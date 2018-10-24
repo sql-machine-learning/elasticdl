@@ -15,7 +15,7 @@ class Elastic(tf.train.Optimizer):
         # TODO(l.zou): need to write OP to send gradients to PS.
         modified_grad = []
         for grad, var in gradients:
-            grad = tf.Print(grad, [grad])
+            grad = tf.Print(grad, [grad], message = var.name + " grad: ")
             modified_grad.append((grad, var))
         return modified_grad
 
@@ -53,5 +53,5 @@ with tf.Session() as sess:
     sess.run(init_op)
     for sx, sy in itertools.chain(*[zip(x_data, y_data)]*10):
         sess.run(train_op, feed_dict={x:sx, y:sy}) 
-        sw = sess.run(w)
-        print('----', sw)
+    sw = sess.run(w)
+    print('----', sw)
