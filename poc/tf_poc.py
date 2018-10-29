@@ -46,5 +46,5 @@ init_op = tf.global_variables_initializer()
 with tf.Session() as sess:
     sess.run(init_op)
     for sx, sy in itertools.chain(*[zip(x_data, y_data)]*1):
-        print(sess.run((train_op, optimizer.intercepted_gradients, w), feed_dict={x:sx, y:sy}))
-
+        _, grads = sess.run((train_op, optimizer.intercepted_gradients), feed_dict={x:sx, y:sy})
+        print grads
