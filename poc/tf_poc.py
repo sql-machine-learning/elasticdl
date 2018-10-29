@@ -2,22 +2,16 @@ import tensorflow as tf
 import numpy as np 
 import itertools
 
-class Elastic(tf.train.Optimizer):
+class HijackGradientOptimizer(tf.train.Optimizer):
     def __init__(self, optimizer):
         self._optimizer = optimizer
         # TODO(l.zou): Need to understand use_locking
-        super(Elastic, self).__init__(name = "Elastic", use_locking = False)
+        super(HijackGradientOptimizer, self).__init__(name = "HijackGradientOptimizer", use_locking = False)
 
     # The method we want to intercept
     def compute_gradients(self, *args, **kwargs):
-        gradients = self._optimizer.compute_gradients(*args, **kwargs)
-        # Modify graph to add print OP to all vars and gradients .
-        # TODO(l.zou): need to write OP to send gradients to PS.
-        modified_grad = []
-        for grad, var in gradients:
-            grad = tf.Print(grad, [grad], message = var.name + " grad: ")
-            modified_grad.append((grad, var))
-        return modified_grad
+        self.intercepted_gradients = self._optimizer.compute_gradients(*args, **kwargs)
+        return self.intercepted_gradients
 
     # Forward all other methods. TODO(l.zou): could use a proxy to automate these
     def get_slot(self, *args, **kwargs):
@@ -44,14 +38,13 @@ y_predict = tf.multiply(x, w[0]) + w[1]
 
 loss = tf.square(y - y_predict)
 
-optimizer = Elastic(tf.train.GradientDescentOptimizer(0.1))
+optimizer = HijackGradientOptimizer(tf.train.GradientDescentOptimizer(0.1))
 train_op = optimizer.minimize(loss)
 
 init_op = tf.global_variables_initializer()
 
 with tf.Session() as sess:
     sess.run(init_op)
-    for sx, sy in itertools.chain(*[zip(x_data, y_data)]*10):
-        sess.run(train_op, feed_dict={x:sx, y:sy}) 
-    sw = sess.run(w)
-    print('----', sw)
+    for sx, sy in itertools.chain(*[zip(x_data, y_data)]*1):
+        print(sess.run((train_op, optimizer.intercepted_gradients, w), feed_dict={x:sx, y:sy}))
+
