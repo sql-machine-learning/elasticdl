@@ -131,6 +131,10 @@ The function `tf.estimator.train_and_evaluate` can start a job of trainer and pa
 
 Programming using MPI assumes that the IP and port of each process in a job are static, just like what KubeFlow and distributed TenosrFlow require.  And, `AllReduce` fails if any process fails.
 
+### Distribution Strategies
+
+Partly due to TenorFlow AllReduce as a demonstration, TenosrFlow official repo adopted the idea of gradient aggregation using `AllReduce` as one of their official [distribution strategy](https://www.tensorflow.org/api_docs/python/tf/contrib/distribute/DistributionStrategy), in addition to using parameter servers.
+
 ### Distributed PyTorch
 
 To support distributed training, PyTorch provides a package [`torch.distribute`](https://pytorch.org/tutorials/intermediate/dist_tuto.html), which inherits the MPI assumptions and interface, including `send`, `recv`, and `allreduce`, and is not fault-tolerant and cannot be extended to support elastic scheduling.
