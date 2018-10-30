@@ -1,6 +1,25 @@
 import tensorflow as tf
 import numpy as np 
 import itertools
+import threading
+
+class DataSource(object):
+    def get_data(self):
+        x = np.random.rand()
+        return np.array([x, x * 2 + 1], dtype='float')
+
+class ParameterServer(object):
+    def __init__(self):
+        self._w = np.array([0,0], dtype='float')
+        self._lock = threading.Lock()
+        
+    def push(self, grad):
+        with self._lock:
+            self._w += grad
+    
+    def pull(self):
+        with self._lock:
+            return self._w.copy()
 
 class Elastic(tf.train.Optimizer):
     def __init__(self, optimizer):
@@ -10,14 +29,8 @@ class Elastic(tf.train.Optimizer):
 
     # The method we want to intercept
     def compute_gradients(self, *args, **kwargs):
-        gradients = self._optimizer.compute_gradients(*args, **kwargs)
-        # Modify graph to add print OP to all vars and gradients .
-        # TODO(l.zou): need to write OP to send gradients to PS.
-        modified_grad = []
-        for grad, var in gradients:
-            grad = tf.Print(grad, [grad], message = var.name + " grad: ")
-            modified_grad.append((grad, var))
-        return modified_grad
+        self._grad_op = self._optimizer.compute_gradients(*args, **kwargs)
+        return self._grad_op
 
     # Forward all other methods. TODO(l.zou): could use a proxy to automate these
     def get_slot(self, *args, **kwargs):
@@ -32,26 +45,65 @@ class Elastic(tf.train.Optimizer):
     def apply_gradients(self, *args, **kwargs):
         return self._optimizer.apply_gradients(*args, **kwargs)
 
-# training data
-x_data = np.random.rand(1000)
-y_data = x_data * 2 + 1
+class ElasticWorker(object):
+    def __init__(self, name, ps, ds, prog):
+        self._name = name
+        self._ps = ps
+        self._ds = ds
+        self._prog = prog(name)
 
-# simple linear model
-x = tf.placeholder("float")
-y = tf.placeholder("float")
-w = tf.Variable([0.0, 0.0], name = "w")
-y_predict = tf.multiply(x, w[0]) + w[1]
+    def run(self):
+        def closure():
+            with self._prog._sess as sess:
+                sess.run(tf.global_variables_initializer())
+                for i in range(1000):
+                    if i % 2 == 0:
+                        w = self._ps.pull()
+                        print("pull: ", self._name, w)
+                        with tf.variable_scope(self._name, reuse=tf.AUTO_REUSE):
+                            vw = tf.get_variable('w')
+                        sess.run(tf.assign(vw, w))
+                        print("assign:", sess.run(vw))
+                    g = self._prog.forward(*self._ds.get_data()) * -0.1
+                    print("push: ", self._name, g)
+                    self._ps.push(g)
+        
+        t = threading.Thread(target = closure, name = self._name)
+        t.start()
+        return t
+    
+class ElasticProgram(object):
+    def __init__(self, name):
+        self._graph = tf.Graph()
+        with self._graph.as_default(), tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+            # simple linear model
+            self._x = tf.placeholder("float")
+            self._y = tf.placeholder("float")
+            w = tf.get_variable("w", [2, ])
+            y_predict = tf.multiply(self._x, w[0]) + w[1]
 
-loss = tf.square(y - y_predict)
+            loss = tf.square(self._y - y_predict)
 
-optimizer = Elastic(tf.train.GradientDescentOptimizer(0.1))
-train_op = optimizer.minimize(loss)
+            optimizer = Elastic(tf.train.GradientDescentOptimizer(0.1))
+            self._train_op = optimizer.minimize(loss)
+            self._grad_op = optimizer._grad_op
+            self._sess = tf.Session()
 
-init_op = tf.global_variables_initializer()
+    def forward(self, x, y):
+        print(x, y)
+        _, grad = self._sess.run([self._train_op, self._grad_op], feed_dict = {self._x:x, self._y:y})
+        print(grad)
+        return grad[0][0]
 
-with tf.Session() as sess:
-    sess.run(init_op)
-    for sx, sy in itertools.chain(*[zip(x_data, y_data)]*10):
-        sess.run(train_op, feed_dict={x:sx, y:sy}) 
-    sw = sess.run(w)
-    print('----', sw)
+def main():
+    ds = DataSource()
+    ps = ParameterServer()
+
+    worker1 = ElasticWorker("worker1", ps, ds, ElasticProgram).run()
+    worker2 = ElasticWorker("worker2", ps, ds, ElasticProgram).run()
+
+    worker1.join()
+    worker2.join()
+
+if __name__ == '__main__':
+    main()
