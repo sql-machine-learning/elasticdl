@@ -21,11 +21,12 @@ class ParameterServer(object):
         with self._lock:
             return self._w.copy()
 
-class Elastic(tf.train.Optimizer):
+class HijackGradientsOptimizer(tf.train.Optimizer):
     def __init__(self, optimizer):
         self._optimizer = optimizer
         # TODO(l.zou): Need to understand use_locking
-        super(Elastic, self).__init__(name = "Elastic", use_locking = False)
+        super(HijackGradientsOptimizer, self).__init__(
+            name = "HijackGradientsOptimizer", use_locking = False)
 
     # The method we want to intercept
     def compute_gradients(self, *args, **kwargs):
@@ -45,7 +46,7 @@ class Elastic(tf.train.Optimizer):
     def apply_gradients(self, *args, **kwargs):
         return self._optimizer.apply_gradients(*args, **kwargs)
 
-class ElasticWorker(object):
+class Worker(object):
     def __init__(self, name, ps, ds, prog):
         self._name = name
         self._ps = ps
@@ -56,7 +57,7 @@ class ElasticWorker(object):
         def closure():
             with self._prog._sess as sess:
                 sess.run(tf.global_variables_initializer())
-                for i in range(1000):
+                for i in range(10):
                     if i % 2 == 0:
                         w = self._ps.pull()
                         print("pull: ", self._name, w)
@@ -72,7 +73,7 @@ class ElasticWorker(object):
         t.start()
         return t
     
-class ElasticProgram(object):
+class LinearRegression(object):
     def __init__(self, name):
         self._graph = tf.Graph()
         with self._graph.as_default(), tf.variable_scope(name, reuse=tf.AUTO_REUSE):
@@ -84,7 +85,7 @@ class ElasticProgram(object):
 
             loss = tf.square(self._y - y_predict)
 
-            optimizer = Elastic(tf.train.GradientDescentOptimizer(0.1))
+            optimizer = HijackGradientsOptimizer(tf.train.GradientDescentOptimizer(0.1))
             self._train_op = optimizer.minimize(loss)
             self._grad_op = optimizer._grad_op
             self._sess = tf.Session()
@@ -96,12 +97,9 @@ class ElasticProgram(object):
         return grad[0][0]
 
 def main():
-    ds = DataSource()
     ps = ParameterServer()
-
-    worker1 = ElasticWorker("worker1", ps, ds, ElasticProgram).run()
-    worker2 = ElasticWorker("worker2", ps, ds, ElasticProgram).run()
-
+    worker1 = Worker("worker1", ps, DataSource(), LinearRegression).run()
+    worker2 = Worker("worker2", ps, DataSource(), LinearRegression).run()
     worker1.join()
     worker2.join()
 
