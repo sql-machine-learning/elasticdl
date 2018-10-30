@@ -127,7 +127,7 @@ The function `tf.estimator.train_and_evaluate` can start a job of trainer and pa
 
 ### TensorFlow AllReduce
 
-[TnesorFlow AllReduce](https://github.com/baidu-research/tensorflow-allreduce) is a project contributed by Baidu Silicon Valley Research.  Instead of using parameter servers to aggregate gradients from trainer processes, we can use MPI's [`AllReduce` function](https://www.mpich.org/static/docs/v3.1/www3/MPI_Allreduce.html).  Baidu contributed their optimized version of MPICH to use sophisticated InfiniBand networks and the RDMA interface.
+[TensorFlow AllReduce](https://github.com/baidu-research/tensorflow-allreduce) is a project contributed by Baidu Silicon Valley Research.  Instead of using parameter servers to aggregate gradients from trainer processes, we can use MPI's [`AllReduce` function](https://www.mpich.org/static/docs/v3.1/www3/MPI_Allreduce.html).  Baidu contributed their optimized version of MPICH to use sophisticated InfiniBand networks and the RDMA interface.
 
 Programming using MPI assumes that the IP and port of each process in a job are static, just like what KubeFlow and distributed TenosrFlow require.  And, `AllReduce` fails if any process fails.
 
