@@ -42,10 +42,16 @@ class ParameterServer(object):
         self._lock = threading.Lock()
         self._model = module_cls()
         self._optmr = self._model.optimizer()
-
+        
+    # Note that unlike in TensorFlow, a parameter in PyTorch doesn't have
+    # an identifier. Here we rely on the fact that the order of the 
+    # parameters won't change during training. In real framework, we will
+    # need a way to match parameters in ParameterServer and its clients.
     def push(self, grad):
         with self._lock:
-            for p, g in zip(self._model.parameters(), grad):
+            params = list(self._model.parameters())
+            assert len(params) == len(grad)
+            for p, g in zip(params, grad):
                 # Note that weight is a 1 x 1 tensor and bias is a scalar.
                 if p.size() == torch.Size([1, 1]):
                     p._grad = torch.tensor([[g]])
@@ -68,7 +74,9 @@ class Worker(threading.Thread):
         threading.Thread.__init__(self, name=name)
 
     def update_param(self, vals):
-        for p, v in zip(self._model.parameters(), vals):
+        params = list(self._model.parameters())
+        assert len(params) == len(vals)
+        for p, v in zip(params, vals):
             p.data.copy_(torch.tensor([v]))
 
     def run(self):
