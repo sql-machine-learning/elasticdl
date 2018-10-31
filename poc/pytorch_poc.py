@@ -6,11 +6,13 @@ import threading
 
 # The following is supposed to be the content of a user program.
 
-# PyTorch encourages users to define models as a subclass of
-# nn.Module, like TensorFlow encourages users to define Estimators.
-# ElasticFlow, when works with PyTorch, follows this convention so to
-# adapt to PyTorch users' convention, except that we need two more
-# methods: loss and optimizer.
+# ElasticFlow users write a deep learning training program that can
+# run locally and distributedly simply by define a PyTorch nn.Module
+# class -- just like what they do in usual PyTorch programming work --
+# but no need to write the main loop nor the tediously complex
+# parallel computing logic like calling the torch.distribute package.
+# ElasticFlow will handle the distributed computing logic, argurablly
+# better than torch.distribute could do.
 class UserDefinedModule(nn.Module):
     def __init__(self):
         nn.Module.__init__(self)
@@ -39,12 +41,11 @@ class ParameterServer(object):
     def __init__(self, module_cls):
         self._lock = threading.Lock()
         self._model = module_cls()
-        self._params = self._model.parameters()
         self._optmr = self._model.optimizer()
 
     def push(self, grad):
         with self._lock:
-            for p, g in zip(self._params, grad):
+            for p, g in zip(self._model.parameters(), grad):
                 # Note that weight is a 1 x 1 tensor and bias is a scalar.
                 if p.size() == torch.Size([1, 1]):
                     p._grad = torch.tensor([[g]])
@@ -52,13 +53,10 @@ class ParameterServer(object):
                     p._grad = torch.tensor([g])
             self._optmr.step()
 
-            for p in self._model.parameters():
-                print('%s w: %f' %
-                      ("parameter server", p.item()))
 
     def pull(self):
         with self._lock:
-            return [p.data.item() for p in self._params]
+            return [p.data.item() for p in self._model.parameters()]
 
 
 class Worker(threading.Thread):
@@ -107,6 +105,9 @@ def main():
 
     worker1.join()
     worker2.join()
+
+    for p in ps._model.parameters():
+        print('%f' % (p.item()))
 
 
 if __name__ == '__main__':
