@@ -53,7 +53,6 @@ class ParameterServer(object):
                     p._grad = torch.tensor([g])
             self._optmr.step()
 
-
     def pull(self):
         with self._lock:
             return [p.data.item() for p in self._model.parameters()]
@@ -73,7 +72,7 @@ class Worker(threading.Thread):
             p.data.copy_(torch.tensor([v]))
 
     def run(self):
-        for i in range(200):
+        for i in range(100):
             if i % 2 == 0:
                 w = self._ps.pull()
                 self.update_param(w)
