@@ -1,9 +1,35 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import itertools
 import threading
-import copy
+
+
+# The following is supposed to be the content of a user program.
+
+# ElasticFlow users write a deep learning training program that can
+# run locally and distributedly simply by define a PyTorch nn.Module
+# class -- just like what they do in usual PyTorch programming work --
+# but no need to write the main loop nor the tediously complex
+# parallel computing logic like calling the torch.distribute package.
+# ElasticFlow will handle the distributed computing logic, argurablly
+# better than torch.distribute could do.
+class UserDefinedModule(nn.Module):
+    def __init__(self):
+        nn.Module.__init__(self)
+        self._linear = nn.Linear(1, 1)
+
+    def forward(self, x):
+        return self._linear(x)
+
+    def loss(self, x, y):
+        return nn.MSELoss()(self.forward(x), y)
+
+    def optimizer(self):
+        return torch.optim.SGD(self.parameters(), lr=0.1)
+
+
+ # The following is supposed to be part of the ElasticFlow framework.
+
 
 class DataSource(object):
     def get_data(self):
@@ -12,94 +38,84 @@ class DataSource(object):
 
 
 class ParameterServer(object):
-    def __init__(self, params):
+    def __init__(self, module_cls):
         self._lock = threading.Lock()
-
-        # Note that unlike in TensorFlow, a parameter in PyTorch doesn't have
-        # an identifier. Here we rely on the face that the order of the 
-        # parameters won't change during training. In real framework, we will
-        # need a way to match parameters in ParameterServer and its clients.
-        self._params = copy.deepcopy(params)
-
-        # In real framework, the type of optimizer and learning rate need to be
-        # passed in from command flags and need to be consistent with the local
-        # optimizer.
-        self._optim = torch.optim.SGD(self._params, lr=0.1)
-
+        self._model = module_cls()
+        self._optmr = self._model.optimizer()
+        
+    # Note that unlike in TensorFlow, a parameter in PyTorch doesn't have
+    # an identifier. Here we rely on the fact that the order of the 
+    # parameters won't change during training. In real framework, we will
+    # need a way to match parameters in ParameterServer and its clients.
     def push(self, grad):
         with self._lock:
-            assert len(self._params) == len(grad)
-            for p, g in zip(self._params, grad):
-                # Note that weight is a 1 x 1 tensor and bias is a scalar. 
+            params = list(self._model.parameters())
+            assert len(params) == len(grad)
+            for p, g in zip(params, grad):
+                # Note that weight is a 1 x 1 tensor and bias is a scalar.
                 if p.size() == torch.Size([1, 1]):
                     p._grad = torch.tensor([[g]])
                 else:
                     p._grad = torch.tensor([g])
-            self._optim.step()
+            self._optmr.step()
 
     def pull(self):
         with self._lock:
-            return [p.data.item() for p in self._params]
+            return [p.data.item() for p in self._model.parameters()]
+
 
 class Worker(threading.Thread):
-    def __init__(self, name, ds, ps, model, prog):
+    def __init__(self, name, ds, ps, module_cls):
         self._name = name
         self._ds = ds
         self._ps = ps
-        self._prog = prog(name, model)
-        threading.Thread.__init__(self, name = name)
+        self._model = module_cls()
+        self._optmr = self._model.optimizer()
+        threading.Thread.__init__(self, name=name)
+
+    def update_param(self, vals):
+        params = list(self._model.parameters())
+        assert len(params) == len(vals)
+        for p, v in zip(params, vals):
+            p.data.copy_(torch.tensor([v]))
 
     def run(self):
         for i in range(100):
             if i % 2 == 0:
                 w = self._ps.pull()
-                self._prog.update_param(w)
+                self.update_param(w)
+
+            # Forward and backward pass
+            self._optmr.zero_grad()
             x, y = self._ds.get_data()
-            grad = self._prog.forward(x, y)
+            loss = self._model.loss(torch.tensor([x]), torch.tensor([y]))
+            loss.backward()
+            self._optmr.step()
+
+            # Collect local gradients
+            grad = [p._grad.item() for p in self._model.parameters()]
             self._ps.push(grad)
 
-class Program(object):
-    def __init__(self, name, model):
-        self._name = name
-        self._model = model
-        self._params = list(self._model.parameters())
-        self._loss = nn.MSELoss()
-        self._optim = torch.optim.SGD(self._params, lr=0.1)  
+            for p in self._model.parameters():
+                print('%s w: %f g: %f' %
+                      (self._name, p.item(), p._grad.item()))
 
-    def update_param(self, vals):
-        assert len(vals) == len(self._params)
-        for p, v in zip(self._params, vals):
-            p.data.copy_(torch.tensor([v]))
-
-    def forward(self, x, y):
-        inputs = torch.tensor([x])
-        targets = torch.tensor([y])
-
-        # Forward pass
-        outputs = self._model(inputs)
-        loss = self._loss(outputs, targets)
-        
-        # Backward and optimize
-        self._optim.zero_grad()
-        loss.backward()
-        self._optim.step()
-        for p in self._params:
-            print('%s w: %f g: %f' % (self._name, p.item(), p._grad.item()))
-
-        return [p._grad.item() for p in self._params]
 
 def main():
-    model = nn.Linear(1, 1)
-    ps = ParameterServer(list(model.parameters()))
+    ps = ParameterServer(UserDefinedModule)
 
-    worker1 = Worker('worker1', DataSource(), ps, model, Program)        
-    worker2 = Worker('worker2', DataSource(), ps, model, Program)        
+    worker1 = Worker('worker1', DataSource(), ps, UserDefinedModule)
+    worker2 = Worker('worker2', DataSource(), ps, UserDefinedModule)
 
     worker1.start()
     worker2.start()
 
     worker1.join()
     worker2.join()
+
+    for p in ps._model.parameters():
+        print('%f' % (p.item()))
+
 
 if __name__ == '__main__':
     main()
