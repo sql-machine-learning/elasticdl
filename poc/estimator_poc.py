@@ -10,13 +10,6 @@ def data_generator():
         yield [x], [x * 2 + 1]
 
 
-def input_fn():
-    dataset = tf.data.Dataset.from_generator(
-        generator=data_generator, output_types=(tf.float32, tf.float32)).batch(1)
-    feature, label = dataset.make_one_shot_iterator().get_next()
-    return {'x': feature}, label
-
-
 class HijackGradientsOptimizer(tf.train.Optimizer):
     def __init__(self, optimizer):
         self._optimizer = optimizer
@@ -97,7 +90,15 @@ class Program(object):
     def __init__(self, name, ps):
         self._name = name
         self._ps = ps
-    
+
+
+    def input_fn(self):
+        dataset = tf.data.Dataset.from_generator(
+            generator=data_generator, output_types=(tf.float32, tf.float32)).batch(1)
+        feature, label = dataset.make_one_shot_iterator().get_next()
+        return {'x': feature}, label
+
+
     def train(self):
         x_col = tf.feature_column.numeric_column('x')
 
@@ -106,7 +107,7 @@ class Program(object):
             tf.train.GradientDescentOptimizer(0.1))
         es = tf.estimator.LinearRegressor([x_col], optimizer=optimizer)
         # Hijack run process
-        es = es.train(input_fn, hooks=[HijackRunHook(self._name, self._ps, optimizer)])
+        es = es.train(self.input_fn, hooks=[HijackRunHook(self._name, self._ps, optimizer)])
         for v in es.get_variable_names():
             print("%s-%s: %s" % (self._name, v, es.get_variable_value(v)))
 
