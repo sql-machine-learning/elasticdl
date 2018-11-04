@@ -5,7 +5,7 @@ import threading
 
 def data_generator():
     # XXX if there are too may training samples, training process will fail, not sure why.
-    for _ in range(500):
+    for _ in range(100):
         x = np.random.rand()
         yield [x], [x * 2 + 1]
 
@@ -58,19 +58,20 @@ class ParameterServer(object):
 
 
 class HijackRunHook(tf.train.SessionRunHook):
-    def __init__(self, ps, optimizer):
+    def __init__(self, name, ps, optimizer):
+        self._name = name
         self._ps = ps
         self._optimizer = optimizer
 
     def before_run(self, run_context):
-        print(run_context.original_args)
+        print(self._name, run_context.original_args)
         return tf.train.SessionRunArgs(fetches={'grad': self._optimizer._grad_op, 'step': tf.train.get_global_step()})
 
     def after_run(self, run_context, run_values):
         if run_context.stop_requested:
             return
-        print(run_context.original_args)
-        print(run_values)
+        print(self._name, run_context.original_args)
+        print(self._name, run_values)
 
         # XXX Need a general way to find gradients.
         grad = run_values.results['grad']
@@ -79,7 +80,7 @@ class HijackRunHook(tf.train.SessionRunHook):
 
         if run_values.results['step'] % 2 == 0:
             w = self._ps.pull()
-            print("pull: ", w)
+            print(self._name, "pull: ", w)
             # XXX need a general way to get variable names
             for v in tf.trainable_variables():
                 if v.name.startswith('linear/linear_model/bias_weights/'):
@@ -92,19 +93,44 @@ class HijackRunHook(tf.train.SessionRunHook):
                 [tf.assign(bias, [w[1]]), tf.assign(x, [[w[0]]])])
 
 
+class Program(object):
+    def __init__(self, name, ps):
+        self._name = name
+        self._ps = ps
+    
+    def train(self):
+        x_col = tf.feature_column.numeric_column('x')
+
+        # Hijack optimizer
+        optimizer = HijackGradientsOptimizer(
+            tf.train.GradientDescentOptimizer(0.1))
+        es = tf.estimator.LinearRegressor([x_col], optimizer=optimizer)
+        # Hijack run process
+        es = es.train(input_fn, hooks=[HijackRunHook(self._name, self._ps, optimizer)])
+        for v in es.get_variable_names():
+            print("%s-%s: %s" % (self._name, v, es.get_variable_value(v)))
+
+
+class Worker(threading.Thread):
+    def __init__(self, name, ps, prog):
+        self._prog = prog(name, ps)
+        threading.Thread.__init__(self, name=name)
+
+    def run(self):
+        self._prog.train()
+
+
 def main():
     ps = ParameterServer()
-    x_col = tf.feature_column.numeric_column('x')
 
-    # Hijack optimizer
-    optimizer = HijackGradientsOptimizer(
-        tf.train.GradientDescentOptimizer(0.1))
-    es = tf.estimator.LinearRegressor([x_col], optimizer=optimizer)
-    # Hijack run process
-    es = es.train(input_fn, hooks=[HijackRunHook(ps, optimizer)])
-    for v in es.get_variable_names():
-        print("%s: %s" % (v, es.get_variable_value(v)))
+    worker1 = Worker('worker1', ps, Program)
+    worker2 = Worker('worker2', ps, Program)
 
+    worker1.start()
+    worker2.start()
+
+    worker1.join()
+    worker2.join()
 
 if __name__ == '__main__':
     main()
