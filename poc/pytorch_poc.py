@@ -27,7 +27,6 @@ class UserDefinedModule(nn.Module):
     def optimizer(self):
         return torch.optim.SGD(self.parameters(), lr=0.1)
 
-
  # The following is supposed to be part of the ElasticFlow framework.
 
 
@@ -42,9 +41,9 @@ class ParameterServer(object):
         self._lock = threading.Lock()
         self._model = module_cls()
         self._optmr = self._model.optimizer()
-        
+
     # Note that unlike in TensorFlow, a parameter in PyTorch doesn't have
-    # an identifier. Here we rely on the fact that the order of the 
+    # an identifier. Here we rely on the fact that the order of the
     # parameters won't change during training. In real framework, we will
     # need a way to match parameters in ParameterServer and its clients.
     def push(self, grad):

@@ -4,7 +4,8 @@ import threading
 
 
 def data_generator():
-    # XXX if there are too may training samples, training process will fail, not sure why.
+    # XXX if there are too may training samples, training process will fail,
+    # not sure why.
     for _ in range(100):
         x = np.random.rand()
         yield [x], [x * 2 + 1]
@@ -22,7 +23,8 @@ class HijackGradientsOptimizer(tf.train.Optimizer):
         self._grad_op = self._optimizer.compute_gradients(*args, **kwargs)
         return self._grad_op
 
-    # Forward all other methods. TODO(l.zou): could use a proxy to automate these
+    # Forward all other methods. TODO(l.zou): could use a proxy to automate
+    # these
     def get_slot(self, *args, **kwargs):
         return self._optimizer.get_slot(*args, **kwargs)
 
@@ -58,7 +60,10 @@ class HijackRunHook(tf.train.SessionRunHook):
 
     def before_run(self, run_context):
         print(self._name, run_context.original_args)
-        return tf.train.SessionRunArgs(fetches={'grad': self._optimizer._grad_op, 'step': tf.train.get_global_step()})
+        return tf.train.SessionRunArgs(
+            fetches={
+                'grad': self._optimizer._grad_op,
+                'step': tf.train.get_global_step()})
 
     def after_run(self, run_context, run_values):
         if run_context.stop_requested:
@@ -91,13 +96,12 @@ class Program(object):
         self._name = name
         self._ps = ps
 
-
     def input_fn(self):
         dataset = tf.data.Dataset.from_generator(
-            generator=data_generator, output_types=(tf.float32, tf.float32)).batch(1)
+            generator=data_generator, output_types=(
+                tf.float32, tf.float32)).batch(1)
         feature, label = dataset.make_one_shot_iterator().get_next()
         return {'x': feature}, label
-
 
     def train(self):
         x_col = tf.feature_column.numeric_column('x')
@@ -107,7 +111,8 @@ class Program(object):
             tf.train.GradientDescentOptimizer(0.1))
         es = tf.estimator.LinearRegressor([x_col], optimizer=optimizer)
         # Hijack run process
-        es = es.train(self.input_fn, hooks=[HijackRunHook(self._name, self._ps, optimizer)])
+        es = es.train(self.input_fn, hooks=[
+                      HijackRunHook(self._name, self._ps, optimizer)])
         for v in es.get_variable_names():
             print("%s-%s: %s" % (self._name, v, es.get_variable_value(v)))
 
@@ -132,6 +137,7 @@ def main():
 
     worker1.join()
     worker2.join()
+
 
 if __name__ == '__main__':
     main()
