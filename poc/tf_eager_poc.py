@@ -11,14 +11,15 @@ import threading
 # (1). a forward function to define the network;
 # (2). a loss function for the loss;
 # (3). a optimizer function for the optimizer.
-# (4). For eager execution only, get_trainable_var_list returns the trainable variable list.
+# (4). For eager execution only, get_trainable_var_list returns the trainable
+#      variable list.
 class UserDefinedModule(object):
     def __init__(self):
         self._trainable_var_list = []
         rand_value = np.random.rand(2)
-        self._W = tfe.Variable(rand_value[0], name = "W", dtype = tf.float32)
+        self._W = tfe.Variable(rand_value[0], name="W", dtype=tf.float32)
         self._trainable_var_list.append(self._W)
-        self._b = tfe.Variable(rand_value[1], name = "b", dtype = tf.float32)
+        self._b = tfe.Variable(rand_value[1], name="b", dtype=tf.float32)
         self._trainable_var_list.append(self._b)
 
     def forward(self, x):
@@ -41,14 +42,14 @@ class HijackGradientsOptimizer(tf.train.Optimizer):
         self._optimizer = optimizer
         # TODO(l.zou): Need to understand use_locking
         super(HijackGradientsOptimizer, self).__init__(
-            name = "HijackGradientsOptimizer", use_locking = False)
+            name="HijackGradientsOptimizer", use_locking=False)
 
     # The method we want to intercept
     def compute_gradients(self, *args, **kwargs):
         self._grad_op = self._optimizer.compute_gradients(*args, **kwargs)
         return self._grad_op
 
-    # Forward all other methods. TODO(l.zou): could use a proxy to automate these
+    # Forward all other methods. TODO(l.zou): could use a proxy to automate.
     def get_slot(self, *args, **kwargs):
         return self._optimizer.get_slot(*args, **kwargs)
 
@@ -72,9 +73,9 @@ class DataSource(object):
             yield(x, 2 * x + 1)
 
     def __init__(self):
-        self._dataset = tf.data.Dataset.from_generator(self.gen,
-                                    (tf.float32, tf.float32),
-                                    (tf.TensorShape([]), tf.TensorShape([])))
+        self._dataset = tf.data.Dataset.from_generator(
+            self.gen, (tf.float32, tf.float32),
+            (tf.TensorShape([]), tf.TensorShape([])))
 
     def get_data(self):
         return self._dataset
@@ -89,7 +90,7 @@ class ParameterServer(object):
         self._vars = {}
         for v in trainable_var_list:
             self._vars[v.name] = v
-        
+
     def push(self, grad):
         with self._lock:
             assert len(self._vars) >= len(grad)
@@ -130,12 +131,12 @@ class Worker(threading.Thread):
             for v in dataset:
                 w = self._ps.pull()
                 self.update_param(w)
-                print("[%s] pull and update weight: "%self._name, w.items())
+                print("[%s] pull and update weight: " % self._name, w.items())
 
                 # Forward and backward pass
                 with tf.GradientTape() as tape:
                     predict = self._model.forward(v[0])
-                    loss = self._model.loss(predict, v[1]) 
+                    loss = self._model.loss(predict, v[1])
                 grads = tape.gradient(loss, self._trainable_var_list)
 
                 # Collect local gradients
@@ -143,9 +144,9 @@ class Worker(threading.Thread):
                 for idx,  v in enumerate(self._trainable_var_list):
                     local_grad[v.name] = grads[idx].numpy()
                 self._ps.push(local_grad)
-                print("[%s] push grad: "%self._name, local_grad.items())
+                print("[%s] push grad: " % self._name, local_grad.items())
 
-        t = threading.Thread(target = closure, name = self._name)
+        t = threading.Thread(target=closure, name=self._name)
         t.start()
         return t
 
