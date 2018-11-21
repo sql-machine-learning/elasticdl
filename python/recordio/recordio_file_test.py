@@ -17,7 +17,7 @@ class TestRecordIOFile(unittest.TestCase):
     def tearDown(self):
         if os.path.exists('/tmp/elasticdl/recordio'):
             shutil.rmtree('/tmp/elasticdl/recordio')
-   
+
     def test_read_by_index(self):
         rdio_w = RecordIOFile('/tmp/elasticdl/recordio/demo.recordio', 'w')
         data_source = []
@@ -51,7 +51,7 @@ class TestRecordIOFile(unittest.TestCase):
         for index in range(len(data_source)):
             self.assertEqual(rdio_r.get(index), data_source[index])
 
-        rdio_r.close() 
+        rdio_r.close()
 
     def test_read_by_iter(self):
         rdio_w = RecordIOFile('/tmp/elasticdl/recordio/demo.recordio', 'w')
@@ -90,7 +90,7 @@ class TestRecordIOFile(unittest.TestCase):
         while iterator.has_next():
             record = iterator.next()
             self.assertEqual(record, data_source[index])
-            index += 1 
+            index += 1
 
         rdio_r.close()
 

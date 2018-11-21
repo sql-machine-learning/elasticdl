@@ -23,17 +23,17 @@ class Reader(object):
 
     def get(self, index):
         """ Return the record specified by the index
-    
+
         Arguments:
           index: record index in the chunk
- 
+
         Returns:
           String record value
- 
+
         Raise:
           RuntimeError: index of out bounds
         """
-        if index < 0 or index >= self._total_count: 
+        if index < 0 or index >= self._total_count:
             raise RuntimeError('index out of bounds for index ' + str(index))
 
         return self._chunk.get(index)

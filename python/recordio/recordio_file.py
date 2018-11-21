@@ -2,6 +2,7 @@ from recordio.file_index import *
 from recordio.writer import *
 from recordio.reader import *
 
+
 class RecordIOFile(object):
     """ Simple Wrapper for FileIndex, Writer and Reader for usability.
     """
@@ -12,12 +13,12 @@ class RecordIOFile(object):
         self._mode = mode
         if mode == 'r' or mode == 'read':
             self._data = open(file_path, 'rb')
-            self._index = FileIndex(self._data)            
+            self._index = FileIndex(self._data)
         elif mode == 'w' or mode == 'write':
             self._data = open(file_path, 'wb')
             self._writer = Writer(self._data, max_chunk_size)
         else:
-            raise RuntimeError('mode value should be \'read\' or \'write\'') 
+            raise RuntimeError('mode value should be \'read\' or \'write\'')
 
     def write(self, record):
         """
@@ -25,7 +26,7 @@ class RecordIOFile(object):
         if self._mode != 'w' and self._mode != 'write':
             raise RuntimeError('Should be under write mode')
 
-        self._writer.write(record)        
+        self._writer.write(record)
 
     def close(self):
         """ Close the data file
@@ -35,14 +36,14 @@ class RecordIOFile(object):
         self._data.close()
 
     def get(self, index):
-        """ Get the record string value specified by index 
-       
+        """ Get the record string value specified by index
+
         Arguments:
-          index: record index in the recordio file 
-  
+          index: record index in the recordio file
+
         Returns:
           Record string value
-  
+
         Raise:
           RuntimeError: not under read mode
         """
@@ -56,10 +57,10 @@ class RecordIOFile(object):
 
     def get_index(self):
         """ Returns the recordio file index
-        
+
         Returns:
           Index of recordio file
- 
+
         Raise:
           RuntimeError: not under read mode
         """
@@ -70,7 +71,7 @@ class RecordIOFile(object):
 
     def count(self):
         """ Return total record count of the recordio file
-        
+
         Returns:
           Total record count
 
@@ -87,7 +88,7 @@ class RecordIOFile(object):
         """
         if self._mode != 'r' and self._mode != 'read':
             raise RuntimeError('Should be under read mode')
- 
+
         return Iterator(self._data, self._index)
 
 
@@ -96,7 +97,7 @@ class Iterator(object):
     """
 
     def __init__(self, data, index):
-        # RecordIO data file 
+        # RecordIO data file
         self._data = data
         # Chunk index
         self._index = index
@@ -107,7 +108,7 @@ class Iterator(object):
 
     def next(self):
         """ Return next record string value of the recordio file
-  
+
         Returns:
           Next record value
 
@@ -130,4 +131,5 @@ class Iterator(object):
         Returns:
           True if not reach the end of file
         """
-        return self._reader.has_next() or (self._chunk_index + 1 < self._index.total_chunks())
+        return self._reader.has_next() or (
+            self._chunk_index + 1 < self._index.total_chunks())

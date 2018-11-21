@@ -11,7 +11,7 @@ class TestFileIndex(unittest.TestCase):
 
     def setUp(self):
         if not os.path.exists('/tmp/elasticdl'):
-            os.mkdir('/tmp/elasticdl') 
+            os.mkdir('/tmp/elasticdl')
         if not os.path.exists('/tmp/elasticdl/recordio'):
             os.mkdir('/tmp/elasticdl/recordio')
 
@@ -156,7 +156,7 @@ class TestFileIndex(unittest.TestCase):
 
         parsed_data = []
         tmp_file = open(file_name, 'rb')
-        index = FileIndex(tmp_file)        
+        index = FileIndex(tmp_file)
         tmp_file.close()
         os.remove(file_name)
 

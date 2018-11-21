@@ -49,7 +49,7 @@ class FileIndex(object):
 
     def locate_record(self, index):
         """ Locate the index of chunk and inner chunk for a record in recordio file.
-       
+
         Arguments:
           index: The index of record in a recordio file cross chunk.
           (record index starts from zero to (total_records -1))
@@ -61,14 +61,15 @@ class FileIndex(object):
         for chk_index in range(self._total_chunks):
             global_count += self._chunk_records[chk_index]
             if index < global_count:
-                return chk_index, (self._chunk_records[chk_index] - (global_count - index))
+                return chk_index, (
+                    self._chunk_records[chk_index] - (global_count - index))
         return -1, -1
 
     def get_record(self, index):
         """ Returns the record by global index(cross chunk) in a recordio file.
 
         Arguments:
-          index: The index of record in a recordio file cross chunk.        
+          index: The index of record in a recordio file cross chunk.
 
         Returns:
           record: A string representing the indexed record
@@ -78,7 +79,9 @@ class FileIndex(object):
         """
         chunk_index, record_index = self.locate_record(index)
         if chunk_index == -1 or record_index == -1:
-            raise RuntimeError('record index out of bounds for index ' + str(index))
+            raise RuntimeError(
+                'record index out of bounds for index ' +
+                str(index))
 
         chunk_offset = self.chunk_offset
 

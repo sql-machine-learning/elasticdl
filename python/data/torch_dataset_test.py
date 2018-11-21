@@ -3,14 +3,14 @@ import os
 import shutil
 from recordio.global_variables import *
 from recordio.file_index import *
-from recordio.recordio_file import RecordIOFile 
+from recordio.recordio_file import RecordIOFile
 from data.torch_dataset import *
 
 
 class TestTorchDataset(unittest.TestCase):
     """ Test torch_dataset.py
     """
-   
+
     def setUp(self):
         if not os.path.exists('/tmp/elasticdl'):
             os.mkdir('/tmp/elasticdl')
