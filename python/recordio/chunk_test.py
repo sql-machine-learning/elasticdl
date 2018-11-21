@@ -1,11 +1,22 @@
 import unittest
 import os
-from chunk import *
+import shutil
+from recordio.chunk import *
 
 
 class TestHeader(unittest.TestCase):
     """ Test chunk.py
     """
+
+    def setUp(self):
+        if not os.path.exists('/tmp/elasticdl'):
+            os.mkdir('/tmp/elasticdl')
+        if not os.path.exists('/tmp/elasticdl/recordio'):
+            os.mkdir('/tmp/elasticdl/recordio')
+
+    def tearDown(self):
+        if os.path.exists('/tmp/elasticdl/recordio'):
+            shutil.rmtree('/tmp/elasticdl/recordio')
 
     def test_add_and_get(self):
         chunk = Chunk()
@@ -42,7 +53,7 @@ class TestHeader(unittest.TestCase):
         chunk.add(record2)
         chunk.add(record3)
 
-        file_name = '/tmp/elasticflow/recordio/test_file'
+        file_name = '/tmp/elasticdl/recordio/test_file'
         tmp_file = open(file_name, 'wb')
         chunk.write(tmp_file, Compressor(2))
         tmp_file.close()

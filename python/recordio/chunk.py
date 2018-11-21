@@ -2,8 +2,8 @@ import gzip
 import os
 from zlib import crc32
 import snappy
-from header import *
-from global_variables import *
+from recordio.header import *
+from recordio.global_variables import *
 
 
 class Chunk(object):

@@ -1,7 +1,7 @@
 import unittest
-from file_index import *
-from writer import *
-from reader import *
+from recordio.file_index import *
+from recordio.writer import *
+from recordio.reader import *
 import os
 
 
@@ -9,8 +9,20 @@ class TestFileIndex(unittest.TestCase):
     """ Test file_index.py
     """
 
+    def setUp(self):
+        if not os.path.exists('/tmp/elasticdl'):
+            os.mkdir('/tmp/elasticdl') 
+        if not os.path.exists('/tmp/elasticdl/recordio'):
+            os.mkdir('/tmp/elasticdl/recordio')
+
+    def tearDown(self):
+        if os.path.exists('/tmp/elasticdl/recordio'):
+            os.rmdir('/tmp/elasticdl/recordio')
+        if os.path.exists('/tmp/elasticdl'):
+            os.rmdir('/tmp/elasticdl')
+
     def test_one_chunk(self):
-        file_name = '/tmp/elasticflow/recordio/test_file'
+        file_name = '/tmp/elasticdl/recordio/test_file'
         tmp_file = open(file_name, 'wb')
         writer = Writer(tmp_file, 1000, Compressor(1))
         writer.write('china')
@@ -28,7 +40,7 @@ class TestFileIndex(unittest.TestCase):
         self.assertEqual(3, index.chunk_records(0))
 
     def test_two_chunk(self):
-        file_name = '/tmp/elasticflow/recordio/test_file'
+        file_name = '/tmp/elasticdl/recordio/test_file'
         tmp_file = open(file_name, 'wb')
         writer = Writer(tmp_file, 10, Compressor(1))
         writer.write('china')
@@ -69,7 +81,7 @@ class TestFileIndex(unittest.TestCase):
         data_source.append('brazil')
         data_source.append('barbados')
 
-        file_name = '/tmp/elasticflow/recordio/test_file'
+        file_name = '/tmp/elasticdl/recordio/test_file'
         tmp_file = open(file_name, 'wb')
         writer = Writer(tmp_file, 20)
 
@@ -109,6 +121,44 @@ class TestFileIndex(unittest.TestCase):
         self.assertEqual(2, index.total_records())
         data.close()
         os.remove('demo.recordio')
+
+    def test_locate_record(self):
+        data_source = []
+        data_source.append('china')
+        data_source.append('usa')
+        data_source.append('russia')
+        data_source.append('india')
+        data_source.append('thailand')
+        data_source.append('finland')
+        data_source.append('france')
+        data_source.append('germany')
+        data_source.append('poland')
+        data_source.append('san marino')
+        data_source.append('sweden')
+        data_source.append('neuseeland')
+        data_source.append('argentina')
+        data_source.append('canada')
+        data_source.append('ottawa')
+        data_source.append('bogota')
+        data_source.append('panama')
+        data_source.append('united states')
+        data_source.append('brazil')
+        data_source.append('barbados')
+
+        file_name = '/tmp/elasticdl/recordio/test_file'
+        tmp_file = open(file_name, 'wb')
+        writer = Writer(tmp_file, 20)
+
+        for data in data_source:
+            writer.write(data)
+        writer.flush()
+        tmp_file.close()
+
+        parsed_data = []
+        tmp_file = open(file_name, 'rb')
+        index = FileIndex(tmp_file)        
+        tmp_file.close()
+        os.remove(file_name)
 
 
 if __name__ == '__main__':

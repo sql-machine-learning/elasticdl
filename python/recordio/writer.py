@@ -1,4 +1,4 @@
-from chunk import *
+from recordio.chunk import *
 
 
 class Writer(object):

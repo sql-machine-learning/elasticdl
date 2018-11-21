@@ -1,5 +1,5 @@
-from global_variables import *
-from header import *
+from recordio.global_variables import *
+from recordio.header import *
 import os
 
 
@@ -18,6 +18,8 @@ class FileIndex(object):
         self._total_records = 0
         # Total chunk count of a recordio file
         self._total_chunks = 0
+        # Input recordio file
+        self._in_file = in_file
 
         # Do the parse process
         self._parse(in_file)
@@ -45,7 +47,42 @@ class FileIndex(object):
             chunk_index += 1
         self._total_chunks = chunk_index
 
-    def chunk_offset(self, chunk_num):
+    def locate_record(self, index):
+        """ Locate the index of chunk and inner chunk for a record in recordio file.
+       
+        Arguments:
+          index: The index of record in a recordio file cross chunk.
+          (record index starts from zero to (total_records -1))
+
+        Returns:
+          (chunk_index, record_index): the index of chunk in recordio file and index of record in the chunk.
+        """
+        global_count = 0
+        for chk_index in range(self._total_chunks):
+            global_count += self._chunk_records[chk_index]
+            if index < global_count:
+                return chk_index, (self._chunk_records[chk_index] - (global_count - index))
+        return -1, -1
+
+    def get_record(self, index):
+        """ Returns the record by global index(cross chunk) in a recordio file.
+
+        Arguments:
+          index: The index of record in a recordio file cross chunk.        
+
+        Returns:
+          record: A string representing the indexed record
+
+        Raises:
+          RuntimeError: index out of bounds
+        """
+        chunk_index, record_index = self.locate_record(index)
+        if chunk_index == -1 or record_index == -1:
+            raise RuntimeError('record index out of bounds for index ' + str(index))
+
+        chunk_offset = self.chunk_offset
+
+    def chunk_offset(self, chunk_index):
         """ Returns the offset of chunk in a file
 
         Arguments:
@@ -54,9 +91,9 @@ class FileIndex(object):
         Returns:
           Chunk offset
         """
-        return self._chunk_offsets[chunk_num]
+        return self._chunk_offsets[chunk_index]
 
-    def chunk_len(self, chunk_num):
+    def chunk_len(self, chunk_index):
         """ Returns the total chunk data size
 
         Arguments:
@@ -65,9 +102,9 @@ class FileIndex(object):
         Returns:
           Total chunk size
         """
-        return self._chunk_lens[chunk_num]
+        return self._chunk_lens[chunk_index]
 
-    def chunk_records(self, chunk_num):
+    def chunk_records(self, chunk_index):
         """ Returns the record numbers in the chunk
 
         Arguments:
@@ -76,7 +113,7 @@ class FileIndex(object):
         Returns:
           Total record number of the chunk
         """
-        return self._chunk_records[chunk_num]
+        return self._chunk_records[chunk_index]
 
     def total_records(self):
         """ Returns the total record number of the file

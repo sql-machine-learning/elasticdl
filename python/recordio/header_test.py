@@ -1,18 +1,29 @@
 import unittest
 import os
-from header import *
+import shutil
+from recordio.header import *
 
 
 class TestHeader(unittest.TestCase):
     """ Test header.py
     """
 
+    def setUp(self):
+        if not os.path.exists('/tmp/elasticdl'):
+            os.mkdir('/tmp/elasticdl')
+        if not os.path.exists('/tmp/elasticdl/recordio'):
+            os.mkdir('/tmp/elasticdl/recordio')
+
+    def tearDown(self):
+        if os.path.exists('/tmp/elasticdl/recordio'):
+            shutil.rmtree('/tmp/elasticdl/recordio')
+
     def test_write_and_parse(self):
         num_records = 1000
         checksum = 824863398
         compressor = Compressor.gzip
         compress_size = 10240
-        file_name = '/tmp/elasticflow/recordio/test_header'
+        file_name = '/tmp/elasticdl/recordio/test_header'
 
         tmp_file = open(file_name, 'wb')
         header1 = Header(num_records, checksum, compressor, compress_size)

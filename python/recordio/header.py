@@ -1,5 +1,5 @@
 from enum import Enum
-from global_variables import *
+from recordio.global_variables import *
 import os
 
 

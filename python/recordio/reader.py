@@ -1,5 +1,5 @@
-from global_variables import *
-from chunk import *
+from recordio.global_variables import *
+from recordio.chunk import *
 
 
 class Reader(object):
@@ -20,6 +20,23 @@ class Reader(object):
         self._total_count = self._chunk.total_count()
         # Current record index
         self._curr_index = 0
+
+    def get(self, index):
+        """ Return the record specified by the index
+    
+        Arguments:
+          index: record index in the chunk
+ 
+        Returns:
+          String record value
+ 
+        Raise:
+          RuntimeError: index of out bounds
+        """
+        if index < 0 or index >= self._total_count: 
+            raise RuntimeError('index out of bounds for index ' + str(index))
+
+        return self._chunk.get(index)
 
     def next(self):
         """ Return the next chunk of the input file.
