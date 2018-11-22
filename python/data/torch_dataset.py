@@ -1,7 +1,5 @@
-from __future__ import absolute_import
-
 from torch.utils.data import Dataset
-from recordio.recordio_file import RecordIOFile
+import recordio
 
 
 class TorchDataset(Dataset):
@@ -10,7 +8,40 @@ class TorchDataset(Dataset):
 
     def __init__(self, recordfile_path):
         # Create recordio file
-        self._rdio = RecordIOFile(recordfile_path, 'r')
+        self._rdio = recordio.File(recordfile_path, 'r')
+
+    def __enter__(self):
+        """ For `with` statement
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """ For `with` statement
+        """
+        self.close()
+
+    def __iter__(self):
+        """ For iterate operation
+        Returns:
+          Iterator of dataset
+        """
+        self._iter_idx = -1 
+        return self
+ 
+    def __next__(self):
+        """ For iterate operation
+        Returns:
+          The next value in dataset
+
+        Raise:
+          StopIteration: Reach the end of dataset
+        """
+        self._iter_idx += 1  
+        if self._iter_idx >= self._rdio.count():
+            raise StopIteration
+
+        return self.__getitem__(self._iter_idx)
+         
 
     def __getitem__(self, index):
         """ Retrieve record data by index
@@ -19,13 +50,7 @@ class TorchDataset(Dataset):
 
         Returns:
           Record value specified by index
-
-        Raise:
-          RuntimeError: Index of of bounds
         """
-        if index >= self._rdio.count():
-            raise RuntimeError('Index out of bounds for index ' + str(index))
-
         return self._rdio.get(index)
 
     def __len__(self):

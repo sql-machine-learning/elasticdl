@@ -1,97 +1,78 @@
 import unittest
-from recordio.file_index import *
-from recordio.writer import *
-from recordio.reader import *
-import os
+import tempfile
+from recordio import FileIndex 
+from recordio import Compressor
+from recordio import Writer 
+from recordio import Reader 
 
 
 class TestFileIndex(unittest.TestCase):
     """ Test file_index.py
     """
 
-    def setUp(self):
-        if not os.path.exists('/tmp/elasticdl'):
-            os.mkdir('/tmp/elasticdl')
-        if not os.path.exists('/tmp/elasticdl/recordio'):
-            os.mkdir('/tmp/elasticdl/recordio')
-
-    def tearDown(self):
-        if os.path.exists('/tmp/elasticdl/recordio'):
-            os.rmdir('/tmp/elasticdl/recordio')
-        if os.path.exists('/tmp/elasticdl'):
-            os.rmdir('/tmp/elasticdl')
-
     def test_one_chunk(self):
-        file_name = '/tmp/elasticdl/recordio/test_file'
-        tmp_file = open(file_name, 'wb')
+        tmp_file = tempfile.NamedTemporaryFile()
         writer = Writer(tmp_file, 1000, Compressor(1))
         writer.write('china')
         writer.write('usa')
         writer.write('russia')
         writer.flush()
-        tmp_file.close()
 
-        tmp_file = open(file_name, 'rb')
+        tmp_file.seek(0)
         index = FileIndex(tmp_file)
         tmp_file.close()
-        os.remove(file_name)
 
         self.assertEqual(1, index.total_chunks())
         self.assertEqual(3, index.chunk_records(0))
 
     def test_two_chunk(self):
-        file_name = '/tmp/elasticdl/recordio/test_file'
-        tmp_file = open(file_name, 'wb')
+        tmp_file = tempfile.NamedTemporaryFile()
         writer = Writer(tmp_file, 10, Compressor(1))
         writer.write('china')
         writer.write('usa')
         writer.write('russia')
         writer.flush()
-        tmp_file.close()
 
-        tmp_file = open(file_name, 'rb')
+        tmp_file.seek(0) 
         index = FileIndex(tmp_file)
         tmp_file.close()
-        os.remove(file_name)
 
         self.assertEqual(2, index.chunk_records(0))
         self.assertEqual(1, index.chunk_records(1))
         self.assertEqual(2, index.total_chunks())
 
     def test_usage(self):
-        data_source = []
-        data_source.append('china')
-        data_source.append('usa')
-        data_source.append('russia')
-        data_source.append('india')
-        data_source.append('thailand')
-        data_source.append('finland')
-        data_source.append('france')
-        data_source.append('germany')
-        data_source.append('poland')
-        data_source.append('san marino')
-        data_source.append('sweden')
-        data_source.append('neuseeland')
-        data_source.append('argentina')
-        data_source.append('canada')
-        data_source.append('ottawa')
-        data_source.append('bogota')
-        data_source.append('panama')
-        data_source.append('united states')
-        data_source.append('brazil')
-        data_source.append('barbados')
+        data_source = [
+            'china',
+            'usa',
+            'russia',
+            'india',
+            'thailand',
+            'finland',
+            'france',
+            'germany',
+            'poland',
+            'san marino',
+            'sweden',
+            'neuseeland',
+            'argentina',
+            'canada',
+            'ottawa',
+            'bogota',
+            'panama',
+            'united states',
+            'brazil',
+            'barbados']
 
-        file_name = '/tmp/elasticdl/recordio/test_file'
-        tmp_file = open(file_name, 'wb')
+        tmp_file = tempfile.NamedTemporaryFile()
         writer = Writer(tmp_file, 20)
 
         for data in data_source:
             writer.write(data)
         writer.flush()
-        tmp_file.close()
 
         parsed_data = []
-        tmp_file = open(file_name, 'rb')
+        tmp_file.seek(0)
         index = FileIndex(tmp_file)
 
         for i in range(index.total_chunks()):
@@ -100,7 +81,6 @@ class TestFileIndex(unittest.TestCase):
                 parsed_data.append(reader.next())
 
         tmp_file.close()
-        os.remove(file_name)
 
         self.assertEqual(20, len(parsed_data))
 
@@ -108,57 +88,52 @@ class TestFileIndex(unittest.TestCase):
             self.assertEqual(v1, v2)
 
     def test_readme_demo(self):
-        data = open('demo.recordio', 'wb')
+        data = tempfile.NamedTemporaryFile()
         max_chunk_size = 1024
         writer = Writer(data, max_chunk_size)
         writer.write('abc')
         writer.write('edf')
         writer.flush()
-        data.close()
 
-        data = open('demo.recordio', 'rb')
+        data.seek(0)        
         index = FileIndex(data)
         self.assertEqual(2, index.total_records())
         data.close()
-        os.remove('demo.recordio')
 
     def test_locate_record(self):
-        data_source = []
-        data_source.append('china')
-        data_source.append('usa')
-        data_source.append('russia')
-        data_source.append('india')
-        data_source.append('thailand')
-        data_source.append('finland')
-        data_source.append('france')
-        data_source.append('germany')
-        data_source.append('poland')
-        data_source.append('san marino')
-        data_source.append('sweden')
-        data_source.append('neuseeland')
-        data_source.append('argentina')
-        data_source.append('canada')
-        data_source.append('ottawa')
-        data_source.append('bogota')
-        data_source.append('panama')
-        data_source.append('united states')
-        data_source.append('brazil')
-        data_source.append('barbados')
+        data_source = [
+            'china',
+            'usa',
+            'russia',
+            'india',
+            'thailand',
+            'finland',
+            'france',
+            'germany',
+            'poland',
+            'san marino',
+            'sweden',
+            'neuseeland',
+            'argentina',
+            'canada',
+            'ottawa',
+            'bogota',
+            'panama',
+            'united states',
+            'brazil',
+            'barbados']
 
-        file_name = '/tmp/elasticdl/recordio/test_file'
-        tmp_file = open(file_name, 'wb')
+        tmp_file = tempfile.NamedTemporaryFile()
         writer = Writer(tmp_file, 20)
 
         for data in data_source:
             writer.write(data)
         writer.flush()
-        tmp_file.close()
 
+        tmp_file.seek(0)
         parsed_data = []
-        tmp_file = open(file_name, 'rb')
         index = FileIndex(tmp_file)
         tmp_file.close()
-        os.remove(file_name)
 
 
 if __name__ == '__main__':

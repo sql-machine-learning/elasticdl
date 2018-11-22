@@ -1,9 +1,9 @@
-from recordio.file_index import *
-from recordio.writer import *
-from recordio.reader import *
+from recordio import FileIndex
+from recordio import Writer
+from recordio import Reader
 
 
-class RecordIOFile(object):
+class File(object):
     """ Simple Wrapper for FileIndex, Writer and Reader for usability.
     """
 
@@ -19,6 +19,50 @@ class RecordIOFile(object):
             self._writer = Writer(self._data, max_chunk_size)
         else:
             raise RuntimeError('mode value should be \'read\' or \'write\'')
+ 
+    def __enter__(self):
+        """ For `with` statement
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """ For `with` statement
+        """
+        self.close()
+
+    def __iter__(self):
+        """ For iterate operation
+        Returns:
+          Iterator of dataset
+        """
+        if self._mode != 'r' and self._mode != 'read':
+            raise RuntimeError('Should be under read mode')
+
+        # Starts from the first chunk
+        self._chunk_index = 0
+        # Initialize the first chunk
+        self._reader = Reader(self._data, 0)
+
+        return self
+
+    def __next__(self):
+        """ For iterate operation
+        Returns:
+          The next value in dataset
+
+        Raise:
+          StopIteration: Reach the end of dataset
+        """
+        if not self._reader.has_next() and (
+            self._chunk_index + 1 >= self._index.total_chunks()):
+            raise StopIteration
+
+        # Switch to the next chunk
+        if not self._reader.has_next():
+            self._chunk_index += 1
+            self._reader = Reader(self._data, self._chunk_index)
+
+        return self._reader.next()
 
     def write(self, record):
         """
@@ -49,6 +93,9 @@ class RecordIOFile(object):
         """
         if self._mode != 'r' and self._mode != 'read':
             raise RuntimeError('Should be under read mode')
+
+        if index >= self._index.total_records():
+            raise RuntimeError('Index out of bounds for index ' + str(index))
 
         chunk_index, record_index = self._index.locate_record(index)
         chunk_offset = self._index.chunk_offset(chunk_index)
@@ -82,54 +129,3 @@ class RecordIOFile(object):
             raise RuntimeError('Should be under read mode')
 
         return self._index.total_records()
-
-    def iterator(self):
-        """
-        """
-        if self._mode != 'r' and self._mode != 'read':
-            raise RuntimeError('Should be under read mode')
-
-        return Iterator(self._data, self._index)
-
-
-class Iterator(object):
-    """ Iterates over the recordio file
-    """
-
-    def __init__(self, data, index):
-        # RecordIO data file
-        self._data = data
-        # Chunk index
-        self._index = index
-        # Starts from the first chunk
-        self._chunk_index = 0
-        # Initialize the first chunk
-        self._reader = Reader(self._data, 0)
-
-    def next(self):
-        """ Return next record string value of the recordio file
-
-        Returns:
-          Next record value
-
-        Raise:
-          RuntimeError: Reach the end of the data file
-        """
-        # Switch to the next chunk
-        if not self._reader.has_next():
-            if self._chunk_index + 1 >= self._index.total_chunks():
-                raise RuntimeError('Reach the end of file.')
-
-            self._chunk_index += 1
-            self._reader = Reader(self._data, self._chunk_index)
-
-        return self._reader.next()
-
-    def has_next(self):
-        """ Check if there is any record
-
-        Returns:
-          True if not reach the end of file
-        """
-        return self._reader.has_next() or (
-            self._chunk_index + 1 < self._index.total_chunks())

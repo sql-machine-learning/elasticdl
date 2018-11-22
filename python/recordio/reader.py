@@ -1,5 +1,4 @@
-from recordio.global_variables import *
-from recordio.chunk import *
+from recordio import Chunk
 
 
 class Reader(object):

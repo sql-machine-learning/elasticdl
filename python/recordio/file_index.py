@@ -1,5 +1,5 @@
-from recordio.global_variables import *
-from recordio.header import *
+from recordio.global_variables import header_size
+from recordio import Header 
 import os
 
 
