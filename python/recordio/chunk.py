@@ -52,6 +52,7 @@ class Chunk(object):
 
         Arguments:
           out_file: The output file of recordio format.
+          compressor: The compressor enum.
 
         Returns:
           True if the write operation execute successfully.
@@ -106,6 +107,7 @@ class Chunk(object):
 
         Arguments:
           in_file: The input file contains the original data.
+          offset: The chunk start offset in the file. 
 
         Returns:
           True if the parse operation execute successfully.

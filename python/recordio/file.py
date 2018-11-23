@@ -54,6 +54,7 @@ class File(object):
 
     def __next__(self):
         """ For iterate operation
+
         Returns:
           The next value in dataset
 

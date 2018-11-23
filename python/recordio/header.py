@@ -41,6 +41,7 @@ class Header(object):
 
         Arguments:
           in_file: The source file.
+          offset: The header start offset in the file. 
 
         Raises:
           ValueError: invalid offset.
