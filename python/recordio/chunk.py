@@ -2,7 +2,7 @@ import gzip
 import os
 from zlib import crc32
 import snappy
-from recordio import Header, Compressor 
+from recordio import Header, Compressor
 from recordio.global_variables import code_type, int_word_len, endian
 
 
@@ -42,8 +42,8 @@ class Chunk(object):
           RuntimeError: If the index is illegal
         """
         if index < 0 or index > len(self._records):
-            raise RuntimeError(
-                'illegal index value for the records size is ' + str(len(self._records)))
+            raise IndexError(
+                'illegal index value for the records size is {}'.format(len(self._records)))
 
         return self._records[index].decode(code_type)
 
@@ -89,7 +89,7 @@ class Chunk(object):
             compressed_data = gzip.compress(uncompressed_bytes)
         # By default
         else:
-            raise RuntimeError('invalid compressor')
+            raise ValueError('invalid compressor')
 
         # Write chunk header into output file
         checksum = crc32(compressed_data)
@@ -119,11 +119,9 @@ class Chunk(object):
         """
         file_size = os.path.getsize(in_file.name)
         if offset < 0 or offset >= (file_size - int_word_len - 1):
-            raise RuntimeError(
-                'invalid offset ' +
-                str(offset) +
-                ' total file size ' +
-                file_size)
+            raise IndexError(
+                'invalid offset {}, total file size {}'.format(
+                    offset, file_size))
 
         in_file.seek(offset)
 
@@ -137,10 +135,8 @@ class Chunk(object):
 
         if real_checksum != raw_checksum:
             raise RuntimeError(
-                "checksum check failed for raw checksum " +
-                str(raw_checksum) +
-                " and new checksum " +
-                str(real_checksum))
+                "checksum check failed for raw checksum {} and new checksum {}".format(
+                    raw_checksum, real_checksum))
 
         compressor = header.compressor()
         # No compression
@@ -153,7 +149,7 @@ class Chunk(object):
         elif compressor is Compressor.gzip:
             uncompressed_byte_arr = gzip.decompress(compressed_byte_arr)
         else:
-            raise RuntimeError('invalid compressor')
+            raise ValueError('invalid compressor')
 
         record_count = 0
         records = []

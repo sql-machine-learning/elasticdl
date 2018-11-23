@@ -18,8 +18,8 @@ class File(object):
             self._data = open(file_path, 'wb')
             self._writer = Writer(self._data, max_chunk_size)
         else:
-            raise RuntimeError('mode value should be \'read\' or \'write\'')
- 
+            raise ValueError('mode value should be \'read\' or \'write\'')
+
     def __enter__(self):
         """ For `with` statement
         """
@@ -36,7 +36,7 @@ class File(object):
           Iterator of dataset
         """
         if self._mode != 'r' and self._mode != 'read':
-            raise RuntimeError('Should be under read mode')
+            raise ValueError('Should be under read mode')
 
         # Starts from the first chunk
         self._chunk_index = 0
@@ -54,7 +54,7 @@ class File(object):
           StopIteration: Reach the end of dataset
         """
         if not self._reader.has_next() and (
-            self._chunk_index + 1 >= self._index.total_chunks()):
+                self._chunk_index + 1 >= self._index.total_chunks()):
             raise StopIteration
 
         # Switch to the next chunk
@@ -68,7 +68,7 @@ class File(object):
         """
         """
         if self._mode != 'w' and self._mode != 'write':
-            raise RuntimeError('Should be under write mode')
+            raise ValueError('Should be under write mode')
 
         self._writer.write(record)
 
@@ -92,10 +92,10 @@ class File(object):
           RuntimeError: not under read mode
         """
         if self._mode != 'r' and self._mode != 'read':
-            raise RuntimeError('Should be under read mode')
+            raise ValueError('Should be under read mode')
 
         if index >= self._index.total_records():
-            raise RuntimeError('Index out of bounds for index ' + str(index))
+            raise ValueError('Index out of bounds for index ' + str(index))
 
         chunk_index, record_index = self._index.locate_record(index)
         chunk_offset = self._index.chunk_offset(chunk_index)
@@ -112,7 +112,7 @@ class File(object):
           RuntimeError: not under read mode
         """
         if self._mode != 'r' and self._mode != 'read':
-            raise RuntimeError('Should be under read mode')
+            raise ValueError('Should be under read mode')
 
         return self._index
 
@@ -126,6 +126,6 @@ class File(object):
           RuntimeError: not under read mode
         """
         if self._mode != 'r' and self._mode != 'read':
-            raise RuntimeError('Should be under read mode')
+            raise ValueError('Should be under read mode')
 
         return self._index.total_records()

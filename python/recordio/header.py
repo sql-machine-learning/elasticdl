@@ -45,11 +45,9 @@ class Header(object):
 
         file_size = os.path.getsize(in_file.name)
         if offset < 0 or offset >= (file_size - int_word_len - 1):
-            raise RuntimeError(
-                'invalid offset ' +
-                str(offset) +
-                ' total file size ' +
-                str(file_size))
+            raise IndexError(
+                'invalid offset {} and total file size {}'.format(
+                    offset, file_size))
 
         in_file.seek(offset)
 

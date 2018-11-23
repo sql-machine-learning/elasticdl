@@ -32,13 +32,13 @@ class TestTorchDataset(unittest.TestCase):
             'brazil',
             'barbados']
 
-        temp = tempfile.NamedTemporaryFile()
-
-        with File(temp.name, 'w') as rdio_w:
+        # this tmp file will be closed in File.close()
+        tmpfile_name = tempfile.NamedTemporaryFile().name
+        with File(tmpfile_name, 'w') as rdio_w:
             for data in data_source:
                 rdio_w.write(data)
 
-        with TorchDataset(temp.name) as dataset:
+        with TorchDataset(tmpfile_name) as dataset:
             self.assertEqual(list(dataset), list(data_source))
 
 

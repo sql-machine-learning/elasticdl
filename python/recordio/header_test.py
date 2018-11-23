@@ -1,5 +1,5 @@
 import unittest
-import tempfile 
+import tempfile
 from recordio import Header, Compressor
 
 
@@ -13,14 +13,13 @@ class TestHeader(unittest.TestCase):
         compressor = Compressor.gzip
         compress_size = 10240
 
-        tmp_file = tempfile.NamedTemporaryFile()
-        header1 = Header(num_records, checksum, compressor, compress_size)
-        header1.write(tmp_file)
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            header1 = Header(num_records, checksum, compressor, compress_size)
+            header1.write(tmp_file)
 
-        tmp_file.seek(0)
-        header2 = Header()
-        header2.parse(tmp_file, 0)
-        tmp_file.close()
+            tmp_file.seek(0)
+            header2 = Header()
+            header2.parse(tmp_file, 0)
 
         self.assertEqual(num_records, header2.total_count())
         self.assertEqual(checksum, header2.checksum())

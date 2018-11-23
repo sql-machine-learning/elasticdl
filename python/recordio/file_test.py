@@ -39,7 +39,6 @@ class TestRecordIOFile(unittest.TestCase):
         with File(tmp_file.name, 'r') as rdio_r:
             self.assertEqual(list(rdio_r), list(data_source))
 
-
     def test_read_by_iter(self):
         data_source = [
             'china',
@@ -63,13 +62,13 @@ class TestRecordIOFile(unittest.TestCase):
             'brazil',
             'barbados']
 
-        tmp_file = tempfile.NamedTemporaryFile()
-
-        with File(tmp_file.name, 'w') as rdio_w:
+        # this tmp file will be closed in File.close()
+        tmpfile_name = tempfile.NamedTemporaryFile().name
+        with File(tmpfile_name, 'w') as rdio_w:
             for data in data_source:
                 rdio_w.write(data)
 
-        with File(tmp_file.name, 'r') as rdio_r:
+        with File(tmpfile_name, 'r') as rdio_r:
             self.assertEqual(list(rdio_r), list(data_source))
 
 

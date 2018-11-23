@@ -1,9 +1,9 @@
 import unittest
 import tempfile
-from recordio import FileIndex 
+from recordio import FileIndex
 from recordio import Compressor
-from recordio import Writer 
-from recordio import Reader 
+from recordio import Writer
+from recordio import Reader
 
 
 class TestFileIndex(unittest.TestCase):
@@ -11,35 +11,33 @@ class TestFileIndex(unittest.TestCase):
     """
 
     def test_one_chunk(self):
-        tmp_file = tempfile.NamedTemporaryFile()
-        writer = Writer(tmp_file, 1000, Compressor(1))
-        writer.write('china')
-        writer.write('usa')
-        writer.write('russia')
-        writer.flush()
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            writer = Writer(tmp_file, 1000, Compressor(1))
+            writer.write('china')
+            writer.write('usa')
+            writer.write('russia')
+            writer.flush()
 
-        tmp_file.seek(0)
-        index = FileIndex(tmp_file)
-        tmp_file.close()
+            tmp_file.seek(0)
+            index = FileIndex(tmp_file)
 
-        self.assertEqual(1, index.total_chunks())
-        self.assertEqual(3, index.chunk_records(0))
+            self.assertEqual(1, index.total_chunks())
+            self.assertEqual(3, index.chunk_records(0))
 
     def test_two_chunk(self):
-        tmp_file = tempfile.NamedTemporaryFile()
-        writer = Writer(tmp_file, 10, Compressor(1))
-        writer.write('china')
-        writer.write('usa')
-        writer.write('russia')
-        writer.flush()
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            writer = Writer(tmp_file, 10, Compressor(1))
+            writer.write('china')
+            writer.write('usa')
+            writer.write('russia')
+            writer.flush()
 
-        tmp_file.seek(0) 
-        index = FileIndex(tmp_file)
-        tmp_file.close()
+            tmp_file.seek(0)
+            index = FileIndex(tmp_file)
 
-        self.assertEqual(2, index.chunk_records(0))
-        self.assertEqual(1, index.chunk_records(1))
-        self.assertEqual(2, index.total_chunks())
+            self.assertEqual(2, index.chunk_records(0))
+            self.assertEqual(1, index.chunk_records(1))
+            self.assertEqual(2, index.total_chunks())
 
     def test_usage(self):
         data_source = [
@@ -64,41 +62,35 @@ class TestFileIndex(unittest.TestCase):
             'brazil',
             'barbados']
 
-        tmp_file = tempfile.NamedTemporaryFile()
-        writer = Writer(tmp_file, 20)
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            writer = Writer(tmp_file, 20)
 
-        for data in data_source:
-            writer.write(data)
-        writer.flush()
+            for data in data_source:
+                writer.write(data)
+            writer.flush()
 
-        parsed_data = []
-        tmp_file.seek(0)
-        index = FileIndex(tmp_file)
+            parsed_data = []
+            tmp_file.seek(0)
+            index = FileIndex(tmp_file)
 
-        for i in range(index.total_chunks()):
-            reader = Reader(tmp_file, index.chunk_offset(i))
-            while reader.has_next():
-                parsed_data.append(reader.next())
+            for i in range(index.total_chunks()):
+                reader = Reader(tmp_file, index.chunk_offset(i))
+                while reader.has_next():
+                    parsed_data.append(reader.next())
 
-        tmp_file.close()
-
-        self.assertEqual(20, len(parsed_data))
-
-        for v1, v2 in zip(data_source, parsed_data):
-            self.assertEqual(v1, v2)
+        self.assertEqual(data_source, parsed_data)
 
     def test_readme_demo(self):
-        data = tempfile.NamedTemporaryFile()
-        max_chunk_size = 1024
-        writer = Writer(data, max_chunk_size)
-        writer.write('abc')
-        writer.write('edf')
-        writer.flush()
+        with tempfile.NamedTemporaryFile() as data:
+            max_chunk_size = 1024
+            writer = Writer(data, max_chunk_size)
+            writer.write('abc')
+            writer.write('edf')
+            writer.flush()
 
-        data.seek(0)        
-        index = FileIndex(data)
-        self.assertEqual(2, index.total_records())
-        data.close()
+            data.seek(0)
+            index = FileIndex(data)
+            self.assertEqual(2, index.total_records())
 
     def test_locate_record(self):
         data_source = [
@@ -123,17 +115,23 @@ class TestFileIndex(unittest.TestCase):
             'brazil',
             'barbados']
 
-        tmp_file = tempfile.NamedTemporaryFile()
-        writer = Writer(tmp_file, 20)
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            writer = Writer(tmp_file, 20)
 
-        for data in data_source:
-            writer.write(data)
-        writer.flush()
+            for data in data_source:
+                writer.write(data)
+            writer.flush()
 
-        tmp_file.seek(0)
-        parsed_data = []
-        index = FileIndex(tmp_file)
-        tmp_file.close()
+            tmp_file.seek(0)
+            index = FileIndex(tmp_file)
+
+            chunk_idx, record_idx = index.locate_record(0)
+            self.assertEqual(chunk_idx, 0)
+            self.assertEqual(record_idx, 0)
+
+            chunk_idx, record_idx = index.locate_record(19)
+            self.assertEqual(chunk_idx, 7)
+            self.assertEqual(record_idx, 1)
 
 
 if __name__ == '__main__':

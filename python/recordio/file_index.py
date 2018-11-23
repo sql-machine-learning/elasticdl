@@ -1,5 +1,5 @@
 from recordio.global_variables import header_size
-from recordio import Header 
+from recordio import Header
 import os
 
 
@@ -79,9 +79,8 @@ class FileIndex(object):
         """
         chunk_index, record_index = self.locate_record(index)
         if chunk_index == -1 or record_index == -1:
-            raise RuntimeError(
-                'record index out of bounds for index ' +
-                str(index))
+            raise IndexError(
+                'record index out of bounds for index {}'.format(index))
 
         chunk_offset = self.chunk_offset
 

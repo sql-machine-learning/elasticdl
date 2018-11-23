@@ -28,13 +28,7 @@ class Reader(object):
 
         Returns:
           String record value
-
-        Raise:
-          RuntimeError: index of out bounds
         """
-        if index < 0 or index >= self._total_count:
-            raise RuntimeError('index out of bounds for index ' + str(index))
-
         return self._chunk.get(index)
 
     def next(self):
