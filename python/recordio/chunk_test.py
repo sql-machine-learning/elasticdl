@@ -1,6 +1,7 @@
 import unittest
-import os
-from chunk import *
+import tempfile
+from recordio import Chunk
+from recordio import Compressor
 
 
 class TestHeader(unittest.TestCase):
@@ -42,15 +43,10 @@ class TestHeader(unittest.TestCase):
         chunk.add(record2)
         chunk.add(record3)
 
-        file_name = '/tmp/elasticflow/recordio/test_file'
-        tmp_file = open(file_name, 'wb')
-        chunk.write(tmp_file, Compressor(2))
-        tmp_file.close()
-
-        tmp_file = open(file_name, 'rb')
-        chunk.parse(tmp_file, 0)
-        tmp_file.close()
-        os.remove(file_name)
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            chunk.write(tmp_file, Compressor(2))
+            tmp_file.seek(0)
+            chunk.parse(tmp_file, 0)
 
         self.assertEqual(chunk.get(0), record1)
         self.assertEqual(chunk.get(1), record2)

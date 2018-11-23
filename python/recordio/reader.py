@@ -1,5 +1,4 @@
-from global_variables import *
-from chunk import *
+from recordio import Chunk
 
 
 class Reader(object):
@@ -21,13 +20,24 @@ class Reader(object):
         # Current record index
         self._curr_index = 0
 
+    def get(self, index):
+        """ Return the record specified by the index
+
+        Arguments:
+          index: record index in the chunk
+
+        Returns:
+          String record value
+        """
+        return self._chunk.get(index)
+
     def next(self):
         """ Return the next chunk of the input file.
 
         Returns:
           The next string value in the chunk.
 
-        Raise:
+        Raises:
           RuntimeError: Reach the end of the chunk and no more any records
         """
         if self._curr_index < self._total_count:

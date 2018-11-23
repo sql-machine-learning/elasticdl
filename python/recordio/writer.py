@@ -1,4 +1,6 @@
-from chunk import *
+from recordio import Compressor
+from recordio import Chunk
+from recordio.global_variables import code_type
 
 
 class Writer(object):

@@ -1,5 +1,5 @@
 from enum import Enum
-from global_variables import *
+from recordio.global_variables import int_word_len, endian
 import os
 
 
@@ -41,15 +41,17 @@ class Header(object):
 
         Arguments:
           in_file: The source file.
+          offset: The header start offset in the file. 
+
+        Raises:
+          ValueError: invalid offset.
         """
 
         file_size = os.path.getsize(in_file.name)
         if offset < 0 or offset >= (file_size - int_word_len - 1):
-            raise RuntimeError(
-                'invalid offset ' +
-                str(offset) +
-                ' total file size ' +
-                str(file_size))
+            raise ValueError(
+                'invalid offset {} and total file size {}'.format(
+                    offset, file_size))
 
         in_file.seek(offset)
 

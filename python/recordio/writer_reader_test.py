@@ -1,7 +1,8 @@
 import unittest
-from writer import *
-from reader import *
-import os
+import tempfile
+from recordio import Compressor
+from recordio import Writer
+from recordio import Reader
 
 
 class TestHeader(unittest.TestCase):
@@ -9,40 +10,32 @@ class TestHeader(unittest.TestCase):
     """
 
     def test_write_reader_no_flush(self):
-        file_name = '/tmp/elasticflow/recordio/test_file'
-        tmp_file = open(file_name, 'wb')
-        writer = Writer(tmp_file, 1000, Compressor(1))
-        writer.write('china')
-        writer.write('usa')
-        writer.write('russia')
-        writer.flush()
-        tmp_file.close()
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            writer = Writer(tmp_file, 1000, Compressor(1))
+            writer.write('china')
+            writer.write('usa')
+            writer.write('russia')
+            writer.flush()
 
-        tmp_file = open(file_name, 'rb')
-        reader = Reader(tmp_file, 0)
-        self.assertEqual(3, reader.total_count())
-        while reader.has_next():
-            reader.next()
-        tmp_file.close()
-        os.remove(file_name)
+            tmp_file.seek(0)
+            reader = Reader(tmp_file, 0)
+            self.assertEqual(3, reader.total_count())
+            while reader.has_next():
+                reader.next()
 
     def test_write_reader_auto_flush(self):
-        file_name = '/tmp/elasticflow/recordio/test_file'
-        tmp_file = open(file_name, 'wb')
-        writer = Writer(tmp_file, 10, Compressor(1))
-        writer.write('china')
-        writer.write('usa')
-        writer.write('russia')
-        writer.flush()
-        tmp_file.close()
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            writer = Writer(tmp_file, 10, Compressor(1))
+            writer.write('china')
+            writer.write('usa')
+            writer.write('russia')
+            writer.flush()
 
-        tmp_file = open(file_name, 'rb')
-        reader = Reader(tmp_file, 0)
-        self.assertEqual(2, reader.total_count())
-        while reader.has_next():
-            reader.next()
-        tmp_file.close()
-        os.remove(file_name)
+            tmp_file.seek(0)
+            reader = Reader(tmp_file, 0)
+            self.assertEqual(2, reader.total_count())
+            while reader.has_next():
+                reader.next()
 
 
 if __name__ == '__main__':

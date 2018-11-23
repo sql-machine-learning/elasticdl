@@ -35,8 +35,25 @@ print('Total file records: ' + str(index.total_records()))
 for i in range(index.total_chunks()):
   reader = Reader(data, index.chunk_offset(i))
   print('Total chunk records: ' + str(reader.total_count()))
+
   while reader.has_next():
     print('record value: ' + reader.next())
 
 data.close()
+```
+
+## RecordIOFile (wrapper for easier use)
+```python
+# write
+rdio_w = RecordIOFile('demo.recordio', 'w')
+rdio_w.write('abc')
+rdio_w.write('def')
+rdio_w.close()
+
+# read
+rdio_r = RecordIOFile('demo.recordio', 'r')
+iterator = rdio_r.iterator()       
+while iterator.has_next():
+    record = iterator.next()
+rdio_r.close()
 ```
