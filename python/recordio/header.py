@@ -41,11 +41,14 @@ class Header(object):
 
         Arguments:
           in_file: The source file.
+
+        Raises:
+          ValueError: invalid offset.
         """
 
         file_size = os.path.getsize(in_file.name)
         if offset < 0 or offset >= (file_size - int_word_len - 1):
-            raise IndexError(
+            raise ValueError(
                 'invalid offset {} and total file size {}'.format(
                     offset, file_size))
 

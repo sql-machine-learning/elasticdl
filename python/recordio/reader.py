@@ -37,7 +37,7 @@ class Reader(object):
         Returns:
           The next string value in the chunk.
 
-        Raise:
+        Raises:
           RuntimeError: Reach the end of the chunk and no more any records
         """
         if self._curr_index < self._total_count:

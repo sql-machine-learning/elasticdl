@@ -20,29 +20,6 @@ class TorchDataset(Dataset):
         """
         self.close()
 
-    def __iter__(self):
-        """ For iterate operation
-        Returns:
-          Iterator of dataset
-        """
-        self._iter_idx = -1 
-        return self
- 
-    def __next__(self):
-        """ For iterate operation
-        Returns:
-          The next value in dataset
-
-        Raise:
-          StopIteration: Reach the end of dataset
-        """
-        self._iter_idx += 1  
-        if self._iter_idx >= self._rdio.count():
-            raise StopIteration
-
-        return self.__getitem__(self._iter_idx)
-         
-
     def __getitem__(self, index):
         """ Retrieve record data by index
         Arguments:
@@ -50,7 +27,13 @@ class TorchDataset(Dataset):
 
         Returns:
           Record value specified by index
+
+        Raises:
+          IndexError: Reach the end of dataset
         """
+        if index >= self._rdio.count():
+            raise IndexError()
+ 
         return self._rdio.get(index)
 
     def __len__(self):

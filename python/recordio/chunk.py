@@ -37,14 +37,7 @@ class Chunk(object):
 
         Returns:
           A string value represending the specified record
-
-        Raises:
-          RuntimeError: If the index is illegal
         """
-        if index < 0 or index > len(self._records):
-            raise IndexError(
-                'illegal index value for the records size is {}'.format(len(self._records)))
-
         return self._records[index].decode(code_type)
 
     def clear(self):
@@ -62,6 +55,9 @@ class Chunk(object):
 
         Returns:
           True if the write operation execute successfully.
+
+        Raises:
+          ValueError: invalid compressor
         """
         if self._total_count <= 0:
             return True
@@ -115,11 +111,13 @@ class Chunk(object):
           True if the parse operation execute successfully.
 
         Raises:
-          RuntimeError: checksum check failed.
+          ValueError: invalid offset.
+          RuntimeError: checksum check failed. 
+          ValueError: invalid compressor.
         """
         file_size = os.path.getsize(in_file.name)
         if offset < 0 or offset >= (file_size - int_word_len - 1):
-            raise IndexError(
+            raise ValueError(
                 'invalid offset {}, total file size {}'.format(
                     offset, file_size))
 

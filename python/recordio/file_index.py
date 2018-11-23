@@ -65,25 +65,6 @@ class FileIndex(object):
                     self._chunk_records[chk_index] - (global_count - index))
         return -1, -1
 
-    def get_record(self, index):
-        """ Returns the record by global index(cross chunk) in a recordio file.
-
-        Arguments:
-          index: The index of record in a recordio file cross chunk.
-
-        Returns:
-          record: A string representing the indexed record
-
-        Raises:
-          RuntimeError: index out of bounds
-        """
-        chunk_index, record_index = self.locate_record(index)
-        if chunk_index == -1 or record_index == -1:
-            raise IndexError(
-                'record index out of bounds for index {}'.format(index))
-
-        chunk_offset = self.chunk_offset
-
     def chunk_offset(self, chunk_index):
         """ Returns the offset of chunk in a file
 

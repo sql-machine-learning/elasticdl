@@ -9,6 +9,9 @@ class File(object):
 
     def __init__(self, file_path, mode, *, max_chunk_size=1024):
         """ Initialize according open mode
+
+        Raises:
+          ValueError: invalid open mode input param.
         """
         self._mode = mode
         if mode == 'r' or mode == 'read':
@@ -32,11 +35,15 @@ class File(object):
 
     def __iter__(self):
         """ For iterate operation
+
         Returns:
           Iterator of dataset
+
+        Raises:
+          RuntimeError: wrong open mode.
         """
         if self._mode != 'r' and self._mode != 'read':
-            raise ValueError('Should be under read mode')
+            raise RuntimeError('Should be under read mode')
 
         # Starts from the first chunk
         self._chunk_index = 0
@@ -50,7 +57,7 @@ class File(object):
         Returns:
           The next value in dataset
 
-        Raise:
+        Raises:
           StopIteration: Reach the end of dataset
         """
         if not self._reader.has_next() and (
@@ -65,10 +72,16 @@ class File(object):
         return self._reader.next()
 
     def write(self, record):
-        """
+        """ Write a record into recordio file.
+
+        Arguments:
+          record: Record value String.
+         
+        Raises:
+          RuntimeError: wrong open mode.
         """
         if self._mode != 'w' and self._mode != 'write':
-            raise ValueError('Should be under write mode')
+            raise RuntimeError('Should be under write mode')
 
         self._writer.write(record)
 
@@ -88,14 +101,11 @@ class File(object):
         Returns:
           Record string value
 
-        Raise:
-          RuntimeError: not under read mode
+        Raises:
+          RuntimeError: wrong open mode.
         """
         if self._mode != 'r' and self._mode != 'read':
-            raise ValueError('Should be under read mode')
-
-        if index >= self._index.total_records():
-            raise ValueError('Index out of bounds for index ' + str(index))
+            raise RuntimeError('Should be under read mode')
 
         chunk_index, record_index = self._index.locate_record(index)
         chunk_offset = self._index.chunk_offset(chunk_index)
@@ -108,11 +118,11 @@ class File(object):
         Returns:
           Index of recordio file
 
-        Raise:
-          RuntimeError: not under read mode
+        Raises:
+          RuntimeError: wrong open mode.
         """
         if self._mode != 'r' and self._mode != 'read':
-            raise ValueError('Should be under read mode')
+            raise RuntimeError('Should be under read mode')
 
         return self._index
 
@@ -122,10 +132,10 @@ class File(object):
         Returns:
           Total record count
 
-        Raise:
-          RuntimeError: not under read mode
+        Raises:
+          RuntimeError: wrong open mode.
         """
         if self._mode != 'r' and self._mode != 'read':
-            raise ValueError('Should be under read mode')
+            raise RuntimeError('Should be under read mode')
 
         return self._index.total_records()
