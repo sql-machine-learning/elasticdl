@@ -23,19 +23,23 @@ class ParameterServer(object):
         self._runner = threading.Thread(target=self._run, name='ps-runner')
         self._exiting = False
 
-    def pull(self, names=None):
+    def pull(self, min_step=0, names=None):
         with self._lock:
+            if min_step > self._step:
+                raise LookupError('Required step is not ready yet: %s' % min_step)
             if names:
                 res = {k: self._vars[k].numpy() for k in names}
             else:
                 res = {k: v.numpy() for k, v in self._vars.items()}
-        return self._step, res
+            return self._step, res
 
     def push(self, base_step, sub_step, grads):
-        if base_step > self._step:
-            raise ValueError(
-                'Illegal base step %s, parameter server step is %s' %
-                (base_step, self._step))
+        with self._lock:
+            if base_step > self._step:
+                raise ValueError(
+                    'Illegal base step %s, parameter server step is %s' %
+                    (base_step, self._step))
+
         if sub_step < 0:
             raise ValueError('Illegal sub step %s' % sub_step)
 
