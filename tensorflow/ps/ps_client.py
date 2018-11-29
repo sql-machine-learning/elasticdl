@@ -1,6 +1,4 @@
 import future
-from future.utils import with_metaclass
-import abc
 
 
 # No partition, all in the first ps
@@ -22,7 +20,7 @@ def HashPartition(v, ps_size):
         for name, data in v.items():
             index = hash(name) % ps_size
             results[index][1][name] = data
-    elif isinstance(v, list) and isinstance(v[0], str):
+    elif isinstance(v, list):
         # name list from pull
         results = [(i, []) for i in range(ps_size)]
         for name in v:
@@ -34,24 +32,14 @@ def HashPartition(v, ps_size):
     return results
 
 
-# PSClientComm defines the API interface with ps
-class PSClientComm(with_metaclass(abc.ABCMeta, object)):
-    @abc.abstractmethod
-    def push(self, base_step, sub_step, grads):
-        raise NotImplementedError('push method must be defined.')
-
-    @abc.abstractmethod
-    def pull(self, names=None, min_step=0):
-        raise NotImplementedError('pull method must be defined.')
-
-
 # Multi-thread implementation of PSClientComm
-class MultiThreadPSClientComm(PSClientComm):
+class MultiThreadPSClientComm(object):
     def __init__(self, ps):
         self._ps = ps
 
     def push(self, base_step, sub_step, grads):
-        self._ps.push(base_step, sub_step, grads)
+        if len(grads) > 0:
+            self._ps.push(base_step, sub_step, grads)
 
     def pull(self, names=None, min_step=0):
         return self._ps.pull(names=names, min_step=min_step)
@@ -76,9 +64,8 @@ class ParameterServerClient(object):
         partition_result = self._partition_func(grads, self._ps_size)
         # TODO: multithread optimization, one thread per ps communication.
         for index, g in partition_result:
-            if len(g) > 0:
-                self._clients[index].push(self._base_step[index],
-                                          sub_step, g)
+            self._clients[index].push(self._base_step[index],
+                                      sub_step, g)
 
     def pull(self, min_step=0, names=None):
         pull_result = {}
