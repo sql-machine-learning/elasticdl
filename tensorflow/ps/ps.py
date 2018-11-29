@@ -1,9 +1,9 @@
+import threading
+import queue
+import numpy as np
+import tensorflow.contrib.eager as tfe
 import tensorflow as tf
 tf.enable_eager_execution()
-import tensorflow.contrib.eager as tfe
-import numpy as np
-import queue
-import threading
 
 
 class ParameterServer(object):
@@ -22,11 +22,18 @@ class ParameterServer(object):
         self._lock = threading.Lock()
         self._runner = threading.Thread(target=self._run, name='ps-runner')
         self._exiting = False
+        self._min_step_cv = threading.Condition()
 
-    def pull(self, min_step=0, names=None):
+    def pull(self, names=None, min_step=0, blocking=True, timeout=None):
+        with self._min_step_cv:
+            self._min_step_cv.wait_for(
+                lambda: not blocking or min_step <= self._step,
+                timeout=timeout)
         with self._lock:
             if min_step > self._step:
-                raise LookupError('Required step is not ready yet: %s' % min_step)
+                raise LookupError(
+                    'Required step is not ready yet: %s' %
+                    min_step)
             if names:
                 res = {k: self._vars[k].numpy() for k in names}
             else:
@@ -54,7 +61,9 @@ class ParameterServer(object):
         grads_vars = [(g, self._vars[k]) for k, g in grads.items()]
         with self._lock:
             self._opt.apply_gradients(grads_vars)
+        with self._min_step_cv:
             self._step += 1
+            self._min_step_cv.notify_all()
 
     def _run(self):
         while not self._exiting:
