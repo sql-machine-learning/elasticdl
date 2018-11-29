@@ -1,3 +1,8 @@
+import future
+from future.utils import with_metaclass
+import abc
+
+
 # No partition, all in the first ps
 def NoPartition(v, ps_size):
     return [(0, v)]
@@ -11,13 +16,13 @@ def HashPartition(v, ps_size):
         raise ValueError('Empty input used in HashPartition.')
     if ps_size == 1:
         return [(0, v)]
-    if type(v) == dict:
+    if isinstance(v, dict):
         # (name, data) dict from push
         results = [(i, {}) for i in range(ps_size)]
         for name, data in v.items():
             index = hash(name) % ps_size
             results[index][1][name] = data
-    elif type(v) == list and type(v[0]) == str:
+    elif isinstance(v, list) and isinstance(v[0], str):
         # name list from pull
         results = [(i, []) for i in range(ps_size)]
         for name in v:
@@ -30,28 +35,26 @@ def HashPartition(v, ps_size):
 
 
 # PSClientComm defines the API interface with ps
-class PSClientComm(object):
-    def __init__(self):
-        pass
-
+class PSClientComm(with_metaclass(abc.ABCMeta, object)):
+    @abc.abstractmethod
     def push(self, base_step, sub_step, grads):
-        pass
+        raise NotImplementedError('push method must be defined.')
 
-    def pull(self, names=None):
-        pass
+    @abc.abstractmethod
+    def pull(self, names=None, min_step=0):
+        raise NotImplementedError('pull method must be defined.')
 
 
 # Multi-thread implementation of PSClientComm
 class MultiThreadPSClientComm(PSClientComm):
     def __init__(self, ps):
-        super(MultiThreadPSClientComm, self).__init__()
         self._ps = ps
 
     def push(self, base_step, sub_step, grads):
         self._ps.push(base_step, sub_step, grads)
 
-    def pull(self, min_step=0, names=None):
-        return self._ps.pull(min_step=min_step, names=names)
+    def pull(self, names=None, min_step=0):
+        return self._ps.pull(names=names, min_step=min_step)
 
 
 # ParameterSererClient uses PSClientComm for ps data transfer.
@@ -82,11 +85,8 @@ class ParameterServerClient(object):
         partition_result = self._partition_func(names, self._ps_size)
         # TODO: multithread optimization, one thread per ps communication.
         for index, n in partition_result:
-            # TODO: rewrite the logic after ps.pull supports min_step
-            while True:
-                ps_step, ps_vars = self._clients[index].pull(names=n)
-                if ps_step >= min_step:
-                    break
+            ps_step, ps_vars = self._clients[index].pull(
+                names=n, min_step=min_step)
             self._base_step[index] = ps_step
             pull_result.update(ps_vars)
         return self.get_min_base_step(), pull_result
