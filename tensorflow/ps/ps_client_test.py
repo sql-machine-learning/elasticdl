@@ -29,8 +29,8 @@ class PSClientTestCase(unittest.TestCase):
                              'y2': np.array([-0.04, 0.84], dtype='float32')}
 
     def test1(self):
-        test_configs = [(1, ps_client.NoPartition),
-                        (2, ps_client.HashPartition)]
+        test_configs = [(1, ps_client.no_partition),
+                        (2, ps_client.hash_partition)]
         for ps_size, func in test_configs:
             var_partitioned = func(self.model_vars, ps_size)
             ps_list = [ParameterServer(tf.train.GradientDescentOptimizer(0.1),

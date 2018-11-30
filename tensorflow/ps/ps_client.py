@@ -2,12 +2,12 @@ import future
 
 
 # No partition, all in the first ps
-def NoPartition(v, ps_size):
+def no_partition(v, ps_size):
     return [v]
 
 
 # Partition v according to the name hashing.
-def HashPartition(v, ps_size):
+def hash_partition(v, ps_size):
     if v is None:
         return [None for i in range(ps_size)]
     if len(v) == 0:
@@ -50,8 +50,8 @@ class ParameterServerClient(object):
     def __init__(self,
                  ps_configs=None,
                  comm_class=MultiThreadPSClientComm,
-                 partition_func=NoPartition):
-        self._ps_size = 1 if partition_func == NoPartition else len(ps_configs)
+                 partition_func=no_partition):
+        self._ps_size = 1 if partition_func == no_partition else len(ps_configs)
         self._partition_func = partition_func
         self._clients = [comm_class(ps_configs[i])
                          for i in range(self._ps_size)]
