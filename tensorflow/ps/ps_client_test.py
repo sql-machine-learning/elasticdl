@@ -34,13 +34,12 @@ class PSClientTestCase(unittest.TestCase):
         for ps_size, func in test_configs:
             var_partitioned = func(self.model_vars, ps_size)
             ps_list = [ParameterServer(tf.train.GradientDescentOptimizer(0.1),
-                                       var_partitioned[i][1])
+                                       var_partitioned[i])
                        for i in range(ps_size)]
             for ps in ps_list:
                 ps.start()
 
-            psc = ps_client.ParameterServerClient(ps_size=ps_size,
-                                                  ps_configs=ps_list,
+            psc = ps_client.ParameterServerClient(ps_configs=ps_list,
                                                   partition_func=func)
             pull_result = psc.pull()
             psc.push(grads=self.grad_vars)
