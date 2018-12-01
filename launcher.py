@@ -16,7 +16,8 @@ class Handle(object):
 
 
 class ThreadLauncher(object):
-    def launch(self, prog, num_ps, num_worker, input):
+    @staticmethod
+    def launch(prog, num_ps, num_worker, input):
         # launch ps
         ps = [ParameterServer(prog.optimizer(), prog.vars())
               for _ in range(num_ps)]
@@ -26,7 +27,8 @@ class ThreadLauncher(object):
         # TODO: launch master
         return Handle(prog, ps, None, None)
 
-    def shutdown(self, handle):
+    @staticmethod
+    def shutdown(handle):
         # TODO: shutdown master
         # TODO: shutdown worker
         # shutdown ps
