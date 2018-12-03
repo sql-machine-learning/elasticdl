@@ -1,5 +1,4 @@
-import future
-
+from binascii import crc32
 
 # No partition, all in the first ps
 def no_partition(v, ps_size):
@@ -8,6 +7,10 @@ def no_partition(v, ps_size):
 
 # Partition v according to the name hashing.
 def hash_partition(v, ps_size):
+    # a simple stable string hash
+    def _hash(s):
+        return crc32(s.encode())
+
     if v is None:
         return [None for i in range(ps_size)]
     if len(v) == 0:
@@ -18,13 +21,13 @@ def hash_partition(v, ps_size):
         # (name, data) dict from push
         results = [{} for i in range(ps_size)]
         for name, data in v.items():
-            index = hash(name) % ps_size
+            index = _hash(name) % ps_size
             results[index][name] = data
     elif isinstance(v, list):
         # name list from pull
         results = [[] for i in range(ps_size)]
         for name in v:
-            index = hash(name) % ps_size
+            index = _hash(name) % ps_size
             results[index].append(name)
     else:
         raise TypeError('Illegal v type %s, only dict or '
