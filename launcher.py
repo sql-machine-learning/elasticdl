@@ -3,7 +3,7 @@ import importlib
 import sys
 import os
 from contextlib import contextmanager
-from python.tflib import ParameterServer
+from elasticdl.tflib import ParameterServer
 
 
 # TODO: use @dataclass
