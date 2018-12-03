@@ -1,5 +1,7 @@
 from binascii import crc32
 import queue
+import threading
+import time
 
 class Work(object):
     '''
@@ -32,31 +34,39 @@ class WorkQueue(object):
         self._max_trail = max_trail
         self._q = queue.PriorityQueue()
         self._in_flight = {}
+        self._lock = threading.Lock()
     
     def put(self, file_index, offset):
-        work = Work(file_index, offset, 0)
-        self._q.put((work.priority, work))
+        with self._lock:
+            work = Work(file_index, offset, 0)
+            self._q.put((work.priority, work))
 
     def get_work(self):
-        work = self._q.get()
-        self._in_flight[work.id] = work
-        return (self.id, self._files[work.file_index], work.offset)
+        with self._lock:
+            work = self._q.get()
+            # TODO: support worker timeout
+            self._in_flight[work.id] = work
+            return (self.id, self._files[work.file_index], work.offset)
         
     def work_done(self, id, succeed):
-        work = self._in_flight[id]
-        next_work = None
-        if not succeed:
-            if work.trail + 1 < self._max_trail:
-                next_work = work.next_trail() 
+        with self._lock:
+            work = self._in_flight.pop(id)
+            next_work = None
+            if not succeed:
+                if work.trail + 1 < self._max_trail:
+                    next_work = work.next_trail() 
+                else:
+                    print('work failed', work)
+            elif work.epoch + 1 < self._num_epoch:
+                next_work = work.next_epoch()
             else:
-                print('work failed', work)
-        elif work.epoch + 1 < self._num_epoch:
-            next_work = work.next_epoch()
-        else:
-            print('work finished', work)
-        if work:
-            self._q.put(work)
-        self._q.task_done()
+                print('work finished', work)
+            if next_work:
+                self._q.put(next_work)
+            self._q.task_done()
+    
+    def join(self):
+        self._q.join()
 
 class Master(object):
     def __init__(self, data_files, num_epoch, max_trail):
@@ -65,16 +75,21 @@ class Master(object):
 
         self._data_files = data_files
         self._work_queue = WorkQueue(num_epoch, max_trail)
+        self._lock = threading.Lock()
         self._num_workers = 0
     
-    # get recordio chunks and push them to workqueue
-    def _prepare(self):
-        pass
-
     def register_worker(self):
-        self._num_workers += 1
-        return self._work_queue
-    
+        with self._lock:
+            self._num_workers += 1
+            return self._work_queue
+
+    def run(self):
+        # TODO: use a thread pool to build index.
+        start = time.time()
+        for (f in self._data_files):
+
+
+
     
 
     
