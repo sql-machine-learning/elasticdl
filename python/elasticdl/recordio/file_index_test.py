@@ -133,6 +133,12 @@ class TestFileIndex(unittest.TestCase):
             self.assertEqual(chunk_idx, 7)
             self.assertEqual(record_idx, 1)
 
+            chunk = index[7]
+            self.assertEqual(chunk.offset, 454)
+            self.assertEqual(chunk.len, 39)
+            self.assertEqual(chunk.num_record, 2)
+
+
 
 if __name__ == '__main__':
     unittest.main()
