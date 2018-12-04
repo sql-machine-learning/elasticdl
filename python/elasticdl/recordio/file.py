@@ -1,6 +1,6 @@
-from recordio import FileIndex
-from recordio import Writer
-from recordio import Reader
+from elasticdl.recordio import FileIndex
+from elasticdl.recordio import Writer
+from elasticdl.recordio import Reader
 
 
 class File(object):
