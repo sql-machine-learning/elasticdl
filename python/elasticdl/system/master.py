@@ -1,5 +1,5 @@
 from binascii import crc32
-from elasticdl.recordio import File
+from ..recordio.file import File
 import queue
 import threading
 import time
@@ -13,7 +13,7 @@ class Work(object):
     def _id(*parts):
         # convert each integer part into a 4-byte array, join them and return
         # crc32
-        return crc32(b''.join(for p in parts p.to_bytes(4, 'little')))
+        return crc32(b''.join(p.to_bytes(4, 'little') for p in parts))
 
     def __init__(self, file_index, offset, epoch, trial=0):
         self.file_index = file_index
@@ -67,7 +67,7 @@ class WorkQueue(object):
             else:
                 print('work finished', work)
             if next_work:
-                self._q.put(next_work)
+                self._q.put((next_work.priority, next_work))
             self._q.task_done()
 
     def join(self):
@@ -96,9 +96,9 @@ class Master(object):
             # doing so makes the system cleaner as if there is a corrupted
             # file, etc., the master will crash and no worker will be started.
             start = time.time()
-            for (i, f in enumerate(self._data_files)):
+            for i, f in enumerate(self._data_files):
                 with File(f) as fd:
-                    for (c in range(fd.get_index().total_chunks())):
+                    for c in range(fd.get_index().total_chunks()):
                         self._work_queue.put(i, fd.get_index().chunk_offset(c))
             print('Time spent on building index: %s seconds:' % time.time() - start)
         self._work_queue.join()
