@@ -1,5 +1,5 @@
 from torch.utils.data import Dataset
-import recordio
+import elasticdl.recordio
 
 
 class TorchDataset(Dataset):

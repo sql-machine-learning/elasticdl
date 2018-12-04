@@ -1,4 +1,4 @@
-from recordio import Chunk
+from elasticdl.recordio import Chunk
 
 
 class Reader(object):

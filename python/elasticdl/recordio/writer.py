@@ -1,6 +1,6 @@
-from recordio import Compressor
-from recordio import Chunk
-from recordio.global_variables import code_type
+from elasticdl.recordio import Compressor
+from elasticdl.recordio import Chunk
+from elasticdl.recordio.global_variables import code_type
 
 
 class Writer(object):

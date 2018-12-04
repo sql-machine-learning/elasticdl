@@ -1,5 +1,5 @@
-from recordio.global_variables import header_size
-from recordio import Header
+from elasticdl.recordio.global_variables import header_size
+from elasticdl.recordio import Header
 import os
 
 
