@@ -97,7 +97,7 @@ class Master(object):
             # file, etc., the master will crash and no worker will be started.
             start = time.time()
             for i, f in enumerate(self._data_files):
-                with File(f) as fd:
+                with File(f, 'r') as fd:
                     for c in range(fd.get_index().total_chunks()):
                         self._work_queue.put(i, fd.get_index().chunk_offset(c))
             print('Time spent on building index: %s seconds:' % time.time() - start)
