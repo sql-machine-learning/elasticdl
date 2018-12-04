@@ -1,7 +1,7 @@
 import unittest
 import tempfile
-from recordio import Chunk
-from recordio import Compressor
+from elasticdl.recordio import Chunk
+from elasticdl.recordio import Compressor
 
 
 class TestHeader(unittest.TestCase):

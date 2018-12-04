@@ -1,6 +1,6 @@
 import unittest
 import tempfile
-from recordio import File
+from elasticdl.recordio import File
 
 
 class TestRecordIOFile(unittest.TestCase):

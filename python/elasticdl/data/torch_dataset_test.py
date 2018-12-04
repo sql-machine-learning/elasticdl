@@ -1,8 +1,8 @@
 import unittest
 import tempfile
-from data import TorchDataset 
-from recordio import FileIndex 
-from recordio import File
+from elasticdl.data import TorchDataset 
+from elasticdl.recordio import FileIndex 
+from elasticdl.recordio import File
 
 
 class TestTorchDataset(unittest.TestCase):
