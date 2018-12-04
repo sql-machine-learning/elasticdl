@@ -1,8 +1,8 @@
 import unittest
 import tempfile
-from recordio import Compressor
-from recordio import Writer
-from recordio import Reader
+from elasticdl.recordio import Compressor
+from elasticdl.recordio import Writer
+from elasticdl.recordio import Reader
 
 
 class TestHeader(unittest.TestCase):

@@ -1,9 +1,9 @@
 import unittest
 import tempfile
-from recordio import FileIndex
-from recordio import Compressor
-from recordio import Writer
-from recordio import Reader
+from elasticdl.recordio import FileIndex
+from elasticdl.recordio import Compressor
+from elasticdl.recordio import Writer
+from elasticdl.recordio import Reader
 
 
 class TestFileIndex(unittest.TestCase):
