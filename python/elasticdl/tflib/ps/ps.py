@@ -22,7 +22,7 @@ class ParameterServer(object):
                     'Initial value for variable %s is not of float type ndarray' %
                     k)
             # TODO: In graph mode we don't need to keep track of variables by ourselves.
-            self._grads_vars[k] = (array_ops.placeholder(dtype=v.dtype, name=k), tf.Variable(v, name='v_' + k))
+            self._grads_vars[k] = (array_ops.placeholder(dtype=v.dtype), tf.Variable(v, name=k))
 
         self._opt = optimizer
         self._apply_grad_op = self._opt.apply_gradients(self._grads_vars.values())
