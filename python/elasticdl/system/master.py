@@ -1,20 +1,19 @@
 from binascii import crc32
-from ..recordio.file import File
+from elasticdl.recordio.file import File
 import queue
 import threading
 import time
 
 
+def _id(*parts):
+    # convert each integer part into a 4-byte array, join them and return
+    # crc32
+    return crc32(b''.join(p.to_bytes(4, 'little') for p in parts))
+
 class Work(object):
     '''
     Represents a unit of work. All data members are read only.
     '''
-    @staticmethod
-    def _id(*parts):
-        # convert each integer part into a 4-byte array, join them and return
-        # crc32
-        return crc32(b''.join(p.to_bytes(4, 'little') for p in parts))
-
     def __init__(self, file_index, offset, epoch, trial=0):
         self.file_index = file_index
         self.offset = offset
@@ -80,7 +79,7 @@ class Master(object):
         assert max_trial > 0
 
         self._data_files = data_files
-        self._work_queue = WorkQueue(num_epoch, max_trial)
+        self._work_queue = WorkQueue(num_epoch, max_trial, files=data_files)
         self._lock = threading.Lock()
         self._num_workers = 0
 
@@ -98,7 +97,7 @@ class Master(object):
             start = time.time()
             for i, f in enumerate(self._data_files):
                 with File(f, 'r') as fd:
-                    for c in range(fd.get_index().total_chunks()):
-                        self._work_queue.put(i, fd.get_index().chunk_offset(c))
-            print('Time spent on building index: %s seconds:' % time.time() - start)
+                    for chunk in fd.get_index():
+                        self._work_queue.put(i, chunk.offset)
+            print('Time spent on building index: %s seconds:' % (time.time() - start))
         self._work_queue.join()
