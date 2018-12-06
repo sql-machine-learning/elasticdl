@@ -1,5 +1,5 @@
 from binascii import crc32
-from elasticdl.recordio.file import File
+from recordio.file import File
 import queue
 import threading
 import time
@@ -10,10 +10,12 @@ def _id(*parts):
     # crc32
     return crc32(b''.join(p.to_bytes(4, 'little') for p in parts))
 
+
 class Work(object):
     '''
     Represents a unit of work. All data members are read only.
     '''
+
     def __init__(self, file_index, offset, epoch, trial=0):
         self.file_index = file_index
         self.offset = offset
@@ -33,7 +35,7 @@ class Work(object):
 
 class WorkQueue(object):
     def __init__(self, num_epoch, max_trial, files):
-        self._files = files
+        self._files = list(files)
         self._num_epoch = num_epoch
         self._max_trial = max_trial
         self._q = queue.PriorityQueue()
@@ -45,12 +47,12 @@ class WorkQueue(object):
             work = Work(file_index, offset, 0)
             self._q.put((work.priority, work))
 
-    def get_work(self):
+    def get_work(self, timeout=1.0):
         with self._lock:
-            work = self._q.get()
+            work = self._q.get(timeout=1.0)[1]
             # TODO: support worker timeout
             self._in_flight[work.id] = work
-            return (self.id, self._files[work.file_index], work.offset)
+            return (work.id, self._files[work.file_index], work.offset)
 
     def work_done(self, id, succeed):
         with self._lock:
@@ -99,5 +101,7 @@ class Master(object):
                 with File(f, 'r') as fd:
                     for chunk in fd.get_index():
                         self._work_queue.put(i, chunk.offset)
-            print('Time spent on building index: %s seconds:' % (time.time() - start))
+            print(
+                'Time spent on building index: %s seconds:' %
+                (time.time() - start))
         self._work_queue.join()
