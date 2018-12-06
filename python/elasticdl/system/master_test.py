@@ -7,6 +7,8 @@ from recordio.file_index import _ChunkData as C
 from master import Master
 
 # used to keep some shared data across workers.
+
+
 class RunLog(object):
     def __init__(self):
         self._lock = threading.Lock()
@@ -21,18 +23,20 @@ class RunLog(object):
             ret = self._run[key] != 0
             self._run[key] += 1
             return ret
-    
+
     def get(self):
         return self._run
 
+
 run_log = RunLog()
+
 
 class MockWorkerThread(threading.Thread):
     def __init__(self, q):
         self._q = q
         self._exiting = False
         threading.Thread.__init__(self)
-    
+
     def run(self):
         while not self._exiting:
             try:
@@ -41,33 +45,42 @@ class MockWorkerThread(threading.Thread):
                 self._q.work_done(work[0], success)
             except queue.Empty:
                 pass
-            
-    
+
     def exit(self):
         self._exiting = True
+
 
 class MockRecordIoFile(object):
     def __init__(self, index):
         self._index = index
+
     def __enter__(self):
         return self
-    def __exit__(self,exc_type, exc_val, exc_tb):
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
         return
+
     def get_index(self):
         return self._index
 
 
 class MockMasterThread(threading.Thread):
     def __init__(self):
-        self.recordio_data = {'f0': [C(0, 100, 2), C(200, 100, 3)], 'f1': [C(10, 200, 4), C(210, 200, 4)]}
-        self.master = Master(self.recordio_data.keys(), num_epoch=3, max_trial=2)
+        self.recordio_data = {'f0': [C(0, 100, 2), C(200, 100, 3)], 'f1': [
+            C(10, 200, 4), C(210, 200, 4)]}
+        self.master = Master(
+            self.recordio_data.keys(),
+            num_epoch=3,
+            max_trial=2)
         threading.Thread.__init__(self)
-    
+
     def run(self):
         # patch Master's recordio calls to inject mock data
         with patch('master.File', autospec=True) as mock:
-            mock.side_effect=[MockRecordIoFile(index) for index in self.recordio_data.values()]
+            mock.side_effect = [MockRecordIoFile(
+                index) for index in self.recordio_data.values()]
             self.master.run()
+
 
 class MasterTest(unittest.TestCase):
     def test_normal(self):
@@ -88,7 +101,10 @@ class MasterTest(unittest.TestCase):
 
         print(run_log.get())
         # Every work got executed 4 time, including 3 epochs and 1 retry.
-        self.assertCountEqual(run_log.get().elements(), [('f0', 0), ('f1', 210), ('f1', 10), ('f0', 200)] * 4)
+        self.assertCountEqual(
+            run_log.get().elements(), [
+                ('f0', 0), ('f1', 210), ('f1', 10), ('f0', 200)] * 4)
+
 
 if __name__ == '__main__':
     unittest.main()
