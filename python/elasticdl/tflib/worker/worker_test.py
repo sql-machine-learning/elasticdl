@@ -4,7 +4,7 @@ import queue
 from unittest.mock import patch
 from recordio.file_index import _ChunkData as C
 from recordio.file import File
-from elasticdl.tflib import ParameterServerClient
+from elasticdl.tflib import ParameterServerClient, no_partition
 from elasticdl.tflib import ParameterServer
 from elasticdl.system.master import Master
 from elasticdl.tflib import Worker
@@ -63,21 +63,16 @@ class Dummy(object):
         return self._opt
 
     @staticmethod
-    def _create_model():
-        input_shape = [1]
-
-        l = tf.keras.layers
-        return tf.keras.Sequential(
-            [
-                l.Reshape(target_shape=input_shape,
-                          input_shape=(1,)),
-                l.Dense(1, input_shape=input_shape)
-            ])
+    def _create_model_var():
+        var_dict = {}
+        var_dict['x'] = tf.get_variable("x", [1])
+        var_dict['y'] = tf.get_variable("y", [1])
+        return var_dict
 
     def _init_vars(self):
         graph = tf.Graph()
         with graph.as_default():
-            self._create_model()
+            self._create_model_var()
             trainable_vars = tf.trainable_variables()
             init_op = tf.initializers.global_variables()
         # strip the variable name  part of ':0'
@@ -94,14 +89,37 @@ class Dummy(object):
 
     @staticmethod
     def forward(x):
-        model = Dummy._create_model()
-        return model(x)
+        model_var = Dummy._create_model_var()
+        return model_var['x'] * x + model_var['y']
 
     @staticmethod
     def loss(y_predict, y_true):
         return tf.reduce_mean(tf.square(y_true - y_predict))
 
 
+def dummy_create_dataset(self,
+                         data_file,
+                         file_offset,
+                         shuffle_buffer_size=0,
+                         batch_size=1):
+    def gen():
+        for i in range(200):
+            x = np.random.rand()
+            yield(x, 2 * x + 1)
+    dataset = tf.data.Dataset.from_generator(
+        gen, (tf.float32, tf.float32),
+        (tf.TensorShape([]), tf.TensorShape([])))
+
+    # shuffle and batch if needed
+    if shuffle_buffer_size:
+        dataset = dataset.shuffle(shuffle_buffer_size)
+    if batch_size > 1:
+        dataset = dataset.batch(batch_size)
+
+    return dataset
+
+
+@patch.object(Worker, '_create_dataset', dummy_create_dataset)
 class WorkerTestCase(unittest.TestCase):
     def test(self):
         prog = Dummy()
@@ -114,10 +132,14 @@ class WorkerTestCase(unittest.TestCase):
         for p in ps:
             p.start()
 
+        ps_client = ParameterServerClient(
+            ps_configs=ps, partition_func=no_partition)
+
         m = MockMasterThread()
         m.start()
 
-        worker = [Worker(ps_configs=ps, master=m,
+        worker = [Worker(ps_client=ps_client,
+                         work_queue=m.register_worker(),
                          forward_func=prog.forward,
                          loss_func=prog.loss,
                          optimizer=prog.optimizer())
@@ -128,6 +150,10 @@ class WorkerTestCase(unittest.TestCase):
         m.join()
         for w in worker:
             w.join()
+
+        base_step, var_values = ps_client.pull()
+        print('Weights after training step %d : ' % base_step, var_values)
+
         for p in ps:
             p.join()
 

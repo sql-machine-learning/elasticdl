@@ -1,5 +1,3 @@
-from elasticdl.tflib import ParameterServerClient, no_partition
-from elasticdl.system.master import Master
 import tensorflow as tf
 import numpy as np
 import threading
@@ -9,20 +7,17 @@ import time
 
 class Worker(object):
     def __init__(self,
-                 ps_configs=None,
-                 partition_func=no_partition,
-                 master=None,
+                 ps_client=None,
+                 work_queue=None,
                  forward_func=None,
                  loss_func=None,
                  optimizer=None):
-        assert(ps_configs)
-        assert(master)
+        assert(ps_client)
+        assert(work_queue)
         assert(forward_func)
         assert(loss_func)
-        self._ps_client = ParameterServerClient(
-            ps_configs=ps_configs, partition_func=partition_func)
-        self._master = master
-        self._work_queue = master.register_worker()
+        self._ps_client = ps_client
+        self._work_queue = work_queue
         self._forward = forward_func
         self._loss = loss_func
         self._opt = optimizer
@@ -43,7 +38,7 @@ class Worker(object):
         sub_step = 0
 
         while not self._exiting:
-            # get work from master
+            # get work from work queue
             try:
                 work_id, data_file, file_offset = self._work_queue.get_work()
             except queue.Empty:
@@ -87,9 +82,6 @@ class Worker(object):
                     try:
                         # pull and update variable values
                         base_step, var_values = self._ps_client.pull()
-                        # debug, to delete
-                        if base_step % 10 == 0:
-                            print('[%d]' % base_step, var_values)
                         for v_name in var_values:
                             sess.run(
                                 tf.assign(var_dict[v_name], var_values[v_name]))
@@ -125,23 +117,14 @@ class Worker(object):
 
         self._model_initialized = True
 
-    # TODO: create dataset using (data_file, file_offset)
-    #       use a fake dataset for now
     def _create_dataset(self,
                         data_file,
                         file_offset,
                         shuffle_buffer_size=0,
                         batch_size=1):
-        # get work from master work queue
-        #self._work_id, data_file, offset = self._work_queue.get_work()
-
-        def gen():
-            for i in range(100):
-                x = np.random.rand()
-                yield(x, 2 * x + 1)
-        dataset = tf.data.Dataset.from_generator(
-            gen, (tf.float32, tf.float32),
-            (tf.TensorShape([]), tf.TensorShape([])))
+        # TODO: create dataset using (data_file, file_offset)
+        dataset = None
+        raise NotImplementedError
 
         # shuffle and batch if needed
         if shuffle_buffer_size:
