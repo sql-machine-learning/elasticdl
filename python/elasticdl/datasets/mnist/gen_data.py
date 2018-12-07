@@ -27,4 +27,3 @@ if __name__ == "__main__":
     (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
     gen("fashion-train", x_train, y_train)
     gen("fashion-test", x_test, y_test)
-
