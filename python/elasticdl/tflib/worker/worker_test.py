@@ -4,10 +4,8 @@ import queue
 from unittest.mock import patch
 from recordio.file_index import _ChunkData as C
 from recordio.file import File
-from elasticdl.tflib import ParameterServerClient, no_partition
-from elasticdl.tflib import ParameterServer
+from elasticdl.tflib import ParameterServerClient, no_partition, ParameterServer, Worker
 from elasticdl.system.master import Master
-from elasticdl.tflib import Worker
 import tensorflow as tf
 import numpy as np
 
@@ -53,11 +51,6 @@ class Dummy(object):
     def __init__(self):
         self._opt = tf.train.GradientDescentOptimizer(0.1)
         self._vars = None
-
-        self._graph = tf.Graph()
-        with self._graph.as_default():
-            self._W = tf.get_variable("x", [1])
-            self._b = tf.get_variable("y", [1])
 
     def optimizer(self):
         return self._opt
