@@ -8,13 +8,13 @@ import time
 def _id(*parts):
     # convert each integer part into a 4-byte array, join them and return
     # crc32
-    return crc32(b''.join(p.to_bytes(4, 'little') for p in parts))
+    return crc32(b"".join(p.to_bytes(4, "little") for p in parts))
 
 
 class Work(object):
-    '''
+    """
     Represents a unit of work. All data members are read only.
-    '''
+    """
 
     def __init__(self, file_index, offset, epoch, trial=0):
         self.file_index = file_index
@@ -47,26 +47,26 @@ class WorkQueue(object):
             work = Work(file_index, offset, 0)
             self._q.put((work.priority, work))
 
-    def get_work(self, timeout=1.0):
+    def get_work(self, timeout=None):
         with self._lock:
-            work = self._q.get(timeout=1.0)[1]
+            work = self._q.get(timeout=timeout)[1]
             # TODO: support worker timeout
             self._in_flight[work.id] = work
             return (work.id, self._files[work.file_index], work.offset)
 
-    def work_done(self, id, succeed):
+    def work_done(self, work_id, succeed):
         with self._lock:
-            work = self._in_flight.pop(id)
+            work = self._in_flight.pop(work_id)
             next_work = None
             if not succeed:
                 if work.trial + 1 < self._max_trial:
                     next_work = work.next_trial()
                 else:
-                    print('work failed', work)
+                    print("work failed", work)
             elif work.epoch + 1 < self._num_epoch:
                 next_work = work.next_epoch()
             else:
-                print('work finished', work)
+                print("work finished", work)
             if next_work:
                 self._q.put((next_work.priority, next_work))
             self._q.task_done()
@@ -98,10 +98,11 @@ class Master(object):
             # file, etc., the master will crash and no worker will be started.
             start = time.time()
             for i, f in enumerate(self._data_files):
-                with File(f, 'r') as fd:
+                with File(f, "r") as fd:
                     for chunk in fd.get_index():
                         self._work_queue.put(i, chunk.offset)
             print(
-                'Time spent on building index: %s seconds:' %
-                (time.time() - start))
+                "Time spent on building index: %s seconds:"
+                % (time.time() - start)
+            )
         self._work_queue.join()

@@ -2,6 +2,7 @@ import numpy as np
 
 N = 28
 
+
 # TODO: maybe use TF variant tensor to do more flexible encoding.
 def encode(data, label):
     assert data.shape == (N, N) and data.dtype == "uint8"
