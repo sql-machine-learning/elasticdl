@@ -26,20 +26,20 @@ class MockRecordIoFile(object):
 
 class MockMasterThread(threading.Thread):
     def __init__(self):
-        self.recordio_data = {'f0': [C(0, 100, 2), C(200, 100, 3)], 'f1': [
-            C(10, 200, 4), C(210, 200, 4)]}
-        self.master = Master(
-            self.recordio_data.keys(),
-            num_epoch=3,
-            max_trial=2)
+        self.recordio_data = {
+            "f0": [C(0, 100, 2), C(200, 100, 3)],
+            "f1": [C(10, 200, 4), C(210, 200, 4)],
+        }
+        self.master = Master(self.recordio_data.keys(), num_epoch=3, max_trial=2)
         threading.Thread.__init__(self)
 
     def run(self):
         # patch Master's recordio calls to inject mock data
         print("start running patched master ")
-        with patch('elasticdl.system.master.File', autospec=True) as mock:
-            mock.side_effect = [MockRecordIoFile(
-                index) for index in self.recordio_data.values()]
+        with patch("elasticdl.system.master.File", autospec=True) as mock:
+            mock.side_effect = [
+                MockRecordIoFile(index) for index in self.recordio_data.values()
+            ]
             self.master.run()
 
     def register_worker(self):
@@ -58,8 +58,8 @@ class Dummy(object):
     @staticmethod
     def _create_model_var():
         var_dict = {}
-        var_dict['x'] = tf.get_variable("x", [1])
-        var_dict['y'] = tf.get_variable("y", [1])
+        var_dict["x"] = tf.get_variable("x", [1])
+        var_dict["y"] = tf.get_variable("y", [1])
         return var_dict
 
     def _init_vars(self):
@@ -83,25 +83,24 @@ class Dummy(object):
     @staticmethod
     def forward(x):
         model_var = Dummy._create_model_var()
-        return model_var['x'] * x + model_var['y']
+        return model_var["x"] * x + model_var["y"]
 
     @staticmethod
     def loss(y_predict, y_true):
         return tf.reduce_mean(tf.square(y_true - y_predict))
 
 
-def dummy_create_dataset(self,
-                         data_file,
-                         file_offset,
-                         shuffle_buffer_size=0,
-                         batch_size=1):
+def dummy_create_dataset(
+    self, data_file, file_offset, shuffle_buffer_size=0, batch_size=1
+):
     def gen():
         for i in range(200):
             x = np.random.rand()
-            yield(x, 2 * x + 1)
+            yield (x, 2 * x + 1)
+
     dataset = tf.data.Dataset.from_generator(
-        gen, (tf.float32, tf.float32),
-        (tf.TensorShape([]), tf.TensorShape([])))
+        gen, (tf.float32, tf.float32), (tf.TensorShape([]), tf.TensorShape([]))
+    )
 
     # shuffle and batch if needed
     if shuffle_buffer_size:
@@ -112,7 +111,7 @@ def dummy_create_dataset(self,
     return dataset
 
 
-@patch.object(Worker, '_create_dataset', dummy_create_dataset)
+@patch.object(Worker, "_create_dataset", dummy_create_dataset)
 class WorkerTestCase(unittest.TestCase):
     def test(self):
         prog = Dummy()
@@ -120,23 +119,25 @@ class WorkerTestCase(unittest.TestCase):
         ps_num = 1
         worker_num = 2
 
-        ps = [ParameterServer(prog.optimizer(), prog.vars())
-              for _ in range(ps_num)]
+        ps = [ParameterServer(prog.optimizer(), prog.vars()) for _ in range(ps_num)]
         for p in ps:
             p.start()
 
-        ps_client = ParameterServerClient(
-            ps_configs=ps, partition_func=no_partition)
+        ps_client = ParameterServerClient(ps_configs=ps, partition_func=no_partition)
 
         m = MockMasterThread()
         m.start()
 
-        worker = [Worker(ps_client=ps_client,
-                         work_queue=m.register_worker(),
-                         forward_func=prog.forward,
-                         loss_func=prog.loss,
-                         optimizer=prog.optimizer())
-                  for _ in range(worker_num)]
+        worker = [
+            Worker(
+                ps_client=ps_client,
+                work_queue=m.register_worker(),
+                forward_func=prog.forward,
+                loss_func=prog.loss,
+                optimizer=prog.optimizer(),
+            )
+            for _ in range(worker_num)
+        ]
         for w in worker:
             w.start()
 
@@ -145,11 +146,11 @@ class WorkerTestCase(unittest.TestCase):
             w.join()
 
         base_step, var_values = ps_client.pull()
-        print('Weights after training step %d : ' % base_step, var_values)
+        print("Weights after training step %d : " % base_step, var_values)
 
         for p in ps:
             p.join()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
