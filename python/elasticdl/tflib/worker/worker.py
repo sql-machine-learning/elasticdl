@@ -49,9 +49,7 @@ class Worker(object):
             try:
                 work_id, data_file, file_offset = self._work_queue.get_work(timeout=2.0)
             except queue.Empty:
-                # no work to do, sleep for a few seconds
-                time.sleep(2.0)
-                continue
+                pass
 
             # create dataset from data_file, file_offset
             # TODO: how to config shuffle/batch parameter from user?
