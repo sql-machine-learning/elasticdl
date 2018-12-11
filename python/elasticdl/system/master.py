@@ -84,6 +84,7 @@ class Master(object):
         self._work_queue = WorkQueue(num_epoch, max_trial, files=data_files)
         self._lock = threading.Lock()
         self._num_workers = 0
+        self._runner = threading.Thread(target=self.run, name="master")
 
     def register_worker(self):
         with self._lock:
@@ -106,3 +107,6 @@ class Master(object):
                 % (time.time() - start)
             )
         self._work_queue.join()
+
+    def start(self):
+        self._runner.start()

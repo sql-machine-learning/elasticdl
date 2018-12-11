@@ -2,7 +2,8 @@ import argparse
 import importlib
 import os
 from contextlib import contextmanager
-from elasticdl.tflib import ParameterServer
+from elasticdl.tflib import ParameterServer, no_partition, ParameterServerClient, Worker 
+from elasticdl.system import Master 
 
 
 # TODO: use @dataclass
@@ -18,15 +19,41 @@ class ThreadLauncher(object):
     @staticmethod
     def launch(prog, num_ps, num_worker, data):
         # launch ps
+        vars = prog.vars()
         ps = [
-            ParameterServer(prog.optimizer(), prog.vars())
+            ParameterServer(prog.optimizer(), vars)
             for _ in range(num_ps)
         ]
         for p in ps:
             p.start()
-        # TODO: launch workers
-        # TODO: launch master
-        return Handle(prog, ps, None, None)
+
+        # launch master
+        filenames = []
+        for root, dirs, names in os.walk(data, False):
+            for filename in names:
+                filenames.append(os.path.join(root,filename))
+        master = Master(
+            filenames,
+            num_epoch=1,
+            max_trial=1)
+        master.start()
+ 
+        # launch worker
+        ps_client = ParameterServerClient(ps_configs=ps, partition_func=no_partition) 
+        workers = [
+            Worker(
+                ps_client=ps_client,
+                work_queue = master.register_worker(),
+                forward_func = prog.forward,
+                loss_func = prog.loss,
+                optimizer = prog.optimizer(),
+            )
+            for _ in range(num_worker)
+        ]
+        for worker in workers:
+            worker.start()
+
+        return Handle(prog, ps, None, master)
 
     @staticmethod
     def shutdown(handle):
@@ -118,7 +145,6 @@ def main(argv):
     # run script to create prog object
     module = path_import(args.script)
     prog = getattr(module, args.class_name)()
-    prog.init()
 
     # launch
     handle = args.runner.launch(prog, args.num_ps, args.num_worker, args.input)
@@ -128,16 +154,16 @@ def main(argv):
 if __name__ == "__main__":
     main(
         [
-            "test_data/dummy.py",
+            "test_data/mnist.py",
             "--class_name",
-            "Dummy",
+            "MnistCNN",
             "--runner",
             "thread",
             "--num_ps",
-            "2",
+            "1",
             "--num_worker",
-            "2",
+            "1",
             "--input",
-            "none",
+            "/home/chris/project/github/elasticdl/python/elasticdl/datasets/mnist/fasion_train",
         ]
     )
