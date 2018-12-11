@@ -4,7 +4,7 @@
 
 We use AliCloud's docker registry to host docker images. Go to http://docker.alibaba-inc.com to register your account.
 
-- Before you can use the registry in console, do `docker docker login --username=xxx reg.docker.alibaba-inc.com` to login to the registry.
+- Before you can use the registry in console, do `docker login --username=xxx reg.docker.alibaba-inc.com` to login to the registry.
 
 ## ElasticDL develop docker image
 
