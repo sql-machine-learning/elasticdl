@@ -10,7 +10,7 @@ if [[ $USER_ID == 0 ]]; then
 fi
 HOME_DIR=$(eval echo ~${USER_NAME})
 
-docker run --rm -it \
+docker run --rm -it --net=host \
     -u ${USER_ID}:${GRP_ID} \
     -v ${HOME_DIR}:/home/${USER_NAME}  \
     -w /home/${USER_NAME} \
