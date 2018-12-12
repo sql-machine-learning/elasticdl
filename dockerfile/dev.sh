@@ -17,4 +17,4 @@ docker run --rm -it --net=host \
     -e REAL_UID=${USER_ID} \
     -e REAL_USER=${USER_NAME} \
     -e REAL_HOME=/home/${USER_NAME} \
-    elasticdl/dev /bin/bash
+    reg.docker.alibaba-inc.com/elasticdl/dev /bin/bash
