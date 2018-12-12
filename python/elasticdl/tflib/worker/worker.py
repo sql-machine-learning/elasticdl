@@ -76,8 +76,14 @@ class Worker(object):
                     # strip out the ':0' part in name
                     trainable_vars = tf.trainable_variables()
                     var_dict = {_extract_name(v.name): v for v in trainable_vars}
-                    var_placeholder = {_extract_name(v.name): array_ops.placeholder(dtype=v.dtype) for v in trainable_vars}
-                    var_assign_op = {name: tf.assign(var_dict[name], var_placeholder[name]) for name in var_dict}
+                    var_placeholder = {
+                        _extract_name(v.name): array_ops.placeholder(dtype=v.dtype)
+                        for v in trainable_vars
+                    }
+                    var_assign_op = {
+                        name: tf.assign(var_dict[name], var_placeholder[name])
+                        for name in var_dict
+                    }
                     sess = tf.Session(graph=self._graph)
                     sess.run(tf.initializers.global_variables())
 
@@ -93,7 +99,10 @@ class Worker(object):
                     # pull and update variable values
                     base_step, var_values = self._ps_client.pull()
                     assign_ops = [var_assign_op[v_name] for v_name in var_values]
-                    assign_feeds = {var_placeholder[v_name]: var_values[v_name] for v_name in var_values}
+                    assign_feeds = {
+                        var_placeholder[v_name]: var_values[v_name]
+                        for v_name in var_values
+                    }
                     sess.run(assign_ops, feed_dict=assign_feeds)
 
                     # compute grads
