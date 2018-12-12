@@ -3,6 +3,7 @@ import numpy as np
 import threading
 import queue
 import time
+from tensorflow.python.ops import array_ops
 
 
 # strip out ':0' part in name
@@ -75,6 +76,8 @@ class Worker(object):
                     # strip out the ':0' part in name
                     trainable_vars = tf.trainable_variables()
                     var_dict = {_extract_name(v.name): v for v in trainable_vars}
+                    var_placeholder = {_extract_name(v.name): array_ops.placeholder(dtype=v.dtype) for v in trainable_vars}
+                    var_assign_op = {name: tf.assign(var_dict[name], var_placeholder[name]) for name in var_dict}
                     sess = tf.Session(graph=self._graph)
                     sess.run(tf.initializers.global_variables())
 
@@ -89,8 +92,9 @@ class Worker(object):
                 try:
                     # pull and update variable values
                     base_step, var_values = self._ps_client.pull()
-                    for v_name in var_values:
-                        sess.run(tf.assign(var_dict[v_name], var_values[v_name]))
+                    assign_ops = [var_assign_op[v_name] for v_name in var_values]
+                    assign_feeds = {var_placeholder[v_name]: var_values[v_name] for v_name in var_values}
+                    sess.run(assign_ops, feed_dict=assign_feeds)
 
                     # compute grads
                     grads = sess.run(self._grads, feed_dict=feed_dict)
