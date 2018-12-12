@@ -5,3 +5,7 @@ RUN apt-get update && apt-get -y --no-install-recommends install libsnappy-dev &
 
 # So bazel won't complain about untracked header files
 RUN ln -s /usr/local/lib/python3.5/dist-packages/tensorflow /usr/local/include 
+
+COPY entry.sh /entry.sh
+ENTRYPOINT ["/entry.sh"]
+

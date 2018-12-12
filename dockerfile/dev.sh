@@ -11,9 +11,8 @@ fi
 HOME_DIR=$(eval echo ~${USER_NAME})
 
 docker run --rm -it --net=host \
-    -u ${USER_ID}:${GRP_ID} \
     -v ${HOME_DIR}:/home/${USER_NAME}  \
-    -w /home/${USER_NAME} \
-    -e USER=${USER_NAME} \
-    -e HOME=/home/${USER_NAME} \
+    -e REAL_GID=${GRP_ID} \
+    -e REAL_UID=${USER_ID} \
+    -e REAL_USER=${USER_NAME} \
     reg.docker.alibaba-inc.com/elasticdl/dev /bin/bash
