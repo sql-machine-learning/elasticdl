@@ -4,8 +4,8 @@ import queue
 from unittest.mock import patch
 from recordio.file_index import _ChunkData as C
 from recordio.file import File
-from elasticdl.tflib import ParameterServerClient, no_partition, ParameterServer, Worker
-from elasticdl.system.master import Master
+from python.elasticdl.tflib import ParameterServerClient, no_partition, ParameterServer, Worker
+from python.elasticdl.system.master import Master
 import tensorflow as tf
 import numpy as np
 
