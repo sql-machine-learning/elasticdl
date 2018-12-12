@@ -14,7 +14,7 @@ The image is intended to ease the developing process of ElasticDL. The docker fi
 
 - Build image: usually you don't need to build the image. Just use the one in the registry. But in case you need to modify the image to add more libraries, etc.
    ```bash
-   docker build -t elasticdl/dev devel/Dockerfile
-   docker tag elasticdl/dev  reg.docker.alibaba-inc.com/elasticdl/dev
+   docker build -t elasticdl/dev devel
+   docker tag elasticdl/dev reg.docker.alibaba-inc.com/elasticdl/dev
    docker push reg.docker.alibaba-inc.com/elasticdl/dev
    ```
