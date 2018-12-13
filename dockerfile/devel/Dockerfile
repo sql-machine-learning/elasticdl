@@ -8,8 +8,8 @@ RUN add-apt-repository -y ppa:longsleep/golang-backports && apt-get update && ap
     bash-completion \
     less \
     iproute2 \
-    golang-1.11
-
+    golang-1.11 \
+    tmux
 
 RUN pip3 install \
     python-snappy \
