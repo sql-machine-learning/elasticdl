@@ -4,7 +4,12 @@ import queue
 from unittest.mock import patch
 from recordio.file_index import _ChunkData as C
 from recordio.file import File
-from elasticdl.tflib import ParameterServerClient, no_partition, ParameterServer, Worker
+
+import sys 
+sys.path.append('..')
+from ps.ps_client import ParameterServerClient, no_partition
+from ps.ps import ParameterServer
+from worker import Worker
 from elasticdl.system.master import Master
 import tensorflow as tf
 import numpy as np
@@ -90,18 +95,19 @@ class Dummy(object):
         return tf.reduce_mean(tf.square(y_true - y_predict))
 
     @staticmethod
-    def data_process_py_func(data):
+    def raw_data_transform_by_py(data):
         parsed = np.frombuffer(data, dtype="float32")
         x = parsed[0]
         y = parsed[1]
         return x, y
 
-    # data_process_py_func output data type
-    data_py_output_type = [tf.float32, tf.float32]
+    @staticmethod
+    def transformed_data_types():
+        return [tf.float32, tf.float32]
 
     # data_process_tf_func is optional. Add it to verify the functionality.
     @staticmethod
-    def data_process_tf_func(x, y):
+    def data_preprocess_by_tf(x, y):
         _x = tf.identity(x)
         _y = tf.identity(y)
         return _x, _y
@@ -127,7 +133,7 @@ class WorkerTestCase(unittest.TestCase):
         ps_num = 1
         worker_num = 2
 
-        ps = [ParameterServer(prog.optimizer(), prog.vars()) for _ in range(ps_num)]
+        ps = [ParameterServer(prog.optimizer, prog.vars()) for _ in range(ps_num)]
         for p in ps:
             p.start()
 
