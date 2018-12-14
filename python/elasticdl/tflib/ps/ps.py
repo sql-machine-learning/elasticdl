@@ -6,7 +6,7 @@ from tensorflow.python.ops import array_ops
 
 
 class ParameterServer(object):
-    def __init__(self, optimizer, tf_vars):
+    def __init__(self, optimizer_func, tf_vars):
         self._step = 0
         self._grad_q = queue.Queue()
         self._lock = threading.Lock()
@@ -15,28 +15,30 @@ class ParameterServer(object):
         self._min_step_cv = threading.Condition()
 
         self._grads_vars = {}
-        for k, v in tf_vars.items():
-            if not isinstance(v, np.ndarray) or v.dtype not in (
-                np.float32,
-                np.float64,
-            ):
-                raise ValueError(
-                    "Initial value for variable %s is not a float ndarray" % k
+    
+        graph = tf.Graph() 
+        with graph.as_default():
+            for k, v in tf_vars.items():
+                if not isinstance(v, np.ndarray) or v.dtype not in (
+                    np.float32,
+                    np.float64,
+                ):
+                    raise ValueError(
+                        "Initial value for variable %s is not a float ndarray" % k
+                    )
+                # TODO: In graph mode we don't need to keep track of variables by
+                # ourselves.
+                self._grads_vars[k] = (
+                    array_ops.placeholder(dtype=v.dtype),
+                    tf.Variable(v, name=k),
                 )
-            # TODO: In graph mode we don't need to keep track of variables by
-            # ourselves.
-            self._grads_vars[k] = (
-                array_ops.placeholder(dtype=v.dtype),
-                tf.Variable(v, name=k),
+            self._opt = optimizer_func()
+            self._apply_grad_op = self._opt.apply_gradients(
+                self._grads_vars.values()
             )
+            init_op = tf.global_variables_initializer()
 
-        self._opt = optimizer
-        self._apply_grad_op = self._opt.apply_gradients(
-            self._grads_vars.values()
-        )
-
-        self._sess = tf.Session()
-        init_op = tf.global_variables_initializer()
+        self._sess = tf.Session(graph=graph)
         self._sess.run(init_op)
 
     def pull(self, names=None, min_step=0, blocking=True, timeout=None):

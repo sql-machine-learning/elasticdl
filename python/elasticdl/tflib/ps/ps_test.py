@@ -9,15 +9,18 @@ from timeit import default_timer as timer
 
 class ParameterServerTestCase(unittest.TestCase):
     def setUp(self):
+        def optimizer():
+            return tf.train.GradientDescentOptimizer(0.1) 
+            
         self.ps1 = ParameterServer(
-            tf.train.GradientDescentOptimizer(0.1),
+            optimizer,
             {
                 "x1": np.array([0.0, 0.0], dtype="float32"),
                 "y1": np.array([1.0, 1.0], dtype="float32"),
             },
         )
         self.ps2 = ParameterServer(
-            tf.train.GradientDescentOptimizer(0.1),
+            optimizer,
             {
                 "x2": np.array([0.0, 0.0], dtype="float32"),
                 "y2": np.array([1.0, 1.0], dtype="float32"),
