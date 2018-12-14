@@ -13,12 +13,7 @@ def _extract_name(name):
 
 
 class Worker(object):
-    def __init__(
-        self,
-        ps_client=None,
-        work_queue=None,
-        umd=None
-    ):
+    def __init__(self, ps_client=None, work_queue=None, umd=None):
         assert ps_client
         assert work_queue
         assert umd
@@ -39,7 +34,7 @@ class Worker(object):
         self._runner.join()
 
     def _run(self):
-        base_step = 0
+        base_step = -1
         sub_step = 0
 
         while not self._exiting:
@@ -94,7 +89,7 @@ class Worker(object):
             while True:
                 try:
                     # pull and update variable values
-                    base_step, var_values = self._ps_client.pull()
+                    base_step, var_values = self._ps_client.pull(min_step=base_step + 1)
                     assign_ops = [var_assign_op[v_name] for v_name in var_values]
                     assign_feeds = {
                         var_placeholder[v_name]: var_values[v_name]
@@ -144,10 +139,18 @@ class Worker(object):
         dataset = Worker._create_recordio_dataset(data_file, file_offset)
 
         # map with umd.data_process_py_func
-        dataset = dataset.map(lambda data: tuple(tf.py_func(self._umd.data_process_py_func, [data], self._umd.data_py_output_type)))
+        dataset = dataset.map(
+            lambda data: tuple(
+                tf.py_func(
+                    self._umd.data_process_py_func,
+                    [data],
+                    self._umd.data_py_output_type,
+                )
+            )
+        )
 
         # map with umd.data_process_tf_func if exists
-        if hasattr(self._umd, 'data_process_tf_func'):
+        if hasattr(self._umd, "data_process_tf_func"):
             dataset = dataset.map(self._umd.data_process_tf_func)
 
         # shuffle and batch if needed

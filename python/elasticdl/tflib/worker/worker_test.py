@@ -107,18 +107,14 @@ class Dummy(object):
         return x, y
 
 
-def dummy_create_recordio_dataset(
-    data_file, file_offset
-):
+def dummy_create_recordio_dataset(data_file, file_offset):
     def gen():
         for i in range(200):
             x = np.float32(np.random.rand())
             y = np.float32(2 * x + 1)
             yield np.concatenate((x, y), axis=None).tobytes()
 
-    dataset = tf.data.Dataset.from_generator(
-        gen, (tf.string), (tf.TensorShape([]))
-    )
+    dataset = tf.data.Dataset.from_generator(gen, (tf.string), (tf.TensorShape([])))
 
     return dataset
 
@@ -141,11 +137,7 @@ class WorkerTestCase(unittest.TestCase):
         m.start()
 
         worker = [
-            Worker(
-                ps_client=ps_client,
-                work_queue=m.register_worker(),
-                umd=Dummy
-            )
+            Worker(ps_client=ps_client, work_queue=m.register_worker(), umd=Dummy)
             for _ in range(worker_num)
         ]
         for w in worker:
