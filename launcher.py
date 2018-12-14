@@ -1,9 +1,10 @@
 import argparse
 import importlib
 import os
+import sys
 from contextlib import contextmanager
-from elasticdl.tflib import ParameterServer
-
+from elasticdl.tflib import ParameterServer, no_partition, ParameterServerClient, Worker 
+from elasticdl.system import Master 
 
 # TODO: use @dataclass
 class Handle(object):
@@ -18,20 +19,50 @@ class ThreadLauncher(object):
     @staticmethod
     def launch(prog, num_ps, num_worker, data):
         # launch ps
+        init_var = prog.vars()
         ps = [
-            ParameterServer(prog.optimizer(), prog.vars())
+            ParameterServer(prog.optimizer(), init_var)
             for _ in range(num_ps)
         ]
         for p in ps:
             p.start()
-        # TODO: launch workers
-        # TODO: launch master
-        return Handle(prog, ps, None, None)
+
+        # launch master
+        filenames = []
+        for root, dirs, names in os.walk(data, False):
+            for filename in names:
+                filenames.append(os.path.join(root,filename))
+        master = Master(
+            filenames,
+            num_epoch=1,
+            max_trial=1)
+        master.start()
+
+        # launch worker
+        ps_client = ParameterServerClient(ps_configs=ps, partition_func=no_partition)
+
+        workers = [
+            Worker(
+                ps_client=ps_client,
+                work_queue = master.register_worker(),
+                umd = prog 
+            )
+            for _ in range(num_worker)
+        ]
+        for worker in workers:
+            worker.start()
+
+        return Handle(prog, ps, workers, master)
 
     @staticmethod
     def shutdown(handle):
-        # TODO: shutdown master
-        # TODO: shutdown worker
+        # shutdown master
+        handle.master.join()
+    
+        # shutdown worker
+        for w in handle.worker:
+            w.join()
+
         # shutdown ps
         for p in handle.ps:
             p.join()
@@ -118,7 +149,6 @@ def main(argv):
     # run script to create prog object
     module = path_import(args.script)
     prog = getattr(module, args.class_name)()
-    prog.init()
 
     # launch
     handle = args.runner.launch(prog, args.num_ps, args.num_worker, args.input)
@@ -126,18 +156,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(
-        [
-            "test_data/dummy.py",
-            "--class_name",
-            "Dummy",
-            "--runner",
-            "thread",
-            "--num_ps",
-            "2",
-            "--num_worker",
-            "2",
-            "--input",
-            "none",
-        ]
-    )
+    main(sys.argv[1:])
