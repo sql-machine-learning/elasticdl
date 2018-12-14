@@ -5,10 +5,8 @@ from unittest.mock import patch
 from recordio.file_index import _ChunkData as C
 from recordio.file import File
 
-import sys 
-sys.path.append('..')
-from ps.ps_client import ParameterServerClient, no_partition
-from ps.ps import ParameterServer
+from elasticdl.tflib import ParameterServerClient, no_partition
+from elasticdl.tflib import ParameterServer
 from worker import Worker
 from elasticdl.system.master import Master
 import tensorflow as tf
