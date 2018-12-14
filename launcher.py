@@ -3,7 +3,7 @@ import importlib
 import os
 import sys
 from contextlib import contextmanager
-from elasticdl.tflib import ParameterServer, no_partition, ParameterServerClient, Worker 
+from elasticdl.tflib import ParameterServer, hash_partition, ParameterServerClient, Worker 
 from elasticdl.system import Master 
 
 # TODO: use @dataclass
@@ -19,10 +19,11 @@ class ThreadLauncher(object):
     @staticmethod
     def launch(prog, num_ps, num_worker, data):
         # launch ps
-        init_var = prog.vars()
+        init_vars = prog.vars()
+        partitioned_vars = hash_partition(init_vars, num_ps)
         ps = [
-            ParameterServer(prog.optimizer(), init_var)
-            for _ in range(num_ps)
+            ParameterServer(prog.optimizer, partitioned_vars[i])
+            for i in range(num_ps)
         ]
         for p in ps:
             p.start()
@@ -39,7 +40,7 @@ class ThreadLauncher(object):
         master.start()
 
         # launch worker
-        ps_client = ParameterServerClient(ps_configs=ps, partition_func=no_partition)
+        ps_client = ParameterServerClient(ps_configs=ps, partition_func=hash_partition)
 
         workers = [
             Worker(

@@ -29,5 +29,4 @@ class UserDefinedModule(object):
         with graph.as_default(), tf.Session() as sess:
            sess.run(init_op)
            var_values = sess.run(trainable_vars)
-        print(var_names)
         self._vars = dict(zip(var_names, var_values))

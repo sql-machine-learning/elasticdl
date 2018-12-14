@@ -62,7 +62,7 @@ class Worker(object):
 
                 # init model if needed
                 if not self._model_initialized:
-                    self._parpare_for_training(dataset)
+                    self._prepare_for_training(dataset)
 
                     # create name,variable dict
                     # strip out the ':0' part in name
@@ -89,7 +89,8 @@ class Worker(object):
             while True:
                 try:
                     # pull and update variable values
-                    base_step, var_values = self._ps_client.pull(min_step=base_step + 1)
+                    new_base_step, var_values = self._ps_client.pull(min_step=base_step + 1) 
+                        
                     assign_ops = [var_assign_op[v_name] for v_name in var_values]
                     assign_feeds = {
                         var_placeholder[v_name]: var_values[v_name]
@@ -97,18 +98,23 @@ class Worker(object):
                     }
                     sess.run(assign_ops, feed_dict=assign_feeds)
 
-                    # compute grads
-                    grads = sess.run(self._grads, feed_dict=feed_dict)
+                    if self._accuracy is not None and base_step % 100 == 0:
+                        grads, accuracy = sess.run([self._grads, self._accuracy], feed_dict=feed_dict)
+                        print('Accuracy [%d]: %1.6g' % (base_step, accuracy))
+                    else:
+                        # compute grads
+                        grads = sess.run(self._grads, feed_dict=feed_dict)
 
                     # push
                     self._ps_client.push(sub_step=sub_step, grads=grads)
+                    base_step = new_base_step
                 except tf.errors.OutOfRangeError:
                     break
 
             # report to master work done
             self._work_queue.work_done(work_id, True)
 
-    def _parpare_for_training(self, dataset):
+    def _prepare_for_training(self, dataset):
         # create placeholder for the dataset
         self._iter_handle = tf.placeholder(tf.string, shape=[], name="iter_handler")
         data_iter = tf.data.Iterator.from_string_handle(
@@ -126,6 +132,11 @@ class Worker(object):
         grads_and_vars = self._opt.compute_gradients(self._loss)
         self._grads = {_extract_name(gv[1].name): gv[0] for gv in grads_and_vars}
 
+        if hasattr(self._umd, 'accuracy'):
+            self._accuracy = self._umd.accuracy(self._forward_result, next_data[1])
+        else:
+            self._accuracy = None
+
         self._model_initialized = True
 
     @staticmethod
@@ -138,20 +149,20 @@ class Worker(object):
     ):
         dataset = Worker._create_recordio_dataset(data_file, file_offset)
 
-        # map with umd.data_process_py_func
+        # map with umd.raw_data_transform_by_py
         dataset = dataset.map(
             lambda data: tuple(
                 tf.py_func(
-                    self._umd.data_process_py_func,
+                    self._umd.raw_data_transform_by_py,
                     [data],
-                    self._umd.data_py_output_type,
+                    self._umd.transformed_data_types(),
                 )
             )
         )
 
         # map with umd.data_process_tf_func if exists
-        if hasattr(self._umd, "data_process_tf_func"):
-            dataset = dataset.map(self._umd.data_process_tf_func)
+        if hasattr(self._umd, "data_preprocess_by_tf"):
+            dataset = dataset.map(self._umd.data_preprocess_by_tf)
 
         # shuffle and batch if needed
         if shuffle_buffer_size:

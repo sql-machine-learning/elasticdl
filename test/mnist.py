@@ -31,7 +31,7 @@ class MnistCNN(UserDefinedModule):
 
     @staticmethod
     def optimizer():
-        return tf.train.AdamOptimizer(learning_rate=0.01)
+        return tf.train.AdamOptimizer(learning_rate=0.001)
 
     @staticmethod
     def accuracy(output, labels):
@@ -46,21 +46,23 @@ class MnistCNN(UserDefinedModule):
         return tf.placeholder(tf.float32, [None, 28, 28, 1])
 
     @staticmethod
-    def data_process_py_func(data):
+    def raw_data_transform_by_py(databytes):
         N = 28
-        parsed = np.frombuffer(data, dtype="uint8")
+        parsed = np.frombuffer(databytes, dtype="uint8")
         assert len(parsed) == N * N + 1
         label = parsed[-1]
         img = np.resize(parsed[:-1], new_shape=(N, N, 1))
         label = label.astype(np.int32)
         img = img.astype(np.float32) / 255.0
+        
         return img, label
 
-    # data_process_py_func output type
-    data_py_output_type = [tf.float32, tf.int32]
+    @staticmethod
+    def transformed_data_types():
+        return [tf.float32, tf.int32]
 
     @staticmethod
-    def data_process_tf_func(image, label):
+    def data_preprocess_by_tf(image, label):
         N = 28
         image = tf.reshape(image, [N, N, 1])
         return image, label
