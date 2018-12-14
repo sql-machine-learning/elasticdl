@@ -104,7 +104,7 @@ class Dummy(object):
     def data_process_tf_func(x, y):
         _x = tf.identity(x)
         _y = tf.identity(y)
-        return x, y
+        return _x, _y
 
 
 def dummy_create_recordio_dataset(data_file, file_offset):
