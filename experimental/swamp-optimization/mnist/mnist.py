@@ -26,10 +26,9 @@ class Net(nn.Module):
         return F.log_softmax(x, dim=1)
 
 
-def train(args, model, device, train_loader, optimizer, epoch):
+def train(args, model, train_loader, optimizer, epoch):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
         output = model(data)
         loss = F.nll_loss(output, target)
@@ -41,13 +40,12 @@ def train(args, model, device, train_loader, optimizer, epoch):
                 100. * batch_idx / len(train_loader), loss.item()))
 
 
-def test(args, model, device, test_loader):
+def test(args, model, test_loader):
     model.eval()
     test_loss = 0
     correct = 0
     with torch.no_grad():
         for data, target in test_loader:
-            data, target = data.to(device), target.to(device)
             output = model(data)
             # sum up batch loss
             test_loss += F.nll_loss(output, target, reduction='sum').item()
@@ -86,8 +84,6 @@ def main():
 
     torch.manual_seed(args.seed)
 
-    device = torch.device("cpu")
-
     kwargs = {}
     train_loader = torch.utils.data.DataLoader(
         datasets.MNIST('./data', train=True, download=True,
@@ -103,13 +99,13 @@ def main():
         ])),
         batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
-    model = Net().to(device)
+    model = Net()
     optimizer = optim.SGD(model.parameters(), lr=args.lr,
                           momentum=args.momentum)
 
     for epoch in range(1, args.epochs + 1):
-        train(args, model, device, train_loader, optimizer, epoch)
-        test(args, model, device, test_loader)
+        train(args, model, train_loader, optimizer, epoch)
+        test(args, model, test_loader)
 
     if (args.save_model):
         torch.save(model.state_dict(), "mnist_cnn.pt")
