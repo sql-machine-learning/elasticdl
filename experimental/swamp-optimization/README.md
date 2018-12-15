@@ -2,9 +2,9 @@
 
 For the background of this algorithm, please refer to https://github.com/wangkuiyi/elasticdl/issues/75. This document is about an illustrative example.
 
-## A Synthesis Problem
+## A Synthetic Problem
 
-To illustrate the search traces of some bees, I want a model that have two real number parameters, so could I plot the traces on 2-dimensional space.  Also, I want a supervised learning example, as most deep learning models are supervised.  So, we use the model
+To illustrate the search traces of some bees, I want a model that have two real number parameters, so could I plot the traces on 2-dimensional space.  Also, as most deep learning models are supervised models, we use the following regression model in the example
 
   y = a x + b
   
@@ -14,7 +14,7 @@ Such a space is "colored" by the cost C:
 
   C = cost(D, ϴ) = mse(Y'=a X + b, Y)
   
-where mse denotes the mean-square-error, Y' is the set of predicted result and Y is the true value, D={X,Y} denotes the training dataset.
+where mse denotes the mean-square-error, Y' is the set of predicted result and Y is the label, D={X,Y} denotes the training dataset.
 
 Please be aware that for each training job, D={X,Y} is fixed, and we don't plot them.
 
@@ -64,12 +64,12 @@ and the backward algorithm:
 
 ```go
 func backward(x, y, e []float64) (da, db flaot64) {
-	for i := range x {
-	    da += e[i] * x[i]
-		db += e[i]
+    for i := range x {
+        da += e[i] * x[i]
+        db += e[i]
     }
-	n := float64(len(x))
-	return da*2/n, db*2/n
+    n := float64(len(x))
+    return da*2/n, db*2/n
 }
 ```
 
@@ -83,8 +83,8 @@ func optimize(a, b, da, db, η float64) (a, b float64) {
 }
 ```
 
-### The Swamp Optimization Algorithm
+## The Swamp Optimization Algorithm
 
-We start a set of trainers as goroutines.  The parameter server runs on the main goroutine.  Each trainer and the parameter server traces their local model.  After the training, the example program plots traces from trainers in red and the trace from the parameter server in green.  We can see from the following output that the final version of model on the parameter server is around the truth ϴ={a,b}={2,1}.  It is not exactly on {2,1} partly because the hypothesis testing is based on small minibatches but not a full dataset.
+We start a set of trainers as goroutines.  The parameter server runs on the main goroutine.  Each trainer and the parameter server trace their local model.  After the training, the example program plots traces from trainers in red and the trace from the parameter server in green.  We can see from the following output that the final version of the model on the parameter server is around the truth ϴ={a,b}={2,1}.  It is not precisely on {2,1} partly because the hypothesis testing is with small minibatches but not a full dataset.
 
 ![](points.png)
