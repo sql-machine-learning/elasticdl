@@ -82,3 +82,9 @@ func optimize(a, b, da, db, η float64) (a, b float64) {
    return a + da * η, b + db * η
 }
 ```
+
+### The Swamp Optimization Algorithm
+
+We start a set of trainers as goroutines.  The parameter server runs on the main goroutine.  Each trainer and the parameter server traces their local model.  After the training, the example program plots traces from trainers in red and the trace from the parameter server in green.  We can see from the following output that the final version of model on the parameter server is around the truth ϴ={a,b}={2,1}.  It is not exactly on {2,1} partly because the hypothesis testing is based on small minibatches but not a full dataset.
+
+![](points.png)
