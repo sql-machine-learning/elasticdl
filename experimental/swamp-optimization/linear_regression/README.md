@@ -2,6 +2,20 @@
 
 For the background of this algorithm, please refer to https://github.com/wangkuiyi/elasticdl/issues/75. This document is about an illustrative example.
 
+## Build and Run
+
+To try this example, [install Go](https://golang.org/doc/install) and run the following command:
+
+```bash
+go run linear_regression.go
+```
+
+This updates the `traces.png` file that presents the optimization traces of the swamp.
+
+![](traces.png)
+
+The swamp consists of some trainers goroutines and the parameter server running by the main goroutine.  Each trainer and the parameter server trace their local model.  After the training, the example program plots traces of local model updates by trainers in red and that by the parameter server in green.  We can see that the final estimate of the model on the parameter server is around the truth ϴ={a,b}={2,1}.  It is not precisely on {2,1} partly due to the randomness from data synthesis and goroutine scheduling.
+
 ## A Synthetic Problem
 
 To illustrate the search traces of some bees, I want a model that have two real number parameters, so could I plot the traces on 2-dimensional space.  Also, as most deep learning models are supervised models, we use the following regression model in the example
@@ -82,9 +96,3 @@ func optimize(a, b, da, db, η float64) (a, b float64) {
    return a + da * η, b + db * η
 }
 ```
-
-## The Swamp Optimization Algorithm
-
-We start a set of trainers as goroutines.  The parameter server runs on the main goroutine.  Each trainer and the parameter server trace their local model.  After the training, the example program plots traces from trainers in red and the trace from the parameter server in green.  We can see from the following output that the final version of the model on the parameter server is around the truth ϴ={a,b}={2,1}.  It is not precisely on {2,1} partly because the hypothesis testing is with small minibatches but not a full dataset.
-
-![](points.png)
