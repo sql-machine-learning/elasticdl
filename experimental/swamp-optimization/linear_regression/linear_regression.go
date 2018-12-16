@@ -6,13 +6,13 @@ import (
 	"log"
 	"math"
 	"math/rand"
-	"runtime"
 	"time"
 
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/plotutil"
 	"gonum.org/v1/plot/vg"
+	"gonum.org/v1/plot/vg/draw"
 )
 
 func validate(x float64, fmt string, args ...interface{}) float64 {
@@ -33,7 +33,8 @@ func validate(x float64, fmt string, args ...interface{}) float64 {
 func synthesize(n int, a, b float64) (x, y []float64) {
 	for i := 0; i < n; i++ {
 		α := validate(rand.Float64()*10.0, "synthesize α")
-		β := validate(a*α+b+rand.Float64()/5.0, "synthesize β from α=%f", α)
+		β := validate(a*α+b+rand.Float64()/5.0, "synthesize β from α=%f",
+			α)
 		x = append(x, α)
 		y = append(y, β)
 	}
@@ -42,7 +43,8 @@ func synthesize(n int, a, b float64) (x, y []float64) {
 
 func forward(x, y []float64, a, b float64) (e []float64, c float64) {
 	for i := range x {
-		α := validate(a*x[i]+b-y[i], "forward e = %f * %f + %f - %f", a, x[i], b, y[i])
+		α := validate(a*x[i]+b-y[i], "forward e = %f * %f + %f - %f", a,
+			x[i], b, y[i])
 		e = append(e, α)
 		c += α * α
 	}
@@ -51,17 +53,21 @@ func forward(x, y []float64, a, b float64) (e []float64, c float64) {
 
 func backward(x, y, e []float64) (da, db float64) {
 	for i := range x {
-		da = validate(da+validate(e[i]*x[i], "backward e*x = %f * %f", e[i], x[i]),
+		da = validate(da+validate(e[i]*x[i], "backward e*x = %f * %f",
+			e[i], x[i]),
 			"da += e[i]*x[i]")
 		db = validate(db+e[i], "backward db += e[i]")
 	}
 	n := float64(len(x))
-	return validate(da*2/n, "backward return da=%f", da), validate(db*2/n, "backward return db=%f", db)
+	return validate(da*2/n, "backward return da=%f", da), validate(db*2/n,
+		"backward return db=%f", db)
 }
 
 func optimize(a, b, da, db, η float64) (float64, float64) {
-	a = validate(a-validate(da*η, "optimize da*η = %f * %f", da, η), "optimize a")
-	b = validate(b-validate(db*η, "optimize db*η = %f * %f", db, η), "optimize b")
+	a = validate(a-validate(da*η, "optimize da*η = %f * %f", da, η),
+		"optimize a")
+	b = validate(b-validate(db*η, "optimize db*η = %f * %f", db, η),
+		"optimize b")
 	return a, b
 }
 
@@ -77,9 +83,9 @@ type model struct {
 	a, b, c float64
 }
 
-func train(up, down chan model, freeTrialSteps int, curve *plotter.XYs) {
-	a := 0.0         // rand.Float64() // random start
-	b := 0.0         // rand.Float64()
+func trainer(up, down chan model, freeTrialSteps int, curve *plotter.XYs) {
+	a := 0.2 * rand.Float64() // random start
+	b := 0.2 * rand.Float64()
 	s := math.Inf(1) // mse >= 0
 	step := freeTrialSteps
 	for {
@@ -110,43 +116,43 @@ func train(up, down chan model, freeTrialSteps int, curve *plotter.XYs) {
 func ps(up, down chan model, curve *plotter.XYs) {
 	var a, b float64
 	c := math.Inf(1)
-	workload := 0
+	updates := 0
 	timer := time.After(2 * time.Second)
-	for workload < 500 {
+	for updates < 500 {
 		select {
 		case θ := <-up: // some worker uploaded a candidate model.
-			workload++
+			updates++
 			if θ.c < c { // looks good according to the worker.
-				x, y := synthesize(m*100, ta, tb) // double check with bigger dev set.
+				// double check with bigger dev set.
+				x, y := synthesize(m*100, ta, tb)
 				_, θ.c = forward(x, y, θ.a, θ.b)
 				if θ.c < c {
 					a, b, c = θ.a, θ.b, θ.c
-					*curve = append(*curve, struct{ X, Y float64 }{a, b})
+					*curve = append(*curve,
+						struct{ X, Y float64 }{a, b})
 				}
 			}
-		case down <- model{a, b, c}: // response if some work is downloading.
+		case down <- model{a, b, c}: // response if any worker downloads.
 		case <-timer:
-			fmt.Println("ps time to rest")
+			fmt.Println("Job stops after a certain period of time.")
 			return
 		}
 	}
-	fmt.Println("ps tired")
+	fmt.Println("Job stops after the PS did a certain number of updates.")
 }
 
 func main() {
 	const w = 10 // number of workers
-	fmt.Println(runtime.GOMAXPROCS(w))
-
 	up := make(chan model)
 	down := make(chan model)
 	curves := make([]plotter.XYs, w+1)
 	for i := 0; i < w; i++ {
-		go train(up, down, 100, &curves[i])
+		go trainer(up, down, 100, &curves[i])
 	}
 	ps(up, down, &curves[w])
 
 	p, _ := plot.New()
-	p.Title.Text = "Worker's traces"
+	p.Title.Text = "Swamp Traces"
 	p.X.Label.Text = "a"
 	p.Y.Label.Text = "b"
 	p.Add(plotter.NewGrid())
@@ -158,8 +164,9 @@ func main() {
 	lp.Color = color.RGBA{G: 255, A: 255}
 	s, _ := plotter.NewScatter(curves[w][len(curves[w])-1:])
 	s.GlyphStyle.Color = color.RGBA{G: 255, A: 255}
+	s.GlyphStyle.Shape = new(draw.BoxGlyph)
 	p.Add(ll, s)
 	p.Legend.Add("parameter server", ll, lp)
-	p.Legend.Add("final point", s)
-	p.Save(10*vg.Inch, 5*vg.Inch, "points.png")
+	p.Legend.Add("final model estimate", s)
+	p.Save(10*vg.Inch, 5*vg.Inch, "traces.png")
 }
