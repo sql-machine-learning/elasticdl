@@ -96,4 +96,3 @@ func optimize(a, b, da, db, η float64) (a, b float64) {
    return a + da * η, b + db * η
 }
 ```
-
