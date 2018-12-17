@@ -9,6 +9,7 @@ import sys
 import pickle
 import threading
 import queue
+import gc
 
 
 class Net(nn.Module):
@@ -97,6 +98,7 @@ def ps(up, down):
             score = s
             updates = updates + 1
             print("updated", updates, score)
+        gc.collect()
 
 
 def main():
@@ -120,15 +122,11 @@ def main():
 
     torch.manual_seed(args.seed)
 
-    try:
-        up = queue.Queue()
-        down = queue.Queue()
-        for t in range(4):
-            threading.Thread(target=trainer, args=(args, up, down,)).start()
-        ps(up, down)
-    except:
-        print("Caught it!")
-    print("main done")
+    up = queue.Queue()
+    down = queue.Queue()
+    for t in range(4):
+        threading.Thread(target=trainer, args=(args, up, down,)).start()
+    ps(up, down)
 
 
 if __name__ == '__main__':
