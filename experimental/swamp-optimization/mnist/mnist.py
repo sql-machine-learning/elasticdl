@@ -56,50 +56,47 @@ def trainer(args, up, down):
             optimizer.zero_grad()
             output = model(data)
             loss = F.nll_loss(output, target)
-            loss.backward()
-            optimizer.step()
 
             if step < args.free_trial_steps:
+                loss.backward()
+                optimizer.step()
                 step = step + 1
             else:
                 if loss.data < score:
                     score = loss.data
                     if up != None:
                         up.put(pickle.dumps(
-                            {"model": model.state_dict(), "loss": loss.data}))
+                            {"model": model.state_dict(), "opt": optimizer.state_dict(), "loss": loss.data}))
                 else:
                     if down != None:
                         m = pickle.loads(down.get())
                         model.load_state_dict(m["model"])
+                        optimizer.load_state_dict(m["opt"])
                         score = m["loss"]
                 step = 0
-            if batch_idx % args.free_trial_steps == 0:
-                print(loss)
-    print("trainer done enough epochs")
+        print("trainer done epoch", epoch)
 
 
 def ps(up, down):
-    model = Net()
+    model_and_score = None
     score = float("inf")
     updates = 0
-    while updates < 50:
+    while updates < 500:
         # In the case that any trainer pulls.
-        down.put_nowait(pickle.dumps(
-            {"model": model.state_dict(), "loss": score}))
+        if model_and_score != None:
+            down.put_nowait(model_and_score)
 
         # In the case that any trainer pushes.
         try:
             d = up.get_nowait()
         except queue.Empty:
             continue
-        updates = updates + 1
-        d = pickle.loads(d)
-        if d["loss"] < score:
-            model.load_state_dict(d["model"])
-            score = d["loss"]
-            print(score)
-        print("updates", updates)
-    print("ps done with enough updates")
+        s = pickle.loads(d)["loss"]
+        if s < score:
+            model_and_score = d
+            score = s
+            updates = updates + 1
+            print("updated", updates, score)
 
 
 def main():
@@ -123,13 +120,14 @@ def main():
 
     torch.manual_seed(args.seed)
 
-    up = queue.Queue()
-    down = queue.Queue()
-    for t in range(1):
-        threading.Thread(target=trainer, args=(args, up, down,)).start()
-    ps(up, down)
-#    trainer(args, None, None)
-
+    try:
+        up = queue.Queue()
+        down = queue.Queue()
+        for t in range(4):
+            threading.Thread(target=trainer, args=(args, up, down,)).start()
+        ps(up, down)
+    except:
+        print("Caught it!")
     print("main done")
 
 
