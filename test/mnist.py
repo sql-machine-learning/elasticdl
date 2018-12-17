@@ -31,7 +31,7 @@ class MnistCNN(UserDefinedModule):
 
     @staticmethod
     def optimizer():
-        return tf.train.AdamOptimizer(learning_rate=0.001)
+        return {'type': tf.train.AdamOptimizer, 'learning_rate': 0.01}
 
     @staticmethod
     def accuracy(output, labels):

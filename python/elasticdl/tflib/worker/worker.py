@@ -20,7 +20,10 @@ class Worker(object):
         self._ps_client = ps_client
         self._work_queue = work_queue
         self._umd = umd
-        self._opt = umd.optimizer()
+        optimizer = umd.optimizer()
+        opt_type = optimizer.pop('type', None)
+        assert(opt_type)
+        self._opt = opt_type(**optimizer)
         self._model_initialized = False
         self._exiting = False
         self._graph = tf.Graph()

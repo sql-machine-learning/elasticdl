@@ -10,8 +10,9 @@ from timeit import default_timer as timer
 class ParameterServerTestCase(unittest.TestCase):
     def setUp(self):
         def optimizer():
-            return tf.train.GradientDescentOptimizer(0.1) 
-            
+            # return tf.train.GradientDescentOptimizer(0.1)
+            return {"type": tf.train.GradientDescentOptimizer, "learning_rate": 0.1}
+
         self.ps1 = ParameterServer(
             optimizer,
             {

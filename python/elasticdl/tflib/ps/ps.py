@@ -15,8 +15,8 @@ class ParameterServer(object):
         self._min_step_cv = threading.Condition()
 
         self._grads_vars = {}
-    
-        graph = tf.Graph() 
+
+        graph = tf.Graph()
         with graph.as_default():
             for k, v in tf_vars.items():
                 if not isinstance(v, np.ndarray) or v.dtype not in (
@@ -24,22 +24,33 @@ class ParameterServer(object):
                     np.float64,
                 ):
                     raise ValueError(
-                        "Initial value for variable %s is not a float ndarray" % k
-                    )
+                        "Initial value for variable %s is not a float ndarray" %
+                        k)
                 # TODO: In graph mode we don't need to keep track of variables by
                 # ourselves.
                 self._grads_vars[k] = (
                     array_ops.placeholder(dtype=v.dtype),
                     tf.Variable(v, name=k),
                 )
-            self._opt = optimizer_func()
+            optimizer = optimizer_func()
+            optimizer_type = optimizer.pop("type", None)
+            assert optimizer
+            learning_rate_value = optimizer.pop("learning_rate", None)
+            assert learning_rate_value
+            self._lr_scale = 1.0
+            self._lr_scale_placeholder = tf.placeholder(
+                dtype=tf.float32, shape=[])
+            self._lr = self._lr_scale_placeholder * learning_rate_value
+            self._opt = optimizer_type(learning_rate=self._lr, **optimizer)
             self._apply_grad_op = self._opt.apply_gradients(
-                self._grads_vars.values()
-            )
+                self._grads_vars.values())
             init_op = tf.global_variables_initializer()
 
         self._sess = tf.Session(graph=graph)
         self._sess.run(init_op)
+
+    def set_learning_rate_scale(self, scale):
+        self._lr_scale = scale
 
     def pull(self, names=None, min_step=0, blocking=True, timeout=None):
         with self._min_step_cv:
@@ -49,17 +60,15 @@ class ParameterServer(object):
         with self._lock:
             if min_step > self._step:
                 raise LookupError(
-                    "Required step is not ready yet: %s" % min_step
-                )
+                    "Required step is not ready yet: %s" %
+                    min_step)
             if names:
                 res = {
-                    k: self._grads_vars[k][1].eval(self._sess) for k in names
-                }
+                    k: self._grads_vars[k][1].eval(
+                        self._sess) for k in names}
             else:
-                res = {
-                    k: v[1].eval(self._sess)
-                    for k, v in self._grads_vars.items()
-                }
+                res = {k: v[1].eval(self._sess)
+                       for k, v in self._grads_vars.items()}
             return self._step, res
 
     def push(self, base_step, sub_step, grads):
@@ -83,6 +92,7 @@ class ParameterServer(object):
     def _compute(self, grads):
         with self._lock:
             feed_dict = {self._grads_vars[k][0]: v for k, v in grads.items()}
+            feed_dict[self._lr_scale_placeholder] = self._lr_scale
             self._sess.run(self._apply_grad_op, feed_dict=feed_dict)
         with self._min_step_cv:
             self._step += 1

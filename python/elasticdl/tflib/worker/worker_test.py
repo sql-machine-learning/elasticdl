@@ -56,7 +56,7 @@ class Dummy(object):
 
     @staticmethod
     def optimizer():
-        return tf.train.GradientDescentOptimizer(0.1)
+        return {"type": tf.train.AdamOptimizer, "learning_rate": 0.1}
 
     @staticmethod
     def _create_model_var():

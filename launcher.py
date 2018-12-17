@@ -26,6 +26,7 @@ class ThreadLauncher(object):
             for i in range(num_ps)
         ]
         for p in ps:
+            p.set_learning_rate_scale(1.0 / num_worker)
             p.start()
 
         # launch master
