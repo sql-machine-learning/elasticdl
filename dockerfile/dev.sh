@@ -7,8 +7,14 @@ if [[ $USER_ID == 0 ]]; then
     GRP_ID=${SUDO_GID}
 fi
 
-GRP_NAME=$(getent group ${GRP_ID} | cut -d: -f1)
-USER_NAME=$(getent passwd ${USER_ID} | cut -d: -f1)
+if [[ $OSTYPE == "darwin"* ]]; then
+    GRP_NAME=$(dscl . -search /Groups PrimaryGroupID ${GRP_ID} | head -1 | cut -f1)
+    USER_NAME=$(dscl . -search /Users UniqueID ${USER_ID} | head -1 | cut -f1)
+else
+    GRP_NAME=$(getent group ${GRP_ID} | cut -d: -f1)
+    USER_NAME=$(getent passwd ${USER_ID} | cut -d: -f1)
+fi
+
 HOME_DIR=$(eval echo ~${USER_NAME})
 
 docker run --rm -it --net=host \
