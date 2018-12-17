@@ -5,7 +5,20 @@ import threading
 import time
 
 
-def _id(*parts):
+__work_id = 1
+__work_id_lock = threading.Lock()
+def _new_work_id():
+    """
+    returns a unique work id. Thread safe. 
+    """
+    global __work_id
+    global __work_id_lock
+    with __work_id_lock:
+        __work_id += 1
+        return __work_id
+
+
+def _crc32(*parts):
     # convert each integer part into a 4-byte array, join them and return
     # crc32
     return crc32(b"".join(p.to_bytes(4, "little") for p in parts))
@@ -23,8 +36,8 @@ class Work(object):
         self.trial = trial
         # Finish earlier epoch first, but randomize the order of chunks within
         # an epoch.
-        self.id = _id(epoch, file_index, offset)
-        self.priority = (epoch, self.id)
+        self.id = _new_work_id()
+        self.priority = (epoch, _crc32(epoch, file_index, offset))
 
     def next_trial(self):
         return Work(self.file_index, self.offset, self.epoch, self.trial + 1)
