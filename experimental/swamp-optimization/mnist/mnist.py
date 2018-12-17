@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.autograd import Variable
 from torchvision import datasets, transforms
 import sys
 import pickle
@@ -44,6 +45,7 @@ def trainer(args, up, down):
         batch_size=args.batch_size,
         shuffle=True,        # each trainer might have different order
         **kwargs)
+
     model = Net()               # trainer-local model.
     optimizer = optim.SGD(model.parameters(), lr=args.lr,
                           momentum=args.momentum)
@@ -78,10 +80,24 @@ def trainer(args, up, down):
         print("trainer done epoch", epoch)
 
 
-def ps(up, down):
+def ps(args, up, down):
     model_and_score = None
     score = float("inf")
     updates = 0
+    batch_size = args.validate_batch_size
+    max_batch = args.validate_max_batch
+
+    validate_loader = torch.utils.data.DataLoader(
+        datasets.MNIST('./data',
+                       train=False,
+                       download=True,
+                       transform=transforms.Compose([
+                           transforms.ToTensor(),
+                           transforms.Normalize((0.1307,), (0.3081,))
+                       ])),
+                       batch_size=batch_size,
+                       shuffle=True) # shuffle for random test
+
     while updates < 500:
         # In the case that any trainer pulls.
         if model_and_score != None:
@@ -93,13 +109,33 @@ def ps(up, down):
         except queue.Empty:
             continue
         s = pickle.loads(d)["loss"]
+
+        # Restore uploaded model
+        state_dict = pickle.loads(d)["model"]
+        model = Net()
+        model.load_state_dict(state_dict)
+        
         if s < score:
-            model_and_score = d
-            score = s
-            updates = updates + 1
-            print("updated", updates, score)
+            # Model double check
+            double_check_loss = validate(model, validate_loader, batch_size, max_batch)
+            if double_check_loss < score:
+                model_and_score = d
+                score = s
+                updates = updates + 1
+                print("updated", updates, score.data.item(), double_check_loss)
         gc.collect()
 
+def validate(model, data_loader, batch_size, max_batch):
+    eval_loss = 0
+    for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
+        if batch_idx < max_batch:
+            out = model(batch_x)
+            loss = F.nll_loss(out, batch_y)
+            eval_loss += loss.data.item()
+        else:
+            break
+    loss_val = eval_loss / max_batch
+    return loss_val
 
 def main():
     # Training settings
@@ -118,6 +154,10 @@ def main():
                         help='how many batches to wait before sync up with the ps')
     parser.add_argument('--save-model', action='store_true', default=False,
                         help='For Saving the current Model')
+    parser.add_argument('--validate_batch_size', default=64,
+                        help='batch size for validation dataset in ps')
+    parser.add_argument('--validate_max_batch', default=5,
+                        help='max batch for validate model in ps')
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -126,7 +166,7 @@ def main():
     down = queue.Queue()
     for t in range(4):
         threading.Thread(target=trainer, args=(args, up, down,)).start()
-    ps(up, down)
+    ps(args, up, down)
 
 
 if __name__ == '__main__':
