@@ -5,6 +5,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
+import sys
+import pickle
+import threading
+import queue
+import gc
 
 
 class Net(nn.Module):
@@ -26,7 +31,7 @@ class Net(nn.Module):
         return F.log_softmax(x, dim=1)
 
 
-def trainer(args):
+def trainer(args, up, down):
     kwargs = {}
     data_loader = torch.utils.data.DataLoader(
         datasets.MNIST('./data',  # cache data to the current directory.
@@ -43,16 +48,57 @@ def trainer(args):
     optimizer = optim.SGD(model.parameters(), lr=args.lr,
                           momentum=args.momentum)
 
-    model.train()
+    # model.train()
+    score = float("inf")
+    step = 0
+
     for epoch in range(args.epochs):
         for batch_idx, (data, target) in enumerate(data_loader):
             optimizer.zero_grad()
             output = model(data)
             loss = F.nll_loss(output, target)
-            loss.backward()
-            optimizer.step()
-            if batch_idx % args.log_interval == 0:
-                print(loss)
+
+            if step < args.free_trial_steps:
+                loss.backward()
+                optimizer.step()
+                step = step + 1
+            else:
+                if loss.data < score:
+                    score = loss.data
+                    if up != None:
+                        up.put(pickle.dumps(
+                            {"model": model.state_dict(), "opt": optimizer.state_dict(), "loss": loss.data}))
+                else:
+                    if down != None:
+                        m = pickle.loads(down.get())
+                        model.load_state_dict(m["model"])
+                        optimizer.load_state_dict(m["opt"])
+                        score = m["loss"]
+                step = 0
+        print("trainer done epoch", epoch)
+
+
+def ps(up, down):
+    model_and_score = None
+    score = float("inf")
+    updates = 0
+    while updates < 500:
+        # In the case that any trainer pulls.
+        if model_and_score != None:
+            down.put_nowait(model_and_score)
+
+        # In the case that any trainer pushes.
+        try:
+            d = up.get_nowait()
+        except queue.Empty:
+            continue
+        s = pickle.loads(d)["loss"]
+        if s < score:
+            model_and_score = d
+            score = s
+            updates = updates + 1
+            print("updated", updates, score)
+        gc.collect()
 
 
 def main():
@@ -68,16 +114,19 @@ def main():
                         help='SGD momentum (default: 0.5)')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
-    parser.add_argument('--log-interval', type=int, default=10, metavar='N',
-                        help='how many batches to wait before logging training status')
-
+    parser.add_argument('--free-trial-steps', type=int, default=10, metavar='N',
+                        help='how many batches to wait before sync up with the ps')
     parser.add_argument('--save-model', action='store_true', default=False,
                         help='For Saving the current Model')
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
 
-    trainer(args)
+    up = queue.Queue()
+    down = queue.Queue()
+    for t in range(4):
+        threading.Thread(target=trainer, args=(args, up, down,)).start()
+    ps(up, down)
 
 
 if __name__ == '__main__':
