@@ -41,8 +41,12 @@ class MockWorkerThread(threading.Thread):
         while not self._exiting:
             try:
                 work = self._q.get_work(timeout=1.0)
-                success = run_log.add_run(work[1], work[2])
-                self._q.work_done(work[0], success)
+                if not work[1]:
+                    # Eval work
+                    result = 0.001
+                else:
+                    result = run_log.add_run(work[1], work[2])
+                self._q.work_done(work[0], result)
             except queue.Empty:
                 pass
 
