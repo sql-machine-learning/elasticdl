@@ -3,9 +3,6 @@ py_library(
     srcs = [
         "record.py",
     ],
-    deps = [
-        "@pyrecordio//recordio:lib",
-    ],
 )
 
 py_test(

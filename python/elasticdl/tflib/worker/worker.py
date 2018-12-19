@@ -3,7 +3,7 @@ import numpy as np
 import threading
 import queue
 import time
-from recordio.tf import RecordIODataset
+from recordio.tensorflow_op import RecordIODataset
 from tensorflow.python.ops import array_ops
 
 
