@@ -1,5 +1,5 @@
 from binascii import crc32
-from recordio.file import File
+from recordio import File
 from contextlib import ExitStack
 import queue
 import threading

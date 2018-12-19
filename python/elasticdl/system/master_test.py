@@ -3,7 +3,7 @@ import unittest
 import threading
 from unittest.mock import patch
 from collections import Counter
-from recordio.file_index import _ChunkData as C
+from recordio.recordio.file_index import _ChunkData as C
 from master import Master
 
 # used to keep some shared data across workers.
