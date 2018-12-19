@@ -11,6 +11,8 @@ import pickle
 import threading
 import queue
 import gc
+import time
+from matplotlib import pyplot as plot
 
 
 class Net(nn.Module):
@@ -32,7 +34,7 @@ class Net(nn.Module):
         return F.log_softmax(x, dim=1)
 
 
-def trainer(args, up, down):
+def trainer(args, up, down, tid):
     kwargs = {}
     data_loader = torch.utils.data.DataLoader(
         datasets.MNIST('./data',  # cache data to the current directory.
@@ -54,6 +56,9 @@ def trainer(args, up, down):
     score = float("inf")
     step = 0
 
+    start_time = time.time()
+    time_costs = []
+    losses = []
     for epoch in range(args.epochs):
         for batch_idx, (data, target) in enumerate(data_loader):
             optimizer.zero_grad()
@@ -77,8 +82,22 @@ def trainer(args, up, down):
                         optimizer.load_state_dict(m["opt"])
                         score = m["loss"]
                 step = 0
-        print("trainer done epoch", epoch)
 
+            if args.metrics_loss_enabled and batch_idx % args.metrics_sample_interval == 0:
+                time_costs.append(round(time.time() - start_time))
+                losses.append(round(loss.item(), 4))
+
+            if batch_idx % args.log_interval == 0:
+                print("Current trainer id: %i, epoch: %i, batch id: %i" % (tid, epoch, batch_idx))
+        print("trainer %i done epoch %i" % (tid, epoch))
+
+    if args.metrics_loss_enabled:
+        plot.plot(time_costs, losses, label='loss')
+        plot.xlabel('timestamp')
+        plot.ylabel('loss')
+        plot.legend(loc=7)
+        plot.title('swamp training of mnist data')
+        plot.savefig(args.loss_file_prefix + '_' + str(tid) + '.png')
 
 def ps(args, up, down):
     model_and_score = None
@@ -122,7 +141,7 @@ def ps(args, up, down):
                 model_and_score = d
                 score = s
                 updates = updates + 1
-                print("updated", updates, score.data.item(), double_check_loss)
+                print("updated", updates, round(score.data.item(), 4), round(double_check_loss, 4))
         gc.collect()
 
 def validate(model, data_loader, batch_size, max_batch):
@@ -159,14 +178,26 @@ def main():
                         help='batch size for validation dataset in ps')
     parser.add_argument('--validate_max_batch', default=5,
                         help='max batch for validate model in ps')
+    parser.add_argument('--metrics-dir', default='./',
+                        help='metrics-dir')
+    parser.add_argument('--loss-file-prefix', default='loss',
+                        help='the name of loss figure file')
+    parser.add_argument('--accuracy-file', default='accuracy.png',
+                        help='the name of accuracy figure file')
+    parser.add_argument('--metrics-sample-interval', type=int, default=10, metavar='N',
+                        help='how many batches to wait before sampling a metircs value')
+    parser.add_argument('--metrics-loss-enabled', type=bool, default=True,
+                        help='if to sample metrics')
+    parser.add_argument('--log-interval', type=int, default=50, metavar='N',
+                        help='how many batches to wait before logging training status')
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
 
     up = queue.Queue()
     down = queue.Queue()
-    for t in range(4):
-        threading.Thread(target=trainer, args=(args, up, down,)).start()
+    for t in range(2):
+        threading.Thread(target=trainer, args=(args, up, down, t,)).start()
     ps(args, up, down)
 
 
