@@ -1,10 +1,10 @@
 # Contributing Guideline
 
-We recommend to run ElasticDL system locally using end-user Docker image. End-user Docker image contains the necessary components to run ElasticDL systems, such as Tensorflow, PyTorch. It also contains data processing tool for preparing input data, as well as some pre-built datasets and training scripts for testing.
+We recommend running ElasticDL system locally using end-user Docker image. End-user Docker image contains the necessary components to run ElasticDL systems, such as Tensorflow, PyTorch, etc. It also contains data processing tools for preparing input data, as well as some pre-built datasets and training scripts for testing.
 
 ## How to Build End-User Docker Image
 
-Following script will clone the git repo and build the end-user Docker image:
+The following script will clone the git repo and build the end-user Docker image:
 
 ```bash
 # on your local MacOs or Linux machine, in your git directory
@@ -14,7 +14,7 @@ elasticdl/build_docker.sh
 ```
 The Docker image is tagged with `elasticdl/user`.
 
-If you made any changes to the ElasticDL code, you will need to rebuild the image. The first build may take sometime because, the subsequent build should be very fast.
+If you made any changes to the ElasticDL code, you will need to rebuild the image. The first build may take some time, the subsequent builds should be very fast.
 
 ## How to Use End-User Docker
 
