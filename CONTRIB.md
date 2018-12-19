@@ -12,6 +12,7 @@ git clone https://github.com/wangkuiyi/elasticdl
 # build end-user Docker image
 elasticdl/build_docker.sh
 ```
+
 The Docker image is tagged with `elasticdl/user`.
 
 If you made any changes to the ElasticDL code, you will need to rebuild the image. The first build may take some time, the subsequent builds should be very fast.
