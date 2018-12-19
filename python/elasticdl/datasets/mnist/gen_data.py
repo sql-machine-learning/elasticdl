@@ -1,4 +1,4 @@
-from recordio.file import File
+from recordio import File
 from tensorflow.python.keras.datasets import mnist, fashion_mnist
 import record
 import itertools
