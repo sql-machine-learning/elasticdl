@@ -124,11 +124,8 @@ def dummy_create_recordio_dataset(data_file, file_offset):
 
 @patch.object(Worker, "_create_recordio_dataset", dummy_create_recordio_dataset)
 class WorkerTestCase(unittest.TestCase):
-    def test(self):
+    def do_test(self, ps_num, worker_num):
         prog = Dummy()
-
-        ps_num = 1
-        worker_num = 2
 
         ps = [ParameterServer(prog.optimizer, prog.vars()) for _ in range(ps_num)]
         for p in ps:
@@ -155,6 +152,12 @@ class WorkerTestCase(unittest.TestCase):
 
         for p in ps:
             p.join()
+
+        def test_1_2(self):
+            self.do_test(ps_num=1, worker_num=2)
+
+        def test_1_2(self):
+            self.do_test(ps_num=2, work_num=1)
 
 
 if __name__ == "__main__":
