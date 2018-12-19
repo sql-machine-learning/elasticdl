@@ -40,7 +40,7 @@ class Worker(object):
         while not self._exiting:
             # get work from work queue
             try:
-                work_id, data_file, file_offset = self._work_queue.get_work(timeout=2.0)
+                work_id, data_file, file_offset = self._work_queue.get_work(timeout=0.1)
                 print('Got work: ', work_id, data_file, file_offset)
             except queue.Empty:
                 continue
@@ -48,7 +48,7 @@ class Worker(object):
             # TODO: handle eval
             if not data_file:
                 self._work_queue.work_done(work_id, 0)
-                return
+                continue
 
             # create dataset from data_file, file_offset
             # TODO: how to config shuffle/batch parameter from user?
