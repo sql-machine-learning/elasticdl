@@ -156,7 +156,7 @@ class WorkerTestCase(unittest.TestCase):
         def test_1_2(self):
             self.do_test(ps_num=1, worker_num=2)
 
-        def test_1_2(self):
+        def test_2_1(self):
             self.do_test(ps_num=2, work_num=1)
 
 
