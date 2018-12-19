@@ -105,7 +105,7 @@ def ps(args, up, down):
 
         # In the case that any trainer pushes.
         try:
-            d = up.get_nowait()
+            d = up.get(timeout=1.0)
         except queue.Empty:
             continue
         s = pickle.loads(d)["loss"]
@@ -127,13 +127,14 @@ def ps(args, up, down):
 
 def validate(model, data_loader, batch_size, max_batch):
     eval_loss = 0
-    for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
-        if batch_idx < max_batch:
-            out = model(batch_x)
-            loss = F.nll_loss(out, batch_y)
-            eval_loss += loss.data.item()
-        else:
-            break
+    with torch.no_grad():
+        for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
+            if batch_idx < max_batch:
+                out = model(batch_x)
+                loss = F.nll_loss(out, batch_y)
+                eval_loss += loss.data.item()
+            else:
+                break
     loss_val = eval_loss / max_batch
     return loss_val
 
