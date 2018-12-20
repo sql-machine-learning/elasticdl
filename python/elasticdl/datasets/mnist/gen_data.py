@@ -47,8 +47,9 @@ def main(argv):
         help="Number of chunks in a RecordIO file",
     )
     args = parser.parse_args(argv)
-    # one uncompressed record has size 28 * 28 + 1 bytes. Assuming 0.3 compression ratio.
-    chunk_size = args.num_record_per_chunk * 28 * 28 * 0.3
+    # one uncompressed record has size 28 * 28 + 1 bytes.
+    # Also add some slack for safety.
+    chunk_size = args.num_record_per_chunk * (28 * 28  + 1) + 100
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     gen(
