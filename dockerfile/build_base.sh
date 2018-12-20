@@ -3,7 +3,7 @@ set -e
 set -x
 
 tmp_dir=$(mktemp -d)
-../../python/elasticdl/datasets/mnist/gen_data.py ${tmp_dir}/data
+../python/elasticdl/datasets/mnist/gen_data.py ${tmp_dir}/data
 
 docker build -t elasticdl/base -t reg.docker.alibaba-inc.com/elasticdl/base ${tmp_dir} -f- << EOF
 FROM tensorflow/tensorflow:1.12.0-py3
