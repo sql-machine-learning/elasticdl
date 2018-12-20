@@ -51,8 +51,8 @@ class Trainer(object):
                            train=True,  # use the training data also for dev.
                            download=True,
                            transform=transforms.Compose([
-                              transforms.ToTensor(),
-                              transforms.Normalize((0.1307,), (0.3081,))
+                               transforms.ToTensor(),
+                               transforms.Normalize((0.1307,), (0.3081,))
                            ])),
             batch_size=self._args.batch_size,
             shuffle=True,        # each trainer might have different order
@@ -60,7 +60,7 @@ class Trainer(object):
 
         model = Net()               # trainer-local model.
         optimizer = optim.SGD(model.parameters(), lr=self._args.lr,
-                          momentum=self._args.momentum)
+                              momentum=self._args.momentum)
 
         # model.train()
         score = float("inf")
@@ -97,7 +97,8 @@ class Trainer(object):
                     self._losses.append(round(loss.item(), 4))
 
                 if batch_idx % self._args.log_interval == 0:
-                    print("Current trainer id: %i, epoch: %i, batch id: %i" % (self._tid, epoch, batch_idx))
+                    print("Current trainer id: %i, epoch: %i, batch id: %i" %
+                          (self._tid, epoch, batch_idx))
             print("trainer %i done epoch %i" % (self._tid, epoch))
 
     def time_costs(self):
@@ -109,15 +110,16 @@ class Trainer(object):
     def tid(self):
         return self._tid
 
+
 class Ps(object):
-   
+
     def __init__(self, args, up, down):
         self._args = args
         self._up = up
         self._down = down
         self._time_costs = []
         self._losses = []
-        self._exit = False 
+        self._exit = False
 
     def run(self):
         model_and_score = None
@@ -134,9 +136,9 @@ class Ps(object):
                                transforms.ToTensor(),
                                transforms.Normalize((0.1307,), (0.3081,))
                            ])),
-                           batch_size=batch_size,
-                           shuffle=True) # shuffle for random test
-        
+            batch_size=batch_size,
+            shuffle=True)  # shuffle for random test
+
         start_time = time.time()
         while not self._exit:
             # In the case that any trainer pulls.
@@ -155,19 +157,21 @@ class Ps(object):
             state_dict = pickle.loads(d)["model"]
             model = Net()
             model.load_state_dict(state_dict)
-        
+
             if s < score:
                 # Model double check
-                double_check_loss = self.validate(model, validate_loader, batch_size, max_batch)
+                double_check_loss = self.validate(
+                    model, validate_loader, batch_size, max_batch)
                 if double_check_loss < score:
                     model_and_score = d
                     score = s
                     updates = updates + 1
 
                     if self._args.loss_file is not None:
-                        self._time_costs.append(round(time.time() - start_time))
+                        self._time_costs.append(
+                            round(time.time() - start_time))
                         self._losses.append(round(s.item(), 4))
- 
+
     def validate(self, model, data_loader, batch_size, max_batch):
         eval_loss = 0
         with torch.no_grad():
@@ -190,13 +194,14 @@ class Ps(object):
     def join(self):
         self._exit = True
 
+
 def main():
     # Training settings
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
     parser.add_argument('--epochs', type=int, default=1, metavar='N',
-                        help='number of epochs to train (default: 10)')
+                        help='number of epochs to train (default: 1)')
     parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
                         help='learning rate (default: 0.01)')
     parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
@@ -225,12 +230,13 @@ def main():
     ps = Ps(args, up, down)
     ps_thread = threading.Thread(target=ps.run, name='ps')
     ps_thread.start()
-    
+
     trainers = []
     trainer_threads = []
-    for t in range(4):
+    for t in range(2):
         trainer = Trainer(t, args, up, down)
-        trainer_thread = threading.Thread(target=trainer.train, name=('trainer-' + str(t)))
+        trainer_thread = threading.Thread(
+            target=trainer.train, name=('trainer-' + str(t)))
         trainer_thread.start()
         trainers.append(trainer)
         trainer_threads.append(trainer_thread)
@@ -238,14 +244,16 @@ def main():
     for thread in trainer_threads:
         thread.join()
 
-    ps.join() 
+    ps.join()
 
     if args.loss_file is not None:
+        print("Write image to ", args.loss_file)
         plot.xlabel('timestamp')
         plot.ylabel('loss')
         plot.title('swamp training for mnist data')
         for trainer in trainers:
-            plot.plot(trainer.time_costs(), trainer.losses(), label='trainer-' + str(trainer.tid()))
+            plot.plot(trainer.time_costs(), trainer.losses(),
+                      label='trainer-' + str(trainer.tid()))
         plot.plot(ps.time_costs(), ps.losses(), label='ps')
         plot.legend(loc=7)
         plot.savefig(args.loss_file)
