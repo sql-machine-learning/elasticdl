@@ -85,7 +85,7 @@ class Trainer(object):
                             self._up.put(pickle.dumps(
                                 {"model": model.state_dict(), "opt": optimizer.state_dict(), "loss": loss.data}))
                     else:
-                        if self._down != None and random.random() > self._args.pull_probability:
+                        if self._down != None and random.random() < self._args.pull_probability:
                             m = pickle.loads(self._down.get())
                             model.load_state_dict(m["model"])
                             optimizer.load_state_dict(m["opt"])
