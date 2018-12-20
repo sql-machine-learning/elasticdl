@@ -221,8 +221,8 @@ def main():
                         help='the name of loss figure file')
     parser.add_argument('--log-interval', type=int, default=50, metavar='N',
                         help='how many batches to wait before logging training status')
-    parser.add_argument('--pull-probability', type=float, default=0, metavar='N',
-                        help='how many batches to wait before logging training status')
+    parser.add_argument('--pull-probability', type=float, default=0,
+                        help='the probability of trainer pulling from ps')
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
