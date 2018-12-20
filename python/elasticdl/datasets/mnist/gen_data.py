@@ -35,7 +35,10 @@ def main(argv):
     )
     parser.add_argument("dir", help="Output directory")
     parser.add_argument(
-        "--chunk_size_kb", default=4, type=int, help="Chunk size in KB"
+        "--num_record_per_chunk",
+        default=1024,
+        type=int,
+        help="Approximate number of records in a chunk. Not accurate due to compression",
     )
     parser.add_argument(
         "--num_chunk",
@@ -44,20 +47,23 @@ def main(argv):
         help="Number of chunks in a RecordIO file",
     )
     args = parser.parse_args(argv)
+    # one uncompressed record has size 28 * 28 + 1 bytes. Assuming 0.3 compression ratio.
+    chunk_size = args.num_record_per_chunk * 28 * 28 * 0.3
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     gen(
         args.dir + "/mnist/train",
         x_train,
         y_train,
-        chunk_size=args.chunk_size_kb * 1024,
+        chunk_size=chunk_size
         num_chunk=args.num_chunk,
     )
+
     gen(
         args.dir + "/mnist/test",
         x_test,
         y_test,
-        chunk_size=args.chunk_size_kb * 1024,
+        chunk_size=chunk_size,
         num_chunk=args.num_chunk,
     )
 
@@ -66,14 +72,14 @@ def main(argv):
         args.dir + "/fashion/train",
         x_train,
         y_train,
-        chunk_size=args.chunk_size_kb * 1024,
+        chunk_size=chunk_size,
         num_chunk=args.num_chunk,
     )
     gen(
         args.dir + "/fashion/test",
         x_test,
         y_test,
-        chunk_size=args.chunk_size_kb * 1024,
+        chunk_size=chunk_size,
         num_chunk=args.num_chunk,
     )
 
