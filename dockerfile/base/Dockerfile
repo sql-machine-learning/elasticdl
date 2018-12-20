@@ -1,5 +1,7 @@
 #!!!!!!!!
-# Dont use the Dockerfile directly. Use build.sh instead, otherwise the data section will be missing!
+# Dont use the Dockerfile directly. In this directory run ./build.sh, which
+# will download MNIST and Fashion-MNIST data, process them and populate the
+# data directory.
 #!!!!!!!!
 
 FROM tensorflow/tensorflow:1.12.0-py3
@@ -13,8 +15,8 @@ RUN pip3 install \
     crc32c \
     torch torchvision
 
-RUN pip3 install -I https://github.com/ElasticDL/pyrecordio/tree/develop/artifacts/recordio-0.0.1-py3-none-any.whl
+# Install pre-build RecordIO package
+RUN pip3 install -I https://github.com/ElasticDL/pyrecordio/raw/develop/artifacts/recordio-0.0.1-py3-none-any.whl
 
 # ElasticDL prebuilt datasets
 COPY data /data
-
