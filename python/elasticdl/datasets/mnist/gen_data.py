@@ -13,7 +13,7 @@ from tensorflow.python.keras.datasets import mnist, fashion_mnist
 import record
 
 
-def gen(file_dir, data, label, *, chunk_size, num_chunk):
+def gen(file_dir, data, label, *, chunk_size, record_per_file):
     assert len(data) == len(label) and len(data) > 0
     os.makedirs(file_dir)
     it = zip(data, label)
@@ -22,7 +22,7 @@ def gen(file_dir, data, label, *, chunk_size, num_chunk):
             file_name = file_dir + "/data-%04d" % i
             print("writing:", file_name)
             with File(file_name, "w", max_chunk_size=chunk_size) as f:
-                for _ in range(num_chunk):
+                for _ in range(record_per_file):
                     row = next(it)
                     f.write(record.encode(row[0], row[1]))
     except StopIteration:
@@ -42,7 +42,7 @@ def main(argv):
     )
     parser.add_argument(
         "--num_chunk",
-        default=1024,
+        default=16,
         type=int,
         help="Number of chunks in a RecordIO file",
     )
@@ -50,6 +50,7 @@ def main(argv):
     # one uncompressed record has size 28 * 28 + 1 bytes.
     # Also add some slack for safety.
     chunk_size = args.num_record_per_chunk * (28 * 28  + 1) + 100
+    record_per_file = args.num_record_per_chunk * args.num_chunk
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     gen(
@@ -57,7 +58,7 @@ def main(argv):
         x_train,
         y_train,
         chunk_size=chunk_size,
-        num_chunk=args.num_chunk,
+        record_per_file=record_per_file,
     )
 
     gen(
@@ -65,7 +66,7 @@ def main(argv):
         x_test,
         y_test,
         chunk_size=chunk_size,
-        num_chunk=args.num_chunk,
+        record_per_file=record_per_file,
     )
 
     (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
@@ -74,14 +75,14 @@ def main(argv):
         x_train,
         y_train,
         chunk_size=chunk_size,
-        num_chunk=args.num_chunk,
+        record_per_file=record_per_file,
     )
     gen(
         args.dir + "/fashion/test",
         x_test,
         y_test,
         chunk_size=chunk_size,
-        num_chunk=args.num_chunk,
+        record_per_file=record_per_file,
     )
 
 
