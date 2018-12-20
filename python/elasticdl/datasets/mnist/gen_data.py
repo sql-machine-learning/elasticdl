@@ -55,7 +55,7 @@ def main(argv):
         args.dir + "/mnist/train",
         x_train,
         y_train,
-        chunk_size=chunk_size
+        chunk_size=chunk_size,
         num_chunk=args.num_chunk,
     )
 
