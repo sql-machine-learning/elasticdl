@@ -12,7 +12,7 @@ docker run --rm -it -v $PWD:/work -w /work swamp python mnist.py --loss-file los
 
 `mnist.py` writes an image `./loss.png` showing the loss curves of the parameter server and all trainers and the parameter `--pull-probability` represens the probability of trainer pulling from ps.
 
-An example with 2 trainer threads with the probability of 0, 0.5 and 1.0 respectively looks like the following:
+An example with 2 trainer threads with the trainer pulling probability of 0, 0.5 and 1.0 respectively looks like the following:
 
 ![](curves/loss_with_pull_prob_0.png)
 
