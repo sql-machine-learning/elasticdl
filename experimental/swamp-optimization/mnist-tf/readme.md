@@ -2,7 +2,7 @@
 
 ### Usage
 
-```python
+```
 python3 src/swamp_launcher.py src/mnist.py --class_name MnistCNN --runner thread --input MNISR_DATA_DIR --num_worker W --pull_probability P --evaluation_frequency F --log_image PNG_IMAGE 
 
 MNISR_DATA_DIR: directory contains recordioIO format data. Training data under sub-directory train/, and test data under sub-directory test/
@@ -48,17 +48,17 @@ p: pull_probability
 acc: model accuracy after 1 epoch
 ```
 
-![w=1 p = 0 acc =0.95947](/Users/Haitao/data/codes/tests/swamp/new_result/img/w1p0a0.959473.png)
+![w=1 p = 0 acc =0.95947](img/w1p0a0.959473.png)
 
-![w=1 p= 0.5](/Users/Haitao/data/codes/tests/swamp/new_result/img/w1p0.5a0.961426.png)
+![w=1 p= 0.5](img/w1p0.5a0.961426.png)
 
-![w=1 p=1](/Users/Haitao/data/codes/tests/swamp/new_result/img/w1p1a0.894531.png)
+![w=1 p=1](img/w1p1a0.894531.png)
 
-![w=2 p=0](/Users/Haitao/data/codes/tests/swamp/new_result/img/w2p0a0.95752.png)
+![w=2 p=0](img/w2p0a0.95752.png)
 
-![w=2 p=0.5](/Users/Haitao/data/codes/tests/swamp/new_result/img/w2p0.5a0.955078.png)
+![w=2 p=0.5](img/w2p0.5a0.955078.png)
 
-![w=2 p=1](/Users/Haitao/data/codes/tests/swamp/new_result/img/w2p1a0.916016.png)
+![w=2 p=1](img/w2p1a0.916016.png)
 
 When pull probablity is low, more validation step is used, resulting in more running time.
 
