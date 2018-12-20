@@ -10,8 +10,8 @@ import sys
 import pickle
 import threading
 import queue
-import gc
 import time
+import gc
 from matplotlib import pyplot as plot
 
 
@@ -34,128 +34,161 @@ class Net(nn.Module):
         return F.log_softmax(x, dim=1)
 
 
-def trainer(args, up, down, tid):
-    kwargs = {}
-    data_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('./data',  # cache data to the current directory.
-                       train=True,  # use the training data also for dev.
-                       download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=args.batch_size,
-        shuffle=True,        # each trainer might have different order
-        **kwargs)
+class Trainer(object):
 
-    model = Net()               # trainer-local model.
-    optimizer = optim.SGD(model.parameters(), lr=args.lr,
-                          momentum=args.momentum)
+    def __init__(self, tid, args, up, down):
+        self._tid = tid
+        self._args = args
+        self._up = up
+        self._down = down
+        self._time_costs = []
+        self._losses = []
 
-    # model.train()
-    score = float("inf")
-    step = 0
+    def train(self):
+        kwargs = {}
+        data_loader = torch.utils.data.DataLoader(
+            datasets.MNIST('./data',  # cache data to the current directory.
+                           train=True,  # use the training data also for dev.
+                           download=True,
+                           transform=transforms.Compose([
+                              transforms.ToTensor(),
+                              transforms.Normalize((0.1307,), (0.3081,))
+                           ])),
+            batch_size=self._args.batch_size,
+            shuffle=True,        # each trainer might have different order
+            **kwargs)
 
-    start_time = time.time()
-    time_costs = []
-    losses = []
-    for epoch in range(args.epochs):
-        for batch_idx, (data, target) in enumerate(data_loader):
-            optimizer.zero_grad()
-            output = model(data)
-            loss = F.nll_loss(output, target)
+        model = Net()               # trainer-local model.
+        optimizer = optim.SGD(model.parameters(), lr=self._args.lr,
+                          momentum=self._args.momentum)
 
-            if step < args.free_trial_steps:
-                loss.backward()
-                optimizer.step()
-                step = step + 1
-            else:
-                if loss.data < score:
-                    score = loss.data
-                    if up != None:
-                        up.put(pickle.dumps(
-                            {"model": model.state_dict(), "opt": optimizer.state_dict(), "loss": loss.data}))
+        # model.train()
+        score = float("inf")
+        step = 0
+
+        start_time = time.time()
+        for epoch in range(self._args.epochs):
+            for batch_idx, (data, target) in enumerate(data_loader):
+                optimizer.zero_grad()
+                output = model(data)
+                loss = F.nll_loss(output, target)
+
+                if step < self._args.free_trial_steps:
+                    loss.backward()
+                    optimizer.step()
+                    step = step + 1
                 else:
-                    if down != None:
-                        m = pickle.loads(down.get())
-                        model.load_state_dict(m["model"])
-                        optimizer.load_state_dict(m["opt"])
-                        score = m["loss"]
-                step = 0
+                    if loss.data < score:
+                        score = loss.data
+                        if self._up != None:
+                            self._up.put(pickle.dumps(
+                                {"model": model.state_dict(), "opt": optimizer.state_dict(), "loss": loss.data}))
+                    else:
+                        if self._down != None:
+                            m = pickle.loads(self._down.get())
+                            model.load_state_dict(m["model"])
+                            optimizer.load_state_dict(m["opt"])
+                            score = m["loss"]
+                    step = 0
+                gc.collect()
 
-            if args.metrics_loss_enabled and batch_idx % args.metrics_sample_interval == 0:
-                time_costs.append(round(time.time() - start_time))
-                losses.append(round(loss.item(), 4))
+                if self._args.loss_file is not None:
+                    self._time_costs.append(round(time.time() - start_time))
+                    self._losses.append(round(loss.item(), 4))
 
-            if batch_idx % args.log_interval == 0:
-                print("Current trainer id: %i, epoch: %i, batch id: %i" % (tid, epoch, batch_idx))
-        print("trainer %i done epoch %i" % (tid, epoch))
+                if batch_idx % self._args.log_interval == 0:
+                    print("Current trainer id: %i, epoch: %i, batch id: %i" % (self._tid, epoch, batch_idx))
+            print("trainer %i done epoch %i" % (self._tid, epoch))
 
-    if args.metrics_loss_enabled:
-        plot.plot(time_costs, losses, label='loss')
-        plot.xlabel('timestamp')
-        plot.ylabel('loss')
-        plot.legend(loc=7)
-        plot.title('swamp training of mnist data')
-        plot.savefig(args.loss_file_prefix + '_' + str(tid) + '.png')
+    def time_costs(self):
+        return self._time_costs
 
-def ps(args, up, down):
-    model_and_score = None
-    score = float("inf")
-    updates = 0
-    batch_size = args.validate_batch_size
-    max_batch = args.validate_max_batch
+    def losses(self):
+        return self._losses
 
-    validate_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('./data',
-                       train=False,
-                       download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-                       batch_size=batch_size,
-                       shuffle=True) # shuffle for random test
+    def tid(self):
+        return self._tid
 
-    while updates < 500:
-        # In the case that any trainer pulls.
-        if model_and_score != None:
-            down.put_nowait(model_and_score)
+class Ps(object):
+   
+    def __init__(self, args, up, down):
+        self._args = args
+        self._up = up
+        self._down = down
+        self._time_costs = []
+        self._losses = []
+        self._exit = False 
 
-        # In the case that any trainer pushes.
-        try:
-            d = up.get(timeout=1.0)
-        except queue.Empty:
-            continue
-        s = pickle.loads(d)["loss"]
+    def run(self):
+        model_and_score = None
+        score = float("inf")
+        updates = 0
+        batch_size = self._args.validate_batch_size
+        max_batch = self._args.validate_max_batch
 
-        # Restore uploaded model
-        state_dict = pickle.loads(d)["model"]
-        model = Net()
-        model.load_state_dict(state_dict)
+        validate_loader = torch.utils.data.DataLoader(
+            datasets.MNIST('./data',
+                           train=False,
+                           download=True,
+                           transform=transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize((0.1307,), (0.3081,))
+                           ])),
+                           batch_size=batch_size,
+                           shuffle=True) # shuffle for random test
         
-        if s < score:
-            # Model double check
-            double_check_loss = validate(model, validate_loader, batch_size, max_batch)
-            if double_check_loss < score:
-                model_and_score = d
-                score = s
-                updates = updates + 1
-                print("updated", updates, round(score.data.item(), 4), round(double_check_loss, 4))
-        gc.collect()
+        start_time = time.time()
+        while not self._exit:
+            # In the case that any trainer pulls.
+            if model_and_score != None:
+                self._down.put_nowait(model_and_score)
 
-def validate(model, data_loader, batch_size, max_batch):
-    eval_loss = 0
-    with torch.no_grad():
-        for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
-            if batch_idx < max_batch:
-                out = model(batch_x)
-                loss = F.nll_loss(out, batch_y)
-                eval_loss += loss.data.item()
-            else:
-                break
-    loss_val = eval_loss / max_batch
-    return loss_val
+            # In the case that any trainer pushes.
+            try:
+                d = self._up.get(timeout=1.0)
+            except queue.Empty:
+                continue
+
+            s = pickle.loads(d)["loss"]
+
+            # Restore uploaded model
+            state_dict = pickle.loads(d)["model"]
+            model = Net()
+            model.load_state_dict(state_dict)
+        
+            if s < score:
+                # Model double check
+                double_check_loss = self.validate(model, validate_loader, batch_size, max_batch)
+                if double_check_loss < score:
+                    model_and_score = d
+                    score = s
+                    updates = updates + 1
+
+                    if self._args.loss_file is not None:
+                        self._time_costs.append(round(time.time() - start_time))
+                        self._losses.append(round(s.item(), 4))
+ 
+    def validate(self, model, data_loader, batch_size, max_batch):
+        eval_loss = 0
+        with torch.no_grad():
+            for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
+                if batch_idx < max_batch:
+                    out = model(batch_x)
+                    loss = F.nll_loss(out, batch_y)
+                    eval_loss += loss.data.item()
+                else:
+                    break
+        loss_val = eval_loss / max_batch
+        return loss_val
+
+    def time_costs(self):
+        return self._time_costs
+
+    def losses(self):
+        return self._losses
+
+    def join(self):
+        self._exit = True
 
 def main():
     # Training settings
@@ -178,16 +211,8 @@ def main():
                         help='batch size for validation dataset in ps')
     parser.add_argument('--validate_max_batch', default=5,
                         help='max batch for validate model in ps')
-    parser.add_argument('--metrics-dir', default='./',
-                        help='metrics-dir')
-    parser.add_argument('--loss-file-prefix', default='loss',
+    parser.add_argument('--loss-file', default='loss.png',
                         help='the name of loss figure file')
-    parser.add_argument('--accuracy-file', default='accuracy.png',
-                        help='the name of accuracy figure file')
-    parser.add_argument('--metrics-sample-interval', type=int, default=10, metavar='N',
-                        help='how many batches to wait before sampling a metircs value')
-    parser.add_argument('--metrics-loss-enabled', type=bool, default=True,
-                        help='if to sample metrics')
     parser.add_argument('--log-interval', type=int, default=50, metavar='N',
                         help='how many batches to wait before logging training status')
     args = parser.parse_args()
@@ -196,9 +221,34 @@ def main():
 
     up = queue.Queue()
     down = queue.Queue()
-    for t in range(2):
-        threading.Thread(target=trainer, args=(args, up, down, t,)).start()
-    ps(args, up, down)
+
+    ps = Ps(args, up, down)
+    ps_thread = threading.Thread(target=ps.run, name='ps')
+    ps_thread.start()
+    
+    trainers = []
+    trainer_threads = []
+    for t in range(4):
+        trainer = Trainer(t, args, up, down)
+        trainer_thread = threading.Thread(target=trainer.train, name=('trainer-' + str(t)))
+        trainer_thread.start()
+        trainers.append(trainer)
+        trainer_threads.append(trainer_thread)
+
+    for thread in trainer_threads:
+        thread.join()
+
+    ps.join() 
+
+    if args.loss_file is not None:
+        plot.xlabel('timestamp')
+        plot.ylabel('loss')
+        plot.title('swamp training for mnist data')
+        for trainer in trainers:
+            plot.plot(trainer.time_costs(), trainer.losses(), label='trainer-' + str(trainer.tid()))
+        plot.plot(ps.time_costs(), ps.losses(), label='ps')
+        plot.legend(loc=7)
+        plot.savefig(args.loss_file)
 
 
 if __name__ == '__main__':
