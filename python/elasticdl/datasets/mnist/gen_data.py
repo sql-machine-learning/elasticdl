@@ -38,7 +38,7 @@ def main(argv):
         "--num_record_per_chunk",
         default=1024,
         type=int,
-        help="Approximate number of records in a chunk. Not accurate due to compression",
+        help="Approximate number of records in a chunk.",
     )
     parser.add_argument(
         "--num_chunk",
