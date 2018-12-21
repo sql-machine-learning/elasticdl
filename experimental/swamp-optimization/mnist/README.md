@@ -7,10 +7,17 @@ docker build -t swamp .
 Then, we can run the example
 
 ```bash
-docker run --rm -it -v $PWD:/work -w /work swamp python mnist.py --loss-file loss.png --pull-probability 0.5
+docker run --rm -it -v $PWD:/work -w /work swamp python mnist.py \
+    --trainer-number 2 \
+    --loss-file loss.png \
+    --pull-probability 0.5
 ```
 
-`mnist.py` writes an image `./loss.png` showing the loss curves of the parameter server and all trainers and the parameter `--pull-probability` represens the probability of trainer pulling from ps.
+`mnist.py` writes an image `./loss.png` showing the loss curves of the parameter server and all trainers and the meaning of parameters in the above command are described below:
+
+`--trainer-number` : number of trainers running in total. 
+`--loss-file` : output loss curve image file.
+ `--pull-probability` : the probability of trainer pulling from ps.
 
 An example with 2 trainer threads with the trainer pulling probability of 0, 0.5 and 1.0 respectively looks like the following:
 
