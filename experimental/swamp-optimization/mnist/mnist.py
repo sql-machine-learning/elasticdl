@@ -21,7 +21,7 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(1, 20, 5, 1)
         self.conv2 = nn.Conv2d(20, 50, 5, 1)
-        self.fc1 = nn.Linear(4*4*50, 500)
+        self.fc1 = nn.Linear(4 * 4 * 50, 500)
         self.fc2 = nn.Linear(500, 10)
 
     def forward(self, x):
@@ -29,7 +29,7 @@ class Net(nn.Module):
         x = F.max_pool2d(x, 2, 2)
         x = F.relu(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
-        x = x.view(-1, 4*4*50)
+        x = x.view(-1, 4 * 4 * 50)
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return F.log_softmax(x, dim=1)
@@ -47,14 +47,14 @@ class Trainer(object):
         self._start_time = time.time()
         self._model = Net()
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
-                              momentum=self._args.momentum)
-        self._score = float("inf") 
+                                    momentum=self._args.momentum)
+        self._score = float("inf")
 
     def train(self):
         data_loader = self._prepare_dataloader(self._args.batch_size)
         step = 0
 
-        # start local training 
+        # start local training
         for epoch in range(self._args.epochs):
             for batch_idx, (data, target) in enumerate(data_loader):
                 self._optimizer.zero_grad()
@@ -69,7 +69,7 @@ class Trainer(object):
                     if loss.data < self._score:
                         self._push_model(loss)
                     else:
-                        if self._down != None and random.random() < self._args.pull_probability:
+                        if self._down is not None and random.random() < self._args.pull_probability:
                             self._pull_model()
                     step = 0
 
@@ -79,8 +79,8 @@ class Trainer(object):
             print("trainer %i done epoch %i" % (self.tid, epoch))
 
     def _prepare_dataloader(self, batch_size):
-       kwargs = {}
-       return torch.utils.data.DataLoader(
+        kwargs = {}
+        return torch.utils.data.DataLoader(
             datasets.MNIST('./data',  # cache data to the current directory.
                            train=True,  # use the training data also for dev.
                            download=True,
@@ -90,19 +90,19 @@ class Trainer(object):
                            ])),
             batch_size=batch_size,
             shuffle=True,        # each trainer might have different order
-            **kwargs) 
-  
+            **kwargs)
+
     def _pull_model(self):
         m = pickle.loads(self._down.get())
         self._model.load_state_dict(m["model"])
         self._optimizer.load_state_dict(m["opt"])
-        self._score = m["loss"] 
+        self._score = m["loss"]
 
     def _push_model(self, loss):
         self._score = loss.data
-        if self._up != None:
-            self._up.put(pickle.dumps(
-                {"model": self._model.state_dict(), "opt": self._optimizer.state_dict(), "loss": loss.data}))
+        if self._up is not None:
+            self._up.put(pickle.dumps({"model": self._model.state_dict(
+            ), "opt": self._optimizer.state_dict(), "loss": loss.data}))
 
     def _record_loss(self, loss):
         if self._args.loss_file is not None:
@@ -112,7 +112,8 @@ class Trainer(object):
     def _print_progress(self, epoch, batch_idx):
         if batch_idx % self._args.log_interval == 0:
             print("Current trainer id: %i, epoch: %i, batch id: %i" %
-                (self.tid, epoch, batch_idx))
+                  (self.tid, epoch, batch_idx))
+
 
 class PS(object):
 
@@ -134,7 +135,7 @@ class PS(object):
 
         while not self._exit:
             # In the case that any trainer pulls.
-            if model_and_score != None:
+            if model_and_score is not None:
                 self._down.put_nowait(model_and_score)
 
             # In the case that any trainer pushes.
@@ -187,7 +188,7 @@ class PS(object):
     def _record_loss(self, loss):
         if self._args.loss_file is not None:
             self.time_costs.append(round(time.time() - self._start_time))
-            self.losses.append(round(loss.item(), 4))        
+            self.losses.append(round(loss.item(), 4))
 
     def terminate(self):
         self._exit = True
@@ -206,8 +207,12 @@ def main():
                         help='SGD momentum (default: 0.5)')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
-    parser.add_argument('--free-trial-steps', type=int, default=10, metavar='N',
-                        help='how many batches to wait before sync up with the ps')
+    parser.add_argument(
+        '--free-trial-steps',
+        type=int,
+        default=10,
+        metavar='N',
+        help='how many batches to wait before sync up with the ps')
     parser.add_argument('--save-model', action='store_true', default=False,
                         help='For Saving the current Model')
     parser.add_argument('--validate_batch_size', default=64,
@@ -216,8 +221,12 @@ def main():
                         help='max batch for validate model in ps')
     parser.add_argument('--loss-file', default='curves/loss.png',
                         help='the name of loss figure file')
-    parser.add_argument('--log-interval', type=int, default=50, metavar='N',
-                        help='how many batches to wait before logging training status')
+    parser.add_argument(
+        '--log-interval',
+        type=int,
+        default=50,
+        metavar='N',
+        help='how many batches to wait before logging training status')
     parser.add_argument('--pull-probability', type=float, default=0,
                         help='the probability of trainer pulling from ps')
     parser.add_argument('--trainer-number', type=int, default=1,
