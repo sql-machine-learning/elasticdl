@@ -15,9 +15,9 @@ docker run --rm -it -v $PWD:/work -w /work swamp python mnist.py \
 
 `mnist.py` writes an image `./loss.png` showing the loss curves of the parameter server and all trainers and the meaning of parameters in the above command are described below:
 
-`--trainer-number` : number of trainers running in total. 
+`--trainer-number` : number of trainers running in total.
 `--loss-file` : output loss curve image file.
- `--pull-probability` : the probability of trainer pulling from ps.
+`--pull-probability` : the probability of trainer pulling from ps.
 
 An example with 2 trainer threads with the trainer pulling probability of 0, 0.5 and 1.0 respectively looks like the following:
 
