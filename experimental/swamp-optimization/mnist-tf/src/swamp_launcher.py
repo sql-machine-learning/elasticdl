@@ -7,14 +7,14 @@ from swamp_ps import SwampParameterServer
 from swamp_worker import SwampWorker
 
 # TODO: use @dataclass
-class Handle(object):
+class Job(object):
     def __init__(self, prog, ps, worker):
         self.prog = prog
         self.ps = ps
         self.worker = worker
 
 
-class ThreadLauncher(object):
+class LocalSwampLauncher(object):
     @staticmethod
     def launch(
         prog,
@@ -33,7 +33,7 @@ class ThreadLauncher(object):
 
         workers = [
             SwampWorker(
-                name="worker-%d" % i,
+                name="w%d" % i,
                 ps=ps,
                 umd=prog,
                 train_dir=data + "/train",
@@ -46,17 +46,17 @@ class ThreadLauncher(object):
         ]
         ps.start()
         for worker in workers:
-            print("launch worker")
+            print("launch worker %s" % worker.name())
             worker.start()
 
-        return Handle(prog, ps, workers)
+        return Job(prog, ps, workers)
 
     @staticmethod
     def shutdown(handle):
         # shutdown worker
         for w in handle.worker:
             w.join()
-        handle.ps.join()
+        handle.ps.stop()
 
 
 @contextmanager
@@ -72,7 +72,7 @@ def add_to_path(p):
         sys.path = old_path
 
 
-def path_import(absolute_path):
+def import_path(absolute_path):
     """
     implementation taken from
     https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
@@ -84,14 +84,14 @@ def path_import(absolute_path):
         return module
 
 
-def main(argv):
+def create_argparser():
     def get_runner(runner):
         if runner == "thread":
-            return ThreadLauncher()
+            return LocalSwampLauncher()
         else:
             raise ValueError("Unknown runner: %s" % runner)
 
-    def pos_int(x):
+    def assert_positive_int(x):
         v = int(x)
         if v < 0:
             raise ValueError("Positive integer required")
@@ -109,10 +109,17 @@ def main(argv):
     )
 
     parser.add_argument(
-        "--num_worker", type=pos_int, required=True, help="number of workers"
+        "--num_worker",
+        type=assert_positive_int,
+        required=True,
+        help="number of workers",
     )
     parser.add_argument(
-        "--num_epoch", type=pos_int, required=False, default=1, help="number of epoch"
+        "--num_epoch",
+        type=assert_positive_int,
+        required=False,
+        default=1,
+        help="number of epoch",
     )
     parser.add_argument(
         "--pull_probability",
@@ -123,7 +130,7 @@ def main(argv):
     )
     parser.add_argument(
         "--evaluation_frequency",
-        type=pos_int,
+        type=assert_positive_int,
         required=False,
         default=4,
         help="the evaluation frequency in batch number",
@@ -136,25 +143,11 @@ def main(argv):
         required=True,
         help="base path that contains the input data in RecordIo format",
     )
-    # TODO(l.zou): add support for passing arguments to the script.
+    return parser
 
-    args = parser.parse_args(argv)
 
-    # run script to create prog object
-    module = path_import(args.script)
-    prog = getattr(module, args.class_name)()
-
-    # launch
-    handle = args.runner.launch(
-        prog,
-        args.num_worker,
-        args.input,
-        args.num_epoch,
-        args.pull_probability,
-        args.evaluation_frequency,
-    )
-    args.runner.shutdown(handle)
-    accuracy = handle.ps.get_accuracy()
+def plot_accuracy(ps, args):
+    accuracy = ps.accuracy()
     info = "w=%d p=%1.2g" % (args.num_worker, args.pull_probability)
     if len(args.log_image):
         file_name = args.log_image
@@ -164,7 +157,29 @@ def main(argv):
             args.pull_probability,
             accuracy,
         )
-    handle.ps.save_log_to_image(file_name, info)
+    ps.plot_accuracy_log(file_name, info)
+
+
+def main(argv):
+    parser = create_argparser()
+    args = parser.parse_args(argv)
+
+    # run script to create prog object
+    module = import_path(args.script)
+    prog = getattr(module, args.class_name)()
+
+    # launch
+    job = args.runner.launch(
+        prog,
+        args.num_worker,
+        args.input,
+        args.num_epoch,
+        args.pull_probability,
+        args.evaluation_frequency,
+    )
+    args.runner.shutdown(job)
+
+    plot_accuracy(job.ps, args)
 
 
 if __name__ == "__main__":

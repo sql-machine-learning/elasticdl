@@ -20,10 +20,10 @@ class SwampParameterServer(object):
         self._start_time = time.time()
         self._log.append((0, 0))
 
-    def join(self):
+    def stop(self):
         self._log.append((time.time() - self._start_time, self._accuracy))
 
-    def get_accuracy(self):
+    def accuracy(self):
         return self._accuracy
 
     def pull(self, names=None):
@@ -53,7 +53,7 @@ class SwampParameterServer(object):
         self._report_count += 1
         return accuracy > self._accuracy
 
-    def save_log_to_image(self, file_name, info=""):
+    def plot_accuracy_log(self, file_name, info=""):
         timesteps = [l[0] for l in self._log]
         accs = [l[1] for l in self._log]
         plot.plot(timesteps, accs)

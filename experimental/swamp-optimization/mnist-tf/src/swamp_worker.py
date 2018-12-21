@@ -100,92 +100,98 @@ class SwampWorker(object):
                 self._exiting = True
                 break
 
-            # TODO: handle eval
-            if not data_file:
-                self._work_queue.work_done(work_id, 0)
-                return
-
-            # create dataset from data_file, file_offset
             # TODO: how to config shuffle/batch parameter from user?
             shuffle_buffer_size = 1000
             batch_size = 64
-            with self._graph.as_default():
-                dataset = self._create_dataset(
-                    data_file,
-                    file_offset,
-                    shuffle_buffer_size=shuffle_buffer_size,
-                    batch_size=batch_size,
-                )
-
-                data_iter = dataset.make_initializable_iterator()
-                data_init_op = data_iter.initializer
-                handle_op = data_iter.string_handle()
-
-                # init model if needed
-                if not self._model_initialized:
-                    self._prepare_for_training(dataset)
-
-                    # create name,variable dict
-                    # strip out the ':0' part in name
-                    trainable_vars = tf.trainable_variables()
-                    var_dict = {_extract_name(v.name): v for v in trainable_vars}
-                    var_placeholder = {
-                        _extract_name(v.name): array_ops.placeholder(dtype=v.dtype)
-                        for v in trainable_vars
-                    }
-                    var_assign_op = {
-                        name: tf.assign(var_dict[name], var_placeholder[name])
-                        for name in var_dict
-                    }
-                    self._vars = trainable_vars
-                    self._var_placeholder = var_placeholder
-                    self._var_assign_op = var_assign_op
-                    sess = tf.Session(graph=self._graph)
-                    sess.run(tf.initializers.global_variables())
-
-            # dataset initialization
-            handle = sess.run(handle_op)
-            sess.run(data_init_op)
-            feed_dict = {self._iter_handle: handle}
+            feed_dict = self._prepare_data_training(
+                data_file, file_offset, batch_size, shuffle_buffer_size
+            )
 
             # train loop for the dataset
             while True:
                 try:
                     need_validate = (1 + worker_step) % self._evaluation_frequency == 0
-                    if need_validate:
-                        batch_accuracy, _ = sess.run(
-                            [self._accuracy, self._train_op], feed_dict=feed_dict
-                        )
-                    else:
-                        sess.run(self._train_op, feed_dict=feed_dict)
+                    self._train_step(feed_dict, need_validate, batch_size)
                     worker_step += 1
-                    push_test = False
-                    if need_validate:
-                        if batch_accuracy > self._best_batch_accuracy:
-                            self._best_batch_accuracy = batch_accuracy
-                            push_test = True
-                        else:
-                            # randomly pull model
-                            if random.random() < self._pull_model_probability:
-                                self._pull_model(sess)
-                            else:
-                                push_test = True
-
-                        if push_test:
-                            # validation on test data
-                            accuracy = self._validation(sess, batch_size)
-                            if (
-                                self._best_accuracy < accuracy
-                                and self._ps.report_accuracy(accuracy)
-                            ):
-                                self._push_model(accuracy, sess)
-                                self._best_accuracy = accuracy
-                            else:
-                                self._pull_model(sess)
                 except tf.errors.OutOfRangeError:
                     break
 
-    def _validation(self, sess, batch_size):
+    def name(self):
+        return self._name
+
+    def _train_step(self, feed_dict, need_validate, batch_size):
+        if need_validate:
+            batch_accuracy, _ = self._sess.run(
+                [self._accuracy, self._train_op], feed_dict=feed_dict
+            )
+        else:
+            self._sess.run(self._train_op, feed_dict=feed_dict)
+        push_test = False
+        if need_validate:
+            if batch_accuracy > self._best_batch_accuracy:
+                self._best_batch_accuracy = batch_accuracy
+                push_test = True
+            else:
+                # randomly pull model
+                if random.random() < self._pull_model_probability:
+                    self._pull_model()
+                else:
+                    push_test = True
+
+            if push_test:
+                # validation on test data
+                accuracy = self._validate(batch_size)
+                if self._best_accuracy < accuracy and self._ps.report_accuracy(
+                    accuracy
+                ):
+                    self._push_model(accuracy)
+                    self._best_accuracy = accuracy
+
+    def _prepare_data_training(
+        self, data_file, file_offset, batch_size, shuffle_buffer_size
+    ):
+        # create dataset from data_file, file_offset
+        with self._graph.as_default():
+            dataset = self._create_dataset(
+                data_file,
+                file_offset,
+                shuffle_buffer_size=shuffle_buffer_size,
+                batch_size=batch_size,
+            )
+
+            data_iter = dataset.make_initializable_iterator()
+            data_init_op = data_iter.initializer
+            handle_op = data_iter.string_handle()
+
+            # init model if needed
+            if not self._model_initialized:
+                self._prepare_model_training(dataset)
+
+                # create name,variable dict
+                # strip out the ':0' part in name
+                trainable_vars = tf.trainable_variables()
+                var_dict = {_extract_name(v.name): v for v in trainable_vars}
+                var_placeholder = {
+                    _extract_name(v.name): array_ops.placeholder(dtype=v.dtype)
+                    for v in trainable_vars
+                }
+                var_assign_op = {
+                    name: tf.assign(var_dict[name], var_placeholder[name])
+                    for name in var_dict
+                }
+                self._vars = trainable_vars
+                self._var_placeholder = var_placeholder
+                self._var_assign_op = var_assign_op
+                self._sess = tf.Session(graph=self._graph)
+                self._sess.run(tf.initializers.global_variables())
+
+        # dataset initialization
+        handle = self._sess.run(handle_op)
+        self._sess.run(data_init_op)
+        feed_dict = {self._iter_handle: handle}
+        return feed_dict
+
+    def _validate(self, batch_size):
         accum_acc = 0
         acc_num = 0
         for w in self._test_work:
@@ -197,12 +203,12 @@ class SwampWorker(object):
                 data_init_op = data_iter.initializer
                 handle_op = data_iter.string_handle()
 
-            handle = sess.run(handle_op)
-            sess.run(data_init_op)
+            handle = self._sess.run(handle_op)
+            self._sess.run(data_init_op)
             feed_dict = {self._iter_handle: handle}
             while True:
                 try:
-                    cur_acc = sess.run(self._accuracy, feed_dict=feed_dict)
+                    cur_acc = self._sess.run(self._accuracy, feed_dict=feed_dict)
                     accum_acc += cur_acc
                     acc_num += 1
                 except tf.errors.OutOfRangeError:
@@ -210,24 +216,24 @@ class SwampWorker(object):
 
         return accum_acc / acc_num
 
-    def _push_model(self, accuracy, sess):
-        var_values = sess.run(self._vars)
+    def _push_model(self, accuracy):
+        var_values = self._sess.run(self._vars)
         var_dict = {
             _extract_name(v.name): var_values[i] for i, v in enumerate(self._vars)
         }
         self._ps.push(accuracy, var_dict)
 
-    def _pull_model(self, sess):
+    def _pull_model(self):
         accuracy, var_values = self._ps.pull()
 
         assign_ops = [self._var_assign_op[v_name] for v_name in var_values]
         assign_feeds = {
             self._var_placeholder[v_name]: var_values[v_name] for v_name in var_values
         }
-        sess.run(assign_ops, feed_dict=assign_feeds)
+        self._sess.run(assign_ops, feed_dict=assign_feeds)
         self._best_accuracy = accuracy
 
-    def _prepare_for_training(self, dataset):
+    def _prepare_model_training(self, dataset):
         # create placeholder for the dataset
         self._iter_handle = tf.placeholder(tf.string, shape=[], name="iter_handler")
         data_iter = tf.data.Iterator.from_string_handle(
