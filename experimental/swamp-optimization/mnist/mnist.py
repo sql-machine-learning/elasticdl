@@ -245,7 +245,7 @@ def main():
 
     # Init PS process
     key = 'ps'
-    # Shared memory of type list used by the parent process and trainer for
+    # Shared list used by the parent process and trainer for
     # loss tracing
     losses = manager.list()
     timestamps = manager.list()
@@ -260,7 +260,7 @@ def main():
     trainer_procs = []
     for t in range(args.trainer_number):
         tname = 'trainer-' + str(t)
-        # Shared memroy of type list used by the parent process and ps for loss
+        # Shared list used by the parent process and ps for loss
         # tracing
         losses = manager.list()
         timestamps = manager.list()
