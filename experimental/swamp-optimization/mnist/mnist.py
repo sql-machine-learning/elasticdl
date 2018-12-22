@@ -8,7 +8,8 @@ from torch.autograd import Variable
 from torchvision import datasets, transforms
 import sys
 import pickle
-import threading
+from multiprocessing import Process, Queue, Value, Manager
+from ctypes import py_object
 import queue
 import time
 import gc
@@ -37,18 +38,18 @@ class Net(nn.Module):
 
 class Trainer(object):
 
-    def __init__(self, tid, args, up, down):
+    def __init__(self, tid, args, model_in_ps, up, losses, timestamps):
         self.tid = tid
         self._args = args
         self._up = up
-        self._down = down
-        self.time_costs = []
-        self.losses = []
+        self._time_costs = timestamps
+        self._losses = losses
         self._start_time = time.time()
         self._model = Net()
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
                                     momentum=self._args.momentum)
         self._score = float("inf")
+        self._model_in_ps = model_in_ps
 
     def train(self):
         data_loader = self._prepare_dataloader(self._args.batch_size)
@@ -69,12 +70,13 @@ class Trainer(object):
                     if loss.data < self._score:
                         self._push_model(loss)
                     else:
-                        if self._down is not None and random.random() < self._args.pull_probability:
+                        if random.random() < self._args.pull_probability:
                             self._pull_model()
                     step = 0
 
                 gc.collect()
-                self._record_loss(loss)
+                if batch_idx % self._args.loss_sample_interval == 0:
+                    self._record_loss(loss)
                 self._print_progress(epoch, batch_idx)
             print("trainer %i done epoch %i" % (self.tid, epoch))
 
@@ -93,7 +95,7 @@ class Trainer(object):
             **kwargs)
 
     def _pull_model(self):
-        m = pickle.loads(self._down.get())
+        m = pickle.loads(self._model_in_ps.value)
         self._model.load_state_dict(m["model"])
         self._optimizer.load_state_dict(m["opt"])
         self._score = m["loss"]
@@ -106,8 +108,8 @@ class Trainer(object):
 
     def _record_loss(self, loss):
         if self._args.loss_file is not None:
-            self.time_costs.append(round(time.time() - self._start_time, 4))
-            self.losses.append(round(loss.item(), 4))
+            self._time_costs.append(round(time.time() - self._start_time, 4))
+            self._losses.append(round(loss.item(), 4))
 
     def _print_progress(self, epoch, batch_idx):
         if batch_idx % self._args.log_interval == 0:
@@ -117,15 +119,15 @@ class Trainer(object):
 
 class PS(object):
 
-    def __init__(self, args, up, down):
+    def __init__(self, args, model_in_ps, up, losses, timestamps):
         self._args = args
         self._up = up
-        self._down = down
-        self.time_costs = []
-        self.losses = []
+        self._time_costs = timestamps
+        self._losses = losses
         self._exit = False
         self._start_time = time.time()
         self._model = Net()
+        self._model_in_ps = model_in_ps
 
     def run(self):
         model_and_score = None
@@ -134,10 +136,6 @@ class PS(object):
         validate_loader = self._prepare_validation_loader()
 
         while not self._exit:
-            # In the case that any trainer pulls.
-            if model_and_score is not None:
-                self._down.put_nowait(model_and_score)
-
             # In the case that any trainer pushes.
             try:
                 d = self._up.get(timeout=1.0)
@@ -155,6 +153,7 @@ class PS(object):
                 double_check_loss = self._validate(validate_loader)
                 if double_check_loss < score:
                     model_and_score = d
+                    self._model_in_ps.value = d
                     score = s
                     updates = updates + 1
                     self._record_loss(s)
@@ -187,11 +186,8 @@ class PS(object):
 
     def _record_loss(self, loss):
         if self._args.loss_file is not None:
-            self.time_costs.append(round(time.time() - self._start_time))
-            self.losses.append(round(loss.item(), 4))
-
-    def terminate(self):
-        self._exit = True
+            self._time_costs.append(round(time.time() - self._start_time))
+            self._losses.append(round(loss.item(), 4))
 
 
 def main():
@@ -222,6 +218,11 @@ def main():
     parser.add_argument('--loss-file', default='curves/loss.png',
                         help='the name of loss figure file')
     parser.add_argument(
+        '--loss-sample-interval',
+        type=int,
+        default=1,
+        help='how many batches to wait before record a loss value')
+    parser.add_argument(
         '--log-interval',
         type=int,
         default=50,
@@ -235,38 +236,55 @@ def main():
 
     torch.manual_seed(args.seed)
 
-    up = queue.Queue()
-    down = queue.Queue()
+    up = Queue()
 
-    ps = PS(args, up, down)
-    ps_thread = threading.Thread(target=ps.run, name='ps')
-    ps_thread.start()
+    manager = Manager()
+    model_in_ps = manager.Value(py_object, None)
+    loss_dict = {}
+    timestamp_dict = {}
 
+    # Init PS process
+    key = 'ps'
+    # Shared memory of type list used by the parent process and trainer for
+    # loss tracing
+    losses = manager.list()
+    timestamps = manager.list()
+    loss_dict[key] = losses
+    timestamp_dict[key] = timestamps
+    ps = PS(args, model_in_ps, up, losses, timestamps)
+    ps_proc = Process(target=ps.run, name='ps')
+    ps_proc.start()
+
+    # Init trainer processes
     trainers = []
-    trainer_threads = []
+    trainer_procs = []
     for t in range(args.trainer_number):
-        trainer = Trainer(t, args, up, down)
-        trainer_thread = threading.Thread(
-            target=trainer.train, name=('trainer-' + str(t)))
-        trainer_thread.start()
+        tname = 'trainer-' + str(t)
+        # Shared memroy of type list used by the parent process and ps for loss
+        # tracing
+        losses = manager.list()
+        timestamps = manager.list()
+        loss_dict[tname] = losses
+        timestamp_dict[tname] = timestamps
+        trainer = Trainer(t, args, model_in_ps, up, losses, timestamps)
+        trainer_proc = Process(target=trainer.train, name=tname)
+        trainer_proc.start()
         trainers.append(trainer)
-        trainer_threads.append(trainer_thread)
+        trainer_procs.append(trainer_proc)
 
-    for thread in trainer_threads:
-        thread.join()
+    for proc in trainer_procs:
+        proc.join()
 
-    ps.terminate()
+    ps_proc.terminate()
 
     if args.loss_file is not None:
         print("Write image to ", args.loss_file)
         plot.xlabel('timestamp')
         plot.ylabel('loss')
         plot.title('swamp training for mnist data')
-        for trainer in trainers:
-            plot.plot(trainer.time_costs, trainer.losses,
-                      label='trainer-' + str(trainer.tid))
-        plot.plot(ps.time_costs, ps.losses, label='ps')
-        plot.legend(loc=7)
+        for (k, v) in loss_dict.items():
+            plot.plot(timestamp_dict[k], v, label=k)
+        plot.legend(loc='upper right', prop={'size': 6})
         plot.savefig(args.loss_file)
 
 
