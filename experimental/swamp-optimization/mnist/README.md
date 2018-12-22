@@ -10,7 +10,8 @@ Then, we can run the example
 docker run --rm -it -v $PWD:/work -w /work swamp python mnist.py \
     --trainer-number 2 \
     --loss-file loss.png \
-    --pull-probability 0.5
+    --pull-probability 0.5 \
+    --loss-sample-interval 10
 ```
 
 `mnist.py` writes an image `./loss.png` showing the loss curves of the parameter server and all trainers and the meaning of parameters in the above command are described below:
@@ -20,6 +21,8 @@ docker run --rm -it -v $PWD:/work -w /work swamp python mnist.py \
 `--loss-file` : output loss curve image file.
 
 `--pull-probability` : the probability of trainer pulling from ps.
+
+`--loss-sample-interval` : how many batches to wait before record a loss value. 
 
 An example with 2 trainer threads with the trainer pulling probability of 0, 0.5 and 1.0 respectively looks like the following:
 
