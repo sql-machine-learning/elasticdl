@@ -8,7 +8,7 @@ from torch.autograd import Variable
 from torchvision import datasets, transforms
 import sys
 import pickle
-from multiprocessing import Process, Queue, Value, Manager
+from multiprocessing import Process, Queue, Manager
 from ctypes import py_object
 import queue
 import time
