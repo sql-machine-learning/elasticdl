@@ -97,14 +97,13 @@ class Trainer(object):
     def _pull_model(self):
         m = pickle.loads(self._model_in_ps.value)
         self._model.load_state_dict(m["model"])
-        self._optimizer.load_state_dict(m["opt"])
         self._score = m["loss"]
 
     def _push_model(self, loss):
         self._score = loss.data
         if self._up is not None:
             self._up.put(pickle.dumps({"model": self._model.state_dict(
-            ), "opt": self._optimizer.state_dict(), "loss": loss.data}))
+            ),  "loss": loss.data}))
 
     def _record_loss(self, loss):
         if self._args.loss_file is not None:
