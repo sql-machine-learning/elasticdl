@@ -39,10 +39,13 @@ class Net(nn.Module):
 class TrainedModel(object):
     ''' Model uploaded to PS by trainers
     '''
-    def __init__(self, model_state, loss=float("inf"), version=1):
+
+    def __init__(self, model_state, optm_state, loss=float("inf"), version=1):
         self.model_state = model_state
+        self.optm_state = optm_state
         self.loss = loss
         self.version = version
+
 
 class Trainer(object):
 
@@ -53,26 +56,34 @@ class Trainer(object):
             trained_model_wrapper,
             up,
             losses,
-            timestamps):
+            timestamps,
+            pulled_losses,
+            pull_timestamps):
         """ Initialize the Trainer.
 
         Arguments:
           tid: The unique identifier of the trainer.
           args: Runtime arguments.
-          trained_model_wrapper: The info(eg. state, loss) of the best uploaded 
-                                 model at present model shared by PS and trainer 
+          trained_model_wrapper: The info(eg. state, loss) of the best uploaded
+                                 model at present model shared by PS and trainer
                                  which is managed by Manager.
           up: A shared Queue for trainer upload model to PS.
-          losses: A shared list used for the main process to trace loss which 
+          losses: A shared list used for the main process to trace loss which
                   is managed by Manager.
-          timestamps: A shared list used for the main process to trace timestamp 
+          timestamps: A shared list used for the main process to trace timestamp
                       which is managed by Manager.
+          pulled_losses: A shared list used for the main process to trace pulled
+                         model loss from ps which is managed by Manager.
+          pull_timestamps: A shared list used for the main process to trace
+                             pulling timestamp which is managed by Manager.
         """
         self.tid = tid
         self._args = args
         self._up = up
         self._time_costs = timestamps
         self._losses = losses
+        self._pulled_losses = pulled_losses
+        self._pull_timestamps = pull_timestamps
         self._start_time = time.time()
         self._model = Net()
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
@@ -126,23 +137,32 @@ class Trainer(object):
     def _pull_model(self):
         trained_model = self._trained_model_wrapper.value
         self._model.load_state_dict(trained_model.model_state)
+        self._optimizer.load_state_dict(trained_model.optm_state)
         self._score = trained_model.loss
+        self._pulled_losses.append(self._score.data.item())
+        self._pull_timestamps.append(self._timestamps())
 
     def _push_model(self, loss):
         self._score = loss.data
         if self._up is not None:
-            upload_model = TrainedModel(self._model.state_dict(), loss.data)
+            upload_model = TrainedModel(
+                self._model.state_dict(),
+                self._optimizer.state_dict(),
+                loss.data)
             self._up.put(pickle.dumps(upload_model))
 
     def _record_loss(self, loss):
         if self._args.loss_file is not None:
-            self._time_costs.append(round(time.time() - self._start_time, 4))
+            self._time_costs.append(self._timestamps())
             self._losses.append(round(loss.item(), 4))
 
     def _print_progress(self, epoch, batch_idx):
         if batch_idx % self._args.log_interval == 0:
             print("Current trainer id: %i, epoch: %i, batch id: %i" %
                   (self.tid, epoch, batch_idx))
+
+    def _timestamps(self):
+        return round(time.time() - self._start_time, 4)
 
 
 class PS(object):
@@ -152,13 +172,13 @@ class PS(object):
 
         Arguments:
           args: Runtime arguments.
-          trained_model_wrapper: The info(eg. state, loss) of the best uploaded 
-                                 model at present shared by PS and trainer which 
+          trained_model_wrapper: The info(eg. state, loss) of the best uploaded
+                                 model at present shared by PS and trainer which
                                  is managed by Manager.
           up: A shared Queue for trainer upload model to PS.
-          losses: A shared list used for the main process to trace loss which 
+          losses: A shared list used for the main process to trace loss which
                   is managed by Manager.
-          timestamps: A shared list used for the main process to trace timestamp 
+          timestamps: A shared list used for the main process to trace timestamp
                       which is managed by Manager.
         """
         self._args = args
@@ -233,7 +253,7 @@ class PS(object):
             self._losses.append(round(loss.item(), 4))
 
 
-def main():
+def parse_args():
     # Training settings
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
@@ -275,17 +295,10 @@ def main():
                         help='the probability of trainer pulling from ps')
     parser.add_argument('--trainer-number', type=int, default=1,
                         help='the total number of trainer to launch')
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    torch.manual_seed(args.seed)
 
-    up = Queue()
-
-    manager = Manager()
-    trained_model = manager.Value(py_object, None)
-    loss_dict = {}
-    timestamp_dict = {}
-
+def start_ps(args, up, manager, trained_model, loss_dict, timestamp_dict):
     # Init PS process
     key = 'ps'
     # Shared list used by the parent process and trainer for
@@ -298,37 +311,102 @@ def main():
     ps_proc = Process(target=ps.run, name='ps')
     ps_proc.start()
 
+    return ps_proc
+
+
+def start_trainers(
+        args,
+        up,
+        manager,
+        trained_model,
+        loss_dict,
+        timestamp_dict):
     # Init trainer processes
     trainers = []
     trainer_procs = []
     for t in range(args.trainer_number):
         tname = 'trainer-' + str(t)
+        tname_with_pull = tname + '-pull'
         # Shared list used by the parent process and ps for loss
         # tracing
         losses = manager.list()
         timestamps = manager.list()
+        pulled_losses = manager.list()
+        pull_timestamps = manager.list()
+
         loss_dict[tname] = losses
         timestamp_dict[tname] = timestamps
-        trainer = Trainer(t, args, trained_model, up, losses, timestamps)
+        loss_dict[tname_with_pull] = pulled_losses
+        timestamp_dict[tname_with_pull] = pull_timestamps
+
+        trainer = Trainer(t, args, trained_model, up, losses, timestamps,
+                          pulled_losses, pull_timestamps)
         trainer_proc = Process(target=trainer.train, name=tname)
         trainer_proc.start()
         trainers.append(trainer)
         trainer_procs.append(trainer_proc)
 
+    return trainers, trainer_procs
+
+
+def draw(args, loss_dict, timestamp_dict):
+    print("Write image to ", args.loss_file)
+    plot.xlabel('timestamp')
+    plot.ylabel('loss')
+    plot.title(
+        'swamp training for mnist data (pull probability %s)' %
+        args.pull_probability)
+    lowest_loss = find_lowest_loss_in_ps(loss_dict)
+    for (k, v) in loss_dict.items():
+        if k.endswith('pull'):
+            plot.scatter(timestamp_dict[k], v, s=12, label=k)
+        elif k == 'ps':
+            plot.plot(
+                timestamp_dict[k], v, label=(
+                    k + ' (lowest-loss: ' + str(lowest_loss) + ')'))
+        else:
+            plot.plot(timestamp_dict[k], v, label=k)
+    plot.legend(loc='upper right', prop={'size': 6})
+    plot.savefig(args.loss_file)
+
+
+def find_lowest_loss_in_ps(loss_dict):
+    loss = float("inf")
+    losses = loss_dict['ps']
+    for v in losses:
+        if loss > v:
+            loss = v
+    return loss
+
+
+def main():
+    args = parse_args()
+    torch.manual_seed(args.seed)
+
+    # Data stores shared by PS, trainers and the main process
+    up = Queue()
+    manager = Manager()
+    trained_model = manager.Value(py_object, None)
+    loss_dict = {}
+    timestamp_dict = {}
+
+    # Start PS and trainers
+    ps_proc = start_ps(
+        args,
+        up,
+        manager,
+        trained_model,
+        loss_dict,
+        timestamp_dict)
+    trainers, trainer_procs = start_trainers(
+        args, up, manager, trained_model, loss_dict, timestamp_dict)
+
     for proc in trainer_procs:
         proc.join()
-
     ps_proc.terminate()
 
     if args.loss_file is not None:
-        print("Write image to ", args.loss_file)
-        plot.xlabel('timestamp')
-        plot.ylabel('loss')
-        plot.title('swamp training for mnist data')
-        for (k, v) in loss_dict.items():
-            plot.plot(timestamp_dict[k], v, label=k)
-        plot.legend(loc='upper right', prop={'size': 6})
-        plot.savefig(args.loss_file)
+        draw(args, loss_dict, timestamp_dict)
 
 
 if __name__ == '__main__':

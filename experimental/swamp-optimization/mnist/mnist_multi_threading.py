@@ -34,6 +34,14 @@ class Net(nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=1)
 
+class TrainedModel(object):
+    ''' Model uploaded to PS by trainers
+    '''
+    def __init__(self, model_state, optmi_state, loss=float("inf"), version=1):
+        self.model_state = model_state
+        self.optmi_state = optmi_state 
+        self.loss = loss
+        self.version = version
 
 class Trainer(object):
 
@@ -44,6 +52,8 @@ class Trainer(object):
         self._down = down
         self.time_costs = []
         self.losses = []
+        self.pulled_losses = []
+        self.pulled_timestamps = []
         self._start_time = time.time()
         self._model = Net()
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
@@ -93,26 +103,32 @@ class Trainer(object):
             **kwargs)
 
     def _pull_model(self):
-        m = pickle.loads(self._down.get())
-        self._model.load_state_dict(m["model"])
-        self._optimizer.load_state_dict(m["opt"])
-        self._score = m["loss"]
+        trained_model = pickle.loads(self._down.get())
+        self._model.load_state_dict(trained_model.model_state)
+        self._optimizer.load_state_dict(trained_model.optmi_state)
+        self._score = trained_model.loss 
+        self.pulled_losses.append(self._score.data.item())
+        self.pulled_timestamps.append(self._timestamps()) 
 
     def _push_model(self, loss):
         self._score = loss.data
         if self._up is not None:
-            self._up.put(pickle.dumps({"model": self._model.state_dict(
-            ), "opt": self._optimizer.state_dict(), "loss": loss.data}))
+            upload_model = TrainedModel(self._model.state_dict(), 
+                self._optimizer.state_dict(), loss.data)
+            self._up.put(pickle.dumps(upload_model))
 
     def _record_loss(self, loss):
         if self._args.loss_file is not None:
-            self.time_costs.append(round(time.time() - self._start_time, 4))
+            self.time_costs.append(self._timestamps())
             self.losses.append(round(loss.item(), 4))
 
     def _print_progress(self, epoch, batch_idx):
         if batch_idx % self._args.log_interval == 0:
             print("Current trainer id: %i, epoch: %i, batch id: %i" %
                   (self.tid, epoch, batch_idx))
+
+    def _timestamps(self):
+        return round(time.time() - self._start_time, 4)
 
 
 class PS(object):
@@ -128,33 +144,36 @@ class PS(object):
         self._model = Net()
 
     def run(self):
-        model_and_score = None
+        trained_model = None
         score = float("inf")
         updates = 0
         validate_loader = self._prepare_validation_loader()
 
         while not self._exit:
             # In the case that any trainer pulls.
-            if model_and_score is not None:
-                self._down.put_nowait(model_and_score)
+            if trained_model is not None:
+                self._down.put_nowait(pickle.dumps(trained_model))
 
             # In the case that any trainer pushes.
             try:
-                d = self._up.get(timeout=1.0)
+                upload_trained_model = pickle.loads(self._up.get(timeout=1.0))
             except queue.Empty:
                 continue
 
-            s = pickle.loads(d)["loss"]
+            
+            s = upload_trained_model.loss
 
             # Restore uploaded model
-            state_dict = pickle.loads(d)["model"]
+            state_dict = upload_trained_model.model_state
             self._model.load_state_dict(state_dict)
 
             if s < score:
                 # Model double check
                 double_check_loss = self._validate(validate_loader)
                 if double_check_loss < score:
-                    model_and_score = d
+                    if trained_model is not None:
+                        upload_trained_model.version = trained_model.version + 1 
+                    trained_model = upload_trained_model
                     score = s
                     updates = updates + 1
                     self._record_loss(s)
@@ -261,15 +280,17 @@ def main():
         print("Write image to ", args.loss_file)
         plot.xlabel('timestamp')
         plot.ylabel('loss')
-        plot.title('swamp training for mnist data')
+        plot.title('swamp training for mnist data (pull probability %s)' % args.pull_probability)
         for trainer in trainers:
             plot.plot(trainer.time_costs, trainer.losses,
                       label='trainer-' + str(trainer.tid))
+        for trainer in trainers:
+            plot.scatter(trainer.pulled_timestamps, trainer.pulled_losses, s=12,
+                      label='trainer-' + str(trainer.tid) + '-pull')
         plot.plot(ps.time_costs, ps.losses, label='ps')
-        plot.legend(loc=7)
+        plot.legend(loc='upper right', prop={'size': 6})
         plot.savefig(args.loss_file)
 
 
 if __name__ == '__main__':
     main()
-
