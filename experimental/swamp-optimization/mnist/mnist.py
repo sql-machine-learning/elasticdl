@@ -40,9 +40,8 @@ class TrainedModel(object):
     ''' Model uploaded to PS by trainers
     '''
 
-    def __init__(self, model_state, optm_state, loss=float("inf"), version=1):
+    def __init__(self, model_state, loss=float("inf"), version=1):
         self.model_state = model_state
-        self.optm_state = optm_state
         self.loss = loss
         self.version = version
 
@@ -137,7 +136,6 @@ class Trainer(object):
     def _pull_model(self):
         trained_model = self._trained_model_wrapper.value
         self._model.load_state_dict(trained_model.model_state)
-        self._optimizer.load_state_dict(trained_model.optm_state)
         self._score = trained_model.loss
         self._pulled_losses.append(self._score.data.item())
         self._pull_timestamps.append(self._timestamps())
@@ -146,9 +144,7 @@ class Trainer(object):
         self._score = loss.data
         if self._up is not None:
             upload_model = TrainedModel(
-                self._model.state_dict(),
-                self._optimizer.state_dict(),
-                loss.data)
+                self._model.state_dict(), loss.data)
             self._up.put(pickle.dumps(upload_model))
 
     def _record_loss(self, loss):
@@ -252,7 +248,6 @@ class PS(object):
             self._time_costs.append(round(time.time() - self._start_time))
             self._losses.append(round(loss.item(), 4))
 
-
 def parse_args():
     # Training settings
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
@@ -297,7 +292,6 @@ def parse_args():
                         help='the total number of trainer to launch')
     return parser.parse_args()
 
-
 def start_ps(args, up, manager, trained_model, loss_dict, timestamp_dict):
     # Init PS process
     key = 'ps'
@@ -312,7 +306,6 @@ def start_ps(args, up, manager, trained_model, loss_dict, timestamp_dict):
     ps_proc.start()
 
     return ps_proc
-
 
 def start_trainers(
         args,
@@ -348,7 +341,6 @@ def start_trainers(
 
     return trainers, trainer_procs
 
-
 def draw(args, loss_dict, timestamp_dict):
     print("Write image to ", args.loss_file)
     plot.xlabel('timestamp')
@@ -369,15 +361,10 @@ def draw(args, loss_dict, timestamp_dict):
     plot.legend(loc='upper right', prop={'size': 6})
     plot.savefig(args.loss_file)
 
-
 def find_lowest_loss_in_ps(loss_dict):
     loss = float("inf")
     losses = loss_dict['ps']
-    for v in losses:
-        if loss > v:
-            loss = v
-    return loss
-
+    return min(losses)
 
 def main():
     args = parse_args()
