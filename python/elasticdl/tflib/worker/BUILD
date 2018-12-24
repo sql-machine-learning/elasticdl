@@ -14,8 +14,6 @@ py_test(
     ],
     deps = [
         ":lib",
-        "//python/elasticdl/tflib:lib",
-        "//python/elasticdl/system:lib",
-        "@pyrecordio//recordio:lib",
+        "//python:elasticdl",
     ],
 )

@@ -1,11 +1,25 @@
 from binascii import crc32
-from recordio.file import File
+from recordio import File
+from contextlib import ExitStack
 import queue
 import threading
 import time
 
 
-def _id(*parts):
+__work_id = 1
+__work_id_lock = threading.Lock()
+def _new_work_id():
+    """
+    returns a unique work id. Thread safe. 
+    """
+    global __work_id
+    global __work_id_lock
+    with __work_id_lock:
+        __work_id += 1
+        return __work_id
+
+
+def _crc32(*parts):
     # convert each integer part into a 4-byte array, join them and return
     # crc32
     return crc32(b"".join(p.to_bytes(4, "little") for p in parts))
@@ -23,8 +37,8 @@ class Work(object):
         self.trial = trial
         # Finish earlier epoch first, but randomize the order of chunks within
         # an epoch.
-        self.id = _id(epoch, file_index, offset)
-        self.priority = (epoch, self.id)
+        self.id = _new_work_id()
+        self.priority = (epoch, _crc32(epoch, file_index, offset))
 
     def next_trial(self):
         return Work(self.file_index, self.offset, self.epoch, self.trial + 1)
@@ -32,6 +46,16 @@ class Work(object):
     def next_epoch(self):
         return Work(self.file_index, self.offset, self.epoch + 1)
 
+
+class EvalWork(object):
+    """
+    Signals worker to evaluation
+    """
+    def __init__(self):
+        self.id = _new_work_id()
+        # assign a higher priority than gradient works
+        self.priority = (-1, self.id)
+        # TODO: add payload
 
 class WorkQueue(object):
     def __init__(self, num_epoch, max_trial, files):
@@ -42,23 +66,35 @@ class WorkQueue(object):
         self._in_flight = {}
         self._lock = threading.Lock()
 
-    def put(self, file_index, offset):
+    def _put_work(self, work):
         with self._lock:
-            work = Work(file_index, offset, 0)
             self._q.put((work.priority, work))
+
+    def put(self, file_index, offset):
+        self._put_work(Work(file_index, offset, 0))
+    
+    def put_eval(self):
+        self._put_work(EvalWork())
 
     def get_work(self, timeout=None):
         with self._lock:
             work = self._q.get(timeout=timeout)[1]
             # TODO: support worker timeout
             self._in_flight[work.id] = work
+            if isinstance(work, EvalWork):
+                return (work.id, "", -1)
             return (work.id, self._files[work.file_index], work.offset)
 
-    def work_done(self, work_id, succeed):
-        with self._lock:
+    def work_done(self, work_id, result):
+        with self._lock, ExitStack() as stack:
+            stack.callback(self._q.task_done)
             work = self._in_flight.pop(work_id)
+            if isinstance(work, EvalWork):
+                print("Eval id: %s, result: %s" % (work.id, result))
+                return
+
             next_work = None
-            if not succeed:
+            if not result:
                 if work.trial + 1 < self._max_trial:
                     next_work = work.next_trial()
                 else:
@@ -69,7 +105,6 @@ class WorkQueue(object):
                 print("work finished", work)
             if next_work:
                 self._q.put((next_work.priority, next_work))
-            self._q.task_done()
 
     def join(self):
         self._q.join()
@@ -102,6 +137,8 @@ class Master(object):
                 with File(f, "r") as fd:
                     for chunk in fd.get_index():
                         self._work_queue.put(i, chunk.offset)
+            # TODO: decide how to do periodic eval
+            self._work_queue.put_eval()
             print(
                 "Time spent on building index: %s seconds:"
                 % (time.time() - start)

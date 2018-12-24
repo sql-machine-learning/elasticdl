@@ -1,4 +1,4 @@
-from recordio.file import File
+from recordio import File
 import record
 import sys
 import argparse

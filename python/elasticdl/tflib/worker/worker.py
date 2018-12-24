@@ -3,7 +3,7 @@ import numpy as np
 import threading
 import queue
 import time
-from recordio.tf import RecordIODataset
+from recordio.tensorflow_op import RecordIODataset
 from tensorflow.python.ops import array_ops
 
 
@@ -43,8 +43,14 @@ class Worker(object):
         while not self._exiting:
             # get work from work queue
             try:
-                work_id, data_file, file_offset = self._work_queue.get_work(timeout=2.0)
+                work_id, data_file, file_offset = self._work_queue.get_work(timeout=0.1)
+                print('Got work: ', work_id, data_file, file_offset)
             except queue.Empty:
+                continue
+            
+            # TODO: handle eval
+            if not data_file:
+                self._work_queue.work_done(work_id, 0)
                 continue
 
             # create dataset from data_file, file_offset
