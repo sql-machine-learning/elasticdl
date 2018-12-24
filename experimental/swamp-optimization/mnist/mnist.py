@@ -36,9 +36,38 @@ class Net(nn.Module):
         return F.log_softmax(x, dim=1)
 
 
+class TrainedModel(object):
+    ''' Model uploaded to PS by trainers
+    '''
+    def __init__(self, model_state, loss=float("inf"), version=1):
+        self.model_state = model_state
+        self.loss = loss
+        self.version = version
+
 class Trainer(object):
 
-    def __init__(self, tid, args, model_in_ps, up, losses, timestamps):
+    def __init__(
+            self,
+            tid,
+            args,
+            trained_model_wrapper,
+            up,
+            losses,
+            timestamps):
+        """ Initialize the Trainer.
+
+        Arguments:
+          tid: The unique identifier of the trainer.
+          args: Runtime arguments.
+          trained_model_wrapper: The info(eg. state, loss) of the best uploaded 
+                                 model at present model shared by PS and trainer 
+                                 which is managed by Manager.
+          up: A shared Queue for trainer upload model to PS.
+          losses: A shared list used for the main process to trace loss which 
+                  is managed by Manager.
+          timestamps: A shared list used for the main process to trace timestamp 
+                      which is managed by Manager.
+        """
         self.tid = tid
         self._args = args
         self._up = up
@@ -49,7 +78,7 @@ class Trainer(object):
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
                                     momentum=self._args.momentum)
         self._score = float("inf")
-        self._model_in_ps = model_in_ps
+        self._trained_model_wrapper = trained_model_wrapper
 
     def train(self):
         data_loader = self._prepare_dataloader(self._args.batch_size)
@@ -95,15 +124,15 @@ class Trainer(object):
             **kwargs)
 
     def _pull_model(self):
-        m = pickle.loads(self._model_in_ps.value)
-        self._model.load_state_dict(m["model"])
-        self._score = m["loss"]
+        trained_model = self._trained_model_wrapper.value
+        self._model.load_state_dict(trained_model.model_state)
+        self._score = trained_model.loss
 
     def _push_model(self, loss):
         self._score = loss.data
         if self._up is not None:
-            self._up.put(pickle.dumps({"model": self._model.state_dict(
-            ),  "loss": loss.data}))
+            upload_model = TrainedModel(self._model.state_dict(), loss.data)
+            self._up.put(pickle.dumps(upload_model))
 
     def _record_loss(self, loss):
         if self._args.loss_file is not None:
@@ -118,7 +147,20 @@ class Trainer(object):
 
 class PS(object):
 
-    def __init__(self, args, model_in_ps, up, losses, timestamps):
+    def __init__(self, args, trained_model_wrapper, up, losses, timestamps):
+        """ Initialize the PS.
+
+        Arguments:
+          args: Runtime arguments.
+          trained_model_wrapper: The info(eg. state, loss) of the best uploaded 
+                                 model at present shared by PS and trainer which 
+                                 is managed by Manager.
+          up: A shared Queue for trainer upload model to PS.
+          losses: A shared list used for the main process to trace loss which 
+                  is managed by Manager.
+          timestamps: A shared list used for the main process to trace timestamp 
+                      which is managed by Manager.
+        """
         self._args = args
         self._up = up
         self._time_costs = timestamps
@@ -126,11 +168,10 @@ class PS(object):
         self._exit = False
         self._start_time = time.time()
         self._model = Net()
-        self._model_in_ps = model_in_ps
+        self._trained_model_wrapper = trained_model_wrapper
+        self._score = float("inf")
 
     def run(self):
-        model_and_score = None
-        score = float("inf")
         updates = 0
         validate_loader = self._prepare_validation_loader()
 
@@ -141,21 +182,16 @@ class PS(object):
             except queue.Empty:
                 continue
 
-            s = pickle.loads(d)["loss"]
-
             # Restore uploaded model
-            state_dict = pickle.loads(d)["model"]
-            self._model.load_state_dict(state_dict)
+            upload_model = pickle.loads(d)
+            self._model.load_state_dict(upload_model.model_state)
 
-            if s < score:
+            if upload_model.loss < self._score:
                 # Model double check
                 double_check_loss = self._validate(validate_loader)
-                if double_check_loss < score:
-                    model_and_score = d
-                    self._model_in_ps.value = d
-                    score = s
-                    updates = updates + 1
-                    self._record_loss(s)
+                if double_check_loss < self._score:
+                    self._update_model_wrapper(upload_model)
+                    self._record_loss(self._score)
 
     def _prepare_validation_loader(self):
         return torch.utils.data.DataLoader(
@@ -182,6 +218,14 @@ class PS(object):
                     break
         loss_val = eval_loss / max_batch
         return loss_val
+
+    def _update_model_wrapper(self, upload_model):
+        if self._trained_model_wrapper.value is not None:
+            upload_model.version = self._trained_model_wrapper.value.version + 1
+            self._trained_model_wrapper.value = upload_model
+        else:
+            self._trained_model_wrapper.value = upload_model
+        self._score = upload_model.loss
 
     def _record_loss(self, loss):
         if self._args.loss_file is not None:
@@ -238,7 +282,7 @@ def main():
     up = Queue()
 
     manager = Manager()
-    model_in_ps = manager.Value(py_object, None)
+    trained_model = manager.Value(py_object, None)
     loss_dict = {}
     timestamp_dict = {}
 
@@ -250,7 +294,7 @@ def main():
     timestamps = manager.list()
     loss_dict[key] = losses
     timestamp_dict[key] = timestamps
-    ps = PS(args, model_in_ps, up, losses, timestamps)
+    ps = PS(args, trained_model, up, losses, timestamps)
     ps_proc = Process(target=ps.run, name='ps')
     ps_proc.start()
 
@@ -265,7 +309,7 @@ def main():
         timestamps = manager.list()
         loss_dict[tname] = losses
         timestamp_dict[tname] = timestamps
-        trainer = Trainer(t, args, model_in_ps, up, losses, timestamps)
+        trainer = Trainer(t, args, trained_model, up, losses, timestamps)
         trainer_proc = Process(target=trainer.train, name=tname)
         trainer_proc.start()
         trainers.append(trainer)
