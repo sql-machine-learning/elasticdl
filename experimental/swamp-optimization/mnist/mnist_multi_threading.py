@@ -8,8 +8,7 @@ from torch.autograd import Variable
 from torchvision import datasets, transforms
 import sys
 import pickle
-from multiprocessing import Process, Queue, Manager
-from ctypes import py_object
+import threading
 import queue
 import time
 import gc
@@ -35,60 +34,31 @@ class Net(nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=1)
 
-
 class TrainedModel(object):
     ''' Model uploaded to PS by trainers
     '''
-
-    def __init__(self, model_state, loss=float("inf"), version=1):
+    def __init__(self, model_state, optmi_state, loss=float("inf"), version=1):
         self.model_state = model_state
+        self.optmi_state = optmi_state 
         self.loss = loss
         self.version = version
 
-
 class Trainer(object):
 
-    def __init__(
-            self,
-            tid,
-            args,
-            trained_model_wrapper,
-            up,
-            losses,
-            timestamps,
-            pulled_losses,
-            pull_timestamps):
-        """ Initialize the Trainer.
-
-        Arguments:
-          tid: The unique identifier of the trainer.
-          args: Runtime arguments.
-          trained_model_wrapper: The info(eg. state, loss) of the best uploaded
-                                 model at present model shared by PS and trainer
-                                 which is managed by Manager.
-          up: A shared Queue for trainer upload model to PS.
-          losses: A shared list used for the main process to trace loss which
-                  is managed by Manager.
-          timestamps: A shared list used for the main process to trace timestamp
-                      which is managed by Manager.
-          pulled_losses: A shared list used for the main process to trace pulled
-                         model loss from ps which is managed by Manager.
-          pull_timestamps: A shared list used for the main process to trace
-                             pulling timestamp which is managed by Manager.
-        """
+    def __init__(self, tid, args, up, down):
         self.tid = tid
         self._args = args
         self._up = up
-        self._time_costs = timestamps
-        self._losses = losses
-        self._pulled_losses = pulled_losses
-        self._pull_timestamps = pull_timestamps
+        self._down = down
+        self.time_costs = []
+        self.losses = []
+        self.pulled_losses = []
+        self.pulled_timestamps = []
         self._start_time = time.time()
         self._model = Net()
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
                                     momentum=self._args.momentum)
         self._score = float("inf")
-        self._trained_model_wrapper = trained_model_wrapper
 
     def train(self):
         data_loader = self._prepare_dataloader(self._args.batch_size)
@@ -109,13 +79,12 @@ class Trainer(object):
                     if loss.data < self._score:
                         self._push_model(loss)
                     else:
-                        if random.random() < self._args.pull_probability:
+                        if self._down is not None and random.random() < self._args.pull_probability:
                             self._pull_model()
                     step = 0
 
                 gc.collect()
-                if batch_idx % self._args.loss_sample_interval == 0:
-                    self._record_loss(loss)
+                self._record_loss(loss)
                 self._print_progress(epoch, batch_idx)
             print("trainer %i done epoch %i" % (self.tid, epoch))
 
@@ -134,23 +103,24 @@ class Trainer(object):
             **kwargs)
 
     def _pull_model(self):
-        trained_model = self._trained_model_wrapper.value
+        trained_model = pickle.loads(self._down.get())
         self._model.load_state_dict(trained_model.model_state)
-        self._score = trained_model.loss
-        self._pulled_losses.append(self._score.data.item())
-        self._pull_timestamps.append(self._timestamps())
+        self._optimizer.load_state_dict(trained_model.optmi_state)
+        self._score = trained_model.loss 
+        self.pulled_losses.append(self._score.data.item())
+        self.pulled_timestamps.append(self._timestamps()) 
 
     def _push_model(self, loss):
         self._score = loss.data
         if self._up is not None:
-            upload_model = TrainedModel(
-                self._model.state_dict(), loss.data)
+            upload_model = TrainedModel(self._model.state_dict(), 
+                self._optimizer.state_dict(), loss.data)
             self._up.put(pickle.dumps(upload_model))
 
     def _record_loss(self, loss):
         if self._args.loss_file is not None:
-            self._time_costs.append(self._timestamps())
-            self._losses.append(round(loss.item(), 4))
+            self.time_costs.append(self._timestamps())
+            self.losses.append(round(loss.item(), 4))
 
     def _print_progress(self, epoch, batch_idx):
         if batch_idx % self._args.log_interval == 0:
@@ -163,51 +133,50 @@ class Trainer(object):
 
 class PS(object):
 
-    def __init__(self, args, trained_model_wrapper, up, losses, timestamps):
-        """ Initialize the PS.
-
-        Arguments:
-          args: Runtime arguments.
-          trained_model_wrapper: The info(eg. state, loss) of the best uploaded
-                                 model at present shared by PS and trainer which
-                                 is managed by Manager.
-          up: A shared Queue for trainer upload model to PS.
-          losses: A shared list used for the main process to trace loss which
-                  is managed by Manager.
-          timestamps: A shared list used for the main process to trace timestamp
-                      which is managed by Manager.
-        """
+    def __init__(self, args, up, down):
         self._args = args
         self._up = up
-        self._time_costs = timestamps
-        self._losses = losses
+        self._down = down
+        self.time_costs = []
+        self.losses = []
         self._exit = False
         self._start_time = time.time()
         self._model = Net()
-        self._trained_model_wrapper = trained_model_wrapper
-        self._score = float("inf")
 
     def run(self):
+        trained_model = None
+        score = float("inf")
         updates = 0
         validate_loader = self._prepare_validation_loader()
 
         while not self._exit:
+            # In the case that any trainer pulls.
+            if trained_model is not None:
+                self._down.put_nowait(pickle.dumps(trained_model))
+
             # In the case that any trainer pushes.
             try:
-                d = self._up.get(timeout=1.0)
+                upload_trained_model = pickle.loads(self._up.get(timeout=1.0))
             except queue.Empty:
                 continue
 
-            # Restore uploaded model
-            upload_model = pickle.loads(d)
-            self._model.load_state_dict(upload_model.model_state)
+            
+            s = upload_trained_model.loss
 
-            if upload_model.loss < self._score:
+            # Restore uploaded model
+            state_dict = upload_trained_model.model_state
+            self._model.load_state_dict(state_dict)
+
+            if s < score:
                 # Model double check
                 double_check_loss = self._validate(validate_loader)
-                if double_check_loss < self._score:
-                    self._update_model_wrapper(upload_model)
-                    self._record_loss(self._score)
+                if double_check_loss < score:
+                    if trained_model is not None:
+                        upload_trained_model.version = trained_model.version + 1 
+                    trained_model = upload_trained_model
+                    score = s
+                    updates = updates + 1
+                    self._record_loss(s)
 
     def _prepare_validation_loader(self):
         return torch.utils.data.DataLoader(
@@ -235,20 +204,16 @@ class PS(object):
         loss_val = eval_loss / max_batch
         return loss_val
 
-    def _update_model_wrapper(self, upload_model):
-        if self._trained_model_wrapper.value is not None:
-            upload_model.version = self._trained_model_wrapper.value.version + 1
-            self._trained_model_wrapper.value = upload_model
-        else:
-            self._trained_model_wrapper.value = upload_model
-        self._score = upload_model.loss
-
     def _record_loss(self, loss):
         if self._args.loss_file is not None:
-            self._time_costs.append(round(time.time() - self._start_time))
-            self._losses.append(round(loss.item(), 4))
+            self.time_costs.append(round(time.time() - self._start_time))
+            self.losses.append(round(loss.item(), 4))
 
-def parse_args():
+    def terminate(self):
+        self._exit = True
+
+
+def main():
     # Training settings
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
@@ -276,11 +241,6 @@ def parse_args():
     parser.add_argument('--loss-file', default='curves/loss.png',
                         help='the name of loss figure file')
     parser.add_argument(
-        '--loss-sample-interval',
-        type=int,
-        default=1,
-        help='how many batches to wait before record a loss value')
-    parser.add_argument(
         '--log-interval',
         type=int,
         default=50,
@@ -290,109 +250,46 @@ def parse_args():
                         help='the probability of trainer pulling from ps')
     parser.add_argument('--trainer-number', type=int, default=1,
                         help='the total number of trainer to launch')
-    return parser.parse_args()
+    args = parser.parse_args()
 
-def start_ps(args, up, manager, trained_model, loss_dict, timestamp_dict):
-    # Init PS process
-    key = 'ps'
-    # Shared list used by the parent process and trainer for
-    # loss tracing
-    losses = manager.list()
-    timestamps = manager.list()
-    loss_dict[key] = losses
-    timestamp_dict[key] = timestamps
-    ps = PS(args, trained_model, up, losses, timestamps)
-    ps_proc = Process(target=ps.run, name='ps')
-    ps_proc.start()
-
-    return ps_proc
-
-def start_trainers(
-        args,
-        up,
-        manager,
-        trained_model,
-        loss_dict,
-        timestamp_dict):
-    # Init trainer processes
-    trainers = []
-    trainer_procs = []
-    for t in range(args.trainer_number):
-        tname = 'trainer-' + str(t)
-        tname_with_pull = tname + '-pull'
-        # Shared list used by the parent process and ps for loss
-        # tracing
-        losses = manager.list()
-        timestamps = manager.list()
-        pulled_losses = manager.list()
-        pull_timestamps = manager.list()
-
-        loss_dict[tname] = losses
-        timestamp_dict[tname] = timestamps
-        loss_dict[tname_with_pull] = pulled_losses
-        timestamp_dict[tname_with_pull] = pull_timestamps
-
-        trainer = Trainer(t, args, trained_model, up, losses, timestamps,
-                          pulled_losses, pull_timestamps)
-        trainer_proc = Process(target=trainer.train, name=tname)
-        trainer_proc.start()
-        trainers.append(trainer)
-        trainer_procs.append(trainer_proc)
-
-    return trainers, trainer_procs
-
-def draw(args, loss_dict, timestamp_dict):
-    print("Write image to ", args.loss_file)
-    plot.xlabel('timestamp')
-    plot.ylabel('loss')
-    plot.title(
-        'swamp training for mnist data (pull probability %s)' %
-        args.pull_probability)
-    lowest_loss = find_lowest_loss_in_ps(loss_dict)
-    for (k, v) in loss_dict.items():
-        if k.endswith('pull'):
-            plot.scatter(timestamp_dict[k], v, s=12, label=k)
-        elif k == 'ps':
-            plot.plot(
-                timestamp_dict[k], v, label=(
-                    k + ' (lowest-loss: ' + str(lowest_loss) + ')'))
-        else:
-            plot.plot(timestamp_dict[k], v, label=k)
-    plot.legend(loc='upper right', prop={'size': 6})
-    plot.savefig(args.loss_file)
-
-def find_lowest_loss_in_ps(loss_dict):
-    losses = loss_dict['ps']
-    return min(losses)
-
-def main():
-    args = parse_args()
     torch.manual_seed(args.seed)
 
-    # Data stores shared by PS, trainers and the main process
-    up = Queue()
-    manager = Manager()
-    trained_model = manager.Value(py_object, None)
-    loss_dict = {}
-    timestamp_dict = {}
+    up = queue.Queue()
+    down = queue.Queue()
 
-    # Start PS and trainers
-    ps_proc = start_ps(
-        args,
-        up,
-        manager,
-        trained_model,
-        loss_dict,
-        timestamp_dict)
-    trainers, trainer_procs = start_trainers(
-        args, up, manager, trained_model, loss_dict, timestamp_dict)
+    ps = PS(args, up, down)
+    ps_thread = threading.Thread(target=ps.run, name='ps')
+    ps_thread.start()
 
-    for proc in trainer_procs:
-        proc.join()
-    ps_proc.terminate()
+    trainers = []
+    trainer_threads = []
+    for t in range(args.trainer_number):
+        trainer = Trainer(t, args, up, down)
+        trainer_thread = threading.Thread(
+            target=trainer.train, name=('trainer-' + str(t)))
+        trainer_thread.start()
+        trainers.append(trainer)
+        trainer_threads.append(trainer_thread)
+
+    for thread in trainer_threads:
+        thread.join()
+
+    ps.terminate()
 
     if args.loss_file is not None:
-        draw(args, loss_dict, timestamp_dict)
+        print("Write image to ", args.loss_file)
+        plot.xlabel('timestamp')
+        plot.ylabel('loss')
+        plot.title('swamp training for mnist data (pull probability %s)' % args.pull_probability)
+        for trainer in trainers:
+            plot.plot(trainer.time_costs, trainer.losses,
+                      label='trainer-' + str(trainer.tid))
+        for trainer in trainers:
+            plot.scatter(trainer.pulled_timestamps, trainer.pulled_losses, s=12,
+                      label='trainer-' + str(trainer.tid) + '-pull')
+        plot.plot(ps.time_costs, ps.losses, label='ps')
+        plot.legend(loc='upper right', prop={'size': 6})
+        plot.savefig(args.loss_file)
 
 
 if __name__ == '__main__':
