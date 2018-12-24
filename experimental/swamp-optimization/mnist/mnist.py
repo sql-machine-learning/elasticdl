@@ -362,7 +362,6 @@ def draw(args, loss_dict, timestamp_dict):
     plot.savefig(args.loss_file)
 
 def find_lowest_loss_in_ps(loss_dict):
-    loss = float("inf")
     losses = loss_dict['ps']
     return min(losses)
 
