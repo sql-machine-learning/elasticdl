@@ -46,6 +46,12 @@ class TrainedModel(object):
         self.version = version
 
 
+class Metrics(object):
+    def __init__(self, loss, accuracy):
+        self.loss = loss
+        self.accuracy = accuracy
+
+
 class Trainer(object):
 
     def __init__(
@@ -54,7 +60,7 @@ class Trainer(object):
             args,
             trained_model_wrapper,
             up,
-            losses,
+            metrics,
             timestamps,
             pulled_losses,
             pull_timestamps):
@@ -67,8 +73,8 @@ class Trainer(object):
                                  model at present model shared by PS and trainer
                                  which is managed by Manager.
           up: A shared Queue for trainer upload model to PS.
-          losses: A shared list used for the main process to trace loss which
-                  is managed by Manager.
+          metrics: A shared list used for the main process to trace loss and accuracy
+                  metrics  which is managed by Manager.
           timestamps: A shared list used for the main process to trace timestamp
                       which is managed by Manager.
           pulled_losses: A shared list used for the main process to trace pulled
@@ -80,7 +86,7 @@ class Trainer(object):
         self._args = args
         self._up = up
         self._time_costs = timestamps
-        self._losses = losses
+        self._metrics = metrics
         self._pulled_losses = pulled_losses
         self._pull_timestamps = pull_timestamps
         self._start_time = time.time()
@@ -115,7 +121,10 @@ class Trainer(object):
 
                 gc.collect()
                 if batch_idx % self._args.loss_sample_interval == 0:
-                    self._record_loss(loss)
+                    _, predicted = torch.max(output, 1)
+                    correct = (predicted == target).sum().item()
+                    accuracy = float(correct) / len(target)
+                    self._record_metrics(loss.item(), accuracy)
                 self._print_progress(epoch, batch_idx)
             print("trainer %i done epoch %i" % (self.tid, epoch))
 
@@ -147,10 +156,10 @@ class Trainer(object):
                 self._model.state_dict(), loss.data)
             self._up.put(pickle.dumps(upload_model))
 
-    def _record_loss(self, loss):
+    def _record_metrics(self, loss, accuracy):
         if self._args.loss_file is not None:
             self._time_costs.append(self._timestamps())
-            self._losses.append(round(loss.item(), 4))
+            self._metrics.append(Metrics(round(loss, 4), round(accuracy, 4)))
 
     def _print_progress(self, epoch, batch_idx):
         if batch_idx % self._args.log_interval == 0:
@@ -163,7 +172,7 @@ class Trainer(object):
 
 class PS(object):
 
-    def __init__(self, args, trained_model_wrapper, up, losses, timestamps):
+    def __init__(self, args, trained_model_wrapper, up, metrics, timestamps):
         """ Initialize the PS.
 
         Arguments:
@@ -172,15 +181,15 @@ class PS(object):
                                  model at present shared by PS and trainer which
                                  is managed by Manager.
           up: A shared Queue for trainer upload model to PS.
-          losses: A shared list used for the main process to trace loss which
-                  is managed by Manager.
+          metrics: A shared list used for the main process to trace loss and accuracy
+                  metrics  which is managed by Manager.
           timestamps: A shared list used for the main process to trace timestamp
                       which is managed by Manager.
         """
         self._args = args
         self._up = up
         self._time_costs = timestamps
-        self._losses = losses
+        self._metrics = metrics
         self._exit = False
         self._start_time = time.time()
         self._model = Net()
@@ -204,10 +213,10 @@ class PS(object):
 
             if upload_model.loss < self._score:
                 # Model double check
-                double_check_loss = self._validate(validate_loader)
+                double_check_loss, accuracy = self._validate(validate_loader)
                 if double_check_loss < self._score:
                     self._update_model_wrapper(upload_model)
-                    self._record_loss(self._score)
+                    self._record_metrics(double_check_loss, accuracy)
 
     def _prepare_validation_loader(self):
         return torch.utils.data.DataLoader(
@@ -224,16 +233,22 @@ class PS(object):
     def _validate(self, data_loader):
         max_batch = self._args.validate_max_batch
         eval_loss = 0
+        correct = 0
+        total = 0
         with torch.no_grad():
             for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
                 if batch_idx < max_batch:
                     out = self._model(batch_x)
                     loss = F.nll_loss(out, batch_y)
                     eval_loss += loss.data.item()
+                    _, predicted = torch.max(out.data, 1)
+                    correct += (predicted == batch_y).sum().item()
+                    total += len(batch_y)
                 else:
                     break
         loss_val = eval_loss / max_batch
-        return loss_val
+        accuracy = float(correct) / total
+        return loss_val, accuracy
 
     def _update_model_wrapper(self, upload_model):
         if self._trained_model_wrapper.value is not None:
@@ -243,10 +258,11 @@ class PS(object):
             self._trained_model_wrapper.value = upload_model
         self._score = upload_model.loss
 
-    def _record_loss(self, loss):
+    def _record_metrics(self, loss, accuracy):
         if self._args.loss_file is not None:
             self._time_costs.append(round(time.time() - self._start_time))
-            self._losses.append(round(loss.item(), 4))
+            self._metrics.append(Metrics(round(loss, 4), round(accuracy, 4)))
+
 
 def parse_args():
     # Training settings
@@ -292,27 +308,29 @@ def parse_args():
                         help='the total number of trainer to launch')
     return parser.parse_args()
 
-def start_ps(args, up, manager, trained_model, loss_dict, timestamp_dict):
+
+def start_ps(args, up, manager, trained_model, metrics_dict, timestamp_dict):
     # Init PS process
     key = 'ps'
     # Shared list used by the parent process and trainer for
     # loss tracing
-    losses = manager.list()
+    metrics = manager.list()
     timestamps = manager.list()
-    loss_dict[key] = losses
+    metrics_dict[key] = metrics
     timestamp_dict[key] = timestamps
-    ps = PS(args, trained_model, up, losses, timestamps)
+    ps = PS(args, trained_model, up, metrics, timestamps)
     ps_proc = Process(target=ps.run, name='ps')
     ps_proc.start()
 
     return ps_proc
+
 
 def start_trainers(
         args,
         up,
         manager,
         trained_model,
-        loss_dict,
+        metrics_dict,
         timestamp_dict):
     # Init trainer processes
     trainers = []
@@ -322,17 +340,17 @@ def start_trainers(
         tname_with_pull = tname + '-pull'
         # Shared list used by the parent process and ps for loss
         # tracing
-        losses = manager.list()
+        metrics = manager.list()
         timestamps = manager.list()
         pulled_losses = manager.list()
         pull_timestamps = manager.list()
 
-        loss_dict[tname] = losses
+        metrics_dict[tname] = metrics
         timestamp_dict[tname] = timestamps
-        loss_dict[tname_with_pull] = pulled_losses
+        metrics_dict[tname_with_pull] = pulled_losses
         timestamp_dict[tname_with_pull] = pull_timestamps
 
-        trainer = Trainer(t, args, trained_model, up, losses, timestamps,
+        trainer = Trainer(t, args, trained_model, up, metrics, timestamps,
                           pulled_losses, pull_timestamps)
         trainer_proc = Process(target=trainer.train, name=tname)
         trainer_proc.start()
@@ -341,29 +359,60 @@ def start_trainers(
 
     return trainers, trainer_procs
 
-def draw(args, loss_dict, timestamp_dict):
+
+def draw(args, metrics_dict, timestamp_dict):
     print("Write image to ", args.loss_file)
-    plot.xlabel('timestamp')
-    plot.ylabel('loss')
-    plot.title(
+    lowest_loss, best_accuracy = find_best_metrics_in_ps(metrics_dict)
+    fig = plot.figure()
+    fig.suptitle(
         'swamp training for mnist data (pull probability %s)' %
         args.pull_probability)
-    lowest_loss = find_lowest_loss_in_ps(loss_dict)
-    for (k, v) in loss_dict.items():
+    loss_ax = fig.add_subplot(2, 1, 1)
+    acc_ax = fig.add_subplot(2, 1, 2)
+
+    plot.xlabel('timestamp')
+    loss_ax.set_ylabel('loss')
+    for (k, v) in metrics_dict.items():
         if k.endswith('pull'):
-            plot.scatter(timestamp_dict[k], v, s=12, label=k)
+            loss_ax.scatter(timestamp_dict[k], v, s=12, label=k)
         elif k == 'ps':
-            plot.plot(
-                timestamp_dict[k], v, label=(
+            losses = [m.loss for m in v]
+            loss_ax.plot(
+                timestamp_dict[k], losses, label=(
                     k + ' (lowest-loss: ' + str(lowest_loss) + ')'))
         else:
-            plot.plot(timestamp_dict[k], v, label=k)
-    plot.legend(loc='upper right', prop={'size': 6})
+            losses = [m.loss for m in v]
+            loss_ax.plot(timestamp_dict[k], losses, label=k)
+    loss_ax.legend(loc='upper right', prop={'size': 6})
+
+    acc_ax.set_xlabel('timestamp')
+    acc_ax.set_ylabel('accuracy')
+    for (k, v) in metrics_dict.items():
+        if k.endswith('pull'):
+            continue
+        elif k == 'ps':
+            acc = [m.accuracy for m in v]
+            acc_ax.plot(
+                timestamp_dict[k], acc, label=(
+                    k + ' (best-acc: ' + str(best_accuracy) + ')'))
+        else:
+            acc = [m.accuracy for m in v]
+            acc_ax.plot(timestamp_dict[k], acc, label=k)
+    acc_ax.legend(loc='lower right', prop={'size': 6})
+
     plot.savefig(args.loss_file)
 
-def find_lowest_loss_in_ps(loss_dict):
-    losses = loss_dict['ps']
-    return min(losses)
+
+def find_best_metrics_in_ps(metrics_dict):
+    loss = float("inf")
+    accuracy = 0
+    for m in metrics_dict['ps']:
+        if m.loss < loss:
+            loss = m.loss
+        if m.accuracy > accuracy:
+            accuracy = m.accuracy
+    return loss, accuracy
+
 
 def main():
     args = parse_args()
@@ -373,7 +422,7 @@ def main():
     up = Queue()
     manager = Manager()
     trained_model = manager.Value(py_object, None)
-    loss_dict = {}
+    metrics_dict = {}
     timestamp_dict = {}
 
     # Start PS and trainers
@@ -382,17 +431,17 @@ def main():
         up,
         manager,
         trained_model,
-        loss_dict,
+        metrics_dict,
         timestamp_dict)
     trainers, trainer_procs = start_trainers(
-        args, up, manager, trained_model, loss_dict, timestamp_dict)
+        args, up, manager, trained_model, metrics_dict, timestamp_dict)
 
     for proc in trainer_procs:
         proc.join()
     ps_proc.terminate()
 
     if args.loss_file is not None:
-        draw(args, loss_dict, timestamp_dict)
+        draw(args, metrics_dict, timestamp_dict)
 
 
 if __name__ == '__main__':
