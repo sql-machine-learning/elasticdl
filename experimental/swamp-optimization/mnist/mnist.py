@@ -71,7 +71,7 @@ class Trainer(object):
             pulled_losses,
             pull_timestamps,
             batch_steps,
-            accuracy):
+            accuracies):
         """ Initialize the Trainer.
 
         Arguments:
@@ -91,7 +91,7 @@ class Trainer(object):
                              pulling timestamp which is managed by Manager.
           batch_steps: A shared list used for the main process to trace batch steps
                        corresponding to the losses
-          accuracy: A shared list used for the main process to trace model accuracy.
+          accuracies: A shared list used for the main process to trace model accuracy.
         """
         self.tid = tid
         self._args = args
@@ -101,7 +101,7 @@ class Trainer(object):
         self._pulled_losses = pulled_losses
         self._pull_timestamps = pull_timestamps
         self._batch_steps = batch_steps
-        self._accuracy = accuracy
+        self._accuracies = accuracies
         self._start_time = time.time()
         self._model = Net()
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
@@ -115,7 +115,6 @@ class Trainer(object):
             self._args.validate_batch_size_in_trainer)
         step = 0
         curr_step_id = 0 
-        best_acc = 0 
 
         # start local training
         for epoch in range(self._args.epochs):
@@ -134,10 +133,8 @@ class Trainer(object):
                         validate_loader, self._model, 
                         self._args.validate_max_batch_in_trainer,
                         self._args.validate_batch_size_in_trainer)
-
-                    if double_check_accuracy > best_acc:
-                        best_acc = double_check_accuracy
-                    current_acc = double_check_accuracy
+                    self._record_metrics(curr_step_id, double_check_loss, 
+                        double_check_accuracy)
 
                     if double_check_loss < self._score:
                         self._push_model(double_check_loss, batch_idx)
@@ -147,17 +144,8 @@ class Trainer(object):
                     step = 0
 
                 gc.collect()
-                if batch_idx % self._args.loss_sample_interval == 0:
-                    _, predicted = torch.max(output, 1)
-                    correct = (predicted == target).sum().item()
-                    accuracy = float(correct) / len(target)
-                    self._record_metrics(curr_step_id, loss.item(), accuracy)
                 self._print_progress(epoch, batch_idx)
             print("trainer %i done epoch %i" % (self.tid, epoch))
-
-        # Record the best metrics
-        self._record_metrics(curr_step_id + 1, self._score, best_acc)
-        
 
     def _prepare_dataloader(self, batch_size):
         kwargs = {}
@@ -192,7 +180,7 @@ class Trainer(object):
             self._time_costs.append(self._timestamps())
             self._metrics.append(Metrics(round(loss, 4), round(accuracy, 4)))
             self._batch_steps.append(batch_step)
-            self._accuracy.append(accuracy)
+            self._accuracies.append(accuracy)
 
     def _print_progress(self, epoch, batch_idx):
         if batch_idx % self._args.log_interval == 0:
@@ -444,18 +432,18 @@ def start_trainers(
         pulled_losses = manager.list()
         pull_timestamps = manager.list()
         batch_steps = manager.list()
-        accuracy = manager.list()
+        accuracies = manager.list()
 
         metrics_dict[tname] = metrics
         timestamp_dict[tname] = timestamps
         metrics_dict[tname_with_pull] = pulled_losses
         timestamp_dict[tname_with_pull] = pull_timestamps
         batch_steps_dict[tname] = batch_steps
-        accuracy_dict[tname] = accuracy
+        accuracy_dict[tname] = accuracies
 
         trainer = Trainer(t, args, trained_model, up, metrics, timestamps,
                           pulled_losses, pull_timestamps, batch_steps,
-                          accuracy)
+                          accuracies)
         trainer_proc = Process(target=trainer.train, name=tname)
         trainer_proc.start()
         trainers.append(trainer)
@@ -535,7 +523,6 @@ def draw(args, metrics_dict, timestamp_dict, batch_steps_dict, accuracy_dict):
 
     plot.tight_layout()
     plot.savefig(args.loss_file)
-
 
 def find_best_metrics_in_ps(metrics_dict, validate_in_ps):
     loss = float("inf")
