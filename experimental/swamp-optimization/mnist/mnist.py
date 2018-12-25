@@ -195,6 +195,7 @@ class PS(object):
         self._model = Net()
         self._trained_model_wrapper = trained_model_wrapper
         self._score = float("inf")
+        self._validate_score = float("inf")
 
     def run(self):
         updates = 0
@@ -214,8 +215,9 @@ class PS(object):
             if upload_model.loss < self._score:
                 # Model double check
                 double_check_loss, accuracy = self._validate(validate_loader)
-                if double_check_loss < self._score:
+                if double_check_loss < self._validate_score:
                     self._update_model_wrapper(upload_model)
+                    self._validate_score = double_check_loss
                     self._record_metrics(double_check_loss, accuracy)
 
     def _prepare_validation_loader(self):
@@ -285,9 +287,9 @@ def parse_args():
         help='how many batches to wait before sync up with the ps')
     parser.add_argument('--save-model', action='store_true', default=False,
                         help='For Saving the current Model')
-    parser.add_argument('--validate_batch_size', default=64,
+    parser.add_argument('--validate_batch_size', type=int, default=64,
                         help='batch size for validation dataset in ps')
-    parser.add_argument('--validate_max_batch', default=5,
+    parser.add_argument('--validate_max_batch', type=int, default=5,
                         help='max batch for validate model in ps')
     parser.add_argument('--loss-file', default='curves/loss.png',
                         help='the name of loss figure file')
