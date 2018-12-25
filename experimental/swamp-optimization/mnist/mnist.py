@@ -248,7 +248,7 @@ class PS(object):
                     total += len(batch_y)
                 else:
                     break
-        loss_val = eval_loss / max_batch
+        loss_val = eval_loss / total * self._args.validate_batch_size
         accuracy = float(correct) / total
         return loss_val, accuracy
 
