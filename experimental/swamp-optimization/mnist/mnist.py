@@ -125,8 +125,9 @@ class Trainer(object):
                     step = step + 1
                 else:
                     double_check_loss, accuracy = validate(validate_loader,
-                                                           self._model, self._args.validate_max_batch_in_trainer,
-                                                           self._args.validate_batch_size_in_trainer)
+                        self._model, self._args.validate_max_batch_in_trainer,
+                        self._args.validate_batch_size_in_trainer)
+
                     if double_check_loss < self._score:
                         self._push_model(double_check_loss, batch_idx)
                     else:
@@ -242,7 +243,10 @@ class PS(object):
                 if self._args.validate_in_ps:
                     # Model double check
                     double_check_loss, accuracy = validate(
-                        validate_loader, self._model, self._args.validate_max_batch_in_ps, self._args.validate_batch_size_in_ps)
+                        validate_loader, self._model, 
+                        self._args.validate_max_batch_in_ps, 
+                        self._args.validate_batch_size_in_ps)
+
                     if double_check_loss < self._validate_score:
                         self._update_model_wrapper(upload_model)
                         self._validate_score = double_check_loss
