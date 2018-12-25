@@ -70,7 +70,8 @@ class Trainer(object):
             timestamps,
             pulled_losses,
             pull_timestamps,
-            batch_steps):
+            batch_steps,
+            accuracy):
         """ Initialize the Trainer.
 
         Arguments:
@@ -90,6 +91,7 @@ class Trainer(object):
                              pulling timestamp which is managed by Manager.
           batch_steps: A shared list used for the main process to trace batch steps
                        corresponding to the losses
+          accuracy: A shared list used for the main process to trace model accuracy.
         """
         self.tid = tid
         self._args = args
@@ -99,6 +101,7 @@ class Trainer(object):
         self._pulled_losses = pulled_losses
         self._pull_timestamps = pull_timestamps
         self._batch_steps = batch_steps
+        self._accuracy = accuracy
         self._start_time = time.time()
         self._model = Net()
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
@@ -178,6 +181,7 @@ class Trainer(object):
             self._time_costs.append(self._timestamps())
             self._metrics.append(Metrics(round(loss, 4), round(accuracy, 4)))
             self._batch_steps.append(batch_step)
+            self._accuracy.append(accuracy)
 
     def _print_progress(self, epoch, batch_idx):
         if batch_idx % self._args.log_interval == 0:
@@ -243,8 +247,8 @@ class PS(object):
                 if self._args.validate_in_ps:
                     # Model double check
                     double_check_loss, accuracy = validate(
-                        validate_loader, self._model, 
-                        self._args.validate_max_batch_in_ps, 
+                        validate_loader, self._model,
+                        self._args.validate_max_batch_in_ps,
                         self._args.validate_batch_size_in_ps)
 
                     if double_check_loss < self._validate_score:
@@ -414,7 +418,8 @@ def start_trainers(
         trained_model,
         metrics_dict,
         timestamp_dict,
-        batch_steps_dict):
+        batch_steps_dict,
+        accuracy_dict):
     # Init trainer processes
     trainers = []
     trainer_procs = []
@@ -428,15 +433,18 @@ def start_trainers(
         pulled_losses = manager.list()
         pull_timestamps = manager.list()
         batch_steps = manager.list()
+        accuracy = manager.list()
 
         metrics_dict[tname] = metrics
         timestamp_dict[tname] = timestamps
         metrics_dict[tname_with_pull] = pulled_losses
         timestamp_dict[tname_with_pull] = pull_timestamps
         batch_steps_dict[tname] = batch_steps
+        accuracy_dict[tname] = accuracy
 
         trainer = Trainer(t, args, trained_model, up, metrics, timestamps,
-                          pulled_losses, pull_timestamps, batch_steps)
+                          pulled_losses, pull_timestamps, batch_steps,
+                          accuracy)
         trainer_proc = Process(target=trainer.train, name=tname)
         trainer_proc.start()
         trainers.append(trainer)
@@ -445,18 +453,14 @@ def start_trainers(
     return trainers, trainer_procs
 
 
-def draw(args, metrics_dict, timestamp_dict, batch_steps_dict):
+def draw(args, metrics_dict, timestamp_dict, batch_steps_dict, accuracy_dict):
     print("Write image to ", args.loss_file)
     lowest_loss, best_accuracy = find_best_metrics_in_ps(
         metrics_dict, args.validate_in_ps)
     fig = plot.figure()
 
-    rows_in_canvas = None
-    cols_in_canvas = 1
-    if args.validate_in_ps:
-        rows_in_canvas = 3
-    else:
-        rows_in_canvas = 2
+    rows_in_canvas = 2
+    cols_in_canvas = 2
 
     # Draw loss/timestamp curve.
     loss_ax = fig.add_subplot(rows_in_canvas, cols_in_canvas, 1)
@@ -464,7 +468,7 @@ def draw(args, metrics_dict, timestamp_dict, batch_steps_dict):
     loss_ax.set_ylabel('loss')
     loss_ax.set_title(
         'swamp training for mnist data (pull probability %s)' %
-        args.pull_probability, fontsize=10)
+        args.pull_probability, fontsize=10, verticalalignment='center')
     for (k, v) in metrics_dict.items():
         if k.endswith('pull'):
             loss_ax.scatter(timestamp_dict[k], v, s=12, label=k)
@@ -491,9 +495,18 @@ def draw(args, metrics_dict, timestamp_dict, batch_steps_dict):
             loss_step_ax.plot(batch_steps_dict[k], losses, label=k)
     loss_step_ax.legend(loc='upper right', prop={'size': 6})
 
+    # Draw accuracy/batch_step curve.
+    accuracy_step_ax = fig.add_subplot(rows_in_canvas, cols_in_canvas, 3)
+    accuracy_step_ax.set_xlabel('batch step')
+    accuracy_step_ax.set_ylabel('accuracy')
+    for (k, v) in accuracy_dict.items():
+        accuracy_step_ax.plot(
+            batch_steps_dict[k], v, label=k + "(max acc:" + str(round(max(v), 4)) + ")")
+    accuracy_step_ax.legend(loc='lower right', prop={'size': 6})
+
     # Draw accuracy/timestamp curve.
     if args.validate_in_ps:
-        acc_ax = fig.add_subplot(rows_in_canvas, cols_in_canvas, 3)
+        acc_ax = fig.add_subplot(rows_in_canvas, cols_in_canvas, 4)
         acc_ax.set_xlabel('timestamp')
         acc_ax.set_ylabel('accuracy')
         for (k, v) in metrics_dict.items():
@@ -509,6 +522,7 @@ def draw(args, metrics_dict, timestamp_dict, batch_steps_dict):
                 acc_ax.plot(timestamp_dict[k], acc, label=k)
         acc_ax.legend(loc='lower right', prop={'size': 6})
 
+    plot.tight_layout()
     plot.savefig(args.loss_file)
 
 
@@ -535,6 +549,7 @@ def main():
     metrics_dict = {}
     timestamp_dict = {}
     batch_steps_dict = {}
+    accuracy_dict = {}
 
     # Start PS and trainers
     ps_proc = start_ps(
@@ -545,15 +560,18 @@ def main():
         metrics_dict,
         timestamp_dict,
         batch_steps_dict)
+
     trainers, trainer_procs = start_trainers(
-        args, up, manager, trained_model, metrics_dict, timestamp_dict, batch_steps_dict)
+        args, up, manager, trained_model, metrics_dict,
+        timestamp_dict, batch_steps_dict, accuracy_dict)
 
     for proc in trainer_procs:
         proc.join()
     ps_proc.terminate()
 
     if args.loss_file is not None:
-        draw(args, metrics_dict, timestamp_dict, batch_steps_dict)
+        draw(args, metrics_dict, timestamp_dict, batch_steps_dict,
+             accuracy_dict)
 
 
 if __name__ == '__main__':
