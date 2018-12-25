@@ -40,11 +40,16 @@ class TrainedModel(object):
     ''' Model uploaded to PS by trainers
     '''
 
-    def __init__(self, model_state, loss=float("inf"), version=1, batch_step=1):
+    def __init__(
+            self,
+            model_state,
+            loss=float("inf"),
+            version=1,
+            batch_step=1):
         self.model_state = model_state
         self.loss = loss
         self.version = version
-        self.batch_step = batch_step 
+        self.batch_step = batch_step
 
 
 class Metrics(object):
@@ -84,7 +89,7 @@ class Trainer(object):
           pull_timestamps: A shared list used for the main process to trace
                              pulling timestamp which is managed by Manager.
           batch_steps: A shared list used for the main process to trace batch steps
-                       corresponding to the losses             
+                       corresponding to the losses
         """
         self.tid = tid
         self._args = args
@@ -103,7 +108,8 @@ class Trainer(object):
 
     def train(self):
         data_loader = self._prepare_dataloader(self._args.batch_size)
-        validate_loader = prepare_validation_loader(self._args.validate_batch_size_in_trainer)
+        validate_loader = prepare_validation_loader(
+            self._args.validate_batch_size_in_trainer)
         step = 0
 
         # start local training
@@ -118,9 +124,9 @@ class Trainer(object):
                     self._optimizer.step()
                     step = step + 1
                 else:
-                    double_check_loss, accuracy = validate(validate_loader, 
-                        self._model, self._args.validate_max_batch_in_trainer, 
-                        self._args.validate_batch_size_in_trainer)
+                    double_check_loss, accuracy = validate(validate_loader,
+                                                           self._model, self._args.validate_max_batch_in_trainer,
+                                                           self._args.validate_batch_size_in_trainer)
                     if double_check_loss < self._score:
                         self._push_model(double_check_loss, batch_idx)
                     else:
@@ -133,7 +139,8 @@ class Trainer(object):
                     _, predicted = torch.max(output, 1)
                     correct = (predicted == target).sum().item()
                     accuracy = float(correct) / len(target)
-                    self._record_metrics((epoch + 1) * batch_idx, loss.item(), accuracy)
+                    self._record_metrics(
+                        (epoch + 1) * batch_idx, loss.item(), accuracy)
                 self._print_progress(epoch, batch_idx)
             print("trainer %i done epoch %i" % (self.tid, epoch))
 
@@ -182,7 +189,14 @@ class Trainer(object):
 
 class PS(object):
 
-    def __init__(self, args, trained_model_wrapper, up, metrics, timestamps, batch_steps):
+    def __init__(
+            self,
+            args,
+            trained_model_wrapper,
+            up,
+            metrics,
+            timestamps,
+            batch_steps):
         """ Initialize the PS.
 
         Arguments:
@@ -210,7 +224,8 @@ class PS(object):
 
     def run(self):
         updates = 0
-        validate_loader = prepare_validation_loader(self._args.validate_batch_size_in_ps)
+        validate_loader = prepare_validation_loader(
+            self._args.validate_batch_size_in_ps)
 
         while not self._exit:
             # In the case that any trainer pushes.
@@ -226,9 +241,8 @@ class PS(object):
             if upload_model.loss < self._score:
                 if self._args.validate_in_ps:
                     # Model double check
-                    double_check_loss, accuracy = validate(validate_loader, 
-                            self._model, self._args.validate_max_batch_in_ps, 
-                            self._args.validate_batch_size_in_ps)
+                    double_check_loss, accuracy = validate(
+                        validate_loader, self._model, self._args.validate_max_batch_in_ps, self._args.validate_batch_size_in_ps)
                     if double_check_loss < self._validate_score:
                         self._update_model_wrapper(upload_model)
                         self._validate_score = double_check_loss
@@ -250,10 +264,19 @@ class PS(object):
             self._time_costs.append(round(time.time() - self._start_time))
             self._batch_steps.append(update_model.batch_step)
             if accuracy is not None:
-                self._metrics.append(Metrics(round(update_model.loss, 4), round(accuracy, 4)))
+                self._metrics.append(
+                    Metrics(
+                        round(
+                            update_model.loss, 4), round(
+                            accuracy, 4)))
             else:
-                self._metrics.append(Metrics(round(update_model.loss, 4), None))
-        
+                self._metrics.append(
+                    Metrics(
+                        round(
+                            update_model.loss,
+                            4),
+                        None))
+
 
 def prepare_validation_loader(validate_batch_size):
     return torch.utils.data.DataLoader(
@@ -266,6 +289,7 @@ def prepare_validation_loader(validate_batch_size):
                        ])),
         batch_size=validate_batch_size,
         shuffle=True)  # shuffle for random test
+
 
 def validate(data_loader, model, validate_max_batch, validate_batch_size):
     max_batch = validate_max_batch
@@ -287,6 +311,7 @@ def validate(data_loader, model, validate_max_batch, validate_batch_size):
     accuracy = float(correct) / total
     return loss_val, accuracy
 
+
 def bool_parser(v):
     if v.lower() in ('true', '1'):
         return True
@@ -294,6 +319,7 @@ def bool_parser(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Unsupported value encountered.')
+
 
 def parse_args():
     # Training settings
@@ -316,10 +342,16 @@ def parse_args():
         help='how many batches to wait before sync up with the ps')
     parser.add_argument('--save-model', action='store_true', default=False,
                         help='For Saving the current Model')
-    parser.add_argument('--validate-batch-size-in-trainer', type=int, default=64,
-                        help='batch size for validation dataset in trainer')
-    parser.add_argument('--validate-max-batch-in-trainer', type=int, default=1000,
-                        help='max batch for validate model in trainer')
+    parser.add_argument(
+        '--validate-batch-size-in-trainer',
+        type=int,
+        default=64,
+        help='batch size for validation dataset in trainer')
+    parser.add_argument(
+        '--validate-max-batch-in-trainer',
+        type=int,
+        default=1000,
+        help='max batch for validate model in trainer')
     parser.add_argument('--validate-batch-size-in-ps', type=int, default=64,
                         help='batch size for validation dataset in ps')
     parser.add_argument('--validate-max-batch-in-ps', type=int, default=5,
@@ -346,7 +378,14 @@ def parse_args():
     return parser.parse_args()
 
 
-def start_ps(args, up, manager, trained_model, metrics_dict, timestamp_dict, batch_steps_dict):
+def start_ps(
+        args,
+        up,
+        manager,
+        trained_model,
+        metrics_dict,
+        timestamp_dict,
+        batch_steps_dict):
     # Init PS process
     key = 'ps'
     # Shared list used by the parent process and trainer for
@@ -404,7 +443,8 @@ def start_trainers(
 
 def draw(args, metrics_dict, timestamp_dict, batch_steps_dict):
     print("Write image to ", args.loss_file)
-    lowest_loss, best_accuracy = find_best_metrics_in_ps(metrics_dict, args.validate_in_ps)
+    lowest_loss, best_accuracy = find_best_metrics_in_ps(
+        metrics_dict, args.validate_in_ps)
     fig = plot.figure()
 
     rows_in_canvas = None
@@ -417,7 +457,7 @@ def draw(args, metrics_dict, timestamp_dict, batch_steps_dict):
     # Draw loss/timestamp curve.
     loss_ax = fig.add_subplot(rows_in_canvas, cols_in_canvas, 1)
     loss_ax.set_xlabel('timestamp')
-    loss_ax.set_ylabel('loss') 
+    loss_ax.set_ylabel('loss')
     loss_ax.set_title(
         'swamp training for mnist data (pull probability %s)' %
         args.pull_probability, fontsize=10)
@@ -437,7 +477,7 @@ def draw(args, metrics_dict, timestamp_dict, batch_steps_dict):
     # Draw loss/batch_step curve.
     loss_step_ax = fig.add_subplot(rows_in_canvas, cols_in_canvas, 2)
     loss_step_ax.set_xlabel('batch step')
-    loss_step_ax.set_ylabel('loss') 
+    loss_step_ax.set_ylabel('loss')
     for (k, v) in metrics_dict.items():
         if k == 'ps':
             losses = [m.loss for m in v]
