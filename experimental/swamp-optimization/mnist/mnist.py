@@ -98,6 +98,7 @@ class Trainer(object):
 
     def train(self):
         data_loader = self._prepare_dataloader(self._args.batch_size)
+        validate_loader = prepare_validation_loader(self._args.validate_batch_size_in_trainer)
         step = 0
 
         # start local training
@@ -112,8 +113,11 @@ class Trainer(object):
                     self._optimizer.step()
                     step = step + 1
                 else:
-                    if loss.data < self._score:
-                        self._push_model(loss)
+                    double_check_loss, accuracy = validate(validate_loader, 
+                        self._model, self._args.validate_max_batch_in_trainer, 
+                        self._args.validate_batch_size_in_trainer)
+                    if double_check_loss < self._score:
+                        self._push_model(double_check_loss)
                     else:
                         if random.random() < self._args.pull_probability:
                             self._pull_model()
@@ -150,10 +154,10 @@ class Trainer(object):
         self._pull_timestamps.append(self._timestamps())
 
     def _push_model(self, loss):
-        self._score = loss.data
+        self._score = loss
         if self._up is not None:
             upload_model = TrainedModel(
-                self._model.state_dict(), loss.data)
+                self._model.state_dict(), loss)
             self._up.put(pickle.dumps(upload_model))
 
     def _record_metrics(self, loss, accuracy):
@@ -199,7 +203,7 @@ class PS(object):
 
     def run(self):
         updates = 0
-        validate_loader = self._prepare_validation_loader()
+        validate_loader = prepare_validation_loader(self._args.validate_batch_size_in_ps)
 
         while not self._exit:
             # In the case that any trainer pushes.
@@ -213,44 +217,18 @@ class PS(object):
             self._model.load_state_dict(upload_model.model_state)
 
             if upload_model.loss < self._score:
-                # Model double check
-                double_check_loss, accuracy = self._validate(validate_loader)
-                if double_check_loss < self._validate_score:
-                    self._update_model_wrapper(upload_model)
-                    self._validate_score = double_check_loss
-                    self._record_metrics(double_check_loss, accuracy)
-
-    def _prepare_validation_loader(self):
-        return torch.utils.data.DataLoader(
-            datasets.MNIST('./data',
-                           train=False,
-                           download=True,
-                           transform=transforms.Compose([
-                               transforms.ToTensor(),
-                               transforms.Normalize((0.1307,), (0.3081,))
-                           ])),
-            batch_size=self._args.validate_batch_size,
-            shuffle=True)  # shuffle for random test
-
-    def _validate(self, data_loader):
-        max_batch = self._args.validate_max_batch
-        eval_loss = 0
-        correct = 0
-        total = 0
-        with torch.no_grad():
-            for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
-                if batch_idx < max_batch:
-                    out = self._model(batch_x)
-                    loss = F.nll_loss(out, batch_y)
-                    eval_loss += loss.data.item()
-                    _, predicted = torch.max(out.data, 1)
-                    correct += (predicted == batch_y).sum().item()
-                    total += len(batch_y)
+                if self._args.validate_in_ps:
+                    # Model double check
+                    double_check_loss, accuracy = validate(validate_loader, 
+                            self._model, self._args.validate_max_batch_in_ps, 
+                            self._args.validate_batch_size_in_ps)
+                    if double_check_loss < self._validate_score:
+                        self._update_model_wrapper(upload_model)
+                        self._validate_score = double_check_loss
+                        self._record_metrics(double_check_loss, accuracy)
                 else:
-                    break
-        loss_val = eval_loss / total * self._args.validate_batch_size
-        accuracy = float(correct) / total
-        return loss_val, accuracy
+                    self._update_model_wrapper(upload_model)
+                    self._record_metrics(upload_model.loss)
 
     def _update_model_wrapper(self, upload_model):
         if self._trained_model_wrapper.value is not None:
@@ -260,11 +238,54 @@ class PS(object):
             self._trained_model_wrapper.value = upload_model
         self._score = upload_model.loss
 
-    def _record_metrics(self, loss, accuracy):
+    def _record_metrics(self, loss, accuracy=None):
         if self._args.loss_file is not None:
             self._time_costs.append(round(time.time() - self._start_time))
-            self._metrics.append(Metrics(round(loss, 4), round(accuracy, 4)))
+            if accuracy is not None:
+                self._metrics.append(Metrics(round(loss, 4), round(accuracy, 4)))
+            else:
+                self._metrics.append(Metrics(round(loss, 4), None))
+        
 
+def prepare_validation_loader(validate_batch_size):
+    return torch.utils.data.DataLoader(
+        datasets.MNIST('./data',
+                       train=False,
+                       download=True,
+                       transform=transforms.Compose([
+                           transforms.ToTensor(),
+                           transforms.Normalize((0.1307,), (0.3081,))
+                       ])),
+        batch_size=validate_batch_size,
+        shuffle=True)  # shuffle for random test
+
+def validate(data_loader, model, validate_max_batch, validate_batch_size):
+    max_batch = validate_max_batch
+    eval_loss = 0
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
+            if batch_idx < max_batch:
+                out = model(batch_x)
+                loss = F.nll_loss(out, batch_y)
+                eval_loss += loss.data.item()
+                _, predicted = torch.max(out.data, 1)
+                correct += (predicted == batch_y).sum().item()
+                total += len(batch_y)
+            else:
+                break
+    loss_val = eval_loss / total * validate_batch_size
+    accuracy = float(correct) / total
+    return loss_val, accuracy
+
+def bool_parser(v):
+    if v.lower() in ('true', '1'):
+        return True
+    elif v.lower() in ('false', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Unsupported value encountered.')
 
 def parse_args():
     # Training settings
@@ -287,10 +308,16 @@ def parse_args():
         help='how many batches to wait before sync up with the ps')
     parser.add_argument('--save-model', action='store_true', default=False,
                         help='For Saving the current Model')
-    parser.add_argument('--validate_batch_size', type=int, default=64,
+    parser.add_argument('--validate-batch-size-in-trainer', type=int, default=64,
+                        help='batch size for validation dataset in trainer')
+    parser.add_argument('--validate-max-batch-in-trainer', type=int, default=1000,
+                        help='max batch for validate model in trainer')
+    parser.add_argument('--validate-batch-size-in-ps', type=int, default=64,
                         help='batch size for validation dataset in ps')
-    parser.add_argument('--validate_max_batch', type=int, default=5,
+    parser.add_argument('--validate-max-batch-in-ps', type=int, default=5,
                         help='max batch for validate model in ps')
+    parser.add_argument('--validate-in-ps', type=bool_parser, default=False,
+                        help='if double check model loss in ps')
     parser.add_argument('--loss-file', default='curves/loss.png',
                         help='the name of loss figure file')
     parser.add_argument(
@@ -364,13 +391,12 @@ def start_trainers(
 
 def draw(args, metrics_dict, timestamp_dict):
     print("Write image to ", args.loss_file)
-    lowest_loss, best_accuracy = find_best_metrics_in_ps(metrics_dict)
+    lowest_loss, best_accuracy = find_best_metrics_in_ps(metrics_dict, args.validate_in_ps)
     fig = plot.figure()
     fig.suptitle(
         'swamp training for mnist data (pull probability %s)' %
         args.pull_probability)
     loss_ax = fig.add_subplot(2, 1, 1)
-    acc_ax = fig.add_subplot(2, 1, 2)
 
     plot.xlabel('timestamp')
     loss_ax.set_ylabel('loss')
@@ -387,32 +413,35 @@ def draw(args, metrics_dict, timestamp_dict):
             loss_ax.plot(timestamp_dict[k], losses, label=k)
     loss_ax.legend(loc='upper right', prop={'size': 6})
 
-    acc_ax.set_xlabel('timestamp')
-    acc_ax.set_ylabel('accuracy')
-    for (k, v) in metrics_dict.items():
-        if k.endswith('pull'):
-            continue
-        elif k == 'ps':
-            acc = [m.accuracy for m in v]
-            acc_ax.plot(
-                timestamp_dict[k], acc, label=(
-                    k + ' (best-acc: ' + str(best_accuracy) + ')'))
-        else:
-            acc = [m.accuracy for m in v]
-            acc_ax.plot(timestamp_dict[k], acc, label=k)
-    acc_ax.legend(loc='lower right', prop={'size': 6})
+    if args.validate_in_ps:
+        acc_ax = fig.add_subplot(2, 1, 2)
+        acc_ax.set_xlabel('timestamp')
+        acc_ax.set_ylabel('accuracy')
+        for (k, v) in metrics_dict.items():
+            if k.endswith('pull'):
+                continue
+            elif k == 'ps':
+                acc = [m.accuracy for m in v]
+                acc_ax.plot(
+                    timestamp_dict[k], acc, label=(
+                        k + ' (best-acc: ' + str(best_accuracy) + ')'))
+            else:
+                acc = [m.accuracy for m in v]
+                acc_ax.plot(timestamp_dict[k], acc, label=k)
+        acc_ax.legend(loc='lower right', prop={'size': 6})
 
     plot.savefig(args.loss_file)
 
 
-def find_best_metrics_in_ps(metrics_dict):
+def find_best_metrics_in_ps(metrics_dict, validate_in_ps):
     loss = float("inf")
     accuracy = 0
     for m in metrics_dict['ps']:
         if m.loss < loss:
             loss = m.loss
-        if m.accuracy > accuracy:
-            accuracy = m.accuracy
+        if validate_in_ps:
+            if m.accuracy > accuracy:
+                accuracy = m.accuracy
     return loss, accuracy
 
 
