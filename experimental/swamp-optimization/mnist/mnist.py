@@ -114,10 +114,13 @@ class Trainer(object):
         validate_loader = prepare_validation_loader(
             self._args.validate_batch_size_in_trainer)
         step = 0
+        curr_step_id = 0 
+        best_acc = 0 
 
         # start local training
         for epoch in range(self._args.epochs):
             for batch_idx, (data, target) in enumerate(data_loader):
+                curr_step_id += 1
                 self._optimizer.zero_grad()
                 output = self._model(data)
                 loss = F.nll_loss(output, target)
@@ -127,9 +130,14 @@ class Trainer(object):
                     self._optimizer.step()
                     step = step + 1
                 else:
-                    double_check_loss, accuracy = validate(validate_loader,
-                        self._model, self._args.validate_max_batch_in_trainer,
+                    double_check_loss, double_check_accuracy = validate(
+                        validate_loader, self._model, 
+                        self._args.validate_max_batch_in_trainer,
                         self._args.validate_batch_size_in_trainer)
+
+                    if double_check_accuracy > best_acc:
+                        best_acc = double_check_accuracy
+                    current_acc = double_check_accuracy
 
                     if double_check_loss < self._score:
                         self._push_model(double_check_loss, batch_idx)
@@ -143,10 +151,13 @@ class Trainer(object):
                     _, predicted = torch.max(output, 1)
                     correct = (predicted == target).sum().item()
                     accuracy = float(correct) / len(target)
-                    self._record_metrics(
-                        (epoch + 1) * batch_idx, loss.item(), accuracy)
+                    self._record_metrics(curr_step_id, loss.item(), accuracy)
                 self._print_progress(epoch, batch_idx)
             print("trainer %i done epoch %i" % (self.tid, epoch))
+
+        # Record the best metrics
+        self._record_metrics(curr_step_id + 1, self._score, best_acc)
+        
 
     def _prepare_dataloader(self, batch_size):
         kwargs = {}
