@@ -13,10 +13,13 @@ from ctypes import py_object
 import queue
 import time
 import gc
-from matplotlib import pyplot as plot
+from matplotlib import pyplot
 import random
 import os
 import shutil
+from reportlab.platypus import SimpleDocTemplate, Image 
+from reportlab.lib.pagesizes import A4, landscape
+from PIL import Image as pilImage
 
 
 class Net(nn.Module):
@@ -142,8 +145,6 @@ class Trainer(object):
         else:
             self._model.load_state_dict(trained_model.model_state)
         self._score = trained_model.loss
-        self._pulled_losses.append(self._score.data.item())
-        self._pull_timestamps.append(timestamps(self._start_time))
 
     def _push_model(self, loss):
         self._score = loss.data
@@ -230,7 +231,7 @@ class PS(object):
     def _prepare_validation_loader(self):
         return torch.utils.data.DataLoader(
             datasets.MNIST('./data',
-                           train=False,
+                           train=True,
                            download=True,
                            transform=transforms.Compose([
                                transforms.ToTensor(),
@@ -473,13 +474,15 @@ def recompute_metrics(job_dir, max_validate_batch, validate_batch_size):
 
     return metrics_dict
 
+def sort_image_file(filename):
+    return filename.split('/')[-1].split('_')[3]
 
 def draw(args, job_dir, metrics_dict):
     image_path = job_dir + '/' + \
         args.loss_file.format(args.trainer_number, args.pull_probability)
     print("Write image to ", image_path)
     lowest_loss, best_accuracy = find_best_metrics_in_ps(metrics_dict)
-    fig = plot.figure()
+    fig = pyplot.figure()
 
     # Plot the loss/timestamp curve.
     loss_ax = fig.add_subplot(2, 1, 1)
@@ -526,8 +529,8 @@ def draw(args, job_dir, metrics_dict):
         shutil.rmtree(job_dir)
         os.makedirs(job_dir)
 
-    plot.tight_layout()
-    plot.savefig(image_path)
+    pyplot.tight_layout()
+    pyplot.savefig(image_path)
 
 
 def find_best_metrics_in_ps(metrics_dict):
@@ -544,11 +547,10 @@ def find_best_metrics_in_ps(metrics_dict):
                 accuracy = better_acc
     return loss, accuracy
 
-
-def main():
+def prepare():
     args = parse_args()
+    torch.manual_seed(args.seed)
     job_name = None
-    ps_job_name = None
     if args.job_name is not None:
         job_name = args.job_name
     else:
@@ -558,19 +560,16 @@ def main():
     job_dir = args.job_root_dir + '/' + job_name
     if os.path.exists(job_dir):
         shutil.rmtree(job_dir)
-    os.makedirs(job_dir)
+    os.makedirs(job_dir) 
+    return args, job_dir
 
-    torch.manual_seed(args.seed)
-
-    # Persist only one net topology to re-compute metrics before draw curves.
-    torch.save(Net(), job_dir + '/model.pkl')
-
+def train(args, job_dir):
     # Data stores shared by PS, trainers and the main process
     up = Queue()
     manager = Manager()
     trained_model = manager.Value(py_object, None)
 
-    # Start PS and trainers
+    # Start PS and trainers.
     ps_proc = start_ps(
         job_dir,
         args,
@@ -585,12 +584,22 @@ def main():
         proc.join()
     ps_proc.terminate()
 
+def plot(args, job_dir):
+    # Persist only one net topology to re-compute metrics before draw curves.
+    torch.save(Net(), job_dir + '/model.pkl')
+
+    # Training finished and start to plot.
     if args.loss_file is not None:
         metrics_dict = recompute_metrics(
             job_dir,
             args.plot_validate_max_batch,
             args.plot_validate_batch_size)
         draw(args, job_dir, metrics_dict)
+
+def main():
+    args, job_dir = prepare()
+    train(args, job_dir)
+    plot(args, job_dir)
 
 
 if __name__ == '__main__':

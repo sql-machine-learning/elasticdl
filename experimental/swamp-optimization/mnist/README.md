@@ -11,7 +11,11 @@ docker run --rm -it -v $PWD:/work -w /work swamp python mnist.py \
     --trainer-number 2 \
     --loss-file loss.png \
     --pull-probability 0.5 \
-    --loss-sample-interval 10
+    --loss-sample-interval 10 \
+    --job-root-dir jobs \
+    --delete-job-data True \
+    --plot-validate-batch-size 64 \
+    --plot-validate-max-batch 10
 ```
 
 `mnist.py` writes an image `./loss.png` showing the loss curves of the parameter server and all trainers and the meaning of parameters in the above command are described below:
@@ -23,6 +27,14 @@ docker run --rm -it -v $PWD:/work -w /work swamp python mnist.py \
 `--pull-probability` : the probability of trainer pulling from ps.
 
 `--loss-sample-interval` : how many batches to wait before record a loss value. 
+
+`--job-root-dir` : the storage path of job data(net and params). 
+
+`--delete-job-data` : whether to delete job data after job finish and completes plot.
+
+`--plot-validate-batch-size` : bach size for calculating accuracy corresponding validation dataset in plot stage.
+
+`--plot-validate-max-batch` : max batch for calculating accuracy corresponding validation dataset in plot stage. 
 
 An example with 2 trainer threads with the trainer pulling probability of 0, 0.5 and 1.0 respectively looks like the following:
 
