@@ -9,7 +9,6 @@ docker build -t swamp .
 ```bash
 docker run --rm -it -v $PWD:/work -w /work swamp python train.py \
     --trainer-number 2 \
-    --loss-file loss.png \
     --pull-probability 0.5 \
     --loss-sample-interval 10 \
     --job-root-dir jobs
@@ -19,8 +18,6 @@ docker run --rm -it -v $PWD:/work -w /work swamp python train.py \
 The meaning of parameters in the above command are described below:
 
 `--trainer-number` : number of trainers running in total.
-
-`--loss-file` : output loss curve image file.
 
 `--pull-probability` : the probability of trainer pulling from ps.
 
@@ -49,8 +46,7 @@ docker run --rm -it -v $PWD:/work -w /work swamp python eval.py \
 
 ### Step 4: plot metrics.
 ```bash
-docker run --rm -it -v $PWD:/work -w /work swamp python plot.py \
-    --job-root-dir jobs
+docker run --rm -it -v $PWD:/work -w /work swamp python plot.py --job-root-dir jobs
 ```
 
 `plot.py` read all the metrics data produced by `eval.py` and generate metrics curve graphs for every training job in `train.py`.
