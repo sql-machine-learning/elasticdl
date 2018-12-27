@@ -9,8 +9,9 @@ from network import Net
 import torch.nn.functional as F
 import multiprocessing
 from multiprocessing import Pool
-from common import prepare_data_loader 
+from common import prepare_data_loader
 from common import bool_parser
+
 
 def _validate(data_loader, model, max_batch, batch_size):
     eval_loss = 0
@@ -31,17 +32,18 @@ def _validate(data_loader, model, max_batch, batch_size):
     accuracy = round(float(correct) / total, 6)
     return loss_val, accuracy
 
+
 def _evaluate(job_root_dir, max_validate_batch, validate_batch_size):
     # Prepare data source
     validation_ds = prepare_data_loader(False, validate_batch_size, False)
- 
+
     validation_works = []
 
     # Evaluate all the jobs under job_root_dir.
     for parent, dirs, _ in os.walk(job_root_dir):
         for job_name in dirs:
             if job_name.startswith('swamp_'):
-                job_dir = parent + '/' + job_name 
+                job_dir = parent + '/' + job_name
 
                 # Start recomputing
                 start_time = time.time()
@@ -57,19 +59,19 @@ def _evaluate(job_root_dir, max_validate_batch, validate_batch_size):
                                 msg_info = 'validating job {} trainer {} epoch {} batch {} ...'.format(
                                     job_name, meta[3], meta[5], meta[7])
                             work_params = {
-                                'validation_ds' : validation_ds,
-                                'max_batch' : max_validate_batch,
-                                'batch_size' : validate_batch_size,
-                                'job_dir' : job_dir,
-                                'pkl_dir' : root,
-                                'param_file' : f,
-                                'timestamp' : meta[-1],
-                                'msg' : msg_info
+                                'validation_ds': validation_ds,
+                                'max_batch': max_validate_batch,
+                                'batch_size': validate_batch_size,
+                                'job_dir': job_dir,
+                                'pkl_dir': root,
+                                'param_file': f,
+                                'timestamp': meta[-1],
+                                'msg': msg_info
                             }
                             validation_works.append(work_params)
-    # Start validation 
+    # Start validation
     start_time = time.time()
-    pool = Pool(processes=int(multiprocessing.cpu_count()/2))
+    pool = Pool(processes=int(multiprocessing.cpu_count() / 2))
     pool.map(_single_validate, validation_works)
     pool.close()
     pool.join()
@@ -77,22 +79,30 @@ def _evaluate(job_root_dir, max_validate_batch, validate_batch_size):
     total_cost = int(end_time - start_time)
     print('validation metrics total cost {} seconds'.format(total_cost))
 
+
 def _single_validate(param_dict):
     print(param_dict['msg'])
     model = torch.load(param_dict['job_dir'] + '/model.pkl')
-    model.load_state_dict(torch.load('{}/{}'.format(param_dict['pkl_dir'], param_dict['param_file'])))    
+    model.load_state_dict(torch.load(
+        '{}/{}'.format(param_dict['pkl_dir'], param_dict['param_file'])))
     loss, accuracy = _validate(
         param_dict['validation_ds'], model, param_dict['max_batch'], param_dict['batch_size'])
-    eval_filename = param_dict['pkl_dir'] + '/' + param_dict['param_file'].split('.')[0] + '.eval'
+    eval_filename = param_dict['pkl_dir'] + '/' + \
+        param_dict['param_file'].split('.')[0] + '.eval'
     if os.path.exists(eval_filename):
         os.remove(eval_filename)
     with open(eval_filename, 'w') as eval_f:
-        eval_f.write('{}_{}_{}'.format(loss, accuracy, int(param_dict['timestamp']))) 
+        eval_f.write(
+            '{}_{}_{}'.format(
+                loss, accuracy, int(
+                    param_dict['timestamp'])))
+
 
 def _prepare():
     args = _parse_args()
     torch.manual_seed(args.seed)
     return args
+
 
 def _parse_args():
     # Training settings
@@ -107,11 +117,15 @@ def _parse_args():
         help='experiment name used for the result data dir name')
     parser.add_argument('--delete-job-data', type=bool_parser, default=False,
                         help='if delete experiment job result data at last.')
-    parser.add_argument('--eval-batch-size', type=int, default=64,
-                        help='batch size for evaluate model logged by train.py')
+    parser.add_argument(
+        '--eval-batch-size',
+        type=int,
+        default=64,
+        help='batch size for evaluate model logged by train.py')
     parser.add_argument('--eval-max-batch', type=int, default=5,
                         help='max batch for evaluate model logged by train.py')
     return parser.parse_args()
+
 
 def main():
     args = _prepare()

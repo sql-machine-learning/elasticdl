@@ -88,7 +88,8 @@ class Trainer(object):
 
                 gc.collect()
                 if batch_idx % self._args.loss_sample_interval == 0:
-                    self._model_logger.dump_model_in_trainer(self._model.state_dict(), self.tid, epoch, batch_idx)
+                    self._model_logger.dump_model_in_trainer(
+                        self._model.state_dict(), self.tid, epoch, batch_idx)
                 self._print_progress(epoch, batch_idx)
             print("trainer %i done epoch %i" % (self.tid, epoch))
 
@@ -146,7 +147,8 @@ class PS(object):
 
     def run(self):
         updates = 0
-        validate_loader = prepare_data_loader(True, self._args.batch_size, True) 
+        validate_loader = prepare_data_loader(
+            True, self._args.batch_size, True)
 
         while not self._exit:
             # In the case that any trainer pushes.
@@ -165,7 +167,8 @@ class PS(object):
                 if double_check_loss < self._validate_score:
                     self._update_model_wrapper(upload_model)
                     self._validate_score = double_check_loss
-                    self._model_logger.dump_model_in_ps(self._model.state_dict(), upload_model.version)
+                    self._model_logger.dump_model_in_ps(
+                        self._model.state_dict(), upload_model.version)
 
     def _validate(self, data_loader):
         max_batch = self._args.validate_max_batch
@@ -194,6 +197,7 @@ class PS(object):
         else:
             self._trained_model_wrapper.value = upload_model
         self._score = upload_model.loss
+
 
 def _parse_args():
     # Training settings
@@ -306,7 +310,7 @@ def _prepare():
     job_dir = args.job_root_dir + '/' + job_name
     if os.path.exists(job_dir):
         shutil.rmtree(job_dir)
-    os.makedirs(job_dir) 
+    os.makedirs(job_dir)
 
     with open(job_dir + '/meta.info', 'w') as meta:
         meta.write('{}_{}'.format(args.trainer_number, args.pull_probability))
@@ -337,6 +341,7 @@ def _train(args, job_dir):
     for proc in trainer_procs:
         proc.join()
     ps_proc.terminate()
+
 
 def main():
     args, job_dir = _prepare()

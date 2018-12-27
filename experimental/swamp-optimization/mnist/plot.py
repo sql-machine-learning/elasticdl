@@ -13,18 +13,21 @@ class Metrics(object):
         self.accuracy = accuracy
         self.timestamp = timestamp
 
+
 def _metric_key_func(metric):
     return metric.timestamp
 
+
 def _parse_job_meta(job_dir):
     with open(job_dir + '/meta.info', 'r') as meta:
-        meta_infos = meta.readline().split('_')        
+        meta_infos = meta.readline().split('_')
         return meta_infos[0], meta_infos[1]
+
 
 def _plot(args, job_root_dir, all_job_metrics_dict):
     for job_name, metrics_dict in all_job_metrics_dict.items():
         job_dir = job_root_dir + '/' + job_name
-        trainer_number, pull_probability = _parse_job_meta(job_dir) 
+        trainer_number, pull_probability = _parse_job_meta(job_dir)
         image_path = job_dir + '/' + \
             args.loss_file.format(trainer_number, pull_probability)
         print("Write image to ", image_path)
@@ -75,6 +78,7 @@ def _plot(args, job_root_dir, all_job_metrics_dict):
         pyplot.tight_layout()
         pyplot.savefig(image_path)
 
+
 def _find_best_metrics_in_ps(metrics_dict):
     loss = float("inf")
     accuracy = 0
@@ -89,7 +93,8 @@ def _find_best_metrics_in_ps(metrics_dict):
                 accuracy = better_acc
     return loss, accuracy
 
-def _collect_metrics(job_root_dir): 
+
+def _collect_metrics(job_root_dir):
     # Collect all the jobs's evaluation data.
     all_job_metrics_dict = {}
     for parent, dirs, _ in os.walk(job_root_dir):
@@ -98,17 +103,23 @@ def _collect_metrics(job_root_dir):
                 job_dir = parent + '/' + job_name
                 metrics_dict = {}
 
-                # Start to collect. 
+                # Start to collect.
                 for root, _, files in os.walk(job_dir):
                     for f in files:
-                        if f.startswith('model_params') and f.endswith('.eval'): 
+                        if f.startswith(
+                                'model_params') and f.endswith('.eval'):
                             metrics_owner = root.split('/')[-1]
                             if metrics_owner not in metrics_dict:
                                 metrics = []
                                 metrics_dict[metrics_owner] = metrics
                             with open(root + '/' + f, 'r') as eval_f:
                                 metrics_vals = eval_f.readline().split('_')
-                                metrics_dict[metrics_owner].append(Metrics(float(metrics_vals[0]), float(metrics_vals[1]), int(metrics_vals[2])))
+                                metrics_dict[metrics_owner].append(
+                                    Metrics(
+                                        float(
+                                            metrics_vals[0]), float(
+                                            metrics_vals[1]), int(
+                                            metrics_vals[2])))
 
                 if len(metrics_dict) > 0:
                     all_job_metrics_dict[job_name] = metrics_dict
@@ -119,6 +130,7 @@ def _collect_metrics(job_root_dir):
 
     return all_job_metrics_dict
 
+
 def _parse_args():
     # Training settings
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
@@ -127,6 +139,7 @@ def _parse_args():
     parser.add_argument('--job-root-dir', default='jobs',
                         help='The root directory of all job result data')
     return parser.parse_args()
+
 
 def main():
     args = _parse_args()

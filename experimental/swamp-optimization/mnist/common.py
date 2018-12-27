@@ -12,6 +12,7 @@ PS_MODEL_DIR = '{}/ps'
 METRICS_IMAGE_FILE_TEMPLATE = 'swamp_metrics_t_{}_pp_{}.png'
 JOB_NAME_TEMPLATE = 'swamp_t{}_pp{}'
 
+
 def prepare_data_loader(is_train, batch_size, shuffle):
     return torch.utils.data.DataLoader(
         datasets.MNIST('./data',
@@ -24,6 +25,7 @@ def prepare_data_loader(is_train, batch_size, shuffle):
         batch_size=batch_size,
         shuffle=shuffle)
 
+
 def bool_parser(v):
     if v.lower() in ('true', '1'):
         return True
@@ -32,8 +34,10 @@ def bool_parser(v):
     else:
         raise argparse.ArgumentTypeError('Unsupported value encountered.')
 
+
 def _time_diff(start_time):
     return int(time.time() - start_time)
+
 
 class ModelLogger(object):
 
@@ -60,7 +64,7 @@ class ModelLogger(object):
                 epoch,
                 batch_idx,
                 _time_diff(
-                    self._start_time))) 
+                    self._start_time)))
 
     def dump_model_in_ps(self, model_state, model_version):
         torch.save(
