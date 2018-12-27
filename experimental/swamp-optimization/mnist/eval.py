@@ -7,6 +7,8 @@ import os
 import shutil
 from network import Net
 import torch.nn.functional as F
+import multiprocessing
+from multiprocessing import Pool
 
 
 def bool_parser(v):
@@ -75,20 +77,19 @@ def evaluate(job_root_dir, max_validate_batch, validate_batch_size):
     # Prepare data source
     validation_ds = prepare_validation_loader(validate_batch_size)
  
+    validation_works = []
+
     # Evaluate all the jobs under job_root_dir.
     for parent, dirs, _ in os.walk(job_root_dir):
         for job_name in dirs:
             if job_name.startswith('swamp_'):
                 job_dir = parent + '/' + job_name 
-                model = torch.load(job_dir + '/model.pkl')
 
                 # Start recomputing
                 start_time = time.time()
                 for root, _, files in os.walk(job_dir):
                     for f in files:
                         if f.startswith('model_params') and f.endswith('.pkl'):
-                            # Load params and parse meta info.
-                            model.load_state_dict(torch.load('{}/{}'.format(root, f)))
                             meta = f.split('.')[0].split('_')
                             model_owner = meta[2] + '_' + meta[3]
                             if (meta[2] == 'ps'):
@@ -97,20 +98,39 @@ def evaluate(job_root_dir, max_validate_batch, validate_batch_size):
                             else:
                                 msg_info = 'validating job {} trainer {} epoch {} batch {} ...'.format(
                                     job_name, meta[3], meta[5], meta[7])
+                            work_params = {
+                                'validation_ds' : validation_ds,
+                                'max_batch' : max_validate_batch,
+                                'batch_size' : validate_batch_size,
+                                'job_dir' : job_dir,
+                                'pkl_dir' : root,
+                                'param_file' : f,
+                                'timestamp' : meta[-1],
+                                'msg' : msg_info
+                            }
+                            validation_works.append(work_params)
+    # Start validation 
+    start_time = time.time()
+    pool = Pool(processes=int(multiprocessing.cpu_count()/2))
+    pool.map(single_validate, validation_works)
+    pool.close()
+    pool.join()
+    end_time = time.time()
+    total_cost = int(end_time - start_time)
+    print('validation metrics total cost {} seconds'.format(total_cost))
 
-                            # Compute loss and accuracy.
-                            print(msg_info)
-                            loss, accuracy = validate(
-                            validation_ds, model, max_validate_batch, validate_batch_size)
-                            eval_filename = root + '/' + f.split('.')[0] + '.eval'
-                            if os.path.exists(eval_filename):
-                                os.remove(eval_filename) 
-                            with open(eval_filename, 'w') as eval_f:
-                                eval_f.write('{}_{}_{}'.format(loss, accuracy, int(meta[-1])))
+def single_validate(param_dict):
+    print(param_dict['msg'])
+    model = torch.load(param_dict['job_dir'] + '/model.pkl')
+    model.load_state_dict(torch.load('{}/{}'.format(param_dict['pkl_dir'], param_dict['param_file'])))    
+    loss, accuracy = validate(
+        param_dict['validation_ds'], model, param_dict['max_batch'], param_dict['batch_size'])
+    eval_filename = param_dict['pkl_dir'] + '/' + param_dict['param_file'].split('.')[0] + '.eval'
+    if os.path.exists(eval_filename):
+        os.remove(eval_filename)
+    with open(eval_filename, 'w') as eval_f:
+        eval_f.write('{}_{}_{}'.format(loss, accuracy, int(param_dict['timestamp']))) 
 
-                end_time = time.time()
-                total_cost = int(end_time - start_time)
-                print('recomputing metrics total cost {} seconds'.format(total_cost))
 
 def prepare():
     args = parse_args()
