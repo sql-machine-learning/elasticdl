@@ -14,25 +14,7 @@ import gc
 import random
 import os
 import shutil
-
-
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 20, 5, 1)
-        self.conv2 = nn.Conv2d(20, 50, 5, 1)
-        self.fc1 = nn.Linear(4 * 4 * 50, 500)
-        self.fc2 = nn.Linear(500, 10)
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = x.view(-1, 4 * 4 * 50)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return F.log_softmax(x, dim=1)
+from network import Net
 
 
 class TrainedModel(object):
@@ -43,13 +25,6 @@ class TrainedModel(object):
         self.model_state = model_state
         self.loss = loss
         self.version = version
-
-
-class Metrics(object):
-    def __init__(self, loss, accuracy, timestamp=1):
-        self.loss = loss
-        self.accuracy = accuracy
-        self.timestamp = timestamp
 
 
 class Trainer(object):
@@ -393,6 +368,9 @@ def prepare():
         shutil.rmtree(job_dir)
     os.makedirs(job_dir) 
 
+    with open(job_dir + '/meta.info', 'w') as meta:
+        meta.write('{}_{}'.format(args.trainer_number, args.pull_probability))
+
     return args, job_dir
 
 
@@ -401,6 +379,9 @@ def train(args, job_dir):
     up = Queue()
     manager = Manager()
     trained_model = manager.Value(py_object, None)
+
+    # Save model net.
+    torch.save(Net(), job_dir + '/model.pkl')
 
     # Start PS and trainers.
     ps_proc = start_ps(
