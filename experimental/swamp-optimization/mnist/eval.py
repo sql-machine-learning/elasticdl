@@ -9,51 +9,10 @@ from network import Net
 import torch.nn.functional as F
 import multiprocessing
 from multiprocessing import Pool
+from common import prepare_data_loader 
+from common import bool_parser
 
-
-def bool_parser(v):
-    if v.lower() in ('true', '1'):
-        return True
-    elif v.lower() in ('false', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Unsupported value encountered.')
-
-
-def parse_args():
-    # Training settings
-    parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-    parser.add_argument('--seed', type=int, default=1, metavar='S',
-                        help='random seed (default: 1)')
-    parser.add_argument('--job-root-dir', default='jobs',
-                        help='The root directory of all job result data')
-    parser.add_argument(
-        '--job-name',
-        default=None,
-        help='experiment name used for the result data dir name')
-    parser.add_argument('--delete-job-data', type=bool_parser, default=False,
-                        help='if delete experiment job result data at last.')
-    parser.add_argument('--plot-validate-batch-size', type=int, default=64,
-                        help='batch size for validation dataset in ps')
-    parser.add_argument('--plot-validate-max-batch', type=int, default=5,
-                        help='max batch for validate model in ps')
-    return parser.parse_args()
-
-
-def prepare_validation_loader(batch_size):
-    return torch.utils.data.DataLoader(
-        datasets.MNIST('./data',
-                       train=False,
-                       download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=batch_size,
-        shuffle=False)
-
-
-def validate(data_loader, model, max_batch, batch_size):
+def _validate(data_loader, model, max_batch, batch_size):
     eval_loss = 0
     correct = 0
     total = 0
@@ -72,10 +31,9 @@ def validate(data_loader, model, max_batch, batch_size):
     accuracy = round(float(correct) / total, 6)
     return loss_val, accuracy
 
-
-def evaluate(job_root_dir, max_validate_batch, validate_batch_size):
+def _evaluate(job_root_dir, max_validate_batch, validate_batch_size):
     # Prepare data source
-    validation_ds = prepare_validation_loader(validate_batch_size)
+    validation_ds = prepare_data_loader(False, validate_batch_size, False)
  
     validation_works = []
 
@@ -112,18 +70,18 @@ def evaluate(job_root_dir, max_validate_batch, validate_batch_size):
     # Start validation 
     start_time = time.time()
     pool = Pool(processes=int(multiprocessing.cpu_count()/2))
-    pool.map(single_validate, validation_works)
+    pool.map(_single_validate, validation_works)
     pool.close()
     pool.join()
     end_time = time.time()
     total_cost = int(end_time - start_time)
     print('validation metrics total cost {} seconds'.format(total_cost))
 
-def single_validate(param_dict):
+def _single_validate(param_dict):
     print(param_dict['msg'])
     model = torch.load(param_dict['job_dir'] + '/model.pkl')
     model.load_state_dict(torch.load('{}/{}'.format(param_dict['pkl_dir'], param_dict['param_file'])))    
-    loss, accuracy = validate(
+    loss, accuracy = _validate(
         param_dict['validation_ds'], model, param_dict['max_batch'], param_dict['batch_size'])
     eval_filename = param_dict['pkl_dir'] + '/' + param_dict['param_file'].split('.')[0] + '.eval'
     if os.path.exists(eval_filename):
@@ -131,19 +89,36 @@ def single_validate(param_dict):
     with open(eval_filename, 'w') as eval_f:
         eval_f.write('{}_{}_{}'.format(loss, accuracy, int(param_dict['timestamp']))) 
 
-
-def prepare():
-    args = parse_args()
+def _prepare():
+    args = _parse_args()
     torch.manual_seed(args.seed)
     return args
 
+def _parse_args():
+    # Training settings
+    parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
+    parser.add_argument('--seed', type=int, default=1, metavar='S',
+                        help='random seed (default: 1)')
+    parser.add_argument('--job-root-dir', default='jobs',
+                        help='The root directory of all job result data')
+    parser.add_argument(
+        '--job-name',
+        default=None,
+        help='experiment name used for the result data dir name')
+    parser.add_argument('--delete-job-data', type=bool_parser, default=False,
+                        help='if delete experiment job result data at last.')
+    parser.add_argument('--eval-batch-size', type=int, default=64,
+                        help='batch size for evaluate model logged by train.py')
+    parser.add_argument('--eval-max-batch', type=int, default=5,
+                        help='max batch for evaluate model logged by train.py')
+    return parser.parse_args()
 
 def main():
-    args = prepare()
-    evaluate(
+    args = _prepare()
+    _evaluate(
         args.job_root_dir,
-        args.plot_validate_max_batch,
-        args.plot_validate_batch_size)
+        args.eval_batch_size,
+        args.eval_max_batch)
 
 
 if __name__ == '__main__':

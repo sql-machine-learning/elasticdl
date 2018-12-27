@@ -7,42 +7,27 @@ import shutil
 
 
 class Metrics(object):
-    def __init__(self, loss, accuracy, timestamp=1):
+    def __init__(self, loss, accuracy, timestamp):
         self.loss = loss
         self.accuracy = accuracy
         self.timestamp = timestamp
 
-
-def parse_args():
-    # Training settings
-    parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-    parser.add_argument('--loss-file', default='swamp_metrics_t_{}_pr_{}.png',
-                        help='the name of loss figure file')
-    parser.add_argument('--job-root-dir', default='jobs',
-                        help='The root directory of all job result data')
-    return parser.parse_args()
-
-
-def metric_key_func(metric):
+def _metric_key_func(metric):
     return metric.timestamp
 
-
-def sort_image_file(filename):
-    return filename.split('/')[-1].split('_')[3]
-
-def parse_job_meta(job_dir):
+def _parse_job_meta(job_dir):
     with open(job_dir + '/meta.info', 'r') as meta:
         meta_infos = meta.readline().split('_')        
         return meta_infos[0], meta_infos[1]
 
-def plot(args, job_root_dir, all_job_metrics_dict):
+def _plot(args, job_root_dir, all_job_metrics_dict):
     for job_name, metrics_dict in all_job_metrics_dict.items():
         job_dir = job_root_dir + '/' + job_name
-        trainer_number, pull_probability = parse_job_meta(job_dir) 
+        trainer_number, pull_probability = _parse_job_meta(job_dir) 
         image_path = job_dir + '/' + \
             args.loss_file.format(trainer_number, pull_probability)
         print("Write image to ", image_path)
-        lowest_loss, best_accuracy = find_best_metrics_in_ps(metrics_dict)
+        lowest_loss, best_accuracy = _find_best_metrics_in_ps(metrics_dict)
         fig = pyplot.figure()
 
         # Plot the loss/timestamp curve.
@@ -89,8 +74,7 @@ def plot(args, job_root_dir, all_job_metrics_dict):
         pyplot.tight_layout()
         pyplot.savefig(image_path)
 
-
-def find_best_metrics_in_ps(metrics_dict):
+def _find_best_metrics_in_ps(metrics_dict):
     loss = float("inf")
     accuracy = 0
     for k, m in metrics_dict.items():
@@ -104,8 +88,7 @@ def find_best_metrics_in_ps(metrics_dict):
                 accuracy = better_acc
     return loss, accuracy
 
-
-def collect_metrics(job_root_dir): 
+def _collect_metrics(job_root_dir): 
     # Collect all the jobs's evaluation data.
     all_job_metrics_dict = {}
     for parent, dirs, _ in os.walk(job_root_dir):
@@ -113,7 +96,6 @@ def collect_metrics(job_root_dir):
             if job_name.startswith('swamp_'):
                 job_dir = parent + '/' + job_name
                 metrics_dict = {}
-                all_job_metrics_dict[job_name] = metrics_dict
 
                 # Start to collect. 
                 for root, _, files in os.walk(job_dir):
@@ -127,16 +109,28 @@ def collect_metrics(job_root_dir):
                                 metrics_vals = eval_f.readline().split('_')
                                 metrics_dict[metrics_owner].append(Metrics(float(metrics_vals[0]), float(metrics_vals[1]), int(metrics_vals[2])))
 
+                if len(metrics_dict) > 0:
+                    all_job_metrics_dict[job_name] = metrics_dict
+
                 # Sorting the metrics according timestamps in ascending order.
                 for k, v in metrics_dict.items():
-                    v.sort(key=metric_key_func)
+                    v.sort(key=_metric_key_func)
 
     return all_job_metrics_dict
 
+def _parse_args():
+    # Training settings
+    parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
+    parser.add_argument('--loss-file', default='swamp_metrics_t_{}_pp_{}.png',
+                        help='the name of loss figure file')
+    parser.add_argument('--job-root-dir', default='jobs',
+                        help='The root directory of all job result data')
+    return parser.parse_args()
+
 def main():
-    args = parse_args()
-    all_job_metrics_dict = collect_metrics(args.job_root_dir)
-    plot(args, args.job_root_dir, all_job_metrics_dict)
+    args = _parse_args()
+    all_job_metrics_dict = _collect_metrics(args.job_root_dir)
+    _plot(args, args.job_root_dir, all_job_metrics_dict)
 
 
 if __name__ == '__main__':

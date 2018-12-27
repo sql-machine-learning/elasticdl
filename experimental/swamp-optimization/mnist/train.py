@@ -15,6 +15,7 @@ import random
 import os
 import shutil
 from network import Net
+from common import prepare_data_loader
 
 
 class TrainedModel(object):
@@ -63,7 +64,7 @@ class Trainer(object):
         self._trained_model_wrapper = trained_model_wrapper
 
     def train(self):
-        data_loader = self._prepare_dataloader(self._args.batch_size)
+        data_loader = prepare_data_loader(True, self._args.batch_size, True)
         step = 0
 
         # start local training
@@ -90,20 +91,6 @@ class Trainer(object):
                     self._dump_model(epoch, batch_idx)
                 self._print_progress(epoch, batch_idx)
             print("trainer %i done epoch %i" % (self.tid, epoch))
-
-    def _prepare_dataloader(self, batch_size):
-        kwargs = {}
-        return torch.utils.data.DataLoader(
-            datasets.MNIST('./data',  # cache data to the current directory.
-                           train=True,  # use the training data also for dev.
-                           download=True,
-                           transform=transforms.Compose([
-                               transforms.ToTensor(),
-                               transforms.Normalize((0.1307,), (0.3081,))
-                           ])),
-            batch_size=batch_size,
-            shuffle=True,        # each trainer might have different order
-            **kwargs)
 
     def _pull_model(self):
         trained_model = self._trained_model_wrapper.value
@@ -173,7 +160,7 @@ class PS(object):
 
     def run(self):
         updates = 0
-        validate_loader = self._prepare_validation_loader()
+        validate_loader = prepare_data_loader(True, self._args.batch_size, True) 
 
         while not self._exit:
             # In the case that any trainer pushes.
@@ -193,18 +180,6 @@ class PS(object):
                     self._update_model_wrapper(upload_model)
                     self._validate_score = double_check_loss
                     self._dump_model(upload_model.version)
-
-    def _prepare_validation_loader(self):
-        return torch.utils.data.DataLoader(
-            datasets.MNIST('./data',
-                           train=True,
-                           download=True,
-                           transform=transforms.Compose([
-                               transforms.ToTensor(),
-                               transforms.Normalize((0.1307,), (0.3081,))
-                           ])),
-            batch_size=self._args.validate_batch_size,
-            shuffle=True)  # shuffle for random test
 
     def _validate(self, data_loader):
         max_batch = self._args.validate_max_batch
@@ -241,19 +216,8 @@ class PS(object):
                        version,
                        timestamp(self._start_time)))
 
-
 def timestamp(start_time):
     return int(time.time() - start_time)
-
-
-def bool_parser(v):
-    if v.lower() in ('true', '1'):
-        return True
-    elif v.lower() in ('false', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Unsupported value encountered.')
-
 
 def parse_args():
     # Training settings
@@ -280,7 +244,7 @@ def parse_args():
                         help='batch size for validation dataset in ps')
     parser.add_argument('--validate_max_batch', type=int, default=5,
                         help='max batch for validate model in ps')
-    parser.add_argument('--loss-file', default='swamp_metrics_t_{}_pr_{}.png',
+    parser.add_argument('--loss-file', default='swamp_metrics_t_{}_pp_{}.png',
                         help='the name of loss figure file')
     parser.add_argument(
         '--loss-sample-interval',
@@ -360,7 +324,7 @@ def prepare():
     if args.job_name is not None:
         job_name = args.job_name
     else:
-        job_name = 'swamp_t{}_pr{}'.format(
+        job_name = 'swamp_t{}_pp{}'.format(
             args.trainer_number, args.pull_probability)
 
     job_dir = args.job_root_dir + '/' + job_name
