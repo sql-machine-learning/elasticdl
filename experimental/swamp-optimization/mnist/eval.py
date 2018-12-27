@@ -51,8 +51,8 @@ def _evaluate(job_root_dir, max_validate_batch, validate_batch_size):
                             meta = f.split('.')[0].split('_')
                             model_owner = meta[2] + '_' + meta[3]
                             if (meta[2] == 'ps'):
-                                msg_info = 'validating job {} ps {} model version {} ...'.format(
-                                    job_name, meta[3], meta[5])
+                                msg_info = 'validating job {} ps model version {} ...'.format(
+                                    job_name, meta[5])
                             else:
                                 msg_info = 'validating job {} trainer {} epoch {} batch {} ...'.format(
                                     job_name, meta[3], meta[5], meta[7])

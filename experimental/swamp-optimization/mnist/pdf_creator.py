@@ -64,8 +64,9 @@ def _converted(pdf_file, all_images, imagefile_sort_fn, images_per_row):
     table.setStyle(TableStyle([
         ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.black),
         ('BOX', (0, 0), (-1, -1), 0.25, colors.black),
-        ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
+        ('BACKGROUND', (0, 0), (-1, -1), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('LEFTPADDING', (0, 0), (-1, -1), 0),
     ]))
 

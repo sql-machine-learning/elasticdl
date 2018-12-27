@@ -16,6 +16,9 @@ import os
 import shutil
 from network import Net
 from common import prepare_data_loader
+from common import ModelLogger
+from common import METRICS_IMAGE_FILE_TEMPLATE
+from common import JOB_NAME_TEMPLATE
 
 
 class TrainedModel(object):
@@ -48,11 +51,6 @@ class Trainer(object):
                                  which is managed by Manager.
           up: A shared Queue for trainer upload model to PS.
         """
-        # Create model data dir for this trainer.
-        self._model_dir = '{}/trainer_{}'.format(job_dir, tid)
-        if not os.path.exists(self._model_dir):
-            os.makedirs(self._model_dir)
-
         self.tid = tid
         self._args = args
         self._up = up
@@ -62,6 +60,8 @@ class Trainer(object):
                                     momentum=self._args.momentum)
         self._score = float("inf")
         self._trained_model_wrapper = trained_model_wrapper
+        self._model_logger = ModelLogger(job_dir)
+        self._model_logger.init_trainer_model_dir(tid)
 
     def train(self):
         data_loader = prepare_data_loader(True, self._args.batch_size, True)
@@ -88,7 +88,7 @@ class Trainer(object):
 
                 gc.collect()
                 if batch_idx % self._args.loss_sample_interval == 0:
-                    self._dump_model(epoch, batch_idx)
+                    self._model_logger.dump_model_in_trainer(self._model.state_dict(), self.tid, epoch, batch_idx)
                 self._print_progress(epoch, batch_idx)
             print("trainer %i done epoch %i" % (self.tid, epoch))
 
@@ -108,17 +108,6 @@ class Trainer(object):
             upload_model = TrainedModel(
                 self._model.state_dict(), loss.data)
             self._up.put(pickle.dumps(upload_model))
-
-    def _dump_model(self, epoch, batch_idx):
-        torch.save(
-            self._model.state_dict(),
-            '{}/model_params_trainer_{}_epoch_{}_batch_{}_sec_{}.pkl'.format(
-                self._model_dir,
-                self.tid,
-                epoch,
-                batch_idx,
-                timestamp(
-                    self._start_time)))
 
     def _print_progress(self, epoch, batch_idx):
         if batch_idx % self._args.log_interval == 0:
@@ -144,11 +133,6 @@ class PS(object):
                                  is managed by Manager.
           up: A shared Queue for trainer upload model to PS.
         """
-        # Create model data dir for PS.
-        self._model_dir = '{}/ps'.format(job_dir)
-        if not os.path.exists(self._model_dir):
-            os.makedirs(self._model_dir)
-
         self._args = args
         self._up = up
         self._exit = False
@@ -157,6 +141,8 @@ class PS(object):
         self._trained_model_wrapper = trained_model_wrapper
         self._score = float("inf")
         self._validate_score = float("inf")
+        self._model_logger = ModelLogger(job_dir)
+        self._model_logger.init_ps_model_dir()
 
     def run(self):
         updates = 0
@@ -179,7 +165,7 @@ class PS(object):
                 if double_check_loss < self._validate_score:
                     self._update_model_wrapper(upload_model)
                     self._validate_score = double_check_loss
-                    self._dump_model(upload_model.version)
+                    self._model_logger.dump_model_in_ps(self._model.state_dict(), upload_model.version)
 
     def _validate(self, data_loader):
         max_batch = self._args.validate_max_batch
@@ -209,17 +195,7 @@ class PS(object):
             self._trained_model_wrapper.value = upload_model
         self._score = upload_model.loss
 
-    def _dump_model(self, version):
-        torch.save(self._model.state_dict(),
-                   '{}/model_params_ps_model_version_{}_sec_{}.pkl'.format(
-                       self._model_dir,
-                       version,
-                       timestamp(self._start_time)))
-
-def timestamp(start_time):
-    return int(time.time() - start_time)
-
-def parse_args():
+def _parse_args():
     # Training settings
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
@@ -244,7 +220,7 @@ def parse_args():
                         help='batch size for validation dataset in ps')
     parser.add_argument('--validate_max_batch', type=int, default=5,
                         help='max batch for validate model in ps')
-    parser.add_argument('--loss-file', default='swamp_metrics_t_{}_pp_{}.png',
+    parser.add_argument('--loss-file', default=METRICS_IMAGE_FILE_TEMPLATE,
                         help='the name of loss figure file')
     parser.add_argument(
         '--loss-sample-interval',
@@ -276,7 +252,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def start_ps(
+def _start_ps(
         job_dir,
         args,
         up,
@@ -293,7 +269,7 @@ def start_ps(
     return ps_proc
 
 
-def start_trainers(
+def _start_trainers(
         job_dir,
         args,
         up,
@@ -317,14 +293,14 @@ def start_trainers(
     return trainers, trainer_procs
 
 
-def prepare():
-    args = parse_args()
+def _prepare():
+    args = _parse_args()
     torch.manual_seed(args.seed)
     job_name = None
     if args.job_name is not None:
         job_name = args.job_name
     else:
-        job_name = 'swamp_t{}_pp{}'.format(
+        job_name = JOB_NAME_TEMPLATE.format(
             args.trainer_number, args.pull_probability)
 
     job_dir = args.job_root_dir + '/' + job_name
@@ -338,7 +314,7 @@ def prepare():
     return args, job_dir
 
 
-def train(args, job_dir):
+def _train(args, job_dir):
     # Data stores shared by PS, trainers and the main process
     up = Queue()
     manager = Manager()
@@ -348,13 +324,13 @@ def train(args, job_dir):
     torch.save(Net(), job_dir + '/model.pkl')
 
     # Start PS and trainers.
-    ps_proc = start_ps(
+    ps_proc = _start_ps(
         job_dir,
         args,
         up,
         manager,
         trained_model)
-    trainers, trainer_procs = start_trainers(
+    trainers, trainer_procs = _start_trainers(
         job_dir, args, up, manager,
         trained_model)
 
@@ -363,8 +339,8 @@ def train(args, job_dir):
     ps_proc.terminate()
 
 def main():
-    args, job_dir = prepare()
-    train(args, job_dir)
+    args, job_dir = _prepare()
+    _train(args, job_dir)
 
 
 if __name__ == '__main__':

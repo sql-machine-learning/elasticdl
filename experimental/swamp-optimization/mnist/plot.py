@@ -4,6 +4,7 @@ import sys
 from matplotlib import pyplot
 import os
 import shutil
+from common import METRICS_IMAGE_FILE_TEMPLATE
 
 
 class Metrics(object):
@@ -121,7 +122,7 @@ def _collect_metrics(job_root_dir):
 def _parse_args():
     # Training settings
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-    parser.add_argument('--loss-file', default='swamp_metrics_t_{}_pp_{}.png',
+    parser.add_argument('--loss-file', default=METRICS_IMAGE_FILE_TEMPLATE,
                         help='the name of loss figure file')
     parser.add_argument('--job-root-dir', default='jobs',
                         help='The root directory of all job result data')
