@@ -71,7 +71,7 @@ def _evaluate(job_root_dir, max_validate_batch, validate_batch_size):
                             validation_works.append(work_params)
     # Start validation
     start_time = time.time()
-    pool = Pool(processes=int(multiprocessing.cpu_count() / 2))
+    pool = Pool(processes=int(multiprocessing.cpu_count() / 4))
     pool.map(_single_validate, validation_works)
     pool.close()
     pool.join()
