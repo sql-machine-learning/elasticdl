@@ -66,7 +66,7 @@ def _converted(pdf_file, all_images, imagefile_sort_fn, images_per_row):
         ('BOX', (0, 0), (-1, -1), 0.25, colors.black),
         ('BACKGROUND', (0, 0), (-1, -1), colors.white),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('LEFTPADDING', (0, 0), (-1, -1), 0),
     ]))
 
