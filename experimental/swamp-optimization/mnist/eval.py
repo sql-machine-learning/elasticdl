@@ -33,7 +33,7 @@ def _validate(data_loader, model, max_batch, batch_size):
     return loss_val, accuracy
 
 
-def _evaluate(job_root_dir, max_validate_batch, validate_batch_size):
+def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency):
     # Prepare data source
     validation_ds = prepare_data_loader(False, validate_batch_size, False)
 
@@ -71,7 +71,7 @@ def _evaluate(job_root_dir, max_validate_batch, validate_batch_size):
                             validation_works.append(work_params)
     # Start validation
     start_time = time.time()
-    pool = Pool(processes=int(multiprocessing.cpu_count() / 4))
+    pool = Pool(processes=concurrency)
     pool.map(_single_validate, validation_works)
     pool.close()
     pool.join()
@@ -124,6 +124,8 @@ def _parse_args():
         help='batch size for evaluate model logged by train.py')
     parser.add_argument('--eval-max-batch', type=int, default=5,
                         help='max batch for evaluate model logged by train.py')
+    parser.add_argument('--eval-concurrency', type=int, default=2,
+                        help='process concurrency for evaluation')
     return parser.parse_args()
 
 
@@ -132,7 +134,8 @@ def main():
     _evaluate(
         args.job_root_dir,
         args.eval_batch_size,
-        args.eval_max_batch)
+        args.eval_max_batch,
+        args.eval_concurrency)
 
 
 if __name__ == '__main__':

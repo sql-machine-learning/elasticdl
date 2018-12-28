@@ -31,7 +31,8 @@ docker run --rm -it -v $PWD:/work -w /work swamp python eval.py \
     --job-root-dir jobs \
     --delete-job-data True \
     --eval-batch-size 64 \
-    --eval-max-batch 200
+    --eval-max-batch 200 \
+    --eval-concurrency
 ```
 
 `eval.py` evaluate all the dumped models in train.py using validation dataset and write loss and accuracy to disk file.
@@ -43,6 +44,8 @@ docker run --rm -it -v $PWD:/work -w /work swamp python eval.py \
 `--eval-batch-size` : Batch size for evaluate model logged by train.py.
 
 `--eval-max-batch` : Max batch for evaluate model logged by train.
+
+`--eval-concurrency` : Process concurrency for evaluation with default value 2.
 
 ### Step 4: plot metrics.
 ```bash
