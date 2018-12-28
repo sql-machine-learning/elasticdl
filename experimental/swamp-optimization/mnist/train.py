@@ -87,7 +87,7 @@ class Trainer(object):
                     step = 0
 
                 gc.collect()
-                if batch_idx % self._args.loss_sample_interval == 0:
+                if batch_idx % self._args.model_sample_interval == 0:
                     self._model_logger.dump_model_in_trainer(
                         self._model.state_dict(), self.tid, epoch, batch_idx)
                 self._print_progress(epoch, batch_idx)
@@ -227,7 +227,7 @@ def _parse_args():
     parser.add_argument('--loss-file', default=METRICS_IMAGE_FILE_TEMPLATE,
                         help='the name of loss figure file')
     parser.add_argument(
-        '--loss-sample-interval',
+        '--model-sample-interval',
         type=int,
         default=1,
         help='how many batches to wait before record a loss value')

@@ -10,18 +10,18 @@ docker build -t swamp .
 docker run --rm -it -v $PWD:/work -w /work swamp python train.py \
     --trainer-number 2 \
     --pull-probability 0.5 \
-    --loss-sample-interval 10 \
+    --model-sample-interval 10 \
     --job-root-dir jobs
 ```
 
-`train.py` execute the taining process and dump models to the `--job-root-dir` at interval `--loss-sample-interval`. 
+`train.py` execute the taining process and dump models to the `--job-root-dir` at interval `--model-sample-interval`. 
 The meaning of parameters in the above command are described below:
 
 `--trainer-number` : number of trainers running in total.
 
 `--pull-probability` : the probability of trainer pulling from ps.
 
-`--loss-sample-interval` : how many batches to wait before record a loss value. 
+`--model-sample-interval` : how many batches to wait before dump a model. 
 
 `--job-root-dir` : the storage path of job data(net and params. 
 
