@@ -6,8 +6,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 import pickle
-from multiprocessing import Process, Queue, Manager
-from ctypes import py_object
+from multiprocessing import Process, Queue, Manager, Value
+from ctypes import py_object, c_bool
 import queue
 import time
 import gc
@@ -91,6 +91,9 @@ class Trainer(object):
                     self._model_logger.dump_model_in_trainer(
                         self._model.state_dict(), self.tid, epoch, batch_idx)
                 self._print_progress(epoch, batch_idx)
+
+            # Push model at the end of each epoch.
+            self._push_model(loss)
             print("trainer %i done epoch %i" % (self.tid, epoch))
 
     def _pull_model(self):
@@ -123,7 +126,8 @@ class PS(object):
             job_dir,
             args,
             trained_model_wrapper,
-            up):
+            up,
+            stop_ps):
         """ Initialize the PS.
 
         Arguments:
@@ -133,10 +137,10 @@ class PS(object):
                                  model at present shared by PS and trainer which
                                  is managed by Manager.
           up: A shared Queue for trainer upload model to PS.
+          stop_ps: A shared bool value for the main process to stop PS.
         """
         self._args = args
         self._up = up
-        self._exit = False
         self._start_time = time.time()
         self._model = Net()
         self._trained_model_wrapper = trained_model_wrapper
@@ -144,13 +148,14 @@ class PS(object):
         self._validate_score = float("inf")
         self._model_logger = ModelLogger(job_dir)
         self._model_logger.init_ps_model_dir()
+        self._stop_ps = stop_ps
 
     def run(self):
         updates = 0
         validate_loader = prepare_data_loader(
             True, self._args.batch_size, True)
 
-        while not self._exit:
+        while not self._up.empty() or not self._stop_ps.value: 
             # In the case that any trainer pushes.
             try:
                 d = self._up.get(timeout=1.0)
@@ -261,12 +266,13 @@ def _start_ps(
         args,
         up,
         manager,
-        trained_model):
+        trained_model,
+        stop_ps):
     # Init PS process
     key = 'ps'
     # Shared list used by the parent process and trainer for
     # loss tracing
-    ps = PS(job_dir, args, trained_model, up)
+    ps = PS(job_dir, args, trained_model, up, stop_ps)
     ps_proc = Process(target=ps.run, name='ps')
     ps_proc.start()
 
@@ -323,6 +329,7 @@ def _train(args, job_dir):
     up = Queue()
     manager = Manager()
     trained_model = manager.Value(py_object, None)
+    stop_ps = Value(c_bool, False)
 
     # Save model net.
     torch.save(Net(), job_dir + '/model.pkl')
@@ -333,14 +340,17 @@ def _train(args, job_dir):
         args,
         up,
         manager,
-        trained_model)
+        trained_model,
+        stop_ps)
     trainers, trainer_procs = _start_trainers(
         job_dir, args, up, manager,
         trained_model)
 
     for proc in trainer_procs:
         proc.join()
-    ps_proc.terminate()
+
+    stop_ps.value = True
+    ps_proc.join()
 
 
 def main():
