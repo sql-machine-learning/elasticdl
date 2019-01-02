@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 
 # for mnist dataset
-class Net(nn.Module):
+class MNIST_Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(1, 20, 5, 1)
@@ -23,9 +23,9 @@ class Net(nn.Module):
 
 
 # for cifar10 dataset
-class Net3(nn.Module):
+class CIFAR10_Net(nn.Module):
     def __init__(self):
-        super(Net3, self).__init__()
+        super(CIFAR10_Net, self).__init__()
         self.conv1 = nn.Conv2d(3, 20, 5, 1)
         self.conv2 = nn.Conv2d(20, 50, 5, 1)
         self.fc1 = nn.Linear(5 * 5 * 50, 500)

@@ -55,7 +55,8 @@ class Trainer(object):
         self._args = args
         self._up = up
         self._start_time = time.time()
-        self._model = getattr(network, args.net_class)()
+        net_class = args.data_type.upper() + '_Net'
+        self._model = getattr(network, net_class)()
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
                                     momentum=self._args.momentum)
         self._score = float("inf")
@@ -142,7 +143,8 @@ class PS(object):
         self._args = args
         self._up = up
         self._start_time = time.time()
-        self._model = getattr(network, args.net_class)()
+        net_class = args.data_type.upper() + '_Net'
+        self._model = getattr(network, net_class)()
         self._trained_model_wrapper = trained_model_wrapper
         self._score = float("inf")
         self._validate_score = float("inf")
@@ -230,8 +232,6 @@ def _parse_args():
                         help='batch size for validation dataset in ps')
     parser.add_argument('--validate_max_batch', type=int, default=5,
                         help='max batch for validate model in ps')
-    parser.add_argument('--net-class', default='Net',
-                        help='the name of the network class)')
     parser.add_argument('--data-type', default='mnist',
                         help='the name of the dataset (mnist, cifar10)')
     parser.add_argument('--loss-file', default=METRICS_IMAGE_FILE_TEMPLATE,
@@ -332,7 +332,8 @@ def _train(args, job_dir):
     stop_ps = Value(c_bool, False)
 
     # Save model net.
-    torch.save(getattr(network, args.net_class)(), job_dir + '/model.pkl')
+    net_class = args.data_type.upper() + '_Net'
+    torch.save(getattr(network, net_class)(), job_dir + '/model.pkl')
 
     # Start PS and trainers.
     ps_proc = _start_ps(

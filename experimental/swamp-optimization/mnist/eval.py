@@ -5,7 +5,6 @@ from torchvision import datasets, transforms
 import time
 import os
 import shutil
-from network import Net
 import torch.nn.functional as F
 import multiprocessing
 from multiprocessing import Pool
