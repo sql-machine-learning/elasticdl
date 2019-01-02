@@ -33,9 +33,10 @@ def _validate(data_loader, model, max_batch, batch_size):
     return loss_val, accuracy
 
 
-def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency):
+def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency, data_type):
     # Prepare data source
-    validation_ds = prepare_data_loader(False, validate_batch_size, False)
+    validation_ds = prepare_data_loader(False, validate_batch_size,
+                                        False, data_type)
 
     validation_works = []
 
@@ -122,9 +123,11 @@ def _parse_args():
         type=int,
         default=64,
         help='batch size for evaluate model logged by train.py')
+    parser.add_argument('--data-type', default='mnist',
+                        help='the name of the dataset (mnist, cifar10)')
     parser.add_argument('--eval-max-batch', type=int, default=5,
                         help='max batch for evaluate model logged by train.py')
-    parser.add_argument('--eval-concurrency', type=int, default=2,
+    parser.add_argument('--eval-concurrency', type=int, default=32,
                         help='process concurrency for evaluation')
     return parser.parse_args()
 
@@ -135,7 +138,8 @@ def main():
         args.job_root_dir,
         args.eval_batch_size,
         args.eval_max_batch,
-        args.eval_concurrency)
+        args.eval_concurrency,
+        args.data_type)
 
 
 if __name__ == '__main__':
