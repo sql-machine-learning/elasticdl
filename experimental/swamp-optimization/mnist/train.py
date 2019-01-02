@@ -98,12 +98,11 @@ class Trainer(object):
 
     def _pull_model(self):
         trained_model = self._trained_model_wrapper.value
-        if random.random() < self._args.crossover_probability:
-            s_dict = self._model.state_dict()
-            for k in trained_model.model_state:
-                s_dict[k] = (s_dict[k] + trained_model.model_state[k]) / 2
-        else:
-            self._model.load_state_dict(trained_model.model_state)
+        coefficient = random.random()
+        s_dict = self._model.state_dict()
+        for k in trained_model.model_state:
+            s_dict[k] = s_dict[k] * coefficient + \
+                trained_model.model_state[k] * (1 - coefficient)
         self._score = trained_model.loss
 
     def _push_model(self, loss):
@@ -155,7 +154,7 @@ class PS(object):
         validate_loader = prepare_data_loader(
             True, self._args.batch_size, True)
 
-        while not self._up.empty() or not self._stop_ps.value: 
+        while not self._up.empty() or not self._stop_ps.value:
             # In the case that any trainer pushes.
             try:
                 d = self._up.get(timeout=1.0)
@@ -244,11 +243,6 @@ def _parse_args():
         help='how many batches to wait before logging training status')
     parser.add_argument('--pull-probability', type=float, default=0,
                         help='the probability of trainer pulling from ps')
-    parser.add_argument(
-        '--crossover-probability',
-        type=float,
-        default=0,
-        help='the probability of crossover op for model pulling')
     parser.add_argument('--trainer-number', type=int, default=1,
                         help='the total number of trainer to launch')
     parser.add_argument('--job-root-dir', default='jobs',
