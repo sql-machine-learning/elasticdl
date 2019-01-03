@@ -1,13 +1,17 @@
 from __future__ import print_function
+import os
+import sys
 import argparse
 import torch
 from torchvision import datasets, transforms
 import time
 import os
 import shutil
+import network
 import torch.nn.functional as F
 import multiprocessing
-from multiprocessing import Pool
+from multiprocessing import Process, Queue
+import queue
 from common import prepare_data_loader
 from common import bool_parser
 
@@ -36,8 +40,8 @@ def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency
     # Prepare data source
     validation_ds = prepare_data_loader(False, validate_batch_size,
                                         False, data_type)
-
-    validation_works = []
+    validation_jobs = Queue()
+    net_class = data_type.upper() + 'Net'
 
     # Evaluate all the jobs under job_root_dir.
     for parent, dirs, _ in os.walk(job_root_dir):
@@ -68,39 +72,57 @@ def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency
                                 'timestamp': meta[-1],
                                 'msg': msg_info
                             }
-                            validation_works.append(work_params)
+                            validation_jobs.put(work_params)
     # Start validation
     start_time = time.time()
-    pool = Pool(processes=concurrency)
-    pool.map(_single_validate, validation_works)
-    pool.close()
-    pool.join()
+    job_procs = []
+    for _ in range(concurrency):
+        job = _SingleValidationJob(validation_jobs, net_class) 
+        job_proc = Process(target=job.validate)
+        job_proc.start()
+        job_procs.append(job_proc)
+
+    for proc in job_procs:
+        proc.join()
+
     end_time = time.time()
     total_cost = int(end_time - start_time)
     print('validation metrics total cost {} seconds'.format(total_cost))
 
 
-def _single_validate(param_dict):
-    print(param_dict['msg'])
-    model = torch.load(param_dict['job_dir'] + '/model.pkl')
-    model.load_state_dict(torch.load(
-        '{}/{}'.format(param_dict['pkl_dir'], param_dict['param_file'])))
-    loss, accuracy = _validate(
-        param_dict['validation_ds'], model, param_dict['max_batch'], param_dict['batch_size'])
-    eval_filename = param_dict['pkl_dir'] + '/' + \
-        param_dict['param_file'].split('.')[0] + '.eval'
-    if os.path.exists(eval_filename):
-        os.remove(eval_filename)
-    with open(eval_filename, 'w') as eval_f:
-        eval_f.write(
-            '{}_{}_{}'.format(
-                loss, accuracy, int(
-                    param_dict['timestamp'])))
+class _SingleValidationJob(object):
+    def __init__(self, job_queue, net_class):
+        self._model = getattr(network, net_class)()
+        self._job_queue = job_queue 
 
+    def validate(self):
+        while True:
+            try:
+                param_dict = self._job_queue.get_nowait()
+            except queue.Empty:
+                break 
+            print(param_dict['msg'])
+            #model = torch.load(param_dict['job_dir'] + '/model.pkl')
+            self._model.load_state_dict(torch.load(
+                '{}/{}'.format(param_dict['pkl_dir'], param_dict['param_file'])))
+
+            loss, accuracy = _validate(
+                param_dict['validation_ds'], self._model, param_dict['max_batch'], param_dict['batch_size'])
+            eval_filename = param_dict['pkl_dir'] + '/' + \
+                param_dict['param_file'].split('.')[0] + '.eval'
+
+            if os.path.exists(eval_filename):
+                os.remove(eval_filename)
+            with open(eval_filename, 'w') as eval_f:
+                eval_f.write(
+                    '{}_{}_{}'.format(
+                        loss, accuracy, int(
+                            param_dict['timestamp'])))
 
 def _prepare():
     args = _parse_args()
     torch.manual_seed(args.seed)
+    os.system('export OMP_NUM_THREADS=1')
     return args
 
 
@@ -124,9 +146,10 @@ def _parse_args():
         help='batch size for evaluate model logged by train.py')
     parser.add_argument('--data-type', default='mnist',
                         help='the name of the dataset (mnist, cifar10)')
-    parser.add_argument('--eval-max-batch', type=int, default=5,
+    parser.add_argument('--eval-max-batch', type=int, default=sys.maxsize,
                         help='max batch for evaluate model logged by train.py')
-    parser.add_argument('--eval-concurrency', type=int, default=2,
+    parser.add_argument('--eval-concurrency', type=int, 
+                        default=int(multiprocessing.cpu_count()/2),
                         help='process concurrency for evaluation')
     return parser.parse_args()
 
