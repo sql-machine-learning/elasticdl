@@ -13,17 +13,28 @@ METRICS_IMAGE_FILE_TEMPLATE = 'swamp_metrics_t_{}_pp_{}.png'
 JOB_NAME_TEMPLATE = 'swamp_t{}_pp{}'
 
 
-def prepare_data_loader(is_train, batch_size, shuffle):
-    return torch.utils.data.DataLoader(
-        datasets.MNIST('./data',
+def prepare_data_loader(is_train, batch_size, shuffle, data='mnist'):
+    if data == 'mnist':
+        dataset = datasets.MNIST('./data',
                        train=is_train,
                        download=True,
                        transform=transforms.Compose([
                            transforms.ToTensor(),
                            transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=batch_size,
-        shuffle=shuffle)
+                       ]))
+    elif data == 'cifar10':
+        dataset = datasets.CIFAR10('./data',
+                       train=is_train,
+                       download=True,
+                       transform=transforms.Compose([
+                           transforms.ToTensor(),
+                           transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                       ]))
+    else:
+        raise AttributeError('data %s not supported' % data)
+    return torch.utils.data.DataLoader(dataset,
+                                       batch_size=batch_size,
+                                       shuffle=shuffle)
 
 
 def bool_parser(v):

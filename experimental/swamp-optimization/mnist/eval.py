@@ -7,7 +7,7 @@ from torchvision import datasets, transforms
 import time
 import os
 import shutil
-from network import Net
+import network
 import torch.nn.functional as F
 import multiprocessing
 from multiprocessing import Process, Queue
@@ -36,10 +36,12 @@ def _validate(data_loader, model, max_batch, batch_size):
     return loss_val, accuracy
 
 
-def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency):
+def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency, data_type):
     # Prepare data source
-    validation_ds = prepare_data_loader(False, validate_batch_size, False)
+    validation_ds = prepare_data_loader(False, validate_batch_size,
+                                        False, data_type)
     validation_jobs = Queue()
+    net_class = data_type.upper() + 'Net'
 
     # Evaluate all the jobs under job_root_dir.
     for parent, dirs, _ in os.walk(job_root_dir):
@@ -75,7 +77,7 @@ def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency
     start_time = time.time()
     job_procs = []
     for _ in range(concurrency):
-        job = _SingleValidationJob(validation_jobs) 
+        job = _SingleValidationJob(validation_jobs, net_class) 
         job_proc = Process(target=job.validate)
         job_proc.start()
         job_procs.append(job_proc)
@@ -89,8 +91,8 @@ def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency
 
 
 class _SingleValidationJob(object):
-    def __init__(self, job_queue):
-        self._model = Net() 
+    def __init__(self, job_queue, net_class):
+        self._model = getattr(network, net_class)()
         self._job_queue = job_queue 
 
     def validate(self):
@@ -142,6 +144,8 @@ def _parse_args():
         type=int,
         default=64,
         help='batch size for evaluate model logged by train.py')
+    parser.add_argument('--data-type', default='mnist',
+                        help='the name of the dataset (mnist, cifar10)')
     parser.add_argument('--eval-max-batch', type=int, default=sys.maxsize,
                         help='max batch for evaluate model logged by train.py')
     parser.add_argument('--eval-concurrency', type=int, 
@@ -156,7 +160,8 @@ def main():
         args.job_root_dir,
         args.eval_batch_size,
         args.eval_max_batch,
-        args.eval_concurrency)
+        args.eval_concurrency,
+        args.data_type)
 
 
 if __name__ == '__main__':

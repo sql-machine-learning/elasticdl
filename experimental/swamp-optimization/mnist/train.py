@@ -14,7 +14,7 @@ import gc
 import random
 import os
 import shutil
-from network import Net
+import network
 from common import prepare_data_loader
 from common import ModelLogger
 from common import METRICS_IMAGE_FILE_TEMPLATE
@@ -55,7 +55,8 @@ class Trainer(object):
         self._args = args
         self._up = up
         self._start_time = time.time()
-        self._model = Net()
+        net_class = args.data_type.upper() + 'Net'
+        self._model = getattr(network, net_class)()
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
                                     momentum=self._args.momentum)
         self._score = float("inf")
@@ -64,7 +65,8 @@ class Trainer(object):
         self._model_logger.init_trainer_model_dir(tid)
 
     def train(self):
-        data_loader = prepare_data_loader(True, self._args.batch_size, True)
+        data_loader = prepare_data_loader(True, self._args.batch_size,
+                                          True, self._args.data_type)
         step = 0
 
         # start local training
@@ -141,7 +143,8 @@ class PS(object):
         self._args = args
         self._up = up
         self._start_time = time.time()
-        self._model = Net()
+        net_class = args.data_type.upper() + 'Net'
+        self._model = getattr(network, net_class)()
         self._trained_model_wrapper = trained_model_wrapper
         self._score = float("inf")
         self._validate_score = float("inf")
@@ -152,7 +155,8 @@ class PS(object):
     def run(self):
         updates = 0
         validate_loader = prepare_data_loader(
-            True, self._args.batch_size, True)
+            True, self._args.batch_size,
+            True, self._args.data_type)
 
         while not self._up.empty() or not self._stop_ps.value:
             # In the case that any trainer pushes.
@@ -228,6 +232,8 @@ def _parse_args():
                         help='batch size for validation dataset in ps')
     parser.add_argument('--validate_max_batch', type=int, default=5,
                         help='max batch for validate model in ps')
+    parser.add_argument('--data-type', default='mnist',
+                        help='the name of the dataset (mnist, cifar10)')
     parser.add_argument('--loss-file', default=METRICS_IMAGE_FILE_TEMPLATE,
                         help='the name of loss figure file')
     parser.add_argument(
@@ -326,7 +332,8 @@ def _train(args, job_dir):
     stop_ps = Value(c_bool, False)
 
     # Save model net.
-    torch.save(Net(), job_dir + '/model.pkl')
+    net_class = args.data_type.upper() + 'Net'
+    torch.save(getattr(network, net_class)(), job_dir + '/model.pkl')
 
     # Start PS and trainers.
     ps_proc = _start_ps(

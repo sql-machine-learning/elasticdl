@@ -11,6 +11,7 @@ docker run --rm -it -v $PWD:/work -w /work swamp python train.py \
     --trainer-number 2 \
     --pull-probability 0.5 \
     --model-sample-interval 10 \
+    --data-type mnist \
     --job-root-dir jobs
 ```
 
@@ -23,7 +24,9 @@ The meaning of parameters in the above command are described below:
 
 `--model-sample-interval` : how many batches to wait before dump a model. 
 
-`--job-root-dir` : the storage path of job data(net and params. 
+`--data-type` : data type, valid values are mnist and cifar10.
+
+`--job-root-dir` : the storage path of job datanet and params. 
 
 ### Step 3: evaluate models dumped in the training process.
 ```bash
@@ -32,6 +35,7 @@ docker run --rm -it -v $PWD:/work -w /work swamp python eval.py \
     --delete-job-data True \
     --eval-batch-size 64 \
     --eval-max-batch 200 \
+    --data-type mnist \
     --eval-concurrency
 ```
 
@@ -45,14 +49,18 @@ docker run --rm -it -v $PWD:/work -w /work swamp python eval.py \
 
 `--eval-max-batch` : Max batch for evaluate model logged by train.
 
+`--data-type`  : data type, valid values are mnist and cifar10.
+
 `--eval-concurrency` : Process concurrency for evaluation with default value 2.
 
 ### Step 4: plot metrics.
 ```bash
-docker run --rm -it -v $PWD:/work -w /work swamp python plot.py --job-root-dir jobs
+docker run --rm -it -v $PWD:/work -w /work swamp python plot.py --data-type mnist --job-root-dir jobs
 ```
 
 `plot.py` read all the metrics data produced by `eval.py` and generate metrics curve graphs for every training job in `train.py`.
+
+`--data-type`  : data type, valid values are mnist and cifar10.
 
 `--job-root-dir` : The root directory of all job result data.
 
