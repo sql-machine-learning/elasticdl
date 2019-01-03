@@ -55,7 +55,7 @@ class Trainer(object):
         self._args = args
         self._up = up
         self._start_time = time.time()
-        net_class = args.data_type.upper() + '_Net'
+        net_class = args.data_type.upper() + 'Net'
         self._model = getattr(network, net_class)()
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
                                     momentum=self._args.momentum)
@@ -143,7 +143,7 @@ class PS(object):
         self._args = args
         self._up = up
         self._start_time = time.time()
-        net_class = args.data_type.upper() + '_Net'
+        net_class = args.data_type.upper() + 'Net'
         self._model = getattr(network, net_class)()
         self._trained_model_wrapper = trained_model_wrapper
         self._score = float("inf")
@@ -332,7 +332,7 @@ def _train(args, job_dir):
     stop_ps = Value(c_bool, False)
 
     # Save model net.
-    net_class = args.data_type.upper() + '_Net'
+    net_class = args.data_type.upper() + 'Net'
     torch.save(getattr(network, net_class)(), job_dir + '/model.pkl')
 
     # Start PS and trainers.

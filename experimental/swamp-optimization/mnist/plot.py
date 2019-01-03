@@ -37,8 +37,9 @@ def _plot(args, job_root_dir, all_job_metrics_dict):
         # Plot the loss/timestamp curve.
         loss_ax = fig.add_subplot(2, 1, 1)
         loss_ax.set_title(
-            'swamp training for mnist data (pull probability %s)' %
-            pull_probability, fontsize=10, verticalalignment='center')
+            'swamp training for %s data (pull probability %s)' %
+            (args.data_type, pull_probability), fontsize=10,
+            verticalalignment='center')
         loss_ax.set_xlabel('timestamp')
         loss_ax.set_ylabel('loss')
         for (k, v) in metrics_dict.items():
@@ -134,6 +135,8 @@ def _collect_metrics(job_root_dir):
 def _parse_args():
     # Training settings
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
+    parser.add_argument('--data-type', default='mnist',
+                        help='the name of the dataset (mnist, cifar10)')
     parser.add_argument('--loss-file', default=METRICS_IMAGE_FILE_TEMPLATE,
                         help='the name of loss figure file')
     parser.add_argument('--job-root-dir', default='jobs',

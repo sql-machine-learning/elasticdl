@@ -126,7 +126,7 @@ def _parse_args():
                         help='the name of the dataset (mnist, cifar10)')
     parser.add_argument('--eval-max-batch', type=int, default=5,
                         help='max batch for evaluate model logged by train.py')
-    parser.add_argument('--eval-concurrency', type=int, default=32,
+    parser.add_argument('--eval-concurrency', type=int, default=2,
                         help='process concurrency for evaluation')
     return parser.parse_args()
 
