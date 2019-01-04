@@ -29,6 +29,7 @@ def gen(file_dir, data, label, *, chunk_size, record_per_file):
     except StopIteration:
         pass
 
+
 def main(argv):
     parser = argparse.ArgumentParser(
         description="Generate CIFAR10 datasets in RecordIO format."
@@ -49,7 +50,7 @@ def main(argv):
     args = parser.parse_args(argv)
     # one uncompressed record has size 3 * 32 * 32 + 1 bytes.
     # Also add some slack for safety.
-    chunk_size = args.num_record_per_chunk * (3 * 32 * 32  + 1) + 100
+    chunk_size = args.num_record_per_chunk * (3 * 32 * 32 + 1) + 100
     record_per_file = args.num_record_per_chunk * args.num_chunk
     backend.set_image_data_format("channels_first")
 
@@ -62,6 +63,9 @@ def main(argv):
         record_per_file=record_per_file,
     )
 
+    # Work around a bug in cifar10.load_data() where y_test is not converted
+    # to uint8
+    y_test = y_test.astype("uint8")
     gen(
         args.dir + "/cifar10/test",
         x_test,
@@ -69,6 +73,7 @@ def main(argv):
         chunk_size=chunk_size,
         record_per_file=record_per_file,
     )
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
