@@ -21,7 +21,7 @@ def show(data, label):
     assert label >= 0 and label <= 9
 
     def pixel(r, g, b):
-        return "\033[48;2;%d;%d;%dm" % (r, g, b) + " \033[0m"
+        return "\033[48;2;%d;%d;%dm \033[0m" % (r, g, b)
 
     # Join r,g,b values
     data = np.stack(data, -1)
