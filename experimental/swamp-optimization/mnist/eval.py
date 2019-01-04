@@ -100,6 +100,7 @@ class _SingleValidationJob(object):
             try:
                 param_dict = self._job_queue.get_nowait()
             except queue.Empty:
+                # workaround for a python queue concurrency bug that the queue may be not empty here.
                 if self._job_queue.qsize() == 0:
                     break
                 else:
