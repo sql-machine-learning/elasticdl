@@ -122,7 +122,7 @@ class _SingleValidationJob(object):
 def _prepare():
     args = _parse_args()
     torch.manual_seed(args.seed)
-    os.system('export OMP_NUM_THREADS=1')
+    os.putenv('OMP_NUM_THREADS', '1')
     return args
 
 
