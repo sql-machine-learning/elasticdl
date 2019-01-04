@@ -100,7 +100,11 @@ class _SingleValidationJob(object):
             try:
                 param_dict = self._job_queue.get_nowait()
             except queue.Empty:
-                break 
+                # workaround for a python queue concurrency bug that the queue may be not empty here.
+                if self._job_queue.qsize() == 0:
+                    break
+                else:
+                    continue
             print(param_dict['msg'])
             #model = torch.load(param_dict['job_dir'] + '/model.pkl')
             self._model.load_state_dict(torch.load(
