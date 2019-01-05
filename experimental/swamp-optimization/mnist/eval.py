@@ -77,6 +77,8 @@ def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency
     start_time = time.time()
     job_procs = []
     for _ in range(concurrency):
+        # Add sentinel job for each evaluation process.
+        validation_jobs.put({})
         job = _SingleValidationJob(validation_jobs, net_class) 
         job_proc = Process(target=job.validate)
         job_proc.start()
@@ -97,21 +99,19 @@ class _SingleValidationJob(object):
 
     def validate(self):
         while True:
-            try:
-                param_dict = self._job_queue.get_nowait()
-            except queue.Empty:
-                # workaround for a python queue concurrency bug that the queue may be not empty here.
-                if self._job_queue.qsize() == 0:
-                    break
-                else:
-                    continue
+            param_dict = self._job_queue.get()
+            # Found sentinel job and eval process could exit.
+            if not param_dict:
+                break
+
             print(param_dict['msg'])
             #model = torch.load(param_dict['job_dir'] + '/model.pkl')
             self._model.load_state_dict(torch.load(
                 '{}/{}'.format(param_dict['pkl_dir'], param_dict['param_file'])))
 
             loss, accuracy = _validate(
-                param_dict['validation_ds'], self._model, param_dict['max_batch'], param_dict['batch_size'])
+                param_dict['validation_ds'], self._model, 
+                    param_dict['max_batch'], param_dict['batch_size'])
             eval_filename = param_dict['pkl_dir'] + '/' + \
                 param_dict['param_file'].split('.')[0] + '.eval'
 
