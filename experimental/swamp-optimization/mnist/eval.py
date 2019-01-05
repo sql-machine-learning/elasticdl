@@ -78,7 +78,7 @@ def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency
     job_procs = []
     for _ in range(concurrency):
         # Add sentinel job for each evaluation process.
-        validation_jobs.put(object())
+        validation_jobs.put({})
         job = _SingleValidationJob(validation_jobs, net_class) 
         job_proc = Process(target=job.validate)
         job_proc.start()
@@ -99,13 +99,11 @@ class _SingleValidationJob(object):
 
     def validate(self):
         while True:
-            try:
-                param_dict = self._job_queue.get_nowait()
-                # Found sentinel job and eval process could exit.
-                if type(param_dict).__name__ != 'dict':
-                    break
-            except queue.Empty:
-                continue
+            param_dict = self._job_queue.get()
+            # Found sentinel job and eval process could exit.
+            if not param_dict:
+                break
+
             print(param_dict['msg'])
             #model = torch.load(param_dict['job_dir'] + '/model.pkl')
             self._model.load_state_dict(torch.load(
