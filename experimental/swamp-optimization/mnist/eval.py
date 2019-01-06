@@ -7,7 +7,9 @@ from torchvision import datasets, transforms
 import time
 import os
 import shutil
-import network
+from models.network import MNISTNet, CIFAR10Net
+from models.resnet import ResidualBlock, ResNet, resnet18
+import torch.nn as nn
 import torch.nn.functional as F
 import multiprocessing
 from multiprocessing import Process, Queue
@@ -16,7 +18,7 @@ from common import prepare_data_loader
 from common import bool_parser
 
 
-def _validate(data_loader, model, max_batch, batch_size):
+def _validate(data_loader, model, loss_fn, max_batch, batch_size):
     eval_loss = 0
     correct = 0
     total = 0
@@ -24,7 +26,7 @@ def _validate(data_loader, model, max_batch, batch_size):
         for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
             if batch_idx < max_batch:
                 out = model(batch_x)
-                loss = F.nll_loss(out, batch_y)
+                loss = loss_fn(out, batch_y)
                 eval_loss += loss.data.item()
                 _, predicted = torch.max(out.data, 1)
                 correct += (predicted == batch_y).sum().item()
@@ -36,12 +38,18 @@ def _validate(data_loader, model, max_batch, batch_size):
     return loss_val, accuracy
 
 
-def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency, data_type):
+def _evaluate(
+        job_root_dir,
+        max_validate_batch,
+        validate_batch_size,
+        concurrency,
+        data_type,
+        model_name):
     # Prepare data source
     validation_ds = prepare_data_loader(False, validate_batch_size,
                                         False, data_type)
     validation_jobs = Queue()
-    net_class = data_type.upper() + 'Net'
+    model_class = globals()[model_name]
 
     # Evaluate all the jobs under job_root_dir.
     for parent, dirs, _ in os.walk(job_root_dir):
@@ -77,7 +85,7 @@ def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency
     start_time = time.time()
     job_procs = []
     for _ in range(concurrency):
-        job = _SingleValidationJob(validation_jobs, net_class) 
+        job = _SingleValidationJob(validation_jobs, model_class)
         job_proc = Process(target=job.validate)
         job_proc.start()
         job_procs.append(job_proc)
@@ -91,16 +99,18 @@ def _evaluate(job_root_dir, max_validate_batch, validate_batch_size, concurrency
 
 
 class _SingleValidationJob(object):
-    def __init__(self, job_queue, net_class):
-        self._model = getattr(network, net_class)()
-        self._job_queue = job_queue 
+    def __init__(self, job_queue, model_class):
+        self._model = model_class()
+        self._job_queue = job_queue
+        self._loss_fn = nn.CrossEntropyLoss()
 
     def validate(self):
         while True:
             try:
                 param_dict = self._job_queue.get_nowait()
             except queue.Empty:
-                # workaround for a python queue concurrency bug that the queue may be not empty here.
+                # workaround for a python queue concurrency bug that the queue
+                # may be not empty here.
                 if self._job_queue.qsize() == 0:
                     break
                 else:
@@ -111,7 +121,8 @@ class _SingleValidationJob(object):
                 '{}/{}'.format(param_dict['pkl_dir'], param_dict['param_file'])))
 
             loss, accuracy = _validate(
-                param_dict['validation_ds'], self._model, param_dict['max_batch'], param_dict['batch_size'])
+                param_dict['validation_ds'], self._model, 
+                self._loss_fn, param_dict['max_batch'], param_dict['batch_size'])
             eval_filename = param_dict['pkl_dir'] + '/' + \
                 param_dict['param_file'].split('.')[0] + '.eval'
 
@@ -150,9 +161,13 @@ def _parse_args():
         help='batch size for evaluate model logged by train.py')
     parser.add_argument('--data-type', default='mnist',
                         help='the name of the dataset (mnist, cifar10)')
+    parser.add_argument(
+        '--model-name',
+        default='MNISTNet',
+        help='the name of the model (MNISTNet, CIFAR10Net, resnet18)')
     parser.add_argument('--eval-max-batch', type=int, default=sys.maxsize,
                         help='max batch for evaluate model logged by train.py')
-    parser.add_argument('--eval-concurrency', type=int, 
+    parser.add_argument('--eval-concurrency', type=int,
                         default=int(multiprocessing.cpu_count()/2),
                         help='process concurrency for evaluation')
     return parser.parse_args()
@@ -162,10 +177,11 @@ def main():
     args = _prepare()
     _evaluate(
         args.job_root_dir,
-        args.eval_batch_size,
         args.eval_max_batch,
+        args.eval_batch_size,
         args.eval_concurrency,
-        args.data_type)
+        args.data_type,
+        args.model_name)
 
 
 if __name__ == '__main__':
