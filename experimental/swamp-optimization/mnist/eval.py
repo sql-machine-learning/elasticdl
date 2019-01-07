@@ -18,12 +18,15 @@ from common import prepare_data_loader
 from common import bool_parser
 
 
-def _validate(data_loader, model, loss_fn, max_batch, batch_size):
+def _validate(data_loader, model, loss_fn, max_batch, batch_size, device):
     eval_loss = 0
     correct = 0
     total = 0
     with torch.no_grad():
         for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
+            if device.type == 'cuda':
+                batch_x = batch_x.to(device)
+                batch_y = batch_y.to(device)
             if batch_idx < max_batch:
                 out = model(batch_x)
                 loss = loss_fn(out, batch_y)
@@ -43,6 +46,7 @@ def _evaluate(
         max_validate_batch,
         validate_batch_size,
         concurrency,
+        use_gpu,
         data_type,
         model_name):
     # Prepare data source
@@ -81,13 +85,23 @@ def _evaluate(
                                 'msg': msg_info
                             }
                             validation_jobs.put(work_params)
+    # check gpu
+    gpu_device_num = 0
+    if use_gpu and torch.cuda.is_available():
+        gpu_device_num = torch.cuda.device_count()
+    if gpu_device_num:
+        concurrency = gpu_device_num
+
     # Start validation
     start_time = time.time()
     job_procs = []
-    for _ in range(concurrency):
+    device = 'cpu'
+    for i in range(concurrency):
         # Add sentinel job for each evaluation process.
         validation_jobs.put({})
-        job = _SingleValidationJob(validation_jobs, model_class) 
+        if gpu_device_num:
+            device = 'cuda:%d' % i
+        job = _SingleValidationJob(validation_jobs, model_class, device) 
         job_proc = Process(target=job.validate)
         job_proc.start()
         job_procs.append(job_proc)
@@ -101,9 +115,10 @@ def _evaluate(
 
 
 class _SingleValidationJob(object):
-    def __init__(self, job_queue, model_class):
+    def __init__(self, job_queue, model_class, device):
         self._model = model_class()
         self._model.train(False)
+        self._device = device
         self._job_queue = job_queue
         self._loss_fn = nn.CrossEntropyLoss()
 
@@ -116,11 +131,15 @@ class _SingleValidationJob(object):
             print(param_dict['msg'])
             #model = torch.load(param_dict['job_dir'] + '/model.pkl')
             self._model.load_state_dict(torch.load(
-                '{}/{}'.format(param_dict['pkl_dir'], param_dict['param_file'])))
+                '{}/{}'.format(param_dict['pkl_dir'], param_dict['param_file']),
+                map_location=self._device))
+            device = torch.device(self._device)
+            self._model.to(device)
 
             loss, accuracy = _validate(
                 param_dict['validation_ds'], self._model, 
-                self._loss_fn, param_dict['max_batch'], param_dict['batch_size'])
+                self._loss_fn, param_dict['max_batch'], param_dict['batch_size'],
+                device)
             eval_filename = param_dict['pkl_dir'] + '/' + \
                 param_dict['param_file'].split('.')[0] + '.eval'
 
@@ -167,17 +186,22 @@ def _parse_args():
                         help='max batch for evaluate model logged by train.py')
     parser.add_argument('--eval-concurrency', type=int,
                         default=int(multiprocessing.cpu_count()/2),
-                        help='process concurrency for evaluation')
+                        help='process concurrency for CPU evaluation')
+    parser.add_argument('--use-gpu', type=bool_parser, default=True,
+                        help='use GPU for evaluation if it is available')
     return parser.parse_args()
 
 
 def main():
     args = _prepare()
+    # Workaround for pytorch multiprocssing cuda init issue.
+    multiprocessing.set_start_method('spawn')
     _evaluate(
         args.job_root_dir,
         args.eval_max_batch,
         args.eval_batch_size,
         args.eval_concurrency,
+        args.use_gpu,
         args.data_type,
         args.model_name)
 
