@@ -101,6 +101,7 @@ def _evaluate(
 class _SingleValidationJob(object):
     def __init__(self, job_queue, model_class):
         self._model = model_class()
+        self._model.train(False)
         self._job_queue = job_queue
         self._loss_fn = nn.CrossEntropyLoss()
 

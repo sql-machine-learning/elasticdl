@@ -70,6 +70,7 @@ class Trainer(object):
         self._loss_fn = nn.CrossEntropyLoss()
 
     def train(self):
+        self._model.train(True)
         data_loader = prepare_data_loader(True, self._args.batch_size,
                                           True, self._args.data_type)
         step = 0
@@ -191,6 +192,7 @@ class PS(object):
         correct = 0
         total = 0
         with torch.no_grad():
+            self._model.train(False)
             for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
                 if batch_idx < max_batch:
                     out = self._model(batch_x)
