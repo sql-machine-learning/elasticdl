@@ -71,12 +71,13 @@ class Trainer(object):
         self._gpu_device = None
 
     def train(self):
+        os.environ['CUDA_VISIBLE_DEVICES'] = str(self._gpu_id)
         self._model = self._model_class()
         self._model.train(True)
 
         # Must move model into cuda before construct optimizer.
         if self._args.use_gpu and torch.cuda.is_available():
-            self._gpu_device = torch.device('cuda:{}'.format(self._gpu_id))
+            self._gpu_device = torch.device('cuda:0')
             self._model.to(self._gpu_device)
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
             momentum=self._args.momentum, weight_decay=5e-4)
