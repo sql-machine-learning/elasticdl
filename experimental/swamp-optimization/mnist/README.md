@@ -11,6 +11,7 @@ docker run --rm -it -v $PWD:/work -w /work swamp python train.py \
     --trainer-number 2 \
     --pull-probability 0.5 \
     --model-sample-interval 10 \
+    --model-name MNISTNet \
     --data-type mnist \
     --job-root-dir jobs
 ```
@@ -24,6 +25,8 @@ The meaning of parameters in the above command are described below:
 
 `--model-sample-interval` : how many batches to wait before dump a model. 
 
+`--model-name` : the name of the net model (MNISTNet, CIFAR10Net, resnet18).
+
 `--data-type` : data type, valid values are mnist and cifar10.
 
 `--job-root-dir` : the storage path of job datanet and params. 
@@ -35,6 +38,7 @@ docker run --rm -it -v $PWD:/work -w /work swamp python eval.py \
     --delete-job-data True \
     --eval-batch-size 64 \
     --eval-max-batch 200 \
+    --model-name MNISTNet \
     --data-type mnist \
     --eval-concurrency
 ```
@@ -48,6 +52,8 @@ docker run --rm -it -v $PWD:/work -w /work swamp python eval.py \
 `--eval-batch-size` : Batch size for evaluate model logged by train.py.
 
 `--eval-max-batch` : Max batch for evaluate model logged by train.
+
+`--model-name` : keep the corresponding values in step 2 the same.
 
 `--data-type`  : data type, valid values are mnist and cifar10.
 
