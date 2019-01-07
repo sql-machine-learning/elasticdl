@@ -89,7 +89,7 @@ def _evaluate(
     gpu_device_num = 0
     if use_gpu and torch.cuda.is_available():
         gpu_device_num = torch.cuda.device_count()
-    if gpu_device_num:
+    if concurrency < gpu_device_num:
         concurrency = gpu_device_num
 
     # Start validation
@@ -100,7 +100,7 @@ def _evaluate(
         # Add sentinel job for each evaluation process.
         validation_jobs.put({})
         if gpu_device_num:
-            device = 'cuda:%d' % i
+            device = 'cuda:%d' % (i % gpu_device_num)
         job = _SingleValidationJob(validation_jobs, model_class, device) 
         job_proc = Process(target=job.validate)
         job_proc.start()
