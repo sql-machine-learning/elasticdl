@@ -40,7 +40,7 @@ docker run --rm -it -v $PWD:/work -w /work swamp python eval.py \
     --eval-max-batch 200 \
     --model-name MNISTNet \
     --data-type mnist \
-    --eval-concurrency
+    --eval-concurrency 2
 ```
 
 `eval.py` evaluate all the dumped models in train.py using validation dataset and write loss and accuracy to disk file.
