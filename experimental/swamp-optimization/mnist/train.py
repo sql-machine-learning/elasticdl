@@ -21,7 +21,7 @@ from common import prepare_data_loader
 from common import ModelLogger
 from common import METRICS_IMAGE_FILE_TEMPLATE
 from common import JOB_NAME_TEMPLATE
-
+from common import bool_parser
 
 class TrainedModel(object):
     ''' Model uploaded to PS by trainers
@@ -57,12 +57,7 @@ class Trainer(object):
         self._args = args
         self._up = up
         self._start_time = time.time()
-        model_class = globals()[args.model_name]
-        self._model = model_class()
-        self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
-                                    momentum=self._args.momentum, weight_decay=5e-4)
-        self._lr_scheduler = lr_scheduler.MultiStepLR(
-            self._optimizer, milestones=[10,10,10], gamma=0.1)
+        self._model_class = globals()[args.model_name]
         self._score = float("inf")
         self._trained_model_wrapper = trained_model_wrapper
         self._model_logger = ModelLogger(job_dir)
@@ -70,7 +65,17 @@ class Trainer(object):
         self._loss_fn = nn.CrossEntropyLoss()
 
     def train(self):
+        self._model = self._model_class()
         self._model.train(True)
+
+        # Must move model into cuda before construct optimizer.
+        if self._args.use_gpu and torch.cuda.is_available():
+            self._model.cuda()
+        self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
+            momentum=self._args.momentum, weight_decay=5e-4)
+        self._lr_scheduler = lr_scheduler.MultiStepLR(
+            self._optimizer, milestones=[10,10,10], gamma=0.1)
+
         data_loader = prepare_data_loader(True, self._args.batch_size,
                                           True, self._args.data_type)
         step = 0
@@ -79,6 +84,9 @@ class Trainer(object):
         for epoch in range(self._args.epochs):
             self._lr_scheduler.step()
             for batch_idx, (data, target) in enumerate(data_loader):
+                if self._args.use_gpu and torch.cuda.is_available():
+                    data = data.cuda()
+                    target = target.cuda()
                 self._optimizer.zero_grad()
                 output = self._model(data)
                 loss = self._loss_fn(output, target)
@@ -88,7 +96,7 @@ class Trainer(object):
                     self._optimizer.step()
                     step = step + 1
                 else:
-                    if loss.data < self._score:
+                    if loss.data.item() < self._score:
                         self._push_model(loss)
                     else:
                         if random.random() < self._args.pull_probability:
@@ -115,10 +123,13 @@ class Trainer(object):
         self._score = trained_model.loss
 
     def _push_model(self, loss):
-        self._score = loss.data
+        state_dict_copy = {}
+        for k, v in self._model.state_dict().items():
+           state_dict_copy[k] = v.to('cpu')
+        self._score = loss.data.item()
         if self._up is not None:
             upload_model = TrainedModel(
-                self._model.state_dict(), loss.data)
+                state_dict_copy, loss.data.item())
             self._up.put(pickle.dumps(upload_model))
 
     def _print_progress(self, epoch, batch_idx):
@@ -150,8 +161,7 @@ class PS(object):
         self._args = args
         self._up = up
         self._start_time = time.time()
-        model_class = globals()[args.model_name]
-        self._model = model_class()
+        self._model_class = globals()[args.model_name]
         self._trained_model_wrapper = trained_model_wrapper
         self._score = float("inf")
         self._validate_score = float("inf")
@@ -161,6 +171,9 @@ class PS(object):
         self._loss_fn = nn.CrossEntropyLoss()
 
     def run(self):
+        self._model = self._model_class()
+        if self._args.use_gpu and torch.cuda.is_available():
+            self._model.cuda()
         updates = 0
         validate_loader = prepare_data_loader(
             True, self._args.batch_size,
@@ -195,6 +208,9 @@ class PS(object):
             self._model.train(False)
             for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
                 if batch_idx < max_batch:
+                    if self._args.use_gpu and torch.cuda.is_available():
+                        batch_x = batch_x.cuda()
+                        batch_y = batch_y.cuda()
                     out = self._model(batch_x)
                     loss = self._loss_fn(out, batch_y)
                     eval_loss += loss.data.item()
@@ -268,6 +284,8 @@ def _parse_args():
         '--job-name',
         default=None,
         help='experiment name used for the result data dir name')
+    parser.add_argument('--use-gpu', type=bool_parser, default=True,                                                                
+                        help='use GPU for training if available')
 
     return parser.parse_args()
 
@@ -360,7 +378,7 @@ def _train(args, job_dir):
 
     for proc in trainer_procs:
         proc.join()
- 
+
     stop_ps.value = True
     ps_proc.join()
 
