@@ -123,6 +123,15 @@ class _SingleValidationJob(object):
         self._loss_fn = nn.CrossEntropyLoss()
 
     def validate(self):
+        device = torch.device(self._device)                                                                                        
+        if device.type == 'cuda':                                                                                                  
+            gpu_index = device.index                                                                                               
+            os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_index)                                                                    
+            map_device = 'cuda:0'                                                                                                  
+            device = torch.device(map_device)                                                                                      
+        else:                                                                                                                      
+            map_device = self._device
+
         while True:
             param_dict = self._job_queue.get()
             # Found sentinel job and eval process could exit.
@@ -132,8 +141,7 @@ class _SingleValidationJob(object):
             #model = torch.load(param_dict['job_dir'] + '/model.pkl')
             self._model.load_state_dict(torch.load(
                 '{}/{}'.format(param_dict['pkl_dir'], param_dict['param_file']),
-                map_location=self._device))
-            device = torch.device(self._device)
+                map_location=map_device))
             self._model.to(device)
 
             loss, accuracy = _validate(
