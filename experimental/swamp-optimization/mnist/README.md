@@ -43,6 +43,7 @@ docker run --rm -it -v $PWD:/work -w /work swamp python eval.py \
     --eval-max-batch 200 \
     --model-name MNISTNet \
     --data-type mnist \
+    --use-gpu False  \
     --eval-concurrency 2
 ```
 
@@ -60,7 +61,9 @@ docker run --rm -it -v $PWD:/work -w /work swamp python eval.py \
 
 `--data-type`  : data type, valid values are mnist and cifar10.
 
-`--eval-concurrency` : Process concurrency for evaluation with default value 2.
+`--use-gpu`  : when True, use gpu if it is available.
+
+`--eval-concurrency` : Process concurrency for CPU evaluation with default value 2.
 
 ### Step 4: plot metrics.
 ```bash
