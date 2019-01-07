@@ -89,7 +89,7 @@ def _evaluate(
     gpu_device_num = 0
     if use_gpu and torch.cuda.is_available():
         gpu_device_num = torch.cuda.device_count()
-    if gpu_device_num:
+    if concurrency < gpu_device_num:
         concurrency = gpu_device_num
 
     # Start validation
@@ -100,7 +100,7 @@ def _evaluate(
         # Add sentinel job for each evaluation process.
         validation_jobs.put({})
         if gpu_device_num:
-            device = 'cuda:%d' % i
+            device = 'cuda:%d' % (i % gpu_device_num)
         job = _SingleValidationJob(validation_jobs, model_class, device) 
         job_proc = Process(target=job.validate)
         job_proc.start()
@@ -123,6 +123,15 @@ class _SingleValidationJob(object):
         self._loss_fn = nn.CrossEntropyLoss()
 
     def validate(self):
+        device = torch.device(self._device)                                                                                        
+        if device.type == 'cuda':                                                                                                  
+            gpu_index = device.index                                                                                               
+            os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_index)                                                                    
+            map_device = 'cuda:0'                                                                                                  
+            device = torch.device(map_device)                                                                                      
+        else:                                                                                                                      
+            map_device = self._device
+
         while True:
             param_dict = self._job_queue.get()
             # Found sentinel job and eval process could exit.
@@ -132,8 +141,7 @@ class _SingleValidationJob(object):
             #model = torch.load(param_dict['job_dir'] + '/model.pkl')
             self._model.load_state_dict(torch.load(
                 '{}/{}'.format(param_dict['pkl_dir'], param_dict['param_file']),
-                map_location=self._device))
-            device = torch.device(self._device)
+                map_location=map_device))
             self._model.to(device)
 
             loss, accuracy = _validate(

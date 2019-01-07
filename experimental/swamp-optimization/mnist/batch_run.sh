@@ -1,4 +1,6 @@
 #!/bin/bash
+export OMP_NUM_THREADS=1
+
 total_trainer=$1
 pull_probability_step=$2
 for (( t = 1; t <= ${total_trainer}; t = t * 2 )); do

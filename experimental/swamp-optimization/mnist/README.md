@@ -13,6 +13,7 @@ docker run --rm -it -v $PWD:/work -w /work swamp python train.py \
     --model-sample-interval 10 \
     --model-name MNISTNet \
     --data-type mnist \
+    --use-gpu True \
     --job-root-dir jobs
 ```
 
@@ -28,6 +29,8 @@ The meaning of parameters in the above command are described below:
 `--model-name` : the name of the net model (MNISTNet, CIFAR10Net, resnet18).
 
 `--data-type` : data type, valid values are mnist and cifar10.
+
+`--use-gpu` : use GPU for training if available.
 
 `--job-root-dir` : the storage path of job datanet and params. 
 

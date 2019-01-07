@@ -7,6 +7,7 @@ import torch.optim as optim
 from torch.optim import lr_scheduler
 from torchvision import datasets, transforms
 import pickle
+import multiprocessing as mp
 from multiprocessing import Process, Queue, Manager, Value
 from ctypes import py_object, c_bool
 import queue
@@ -21,6 +22,7 @@ from common import prepare_data_loader
 from common import ModelLogger
 from common import METRICS_IMAGE_FILE_TEMPLATE
 from common import JOB_NAME_TEMPLATE
+from common import bool_parser
 
 
 class TrainedModel(object):
@@ -41,7 +43,8 @@ class Trainer(object):
             tid,
             args,
             trained_model_wrapper,
-            up):
+            up,
+            gpu_id):
         """ Initialize the Trainer.
 
         Arguments:
@@ -52,25 +55,35 @@ class Trainer(object):
                                  model at present model shared by PS and trainer
                                  which is managed by Manager.
           up: A shared Queue for trainer upload model to PS.
+          gpu_id: GPU device id if gpu available.
         """
         self.tid = tid
         self._args = args
         self._up = up
         self._start_time = time.time()
-        model_class = globals()[args.model_name]
-        self._model = model_class()
-        self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
-                                    momentum=self._args.momentum, weight_decay=5e-4)
-        self._lr_scheduler = lr_scheduler.MultiStepLR(
-            self._optimizer, milestones=[10,10,10], gamma=0.1)
+        self._model_class = globals()[args.model_name]
         self._score = float("inf")
         self._trained_model_wrapper = trained_model_wrapper
         self._model_logger = ModelLogger(job_dir)
         self._model_logger.init_trainer_model_dir(tid)
         self._loss_fn = nn.CrossEntropyLoss()
+        self._gpu_id = gpu_id
+        self._gpu_device = None
 
     def train(self):
+        os.environ['CUDA_VISIBLE_DEVICES'] = str(self._gpu_id)
+        self._model = self._model_class()
         self._model.train(True)
+
+        # Must move model into cuda before construct optimizer.
+        if self._args.use_gpu and torch.cuda.is_available():
+            self._gpu_device = torch.device('cuda:0')
+            self._model.to(self._gpu_device)
+        self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
+            momentum=self._args.momentum, weight_decay=5e-4)
+        self._lr_scheduler = lr_scheduler.MultiStepLR(
+            self._optimizer, milestones=[10,10,10], gamma=0.1)
+
         data_loader = prepare_data_loader(True, self._args.batch_size,
                                           True, self._args.data_type)
         step = 0
@@ -79,6 +92,9 @@ class Trainer(object):
         for epoch in range(self._args.epochs):
             self._lr_scheduler.step()
             for batch_idx, (data, target) in enumerate(data_loader):
+                if self._args.use_gpu and torch.cuda.is_available():
+                    data = data.to(self._gpu_device)
+                    target = target.to(self._gpu_device)
                 self._optimizer.zero_grad()
                 output = self._model(data)
                 loss = self._loss_fn(output, target)
@@ -88,7 +104,7 @@ class Trainer(object):
                     self._optimizer.step()
                     step = step + 1
                 else:
-                    if loss.data < self._score:
+                    if loss.data.item() < self._score:
                         self._push_model(loss)
                     else:
                         if random.random() < self._args.pull_probability:
@@ -115,10 +131,13 @@ class Trainer(object):
         self._score = trained_model.loss
 
     def _push_model(self, loss):
-        self._score = loss.data
+        state_dict_copy = {}
+        for k, v in self._model.state_dict().items():
+           state_dict_copy[k] = v.to('cpu')
+        self._score = loss.data.item()
         if self._up is not None:
             upload_model = TrainedModel(
-                self._model.state_dict(), loss.data)
+                state_dict_copy, loss.data.item())
             self._up.put(pickle.dumps(upload_model))
 
     def _print_progress(self, epoch, batch_idx):
@@ -135,7 +154,8 @@ class PS(object):
             args,
             trained_model_wrapper,
             up,
-            stop_ps):
+            stop_ps,
+            gpu_id):
         """ Initialize the PS.
 
         Arguments:
@@ -146,12 +166,12 @@ class PS(object):
                                  is managed by Manager.
           up: A shared Queue for trainer upload model to PS.
           stop_ps: A shared bool value for the main process to stop PS.
+          gpu_id: GPU device id if gpu available.
         """
         self._args = args
         self._up = up
         self._start_time = time.time()
-        model_class = globals()[args.model_name]
-        self._model = model_class()
+        self._model_class = globals()[args.model_name]
         self._trained_model_wrapper = trained_model_wrapper
         self._score = float("inf")
         self._validate_score = float("inf")
@@ -159,8 +179,14 @@ class PS(object):
         self._model_logger.init_ps_model_dir()
         self._stop_ps = stop_ps
         self._loss_fn = nn.CrossEntropyLoss()
+        self._gpu_id = gpu_id
+        self._gpu_device = None
 
     def run(self):
+        self._model = self._model_class()
+        if self._args.use_gpu and torch.cuda.is_available():
+            self._gpu_device = torch.device('cuda:{}'.format(self._gpu_id))
+            self._model.to(self._gpu_device)
         updates = 0
         validate_loader = prepare_data_loader(
             True, self._args.batch_size,
@@ -179,14 +205,14 @@ class PS(object):
 
             if upload_model.loss < self._score:
                 # Model double check
-                double_check_loss, accuracy = self._validate(validate_loader)
+                double_check_loss, accuracy = self._validate(validate_loader, self._gpu_device)
                 if double_check_loss < self._validate_score:
                     self._update_model_wrapper(upload_model)
                     self._validate_score = double_check_loss
                     self._model_logger.dump_model_in_ps(
                         self._model.state_dict(), upload_model.version)
 
-    def _validate(self, data_loader):
+    def _validate(self, data_loader, gpu_device):
         max_batch = self._args.validate_max_batch
         eval_loss = 0
         correct = 0
@@ -195,6 +221,9 @@ class PS(object):
             self._model.train(False)
             for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
                 if batch_idx < max_batch:
+                    if self._args.use_gpu and torch.cuda.is_available():
+                        batch_x = batch_x.to(gpu_device)
+                        batch_y = batch_y.to(gpu_device)
                     out = self._model(batch_x)
                     loss = self._loss_fn(out, batch_y)
                     eval_loss += loss.data.item()
@@ -268,6 +297,8 @@ def _parse_args():
         '--job-name',
         default=None,
         help='experiment name used for the result data dir name')
+    parser.add_argument('--use-gpu', type=bool_parser, default=True,                                                                
+                        help='use GPU for training if available')
 
     return parser.parse_args()
 
@@ -278,12 +309,13 @@ def _start_ps(
         up,
         manager,
         trained_model,
-        stop_ps):
+        stop_ps,
+        gpu_id):
     # Init PS process
     key = 'ps'
     # Shared list used by the parent process and trainer for
     # loss tracing
-    ps = PS(job_dir, args, trained_model, up, stop_ps)
+    ps = PS(job_dir, args, trained_model, up, stop_ps, gpu_id)
     ps_proc = Process(target=ps.run, name='ps')
     ps_proc.start()
 
@@ -295,7 +327,8 @@ def _start_trainers(
         args,
         up,
         manager,
-        trained_model):
+        trained_model,
+        total_gpu_cnt):
     # Init trainer processes
     trainers = []
     trainer_procs = []
@@ -305,7 +338,8 @@ def _start_trainers(
             t,
             args,
             trained_model,
-            up)
+            up,
+            t % total_gpu_cnt)
         trainer_proc = Process(target=trainer.train)
         trainer_proc.start()
         trainers.append(trainer)
@@ -316,6 +350,7 @@ def _start_trainers(
 
 def _prepare():
     args = _parse_args()
+    mp.set_start_method('spawn')
     torch.manual_seed(args.seed)
     job_name = None
     if args.job_name is not None:
@@ -346,6 +381,9 @@ def _train(args, job_dir):
     model_class = globals()[args.model_name]
     torch.save(model_class(), job_dir + '/model.pkl')
 
+    # Available GPU count.
+    total_gpu_cnt = torch.cuda.device_count() 
+
     # Start PS and trainers.
     ps_proc = _start_ps(
         job_dir,
@@ -353,14 +391,15 @@ def _train(args, job_dir):
         up,
         manager,
         trained_model,
-        stop_ps)
+        stop_ps,
+        0)
     trainers, trainer_procs = _start_trainers(
         job_dir, args, up, manager,
-        trained_model)
+        trained_model, total_gpu_cnt)
 
     for proc in trainer_procs:
         proc.join()
- 
+
     stop_ps.value = True
     ps_proc.join()
 
