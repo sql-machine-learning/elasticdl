@@ -126,8 +126,11 @@ class Trainer(object):
         coefficient = random.random()
         s_dict = self._model.state_dict()
         for k in trained_model.model_state:
-            s_dict[k] = s_dict[k] * coefficient + \
-                trained_model.model_state[k] * (1 - coefficient)
+            if self._args.use_gpu and torch.cuda.is_available():
+                trained_value = trained_model.model_state[k].to(self._gpu_device)
+            else:
+                trained_value = trained_model.model_state[k]
+            s_dict[k] = s_dict[k] * coefficient + trained_value * (1 - coefficient)
         self._score = trained_model.loss
 
     def _push_model(self, loss):
