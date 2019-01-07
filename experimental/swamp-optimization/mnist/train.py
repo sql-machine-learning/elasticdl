@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.optim import lr_scheduler
 from torchvision import datasets, transforms
 import pickle
 from multiprocessing import Process, Queue, Manager, Value
@@ -14,7 +15,8 @@ import gc
 import random
 import os
 import shutil
-import network
+from models.network import MNISTNet, CIFAR10Net 
+from models.resnet import ResidualBlock, ResNet, resnet18 
 from common import prepare_data_loader
 from common import ModelLogger
 from common import METRICS_IMAGE_FILE_TEMPLATE
@@ -55,27 +57,32 @@ class Trainer(object):
         self._args = args
         self._up = up
         self._start_time = time.time()
-        net_class = args.data_type.upper() + 'Net'
-        self._model = getattr(network, net_class)()
+        model_class = globals()[args.model_name]
+        self._model = model_class()
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
-                                    momentum=self._args.momentum)
+                                    momentum=self._args.momentum, weight_decay=5e-4)
+        self._lr_scheduler = lr_scheduler.MultiStepLR(
+            self._optimizer, milestones=[10,10,10], gamma=0.1)
         self._score = float("inf")
         self._trained_model_wrapper = trained_model_wrapper
         self._model_logger = ModelLogger(job_dir)
         self._model_logger.init_trainer_model_dir(tid)
+        self._loss_fn = nn.CrossEntropyLoss()
 
     def train(self):
+        self._model.train(True)
         data_loader = prepare_data_loader(True, self._args.batch_size,
                                           True, self._args.data_type)
         step = 0
 
         # start local training
         for epoch in range(self._args.epochs):
+            self._lr_scheduler.step()
             for batch_idx, (data, target) in enumerate(data_loader):
                 self._optimizer.zero_grad()
                 output = self._model(data)
-                loss = F.nll_loss(output, target)
-
+                loss = self._loss_fn(output, target)
+                
                 if step < self._args.free_trial_steps:
                     loss.backward()
                     self._optimizer.step()
@@ -143,14 +150,15 @@ class PS(object):
         self._args = args
         self._up = up
         self._start_time = time.time()
-        net_class = args.data_type.upper() + 'Net'
-        self._model = getattr(network, net_class)()
+        model_class = globals()[args.model_name]
+        self._model = model_class()
         self._trained_model_wrapper = trained_model_wrapper
         self._score = float("inf")
         self._validate_score = float("inf")
         self._model_logger = ModelLogger(job_dir)
         self._model_logger.init_ps_model_dir()
         self._stop_ps = stop_ps
+        self._loss_fn = nn.CrossEntropyLoss()
 
     def run(self):
         updates = 0
@@ -184,10 +192,11 @@ class PS(object):
         correct = 0
         total = 0
         with torch.no_grad():
+            self._model.train(False)
             for batch_idx, (batch_x, batch_y) in enumerate(data_loader):
                 if batch_idx < max_batch:
                     out = self._model(batch_x)
-                    loss = F.nll_loss(out, batch_y)
+                    loss = self._loss_fn(out, batch_y)
                     eval_loss += loss.data.item()
                     _, predicted = torch.max(out.data, 1)
                     correct += (predicted == batch_y).sum().item()
@@ -209,7 +218,7 @@ class PS(object):
 
 def _parse_args():
     # Training settings
-    parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
+    parser = argparse.ArgumentParser(description='PyTorch Swamp Example')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
     parser.add_argument('--epochs', type=int, default=1, metavar='N',
@@ -234,6 +243,8 @@ def _parse_args():
                         help='max batch for validate model in ps')
     parser.add_argument('--data-type', default='mnist',
                         help='the name of the dataset (mnist, cifar10)')
+    parser.add_argument('--model-name', default='MNISTNet',
+                        help='the name of the model (MNISTNet, CIFAR10Net, resnet18)')
     parser.add_argument('--loss-file', default=METRICS_IMAGE_FILE_TEMPLATE,
                         help='the name of loss figure file')
     parser.add_argument(
@@ -332,8 +343,8 @@ def _train(args, job_dir):
     stop_ps = Value(c_bool, False)
 
     # Save model net.
-    net_class = args.data_type.upper() + 'Net'
-    torch.save(getattr(network, net_class)(), job_dir + '/model.pkl')
+    model_class = globals()[args.model_name]
+    torch.save(model_class(), job_dir + '/model.pkl')
 
     # Start PS and trainers.
     ps_proc = _start_ps(
@@ -349,7 +360,7 @@ def _train(args, job_dir):
 
     for proc in trainer_procs:
         proc.join()
-
+ 
     stop_ps.value = True
     ps_proc.join()
 
