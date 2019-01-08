@@ -23,13 +23,23 @@ def prepare_data_loader(is_train, batch_size, shuffle, data='mnist'):
                            transforms.Normalize((0.1307,), (0.3081,))
                        ]))
     elif data == 'cifar10':
+        if is_train:
+            transform=transforms.Compose([
+                transforms.RandomCrop(32, padding=4),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+                ])
+        else:
+            transform=transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+                ])
         dataset = datasets.CIFAR10('./data',
                        train=is_train,
                        download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
-                       ]))
+                       transform=transform
+                       )
     else:
         raise AttributeError('data %s not supported' % data)
     return torch.utils.data.DataLoader(dataset,
