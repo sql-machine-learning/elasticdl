@@ -82,7 +82,7 @@ class Trainer(object):
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
             momentum=self._args.momentum, weight_decay=5e-4)
         self._lr_scheduler = lr_scheduler.MultiStepLR(
-            self._optimizer, milestones=[10,10,10], gamma=0.1)
+            self._optimizer, milestones=[60,90,120], gamma=0.1)
 
         data_loader = prepare_data_loader(True, self._args.batch_size,
                                           True, self._args.data_type)
@@ -353,7 +353,7 @@ def _start_trainers(
 
 def _prepare():
     args = _parse_args()
-    mp.set_start_method('spawn')
+    mp.set_start_method('spawn', force=True)
     torch.manual_seed(args.seed)
     job_name = None
     if args.job_name is not None:
