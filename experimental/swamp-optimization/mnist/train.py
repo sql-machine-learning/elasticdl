@@ -342,7 +342,7 @@ def _start_trainers(
             args,
             trained_model,
             up,
-            t % total_gpu_cnt)
+            0 if total_gpu_cnt == 0 else t % total_gpu_cnt)
         trainer_proc = Process(target=trainer.train)
         trainer_proc.start()
         trainers.append(trainer)
