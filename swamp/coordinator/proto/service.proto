@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package coordinator;
+
+message Model {
+  // Picked torch model
+  bytes torch_picked = 1;
+}
+
+message PushRequest {
+  // Trainer's local model
+  Model model = 1;
+  // Trainer's model score.
+  double score = 2;
+}
+
+message PullRequest {
+  // Trainer's id
+  uint32 trainer_id = 1;
+}
+
+message PullResponse {
+  // Coordinator's model
+  Model model = 1;
+  // Coordinator's model score
+  double score = 2;
+}
+
+service Coordinator {
+  rpc Push(PushRequest) returns (google.protobuf.Empty);
+  rpc Pull(PullRequest) returns (PullResponse);
+}
