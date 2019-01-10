@@ -69,6 +69,7 @@ class Trainer(object):
         self._loss_fn = nn.CrossEntropyLoss()
         self._gpu_id = gpu_id
         self._gpu_device = None
+        self._last_pull_model_version = -1
 
     def train(self):
         os.environ['CUDA_VISIBLE_DEVICES'] = str(self._gpu_id)
@@ -123,6 +124,11 @@ class Trainer(object):
 
     def _pull_model(self):
         trained_model = self._trained_model_wrapper.value
+
+        if self._last_pull_model_version >= trained_model.version:
+            return
+
+        self._last_pull_model_version = trained_model.version
         coefficient = random.random()
         s_dict = self._model.state_dict()
         for k in trained_model.model_state:
