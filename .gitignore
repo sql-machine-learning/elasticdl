@@ -1,3 +1,4 @@
-.vscode/*
+.vscode/
 *.pyc
-bazel-**/**
+bazel-*
+build/
