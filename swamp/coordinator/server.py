@@ -57,6 +57,10 @@ class _ModelSelector(object):
             target=self._eval_model, name="eval_model_thread"
         )
 
+    def _get_num_pending_for_test(self):
+        with self._cv:
+            return len(self._pending_models)
+
     def start(self):
         "start model selector's eval thread"
         logging.info("starting model eval thread")
@@ -165,10 +169,7 @@ class _ModelSelector(object):
                 self._pending_models = self._pending_models[i:]
 
 
-def _serve(port, max_pending, model_evaluator, event):
-    model_selector = _ModelSelector(
-        max_pending=max_pending, model_evaluator=model_evaluator
-    )
+def _serve(port, model_selector, event):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=16))
     proto.service_pb2_grpc.add_CoordinatorServicer_to_server(
         CoordinatorServicer(model_selector), server
@@ -195,9 +196,11 @@ def eval_torch_model(model):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+    model_selector = _ModelSelector(
+        max_pending=32, model_evaluator=eval_torch_model
+    )
     _serve(
         port=5000,
-        max_pending=32,
-        model_evaluator=eval_torch_model,
+        model_selector=model_selector,
         event=threading.Event(),
     )
