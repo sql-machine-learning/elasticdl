@@ -6,7 +6,6 @@ import logging
 import pickle
 import random
 import threading
-import time
 
 from google.protobuf.empty_pb2 import Empty
 import grpc
@@ -33,20 +32,16 @@ class CoordinatorServicer(proto.service_pb2_grpc.CoordinatorServicer):
 
     def Pull(self, request, context):
         model, loss = self._model_selector.get(request.trainer_id)
+        if model is None:
+            context.abort(grpc.StatusCode.UNAVAILABLE, "Model unavailable")
         response = PullResponse(
             loss=loss, model=Model(torch_pickled=pickle.dumps(model))
         )
         return response
 
 
-# TODO: call pytorch to eval model
-def eval_torch_model(model):
-    "Evaluate a torch model and return loss"
-    return random.random()
-
-
 class _ModelSelector(object):
-    def __init__(self, *, max_pending, model_evaluator=eval_torch_model):
+    def __init__(self, *, max_pending, model_evaluator):
         self._exit = False
         self._max_pending = max_pending
         self._model_evaluator = model_evaluator
@@ -80,7 +75,7 @@ class _ModelSelector(object):
             logging.info(
                 "trainer get model: id: %d loss: %f", trainer_id, loss
             )
-            if self._best is None:
+            if model is None:
                 logging.error("trainer get model error: id: %d", trainer_id)
             return model, loss
 
@@ -130,14 +125,19 @@ class _ModelSelector(object):
             loss = self._model_evaluator(model)
             logging.info("evaluated model, loss: %f", loss)
             with self._cv:
-                if loss < self._best[1]:
+                if loss >= self._best[1]:
                     logging.info(
-                        "updating best model: old loss: %f new loss: %f",
+                        "keeping best model: current best loss: %f",
                         self._best[1],
-                        loss,
                     )
-                    # TODO: dump the best model.
-                    self._best = (model, loss)
+                    return
+                logging.info(
+                    "updating best model: old loss: %f new loss: %f",
+                    self._best[1],
+                    loss,
+                )
+                # TODO: dump the best model.
+                self._best = (model, loss)
                 # best loss changed, drop inadmissible models from
                 # pending list.
                 i = 0
@@ -151,8 +151,10 @@ class _ModelSelector(object):
                 self._pending_models = self._pending_models[i:]
 
 
-def _serve():
-    model_selector = _ModelSelector(max_pending=32)
+def _serve(max_pending, model_evaluator, event):
+    model_selector = _ModelSelector(
+        max_pending=max_pending, model_evaluator=model_evaluator
+    )
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=16))
     proto.service_pb2_grpc.add_CoordinatorServicer_to_server(
         CoordinatorServicer(model_selector), server
@@ -163,13 +165,24 @@ def _serve():
     server.start()
 
     try:
-        while True:
-            time.sleep(24 * 60 * 60)
+        event.wait()
     except KeyboardInterrupt:
-        server.stop(0)
-        model_selector.stop()
+        pass
+
+    server.stop(0)
+    model_selector.stop()
+
+
+# TODO: call pytorch to eval model
+def eval_torch_model(model):
+    "Evaluate a torch model and return loss"
+    return random.random()
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    _serve()
+    _serve(
+        max_pending=32,
+        model_evaluator=eval_torch_model,
+        event=threading.Event(),
+    )
