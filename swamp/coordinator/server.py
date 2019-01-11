@@ -138,8 +138,9 @@ class _ModelSelector(object):
                     logging.info("reseting model selector")
                     self._pending_models.clear()
                     self._best = (None, float("inf"))
+                    self._reset = False
                     continue
-                model = self._pending_models.pop()
+                model, _ = self._pending_models.pop()
             loss = self._model_evaluator(model)
             logging.info("evaluated model, loss: %f", loss)
             with self._cv:
@@ -194,8 +195,8 @@ def eval_torch_model(model):
     return random.random()
 
 
+logging.basicConfig(level=logging.INFO)
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
     model_selector = _ModelSelector(
         max_pending=32, model_evaluator=eval_torch_model
     )
