@@ -24,7 +24,7 @@ class CoordinatorServicer(proto.service_pb2_grpc.CoordinatorServicer):
 
     def Push(self, request, context):
         if request.loss <= 0:
-            raise ValueError("Invalid loss: " + request.loss)
+            raise ValueError("Invalid loss: %f" % request.loss)
 
         model = pickle.loads(request.model.torch_pickled)
         self._model_selector.add(request.trainer_id, model, request.loss)
