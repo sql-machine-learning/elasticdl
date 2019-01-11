@@ -31,5 +31,4 @@ class Client(object):
     def pull(self):
         "Pull model and loss from server"
         response = self._stub.Pull(PullRequest(trainer_id=self._trainer_id))
-        print("xxxxx", pickle.loads(response.model.torch_pickled))
         return pickle.loads(response.model.torch_pickled), response.loss
