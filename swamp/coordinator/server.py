@@ -151,7 +151,7 @@ class _ModelSelector(object):
                 self._pending_models = self._pending_models[i:]
 
 
-def _serve(max_pending, model_evaluator, event):
+def _serve(port, max_pending, model_evaluator, event):
     model_selector = _ModelSelector(
         max_pending=max_pending, model_evaluator=model_evaluator
     )
@@ -159,7 +159,7 @@ def _serve(max_pending, model_evaluator, event):
     proto.service_pb2_grpc.add_CoordinatorServicer_to_server(
         CoordinatorServicer(model_selector), server
     )
-    server.add_insecure_port("[::]:5000")
+    server.add_insecure_port("[::]:%d" % port)
 
     model_selector.start()
     server.start()
@@ -182,6 +182,7 @@ def eval_torch_model(model):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     _serve(
+        port=5000,
         max_pending=32,
         model_evaluator=eval_torch_model,
         event=threading.Event(),
