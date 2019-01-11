@@ -93,15 +93,12 @@ class ClientServerTest(unittest.TestCase):
     def testPullAfterPush(self):
         # server will eval the model and get a different loss.
         model = self.makeModel(1, 0.1)
-        print(model)
         # unblock eval
         self.eval_event.set()
         self.client.push(model, 0.2)
         time.sleep(0.1)
 
         pulled, loss = self.client.pull()
-        print(pulled)
-        print(loss)
         self.assertAlmostEqual(loss, 0.1)
         self.assertEqual(pulled, model)
 
