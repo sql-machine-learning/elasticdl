@@ -42,11 +42,13 @@ class CoordinatorServicer(proto.service_pb2_grpc.CoordinatorServicer):
 
 class _ModelSelector(object):
     def __init__(self, *, max_pending, model_evaluator):
-        self._exit = False
         self._max_pending = max_pending
         self._model_evaluator = model_evaluator
-        # used as a lock to protect _best, and a cv for _pending_models.
+
+        # used as a lock to protect all following, and a cv to signal eval_threads.
         self._cv = threading.Condition()
+        self._exit = False
+        self._reset = False
         self._best = (None, float("inf"))
         # pending models are sorted by their loss value, in decresing order.
         self._pending_models = []
@@ -67,6 +69,13 @@ class _ModelSelector(object):
             self._exit = True
             self._cv.notify()
         self._eval_thread.join()
+
+    # TODO: expose through RPC so we don't have to restart server for new experiments.
+    def reset(self):
+        "reset the model selector"
+        with self._cv:
+            self._reset = True
+            self._cv.notify()
 
     def get(self, trainer_id):
         "get the current best model"
@@ -118,9 +127,14 @@ class _ModelSelector(object):
         while True:
             model = None
             with self._cv:
-                self._cv.wait_for(lambda: self._exit or self._pending_models)
+                self._cv.wait_for(lambda: self._exit or self._reset or self._pending_models)
                 if self._exit:
                     return
+                if self._reset:
+                    logging.info("reseting model selector")
+                    self._pending_models = []
+                    self._best = (None, float("inf"))
+                    continue
                 model = self._pending_models.pop()
             loss = self._model_evaluator(model)
             logging.info("evaluated model, loss: %f", loss)
