@@ -14,7 +14,7 @@ message PushRequest {
   uint32 trainer_id = 1;
   // Trainer's local model
   Model model = 2;
-  // Trainer's model score.
+  // Trainer's model loss
   double loss = 3;
 }
 
@@ -26,7 +26,7 @@ message PullRequest {
 message PullResponse {
   // Coordinator's model
   Model model = 1;
-  // Coordinator's model score
+  // Coordinator's model loss
   double loss = 2;
 }
 
