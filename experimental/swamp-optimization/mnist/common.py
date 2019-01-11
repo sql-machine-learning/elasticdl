@@ -12,6 +12,8 @@ PS_MODEL_DIR = '{}/ps'
 METRICS_IMAGE_FILE_TEMPLATE = 'swamp_metrics_t_{}_pp_{}.png'
 JOB_NAME_TEMPLATE = 'swamp_t{}_pp{}'
 
+dataset_num_classes = {'mnist' : 10, 'cifar10' : 10, 'ImageNet' : 1000}
+
 
 def prepare_data_loader(is_train, batch_size, shuffle, data='mnist', data_dir='./data'):
     if data == 'mnist':

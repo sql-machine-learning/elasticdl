@@ -12,7 +12,6 @@ docker run --rm -it -v $PWD:/work -w /work swamp python train.py \
     --pull-probability 0.5 \
     --model-sample-interval 10 \
     --model-name MNISTNet \
-    --num-classes 10 \
     --data-type mnist \
     --use-gpu True \
     --job-root-dir jobs \
@@ -30,8 +29,6 @@ The meaning of parameters in the above command are described below:
 `--model-sample-interval` : how many batches to wait before dump a model. 
 
 `--model-name` : the name of the net model (MNISTNet, CIFAR10Net, resnet18).
-
-`--num-classes` : total number of classes of dataset.
 
 `--data-type` : data type, valid values are mnist, cifar10, ImageNet.
 
