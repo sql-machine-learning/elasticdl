@@ -136,7 +136,7 @@ class _ModelSelector(object):
                     return
                 if self._reset:
                     logging.info("reseting model selector")
-                    self._pending_models = []
+                    self._pending_models.clear()
                     self._best = (None, float("inf"))
                     continue
                 model = self._pending_models.pop()
