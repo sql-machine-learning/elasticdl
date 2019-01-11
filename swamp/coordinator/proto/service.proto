@@ -5,15 +5,17 @@ import "google/protobuf/empty.proto";
 package coordinator;
 
 message Model {
-  // Picked torch model
-  bytes torch_picked = 1;
+  // Pickled torch model
+  bytes torch_pickled = 1;
 }
 
 message PushRequest {
+  // Trainer's id
+  uint32 trainer_id = 1;
   // Trainer's local model
-  Model model = 1;
-  // Trainer's model score.
-  double score = 2;
+  Model model = 2;
+  // Trainer's model loss
+  double loss = 3;
 }
 
 message PullRequest {
@@ -24,8 +26,8 @@ message PullRequest {
 message PullResponse {
   // Coordinator's model
   Model model = 1;
-  // Coordinator's model score
-  double score = 2;
+  // Coordinator's model loss
+  double loss = 2;
 }
 
 service Coordinator {
