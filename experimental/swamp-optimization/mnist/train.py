@@ -16,13 +16,14 @@ import gc
 import random
 import os
 import shutil
-from models.network import MNISTNet, CIFAR10Net 
-from models.resnet import ResidualBlock, ResNet, resnet18 
+from models.network import MNISTNet, CIFAR10Net
+from models.resnet import ResidualBlock, ResNet, resnet18
 from common import prepare_data_loader
 from common import ModelLogger
 from common import METRICS_IMAGE_FILE_TEMPLATE
 from common import JOB_NAME_TEMPLATE
 from common import bool_parser
+from common import dataset_num_classes
 
 
 class TrainedModel(object):
@@ -44,7 +45,8 @@ class Trainer(object):
             args,
             trained_model_wrapper,
             up,
-            gpu_id):
+            gpu_id,
+            num_classes):
         """ Initialize the Trainer.
 
         Arguments:
@@ -70,10 +72,11 @@ class Trainer(object):
         self._gpu_id = gpu_id
         self._gpu_device = None
         self._last_pull_model_version = -1
+        self._num_classes = num_classes
 
     def train(self):
         os.environ['CUDA_VISIBLE_DEVICES'] = str(self._gpu_id)
-        self._model = self._model_class()
+        self._model = self._model_class(self._num_classes)
         self._model.train(True)
 
         # Must move model into cuda before construct optimizer.
@@ -83,10 +86,11 @@ class Trainer(object):
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
             momentum=self._args.momentum, weight_decay=5e-4)
         self._lr_scheduler = lr_scheduler.MultiStepLR(
-            self._optimizer, milestones=[60,90,120], gamma=0.1)
+            self._optimizer, milestones=[10, 20, 30], gamma=0.1)
 
         data_loader = prepare_data_loader(True, self._args.batch_size,
-                                          True, self._args.data_type)
+                                          True, self._args.data_type,
+                                          self._args.training_data_dir)
         step = 0
 
         # start local training
@@ -124,7 +128,8 @@ class Trainer(object):
 
     def _pull_model(self):
         trained_model = self._trained_model_wrapper.value
-
+        if trained_model is None:
+            return
         if self._last_pull_model_version >= trained_model.version:
             return
 
@@ -164,7 +169,8 @@ class PS(object):
             trained_model_wrapper,
             up,
             stop_ps,
-            gpu_id):
+            gpu_id,
+            num_classes):
         """ Initialize the PS.
 
         Arguments:
@@ -190,16 +196,18 @@ class PS(object):
         self._loss_fn = nn.CrossEntropyLoss()
         self._gpu_id = gpu_id
         self._gpu_device = None
+        self._num_classes = num_classes
 
     def run(self):
-        self._model = self._model_class()
+        self._model = self._model_class(self._num_classes)
         if self._args.use_gpu and torch.cuda.is_available():
             self._gpu_device = torch.device('cuda:{}'.format(self._gpu_id))
             self._model.to(self._gpu_device)
         updates = 0
         validate_loader = prepare_data_loader(
             True, self._args.batch_size,
-            True, self._args.data_type)
+            True, self._args.data_type,
+            self._args.validation_data_dir)
 
         while not self._up.empty() or not self._stop_ps.value:
             # In the case that any trainer pushes.
@@ -280,7 +288,7 @@ def _parse_args():
     parser.add_argument('--validate_max_batch', type=int, default=5,
                         help='max batch for validate model in ps')
     parser.add_argument('--data-type', default='mnist',
-                        help='the name of the dataset (mnist, cifar10)')
+                        help='the name of the dataset (mnist, cifar10, ImageNet)')
     parser.add_argument('--model-name', default='MNISTNet',
                         help='the name of the model (MNISTNet, CIFAR10Net, resnet18)')
     parser.add_argument('--loss-file', default=METRICS_IMAGE_FILE_TEMPLATE,
@@ -308,6 +316,10 @@ def _parse_args():
         help='experiment name used for the result data dir name')
     parser.add_argument('--use-gpu', type=bool_parser, default=True,                                                                
                         help='use GPU for training if available')
+    parser.add_argument('--training-data-dir', default='./data',
+                        help='data directory for training')
+    parser.add_argument('--validation-data-dir', default='./data',
+                        help='data directory for validation')
 
     return parser.parse_args()
 
@@ -319,12 +331,13 @@ def _start_ps(
         manager,
         trained_model,
         stop_ps,
-        gpu_id):
+        gpu_id,
+        num_classes):
     # Init PS process
     key = 'ps'
     # Shared list used by the parent process and trainer for
     # loss tracing
-    ps = PS(job_dir, args, trained_model, up, stop_ps, gpu_id)
+    ps = PS(job_dir, args, trained_model, up, stop_ps, gpu_id, num_classes)
     ps_proc = Process(target=ps.run, name='ps')
     ps_proc.start()
 
@@ -337,7 +350,7 @@ def _start_trainers(
         up,
         manager,
         trained_model,
-        total_gpu_cnt):
+        total_gpu_cnt, num_classes):
     # Init trainer processes
     trainers = []
     trainer_procs = []
@@ -348,7 +361,8 @@ def _start_trainers(
             args,
             trained_model,
             up,
-            0 if total_gpu_cnt == 0 else t % total_gpu_cnt)
+            0 if total_gpu_cnt == 0 else t % total_gpu_cnt,
+            num_classes)
         trainer_proc = Process(target=trainer.train)
         trainer_proc.start()
         trainers.append(trainer)
@@ -376,10 +390,13 @@ def _prepare():
     with open(job_dir + '/meta.info', 'w') as meta:
         meta.write('{}_{}'.format(args.trainer_number, args.pull_probability))
 
-    return args, job_dir
+    if args.data_type not in dataset_num_classes.keys():
+        raise ValueError('invalid param --data-type {}'.format(args.data_type))
+
+    return args, job_dir, dataset_num_classes[args.data_type] 
 
 
-def _train(args, job_dir):
+def _train(args, job_dir, num_classes):
     # Data stores shared by PS, trainers and the main process
     up = Queue()
     manager = Manager()
@@ -388,7 +405,7 @@ def _train(args, job_dir):
 
     # Save model net.
     model_class = globals()[args.model_name]
-    torch.save(model_class(), job_dir + '/model.pkl')
+    torch.save(model_class(num_classes), job_dir + '/model.pkl')
 
     # Available GPU count.
     total_gpu_cnt = torch.cuda.device_count() 
@@ -401,10 +418,12 @@ def _train(args, job_dir):
         manager,
         trained_model,
         stop_ps,
-        0)
+        0,
+        num_classes)
     trainers, trainer_procs = _start_trainers(
         job_dir, args, up, manager,
-        trained_model, total_gpu_cnt)
+        trained_model, total_gpu_cnt,
+        num_classes)
 
     for proc in trainer_procs:
         proc.join()
@@ -414,8 +433,8 @@ def _train(args, job_dir):
 
 
 def main():
-    args, job_dir = _prepare()
-    _train(args, job_dir)
+    args, job_dir, num_classes = _prepare()
+    _train(args, job_dir, num_classes)
 
 
 if __name__ == '__main__':
