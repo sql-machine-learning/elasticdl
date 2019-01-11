@@ -16,8 +16,8 @@ import gc
 import random
 import os
 import shutil
-from models.network import MNISTNet, CIFAR10Net 
-from models.resnet import ResidualBlock, ResNet, resnet18 
+from models.network import MNISTNet, CIFAR10Net
+from models.resnet import ResidualBlock, ResNet, resnet18
 from common import prepare_data_loader
 from common import ModelLogger
 from common import METRICS_IMAGE_FILE_TEMPLATE
@@ -73,7 +73,7 @@ class Trainer(object):
 
     def train(self):
         os.environ['CUDA_VISIBLE_DEVICES'] = str(self._gpu_id)
-        self._model = self._model_class()
+        self._model = self._model_class(self._args.num_classes)
         self._model.train(True)
 
         # Must move model into cuda before construct optimizer.
@@ -83,10 +83,11 @@ class Trainer(object):
         self._optimizer = optim.SGD(self._model.parameters(), lr=self._args.lr,
             momentum=self._args.momentum, weight_decay=5e-4)
         self._lr_scheduler = lr_scheduler.MultiStepLR(
-            self._optimizer, milestones=[60,90,120], gamma=0.1)
+            self._optimizer, milestones=[10, 20, 30], gamma=0.1)
 
         data_loader = prepare_data_loader(True, self._args.batch_size,
-                                          True, self._args.data_type)
+                                          True, self._args.data_type,
+                                          self._args.training_data_dir)
         step = 0
 
         # start local training
@@ -192,14 +193,15 @@ class PS(object):
         self._gpu_device = None
 
     def run(self):
-        self._model = self._model_class()
+        self._model = self._model_class(self._args.num_classes)
         if self._args.use_gpu and torch.cuda.is_available():
             self._gpu_device = torch.device('cuda:{}'.format(self._gpu_id))
             self._model.to(self._gpu_device)
         updates = 0
         validate_loader = prepare_data_loader(
             True, self._args.batch_size,
-            True, self._args.data_type)
+            True, self._args.data_type,
+            self._args.validation_data_dir)
 
         while not self._up.empty() or not self._stop_ps.value:
             # In the case that any trainer pushes.
@@ -280,9 +282,11 @@ def _parse_args():
     parser.add_argument('--validate_max_batch', type=int, default=5,
                         help='max batch for validate model in ps')
     parser.add_argument('--data-type', default='mnist',
-                        help='the name of the dataset (mnist, cifar10)')
+                        help='the name of the dataset (mnist, cifar10, ImageNet)')
     parser.add_argument('--model-name', default='MNISTNet',
                         help='the name of the model (MNISTNet, CIFAR10Net, resnet18)')
+    parser.add_argument('--num-classes', type=int, default=10,
+                        help='total number of classes of dataset')
     parser.add_argument('--loss-file', default=METRICS_IMAGE_FILE_TEMPLATE,
                         help='the name of loss figure file')
     parser.add_argument(
@@ -308,6 +312,10 @@ def _parse_args():
         help='experiment name used for the result data dir name')
     parser.add_argument('--use-gpu', type=bool_parser, default=True,                                                                
                         help='use GPU for training if available')
+    parser.add_argument('--training-data-dir', default='./data',
+                        help='data directory for training')
+    parser.add_argument('--validation-data-dir', default='./data',
+                        help='data directory for validation')
 
     return parser.parse_args()
 
@@ -388,7 +396,7 @@ def _train(args, job_dir):
 
     # Save model net.
     model_class = globals()[args.model_name]
-    torch.save(model_class(), job_dir + '/model.pkl')
+    torch.save(model_class(args.num_classes), job_dir + '/model.pkl')
 
     # Available GPU count.
     total_gpu_cnt = torch.cuda.device_count() 

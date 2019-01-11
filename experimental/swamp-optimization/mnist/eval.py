@@ -43,6 +43,7 @@ def _validate(data_loader, model, loss_fn, max_batch, batch_size, device):
 
 def _evaluate(
         job_root_dir,
+        eval_data_dir,
         max_validate_batch,
         validate_batch_size,
         concurrency,
@@ -51,7 +52,7 @@ def _evaluate(
         model_name):
     # Prepare data source
     validation_ds = prepare_data_loader(False, validate_batch_size,
-                                        False, data_type)
+                                        False, data_type, eval_data_dir)
     validation_jobs = Queue()
     model_class = globals()[model_name]
 
@@ -197,6 +198,8 @@ def _parse_args():
                         help='process concurrency for CPU evaluation')
     parser.add_argument('--use-gpu', type=bool_parser, default=True,
                         help='use GPU for evaluation if it is available')
+    parser.add_argument('--eval-data-dir', default='./data',
+                        help='data directory for evaluation')
     return parser.parse_args()
 
 
@@ -206,6 +209,7 @@ def main():
     multiprocessing.set_start_method('spawn')
     _evaluate(
         args.job_root_dir,
+        args.eval_data_dir,
         args.eval_max_batch,
         args.eval_batch_size,
         args.eval_concurrency,

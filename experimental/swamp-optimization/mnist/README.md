@@ -12,9 +12,12 @@ docker run --rm -it -v $PWD:/work -w /work swamp python train.py \
     --pull-probability 0.5 \
     --model-sample-interval 10 \
     --model-name MNISTNet \
+    --num-classes 10 \
     --data-type mnist \
     --use-gpu True \
-    --job-root-dir jobs
+    --job-root-dir jobs \
+    --training-data-dir ./data \
+    --validation-data-dir ./data
 ```
 
 `train.py` execute the taining process and dump models to the `--job-root-dir` at interval `--model-sample-interval`. 
@@ -28,11 +31,17 @@ The meaning of parameters in the above command are described below:
 
 `--model-name` : the name of the net model (MNISTNet, CIFAR10Net, resnet18).
 
-`--data-type` : data type, valid values are mnist and cifar10.
+`--num-classes` : total number of classes of dataset.
+
+`--data-type` : data type, valid values are mnist, cifar10, ImageNet.
 
 `--use-gpu` : use GPU for training if available.
 
 `--job-root-dir` : the storage path of job datanet and params. 
+
+`--training-data-dir` : data directory for training.
+
+`--validation-data-dir` : data directory for validation.
 
 ### Step 3: evaluate models dumped in the training process.
 ```bash
@@ -44,7 +53,8 @@ docker run --rm -it -v $PWD:/work -w /work swamp python eval.py \
     --model-name MNISTNet \
     --data-type mnist \
     --use-gpu False  \
-    --eval-concurrency 2
+    --eval-concurrency 2 \
+    --eval-data-dir ./data
 ```
 
 `eval.py` evaluate all the dumped models in train.py using validation dataset and write loss and accuracy to disk file.
@@ -59,11 +69,13 @@ docker run --rm -it -v $PWD:/work -w /work swamp python eval.py \
 
 `--model-name` : keep the corresponding values in step 2 the same.
 
-`--data-type`  : data type, valid values are mnist and cifar10.
+`--data-type`  : data type, valid values are mnist, cifar10, ImageNet.
 
 `--use-gpu`  : when True, use gpu if it is available.
 
 `--eval-concurrency` : Process concurrency for CPU evaluation with default value 2.
+
+`--eval-data-dir` : data directory for evaluation.
 
 ### Step 4: plot metrics.
 ```bash
@@ -72,7 +84,7 @@ docker run --rm -it -v $PWD:/work -w /work swamp python plot.py --data-type mnis
 
 `plot.py` read all the metrics data produced by `eval.py` and generate metrics curve graphs for every training job in `train.py`.
 
-`--data-type`  : data type, valid values are mnist and cifar10.
+`--data-type`  : data type, valid values are mnist, cifar10, ImageNet.
 
 `--job-root-dir` : The root directory of all job result data.
 
