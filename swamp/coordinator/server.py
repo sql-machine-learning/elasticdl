@@ -45,7 +45,8 @@ class _ModelSelector(object):
         self._max_pending = max_pending
         self._model_evaluator = model_evaluator
 
-        # used as a lock to protect all following, and a cv to signal eval_threads.
+        # used as a lock to protect all following, and a cv to signal
+        # eval_threads.
         self._cv = threading.Condition()
         self._exit = False
         self._reset = False
@@ -74,7 +75,8 @@ class _ModelSelector(object):
             self._cv.notify()
         self._eval_thread.join()
 
-    # TODO: expose through RPC so we don't have to restart server for new experiments.
+    # TODO: expose through RPC so we don't have to restart server for new
+    # experiments.
     def reset(self):
         "reset the model selector"
         with self._cv:
@@ -131,7 +133,9 @@ class _ModelSelector(object):
         while True:
             model = None
             with self._cv:
-                self._cv.wait_for(lambda: self._exit or self._reset or self._pending_models)
+                self._cv.wait_for(
+                    lambda: self._exit or self._reset or self._pending_models
+                )
                 if self._exit:
                     return
                 if self._reset:
@@ -143,19 +147,18 @@ class _ModelSelector(object):
                 model, _ = self._pending_models.pop()
             loss = self._model_evaluator(model)
             logging.info("evaluated model, loss: %f", loss)
-            with self._cv:
-                if loss >= self._best[1]:
-                    logging.info(
-                        "keeping best model: current best loss: %f",
-                        self._best[1],
-                    )
-                    return
+            if loss >= self._best[1]:
                 logging.info(
-                    "updating best model: old loss: %f new loss: %f",
-                    self._best[1],
-                    loss,
+                    "keeping best model: current best loss: %f", self._best[1]
                 )
-                # TODO: dump the best model.
+                continue
+            logging.info(
+                "updating best model: old loss: %f new loss: %f",
+                self._best[1],
+                loss,
+            )
+            # TODO: dump the best model.
+            with self._cv:
                 self._best = (model, loss)
                 # best loss changed, drop inadmissible models from
                 # pending list.
@@ -197,11 +200,7 @@ def eval_torch_model(model):
 
 logging.basicConfig(level=logging.INFO)
 if __name__ == "__main__":
-    model_selector = _ModelSelector(
+    selector = _ModelSelector(
         max_pending=32, model_evaluator=eval_torch_model
     )
-    _serve(
-        port=5000,
-        model_selector=model_selector,
-        event=threading.Event(),
-    )
+    _serve(port=5000, model_selector=selector, event=threading.Event())
