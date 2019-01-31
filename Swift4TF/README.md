@@ -2,7 +2,7 @@
 
 [Swift for TensorFlow(S4TF)](https://www.tensorflow.org/swift/) is an early stage project that aims to describing TensorFlow training using programming model.
 
-To help evaluating S4TF, we have built a docker image with latest pre-built packages. The docker image is at `reg.docker.alibaba-inc.com/elasticdl/swift4tf`. Note that, the docker image has to be run in privileged mode. For example:
+To help evaluating S4TF, we have built a docker image with latest pre-built packages. The docker image is at `reg.docker.alibaba-inc.com/elasticdl/swift4tf`. Note that, the Docker image has to be run in privileged mode. For example:
 
 ```
 docker run -it --privileged reg.docker.alibaba-inc.com/elasticdl/swift4tf /bin/bash
