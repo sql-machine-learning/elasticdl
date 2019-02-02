@@ -13,7 +13,7 @@ fname=${1##*/}
 
 cat <<EOF > ${tmp_dir}/Dockerfile
 
-FROM reg.docker.alibaba-inc.com/elasticdl/swift-gpu-devel
+FROM swift-gpu-devel
 
 COPY ${fname} /
 RUN tar xzvf /${fname} --directory=usr --strip-components=1 \

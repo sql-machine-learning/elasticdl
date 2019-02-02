@@ -9,10 +9,8 @@ We first build a devel image, the use the devel image to compile S4TF toolchain 
 In `dockerfiles` directory: 
 ```
 docker build \
-    -t reg.docker.alibaba-inc.com/elasticdl/swift-gpu-devel \
     -t swift-gpu-devel \
     swift-gpu-devel
-docker push reg.docker.alibaba-inc.com/elasticdl/swift-gpu-devel
 ```
 
 ### Compile S4TF Toolchain With GPU Support
@@ -27,20 +25,21 @@ git clone git@github.com:apple/swift.git -b tensorflow
 Now use devel image to build s4tf (You will need to mount your own git directories).
 
 ```
-sudo docker run --net=host -it --rm \
-    -v /home/l.zou/git:/git \
-    reg.docker.alibaba-inc.com/elasticdl/swift-gpu-devel \ 
+sudo docker run -it --rm \
+    -v $HOME/.cache:/root/.cache \
+    -v $HOME/git:/git \
+    swift-gpu-devel \ 
     /bin/bash -c \
-    'cd /git/swift-1 && ./utils/build-toolchain-tensorflow -g'
+    'cd /git/swift && ./utils/build-toolchain-tensorflow -g'
 ```
 
-（TDOO）currently bazel uses cache in the container, we could make it cache on a mounted directory to reuse across compilations.
+Here `$HOME/.cache` volume is used for bazel cache across compilations.
 
 If everything works ok, there will be a `swift-tensorflow-LOCAL-*.tar.gz` file generated in swift git directory.
 
 ### Build S4TF Image with the toolchain
 
-Run `build-swift-gpu-image.sh` script and pass the path of the toolchain file to it. It will build a image tagged `s4tf-gpu`.
+Run `build-s4tf-image.sh` script and pass the path of the toolchain file to it. It will build a image tagged `s4tf-gpu`.
 
 ### Verify S4TF Image GPU Support
 
@@ -51,5 +50,10 @@ sudo docker run --net=host -it --rm \
     --security-opt seccomp:unconfined \
     s4tf-gpu /bin/bash
 ```
+
+We need `--security-opt seccomp:unconfined` here for swift interpreter to work. According to [this note]( https://github.com/zachgrayio/swift-tensorflow/blob/5f29d1cfae6f93c424e677ee21ab35ea245ff41a/README.md#run-a-repl):
+
+> when running this interactive container with the standard -it, we also must run without the default seccomp profile with --security-opt seccomp:unconfined to allow the Swift REPL access to ptrace and run correctly.
+
 
 TODO: add steps for verification
