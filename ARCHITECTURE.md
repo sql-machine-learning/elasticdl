@@ -114,12 +114,12 @@ message DataBatchRequest {
     int64 start_record;
     int batch_size;
 }
-message DataBatch {
+message Record {
     // Opaque data to be parsed by trainer.
-    repeated bytes data;
+    repeated byte data;
 }
 message DataBatchResponse {
-    repeated DataBatch batch;
+    repeated Record batch;
 }
 rpc ReadData(DataBatchRequest) returns (stream DataBatchResponse)
 ```
