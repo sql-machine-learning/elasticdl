@@ -12,7 +12,7 @@ Coordinator gathers stats from trainers and use a local strategy to decide furth
 
 Trainers are running in a loop. When idle, a trainer fetches a training or evaluation task from Coordinator. When the task is finished, trainer push the results to coordinator and waiting for next task.
 
-Trainer also maintain an RPC interface via which coordinator can directly stop the current task.
+Trainer also maintain an RPC interface via which coordinator can directly stop the current task. Coordinator can also query a trainer's progress or ask a trainer to evaluate the current model via RPC interfaces.
 
 Coordinator RPC:
 
@@ -95,8 +95,17 @@ message Model {
     repeated byte content;
 }
 
+message Progress {
+    int epoch;
+    int iteration;
+}
+
 rpc StopTask(Empty) returns (Empty)
 rpc GetModel(Empty) returns (Model)
+rpc GetProgress(Empty) returns (Progress)
+// TraskSpec must use EvaluationTaskSpec with empty ModelSpec.
+// Trainer would pause the training if it is in a training task, do the evaluation, then resume the training.
+rpc EvaluateCurrentModel(TaskSpec) return(Empty)
 ```
 
 Data Proxy RPC 
@@ -123,3 +132,9 @@ message DataBatchResponse {
 }
 rpc ReadData(DataBatchRequest) returns (stream DataBatchResponse)
 ```
+
+# Open issue
+A coordinator is responsible for a model training. There are one or more trainers, and each trainer has one or more docker containers.  
+* How to determine the initial trainer number and the corresponding docker container number.
+* How to dynamically change the trainer number or the number of docker containers in a trainer.
+* Each trainer will have a RPC service, and train/evaluate the model with one or more containers. If more than one container are used, distributed training is used (allreduce or PS).
