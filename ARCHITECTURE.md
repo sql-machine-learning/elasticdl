@@ -1,6 +1,6 @@
 # Archtecture Overview
 
-(TODO: Add a diagram)
+[Diagram](doc/design_diagram.pdf)
 
 ## Tranier / Coordinator interaction
 
