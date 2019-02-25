@@ -11,7 +11,7 @@ func TestUploadAndDownloadFile(t *testing.T) {
     const localFilePath = "tmp_file.txt"
 
     s := []byte("hi, elasticdl")
-	ioutil.WriteFile(localFilePath, s, os.ModeAppend)
+    ioutil.WriteFile(localFilePath, s, os.ModeAppend)
 
     CopyLocalFileToRemote(localFilePath, remoteFilePath)
     CopyRemoteFileToLocal(remoteFilePath, localFilePath)
