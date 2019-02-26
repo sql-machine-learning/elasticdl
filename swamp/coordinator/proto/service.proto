@@ -13,7 +13,7 @@ enum HyperParameterType {
 
 message HyperParameterValue {
   oneof value {
-    doulbe double_value = 1;
+    double double_value = 1;
     int32 int_value = 2;
     string categorical_value = 3;
   }
@@ -75,7 +75,11 @@ message TrainingTaskSpec {
   // Path to a python module that specifies the model.
   string model_path = 1;
 
-  HyperParameters hyper_parameters = 2;
+  // If present, will load initial state from the state.
+  string model_state_path = 2;
+
+  HyperParameters hyper_parameters = 3;
+
 }
 
 message EvaluationTaskSpec {
