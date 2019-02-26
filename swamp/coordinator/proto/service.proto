@@ -4,33 +4,106 @@ import "google/protobuf/empty.proto";
 
 package coordinator;
 
-message Model {
-  // Pickled torch model
-  bytes torch_pickled = 1;
+enum HyperParameterType {
+  UNKNOWN_TYPE = 0;
+  DOUBLE = 1;
+  INT = 2;
+  CATEGORICAL = 3;
 }
 
-message PushRequest {
-  // Trainer's id
-  uint32 trainer_id = 1;
-  // Trainer's local model
-  Model model = 2;
-  // Trainer's model loss
+message HyperParameterValue {
+  oneof value {
+    doulbe double_value = 1;
+    int32 int_value = 2;
+    string categorical_value = 3;
+  }
+}
+
+message HyperParameters {
+  map<string, HyperParameterValue> param = 1;
+}
+
+message IntSpace {
+  int32 min = 1;
+  int32 max = 2;
+}
+
+message DoubleSpace {
+  double min = 1;
+  double max = 2;
+}
+
+message CategoricalSpace {
+  repeated string value = 1;
+}
+
+message HyperParameterSpace {
+  oneof space {
+    IntSpace int_space = 1;
+    DoubleSpace double_space = 2;
+    CategoricalSpace categorical_space = 3;
+  }
+}
+
+enum SearchType {
+  UNKNOWN_SEARCH = 0;
+  GRID = 1;
+  LOG = 2;
+  RANDOM = 3;
+  // TODO: support bayesian and strategy module?
+}
+
+message HyperParameterSearch {
+  HyperParameterSpace space = 1;
+
+  // Should only be specified for INT or DOUBLE type.
+  oneof search {
+    // For GRID search.
+    double linear_step = 1;
+    // For LOG search. Should be greater than 1.
+    double log_step = 2;
+    // For RANDOM search. 
+    int32 sample_size = 3;
+  }
+}
+
+message HyperParameterSearchSpec {
+  map<string, HyperParameterSearch> param = 1;
+}
+
+message TrainingTaskSpec {
+  // Path to a python module that specifies the model.
+  string model_path = 1;
+
+  HyperParameters hyper_parameters = 2;
+}
+
+message EvaluationTaskSpec {
+  // Path to a python module that specifies the model.
+  string model_path = 1;
+  // Path to saved model state (e.g. parameters).
+  string model_state_path = 2;
+}
+
+message TaskSpec {
+  int64 task_id = 1;
+  oneof {
+    TrainingTaskSpec training_task = 2;
+    EvaluationTaskSpec evaluation_spec = 3;
+  }
+}
+
+message TaskResult {
+  int64 task_id = 1;
+  string model_state_path = 2;  // Model path on the distributed filesystem.
   double loss = 3;
-}
-
-message PullRequest {
-  // Trainer's id
-  uint32 trainer_id = 1;
-}
-
-message PullResponse {
-  // Coordinator's model
-  Model model = 1;
-  // Coordinator's model loss
-  double loss = 2;
+  double accuracy = 4;
+  // TODO: some stats about the run，e.g. how many record used, time spent, memory
+  // usage, GPU percentage, etc.
+  // RunStats stat;
 }
 
 service Coordinator {
-  rpc Push(PushRequest) returns (google.protobuf.Empty);
-  rpc Pull(PullRequest) returns (PullResponse);
+  rpc GetTask(google.protobuf.Empty) returns (TaskSpec);
+  rpc PushResult(TaskResult) returns (PullResponse);
 }
