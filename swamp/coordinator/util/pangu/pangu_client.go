@@ -7,37 +7,37 @@ import (
         "strings"
 )
 
-const pangu_root_path = "pangu://AT-20ANT/elasticdl/"
+const pangu_root_path = "pangu://${clusterName}/elasticdl/"
 const pangu_client = "/pangu/pangu_cli.py"
 
 // CopyRemoteFileToLocal copy the remote pangu file to lcoal filesystem.
 // The Param remoteFilePath as a relative subpath of constant pangu_root_path.
-func CopyRemoteFileToLocal(remoteFilePath string, localFilePath string) {
-    fullRemoteFilePath := pangu_root_path + remoteFilePath
+func CopyRemoteFileToLocal(clusterName string, remoteFilePath string, localFilePath string) {
+    fullRemoteFilePath := strings.Replace(pangu_root_path, "${clusterName}", clusterName, 1) + remoteFilePath
     cmd := exec.Command("python", pangu_client, "cp", fullRemoteFilePath, localFilePath)
     executeCmd(cmd)
 }
 
 // CopyLocalFileToRemote copy the local file to remote pangu filesystem.
 // The Param remoteFilePath as a relative subpath of constant pangu_root_path.
-func CopyLocalFileToRemote(localFilePath string, remoteFilePath string) {
-    fullRemoteFilePath := pangu_root_path + remoteFilePath
+func CopyLocalFileToRemote(clusterName string, localFilePath string, remoteFilePath string) {
+    fullRemoteFilePath := strings.Replace(pangu_root_path, "${clusterName}", clusterName, 1) + remoteFilePath
     cmd := exec.Command("python", pangu_client, "cp", localFilePath, fullRemoteFilePath)
     executeCmd(cmd)
 }
 
 // RemoveRemoteFile remove the file in remote pangu filesystem.
 // The Param remoteFilePath as a relative subpath of constant pangu_root_path.
-func RemoveRemoteFile(remoteFilePath string) {
-    fullRemoteFilePath := pangu_root_path + remoteFilePath
+func RemoveRemoteFile(clusterName string, remoteFilePath string) {
+    fullRemoteFilePath := strings.Replace(pangu_root_path, "${clusterName}", clusterName, 1) + remoteFilePath
     cmd := exec.Command("python", pangu_client, "rm", fullRemoteFilePath)
     executeCmdWithY(cmd)
 }
 
 // CreateRemoteDir create new directory in remote pangu filesystem.
 // The Param remoteDir as a relative subpath of constant pangu_root_path.
-func CreateRemoteDir(remoteDir string) {
-    fullRemoteDir := pangu_root_path + remoteDir
+func CreateRemoteDir(clusterName string, remoteDir string) {
+    fullRemoteDir := strings.Replace(pangu_root_path, "${clusterName}", clusterName, 1) + remoteDir
     cmd := exec.Command("python", pangu_client, "mkdir", fullRemoteDir)
     executeCmd(cmd)
 }

@@ -6,6 +6,8 @@ import (
         "io/ioutil"
 )
 
+const clusterName = "AT-20ANT"
+
 func TestUploadAndDownloadFile(t *testing.T) {
     const remoteFilePath = "test/tmp_file.txt"
     const localFilePath = "tmp_file.txt"
@@ -13,9 +15,9 @@ func TestUploadAndDownloadFile(t *testing.T) {
     s := []byte("hi, elasticdl")
     ioutil.WriteFile(localFilePath, s, os.ModeAppend)
 
-    CopyLocalFileToRemote(localFilePath, remoteFilePath)
-    CopyRemoteFileToLocal(remoteFilePath, localFilePath)
-    RemoveRemoteFile(remoteFilePath)
+    CopyLocalFileToRemote(clusterName, localFilePath, remoteFilePath)
+    CopyRemoteFileToLocal(clusterName, remoteFilePath, localFilePath)
+    RemoveRemoteFile(clusterName, remoteFilePath)
 
     err := os.Remove(localFilePath)
     if err != nil {
@@ -24,6 +26,6 @@ func TestUploadAndDownloadFile(t *testing.T) {
 }
 
 func TestCreateRemoteDir(t *testing.T) {
-    CreateRemoteDir("tmp_dir")
-    RemoveRemoteFile("tmp_dir")
+    CreateRemoteDir(clusterName, "tmp_dir")
+    RemoveRemoteFile(clusterName, "tmp_dir")
 }
