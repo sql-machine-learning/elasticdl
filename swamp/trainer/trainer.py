@@ -59,23 +59,24 @@ class Trainer(object):
 
     def __init__(
             self,
-            args):
+            pangu_cluster):
         """ Initialize the Trainer.
-
-        Arguments:
-          args: Runtime arguments.
         """
-        self._args = args
+        self._pangu_cluster = pangu_cluster 
         self._task_queue = Queue()
         self._result_queue = Queue()
+        self._stop = False
 
     def start(self):
         # start task fetcher subprocess.
         self._start_task_fetcher()
 
         # process tasks in pending task queue.
-        while True:
+        while not self._stop:
             task = self._task_queue.get()
+
+            # download model
+            self._download_file(task.model_path)
 
             # import user-defined module dynamically
             module_path_segs = task.model_path.split('/')
@@ -90,16 +91,16 @@ class Trainer(object):
             result = TaskResult(task.trained_model_path, loss, acc)
             self._result_queue.put(result)
 
+    def stop(self):
+        self._stop = True
+
     def _start_task_fetcher(self):
          task_fetcher = threading.Thread(target=self._fetch_task)
          task_fetcher.start()
 
     def _train(self, module, task):
-        # download model
-        self._download_file(self._args.pangu_cluster, task.model_path)
-
         # downlaod training data
-        self._download_file(self._args.pangu_cluster, task.training_data_path)
+        self._download_file(task.training_data_path)
 
         model_class = getattr(module, task.model_name)
         model = model_class()
@@ -156,13 +157,12 @@ class Trainer(object):
                 self._print_progress(task.job_id, task.task_id, epoch, batch_idx, log_interval)
 
             print("job %s task %s done epoch %i" % (task.job_id, task.task_id, epoch))
-
         return model
 
     def _evaluate(self, module, model, task):
         # download validation data if any.
         if task.validation_data_path and len(task.validation_data_path.strip()) > 0:
-            self._download_file(self._args.pangu_cluster, task.validation_data_path)
+            self._download_file(self._pangu_cluster, task.validation_data_path)
         if task.validation_data_preprocess_func:
             getattr(module, task.validation_data_preprocess_func)()
 
@@ -195,12 +195,11 @@ class Trainer(object):
                 total += len(batch_y)
         loss_val = round(eval_loss / total * batch_size, 6)
         accuracy = round(float(correct) / total, 6)
-
         return loss_val, accuracy
 
     def _save_model(self, model, remote_file_path):
         torch.save(model, 'model.pkl')
-        self._upload_file(self._args.pangu_cluster, 'model.pkl', remote_file_path)
+        self._upload_file('model.pkl', remote_file_path)
 
     def _print_progress(self, job_id, task_id, epoch, batch_idx, log_interval):
         if batch_idx % log_interval == 0:
@@ -208,52 +207,30 @@ class Trainer(object):
                   (job_id, task_id, epoch, batch_idx))
 
     def _fetch_task(self):
-        training_params = {
-                'use_gpu' : True,
-                'log_interval' : 50,
-                'epochs' : 1}
-        hyper_params = {
-                'batch_size' : 64,
-                'lr' : 0.1,
-                'momentum' : 0.5,
-                'weight_decay' : 5e-4,
-                'lr_sched_milestones' : [10, 20, 30],
-                'lr_sched_gamma' : 0.1}
-        task = Task('dev_job',
-                    'task_1', 
-                    'MNISTNet', 
-                    'jobs/dev_job/task_1/network.py', 
-                    'jobs/dev_job/task_1/model.pkl',
-                    'loss_func', 
-                    'optimizer_func', 
-                    'jobs/dev_job/task_1/data.tar.gz',
-                    None,
-                    'preprocess_data',
-                    None,
-                    'prepare_training_dataset',
-                    'prepare_validation_dataset',
-                    training_params,
-                    hyper_params)
+        task = self._do_fetch()
         self._task_queue.put(task) 
 
-    def _download_file(self, pangu_cluster, remote_file_path):
+    def _do_fetch(self):
+        # TODO: use protobuf client to fetch task from coordinator
+        pass
+
+    def _download_file(self, remote_file_path):
         path_split_segs = remote_file_path.split('/')
         local_file = path_split_segs[len(path_split_segs) - 1] 
         cmd = 'python /pangu/pangu_cli.py cp pangu://' + \
-            pangu_cluster + '/elasticdl/' + remote_file_path + ' ' + local_file
+            self._pangu_cluster + '/elasticdl/' + remote_file_path + ' ' + local_file
         print('executing download cmd: ' + cmd)
         status, result = subprocess.getstatusoutput(cmd)
         print('download model status: ' + str(status))
         print('download model output: ' + result)
 
-    def _upload_file(self, pangu_cluster, local_file_path, remote_file_path):
+    def _upload_file(self, local_file_path, remote_file_path):
         cmd = 'python /pangu/pangu_cli.py cp ' + local_file_path + ' pangu://' + \
-            pangu_cluster + '/elasticdl/' + remote_file_path
+            self._pangu_cluster + '/elasticdl/' + remote_file_path
         print('executing upload cmd: ' + cmd)
         status, result = subprocess.getstatusoutput(cmd)
         print('upload model status: ' + str(status))
         print('upload model output: ' + result)
-         
 
 def _parse_args():
     # Training settings
@@ -267,7 +244,7 @@ def _prepare():
 
 def main():
     args = _prepare()
-    trainer = Trainer(args)
+    trainer = Trainer(args.pangu_cluster)
     trainer.start()
 
 if __name__ == '__main__':
