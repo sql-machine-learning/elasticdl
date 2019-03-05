@@ -4,33 +4,119 @@ import "google/protobuf/empty.proto";
 
 package coordinator;
 
-message Model {
-  // Pickled torch model
-  bytes torch_pickled = 1;
+enum HyperParameterType {
+  UNKNOWN_TYPE = 0;
+  DOUBLE = 1;
+  INT = 2;
+  CATEGORICAL = 3;
 }
 
-message PushRequest {
-  // Trainer's id
-  uint32 trainer_id = 1;
-  // Trainer's local model
-  Model model = 2;
-  // Trainer's model loss
+message HyperParameterValue {
+  oneof value {
+    double double_value = 1;
+    int32 int_value = 2;
+    string categorical_value = 3;
+  }
+}
+
+message HyperParameters {
+  map<string, HyperParameterValue> param = 1;
+}
+
+message IntRange {
+  int32 min = 1;
+  int32 max = 2;
+}
+
+message DoubleRange {
+  double min = 1;
+  double max = 2;
+}
+
+message CategoricalRange {
+  repeated string value = 1;
+}
+
+message HyperParameterRange {
+  oneof range {
+    IntRange int_range = 1;
+    DoubleRange double_range = 2;
+    CategoricalRange categorical_range = 3;
+  }
+}
+
+enum SearchType {
+  UNKNOWN_SEARCH = 0;
+  GRID = 1;
+  LOG = 2;
+  RANDOM = 3;
+  // TODO: support bayesian and strategy module?
+}
+
+message HyperParameterSearch {
+  HyperParameterRange range = 1;
+
+  // Should only be specified for INT or DOUBLE type.
+  oneof search {
+    // For GRID search.
+    double linear_step = 2;
+    // For LOG search. Should be greater than 1.
+    double log_step = 3;
+    // For RANDOM search.
+    int32 sample_size = 4;
+  }
+}
+
+message HyperParameterSearchSpec {
+  map<string, HyperParameterSearch> param = 1;
+}
+
+// Shared task configration between training and evaluation tasks.
+message TaskBase {
+  // Path to a python module that specifies the model.
+  string model_path = 1;
+
+  // Neural network class name defined in the python module. The created
+  // instance has method to access loss function, optimizer, etc.
+  string network_class = 2;
+
+  // Dataset class name defined in the python module. The created instance
+  // to access training and evaluation dataset, etc.
+  string dataset_class = 3;
+
+  // Path to saved model state (e.g. parameters). Optional for training tasks.
+  string model_state_path = 4;
+}
+
+message TrainingTask {
+  TaskBase base = 1;
+  HyperParameters hyper_parameters = 2;
+}
+
+message EvaluationTask {
+  TaskBase base = 1;
+}
+
+message Task {
+  // Unique id assigned to a task by coordinator. Used by Bees to report
+  // results back to coordinator, etc.
+  int64 task_id = 1;
+  oneof task {
+    TrainingTask training_task = 2;
+    EvaluationTask evaluation_task = 3;
+  }
+}
+
+message TaskResult {
+  int64 task_id = 1;
+  string model_state_path = 2; // Model path on the distributed filesystem.
   double loss = 3;
-}
-
-message PullRequest {
-  // Trainer's id
-  uint32 trainer_id = 1;
-}
-
-message PullResponse {
-  // Coordinator's model
-  Model model = 1;
-  // Coordinator's model loss
-  double loss = 2;
+  double accuracy = 4;
+  // TODO: some stats about the run，e.g. how many record used, time spent,
+  // memory usage, GPU percentage, etc. RunStats stat;
 }
 
 service Coordinator {
-  rpc Push(PushRequest) returns (google.protobuf.Empty);
-  rpc Pull(PullRequest) returns (PullResponse);
+  rpc GetTask(google.protobuf.Empty) returns (Task);
+  rpc PushResult(TaskResult) returns (google.protobuf.Empty);
 }
