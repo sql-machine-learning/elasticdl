@@ -11,14 +11,18 @@ docker build -t swamp_dev - < Dockerfile.dev
 ## Compile and run POC
 
 ### Start Docker container
-  
+
 ```
 docker run --net=host --rm -it -v $HOME/go:/go -v $HOME/.kube:/.kube swamp_dev:latest /bin/bash
 ```
 Note that:
 * The `elasticdl` git repo should be under your `$HOME/go/src` directory
 * Mac's Docker App should have kubernetes enabled and make sure local `kubectl` works and your `$HOME/.kube` directory point to local cluster started by Docker app.
+* If you use `minikube` instead of Docker internal k8s environment, you will also need to map `.minikube` directory into the container, i.e.:
 
+   ```
+   docker run --net=host --rm -it -v $HOME/go:/go -v $HOME/.kube:/.kube -v $HOME/.minikube:$HOME/.minikube swamp_dev:latest /bin/bash
+   ```
 
 ### Compile and run
 
