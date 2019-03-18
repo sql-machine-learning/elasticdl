@@ -16,7 +16,7 @@ docker build -t swamp:dev - < Dockerfile.dev
 docker run --net=host --rm -it \
     -v $HOME/go:/go \
     -v $HOME/.kube:/.kube \
-    swamp_dev:latest /bin/bash
+    swamp:dev /bin/bash
 ```
 Note that:
 * The `elasticdl` git repo should be under your `$HOME/go/src` directory
@@ -28,7 +28,7 @@ Note that:
        -v $HOME/go:/go \
        -v $HOME/.kube:/.kube \
        -v $HOME/.minikube:$HOME/.minikube \
-       swamp_dev:latest /bin/bash
+       swamp:dev /bin/bash
    ```
 
 ### Compile and run
