@@ -56,4 +56,4 @@ Change to your `elasticdl` repo directory under `/go/src` and do:
 go run cmd/examples/k8s_pods/main.go -kubeconfig=/.kube/config
 ```
 
-The POC app lists all PODs with metrics, delete the POD with name 'poc' and restart it. Meanwhile, there is a goroutine listening and print out POD events.
+The example app lists all pods with metrics, delete the pod with name 'pod-example' and restart it. Meanwhile, there is a goroutine listening and print out pod events.
