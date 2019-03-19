@@ -1,5 +1,15 @@
 # Build and Run
 
+## Start K8s Metrics-Server
+
+The example demonstrates fetching metrics, e.g. resource usages from a pod. To enable metrics collecting, the metrics server needs to be started in the test cluster (Docker internal k8s or minikube):
+
+```
+kubectl apply -f k8s/addons/metrics-server.yaml
+```
+
+Wait for ~30 seconds for the server to start. Run `kubectl top node` or `kubectl top pod`  to verify.
+
 ## Build develop Docker image
 
 Change to `swamp` directory and build dev Docker image:
@@ -33,10 +43,11 @@ Note that:
 
 ### Compile and run
 
-In the container, first install k8s go client
+In the container, first install k8s go client and metrics client.
 
 ```
 go get github.com/kubernetes/client-go/...
+go get github.com/kubernetes/metrics/...
 ```
 
 Change to your `elasticdl` repo directory under `/go/src` and do:
@@ -45,4 +56,4 @@ Change to your `elasticdl` repo directory under `/go/src` and do:
 go run cmd/examples/k8s_pods/main.go -kubeconfig=/.kube/config
 ```
 
-The POC app lists all PODs, delete the POD with name 'poc' and restart it. Meanwhile, there is a goroutine listening and print out POD events.
+The POC app lists all PODs with metrics, delete the POD with name 'poc' and restart it. Meanwhile, there is a goroutine listening and print out POD events.
