@@ -1,14 +1,20 @@
 # Build and Run
 
-## Start K8s Metrics-Server
+## Start K8s Metrics Server
 
-The example demonstrates fetching metrics, e.g. resource usages from a pod. To enable metrics collecting, the metrics server needs to be started in the test cluster (Docker internal k8s or minikube):
+[Metrics server](https://kubernetes.io/docs/tasks/debug-application-cluster/core-metrics-pipeline/#metrics-server) aggregates cluster-wide resource usage statistics.
+The example demonstrates fetching resource usages for a pod from metrics server. For this purpose, the metrics server needs to be started in the test cluster (Docker internal k8s or minikube):
 
 ```
 kubectl apply -f k8s/addons/metrics-server.yaml
 ```
 
-Wait for ~30 seconds for the server to start. Run `kubectl top node` or `kubectl top pod`  to verify.
+Wait for ~30 seconds for the server to start. Run `kubectl top node` or `kubectl top pod`  to verify. For example on a Mac, `kubctl top node` should display something like:
+
+```
+NAME                 CPU(cores)   CPU%      MEMORY(bytes)   MEMORY%
+docker-for-desktop   709m         23%       1790Mi          30%
+```
 
 ## Build develop Docker image
 
