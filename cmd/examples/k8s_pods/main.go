@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"time"
@@ -13,6 +14,14 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	metricsv1beta1 "k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1beta1"
 )
+
+func formatJson(in interface{}) string {
+	out, err := json.MarshalIndent(in, "", "  ")
+	if err != nil {
+		panic(err.Error())
+	}
+	return string(out)
+}
 
 func createPodClients(kubeconfig string) (v1.PodInterface, metricsv1beta1.PodMetricsInterface) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
@@ -41,7 +50,7 @@ func watchPodEvents(podclient v1.PodInterface) {
 	// Watch for POD events.
 	go func(ch <-chan watch.Event) {
 		for event := range ch {
-			fmt.Println(event)
+			fmt.Println(formatJson(event))
 		}
 	}(watcher.ResultChan())
 }
@@ -105,7 +114,7 @@ func printPodMetrics(podclient v1.PodInterface, metricsclient metricsv1beta1.Pod
 		if err != nil {
 			fmt.Printf("%s %s\n", p.Name, err.Error())
 		} else {
-			fmt.Printf("%s %s\n", p.Name, *metrics)
+			fmt.Println(formatJson(*metrics))
 		}
 	}
 }
