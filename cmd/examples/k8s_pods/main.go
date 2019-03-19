@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"time"
@@ -11,9 +12,18 @@ import (
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
+	metricsv1beta1 "k8s.io/metrics/pkg/client/clientset/versioned/typed/metrics/v1beta1"
 )
 
-func createPodClient(kubeconfig string) v1.PodInterface {
+func formatJson(in interface{}) string {
+	out, err := json.MarshalIndent(in, "", "  ")
+	if err != nil {
+		panic(err.Error())
+	}
+	return string(out)
+}
+
+func createPodClients(kubeconfig string) (v1.PodInterface, metricsv1beta1.PodMetricsInterface) {
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		panic(err.Error())
@@ -23,7 +33,12 @@ func createPodClient(kubeconfig string) v1.PodInterface {
 		panic(err.Error())
 	}
 
-	return clientset.CoreV1().Pods(apiv1.NamespaceDefault)
+	metricsclient, err := metricsv1beta1.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return clientset.CoreV1().Pods(apiv1.NamespaceDefault), metricsclient.PodMetricses(apiv1.NamespaceDefault)
 }
 
 func watchPodEvents(podclient v1.PodInterface) {
@@ -35,7 +50,7 @@ func watchPodEvents(podclient v1.PodInterface) {
 	// Watch for POD events.
 	go func(ch <-chan watch.Event) {
 		for event := range ch {
-			fmt.Println(event)
+			fmt.Println(formatJson(event))
 		}
 	}(watcher.ResultChan())
 }
@@ -85,15 +100,22 @@ func createPod(podclient v1.PodInterface, name string) {
 	if err != nil {
 		panic(err.Error())
 	}
+	// Wait for a while for POD to start.
+	time.Sleep(30 * time.Second)
 }
 
-func printPodNames(podclient v1.PodInterface) {
+func printPodMetrics(podclient v1.PodInterface, metricsclient metricsv1beta1.PodMetricsInterface) {
 	pods, err := podclient.List(metav1.ListOptions{})
 	if err != nil {
 		panic(err.Error())
 	}
 	for _, p := range pods.Items {
-		fmt.Println(p.Name)
+		metrics, err := metricsclient.Get(p.Name, metav1.GetOptions{})
+		if err != nil {
+			fmt.Printf("%s %s\n", p.Name, err.Error())
+		} else {
+			fmt.Println(formatJson(*metrics))
+		}
 	}
 }
 
@@ -101,12 +123,13 @@ func main() {
 	var kubeconfig = flag.String("kubeconfig", "", "Path to kubeconfig file")
 	flag.Parse()
 
-	podclient := createPodClient(*kubeconfig)
+	podclient, metricsclient := createPodClients(*kubeconfig)
 	watchPodEvents(podclient)
 
 	podname := "pod-example"
 	deletePodIfExists(podclient, podname)
 	createPod(podclient, podname)
 
-	printPodNames(podclient)
+	fmt.Println("----------")
+	printPodMetrics(podclient, metricsclient)
 }
