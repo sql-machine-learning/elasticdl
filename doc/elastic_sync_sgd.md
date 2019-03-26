@@ -59,17 +59,19 @@ model_version = 0
 
 gradients = []
 
-
+@grpc
 def GetModel():
     return model_params, model_version
 
 
+@grpc
 def GetTask():
     task = todo.pop()
     doing.push(task)
     return task, model_version
 
 
+@grpc
 def ReportResult(task, result):
     if task.model_version != model_version:
         return # Ignore the report.
