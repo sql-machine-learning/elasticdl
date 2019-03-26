@@ -28,6 +28,9 @@ RUN mkdir /go_tmp && go get github.com/golang/protobuf/protoc-gen-go && mv /go_t
 # Install Protobuf python support
 RUN pip3 install grpcio-tools
 
+# Install python kubernetes-client
+RUN pip3 install kubernetes
+
 # Note: user's go directory should be mount to /go in the container.
 ENV GOPATH=/go
 ENV PATH /go/bin:$PATH

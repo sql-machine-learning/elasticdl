@@ -47,7 +47,7 @@ Note that:
        swamp:dev /bin/bash
    ```
 
-### Compile and run
+### Compile and run GO sample
 
 In the container, first install k8s go client and metrics client.
 
@@ -63,3 +63,12 @@ go run cmd/examples/k8s_pods/main.go -kubeconfig=/.kube/config
 ```
 
 The example app lists all pods with metrics, delete the pod with name 'pod-example' and restart it. Meanwhile, there is a goroutine listening and print out pod events.
+
+### Run python sample
+In the container, change to your `elasticdl` repo directory, go to `cmd/examples/k8s_pods` directory and do:
+
+```
+python main.py
+```
+
+The example app deletes the pod with name 'pod-example' in namespace 'swamp-samples' and restart it. After that, it lists all the pods and namespaces in kubernetes.
