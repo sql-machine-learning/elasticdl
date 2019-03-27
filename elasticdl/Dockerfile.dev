@@ -11,3 +11,6 @@ RUN mv protoc3/include/* /usr/local/include/
 
 # Install gRPC tools in Python
 RUN pip install grpcio-tools
+
+# Install the Kubernetes Python client
+RUN pip install kubernetes
