@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package master;
+
+// A task is a unit of work for ElasticDL training workers, assigned by master.
+// It specifies a minibatch for workers. For now, we only support RecordIO 
+// format. 
+message Task {
+    // Filename for a RecordIO shard. An empty filename signifies that the
+    // master has no pending taske to assign to requesting worker.
+    string shard_file_name = 1;
+
+    // Strating and ending (inclusive) record number.
+    int64 start = 2;
+    int64 end = 3;
+}
+
+service Master {
+    rpc GetTask(google.protobuf.Empty) returns (Task);
+}
