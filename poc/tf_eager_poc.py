@@ -37,34 +37,6 @@ class UserDefinedModule(object):
 
 # The following is supposed to be part of the ElasticFlow framework.
 
-class HijackGradientsOptimizer(tf.train.Optimizer):
-    def __init__(self, optimizer):
-        self._optimizer = optimizer
-        # TODO(l.zou): Need to understand use_locking
-        super(HijackGradientsOptimizer, self).__init__(
-            name="HijackGradientsOptimizer", use_locking=False)
-
-    # The method we want to intercept
-    def compute_gradients(self, *args, **kwargs):
-        self._grad_op = self._optimizer.compute_gradients(*args, **kwargs)
-        return self._grad_op
-
-    # Forward all other methods. TODO(l.zou): could use a proxy to automate.
-    def get_slot(self, *args, **kwargs):
-        return self._optimizer.get_slot(*args, **kwargs)
-
-    def get_slot_names(self, *args, **kwargs):
-        return self._optimizer.get_slot_names(*args, **kwargs)
-
-    def variables(self, *args, **kwargs):
-        return self._optimizer.variables(*args, **kwargs)
-
-    # TODO(haitao): we can optimize data communication(quantization, etc)
-    # by modifying worker side compute_gradients and ps side apply_gradients.
-    def apply_gradients(self, *args, **kwargs):
-        return self._optimizer.apply_gradients(*args, **kwargs)
-
-
 class DataSource(object):
     @staticmethod
     def gen():
@@ -85,7 +57,7 @@ class ParameterServer(object):
     def __init__(self, module_cls):
         self._lock = threading.Lock()
         self._model = module_cls()
-        self._opt = HijackGradientsOptimizer(self._model.optimizer())
+        self._opt = self._model.optimizer()
         trainable_var_list = self._model.get_trainable_var_list()
         self._vars = {}
         for v in trainable_var_list:
@@ -117,7 +89,6 @@ class Worker(threading.Thread):
         self._vars = {}
         for v in self._trainable_var_list:
             self._vars[v.name] = v
-        self._opt = HijackGradientsOptimizer(self._model.optimizer())
         threading.Thread.__init__(self, name=name)
 
     def update_param(self, vals):
