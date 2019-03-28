@@ -5,16 +5,18 @@ import "google/protobuf/empty.proto";
 package master;
 
 // A task is a unit of work for ElasticDL training workers, assigned by master.
-// It specifies a minibatch for workers. For now, we only support RecordIO 
-// format. 
+// Worker divides a task into multiple minibatches and compute a gradient for
+// each minibatch. For now, only RecordIO file format is supported.
 message Task {
+    int32 minibatch_size = 1;
+
     // Filename for a RecordIO shard. An empty filename signifies that the
     // master has no pending taske to assign to requesting worker.
-    string shard_file_name = 1;
+    string shard_file_name = 2;
 
     // Strating and ending (inclusive) record number.
-    int64 start = 2;
-    int64 end = 3;
+    int64 start = 3;
+    int64 end = 4;
 }
 
 service Master {
