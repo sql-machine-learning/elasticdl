@@ -23,19 +23,13 @@ while True:
     if err != NULL:
         continue # Retry to get task.
 
-    # If the worker doesn't have the model to be updated, it downloads the
-    # model from the master.
-    if task.model_version != model_version:
-        model_params, model_version, err = master.GetModel(task.model_version)
-        if err != NULL:
-            # Tell the master that the task is not completed, so the master
-            # could move the task from the doing queue back to the todo queue.
-            master.ReportResult(task, FAILED) 
-            continue
-
     task_status = SUCCEED
     for minibatch in read_data(task.data_segment):
         try:
+            # If the current model_version on the worker is older than the model
+            # on the master, master.UpdateLocalModel updates model_version and 
+            # model_params; otherwise, it leaves these two variables unchanged.
+            master.UpdateModel(&model_version, &model_params)
             cost = module.forward(data, model_params)
             gradients = module.backward(cost, model_params)
         except:
@@ -62,15 +56,17 @@ model_version = 0
 gradients = []
 
 @grpc
-def GetModel():
-    return model_params, model_version
+def UpdateModel(mv, mp):
+    if model_version != mv:
+        copy(*mv, model_version)
+        copy(*mp, model_params)
 
 
 @grpc
 def GetTask():
     task = todo.pop()
     doing.push(task)
-    return task, model_version
+    return task
 
 
 @grpc
@@ -83,14 +79,12 @@ def ReportGradients(task, result):
         model_params = optimize_model(model_params, gradients)
         model_version = model_version + 1
         gradients = [] # Clear out the buffer.
-        
+
+
 @grpc
 def ReportTask(task, status):
     if status == FAILED:
-        # Move the failed task from doing back to todo.
-        find_and_remove_task_from(doing, task)
-        todo.push(task)
+        move_task(task, doing, todo) # Move the task from doing back to todo
     else:
-        find_and_remove_task_from(doing, task)
-        done.push(task)
+        move_task(task, doing, done) # Move the task from doing to done
 ```
