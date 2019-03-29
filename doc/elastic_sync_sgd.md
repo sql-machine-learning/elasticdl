@@ -72,11 +72,11 @@ def GetTask():
 
 
 @grpc
-def ReportGradients(mv, result):
+def ReportGradients(mv, grads):
     if mv != model_version:
         return # Ignore the report.
 
-    gradients = [gradients, result]
+    gradients += grads
     if len(gradients) >= num_gradients_sufficient_to_update_model():
         model_params = optimize_model(model_params, gradients)
         model_version = model_version + 1
