@@ -33,17 +33,17 @@ while True:
             master.ReportResult(task, FAILED) 
             continue
 
+    task_status = SUCCEED
     for minibatch in read_data(task.data_segment):
         try:
             cost = module.forward(data, model_params)
             gradients = module.backward(cost, model_params)
         except:
-            master.ReportTask(task, FAILED)
-            return
+            task_status = FAILED
+            break
         else:
             master.ReportGradients(task, gradients)
-
-    master.ReportTask(task, SUCCEED)
+    master.ReportTask(task, task_status)
     
 
 #------- master.py -------#
