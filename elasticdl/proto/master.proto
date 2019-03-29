@@ -17,6 +17,9 @@ message Task {
     // Strating and ending (inclusive) record number.
     int64 start = 3;
     int64 end = 4;
+
+    // Current model version of master
+    int32 model_version = 5;
 }
 
 service Master {
