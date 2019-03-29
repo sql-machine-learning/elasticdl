@@ -33,16 +33,18 @@ while True:
             master.ReportResult(task, FAILED) 
             continue
 
-    try:
-        data = local_data(task.data_segment)
-        cost = module.forward(data, model_params)
-        gradients = module.backward(cost, model_params)
-    except:
-        master.ReportResult(task, FAILED)
-        continue
-    else:
-        master.ReportResult(task, gradients)
+    for minibatch in read_data(task.data_segment):
+        try:
+            cost = module.forward(data, model_params)
+            gradients = module.backward(cost, model_params)
+        except:
+            master.ReportTask(task, FAILED)
+            return
+        else:
+            master.ReportGradients(task, gradients)
 
+    master.ReportTask(task, SUCCEED)
+    
 
 #------- master.py -------#
 
@@ -72,21 +74,23 @@ def GetTask():
 
 
 @grpc
-def ReportResult(task, result):
+def ReportGradients(task, result):
     if task.model_version != model_version:
         return # Ignore the report.
 
-    if result == FAILED:
-        # Move the failed task from doing back to todo.
-        find_and_remove_task_from(doing, task)
-        todo.push(task)
-        return
-    
     gradients = [gradients, result]
-    find_and_remove_task_from(doing, task)
-    done.push(task)
-    if gradients.length() >= num_gradients_sufficient_to_update_model():
+    if len(gradients) >= num_gradients_sufficient_to_update_model():
         model_params = optimize_model(model_params, gradients)
         model_version = model_version + 1
         gradients = [] # Clear out the buffer.
+        
+@grpc
+def ReportTask(task, status):
+    if status == FAILED:
+        # Move the failed task from doing back to todo.
+        find_and_remove_task_from(doing, task)
+        todo.push(task)
+    else:
+        find_and_remove_task_from(doing, task)
+        done.push(task)
 ```
