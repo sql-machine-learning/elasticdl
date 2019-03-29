@@ -29,16 +29,16 @@ while True:
     for minibatch in read_data(task):
         try:
             # If the current model_version on the worker is older than the model
-            # on the master, master.UpdateLocalModel updates model_version and 
+            # on the master, this call updates model_version and 
             # model_params; otherwise, it leaves these two variables unchanged.
-            master.UpdateModel(&model_version, &model_params)
+            master.UpdateModelIfOutOfDate(&model_version, &model_params)
             cost = module.forward(data, model_params)
             gradients = module.backward(cost, model_params)
         except:
             task_status = FAILED
             break
         else:
-            master.ReportGradients(task, gradients)
+            master.ReportGradients(model_version, gradients)
     master.ReportTask(task, task_status)
     
 
@@ -58,7 +58,7 @@ model_version = 0
 gradients = []
 
 @grpc
-def UpdateModel(mv, mp):
+def UpdateModelIfOutOfDate(mv, mp):
     if model_version != mv:
         copy(*mv, model_version)
         copy(*mp, model_params)
@@ -72,8 +72,8 @@ def GetTask():
 
 
 @grpc
-def ReportGradients(task, result):
-    if task.model_version != model_version:
+def ReportGradients(mv, result):
+    if mv != model_version:
         return # Ignore the report.
 
     gradients = [gradients, result]
