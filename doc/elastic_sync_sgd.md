@@ -20,6 +20,8 @@ while True:
     # model id.  The meaning of a task is "to update the specified model with
     # the given data segment".
     task, err = master.GetTask()
+    if err == NO_MORE_TASK:
+        break    # Training completed.
     if err != NULL:
         continue # Retry to get task.
 
