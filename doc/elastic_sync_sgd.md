@@ -20,29 +20,40 @@ while True:
     # model id.  The meaning of a task is "to update the specified model with
     # the given data segment".
     task, err = master.GetTask()
+    if err == NO_MORE_TASK:
+        break    # Training completed.
     if err != NULL:
         continue # Retry to get task.
 
-    # If the worker doesn't have the model to be updated, it downloads the
-    # model from the master.
-    if task.model_version != model_version:
-        model_params, model_version, err = master.GetModel(task.model_version)
-        if err != NULL:
-            # Tell the master that the task is not completed, so the master
-            # could move the task from the doing queue back to the todo queue.
-            master.ReportResult(task, FAILED) 
-            continue
-
-    try:
-        data = local_data(task.data_segment)
-        cost = module.forward(data, model_params)
-        gradients = module.backward(cost, model_params)
-    except:
-        master.ReportResult(task, FAILED)
-        continue
-    else:
-        master.ReportResult(task, gradients)
-
+    task_status = SUCCEED
+    for minibatch in read_data(task):
+        accepted = False
+        report_count = 0
+        while not accepted:
+            try:
+                # If the current model_version on the worker is older than the model
+                # on the master, this call updates model_version and 
+                # model_params; otherwise, it leaves these two variables unchanged.
+                master.UpdateModelIfOutOfDate(&model_version, &model_params)
+                cost = module.forward(data, model_params)
+                gradients = module.backward(cost, model_params)
+            except:
+                task_status = FAILED
+                break
+            else:
+                # If the reported gradients are not accepted by the master due to old model_version,
+                # try the minibatch again with the updated model in the next while loop.
+                # Fail the task if the minibatch report count exceeds a predefined threshold.
+                accepted = master.ReportGradients(model_version, gradients)
+                if not accepted:
+                    report_count += 1
+                    if report_count == PREDEFINED_MAX_REPORT_COUNT:
+                        task_status = FAILED
+                        break
+        if task_status == FAILED:
+            break
+    master.ReportTask(task, task_status)
+    
 
 #------- master.py -------#
 
@@ -60,33 +71,36 @@ model_version = 0
 gradients = []
 
 @grpc
-def GetModel():
-    return model_params, model_version
+def UpdateModelIfOutOfDate(mv, mp):
+    if model_version != mv:
+        copy(*mv, model_version)
+        copy(*mp, model_params)
 
 
 @grpc
 def GetTask():
     task = todo.pop()
     doing.push(task)
-    return task, model_version
+    return task
 
 
 @grpc
-def ReportResult(task, result):
-    if task.model_version != model_version:
-        return # Ignore the report.
+def ReportGradients(mv, grads):
+    accepted = False
+    if mv == model_version:
+        gradients += grads
+        accepted = True
+        if len(gradients) >= num_gradients_sufficient_to_update_model():
+            model_params = optimize_model(model_params, gradients)
+            model_version = model_version + 1
+            gradients = [] # Clear out the buffer.
+    return accepted
 
-    if result == FAILED:
-        # Move the failed task from doing back to todo.
-        find_and_remove_task_from(doing, task)
-        todo.push(task)
-        return
-    
-    gradients = [gradients, result]
-    find_and_remove_task_from(doing, task)
-    done.push(task)
-    if gradients.length() >= num_gradients_sufficient_to_update_model():
-        model_params = optimize_model(model_params, gradients)
-        model_version = model_version + 1
-        gradients = [] # Clear out the buffer.
+
+@grpc
+def ReportTask(task, status):
+    if status == FAILED:
+        move_task(task, doing, todo) # Move the task from doing back to todo
+    else:
+        move_task(task, doing, done) # Move the task from doing to done
 ```
