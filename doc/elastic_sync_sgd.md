@@ -24,7 +24,7 @@ while True:
         continue # Retry to get task.
 
     task_status = SUCCEED
-    for minibatch in read_data(task.data_segment):
+    for minibatch in read_data(task):
         try:
             # If the current model_version on the worker is older than the model
             # on the master, master.UpdateLocalModel updates model_version and 
