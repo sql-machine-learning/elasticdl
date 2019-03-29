@@ -38,7 +38,7 @@ while True:
             task_status = FAILED
             break
         else:
-            master.ReportGradients(model_version, gradients)
+            model_version = master.ReportGradients(model_version, gradients)
     master.ReportTask(task, task_status)
     
 
@@ -73,14 +73,13 @@ def GetTask():
 
 @grpc
 def ReportGradients(mv, grads):
-    if mv != model_version:
-        return # Ignore the report.
-
-    gradients += grads
-    if len(gradients) >= num_gradients_sufficient_to_update_model():
-        model_params = optimize_model(model_params, gradients)
-        model_version = model_version + 1
-        gradients = [] # Clear out the buffer.
+    if mv == model_version:
+        gradients += grads
+        if len(gradients) >= num_gradients_sufficient_to_update_model():
+            model_params = optimize_model(model_params, gradients)
+            model_version = model_version + 1
+            gradients = [] # Clear out the buffer.
+    return model_version
 
 
 @grpc
