@@ -22,24 +22,14 @@ message Task {
     int32 model_version = 5;
 }
 
-// Modeled after
-// https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto
-// but without external dependencies.
 message Tensor {
-    enum DataType {
-        DT_INVALID = 0;
-        DT_FLOAT = 1;
-        DT_DOUBLE = 2;
-    }
-    DataType dtype = 1;
-    
     // Dimensions of the tensor. The first entry in "dim" is the outermost
     // dimension used to layout the values, the last entry is the innermost
     // dimension.
-    repeated int32 dim = 2;
+    repeated int32 dim = 1;
 
-    // ndarray's buffer dump.
-    bytes content = 3;
+    // ndarray's buffer dump. Each element must be a double value.
+    bytes content = 2;
 }
 
 message Model {
