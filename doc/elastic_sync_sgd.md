@@ -27,18 +27,31 @@ while True:
 
     task_status = SUCCEED
     for minibatch in read_data(task):
-        try:
-            # If the current model_version on the worker is older than the model
-            # on the master, this call updates model_version and 
-            # model_params; otherwise, it leaves these two variables unchanged.
-            master.UpdateModelIfOutOfDate(&model_version, &model_params)
-            cost = module.forward(data, model_params)
-            gradients = module.backward(cost, model_params)
-        except:
-            task_status = FAILED
+        accepted = False
+        report_count = 0
+        while not accepted:
+            try:
+                # If the current model_version on the worker is older than the model
+                # on the master, this call updates model_version and 
+                # model_params; otherwise, it leaves these two variables unchanged.
+                master.UpdateModelIfOutOfDate(&model_version, &model_params)
+                cost = module.forward(data, model_params)
+                gradients = module.backward(cost, model_params)
+            except:
+                task_status = FAILED
+                break
+            else:
+                # If the reported gradients are not accepted by the master due to old model_version,
+                # try the minibatch again with the updated model in the next while loop.
+                # Fail the task if the minibatch report count exceeds a predefined threshold.
+                accepted = master.ReportGradients(model_version, gradients)
+                if not accepted:
+                    report_count += 1
+                    if report_count == PREDEFINED_MAX_REPORT_COUNT:
+                        task_status = FAILED
+                        break
+        if task_status == FAILED:
             break
-        else:
-            model_version = master.ReportGradients(model_version, gradients)
     master.ReportTask(task, task_status)
     
 
@@ -73,13 +86,15 @@ def GetTask():
 
 @grpc
 def ReportGradients(mv, grads):
+    accepted = False
     if mv == model_version:
         gradients += grads
+        accepted = True
         if len(gradients) >= num_gradients_sufficient_to_update_model():
             model_params = optimize_model(model_params, gradients)
             model_version = model_version + 1
             gradients = [] # Clear out the buffer.
-    return model_version
+    return accepted
 
 
 @grpc
