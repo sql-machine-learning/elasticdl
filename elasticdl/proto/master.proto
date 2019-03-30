@@ -17,7 +17,7 @@ message Task {
     // master has no pending tasks to assign to the requesting worker.
     string shard_file_name = 3;
 
-    // Strating and ending (inclusive) record number.
+    // Starting and ending (inclusive) record number.
     int64 start = 4;
     int64 end = 5;
 
@@ -57,8 +57,10 @@ message ReportTaskResultRequest {
 }
 
 message ReportTaskResultReply {
+    // If the gradient is accepted.
+    bool accepted = 1;
     // Current model version on master.
-    int32 model_version = 1;
+    int32 model_version = 2;
 }
 
 service Master {
