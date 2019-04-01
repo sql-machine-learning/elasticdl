@@ -8,18 +8,21 @@ package master;
 // Worker divides a task into multiple minibatches and compute a gradient for
 // each minibatch. For now, only RecordIO file format is supported.
 message Task {
-    int32 minibatch_size = 1;
+    // Unique id assigned by master.
+    int32 task_id = 1;
+
+    int32 minibatch_size = 2;
 
     // Filename for a RecordIO shard. An empty filename signifies that the
-    // master has no pending taske to assign to requesting worker.
-    string shard_file_name = 2;
+    // master has no pending tasks to assign to the requesting worker.
+    string shard_file_name = 3;
 
-    // Strating and ending (inclusive) record number.
-    int64 start = 3;
-    int64 end = 4;
+    // Starting and ending (inclusive) record number.
+    int64 start = 4;
+    int64 end = 5;
 
-    // Current model version of master
-    int32 model_version = 5;
+    // Current model version on master
+    int32 model_version = 6;
 }
 
 message Tensor {
@@ -41,7 +44,27 @@ message GetModelRequest {
     int32 min_version = 1;
 }
 
+message ReportTaskResultRequest {
+    // Task id assigned by master.
+    int32 task_id = 1;
+    // Model version used to compute gradients.
+    int32 model_version = 2;
+    
+    // When error occured, gradient is empty an err_message contains error
+    // message in plain text.
+    map<string, Tensor> gradient = 3;
+    string err_message = 4;
+}
+
+message ReportTaskResultReply {
+    // If the gradient is accepted.
+    bool accepted = 1;
+    // Current model version on master.
+    int32 model_version = 2;
+}
+
 service Master {
     rpc GetTask(google.protobuf.Empty) returns (Task);
     rpc GetModel(GetModelRequest) returns (Model);
+    rpc ReportTaskResult(ReportTaskResultRequest) returns (ReportTaskResultReply);
 }
