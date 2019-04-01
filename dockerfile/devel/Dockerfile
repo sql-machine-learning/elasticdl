@@ -17,7 +17,7 @@ RUN pip3 install \
     torch torchvision
 
 # So bazel won't complain about untracked header files
-RUN ln -s /usr/local/lib/python3.5/dist-packages/tensorflow /usr/local/include 
+RUN ln -s /usr/local/lib/python3.5/dist-packages/tensorflow/include/* /usr/local/include 
 
 COPY entry.sh /entry.sh
 ENTRYPOINT ["/entry.sh"]
