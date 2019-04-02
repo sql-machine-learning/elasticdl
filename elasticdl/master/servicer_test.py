@@ -133,5 +133,6 @@ class ServicerTest(unittest.TestCase):
         res = master.ReportTaskResult(req, None)
         self.assertTrue(res.accepted)
         self.assertEqual(2, res.model_version)
+        # TODO: verify model when model updating is in place.
         self.assertFalse(master._gradient_sum)
         self.assertEqual(0, master._grad_n)
