@@ -10,7 +10,7 @@ def TensorToNdarray(tensor_pb):
     """
 
     # Check that the buffer size agrees with dimensions.
-    size = 8  # A double item occupies 8 bytes
+    size = 4  # A float32 item occupies 4 bytes
     for d in tensor_pb.dim:
         size *= d
     if size != len(tensor_pb.content):
@@ -20,7 +20,7 @@ def TensorToNdarray(tensor_pb):
             len(tensor_pb.content),
         )
     arr = np.ndarray(
-        shape=tensor_pb.dim, dtype=float, buffer=tensor_pb.content
+        shape=tensor_pb.dim, dtype=np.float32, buffer=tensor_pb.content
     )
     tensor_pb.Clear()
 
@@ -30,9 +30,9 @@ def TensorToNdarray(tensor_pb):
 def NdarrayToTensor(arr):
     """Convert ndarray to Tensor PB"""
 
-    if arr.dtype != float:
+    if arr.dtype != np.float32:
         raise ValueError(
-            "expected ndarray to be of float64 type, got %s type", arr.dtype
+            "expected ndarray to be of float32 type, got %s type", arr.dtype
         )
     tensor = master_pb2.Tensor()
     tensor.dim.extend(arr.shape)
