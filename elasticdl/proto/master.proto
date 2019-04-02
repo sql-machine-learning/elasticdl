@@ -31,7 +31,7 @@ message Tensor {
     // dimension.
     repeated int32 dim = 1;
 
-    // ndarray's buffer dump. Each element must be a double value.
+    // ndarray's buffer dump. Each element must be a 32 bit float value.
     bytes content = 2;
 }
 
