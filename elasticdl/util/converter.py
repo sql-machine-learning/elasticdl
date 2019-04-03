@@ -9,6 +9,9 @@ def TensorToNdarray(tensor_pb):
     ndarray.
     """
 
+    if not tensor_pb.dim:
+        raise ValueError("Tensor PB has no dim defined")
+
     # Check that the buffer size agrees with dimensions.
     size = 4  # A float32 item occupies 4 bytes
     for d in tensor_pb.dim:
