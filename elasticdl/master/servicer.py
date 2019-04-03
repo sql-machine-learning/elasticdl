@@ -1,5 +1,7 @@
 import threading
+import numpy as np
 
+import tensorflow as tf
 from proto import master_pb2
 from proto import master_pb2_grpc
 from util.converter import NdarrayToTensor, TensorToNdarray
@@ -17,6 +19,12 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         self._gradient_sum = {}
         self._grad_to_wait = grads_to_wait
         self._grad_n = 0
+
+    def _set_model_var(self, name, value):
+        """Add or set model variable. Value should be a float32 ndarray"""
+        if value.dtype != np.float32:
+            raise ValueError("Value should be a float32 numpy array")
+        self._model[name] = tf.Variable(value, name=name, use_resource=True)
 
     def GetTask(self, request, context):
         # TODO: implent task queues. Return an empty task for now.
@@ -38,7 +46,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         with self._lock:
             res.version = self._version
             for k, v in self._model.items():
-                res.param[k].CopyFrom(NdarrayToTensor(v))
+                res.param[k].CopyFrom(NdarrayToTensor(v.numpy()))
         return res
 
     def ReportTaskResult(self, request, context):
@@ -76,7 +84,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
                         "Gradient key: %s is not part of model", k
                     )
                 arr = TensorToNdarray(v)
-                if arr.shape != self._model[k].shape:
+                if arr.shape != self._model[k].numpy().shape:
                     raise ValueError(
                         "Gradient key: %s has incompatible dimension", k
                     )
