@@ -2,6 +2,8 @@ import threading
 import numpy as np
 
 import tensorflow as tf
+assert tf.executing_eagerly()
+
 from proto import master_pb2
 from proto import master_pb2_grpc
 from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
