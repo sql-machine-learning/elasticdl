@@ -2,6 +2,8 @@ import threading
 import numpy as np
 
 import tensorflow as tf
+assert tf.executing_eagerly()
+
 from proto import master_pb2
 from proto import master_pb2_grpc
 from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
@@ -10,8 +12,9 @@ from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
 class MasterServicer(master_pb2_grpc.MasterServicer):
     """Master service implementation"""
 
-    def __init__(self, logger, grads_to_wait):
+    def __init__(self, logger, grads_to_wait, optimizer):
         self.logger = logger
+        self._opt = optimizer
         self._lock = threading.Lock()
         # TODO: random initialization
         # A <string, tf.ResourceVariable> map. We use tf.ResourceVariable
@@ -51,6 +54,17 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
             for k, v in self._model.items():
                 res.param[k].CopyFrom(ndarray_to_tensor(v.numpy()))
         return res
+
+    def _update_model(self):
+        assert self._lock.locked()
+        grad_var = []
+        for k in self._gradient_sum:
+            self._gradient_sum[k] = self._gradient_sum[k] / self._grad_to_wait
+            grad_var.append((self._gradient_sum[k], self._model[k]))
+        self._opt.apply_gradients(grad_var)
+        self._version += 1
+        self._gradient_sum.clear()
+        self._grad_n = 0
 
     def ReportTaskResult(self, request, context):
         if request.model_version > self._version:
@@ -101,10 +115,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
 
             self._grad_n += 1
             if self._grad_n >= self._grad_to_wait:
-                # TODO: update model
-                self._version += 1
-                self._gradient_sum.clear()
-                self._grad_n = 0
+                self._update_model()
         res.accepted = True
         res.model_version = self._version
         return res
