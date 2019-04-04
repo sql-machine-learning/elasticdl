@@ -29,25 +29,24 @@ class TestModel(object):
         x1 = tf.keras.layers.Dense(1)(input1)
         self._model = tf.keras.models.Model(input1, x1)
 
-    def GetKerasModel(self):
+    def get_keras_model(self):
         return self._model
 
-    def Output(self, data):
+    def output(self, data):
         return self._model.call(data['x'])
 
-    def Loss(self, output, data):
+    def loss(self, output, data):
         return tf.reduce_mean(tf.square(output - data['y']))
 
 
 class WorkerTest(unittest.TestCase):
-    def testLocalTrain(self):
+    def test_local_train(self):
         tf.enable_eager_execution()
         worker = Worker(TestModel, input_fn, get_optimizer)
         batch_size = 32
         epoch = 2
-        worker.LocalTrain(batch_size, epoch)
         try:
-            worker.LocalTrain(batch_size, epoch)
+            worker.local_train(batch_size, epoch)
             res = True
         except Exception as ex:
             print(ex)

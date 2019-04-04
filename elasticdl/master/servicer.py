@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from proto import master_pb2
 from proto import master_pb2_grpc
-from util.converter import NdarrayToTensor, TensorToNdarray
+from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
 
 
 class MasterServicer(master_pb2_grpc.MasterServicer):
@@ -49,7 +49,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         with self._lock:
             res.version = self._version
             for k, v in self._model.items():
-                res.param[k].CopyFrom(NdarrayToTensor(v.numpy()))
+                res.param[k].CopyFrom(ndarray_to_tensor(v.numpy()))
         return res
 
     def ReportTaskResult(self, request, context):
@@ -86,7 +86,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
                     raise ValueError(
                         "Gradient key: %s is not part of model", k
                     )
-                arr = TensorToNdarray(v)
+                arr = tensor_to_ndarray(v)
                 if arr.shape != self._model[k].numpy().shape:
                     raise ValueError(
                         "Gradient key: %s has incompatible dimension", k

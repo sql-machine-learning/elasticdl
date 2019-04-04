@@ -11,9 +11,9 @@ class Worker(object):
         """
         Arguments:
             model_cls: A class to define the model, which contains funcs
-                GetKerasModel: return the keras model defined in the class, with a tf dataset as its input
-                Output(data): get model ouput from data as input, either a single output of a dict of outputs
-                Loss(data): get model loss from data as input
+                get_keras_model: return the keras model defined in the class, with a tf dataset as its input
+                output(data): get model ouput from data as input, either a single output of a dict of outputs
+                loss(output, data): get model loss from output and data as input
             input_fn: a func to to get a dataset, which can be used as the keras model input
                       dataset = input_fn(dict_of_params)
                       dict_of_params from GetTask for DistributedTrain, from kwargs for LocalTrain
@@ -22,7 +22,7 @@ class Worker(object):
         """
 
         self._model_cls = model_cls()
-        self._keras_model = self._model_cls.GetKerasModel()
+        self._keras_model = self._model_cls.get_keras_model()
         self._input_fn = input_fn
         self._opt_fn = opt_fn
         if channel is None:
@@ -31,30 +31,31 @@ class Worker(object):
             self._stub = master_pb2_grpc.MasterStub(channel)
         self._model_version = -1
 
-    def GetTask(self):
+    def get_task(self):
         # TODO: get task from master
         pass
 
-    def GetModel(self):
+    def get_model(self):
         # TODO: get model from master
         pass
 
-    def ReportTaskResult(self):
+    def report_task_result(self):
         # TODO: report task result to master
         pass
 
-    def ReportGradient(self):
+    def report_gradient(self):
         # TODO: report gradient to ps
         pass
 
-    def DistributedTrain(self):
+    def distributed_train(self):
         # TODO: distributed training
         pass
 
-    def LocalTrain(self, batch_size, epoch=1, kwargs=None):
+    def local_train(self, batch_size, epoch=1, kwargs=None):
         """
         Local training for local testing. Must in eager mode.
         Argments:
+            batch_size: batch size in training
             epoch: the number of epoch in training
             kwargs: contains a dict of parameters used in training
         """
@@ -68,12 +69,12 @@ class Worker(object):
 
         for data in dataset:
             with tf.GradientTape() as tape:
-                output = self._model_cls.Output(data)
-                loss = self._model_cls.Loss(output, data)
+                output = self._model_cls.output(data)
+                loss = self._model_cls.loss(output, data)
                 # Add regularization loss if any.
                 # Note: for distributed training, the regularization loss should
                 #       be divided by the number of contributing workers, which
-                #       might be dificult for elasticdl.
+                #       might be difficult for elasticdl.
                 if self._keras_model.losses:
                     loss += math_ops.add_n(self._keras_model.losses)
             grads = tape.gradient(loss, self._keras_model.variables)
