@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 
 import tensorflow as tf
+
 tf.enable_eager_execution()
 
 from google.protobuf import empty_pb2
@@ -14,7 +15,7 @@ from .servicer import MasterServicer
 
 class ServicerTest(unittest.TestCase):
     def testGetTask(self):
-        master = MasterServicer(logging.getLogger(), 2)
+        master = MasterServicer(logging.getLogger(), 2, None)
 
         # No task yet, make sure the returned versions are as expected.
         task = master.GetTask(empty_pb2.Empty(), None)
@@ -27,7 +28,7 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual(1, task.model_version)
 
     def testGetModel(self):
-        master = MasterServicer(logging.getLogger(), 2)
+        master = MasterServicer(logging.getLogger(), 2, None)
         req = master_pb2.GetModelRequest()
         req.min_version = 0
 
@@ -66,12 +67,14 @@ class ServicerTest(unittest.TestCase):
                 NdarrayToTensor(np.array([0.1], dtype=np.float32))
             )
             req.gradient["y"].CopyFrom(
-                NdarrayToTensor(np.array([0.1, 0.2], dtype=np.float32))
+                NdarrayToTensor(np.array([0.03, 0.06], dtype=np.float32))
             )
             req.model_version = 1
             return req
 
-        master = MasterServicer(logging.getLogger(), 3)
+        master = MasterServicer(
+            logging.getLogger(), 3, tf.train.GradientDescentOptimizer(0.1)
+        )
         master._version = 1
         master._set_model_var("x", np.array([2.0], dtype=np.float32))
         master._set_model_var("y", np.array([12.0, 13.0], dtype=np.float32))
@@ -126,7 +129,7 @@ class ServicerTest(unittest.TestCase):
             np.array([0.2], dtype=np.float32), master._gradient_sum["x"]
         )
         np.testing.assert_array_equal(
-            np.array([0.1, 0.2], dtype=np.float32), master._gradient_sum["y"]
+            np.array([0.03, 0.06], dtype=np.float32), master._gradient_sum["y"]
         )
         self.assertEqual(2, master._grad_n)
 
@@ -136,6 +139,15 @@ class ServicerTest(unittest.TestCase):
         res = master.ReportTaskResult(req, None)
         self.assertTrue(res.accepted)
         self.assertEqual(2, res.model_version)
-        # TODO: verify model when model updating is in place.
         self.assertFalse(master._gradient_sum)
         self.assertEqual(0, master._grad_n)
+        np.testing.assert_array_equal(
+            # [2] - 0.1 * [0.1]
+            np.array([1.99], dtype=np.float32),
+            master._model["x"].numpy(),
+        )
+        np.testing.assert_array_equal(
+            # [12, 13] - 0.1 * [0.02, 0.04]
+            np.array([11.998, 12.996], dtype=np.float32),
+            master._model["y"].numpy(),
+        )

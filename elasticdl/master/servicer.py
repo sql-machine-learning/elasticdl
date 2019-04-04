@@ -10,8 +10,9 @@ from util.converter import NdarrayToTensor, TensorToNdarray
 class MasterServicer(master_pb2_grpc.MasterServicer):
     """Master service implementation"""
 
-    def __init__(self, logger, grads_to_wait):
+    def __init__(self, logger, grads_to_wait, optimizer):
         self.logger = logger
+        self._opt = optimizer
         self._lock = threading.Lock()
         # TODO: random initialization
         # A <string, tf.ResourceVariable> map. We use tf.ResourceVariable
@@ -51,6 +52,17 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
             for k, v in self._model.items():
                 res.param[k].CopyFrom(NdarrayToTensor(v.numpy()))
         return res
+
+    def _update_model(self):
+        assert self._lock.locked()
+        grad_var = []
+        for k in self._gradient_sum:
+            self._gradient_sum[k] = self._gradient_sum[k] / self._grad_to_wait
+            grad_var.append((self._gradient_sum[k], self._model[k]))
+        self._opt.apply_gradients(grad_var)
+        self._version += 1
+        self._gradient_sum.clear()
+        self._grad_n = 0
 
     def ReportTaskResult(self, request, context):
         if request.model_version > self._version:
@@ -101,10 +113,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
 
             self._grad_n += 1
             if self._grad_n >= self._grad_to_wait:
-                # TODO: update model
-                self._version += 1
-                self._gradient_sum.clear()
-                self._grad_n = 0
+                self._update_model()
         res.accepted = True
         res.model_version = self._version
         return res
