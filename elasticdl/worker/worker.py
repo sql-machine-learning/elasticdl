@@ -1,4 +1,6 @@
 import tensorflow as tf
+assert tf.executing_eagerly()
+
 from tensorflow.python.ops import math_ops
 from proto import master_pb2
 from proto import master_pb2_grpc
@@ -59,9 +61,6 @@ class Worker(object):
             epoch: the number of epoch in training
             kwargs: contains a dict of parameters used in training
         """
-
-        if not tf.executing_eagerly():
-            raise ValueError('Eager mode is required for LocalTrain')
 
         dataset = self._input_fn(kwargs)
         dataset = dataset.repeat(epoch).batch(batch_size)
