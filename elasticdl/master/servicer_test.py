@@ -2,6 +2,9 @@ import logging
 import unittest
 import numpy as np
 
+import tensorflow as tf
+tf.enable_eager_execution()
+
 from google.protobuf import empty_pb2
 
 from proto import master_pb2
@@ -29,7 +32,7 @@ class ServicerTest(unittest.TestCase):
         req.min_version = 0
 
         # Get version 0
-        master._model["x"] = np.array([1.0, 1.0], dtype=np.float32)
+        master._set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
         model = master.GetModel(req, None)
         self.assertEqual(0, model.version)
         self.assertEqual(["x"], list(model.param.keys()))
@@ -39,8 +42,8 @@ class ServicerTest(unittest.TestCase):
 
         # increase master's model version, now should get version 1
         master._version = 1
-        master._model["x"] = np.array([2.0, 2.0], dtype=np.float32)
-        master._model["y"] = np.array([12.0, 13.0], dtype=np.float32)
+        master._set_model_var("x", np.array([2.0, 2.0], dtype=np.float32))
+        master._set_model_var("y", np.array([12.0, 13.0], dtype=np.float32))
         model = master.GetModel(req, None)
         self.assertEqual(1, model.version)
         self.assertEqual(["x", "y"], list(model.param.keys()))
@@ -70,8 +73,8 @@ class ServicerTest(unittest.TestCase):
 
         master = MasterServicer(logging.getLogger(), 3)
         master._version = 1
-        master._model["x"] = np.array([2.0], dtype=np.float32)
-        master._model["y"] = np.array([12.0, 13.0], dtype=np.float32)
+        master._set_model_var("x", np.array([2.0], dtype=np.float32))
+        master._set_model_var("y", np.array([12.0, 13.0], dtype=np.float32))
 
         # Report a future version, should raise exception
         req = makeGrad()
