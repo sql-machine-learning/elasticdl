@@ -14,6 +14,9 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         self.logger = logger
         self._lock = threading.Lock()
         # TODO: random initialization
+        # A <string, tf.ResourceVariable> map. We use tf.ResourceVariable
+        # instead ndarray to avoid copying and conversion when calling
+        # optimizer's apply_gradients() function.
         self._model = {}
         self._version = 0
         self._gradient_sum = {}
