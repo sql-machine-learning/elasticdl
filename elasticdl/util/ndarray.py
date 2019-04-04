@@ -2,7 +2,7 @@ import numpy as np
 from proto import master_pb2
 
 
-def TensorToNdarray(tensor_pb):
+def tensor_to_ndarray(tensor_pb):
     """
     Create an ndarray from Tensor proto message. Note: upon return, the input
     tensor message is reset and underlying buffer passed to the returned
@@ -30,7 +30,7 @@ def TensorToNdarray(tensor_pb):
     return arr
 
 
-def NdarrayToTensor(arr):
+def ndarray_to_tensor(arr):
     """Convert ndarray to Tensor PB"""
 
     if arr.dtype != np.float32:

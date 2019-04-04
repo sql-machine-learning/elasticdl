@@ -9,7 +9,7 @@ tf.enable_eager_execution()
 from google.protobuf import empty_pb2
 
 from proto import master_pb2
-from util.converter import TensorToNdarray, NdarrayToTensor
+from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
 from .servicer import MasterServicer
 
 
@@ -38,7 +38,7 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual(0, model.version)
         self.assertEqual(["x"], list(model.param.keys()))
         np.testing.assert_array_equal(
-            np.array([1.0, 1.0]), TensorToNdarray(model.param["x"])
+            np.array([1.0, 1.0]), tensor_to_ndarray(model.param["x"])
         )
 
         # increase master's model version, now should get version 1
@@ -49,10 +49,10 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual(1, model.version)
         self.assertEqual(["x", "y"], list(model.param.keys()))
         np.testing.assert_array_equal(
-            np.array([2.0, 2.0]), TensorToNdarray(model.param["x"])
+            np.array([2.0, 2.0]), tensor_to_ndarray(model.param["x"])
         )
         np.testing.assert_array_equal(
-            np.array([12.0, 13.0]), TensorToNdarray(model.param["y"])
+            np.array([12.0, 13.0]), tensor_to_ndarray(model.param["y"])
         )
 
         # try to get version 2, it should raise exception.
@@ -64,10 +64,10 @@ class ServicerTest(unittest.TestCase):
             """ Make a ReportTaskResultRequest compatible with model"""
             req = master_pb2.ReportTaskResultRequest()
             req.gradient["x"].CopyFrom(
-                NdarrayToTensor(np.array([0.1], dtype=np.float32))
+                ndarray_to_tensor(np.array([0.1], dtype=np.float32))
             )
             req.gradient["y"].CopyFrom(
-                NdarrayToTensor(np.array([0.03, 0.06], dtype=np.float32))
+                ndarray_to_tensor(np.array([0.03, 0.06], dtype=np.float32))
             )
             req.model_version = 1
             return req
@@ -101,14 +101,14 @@ class ServicerTest(unittest.TestCase):
         # Report a unknown gradient, should raise.
         req = makeGrad()
         req.gradient["z"].CopyFrom(
-            NdarrayToTensor(np.array([0.1], dtype=np.float32))
+            ndarray_to_tensor(np.array([0.1], dtype=np.float32))
         )
         self.assertRaises(ValueError, master.ReportTaskResult, req, None)
 
         # Report an incompatible gradient, should raise.
         req = makeGrad()
         req.gradient["y"].CopyFrom(
-            NdarrayToTensor(np.array([0.1], dtype=np.float32))
+            ndarray_to_tensor(np.array([0.1], dtype=np.float32))
         )
         self.assertRaises(ValueError, master.ReportTaskResult, req, None)
 
