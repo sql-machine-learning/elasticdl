@@ -1,6 +1,9 @@
 import unittest
-import tensorflow as tf
 import numpy as np
+
+
+import tensorflow as tf
+tf.enable_eager_execution()
 
 from .worker import Worker
 
@@ -41,7 +44,6 @@ class TestModel(object):
 
 class WorkerTest(unittest.TestCase):
     def test_local_train(self):
-        tf.enable_eager_execution()
         worker = Worker(TestModel, input_fn, get_optimizer)
         batch_size = 32
         epoch = 2
