@@ -1,7 +1,6 @@
 import tensorflow as tf
 tf.enable_eager_execution()
 
-import tensorflow.contrib.eager as tfe
 import numpy as np
 import threading
 
@@ -19,9 +18,9 @@ class UserDefinedModule(object):
     def __init__(self):
         self._trainable_var_list = []
         rand_value = np.random.rand(2)
-        self._W = tfe.Variable(rand_value[0], name="W", dtype=tf.float32)
+        self._W = tf.Variable(rand_value[0], name="W", dtype=tf.float32)
         self._trainable_var_list.append(self._W)
-        self._b = tfe.Variable(rand_value[1], name="b", dtype=tf.float32)
+        self._b = tf.Variable(rand_value[1], name="b", dtype=tf.float32)
         self._trainable_var_list.append(self._b)
 
     def forward(self, x):
