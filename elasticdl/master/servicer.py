@@ -30,7 +30,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         """Add or set model variable. Value should be a float32 ndarray"""
         if value.dtype != np.float32:
             raise ValueError("Value should be a float32 numpy array")
-        self._model[name] = tf.Variable(value, name=name, use_resource=True)
+        self._model[name] = tf.Variable(value, name=name)
 
     def GetTask(self, request, context):
         # TODO: implent task queues. Return an empty task for now.
