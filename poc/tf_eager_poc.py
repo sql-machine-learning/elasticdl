@@ -1,4 +1,6 @@
 import tensorflow as tf
+tf.enable_eager_execution()
+
 import tensorflow.contrib.eager as tfe
 import numpy as np
 import threading
@@ -123,9 +125,6 @@ class Worker(threading.Thread):
 
 
 def main():
-    # Enable eager execution
-    tf.enable_eager_execution()
-
     ps = ParameterServer(UserDefinedModule)
 
     worker1 = Worker('worker1', DataSource(), ps, UserDefinedModule)
