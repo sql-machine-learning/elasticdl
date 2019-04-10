@@ -12,3 +12,7 @@ RUN pip install grpcio-tools
 
 # Install the Kubernetes Python client
 RUN pip install kubernetes
+
+# Install RecordIO and its dependency
+RUN apt-get install -y libsnappy-dev && \
+    pip install pyrecordio
