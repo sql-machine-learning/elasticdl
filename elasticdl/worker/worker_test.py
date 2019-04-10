@@ -1,5 +1,3 @@
-from proto import master_pb2
-from .worker import Worker
 import recordio
 import os
 import tempfile
@@ -9,6 +7,9 @@ import numpy as np
 
 import tensorflow as tf
 tf.enable_eager_execution()
+
+from .worker import Worker
+from proto import master_pb2
 
 
 def input_fn(kwargs):

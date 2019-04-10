@@ -1,10 +1,10 @@
-from proto import master_pb2_grpc
-from proto import master_pb2
-import recordio
-from tensorflow.python.ops import math_ops
 import tensorflow as tf
 assert tf.executing_eagerly()
 
+from tensorflow.python.ops import math_ops
+import recordio
+from proto import master_pb2
+from proto import master_pb2_grpc
 
 class Worker(object):
     """ElasticDL worker"""
