@@ -5,9 +5,8 @@
 To build the development Docker image, run the following command:
 
 ```bash
-docker build -t elasticdl:dev -f Dockerfile.dev whl_file_dir
+docker build -t elasticdl:dev -f Dockerfile.dev .
 ```
-`whl_file_dir` is the directory which includes `recordio-0.0.1-py3-none-any.whl`. `recordio-0.0.1-py3-none-any.whl` can be downloaded from [here](https://github.com/ElasticDL/pyrecordio/raw/develop/artifacts/recordio-0.0.1-py3-none-any.whl).
 
 To develop in the Docker container, run the following command to map in your `elasticdl` git repo directory and start container:
 
