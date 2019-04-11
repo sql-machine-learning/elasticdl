@@ -121,8 +121,8 @@ class WorkerTest(unittest.TestCase):
                                 16,
                                 get_optimizer(),
                                 task_q)
-        for n in worker._name_var_dict:
-            master._set_model_var(n, worker._name_var_dict[n].numpy())
+        for var in worker._keras_model.variables:
+            master._set_model_var(Worker.replaced_name(var.name), var.numpy())
 
         with mock.patch.object(worker._stub, 'GetTask', mock_GetTask),                   \
                 mock.patch.object(worker._stub, 'GetModel', mock_GetModel),              \

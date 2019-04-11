@@ -36,20 +36,10 @@ class Worker(object):
         else:
             self._stub = master_pb2_grpc.MasterStub(channel)
         self._model_version = -1
-        self._name_var_dict = Worker.create_name_variable_dict(
-            self._keras_model.variables)
 
     @staticmethod
     def replaced_name(name):
         return name.replace(':', '-')
-
-    @staticmethod
-    def create_name_variable_dict(variables):
-        name_var_dict = dict()
-        for v in variables:
-            # Master cannot accept name with ':', as tf.Variable() will fail.
-            name_var_dict[Worker.replaced_name(v.name)] = v
-        return name_var_dict
 
     def get_task(self):
         """
@@ -65,9 +55,10 @@ class Worker(object):
         req.min_version = min_version
         model = self._stub.GetModel(req)
 
-        for name in model.param:
-            self._name_var_dict[name].assign(
-                tensor_to_ndarray(model.param[name]))
+        for var in self._keras_model.variables:
+            # Assumes all variables exist in model.param.
+            var.assign(
+                 tensor_to_ndarray(model.param[Worker.replaced_name(var.name)]))
         self._model_version = model.version
 
     def report_task_result(self, task_id, err_msg):
