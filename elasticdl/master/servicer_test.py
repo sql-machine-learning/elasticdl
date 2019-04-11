@@ -2,6 +2,8 @@ import logging
 import unittest
 import numpy as np
 
+from collections import defaultdict
+
 import tensorflow as tf
 
 tf.enable_eager_execution()
@@ -11,11 +13,18 @@ from google.protobuf import empty_pb2
 from proto import master_pb2
 from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
 from .servicer import MasterServicer
+from .task_queue import _TaskQueue
 
 
 class ServicerTest(unittest.TestCase):
-    def testGetTask(self):
-        master = MasterServicer(logging.getLogger(), 2, None)
+    def testGetEmptyTask(self):
+        master = MasterServicer(
+            logging.getLogger(),
+            2,
+            3,
+            None,
+            _TaskQueue({}, record_per_task=3, num_epoch=2),
+        )
 
         # No task yet, make sure the returned versions are as expected.
         task = master.GetTask(empty_pb2.Empty(), None)
@@ -28,7 +37,7 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual(1, task.model_version)
 
     def testGetModel(self):
-        master = MasterServicer(logging.getLogger(), 2, None)
+        master = MasterServicer(logging.getLogger(), 2, 3, None, None)
         req = master_pb2.GetModelRequest()
         req.min_version = 0
 
@@ -59,10 +68,10 @@ class ServicerTest(unittest.TestCase):
         req.min_version = 2
         self.assertRaises(ValueError, master.GetModel, req, None)
 
-    def testReportTaskResult(self):
+    def testReportGradient(self):
         def makeGrad():
             """ Make a ReportTaskResultRequest compatible with model"""
-            req = master_pb2.ReportTaskResultRequest()
+            req = master_pb2.ReportGradientRequest()
             req.gradient["x"].CopyFrom(
                 ndarray_to_tensor(np.array([0.1], dtype=np.float32))
             )
@@ -73,7 +82,11 @@ class ServicerTest(unittest.TestCase):
             return req
 
         master = MasterServicer(
-            logging.getLogger(), 3, tf.train.GradientDescentOptimizer(0.1)
+            logging.getLogger(),
+            3,
+            3,
+            tf.train.GradientDescentOptimizer(0.1),
+            None,
         )
         master._version = 1
         master._set_model_var("x", np.array([2.0], dtype=np.float32))
@@ -82,19 +95,12 @@ class ServicerTest(unittest.TestCase):
         # Report a future version, should raise exception
         req = makeGrad()
         req.model_version = 2
-        self.assertRaises(ValueError, master.ReportTaskResult, req, None)
+        self.assertRaises(ValueError, master.ReportGradient, req, None)
 
         # Report an old version, should not be accepted
         req = makeGrad()
         req.model_version = 0
-        res = master.ReportTaskResult(req, None)
-        self.assertFalse(res.accepted)
-        self.assertEqual(1, res.model_version)
-
-        # Report a current version, but with error, should not be accepted.
-        req = makeGrad()
-        req.err_message = "worker error"
-        res = master.ReportTaskResult(req, None)
+        res = master.ReportGradient(req, None)
         self.assertFalse(res.accepted)
         self.assertEqual(1, res.model_version)
 
@@ -103,25 +109,25 @@ class ServicerTest(unittest.TestCase):
         req.gradient["z"].CopyFrom(
             ndarray_to_tensor(np.array([0.1], dtype=np.float32))
         )
-        self.assertRaises(ValueError, master.ReportTaskResult, req, None)
+        self.assertRaises(ValueError, master.ReportGradient, req, None)
 
         # Report an incompatible gradient, should raise.
         req = makeGrad()
         req.gradient["y"].CopyFrom(
             ndarray_to_tensor(np.array([0.1], dtype=np.float32))
         )
-        self.assertRaises(ValueError, master.ReportTaskResult, req, None)
+        self.assertRaises(ValueError, master.ReportGradient, req, None)
 
-        # Report a current version without error, should be accepted.
+        # Report a current version, should be accepted.
         req = makeGrad()
-        res = master.ReportTaskResult(req, None)
+        res = master.ReportGradient(req, None)
         self.assertTrue(res.accepted)
         self.assertEqual(1, res.model_version)
 
         # Report a current version with part of gradients, should be accepted.
         req = makeGrad()
         del req.gradient["y"]
-        res = master.ReportTaskResult(req, None)
+        res = master.ReportGradient(req, None)
         self.assertTrue(res.accepted)
         self.assertEqual(1, res.model_version)
         # Gradient should be accumulated.
@@ -133,10 +139,10 @@ class ServicerTest(unittest.TestCase):
         )
         self.assertEqual(2, master._grad_n)
 
-        # Report a current version without error, should be accepted, and a new
-        # version created
+        # Report a current version, should be accepted, and a new version
+        # created
         req = makeGrad()
-        res = master.ReportTaskResult(req, None)
+        res = master.ReportGradient(req, None)
         self.assertTrue(res.accepted)
         self.assertEqual(2, res.model_version)
         self.assertFalse(master._gradient_sum)
@@ -150,4 +156,37 @@ class ServicerTest(unittest.TestCase):
             # [12, 13] - 0.1 * [0.02, 0.04]
             np.array([11.998, 12.996], dtype=np.float32),
             master._model["y"].numpy(),
+        )
+
+    def testReportTaskResult(self):
+        task_q = _TaskQueue(
+            {"shard_1": 10, "shard_2": 9}, record_per_task=3, num_epoch=2
+        )
+        master = MasterServicer(logging.getLogger(), 3, 3, None, task_q)
+
+        # task to number of runs.
+        tasks = defaultdict(int)
+        while True:
+            task = master.GetTask(empty_pb2.Empty(), None)
+            if not task.shard_file_name:
+                break
+            task_key = (task.shard_file_name, task.start, task.end)
+            tasks[task_key] += 1
+            report = master_pb2.ReportTaskResultRequest()
+            report.task_id = task.task_id
+            if task.start == 0 and tasks[task_key] == 1:
+                # Simulate error reports.
+                report.err_message = "Worker error"
+            master.ReportTaskResult(report, None)
+
+        self.assertDictEqual(
+            {
+                ("shard_1", 0, 3): 3,
+                ("shard_1", 3, 6): 2,
+                ("shard_1", 6, 9): 2,
+                ("shard_1", 9, 10): 2,
+                ("shard_2", 0, 3): 3,
+                ("shard_2", 3, 6): 2,
+                ("shard_2", 6, 9): 2,
+            }, tasks
         )

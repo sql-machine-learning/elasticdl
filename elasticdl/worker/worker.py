@@ -2,9 +2,10 @@ import tensorflow as tf
 assert tf.executing_eagerly()
 
 from tensorflow.python.ops import math_ops
+import itertools
+import recordio
 from proto import master_pb2
 from proto import master_pb2_grpc
-
 
 class Worker(object):
     """ElasticDL worker"""
@@ -37,21 +38,60 @@ class Worker(object):
         # TODO: get task from master
         pass
 
-    def get_model(self):
-        # TODO: get model from master
+    def get_model(self, min_version):
+        # TODO: get model from master, and update model_version
         pass
 
-    def report_task_result(self):
+    def report_task_result(self, task_id, err_msg):
         # TODO: report task result to master
         pass
 
-    def report_gradient(self):
+    def report_gradient(self, grads, variables):
         # TODO: report gradient to ps
         pass
 
     def distributed_train(self):
-        # TODO: distributed training
-        pass
+        """
+        Distributed training.
+        """
+        while True:
+            task = self.get_task()
+            if not task.shard_file_name:
+                # No more task
+                break
+            batch_size = task.minibatch_size
+            err_msg = ""
+            try:
+                with recordio.File(task.shard_file_name, "r") as rdio_r:
+                    reader = rdio_r.get_reader(task.start, task.end)
+                    while True:
+                        record_buf = list(itertools.islice(reader, batch_size))
+                        if not record_buf:
+                            break
+
+                        # TODO: optimize the logic to avoid unnecessary get_model call.
+                        self.get_model(
+                            max(self._model_version, task.model_version))
+
+                        batch_input_data = self._input_fn(record_buf)
+
+                        with tf.GradientTape() as tape:
+                            output = self._model_cls.output(
+                                batch_input_data)
+                            loss = self._model_cls.loss(
+                                output, batch_input_data)
+                            # TODO:  Add regularization loss if any,
+                            #        which should be divided by the number of contributing workers.
+                        grads = tape.gradient(
+                            loss, self._keras_model.variables)
+                        print("Loss is ", loss.numpy())
+
+                        self.report_gradient(
+                            grads, self._keras_model.variables)
+
+            except Exception as ex:
+                err_msg = str(ex)
+            self.report_task_result(task.task_id, err_msg)
 
     def local_train(self, batch_size, epoch=1, kwargs=None):
         """
@@ -78,5 +118,5 @@ class Worker(object):
                     loss += math_ops.add_n(self._keras_model.losses)
             grads = tape.gradient(loss, self._keras_model.variables)
             optimizer.apply_gradients(zip(grads, self._keras_model.variables))
-            print('Loss is ', loss.numpy())
+            print("Loss is ", loss.numpy())
         pass
