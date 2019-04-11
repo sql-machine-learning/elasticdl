@@ -1,11 +1,14 @@
 import tensorflow as tf
 assert tf.executing_eagerly()
 
+from google.protobuf import empty_pb2
 from tensorflow.python.ops import math_ops
+from proto import master_pb2_grpc
+from proto import master_pb2
+from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
 import itertools
 import recordio
-from proto import master_pb2
-from proto import master_pb2_grpc
+
 
 class Worker(object):
     """ElasticDL worker"""
@@ -34,21 +37,50 @@ class Worker(object):
             self._stub = master_pb2_grpc.MasterStub(channel)
         self._model_version = -1
 
+    @staticmethod
+    def replaced_name(name):
+        return name.replace(':', '-')
+
     def get_task(self):
-        # TODO: get task from master
-        pass
+        """
+        get task from master
+        """
+        return self._stub.GetTask(empty_pb2.Empty())
 
     def get_model(self, min_version):
-        # TODO: get model from master, and update model_version
-        pass
+        """
+        get model from master, and update model_version
+        """
+        req = master_pb2.GetModelRequest()
+        req.min_version = min_version
+        model = self._stub.GetModel(req)
+
+        for var in self._keras_model.variables:
+            # Assumes all variables exist in model.param.
+            var.assign(
+                 tensor_to_ndarray(model.param[Worker.replaced_name(var.name)]))
+        self._model_version = model.version
 
     def report_task_result(self, task_id, err_msg):
-        # TODO: report task result to master
-        pass
+        """
+        report task result to master
+        """
+        report = master_pb2.ReportTaskResultRequest()
+        report.task_id = task_id
+        report.err_message = err_msg
+        return self._stub.ReportTaskResult(report)
 
-    def report_gradient(self, grads, variables):
-        # TODO: report gradient to ps
-        pass
+    def report_gradient(self, grads):
+        """
+        report gradient to ps, return (accepted, model_version) from rpc call.
+        """
+        req = master_pb2.ReportGradientRequest()
+        for g, v in zip(grads, self._keras_model.variables):
+            req.gradient[Worker.replaced_name(v.name)].CopyFrom(
+                ndarray_to_tensor(g.numpy()))
+        req.model_version = self._model_version
+        res = self._stub.ReportGradient(req)
+        return res.accepted, res.model_version
 
     def distributed_train(self):
         """
@@ -64,14 +96,16 @@ class Worker(object):
             try:
                 with recordio.File(task.shard_file_name, "r") as rdio_r:
                     reader = rdio_r.get_reader(task.start, task.end)
+                    min_model_version = task.model_version
                     while True:
-                        record_buf = list(itertools.islice(reader, batch_size))
+                        record_buf = list(
+                            itertools.islice(reader, 0, batch_size))
                         if not record_buf:
                             break
 
                         # TODO: optimize the logic to avoid unnecessary get_model call.
                         self.get_model(
-                            max(self._model_version, task.model_version))
+                            max(self._model_version, min_model_version))
 
                         batch_input_data = self._input_fn(record_buf)
 
@@ -86,8 +120,9 @@ class Worker(object):
                             loss, self._keras_model.variables)
                         print("Loss is ", loss.numpy())
 
-                        self.report_gradient(
-                            grads, self._keras_model.variables)
+                        accepted, min_model_version = self.report_gradient(
+                            grads)
+                        # TODO: re-train the current minibatch if not accepted.
 
             except Exception as ex:
                 err_msg = str(ex)
