@@ -17,7 +17,7 @@ message Task {
     // master has no pending tasks to assign to the requesting worker.
     string shard_file_name = 3;
 
-    // Starting and ending (inclusive) record number.
+    // Starting and ending (non-inclusive) record number.
     int64 start = 4;
     int64 end = 5;
 
