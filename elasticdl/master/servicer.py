@@ -76,7 +76,6 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
             raise ValueError(err_msg)
 
         res = master_pb2.ReportGradientReply()
-        res.gradient_id = request.gradient_id
         if request.model_version < self._version:
             self.logger.warning(
                 "Task result for outdated version %d dropped",

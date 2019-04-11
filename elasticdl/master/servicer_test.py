@@ -1,5 +1,4 @@
 import logging
-import random
 import unittest
 import numpy as np
 
@@ -64,7 +63,6 @@ class ServicerTest(unittest.TestCase):
         def makeGrad():
             """ Make a ReportTaskResultRequest compatible with model"""
             req = master_pb2.ReportGradientRequest()
-            req.gradient_id = random.randint(0, 1000)
             req.gradient["x"].CopyFrom(
                 ndarray_to_tensor(np.array([0.1], dtype=np.float32))
             )
@@ -92,7 +90,6 @@ class ServicerTest(unittest.TestCase):
         res = master.ReportGradient(req, None)
         self.assertFalse(res.accepted)
         self.assertEqual(1, res.model_version)
-        self.assertEqual(req.gradient_id, res.gradient_id)
 
         # Report a unknown gradient, should raise.
         req = makeGrad()
@@ -113,7 +110,6 @@ class ServicerTest(unittest.TestCase):
         res = master.ReportGradient(req, None)
         self.assertTrue(res.accepted)
         self.assertEqual(1, res.model_version)
-        self.assertEqual(req.gradient_id, res.gradient_id)
 
         # Report a current version with part of gradients, should be accepted.
         req = makeGrad()
@@ -129,7 +125,6 @@ class ServicerTest(unittest.TestCase):
             np.array([0.03, 0.06], dtype=np.float32), master._gradient_sum["y"]
         )
         self.assertEqual(2, master._grad_n)
-        self.assertEqual(req.gradient_id, res.gradient_id)
 
         # Report a current version, should be accepted, and a new version
         # created
@@ -139,7 +134,6 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual(2, res.model_version)
         self.assertFalse(master._gradient_sum)
         self.assertEqual(0, master._grad_n)
-        self.assertEqual(req.gradient_id, res.gradient_id)
         np.testing.assert_array_equal(
             # [2] - 0.1 * [0.1]
             np.array([1.99], dtype=np.float32),

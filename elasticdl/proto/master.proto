@@ -55,14 +55,10 @@ message ReportGradientRequest {
 }
 
 message ReportGradientReply {
-    // Directly copied by master from corresponding ReportGradientRequest
-    int32 gradient_id = 1;
-
     // If the gradient is accepted.
-
-    bool accepted = 2;
+    bool accepted = 1;
     // Current model version on master.
-    int32 model_version = 3;
+    int32 model_version = 2;
 }
 
 message ReportTaskResultRequest {
