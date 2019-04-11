@@ -66,7 +66,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         self._gradient_sum.clear()
         self._grad_n = 0
 
-    def ReportTaskResult(self, request, context):
+    def ReportGradient(self, request, context):
         if request.model_version > self._version:
             err_msg = "Model version %d out of range, current version: %d" % (
                 request.model_version,
@@ -75,18 +75,12 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
             self.logger.warning(err_msg)
             raise ValueError(err_msg)
 
-        res = master_pb2.ReportTaskResultReply()
+        res = master_pb2.ReportGradientReply()
         if request.model_version < self._version:
             self.logger.warning(
                 "Task result for outdated version %d dropped",
                 request.model_version,
             )
-            res.accepted = False
-            res.model_version = self._version
-            return res
-
-        if request.err_message:
-            self.logger.warning("Worker error: %s" % request.err_message)
             res.accepted = False
             res.model_version = self._version
             return res

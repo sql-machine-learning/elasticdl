@@ -59,10 +59,10 @@ class ServicerTest(unittest.TestCase):
         req.min_version = 2
         self.assertRaises(ValueError, master.GetModel, req, None)
 
-    def testReportTaskResult(self):
+    def testReportGradient(self):
         def makeGrad():
             """ Make a ReportTaskResultRequest compatible with model"""
-            req = master_pb2.ReportTaskResultRequest()
+            req = master_pb2.ReportGradientRequest()
             req.gradient["x"].CopyFrom(
                 ndarray_to_tensor(np.array([0.1], dtype=np.float32))
             )
@@ -82,19 +82,12 @@ class ServicerTest(unittest.TestCase):
         # Report a future version, should raise exception
         req = makeGrad()
         req.model_version = 2
-        self.assertRaises(ValueError, master.ReportTaskResult, req, None)
+        self.assertRaises(ValueError, master.ReportGradient, req, None)
 
         # Report an old version, should not be accepted
         req = makeGrad()
         req.model_version = 0
-        res = master.ReportTaskResult(req, None)
-        self.assertFalse(res.accepted)
-        self.assertEqual(1, res.model_version)
-
-        # Report a current version, but with error, should not be accepted.
-        req = makeGrad()
-        req.err_message = "worker error"
-        res = master.ReportTaskResult(req, None)
+        res = master.ReportGradient(req, None)
         self.assertFalse(res.accepted)
         self.assertEqual(1, res.model_version)
 
@@ -103,25 +96,25 @@ class ServicerTest(unittest.TestCase):
         req.gradient["z"].CopyFrom(
             ndarray_to_tensor(np.array([0.1], dtype=np.float32))
         )
-        self.assertRaises(ValueError, master.ReportTaskResult, req, None)
+        self.assertRaises(ValueError, master.ReportGradient, req, None)
 
         # Report an incompatible gradient, should raise.
         req = makeGrad()
         req.gradient["y"].CopyFrom(
             ndarray_to_tensor(np.array([0.1], dtype=np.float32))
         )
-        self.assertRaises(ValueError, master.ReportTaskResult, req, None)
+        self.assertRaises(ValueError, master.ReportGradient, req, None)
 
-        # Report a current version without error, should be accepted.
+        # Report a current version, should be accepted.
         req = makeGrad()
-        res = master.ReportTaskResult(req, None)
+        res = master.ReportGradient(req, None)
         self.assertTrue(res.accepted)
         self.assertEqual(1, res.model_version)
 
         # Report a current version with part of gradients, should be accepted.
         req = makeGrad()
         del req.gradient["y"]
-        res = master.ReportTaskResult(req, None)
+        res = master.ReportGradient(req, None)
         self.assertTrue(res.accepted)
         self.assertEqual(1, res.model_version)
         # Gradient should be accumulated.
@@ -133,10 +126,10 @@ class ServicerTest(unittest.TestCase):
         )
         self.assertEqual(2, master._grad_n)
 
-        # Report a current version without error, should be accepted, and a new
-        # version created
+        # Report a current version, should be accepted, and a new version
+        # created
         req = makeGrad()
-        res = master.ReportTaskResult(req, None)
+        res = master.ReportGradient(req, None)
         self.assertTrue(res.accepted)
         self.assertEqual(2, res.model_version)
         self.assertFalse(master._gradient_sum)
@@ -151,3 +144,7 @@ class ServicerTest(unittest.TestCase):
             np.array([11.998, 12.996], dtype=np.float32),
             master._model["y"].numpy(),
         )
+
+    def testReportTaskResult(self):
+        # TODO: add tests and verify task queue
+        pass
