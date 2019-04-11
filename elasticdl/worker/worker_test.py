@@ -1,15 +1,19 @@
-import recordio
-import os
-import tempfile
-import mock
-import unittest
-import numpy as np
-
 import tensorflow as tf
 tf.enable_eager_execution()
 
-from .worker import Worker
+from master.task_queue import _TaskQueue
+from master.servicer import MasterServicer
+from proto import master_pb2_grpc
 from proto import master_pb2
+from .worker import Worker
+import os
+import logging
+import tempfile
+import mock
+import grpc
+import unittest
+import numpy as np
+import recordio
 
 
 def input_fn(kwargs):
@@ -47,78 +51,6 @@ def get_optimizer(lr=0.1):
     return tf.train.GradientDescentOptimizer(lr)
 
 
-"""
-Mock the methods in Worker class, so that we can test Worker.distributed_train locally.
-get_task: mock Worker.get_task.
-          Return a task for a generated recordio file in the first call, empty task in the second call.
-get_model: mock Worker.get_model.
-           Do nothing and keep the local model.
-report_gradient: mock Worker.report_gradient.
-                 Update local model with the gradients.
-report_task_result: mock Worker.report_task_result.
-                    Print the task result.
-"""
-
-
-def create_task(size, batch_size):
-    temp_file = tempfile.mkstemp()
-    os.close(temp_file[0])
-    with recordio.File(temp_file[1], 'w', max_chunk_size=size) as f:
-        for _ in range(size):
-            x = np.random.rand((1)).astype(np.float32)
-            y = 2 * x + 1
-            data = np.concatenate((x, y), axis=None).tobytes()
-            f.write(data)
-
-    task = master_pb2.Task()
-    task.task_id = 0
-    task.minibatch_size = batch_size
-    task.shard_file_name = temp_file[1]
-    task.start = 0
-    task.end = size
-    task.model_version = 0
-
-    empty_task = master_pb2.Task()
-    return [task, empty_task]
-
-
-tasks = create_task(128, 16)
-opt = get_optimizer()
-
-
-def get_task():
-    """
-    mock Worker.get_task
-    """
-    return tasks.pop(0)
-
-
-def get_model(min_version):
-    """
-    mock Worker.get_model
-    """
-    pass
-
-
-def report_gradient(grads, variables):
-    """
-    mock Worker.report_gradient
-    """
-    # Update local model with the gradients.
-    opt.apply_gradients(zip(grads, variables))
-
-
-def report_task_result(task_id, err_msg):
-    """
-    mock Worker.report_task_result
-    """
-    if not err_msg:
-        print('Task %d finished successfully.' % task_id)
-    else:
-        print('Task %d failed: %s' % (task_id, err_msg))
-    pass
-
-
 class TestModel(object):
     def __init__(self):
         input1 = tf.keras.layers.Input(shape=(1,))
@@ -148,16 +80,58 @@ class WorkerTest(unittest.TestCase):
             res = False
         self.assertTrue(res)
 
-    @mock.patch(Worker.__module__ + '.Worker.get_task', side_effect=get_task)
-    @mock.patch(Worker.__module__ + '.Worker.get_model', side_effect=get_model)
-    @mock.patch(Worker.__module__ + '.Worker.report_gradient', side_effect=report_gradient)
-    @mock.patch(Worker.__module__ + '.Worker.report_task_result', side_effect=report_task_result)
-    def test_distributed_train(self, mock_report_task_result, mock_report_gradient, mock_get_model, mock_get_task):
-        worker = Worker(TestModel, batch_input_fn, get_optimizer)
-        try:
-            worker.distributed_train()
-            res = True
-        except Exception as ex:
-            print(ex)
-            res = False
+    def test_distributed_train(self):
+        """
+        Run Worker.distributed_train with a local master.
+        grpc calls are mocked by local master call.
+        """
+
+        def create_recordio_file(size):
+            temp_file = tempfile.mkstemp()
+            os.close(temp_file[0])
+            with recordio.File(temp_file[1], 'w', max_chunk_size=size) as f:
+                for _ in range(size):
+                    x = np.random.rand((1)).astype(np.float32)
+                    y = 2 * x + 1
+                    data = np.concatenate((x, y), axis=None).tobytes()
+                    f.write(data)
+            return temp_file[1]
+
+        def mock_GetTask(req):
+            return master.GetTask(req, None)
+
+        def mock_GetModel(req):
+            return master.GetModel(req, None)
+
+        def mock_ReportGradient(req):
+            return master.ReportGradient(req, None)
+
+        def mock_ReportTaskResult(req):
+            return master.ReportTaskResult(req, None)
+
+        channel = grpc.insecure_channel('localhost:9999')
+        worker = Worker(TestModel, batch_input_fn, get_optimizer, channel)
+
+        filename = create_recordio_file(128)
+        task_q = _TaskQueue(
+            {filename: 128}, record_per_task=64, num_epoch=1
+        )
+        master = MasterServicer(logging.getLogger(),
+                                2,
+                                16,
+                                get_optimizer(),
+                                task_q)
+        for n in worker._name_var_dict:
+            master._set_model_var(n, worker._name_var_dict[n].numpy())
+
+        with mock.patch.object(worker._stub, 'GetTask', mock_GetTask),                   \
+                mock.patch.object(worker._stub, 'GetModel', mock_GetModel),              \
+                mock.patch.object(worker._stub, 'ReportGradient', mock_ReportGradient),  \
+                mock.patch.object(worker._stub, 'ReportTaskResult', mock_ReportTaskResult):
+            try:
+                worker.distributed_train()
+                res = True
+            except Exception as ex:
+                print(ex)
+                res = False
         self.assertTrue(res)
