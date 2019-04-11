@@ -44,9 +44,14 @@ class CodedRecordIOTest(unittest.TestCase):
             rlist = [raw_r.get(i) for i in range(len(DATA))]
             self.assertEqual(list(map(encoder, DATA)), rlist)
 
-        # Verify decoded content
+        # Verify decoded content, with get() interface.
         with File(tmp_file.name, "r", decoder=decoder) as coded_r:
             rlist = [coded_r.get(i) for i in range(len(DATA))]
+            self.assertEqual(DATA, rlist)
+
+        # Verify decoded content, with iterator interface 
+        with File(tmp_file.name, "r", decoder=decoder) as coded_r:
+            rlist = list(coded_r)
             self.assertEqual(DATA, rlist)
 
 if __name__ == "__main__":
