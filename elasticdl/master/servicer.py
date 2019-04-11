@@ -4,6 +4,8 @@ import numpy as np
 import tensorflow as tf
 assert tf.executing_eagerly()
 
+from google.protobuf import empty_pb2
+
 from proto import master_pb2
 from proto import master_pb2_grpc
 from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
@@ -12,9 +14,11 @@ from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
 class MasterServicer(master_pb2_grpc.MasterServicer):
     """Master service implementation"""
 
-    def __init__(self, logger, grads_to_wait, optimizer):
+    def __init__(self, logger, grads_to_wait, minibatch_size, optimizer, task_q):
+        # TODO: group params together into a single object.
         self.logger = logger
         self._opt = optimizer
+        self._task_q = task_q
         self._lock = threading.Lock()
         # TODO: random initialization
         # A <string, tf.ResourceVariable> map. We use tf.ResourceVariable
@@ -25,6 +29,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         self._gradient_sum = {}
         self._grad_to_wait = grads_to_wait
         self._grad_n = 0
+        self._minibatch_size = minibatch_size
 
     def _set_model_var(self, name, value):
         """Add or set model variable. Value should be a float32 ndarray"""
@@ -32,12 +37,19 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
             raise ValueError("Value should be a float32 numpy array")
         self._model[name] = tf.Variable(value, name=name)
 
+
     def GetTask(self, request, context):
-        # TODO: implent task queues. Return an empty task for now.
         res = master_pb2.Task()
-        res.shard_file_name = ""
         res.model_version = self._version
+        res.minibatch_size = self._minibatch_size
+        task_id, task = self._task_q.get()
+        if task:
+            res.task_id = task_id
+            res.shard_file_name = task.file_name
+            res.start = task.start
+            res.end = task.end
         return res
+
 
     def GetModel(self, request, context):
         if request.min_version > self._version:
@@ -113,3 +125,11 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         res.accepted = True
         res.model_version = self._version
         return res
+
+    def ReportTaskResult(self, request, context):
+        if request.err_message:
+            self.logger.warning("Worker reported error: " + request.err_message)
+            self._task_q.report(request.task_id, False)
+        else:
+            self._task_q.report(request.task_id, True)
+        return empty_pb2.Empty()
