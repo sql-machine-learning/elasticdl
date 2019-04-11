@@ -44,27 +44,34 @@ message GetModelRequest {
     int32 min_version = 1;
 }
 
-message ReportTaskResultRequest {
-    // Task id assigned by master.
-    int32 task_id = 1;
+message ReportGradientRequest {
+    // Used by worker to identify the report. Not used by master. It will be
+    // copied directly into ReportGradientReply
+    int32 gradient_id = 1;
+    
     // Model version used to compute gradients.
     int32 model_version = 2;
-    
-    // When error occured, gradient is empty an err_message contains error
-    // message in plain text.
     map<string, Tensor> gradient = 3;
-    string err_message = 4;
 }
 
-message ReportTaskResultReply {
+message ReportGradientReply {
     // If the gradient is accepted.
     bool accepted = 1;
     // Current model version on master.
     int32 model_version = 2;
 }
 
+message ReportTaskResultRequest {
+    // Task id assigned by master.
+    int32 task_id = 1;
+
+    // When error occured, err_message contains error message in plain text.
+    string err_message = 2;
+}
+
 service Master {
     rpc GetTask(google.protobuf.Empty) returns (Task);
     rpc GetModel(GetModelRequest) returns (Model);
-    rpc ReportTaskResult(ReportTaskResultRequest) returns (ReportTaskResultReply);
+    rpc ReportGradient(ReportGradientRequest) returns (ReportGradientReply);
+    rpc ReportTaskResult(ReportTaskResultRequest) returns (google.protobuf.Empty);
 }
