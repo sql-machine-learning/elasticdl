@@ -75,7 +75,7 @@ def create_task(size, batch_size):
     task.minibatch_size = batch_size
     task.shard_file_name = temp_file[1]
     task.start = 0
-    task.end = size - 1
+    task.end = size
     task.model_version = 0
 
     empty_task = master_pb2.Task()

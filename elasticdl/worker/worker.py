@@ -64,7 +64,7 @@ class Worker(object):
             err_msg = ""
             try:
                 with recordio.File(task.shard_file_name, "r") as rdio_r:
-                    reader = rdio_r.get_reader(task.start, task.end + 1)
+                    reader = rdio_r.get_reader(task.start, task.end)
                     while True:
                         for record in itertools.islice(reader, 0, batch_size):
                             record_buf.append(record)
