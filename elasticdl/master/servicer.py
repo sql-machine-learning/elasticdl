@@ -4,6 +4,8 @@ import numpy as np
 import tensorflow as tf
 assert tf.executing_eagerly()
 
+from google.protobuf import empty_pb2
+
 from proto import master_pb2
 from proto import master_pb2_grpc
 from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
@@ -123,3 +125,11 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         res.accepted = True
         res.model_version = self._version
         return res
+
+    def ReportTaskResult(self, request, context):
+        if request.err_message:
+            self.logger.warning("Worker reported error: " + request.err_message)
+            self._task_q.report(request.task_id, False)
+        else:
+            self._task_q.report(request.task_id, True)
+        return empty_pb2.Empty()

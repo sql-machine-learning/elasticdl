@@ -37,7 +37,7 @@ class _TaskQueue(object):
         self._create_tasks()
 
     def _create_tasks(self):
-        for name, num_records in self._shards:
+        for name, num_records in self._shards.items():
             for start in range(0, num_records, self._record_per_task):
                 self._todo.append(
                     _Task(
@@ -52,11 +52,11 @@ class _TaskQueue(object):
         """Return next (task_id, Task) tuple"""
 
         with self._lock:
-            if not self._todo and self._epoch < self._num_epoch:
+            if not self._todo and self._epoch < self._num_epoch - 1:
                 # Start a new epoch
                 self._create_tasks()
                 self._epoch += 1
-                self._logger.warning(f"Starting epoch {self._epoch}")
+                self._logger.warning("Starting epoch %d" % self._epoch)
 
             if not self._todo:
                 # No more tasks
@@ -64,7 +64,7 @@ class _TaskQueue(object):
 
             self._task_id += 1
             task = self._todo.pop()
-            # TODO: Handing timeout of tasks.
+            # TODO: Handle timeout of tasks.
             self._doing[self._task_id] = task
 
             return self._task_id, task
@@ -73,9 +73,9 @@ class _TaskQueue(object):
         """Report if the task is successful or not"""
 
         with self._lock:
-            task = self._doing.pop(task_id)
+            task = self._doing.pop(task_id, None)
             if not task:
-                self._logger.warning(f"Unknown task_id: {task_id}")
+                self._logger.warning("Unknown task_id: %d" % task_id)
             elif not success:
                 # TODO: keep count of retries.
                 self._todo.append(task)
