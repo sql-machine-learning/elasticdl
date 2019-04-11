@@ -2,6 +2,7 @@ import tensorflow as tf
 assert tf.executing_eagerly()
 
 from tensorflow.python.ops import math_ops
+import itertools
 import recordio
 from proto import master_pb2
 from proto import master_pb2_grpc
@@ -55,40 +56,42 @@ class Worker(object):
         """
         while True:
             task = self.get_task()
-            if task.shard_file_name is '':
+            if not task.shard_file_name:
                 # No more task
                 break
             batch_size = task.minibatch_size
-            task_data_size = task.end - task.start + 1
             record_buf = []
-            err_msg = ''
-            record_count = 0
+            err_msg = ""
             try:
-                with recordio.File(task.shard_file_name, 'r') as rdio_r:
-                    for record in rdio_r.get_reader(task.start, task.end + 1):
-                        record_count += 1
-                        record_buf.append(record)
-                        if len(record_buf) == batch_size or record_count == task_data_size:
-                            # TODO: optimize the logic to avoid unnecessary get_model call.
-                            self.get_model(
-                                max(self._model_version, task.model_version))
+                with recordio.File(task.shard_file_name, "r") as rdio_r:
+                    reader = rdio_r.get_reader(task.start, task.end + 1)
+                    while True:
+                        for record in itertools.islice(reader, 0, batch_size):
+                            record_buf.append(record)
+                        if len(record_buf) == 0:
+                            break
 
-                            batch_input_data = self._input_fn(record_buf)
+                        # TODO: optimize the logic to avoid unnecessary get_model call.
+                        self.get_model(
+                            max(self._model_version, task.model_version))
 
-                            with tf.GradientTape() as tape:
-                                output = self._model_cls.output(
-                                    batch_input_data)
-                                loss = self._model_cls.loss(
-                                    output, batch_input_data)
-                                # TODO:  Add regularization loss if any,
-                                #        which should be divided by the number of contributing workers.
-                            grads = tape.gradient(
-                                loss, self._keras_model.variables)
-                            print('Loss is ', loss.numpy())
+                        batch_input_data = self._input_fn(record_buf)
 
-                            self.report_gradient(
-                                grads, self._keras_model.variables)
-                            record_buf = []
+                        with tf.GradientTape() as tape:
+                            output = self._model_cls.output(
+                                batch_input_data)
+                            loss = self._model_cls.loss(
+                                output, batch_input_data)
+                            # TODO:  Add regularization loss if any,
+                            #        which should be divided by the number of contributing workers.
+                        grads = tape.gradient(
+                            loss, self._keras_model.variables)
+                        print("Loss is ", loss.numpy())
+
+                        self.report_gradient(
+                            grads, self._keras_model.variables)
+
+                        record_buf = []
             except Exception as ex:
                 err_msg = str(ex)
             self.report_task_result(task.task_id, err_msg)
@@ -118,5 +121,5 @@ class Worker(object):
                     loss += math_ops.add_n(self._keras_model.losses)
             grads = tape.gradient(loss, self._keras_model.variables)
             optimizer.apply_gradients(zip(grads, self._keras_model.variables))
-            print('Loss is ', loss.numpy())
+            print("Loss is ", loss.numpy())
         pass

@@ -112,7 +112,7 @@ def report_task_result(task_id, err_msg):
     """
     mock Worker.report_task_result
     """
-    if err_msg == '':
+    if not err_msg:
         print('Task %d finished successfully.' % task_id)
     else:
         print('Task %d failed: %s' % (task_id, err_msg))
