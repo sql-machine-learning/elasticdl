@@ -60,15 +60,13 @@ class Worker(object):
                 # No more task
                 break
             batch_size = task.minibatch_size
-            record_buf = []
             err_msg = ""
             try:
                 with recordio.File(task.shard_file_name, "r") as rdio_r:
                     reader = rdio_r.get_reader(task.start, task.end)
                     while True:
-                        for record in itertools.islice(reader, 0, batch_size):
-                            record_buf.append(record)
-                        if len(record_buf) == 0:
+                        record_buf = list(itertools.islice(reader, batch_size))
+                        if not record_buf:
                             break
 
                         # TODO: optimize the logic to avoid unnecessary get_model call.
@@ -91,7 +89,6 @@ class Worker(object):
                         self.report_gradient(
                             grads, self._keras_model.variables)
 
-                        record_buf = []
             except Exception as ex:
                 err_msg = str(ex)
             self.report_task_result(task.task_id, err_msg)
