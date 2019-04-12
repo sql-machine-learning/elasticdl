@@ -1,6 +1,4 @@
 from recordio import File
-from recordio.recordio.reader import RangeReader
-from recordio.recordio.header import Compressor
 import tensorflow as tf
 
 class TFExampleBaseCodec(object):
