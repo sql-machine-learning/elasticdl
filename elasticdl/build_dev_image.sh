@@ -6,7 +6,7 @@ tmp_dir=$(mktemp -d)
 ../python/elasticdl/datasets/mnist/gen_data.py ${tmp_dir}/data
 ../python/elasticdl/datasets/cifar10/gen_data.py ${tmp_dir}/data
 
-make && cp -R . ${tmp_dir}/elasticdl 
+cp -R . ${tmp_dir}/elasticdl 
 
 docker build -t elasticdl:dev ${tmp_dir} -f- << EOF
 FROM tensorflow/tensorflow:1.13.1-py3
@@ -33,6 +33,8 @@ COPY data /data
 
 COPY elasticdl /elasticdl
 WORKDIR /elasticdl
+
+RUN make
 EOF
 
 echo "Built Docker image elasticdl:dev"
