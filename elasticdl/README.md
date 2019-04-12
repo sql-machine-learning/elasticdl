@@ -35,6 +35,14 @@ docker run --rm -u $(id -u):$(id -g) -it \
     elasticdl:dev \
     bash -c "make && python -m unittest -v */*_test.py"
 ```
+### Test in Docker
+
+```
+python -m master.main --train_data_dir=/data/mnist/train --record_per_task=100 --num_epoch=2 --grads_to_wait=2 --minibatch_size=10
+
+python -m worker.main --master_addr=localhost:50001
+
+```
 
 ### Manual Debug
 
