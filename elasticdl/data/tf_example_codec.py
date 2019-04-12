@@ -1,4 +1,3 @@
-from recordio import File
 import tensorflow as tf
 
 class TFExampleBaseCodec(object):
