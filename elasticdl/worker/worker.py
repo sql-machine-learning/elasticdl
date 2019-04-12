@@ -9,11 +9,18 @@ from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
 import itertools
 import recordio
 
+# the default max number of a minibatch retrain as its gradients are not accepted by master.
+DEFAULT_MAX_MINIBATCH_RETRAIN_NUM = 64
 
 class Worker(object):
     """ElasticDL worker"""
 
-    def __init__(self, model_cls, input_fn, opt_fn, channel=None):
+    def __init__(self,
+                 model_cls,
+                 input_fn,
+                 opt_fn,
+                 channel=None,
+                 max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM):
         """
         Arguments:
             model_cls: A class to define the model, which contains funcs
@@ -25,6 +32,7 @@ class Worker(object):
                       dict_of_params from GetTask for DistributedTrain, from kwargs for LocalTrain
             opt_fn: a func to get the optimizer 
             channel: grpc channel
+            max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
 
         self._model_cls = model_cls()
@@ -35,6 +43,7 @@ class Worker(object):
             self._stub = None
         else:
             self._stub = master_pb2_grpc.MasterStub(channel)
+        self._max_retrain_num = max_retrain_num
         self._model_version = -1
 
     @staticmethod
@@ -58,7 +67,7 @@ class Worker(object):
         for var in self._keras_model.variables:
             # Assumes all variables exist in model.param.
             var.assign(
-                 tensor_to_ndarray(model.param[Worker.replaced_name(var.name)]))
+                tensor_to_ndarray(model.param[Worker.replaced_name(var.name)]))
         self._model_version = model.version
 
     def report_task_result(self, task_id, err_msg):
@@ -103,26 +112,34 @@ class Worker(object):
                         if not record_buf:
                             break
 
-                        # TODO: optimize the logic to avoid unnecessary get_model call.
-                        self.get_model(
-                            max(self._model_version, min_model_version))
+                        accepted = False
+                        minibatch_retrain_num = 0
+                        while not accepted:
+                            minibatch_retrain_num += 1
+                            if minibatch_retrain_num > self._max_retrain_num:
+                                # Worker got stuck, fail the task.
+                                # TODO: stop the worker if it fails to make any progress for some time.
+                                raise Exception("Worker got stuck")
 
-                        batch_input_data = self._input_fn(record_buf)
+                            # TODO: optimize the logic to avoid unnecessary get_model call.
+                            self.get_model(
+                                max(self._model_version, min_model_version))
 
-                        with tf.GradientTape() as tape:
-                            output = self._model_cls.output(
-                                batch_input_data)
-                            loss = self._model_cls.loss(
-                                output, batch_input_data)
-                            # TODO:  Add regularization loss if any,
-                            #        which should be divided by the number of contributing workers.
-                        grads = tape.gradient(
-                            loss, self._keras_model.variables)
-                        print("Loss is ", loss.numpy())
+                            batch_input_data = self._input_fn(record_buf)
 
-                        accepted, min_model_version = self.report_gradient(
-                            grads)
-                        # TODO: re-train the current minibatch if not accepted.
+                            with tf.GradientTape() as tape:
+                                output = self._model_cls.output(
+                                    batch_input_data)
+                                loss = self._model_cls.loss(
+                                    output, batch_input_data)
+                                # TODO:  Add regularization loss if any,
+                                #        which should be divided by the number of contributing workers.
+                            grads = tape.gradient(
+                                loss, self._keras_model.variables)
+                            print("Loss is ", loss.numpy())
+
+                            accepted, min_model_version = self.report_gradient(
+                                grads)
 
             except Exception as ex:
                 err_msg = str(ex)

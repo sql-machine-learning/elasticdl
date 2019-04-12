@@ -3,6 +3,7 @@ tf.enable_eager_execution()
 
 from master.task_queue import _TaskQueue
 from master.servicer import MasterServicer
+from google.protobuf import empty_pb2
 from proto import master_pb2_grpc
 from proto import master_pb2
 from .worker import Worker
@@ -104,6 +105,10 @@ class WorkerTest(unittest.TestCase):
             return master.GetModel(req, None)
 
         def mock_ReportGradient(req):
+            if master._version > 2 and master._version < 20:
+                # For testing of retrain when gradient not accepted.
+                # Increase master version so the gradient will not be accepted.
+                master._version += 1
             return master.ReportGradient(req, None)
 
         def mock_ReportTaskResult(req):
@@ -134,4 +139,8 @@ class WorkerTest(unittest.TestCase):
             except Exception as ex:
                 print(ex)
                 res = False
+
         self.assertTrue(res)
+        task = mock_GetTask(empty_pb2.Empty())
+        # No more task.
+        self.assertTrue(not task.shard_file_name)
