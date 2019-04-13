@@ -1,17 +1,68 @@
 from concurrent import futures
 import logging
 import time
+import argparse
+import os
 
 import grpc
+import tensorflow as tf
 
+tf.enable_eager_execution()
+
+from recordio import File
 from proto import master_pb2_grpc
 from .servicer import MasterServicer
+from .task_queue import _TaskQueue
+
+
+def _make_task_queue(data_dir, record_per_task, num_epoch):
+    f_records = {}
+    for f in os.listdir(data_dir):
+        p = os.path.join(data_dir, f)
+        with File(p, "r") as rio:
+            f_records[p] = rio.count()
+    return _TaskQueue(f_records, record_per_task, num_epoch)
+
+
+def _parse_args():
+    parser = argparse.ArgumentParser(description="ElasticDL Master")
+    parser.add_argument(
+        "--train_data_dir",
+        help="Training data directory. Files should be in RecordIO format",
+        required=True,
+    )
+    parser.add_argument("--record_per_task", type=int, required=True)
+    parser.add_argument("--num_epoch", type=int, required=True)
+    parser.add_argument(
+        "--grads_to_wait",
+        type=int,
+        help="Number of gradients to wait before updating model",
+        required=True,
+    )
+    parser.add_argument(
+        "--minibatch_size",
+        type=int,
+        help="Minibatch size used by workers to compute gradients",
+        required=True,
+    )
+    return parser.parse_args()
+
 
 def main():
     logger = logging.getLogger("master")
+    args = _parse_args()
+    task_q = _make_task_queue(
+        args.train_data_dir, args.record_per_task, args.num_epoch
+    )
+    # TODO: use user provided optimizer
+    optimizer = tf.train.GradientDescentOptimizer(0.1)
+
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
     master_pb2_grpc.add_MasterServicer_to_server(
-        MasterServicer(logger), server
+        MasterServicer(
+            logger, args.grads_to_wait, args.minibatch_size, optimizer, task_q
+        ),
+        server,
     )
     server.add_insecure_port("[::]:50001")
     server.start()

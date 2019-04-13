@@ -35,6 +35,29 @@ docker run --rm -u $(id -u):$(id -g) -it \
     elasticdl:dev \
     bash -c "make && python -m unittest -v */*_test.py"
 ```
+### Test in Docker
+
+In a terminal, start master to distribute mnist training tasks.
+
+```
+docker run --net=host --rm -it elasticdl:dev \
+    python -m master.main \
+        --train_data_dir=/data/mnist/train \
+        --record_per_task=100 \
+        --num_epoch=2 \
+        --grads_to_wait=2 \
+        --minibatch_size=10
+```
+
+In another terminal, start a worker
+
+```
+docker run --net=host --rm -it elasticdl:dev \
+    python -m worker.main \
+        --master_addr=localhost:50001
+```
+
+Currently, worker only gets task and report fake task results, no real training is done yet.
 
 ### Manual Debug
 
