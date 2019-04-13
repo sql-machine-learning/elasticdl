@@ -2,6 +2,8 @@
 set -e
 set -x
 
+# The data generation depends on TensorFlow >= 1.12, python 3 and pyrecordio
+# library. Make sure you have them installed locally.
 tmp_dir=$(mktemp -d)
 ../python/elasticdl/datasets/mnist/gen_data.py ${tmp_dir}/data
 ../python/elasticdl/datasets/cifar10/gen_data.py ${tmp_dir}/data
