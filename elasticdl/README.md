@@ -47,11 +47,9 @@ docker run --net=host --rm -it elasticdl:dev \
         --num_epoch=2 \
         --grads_to_wait=2 \
         --minibatch_size=10
-
-python -m worker.main --master_addr=localhost:50001
-
 ```
-In antoer terminal, start a worker
+
+In another terminal, start a worker
 
 ```
 docker run --net=host --rm -it elasticdl:dev \
