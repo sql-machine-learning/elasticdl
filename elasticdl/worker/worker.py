@@ -112,15 +112,7 @@ class Worker(object):
                         if not record_buf:
                             break
 
-                        accepted = False
-                        minibatch_retrain_num = 0
-                        while not accepted:
-                            minibatch_retrain_num += 1
-                            if minibatch_retrain_num > self._max_retrain_num:
-                                # Worker got stuck, fail the task.
-                                # TODO: stop the worker if it fails to make any progress for some time.
-                                raise Exception("Worker got stuck")
-
+                        for _ in range(self._max_retrain_num):
                             # TODO: optimize the logic to avoid unnecessary get_model call.
                             self.get_model(
                                 max(self._model_version, min_model_version))
@@ -140,6 +132,13 @@ class Worker(object):
 
                             accepted, min_model_version = self.report_gradient(
                                 grads)
+                            if accepted:
+                                break
+                        else:
+                            # Worker got stuck, fail the task.
+                            # TODO: stop the worker if it fails to make any progress for some time.
+                            raise RuntimeError("Worker got stuck")
+
 
             except Exception as ex:
                 err_msg = str(ex)

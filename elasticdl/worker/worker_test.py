@@ -105,7 +105,7 @@ class WorkerTest(unittest.TestCase):
             return master.GetModel(req, None)
 
         def mock_ReportGradient(req):
-            if master._version > 2 and master._version < 20:
+            if master._version > 2 and master._version < 80:
                 # For testing of retrain when gradient not accepted.
                 # Increase master version so the gradient will not be accepted.
                 master._version += 1
