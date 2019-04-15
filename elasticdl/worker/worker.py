@@ -17,8 +17,6 @@ class Worker(object):
 
     def __init__(self,
                  model_cls,
-                 input_fn,
-                 opt_fn,
                  channel=None,
                  max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM):
         """
@@ -27,18 +25,16 @@ class Worker(object):
                 get_keras_model: return the keras model defined in the class, with a tf dataset as its input
                 output(data): get model ouput from data as input, either a single output of a dict of outputs
                 loss(output, data): get model loss from output and data as input
-            input_fn: a func to to get a dataset, which can be used as the keras model input
-                      dataset = input_fn(dict_of_params)
-                      dict_of_params from GetTask for DistributedTrain, from kwargs for LocalTrain
-            opt_fn: a func to get the optimizer 
+                input_fn: a func to process a data batch, which can be used as the keras model input
+                optimizer: a func to get an optimizer 
             channel: grpc channel
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
 
         self._model_cls = model_cls()
         self._keras_model = self._model_cls.get_keras_model()
-        self._input_fn = input_fn
-        self._opt_fn = opt_fn
+        self._input_fn = model_cls.input_fn
+        self._opt_fn = model_cls.optimizer
         if channel is None:
             self._stub = None
         else:
@@ -144,7 +140,7 @@ class Worker(object):
                 err_msg = str(ex)
             self.report_task_result(task.task_id, err_msg)
 
-    def local_train(self, batch_size, epoch=1, kwargs=None):
+    def local_train(self, file_list, batch_size, epoch=1, kwargs=None):
         """
         Local training for local testing. Must in eager mode.
         Argments:
@@ -152,22 +148,30 @@ class Worker(object):
             epoch: the number of epoch in training
             kwargs: contains a dict of parameters used in training
         """
-
-        dataset = self._input_fn(kwargs)
-        dataset = dataset.repeat(epoch).batch(batch_size)
         optimizer = self._opt_fn()
+        for _ in range(epoch):
+            for f in file_list:
+                with recordio.File(f, "r") as rdio_r:
+                    reader = rdio_r.get_reader(0, rdio_r.count())
+                    while True:
+                        record_buf = list(
+                            itertools.islice(reader, 0, batch_size))
+                        if not record_buf:
+                            break
 
-        for data in dataset:
-            with tf.GradientTape() as tape:
-                output = self._model_cls.output(data)
-                loss = self._model_cls.loss(output, data)
-                # Add regularization loss if any.
-                # Note: for distributed training, the regularization loss should
-                #       be divided by the number of contributing workers, which
-                #       might be difficult for elasticdl.
-                if self._keras_model.losses:
-                    loss += math_ops.add_n(self._keras_model.losses)
-            grads = tape.gradient(loss, self._keras_model.variables)
-            optimizer.apply_gradients(zip(grads, self._keras_model.variables))
-            print("Loss is ", loss.numpy())
-        pass
+                        data = self._input_fn(record_buf)
+
+                        with tf.GradientTape() as tape:
+                            output = self._model_cls.output(data)
+                            loss = self._model_cls.loss(output, data)
+                            # Add regularization loss if any.
+                            # Note: for distributed training, the regularization loss should
+                            #       be divided by the number of contributing workers, which
+                            #       might be difficult for elasticdl.
+                            if self._keras_model.losses:
+                                loss += math_ops.add_n(self._keras_model.losses)
+                        grads = tape.gradient(
+                            loss, self._keras_model.variables)
+                        optimizer.apply_gradients(
+                            zip(grads, self._keras_model.variables))
+                        print("Loss is ", loss.numpy())
