@@ -60,8 +60,8 @@ class Worker(object):
         req.min_version = min_version
         model = self._stub.GetModel(req)
 
-        for var in self._keras_model.variables:
-            # Assumes all variables exist in model.param.
+        for var in self._keras_model.trainable_variables:
+            # Assumes all trainable variables exist in model.param.
             var.assign(
                 tensor_to_ndarray(model.param[Worker.replaced_name(var.name)]))
         self._model_version = model.version
@@ -80,7 +80,7 @@ class Worker(object):
         report gradient to ps, return (accepted, model_version) from rpc call.
         """
         req = master_pb2.ReportGradientRequest()
-        for g, v in zip(grads, self._keras_model.variables):
+        for g, v in zip(grads, self._keras_model.trainable_variables):
             req.gradient[Worker.replaced_name(v.name)].CopyFrom(
                 ndarray_to_tensor(g.numpy()))
         req.model_version = self._model_version
@@ -123,7 +123,7 @@ class Worker(object):
                                 # TODO:  Add regularization loss if any,
                                 #        which should be divided by the number of contributing workers.
                             grads = tape.gradient(
-                                loss, self._keras_model.variables)
+                                loss, self._keras_model.trainable_variables)
                             print("Loss is ", loss.numpy())
 
                             accepted, min_model_version = self.report_gradient(
@@ -171,7 +171,7 @@ class Worker(object):
                             if self._keras_model.losses:
                                 loss += math_ops.add_n(self._keras_model.losses)
                         grads = tape.gradient(
-                            loss, self._keras_model.variables)
+                            loss, self._keras_model.trainable_variables)
                         optimizer.apply_gradients(
-                            zip(grads, self._keras_model.variables))
+                            zip(grads, self._keras_model.trainable_variables))
                         print("Loss is ", loss.numpy())
