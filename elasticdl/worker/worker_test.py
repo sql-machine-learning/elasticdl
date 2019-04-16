@@ -7,7 +7,6 @@ from google.protobuf import empty_pb2
 from proto import master_pb2_grpc
 from proto import master_pb2
 from .worker import Worker
-import os
 import logging
 import tempfile
 import mock
@@ -29,7 +28,8 @@ class TestModel(object):
     def output(self, data):
         return self._model.call(data['x'])
 
-    def loss(self, output, data):
+    @staticmethod
+    def loss(output, data):
         return tf.reduce_mean(tf.square(output - data['y']))
 
     @staticmethod
@@ -55,15 +55,14 @@ class TestModel(object):
 
 
 def create_recordio_file(size):
-    temp_file = tempfile.mkstemp()
-    os.close(temp_file[0])
-    with recordio.File(temp_file[1], 'w', max_chunk_size=size) as f:
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    with recordio.File(temp_file.name, 'w', max_chunk_size=size) as f:
         for _ in range(size):
             x = np.random.rand((1)).astype(np.float32)
             y = 2 * x + 1
             data = np.concatenate((x, y), axis=None).tobytes()
             f.write(data)
-    return temp_file[1]
+    return temp_file.name
 
 class WorkerTest(unittest.TestCase):
     def test_local_train(self):
