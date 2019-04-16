@@ -52,7 +52,7 @@ def get_optimizer(lr=0.1):
     return tf.train.GradientDescentOptimizer(lr)
 
 
-class TestModel(object):
+class TestModel1(object):
     def __init__(self):
         input1 = tf.keras.layers.Input(shape=(1,))
         x1 = tf.keras.layers.Dense(1)(input1)
@@ -66,6 +66,35 @@ class TestModel(object):
 
     def loss(self, output, data):
         return tf.reduce_mean(tf.square(output - data['y']))
+
+
+class TestModel(tf.keras.Model):
+
+    def __init__(self, num_classes=10):
+        super(TestModel, self).__init__(name='test_model')
+        self.num_classes = num_classes
+        self.dense_1 = tf.keras.layers.Dense(32, activation='relu')
+        self.dense_2 = tf.keras.layers.Dense(num_classes, activation='sigmoid')
+
+    def call(self, inputs):
+        x = self.dense_1(inputs)
+        return self.dense_2(x)
+
+    @staticmethod
+    def input_shapes():
+        return (10, 10)
+
+    @staticmethod
+    def input_names():
+        return ['x']
+
+    @staticmethod
+    def label_name():
+        return ['y']
+
+    @staticmethod
+    def loss_fn(output, label):
+        return tf.reduce_mean(tf.square(output - label)) 
 
 
 class WorkerTest(unittest.TestCase):
@@ -126,8 +155,8 @@ class WorkerTest(unittest.TestCase):
                                 16,
                                 get_optimizer(),
                                 task_q)
-        for var in worker._keras_model.variables:
-            master._set_model_var(Worker.replaced_name(var.name), var.numpy())
+        for var in worker._model_inst.trainable_variables:
+            master.set_model_var(var.name, var.numpy())
 
         with mock.patch.object(worker._stub, 'GetTask', mock_GetTask),                   \
                 mock.patch.object(worker._stub, 'GetModel', mock_GetModel),              \

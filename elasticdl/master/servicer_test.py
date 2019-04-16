@@ -1,6 +1,7 @@
 import logging
 import unittest
 import numpy as np
+import tensorflow as tf
 
 from collections import defaultdict
 
@@ -15,6 +16,21 @@ from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
 from .servicer import MasterServicer
 from .task_queue import _TaskQueue
 
+class TestModel(tf.keras.Model):
+
+    def __init__(self, num_classes=10):
+        super(TestModel, self).__init__(name='test_model')
+        self.num_classes = num_classes
+        self.dense_1 = tf.keras.layers.Dense(32, activation='relu')
+        self.dense_2 = tf.keras.layers.Dense(num_classes, activation='sigmoid')
+
+    def call(self, inputs):
+        x = self.dense_1(inputs)
+        return self.dense_2(x)
+
+    @staticmethod
+    def input_shapes():
+        return (10, 10)
 
 class ServicerTest(unittest.TestCase):
     def testGetEmptyTask(self):
@@ -42,7 +58,7 @@ class ServicerTest(unittest.TestCase):
         req.min_version = 0
 
         # Get version 0
-        master._set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
+        master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
         model = master.GetModel(req, None)
         self.assertEqual(0, model.version)
         self.assertEqual(["x"], list(model.param.keys()))
@@ -52,8 +68,8 @@ class ServicerTest(unittest.TestCase):
 
         # increase master's model version, now should get version 1
         master._version = 1
-        master._set_model_var("x", np.array([2.0, 2.0], dtype=np.float32))
-        master._set_model_var("y", np.array([12.0, 13.0], dtype=np.float32))
+        master.set_model_var("x", np.array([2.0, 2.0], dtype=np.float32))
+        master.set_model_var("y", np.array([12.0, 13.0], dtype=np.float32))
         model = master.GetModel(req, None)
         self.assertEqual(1, model.version)
         self.assertEqual(["x", "y"], list(model.param.keys()))
@@ -89,8 +105,8 @@ class ServicerTest(unittest.TestCase):
             None,
         )
         master._version = 1
-        master._set_model_var("x", np.array([2.0], dtype=np.float32))
-        master._set_model_var("y", np.array([12.0, 13.0], dtype=np.float32))
+        master.set_model_var("x", np.array([2.0], dtype=np.float32))
+        master.set_model_var("y", np.array([12.0, 13.0], dtype=np.float32))
 
         # Report a future version, should raise exception
         req = makeGrad()
@@ -190,3 +206,18 @@ class ServicerTest(unittest.TestCase):
                 ("shard_2", 6, 9): 2,
             }, tasks
         )
+
+    def testUserDefinedModel(self):
+        master = MasterServicer(logging.getLogger(), 2, 3, None, None)
+        req = master_pb2.GetModelRequest()
+        req.min_version = 0
+
+        # Get version 0
+        model_inst = TestModel()
+        model_inst.build(TestModel.input_shapes())
+        for variable in model_inst.trainable_variables:
+            master.set_model_var(variable.name, variable.numpy())
+        model = master.GetModel(req, None)
+        self.assertEqual(0, model.version)
+        self.assertEqual(['dense/bias:0', 'dense/kernel:0', 'dense_1/bias:0', 
+            'dense_1/kernel:0'], list(sorted(model.param.keys())))

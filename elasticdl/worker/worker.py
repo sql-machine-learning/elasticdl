@@ -35,8 +35,10 @@ class Worker(object):
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
 
-        self._model_cls = model_cls()
-        self._keras_model = self._model_cls.get_keras_model()
+        self._model_cls = model_cls
+        self._model_inst = model_cls()
+        self._model_inst.build(model_cls.input_shapes())
+
         self._input_fn = input_fn
         self._opt_fn = opt_fn
         if channel is None:
@@ -45,10 +47,6 @@ class Worker(object):
             self._stub = master_pb2_grpc.MasterStub(channel)
         self._max_retrain_num = max_retrain_num
         self._model_version = -1
-
-    @staticmethod
-    def replaced_name(name):
-        return name.replace(':', '-')
 
     def get_task(self):
         """
@@ -64,10 +62,10 @@ class Worker(object):
         req.min_version = min_version
         model = self._stub.GetModel(req)
 
-        for var in self._keras_model.variables:
+        for var in self._model_inst.trainable_variables:
             # Assumes all variables exist in model.param.
             var.assign(
-                tensor_to_ndarray(model.param[Worker.replaced_name(var.name)]))
+                tensor_to_ndarray(model.param[var.name]))
         self._model_version = model.version
 
     def report_task_result(self, task_id, err_msg):
@@ -84,8 +82,8 @@ class Worker(object):
         report gradient to ps, return (accepted, model_version) from rpc call.
         """
         req = master_pb2.ReportGradientRequest()
-        for g, v in zip(grads, self._keras_model.variables):
-            req.gradient[Worker.replaced_name(v.name)].CopyFrom(
+        for g, v in zip(grads, self._model_inst.trainable_variables):
+            req.gradient[v.name].CopyFrom(
                 ndarray_to_tensor(g.numpy()))
         req.model_version = self._model_version
         res = self._stub.ReportGradient(req)
@@ -120,14 +118,18 @@ class Worker(object):
                             batch_input_data = self._input_fn(record_buf)
 
                             with tf.GradientTape() as tape:
-                                output = self._model_cls.output(
-                                    batch_input_data)
-                                loss = self._model_cls.loss(
-                                    output, batch_input_data)
+                                inputs = []
+                                for input_name in self._model_cls.input_names():
+                                    inputs.append(batch_input_data[input_name])
+                                output = self._model_inst.call(inputs)
+
+                                loss = self._model_cls.loss_fn(
+                                    output, batch_input_data[self._model_cls.label_name()])
+
                                 # TODO:  Add regularization loss if any,
                                 #        which should be divided by the number of contributing workers.
                             grads = tape.gradient(
-                                loss, self._keras_model.variables)
+                                loss, self._model_inst.trainable_variables)
                             print("Loss is ", loss.numpy())
 
                             accepted, min_model_version = self.report_gradient(
@@ -159,15 +161,19 @@ class Worker(object):
 
         for data in dataset:
             with tf.GradientTape() as tape:
-                output = self._model_cls.output(data)
-                loss = self._model_cls.loss(output, data)
+                inputs = []
+                for input_name in self._model_cls.input_names():
+                    inputs.append(batch_input_data[input_name])
+                output = self._model_inst.call(inputs)
+                loss = self._model_cls.loss(output, data[self._model_cls.label_name()])
+
                 # Add regularization loss if any.
                 # Note: for distributed training, the regularization loss should
                 #       be divided by the number of contributing workers, which
                 #       might be difficult for elasticdl.
-                if self._keras_model.losses:
-                    loss += math_ops.add_n(self._keras_model.losses)
-            grads = tape.gradient(loss, self._keras_model.variables)
-            optimizer.apply_gradients(zip(grads, self._keras_model.variables))
+                if self._model_inst.losses:
+                    loss += math_ops.add_n(self._model_inst.losses)
+            grads = tape.gradient(loss, self._model_inst.trainable_variables)
+            optimizer.apply_gradients(zip(grads, self._model_inst.trainable_variables))
             print("Loss is ", loss.numpy())
         pass

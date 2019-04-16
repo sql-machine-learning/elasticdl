@@ -1,4 +1,5 @@
 import threading
+import base64
 import numpy as np
 
 import tensorflow as tf
@@ -31,11 +32,16 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         self._grad_n = 0
         self._minibatch_size = minibatch_size
 
-    def _set_model_var(self, name, value):
+    def set_model_var(self, name, value):
         """Add or set model variable. Value should be a float32 ndarray"""
         if value.dtype != np.float32:
             raise ValueError("Value should be a float32 numpy array")
-        self._model[name] = tf.Variable(value, name=name)
+        self._model[name] = tf.Variable(value, name=MasterServicer.var_name_encode(name))
+
+
+    @staticmethod
+    def var_name_encode(name):
+        return name.replace(":", "-")
 
 
     def GetTask(self, request, context):
