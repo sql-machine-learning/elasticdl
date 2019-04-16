@@ -23,7 +23,7 @@ def main():
         def get_keras_model(self):
             return None
 
-    worker = Worker(lambda: _Model(), lambda: None, None, channel=channel)
+    worker = Worker(lambda: _Model(), channel=channel)
 
     while True:
         task = worker.get_task()
