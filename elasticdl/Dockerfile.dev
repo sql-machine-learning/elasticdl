@@ -1,16 +1,3 @@
-#! /bin/bash
-set -e
-set -x
-
-# The data generation depends on TensorFlow >= 1.12, python 3 and pyrecordio
-# library. Make sure you have them installed locally.
-tmp_dir=$(mktemp -d)
-../python/elasticdl/datasets/mnist/gen_data.py ${tmp_dir}/data
-../python/elasticdl/datasets/cifar10/gen_data.py ${tmp_dir}/data
-
-cp -R . ${tmp_dir}/elasticdl 
-
-docker build -t elasticdl:dev ${tmp_dir} -f- << EOF
 FROM tensorflow/tensorflow:1.13.1-py3
 # For GPU version, use:
 # FROM tensorflow/tensorflow:1.13.1-gpu-py3
@@ -30,13 +17,13 @@ RUN pip install kubernetes
 RUN apt-get install -y libsnappy-dev && \
     pip install pyrecordio
 
-# ElasticDL prebuilt datasets
-COPY data /data
+# RecordIO dataset generator
+COPY recordio_ds_gen /recordio_ds_gen
+WORKDIR recordio_ds_gen  
+RUN python mnist/gen_data.py /data
+RUN cifar10/gen_data.py /data
 
-COPY elasticdl /elasticdl
+COPY . /elasticdl
 WORKDIR /elasticdl
 
 RUN make
-EOF
-
-echo "Built Docker image elasticdl:dev"
