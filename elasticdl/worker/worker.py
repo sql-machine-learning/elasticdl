@@ -17,8 +17,6 @@ class Worker(object):
 
     def __init__(self,
                  model_cls,
-                 input_fn,
-                 opt_fn,
                  channel=None,
                  max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM):
         """
@@ -27,10 +25,8 @@ class Worker(object):
                 get_keras_model: return the keras model defined in the class, with a tf dataset as its input
                 output(data): get model ouput from data as input, either a single output of a dict of outputs
                 loss(output, data): get model loss from output and data as input
-            input_fn: a func to to get a dataset, which can be used as the keras model input
-                      dataset = input_fn(dict_of_params)
-                      dict_of_params from GetTask for DistributedTrain, from kwargs for LocalTrain
-            opt_fn: a func to get the optimizer 
+                input_fn: a func to process a data batch, which can be used as the keras model input
+                optimizer: a func to get an optimizer 
             channel: grpc channel
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
@@ -39,8 +35,9 @@ class Worker(object):
         self._model_inst = model_cls()
         self._model_inst.build(model_cls.input_shapes())
 
-        self._input_fn = input_fn
-        self._opt_fn = opt_fn
+        self._input_fn = model_cls.input_fn 
+        self._opt_fn = model_cls.optimizer
+
         if channel is None:
             self._stub = None
         else:
@@ -63,7 +60,7 @@ class Worker(object):
         model = self._stub.GetModel(req)
 
         for var in self._model_inst.trainable_variables:
-            # Assumes all variables exist in model.param.
+            # Assumes all trainable variables exist in model.param.
             var.assign(
                 tensor_to_ndarray(model.param[var.name]))
         self._model_version = model.version
@@ -148,7 +145,7 @@ class Worker(object):
                 err_msg = str(ex)
             self.report_task_result(task.task_id, err_msg)
 
-    def local_train(self, batch_size, epoch=1, kwargs=None):
+    def local_train(self, file_list, batch_size, epoch=1, kwargs=None):
         """
         Local training for local testing. Must in eager mode.
         Argments:
@@ -156,32 +153,39 @@ class Worker(object):
             epoch: the number of epoch in training
             kwargs: contains a dict of parameters used in training
         """
-
-        dataset = self._input_fn(kwargs)
-        dataset = dataset.repeat(epoch).batch(batch_size)
         optimizer = self._opt_fn()
+        for _ in range(epoch):
+            for f in file_list:
+                with recordio.File(f, "r") as rdio_r:
+                    reader = rdio_r.get_reader(0, rdio_r.count())
+                    while True:
+                        record_buf = list(
+                            itertools.islice(reader, 0, batch_size))
+                        if not record_buf:
+                            break
 
-        for data in dataset:
-            with tf.GradientTape() as tape:
-                inputs = []
-                for input_name in self._model_cls.input_names():
-                    inputs.append(data[input_name])
+                        data = self._input_fn(record_buf)
 
-                outputs = self._model_inst.call(inputs)
+                        with tf.GradientTape() as tape:
+                            inputs = []
+                            for input_name in self._model_cls.input_names():
+                                inputs.append(data[input_name])
+                            outputs = self._model_inst.call(inputs)
 
-                labels = []
-                for label_name in self._model_cls.label_names():
-                    labels.append(data[label_name])
-                    
-                loss = self._model_cls.loss(outputs, labels) 
+                            labels = []
+                            for label_name in self._model_cls.label_names():
+                                labels.append(data[label_name])
 
-                # Add regularization loss if any.
-                # Note: for distributed training, the regularization loss should
-                #       be divided by the number of contributing workers, which
-                #       might be difficult for elasticdl.
-                if self._model_inst.losses:
-                    loss += math_ops.add_n(self._model_inst.losses)
-            grads = tape.gradient(loss, self._model_inst.trainable_variables)
-            optimizer.apply_gradients(zip(grads, self._model_inst.trainable_variables))
-            print("Loss is ", loss.numpy())
-        pass
+                            loss = self._model_cls.loss(outputs, labels)
+
+                            # Add regularization loss if any.
+                            # Note: for distributed training, the regularization loss should
+                            #       be divided by the number of contributing workers, which
+                            #       might be difficult for elasticdl.
+                            if self._model_inst.losses:
+                                loss += math_ops.add_n(self._model_inst.losses)
+                        grads = tape.gradient(
+                            loss, self._model_inst.trainable_variables)
+                        optimizer.apply_gradients(
+                            zip(grads, self._model_inst.trainable_variables))
+                        print("Loss is ", loss.numpy())
