@@ -2,6 +2,7 @@ import threading
 import numpy as np
 
 import tensorflow as tf
+
 assert tf.executing_eagerly()
 
 from google.protobuf import empty_pb2
@@ -14,13 +15,21 @@ from common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 class MasterServicer(master_pb2_grpc.MasterServicer):
     """Master service implementation"""
 
-    def __init__(self, logger, grads_to_wait, minibatch_size, optimizer, task_q):
+    def __init__(
+        self,
+        logger,
+        grads_to_wait,
+        minibatch_size,
+        optimizer,
+        task_q,
+        *,
+        init_var=[]
+    ):
         # TODO: group params together into a single object.
         self.logger = logger
         self._opt = optimizer
         self._task_q = task_q
         self._lock = threading.Lock()
-        # TODO: random initialization
         # A <string, tf.ResourceVariable> map. We use tf.ResourceVariable
         # instead ndarray to avoid copying and conversion when calling
         # optimizer's apply_gradients() function.
@@ -30,18 +39,20 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         self._grad_to_wait = grads_to_wait
         self._grad_n = 0
         self._minibatch_size = minibatch_size
+        for var in init_var:
+            self.set_model_var(var.name, var.numpy())
 
     def set_model_var(self, name, value):
         """Add or set model variable. Value should be a float32 ndarray"""
         if value.dtype != np.float32:
             raise ValueError("Value should be a float32 numpy array")
-        self._model[name] = tf.Variable(value, name=MasterServicer.var_name_encode(name))
-
+        self._model[name] = tf.Variable(
+            value, name=MasterServicer.var_name_encode(name)
+        )
 
     @staticmethod
     def var_name_encode(name):
         return name.replace(":", "-")
-
 
     def GetTask(self, request, context):
         res = master_pb2.Task()
@@ -54,7 +65,6 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
             res.start = task.start
             res.end = task.end
         return res
-
 
     def GetModel(self, request, context):
         if request.min_version > self._version:
@@ -133,7 +143,9 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
 
     def ReportTaskResult(self, request, context):
         if request.err_message:
-            self.logger.warning("Worker reported error: " + request.err_message)
+            self.logger.warning(
+                "Worker reported error: " + request.err_message
+            )
             self._task_q.report(request.task_id, False)
         else:
             self._task_q.report(request.task_id, True)
