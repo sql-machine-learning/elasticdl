@@ -3,8 +3,6 @@ import logging
 import time
 import argparse
 import os
-import importlib
-from contextlib import contextmanager
 
 import grpc
 import tensorflow as tf
