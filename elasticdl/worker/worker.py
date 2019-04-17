@@ -113,6 +113,7 @@ class Worker(object):
                                 for input_name in self._model_inst.input_names():
                                     inputs.append(batch_input_data[input_name])
                                 outputs = self._model_inst.call(inputs)
+                                print(outputs)
                                 loss = self._model_inst.loss(outputs, batch_input_data)
 
                                 # TODO:  Add regularization loss if any,

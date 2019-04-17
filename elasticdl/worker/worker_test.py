@@ -20,7 +20,7 @@ class TestModel(tf.keras.Model):
     def __init__(self):
         super(TestModel, self).__init__(name='test_model')
         self.dense_1 = tf.keras.layers.Dense(32, activation='relu')
-        self.dense_2 = tf.keras.layers.Dense(2, activation='sigmoid')
+        self.dense_2 = tf.keras.layers.Dense(1, activation='sigmoid')
 
     def call(self, inputs):
         x = self.dense_1(inputs)
@@ -36,7 +36,7 @@ class TestModel(tf.keras.Model):
 
     @staticmethod
     def loss(outputs, labels):
-        return tf.reduce_mean(tf.square(outputs[0] - labels['y'])) 
+        return tf.reduce_mean(tf.square(outputs - labels['y'])) 
 
     @staticmethod
     def input_fn(records):
