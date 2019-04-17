@@ -21,7 +21,7 @@ class Worker(object):
                  max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM):
         """
         Arguments:
-            model_cls: A class to define the model, which contains funcs
+            model_cls: A class to define the model
             channel: grpc channel
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
@@ -114,11 +114,7 @@ class Worker(object):
                                 for input_name in self._model_cls.input_names():
                                     inputs.append(batch_input_data[input_name])
                                 outputs = self._model_inst.call(inputs)
-                                labels = []
-                                for label_name in self._model_cls.label_names():
-                                    labels.append(batch_input_data[label_name])
-
-                                loss = self._model_cls.loss(outputs, labels)
+                                loss = self._model_cls.loss(outputs, batch_input_data)
 
                                 # TODO:  Add regularization loss if any,
                                 #        which should be divided by the number of contributing workers.
@@ -166,12 +162,7 @@ class Worker(object):
                             for input_name in self._model_cls.input_names():
                                 inputs.append(data[input_name])
                             outputs = self._model_inst.call(inputs)
-
-                            labels = []
-                            for label_name in self._model_cls.label_names():
-                                labels.append(data[label_name])
-
-                            loss = self._model_cls.loss(outputs, labels)
+                            loss = self._model_cls.loss(outputs, data)
 
                             # Add regularization loss if any.
                             # Note: for distributed training, the regularization loss should

@@ -36,12 +36,8 @@ class TestModel(tf.keras.Model):
         return ['x']
 
     @staticmethod
-    def label_names():
-        return ['y']
-
-    @staticmethod
     def loss(outputs, labels):
-        return tf.reduce_mean(tf.square(outputs[0] - labels[0])) 
+        return tf.reduce_mean(tf.square(outputs[0] - labels['y'])) 
 
     @staticmethod
     def input_fn(records):
