@@ -16,21 +16,25 @@ import numpy as np
 import recordio
 
 
-class TestModel(object):
+class TestModel(tf.keras.Model):
     def __init__(self):
-        input1 = tf.keras.layers.Input(shape=(1,))
-        x1 = tf.keras.layers.Dense(1)(input1)
-        self._model = tf.keras.models.Model(input1, x1)
+        super(TestModel, self).__init__(name='test_model')
+        self.dense = tf.keras.layers.Dense(1)
 
-    def get_keras_model(self):
-        return self._model
-
-    def output(self, data):
-        return self._model.call(data['x'])
+    def call(self, inputs):
+        return self.dense(inputs)
 
     @staticmethod
-    def loss(output, data):
-        return tf.reduce_mean(tf.square(output - data['y']))
+    def input_shapes():
+        return (1, 1)
+
+    @staticmethod
+    def input_names():
+        return ['x']
+
+    @staticmethod
+    def loss(outputs, labels):
+        return tf.reduce_mean(tf.square(outputs - labels['y'])) 
 
     @staticmethod
     def input_fn(records):
@@ -111,8 +115,9 @@ class WorkerTest(unittest.TestCase):
                                 16,
                                 TestModel.optimizer(),
                                 task_q)
-        for var in worker._keras_model.trainable_variables:
-            master._set_model_var(Worker.replaced_name(var.name), var.numpy())
+
+        for var in worker._model.trainable_variables:
+            master.set_model_var(var.name, var.numpy())
 
         with mock.patch.object(worker._stub, 'GetTask', mock_GetTask),                   \
                 mock.patch.object(worker._stub, 'GetModel', mock_GetModel),              \

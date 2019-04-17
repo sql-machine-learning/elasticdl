@@ -5,7 +5,7 @@ from google.protobuf import empty_pb2
 from tensorflow.python.ops import math_ops
 from proto import master_pb2_grpc
 from proto import master_pb2
-from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 import itertools
 import recordio
 
@@ -21,30 +21,23 @@ class Worker(object):
                  max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM):
         """
         Arguments:
-            model_cls: A class to define the model, which contains funcs
-                get_keras_model: return the keras model defined in the class, with a tf dataset as its input
-                output(data): get model ouput from data as input, either a single output of a dict of outputs
-                loss(output, data): get model loss from output and data as input
-                input_fn: a func to process a data batch, which can be used as the keras model input
-                optimizer: a func to get an optimizer 
+            model_cls: A class to define the model
             channel: grpc channel
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
 
-        self._model_cls = model_cls()
-        self._keras_model = self._model_cls.get_keras_model()
-        self._input_fn = model_cls.input_fn
+        self._model = model_cls()
+        self._model.build(model_cls.input_shapes())
+
+        self._input_fn = model_cls.input_fn 
         self._opt_fn = model_cls.optimizer
+
         if channel is None:
             self._stub = None
         else:
             self._stub = master_pb2_grpc.MasterStub(channel)
         self._max_retrain_num = max_retrain_num
         self._model_version = -1
-
-    @staticmethod
-    def replaced_name(name):
-        return name.replace(':', '-')
 
     def get_task(self):
         """
@@ -60,10 +53,10 @@ class Worker(object):
         req.min_version = min_version
         model = self._stub.GetModel(req)
 
-        for var in self._keras_model.trainable_variables:
+        for var in self._model.trainable_variables:
             # Assumes all trainable variables exist in model.param.
             var.assign(
-                tensor_to_ndarray(model.param[Worker.replaced_name(var.name)]))
+                tensor_to_ndarray(model.param[var.name]))
         self._model_version = model.version
 
     def report_task_result(self, task_id, err_msg):
@@ -80,8 +73,8 @@ class Worker(object):
         report gradient to ps, return (accepted, model_version) from rpc call.
         """
         req = master_pb2.ReportGradientRequest()
-        for g, v in zip(grads, self._keras_model.trainable_variables):
-            req.gradient[Worker.replaced_name(v.name)].CopyFrom(
+        for g, v in zip(grads, self._model.trainable_variables):
+            req.gradient[v.name].CopyFrom(
                 ndarray_to_tensor(g.numpy()))
         req.model_version = self._model_version
         res = self._stub.ReportGradient(req)
@@ -116,14 +109,18 @@ class Worker(object):
                             batch_input_data = self._input_fn(record_buf)
 
                             with tf.GradientTape() as tape:
-                                output = self._model_cls.output(
-                                    batch_input_data)
-                                loss = self._model_cls.loss(
-                                    output, batch_input_data)
+                                inputs = []
+                                for input_name in self._model.input_names():
+                                    inputs.append(batch_input_data[input_name])
+                                if len(inputs) == 1:
+                                    inputs = inputs[0]
+                                outputs = self._model.call(inputs)
+                                loss = self._model.loss(outputs, batch_input_data)
+
                                 # TODO:  Add regularization loss if any,
                                 #        which should be divided by the number of contributing workers.
                             grads = tape.gradient(
-                                loss, self._keras_model.trainable_variables)
+                                loss, self._model.trainable_variables)
                             print("Loss is ", loss.numpy())
 
                             accepted, min_model_version = self.report_gradient(
@@ -162,16 +159,22 @@ class Worker(object):
                         data = self._input_fn(record_buf)
 
                         with tf.GradientTape() as tape:
-                            output = self._model_cls.output(data)
-                            loss = self._model_cls.loss(output, data)
+                            inputs = []
+                            for input_name in self._model.input_names():
+                                inputs.append(data[input_name])
+                            if len(inputs) == 1:
+                                inputs = inputs[0]
+                            outputs = self._model.call(inputs)
+                            loss = self._model.loss(outputs, data)
+
                             # Add regularization loss if any.
                             # Note: for distributed training, the regularization loss should
                             #       be divided by the number of contributing workers, which
                             #       might be difficult for elasticdl.
-                            if self._keras_model.losses:
-                                loss += math_ops.add_n(self._keras_model.losses)
+                            if self._model.losses:
+                                loss += math_ops.add_n(self._model.losses)
                         grads = tape.gradient(
-                            loss, self._keras_model.trainable_variables)
+                            loss, self._model.trainable_variables)
                         optimizer.apply_gradients(
-                            zip(grads, self._keras_model.trainable_variables))
+                            zip(grads, self._model.trainable_variables))
                         print("Loss is ", loss.numpy())
