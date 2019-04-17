@@ -22,8 +22,11 @@ def main():
     class _Model(object):
         def get_keras_model(self):
             return None
+        input_fn = None
+        optimizer = None
 
-    worker = Worker(lambda: _Model(), channel=channel)
+
+    worker = Worker(_Model, channel=channel)
 
     while True:
         task = worker.get_task()
