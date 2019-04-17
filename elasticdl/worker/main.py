@@ -31,12 +31,7 @@ def main():
     channel = grpc.insecure_channel(args.master_addr)
     worker = Worker(model_cls, channel=channel)
 
-    while True:
-        task = worker.get_task()
-        print(task)
-        if not task.shard_file_name:
-            break
-        worker.report_task_result(task.task_id, "")
+    worker.distributed_train()
 
 
 if __name__ == "__main__":
