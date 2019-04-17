@@ -26,7 +26,6 @@ class Worker(object):
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
 
-        self._model_cls = model_cls
         self._model_inst = model_cls()
         self._model_inst.build(model_cls.input_shapes())
 
@@ -111,10 +110,10 @@ class Worker(object):
 
                             with tf.GradientTape() as tape:
                                 inputs = []
-                                for input_name in self._model_cls.input_names():
+                                for input_name in self._model_inst.input_names():
                                     inputs.append(batch_input_data[input_name])
                                 outputs = self._model_inst.call(inputs)
-                                loss = self._model_cls.loss(outputs, batch_input_data)
+                                loss = self._model_inst.loss(outputs, batch_input_data)
 
                                 # TODO:  Add regularization loss if any,
                                 #        which should be divided by the number of contributing workers.
@@ -159,10 +158,10 @@ class Worker(object):
 
                         with tf.GradientTape() as tape:
                             inputs = []
-                            for input_name in self._model_cls.input_names():
+                            for input_name in self._model_inst.input_names():
                                 inputs.append(data[input_name])
                             outputs = self._model_inst.call(inputs)
-                            loss = self._model_cls.loss(outputs, data)
+                            loss = self._model_inst.loss(outputs, data)
 
                             # Add regularization loss if any.
                             # Note: for distributed training, the regularization loss should
