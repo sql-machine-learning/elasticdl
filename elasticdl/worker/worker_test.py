@@ -17,11 +17,10 @@ import recordio
 
 
 class TestModel(tf.keras.Model):
-    def __init__(self, num_classes=10):
+    def __init__(self):
         super(TestModel, self).__init__(name='test_model')
-        self.num_classes = num_classes
         self.dense_1 = tf.keras.layers.Dense(32, activation='relu')
-        self.dense_2 = tf.keras.layers.Dense(num_classes, activation='sigmoid')
+        self.dense_2 = tf.keras.layers.Dense(2, activation='sigmoid')
 
     def call(self, inputs):
         x = self.dense_1(inputs)
