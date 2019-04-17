@@ -1,5 +1,6 @@
 # common helper methods for model manipulation.
 import os
+from contextlib import contextmanager
 
 def load_user_model(model_file, model_class):
     with _add_to_path(os.path.dirname(absolute_path)):
