@@ -12,7 +12,7 @@ tf.enable_eager_execution()
 from google.protobuf import empty_pb2
 
 from proto import master_pb2
-from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 from .servicer import MasterServicer
 from .task_queue import _TaskQueue
 
@@ -31,6 +31,10 @@ class TestModel(tf.keras.Model):
     @staticmethod
     def input_shapes():
         return (10, 10)
+
+    @staticmethod
+    def optimizer(lr=0.1):
+        return tf.train.GradientDescentOptimizer(lr)
 
 class ServicerTest(unittest.TestCase):
     def testGetEmptyTask(self):

@@ -15,6 +15,7 @@ from recordio import File
 from proto import master_pb2_grpc
 from .servicer import MasterServicer
 from .task_queue import _TaskQueue
+from common.model_helper import load_user_model 
 
 
 def _make_task_queue(data_dir, record_per_task, num_epoch):
@@ -25,16 +26,6 @@ def _make_task_queue(data_dir, record_per_task, num_epoch):
             f_records[p] = rio.count()
     return _TaskQueue(f_records, record_per_task, num_epoch)
 
-def _load_user_model(model_file, model_class):
-    with add_to_path(os.path.dirname(absolute_path)):
-        spec = importlib.util.spec_from_file_location(absolute_path, absolute_path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        user_model = getattr(module, model_class)
-
-        model_inst = user_model()
-        model_inst.build(model_inst.input_shapes())
-        return model_inst
 
 @contextmanager
 def _add_to_path(p):
@@ -88,9 +79,10 @@ def main():
     task_q = _make_task_queue(
         args.train_data_dir, args.record_per_task, args.num_epoch
     )
-    # TODO: use user provided optimizer
-    optimizer = tf.train.GradientDescentOptimizer(0.1)
-    model_inst = _load_user_model(args.model_file, args.model_class)
+    model_cls = load_user_model(args.model_file, args.model_class)
+    model_inst = model_cls()
+    model_inst.build(model_inst.input_shapes())
+    optimizer = model_cls.optimizer() 
     
     servicer = MasterServicer(
         logger, args.grads_to_wait, args.minibatch_size, optimizer, task_q

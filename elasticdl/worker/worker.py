@@ -5,7 +5,7 @@ from google.protobuf import empty_pb2
 from tensorflow.python.ops import math_ops
 from proto import master_pb2_grpc
 from proto import master_pb2
-from util.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 import itertools
 import recordio
 
