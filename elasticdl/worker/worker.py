@@ -26,8 +26,8 @@ class Worker(object):
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
 
-        self._model_inst = model_cls()
-        self._model_inst.build(model_cls.input_shapes())
+        self._model = model_cls()
+        self._model.build(model_cls.input_shapes())
 
         self._input_fn = model_cls.input_fn 
         self._opt_fn = model_cls.optimizer
@@ -53,7 +53,7 @@ class Worker(object):
         req.min_version = min_version
         model = self._stub.GetModel(req)
 
-        for var in self._model_inst.trainable_variables:
+        for var in self._model.trainable_variables:
             # Assumes all trainable variables exist in model.param.
             var.assign(
                 tensor_to_ndarray(model.param[var.name]))
@@ -73,7 +73,7 @@ class Worker(object):
         report gradient to ps, return (accepted, model_version) from rpc call.
         """
         req = master_pb2.ReportGradientRequest()
-        for g, v in zip(grads, self._model_inst.trainable_variables):
+        for g, v in zip(grads, self._model.trainable_variables):
             req.gradient[v.name].CopyFrom(
                 ndarray_to_tensor(g.numpy()))
         req.model_version = self._model_version
@@ -110,15 +110,17 @@ class Worker(object):
 
                             with tf.GradientTape() as tape:
                                 inputs = []
-                                for input_name in self._model_inst.input_names():
+                                for input_name in self._model.input_names():
                                     inputs.append(batch_input_data[input_name])
-                                outputs = self._model_inst.call(inputs)
-                                loss = self._model_inst.loss(outputs, batch_input_data)
+                                if len(inputs) == 1:
+                                    inputs = inputs[0]
+                                outputs = self._model.call(inputs)
+                                loss = self._model.loss(outputs, batch_input_data)
 
                                 # TODO:  Add regularization loss if any,
                                 #        which should be divided by the number of contributing workers.
                             grads = tape.gradient(
-                                loss, self._model_inst.trainable_variables)
+                                loss, self._model.trainable_variables)
                             print("Loss is ", loss.numpy())
 
                             accepted, min_model_version = self.report_gradient(
@@ -158,19 +160,21 @@ class Worker(object):
 
                         with tf.GradientTape() as tape:
                             inputs = []
-                            for input_name in self._model_inst.input_names():
+                            for input_name in self._model.input_names():
                                 inputs.append(data[input_name])
-                            outputs = self._model_inst.call(inputs)
-                            loss = self._model_inst.loss(outputs, data)
+                            if len(inputs) == 1:
+                                inputs = inputs[0]
+                            outputs = self._model.call(inputs)
+                            loss = self._model.loss(outputs, data)
 
                             # Add regularization loss if any.
                             # Note: for distributed training, the regularization loss should
                             #       be divided by the number of contributing workers, which
                             #       might be difficult for elasticdl.
-                            if self._model_inst.losses:
-                                loss += math_ops.add_n(self._model_inst.losses)
+                            if self._model.losses:
+                                loss += math_ops.add_n(self._model.losses)
                         grads = tape.gradient(
-                            loss, self._model_inst.trainable_variables)
+                            loss, self._model.trainable_variables)
                         optimizer.apply_gradients(
-                            zip(grads, self._model_inst.trainable_variables))
+                            zip(grads, self._model.trainable_variables))
                         print("Loss is ", loss.numpy())
