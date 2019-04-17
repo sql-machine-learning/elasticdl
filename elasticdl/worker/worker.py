@@ -121,10 +121,12 @@ class Worker(object):
                                 inputs = []
                                 for input_name in self._model_cls.input_names():
                                     inputs.append(batch_input_data[input_name])
-                                output = self._model_inst.call(inputs)
+                                outputs = self._model_inst.call(inputs)
+                                labels = []
+                                for label_name in self._model_cls.label_names():
+                                    labels.append(batch_input_data[label_name])
 
-                                loss = self._model_cls.loss_fn(
-                                    output, batch_input_data[self._model_cls.label_name()])
+                                loss = self._model_cls.loss(outputs, labels)
 
                                 # TODO:  Add regularization loss if any,
                                 #        which should be divided by the number of contributing workers.
@@ -163,9 +165,15 @@ class Worker(object):
             with tf.GradientTape() as tape:
                 inputs = []
                 for input_name in self._model_cls.input_names():
-                    inputs.append(batch_input_data[input_name])
-                output = self._model_inst.call(inputs)
-                loss = self._model_cls.loss(output, data[self._model_cls.label_name()])
+                    inputs.append(data[input_name])
+
+                outputs = self._model_inst.call(inputs)
+
+                labels = []
+                for label_name in self._model_cls.label_names():
+                    labels.append(data[label_name])
+                    
+                loss = self._model_cls.loss(outputs, labels) 
 
                 # Add regularization loss if any.
                 # Note: for distributed training, the regularization loss should

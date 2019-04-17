@@ -52,22 +52,6 @@ def get_optimizer(lr=0.1):
     return tf.train.GradientDescentOptimizer(lr)
 
 
-class TestModel1(object):
-    def __init__(self):
-        input1 = tf.keras.layers.Input(shape=(1,))
-        x1 = tf.keras.layers.Dense(1)(input1)
-        self._model = tf.keras.models.Model(input1, x1)
-
-    def get_keras_model(self):
-        return self._model
-
-    def output(self, data):
-        return self._model.call(data['x'])
-
-    def loss(self, output, data):
-        return tf.reduce_mean(tf.square(output - data['y']))
-
-
 class TestModel(tf.keras.Model):
 
     def __init__(self, num_classes=10):
@@ -82,19 +66,19 @@ class TestModel(tf.keras.Model):
 
     @staticmethod
     def input_shapes():
-        return (10, 10)
+        return (1,1)
 
     @staticmethod
     def input_names():
         return ['x']
 
     @staticmethod
-    def label_name():
+    def label_names():
         return ['y']
 
     @staticmethod
-    def loss_fn(output, label):
-        return tf.reduce_mean(tf.square(output - label)) 
+    def loss(outputs, labels):
+        return tf.reduce_mean(tf.square(outputs[0] - labels[0])) 
 
 
 class WorkerTest(unittest.TestCase):
