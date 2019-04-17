@@ -25,18 +25,6 @@ def _make_task_queue(data_dir, record_per_task, num_epoch):
     return _TaskQueue(f_records, record_per_task, num_epoch)
 
 
-@contextmanager
-def _add_to_path(p):
-    import sys
-
-    old_path = sys.path
-    sys.path = sys.path[:]
-    sys.path.insert(0, p)
-    try:
-        yield
-    finally:
-        sys.path = old_path
-
 def _parse_args():
     parser = argparse.ArgumentParser(description="ElasticDL Master")
     parser.add_argument(
