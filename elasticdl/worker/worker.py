@@ -22,11 +22,6 @@ class Worker(object):
         """
         Arguments:
             model_cls: A class to define the model, which contains funcs
-                get_keras_model: return the keras model defined in the class, with a tf dataset as its input
-                output(data): get model ouput from data as input, either a single output of a dict of outputs
-                loss(output, data): get model loss from output and data as input
-                input_fn: a func to process a data batch, which can be used as the keras model input
-                optimizer: a func to get an optimizer 
             channel: grpc channel
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """

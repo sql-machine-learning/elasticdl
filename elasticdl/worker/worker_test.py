@@ -16,19 +16,6 @@ import numpy as np
 import recordio
 
 
-def input_fn(kwargs):
-    def gen():
-        for i in range(64):
-            x = np.random.rand((1)).astype(np.float32)
-            y = np.float32(2 * x + 1)
-            yield {'x': x, 'y': y}
-
-    dataset = tf.data.Dataset.from_generator(
-        gen, output_types={'x': tf.float32, 'y': tf.float32},
-        output_shapes={'x': tf.TensorShape([1]), 'y': tf.TensorShape([1])})
-
-    return dataset
-
 class TestModel(tf.keras.Model):
     def __init__(self, num_classes=10):
         super(TestModel, self).__init__(name='test_model')
