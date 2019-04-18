@@ -42,6 +42,8 @@ In a terminal, start master to distribute mnist training tasks.
 ```
 docker run --net=host --rm -it elasticdl:dev \
     python -m master.main \
+        --model-file=examples/mnist/mnist.py \
+        --model-class=MnistModel \
         --train_data_dir=/data/mnist/train \
         --record_per_task=100 \
         --num_epoch=2 \
@@ -54,10 +56,12 @@ In another terminal, start a worker
 ```
 docker run --net=host --rm -it elasticdl:dev \
     python -m worker.main \
+        --model-file=examples/mnist/mnist.py \
+        --model-class=MnistModel \
         --master_addr=localhost:50001
 ```
 
-Currently, worker only gets task and report fake task results, no real training is done yet.
+This will train MNIST data with a model defined in [examples/mnist/mnist.py](examples/mnist/mnist.py) for 2 epoches. 
 
 ### Manual Debug
 
