@@ -13,7 +13,7 @@ from recordio import File
 from proto import master_pb2_grpc
 from .servicer import MasterServicer
 from .task_queue import _TaskQueue
-from common.model_helper import load_user_model 
+from common.model_helper import load_user_model
 
 
 def _make_task_queue(data_dir, record_per_task, num_epoch):
@@ -31,12 +31,12 @@ def _parse_args():
         "--model-file",
         help="Full file path of user defined neural model",
         required=True,
-    ) 
+    )
     parser.add_argument(
         "--model-class",
         help="The model class name defined in model file",
         required=True,
-    ) 
+    )
     parser.add_argument(
         "--train_data_dir",
         help="Training data directory. Files should be in RecordIO format",
@@ -68,18 +68,17 @@ def main():
     model_cls = load_user_model(args.model_file, args.model_class)
     model_inst = model_cls()
     model_inst.build(model_inst.input_shapes())
-    optimizer = model_cls.optimizer() 
-    
-    servicer = MasterServicer(
-        logger, args.grads_to_wait, args.minibatch_size, optimizer, task_q
-    )
-    for variable in model_inst.trainable_variables:
-        servicer.set_model_var(variable.name, variable.numpy())
+    optimizer = model_cls.optimizer()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
     master_pb2_grpc.add_MasterServicer_to_server(
         MasterServicer(
-            logger, args.grads_to_wait, args.minibatch_size, optimizer, task_q
+            logger,
+            args.grads_to_wait,
+            args.minibatch_size,
+            optimizer,
+            task_q,
+            init_var=model_inst.trainable_variables,
         ),
         server,
     )
