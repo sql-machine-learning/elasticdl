@@ -21,7 +21,7 @@ class TestModel(tf.keras.Model):
         super(TestModel, self).__init__(name='test_model')
         self.dense = tf.keras.layers.Dense(1)
 
-    def call(self, inputs):
+    def call(self, inputs, training=False):
         return self.dense(inputs)
 
     @staticmethod
