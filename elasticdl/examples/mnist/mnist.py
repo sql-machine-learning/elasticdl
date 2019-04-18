@@ -25,13 +25,14 @@ class MnistModel(tf.keras.Model):
         self._flatten = tf.keras.layers.Flatten()
         self._dense = tf.keras.layers.Dense(10)
 
-    def call(self, inputs):
+    def call(self, inputs, training=False):
         x = self._reshape(inputs)
         x = self._conv1(x)
         x = self._conv2(x)
-        x = self._batch_norm(x)
+        x = self._batch_norm(x, training=training)
         x = self._maxpooling(x)
-        x = self._dropout(x)
+        if training:
+            x = self._dropout(x, training=training)
         x = self._flatten(x)
         x = self._dense(x)
         return x

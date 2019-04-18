@@ -114,7 +114,7 @@ class Worker(object):
                                     inputs.append(batch_input_data[input_name])
                                 if len(inputs) == 1:
                                     inputs = inputs[0]
-                                outputs = self._model.call(inputs)
+                                outputs = self._model.call(inputs, training=True)
                                 loss = self._model.loss(outputs, batch_input_data)
 
                                 # TODO:  Add regularization loss if any,
@@ -164,7 +164,7 @@ class Worker(object):
                                 inputs.append(data[input_name])
                             if len(inputs) == 1:
                                 inputs = inputs[0]
-                            outputs = self._model.call(inputs)
+                            outputs = self._model.call(inputs, training=True)
                             loss = self._model.loss(outputs, data)
 
                             # Add regularization loss if any.
