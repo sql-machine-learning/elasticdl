@@ -48,20 +48,25 @@ class Client(object):
             label_selector="elasticdl=" + self._job_name,
         )
         for event in stream:
-            logger.warning(event)
             self._event_cb(event)
 
     def _get_pod_name(self, worker_name):
         return self._job_name + "-" + worker_name
 
-    def _create_worker_pod(self, worker_name):
+    def _create_worker_pod(self, worker_name, command=None, args=None, restart_policy="OnFailure"):
         # Worker container config
         container = client.V1Container(
-            name=self._get_pod_name(worker_name), image=self._image
+            name=self._get_pod_name(worker_name),
+            image=self._image,
+            command=command,
+            args=args
         )
         # Pod
         pod = client.V1Pod(
-            spec=client.V1PodSpec(containers=[container]),
+            spec=client.V1PodSpec(
+                containers=[container],
+                restart_policy=restart_policy
+            ),
             metadata=client.V1ObjectMeta(
                 name=self._get_pod_name(worker_name),
                 labels={"elasticdl": self._job_name},
@@ -69,9 +74,10 @@ class Client(object):
         )
         return pod
 
-    def create_worker(self, worker_name):
+    def create_worker(self, worker_name, command=None, args=None, restart_policy="OnFailure"):
         self._logger.warning("Creating worker: " + worker_name)
-        pod = self._create_worker_pod(worker_name)
+        pod = self._create_worker_pod(
+            worker_name, command=command, args=args, restart_policy=restart_policy)
         self._v1.create_namespaced_pod(self._ns, pod)
 
     def delete_worker(self, worker_name):
