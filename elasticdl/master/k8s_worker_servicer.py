@@ -96,7 +96,7 @@ class WorkerServicer(object):
 
     def start_workers(self, restart_policy="OnFailure"):
         for i in range(self._worker_num):
-            self.add_worker("worker-%d" % i, restart_policy=restart_policy)
+            self._add_worker("worker-%d" % i, restart_policy=restart_policy)
 
     def remove_workers(self):
         for i in range(self._worker_num):
@@ -104,17 +104,17 @@ class WorkerServicer(object):
             for container_name in self._worker_tracker._worker_pods_status:
                 if worker_name in container_name and \
                 self._worker_tracker._worker_pods_status[container_name].last_event_type != "DELETED":
-                    self.delete_worker(worker_name)
+                    self._delete_worker(worker_name)
                     break
 
-    def add_worker(self, worker_name, restart_policy="OnFailure"):
+    def _add_worker(self, worker_name, restart_policy="OnFailure"):
         self._k8s_client.create_worker(
             worker_name,
             command=self._command,
             args=self._args,
             restart_policy=restart_policy)
 
-    def delete_worker(self, worker_name):
+    def _delete_worker(self, worker_name):
         self._k8s_client.delete_worker(worker_name)
 
     def get_counters(self):
