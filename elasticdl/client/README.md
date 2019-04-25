@@ -5,17 +5,17 @@
 To submit EDL job to minikube, make sure minikube is started locally.
 
 ```bash
-sudo minikube status
+minikube status
 ```
 
 Start a minikube dashboard may help you check the pod status easily.
 
 ```bash
-sudo minikube dashboard
+minikube dashboard
 ```
 
 
-## Install ElasticDL client package
+## Install ElasticDL client package on host machine
 ```bash
 curl -o elasticdl-0.0.1-py3-none-any.whl http://dl-alipay-hz1.cn-hangzhou.oss.aliyun-inc.com/elasticdl-0.0.1-py3-none-any.whl
 pip install elasticdl-0.0.1-py3-none-any.whl
@@ -23,6 +23,8 @@ pip install elasticdl-0.0.1-py3-none-any.whl
 
 
 ## Write keras model and use EDL client to submit job
+
+save the following file as model.py
 
 ```bash
 import tensorflow as tf
@@ -73,9 +75,36 @@ if __name__ == '__main__':
     edl.run(TestModel, train_data_dir='/data/mnist/train')
 ```
 
+## Submit EDL job
+
+check if there is existing pod named `elasticdl-master`
+
+```bash
+kubectl get pods
+```
+
+remove the existing pod with name `elasticdl-master` if any.
+
+```bash
+kubectl delete pod elasticdl-master
+```
+
+set the minikube docker hub environment.
+
+```bash
+eval $(minikube docker-env)
+```
+
+submit EDL job.
+
+```bash
+python model.py
+
+```
+
 ## Check the pod status
 
 ```bash
 kubectl get pods
-kubectl logs ${pod_name}
+kubectl logs elasticdl-master
 ```
