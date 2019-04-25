@@ -1,5 +1,5 @@
 import numpy as np
-from proto import master_pb2
+from elasticdl.proto import master_pb2
 
 
 def tensor_to_ndarray(tensor_pb):

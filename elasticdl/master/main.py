@@ -10,10 +10,10 @@ import tensorflow as tf
 tf.enable_eager_execution()
 
 from recordio import File
-from proto import master_pb2_grpc
+from elasticdl.proto import master_pb2_grpc
 from .servicer import MasterServicer
 from .task_queue import _TaskQueue
-from common.model_helper import load_user_model
+from elasticdl.common.model_helper import load_user_model
 
 
 def _make_task_queue(data_dir, record_per_task, num_epoch):

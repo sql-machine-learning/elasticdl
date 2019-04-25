@@ -1,7 +1,7 @@
 import numpy as np
 import unittest
 
-from proto import master_pb2
+from elasticdl.proto import master_pb2
 from .ndarray import ndarray_to_tensor, tensor_to_ndarray
 
 
