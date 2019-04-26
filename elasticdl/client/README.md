@@ -14,11 +14,16 @@ Start a minikube dashboard may help you check the pod status easily.
 minikube dashboard
 ```
 
+set the minikube docker hub environment.
+
+```bash
+eval $(minikube docker-env)
+```
+
 
 ## Install ElasticDL client package on host machine
 ```bash
-curl -o elasticdl-0.0.1-py3-none-any.whl http://dl-alipay-hz1.cn-hangzhou.oss.aliyun-inc.com/elasticdl-0.0.1-py3-none-any.whl
-pip install elasticdl-0.0.1-py3-none-any.whl
+pip install http://dl-alipay-hz1.cn-hangzhou.oss.aliyun-inc.com/elasticdl-0.0.1-py3-none-any.whl
 ```
 
 
@@ -87,12 +92,6 @@ remove the existing pod with name `elasticdl-master` if any.
 
 ```bash
 kubectl delete pod elasticdl-master
-```
-
-set the minikube docker hub environment.
-
-```bash
-eval $(minikube docker-env)
 ```
 
 submit EDL job.

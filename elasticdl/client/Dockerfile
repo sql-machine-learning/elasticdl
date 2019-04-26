@@ -17,8 +17,5 @@ RUN pip install kubernetes
 RUN apt-get install -y libsnappy-dev && \
     pip install pyrecordio
 
-RUN cd /tmp && \
-    curl -o elasticdl-0.0.1-py3-none-any.whl http://dl-alipay-hz1.cn-hangzhou.oss.aliyun-inc.com/elasticdl-0.0.1-py3-none-any.whl && \
-    pip install elasticdl-0.0.1-py3-none-any.whl
-
-RUN python -m elasticdl.recordio_ds_gen.mnist.gen_data /data
+RUN pip install http://dl-alipay-hz1.cn-hangzhou.oss.aliyun-inc.com/elasticdl-0.0.1-py3-none-any.whl && \
+    python -m elasticdl.recordio_ds_gen.mnist.gen_data /data

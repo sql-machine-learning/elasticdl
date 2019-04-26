@@ -7,7 +7,7 @@ def run(model_class, train_data_dir=None,
         record_per_task=100):
     m_path, m_file = _getModelFile()
     m_file_in_docker = "/model/" + m_file
-    _buildDockerImage(m_path, m_file, m_file_in_docker)
+    _build_docker_image(m_path, m_file, m_file_in_docker)
     _submit(m_file_in_docker, model_class.__name__, train_data_dir=train_data_dir, 
             num_epoch=num_epoch, minibatch_size=minibatch_size, record_per_task=record_per_task)
 
@@ -16,7 +16,7 @@ def _getModelFile():
     m_path = os.path.abspath(os.path.dirname(m_file))
     return m_path, m_file
 
-def _buildDockerImage(m_path, m_file, m_file_in_docker):
+def _build_docker_image(m_path, m_file, m_file_in_docker):
     d_path = os.path.abspath(os.path.dirname(
         inspect.currentframe().f_back.f_code.co_filename))
     new_dfile = m_path + "/Dockerfile"
