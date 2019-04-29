@@ -1,7 +1,7 @@
 import os
 import time
 
-import k8s
+from elasticdl.master import k8s
 
 
 class WorkerPodStatus(object):
