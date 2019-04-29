@@ -1,12 +1,12 @@
 import tensorflow as tf
 tf.enable_eager_execution()
 
-from master.task_queue import _TaskQueue
-from master.servicer import MasterServicer
+from elasticdl.master.task_queue import _TaskQueue
+from elasticdl.master.servicer import MasterServicer
 from google.protobuf import empty_pb2
-from proto import master_pb2_grpc
-from proto import master_pb2
-from .worker import Worker
+from elasticdl.proto import master_pb2_grpc
+from elasticdl.proto import master_pb2
+from elasticdl.worker.worker import Worker
 import logging
 import tempfile
 import mock

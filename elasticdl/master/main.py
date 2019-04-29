@@ -11,8 +11,8 @@ tf.enable_eager_execution()
 
 from recordio import File
 from elasticdl.proto import master_pb2_grpc
-from .servicer import MasterServicer
-from .task_queue import _TaskQueue
+from elasticdl.master.servicer import MasterServicer
+from elasticdl.master.task_queue import _TaskQueue
 from elasticdl.common.model_helper import load_user_model
 
 

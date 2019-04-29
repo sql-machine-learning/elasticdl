@@ -2,7 +2,7 @@ import numpy as np
 import unittest
 
 from elasticdl.proto import master_pb2
-from .ndarray import ndarray_to_tensor, tensor_to_ndarray
+from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 
 
 class ConverterTest(unittest.TestCase):
