@@ -10,7 +10,7 @@ To run this tester inside a k8s cluster:
 import os
 import time
 
-import k8s
+from elasticdl.master import k8s
 
 class WorkerTracker(object):
     def __init__(self):

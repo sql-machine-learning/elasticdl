@@ -20,10 +20,10 @@ docker run --rm -u $(id -u):$(id -g) -it \
 
 ### Unittests
 
-In dev Docker container's `elasticdl` repo's `elasticdl` directory, do the following:
+In dev Docker container's `elasticdl` repo's root directory, do the following:
 
 ```bash
-make && python -m unittest -v */*_test.py
+make && python -m unittest elasticdl/*/*_test.py
 ```
 
 Could also start Docker container and run unittests in a single command:

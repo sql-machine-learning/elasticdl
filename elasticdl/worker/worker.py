@@ -3,9 +3,9 @@ assert tf.executing_eagerly()
 
 from google.protobuf import empty_pb2
 from tensorflow.python.ops import math_ops
-from proto import master_pb2_grpc
-from proto import master_pb2
-from common.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from elasticdl.proto import master_pb2_grpc
+from elasticdl.proto import master_pb2
+from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 import itertools
 import recordio
 

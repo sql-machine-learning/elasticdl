@@ -11,10 +11,10 @@ tf.enable_eager_execution()
 
 from google.protobuf import empty_pb2
 
-from proto import master_pb2
-from common.ndarray import ndarray_to_tensor, tensor_to_ndarray
-from .servicer import MasterServicer
-from .task_queue import _TaskQueue
+from elasticdl.proto import master_pb2
+from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from elasticdl.master.servicer import MasterServicer
+from elasticdl.master.task_queue import _TaskQueue
 
 class TestModel(tf.keras.Model):
 

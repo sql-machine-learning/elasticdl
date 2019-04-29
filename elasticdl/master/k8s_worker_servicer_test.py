@@ -6,7 +6,7 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-from k8s_worker_servicer import WorkerServicer
+from elasticdl.master.k8s_worker_servicer import WorkerServicer
 
 
 class WorkerServicerTest(unittest.TestCase):

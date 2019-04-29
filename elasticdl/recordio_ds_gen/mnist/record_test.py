@@ -1,5 +1,5 @@
 import unittest
-import record
+from elasticdl.recordio_ds_gen.mnist import record
 import numpy as np
 
 

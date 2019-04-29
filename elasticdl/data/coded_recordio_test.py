@@ -2,7 +2,7 @@ import unittest
 import codecs
 import tempfile
 
-from .coded_recordio import File
+from elasticdl.data.coded_recordio import File
 
 encoder = lambda x: codecs.encode(x, "rot_13").encode()
 decoder = lambda x: codecs.decode(x.decode(), "rot_13")

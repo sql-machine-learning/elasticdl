@@ -3,8 +3,8 @@ import tempfile
 import os
 import tensorflow as tf
 import numpy as np
-from .coded_recordio import File
-from .tf_example_codec import TFExampleCodec
+from elasticdl.data.coded_recordio import File
+from elasticdl.data.tf_example_codec import TFExampleCodec
 
 
 class TestTFExampleCodec(unittest.TestCase):
