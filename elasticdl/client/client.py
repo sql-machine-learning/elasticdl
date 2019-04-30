@@ -77,7 +77,7 @@ def _generate_yaml(m_file, m_class,
           train_data_dir=train_data_dir, 
           timestamp=timestamp, num_worker=num_worker, num_epoch=num_epoch,
           minibatch_size=minibatch_size, record_per_task=record_per_task,
-          user=getpass.getuser()))
+          user=getpass.getuser(), grads_to_wait=grads_to_wait))
   return yaml_file
 
 def _submit(yaml_file):
