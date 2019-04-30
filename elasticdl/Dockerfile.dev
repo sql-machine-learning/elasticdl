@@ -17,13 +17,12 @@ RUN pip install kubernetes
 RUN apt-get install -y libsnappy-dev && \
     pip install pyrecordio
 
-# RecordIO dataset generator
-COPY recordio_ds_gen /recordio_ds_gen
-WORKDIR recordio_ds_gen  
-RUN python mnist/gen_data.py /data
-RUN cifar10/gen_data.py /data
+ENV PYTHONPATH=/
 
 COPY . /elasticdl
 WORKDIR /elasticdl
 
-RUN make
+# RecordIO dataset generator
+WORKDIR /elasticdl/recordio_ds_gen  
+RUN python mnist/gen_data.py /data
+RUN cifar10/gen_data.py /data
