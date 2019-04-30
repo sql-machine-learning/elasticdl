@@ -9,7 +9,7 @@ def run(model_class, train_data_dir=None,
         num_epoch=1, minibatch_size=10, 
         record_per_task=100):
     m_path, m_file = _getModelFile()
-    m_file_in_docker = "/model/" + m_file
+    m_file_in_docker = "/model/" + m_file 
     timestamp = int(round(time.time() * 1000))
     _build_docker_image(m_path, m_file, m_file_in_docker, timestamp)
     yaml_file = _generate_yaml(m_file_in_docker, model_class.__name__, train_data_dir=train_data_dir, 
@@ -26,7 +26,7 @@ def _build_docker_image(m_path, m_file, m_file_in_docker, timestamp):
     d_path = os.path.abspath(os.path.dirname(
         inspect.currentframe().f_back.f_code.co_filename))
     new_dfile = m_path + "/Dockerfile"
-    shutil.copyfile(d_path + "/Dockerfile", new_dfile)
+    shutil.copyfile(d_path + "/../Dockerfile.dev", new_dfile)
 
     with open(new_dfile, 'a') as df:
         df.write("COPY " + m_file + " " + m_file_in_docker)

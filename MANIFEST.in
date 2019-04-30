@@ -1,1 +1,1 @@
-include elasticdl/client/Dockerfile 
+include elasticdl/Dockerfile.dev
