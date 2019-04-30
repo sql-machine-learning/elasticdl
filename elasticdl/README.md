@@ -63,6 +63,39 @@ docker run --net=host --rm -it elasticdl:dev \
 
 This will train MNIST data with a model defined in [examples/mnist/mnist.py](examples/mnist/mnist.py) for 2 epoches. 
 
+### Test with Kubernetes
+Create a `test_mnist.yaml` file as:
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-mnist
+  labels:
+    purpose: test-command
+spec:
+  containers:
+  - name: mnist-demo-container
+    image: edl:newtest
+    command: ["python"]
+    args: ["-m", "elasticdl.master.main", "--model-file=/elasticdl/examples/mnist/mnist.py", "--model-class=MnistModel", "--train_data_dir=/data/mnist/train", "--record_per_task=100", "--num_epoch=1", "--grads_to_wait=2", "--minibatch_size=64", "--num_worker=2", "--worker_image=elasticdl:dev", "--job_name=edl-train-043019"]
+    imagePullPolicy: Never
+    env:
+      - name: MY_POD_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
+  restartPolicy: Never
+```
+
+Then start the training job as:
+
+```
+kubectl apply -f test_mnist.yaml
+```
+
+This will start a master pod, which will launch 2 worker pods for training.
+
 ### Manual Debug
 
 Sometimes it is easier to debug with a real master server. To start master server in container, run the following in `elasticdl` directory:

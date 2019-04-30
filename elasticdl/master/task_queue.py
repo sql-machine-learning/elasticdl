@@ -79,3 +79,7 @@ class _TaskQueue(object):
             elif not success:
                 # TODO: keep count of retries.
                 self._todo.append(task)
+
+    def finished(self):
+        """Return if all tasks are done"""
+        return not self._todo and not self._doing
