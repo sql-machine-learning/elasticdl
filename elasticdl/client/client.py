@@ -37,51 +37,55 @@ def _build_docker_image(m_path, m_file, m_file_in_docker, timestamp):
 def _generate_yaml(m_file, m_class,
                    train_data_dir=None, num_epoch=1,
                    minibatch_size=10, record_per_task=100, timestamp=1):
-    t = Template('apiVersion: v1\n' \
-                  'kind: Pod\n' \
-                  'metadata:\n' \
-                  '  name: elasticdl-master-$timestamp\n' \
-                  '  labels:\n' \
-                  '    purpose: test-command\n' \
-                  'spec:\n' \
-                  '  containers:\n' \
-                  '  - name: elasticdl-master-$timestamp\n' \
-                  '    image: elasticdl:dev_$timestamp\n' \
-                  '    command: ["python"]\n' \
-                  '    args: ["-m", "elasticdl.master.main", ' \
-                  '"--model-file", "' + m_file + '", ' \
-                  '"--model-class", "' + m_class + '", ' \
-                  '"--train_data_dir", "' + train_data_dir + '", ' \
-                  '"--num_epoch", "$num_epoch", ' \
-                  '"--grads_to_wait", "2", ' \
-                  '"--minibatch_size", "$minibatch_size", ' \
-                  '"--record_per_task", "$record_per_task"' \
-                  ']\n' \
-                  '    imagePullPolicy: Never\n' \
-                  '    volumeMounts:\n' \
-                  '    -  mountPath: /Users/$user/.minikube\n' \
-                  '       name: minikube-mount\n' \
-                  '    -  mountPath: /root/.kube\n' \
-                  '       name: kube-mount\n' \
-                  '    env:\n' \
-                  '    - name: MY_POD_IP\n' \
-                  '      valueFrom:\n' \
-                  '        fieldRef:\n' \
-                  '          fieldPath: status.podIP\n' \
-                  '  volumes:\n' \
-                  '  - name: kube-mount\n' \
-                  '    hostPath:\n' \
-                  '      path: /myhome/.kube\n' \
-                  '  - name: minikube-mount\n' \
-                  '    hostPath:\n' \
-                  '      path: /myhome/.minikube\n' \
-                  '  restartPolicy: Never\n')
-    yaml_file = 'job_desc.yaml'
-    with open(yaml_file, "w") as yaml:
-        yaml.write(t.substitute(timestamp=timestamp, num_epoch=num_epoch,
-            minibatch_size=minibatch_size, record_per_task=record_per_task,
-            user=getpass.getuser()))
-    return yaml_file
+  YAML_TEMPLATE = """
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: elasticdl-master-$timestamp
+    labels:
+      purpose: test-command
+  spec:
+    containers:
+    - name: elasticdl-master-$timestamp
+      image: elasticdl:dev_$timestamp
+      command: ["python"]
+      args: ["-m", "elasticdl.master.main",
+           "--model-file", "$m_file",
+           "--model-class", "$m_class",
+           "--train_data_dir", "$train_data_dir",
+           "--num_epoch", "$num_epoch",
+           "--grads_to_wait", "2",
+           "--minibatch_size", "$minibatch_size",
+           "--record_per_task", "$record_per_task"]
+      imagePullPolicy: Never
+      volumeMounts:
+      -  mountPath: /Users/$user/.minikube
+         name: minikube-mount
+      -  mountPath: /root/.kube
+         name: kube-mount
+      env:
+      - name: MY_POD_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
+    volumes:
+    - name: kube-mount
+      hostPath:
+        path: /myhome/.kube
+    - name: minikube-mount
+      hostPath:
+        path: /myhome/.minikube
+    restartPolicy: Never
+  """
+  t = Template(YAML_TEMPLATE)
+  yaml_file = 'job_desc.yaml'
+  with open(yaml_file, "w") as yaml:
+      yaml.write(t.substitute(m_file=m_file, m_class=m_class, 
+          train_data_dir=train_data_dir, 
+          timestamp=timestamp, num_epoch=num_epoch,
+          minibatch_size=minibatch_size, record_per_task=record_per_task,
+          user=getpass.getuser()))
+  return yaml_file
 
 def _submit(yaml_file):
     os.system('kubectl create -f ' + yaml_file)
