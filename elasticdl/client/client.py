@@ -32,6 +32,8 @@ def _build_docker_image(m_path, m_file, m_file_in_docker, timestamp):
         df.write("COPY " + m_file + " " + m_file_in_docker)
     val = os.system('docker build -t elasticdl:dev_' + str(timestamp) + ' -f Dockerfile .')
 
+    # TODO: upload docker image to docker hub.
+
 def _generate_yaml(m_file, m_class,
                    train_data_dir=None, num_epoch=1,
                    minibatch_size=10, record_per_task=100, timestamp=1):
