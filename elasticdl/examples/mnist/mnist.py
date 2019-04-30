@@ -1,10 +1,8 @@
 import tensorflow as tf
-tf.enable_eager_execution()
 
 import os
 import argparse
 import numpy as np
-from worker.worker import Worker
 
 
 class MnistModel(tf.keras.Model):
