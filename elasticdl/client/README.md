@@ -1,25 +1,8 @@
 # ElasticDL Client: Submit EDL job to minikube from laptop.
 
-## Prepare Environment
+## Check Environment
 
-To submit EDL job to minikube, make sure minikube is started locally.
-
-```bash
-minikube status
-```
-
-Start a minikube dashboard may help you check the pod status easily.
-
-```bash
-minikube dashboard
-```
-
-set the minikube docker hub environment.
-
-```bash
-eval $(minikube docker-env)
-```
-
+make sure the kubernetes docker-for-desktop (not minikube) already installed on your laptop.
 
 ## Download ElasticDL Source Code
 ```bash
@@ -120,19 +103,6 @@ if __name__ == '__main__':
 
 ## Submit EDL job
 
-check if there is existing pod named `elasticdl-master`
-
-```bash
-kubectl get pods
-```
-
-remove the existing pod with name `elasticdl-master` if any.
-
-```bash
-kubectl delete pod elasticdl-master
-```
-
-submit EDL job.
 
 ```bash
 python model.py
@@ -143,5 +113,5 @@ python model.py
 
 ```bash
 kubectl get pods
-kubectl logs elasticdl-master
+kubectl logs ${pod_name}
 ```
