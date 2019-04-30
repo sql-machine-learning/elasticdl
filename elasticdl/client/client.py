@@ -7,14 +7,15 @@ from string import Template
 
 def run(model_class, train_data_dir=None, 
         num_epoch=1, minibatch_size=10, 
-        record_per_task=100):
+        record_per_task=100, num_worker=1, grads_to_wait=2):
     m_path, m_file = _getModelFile()
     m_file_in_docker = "/model/" + m_file 
     timestamp = int(round(time.time() * 1000))
     _build_docker_image(m_path, m_file, m_file_in_docker, timestamp)
     yaml_file = _generate_yaml(m_file_in_docker, model_class.__name__, train_data_dir=train_data_dir, 
             num_epoch=num_epoch, minibatch_size=minibatch_size, 
-            record_per_task=record_per_task, timestamp=timestamp)
+            record_per_task=record_per_task, num_worker=num_worker, 
+            grads_to_wait=grads_to_wait, timestamp=timestamp)
     _submit(yaml_file)
 
 def _getModelFile():
@@ -36,7 +37,8 @@ def _build_docker_image(m_path, m_file, m_file_in_docker, timestamp):
 
 def _generate_yaml(m_file, m_class,
                    train_data_dir=None, num_epoch=1,
-                   minibatch_size=10, record_per_task=100, timestamp=1):
+                   minibatch_size=10, record_per_task=100, 
+                   num_worker=1, grads_to_wait=2, timestamp=1):
   YAML_TEMPLATE = """
   apiVersion: v1
   kind: Pod
@@ -51,10 +53,13 @@ def _generate_yaml(m_file, m_class,
       command: ["python"]
       args: ["-m", "elasticdl.master.main",
            "--model-file", "$m_file",
+           "--num_worker", "$num_worker",
+           "--worker_image", "elasticdl:dev_$timestamp",
+           "--job_name", "elasticdl-$timestamp",
            "--model-class", "$m_class",
            "--train_data_dir", "$train_data_dir",
            "--num_epoch", "$num_epoch",
-           "--grads_to_wait", "2",
+           "--grads_to_wait", "$grads_to_wait",
            "--minibatch_size", "$minibatch_size",
            "--record_per_task", "$record_per_task"]
       imagePullPolicy: Never
@@ -70,7 +75,7 @@ def _generate_yaml(m_file, m_class,
   with open(yaml_file, "w") as yaml:
       yaml.write(t.substitute(m_file=m_file, m_class=m_class, 
           train_data_dir=train_data_dir, 
-          timestamp=timestamp, num_epoch=num_epoch,
+          timestamp=timestamp, num_worker=num_worker, num_epoch=num_epoch,
           minibatch_size=minibatch_size, record_per_task=record_per_task,
           user=getpass.getuser()))
   return yaml_file
