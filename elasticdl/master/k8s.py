@@ -21,7 +21,7 @@ class Client(object):
             event_callback: If not None, an event watcher will be created and
                 events passed to the callback.
         """
-        if os.getenv("KUBERNETES_SERVICE_HOST "):
+        if os.getenv("KUBERNETES_SERVICE_HOST"):
             # We are running inside k8s
             config.load_incluster_config()
         else:

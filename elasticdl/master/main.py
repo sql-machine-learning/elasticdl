@@ -13,6 +13,7 @@ from recordio import File
 from elasticdl.proto import master_pb2_grpc
 from elasticdl.master.servicer import MasterServicer
 from elasticdl.master.task_queue import _TaskQueue
+from elasticdl.master.k8s_worker_servicer import WorkerServicer
 from elasticdl.common.model_helper import load_user_model
 
 
@@ -56,6 +57,22 @@ def _parse_args():
         help="Minibatch size used by workers to compute gradients",
         required=True,
     )
+    parser.add_argument(
+        "--num_worker",
+        type=int,
+        help="the number of workers used in training",
+        default=0,
+    )
+    parser.add_argument(
+        "--worker_image",
+        help="docker image for worker",
+        default=None,
+    )
+    parser.add_argument(
+        "--job_name",
+        help="job name",
+        default="elastic-train",
+    )
     return parser.parse_args()
 
 
@@ -85,12 +102,49 @@ def main():
     server.add_insecure_port("[::]:50001")
     server.start()
     logger.warning("Server started")
+
+    if args.num_worker:
+        # get master pod IP from env
+        pod_ip = os.getenv("MY_POD_IP", "localhost")
+        master_addr = pod_ip + ":50001"
+        worker_command = ["python"]
+        worker_args = [
+                "-m",
+                "elasticdl.worker.main",
+                "--model-file={}".format(args.model_file),
+                "--model-class={}".format(args.model_class),
+                "--master_addr={}".format(master_addr)
+            ]
+
+        worker_servicer = WorkerServicer(
+                job_name=args.job_name,
+                worker_image=args.worker_image,
+                command=worker_command,
+                args=worker_args,
+                namespace="default",
+                worker_num=args.num_worker
+            )
+        worker_servicer.start_workers(restart_policy="Never")
+
     try:
         while True:
-            time.sleep(3600)
+            if task_q.finished():
+                break
+            time.sleep(30)
     except KeyboardInterrupt:
         logger.warning("Server stopping")
-        server.stop(0)
+
+    if args.num_worker:
+        # TODO: worker_servicer.remove_workers supports synchronized call
+        worker_servicer.remove_workers()
+        # wait for worker pod to be deleted
+        max_check_num = 10
+        for _ in range(max_check_num):
+            time.sleep(3)
+            counters = worker_servicer.get_counters()
+            if counters["pod_count"] == 0:
+                break
+    server.stop(0)
 
 
 if __name__ == "__main__":
