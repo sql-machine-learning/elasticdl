@@ -58,23 +58,11 @@ def _generate_yaml(m_file, m_class,
            "--minibatch_size", "$minibatch_size",
            "--record_per_task", "$record_per_task"]
       imagePullPolicy: Never
-      volumeMounts:
-      -  mountPath: /Users/$user/.minikube
-         name: minikube-mount
-      -  mountPath: /root/.kube
-         name: kube-mount
       env:
       - name: MY_POD_IP
         valueFrom:
           fieldRef:
             fieldPath: status.podIP
-    volumes:
-    - name: kube-mount
-      hostPath:
-        path: /myhome/.kube
-    - name: minikube-mount
-      hostPath:
-        path: /myhome/.minikube
     restartPolicy: Never
   """
   t = Template(YAML_TEMPLATE)
