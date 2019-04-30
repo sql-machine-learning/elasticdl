@@ -21,9 +21,13 @@ eval $(minikube docker-env)
 ```
 
 
-## Install ElasticDL client package on host machine
+## Download ElasticDL Source Code
 ```bash
-pip install http://dl-alipay-hz1.cn-hangzhou.oss.aliyun-inc.com/elasticdl-0.0.1-py3-none-any.whl
+git clone https://github.com/wangkuiyi/elasticdl.git
+cd elasticdl
+make
+pip3 install .
+cd elasticdl
 ```
 
 
