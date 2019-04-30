@@ -26,7 +26,7 @@ eval $(minikube docker-env)
 git clone https://github.com/wangkuiyi/elasticdl.git
 cd elasticdl
 make
-pip3 install .
+export PYTHONPATH=$PWD
 cd elasticdl
 ```
 
