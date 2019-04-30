@@ -3,8 +3,8 @@ tf.enable_eager_execution()
 
 import os
 import unittest
-from worker.worker import Worker
-from common.model_helper import load_user_model
+from elasticdl.worker.worker import Worker
+from elasticdl.common.model_helper import load_user_model
 
 
 class WorkerTest(unittest.TestCase):
@@ -30,3 +30,7 @@ class WorkerTest(unittest.TestCase):
             print(ex)
             res = False
         self.assertTrue(res)
+
+
+if __name__ == "__main__":
+    unittest.main()
