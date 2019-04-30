@@ -1,8 +1,9 @@
 import unittest
-from elasticdl.recordio_ds_gen.mnist import record
 import numpy as np
+from elasticdl.recordio_ds_gen.cifar10 import record
 
 N = 32
+
 
 class RecordTest(unittest.TestCase):
     def test_round_trip(self):
@@ -14,9 +15,9 @@ class RecordTest(unittest.TestCase):
         for i in range(N):
             for j in range(N):
                 red[i, j] = 8 * i
-                green[i,j] = (i + j) * 4
+                green[i, j] = (i + j) * 4
                 blue[i, j] = 8 * j
-        encoded = record.encode(img, 5)
+        encoded = record.encode(img, np.uint8(5))
         d_img, d_label = record.decode(encoded)
         np.testing.assert_array_equal(img, d_img)
         self.assertEqual(d_label, 5)
