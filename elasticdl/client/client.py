@@ -4,6 +4,8 @@ import shutil
 import time
 import getpass
 from string import Template
+import docker
+
 
 def run(model_class, train_data_dir=None, 
         num_epoch=1, minibatch_size=10, 
@@ -31,7 +33,9 @@ def _build_docker_image(m_path, m_file, m_file_in_docker, timestamp):
 
     with open(new_dfile, 'a') as df:
         df.write("COPY " + m_file + " " + m_file_in_docker)
-    val = os.system('docker build -t elasticdl:dev_' + str(timestamp) + ' -f Dockerfile .')
+    client = docker.APIClient(base_url='unix://var/run/docker.sock') 
+    for line in client.build(dockerfile='Dockerfile', path='.', tag='elasticdl:dev_' + str(timestamp)):
+        print(str(line, encoding = "utf-8"))
 
     # TODO: upload docker image to docker hub.
 
