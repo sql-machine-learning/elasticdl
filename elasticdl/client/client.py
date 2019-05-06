@@ -5,6 +5,9 @@ import time
 import getpass
 from string import Template
 import docker
+import yaml
+from kubernetes.client.apis import core_v1_api
+from kubernetes import config
 
 
 def run(model_class, train_data_dir=None, 
@@ -85,4 +88,9 @@ def _generate_yaml(m_file, m_class,
   return yaml_file
 
 def _submit(yaml_file):
-    os.system('kubectl create -f ' + yaml_file)
+    config.load_kube_config()
+    with open(yaml_file, 'r') as f:
+        pod_desc = yaml.safe_load(f)
+        api = core_v1_api.CoreV1Api()
+        resp = api.create_namespaced_pod(body=pod_desc, namespace='default')
+        print("Pod created. status='%s'" % str(resp.status))
