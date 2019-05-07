@@ -17,11 +17,11 @@ def run(model_class, train_data_dir=None,
     m_file_in_docker = "/model/" + m_file 
     timestamp = int(round(time.time() * 1000))
     _build_docker_image(m_path, m_file, m_file_in_docker, timestamp)
-    yaml_file = _generate_yaml(m_file_in_docker, model_class.__name__, train_data_dir=train_data_dir, 
+    yaml_content = _generate_yaml(m_file_in_docker, model_class.__name__, train_data_dir=train_data_dir, 
             num_epoch=num_epoch, minibatch_size=minibatch_size, 
             record_per_task=record_per_task, num_worker=num_worker, 
             grads_to_wait=grads_to_wait, timestamp=timestamp)
-    _submit(yaml_file)
+    _submit(yaml_content)
 
 def _getModelFile():
     m_file = inspect.currentframe().f_back.f_back.f_code.co_filename
@@ -78,19 +78,15 @@ def _generate_yaml(m_file, m_class,
     restartPolicy: Never
   """
   t = Template(YAML_TEMPLATE)
-  yaml_file = 'job_desc.yaml'
-  with open(yaml_file, "w") as yaml:
-      yaml.write(t.substitute(m_file=m_file, m_class=m_class, 
-          train_data_dir=train_data_dir, 
-          timestamp=timestamp, num_worker=num_worker, num_epoch=num_epoch,
-          minibatch_size=minibatch_size, record_per_task=record_per_task,
-          user=getpass.getuser(), grads_to_wait=grads_to_wait))
-  return yaml_file
+  return t.substitute(m_file=m_file, m_class=m_class, 
+             train_data_dir=train_data_dir, 
+             timestamp=timestamp, num_worker=num_worker, num_epoch=num_epoch,
+             minibatch_size=minibatch_size, record_per_task=record_per_task,
+             user=getpass.getuser(), grads_to_wait=grads_to_wait)
 
-def _submit(yaml_file):
+def _submit(yaml_content):
     config.load_kube_config()
-    with open(yaml_file, 'r') as f:
-        pod_desc = yaml.safe_load(f)
-        api = core_v1_api.CoreV1Api()
-        resp = api.create_namespaced_pod(body=pod_desc, namespace='default')
-        print("Pod created. status='%s'" % str(resp.status))
+    pod_desc = yaml.safe_load(yaml_content)
+    api = core_v1_api.CoreV1Api()
+    resp = api.create_namespaced_pod(body=pod_desc, namespace='default')
+    print("Pod created. status='%s'" % str(resp.status))
