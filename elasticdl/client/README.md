@@ -1,4 +1,4 @@
-# ElasticDL Client: Submit EDL job to minikube from laptop.
+# ElasticDL Client: Submit EDL job to mac kubernetes docker-for-desktop from laptop.
 
 ## Check Environment
 
