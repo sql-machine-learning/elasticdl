@@ -31,7 +31,6 @@ def main():
         worker_image="gcr.io/google-samples/hello-app:1.0",
         namespace="default",
         job_name="training-job",
-        master_addr="",
         event_callback=tracker.event_cb,
     )
 

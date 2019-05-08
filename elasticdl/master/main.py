@@ -13,7 +13,7 @@ from recordio import File
 from elasticdl.proto import master_pb2_grpc
 from elasticdl.master.servicer import MasterServicer
 from elasticdl.master.task_queue import _TaskQueue
-from elasticdl.master.k8s_worker_servicer import WorkerServicer
+from elasticdl.master.k8s_worker_manager import WorkerManager
 from elasticdl.common.model_helper import load_user_model
 
 
@@ -116,7 +116,7 @@ def main():
                 "--master_addr={}".format(master_addr)
             ]
 
-        worker_servicer = WorkerServicer(
+        worker_manager = WorkerManager(
                 job_name=args.job_name,
                 worker_image=args.worker_image,
                 command=worker_command,
@@ -124,7 +124,7 @@ def main():
                 namespace="default",
                 worker_num=args.num_worker
             )
-        worker_servicer.start_workers(restart_policy="Never")
+        worker_manager.start_workers(restart_policy="Never")
 
     try:
         while True:
@@ -135,14 +135,14 @@ def main():
         logger.warning("Server stopping")
 
     if args.num_worker:
-        # TODO: worker_servicer.remove_workers supports synchronized call
-        worker_servicer.remove_workers()
+        # TODO: worker_manager.remove_workers supports synchronized call
+        worker_manager.remove_workers()
         # wait for worker pod to be deleted
         max_check_num = 10
         for _ in range(max_check_num):
             time.sleep(3)
-            counters = worker_servicer.get_counters()
-            if counters["pod_count"] == 0:
+            counters = worker_manager.get_counters()
+            if not counters:
                 break
     server.stop(0)
 
