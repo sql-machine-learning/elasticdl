@@ -7,7 +7,7 @@ from kubernetes import client, config, watch
 
 class Client(object):
     def __init__(
-        self, *, worker_image, namespace, job_name, master_addr, event_callback
+        self, *, worker_image, namespace, job_name, event_callback
     ):
         """
         ElasticDL k8s client.
@@ -33,7 +33,6 @@ class Client(object):
         self._image = worker_image
         self._ns = namespace
         self._job_name = job_name
-        self._master_addr = master_addr
         self._event_cb = event_callback
         if self._event_cb:
             threading.Thread(
@@ -50,13 +49,13 @@ class Client(object):
         for event in stream:
             self._event_cb(event)
 
-    def _get_pod_name(self, worker_name):
+    def get_pod_name(self, worker_name):
         return self._job_name + "-" + worker_name
 
     def _create_worker_pod(self, worker_name, command=None, args=None, restart_policy="OnFailure"):
         # Worker container config
         container = client.V1Container(
-            name=self._get_pod_name(worker_name),
+            name=self.get_pod_name(worker_name),
             image=self._image,
             command=command,
             args=args
@@ -68,7 +67,7 @@ class Client(object):
                 restart_policy=restart_policy
             ),
             metadata=client.V1ObjectMeta(
-                name=self._get_pod_name(worker_name),
+                name=self.get_pod_name(worker_name),
                 labels={"elasticdl": self._job_name},
             ),
         )
@@ -83,7 +82,7 @@ class Client(object):
     def delete_worker(self, worker_name):
         self._logger.warning("Deleting worker: " + worker_name)
         self._v1.delete_namespaced_pod(
-            self._get_pod_name(worker_name),
+            self.get_pod_name(worker_name),
             self._ns,
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )
