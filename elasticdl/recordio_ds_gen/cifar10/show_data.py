@@ -1,5 +1,5 @@
 from recordio import File
-from elasticdl.recordio_ds_gen.mnist import record
+from elasticdl.recordio_ds_gen.cifar10 import record
 import sys
 import argparse
 
