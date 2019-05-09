@@ -2,7 +2,7 @@
 
 ## The Development Docker Image
 
-To build the development Docker image, in reppo's root directory, run the following command:
+To build the development Docker image, in repo's root directory, run the following command:
 
 ```bash
 docker build -t elasticdl:dev -f dockerfile/elasticdl.dev .
