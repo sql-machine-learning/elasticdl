@@ -1,13 +1,28 @@
+import argparse
 import os
 import inspect
 import tempfile
 import time
 import getpass
+import sys
 from string import Template
 import docker
 import yaml
 from kubernetes.client.apis import core_v1_api
 from kubernetes import config
+
+def main(args):
+    MASTER_ARGS = [
+           "--model-file",
+           "--num_worker",
+           "--model-class",
+           "--train_data_dir",
+           "--num_epoch",
+           "--grads_to_wait",
+           "--minibatch_size",
+           "--record_per_task",]
+    parser = argparse.ArgumentParser(description="ElasticDL Client")
+    
 
 
 def run(model_class, train_data_dir=None, 
@@ -87,3 +102,6 @@ def _submit(yaml_content):
     api = core_v1_api.CoreV1Api()
     resp = api.create_namespaced_pod(body=pod_desc, namespace='default')
     print("Pod created. status='%s'" % str(resp.status))
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
