@@ -40,7 +40,6 @@ class Client(object):
             ).start()
 
     def _watch(self):
-        logger = logging.getLogger("k8s_event")
         stream = watch.Watch().stream(
             self._v1.list_namespaced_pod,
             self._ns,

@@ -1,4 +1,3 @@
-from concurrent import futures
 import logging
 import time
 import argparse
@@ -9,6 +8,7 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
+from concurrent import futures
 from recordio import File
 from elasticdl.proto import master_pb2_grpc
 from elasticdl.master.servicer import MasterServicer
@@ -29,12 +29,12 @@ def _make_task_queue(data_dir, record_per_task, num_epoch):
 def _parse_args():
     parser = argparse.ArgumentParser(description="ElasticDL Master")
     parser.add_argument(
-        "--model-file",
+        "--model_file",
         help="Full file path of user defined neural model",
         required=True,
     )
     parser.add_argument(
-        "--model-class",
+        "--model_class",
         help="The model class name defined in model file",
         required=True,
     )
@@ -77,6 +77,8 @@ def _parse_args():
 
 
 def main():
+    # TODO: pass port via flags.
+    PORT = 50001    
     logger = logging.getLogger("master")
     args = _parse_args()
     task_q = _make_task_queue(
@@ -99,21 +101,18 @@ def main():
         ),
         server,
     )
-    server.add_insecure_port("[::]:50001")
+    server.add_insecure_port("[::]:{}".format(PORT))
     server.start()
-    logger.warning("Server started")
+    logger.warning("Server started at port: %d", PORT)
 
     if args.num_worker:
-        # get master pod IP from env
-        pod_ip = os.getenv("MY_POD_IP", "localhost")
-        master_addr = pod_ip + ":50001"
+        master_addr = "%s:%d" % (os.getenv("MY_POD_IP", "localhost"), PORT)
         worker_command = ["python"]
         worker_args = [
-                "-m",
-                "elasticdl.worker.main",
-                "--model-file={}".format(args.model_file),
-                "--model-class={}".format(args.model_class),
-                "--master_addr={}".format(master_addr)
+                "-m", "elasticdl.worker.main",
+                "--model_file", args.model_file,
+                "--model_class", args.model_class,
+                "--master_addr", master_addr,
             ]
 
         worker_manager = WorkerManager(
