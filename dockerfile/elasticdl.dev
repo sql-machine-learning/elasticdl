@@ -19,10 +19,10 @@ RUN apt-get install -y libsnappy-dev && \
 
 ENV PYTHONPATH=/
 
-COPY . /elasticdl
-WORKDIR /elasticdl
-
 # RecordIO dataset generator
-WORKDIR /elasticdl/recordio_ds_gen  
-RUN python mnist/gen_data.py /data
-RUN cifar10/gen_data.py /data
+COPY recordio_ds_gen /recordio_ds_gen  
+RUN python /recordio_ds_gen/mnist/gen_data.py /data
+RUN python /recordio_ds_gen/cifar10/gen_data.py /data
+
+COPY elasticdl /elasticdl
+WORKDIR /

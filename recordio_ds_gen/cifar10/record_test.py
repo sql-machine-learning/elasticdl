@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from elasticdl.recordio_ds_gen.cifar10 import record
+from recordio_ds_gen.cifar10 import record
 
 N = 32
 

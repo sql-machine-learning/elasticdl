@@ -10,7 +10,7 @@ import os
 import sys
 from recordio import File
 from tensorflow.python.keras.datasets import mnist, fashion_mnist
-from elasticdl.recordio_ds_gen.mnist import record
+from recordio_ds_gen.mnist import record
 
 
 def gen(file_dir, data, label, *, chunk_size, record_per_file):
