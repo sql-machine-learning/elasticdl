@@ -13,29 +13,25 @@ from kubernetes import config
 def run(model_class, train_data_dir=None, 
         num_epoch=1, minibatch_size=10, 
         record_per_task=100, num_worker=1, grads_to_wait=2):
-    m_path, m_file = _getModelFile()
-    m_file_in_docker = "/model/" + m_file 
+    # TODO: Fix this hacky code.
+    m_file = inspect.currentframe().f_back.f_code.co_filename
+    m_file_in_docker = "/model/" + os.path.basename(m_file) 
     timestamp = int(round(time.time() * 1000))
-    _build_docker_image(m_path, m_file, m_file_in_docker, timestamp)
+    _build_docker_image(m_file, m_file_in_docker, timestamp)
     yaml_content = _generate_yaml(m_file_in_docker, model_class.__name__, train_data_dir=train_data_dir, 
             num_epoch=num_epoch, minibatch_size=minibatch_size, 
             record_per_task=record_per_task, num_worker=num_worker, 
             grads_to_wait=grads_to_wait, timestamp=timestamp)
     _submit(yaml_content)
 
-def _getModelFile():
-    m_file = inspect.currentframe().f_back.f_back.f_code.co_filename
-    m_path = os.path.abspath(os.path.dirname(m_file))
-    return m_path, m_file
-
-def _build_docker_image(m_file, timestamp, image_base="elasticdl:dev"):
+def _build_docker_image(m_file, m_file_in_docker, timestamp, image_base="elasticdl:dev"):
     DOCKER_TEMPLATE = """
 FROM {}
-COPY {} /model/{}
+COPY {} {}
 """
 
-    with tempfile.NamedTemporaryFile(delete=False) as df:
-        df.write(DOCKER_TEMPLATE.format(image_base, m_file, os.path.basename(m_file)))
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
+        df.write(DOCKER_TEMPLATE.format(image_base, m_file, m_file_in_docker))
 
     client = docker.APIClient(base_url='unix://var/run/docker.sock') 
     for line in client.build(dockerfile=df.name, path='.', tag='elasticdl:dev_' + str(timestamp)):
