@@ -64,21 +64,15 @@ def _parse_args():
         default=0,
     )
     parser.add_argument(
-        "--worker_image",
-        help="docker image for worker",
-        default=None,
+        "--worker_image", help="docker image for worker", default=None
     )
-    parser.add_argument(
-        "--job_name",
-        help="job name",
-        default="elastic-train",
-    )
+    parser.add_argument("--job_name", help="job name", default="elastic-train")
     return parser.parse_args()
 
 
 def main():
     # TODO: pass port via flags.
-    PORT = 50001    
+    PORT = 50001
     logger = logging.getLogger("master")
     args = _parse_args()
     task_q = _make_task_queue(
@@ -109,20 +103,24 @@ def main():
         master_addr = "%s:%d" % (os.getenv("MY_POD_IP", "localhost"), PORT)
         worker_command = ["python"]
         worker_args = [
-                "-m", "elasticdl.worker.main",
-                "--model_file", args.model_file,
-                "--model_class", args.model_class,
-                "--master_addr", master_addr,
-            ]
+            "-m",
+            "elasticdl.worker.main",
+            "--model_file",
+            args.model_file,
+            "--model_class",
+            args.model_class,
+            "--master_addr",
+            master_addr,
+        ]
 
         worker_manager = WorkerManager(
-                job_name=args.job_name,
-                worker_image=args.worker_image,
-                command=worker_command,
-                args=worker_args,
-                namespace="default",
-                worker_num=args.num_worker
-            )
+            job_name=args.job_name,
+            worker_image=args.worker_image,
+            command=worker_command,
+            args=worker_args,
+            namespace="default",
+            num_worker=args.num_worker,
+        )
         worker_manager.start_workers(restart_policy="Never")
 
     try:
