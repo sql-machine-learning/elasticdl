@@ -34,11 +34,6 @@ def _parse_args():
         required=True,
     )
     parser.add_argument(
-        "--model_class",
-        help="The model class name defined in model file",
-        required=True,
-    )
-    parser.add_argument(
         "--train_data_dir",
         help="Training data directory. Files should be in RecordIO format",
         required=True,
@@ -78,10 +73,9 @@ def main():
     task_q = _make_task_queue(
         args.train_data_dir, args.record_per_task, args.num_epoch
     )
-    model_cls = load_user_model(args.model_file, args.model_class)
-    model_inst = model_cls()
-    model_inst.build(model_inst.input_shapes())
-    optimizer = model_cls.optimizer()
+    model_module = load_user_model(args.model_file)
+    model_inst = model_module.model
+    optimizer = model_module.optimizer
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
     master_pb2_grpc.add_MasterServicer_to_server(
@@ -107,8 +101,6 @@ def main():
             "elasticdl.worker.main",
             "--model_file",
             args.model_file,
-            "--model_class",
-            args.model_class,
             "--master_addr",
             master_addr,
         ]

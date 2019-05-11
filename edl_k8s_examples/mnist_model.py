@@ -32,42 +32,37 @@ class MnistModel(tf.keras.Model):
         x = self._dense(x)
         return x
 
-    @staticmethod
-    def input_shapes():
-        return (1, 28, 28)
 
-    @staticmethod
-    def input_names():
-        return ['image']
+model = MnistModel()
+model.build(input_shape=(1, 28, 28))
+
+input_names = ['image']
         
-    @staticmethod
-    def loss(output, labels):
-        return tf.reduce_mean(
-            tf.nn.sparse_softmax_cross_entropy_with_logits(
-                logits=output, labels=labels['label']))
+def loss(output, labels):
+    return tf.reduce_mean(
+        tf.nn.sparse_softmax_cross_entropy_with_logits(
+            logits=output, labels=labels['label']))
 
-    @staticmethod
-    def optimizer(lr=0.1):
-        return tf.train.GradientDescentOptimizer(lr)
+def optimizer(lr=0.1):
+    return tf.train.GradientDescentOptimizer(lr)
 
-    @staticmethod
-    def input_fn(records):
-        image_list = []
-        label_list = []
-        # deserialize
-        for r in records:
-            parsed = np.frombuffer(r, dtype="uint8")
-            label = parsed[-1]
-            image = np.resize(parsed[:-1], new_shape=(28, 28))
-            image = image.astype(np.float32)
-            image /= 255
-            label = label.astype(np.int32)
-            image_list.append(image)
-            label_list.append(label)
+def input_fn(records):
+    image_list = []
+    label_list = []
+    # deserialize
+    for r in records:
+        parsed = np.frombuffer(r, dtype="uint8")
+        label = parsed[-1]
+        image = np.resize(parsed[:-1], new_shape=(28, 28))
+        image = image.astype(np.float32)
+        image /= 255
+        label = label.astype(np.int32)
+        image_list.append(image)
+        label_list.append(label)
 
-        # batching
-        batch_size = len(image_list)
-        images = np.concatenate(image_list, axis=0)
-        images = np.reshape(images, (batch_size, 28, 28))
-        labels = np.array(label_list)
-        return {'image': images, 'label': labels}
+    # batching
+    batch_size = len(image_list)
+    images = np.concatenate(image_list, axis=0)
+    images = np.reshape(images, (batch_size, 28, 28))
+    labels = np.array(label_list)
+    return {'image': images, 'label': labels}
