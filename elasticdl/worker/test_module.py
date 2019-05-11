@@ -2,18 +2,11 @@ import tensorflow as tf
 import numpy as np
 
 from tensorflow.keras.layers import *
-
-class TestModel(tf.keras.Model):
-    def __init__(self):
-        super(TestModel, self).__init__(name='test_model')
-        self.dense = tf.keras.layers.Dense(1)
-
-    def call(self, inputs, training=False):
-        return self.dense(inputs)
+from tensorflow.keras import Model
 
 inputs = Input(shape=(1, 1))
 outputs = Dense(1)(inputs)
-model = tf.keras.Model(inputs, outputs)
+model = Model(inputs, outputs)
 
 input_names = ['x']
 
