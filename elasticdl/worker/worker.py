@@ -6,6 +6,7 @@ from tensorflow.python.ops import math_ops
 from elasticdl.proto import master_pb2_grpc
 from elasticdl.proto import master_pb2
 from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from elasticdl.common.model_helper import load_user_model
 import itertools
 import recordio
 
@@ -16,21 +17,22 @@ class Worker(object):
     """ElasticDL worker"""
 
     def __init__(self,
-                 model_cls,
+                 model_file,
                  channel=None,
                  max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM):
         """
         Arguments:
-            model_cls: A class to define the model
+            model_module: A module to define the model
             channel: grpc channel
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
 
-        self._model = model_cls()
-        self._model.build(model_cls.input_shapes())
-
-        self._input_fn = model_cls.input_fn 
-        self._opt_fn = model_cls.optimizer
+        model_module = load_user_model(model_file)
+        self._model = model_module.model
+        self._input_fn = model_module.input_fn 
+        self._opt_fn = model_module.optimizer
+        self._loss = model_module.loss
+        self._input_names = model_module.input_names
 
         if channel is None:
             self._stub = None
@@ -110,12 +112,12 @@ class Worker(object):
 
                             with tf.GradientTape() as tape:
                                 inputs = []
-                                for input_name in self._model.input_names():
+                                for input_name in self._input_names:
                                     inputs.append(batch_input_data[input_name])
                                 if len(inputs) == 1:
                                     inputs = inputs[0]
                                 outputs = self._model.call(inputs, training=True)
-                                loss = self._model.loss(outputs, batch_input_data)
+                                loss = self._loss(outputs, batch_input_data)
 
                                 # TODO:  Add regularization loss if any,
                                 #        which should be divided by the number of contributing workers.
@@ -160,12 +162,12 @@ class Worker(object):
 
                         with tf.GradientTape() as tape:
                             inputs = []
-                            for input_name in self._model.input_names():
+                            for input_name in self._input_names:
                                 inputs.append(data[input_name])
                             if len(inputs) == 1:
                                 inputs = inputs[0]
                             outputs = self._model.call(inputs, training=True)
-                            loss = self._model.loss(outputs, data)
+                            loss = self._loss(outputs, data)
 
                             # Add regularization loss if any.
                             # Note: for distributed training, the regularization loss should

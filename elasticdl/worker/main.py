@@ -6,7 +6,6 @@ import tensorflow as tf
 tf.enable_eager_execution()
 
 from elasticdl.worker.worker import Worker
-from elasticdl.common.model_helper import load_user_model
 
 
 def _parse_args():
@@ -17,19 +16,13 @@ def _parse_args():
         help="Full file path of user defined neural model",
         required=True,
     )
-    parser.add_argument(
-        "--model_class",
-        help="The model class name defined in model file",
-        required=True,
-    )
     return parser.parse_args()
 
 
 def main():
     args = _parse_args()
-    model_cls = load_user_model(args.model_file, args.model_class)
     channel = grpc.insecure_channel(args.master_addr)
-    worker = Worker(model_cls, channel=channel)
+    worker = Worker(args.model_file, channel=channel)
 
     worker.distributed_train()
 

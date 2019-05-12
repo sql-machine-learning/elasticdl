@@ -1,62 +1,25 @@
 import tensorflow as tf
 tf.enable_eager_execution()
 
+import logging
+import tempfile
+import mock
+import grpc
+import os
+import unittest
+import numpy as np
+import recordio
+
 from elasticdl.master.task_queue import _TaskQueue
 from elasticdl.master.servicer import MasterServicer
 from google.protobuf import empty_pb2
 from elasticdl.proto import master_pb2_grpc
 from elasticdl.proto import master_pb2
 from elasticdl.worker.worker import Worker
-import logging
-import tempfile
-import mock
-import grpc
-import unittest
-import numpy as np
-import recordio
 
-
-class TestModel(tf.keras.Model):
-    def __init__(self):
-        super(TestModel, self).__init__(name='test_model')
-        self.dense = tf.keras.layers.Dense(1)
-
-    def call(self, inputs, training=False):
-        return self.dense(inputs)
-
-    @staticmethod
-    def input_shapes():
-        return (1, 1)
-
-    @staticmethod
-    def input_names():
-        return ['x']
-
-    @staticmethod
-    def loss(outputs, labels):
-        return tf.reduce_mean(tf.square(outputs - labels['y'])) 
-
-    @staticmethod
-    def input_fn(records):
-        x_list = []
-        y_list = []
-        # deserialize
-        for r in records:
-            parsed = np.frombuffer(r, dtype='float32')
-            x_list.append([parsed[0]])
-            y_list.append([parsed[1]])
-        # batching
-        batch_size = len(x_list)
-        xs = np.concatenate(x_list, axis=0)
-        xs = np.reshape(xs, (batch_size, 1))
-        ys = np.concatenate(y_list, axis=0)
-        ys = np.reshape(xs, (batch_size, 1))
-        return {'x': xs, 'y': ys}
-
-    @staticmethod
-    def optimizer(lr=0.1):
-        return tf.train.GradientDescentOptimizer(lr)
-
+_module_file = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)),
+    "test_module.py")
 
 def create_recordio_file(size):
     temp_file = tempfile.NamedTemporaryFile(delete=False)
@@ -70,7 +33,7 @@ def create_recordio_file(size):
 
 class WorkerTest(unittest.TestCase):
     def test_local_train(self):
-        worker = Worker(TestModel)
+        worker = Worker(_module_file)
         filename = create_recordio_file(128)
         batch_size = 32
         epoch = 2
@@ -104,7 +67,7 @@ class WorkerTest(unittest.TestCase):
             return master.ReportTaskResult(req, None)
 
         channel = grpc.insecure_channel('localhost:9999')
-        worker = Worker(TestModel, channel)
+        worker = Worker(_module_file, channel)
 
         filename = create_recordio_file(128)
         task_q = _TaskQueue(
@@ -113,7 +76,7 @@ class WorkerTest(unittest.TestCase):
         master = MasterServicer(logging.getLogger(),
                                 2,
                                 16,
-                                TestModel.optimizer(),
+                                worker._opt_fn(),
                                 task_q)
 
         for var in worker._model.trainable_variables:
