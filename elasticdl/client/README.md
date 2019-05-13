@@ -8,6 +8,7 @@ make sure the kubernetes docker-for-desktop (not minikube) already installed on 
 ```bash
 git clone https://github.com/wangkuiyi/elasticdl.git
 cd elasticdl
+make
 ```
 
 ## Build ElasticDL Dev Docker Image
@@ -30,7 +31,6 @@ To submit a model, e.g. `edl_k8s_examples/mnist_model.py` to ElasticDL system:
 ```bash
 python elasticdl/client/client.py \
     --model_file=edl_k8s_examples/mnist_model.py \
-    --model_class=MnistModel \
     --train_data_dir=/data/mnist/train \
     --num_epoch=1 \
     --minibatch_size=10 \
