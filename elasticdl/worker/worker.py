@@ -32,7 +32,7 @@ class Worker(object):
         self._model = model_module.model
         self._feature_columns = model_module.feature_columns()
         self._all_columns = self._feature_columns + model_module.label_columns()
-        if not isinstance(self._model, tf.keras.Model):
+        if not (type(self._model) == tf.keras.Model):
             build_model(self._model, self._feature_columns)
         self._input_fn = model_module.input_fn 
         self._opt_fn = model_module.optimizer
@@ -122,7 +122,7 @@ class Worker(object):
                                 if len(inputs) == 1:
                                     inputs = inputs[0]
                                 outputs = self._model.call(inputs, training=True)
-                                loss = self._loss(outputs, batch_label)
+                                loss = self._loss(outputs, batch_label.flatten())
 
                                 # TODO:  Add regularization loss if any,
                                 #        which should be divided by the number of contributing workers.
