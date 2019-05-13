@@ -41,7 +41,7 @@ input_names = ['image']
 def loss(output, labels):
     return tf.reduce_mean(
         tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=output, labels=labels['label']))
+            logits=output, labels=labels))
 
 def optimizer(lr=0.1):
     return tf.train.GradientDescentOptimizer(lr)
@@ -65,4 +65,4 @@ def input_fn(records):
     images = np.concatenate(image_list, axis=0)
     images = np.reshape(images, (batch_size, 28, 28))
     labels = np.array(label_list)
-    return {'image': images, 'label': labels}
+    return ({'image': images}, labels)
