@@ -6,7 +6,8 @@ from tensorflow.python.ops import math_ops
 from elasticdl.proto import master_pb2_grpc
 from elasticdl.proto import master_pb2
 from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
-from elasticdl.common.model_helper import load_user_model
+from elasticdl.common.model_helper import load_user_model, build_model
+from elasticdl.record_codec.tf_example_codec import TFExampleCodec
 import itertools
 import recordio
 
@@ -29,10 +30,12 @@ class Worker(object):
 
         model_module = load_user_model(model_file)
         self._model = model_module.model
+        self._feature_columns = model_module.feature_columns()
+        self._all_columns = self._feature_columns + model_module.label_columns()
+        build_model(self._model, self._feature_columns)
         self._input_fn = model_module.input_fn 
         self._opt_fn = model_module.optimizer
         self._loss = model_module.loss
-        self._input_names = model_module.input_names
 
         if channel is None:
             self._stub = None
@@ -86,6 +89,7 @@ class Worker(object):
         """
         Distributed training.
         """
+        codec = TFExampleCodec(self._all_columns)
         while True:
             task = self.get_task()
             if not task.shard_file_name:
@@ -94,7 +98,7 @@ class Worker(object):
             batch_size = task.minibatch_size
             err_msg = ""
             try:
-                with recordio.File(task.shard_file_name, "r") as rdio_r:
+                with recordio.File(task.shard_file_name, "r", decoder=codec.decode) as rdio_r:
                     reader = rdio_r.get_reader(task.start, task.end)
                     min_model_version = task.model_version
                     while True:
@@ -112,8 +116,8 @@ class Worker(object):
 
                             with tf.GradientTape() as tape:
                                 inputs = []
-                                for input_name in self._input_names:
-                                    inputs.append(batch_input_data[input_name])
+                                for f_col in self._feature_columns:
+                                    inputs.append(batch_input_data[f_col.key])
                                 if len(inputs) == 1:
                                     inputs = inputs[0]
                                 outputs = self._model.call(inputs, training=True)
@@ -162,8 +166,8 @@ class Worker(object):
 
                         with tf.GradientTape() as tape:
                             inputs = []
-                            for input_name in self._input_names:
-                                inputs.append(data[input_name])
+                            for f_col in feature_columns:
+                                inputs.append(batch_input_data[f_col.key])
                             if len(inputs) == 1:
                                 inputs = inputs[0]
                             outputs = self._model.call(inputs, training=True)

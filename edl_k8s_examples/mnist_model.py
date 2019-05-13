@@ -34,14 +34,19 @@ class MnistModel(tf.keras.Model):
 
 
 model = MnistModel()
-model.build(input_shape=(1, 28, 28))
 
-input_names = ['image']
+def feature_columns():
+    return [tf.feature_column.numeric_column(key="image",
+        dtype=tf.dtypes.float32, shape=[1, 28, 28])]
+
+def label_columns():
+    return [tf.feature_column.numeric_column(key="label",
+        dtype=tf.dtypes.int64, shape=[1])]
         
 def loss(output, labels):
     return tf.reduce_mean(
         tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=output, labels=labels))
+            logits=output, labels=labels.flatten()))
 
 def optimizer(lr=0.1):
     return tf.train.GradientDescentOptimizer(lr)
@@ -51,9 +56,9 @@ def input_fn(records):
     label_list = []
     # deserialize
     for r in records:
-        parsed = np.frombuffer(r, dtype="uint8")
-        label = parsed[-1]
-        image = np.resize(parsed[:-1], new_shape=(28, 28))
+        label = r['label'].numpy()
+        image = np.frombuffer(r['image'].numpy(), dtype="uint8")
+        image = np.resize(image, new_shape=(28, 28))
         image = image.astype(np.float32)
         image /= 255
         label = label.astype(np.int32)

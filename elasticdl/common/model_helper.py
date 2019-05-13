@@ -7,3 +7,12 @@ def load_user_model(model_file):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+def build_model(model, feature_columns):
+    if len(feature_columns) == 1:
+        model.build(feature_columns[0].shape)
+    else:
+        input_shapes = []
+        for f_col in feature_columns:
+            input_shapes.append(f_col.shape)
+        model.build(input_shapes)

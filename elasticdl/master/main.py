@@ -14,7 +14,7 @@ from elasticdl.proto import master_pb2_grpc
 from elasticdl.master.servicer import MasterServicer
 from elasticdl.master.task_queue import _TaskQueue
 from elasticdl.master.k8s_worker_manager import WorkerManager
-from elasticdl.common.model_helper import load_user_model
+from elasticdl.common.model_helper import load_user_model, build_model
 
 
 def _make_task_queue(data_dir, record_per_task, num_epoch):
@@ -75,7 +75,8 @@ def main():
     )
     model_module = load_user_model(args.model_file)
     model_inst = model_module.model
-    optimizer = model_module.optimizer
+    build_model(model_inst, model_module.feature_columns())
+    optimizer = model_module.optimizer()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
     master_pb2_grpc.add_MasterServicer_to_server(
