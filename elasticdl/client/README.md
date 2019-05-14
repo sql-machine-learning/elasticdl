@@ -8,7 +8,6 @@ make sure the kubernetes docker-for-desktop (not minikube) already installed on 
 ```bash
 git clone https://github.com/wangkuiyi/elasticdl.git
 cd elasticdl
-make
 ```
 
 ## Build ElasticDL Dev Docker Image

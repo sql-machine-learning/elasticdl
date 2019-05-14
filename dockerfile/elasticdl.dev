@@ -26,4 +26,5 @@ RUN python /recordio_ds_gen/mnist/gen_data_use_tf_example.py /data
 RUN python /recordio_ds_gen/cifar10/gen_data.py /data
 
 COPY elasticdl /elasticdl
-WORKDIR /
+WORKDIR /elasticdl
+RUN make
