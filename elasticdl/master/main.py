@@ -80,8 +80,7 @@ def main():
     )
     model_module = load_user_model(args.model_file)
     model_inst = model_module.model
-    if not (type(model_inst) == tf.keras.Model):
-        build_model(model_inst, model_module.feature_columns())
+    build_model(model_inst, model_module.feature_columns())
     optimizer = model_module.optimizer()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
