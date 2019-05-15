@@ -62,6 +62,11 @@ def _parse_args():
         "--worker_image", help="docker image for worker", default=None
     )
     parser.add_argument("--job_name", help="job name", default="elastic-train")
+    parser.add_argument(
+        "--codec-type",
+        default=None,
+        help="Type of codec(tf_example or None)",
+    )
     return parser.parse_args()
 
 
@@ -105,6 +110,8 @@ def main():
             args.model_file,
             "--master_addr",
             master_addr,
+            "--codec-type",
+            args.codec_type
         ]
 
         worker_manager = WorkerManager(

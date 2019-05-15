@@ -1,3 +1,4 @@
+import traceback
 import tensorflow as tf
 assert tf.executing_eagerly()
 
@@ -8,6 +9,7 @@ from elasticdl.proto import master_pb2
 from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 from elasticdl.common.model_helper import load_user_model, build_model
 from elasticdl.record_codec.tf_example_codec import TFExampleCodec
+from elasticdl.record_codec.bytes_codec import BytesCodec
 import itertools
 import recordio
 
@@ -20,7 +22,8 @@ class Worker(object):
     def __init__(self,
                  model_file,
                  channel=None,
-                 max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM):
+                 max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM,
+                 codec_type=None):
         """
         Arguments:
             model_module: A module to define the model
@@ -44,6 +47,7 @@ class Worker(object):
             self._stub = master_pb2_grpc.MasterStub(channel)
         self._max_retrain_num = max_retrain_num
         self._model_version = -1
+        self._codec_type = codec_type
 
     def get_task(self):
         """
@@ -90,7 +94,10 @@ class Worker(object):
         """
         Distributed training.
         """
-        codec = TFExampleCodec(self._all_columns)
+        if self._codec_type == 'tf_example':
+            codec = TFExampleCodec(self._all_columns)
+        else:
+            codec = BytesCodec()
         while True:
             task = self.get_task()
             if not task.shard_file_name:
@@ -142,6 +149,7 @@ class Worker(object):
 
             except Exception as ex:
                 err_msg = str(ex)
+                traceback.print_exc()
             self.report_task_result(task.task_id, err_msg)
 
     def local_train(self, file_list, batch_size, epoch=1, kwargs=None):
