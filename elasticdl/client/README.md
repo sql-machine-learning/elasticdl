@@ -35,7 +35,8 @@ python elasticdl/client/client.py \
     --minibatch_size=10 \
     --record_per_task=100 \
     --num_worker=1 \
-    --grads_to_wait=2
+    --grads_to_wait=2 \
+    --codec-type=tf_example
 ```
 
 ## Check the pod status
