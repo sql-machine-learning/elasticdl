@@ -174,8 +174,8 @@ class Worker(object):
 
                         with tf.GradientTape() as tape:
                             inputs = []
-                            for f_col in feature_columns:
-                                inputs.append(batch_input_data[f_col.key])
+                            for f_col in self._feature_columns:
+                                inputs.append(data[f_col.key])
                             if len(inputs) == 1:
                                 inputs = inputs[0]
                             outputs = self._model.call(inputs, training=True)

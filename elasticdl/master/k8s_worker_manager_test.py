@@ -18,7 +18,7 @@ class WorkerManagerTest(unittest.TestCase):
             command=["/bin/ls"],
             args=[],
             namespace="default",
-            worker_num=3
+            num_worker=3
         )
         worker_servicer.start_workers()
         counters = worker_servicer.get_counters()
@@ -49,7 +49,7 @@ class WorkerManagerTest(unittest.TestCase):
             command=["badcommand"],
             args=["badargs"],
             namespace="default",
-            worker_num=3
+            num_worker=3
         )
         worker_servicer.start_workers(restart_policy="Never")
         max_check_num = 20

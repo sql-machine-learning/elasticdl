@@ -27,7 +27,7 @@ class TFExampleCodec(object):
                 )
             else:
                 raise ValueError(
-                    "not supported tensorflow data type: " + f_type
+                    "not supported tensorflow data type: " + str(f_type)
                 )
 
         example = tf.train.Example(features=tf.train.Features(feature=f_dict))
