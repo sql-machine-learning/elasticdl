@@ -21,8 +21,11 @@ ENV PYTHONPATH=/
 
 # RecordIO dataset generator
 COPY recordio_ds_gen /recordio_ds_gen  
-RUN python /recordio_ds_gen/mnist/gen_data.py /data
+COPY record_codec /elasticdl/record_codec
+RUN python /recordio_ds_gen/mnist/gen_data.py --codec-type tf_example /data
 RUN python /recordio_ds_gen/cifar10/gen_data.py /data
 
-COPY elasticdl /elasticdl
 WORKDIR /
+COPY elasticdl /elasticdl
+COPY Makefile /Makefile
+RUN make

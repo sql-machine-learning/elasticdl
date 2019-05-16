@@ -31,13 +31,14 @@ To submit a model, e.g. `edl_k8s_examples/mnist_model.py` to ElasticDL system:
 
 ```bash
 python elasticdl/client/client.py \
-    --model_file=edl_k8s_examples/mnist_model.py \
+    --model_file=edl_k8s_examples/mnist_subclass.py \
     --train_data_dir=/data/mnist/train \
     --num_epoch=1 \
     --minibatch_size=10 \
     --record_per_task=100 \
     --num_worker=1 \
-    --grads_to_wait=2
+    --grads_to_wait=2 \
+    --codec-type=tf_example
 ```
 
 ## Check the pod status

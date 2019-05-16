@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.python.framework.ops import EagerTensor
 import numpy as np
 
 
@@ -34,9 +35,14 @@ class MnistModel(tf.keras.Model):
 
 
 model = MnistModel()
-model.build(input_shape=(1, 28, 28))
 
-input_names = ['image']
+def feature_columns():
+    return [tf.feature_column.numeric_column(key="image",
+        dtype=tf.dtypes.float32, shape=[1, 28, 28])]
+
+def label_columns():
+    return [tf.feature_column.numeric_column(key="label",
+        dtype=tf.dtypes.int64, shape=[1])]
         
 def loss(output, labels):
     return tf.reduce_mean(
@@ -51,9 +57,10 @@ def input_fn(records):
     label_list = []
     # deserialize
     for r in records:
-        parsed = np.frombuffer(r, dtype="uint8")
-        label = parsed[-1]
-        image = np.resize(parsed[:-1], new_shape=(28, 28))
+        get_np_val = (lambda data: data.numpy() if isinstance(data, EagerTensor) else data)
+        label = get_np_val(r['label'])
+        image = np.frombuffer(get_np_val(r['image']), dtype="uint8")
+        image = np.resize(image, new_shape=(28, 28))
         image = image.astype(np.float32)
         image /= 255
         label = label.astype(np.int32)

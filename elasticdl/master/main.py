@@ -14,7 +14,7 @@ from elasticdl.proto import master_pb2_grpc
 from elasticdl.master.servicer import MasterServicer
 from elasticdl.master.task_queue import _TaskQueue
 from elasticdl.master.k8s_worker_manager import WorkerManager
-from elasticdl.common.model_helper import load_user_model
+from elasticdl.common.model_helper import load_user_model, build_model
 
 
 def _make_task_queue(data_dir, record_per_task, num_epoch):
@@ -62,6 +62,11 @@ def _parse_args():
         "--worker_image", help="docker image for worker", default=None
     )
     parser.add_argument("--job_name", help="job name", default="elastic-train")
+    parser.add_argument(
+        "--codec-type",
+        default=None,
+        help="Type of codec(tf_example or None)",
+    )
     return parser.parse_args()
 
 
@@ -75,7 +80,8 @@ def main():
     )
     model_module = load_user_model(args.model_file)
     model_inst = model_module.model
-    optimizer = model_module.optimizer
+    build_model(model_inst, model_module.feature_columns())
+    optimizer = model_module.optimizer()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
     master_pb2_grpc.add_MasterServicer_to_server(
@@ -103,6 +109,8 @@ def main():
             args.model_file,
             "--master_addr",
             master_addr,
+            "--codec-type",
+            args.codec_type
         ]
 
         worker_manager = WorkerManager(

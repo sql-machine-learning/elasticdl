@@ -16,13 +16,18 @@ def _parse_args():
         help="Full file path of user defined neural model",
         required=True,
     )
+    parser.add_argument(
+        "--codec-type",
+        default=None,
+        help="Type of codec(tf_example or None)",
+    )
     return parser.parse_args()
 
 
 def main():
     args = _parse_args()
     channel = grpc.insecure_channel(args.master_addr)
-    worker = Worker(args.model_file, channel=channel)
+    worker = Worker(args.model_file, channel=channel, codec_type=args.codec_type)
 
     worker.distributed_train()
 

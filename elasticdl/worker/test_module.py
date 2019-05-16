@@ -13,6 +13,14 @@ input_names = ['x']
 def loss(outputs, labels):
     return tf.reduce_mean(tf.square(outputs - labels)) 
 
+def feature_columns():
+    return [tf.feature_column.numeric_column(key="x",
+        dtype=tf.dtypes.float32, shape=[1])]
+
+def label_columns():
+    return [tf.feature_column.numeric_column(key="y",
+        dtype=tf.dtypes.int64, shape=[1])]
+
 def input_fn(records):
     x_list = []
     y_list = []

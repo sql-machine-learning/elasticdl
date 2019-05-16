@@ -1,3 +1,4 @@
+import traceback
 import tensorflow as tf
 assert tf.executing_eagerly()
 
@@ -6,7 +7,9 @@ from tensorflow.python.ops import math_ops
 from elasticdl.proto import master_pb2_grpc
 from elasticdl.proto import master_pb2
 from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
-from elasticdl.common.model_helper import load_user_model
+from elasticdl.common.model_helper import load_user_model, build_model
+from elasticdl.record_codec.tf_example_codec import TFExampleCodec
+from elasticdl.record_codec.bytes_codec import BytesCodec
 import itertools
 import recordio
 
@@ -19,7 +22,8 @@ class Worker(object):
     def __init__(self,
                  model_file,
                  channel=None,
-                 max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM):
+                 max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM,
+                 codec_type=None):
         """
         Arguments:
             model_module: A module to define the model
@@ -29,10 +33,12 @@ class Worker(object):
 
         model_module = load_user_model(model_file)
         self._model = model_module.model
+        self._feature_columns = model_module.feature_columns()
+        self._all_columns = self._feature_columns + model_module.label_columns()
+        build_model(self._model, self._feature_columns)
         self._input_fn = model_module.input_fn 
         self._opt_fn = model_module.optimizer
         self._loss = model_module.loss
-        self._input_names = model_module.input_names
 
         if channel is None:
             self._stub = None
@@ -40,6 +46,7 @@ class Worker(object):
             self._stub = master_pb2_grpc.MasterStub(channel)
         self._max_retrain_num = max_retrain_num
         self._model_version = -1
+        self._codec_type = codec_type
 
     def get_task(self):
         """
@@ -86,6 +93,10 @@ class Worker(object):
         """
         Distributed training.
         """
+        if self._codec_type == 'tf_example':
+            codec = TFExampleCodec(self._all_columns)
+        else:
+            codec = BytesCodec()
         while True:
             task = self.get_task()
             if not task.shard_file_name:
@@ -94,7 +105,7 @@ class Worker(object):
             batch_size = task.minibatch_size
             err_msg = ""
             try:
-                with recordio.File(task.shard_file_name, "r") as rdio_r:
+                with recordio.File(task.shard_file_name, "r", decoder=codec.decode) as rdio_r:
                     reader = rdio_r.get_reader(task.start, task.end)
                     min_model_version = task.model_version
                     while True:
@@ -112,12 +123,12 @@ class Worker(object):
 
                             with tf.GradientTape() as tape:
                                 inputs = []
-                                for input_name in self._input_names:
-                                    inputs.append(batch_input_data[input_name])
+                                for f_col in self._feature_columns:
+                                    inputs.append(batch_input_data[f_col.key])
                                 if len(inputs) == 1:
                                     inputs = inputs[0]
                                 outputs = self._model.call(inputs, training=True)
-                                loss = self._loss(outputs, batch_label)
+                                loss = self._loss(outputs, batch_label.flatten())
 
                                 # TODO:  Add regularization loss if any,
                                 #        which should be divided by the number of contributing workers.
@@ -137,6 +148,7 @@ class Worker(object):
 
             except Exception as ex:
                 err_msg = str(ex)
+                traceback.print_exc()
             self.report_task_result(task.task_id, err_msg)
 
     def local_train(self, file_list, batch_size, epoch=1, kwargs=None):
@@ -162,8 +174,8 @@ class Worker(object):
 
                         with tf.GradientTape() as tape:
                             inputs = []
-                            for input_name in self._input_names:
-                                inputs.append(data[input_name])
+                            for f_col in self._feature_columns:
+                                inputs.append(data[f_col.key])
                             if len(inputs) == 1:
                                 inputs = inputs[0]
                             outputs = self._model.call(inputs, training=True)
