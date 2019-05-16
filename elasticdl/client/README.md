@@ -1,8 +1,10 @@
-# ElasticDL Client: Submit EDL job to mac kubernetes docker-for-desktop from laptop.
+# ElasticDL Client: Submit ElasticDL Job to Kubernetes 
+
+Currently for Mac docker-for-desktop only.
 
 ## Check Environment
 
-make sure the kubernetes docker-for-desktop (not minikube) already installed on your laptop.
+Make sure the Kubernetes docker-for-desktop (not minikube) is installed on your Mac.
 
 ## Download ElasticDL Source Code
 ```bash
@@ -10,11 +12,11 @@ git clone https://github.com/wangkuiyi/elasticdl.git
 cd elasticdl
 ```
 
-## Build ElasticDL Dev Docker Image
+## Build ElasticDL Development Docker Image
 ```bash
 docker build -t elasticdl:dev -f dockerfile/elasticdl.dev .
 ```
-The k8s example use `elasticdl:dev` Docker image as the base master/worker image.
+The Kubernetes example use `elasticdl:dev` Docker image as the base master/worker image.
 
 
 ## Write a Keras Model
