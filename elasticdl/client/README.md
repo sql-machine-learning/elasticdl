@@ -38,7 +38,9 @@ python elasticdl/client/client.py \
     --record_per_task=100 \
     --num_worker=1 \
     --grads_to_wait=2 \
-    --codec-type=tf_example
+    --codec-type=tf_example \
+    --repository=gcr.io \
+    --image-base=gcr.io/elasticdl/mnist:dev
 ```
 
 ## Check the pod status
