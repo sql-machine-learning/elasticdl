@@ -4,10 +4,8 @@ import tensorflow as tf
 
 class TFExampleCodec(object):
     def __init__(self, feature_columns):
-        self._f_name2type = {}
         self._example_spec = tf.feature_column.make_parse_example_spec(feature_columns)
-        for f_col in feature_columns:
-            self._f_name2type[f_col.key] = f_col.dtype
+        self._f_name2type = {f_col.key: f_col.dtype for f_col in feature_columns}
 
     def encode(self, example):
         f_dict = {}
