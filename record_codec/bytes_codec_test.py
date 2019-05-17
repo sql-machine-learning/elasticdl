@@ -4,7 +4,7 @@ import os
 import tensorflow as tf
 import numpy as np
 from recordio import File
-from record_codec.bytes_codec import BytesCodec
+from elasticdl.record_codec.bytes_codec import BytesCodec
 
 
 class TestBytesCodec(unittest.TestCase):
