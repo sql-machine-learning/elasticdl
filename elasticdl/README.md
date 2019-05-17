@@ -8,11 +8,12 @@ To build the development Docker image, in repo's root directory, run the followi
 docker build -t elasticdl:dev -f dockerfile/elasticdl.dev .
 ```
 
-To develop in the Docker container, run the following command to map in your `elasticdl` git repo directory and start container:
+To develop in the Docker container, run the following command to mount your cloned `elasticdl` git repo directory (e.g. `EDL_REPO` below) to `/elasticdl` directory in the container and start container:
 
 ```bash
+EDL_REPO=$HOME/git/elasticdl
 docker run --rm -u $(id -u):$(id -g) -it \
-    -v $HOME/git/elasticdl:/elasticdl \
+    -v $EDL_REPO:/elasticdl \
     elasticdl:dev
 ```
 
@@ -30,8 +31,8 @@ Could also start Docker container and run unittests in a single command:
 
 ```bash
 docker run --rm -u $(id -u):$(id -g) -it \
-    -v $HOME/git/elasticdl:/elasticdl \
-    -w /elasticdl \
+    -v $EDL_REPO:/elasticdl \
+    -w /elasticdl/elasticdl \
     elasticdl:dev \
     bash -c "make && python -m unittest -v */*_test.py"
 ```
