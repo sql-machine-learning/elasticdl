@@ -1,32 +1,42 @@
 import numpy as np
 
-N = 28
 
-
-# TODO: maybe use TF variant tensor to do more flexible encoding.
 class BytesCodec(object):
+    def __init__(self, feature_columns):
+        self._feature_columns = feature_columns
+        self._col_id = {
+            c.name: order for order, c in enumerate(feature_columns)
+        }
+
     def encode(self, data):
-        values = [] 
-        for _, f_value in data:
-            values.append(f_value)
-        return np.concatenate(values, axis=None).tobytes()
+        # Rearrange the data in order of the columns.
+        values = [None] * len(self._feature_columns)
+        for f_name, f_value in data:
+            col_id = self._col_id[f_name]
+            column = self._feature_columns[col_id]
+            if column.dtype != f_value.dtype or column.shape != f_value.shape:
+                raise ValueError(
+                    "Input data doesn't match column %s definition: column: (%s, %s) data: (%s, %s)" % (
+                    f_name, column.dtype, column.shape, f_value.dtype, f_value.shape)
+                )
+            values[col_id] = f_value.tobytes()
+        for id, value in enumerate(values):
+            if value is None:
+                raise ValueError(
+                    "Missing value for column: %s",
+                    self._col_id[id].name
+                )
+        return b"".join(values)
 
     def decode(self, record):
-        parsed = np.frombuffer(record, dtype="uint8")
-        assert len(parsed) == N * N + 1
-        label = parsed[-1]
-        parsed = np.resize(parsed[:-1], new_shape=(N, N))
-        return {'image': parsed, 'label': label}
-
-    def show(self, data, label):
-        """Print the image and label on terminal for debugging"""
-        assert data.shape == (N, N) and data.dtype == "uint8"
-        assert label >= 0 and label <= 9
-
-        def grey(x):
-            return "\033[48;2;%d;%d;%dm" % (x, x, x) + " \033[0m"
-
-        for line in data:
-            s = "".join(grey(x) for x in line)
-            print(s)
-        print("label =", label)
+        offset = 0
+        res = {}
+        for c in self._feature_columns:
+            count = np.prod(c.shape)
+            res[c.name] = np.frombuffer(
+                record,
+                dtype=c.dtype.as_numpy_dtype,
+                count=count,
+                offset=offset).reshape(c.shape)
+            offset += count * c.dtype.size
+        return res
