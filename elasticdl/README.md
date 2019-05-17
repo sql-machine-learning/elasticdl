@@ -31,7 +31,7 @@ Could also start Docker container and run unittests in a single command:
 ```bash
 docker run --rm -u $(id -u):$(id -g) -it \
     -v $HOME/git/elasticdl:/elasticdl \
-    -w /elasticdl/elasticdl \
+    -w /elasticdl \
     elasticdl:dev \
     bash -c "make && python -m unittest -v */*_test.py"
 ```
