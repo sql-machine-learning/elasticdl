@@ -21,7 +21,7 @@ ENV PYTHONPATH=/
 
 # RecordIO dataset generator
 COPY recordio_ds_gen /recordio_ds_gen  
-COPY record_codec /elasticdl/record_codec
+COPY record_codec /record_codec
 RUN python /recordio_ds_gen/mnist/gen_data.py --codec-type tf_example /data
 RUN python /recordio_ds_gen/cifar10/gen_data.py /data
 
