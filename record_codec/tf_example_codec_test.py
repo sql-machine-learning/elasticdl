@@ -4,7 +4,7 @@ import os
 import tensorflow as tf
 import numpy as np
 from recordio import File
-from elasticdl.record_codec.tf_example_codec import TFExampleCodec
+from record_codec import TFExampleCodec
 
 
 class TestTFExampleCodec(unittest.TestCase):
