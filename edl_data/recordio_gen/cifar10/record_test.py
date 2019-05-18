@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from recordio_ds_gen.cifar10 import record
+from edl_data.recordio_gen.cifar10 import record
 
 N = 32
 
