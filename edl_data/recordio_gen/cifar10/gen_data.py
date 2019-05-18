@@ -11,7 +11,7 @@ import sys
 from recordio import File
 from tensorflow.python.keras import backend
 from tensorflow.python.keras.datasets import cifar10
-from recordio_ds_gen.cifar10 import record
+from edl_data.recordio_gen.cifar10 import record
 
 # TODO: This function can be shared with MNIST dataset
 def gen(file_dir, data, label, *, chunk_size, record_per_file):

@@ -4,28 +4,28 @@ import os
 import tensorflow as tf
 import numpy as np
 from recordio import File
-from record_codec.bytes_codec import BytesCodec
+from edl_data.codec import TFExampleCodec
 
 
-class TestBytesCodec(unittest.TestCase):
-    """ Test bytes_codec.py
+class TestTFExampleCodec(unittest.TestCase):
+    """ Test tf_example_codec.py
     """
 
     def test_encode_and_decode(self):
         feature_columns = [tf.feature_column.numeric_column(key="f0",
-            dtype=tf.float64, shape=[1]),
+            dtype=tf.float32, shape=[1]),
             tf.feature_column.numeric_column(key="label",
             dtype=tf.int64, shape=[1])]
 
-        example_1 = [("f0", np.array([100.1])), ("label", np.array([1]))]
-        example_2 = [("f0", np.array([200.1])), ("label", np.array([2]))]
-        example_3 = [("f0", np.array([300.1])), ("label", np.array([3]))]
+        example_1 = [("f0", np.array(100.1)), ("label", np.array(1))]
+        example_2 = [("f0", np.array(200.1)), ("label", np.array(2))]
+        example_3 = [("f0", np.array(300.1)), ("label", np.array(3))]
         examples = [example_1, example_2, example_3]
 
         tmp_file = tempfile.NamedTemporaryFile(delete=False)
 
         # Create the codec for tf.train.Exampel data.
-        codec = BytesCodec(feature_columns)
+        codec = TFExampleCodec(feature_columns)
 
         # Write an encoded RecordIO file.
         with File(tmp_file.name, "w", encoder=codec.encode) as coded_w:
@@ -34,12 +34,15 @@ class TestBytesCodec(unittest.TestCase):
 
         # Verify decoded content, with get() interface.
         with File(tmp_file.name, "r", decoder=codec.decode) as coded_r:
-            for idx in range(coded_r.count()):
-                exp = coded_r.get(idx)
-                expected_exp = examples[idx]
-                f_0, label = exp["f0"], exp["label"]
-                self.assertEqual(f_0, expected_exp[0][1])
-                self.assertEqual(label, expected_exp[1][1])
+            with tf.Session() as session:
+                for idx in range(coded_r.count()):
+                    exp = coded_r.get(idx)
+                    expected_exp = examples[idx]
+                    f_0, label = session.run(
+                        [exp["f0"], exp["label"]]
+                    )
+                    self.assertEqual(f_0, np.float32(expected_exp[0][1]))
+                    self.assertEqual(label, np.int64(expected_exp[1][1]))
 
         os.remove(tmp_file.name)
 

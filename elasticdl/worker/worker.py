@@ -8,8 +8,8 @@ from elasticdl.proto import master_pb2_grpc
 from elasticdl.proto import master_pb2
 from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 from elasticdl.common.model_helper import load_user_model, build_model
-from elasticdl.record_codec.tf_example_codec import TFExampleCodec
-from elasticdl.record_codec.bytes_codec import BytesCodec
+from edl_data.codec import TFExampleCodec
+from edl_data.codec import BytesCodec
 import itertools
 import recordio
 
@@ -96,7 +96,7 @@ class Worker(object):
         if self._codec_type == 'tf_example':
             codec = TFExampleCodec(self._all_columns)
         else:
-            codec = BytesCodec()
+            codec = BytesCodec(self._all_columns)
         while True:
             task = self.get_task()
             if not task.shard_file_name:

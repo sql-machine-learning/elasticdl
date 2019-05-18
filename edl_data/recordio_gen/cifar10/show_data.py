@@ -1,5 +1,5 @@
 from recordio import File
-from recordio_ds_gen.cifar10 import record
+from edl_data.recordio_gen.cifar10 import record
 import sys
 import argparse
 
