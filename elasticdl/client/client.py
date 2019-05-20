@@ -32,12 +32,14 @@ COPY {} {}
     for line in client.build(
         dockerfile=df.name, path=".", rm=True, tag=image_name, decode=True
     ):
+        if "error" in line:
+            raise RuntimeError("Docker image build failure: " % line["error"])
         text = line.get("stream", None)
         if text:
             sys.stdout.write(text)
             sys.stdout.flush()
     print("===== Docker Image Built =====")
-    if repository != None:
+    if repository is not None:
         for line in client.push(image_name, stream=True, decode=True):
             print(line)
 
