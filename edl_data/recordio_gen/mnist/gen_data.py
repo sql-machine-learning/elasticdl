@@ -46,19 +46,19 @@ def main(argv):
     )
     parser.add_argument("dir", help="Output directory")
     parser.add_argument(
-        "--num-record-per-chunk",
+        "--num_record_per_chunk",
         default=1024,
         type=int,
         help="Approximate number of records in a chunk.",
     )
     parser.add_argument(
-        "--num-chunk",
+        "--num_chunk",
         default=16,
         type=int,
         help="Number of chunks in a RecordIO file",
     )
     parser.add_argument(
-        "--codec-type",
+        "--codec_type",
         default=None,
         help="Type of codec(tf_example or None)",
     )
