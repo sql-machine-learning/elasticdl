@@ -13,7 +13,8 @@ To develop in the Docker container, run the following command to mount your clon
 ```bash
 EDL_REPO=$HOME/git/elasticdl
 docker run --rm -u $(id -u):$(id -g) -it \
-    -v $EDL_REPO:/elasticdl \
+    -v $EDL_REPO:/v \
+    -w /v \
     elasticdl:dev
 ```
 
@@ -31,10 +32,10 @@ Could also start Docker container and run unittests in a single command:
 
 ```bash
 docker run --rm -u $(id -u):$(id -g) -it \
-    -v $EDL_REPO:/elasticdl \
-    -w /elasticdl/elasticdl \
+    -v $EDL_REPO:/v \
+    -w /v \
     elasticdl:dev \
-    bash -c "make && python -m unittest -v */*_test.py"
+    bash -c "make && python -m unittest -v elasticdl/*/*_test.py"
 ```
 ### Test in Docker
 
