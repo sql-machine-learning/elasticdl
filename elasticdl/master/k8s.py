@@ -49,7 +49,7 @@ class Client(object):
             self._event_cb(event)
 
     def get_pod_name(self, worker_name):
-        return self._job_name + "-" + worker_name
+        return "elasticdl-worker-" + self._job_name + "-" + worker_name
 
     def _create_worker_pod(self, worker_name, command=None, args=None, restart_policy="OnFailure"):
         # Worker container config
