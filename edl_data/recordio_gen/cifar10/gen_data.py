@@ -11,10 +11,13 @@ import sys
 from recordio import File
 from tensorflow.python.keras import backend
 from tensorflow.python.keras.datasets import cifar10
-from edl_data.recordio_gen.cifar10 import record
+from edl_data.codec import TFExampleCodec
+from edl_data.codec import BytesCodec
+import tensorflow as tf
+import numpy as np
 
 # TODO: This function can be shared with MNIST dataset
-def gen(file_dir, data, label, *, chunk_size, record_per_file):
+def gen(file_dir, data, label, *, chunk_size, record_per_file, codec_type):
     assert len(data) == len(label) and len(data) > 0
     os.makedirs(file_dir)
     it = zip(data, label)
@@ -22,10 +25,18 @@ def gen(file_dir, data, label, *, chunk_size, record_per_file):
         for i in itertools.count():
             file_name = file_dir + "/data-%04d" % i
             print("writing:", file_name)
-            with File(file_name, "w", max_chunk_size=chunk_size) as f:
+            feature_columns = [tf.feature_column.numeric_column(key="image",
+                dtype=tf.float32, shape=[3, 32, 32]),
+                tf.feature_column.numeric_column(key="label",
+                dtype=tf.int64, shape=[1, 1])]
+            if codec_type == 'tf_example':
+                encode_fn = TFExampleCodec(feature_columns).encode
+            else:
+                encode_fn = BytesCodec(feature_columns).encode
+            with File(file_name, "w", max_chunk_size=chunk_size, encoder=encode_fn) as f:
                 for _ in range(record_per_file):
                     row = next(it)
-                    f.write(record.encode(row[0], row[1]))
+                    f.write([("image", row[0].astype(np.float32)), ("label", np.array([row[1].astype(np.int64)]))])
     except StopIteration:
         pass
 
@@ -47,6 +58,12 @@ def main(argv):
         type=int,
         help="Number of chunks in a RecordIO file",
     )
+    parser.add_argument(
+        "--codec_type",
+        default=None,
+        choices=["tf_example"],
+        help="Type of codec(tf_example or None)",
+    )
     args = parser.parse_args(argv)
     # one uncompressed record has size 3 * 32 * 32 + 1 bytes.
     # Also add some slack for safety.
@@ -61,6 +78,7 @@ def main(argv):
         y_train,
         chunk_size=chunk_size,
         record_per_file=record_per_file,
+        codec_type=args.codec_type,
     )
 
     # Work around a bug in cifar10.load_data() where y_test is not converted
@@ -72,6 +90,7 @@ def main(argv):
         y_test,
         chunk_size=chunk_size,
         record_per_file=record_per_file,
+        codec_type=args.codec_type,
     )
 
 

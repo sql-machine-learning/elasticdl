@@ -26,8 +26,8 @@ ENV PYTHONPATH=/
 
 # ElasticDL dataset generator and codecs
 COPY edl_data /edl_data  
-RUN python /edl_data/recordio_gen/mnist/gen_data.py --codec-type tf_example /data
-RUN python /edl_data/recordio_gen/cifar10/gen_data.py /data
+RUN python /edl_data/recordio_gen/mnist/gen_data.py --codec_type tf_example /data
+RUN python /edl_data/recordio_gen/cifar10/gen_data.py --codec_type tf_example /data
 
 WORKDIR /
 COPY elasticdl /elasticdl

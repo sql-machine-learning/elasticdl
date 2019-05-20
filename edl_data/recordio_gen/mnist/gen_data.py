@@ -58,8 +58,9 @@ def main(argv):
         help="Number of chunks in a RecordIO file",
     )
     parser.add_argument(
-        "--codec-type",
+        "--codec_type",
         default=None,
+        choices=["tf_example"],
         help="Type of codec(tf_example or None)",
     )
     args = parser.parse_args(argv)
