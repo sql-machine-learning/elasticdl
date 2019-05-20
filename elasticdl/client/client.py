@@ -42,17 +42,17 @@ def _gen_master_def(image_name, model_file, argv, timestamp):
 apiVersion: v1
 kind: Pod
 metadata:
-  name: elasticdl-master-{timestamp}
+  name: "elasticdl-master-{timestamp}"
   labels:
     purpose: test-command
 spec:
   containers:
-  - name: elasticdl-master-{timestamp}
-    image: {image_name}
+  - name: "elasticdl-master-{timestamp}"
+    image: "{image_name}"
     command: ["python"]
     args: [
         "-m", "elasticdl.master.main",
-        "--worker_image", {image_name},
+        "--worker_image", "{image_name}",
         "--model_file", "{m_file}"
     ]
     imagePullPolicy: IfNotPresent 
