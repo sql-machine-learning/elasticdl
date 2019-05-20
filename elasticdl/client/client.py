@@ -28,11 +28,15 @@ COPY {} {}
         df.write(DOCKER_TEMPLATE.format(image_base, m_file, _m_file_in_docker(m_file)))
 
     client = docker.APIClient(base_url="unix://var/run/docker.sock")
+    print("===== Building Docker Image =====")
     for line in client.build(
-        dockerfile=df.name, path=".", rm=True, tag=image_name
+        dockerfile=df.name, path=".", rm=True, tag=image_name, decode=True
     ):
-        print(str(line, encoding="utf-8"))
-
+        text = line.get("stream", None)
+        if text:
+            sys.stdout.write(text)
+            sys.stdout.flush()
+    print("===== Docker Image Built =====")
     if repository != None:
         for line in client.push(image_name, stream=True, decode=True):
             print(line)
