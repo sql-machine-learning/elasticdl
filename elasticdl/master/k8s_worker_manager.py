@@ -40,13 +40,13 @@ class WorkerManager(object):
 
     def start_workers(self, restart_policy="OnFailure"):
         for i in range(self._num_worker):
-            worker_name = "worker-%d" % i
+            worker_name = "%d" % i
             self._logger.warning("Starting worker: %d", i)
             self._add_worker(worker_name, restart_policy=restart_policy)
 
     def remove_workers(self):
         for i in range(self._num_worker):
-            worker_name = "worker-%d" % i
+            worker_name = "%d" % i
             pod_name = self._k8s_client.get_pod_name(worker_name)
             if pod_name in self._worker_tracker._pods_phase:
                 self._logger.warning("Deleting worker: %d", i)
