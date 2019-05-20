@@ -17,7 +17,7 @@ def _parse_args():
         required=True,
     )
     parser.add_argument(
-        "--codec-type",
+        "--codec_type",
         default=None,
         help="Type of codec(tf_example or None)",
     )

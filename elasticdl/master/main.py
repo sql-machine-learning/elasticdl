@@ -63,7 +63,7 @@ def _parse_args():
     )
     parser.add_argument("--job_name", help="job name", required=True)
     parser.add_argument(
-        "--codec-type",
+        "--codec_type",
         default=None,
         choices=["tf_example"],
         help="Type of codec(tf_example or None)",
@@ -110,7 +110,7 @@ def main():
             args.model_file,
             "--master_addr",
             master_addr,
-            "--codec-type",
+            "--codec_type",
             args.codec_type
         ]
 
