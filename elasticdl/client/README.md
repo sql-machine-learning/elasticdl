@@ -40,7 +40,7 @@ python elasticdl/client/client.py \
     --record_per_task=100 \
     --num_worker=1 \
     --grads_to_wait=2 \
-    --codec-type=tf_example \
+    --codec_type=tf_example \
     --job_name=test \
     --image_base=elasticdl:dev
 ```
@@ -56,7 +56,7 @@ python elasticdl/client/client.py \
     --record_per_task=100 \
     --num_worker=1 \
     --grads_to_wait=2 \
-    --codec-type=tf_example \
+    --codec_type=tf_example \
     --job_name=test \
     --repository=gcr.io \
     --image_base=gcr.io/elasticdl/mnist:dev
