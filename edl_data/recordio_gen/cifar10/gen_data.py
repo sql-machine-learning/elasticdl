@@ -29,7 +29,7 @@ def gen(file_dir, data, label, *, chunk_size, record_per_file, codec_type):
                 dtype=tf.float32, shape=[3, 32, 32]),
                 tf.feature_column.numeric_column(key="label",
                 dtype=tf.int64, shape=[1, 1])]
-            if codec_type == 'tf_example':
+            if codec_type == "tf_example":
                 encode_fn = TFExampleCodec(feature_columns).encode
             else:
                 encode_fn = BytesCodec(feature_columns).encode

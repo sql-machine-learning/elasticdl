@@ -24,7 +24,7 @@ def gen(file_dir, data, label, *, chunk_size, record_per_file, codec_type):
         for i in itertools.count():
             file_name = file_dir + "/data-%04d" % i
             print("writing:", file_name)
-            if codec_type == 'tf_example':
+            if codec_type == "tf_example":
                 feature_columns = [tf.feature_column.numeric_column(key="image",
                     dtype=tf.float32, shape=[1, 28, 28]),
                     tf.feature_column.numeric_column(key="label",

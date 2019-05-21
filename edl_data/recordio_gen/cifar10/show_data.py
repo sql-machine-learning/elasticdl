@@ -31,7 +31,7 @@ def main(argv):
         dtype=tf.float32, shape=[1, 32, 32]),
         tf.feature_column.numeric_column(key="label",
         dtype=tf.int64, shape=[1])]
-    if args.codec_type == 'tf_example':
+    if args.codec_type == "tf_example":
         decode_fn = TFExampleCodec(feature_columns).decode
     else:
         decode_fn = BytesCodec(feature_columns).decode

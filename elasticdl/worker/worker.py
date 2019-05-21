@@ -93,7 +93,7 @@ class Worker(object):
         """
         Distributed training.
         """
-        if self._codec_type == 'tf_example':
+        if self._codec_type == "tf_example":
             codec = TFExampleCodec(self._all_columns)
         else:
             codec = BytesCodec(self._all_columns)
