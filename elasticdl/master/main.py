@@ -110,7 +110,7 @@ def main():
             args.model_file,
             "--master_addr",
             master_addr,
-            "--codec-type",
+            "--codec_type",
             args.codec_type
         ]
 
