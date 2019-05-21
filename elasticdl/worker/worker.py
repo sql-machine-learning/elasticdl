@@ -93,10 +93,12 @@ class Worker(object):
         """
         Distributed training.
         """
-        if self._codec_type == 'tf_example':
+        if self._codec_type == "tf_example":
             codec = TFExampleCodec(self._all_columns)
-        else:
+        elif self._codec_type == "bytes":
             codec = BytesCodec(self._all_columns)
+        else:
+            raise ValueError("invalid codec_type: " + self._codec_type)
         while True:
             task = self.get_task()
             if not task.shard_file_name:
