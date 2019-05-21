@@ -63,9 +63,9 @@ def _parse_args():
     )
     parser.add_argument("--job_name", help="job name", default="elastic-train")
     parser.add_argument(
-        "--codec-type",
-        default=None,
-        help="Type of codec(tf_example or None)",
+        "--codec_type",
+        choices=["tf_example", "bytes"],
+        help="Type of codec(tf_example or bytes)",
     )
     return parser.parse_args()
 
