@@ -30,15 +30,21 @@ class Worker(object):
             channel: grpc channel
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
-
         model_module = load_user_model(model_file)
         self._model = model_module.model
         self._feature_columns = model_module.feature_columns()
-        self._all_columns = self._feature_columns + model_module.label_columns()
         build_model(self._model, self._feature_columns)
         self._input_fn = model_module.input_fn 
         self._opt_fn = model_module.optimizer
         self._loss = model_module.loss
+        all_columns = self._feature_columns + model_module.label_columns()
+        if codec_type == "tf_example":
+            self._codec = TFExampleCodec(all_columns)
+        elif codec_type == "bytes":
+            self._codec = BytesCodec(all_columns)
+        else:
+            raise ValueError("invalid codec_type: " + codec_type)
+
 
         if channel is None:
             self._stub = None
@@ -93,12 +99,6 @@ class Worker(object):
         """
         Distributed training.
         """
-        if self._codec_type == "tf_example":
-            codec = TFExampleCodec(self._all_columns)
-        elif self._codec_type == "bytes":
-            codec = BytesCodec(self._all_columns)
-        else:
-            raise ValueError("invalid codec_type: " + self._codec_type)
         while True:
             task = self.get_task()
             if not task.shard_file_name:
@@ -107,7 +107,7 @@ class Worker(object):
             batch_size = task.minibatch_size
             err_msg = ""
             try:
-                with recordio.File(task.shard_file_name, "r", decoder=codec.decode) as rdio_r:
+                with recordio.File(task.shard_file_name, "r", decoder=self._codec.decode) as rdio_r:
                     reader = rdio_r.get_reader(task.start, task.end)
                     min_model_version = task.model_version
                     while True:
@@ -164,7 +164,7 @@ class Worker(object):
         optimizer = self._opt_fn()
         for _ in range(epoch):
             for f in file_list:
-                with recordio.File(f, "r") as rdio_r:
+                with recordio.File(f, "r", decoder=self._codec.decode) as rdio_r:
                     reader = rdio_r.get_reader(0, rdio_r.count())
                     while True:
                         record_buf = list(
