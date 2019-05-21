@@ -8,8 +8,6 @@ inputs = Input(shape=(1, 1))
 outputs = Dense(1)(inputs)
 model = Model(inputs, outputs)
 
-input_names = ['x']
-
 def loss(outputs, labels):
     return tf.reduce_mean(tf.square(outputs - labels)) 
 
@@ -19,16 +17,15 @@ def feature_columns():
 
 def label_columns():
     return [tf.feature_column.numeric_column(key="y",
-        dtype=tf.dtypes.int64, shape=[1])]
+        dtype=tf.dtypes.float32, shape=[1])]
 
 def input_fn(records):
     x_list = []
     y_list = []
     # deserialize
     for r in records:
-        parsed = np.frombuffer(r, dtype='float32')
-        x_list.append([parsed[0]])
-        y_list.append([parsed[1]])
+        x_list.append([r["x"]])
+        y_list.append([r["y"]])
     # batching
     batch_size = len(x_list)
     xs = np.concatenate(x_list, axis=0)
