@@ -37,7 +37,7 @@ def gen(file_dir, data, label, *, chunk_size, record_per_file, codec_type):
             with File(file_name, "w", max_chunk_size=chunk_size, encoder=encode_fn) as f:
                 for _ in range(record_per_file):
                     row = next(it)
-                    f.write([("image", row[0]), ("label", np.array([row[1]]))])
+                    f.write({"image": row[0], "label": np.array([row[1]])})
     except StopIteration:
         pass
 
