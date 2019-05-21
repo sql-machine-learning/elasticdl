@@ -21,9 +21,8 @@ def main(argv):
     )
     parser.add_argument(
         "--codec_type",
-        default=None,
-        choices=["tf_example"],
-        help="Type of codec(tf_example or None)",
+        choices=["tf_example", "bytes"],
+        help="Type of codec(tf_example or bytes)",
     )
     args = parser.parse_args(argv)
 
@@ -33,8 +32,10 @@ def main(argv):
         dtype=tf.int64, shape=[1])]
     if args.codec_type == "tf_example":
         decode_fn = TFExampleCodec(feature_columns).decode
-    else:
+    elif args.codec_type == "bytes":
         decode_fn = BytesCodec(feature_columns).decode
+    else:
+        raise ValueError("invalid codec_type: " + codec_type)
     with File(args.file, "r", decoder=decode_fn) as f:
         for i in range(
             args.start, args.start + (args.n * args.step), args.step
