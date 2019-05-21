@@ -61,7 +61,7 @@ def _parse_args():
     parser.add_argument(
         "--worker_image", help="docker image for worker", default=None
     )
-    parser.add_argument("--job_name", help="job name", default="elastic-train")
+    parser.add_argument("--job_name", help="job name", required=True)
     parser.add_argument(
         "--codec_type",
         default="bytes",

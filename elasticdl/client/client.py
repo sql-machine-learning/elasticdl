@@ -28,31 +28,38 @@ COPY {} {}
         df.write(DOCKER_TEMPLATE.format(image_base, m_file, _m_file_in_docker(m_file)))
 
     client = docker.APIClient(base_url="unix://var/run/docker.sock")
+    print("===== Building Docker Image =====")
     for line in client.build(
-        dockerfile=df.name, path=".", rm=True, tag=image_name
+        dockerfile=df.name, path=".", rm=True, tag=image_name, decode=True
     ):
-        print(str(line, encoding="utf-8"))
-
-    if repository != None:
+        if "error" in line:
+            raise RuntimeError("Docker image build failure: " % line["error"])
+        text = line.get("stream", None)
+        if text:
+            sys.stdout.write(text)
+            sys.stdout.flush()
+    print("===== Docker Image Built =====")
+    if repository is not None:
         for line in client.push(image_name, stream=True, decode=True):
             print(line)
 
-def _gen_master_def(image_name, model_file, argv, timestamp):
+def _gen_master_def(image_name, model_file, job_name, argv):
     master_yaml = """
 apiVersion: v1
 kind: Pod
 metadata:
-  name: elasticdl-master-{timestamp}
+  name: "elasticdl-master-{job_name}"
   labels:
     purpose: test-command
 spec:
   containers:
-  - name: elasticdl-master-{timestamp}
-    image: {image_name}
+  - name: "elasticdl-master-{job_name}"
+    image: "{image_name}"
     command: ["python"]
     args: [
         "-m", "elasticdl.master.main",
-        "--worker_image", {image_name},
+        "--job_name", "{job_name}",
+        "--worker_image", "{image_name}",
         "--model_file", "{m_file}"
     ]
     imagePullPolicy: IfNotPresent 
@@ -62,7 +69,7 @@ spec:
         fieldRef:
           fieldPath: status.podIP
   restartPolicy: Never
-""" .format(m_file=_m_file_in_docker(model_file), image_name=image_name, timestamp=timestamp)
+""" .format(m_file=_m_file_in_docker(model_file), image_name=image_name, job_name=job_name)
 
     master_def = yaml.safe_load(master_yaml)
 
@@ -70,8 +77,8 @@ spec:
     master_def['spec']['containers'][0]['args'].extend(argv)
     return master_def
 
-def _submit(image_name, model_file, argv, timestamp):
-    master_def = _gen_master_def(image_name, model_file, argv, timestamp)
+def _submit(image_name, model_file, job_name, argv):
+    master_def = _gen_master_def(image_name, model_file, job_name, argv)
     config.load_kube_config()
     api = core_v1_api.CoreV1Api()
     resp = api.create_namespaced_pod(body=master_def, namespace="default")
@@ -81,15 +88,16 @@ def main():
     parser = argparse.ArgumentParser(description="ElasticDL Client")
     # Rewrite model_file argument and pass all other arguments to master.
     parser.add_argument("--model_file", help="Path to Model file", required=True)
-    parser.add_argument("--image-base", help="Base image containing elasticdl runtime environment.")
+    parser.add_argument("--image_base", help="Base image containing elasticdl runtime environment.", required=True)
     parser.add_argument("--repository", help="The repository to push docker image to.")
+    parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     args, argv = parser.parse_known_args()
 
-    timestamp = str(int(round(time.time() * 1000)))
-    image_name = args.image_base + '_' + timestamp 
+    job_name = args.job_name + "-" + str(int(round(time.time() * 1000)))
+    image_name = args.image_base + '_' + job_name 
     _build_docker_image(args.model_file, image_name, image_base=args.image_base,
         repository=args.repository)
-    _submit(image_name, args.model_file, argv, timestamp)
+    _submit(image_name, args.model_file, job_name, argv)
 
 
 if __name__ == "__main__":
