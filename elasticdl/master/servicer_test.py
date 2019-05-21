@@ -222,5 +222,5 @@ class ServicerTest(unittest.TestCase):
             master.set_model_var(variable.name, variable.numpy())
         model = master.GetModel(req, None)
         self.assertEqual(0, model.version)
-        self.assertEqual(['dense/bias:0', 'dense/kernel:0', 'dense_1/bias:0', 
-            'dense_1/kernel:0'], list(sorted(model.param.keys())))
+        self.assertEqual(['dense_1/bias:0', 'dense_1/kernel:0', 'dense_2/bias:0', 
+            'dense_2/kernel:0'], list(sorted(model.param.keys())))
