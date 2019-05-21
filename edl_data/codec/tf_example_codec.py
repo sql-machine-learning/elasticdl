@@ -4,12 +4,21 @@ import tensorflow as tf
 
 class TFExampleCodec(object):
     def __init__(self, feature_columns):
-        self._example_spec = tf.feature_column.make_parse_example_spec(feature_columns)
-        self._f_name2type = {f_col.key: f_col.dtype for f_col in feature_columns}
+        self._example_spec = tf.feature_column.make_parse_example_spec(
+            feature_columns
+        )
+        self._f_name2type = {
+            f_col.key: f_col.dtype for f_col in feature_columns
+        }
 
     def encode(self, example):
+        if self._example_spec.keys() != example.keys():
+            raise ValueError(
+                "Column keys mismatch: expected %s, got %s "
+                % (self._example_spec.keys(), example.keys())
+            )
         f_dict = {}
-        for f_name, f_value in example:
+        for f_name, f_value in example.items():
             f_type = self._f_name2type[f_name]
             if f_type == tf.string:
                 f_dict[f_name] = tf.train.Feature(

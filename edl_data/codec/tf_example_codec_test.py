@@ -17,9 +17,9 @@ class TestTFExampleCodec(unittest.TestCase):
             tf.feature_column.numeric_column(key="label",
             dtype=tf.int64, shape=[1])]
 
-        example_1 = [("f0", np.array(100.1)), ("label", np.array(1))]
-        example_2 = [("f0", np.array(200.1)), ("label", np.array(2))]
-        example_3 = [("f0", np.array(300.1)), ("label", np.array(3))]
+        example_1 = {"f0": np.array(100.1), "label": np.array(1)}
+        example_2 = {"f0": np.array(200.1), "label": np.array(2)}
+        example_3 = {"f0": np.array(300.1), "label": np.array(3)}
         examples = [example_1, example_2, example_3]
 
         tmp_file = tempfile.NamedTemporaryFile(delete=False)
@@ -41,8 +41,8 @@ class TestTFExampleCodec(unittest.TestCase):
                     f_0, label = session.run(
                         [exp["f0"], exp["label"]]
                     )
-                    self.assertEqual(f_0, np.float32(expected_exp[0][1]))
-                    self.assertEqual(label, np.int64(expected_exp[1][1]))
+                    self.assertEqual(f_0, np.float32(expected_exp["f0"]))
+                    self.assertEqual(label, np.int64(expected_exp["label"]))
 
         os.remove(tmp_file.name)
 

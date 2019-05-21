@@ -9,9 +9,15 @@ class BytesCodec(object):
         }
 
     def encode(self, data):
+        # Check that all columns are present.
+        if data.keys() != self._col_id.keys():
+            raise ValueError(
+                "Column keys mismatch: expected %s, got %s " % (self._col_id.keys(), data.keys())
+            )
+
         # Rearrange the data in order of the columns.
         values = [None] * len(self._feature_columns)
-        for f_name, f_value in data:
+        for f_name, f_value in data.items():
             col_id = self._col_id[f_name]
             column = self._feature_columns[col_id]
             if column.dtype != f_value.dtype or column.shape != f_value.shape:
@@ -20,12 +26,6 @@ class BytesCodec(object):
                     f_name, column.dtype, column.shape, f_value.dtype, f_value.shape)
                 )
             values[col_id] = f_value.tobytes()
-        for id, value in enumerate(values):
-            if value is None:
-                raise ValueError(
-                    "Missing value for column: %s",
-                    self._col_id[id].name
-                )
         return b"".join(values)
 
     def decode(self, record):
