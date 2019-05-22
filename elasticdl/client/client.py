@@ -147,10 +147,10 @@ def main():
         default="1000m"
         help="the maximal cpu used by worker in training")
     parser.add_argument("--worker_memory_request", 
-        default="1024Mi"
+        default="4096Mi"
         help="the minimal memory required by worker in training")
     parser.add_argument("--worker_memory_limit", 
-        default="1024Mi"
+        default="4096Mi"
         help="the maximal memory used by worker in training")
     args, argv = parser.parse_known_args()
     _validate_params(args)
