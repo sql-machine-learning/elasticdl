@@ -11,7 +11,7 @@ docker build -t elasticdl:dev -f dockerfile/elasticdl.dev .
 To develop in the Docker container, run the following command to mount your cloned `elasticdl` git repo directory (e.g. `EDL_REPO` below) to `/elasticdl` directory in the container and start container:
 
 ```bash
-EDL_REPO=$HOME/git/elasticdl
+EDL_REPO=<your_elasticdl_git_repo>
 docker run --rm -u $(id -u):$(id -g) -it \
     -v $EDL_REPO:/v \
     -w /v \

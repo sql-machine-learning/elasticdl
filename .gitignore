@@ -6,3 +6,4 @@ build/
 *_pb2_grpc.py
 *.pb.go
 *~
+.DS_Store
