@@ -44,8 +44,7 @@ COPY {} {}
         for line in client.push(image_name, stream=True, decode=True):
             print(line)
 
-def _gen_master_def(image_name, model_file, job_name, 
-    cpu_request, cpu_limit, memory_request, memory_limit, args, argv):
+def _gen_master_def(image_name, model_file, job_name, args, argv):
     master_yaml = """
 apiVersion: v1
 kind: Pod
@@ -71,11 +70,11 @@ spec:
     imagePullPolicy: IfNotPresent 
     resources:
       limits:
-        cpu:  "{cpu_limit}"
-        memory: "{memory_limit}"
+        cpu:  "{master_cpu_limit}"
+        memory: "{master_memory_limit}"
       requests:
-        cpu:  "{cpu_request}"
-        memory: "{memory_request}"
+        cpu:  "{master_cpu_request}"
+        memory: "{master_memory_request}"
     env:
     - name: MY_POD_IP
       valueFrom:
@@ -83,8 +82,8 @@ spec:
           fieldPath: status.podIP
   restartPolicy: Never
 """ .format(m_file=_m_file_in_docker(model_file), image_name=image_name, job_name=job_name,
-        cpu_limit=cpu_limit, cpu_request=cpu_request, 
-        memory_limit=memory_limit, memory_request=memory_request,
+        master_cpu_limit=args.master_cpu_limit, master_cpu_request=args.master_cpu_request, 
+        master_memory_limit=args.master_memory_limit, master_memory_request=args.master_memory_request,
         worker_cpu_limit=args.worker_cpu_limit, worker_cpu_request=args.worker_cpu_request,
         worker_memory_limit=args.worker_memory_limit, worker_memory_request=args.worker_memory_request)
 
@@ -94,10 +93,8 @@ spec:
     master_def['spec']['containers'][0]['args'].extend(argv)
     return master_def
 
-def _submit(image_name, model_file, job_name, 
-    cpu_request, cpu_limit, memory_request, memory_limit, args, argv):
-    master_def = _gen_master_def(image_name, model_file, job_name, 
-        cpu_request, cpu_limit, memory_request, memory_limit, args, argv)
+def _submit(image_name, model_file, job_name, args, argv):
+    master_def = _gen_master_def(image_name, model_file, job_name, args, argv)
     config.load_kube_config()
     api = core_v1_api.CoreV1Api()
     resp = api.create_namespaced_pod(body=master_def, namespace="default")
@@ -154,9 +151,7 @@ def main():
     image_name = args.image_base + '_' + job_name 
     _build_docker_image(args.model_file, image_name, image_base=args.image_base,
         repository=args.repository)
-    _submit(image_name, args.model_file, job_name, args.master_cpu_request, 
-        args.master_cpu_limit, args.master_memory_request, args.master_memory_limit,
-        args, argv)
+    _submit(image_name, args.model_file, job_name, args, argv)
 
 
 if __name__ == "__main__":
