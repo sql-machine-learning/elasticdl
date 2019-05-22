@@ -3,6 +3,7 @@ import os
 import threading
 
 from kubernetes import client, config, watch
+from kubernetes.client import V1ResourceRequirements
 
 
 class Client(object):
@@ -51,7 +52,8 @@ class Client(object):
     def get_pod_name(self, worker_name):
         return "elasticdl-worker-" + self._job_name + "-" + worker_name
 
-    def _create_worker_pod(self, worker_name, command=None, args=None, restart_policy="OnFailure"):
+    def _create_worker_pod(self, worker_name, cpu_request, cpu_limit, memory_request, 
+            memory_limit, command=None, args=None, restart_policy="OnFailure"):
         # Worker container config
         container = client.V1Container(
             name=self.get_pod_name(worker_name),
@@ -59,6 +61,12 @@ class Client(object):
             command=command,
             args=args
         )
+
+        res_reqs = {"cpu": cpu_request, "memory": memory_request}
+        res_limits = {"cpu": cpu_limit, "memory": memory_limit}
+        res = V1ResourceRequirements(limits=res_limits, requests=res_reqs);
+        container.resources = res
+
         # Pod
         pod = client.V1Pod(
             spec=client.V1PodSpec(
@@ -72,10 +80,12 @@ class Client(object):
         )
         return pod
 
-    def create_worker(self, worker_name, command=None, args=None, restart_policy="OnFailure"):
+    def create_worker(self, worker_name, cpu_request, cpu_limit, memory_request, 
+            memory_limit, command=None, args=None, restart_policy="OnFailure"):
         self._logger.warning("Creating worker: " + worker_name)
         pod = self._create_worker_pod(
-            worker_name, command=command, args=args, restart_policy=restart_policy)
+            worker_name, cpu_request, cpu_limit, memory_request, memory_limit, 
+            command=command, args=args, restart_policy=restart_policy)
         self._v1.create_namespaced_pod(self._ns, pod)
 
     def delete_worker(self, worker_name):
