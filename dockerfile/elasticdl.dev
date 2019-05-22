@@ -22,7 +22,7 @@ RUN apt-get install -y libsnappy-dev
 # Install RecordIO 
 RUN pip install 'pyrecordio>=0.0.2'
 
-ENV PYTHONPATH=/
+ENV PYTHONPATH=/:""
 
 # ElasticDL dataset generator and codecs
 COPY data /data
