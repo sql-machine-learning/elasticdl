@@ -1,6 +1,6 @@
 from recordio import File
-from edl_data.codec import TFExampleCodec
-from edl_data.codec import BytesCodec
+from data.codec import TFExampleCodec
+from data.codec import BytesCodec
 import sys
 import argparse
 import tensorflow as tf

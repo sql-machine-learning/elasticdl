@@ -8,8 +8,8 @@ from elasticdl.proto import master_pb2_grpc
 from elasticdl.proto import master_pb2
 from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 from elasticdl.common.model_helper import load_user_model, build_model
-from edl_data.codec import TFExampleCodec
-from edl_data.codec import BytesCodec
+from data.codec import TFExampleCodec
+from data.codec import BytesCodec
 import itertools
 import recordio
 
