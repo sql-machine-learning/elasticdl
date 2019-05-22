@@ -129,21 +129,29 @@ def main():
     parser.add_argument("--repository", help="The repository to push docker image to.")
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument("--master_cpu_request", 
-        help="the minimal cpu required by master in training", required=True)
+        default="100m",
+        help="the minimal cpu required by master in training")
     parser.add_argument("--master_cpu_limit", 
-        help="the maximal cpu used by master in training", required=True)
+        default="100m",
+        help="the maximal cpu used by master in training")
     parser.add_argument("--master_memory_request", 
-        help="the minimal memory required by master in training", required=True)
+        default="1024Mi",
+        help="the minimal memory required by master in training")
     parser.add_argument("--master_memory_limit", 
-        help="the maximal memory used by master in training", required=True)
+        default="1024Mi",
+        help="the maximal memory used by master in training")
     parser.add_argument("--worker_cpu_request", 
-        help="the minimal cpu required by worker in training", required=True)
+        default="1000m"
+        help="the minimal cpu required by worker in training")
     parser.add_argument("--worker_cpu_limit", 
-        help="the maximal cpu used by worker in training", required=True)
+        default="1000m"
+        help="the maximal cpu used by worker in training")
     parser.add_argument("--worker_memory_request", 
-        help="the minimal memory required by worker in training", required=True)
+        default="1024Mi"
+        help="the minimal memory required by worker in training")
     parser.add_argument("--worker_memory_limit", 
-        help="the maximal memory used by worker in training", required=True)
+        default="1024Mi"
+        help="the maximal memory used by worker in training")
     args, argv = parser.parse_known_args()
     _validate_params(args)
 
