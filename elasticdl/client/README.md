@@ -55,6 +55,14 @@ python elasticdl/client/client.py \
     --minibatch_size=10 \
     --record_per_task=100 \
     --num_worker=1 \
+    --master_cpu_request=1000m \
+    --master_cpu_limit=1000m \
+    --master_memory_request=2048Mi \
+    --master_memory_limit=2048Mi \
+    --worker_cpu_request=2000m \
+    --worker_cpu_limit=2000m \
+    --worker_memory_request=4096Mi \
+    --worker_memory_limit=4096Mi \
     --grads_to_wait=2 \
     --codec_type=tf_example \
     --job_name=test \

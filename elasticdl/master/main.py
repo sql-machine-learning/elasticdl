@@ -59,6 +59,26 @@ def _parse_args():
         default=0,
     )
     parser.add_argument(
+        "--worker_cpu_request",
+        help="the minimal cpu required by worker in training",
+        default="1000m",
+    )
+    parser.add_argument(
+        "--worker_cpu_limit",
+        help="the maximal cpu used by worker in training",
+        default="1000m",
+    )
+    parser.add_argument(
+        "--worker_memory_request",
+        help="the minimal memory required by worker in training",
+        default="4096Mi",
+    )
+    parser.add_argument(
+        "--worker_memory_limit",
+        help="the maximal memory used by worker in training",
+        default="4096Mi",
+    )
+    parser.add_argument(
         "--worker_image", help="docker image for worker", default=None
     )
     parser.add_argument("--job_name", help="job name", required=True)
@@ -121,6 +141,10 @@ def main():
             args=worker_args,
             namespace="default",
             num_worker=args.num_worker,
+            cpu_request=args.worker_cpu_request,
+            cpu_limit=args.worker_cpu_limit,
+            memory_request=args.worker_memory_request,
+            memory_limit=args.worker_memory_limit,
         )
         worker_manager.start_workers(restart_policy="Never")
 
