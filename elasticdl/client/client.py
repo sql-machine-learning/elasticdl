@@ -34,6 +34,7 @@ COPY {} {}
         dockerfile=df.name, path=".", rm=True, tag=image_name, decode=True
     ):
         if "error" in line:
+            print(line)
             raise RuntimeError("Docker image build failure: " % line["error"])
         text = line.get("stream", None)
         if text:

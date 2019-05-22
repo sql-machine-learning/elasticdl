@@ -11,8 +11,8 @@ import sys
 import tensorflow as tf
 import numpy as np
 from recordio import File
-from edl_data.codec import TFExampleCodec
-from edl_data.codec import BytesCodec
+from data.codec import TFExampleCodec
+from data.codec import BytesCodec
 from tensorflow.python.keras.datasets import mnist, fashion_mnist
 
 

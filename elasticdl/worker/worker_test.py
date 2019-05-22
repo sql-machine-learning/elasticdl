@@ -17,8 +17,8 @@ from google.protobuf import empty_pb2
 from elasticdl.proto import master_pb2_grpc
 from elasticdl.proto import master_pb2
 from elasticdl.worker.worker import Worker
-from edl_data.codec import BytesCodec
-from edl_data.codec import TFExampleCodec
+from data.codec import BytesCodec
+from data.codec import TFExampleCodec
 
 _module_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),

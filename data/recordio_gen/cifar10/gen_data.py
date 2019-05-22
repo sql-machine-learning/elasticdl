@@ -11,8 +11,8 @@ import sys
 from recordio import File
 from tensorflow.python.keras import backend
 from tensorflow.python.keras.datasets import cifar10
-from edl_data.codec import TFExampleCodec
-from edl_data.codec import BytesCodec
+from data.codec import TFExampleCodec
+from data.codec import BytesCodec
 import tensorflow as tf
 import numpy as np
 
