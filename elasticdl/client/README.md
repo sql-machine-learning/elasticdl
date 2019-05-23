@@ -49,12 +49,15 @@ python elasticdl/client/client.py \
 
 ```bash
 python elasticdl/client/client.py \
+    --job_name=test \
     --model_file=edl_k8s_examples/mnist_subclass.py \
     --train_data_dir=/data/mnist/train \
     --num_epoch=1 \
     --minibatch_size=10 \
     --record_per_task=100 \
     --num_worker=1 \
+    --master_pod_priority=highest-priority
+    --worker_pod_priority=high-priority
     --master_cpu_request=1000m \
     --master_cpu_limit=1000m \
     --master_memory_request=2048Mi \
@@ -65,7 +68,6 @@ python elasticdl/client/client.py \
     --worker_memory_limit=4096Mi \
     --grads_to_wait=2 \
     --codec_type=tf_example \
-    --job_name=test \
     --repository=gcr.io \
     --image_base=gcr.io/elasticdl/mnist:dev
 ```

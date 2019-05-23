@@ -79,6 +79,9 @@ def _parse_args():
         default="4096Mi",
     )
     parser.add_argument(
+        "--worker_pod_priority",
+        help="the requested priority of worker pod")
+    parser.add_argument(
         "--worker_image", help="docker image for worker", default=None
     )
     parser.add_argument("--job_name", help="job name", required=True)
@@ -145,6 +148,7 @@ def main():
             cpu_limit=args.worker_cpu_limit,
             memory_request=args.worker_memory_request,
             memory_limit=args.worker_memory_limit,
+            pod_priority=args.worker_pod_priority,
         )
         worker_manager.start_workers(restart_policy="Never")
 

@@ -34,7 +34,7 @@ COPY {} {}
         dockerfile=df.name, path=".", rm=True, tag=image_name, decode=True
     ):
         if "error" in line:
-            raise RuntimeError("Docker image build failure: " % line["error"])
+            raise RuntimeError("Docker image build failure: %s" % line["error"])
         text = line.get("stream", None)
         if text:
             sys.stdout.write(text)
@@ -91,6 +91,12 @@ spec:
 
     # Build master arguments
     master_def['spec']['containers'][0]['args'].extend(argv)
+
+    if args.master_pod_priority is not None:
+        master_def['spec']['priorityClassName'] = args.master_pod_priority
+    if args.worker_pod_priority is not None:
+        master_def['spec']['containers'][0]['args'].extend(
+            ["--worker_pod_priority", args.worker_pod_priority])
     return master_def
 
 def _submit(image_name, model_file, job_name, args, argv):
@@ -152,6 +158,10 @@ def main():
     parser.add_argument("--worker_memory_limit", 
         default="4096Mi",
         help="the maximal memory used by worker in training")
+    parser.add_argument("--master_pod_priority",
+        help="the requested priority of master pod")
+    parser.add_argument("--worker_pod_priority",
+        help="the requested priority of worker pod")
     args, argv = parser.parse_known_args()
     _validate_params(args)
 
