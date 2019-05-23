@@ -37,20 +37,8 @@ def gen(file_dir, data, label, *, chunk_size, record_per_file, codec_type):
             with File(file_name, "w", max_chunk_size=chunk_size, encoder=encode_fn) as f:
                 for _ in range(record_per_file):
                     row = next(it)
-                    f.write(
-                        {
-                            "image": row[0].astype(
-                                feature_columns[0].dtype.as_numpy_dtype
-                            ).reshape((1, 28, 28)),
-                            "label": np.array(
-                                [
-                                    row[1].astype(
-                                        feature_columns[1].dtype.as_numpy_dtype
-                                    )
-                                ]
-                            ),
-                        }
-                    )
+                    f.write({f_col.key: row[i].astype(f_col.dtype.as_numpy_dtype).reshape(
+                        f_col.shape) for i, f_col in enumerate(feature_columns)})
     except StopIteration:
         pass
 
