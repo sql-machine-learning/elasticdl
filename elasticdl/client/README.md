@@ -56,8 +56,8 @@ python elasticdl/client/client.py \
     --minibatch_size=10 \
     --record_per_task=100 \
     --num_worker=1 \
-    --master_pod_priority=highest-priority
-    --worker_pod_priority=high-priority
+    --master_pod_priority=highest-priority \
+    --worker_pod_priority=high-priority \
     --master_cpu_request=1000m \
     --master_cpu_limit=1000m \
     --master_memory_request=2048Mi \
