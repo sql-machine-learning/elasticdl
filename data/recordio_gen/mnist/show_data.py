@@ -6,7 +6,6 @@ import argparse
 import tensorflow as tf
 tf.enable_eager_execution()
 
-# TODO: share code with MNIST dataset.
 def main(argv):
     print(argv)
     parser = argparse.ArgumentParser(
