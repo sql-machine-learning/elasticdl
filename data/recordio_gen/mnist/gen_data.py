@@ -24,17 +24,13 @@ def gen(file_dir, data, label, *, chunk_size, record_per_file, codec_type):
         for i in itertools.count():
             file_name = file_dir + "/data-%04d" % i
             print("writing:", file_name)
+            feature_columns = [tf.feature_column.numeric_column(key="image",
+                dtype=tf.float32, shape=[1, 28, 28]),
+                tf.feature_column.numeric_column(key="label",
+                dtype=tf.int64, shape=[1])]
             if codec_type == "tf_example":
-                feature_columns = [tf.feature_column.numeric_column(key="image",
-                    dtype=tf.float32, shape=[1, 28, 28]),
-                    tf.feature_column.numeric_column(key="label",
-                    dtype=tf.int64, shape=[1])]
                 encode_fn = TFExampleCodec(feature_columns).encode
             elif codec_type == "bytes":
-                feature_columns = [tf.feature_column.numeric_column(key="image",
-                    dtype=tf.float32, shape=[28, 28]),
-                    tf.feature_column.numeric_column(key="label",
-                    dtype=tf.int64, shape=[1])]
                 encode_fn = BytesCodec(feature_columns).encode 
             else:
                 raise ValueError("invalid codec_type: " + codec_type)
@@ -45,7 +41,7 @@ def gen(file_dir, data, label, *, chunk_size, record_per_file, codec_type):
                         {
                             "image": row[0].astype(
                                 feature_columns[0].dtype.as_numpy_dtype
-                            ),
+                            ).reshape((1, 28, 28)),
                             "label": np.array(
                                 [
                                     row[1].astype(
