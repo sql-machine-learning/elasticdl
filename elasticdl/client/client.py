@@ -94,9 +94,6 @@ spec:
 
     if args.master_pod_priority is not None:
         master_def['spec']['priorityClassName'] = args.master_pod_priority
-    if args.worker_pod_priority is not None:
-        master_def['spec']['containers'][0]['args'].extend(
-            ["--worker_pod_priority", args.worker_pod_priority])
     return master_def
 
 def _submit(image_name, model_file, job_name, args, argv):
@@ -160,8 +157,6 @@ def main():
         help="the maximal memory used by worker in training")
     parser.add_argument("--master_pod_priority",
         help="the requested priority of master pod")
-    parser.add_argument("--worker_pod_priority",
-        help="the requested priority of worker pod")
     args, argv = parser.parse_known_args()
     _validate_params(args)
 
