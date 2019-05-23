@@ -23,19 +23,27 @@ The Kubernetes example use `elasticdl:dev` Docker image as the base master/worke
 
 **(TODO: Describe programming API)**
 
-There are several Keras examples provided in `edl_k8s_examples` directory.
+There are several Keras examples provided in `elasticdl/examples` directory.
 
 ## Submit ElasticDL job
 
-Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and submit a model, e.g. `edl_k8s_examples/mnist_model.py` to it.
+Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and submit a model, e.g. `elasticdl/examples/mnist_subclass.py` to it.
 
 ### Submit to local Kubernetes on Your Machine
 
 ```bash
 python elasticdl/client/client.py \
-    --model_file=edl_k8s_examples/mnist_subclass.py \
+    --model_file=elasticdl/examples/mnist_subclass.py \
     --train_data_dir=/data/mnist/train \
     --num_epoch=1 \
+    --master_cpu_request=1000m \
+    --master_cpu_limit=1000m \
+    --master_memory_request=512Mi \
+    --master_memory_limit=512Mi \
+    --worker_cpu_request=1000m \
+    --worker_cpu_limit=1000m \
+    --worker_memory_request=1024Mi \
+    --worker_memory_limit=1024Mi \
     --minibatch_size=10 \
     --record_per_task=100 \
     --num_worker=1 \
@@ -50,7 +58,7 @@ python elasticdl/client/client.py \
 ```bash
 python elasticdl/client/client.py \
     --job_name=test \
-    --model_file=edl_k8s_examples/mnist_subclass.py \
+    --model_file=elasticdl/examples/mnist_subclass.py \
     --train_data_dir=/data/mnist/train \
     --num_epoch=1 \
     --minibatch_size=10 \
