@@ -10,7 +10,7 @@ tf.enable_eager_execution()
 def main(argv):
     print(argv)
     parser = argparse.ArgumentParser(
-        description="Show same data from CIFAR10 recordio"
+        description="Show same data from mnist recordio"
     )
     parser.add_argument("file", help="RecordIo file to read")
     parser.add_argument(
