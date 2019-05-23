@@ -53,7 +53,7 @@ class Client(object):
         return "elasticdl-worker-" + self._job_name + "-" + worker_name
 
     def _create_worker_pod(self, worker_name, cpu_request, cpu_limit, memory_request, 
-            memory_limit, command=None, args=None, restart_policy="OnFailure"):
+            memory_limit, pod_priority, command=None, args=None, restart_policy="OnFailure"):
         # Worker container config
         container = client.V1Container(
             name=self.get_pod_name(worker_name),
@@ -68,11 +68,15 @@ class Client(object):
         container.resources = res
 
         # Pod
+        spec=client.V1PodSpec(
+            containers=[container],
+            restart_policy=restart_policy,
+        )
+        if pod_priority is not None:
+            spec.priority_class_name = pod_priority
+
         pod = client.V1Pod(
-            spec=client.V1PodSpec(
-                containers=[container],
-                restart_policy=restart_policy
-            ),
+            spec=spec,
             metadata=client.V1ObjectMeta(
                 name=self.get_pod_name(worker_name),
                 labels={"elasticdl": self._job_name},
@@ -81,11 +85,11 @@ class Client(object):
         return pod
 
     def create_worker(self, worker_name, cpu_request, cpu_limit, memory_request, 
-            memory_limit, command=None, args=None, restart_policy="OnFailure"):
+            memory_limit, pod_priority=None, command=None, args=None, restart_policy="OnFailure"):
         self._logger.warning("Creating worker: " + worker_name)
         pod = self._create_worker_pod(
             worker_name, cpu_request, cpu_limit, memory_request, memory_limit, 
-            command=command, args=args, restart_policy=restart_policy)
+            pod_priority, command=command, args=args, restart_policy=restart_policy)
         self._v1.create_namespaced_pod(self._ns, pod)
 
     def delete_worker(self, worker_name):
