@@ -4,6 +4,7 @@ from data.codec import BytesCodec
 import sys
 import argparse
 import tensorflow as tf
+tf.enable_eager_execution()
 
 # TODO: share code with MNIST dataset.
 def main(argv):
@@ -28,9 +29,9 @@ def main(argv):
     args = parser.parse_args(argv)
 
     feature_columns = [tf.feature_column.numeric_column(key="image",
-        dtype=tf.float32, shape=[1, 32, 32]),
+        dtype=tf.float32, shape=[3, 32, 32]),
         tf.feature_column.numeric_column(key="label",
-        dtype=tf.int64, shape=[1])]
+        dtype=tf.int64, shape=[1, 1])]
     if args.codec_type == "tf_example":
         decode_fn = TFExampleCodec(feature_columns).decode
     elif args.codec_type == "bytes":
@@ -43,7 +44,11 @@ def main(argv):
         ):
             print("-" * 10)
             print("record:", i)
-            print(f.get(i))
+            if args.codec_type == "tf_example":
+                print(f.get(i)['image'].numpy())
+                print(f.get(i)['label'].numpy())
+            elif args.codec_type == "bytes":
+                print(f.get(i))
 
 
 if __name__ == "__main__":

@@ -1,8 +1,10 @@
 from recordio import File
-from recordio_ds_gen.mnist import record
+from data.codec import TFExampleCodec
+from data.codec import BytesCodec
 import sys
 import argparse
-
+import tensorflow as tf
+tf.enable_eager_execution()
 
 def main(argv):
     print(argv)
@@ -17,15 +19,35 @@ def main(argv):
     parser.add_argument(
         "--n", default=20, type=int, help="How many record to show"
     )
+    parser.add_argument(
+        "--codec_type",
+        default="bytes",
+        choices=["tf_example", "bytes"],
+        help="Type of codec(tf_example or bytes)",
+    )
     args = parser.parse_args(argv)
 
-    with File(args.file, "r") as f:
+    feature_columns = [tf.feature_column.numeric_column(key="image",
+        dtype=tf.float32, shape=[1, 28, 28]),
+        tf.feature_column.numeric_column(key="label",
+        dtype=tf.int64, shape=[1])]
+    if args.codec_type == "tf_example":
+        decode_fn = TFExampleCodec(feature_columns).decode
+    elif args.codec_type == "bytes":
+        decode_fn = BytesCodec(feature_columns).decode
+    else:
+        raise ValueError("invalid codec_type: " + codec_type)
+    with File(args.file, "r", decoder=decode_fn) as f:
         for i in range(
             args.start, args.start + (args.n * args.step), args.step
         ):
             print("-" * 10)
             print("record:", i)
-            record.show(*record.decode(f.get(i)))
+            if args.codec_type == "tf_example":
+                print(f.get(i)['image'].numpy())
+                print(f.get(i)['label'].numpy())
+            elif args.codec_type == "bytes":
+                print(f.get(i))
 
 
 if __name__ == "__main__":
