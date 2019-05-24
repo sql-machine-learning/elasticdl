@@ -39,7 +39,7 @@ def create_recordio_file(size, codec_type):
         for _ in range(size):
             x = np.random.rand((1)).astype(np.float32)
             y = 2 * x + 1
-            f.write([("x",x), ("y",y)])
+            f.write({"x": x, "y": y})
     return temp_file.name
 
 class WorkerTest(unittest.TestCase):
