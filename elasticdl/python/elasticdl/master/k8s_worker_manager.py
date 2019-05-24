@@ -46,33 +46,31 @@ class WorkerManager(object):
 
     def start_workers(self, restart_policy="OnFailure"):
         for i in range(self._num_worker):
-            worker_name = "%d" % i
-            self._logger.warning("Starting worker: %d", i)
-            self._add_worker(worker_name, restart_policy=restart_policy)
+            self._logger.warning("Starting worker: %d" % i)
+            self._add_worker(i, restart_policy=restart_policy)
 
     def remove_workers(self):
         for i in range(self._num_worker):
-            worker_name = "%d" % i
-            pod_name = self._k8s_client.get_pod_name(worker_name)
+            pod_name = self._k8s_client.get_pod_name(i)
             if pod_name in self._worker_tracker._pods_phase:
                 self._logger.warning("Deleting worker: %d", i)
-                self._delete_worker(worker_name)
+                self._delete_worker(i)
 
-    def _add_worker(self, worker_name, restart_policy):
+    def _add_worker(self, worker_id, restart_policy):
         self._k8s_client.create_worker(
-            worker_name,
+            worker_id,
             self._cpu_request,
             self._cpu_limit,
             self._memory_request,
             self._memory_limit,
             self._pod_priority,
             command=self._command,
-            args=self._args,
+            args=self._args + ["--worker_id", str(worker_id)],
             restart_policy=restart_policy,
         )
 
-    def _delete_worker(self, worker_name):
-        self._k8s_client.delete_worker(worker_name)
+    def _delete_worker(self, worker_id):
+        self._k8s_client.delete_worker(worker_id)
 
     def get_counters(self):
         return self._worker_tracker.get_counters()

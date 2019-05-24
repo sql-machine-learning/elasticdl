@@ -20,6 +20,7 @@ class Worker(object):
     """ElasticDL worker"""
 
     def __init__(self,
+                 worker_id,
                  model_file,
                  channel=None,
                  max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM,
@@ -30,6 +31,7 @@ class Worker(object):
             channel: grpc channel
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
+        self._worker_id = worker_id,
         model_module = load_user_model(model_file)
         self._model = model_module.model
         self._feature_columns = model_module.feature_columns()

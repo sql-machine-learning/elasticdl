@@ -10,6 +10,9 @@ from elasticdl.worker.worker import Worker
 
 def _parse_args():
     parser = argparse.ArgumentParser(description="ElasticDL Worker")
+    parser.add_argument(
+        "--worker_id", help="Id unique to the worker", type=int, required=True
+    )
     parser.add_argument("--master_addr", help="Master ip:port", required=True)
     parser.add_argument(
         "--model_file",
@@ -28,7 +31,12 @@ def _parse_args():
 def main():
     args = _parse_args()
     channel = grpc.insecure_channel(args.master_addr)
-    worker = Worker(args.model_file, channel=channel, codec_type=args.codec_type)
+    worker = Worker(
+        args.worker_id,
+        args.model_file,
+        channel=channel,
+        codec_type=args.codec_type,
+    )
 
     worker.distributed_train()
 
