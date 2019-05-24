@@ -1,23 +1,37 @@
-FROM tensorflow/tensorflow:1.12.0-devel-py3
+FROM tensorflow/tensorflow:1.13.1-py3
+# For GPU version, use:
+# FROM tensorflow/tensorflow:1.13.1-gpu-py3
+# for pytorch, use:
+# FROM pytorch/pytorch
 
-# Code dependencies and dev tools
-RUN add-apt-repository -y ppa:longsleep/golang-backports && apt-get update && apt-get -y --no-install-recommends install \
-    libsnappy-dev \
-    libgtest-dev \
-    vim \
-    bash-completion \
-    less \
-    iproute2 \
-    golang-1.11 \
-    tmux
+RUN apt-get update
+RUN apt-get install -y unzip curl
 
-RUN pip3 install \
-    python-snappy \
-    crc32c \
-    torch torchvision
+ARG EXTRA_PYPI_INDEX
 
-# So bazel won't complain about untracked header files
-RUN ln -s /usr/local/lib/python3.5/dist-packages/tensorflow/include/* /usr/local/include 
+# Install gRPC tools in Python
+RUN pip install grpcio-tools --extra-index-url=${EXTRA_PYPI_INDEX}
 
-COPY entry.sh /entry.sh
-ENTRYPOINT ["/entry.sh"]
+# Install the Kubernetes Python client
+RUN pip install kubernetes --extra-index-url=${EXTRA_PYPI_INDEX}
+
+# Install Docker python SDK
+RUN pip install docker --extra-index-url=${EXTRA_PYPI_INDEX}
+
+# Install RecordIO dependencies
+RUN apt-get install -y libsnappy-dev
+
+# Install RecordIO 
+RUN pip install 'pyrecordio>=0.0.4' --extra-index-url=${EXTRA_PYPI_INDEX}
+
+ENV PYTHONPATH=/
+
+# ElasticDL dataset generator and codecs
+COPY elasticdl/python/data /data  
+RUN python /data/recordio_gen/mnist/gen_data.py --codec_type tf_example /data
+RUN python /data/recordio_gen/cifar10/gen_data.py --codec_type tf_example /data
+
+WORKDIR /
+COPY elasticdl /elasticdl
+COPY Makefile /Makefile
+RUN make
