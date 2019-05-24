@@ -73,7 +73,7 @@ class _TaskQueue(object):
         """Report if the task is successful or not"""
 
         with self._lock:
-            _, task = self._doing.pop(task_id, None)
+            _, task = self._doing.pop(task_id, (-1, None))
             if not task:
                 self._logger.warning("Unknown task_id: %d" % task_id)
             elif not success:

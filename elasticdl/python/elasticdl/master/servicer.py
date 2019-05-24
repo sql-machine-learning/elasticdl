@@ -58,7 +58,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         res = master_pb2.Task()
         res.model_version = self._version
         res.minibatch_size = self._minibatch_size
-        task_id, task = self._task_q.get()
+        task_id, task = self._task_q.get(request.worker_id)
         if task:
             res.task_id = task_id
             res.shard_file_name = task.file_name
