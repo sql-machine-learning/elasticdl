@@ -40,6 +40,10 @@ message Model {
     map<string, Tensor> param = 2; 
 }
 
+message GetTaskRequest {
+    int32 worker_id = 1;
+}
+
 message GetModelRequest {
     int32 min_version = 1;
 }
@@ -70,7 +74,7 @@ message ReportTaskResultRequest {
 }
 
 service Master {
-    rpc GetTask(google.protobuf.Empty) returns (Task);
+    rpc GetTask(GetTaskRequest) returns (Task);
     rpc GetModel(GetModelRequest) returns (Model);
     rpc ReportGradient(ReportGradientRequest) returns (ReportGradientReply);
     rpc ReportTaskResult(ReportTaskResultRequest) returns (google.protobuf.Empty);

@@ -1,4 +1,5 @@
 import logging
+import random
 import unittest
 import numpy as np
 import tensorflow as tf
@@ -45,13 +46,16 @@ class ServicerTest(unittest.TestCase):
             _TaskQueue({}, record_per_task=3, num_epoch=2),
         )
 
+        req = master_pb2.GetTaskRequest()
+
         # No task yet, make sure the returned versions are as expected.
-        task = master.GetTask(empty_pb2.Empty(), None)
+        req.worker_id = 1
+        task = master.GetTask(req, None)
         self.assertEqual("", task.shard_file_name)
         self.assertEqual(0, task.model_version)
 
         master._version = 1
-        task = master.GetTask(empty_pb2.Empty(), None)
+        task = master.GetTask(req, None)
         self.assertEqual("", task.shard_file_name)
         self.assertEqual(1, task.model_version)
 
@@ -186,9 +190,12 @@ class ServicerTest(unittest.TestCase):
         # task to number of runs.
         tasks = defaultdict(int)
         while True:
-            task = master.GetTask(empty_pb2.Empty(), None)
+            req = master_pb2.GetTaskRequest()
+            req.worker_id = random.randint(1, 10)
+            task = master.GetTask(req, None)
             if not task.shard_file_name:
                 break
+            self.assertEqual(task_q._doing[task.task_id][0], req.worker_id)
             task_key = (task.shard_file_name, task.start, task.end)
             tasks[task_key] += 1
             report = master_pb2.ReportTaskResultRequest()

@@ -31,7 +31,7 @@ class Worker(object):
             channel: grpc channel
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
-        self._worker_id = worker_id,
+        self._worker_id = worker_id
         model_module = load_user_model(model_file)
         self._model = model_module.model
         self._feature_columns = model_module.feature_columns()
@@ -60,7 +60,10 @@ class Worker(object):
         """
         get task from master
         """
-        return self._stub.GetTask(empty_pb2.Empty())
+        req = master_pb2.GetTaskRequest()
+        req.worker_id = self._worker_id
+        
+        return self._stub.GetTask(req)
 
     def get_model(self, min_version):
         """

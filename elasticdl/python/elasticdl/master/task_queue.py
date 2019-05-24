@@ -48,7 +48,7 @@ class _TaskQueue(object):
                 )
         random.shuffle(self._todo)
 
-    def get(self):
+    def get(self, worker_id):
         """Return next (task_id, Task) tuple"""
 
         with self._lock:
@@ -65,7 +65,7 @@ class _TaskQueue(object):
             self._task_id += 1
             task = self._todo.pop()
             # TODO: Handle timeout of tasks.
-            self._doing[self._task_id] = task
+            self._doing[self._task_id] = (worker_id, task)
 
             return self._task_id, task
 
@@ -73,7 +73,7 @@ class _TaskQueue(object):
         """Report if the task is successful or not"""
 
         with self._lock:
-            task = self._doing.pop(task_id, None)
+            _, task = self._doing.pop(task_id, (-1, None))
             if not task:
                 self._logger.warning("Unknown task_id: %d" % task_id)
             elif not success:
