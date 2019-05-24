@@ -49,14 +49,14 @@ class Client(object):
         for event in stream:
             self._event_cb(event)
 
-    def get_pod_name(self, worker_name):
-        return "elasticdl-worker-" + self._job_name + "-" + worker_name
+    def get_pod_name(self, worker_id):
+        return "elasticdl-worker-" + self._job_name + "-" + str(worker_id)
 
-    def _create_worker_pod(self, worker_name, cpu_request, cpu_limit, memory_request, 
+    def _create_worker_pod(self, worker_id, cpu_request, cpu_limit, memory_request, 
             memory_limit, pod_priority, command=None, args=None, restart_policy="OnFailure"):
         # Worker container config
         container = client.V1Container(
-            name=self.get_pod_name(worker_name),
+            name=self.get_pod_name(worker_id),
             image=self._image,
             command=command,
             args=args
@@ -78,24 +78,24 @@ class Client(object):
         pod = client.V1Pod(
             spec=spec,
             metadata=client.V1ObjectMeta(
-                name=self.get_pod_name(worker_name),
+                name=self.get_pod_name(worker_id),
                 labels={"elasticdl": self._job_name},
             ),
         )
         return pod
 
-    def create_worker(self, worker_name, cpu_request, cpu_limit, memory_request, 
+    def create_worker(self, worker_id, cpu_request, cpu_limit, memory_request, 
             memory_limit, pod_priority=None, command=None, args=None, restart_policy="OnFailure"):
-        self._logger.warning("Creating worker: " + worker_name)
+        self._logger.warning("Creating worker: " + str(worker_id))
         pod = self._create_worker_pod(
-            worker_name, cpu_request, cpu_limit, memory_request, memory_limit, 
+            worker_id, cpu_request, cpu_limit, memory_request, memory_limit, 
             pod_priority, command=command, args=args, restart_policy=restart_policy)
         self._v1.create_namespaced_pod(self._ns, pod)
 
-    def delete_worker(self, worker_name):
-        self._logger.warning("Deleting worker: " + worker_name)
+    def delete_worker(self, worker_id):
+        self._logger.warning("Deleting worker: " + str(worker_id))
         self._v1.delete_namespaced_pod(
-            self.get_pod_name(worker_name),
+            self.get_pod_name(worker_id),
             self._ns,
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )
