@@ -22,9 +22,9 @@ RUN pip install docker --extra-index-url=${EXTRA_PYPI_INDEX}
 RUN apt-get install -y libsnappy-dev
 
 # Install RecordIO 
-RUN pip install 'pyrecordio>=0.0.4' --extra-index-url=${EXTRA_PYPI_INDEX}
+RUN pip install 'pyrecordio==0.0.4' --extra-index-url=${EXTRA_PYPI_INDEX}
 
-ENV PYTHONPATH=/
+ENV PYTHONPATH=/:/elasticdl/python/
 
 # ElasticDL dataset generator and codecs
 COPY elasticdl/python/data /data  
