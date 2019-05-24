@@ -5,7 +5,7 @@
 To build the development Docker image, in repo's root directory, run the following command:
 
 ```bash
-docker build \ 
+docker build \
     -t elasticdl:dev \
     -f elasticdl/docker/Dockerfile .
 ```
@@ -13,7 +13,7 @@ docker build \
 When having difficulties downloading from the main PYPI site, You could pass an extra PYPI index url to `docker build`, such as:
 
 ```bash
-docker build \ 
+docker build \
     --build-arg EXTRA_PYPI_INDEX=https://mirrors.aliyun.com/pypi/simple \
     -t elasticdl:dev \
     -f elasticdl/docker/Dockerfile .
@@ -37,7 +37,7 @@ docker run --rm -u $(id -u):$(id -g) -it \
 In dev Docker container's `elasticdl` repo's root directory, do the following:
 
 ```bash
-make && python -m unittest discover elasticdl '*_test.py'
+make && python -m unittest discover elasticdl/python '*_test.py'
 ```
 
 Could also start Docker container and run unittests in a single command:
@@ -47,7 +47,7 @@ docker run --rm -u $(id -u):$(id -g) -it \
     -v $EDL_REPO:/v \
     -w /v \
     elasticdl:dev \
-    bash -c "make && python -m unittest discover elasticdl '*_test.py'"
+    bash -c "make && python -m unittest discover elasticdl/python '*_test.py'"
 ```
 ### Test in Docker
 
