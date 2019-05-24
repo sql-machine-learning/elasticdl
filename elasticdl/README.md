@@ -14,7 +14,7 @@ When having difficulties downloading from the main PYPI site, You could pass an 
 
 ```bash
 docker build \ 
-    --build-arg EXTRA_PYPI_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple
+    --build-arg EXTRA_PYPI_INDEX=https://mirrors.aliyun.com/pypi/simple \
     -t elasticdl:dev \
     -f elasticdl/docker/Dockerfile .
 ```
