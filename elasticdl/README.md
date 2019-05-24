@@ -5,8 +5,20 @@
 To build the development Docker image, in repo's root directory, run the following command:
 
 ```bash
-docker build -t elasticdl:dev -f dockerfile/elasticdl.dev .
+docker build \ 
+    -t elasticdl:dev \
+    -f elasticdl/docker/Dockerfile .
 ```
+
+When having difficulties downloading from the main PYPI site, You could pass an extra PYPI index url to `docker build`, such as:
+
+```bash
+docker build \ 
+    --build-arg EXTRA_PYPI_INDEX=https://mirrors.aliyun.com/pypi/simple \
+    -t elasticdl:dev \
+    -f elasticdl/docker/Dockerfile .
+```
+
 
 To develop in the Docker container, run the following command to mount your cloned `elasticdl` git repo directory (e.g. `EDL_REPO` below) to `/elasticdl` directory in the container and start container:
 
