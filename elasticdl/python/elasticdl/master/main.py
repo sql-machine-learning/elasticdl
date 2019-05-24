@@ -163,13 +163,7 @@ def main():
     if args.num_worker:
         # TODO: worker_manager.remove_workers supports synchronized call
         worker_manager.remove_workers()
-        # wait for worker pod to be deleted
-        max_check_num = 10
-        for _ in range(max_check_num):
-            time.sleep(3)
-            counters = worker_manager.get_counters()
-            if not counters:
-                break
+
     server.stop(0)
 
 
