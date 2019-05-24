@@ -36,7 +36,7 @@ def main():
 
     # Start 3 workers
     for i in range(3):
-        c.create_worker("worker-%d" % i)
+        c.create_worker("worker-%d" % i, "500m", "500m", "64Mi", "64Mi")
         time.sleep(5)
 
     # wait for workers to be added
@@ -48,7 +48,7 @@ def main():
         c.delete_worker("worker-%d" % i)
 
     # wait for workers to be deleted
-    while tracker._count > 3:
+    while tracker._count > 0:
         time.sleep(1)
 
 if __name__ == "__main__":
