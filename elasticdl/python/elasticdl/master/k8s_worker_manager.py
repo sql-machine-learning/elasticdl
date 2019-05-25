@@ -6,8 +6,8 @@ from collections import Counter
 from elasticdl.master import k8s
 
 
-class WorkerTracker(object):
-    def __init__(self):
+class _WorkerTracker(object):
+    def __init__(self, task_q):
         # pod name to phase mapping
         # phase: Pending/Running/Succeeded/Failed/Unknown
         #   Pending: worker pod not started yet
@@ -16,6 +16,7 @@ class WorkerTracker(object):
         #   Failed: worker pod is killed for some reason
         #   Unknown: unkown
         self._pods_phase = {}
+        self._task_q = task_q
 
     def get_counters(self):
         return Counter(self._pods_phase.values())
@@ -25,10 +26,15 @@ class WorkerTracker(object):
         self._pods_phase[pod_name] = event["object"].status.phase
         if event["type"] == "DELETED":
             del self._pods_phase[pod_name]
+            self._task_q.recover_tasks(
+                # TODO: move worker_id and pod name mapping to a separate class 
+                int(pod_name.rsplit("-", 1)[1])
+            )
+
 
 
 class WorkerManager(object):
-    def __init__(self, command, args, num_worker=1, cpu_request="1000m", cpu_limit="1000m",
+    def __init__(self, task_q, command, args, num_worker=1, cpu_request="1000m", cpu_limit="1000m",
             memory_request="4096Mi", memory_limit="4096Mi", pod_priority=None, **kwargs):
         self._logger = logging.getLogger("WorkerManager")
         self._command = command
@@ -39,7 +45,7 @@ class WorkerManager(object):
         self._memory_request = memory_request
         self._memory_limit = memory_limit
         self._pod_priority = pod_priority
-        self._worker_tracker = WorkerTracker()
+        self._worker_tracker = _WorkerTracker(task_q)
         self._k8s_client = k8s.Client(
             event_callback=self._worker_tracker.event_cb, **kwargs
         )

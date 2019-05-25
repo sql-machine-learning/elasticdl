@@ -138,6 +138,7 @@ def main():
         ]
 
         worker_manager = WorkerManager(
+            task_q,
             job_name=args.job_name,
             worker_image=args.worker_image,
             command=worker_command,

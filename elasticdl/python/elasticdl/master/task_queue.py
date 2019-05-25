@@ -83,3 +83,10 @@ class _TaskQueue(object):
     def finished(self):
         """Return if all tasks are done"""
         return not self._todo and not self._doing
+
+    def recover_tasks(self, worker_id):
+        """Recover doing tasks for a dead worker"""
+
+        with self._lock:
+            tasks = [task for wid, task in self._doing if wid == worker_id]
+            self._todo.extend(tasks)
