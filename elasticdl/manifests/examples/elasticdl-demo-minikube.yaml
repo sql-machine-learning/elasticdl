@@ -7,7 +7,23 @@ spec:
   - name: mnist-demo-container
     image: elasticdl:dev
     command: ["/bin/bash"]
-    args: ["-c", "cd elasticdl/python && python -m elasticdl.master.main --model_file=/elasticdl/python/examples/mnist_functional_api.py --train_data_dir=/data/mnist/train --codec_type=tf_example --record_per_task=100 --num_epoch=1 --grads_to_wait=2 --minibatch_size=64 --num_worker=2 --worker_image=elasticdl:dev --worker_cpu_request=100m --worker_memory_request=100Mi --job_name=edl-train"]
+    args:
+    - -c
+    - >
+      cd elasticdl/python &&
+      python -m elasticdl.master.main
+      --model_file=/elasticdl/python/examples/mnist_functional_api.py
+      --train_data_dir=/data/mnist/train
+      --codec_type=tf_example
+      --record_per_task=100
+      --num_epoch=1
+      --grads_to_wait=2
+      --minibatch_size=64
+      --num_worker=2
+      --worker_image=elasticdl:dev
+      --worker_cpu_request=100m
+      --worker_memory_request=100Mi
+      --job_name=edl-train
     imagePullPolicy: Never
     env:
       - name: MY_POD_IP

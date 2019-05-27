@@ -89,7 +89,7 @@ For Minikube, run the following command to launch the job.
 ```bash
 kubectl apply -f manifests/examples/elasticdl-demo-minikube.yaml
 ```
-Note that, to let Minikube use local image, you need to run `eval $(minikube docker-env)` first, and then build the image following [instructions](#the-development-docker-image).
+Note that, to let Minikube use local image instead of remote registries, you need to run `eval $(minikube docker-env)` first, and then build the image following [instructions](#the-development-docker-image).
 
 For other Kubernetes clusters, first make sure the built image has been pushed to some registries, and then run the following command to launch the job. 
 ```bash
