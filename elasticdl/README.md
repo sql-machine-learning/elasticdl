@@ -82,37 +82,24 @@ docker run --net=host --rm -it elasticdl:dev \
 This will train MNIST data with a model defined in [python/examples/mnist_functional_api.py](python/examples/mnist_functional_api.py) for 2 epoches.
 
 ### Test with Kubernetes
-Create a `test_mnist.yaml` file as:
 
+We can also test ElasticDL job in a Kubernetes environment using the previous built [image](#the-development-docker-image).
+
+For Minikube, run the following command to launch the job.
+```bash
+kubectl apply -f manifests/examples/elasticdl-demo-minikube.yaml
 ```
-apiVersion: v1
-kind: Pod
-metadata:
-  name: test-mnist
-  labels:
-    purpose: test-command
-spec:
-  containers:
-  - name: mnist-demo-container
-    image: edl:newtest
-    command: ["python"]
-    args: ["-m", "elasticdl.master.main", "--model-file=/elasticdl/examples/mnist/mnist.py", "--model-class=MnistModel", "--train_data_dir=/data/mnist/train", "--record_per_task=100", "--num_epoch=1", "--grads_to_wait=2", "--minibatch_size=64", "--num_worker=2", "--worker_image=elasticdl:dev", "--job_name=edl-train-043019"]
-    imagePullPolicy: Never
-    env:
-      - name: MY_POD_IP
-        valueFrom:
-          fieldRef:
-            fieldPath: status.podIP
-  restartPolicy: Never
+Note that, to let Minikube use local image instead of remote registries, you need to run `eval $(minikube docker-env)` first, and then build the image following [instructions](#the-development-docker-image).
+
+For other Kubernetes clusters, first make sure the built image has been pushed to some registries, and then run the following command to launch the job. 
+```bash
+kubectl apply -f manifests/examples/elasticdl-demo-k8s.yaml
 ```
 
-Then start the training job as:
-
+If you find permission error in the main pod log, e.g., `"pods is forbidden: User \"system:serviceaccount:default:default\" cannot create resource \"pods\""`, you need to grant pod-related permissions for the default user.
+```bash
+kubectl apply -f manifests/examples/elasticdl-rbac.yaml
 ```
-kubectl apply -f test_mnist.yaml
-```
-
-This will start a master pod, which will launch 2 worker pods for training.
 
 ### Manual Debug
 
