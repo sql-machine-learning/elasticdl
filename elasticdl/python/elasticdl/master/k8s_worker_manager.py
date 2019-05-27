@@ -52,14 +52,14 @@ class WorkerManager(object):
 
     def start_workers(self, restart_policy="OnFailure"):
         for i in range(self._num_worker):
-            self._logger.warning("Starting worker: %d" % i)
+            self._logger.info("Starting worker: %d" % i)
             self._add_worker(i, restart_policy=restart_policy)
 
     def remove_workers(self):
         for i in range(self._num_worker):
             pod_name = self._k8s_client.get_pod_name(i)
             if pod_name in self._worker_tracker._pods_phase:
-                self._logger.warning("Deleting worker: %d", i)
+                self._logger.info("Deleting worker: %d", i)
                 self._delete_worker(i)
 
     def _add_worker(self, worker_id, restart_policy):
