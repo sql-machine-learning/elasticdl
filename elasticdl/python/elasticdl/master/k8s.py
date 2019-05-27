@@ -64,7 +64,7 @@ class Client(object):
 
         res_reqs = {"cpu": cpu_request, "memory": memory_request}
         res_limits = {"cpu": cpu_limit, "memory": memory_limit}
-        res = V1ResourceRequirements(limits=res_limits, requests=res_reqs);
+        res = V1ResourceRequirements(limits=res_limits, requests=res_reqs)
         container.resources = res
 
         # Pod
@@ -86,14 +86,14 @@ class Client(object):
 
     def create_worker(self, worker_id, cpu_request, cpu_limit, memory_request, 
             memory_limit, pod_priority=None, command=None, args=None, restart_policy="OnFailure"):
-        self._logger.warning("Creating worker: " + str(worker_id))
+        self._logger.info("Creating worker: " + str(worker_id))
         pod = self._create_worker_pod(
             worker_id, cpu_request, cpu_limit, memory_request, memory_limit, 
             pod_priority, command=command, args=args, restart_policy=restart_policy)
         self._v1.create_namespaced_pod(self._ns, pod)
 
     def delete_worker(self, worker_id):
-        self._logger.warning("Deleting worker: " + str(worker_id))
+        self._logger.info("Deleting worker: " + str(worker_id))
         self._v1.delete_namespaced_pod(
             self.get_pod_name(worker_id),
             self._ns,

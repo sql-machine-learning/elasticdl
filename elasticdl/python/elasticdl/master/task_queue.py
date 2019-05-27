@@ -59,7 +59,7 @@ class _TaskQueue(object):
                 # Start a new epoch
                 self._create_tasks()
                 self._epoch += 1
-                self._logger.warning("Starting epoch %d" % self._epoch)
+                self._logger.info("Starting epoch %d" % self._epoch)
 
             if not self._todo:
                 # No more tasks
