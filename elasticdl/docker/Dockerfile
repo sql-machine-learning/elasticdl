@@ -18,11 +18,8 @@ RUN pip install kubernetes --extra-index-url=${EXTRA_PYPI_INDEX}
 # Install Docker python SDK
 RUN pip install docker --extra-index-url=${EXTRA_PYPI_INDEX}
 
-# Install RecordIO dependencies
-RUN apt-get install -y libsnappy-dev
-
 # Install RecordIO 
-RUN pip install 'pyrecordio==0.0.4' --extra-index-url=${EXTRA_PYPI_INDEX}
+RUN pip install 'pyrecordio>=0.0.6' --extra-index-url=${EXTRA_PYPI_INDEX}
 
 ENV PYTHONPATH=/:/elasticdl/python/
 

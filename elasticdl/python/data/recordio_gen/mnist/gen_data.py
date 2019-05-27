@@ -10,7 +10,9 @@ import os
 import sys
 import tensorflow as tf
 import numpy as np
-from recordio import File
+import recordio
+
+from contextlib import closing
 from data.codec import TFExampleCodec
 from data.codec import BytesCodec
 from tensorflow.python.keras.datasets import mnist, fashion_mnist
@@ -24,21 +26,32 @@ def gen(file_dir, data, label, *, chunk_size, record_per_file, codec_type):
         for i in itertools.count():
             file_name = file_dir + "/data-%04d" % i
             print("writing:", file_name)
-            feature_columns = [tf.feature_column.numeric_column(key="image",
-                dtype=tf.float32, shape=[1, 28, 28]),
-                tf.feature_column.numeric_column(key="label",
-                dtype=tf.int64, shape=[1])]
+            feature_columns = [
+                tf.feature_column.numeric_column(
+                    key="image", dtype=tf.float32, shape=[1, 28, 28]
+                ),
+                tf.feature_column.numeric_column(
+                    key="label", dtype=tf.int64, shape=[1]
+                ),
+            ]
             if codec_type == "tf_example":
                 encode_fn = TFExampleCodec(feature_columns).encode
             elif codec_type == "bytes":
-                encode_fn = BytesCodec(feature_columns).encode 
+                encode_fn = BytesCodec(feature_columns).encode
             else:
                 raise ValueError("invalid codec_type: " + codec_type)
-            with File(file_name, "w", max_chunk_size=chunk_size, encoder=encode_fn) as f:
+            with closing(recordio.Writer(file_name)) as f:
                 for _ in range(record_per_file):
                     row = next(it)
-                    f.write({f_col.key: row[i].astype(f_col.dtype.as_numpy_dtype).reshape(
-                        f_col.shape) for i, f_col in enumerate(feature_columns)})
+                    rec = encode_fn(
+                        {
+                            f_col.key: row[i]
+                            .astype(f_col.dtype.as_numpy_dtype)
+                            .reshape(f_col.shape)
+                            for i, f_col in enumerate(feature_columns)
+                        }
+                    )
+                    f.write(rec)
     except StopIteration:
         pass
 
@@ -69,7 +82,7 @@ def main(argv):
     args = parser.parse_args(argv)
     # one uncompressed record has size 28 * 28 + 1 bytes.
     # Also add some slack for safety.
-    chunk_size = args.num_record_per_chunk * (28 * 28  + 1) + 100
+    chunk_size = args.num_record_per_chunk * (28 * 28 + 1) + 100
     record_per_file = args.num_record_per_chunk * args.num_chunk
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()

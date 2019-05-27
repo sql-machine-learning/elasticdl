@@ -2,6 +2,10 @@ import traceback
 import tensorflow as tf
 assert tf.executing_eagerly()
 
+import itertools
+import recordio
+
+from contextlib import closing
 from google.protobuf import empty_pb2
 from tensorflow.python.ops import math_ops
 from elasticdl.proto import master_pb2_grpc
@@ -10,8 +14,6 @@ from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 from elasticdl.common.model_helper import load_user_model, build_model
 from data.codec import TFExampleCodec
 from data.codec import BytesCodec
-import itertools
-import recordio
 
 # the default max number of a minibatch retrain as its gradients are not accepted by master.
 DEFAULT_MAX_MINIBATCH_RETRAIN_NUM = 64
@@ -100,6 +102,17 @@ class Worker(object):
         res = self._stub.ReportGradient(req)
         return res.accepted, res.model_version
 
+    @staticmethod
+    def _get_batch(reader, batch_size, decode):
+        res = []
+        for i in range(batch_size):
+            record = reader.record()
+            if record is None:
+                break
+            res.append(decode(record))
+        return res
+                
+
     def distributed_train(self):
         """
         Distributed training.
@@ -112,12 +125,10 @@ class Worker(object):
             batch_size = task.minibatch_size
             err_msg = ""
             try:
-                with recordio.File(task.shard_file_name, "r", decoder=self._codec.decode) as rdio_r:
-                    reader = rdio_r.get_reader(task.start, task.end)
+                with closing(recordio.Scanner(task.shard_file_name, task.start, task.end - task.start)) as reader:
                     min_model_version = task.model_version
                     while True:
-                        record_buf = list(
-                            itertools.islice(reader, 0, batch_size))
+                        record_buf = self._get_batch(reader, batch_size, self._codec.decode)
                         if not record_buf:
                             break
 
@@ -169,11 +180,9 @@ class Worker(object):
         optimizer = self._opt_fn()
         for _ in range(epoch):
             for f in file_list:
-                with recordio.File(f, "r", decoder=self._codec.decode) as rdio_r:
-                    reader = rdio_r.get_reader(0, rdio_r.count())
+                with closing(recordio.Scanner(f)) as reader:
                     while True:
-                        record_buf = list(
-                            itertools.islice(reader, 0, batch_size))
+                        record_buf = self._get_batch(reader, batch_size, self._codec.decode)
                         if not record_buf:
                             break
 

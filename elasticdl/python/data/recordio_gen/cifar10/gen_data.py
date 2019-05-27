@@ -8,7 +8,9 @@ import itertools
 import argparse
 import os
 import sys
-from recordio import File
+import recordio
+
+from contextlib import closing
 from tensorflow.python.keras import backend
 from tensorflow.python.keras.datasets import cifar10
 from data.codec import TFExampleCodec
@@ -39,13 +41,19 @@ def gen(file_dir, data, label, *, chunk_size, record_per_file, codec_type):
                 encode_fn = BytesCodec(feature_columns).encode
             else:
                 raise ValueError("invalid codec_type: " + codec_type)
-            with File(
-                file_name, "w", max_chunk_size=chunk_size, encoder=encode_fn
-            ) as f:
+
+            with closing(recordio.Writer(file_name)) as f:
                 for _ in range(record_per_file):
                     row = next(it)
-                    f.write({f_col.key: row[i].astype(f_col.dtype.as_numpy_dtype).reshape(
-                        f_col.shape) for i, f_col in enumerate(feature_columns)})
+                    rec = encode_fn(
+                        {
+                            f_col.key: row[i]
+                            .astype(f_col.dtype.as_numpy_dtype)
+                            .reshape(f_col.shape)
+                            for i, f_col in enumerate(feature_columns)
+                        }
+                    )
+                    f.write(rec)
     except StopIteration:
         pass
 

@@ -1,10 +1,12 @@
-from recordio import File
-from data.codec import TFExampleCodec
-from data.codec import BytesCodec
 import sys
 import argparse
+import recordio
 import tensorflow as tf
 tf.enable_eager_execution()
+
+from contextlib import closing
+from data.codec import TFExampleCodec
+from data.codec import BytesCodec
 
 # TODO: share code with MNIST dataset.
 def main(argv):
@@ -16,7 +18,6 @@ def main(argv):
     parser.add_argument(
         "--start", default=0, type=int, help="Start record number"
     )
-    parser.add_argument("--step", default=1, type=int, help="Step")
     parser.add_argument(
         "--n", default=20, type=int, help="How many record to show"
     )
@@ -38,17 +39,21 @@ def main(argv):
         decode_fn = BytesCodec(feature_columns).decode
     else:
         raise ValueError("invalid codec_type: " + codec_type)
-    with File(args.file, "r", decoder=decode_fn) as f:
-        for i in range(
-            args.start, args.start + (args.n * args.step), args.step
-        ):
+
+    with closing(recordio.Scanner(args.file, args.start, args.n)) as f:
+        for i in range(args.start, args.start + args.n):
+            rec = f.record()
+            if rec is None:
+                break
+            rec = decode_fn(rec)
+
             print("-" * 10)
             print("record:", i)
             if args.codec_type == "tf_example":
-                print(f.get(i)['image'].numpy())
-                print(f.get(i)['label'].numpy())
+                print(rec['image'].numpy())
+                print(rec['label'].numpy())
             elif args.codec_type == "bytes":
-                print(f.get(i))
+                print(rec)
 
 
 if __name__ == "__main__":

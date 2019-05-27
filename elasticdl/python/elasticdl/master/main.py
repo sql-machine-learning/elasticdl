@@ -2,14 +2,15 @@ import logging
 import time
 import argparse
 import os
+import recordio
 
 import grpc
 import tensorflow as tf
 
 tf.enable_eager_execution()
 
+from contextlib import closing
 from concurrent import futures
-from recordio import File
 from elasticdl.proto import master_pb2_grpc
 from elasticdl.master.servicer import MasterServicer
 from elasticdl.master.task_queue import _TaskQueue
@@ -21,8 +22,8 @@ def _make_task_queue(data_dir, record_per_task, num_epoch):
     f_records = {}
     for f in os.listdir(data_dir):
         p = os.path.join(data_dir, f)
-        with File(p, "r") as rio:
-            f_records[p] = rio.count()
+        with closing(recordio.Index(p)) as rio:
+            f_records[p] = rio.num_records()
     return _TaskQueue(f_records, record_per_task, num_epoch)
 
 

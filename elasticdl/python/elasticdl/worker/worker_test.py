@@ -10,6 +10,7 @@ import unittest
 import numpy as np
 import recordio
 
+from contextlib import closing
 from elasticdl.common.model_helper import load_user_model
 from elasticdl.master.task_queue import _TaskQueue
 from elasticdl.master.servicer import MasterServicer
@@ -35,11 +36,11 @@ def create_recordio_file(size, codec_type):
         codec = TFExampleCodec(columns)
 
     temp_file = tempfile.NamedTemporaryFile(delete=False)
-    with recordio.File(temp_file.name, 'w', max_chunk_size=size, encoder=codec.encode) as f:
+    with closing(recordio.Writer(temp_file.name)) as f:
         for _ in range(size):
             x = np.random.rand((1)).astype(np.float32)
             y = 2 * x + 1
-            f.write({"x": x, "y": y})
+            f.write(codec.encode({"x": x, "y": y}))
     return temp_file.name
 
 class WorkerTest(unittest.TestCase):
