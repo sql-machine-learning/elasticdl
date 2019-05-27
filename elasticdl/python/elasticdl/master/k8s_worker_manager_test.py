@@ -47,7 +47,6 @@ class WorkerManagerTest(unittest.TestCase):
             [call(0), call(1), call(2)], any_order=True
         )
 
-
     @unittest.skipIf(os.environ.get('K8S_TESTS', 'True') == 'False', 'No Kubernetes cluster available')
     def testFailedWorkerPod(self):
         """
