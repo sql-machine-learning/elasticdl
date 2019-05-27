@@ -121,7 +121,7 @@ def main():
     )
     server.add_insecure_port("[::]:{}".format(PORT))
     server.start()
-    logger.warning("Server started at port: %d", PORT)
+    logger.info("Server started at port: %d", PORT)
 
     if args.num_worker:
         master_addr = "%s:%d" % (os.getenv("MY_POD_IP", "localhost"), PORT)

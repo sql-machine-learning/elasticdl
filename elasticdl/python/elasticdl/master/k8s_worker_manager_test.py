@@ -13,14 +13,13 @@ from elasticdl.master.task_queue import _TaskQueue
 
 
 class WorkerManagerTest(unittest.TestCase):
-    @unittest.skipIf(os.environ.get('K8S_TESTS', 'False') == 'True', 'No Kubernetes cluster available')
+    @unittest.skipIf(os.environ.get('K8S_TESTS', 'True') == 'False', 'No Kubernetes cluster available')
     def testCreateDeleteWorkerPod(self):
         task_q = _TaskQueue({"f": 10}, 1, 1)
         task_q.recover_tasks = MagicMock()
         worker_servicer = WorkerManager(
             task_q,
             job_name="test-create-worker-pod",
-            #worker_image="elasticdl:dev",
             worker_image="gcr.io/google-samples/hello-app:1.0",
             command=["/bin/ls"],
             args=[],
@@ -48,7 +47,8 @@ class WorkerManagerTest(unittest.TestCase):
             [call(0), call(1), call(2)], any_order=True
         )
 
-    @unittest.skipIf(os.environ.get('K8S_TESTS', 'False') == 'True', 'No Kubernetes cluster available')
+
+    @unittest.skipIf(os.environ.get('K8S_TESTS', 'True') == 'False', 'No Kubernetes cluster available')
     def testFailedWorkerPod(self):
         """
         Start a pod running a python program destined to fail with restart_policy="Never"
