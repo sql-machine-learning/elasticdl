@@ -17,6 +17,7 @@ class WorkerTracker(object):
             self._count -= 1
 
 
+@unittest.skipIf(os.environ.get('K8S_TESTS', 'True') == 'False', 'No Kubernetes cluster available')
 class K8sClientTest(unittest.TestCase):
     def test_client(self):
         tracker = WorkerTracker()
