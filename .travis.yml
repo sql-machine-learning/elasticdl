@@ -1,2 +1,6 @@
 language: python
-script: make &&  python -m unittest discover elasticdl/python '*_test.py'
+
+script:
+  - set -e
+  - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile .
+  - docker run --rm -it elasticdl:dev bash -c "make && python -m unittest discover elasticdl/python '*_test.py'"
