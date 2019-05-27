@@ -13,6 +13,9 @@ class _Task(object):
         self.start = start
         self.end = end
 
+    def _info(self):
+        return (self.file_name, self.start, self.end)
+
 
 class _TaskQueue(object):
     """Creates and dispatches Tasks. Keep track of a Task's lifecycle."""
@@ -88,5 +91,8 @@ class _TaskQueue(object):
         """Recover doing tasks for a dead worker"""
 
         with self._lock:
-            tasks = [task for wid, task in self._doing if wid == worker_id]
-            self._todo.extend(tasks)
+            ids = [
+                id for id, (wid, _) in self._doing.items() if wid == worker_id
+            ]
+        for id in ids:
+            self.report(id, False)
