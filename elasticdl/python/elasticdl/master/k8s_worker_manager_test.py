@@ -6,19 +6,18 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock, call, Mock, patch
 from elasticdl.master.k8s_worker_manager import WorkerManager
 from elasticdl.master.task_queue import _TaskQueue
 
 
 class WorkerManagerTest(unittest.TestCase):
-    def testCreateDeleteWorkerPod(self):
+    def testCreateDeleteWorkerPod(self, mock_get):
         task_q = _TaskQueue({"f": 10}, 1, 1)
         task_q.recover_tasks = MagicMock()
         worker_servicer = WorkerManager(
             task_q,
             job_name="test-create-worker-pod",
-            #worker_image="elasticdl:dev",
             worker_image="gcr.io/google-samples/hello-app:1.0",
             command=["/bin/ls"],
             args=[],
