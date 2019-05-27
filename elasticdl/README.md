@@ -55,27 +55,31 @@ In a terminal, start master to distribute mnist training tasks.
 
 ```
 docker run --net=host --rm -it elasticdl:dev \
-    python -m master.main \
-        --model-file=examples/mnist/mnist.py \
-        --model-class=MnistModel \
-        --train_data_dir=/data/mnist/train \
-        --record_per_task=100 \
-        --num_epoch=2 \
-        --grads_to_wait=2 \
-        --minibatch_size=10
+    bash -c "cd elasticdl/python &&
+      python -m elasticdl.master.main \
+          --model_file=examples/mnist_functional_api.py \
+          --job_name=test \
+          --train_data_dir=/data/mnist/train \
+          --record_per_task=100 \
+          --num_epoch=2 \
+          --codec_type=tf_example \
+          --grads_to_wait=2 \
+          --minibatch_size=10"
 ```
 
 In another terminal, start a worker
 
 ```
 docker run --net=host --rm -it elasticdl:dev \
-    python -m worker.main \
-        --model-file=examples/mnist/mnist.py \
-        --model-class=MnistModel \
-        --master_addr=localhost:50001
+    bash -c "cd elasticdl/python &&
+      python -m elasticdl.worker.main \
+          --worker_id=1 \
+          --model_file=examples/mnist_functional_api.py \
+          --codec_type=tf_example \
+          --master_addr=localhost:50001"
 ```
 
-This will train MNIST data with a model defined in [examples/mnist/mnist.py](examples/mnist/mnist.py) for 2 epoches. 
+This will train MNIST data with a model defined in [python/examples/mnist_functional_api.py](python/examples/mnist_functional_api.py) for 2 epoches.
 
 ### Test with Kubernetes
 Create a `test_mnist.yaml` file as:
