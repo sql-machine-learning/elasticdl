@@ -101,14 +101,6 @@ If you find permission error in the main pod log, e.g., `"pods is forbidden: Use
 kubectl apply -f manifests/examples/elasticdl-rbac.yaml
 ```
 
-### Manual Debug
-
-Sometimes it is easier to debug with a real master server. To start master server in container, run the following in `elasticdl` directory:
-
-```bash
-make && python -m master.main
-```
-
 ### Run ElasticDL On GKE
 https://docs.google.com/document/d/1cbzYjHTd7SUAPUGbT82AcmVu_4iWWjwykrryIDH-fOU/edit#heading=h.mbjsiz6n6jlo
 
