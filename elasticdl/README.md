@@ -49,6 +49,10 @@ docker run --rm -u $(id -u):$(id -g) -it \
     elasticdl:dev \
     bash -c "make && python -m unittest discover elasticdl/python '*_test.py'"
 ```
+
+Note that, some unittests may require a running Kubernetes cluster available. To skip those unittests, use `make && K8S_TESTS=False python -m unittest discover elasticdl/python '*_test.py'` as the bash command.
+
+
 ### Test in Docker
 
 In a terminal, start master to distribute mnist training tasks.

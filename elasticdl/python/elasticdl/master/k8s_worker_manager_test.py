@@ -1,4 +1,5 @@
 import logging
+import os
 import unittest
 import time
 import numpy as np
@@ -6,13 +7,14 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-from unittest.mock import MagicMock, call, Mock, patch
+from unittest.mock import MagicMock, call
 from elasticdl.master.k8s_worker_manager import WorkerManager
 from elasticdl.master.task_queue import _TaskQueue
 
 
 class WorkerManagerTest(unittest.TestCase):
-    def testCreateDeleteWorkerPod(self, mock_get):
+    @unittest.skipIf(os.environ.get('K8S_TESTS', 'True') == 'False', 'No Kubernetes cluster available')
+    def testCreateDeleteWorkerPod(self):
         task_q = _TaskQueue({"f": 10}, 1, 1)
         task_q.recover_tasks = MagicMock()
         worker_servicer = WorkerManager(
@@ -45,6 +47,7 @@ class WorkerManagerTest(unittest.TestCase):
             [call(0), call(1), call(2)], any_order=True
         )
 
+    @unittest.skipIf(os.environ.get('K8S_TESTS', 'True') == 'False', 'No Kubernetes cluster available')
     def testFailedWorkerPod(self):
         """
         Start a pod running a python program destined to fail with restart_policy="Never"
