@@ -1,0 +1,2 @@
+language: python
+script: make &&  python -m unittest discover elasticdl/python '*_test.py'
