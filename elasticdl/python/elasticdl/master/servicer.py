@@ -7,12 +7,12 @@ assert tf.executing_eagerly()
 
 from google.protobuf import empty_pb2
 
-from elasticdl.proto import master_pb2
-from elasticdl.proto import master_pb2_grpc
-from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from elasticdl.python.elasticdl.proto import elasticdl_pb2
+from elasticdl.python.elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 
 
-class MasterServicer(master_pb2_grpc.MasterServicer):
+class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     """Master service implementation"""
 
     def __init__(
@@ -54,8 +54,8 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
     def var_name_encode(name):
         return name.replace(":", "-")
 
-    def GetTask(self, request, context):
-        res = master_pb2.Task()
+    def GetTask(self, request, _):
+        res = elasticdl_pb2.Task()
         res.model_version = self._version
         res.minibatch_size = self._minibatch_size
         task_id, task = self._task_q.get(request.worker_id)
@@ -66,7 +66,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
             res.end = task.end
         return res
 
-    def GetModel(self, request, context):
+    def GetModel(self, request, _):
         if request.min_version > self._version:
             err_msg = (
                 "Requested version %d not available yet, current version: %d"
@@ -75,7 +75,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
             self.logger.warning(err_msg)
             raise ValueError(err_msg)
 
-        res = master_pb2.Model()
+        res = elasticdl_pb2.Model()
         with self._lock:
             res.version = self._version
             for k, v in self._model.items():
@@ -93,7 +93,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         self._gradient_sum.clear()
         self._grad_n = 0
 
-    def ReportGradient(self, request, context):
+    def ReportGradient(self, request, _):
         if request.model_version > self._version:
             err_msg = "Model version %d out of range, current version: %d" % (
                 request.model_version,
@@ -102,7 +102,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
             self.logger.warning(err_msg)
             raise ValueError(err_msg)
 
-        res = master_pb2.ReportGradientReply()
+        res = elasticdl_pb2.ReportGradientReply()
         if request.model_version < self._version:
             self.logger.warning(
                 "Task result for outdated version %d dropped",
@@ -141,7 +141,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         res.model_version = self._version
         return res
 
-    def ReportTaskResult(self, request, context):
+    def ReportTaskResult(self, request, _):
         if request.err_message:
             self.logger.warning(
                 "Worker reported error: " + request.err_message

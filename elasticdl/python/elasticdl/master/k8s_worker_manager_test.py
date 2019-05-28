@@ -1,15 +1,14 @@
-import logging
 import os
 import unittest
 import time
-import numpy as np
+
 import tensorflow as tf
 
 tf.enable_eager_execution()
 
 from unittest.mock import MagicMock, call
-from elasticdl.master.k8s_worker_manager import WorkerManager
-from elasticdl.master.task_queue import _TaskQueue
+from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
+from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 
 
 class WorkerManagerTest(unittest.TestCase):
@@ -27,7 +26,6 @@ class WorkerManagerTest(unittest.TestCase):
             num_worker=3
         )
         worker_servicer.start_workers()
-        counters = worker_servicer.get_counters()
         max_check_num = 20
         for _ in range(max_check_num):
             time.sleep(3)
@@ -83,6 +81,7 @@ class WorkerManagerTest(unittest.TestCase):
         task_q.recover_tasks.assert_has_calls(
             [call(0), call(1), call(2)], any_order=True
         )
+
 
 if __name__ == '__main__':
     unittest.main()

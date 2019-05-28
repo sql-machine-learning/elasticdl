@@ -1,7 +1,7 @@
 import unittest
 import tensorflow as tf
 import numpy as np
-from data.codec import BytesCodec
+from elasticdl.python.data.codec import BytesCodec
 
 
 class TestBytesCodec(unittest.TestCase):

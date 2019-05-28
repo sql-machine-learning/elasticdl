@@ -5,14 +5,14 @@ import tensorflow as tf
 tf.enable_eager_execution()
 
 from contextlib import closing
-from data.codec import TFExampleCodec
-from data.codec import BytesCodec
+from elasticdl.python.data.codec import TFExampleCodec
+from elasticdl.python.data.codec import BytesCodec
 
 # TODO: share code with MNIST dataset.
 def main(argv):
     print(argv)
     parser = argparse.ArgumentParser(
-        description="Show same data from CIFAR10 recordio"
+        description="Show some data from CIFAR10 recordio"
     )
     parser.add_argument("file", help="RecordIo file to read")
     parser.add_argument(

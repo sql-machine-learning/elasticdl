@@ -1,8 +1,8 @@
 import numpy as np
 import unittest
 
-from elasticdl.proto import master_pb2
-from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from elasticdl.python.elasticdl.proto import elasticdl_pb2
+from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 
 
 class ConverterTest(unittest.TestCase):
@@ -36,7 +36,7 @@ class ConverterTest(unittest.TestCase):
         self.assertEqual(4 * 2 * 1 * 3 * 4, len(t.content))
 
     def testtensor_to_ndarray(self):
-        t = master_pb2.Tensor()
+        t = elasticdl_pb2.Tensor()
         # No dim defined, should raise.
         self.assertRaises(ValueError, tensor_to_ndarray, t)
 

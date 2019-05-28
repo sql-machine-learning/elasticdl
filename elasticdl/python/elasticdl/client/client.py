@@ -51,14 +51,15 @@ kind: Pod
 metadata:
   name: "elasticdl-master-{job_name}"
   labels:
-    purpose: test-command
+    app: elasticdl
+    elasticdl_job_name: {job_name}
 spec:
   containers:
   - name: "elasticdl-master-{job_name}"
     image: "{image_name}"
     command: ["python"]
     args: [
-        "-m", "elasticdl.master.main",
+        "-m", "elasticdl.python.elasticdl.master.main",
         "--job_name", "{job_name}",
         "--worker_image", "{image_name}",
         "--model_file", "{m_file}",
@@ -86,7 +87,7 @@ spec:
         master_memory_limit=args.master_memory_limit, master_memory_request=args.master_memory_request,
         worker_cpu_limit=args.worker_cpu_limit, worker_cpu_request=args.worker_cpu_request,
         worker_memory_limit=args.worker_memory_limit, worker_memory_request=args.worker_memory_request,
-        volumn_name=args.volumn_name, mount_path=args.mount_path)
+        volume_name=args.volume_name, mount_path=args.mount_path)
 
     master_def = yaml.safe_load(master_yaml)
 
@@ -96,14 +97,14 @@ spec:
     if args.master_pod_priority is not None:
         master_def['spec']['priorityClassName'] = args.master_pod_priority
 
-    if args.volumn_name is not None and args.mount_path is not None:
+    if args.volume_name is not None and args.mount_path is not None:
         persistent_volume_claim = {'claimName': 'fileserver-claim', 'readOnly': False}
-        volumn = {'name': args.volumn_name, 'persistentVolumeClaim': persistent_volume_claim}
-        master_def['spec']['volumes'] = [volumn]
+        volume = {'name': args.volume_name, 'persistentVolumeClaim': persistent_volume_claim}
+        master_def['spec']['volumes'] = [volume]
         master_def['spec']['containers'][0]['volumeMounts'] = [
-            {'mountPath': args.mount_path, 'name': args.volumn_name}]
+            {'mountPath': args.mount_path, 'name': args.volume_name}]
         master_def['spec']['containers'][0]['args'].extend(['--mount_path', 
-            args.mount_path, '--volumn_name', args.volumn_name])
+            args.mount_path, '--volume_name', args.volume_name])
 
     return master_def
 
@@ -168,14 +169,14 @@ def main():
         help="the maximal memory used by worker in training")
     parser.add_argument("--master_pod_priority",
         help="the requested priority of master pod")
-    parser.add_argument("--volumn_name",
-        help="the volumn name of network filesytem")
+    parser.add_argument("--volume_name",
+        help="the volume name of network filesytem")
     parser.add_argument("--mount_path",
         help="the mount path in the docker container")
     args, argv = parser.parse_known_args()
     _validate_params(args)
 
-    job_name = args.job_name + "-" + str(int(round(time.time() * 1000)))
+    job_name = args.job_name
     image_name = args.image_base + '_' + job_name 
     _build_docker_image(args.model_file, image_name, image_base=args.image_base,
         repository=args.repository)

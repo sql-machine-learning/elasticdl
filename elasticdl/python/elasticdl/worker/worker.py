@@ -2,18 +2,16 @@ import traceback
 import tensorflow as tf
 assert tf.executing_eagerly()
 
-import itertools
 import recordio
 
 from contextlib import closing
-from google.protobuf import empty_pb2
 from tensorflow.python.ops import math_ops
-from elasticdl.proto import master_pb2_grpc
-from elasticdl.proto import master_pb2
-from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
-from elasticdl.common.model_helper import load_user_model, build_model
-from data.codec import TFExampleCodec
-from data.codec import BytesCodec
+from elasticdl.python.elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.python.elasticdl.proto import elasticdl_pb2
+from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from elasticdl.python.elasticdl.common.model_helper import load_user_model, build_model
+from elasticdl.python.data.codec import TFExampleCodec
+from elasticdl.python.data.codec import BytesCodec
 
 # the default max number of a minibatch retrain as its gradients are not accepted by master.
 DEFAULT_MAX_MINIBATCH_RETRAIN_NUM = 64
@@ -49,11 +47,10 @@ class Worker(object):
         else:
             raise ValueError("invalid codec_type: " + codec_type)
 
-
         if channel is None:
             self._stub = None
         else:
-            self._stub = master_pb2_grpc.MasterStub(channel)
+            self._stub = elasticdl_pb2_grpc.MasterStub(channel)
         self._max_retrain_num = max_retrain_num
         self._model_version = -1
         self._codec_type = codec_type
@@ -62,7 +59,7 @@ class Worker(object):
         """
         get task from master
         """
-        req = master_pb2.GetTaskRequest()
+        req = elasticdl_pb2.GetTaskRequest()
         req.worker_id = self._worker_id
         
         return self._stub.GetTask(req)
@@ -71,7 +68,7 @@ class Worker(object):
         """
         get model from master, and update model_version
         """
-        req = master_pb2.GetModelRequest()
+        req = elasticdl_pb2.GetModelRequest()
         req.min_version = min_version
         model = self._stub.GetModel(req)
 
@@ -85,7 +82,7 @@ class Worker(object):
         """
         report task result to master
         """
-        report = master_pb2.ReportTaskResultRequest()
+        report = elasticdl_pb2.ReportTaskResultRequest()
         report.task_id = task_id
         report.err_message = err_msg
         return self._stub.ReportTaskResult(report)
@@ -94,7 +91,7 @@ class Worker(object):
         """
         report gradient to ps, return (accepted, model_version) from rpc call.
         """
-        req = master_pb2.ReportGradientRequest()
+        req = elasticdl_pb2.ReportGradientRequest()
         for g, v in zip(grads, self._model.trainable_variables):
             req.gradient[v.name].CopyFrom(
                 ndarray_to_tensor(g.numpy()))
@@ -111,7 +108,6 @@ class Worker(object):
                 break
             res.append(decode(record))
         return res
-                
 
     def distributed_train(self):
         """
@@ -162,8 +158,6 @@ class Worker(object):
                             # Worker got stuck, fail the task.
                             # TODO: stop the worker if it fails to make any progress for some time.
                             raise RuntimeError("Worker got stuck")
-
-
             except Exception as ex:
                 err_msg = str(ex)
                 traceback.print_exc()

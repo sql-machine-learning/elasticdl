@@ -1,2 +1,2 @@
-master_pb:
-	python -m grpc_tools.protoc -I . elasticdl/proto/master.proto --python_out=elasticdl/python/ --grpc_python_out=elasticdl/python/
+elasticdl_pb:
+	python -m grpc_tools.protoc -I . elasticdl/python/elasticdl/proto/elasticdl.proto --python_out=. --grpc_python_out=.

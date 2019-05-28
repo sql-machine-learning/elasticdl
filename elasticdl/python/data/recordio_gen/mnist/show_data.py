@@ -3,15 +3,15 @@ import sys
 import argparse
 
 from contextlib import closing
-from data.codec import TFExampleCodec
-from data.codec import BytesCodec
+from elasticdl.python.data.codec import TFExampleCodec
+from elasticdl.python.data.codec import BytesCodec
 import tensorflow as tf
 tf.enable_eager_execution()
 
 def main(argv):
     print(argv)
     parser = argparse.ArgumentParser(
-        description="Show same data from mnist recordio"
+        description="Show some data from mnist recordio"
     )
     parser.add_argument("file", help="RecordIo file to read")
     parser.add_argument(

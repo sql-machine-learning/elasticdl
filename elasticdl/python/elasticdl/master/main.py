@@ -11,11 +11,11 @@ tf.enable_eager_execution()
 
 from contextlib import closing
 from concurrent import futures
-from elasticdl.proto import master_pb2_grpc
-from elasticdl.master.servicer import MasterServicer
-from elasticdl.master.task_queue import _TaskQueue
-from elasticdl.master.k8s_worker_manager import WorkerManager
-from elasticdl.common.model_helper import load_user_model, build_model
+from elasticdl.python.elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.python.elasticdl.master.servicer import MasterServicer
+from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
+from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
+from elasticdl.python.elasticdl.common.model_helper import load_user_model, build_model
 
 
 def _make_task_queue(data_dir, record_per_task, num_epoch):
@@ -92,8 +92,8 @@ def _parse_args():
         choices=["tf_example", "bytes"],
         help="Type of codec(tf_example or bytes)",
     )
-    parser.add_argument("--volumn_name",
-        help="the volumn name of network filesytem")
+    parser.add_argument("--volume_name",
+        help="the volume name of network filesytem")
     parser.add_argument("--mount_path",
         help="the mount path in the docker container")
     return parser.parse_args()
@@ -113,7 +113,7 @@ def main():
     optimizer = model_module.optimizer()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
-    master_pb2_grpc.add_MasterServicer_to_server(
+    elasticdl_pb2_grpc.add_MasterServicer_to_server(
         MasterServicer(
             logger,
             args.grads_to_wait,
@@ -133,7 +133,7 @@ def main():
         worker_command = ["python"]
         worker_args = [
             "-m",
-            "elasticdl.worker.main",
+            "elasticdl.python.elasticdl.worker.main",
             "--model_file",
             args.model_file,
             "--master_addr",
@@ -156,7 +156,7 @@ def main():
             memory_limit=args.worker_memory_limit,
             pod_priority=args.worker_pod_priority,
             mount_path=args.mount_path,
-            volumn_name=args.volumn_name,
+            volume_name=args.volume_name,
         )
         worker_manager.start_workers(restart_policy="Never")
 

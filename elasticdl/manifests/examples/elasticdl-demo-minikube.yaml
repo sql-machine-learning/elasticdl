@@ -1,7 +1,10 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: test-mnist
+  name: elasticdl-master-test-mnist
+  labels:
+    app: elasticdl
+    elasticdl_job_name: test-mnist
 spec:
   containers:
   - name: mnist-demo-container
@@ -10,10 +13,9 @@ spec:
     args:
     - -c
     - >
-      cd elasticdl/python &&
-      python -m elasticdl.master.main
+      python -m elasticdl.python.elasticdl.master.main
       --model_file=/elasticdl/python/examples/mnist_functional_api.py
-      --train_data_dir=/data/mnist/train
+      --train_data_dir=/elasticdl/python/data/mnist/train
       --codec_type=tf_example
       --record_per_task=100
       --num_epoch=1
@@ -23,7 +25,7 @@ spec:
       --worker_image=elasticdl:dev
       --worker_cpu_request=100m
       --worker_memory_request=100Mi
-      --job_name=edl-train
+      --job_name=test-mnist
     imagePullPolicy: Never
     env:
       - name: MY_POD_IP
