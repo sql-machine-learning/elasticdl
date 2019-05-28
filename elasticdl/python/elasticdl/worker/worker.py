@@ -8,8 +8,8 @@ import recordio
 from contextlib import closing
 from google.protobuf import empty_pb2
 from tensorflow.python.ops import math_ops
-from elasticdl.proto import master_pb2_grpc
-from elasticdl.proto import master_pb2
+from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2
 from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 from elasticdl.common.model_helper import load_user_model, build_model
 from data.codec import TFExampleCodec
@@ -53,7 +53,7 @@ class Worker(object):
         if channel is None:
             self._stub = None
         else:
-            self._stub = master_pb2_grpc.MasterStub(channel)
+            self._stub = elasticdl_pb2_grpc.MasterStub(channel)
         self._max_retrain_num = max_retrain_num
         self._model_version = -1
         self._codec_type = codec_type
@@ -62,7 +62,7 @@ class Worker(object):
         """
         get task from master
         """
-        req = master_pb2.GetTaskRequest()
+        req = elasticdl_pb2.GetTaskRequest()
         req.worker_id = self._worker_id
         
         return self._stub.GetTask(req)
@@ -71,7 +71,7 @@ class Worker(object):
         """
         get model from master, and update model_version
         """
-        req = master_pb2.GetModelRequest()
+        req = elasticdl_pb2.GetModelRequest()
         req.min_version = min_version
         model = self._stub.GetModel(req)
 
@@ -85,7 +85,7 @@ class Worker(object):
         """
         report task result to master
         """
-        report = master_pb2.ReportTaskResultRequest()
+        report = elasticdl_pb2.ReportTaskResultRequest()
         report.task_id = task_id
         report.err_message = err_msg
         return self._stub.ReportTaskResult(report)
@@ -94,7 +94,7 @@ class Worker(object):
         """
         report gradient to ps, return (accepted, model_version) from rpc call.
         """
-        req = master_pb2.ReportGradientRequest()
+        req = elasticdl_pb2.ReportGradientRequest()
         for g, v in zip(grads, self._model.trainable_variables):
             req.gradient[v.name].CopyFrom(
                 ndarray_to_tensor(g.numpy()))

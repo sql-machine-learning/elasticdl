@@ -12,7 +12,7 @@ tf.enable_eager_execution()
 
 from google.protobuf import empty_pb2
 
-from elasticdl.proto import master_pb2
+from elasticdl.proto import elasticdl_pb2
 from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 from elasticdl.master.servicer import MasterServicer
 from elasticdl.master.task_queue import _TaskQueue
@@ -46,7 +46,7 @@ class ServicerTest(unittest.TestCase):
             _TaskQueue({}, record_per_task=3, num_epoch=2),
         )
 
-        req = master_pb2.GetTaskRequest()
+        req = elasticdl_pb2.GetTaskRequest()
 
         # No task yet, make sure the returned versions are as expected.
         req.worker_id = 1
@@ -61,7 +61,7 @@ class ServicerTest(unittest.TestCase):
 
     def testGetModel(self):
         master = MasterServicer(logging.getLogger(), 2, 3, None, None)
-        req = master_pb2.GetModelRequest()
+        req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 
         # Get version 0
@@ -94,7 +94,7 @@ class ServicerTest(unittest.TestCase):
     def testReportGradient(self):
         def makeGrad():
             """ Make a ReportTaskResultRequest compatible with model"""
-            req = master_pb2.ReportGradientRequest()
+            req = elasticdl_pb2.ReportGradientRequest()
             req.gradient["x"].CopyFrom(
                 ndarray_to_tensor(np.array([0.1], dtype=np.float32))
             )
@@ -190,7 +190,7 @@ class ServicerTest(unittest.TestCase):
         # task to number of runs.
         tasks = defaultdict(int)
         while True:
-            req = master_pb2.GetTaskRequest()
+            req = elasticdl_pb2.GetTaskRequest()
             req.worker_id = random.randint(1, 10)
             task = master.GetTask(req, None)
             if not task.shard_file_name:
@@ -198,7 +198,7 @@ class ServicerTest(unittest.TestCase):
             self.assertEqual(task_q._doing[task.task_id][0], req.worker_id)
             task_key = (task.shard_file_name, task.start, task.end)
             tasks[task_key] += 1
-            report = master_pb2.ReportTaskResultRequest()
+            report = elasticdl_pb2.ReportTaskResultRequest()
             report.task_id = task.task_id
             if task.start == 0 and tasks[task_key] == 1:
                 # Simulate error reports.
@@ -219,7 +219,7 @@ class ServicerTest(unittest.TestCase):
 
     def testUserDefinedModel(self):
         master = MasterServicer(logging.getLogger(), 2, 3, None, None)
-        req = master_pb2.GetModelRequest()
+        req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 
         model_inst = TestModel()

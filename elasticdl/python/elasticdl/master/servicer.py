@@ -7,12 +7,12 @@ assert tf.executing_eagerly()
 
 from google.protobuf import empty_pb2
 
-from elasticdl.proto import master_pb2
-from elasticdl.proto import master_pb2_grpc
+from elasticdl.proto import elasticdl_pb2
+from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 
 
-class MasterServicer(master_pb2_grpc.MasterServicer):
+class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     """Master service implementation"""
 
     def __init__(
@@ -55,7 +55,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
         return name.replace(":", "-")
 
     def GetTask(self, request, context):
-        res = master_pb2.Task()
+        res = elasticdl_pb2.Task()
         res.model_version = self._version
         res.minibatch_size = self._minibatch_size
         task_id, task = self._task_q.get(request.worker_id)
@@ -75,7 +75,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
             self.logger.warning(err_msg)
             raise ValueError(err_msg)
 
-        res = master_pb2.Model()
+        res = elasticdl_pb2.Model()
         with self._lock:
             res.version = self._version
             for k, v in self._model.items():
@@ -102,7 +102,7 @@ class MasterServicer(master_pb2_grpc.MasterServicer):
             self.logger.warning(err_msg)
             raise ValueError(err_msg)
 
-        res = master_pb2.ReportGradientReply()
+        res = elasticdl_pb2.ReportGradientReply()
         if request.model_version < self._version:
             self.logger.warning(
                 "Task result for outdated version %d dropped",
