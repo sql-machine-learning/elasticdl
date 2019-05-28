@@ -222,11 +222,11 @@ class ServicerTest(unittest.TestCase):
         req = master_pb2.GetModelRequest()
         req.min_version = 0
 
-        # Get version 0
         model_inst = TestModel()
         model_inst.build(TestModel.input_shapes())
         for variable in model_inst.trainable_variables:
             master.set_model_var(variable.name, variable.numpy())
+        # Get version 0
         model = master.GetModel(req, None)
         self.assertEqual(0, model.version)
         self.assertEqual(['dense_1/bias:0', 'dense_1/kernel:0', 'dense_2/bias:0', 
