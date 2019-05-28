@@ -1,5 +1,5 @@
 import numpy as np
-from elasticdl.proto import master_pb2
+from elasticdl.proto import elasticdl_pb2
 
 
 def tensor_to_ndarray(tensor_pb):
@@ -37,7 +37,7 @@ def ndarray_to_tensor(arr):
         raise ValueError(
             "expected ndarray to be of float32 type, got %s type", arr.dtype
         )
-    tensor = master_pb2.Tensor()
+    tensor = elasticdl_pb2.Tensor()
     tensor.dim.extend(arr.shape)
     tensor.content = arr.tobytes()
 

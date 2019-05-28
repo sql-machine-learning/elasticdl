@@ -11,7 +11,7 @@ tf.enable_eager_execution()
 
 from contextlib import closing
 from concurrent import futures
-from elasticdl.proto import master_pb2_grpc
+from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.master.servicer import MasterServicer
 from elasticdl.master.task_queue import _TaskQueue
 from elasticdl.master.k8s_worker_manager import WorkerManager
@@ -113,7 +113,7 @@ def main():
     optimizer = model_module.optimizer()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
-    master_pb2_grpc.add_MasterServicer_to_server(
+    elasticdl_pb2_grpc.add_MasterServicer_to_server(
         MasterServicer(
             logger,
             args.grads_to_wait,

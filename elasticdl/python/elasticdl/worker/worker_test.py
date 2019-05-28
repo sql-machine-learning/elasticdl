@@ -15,8 +15,8 @@ from elasticdl.common.model_helper import load_user_model
 from elasticdl.master.task_queue import _TaskQueue
 from elasticdl.master.servicer import MasterServicer
 from google.protobuf import empty_pb2
-from elasticdl.proto import master_pb2_grpc
-from elasticdl.proto import master_pb2
+from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2
 from elasticdl.worker.worker import Worker
 from data.codec import BytesCodec
 from data.codec import TFExampleCodec
@@ -112,7 +112,7 @@ class WorkerTest(unittest.TestCase):
                 res = False
 
         self.assertTrue(res)
-        req = master_pb2.GetTaskRequest()
+        req = elasticdl_pb2.GetTaskRequest()
         req.worker_id = 1
         task = mock_GetTask(req)
         # No more task.
