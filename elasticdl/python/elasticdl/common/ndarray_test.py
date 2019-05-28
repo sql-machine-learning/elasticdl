@@ -1,8 +1,8 @@
 import numpy as np
 import unittest
 
-from elasticdl.proto import elasticdl_pb2
-from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from elasticdl.python.elasticdl.proto import elasticdl_pb2
+from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 
 
 class ConverterTest(unittest.TestCase):

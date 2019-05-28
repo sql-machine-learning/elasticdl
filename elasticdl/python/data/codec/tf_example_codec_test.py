@@ -1,7 +1,7 @@
 import unittest
 import tensorflow as tf
 import numpy as np
-from data.codec import TFExampleCodec
+from elasticdl.python.data.codec import TFExampleCodec
 
 
 class TestTFExampleCodec(unittest.TestCase):
