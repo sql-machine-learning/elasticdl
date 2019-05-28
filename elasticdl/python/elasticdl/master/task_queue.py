@@ -14,7 +14,7 @@ class _Task(object):
         self.end = end
 
     def _info(self):
-        return (self.file_name, self.start, self.end)
+        return self.file_name, self.start, self.end
 
 
 class _TaskQueue(object):

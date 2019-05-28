@@ -2,15 +2,12 @@ import logging
 import random
 import unittest
 import numpy as np
-import tensorflow as tf
 
 from collections import defaultdict
 
 import tensorflow as tf
 
 tf.enable_eager_execution()
-
-from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
@@ -35,6 +32,7 @@ class TestModel(tf.keras.Model):
     @staticmethod
     def optimizer(lr=0.1):
         return tf.train.GradientDescentOptimizer(lr)
+
 
 class ServicerTest(unittest.TestCase):
     def testGetEmptyTask(self):
@@ -229,5 +227,5 @@ class ServicerTest(unittest.TestCase):
         # Get version 0
         model = master.GetModel(req, None)
         self.assertEqual(0, model.version)
-        self.assertEqual(['dense_1/bias:0', 'dense_1/kernel:0', 'dense_2/bias:0', 
-            'dense_2/kernel:0'], list(sorted(model.param.keys())))
+        self.assertEqual(['dense_1/bias:0', 'dense_1/kernel:0', 'dense_2/bias:0',
+                          'dense_2/kernel:0'], list(sorted(model.param.keys())))

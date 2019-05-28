@@ -1,6 +1,4 @@
 import logging
-import os
-import time
 
 from collections import Counter
 from elasticdl.master import k8s
@@ -32,11 +30,10 @@ class _WorkerTracker(object):
             )
 
 
-
 class WorkerManager(object):
     def __init__(self, task_q, command, args, num_worker=1, cpu_request="1000m", cpu_limit="1000m",
-            memory_request="4096Mi", memory_limit="4096Mi", pod_priority=None, 
-            mount_path=None, volume_name=None, **kwargs):
+                 memory_request="4096Mi", memory_limit="4096Mi", pod_priority=None,
+                 mount_path=None, volume_name=None, **kwargs):
         self._logger = logging.getLogger("WorkerManager")
         self._command = command
         self._args = args
