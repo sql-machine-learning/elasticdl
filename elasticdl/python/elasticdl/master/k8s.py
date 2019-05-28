@@ -44,7 +44,7 @@ class Client(object):
         stream = watch.Watch().stream(
             self._v1.list_namespaced_pod,
             self._ns,
-            label_selector = "elasticdl_job_name=" + self._job_name,
+            label_selector="elasticdl_job_name=" + self._job_name,
         )
         for event in stream:
             self._event_cb(event)
@@ -52,9 +52,9 @@ class Client(object):
     def get_pod_name(self, worker_id):
         return "elasticdl-worker-" + self._job_name + "-" + str(worker_id)
 
-    def _create_worker_pod(self, worker_id, cpu_request, cpu_limit, memory_request, 
-            memory_limit, pod_priority, mount_path=None, volume_name=None,
-            command=None, args=None, restart_policy="OnFailure"):
+    def _create_worker_pod(self, worker_id, cpu_request, cpu_limit, memory_request,
+                           memory_limit, pod_priority, mount_path=None, volume_name=None,
+                           command=None, args=None, restart_policy="OnFailure"):
         # Worker container config
         container = client.V1Container(
             name=self.get_pod_name(worker_id),
@@ -69,7 +69,7 @@ class Client(object):
         container.resources = res
 
         # Pod
-        spec=client.V1PodSpec(
+        spec = client.V1PodSpec(
             containers=[container],
             restart_policy=restart_policy,
         )
@@ -81,16 +81,16 @@ class Client(object):
                 persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(
                     claim_name="fileserver-claim", read_only=False))
             spec.volumes = [volume]
-            container.volume_mounts=[client.V1VolumeMount(name=volume_name, mount_path=mount_path)]
+            container.volume_mounts = [client.V1VolumeMount(name=volume_name, mount_path=mount_path)]
 
         if pod_priority is not None:
             spec.priority_class_name = pod_priority
 
         pod = client.V1Pod(
-            spec = spec,
-            metadata = client.V1ObjectMeta(
-                name = self.get_pod_name(worker_id),
-                labels = {
+            spec=spec,
+            metadata=client.V1ObjectMeta(
+                name=self.get_pod_name(worker_id),
+                labels={
                     "app": "elasticdl",
                     "elasticdl_job_name": self._job_name
                 },
@@ -98,9 +98,9 @@ class Client(object):
         )
         return pod
 
-    def create_worker(self, worker_id, cpu_request, cpu_limit, memory_request, 
-            memory_limit, pod_priority=None, mount_path=None, volume_name=None, 
-            command=None, args=None, restart_policy="OnFailure"):
+    def create_worker(self, worker_id, cpu_request, cpu_limit, memory_request,
+                      memory_limit, pod_priority=None, mount_path=None, volume_name=None,
+                      command=None, args=None, restart_policy="OnFailure"):
         self._logger.info("Creating worker: " + str(worker_id))
         pod = self._create_worker_pod(
             worker_id, cpu_request, cpu_limit, memory_request, memory_limit, 

@@ -5,6 +5,7 @@ import time
 
 from elasticdl.master import k8s
 
+
 class WorkerTracker(object):
     def __init__(self):
         self._count = 0
@@ -45,6 +46,7 @@ class K8sClientTest(unittest.TestCase):
         # wait for workers to be deleted
         while tracker._count > 0:
             time.sleep(1)
+
 
 if __name__ == "__main__":
     unittest.main()
