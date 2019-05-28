@@ -35,7 +35,8 @@ class _WorkerTracker(object):
 
 class WorkerManager(object):
     def __init__(self, task_q, command, args, num_worker=1, cpu_request="1000m", cpu_limit="1000m",
-            memory_request="4096Mi", memory_limit="4096Mi", pod_priority=None, **kwargs):
+            memory_request="4096Mi", memory_limit="4096Mi", pod_priority=None, 
+            mount_path=None, volumn_name=None, **kwargs):
         self._logger = logging.getLogger("WorkerManager")
         self._command = command
         self._args = args
@@ -45,6 +46,8 @@ class WorkerManager(object):
         self._memory_request = memory_request
         self._memory_limit = memory_limit
         self._pod_priority = pod_priority
+        self._mount_path = mount_path
+        self._volumn_name = volumn_name
         self._worker_tracker = _WorkerTracker(task_q)
         self._k8s_client = k8s.Client(
             event_callback=self._worker_tracker.event_cb, **kwargs
@@ -70,6 +73,8 @@ class WorkerManager(object):
             self._memory_request,
             self._memory_limit,
             self._pod_priority,
+            self._mount_path,
+            self._volumn_name,
             command=self._command,
             args=self._args + ["--worker_id", str(worker_id)],
             restart_policy=restart_policy,

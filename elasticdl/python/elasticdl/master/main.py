@@ -92,6 +92,10 @@ def _parse_args():
         choices=["tf_example", "bytes"],
         help="Type of codec(tf_example or bytes)",
     )
+    parser.add_argument("--volumn_name",
+        help="the volumn name of network filesytem")
+    parser.add_argument("--mount_path",
+        help="the mount path in the docker container")
     return parser.parse_args()
 
 
@@ -151,6 +155,8 @@ def main():
             memory_request=args.worker_memory_request,
             memory_limit=args.worker_memory_limit,
             pod_priority=args.worker_pod_priority,
+            mount_path=args.mount_path,
+            volumn_name=args.volumn_name,
         )
         worker_manager.start_workers(restart_policy="Never")
 
