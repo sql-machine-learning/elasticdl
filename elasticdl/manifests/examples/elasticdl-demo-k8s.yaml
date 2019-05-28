@@ -1,7 +1,10 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: test-mnist
+  name: elasticdl-master-test-mnist
+  labels:
+    app: elasticdl
+    elasticdl_job_name: test-mnist
 spec:
   containers:
   - name: mnist-demo-container
@@ -21,7 +24,7 @@ spec:
       --minibatch_size=64
       --num_worker=2
       --worker_image=elasticdl:dev
-      --job_name=edl-train
+      --job_name=test-mnist
     imagePullPolicy: IfNotPresent
     env:
       - name: MY_POD_IP
