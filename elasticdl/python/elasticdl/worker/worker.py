@@ -2,11 +2,9 @@ import traceback
 import tensorflow as tf
 assert tf.executing_eagerly()
 
-import itertools
 import recordio
 
 from contextlib import closing
-from google.protobuf import empty_pb2
 from tensorflow.python.ops import math_ops
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.proto import elasticdl_pb2
@@ -48,7 +46,6 @@ class Worker(object):
             self._codec = BytesCodec(all_columns)
         else:
             raise ValueError("invalid codec_type: " + codec_type)
-
 
         if channel is None:
             self._stub = None
@@ -111,7 +108,6 @@ class Worker(object):
                 break
             res.append(decode(record))
         return res
-                
 
     def distributed_train(self):
         """
@@ -162,8 +158,6 @@ class Worker(object):
                             # Worker got stuck, fail the task.
                             # TODO: stop the worker if it fails to make any progress for some time.
                             raise RuntimeError("Worker got stuck")
-
-
             except Exception as ex:
                 err_msg = str(ex)
                 traceback.print_exc()

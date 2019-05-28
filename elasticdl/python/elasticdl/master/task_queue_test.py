@@ -1,5 +1,4 @@
 import unittest
-import random
 
 from elasticdl.master.task_queue import _TaskQueue
 

@@ -14,8 +14,6 @@ from contextlib import closing
 from elasticdl.common.model_helper import load_user_model
 from elasticdl.master.task_queue import _TaskQueue
 from elasticdl.master.servicer import MasterServicer
-from google.protobuf import empty_pb2
-from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.worker.worker import Worker
 from data.codec import BytesCodec
@@ -27,6 +25,7 @@ _module_file = os.path.join(
 
 m = load_user_model(_module_file)
 columns = m.feature_columns() + m.label_columns()
+
 
 def create_recordio_file(size, codec_type):
     codec = None
@@ -42,6 +41,7 @@ def create_recordio_file(size, codec_type):
             y = 2 * x + 1
             f.write(codec.encode({"x": x, "y": y}))
     return temp_file.name
+
 
 class WorkerTest(unittest.TestCase):
     def local_train(self, codec_type):
@@ -75,7 +75,7 @@ class WorkerTest(unittest.TestCase):
             return master.GetModel(req, None)
 
         def mock_ReportGradient(req):
-            if master._version > 2 and master._version < 80:
+            if 2 < master._version < 80:
                 # For testing of retrain when gradient not accepted.
                 # Increase master version so the gradient will not be accepted.
                 master._version += 1

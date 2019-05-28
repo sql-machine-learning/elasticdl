@@ -54,7 +54,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def var_name_encode(name):
         return name.replace(":", "-")
 
-    def GetTask(self, request, context):
+    def GetTask(self, request, _):
         res = elasticdl_pb2.Task()
         res.model_version = self._version
         res.minibatch_size = self._minibatch_size
@@ -66,7 +66,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             res.end = task.end
         return res
 
-    def GetModel(self, request, context):
+    def GetModel(self, request, _):
         if request.min_version > self._version:
             err_msg = (
                 "Requested version %d not available yet, current version: %d"
@@ -93,7 +93,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._gradient_sum.clear()
         self._grad_n = 0
 
-    def ReportGradient(self, request, context):
+    def ReportGradient(self, request, _):
         if request.model_version > self._version:
             err_msg = "Model version %d out of range, current version: %d" % (
                 request.model_version,
@@ -141,7 +141,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         res.model_version = self._version
         return res
 
-    def ReportTaskResult(self, request, context):
+    def ReportTaskResult(self, request, _):
         if request.err_message:
             self.logger.warning(
                 "Worker reported error: " + request.err_message
