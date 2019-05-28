@@ -59,7 +59,7 @@ python elasticdl/python/elasticdl/client/client.py \
 python elasticdl/python/elasticdl/client/client.py \
     --job_name=test \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
-    --train_data_dir=/data/mnist/train \
+    --train_data_dir=/data/mnist_nfs/mnist/train \
     --num_epoch=1 \
     --minibatch_size=10 \
     --record_per_task=100 \
@@ -76,6 +76,8 @@ python elasticdl/python/elasticdl/client/client.py \
     --worker_memory_limit=4096Mi \
     --grads_to_wait=2 \
     --codec_type=tf_example \
+    --mount_path=/data \
+    --volumn_name=data-volumn \
     --repository=gcr.io \
     --image_base=gcr.io/elasticdl/mnist:dev
 ```
