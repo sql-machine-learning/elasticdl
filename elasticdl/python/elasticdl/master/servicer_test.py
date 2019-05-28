@@ -79,7 +79,7 @@ class ServicerTest(unittest.TestCase):
         master.set_model_var("y", np.array([12.0, 13.0], dtype=np.float32))
         model = master.GetModel(req, None)
         self.assertEqual(1, model.version)
-        self.assertEqual(["x", "y"], list(model.param.keys()))
+        self.assertEqual(["x", "y"], list(sorted(model.param.keys())))
         np.testing.assert_array_equal(
             np.array([2.0, 2.0]), tensor_to_ndarray(model.param["x"])
         )
