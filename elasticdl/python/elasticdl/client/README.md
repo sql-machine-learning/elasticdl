@@ -77,7 +77,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --grads_to_wait=2 \
     --codec_type=tf_example \
     --mount_path=/data \
-    --volumn_name=data-volumn \
+    --volume_name=data-volume \
     --repository=gcr.io \
     --image_base=gcr.io/elasticdl/mnist:dev
 ```
