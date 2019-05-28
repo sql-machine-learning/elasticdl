@@ -9,9 +9,9 @@ To access GKE from your local environment, we need to install some tools.
 * Use the command below to generate corresponding kubeconfig:
 
    ```
-gcloud container clusters get-credentials ${cluster_name}
-```
- and then add the generated config to your local kubeconfig file (`~/.kube/config` by default). 
+   gcloud container clusters get-credentials ${cluster_name}
+   ```
+    and then add the generated config to your local kubeconfig file (`~/.kube/config` by default). 
  
 * Make sure you have [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/) available locally.
 
