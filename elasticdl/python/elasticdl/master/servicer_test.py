@@ -21,8 +21,8 @@ class TestModel(tf.keras.Model):
 
     def __init__(self):
         super(TestModel, self).__init__(name='test_model')
-        self.dense_1 = tf.keras.layers.Dense(32, activation='relu')
-        self.dense_2 = tf.keras.layers.Dense(1, activation='sigmoid')
+        self.dense_1 = tf.keras.layers.Dense(32, activation='relu', name='dense_1')
+        self.dense_2 = tf.keras.layers.Dense(1, activation='sigmoid', name='dense_2')
 
     def call(self, inputs):
         x = self.dense_1(inputs)
@@ -79,7 +79,7 @@ class ServicerTest(unittest.TestCase):
         master.set_model_var("y", np.array([12.0, 13.0], dtype=np.float32))
         model = master.GetModel(req, None)
         self.assertEqual(1, model.version)
-        self.assertEqual(["x", "y"], list(model.param.keys()))
+        self.assertEqual(["x", "y"], list(sorted(model.param.keys())))
         np.testing.assert_array_equal(
             np.array([2.0, 2.0]), tensor_to_ndarray(model.param["x"])
         )
@@ -222,11 +222,11 @@ class ServicerTest(unittest.TestCase):
         req = master_pb2.GetModelRequest()
         req.min_version = 0
 
-        # Get version 0
         model_inst = TestModel()
         model_inst.build(TestModel.input_shapes())
         for variable in model_inst.trainable_variables:
             master.set_model_var(variable.name, variable.numpy())
+        # Get version 0
         model = master.GetModel(req, None)
         self.assertEqual(0, model.version)
         self.assertEqual(['dense_1/bias:0', 'dense_1/kernel:0', 'dense_2/bias:0', 
