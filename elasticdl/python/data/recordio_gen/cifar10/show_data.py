@@ -12,7 +12,7 @@ from data.codec import BytesCodec
 def main(argv):
     print(argv)
     parser = argparse.ArgumentParser(
-        description="Show same data from CIFAR10 recordio"
+        description="Show some data from CIFAR10 recordio"
     )
     parser.add_argument("file", help="RecordIo file to read")
     parser.add_argument(

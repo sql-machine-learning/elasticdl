@@ -44,7 +44,7 @@ class Client(object):
         stream = watch.Watch().stream(
             self._v1.list_namespaced_pod,
             self._ns,
-            label_selector="elasticdl=" + self._job_name,
+            label_selector = "elasticdl_job_name=" + self._job_name,
         )
         for event in stream:
             self._event_cb(event)
@@ -76,10 +76,13 @@ class Client(object):
             spec.priority_class_name = pod_priority
 
         pod = client.V1Pod(
-            spec=spec,
-            metadata=client.V1ObjectMeta(
-                name=self.get_pod_name(worker_id),
-                labels={"elasticdl": self._job_name},
+            spec = spec,
+            metadata = client.V1ObjectMeta(
+                name = self.get_pod_name(worker_id),
+                labels = {
+                    "app": "elasticdl",
+                    "elasticdl_job_name": self._job_name
+                },
             ),
         )
         return pod
