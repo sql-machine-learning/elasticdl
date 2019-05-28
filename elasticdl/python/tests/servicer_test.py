@@ -9,10 +9,18 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
+<<<<<<< HEAD:elasticdl/python/tests/servicer_test.py
 from elasticdl.python.elasticdl.proto import elasticdl_pb2
 from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
+=======
+from elasticdl.proto import elasticdl_pb2
+from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from elasticdl.common.utils import create_logger
+from elasticdl.master.servicer import MasterServicer
+from elasticdl.master.task_queue import _TaskQueue
+>>>>>>> log:elasticdl/python/elasticdl/master/servicer_test.py
 
 class TestModel(tf.keras.Model):
 
@@ -37,7 +45,7 @@ class TestModel(tf.keras.Model):
 class ServicerTest(unittest.TestCase):
     def testGetEmptyTask(self):
         master = MasterServicer(
-            logging.getLogger(),
+            create_logger("service_test"),
             2,
             3,
             None,
@@ -58,7 +66,7 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual(1, task.model_version)
 
     def testGetModel(self):
-        master = MasterServicer(logging.getLogger(), 2, 3, None, None)
+        master = MasterServicer(create_logger("service_test"), 2, 3, None, None)
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 
@@ -183,7 +191,7 @@ class ServicerTest(unittest.TestCase):
         task_q = _TaskQueue(
             {"shard_1": 10, "shard_2": 9}, record_per_task=3, num_epoch=2
         )
-        master = MasterServicer(logging.getLogger(), 3, 3, None, task_q)
+        master = MasterServicer(create_logger("service_test"), 3, 3, None, task_q)
 
         # task to number of runs.
         tasks = defaultdict(int)
@@ -216,7 +224,7 @@ class ServicerTest(unittest.TestCase):
         )
 
     def testUserDefinedModel(self):
-        master = MasterServicer(logging.getLogger(), 2, 3, None, None)
+        master = MasterServicer(create_logger("service_test"), 2, 3, None, None)
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 

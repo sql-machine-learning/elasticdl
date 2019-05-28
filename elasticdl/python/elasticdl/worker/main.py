@@ -5,7 +5,12 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
+<<<<<<< HEAD
 from elasticdl.python.elasticdl.worker.worker import Worker
+=======
+from elasticdl.common.utils import create_logger
+from elasticdl.worker.worker import Worker
+>>>>>>> log
 
 
 def _parse_args():
@@ -34,6 +39,7 @@ def main():
     worker = Worker(
         args.worker_id,
         args.model_file,
+        create_logger("worker"),
         channel=channel,
         codec_type=args.codec_type,
     )
