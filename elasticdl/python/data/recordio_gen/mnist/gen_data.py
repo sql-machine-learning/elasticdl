@@ -13,8 +13,8 @@ import numpy as np
 import recordio
 
 from contextlib import closing
-from data.codec import TFExampleCodec
-from data.codec import BytesCodec
+from elasticdl.python.data.codec import TFExampleCodec
+from elasticdl.python.data.codec import BytesCodec
 from tensorflow.python.keras.datasets import mnist, fashion_mnist
 
 

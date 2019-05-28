@@ -76,7 +76,7 @@ In another terminal, start a worker
 ```
 docker run --net=host --rm -it elasticdl:dev \
     bash -c "cd elasticdl/python &&
-      python -m elasticdl.worker.main \
+      python -m elasticdl.python.elasticdl.worker.main \
           --worker_id=1 \
           --model_file=examples/mnist_functional_api.py \
           --codec_type=tf_example \

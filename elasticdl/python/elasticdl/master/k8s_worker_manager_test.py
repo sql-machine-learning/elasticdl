@@ -7,8 +7,8 @@ import tensorflow as tf
 tf.enable_eager_execution()
 
 from unittest.mock import MagicMock, call
-from elasticdl.master.k8s_worker_manager import WorkerManager
-from elasticdl.master.task_queue import _TaskQueue
+from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
+from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 
 
 class WorkerManagerTest(unittest.TestCase):

@@ -6,12 +6,12 @@ import recordio
 
 from contextlib import closing
 from tensorflow.python.ops import math_ops
-from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.proto import elasticdl_pb2
-from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
-from elasticdl.common.model_helper import load_user_model, build_model
-from data.codec import TFExampleCodec
-from data.codec import BytesCodec
+from elasticdl.python.elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.python.elasticdl.proto import elasticdl_pb2
+from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from elasticdl.python.elasticdl.common.model_helper import load_user_model, build_model
+from elasticdl.python.data.codec import TFExampleCodec
+from elasticdl.python.data.codec import BytesCodec
 
 # the default max number of a minibatch retrain as its gradients are not accepted by master.
 DEFAULT_MAX_MINIBATCH_RETRAIN_NUM = 64

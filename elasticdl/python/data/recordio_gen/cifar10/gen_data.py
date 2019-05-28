@@ -13,8 +13,8 @@ import recordio
 from contextlib import closing
 from tensorflow.python.keras import backend
 from tensorflow.python.keras.datasets import cifar10
-from data.codec import TFExampleCodec
-from data.codec import BytesCodec
+from elasticdl.python.data.codec import TFExampleCodec
+from elasticdl.python.data.codec import BytesCodec
 import tensorflow as tf
 import numpy as np
 
