@@ -3,8 +3,8 @@ import sys
 import argparse
 
 from contextlib import closing
-from data.codec import TFExampleCodec
-from data.codec import BytesCodec
+from elasticdl.python.data.codec import TFExampleCodec
+from elasticdl.python.data.codec import BytesCodec
 import tensorflow as tf
 tf.enable_eager_execution()
 

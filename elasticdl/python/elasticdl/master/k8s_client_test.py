@@ -3,7 +3,7 @@ import unittest
 import os
 import time
 
-from elasticdl.master import k8s
+from elasticdl.python.elasticdl.master import k8s
 
 
 class WorkerTracker(object):

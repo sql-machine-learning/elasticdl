@@ -59,7 +59,7 @@ spec:
     image: "{image_name}"
     command: ["python"]
     args: [
-        "-m", "elasticdl.master.main",
+        "-m", "elasticdl.python.elasticdl.master.main",
         "--job_name", "{job_name}",
         "--worker_image", "{image_name}",
         "--model_file", "{m_file}",

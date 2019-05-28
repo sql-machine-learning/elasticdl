@@ -1,7 +1,7 @@
 import logging
 
 from collections import Counter
-from elasticdl.master import k8s
+from elasticdl.python.elasticdl.master import k8s
 
 
 class _WorkerTracker(object):

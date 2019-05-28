@@ -9,10 +9,10 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-from elasticdl.proto import elasticdl_pb2
-from elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
-from elasticdl.master.servicer import MasterServicer
-from elasticdl.master.task_queue import _TaskQueue
+from elasticdl.python.elasticdl.proto import elasticdl_pb2
+from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from elasticdl.python.elasticdl.master.servicer import MasterServicer
+from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 
 class TestModel(tf.keras.Model):
 

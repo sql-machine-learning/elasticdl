@@ -5,7 +5,7 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-from elasticdl.worker.worker import Worker
+from elasticdl.python.elasticdl.worker.worker import Worker
 
 
 def _parse_args():
