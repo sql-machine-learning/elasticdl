@@ -53,7 +53,7 @@ class Client(object):
         return "elasticdl-worker-" + self._job_name + "-" + str(worker_id)
 
     def _create_worker_pod(self, worker_id, cpu_request, cpu_limit, memory_request, 
-            memory_limit, pod_priority, mount_path=None, volumn_name=None,
+            memory_limit, pod_priority, mount_path=None, volume_name=None,
             command=None, args=None, restart_policy="OnFailure"):
         # Worker container config
         container = client.V1Container(
@@ -75,13 +75,13 @@ class Client(object):
         )
 
         # Mount data path
-        if mount_path is not None and volumn_name is not None:
-            volumn = client.V1Volume(
-                name='data-volumn',
+        if mount_path is not None and volume_name is not None:
+            volume = client.V1Volume(
+                name='data-volume',
                 persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(
                     claim_name="fileserver-claim", read_only=False))
-            spec.volumes = [volumn]
-            container.volume_mounts=[client.V1VolumeMount(name=volumn_name, mount_path=mount_path)]
+            spec.volumes = [volume]
+            container.volume_mounts=[client.V1VolumeMount(name=volume_name, mount_path=mount_path)]
 
         if pod_priority is not None:
             spec.priority_class_name = pod_priority
@@ -99,12 +99,12 @@ class Client(object):
         return pod
 
     def create_worker(self, worker_id, cpu_request, cpu_limit, memory_request, 
-            memory_limit, pod_priority=None, mount_path=None, volumn_name=None, 
+            memory_limit, pod_priority=None, mount_path=None, volume_name=None, 
             command=None, args=None, restart_policy="OnFailure"):
         self._logger.info("Creating worker: " + str(worker_id))
         pod = self._create_worker_pod(
             worker_id, cpu_request, cpu_limit, memory_request, memory_limit, 
-            pod_priority, mount_path, volumn_name, command=command, 
+            pod_priority, mount_path, volume_name, command=command, 
             args=args, restart_policy=restart_policy)
         self._v1.create_namespaced_pod(self._ns, pod)
 
