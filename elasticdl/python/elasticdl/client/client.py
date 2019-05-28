@@ -51,7 +51,8 @@ kind: Pod
 metadata:
   name: "elasticdl-master-{job_name}"
   labels:
-    purpose: test-command
+    app: elasticdl
+    elasticdl_job_name: {job_name}
 spec:
   containers:
   - name: "elasticdl-master-{job_name}"
@@ -175,7 +176,7 @@ def main():
     args, argv = parser.parse_known_args()
     _validate_params(args)
 
-    job_name = args.job_name + "-" + str(int(round(time.time() * 1000)))
+    job_name = args.job_name
     image_name = args.image_base + '_' + job_name 
     _build_docker_image(args.model_file, image_name, image_base=args.image_base,
         repository=args.repository)
