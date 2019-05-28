@@ -21,8 +21,8 @@ class TestModel(tf.keras.Model):
 
     def __init__(self):
         super(TestModel, self).__init__(name='test_model')
-        self.dense_1 = tf.keras.layers.Dense(32, activation='relu')
-        self.dense_2 = tf.keras.layers.Dense(1, activation='sigmoid')
+        self.dense_1 = tf.keras.layers.Dense(32, activation='relu', name='dense_1')
+        self.dense_2 = tf.keras.layers.Dense(1, activation='sigmoid', name='dense_2')
 
     def call(self, inputs):
         x = self.dense_1(inputs)
