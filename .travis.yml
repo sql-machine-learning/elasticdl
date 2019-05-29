@@ -3,4 +3,4 @@ language: python
 script:
   - set -e
   - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile .
-  - docker run --rm -it elasticdl:dev bash -c "make && K8S_TESTS=False python -m unittest elasticdl/python/elasticdl/*/*_test.py"
+  - docker run --rm -it elasticdl:dev bash -c "make && K8S_TESTS=False python -m unittest discover elasticdl/python/tests/ '*_test.py'"
