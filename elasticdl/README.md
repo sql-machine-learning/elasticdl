@@ -50,7 +50,7 @@ docker run --rm -u $(id -u):$(id -g) -it \
     bash -c "make && K8S_TESTS=False pytest elasticdl/python/tests"
 ```
 
-Note that, some unittests may require a running Kubernetes cluster available. To skip those unittests, use:
+Note that, some unittests may require a running Kubernetes cluster available. To include those unittests, use:
 
 ```bash
 make && pytest elasticdl/python/tests
