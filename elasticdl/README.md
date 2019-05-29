@@ -10,7 +10,7 @@ docker build \
     -f elasticdl/docker/Dockerfile .
 ```
 
-When having difficulties downloading from the main PYPI site, You could pass an extra PYPI index url to `docker build`, such as:
+When having difficulties downloading from the main PYPI site, you could pass an extra PYPI index url to `docker build`, such as:
 
 ```bash
 docker build \
