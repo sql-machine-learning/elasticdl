@@ -25,7 +25,7 @@ ElasticDL jobs require pod creation and deletion permissions. Make sure you have
 kubectl apply -f elasticdl/elasticdl/manifests/examples/manifests/examples/elasticdl-rbac.yaml
 ```
 
-## Buil Docker Image
+## Build Docker Image
 
 Clone ElasticDL source code:
 ```bash
