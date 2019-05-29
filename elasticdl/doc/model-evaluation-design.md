@@ -1,6 +1,4 @@
-## Model Evaluation
-
-### Design Overview
+## Model Evaluation Design
 
 This document describes the design of model evaluation task for ElasticDL.
 
@@ -20,6 +18,7 @@ This document describes the design of model evaluation task for ElasticDL.
 * The evaluator fetches the latest model from master pod.
 * Model can be evaluated by a specified number of steps. If `None`, evaluation will continue until reaching the end of input.
 * Model evaluation metrics can be defined by users together with the model definition.
+* The computed model evaluation metrics can be report back to master through RPC call.
 
 #### Implementation Plan
 
