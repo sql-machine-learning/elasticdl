@@ -1,7 +1,7 @@
 # ElasticDL on Google Kubernetes Engine
 This document illustrates how to run ElasticDL with elastic scheduling in Google Kubernetes Engine (GKE) environment. Before we start, make sure you have a GKE account and a running cluster there.
 
-## Configure You GKE Environment
+## Configure Your GKE Environment
 
 To access GKE, we need to install the following tools.
 
