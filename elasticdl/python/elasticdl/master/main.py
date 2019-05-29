@@ -96,14 +96,30 @@ def _parse_args():
         help="the volume name of network filesytem")
     parser.add_argument("--mount_path",
         help="the mount path in the docker container")
+    parser.add_argument(
+        "--log_level",
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        type=str.upper,
+        default='WARNING',
+        help="the logging level",
+    )
     return parser.parse_args()
 
 
 def main():
+    args = _parse_args()
+
     # TODO: pass port via flags.
     PORT = 50001
+
+    # Initialize logger
+    logging.basicConfig(
+        format='%(asctime)s %(name)s %(levelname)-8s '
+        '[%(filename)s:%(lineno)d] %(message)s',
+    )
     logger = logging.getLogger("master")
-    args = _parse_args()
+    logger.setLevel(args.log_level)
+
     task_q = _make_task_queue(
         args.train_data_dir, args.record_per_task, args.num_epoch
     )
