@@ -1,5 +1,6 @@
 import argparse
 import grpc
+import logging
 
 import tensorflow as tf
 
@@ -25,15 +26,33 @@ def _parse_args():
         choices=["tf_example", "bytes"],
         help="Type of codec(tf_example or bytes)",
     )
+    parser.add_argument(
+        "--log_level",
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        type=str.upper,
+        default='WARNING',
+        help="Set the logging level",
+    )
+
     return parser.parse_args()
 
 
 def main():
     args = _parse_args()
     channel = grpc.insecure_channel(args.master_addr)
+
+    # Initialize logger
+    logging.basicConfig(
+        format='%(asctime)s %(name)s %(levelname)-8s '
+        '[%(filename)s:%(lineno)d] %(message)s',
+    )
+    logger = logging.getLogger("worker-%d" % args.worker_id)
+    logger.setLevel(args.log_level)
+
     worker = Worker(
         args.worker_id,
         args.model_file,
+        logger,
         channel=channel,
         codec_type=args.codec_type,
     )

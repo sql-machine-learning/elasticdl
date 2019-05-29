@@ -22,6 +22,7 @@ class Worker(object):
     def __init__(self,
                  worker_id,
                  model_file,
+                 logger,
                  channel=None,
                  max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM,
                  codec_type=None):
@@ -31,6 +32,7 @@ class Worker(object):
             channel: grpc channel
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
+        self.logger = logger
         self._worker_id = worker_id
         model_module = load_user_model(model_file)
         self._model = model_module.model
@@ -148,7 +150,7 @@ class Worker(object):
                                 #        which should be divided by the number of contributing workers.
                             grads = tape.gradient(
                                 loss, self._model.trainable_variables)
-                            print("Loss is ", loss.numpy())
+                            self.logger.info("Loss is %f" % loss.numpy())
 
                             accepted, min_model_version = self.report_gradient(
                                 grads)
@@ -201,4 +203,4 @@ class Worker(object):
                             loss, self._model.trainable_variables)
                         optimizer.apply_gradients(
                             zip(grads, self._model.trainable_variables))
-                        print("Loss is ", loss.numpy())
+                        self.logger.info("Loss is %f" % loss.numpy())

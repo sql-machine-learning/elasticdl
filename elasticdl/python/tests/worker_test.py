@@ -45,7 +45,7 @@ def create_recordio_file(size, codec_type):
 
 class WorkerTest(unittest.TestCase):
     def local_train(self, codec_type):
-        worker = Worker(0, _module_file, codec_type=codec_type)
+        worker = Worker(0, _module_file, logging.getLogger("worker"), codec_type=codec_type)
         filename = create_recordio_file(128, codec_type)
         batch_size = 32
         epoch = 2
@@ -85,13 +85,13 @@ class WorkerTest(unittest.TestCase):
             return master.ReportTaskResult(req, None)
 
         channel = grpc.insecure_channel('localhost:9999')
-        worker = Worker(1, _module_file, channel, codec_type=codec_type)
+        worker = Worker(1, _module_file, logging.getLogger("worker"), channel, codec_type=codec_type)
 
         filename = create_recordio_file(128, codec_type)
         task_q = _TaskQueue(
             {filename: 128}, record_per_task=64, num_epoch=1
         )
-        master = MasterServicer(logging.getLogger(),
+        master = MasterServicer(logging.getLogger("master"),
                                 2,
                                 16,
                                 worker._opt_fn(),

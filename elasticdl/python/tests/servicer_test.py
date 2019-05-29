@@ -37,7 +37,7 @@ class TestModel(tf.keras.Model):
 class ServicerTest(unittest.TestCase):
     def testGetEmptyTask(self):
         master = MasterServicer(
-            logging.getLogger(),
+            logging.getLogger("service_test"),
             2,
             3,
             None,
@@ -58,7 +58,7 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual(1, task.model_version)
 
     def testGetModel(self):
-        master = MasterServicer(logging.getLogger(), 2, 3, None, None)
+        master = MasterServicer(logging.getLogger("service_test"), 2, 3, None, None)
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 
@@ -183,7 +183,7 @@ class ServicerTest(unittest.TestCase):
         task_q = _TaskQueue(
             {"shard_1": 10, "shard_2": 9}, record_per_task=3, num_epoch=2
         )
-        master = MasterServicer(logging.getLogger(), 3, 3, None, task_q)
+        master = MasterServicer(logging.getLogger("service_test"), 3, 3, None, task_q)
 
         # task to number of runs.
         tasks = defaultdict(int)
@@ -216,7 +216,7 @@ class ServicerTest(unittest.TestCase):
         )
 
     def testUserDefinedModel(self):
-        master = MasterServicer(logging.getLogger(), 2, 3, None, None)
+        master = MasterServicer(logging.getLogger("service_test"), 2, 3, None, None)
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 
