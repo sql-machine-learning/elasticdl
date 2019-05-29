@@ -16,7 +16,7 @@ This document describes the design of model evaluation task for ElasticDL.
 * Master pod is responsible for creating the evaluator.
 * Evaluator is created by master pod after training/task queue is finished.
 * The evaluator fetches the latest model from master pod.
-* Model can be evaluated by a specified number of steps. If `None`, evaluation will continue until reaching the end of input.
+* Model can be evaluated by a specified number of steps or batches of evaluation samples. If `None`, evaluation will continue until reaching the end of input.
 * Model evaluation metrics can be defined by users together with the model definition.
 * The computed model evaluation metrics can be report back to master through RPC call.
 
@@ -27,8 +27,8 @@ This document describes the design of model evaluation task for ElasticDL.
     `ReportEvaluationMetricsReply` and `ReportEvaluationMetricsRequest`.
 * Implement `Evaluator` class that includes the following (reuse code in `Worker` whenever possible):
     * `distributed_evaluate()` that contains the main logic for model evaluation.
-    * `report_task_result()` that reports evaluation task result back to master through RPC call.
-    * `report_evaluation_metrics()` that reports the computed evaluation metrics back to master through RPC call.
+    * `report_task_result()` that reports evaluation task result (e.g. task id and error message) back to master through RPC call.
+    * `report_evaluation_metrics()` that reports the computed evaluation metrics (e.g. accuracy, precision, recall, etc.) back to master through RPC call.
 * Add main CLI entry-point to `Evaluator.distributed_evaluate()`.
 
 ### Future Development
