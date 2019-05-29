@@ -1,14 +1,12 @@
 import argparse
 import os
-import inspect
 import tempfile
-import time
-import getpass
 import sys
-from string import Template
+import re
+
 import docker
 import yaml
-import re
+
 from kubernetes.client.apis import core_v1_api
 from kubernetes import config
 
