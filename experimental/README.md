@@ -1,7 +1,5 @@
 # ElasticFlow
 
-[![Travis-CI Build Status](https://travis-ci.com/wangkuiyi/elasticdl.svg?token=hdxEdHNTb4ZXZHY7x8gv&branch=develop)](https://travis-ci.com/wangkuiyi/elasticdl)
-
 ElasticFlow is a distributed programming framework for deep learning.  Programmers write a deep learning program by implementing a single function `forward`, just like we can write an offline data processing program using MapReduce by implementing the `map` and `reduce` functions.
 
 ElasticFlow allows users to implement `forward` using TensorFlow graph API or PyTorch.  In either case, it invokes TensorFlow or PyTorch for [autodiff](https://arxiv.org/abs/1502.05767) -- automatically derive the backward pass from `forward` to make a complete training program.
