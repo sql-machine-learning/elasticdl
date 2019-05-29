@@ -104,9 +104,11 @@ def main():
     PORT = 50001
 
     # Initilize logger
-    logging.basicConfig(format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-    datefmt='%Y-%m-%d:%H:%M:%S',
-    level=logging.DEBUG)
+    logging.basicConfig(
+        format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+        datefmt='%Y-%m-%d:%H:%M:%S',
+        level=logging.DEBUG
+    )
     logger = logging.getLogger("master")
 
     args = _parse_args()

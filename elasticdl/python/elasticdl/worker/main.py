@@ -34,9 +34,11 @@ def main():
     channel = grpc.insecure_channel(args.master_addr)
 
     # Initilize logger
-    logging.basicConfig(format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-    datefmt='%Y-%m-%d:%H:%M:%S',
-    level=logging.DEBUG)
+    logging.basicConfig(
+        format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+        datefmt='%Y-%m-%d:%H:%M:%S',
+        level=logging.DEBUG
+    )
     logger = logging.getLogger("worker-%d" % args.worker_id)
 
     worker = Worker(
