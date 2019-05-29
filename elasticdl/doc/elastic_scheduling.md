@@ -1,12 +1,12 @@
 # ElasticDL on Google Kubernetes Engine
-This document illustrates how to run ElasticDL with elastic scheduling in Google Kubernetes Engine (GKE) environment. Before we start, make sure you have a GKE account and a running cluster there.
+
+ElasticDL is a Kubernetes-native machine learning framework.  This document explains how to run an ElasticDL job on Google Kubernetes Engine (GKE).
 
 ## Configure Your GKE Environment
 
-To access GKE, we need to install the following tools.
+To access GKE, we need to install [Google Cloud SDK](https://cloud.google.com/sdk/install), which includes command-line tools like `gcloud`.
 
-* Install [gcloud CLI](https://cloud.google.com/sdk/docs/quickstart-macos). Note that gcloud CLI requires **python v2.7**. [miniconda](https://docs.conda.io/en/latest/miniconda.html) is recommended for managing multi-version python environment.
-* Use the command below to generate corresponding kubeconfig:
+- Use the command below to generate corresponding kubeconfig:
 
    ```
    gcloud container clusters get-credentials ${cluster_name}
