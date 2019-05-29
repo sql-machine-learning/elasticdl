@@ -11,7 +11,6 @@ import numpy as np
 import recordio
 
 from contextlib import closing
-<<<<<<< HEAD:elasticdl/python/tests/worker_test.py
 from elasticdl.python.elasticdl.common.model_helper import load_user_model
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
@@ -19,16 +18,6 @@ from elasticdl.python.elasticdl.proto import elasticdl_pb2
 from elasticdl.python.elasticdl.worker.worker import Worker
 from elasticdl.python.data.codec import BytesCodec
 from elasticdl.python.data.codec import TFExampleCodec
-=======
-from elasticdl.common.model_helper import load_user_model
-from elasticdl.common.utils import create_logger
-from elasticdl.master.task_queue import _TaskQueue
-from elasticdl.master.servicer import MasterServicer
-from elasticdl.proto import elasticdl_pb2
-from elasticdl.worker.worker import Worker
-from data.codec import BytesCodec
-from data.codec import TFExampleCodec
->>>>>>> log:elasticdl/python/elasticdl/worker/worker_test.py
 
 _module_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
@@ -56,7 +45,7 @@ def create_recordio_file(size, codec_type):
 
 class WorkerTest(unittest.TestCase):
     def local_train(self, codec_type):
-        worker = Worker(0, _module_file, create_logger("worker"), codec_type=codec_type)
+        worker = Worker(0, _module_file, logging.getLogger("worker"), codec_type=codec_type)
         filename = create_recordio_file(128, codec_type)
         batch_size = 32
         epoch = 2
@@ -96,13 +85,13 @@ class WorkerTest(unittest.TestCase):
             return master.ReportTaskResult(req, None)
 
         channel = grpc.insecure_channel('localhost:9999')
-        worker = Worker(1, _module_file, create_logger("worker"), channel, codec_type=codec_type)
+        worker = Worker(1, _module_file, logging.getLogger("worker"), channel, codec_type=codec_type)
 
         filename = create_recordio_file(128, codec_type)
         task_q = _TaskQueue(
             {filename: 128}, record_per_task=64, num_epoch=1
         )
-        master = MasterServicer(create_logger("master"),
+        master = MasterServicer(logging.getLogger("master"),
                                 2,
                                 16,
                                 worker._opt_fn(),

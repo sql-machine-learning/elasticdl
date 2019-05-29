@@ -11,20 +11,11 @@ tf.enable_eager_execution()
 
 from contextlib import closing
 from concurrent import futures
-<<<<<<< HEAD
 from elasticdl.python.elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
 from elasticdl.python.elasticdl.common.model_helper import load_user_model, build_model
-=======
-from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.master.servicer import MasterServicer
-from elasticdl.master.task_queue import _TaskQueue
-from elasticdl.master.k8s_worker_manager import WorkerManager
-from elasticdl.common.model_helper import load_user_model, build_model
-from elasticdl.common.utils import create_logger
->>>>>>> log
 
 
 def _make_task_queue(data_dir, record_per_task, num_epoch):
@@ -111,7 +102,13 @@ def _parse_args():
 def main():
     # TODO: pass port via flags.
     PORT = 50001
-    logger = create_logger("master")
+
+    # Initilize logger
+    logging.basicConfig(format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%Y-%m-%d:%H:%M:%S',
+    level=logging.DEBUG)
+    logger = logging.getLogger("master")
+
     args = _parse_args()
     task_q = _make_task_queue(
         args.train_data_dir, args.record_per_task, args.num_epoch

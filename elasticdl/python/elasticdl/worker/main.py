@@ -1,16 +1,12 @@
 import argparse
 import grpc
+import logging
 
 import tensorflow as tf
 
 tf.enable_eager_execution()
 
-<<<<<<< HEAD
 from elasticdl.python.elasticdl.worker.worker import Worker
-=======
-from elasticdl.common.utils import create_logger
-from elasticdl.worker.worker import Worker
->>>>>>> log
 
 
 def _parse_args():
@@ -36,10 +32,17 @@ def _parse_args():
 def main():
     args = _parse_args()
     channel = grpc.insecure_channel(args.master_addr)
+
+    # Initilize logger
+    logging.basicConfig(format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%Y-%m-%d:%H:%M:%S',
+    level=logging.DEBUG)
+    logger = logging.getLogger("worker-%d" % args.worker_id)
+
     worker = Worker(
         args.worker_id,
         args.model_file,
-        create_logger("worker"),
+        logger,
         channel=channel,
         codec_type=args.codec_type,
     )
