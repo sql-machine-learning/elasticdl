@@ -18,6 +18,9 @@ RUN pip install kubernetes --extra-index-url=${EXTRA_PYPI_INDEX}
 # Install Docker python SDK
 RUN pip install docker --extra-index-url=${EXTRA_PYPI_INDEX}
 
+# Install pytest
+RUN pip install pytest --extra-index-url=${EXTRA_PYPI_INDEX}
+
 # Install RecordIO 
 RUN pip install 'pyrecordio>=0.0.6' --extra-index-url=${EXTRA_PYPI_INDEX}
 
