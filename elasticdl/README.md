@@ -37,7 +37,7 @@ docker run --rm -u $(id -u):$(id -g) -it \
 In dev Docker container's `elasticdl` repo's root directory, do the following:
 
 ```bash
-make && K8S_TESTS=False python -m unittest discover elasticdl/python/tests/ '*_test.py'
+make && K8S_TESTS=False pytest elasticdl/python/tests
 ```
 
 Could also start Docker container and run unittests in a single command:
@@ -47,7 +47,7 @@ docker run --rm -u $(id -u):$(id -g) -it \
     -v $EDL_REPO:/v \
     -w /v \
     elasticdl:dev \
-    bash -c "make && K8S_TESTS=False python -m unittest discover elasticdl/python/tests/ '*_test.py'"
+    bash -c "make && K8S_TESTS=False pytest elasticdl/python/tests"
 ```
 
 Note that, some unittests may require a running Kubernetes cluster available. To skip those unittests, use `make && K8S_TESTS=False python -m unittest discover elasticdl/python '*_test.py'` as the bash command.
