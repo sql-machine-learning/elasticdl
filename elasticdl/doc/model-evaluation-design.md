@@ -14,9 +14,14 @@ This document describes the design of model evaluation task for ElasticDL.
 
 * There's only one evaluation worker without multiprocessing.
 * Master pod is responsible for creating the evaluation worker.
-* Evaluation worker is created by master pod after training/task queue is finished.
+* Evaluation worker is created by master pod together with the workers for training.
+* Evaluation starts after a specified warm-up period and on a given time interval. For example, we need to expose
+    the following parameters to users:
+    * `start_delay_secs`: Start evaluating after waiting for this many seconds.
+    * `throttle_secs`: Do not re-evaluate unless the last evaluation was started at least this many seconds ago.
 * The evaluation worker fetches the latest model from master pod.
-* Model can be evaluated by a specified number of steps or batches of evaluation samples. If `None`, evaluation will continue until reaching the end of input.
+* Model can be evaluated by a specified number of steps or batches of evaluation samples. If `None`,
+    evaluation will continue until reaching the end of input.
 * Model evaluation metrics can be defined by users together with the model definition.
 * The computed model evaluation metrics can be report back to master through RPC call.
 
@@ -38,9 +43,6 @@ This document describes the design of model evaluation task for ElasticDL.
 
 A list of potential features we may want for model evaluation in the future:
 
-* Support evaluating the model during training, which includes:
-    * `start_delay_secs`: Start evaluating after waiting for this many seconds.
-    * `throttle_secs`: Do not re-evaluate unless the last evaluation was started at least this many seconds ago.
 * `num_parallel_processes`: The number of children processes to run evaluation on each individual evaluation worker.
 * `sample_weights`: Optional Numpy array of weights for the test samples, used for weighting the loss function.
 
