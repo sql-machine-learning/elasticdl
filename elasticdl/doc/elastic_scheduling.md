@@ -6,21 +6,29 @@ ElasticDL is a Kubernetes-native machine learning framework.  This document expl
 
 To access GKE, we need to install [Google Cloud SDK](https://cloud.google.com/sdk/install), which includes command-line tools like `gcloud`.
 
-- Use the command below to generate corresponding kubeconfig:
+- Set the PROJECT_ID environment variable in your shell by retrieving the pre-configured project ID on gcloud by running the command below:
 
    ```
-   gcloud container clusters get-credentials ${cluster_name}
+   export PROJECT_ID="$(gcloud config get-value project -q)"
+   ```
+
+- Use the command below to generate the corresponding kubeconfig:
+
+   ```
+   gcloud container clusters get-credentials ${PROJECT_ID}
    ```
     and then add the generated config to your local kubeconfig file (`~/.kube/config` by default). 
  
-* Make sure you have [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/) available locally.
+- Make sure you have [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/) available locally.
 
 Use the following command to list all the started components.
+
 ```bash
 kubectl get all --all-namespaces
 ```
 
-ElasticDL jobs require pod creation and deletion permissions. Make sure you have grantted related permissions to the default or other related service accounts.
+ElasticDL jobs require pod creation and deletion permissions. Make sure you have granted related permissions to the default or other related service accounts.
+
 ```bash
 kubectl apply -f elasticdl/elasticdl/manifests/examples/manifests/examples/elasticdl-rbac.yaml
 ```
@@ -28,6 +36,7 @@ kubectl apply -f elasticdl/elasticdl/manifests/examples/manifests/examples/elast
 ## Build Docker Image
 
 Clone ElasticDL source code:
+
 ```bash
 git clone https://github.com/wangkuiyi/elasticdl.git
 ```
@@ -36,7 +45,7 @@ Build docker image:
 
 ```bash
 cd elasticdl
-docker build -t gcr.io/${project_name}/elasticdl:dev -f elasticdl/docker/Dockerfile .
+docker build -t gcr.io/${PROJECT_ID}/elasticdl:dev -f elasticdl/docker/Dockerfile .
 ```
 
 ## Upload Docker Image
@@ -48,11 +57,68 @@ gcloud auth configure-docker
 and then use the Docker command-line tool to upload the image to your Container Registry:
 
 ```
-docker push gcr.io/${project_name}/elasticdl:dev
+docker push gcr.io/${PROJECT_ID}/elasticdl:dev
+```
+## Example Of Submitting A Job On GKE
+Use the command below to submit your first ElasticDL job on GKE:
+
+```
+python elasticdl/python/elasticdl/client/client.py \
+    --job_name=hello-world \
+    --model_file=elasticdl/python/examples/mnist_functional_api.py \
+    --train_data_dir=/data/mnist/train \
+    --num_epoch=1 \
+    --minibatch_size=10 \
+    --record_per_task=100 \
+    --num_worker=2 \
+    --grads_to_wait=2 \
+    --codec_type=bytes \
+    --repository=gcr.io \
+    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev
+```
+Use the following command to check the job's pods statuses:
+
+```bash
+kubectl get pods -l elasticdl_job_name=hello-world
+```
+You could delete all the pods of the submitted job using the command below:
+
+```
+kubectl delete pod -l elasticdl_job_name=hello-world
 ```
 
+## Example Of Job Fault Tolerance
+One of the important features of ElasticDL is fault tolerance which ensures job success in extreme cases such as pod deletion and vm crash.
 
-## Test Case For Elastic Scheduling
+Same as the first example, submit a job on GKE using the command below:
+
+```
+python elasticdl/python/elasticdl/client/client.py \
+    --job_name=fault-tolerance \
+    --model_file=elasticdl/python/examples/mnist_functional_api.py \
+    --train_data_dir=/data/mnist/train \
+    --num_epoch=1 \
+    --minibatch_size=10 \
+    --record_per_task=100 \
+    --num_worker=2 \
+    --grads_to_wait=2 \
+    --codec_type=bytes \
+    --repository=gcr.io \
+    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev
+```
+Check the job's pods statuses and wait until all the pods become `Running`:
+
+```
+kubectl get pods -l elasticdl_job_name=fault-tolerance
+```
+And then delete one of the two worker's pods:
+
+```
+kubectl delete pod elasticdl-worker-fault-tolerance-0
+```
+Keeping track the number of job's pods, you will see the number restores to two pods, and the job will finish finally.
+
+## Example Of Elastic Scheduling
 Assume we have a GKE cluster with three instances, and each instance is configured with 4 CPU cores and 15 GB memory.
 
 ### Setup priority classes
@@ -106,7 +172,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --grads_to_wait=2 \
     --codec_type=bytes \
     --repository=gcr.io \
-    --image_base=gcr.io/elasticdl/elasticdl:dev
+    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev
 ```
 
 The first job will launch one master pod and two worker pods. Use the following command to check pods statues, and wait until all pods become `Running`.
@@ -138,7 +204,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --grads_to_wait=2 \
     --codec_type=bytes \
     --repository=gcr.io \
-    --image_base=gcr.io/elasticdl/elasticdl:dev
+    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev
 ```
 Use the following command:
 
@@ -148,7 +214,8 @@ kubectl get pods -l elasticdl_job_name=high-prio-job
 You will find the master is Running and a worker is Pending due to insufficient resources.
 
 Because the second job has higher priority than the first one, so soon the first job gets preempted and one of its workers is deleted by Kubernetes, the released resource is re-assigned to the second job.
- 
-Because of elastic scheduling, the two elasticdl jobs will finish finally.
 
+Because of elastic scheduling, the two ElasticDL jobs continue running.
+
+When the job with high-priority finished, the low-priority job would restore to two pods due to released resources and finish finally.
 
