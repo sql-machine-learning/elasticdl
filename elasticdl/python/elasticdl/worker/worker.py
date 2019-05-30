@@ -6,8 +6,8 @@ import recordio
 
 from contextlib import closing
 from tensorflow.python.ops import math_ops
-from elasticdl.python.elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.python.elasticdl.proto import elasticdl_pb2
+from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 from elasticdl.python.elasticdl.common.model_helper import load_user_model, build_model
 from elasticdl.python.data.codec import TFExampleCodec

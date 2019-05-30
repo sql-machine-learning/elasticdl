@@ -11,7 +11,7 @@ tf.enable_eager_execution()
 
 from contextlib import closing
 from concurrent import futures
-from elasticdl.python.elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
