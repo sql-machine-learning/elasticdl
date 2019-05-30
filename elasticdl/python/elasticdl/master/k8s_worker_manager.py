@@ -80,10 +80,15 @@ class WorkerManager(object):
             return Counter(self._pods_phase.values())
 
     def _event_cb(self, event):
-        pod_name = event["object"].metadata.name
+        evt_obj = event.get("object")
+        evt_type = event.get("type")
+        if not evt_obj or not evt_type:
+            self._logger.error("Event doesn't have object or type: %s" % event)
+            return
+        pod_name = evt_obj.metadata.name
         with self._lock:
-            self._pods_phase[pod_name] = event["object"].status.phase
-            if event["type"] == "DELETED":
+            self._pods_phase[pod_name] = evt_obj.status.phase
+            if evt_type == "DELETED":
                 del self._pods_phase[pod_name]
                 self._task_q.recover_tasks(
                     # TODO: move worker_id and pod name mapping to a separate
