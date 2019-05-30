@@ -1,9 +1,9 @@
 import logging
 import os
 import threading
+import traceback
 
 from kubernetes import client, config, watch
-from kubernetes.client import V1ResourceRequirements
 
 
 class Client(object):
@@ -47,26 +47,29 @@ class Client(object):
             label_selector="elasticdl_job_name=" + self._job_name,
         )
         for event in stream:
-            self._event_cb(event)
+            try:
+                self._event_cb(event)
+            except Exception:
+                traceback.print_exc()
+
+
 
     def get_pod_name(self, worker_id):
         return "elasticdl-worker-" + self._job_name + "-" + str(worker_id)
 
-    def _create_worker_pod(self, worker_id, cpu_request, cpu_limit, memory_request,
-                           memory_limit, pod_priority, mount_path=None, volume_name=None,
-                           command=None, args=None, restart_policy="OnFailure"):
+    def _create_worker_pod(self, worker_id, resource_requests, resource_limits, priority,
+                           mount_path, volume_name, command, args, restart_policy):
         # Worker container config
         container = client.V1Container(
             name=self.get_pod_name(worker_id),
             image=self._image,
             command=command,
+            resources=client.V1ResourceRequirements(
+                requests=resource_requests,
+                limits=resource_limits
+            ),
             args=args
         )
-
-        res_reqs = {"cpu": cpu_request, "memory": memory_request}
-        res_limits = {"cpu": cpu_limit, "memory": memory_limit}
-        res = V1ResourceRequirements(limits=res_limits, requests=res_reqs)
-        container.resources = res
 
         # Pod
         spec = client.V1PodSpec(
@@ -83,8 +86,8 @@ class Client(object):
             spec.volumes = [volume]
             container.volume_mounts = [client.V1VolumeMount(name=volume_name, mount_path=mount_path)]
 
-        if pod_priority is not None:
-            spec.priority_class_name = pod_priority
+        if priority is not None:
+            spec.priority_class_name = priority
 
         pod = client.V1Pod(
             spec=spec,
@@ -98,13 +101,13 @@ class Client(object):
         )
         return pod
 
-    def create_worker(self, worker_id, cpu_request, cpu_limit, memory_request,
-                      memory_limit, pod_priority=None, mount_path=None, volume_name=None,
-                      command=None, args=None, restart_policy="OnFailure"):
+    def create_worker(self, worker_id, resource_requests, resource_limits, priority=None,
+                      mount_path=None, volume_name=None, command=None, args=None,
+                      restart_policy="OnFailure"):
         self._logger.info("Creating worker: " + str(worker_id))
         pod = self._create_worker_pod(
-            worker_id, cpu_request, cpu_limit, memory_request, memory_limit, 
-            pod_priority, mount_path, volume_name, command=command, 
+            worker_id, resource_requests, resource_limits, priority,
+            mount_path, volume_name, command=command,
             args=args, restart_policy=restart_policy)
         self._v1.create_namespaced_pod(self._ns, pod)
 

@@ -38,7 +38,7 @@ model = MnistModel()
 
 def feature_columns():
     return [tf.feature_column.numeric_column(key="image",
-        dtype=tf.dtypes.float32, shape=[1, 28, 28])]
+        dtype=tf.dtypes.float32, shape=[28, 28])]
 
 def label_columns():
     return [tf.feature_column.numeric_column(key="label",
