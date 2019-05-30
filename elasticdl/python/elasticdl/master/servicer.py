@@ -7,8 +7,8 @@ assert tf.executing_eagerly()
 
 from google.protobuf import empty_pb2
 
-from elasticdl.python.elasticdl.proto import elasticdl_pb2
-from elasticdl.python.elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2
+from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
 
 
