@@ -3,7 +3,7 @@ from tensorflow.python.framework.ops import EagerTensor
 import numpy as np
 
 
-inputs = tf.keras.Input(shape=(28, 28, 1), name='img')
+inputs = tf.keras.Input(shape=(28, 28), name='img')
 x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
 x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation='relu')(x)
 x = tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation='relu')(x)
@@ -17,7 +17,7 @@ model = tf.keras.Model(inputs=inputs, outputs=outputs, name='mnist_model')
 
 def feature_columns():
     return [tf.feature_column.numeric_column(key="image",
-        dtype=tf.dtypes.float32, shape=[1, 28, 28])]
+        dtype=tf.dtypes.float32, shape=[28, 28])]
 
 def label_columns():
     return [tf.feature_column.numeric_column(key="label",

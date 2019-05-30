@@ -28,7 +28,7 @@ def gen(file_dir, data, label, *, chunk_size, record_per_file, codec_type):
             print("writing:", file_name)
             feature_columns = [
                 tf.feature_column.numeric_column(
-                    key="image", dtype=tf.float32, shape=[1, 28, 28]
+                    key="image", dtype=tf.float32, shape=[28, 28]
                 ),
                 tf.feature_column.numeric_column(
                     key="label", dtype=tf.int64, shape=[1]
