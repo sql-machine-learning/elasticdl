@@ -73,9 +73,23 @@ message ReportTaskResultRequest {
     string err_message = 2;
 }
 
+message ReportEvaluationMetricsReply {
+    // If the evaluation metric is accepted.
+    bool accepted = 1;
+    // Current model version on master.
+    int32 model_version = 2;
+}
+
+message ReportEvaluationMetricsRequest {
+    // Model version used to compute evaluation metrics.
+    int32 model_version = 1;
+    map<string, Tensor> evaluation_metrics = 2;
+}
+
 service Master {
     rpc GetTask(GetTaskRequest) returns (Task);
     rpc GetModel(GetModelRequest) returns (Model);
     rpc ReportGradient(ReportGradientRequest) returns (ReportGradientReply);
+    rpc ReportEvaluationMetrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsReply);
     rpc ReportTaskResult(ReportTaskResultRequest) returns (google.protobuf.Empty);
 }
