@@ -31,8 +31,9 @@ class K8sClientTest(unittest.TestCase):
         )
 
         # Start 3 workers
+        resource = {"cpu": "100m", "memory": "64M"}
         for i in range(3):
-            c.create_worker("worker-%d" % i, "500m", "500m", "64Mi", "64Mi")
+            c.create_worker("worker-%d" % i, resource, resource)
             time.sleep(5)
 
         # wait for workers to be added
