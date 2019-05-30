@@ -38,10 +38,14 @@ class WorkerManager(object):
         self._command = command
         self._args = args
         self._num_worker = num_worker
-        self._cpu_request = cpu_request 
-        self._cpu_limit = cpu_limit
-        self._memory_request = memory_request
-        self._memory_limit = memory_limit
+        self._resource_requests = {
+            "cpu": cpu_request,
+            "memory": memory_request
+        }
+        self._resource_limits = {
+            "cpu": cpu_limit,
+            "memory": memory_limit
+        }
         self._pod_priority = pod_priority
         self._mount_path = mount_path
         self._volume_name = volume_name
@@ -65,10 +69,8 @@ class WorkerManager(object):
     def _add_worker(self, worker_id, restart_policy):
         self._k8s_client.create_worker(
             worker_id,
-            self._cpu_request,
-            self._cpu_limit,
-            self._memory_request,
-            self._memory_limit,
+            self._resource_requests,
+            self._resource_limits,
             self._pod_priority,
             self._mount_path,
             self._volume_name,
