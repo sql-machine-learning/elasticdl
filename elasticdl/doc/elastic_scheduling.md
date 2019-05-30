@@ -88,7 +88,7 @@ kubectl delete pod -l elasticdl_job_name=hello-world
 ```
 
 ## Example Of Job Fault Tolerance
-One of the important features of ElasticDL is fault tolerance which ensures job success in extreme cases such as pod deletion and vm crash.
+One of the important features of ElasticDL is fault tolerance which ensures job success in extreme cases such as pods get killed due to some reasons.
 
 Same as the first example, submit a job on GKE using the command below:
 
