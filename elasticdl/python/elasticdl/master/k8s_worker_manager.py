@@ -56,23 +56,24 @@ class WorkerManager(object):
         for i in range(self._num_worker):
             self._logger.info("Starting worker: %d" % i)
             self._k8s_client.create_worker(
-                worker_id,
+                i,
                 self._resource_requests,
                 self._resource_limits,
                 self._pod_priority,
                 self._mount_path,
                 self._volume_name,
                 command=self._command,
-                args=self._args + ["--worker_id", str(worker_id)],
+                args=self._args + ["--worker_id", str(i)],
                 restart_policy=restart_policy,
             )
 
     def remove_workers(self):
         for i in range(self._num_worker):
             pod_name = self._k8s_client.get_pod_name(i)
-            if pod_name in self._worker_tracker._pods_phase:
-                self._logger.info("Deleting worker: %d", i)
-                self._k8s_client.delete_worker(worker_id)
+            with self._lock:
+                if pod_name in self._pods_phase:
+                    self._logger.info("Deleting worker: %d", i)
+                    self._k8s_client.delete_worker(i)
 
     def get_counters(self):
         with self._lock:
