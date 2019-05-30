@@ -73,9 +73,8 @@ def input_fn(records):
     label_list = []
     # deserialize
     for r in records:
-        get_np_val = (lambda data: data.numpy() if isinstance(data, EagerTensor) else data)
-        label = get_np_val(r['label'])
-        image = np.frombuffer(get_np_val(r['image']), dtype="uint8")
+        label = r['label']
+        image = np.frombuffer(r['image'], dtype="uint8")
         image = np.resize(image, new_shape=(28, 28))
         image = image.astype(np.float32)
         image /= 255
