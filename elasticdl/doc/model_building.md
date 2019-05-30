@@ -1,13 +1,13 @@
 # ElasticDL Model Building
-To run an ElasticDL job, the user provides a model file in the job submission, such as [`mnist_functional_api.py`](../python/examples/mnist_functional_api.py) used in this [ElasticDL job submission sample](elastic_scheduling.md#submit-the-first-job-with-low-priority). 
+To run an ElasticDL job, users need to provide a model file in the job submission, such as [`mnist_functional_api.py`](../python/examples/mnist_functional_api.py) used in this [example](elastic_scheduling.md#submit-the-first-job-with-low-priority). 
 
-This model file contains a [model](#model) built in Keras and other components required by ElasticDL model training, including [input\_fn](#input_fn), [feature\_columns](#feature_columns), [label\_columns](#label_columns), [loss](#loss), and [optimizer](#optimizer). 
+This model file contains a [model](#model) built in Keras and other components required by ElasticDL, including [input\_fn](#input_fn), [feature\_columns](#feature_columns), [label\_columns](#label_columns), [loss](#loss), and [optimizer](#optimizer). 
 
 ## Model File Components
 ### model
 `model` is a Keras model built using either Tensorflow Keras [functional API](https://www.tensorflow.org/guide/keras#functional_api) or [model subclassing](https://www.tensorflow.org/guide/keras#model_subclassing). 
 
-The following example shows `model` using functional API:
+The following example shows a `model` using functional API:
 
 ```
 inputs = tf.keras.Input(shape=(28, 28, 1), name='img')
