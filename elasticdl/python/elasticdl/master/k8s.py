@@ -1,6 +1,7 @@
 import logging
 import os
 import threading
+import traceback
 
 from kubernetes import client, config, watch
 
@@ -46,7 +47,12 @@ class Client(object):
             label_selector="elasticdl_job_name=" + self._job_name,
         )
         for event in stream:
-            self._event_cb(event)
+            try:
+                self._event_cb(event)
+            except Exception:
+                traceback.print_exc()
+
+
 
     def get_pod_name(self, worker_id):
         return "elasticdl-worker-" + self._job_name + "-" + str(worker_id)
