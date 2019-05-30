@@ -14,10 +14,10 @@ from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 
-class TestModel(tf.keras.Model):
+class SimpleModel(tf.keras.Model):
 
     def __init__(self):
-        super(TestModel, self).__init__(name='test_model')
+        super(SimpleModel, self).__init__(name='test_model')
         self.dense_1 = tf.keras.layers.Dense(32, activation='relu', name='dense_1')
         self.dense_2 = tf.keras.layers.Dense(1, activation='sigmoid', name='dense_2')
 
@@ -220,8 +220,8 @@ class ServicerTest(unittest.TestCase):
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 
-        model_inst = TestModel()
-        model_inst.build(TestModel.input_shapes())
+        model_inst = SimpleModel()
+        model_inst.build(SimpleModel.input_shapes())
         for variable in model_inst.trainable_variables:
             master.set_model_var(variable.name, variable.numpy())
         # Get version 0
