@@ -1,6 +1,7 @@
 import unittest
 
 import os
+import random
 import time
 
 from elasticdl.python.elasticdl.master import k8s
@@ -26,7 +27,7 @@ class K8sClientTest(unittest.TestCase):
         c = k8s.Client(
             worker_image="gcr.io/google-samples/hello-app:1.0",
             namespace="default",
-            job_name="training-job",
+            job_name="test-job-%d-%d" % (int(time.time()), random.randint(1, 101)),
             event_callback=tracker.event_cb,
         )
 
