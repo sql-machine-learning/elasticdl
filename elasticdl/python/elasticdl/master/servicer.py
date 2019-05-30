@@ -68,13 +68,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return res
 
     def GetModel(self, request, _):
-        if request.min_version > self._version:
-            err_msg = (
-                "Requested version %d not available yet, current version: %d"
-                % (request.min_version, self._version)
-            )
-            self.logger.warning(err_msg)
-            raise ValueError(err_msg)
+        _ = self._validate_model_version(request.min_version)
 
         res = elasticdl_pb2.Model()
         with self._lock:
@@ -96,7 +90,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def _validate_model_version(self, request_model_version):
         if request_model_version > self._version:
-            err_msg = "Model version %d out of range, current version: %d" % (
+            err_msg = "Model version %d not available yet, current version: %d" % (
                 request_model_version,
                 self._version,
             )
