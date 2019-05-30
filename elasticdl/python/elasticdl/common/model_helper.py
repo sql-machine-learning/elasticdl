@@ -10,9 +10,11 @@ def load_user_model(model_file):
 
 def build_model(model, feature_columns):
     if len(feature_columns) == 1:
-        model.build((1,) + feature_columns[0].shape)
+        # add 1 in the as the first item in input_shape tuple, as tf.keras requires this additional shape dimension.
+        # https://github.com/tensorflow/tensorflow/blob/fac9d70abfb1465da53d9574173f19f235ee6d02/tensorflow/python/keras/layers/core.py#L467
+        model.build((1,) + tuple(feature_columns[0].shape))
     else:
         input_shapes = []
         for f_col in feature_columns:
-            input_shapes.append((1,) + f_col.shape)
+            input_shapes.append((1,) + tuple(f_col.shape))
         model.build(input_shapes)
