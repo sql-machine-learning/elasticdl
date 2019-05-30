@@ -184,10 +184,6 @@ def main():
     except KeyboardInterrupt:
         logger.warning("Server stopping")
 
-    if args.num_worker:
-        # TODO: worker_manager.remove_workers supports synchronized call
-        worker_manager.remove_workers()
-
     server.stop(0)
 
 
