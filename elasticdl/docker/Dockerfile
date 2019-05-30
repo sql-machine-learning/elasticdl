@@ -24,12 +24,7 @@ RUN pip install pytest --extra-index-url=${EXTRA_PYPI_INDEX}
 # Install RecordIO 
 RUN pip install 'pyrecordio>=0.0.6' --extra-index-url=${EXTRA_PYPI_INDEX}
 
-ENV PYTHONPATH=/:/elasticdl/python/
-
-# ElasticDL dataset generator and codecs
-COPY elasticdl/python/data elasticdl/python/data
-RUN python elasticdl/python/data/recordio_gen/mnist/gen_data.py --codec_type tf_example elasticdl/python/data
-RUN python elasticdl/python/data/recordio_gen/cifar10/gen_data.py --codec_type tf_example elasticdl/python/data
+ENV PYTHONPATH=/
 
 WORKDIR /
 COPY elasticdl /elasticdl
