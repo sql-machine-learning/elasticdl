@@ -116,7 +116,7 @@ And then delete one of the two worker's pods:
 ```
 kubectl delete pod elasticdl-worker-fault-tolerance-0
 ```
-Keeping track the number of job's pods, you will see the number restores to two pods, and the job will finish finally.
+Keeping track the number of job's pods, you will see the number restores to two pods, and the job will complete successfully.
 
 ## Example Of Elastic Scheduling
 Assume we have a GKE cluster with three instances, and each instance is configured with 4 CPU cores and 15 GB memory.
