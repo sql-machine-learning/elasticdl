@@ -174,6 +174,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --repository=gcr.io \
     --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev
 ```
+Please note that the master pod is configured priority `high-priority` which means the master cannot be preempted even for low priority jobs.
 
 The first job will launch one master pod and two worker pods. Use the following command to check pods statues, and wait until all pods become `Running`.
 
