@@ -69,7 +69,7 @@ message ReportTaskResultRequest {
     // Task id assigned by master.
     int32 task_id = 1;
 
-    // When error occured, err_message contains error message in plain text.
+    // When error occurred, err_message contains error message in plain text.
     string err_message = 2;
 }
 
