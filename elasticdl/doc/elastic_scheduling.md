@@ -59,7 +59,7 @@ and then use the Docker command-line tool to upload the image to your Container 
 ```
 docker push gcr.io/${PROJECT_ID}/elasticdl:dev
 ```
-## Example Of Submitting A Job On GKE
+## Example of Job Submission on GKE
 Use the command below to submit your first ElasticDL job on GKE:
 
 ```
@@ -87,7 +87,7 @@ You could delete all the pods of the submitted job using the command below:
 kubectl delete pod -l elasticdl_job_name=hello-world
 ```
 
-## Example Of Job Fault Tolerance
+## Example of Job Fault Tolerance
 One of the important features of ElasticDL is fault tolerance which ensures job success in extreme cases such as pods get killed due to some reasons.
 
 Same as the first example, submit a job on GKE using the command below:
@@ -118,7 +118,7 @@ kubectl delete pod elasticdl-worker-fault-tolerance-0
 ```
 Keeping track the number of job's pods, you will see the number restores to two pods, and the job will complete successfully.
 
-## Example Of Elastic Scheduling
+## Example of Elastic Scheduling
 Assume we have a GKE cluster with three instances, and each instance is configured with 4 CPU cores and 15 GB memory.
 
 ### Setup priority classes
