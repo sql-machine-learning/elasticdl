@@ -1,6 +1,3 @@
-from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
-from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
-from unittest.mock import MagicMock, call
 import os
 import unittest
 import time
@@ -8,6 +5,10 @@ import time
 import tensorflow as tf
 
 tf.enable_eager_execution()
+
+from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
+from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
+from unittest.mock import MagicMock, call
 
 
 class WorkerManagerTest(unittest.TestCase):
