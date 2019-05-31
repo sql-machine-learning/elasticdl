@@ -79,7 +79,7 @@ Example:
 def input_fn(records):
     image_list = []
     label_list = []
-    # deserialize
+    # data processing
     for r in records:
         label = r['label']
         image /= 255
