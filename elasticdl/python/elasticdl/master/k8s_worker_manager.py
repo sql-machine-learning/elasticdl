@@ -53,8 +53,6 @@ class WorkerManager(object):
         #   Failed: worker pod is killed for some reason
         #   Unknown: unknown
         self._pods_phase = {}
-        # worker id to pod name mapping
-        self._id_to_pod_name = {}
         # pod name to worker id mapping
         self._pod_name_to_id = {}
 
