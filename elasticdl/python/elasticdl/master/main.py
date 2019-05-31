@@ -103,6 +103,8 @@ def _parse_args():
         default='WARNING',
         help="the logging level",
     )
+    parser.add_argument("--image_pull_policy",
+        help="the image pull policy of master and worker")
     return parser.parse_args()
 
 
@@ -173,8 +175,10 @@ def main():
             pod_priority=args.worker_pod_priority,
             mount_path=args.mount_path,
             volume_name=args.volume_name,
+            image_pull_policy=args.image_pull_policy,
+            restart_policy="Never",
         )
-        worker_manager.start_workers(restart_policy="Never")
+        worker_manager.start_workers()
 
     try:
         while True:
