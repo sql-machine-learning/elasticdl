@@ -3,7 +3,7 @@ import logging
 import threading
 
 from collections import Counter
-from elasticdl.python.elasticdl.master import k8s
+from elasticdl.python.elasticdl.master import k8s_client as k8s
 
 
 class WorkerManager(object):
