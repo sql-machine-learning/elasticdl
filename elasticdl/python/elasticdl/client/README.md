@@ -79,7 +79,8 @@ python elasticdl/python/elasticdl/client/client.py \
     --mount_path=/data \
     --volume_name=data-volume \
     --repository=gcr.io \
-    --image_base=gcr.io/elasticdl/mnist:dev
+    --image_base=gcr.io/elasticdl/mnist:dev \
+    --image_pull_policy=Always
 ```
 The difference is the additional `repository` argument that points to the Docker hub used by GKE.
 
