@@ -2,7 +2,8 @@ import numpy as np
 import unittest
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor
+from elasticdl.python.elasticdl.common.ndarray import tensor_to_ndarray
 
 
 class ConverterTest(unittest.TestCase):
@@ -78,3 +79,7 @@ class ConverterTest(unittest.TestCase):
         verify(np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32))
         # 4-D random array
         verify(np.ndarray(shape=[2, 1, 3, 4], dtype=np.float32))
+
+
+if __name__ == "__main__":
+    unittest.main()

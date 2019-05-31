@@ -1,4 +1,5 @@
 import tensorflow as tf
+
 tf.enable_eager_execution()
 
 import logging
@@ -20,8 +21,8 @@ from elasticdl.python.data.codec import BytesCodec
 from elasticdl.python.data.codec import TFExampleCodec
 
 _module_file = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)),
-    "test_module.py")
+    os.path.dirname(os.path.realpath(__file__)), "test_module.py"
+)
 
 m = load_user_model(_module_file)
 columns = m.feature_columns() + m.label_columns()
@@ -45,7 +46,9 @@ def create_recordio_file(size, codec_type):
 
 class WorkerTest(unittest.TestCase):
     def local_train(self, codec_type):
-        worker = Worker(0, _module_file, logging.getLogger("worker"), codec_type=codec_type)
+        worker = Worker(
+            0, _module_file, logging.getLogger("worker"), codec_type=codec_type
+        )
         filename = create_recordio_file(128, codec_type)
         batch_size = 32
         epoch = 2
@@ -56,7 +59,7 @@ class WorkerTest(unittest.TestCase):
             print(ex)
             res = False
         self.assertTrue(res)
-    
+
     def test_local_train_bytes(self):
         self.local_train("bytes")
 
@@ -68,6 +71,7 @@ class WorkerTest(unittest.TestCase):
         Run Worker.distributed_train with a local master.
         grpc calls are mocked by local master call.
         """
+
         def mock_GetTask(req):
             return master.GetTask(req, None)
 
@@ -84,26 +88,33 @@ class WorkerTest(unittest.TestCase):
         def mock_ReportTaskResult(req):
             return master.ReportTaskResult(req, None)
 
-        channel = grpc.insecure_channel('localhost:9999')
-        worker = Worker(1, _module_file, logging.getLogger("worker"), channel, codec_type=codec_type)
+        channel = grpc.insecure_channel("localhost:9999")
+        worker = Worker(
+            1,
+            _module_file,
+            logging.getLogger("worker"),
+            channel,
+            codec_type=codec_type,
+        )
 
         filename = create_recordio_file(128, codec_type)
-        task_q = _TaskQueue(
-            {filename: 128}, record_per_task=64, num_epoch=1
+        task_q = _TaskQueue({filename: 128}, record_per_task=64, num_epoch=1)
+        master = MasterServicer(
+            logging.getLogger("master"), 2, 16, worker._opt_fn(), task_q
         )
-        master = MasterServicer(logging.getLogger("master"),
-                                2,
-                                16,
-                                worker._opt_fn(),
-                                task_q)
 
         for var in worker._model.trainable_variables:
             master.set_model_var(var.name, var.numpy())
 
-        with mock.patch.object(worker._stub, 'GetTask', mock_GetTask),                   \
-                mock.patch.object(worker._stub, 'GetModel', mock_GetModel),              \
-                mock.patch.object(worker._stub, 'ReportGradient', mock_ReportGradient),  \
-                mock.patch.object(worker._stub, 'ReportTaskResult', mock_ReportTaskResult):
+        with mock.patch.object(
+            worker._stub, "GetTask", mock_GetTask
+        ), mock.patch.object(
+            worker._stub, "GetModel", mock_GetModel
+        ), mock.patch.object(
+            worker._stub, "ReportGradient", mock_ReportGradient
+        ), mock.patch.object(
+            worker._stub, "ReportTaskResult", mock_ReportTaskResult
+        ):
             try:
                 worker.distributed_train()
                 res = True
@@ -123,3 +134,7 @@ class WorkerTest(unittest.TestCase):
 
     def test_distributed_train_tf_example(self):
         self.distributed_train("tf_example")
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -6,13 +6,16 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-from unittest.mock import MagicMock, call
-from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
+from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
+from unittest.mock import MagicMock, call
 
 
 class WorkerManagerTest(unittest.TestCase):
-    @unittest.skipIf(os.environ.get('K8S_TESTS', 'True') == 'False', 'No Kubernetes cluster available')
+    @unittest.skipIf(
+        os.environ.get("K8S_TESTS", "True") == "False",
+        "No Kubernetes cluster available",
+    )
     def testCreateDeleteWorkerPod(self):
         task_q = _TaskQueue({"f": 10}, 1, 1)
         task_q.recover_tasks = MagicMock()
@@ -23,7 +26,7 @@ class WorkerManagerTest(unittest.TestCase):
             command=["echo"],
             args=[],
             namespace="default",
-            num_worker=3
+            num_worker=3,
         )
 
         worker_manager.start_workers()
@@ -46,7 +49,10 @@ class WorkerManagerTest(unittest.TestCase):
             [call(0), call(1), call(2)], any_order=True
         )
 
-    @unittest.skipIf(os.environ.get('K8S_TESTS', 'True') == 'False', 'No Kubernetes cluster available')
+    @unittest.skipIf(
+        os.environ.get("K8S_TESTS", "True") == "False",
+        "No Kubernetes cluster available",
+    )
     def testFailedWorkerPod(self):
         """
         Start a pod running a python program destined to fail with restart_policy="Never"
@@ -62,7 +68,7 @@ class WorkerManagerTest(unittest.TestCase):
             args=["badargs"],
             namespace="default",
             num_worker=3,
-            restart_policy="Never"
+            restart_policy="Never",
         )
         worker_manager.start_workers()
         max_check_num = 20
@@ -84,7 +90,10 @@ class WorkerManagerTest(unittest.TestCase):
             [call(0), call(1), call(2)], any_order=True
         )
 
-    @unittest.skipIf(os.environ.get('K8S_TESTS', 'True') == 'False', 'No Kubernetes cluster available')
+    @unittest.skipIf(
+        os.environ.get("K8S_TESTS", "True") == "False",
+        "No Kubernetes cluster available",
+    )
     def testRelaunchWorkerPod(self):
         task_q = _TaskQueue({"f": 10}, 1, 1)
         worker_manager = WorkerManager(
@@ -94,11 +103,11 @@ class WorkerManagerTest(unittest.TestCase):
             command=["sleep 10"],
             args=[],
             namespace="default",
-            num_worker=3
+            num_worker=3,
         )
 
         worker_manager.start_workers()
-        
+
         max_check_num = 60
         for _ in range(max_check_num):
             time.sleep(1)
@@ -133,8 +142,9 @@ class WorkerManagerTest(unittest.TestCase):
                         found = True
         else:
             self.fail("Failed to find newly launched worker.")
-        
+
         worker_manager.stop_relaunch_and_remove_workers()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
