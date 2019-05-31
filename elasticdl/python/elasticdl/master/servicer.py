@@ -108,7 +108,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def ReportGradient(self, request, _):
         invalid_model_version = self._validate_model_version(request.model_version)
 
-        res = elasticdl_pb2.ReportGradientReply()
+        res = elasticdl_pb2.ReportGradientResponse()
         if invalid_model_version:
             res.accepted = False
             res.model_version = self._version
@@ -156,7 +156,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def ReportEvaluationMetrics(self, request, _):
         invalid_model_version = self._validate_model_version(request.model_version)
 
-        res = elasticdl_pb2.ReportEvaluationMetricsReply()
+        res = elasticdl_pb2.ReportEvaluationMetricsResponse()
         if invalid_model_version:
             res.accepted = False
             res.model_version = self._version

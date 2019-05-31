@@ -58,7 +58,7 @@ message ReportGradientRequest {
     map<string, Tensor> gradient = 3;
 }
 
-message ReportGradientReply {
+message ReportGradientResponse {
     // If the gradient is accepted.
     bool accepted = 1;
     // Current model version on master.
@@ -73,7 +73,7 @@ message ReportTaskResultRequest {
     string err_message = 2;
 }
 
-message ReportEvaluationMetricsReply {
+message ReportEvaluationMetricsResponse {
     // If the evaluation metric is accepted.
     bool accepted = 1;
     // Current model version on master.
@@ -89,7 +89,7 @@ message ReportEvaluationMetricsRequest {
 service Master {
     rpc GetTask(GetTaskRequest) returns (Task);
     rpc GetModel(GetModelRequest) returns (Model);
-    rpc ReportGradient(ReportGradientRequest) returns (ReportGradientReply);
-    rpc ReportEvaluationMetrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsReply);
+    rpc ReportGradient(ReportGradientRequest) returns (ReportGradientResponse);
+    rpc ReportEvaluationMetrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsResponse);
     rpc ReportTaskResult(ReportTaskResultRequest) returns (google.protobuf.Empty);
 }
