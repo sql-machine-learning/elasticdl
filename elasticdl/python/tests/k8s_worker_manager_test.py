@@ -20,11 +20,12 @@ class WorkerManagerTest(unittest.TestCase):
             task_q,
             job_name="test-create-worker-pod",
             worker_image="gcr.io/google-samples/hello-app:1.0",
-            command=["/bin/ls"],
+            command=["echo"],
             args=[],
             namespace="default",
             num_worker=3
         )
+
         worker_servicer.start_workers()
         max_check_num = 20
         for _ in range(max_check_num):
@@ -34,7 +35,7 @@ class WorkerManagerTest(unittest.TestCase):
             if counters["Succeeded"] == 3:
                 break
 
-        worker_servicer.remove_workers()
+        worker_servicer.stop_relaunch_and_remove_workers()
         for _ in range(max_check_num):
             time.sleep(3)
             counters = worker_servicer.get_counters()
@@ -60,9 +61,10 @@ class WorkerManagerTest(unittest.TestCase):
             command=["badcommand"],
             args=["badargs"],
             namespace="default",
-            num_worker=3
+            num_worker=3,
+            restart_policy="Never"
         )
-        worker_servicer.start_workers(restart_policy="Never")
+        worker_servicer.start_workers()
         max_check_num = 20
         for _ in range(max_check_num):
             time.sleep(3)
@@ -71,7 +73,7 @@ class WorkerManagerTest(unittest.TestCase):
             if counters["Failed"] == 3:
                 break
 
-        worker_servicer.remove_workers()
+        worker_servicer.stop_relaunch_and_remove_workers()
         for _ in range(max_check_num):
             time.sleep(3)
             counters = worker_servicer.get_counters()
@@ -82,6 +84,57 @@ class WorkerManagerTest(unittest.TestCase):
             [call(0), call(1), call(2)], any_order=True
         )
 
+    @unittest.skipIf(os.environ.get('K8S_TESTS', 'True') == 'False', 'No Kubernetes cluster available')
+    def testRelaunchWorkerPod(self):
+        task_q = _TaskQueue({"f": 10}, 1, 1)
+        worker_servicer = WorkerManager(
+            task_q,
+            job_name="test-relaunch-worker-pod",
+            worker_image="gcr.io/google-samples/hello-app:1.0",
+            command=["sleep 10"],
+            args=[],
+            namespace="default",
+            num_worker=3
+        )
+
+        worker_servicer.start_workers()
+        
+        max_check_num = 60
+        for _ in range(max_check_num):
+            time.sleep(1)
+            counters = worker_servicer.get_counters()
+            print(counters)
+            if counters["Runing"] + counters["Pending"] > 0:
+                break
+        # Note: There is a slight chance of race condition.
+        # Hack to find a worker to remove
+        current_workers = set()
+        live_workers = set()
+        with worker_servicer._lock:
+            for k, (_, phase) in worker_servicer._pods_phase.items():
+                current_workers.add(k)
+                if phase in ["Running", "Pending"]:
+                    live_workers.add(k)
+        self.assertTrue(live_workers)
+
+        worker_servicer._remove_worker(live_workers.pop())
+        # verify a new worker get launched
+        found = False
+        print(current_workers)
+        for _ in range(max_check_num):
+            if found:
+                break
+            time.sleep(1)
+            counters = worker_servicer.get_counters()
+            print(counters)
+            with worker_servicer._lock:
+                for k in worker_servicer._pods_phase:
+                    if k not in current_workers:
+                        found = True
+        else:
+            self.fail("Failed to find newly launched worker.")
+        
+        worker_servicer.stop_relaunch_and_remove_workers()
 
 if __name__ == '__main__':
     unittest.main()
