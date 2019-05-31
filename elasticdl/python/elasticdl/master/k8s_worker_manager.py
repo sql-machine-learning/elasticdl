@@ -19,6 +19,7 @@ class WorkerManager(object):
             pod_priority=None,
             mount_path=None,
             volume_name=None,
+            image_pull_policy=None,
             **kwargs):
         self._logger = logging.getLogger("WorkerManager")
         self._command = command
@@ -35,6 +36,7 @@ class WorkerManager(object):
         self._pod_priority = pod_priority
         self._mount_path = mount_path
         self._volume_name = volume_name
+        self._image_pull_policy=image_pull_policy
         self._task_q = task_q
 
         # protects followed variables, which are accessed from event_cb.
@@ -62,6 +64,7 @@ class WorkerManager(object):
                 self._pod_priority,
                 self._mount_path,
                 self._volume_name,
+                self._image_pull_policy,
                 command=self._command,
                 args=self._args + ["--worker_id", str(i)],
                 restart_policy=restart_policy,
