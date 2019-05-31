@@ -66,7 +66,7 @@ spec:
         "--worker_memory_request", "{worker_memory_request}",
         "--worker_memory_limit", "{worker_memory_limit}"
     ]
-    imagePullPolicy: IfNotPresent 
+    imagePullPolicy: {image_pull_policy} 
     resources:
       limits:
         cpu:  "{master_cpu_limit}"
@@ -85,7 +85,7 @@ spec:
         master_memory_limit=args.master_memory_limit, master_memory_request=args.master_memory_request,
         worker_cpu_limit=args.worker_cpu_limit, worker_cpu_request=args.worker_cpu_request,
         worker_memory_limit=args.worker_memory_limit, worker_memory_request=args.worker_memory_request,
-        volume_name=args.volume_name, mount_path=args.mount_path)
+        image_pull_policy=args.image_pull_policy)
 
     master_def = yaml.safe_load(master_yaml)
 
@@ -102,7 +102,8 @@ spec:
         master_def['spec']['containers'][0]['volumeMounts'] = [
             {'mountPath': args.mount_path, 'name': args.volume_name}]
         master_def['spec']['containers'][0]['args'].extend(['--mount_path', 
-            args.mount_path, '--volume_name', args.volume_name])
+            args.mount_path, '--volume_name', args.volume_name,
+            '--image_pull_policy', args.image_pull_policy])
 
     return master_def
 
@@ -171,6 +172,9 @@ def main():
         help="the volume name of network filesytem")
     parser.add_argument("--mount_path",
         help="the mount path in the docker container")
+    parser.add_argument("--image_pull_policy",
+        default="Always",
+        help="the image pull policy of master and worker")
     args, argv = parser.parse_known_args()
     _validate_params(args)
 
