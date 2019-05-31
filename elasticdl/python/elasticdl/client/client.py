@@ -173,6 +173,7 @@ def main():
     parser.add_argument("--mount_path",
         help="the mount path in the docker container")
     parser.add_argument("--image_pull_policy",
+        default="Always",
         help="the image pull policy of master and worker")
     args, argv = parser.parse_known_args()
     _validate_params(args)
