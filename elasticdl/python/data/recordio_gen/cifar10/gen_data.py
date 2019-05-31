@@ -4,58 +4,14 @@
 Download and transform CIFAR10 data to RecordIO format.
 """
 
-import itertools
 import argparse
-import os
 import sys
-import recordio
-
-from contextlib import closing
+import tensorflow as tf
 from tensorflow.python.keras import backend
 from tensorflow.python.keras.datasets import cifar10
-from elasticdl.python.data.codec import TFExampleCodec
-from elasticdl.python.data.codec import BytesCodec
-import tensorflow as tf
-import numpy as np
+from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import \
+    convert_numpy_to_recordio
 
-# TODO: This function can be shared with MNIST dataset
-def gen(file_dir, data, label, *, chunk_size, record_per_file, codec_type):
-    assert len(data) == len(label) and len(data) > 0
-    os.makedirs(file_dir)
-    it = zip(data, label)
-    try:
-        for i in itertools.count():
-            file_name = file_dir + "/data-%04d" % i
-            print("writing:", file_name)
-            feature_columns = [
-                tf.feature_column.numeric_column(
-                    key="image", dtype=tf.float32, shape=[3, 32, 32]
-                ),
-                tf.feature_column.numeric_column(
-                    key="label", dtype=tf.int64, shape=[1, 1]
-                ),
-            ]
-            if codec_type == "tf_example":
-                encode_fn = TFExampleCodec(feature_columns).encode
-            elif codec_type == "bytes":
-                encode_fn = BytesCodec(feature_columns).encode
-            else:
-                raise ValueError("invalid codec_type: " + codec_type)
-
-            with closing(recordio.Writer(file_name)) as f:
-                for _ in range(record_per_file):
-                    row = next(it)
-                    rec = encode_fn(
-                        {
-                            f_col.key: row[i]
-                            .astype(f_col.dtype.as_numpy_dtype)
-                            .reshape(f_col.shape)
-                            for i, f_col in enumerate(feature_columns)
-                        }
-                    )
-                    f.write(rec)
-    except StopIteration:
-        pass
 
 
 def main(argv):
@@ -82,18 +38,25 @@ def main(argv):
         help="Type of codec(tf_example or bytes)",
     )
     args = parser.parse_args(argv)
-    # one uncompressed record has size 3 * 32 * 32 + 1 bytes.
-    # Also add some slack for safety.
-    chunk_size = args.num_record_per_chunk * (3 * 32 * 32 + 1) + 100
+
     record_per_file = args.num_record_per_chunk * args.num_chunk
     backend.set_image_data_format("channels_first")
 
+    feature_columns = [
+        tf.feature_column.numeric_column(
+            key="image", dtype=tf.float32, shape=[3, 32, 32]
+        ),
+        tf.feature_column.numeric_column(
+            key="label", dtype=tf.int64, shape=[1, 1]
+        ),
+    ]
+
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-    gen(
+    convert_numpy_to_recordio(
         args.dir + "/cifar10/train",
         x_train,
         y_train,
-        chunk_size=chunk_size,
+        feature_columns,
         record_per_file=record_per_file,
         codec_type=args.codec_type,
     )
@@ -101,11 +64,11 @@ def main(argv):
     # Work around a bug in cifar10.load_data() where y_test is not converted
     # to uint8
     y_test = y_test.astype("uint8")
-    gen(
+    convert_numpy_to_recordio(
         args.dir + "/cifar10/test",
         x_test,
         y_test,
-        chunk_size=chunk_size,
+        feature_columns,
         record_per_file=record_per_file,
         codec_type=args.codec_type,
     )
