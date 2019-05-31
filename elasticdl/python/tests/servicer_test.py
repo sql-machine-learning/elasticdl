@@ -9,17 +9,22 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
-from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
+from elasticdl.python.elasticdl.master.servicer import MasterServicer
+from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor
+from elasticdl.python.elasticdl.common.ndarray import tensor_to_ndarray
+from elasticdl.proto import elasticdl_pb2
+
 
 class SimpleModel(tf.keras.Model):
-
     def __init__(self):
-        super(SimpleModel, self).__init__(name='test_model')
-        self.dense_1 = tf.keras.layers.Dense(32, activation='relu', name='dense_1')
-        self.dense_2 = tf.keras.layers.Dense(1, activation='sigmoid', name='dense_2')
+        super(SimpleModel, self).__init__(name="test_model")
+        self.dense_1 = tf.keras.layers.Dense(
+            32, activation="relu", name="dense_1"
+        )
+        self.dense_2 = tf.keras.layers.Dense(
+            1, activation="sigmoid", name="dense_2"
+        )
 
     def call(self, inputs):
         x = self.dense_1(inputs)
@@ -58,7 +63,9 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual(1, task.model_version)
 
     def testGetModel(self):
-        master = MasterServicer(logging.getLogger("service_test"), 2, 3, None, None)
+        master = MasterServicer(
+            logging.getLogger("service_test"), 2, 3, None, None
+        )
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 
@@ -183,7 +190,9 @@ class ServicerTest(unittest.TestCase):
         task_q = _TaskQueue(
             {"shard_1": 10, "shard_2": 9}, record_per_task=3, num_epoch=2
         )
-        master = MasterServicer(logging.getLogger("service_test"), 3, 3, None, task_q)
+        master = MasterServicer(
+            logging.getLogger("service_test"), 3, 3, None, task_q
+        )
 
         # task to number of runs.
         tasks = defaultdict(int)
@@ -212,11 +221,14 @@ class ServicerTest(unittest.TestCase):
                 ("shard_2", 0, 3): 3,
                 ("shard_2", 3, 6): 2,
                 ("shard_2", 6, 9): 2,
-            }, tasks
+            },
+            tasks,
         )
 
     def testUserDefinedModel(self):
-        master = MasterServicer(logging.getLogger("service_test"), 2, 3, None, None)
+        master = MasterServicer(
+            logging.getLogger("service_test"), 2, 3, None, None
+        )
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 
@@ -227,5 +239,16 @@ class ServicerTest(unittest.TestCase):
         # Get version 0
         model = master.GetModel(req, None)
         self.assertEqual(0, model.version)
-        self.assertEqual(['dense_1/bias:0', 'dense_1/kernel:0', 'dense_2/bias:0',
-                          'dense_2/kernel:0'], list(sorted(model.param.keys())))
+        self.assertEqual(
+            [
+                "dense_1/bias:0",
+                "dense_1/kernel:0",
+                "dense_2/bias:0",
+                "dense_2/kernel:0",
+            ],
+            list(sorted(model.param.keys())),
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
