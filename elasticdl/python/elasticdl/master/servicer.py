@@ -39,6 +39,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._grad_to_wait = grads_to_wait
         self._grad_n = 0
         self._minibatch_size = minibatch_size
+        self._evaluation_metrics = {}
         for var in init_var:
             self.set_model_var(var.name, var.numpy())
 
@@ -67,13 +68,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return res
 
     def GetModel(self, request, _):
-        if request.min_version > self._version:
-            err_msg = (
-                "Requested version %d not available yet, current version: %d"
-                % (request.min_version, self._version)
-            )
-            self.logger.warning(err_msg)
-            raise ValueError(err_msg)
+        _ = self._validate_model_version(request.min_version)
 
         res = elasticdl_pb2.Model()
         with self._lock:
@@ -93,21 +88,28 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._gradient_sum.clear()
         self._grad_n = 0
 
-    def ReportGradient(self, request, _):
-        if request.model_version > self._version:
-            err_msg = "Model version %d out of range, current version: %d" % (
-                request.model_version,
+    def _validate_model_version(self, request_model_version):
+        if request_model_version > self._version:
+            err_msg = "Model version %d not available yet, current version: %d" % (
+                request_model_version,
                 self._version,
             )
             self.logger.warning(err_msg)
             raise ValueError(err_msg)
 
-        res = elasticdl_pb2.ReportGradientReply()
-        if request.model_version < self._version:
+        invalid_model_version = request_model_version < self._version
+        if invalid_model_version:
             self.logger.warning(
                 "Task result for outdated version %d dropped",
-                request.model_version,
+                request_model_version,
             )
+        return invalid_model_version
+
+    def ReportGradient(self, request, _):
+        invalid_model_version = self._validate_model_version(request.model_version)
+
+        res = elasticdl_pb2.ReportGradientResponse()
+        if invalid_model_version:
             res.accepted = False
             res.model_version = self._version
             return res
@@ -150,3 +152,22 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         else:
             self._task_q.report(request.task_id, True)
         return empty_pb2.Empty()
+
+    def ReportEvaluationMetrics(self, request, _):
+        invalid_model_version = self._validate_model_version(request.model_version)
+
+        res = elasticdl_pb2.ReportEvaluationMetricsResponse()
+        if invalid_model_version:
+            res.accepted = False
+            res.model_version = self._version
+            return res
+
+        with self._lock:
+            for k, v in request.evaluation_metrics.items():
+                arr = tensor_to_ndarray(v)
+                self._evaluation_metrics[k] = arr
+
+            self._update_model()
+        res.accepted = True
+        res.model_version = self._version
+        return res
