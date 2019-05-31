@@ -9,8 +9,8 @@ outputs = Dense(1)(inputs)
 model = Model(inputs, outputs)
 
 
-def loss(outputs, labels):
-    return tf.reduce_mean(tf.square(outputs - labels)) 
+def loss(predictions, labels):
+    return tf.reduce_mean(tf.square(predictions - labels)) 
 
 
 def feature_columns():
