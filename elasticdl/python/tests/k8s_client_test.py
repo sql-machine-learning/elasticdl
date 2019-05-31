@@ -12,7 +12,7 @@ class WorkerTracker(object):
         self._count = 0
 
     def event_cb(self, event):
-        print("----- %s -----\n" % event["type"])
+        print("----- %s %s -----\n" % (event["type"], event["object"].status))
         if event["type"] == "ADDED":
             self._count += 1
         elif event["type"] == "DELETED":
@@ -34,7 +34,7 @@ class K8sClientTest(unittest.TestCase):
         # Start 3 workers
         resource = {"cpu": "100m", "memory": "64M"}
         for i in range(3):
-            c.create_worker("worker-%d" % i, resource, resource)
+            _ = c.create_worker("worker-%d" % i, resource, resource, command=["echo"])
             time.sleep(5)
 
         # wait for workers to be added

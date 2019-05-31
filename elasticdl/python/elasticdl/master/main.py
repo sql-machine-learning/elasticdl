@@ -173,8 +173,9 @@ def main():
             pod_priority=args.worker_pod_priority,
             mount_path=args.mount_path,
             volume_name=args.volume_name,
+            restart_policy="Never",
         )
-        worker_manager.start_workers(restart_policy="Never")
+        worker_manager.start_workers()
 
     try:
         while True:
