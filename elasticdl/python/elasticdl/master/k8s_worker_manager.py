@@ -93,7 +93,7 @@ class WorkerManager(object):
                 self._logger.error("Unknown worker id: %s" % worker_id)
                 return
 
-            # TODO: change _k8s_client to accept pod name instead of worker id.
+        # TODO: change _k8s_client to accept pod name instead of worker id.
         self._k8s_client.delete_worker(worker_id)
 
     def stop_relaunch_and_remove_workers(self):
