@@ -4,7 +4,7 @@ import os
 import random
 import time
 
-from elasticdl.python.elasticdl.master import k8s
+from elasticdl.python.elasticdl.master import k8s_client as k8s
 
 
 class WorkerTracker(object):
