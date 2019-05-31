@@ -27,12 +27,9 @@ Another example using model subclassing:
 
 ```
 class MnistModel(tf.keras.Model):
-    def __init__(self, channel_last=True):
+    def __init__(self):
         super(MnistModel, self).__init__(name='mnist_model')
-        if channel_last:
-            self._reshape = tf.keras.layers.Reshape((28, 28, 1))
-        else:
-            self._reshape = tf.keras.layers.Reshape((1, 28, 28))
+        self._reshape = tf.keras.layers.Reshape((28, 28, 1))
         self._conv1 = tf.keras.layers.Conv2D(
             32, kernel_size=(3, 3), activation='relu')
         self._conv2 = tf.keras.layers.Conv2D(
