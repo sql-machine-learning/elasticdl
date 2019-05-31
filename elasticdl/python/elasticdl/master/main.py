@@ -176,8 +176,9 @@ def main():
             mount_path=args.mount_path,
             volume_name=args.volume_name,
             image_pull_policy=args.image_pull_policy,
+            restart_policy="Never",
         )
-        worker_manager.start_workers(restart_policy="Never")
+        worker_manager.start_workers()
 
     try:
         while True:

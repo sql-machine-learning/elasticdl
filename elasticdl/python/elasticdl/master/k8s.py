@@ -110,7 +110,7 @@ class Client(object):
             worker_id, resource_requests, resource_limits, priority,
             mount_path, volume_name, image_pull_policy, command=command,
             args=args, restart_policy=restart_policy)
-        self._v1.create_namespaced_pod(self._ns, pod)
+        return self._v1.create_namespaced_pod(self._ns, pod)
 
     def delete_worker(self, worker_id):
         self._logger.info("Deleting worker: " + str(worker_id))
