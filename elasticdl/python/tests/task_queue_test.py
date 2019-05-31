@@ -79,3 +79,7 @@ class TaskQueueTest(unittest.TestCase):
         self.assertEqual(
             sorted([v._info() for _, v in got_tasks]), epoch_tasks
         )
+
+
+if __name__ == "__main__":
+    unittest.main()
