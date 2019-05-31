@@ -50,7 +50,7 @@ message GetModelRequest {
 
 message ReportGradientRequest {
     // Used by worker to identify the report. Not used by master. It will be
-    // copied directly into ReportGradientReply
+    // copied directly into ReportGradientResponse
     int32 gradient_id = 1;
     
     // Model version used to compute gradients.
