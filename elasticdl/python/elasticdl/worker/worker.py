@@ -150,11 +150,11 @@ class Worker(object):
                                 #        which should be divided by the number of contributing workers.
                             grads = tape.gradient(
                                 loss, self._model.trainable_variables)
-                            self.logger.info("Loss is %f" % loss.numpy())
 
                             accepted, min_model_version = self.report_gradient(
                                 grads)
                             if accepted:
+                                self.logger.info("Loss is %f" % loss.numpy())
                                 break
                         else:
                             # Worker got stuck, fail the task.
