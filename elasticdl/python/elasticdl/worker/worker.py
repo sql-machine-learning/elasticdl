@@ -129,6 +129,15 @@ class Worker(object):
             res.append(decode(record))
         return res
 
+    def _get_features_and_labels_from_record(self, record_buf):
+        batch_input_data, batch_label = self._input_fn(record_buf)
+        features = []
+        for f_col in self._feature_columns:
+            features.append(batch_input_data[f_col.key])
+        if len(features) == 1:
+            features = features[0]
+        return features, batch_label.flatten()
+
     def distributed_train(self):
         """
         Distributed training.
@@ -153,16 +162,11 @@ class Worker(object):
                             self.get_model(
                                 max(self._model_version, min_model_version))
 
-                            batch_input_data, batch_label = self._input_fn(record_buf)
+                            features, labels = self._get_features_and_labels_from_record(record_buf)
 
                             with tf.GradientTape() as tape:
-                                inputs = []
-                                for f_col in self._feature_columns:
-                                    inputs.append(batch_input_data[f_col.key])
-                                if len(inputs) == 1:
-                                    inputs = inputs[0]
-                                outputs = self._model.call(inputs, training=True)
-                                loss = self._loss(outputs, batch_label.flatten())
+                                outputs = self._model.call(features, training=True)
+                                loss = self._loss(outputs, labels)
 
                                 # TODO:  Add regularization loss if any,
                                 #        which should be divided by the number of contributing workers.
@@ -200,15 +204,10 @@ class Worker(object):
                         if not record_buf:
                             break
 
-                        data, labels = self._input_fn(record_buf)
+                        features, labels = self._get_features_and_labels_from_record(record_buf)
 
                         with tf.GradientTape() as tape:
-                            inputs = []
-                            for f_col in self._feature_columns:
-                                inputs.append(data[f_col.key])
-                            if len(inputs) == 1:
-                                inputs = inputs[0]
-                            outputs = self._model.call(inputs, training=True)
+                            outputs = self._model.call(features, training=True)
                             loss = self._loss(outputs, labels)
 
                             # Add regularization loss if any.
@@ -247,14 +246,9 @@ class Worker(object):
 
                         for _ in range(self._max_evaluate_retry_num):
                             self.get_model(max(self._model_version, min_model_version))
-                            batch_input_data, batch_label = self._input_fn(record_buf)
-                            inputs = []
-                            for f_col in self._feature_columns:
-                                inputs.append(batch_input_data[f_col.key])
-                            if len(inputs) == 1:
-                                inputs = inputs[0]
-                            outputs = self._model.call(inputs, training=False)
-                            evaluation_metrics = self._eval_metrics_fn(outputs, batch_label.flatten())
+                            features, labels = self._get_features_and_labels_from_record(record_buf)
+                            outputs = self._model.call(features, training=False)
+                            evaluation_metrics = self._eval_metrics_fn(outputs, labels)
 
                             accepted, min_model_version = self.report_evaluation_metrics(evaluation_metrics)
                             if accepted:
