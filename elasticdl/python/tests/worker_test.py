@@ -64,9 +64,9 @@ class WorkerTest(unittest.TestCase):
     def test_local_train_tf_example(self):
         self.local_train("tf_example")
 
-    def distributed_train(self, codec_type):
+    def distributed_train_and_evaluate(self, codec_type):
         """
-        Run Worker.distributed_train with a local master.
+        Run Worker.distributed training and evaluation with a local master.
         grpc calls are mocked by local master call.
         """
 
@@ -82,6 +82,11 @@ class WorkerTest(unittest.TestCase):
                 # Increase master version so the gradient will not be accepted.
                 master._version += 1
             return master.ReportGradient(req, None)
+
+        def mock_ReportEvaluationMetrics(req):
+            master._version += 1
+            req.evaluation_metrics = {'mse': 10}
+            return master.ReportEvaluationMetrics(req, None)
 
         def mock_ReportTaskResult(req):
             return master.ReportTaskResult(req, None)
@@ -112,10 +117,13 @@ class WorkerTest(unittest.TestCase):
         ), mock.patch.object(
             worker._stub, "ReportGradient", mock_ReportGradient
         ), mock.patch.object(
+            worker._stub, 'ReportEvaluationMetrics', mock_ReportEvaluationMetrics
+        ), mock.patch.object(
             worker._stub, "ReportTaskResult", mock_ReportTaskResult
         ):
             try:
                 worker.distributed_train()
+                worker.distributed_evaluate(steps=2)
                 res = True
             except Exception as ex:
                 print(ex)
@@ -128,11 +136,11 @@ class WorkerTest(unittest.TestCase):
         # No more task.
         self.assertTrue(not task.shard_file_name)
 
-    def test_distributed_train_bytes(self):
-        self.distributed_train("bytes")
+    def test_distributed_train_and_evaluate_bytes(self):
+        self.distributed_train_and_evaluate("bytes")
 
-    def test_distributed_train_tf_example(self):
-        self.distributed_train("tf_example")
+    def test_distributed_train_and_evaluate_tf_example(self):
+        self.distributed_train_and_evaluate("tf_example")
 
 
 if __name__ == "__main__":

@@ -16,6 +16,9 @@ from elasticdl.python.data.codec import BytesCodec
 
 # the default max number of a minibatch retrain as its gradients are not accepted by master.
 DEFAULT_MAX_MINIBATCH_RETRAIN_NUM = 64
+# the default max number of a minibatch retry as its calculated evaluation metrics are not accepted by master.
+DEFAULT_MAX_MINIBATCH_EVALUATE_RETRY_NUM = 10
+
 
 class Worker(object):
     """ElasticDL worker"""
@@ -25,6 +28,7 @@ class Worker(object):
                  model_file,
                  channel=None,
                  max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM,
+                 max_evaluate_retry_num=DEFAULT_MAX_MINIBATCH_EVALUATE_RETRY_NUM,
                  codec_type=None):
         """
         Arguments:
@@ -41,6 +45,7 @@ class Worker(object):
         self._input_fn = model_module.input_fn 
         self._opt_fn = model_module.optimizer
         self._loss = model_module.loss
+        self._eval_metrics_fn = model_module.eval_metrics_fn
         all_columns = self._feature_columns + model_module.label_columns()
         if codec_type == "tf_example":
             self._codec = TFExampleCodec(all_columns)
@@ -54,6 +59,7 @@ class Worker(object):
         else:
             self._stub = elasticdl_pb2_grpc.MasterStub(channel)
         self._max_retrain_num = max_retrain_num
+        self._max_evaluate_retry_num = max_evaluate_retry_num
         self._model_version = -1
         self._codec_type = codec_type
 
@@ -99,6 +105,18 @@ class Worker(object):
                 ndarray_to_tensor(g.numpy()))
         req.model_version = self._model_version
         res = self._stub.ReportGradient(req)
+        return res.accepted, res.model_version
+
+    def report_evaluation_metrics(self, evaluation_metrics):
+        """
+        report evaluation metrics to ps, return (accepted, model_version) from rpc call.
+        """
+        req = elasticdl_pb2.ReportEvaluationMetricsRequest()
+        for k, v in evaluation_metrics.items():
+            req.evaluation_metrics[k].CopyFrom(
+                ndarray_to_tensor(v.numpy()))
+        req.model_version = self._model_version
+        res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
 
     @staticmethod
@@ -204,3 +222,48 @@ class Worker(object):
                         optimizer.apply_gradients(
                             zip(grads, self._model.trainable_variables))
                         self._logger.info("Loss is %f" % loss.numpy())
+
+    def distributed_evaluate(self, steps):
+        """
+        Distributed model evaluation.
+        """
+        while True:
+            task = self.get_task()
+            if not task.shard_file_name:
+                break
+            batch_size = task.minibatch_size
+            err_msg = ""
+            try:
+                with closing(recordio.Scanner(task.shard_file_name, task.start, task.end - task.start)) as reader:
+                    min_model_version = task.model_version
+                    current_step = 0
+                    while True:
+                        current_step += 1
+                        if current_step > steps:
+                            break
+                        record_buf = self._get_batch(reader, batch_size, self._codec.decode)
+                        if not record_buf:
+                            break
+
+                        for _ in range(self._max_evaluate_retry_num):
+                            self.get_model(max(self._model_version, min_model_version))
+                            batch_input_data, batch_label = self._input_fn(record_buf)
+                            inputs = []
+                            for f_col in self._feature_columns:
+                                inputs.append(batch_input_data[f_col.key])
+                            if len(inputs) == 1:
+                                inputs = inputs[0]
+                            outputs = self._model.call(inputs, training=False)
+                            evaluation_metrics = self._eval_metrics_fn(outputs, batch_label.flatten())
+
+                            accepted, min_model_version = self.report_evaluation_metrics(evaluation_metrics)
+                            if accepted:
+                                evaluation_metrics = {k: v.numpy() for k, v in evaluation_metrics.items()}
+                                self.logger.info("Evaluation metrics: %s" % evaluation_metrics)
+                                break
+                        else:
+                            raise RuntimeError("Worker got stuck during model evaluation")
+            except Exception as ex:
+                err_msg = str(ex)
+                traceback.print_exc()
+            self.report_task_result(task.task_id, err_msg)
