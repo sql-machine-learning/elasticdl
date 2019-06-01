@@ -1,5 +1,7 @@
 import logging
 import traceback
+import time
+
 import tensorflow as tf
 assert tf.executing_eagerly()
 
@@ -14,6 +16,7 @@ from elasticdl.python.elasticdl.common.model_helper import load_user_model, buil
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.data.codec import BytesCodec
 
+# TODO: Move these args to train/evaluate specific functions
 # the default max number of a minibatch retrain as its gradients are not accepted by master.
 DEFAULT_MAX_MINIBATCH_RETRAIN_NUM = 64
 # the default max number of a minibatch retry as its calculated evaluation metrics are not accepted by master.
@@ -181,7 +184,7 @@ class Worker(object):
                         else:
                             # Worker got stuck, fail the task.
                             # TODO: stop the worker if it fails to make any progress for some time.
-                            raise RuntimeError("Worker got stuck")
+                            raise RuntimeError("Worker got stuck during training")
             except Exception as ex:
                 err_msg = str(ex)
                 traceback.print_exc()
@@ -222,10 +225,19 @@ class Worker(object):
                             zip(grads, self._model.trainable_variables))
                         self._logger.info("Loss is %f" % loss.numpy())
 
-    def distributed_evaluate(self, steps):
+    def distributed_evaluate(self, steps=None, start_delay_secs=None, throttle_secs=None):
         """
         Distributed model evaluation.
+
+        Arguments:
+            steps: Evaluate the model by this many number of steps where the model is evaluated on one batch of samples
+                for each step. If `None`, evaluation will continue until reaching the end of input.
+            start_delay_secs: Start evaluating after waiting for this many seconds. if `None`, there's no delay.
+            throttle_secs: Do not re-evaluate unless the last evaluation was started at least this many seconds ago.
         """
+        if start_delay_secs:
+            time.sleep(start_delay_secs)
+        # TODO: Implement throttle_secs
         while True:
             task = self.get_task()
             if not task.shard_file_name:
@@ -238,7 +250,7 @@ class Worker(object):
                     current_step = 0
                     while True:
                         current_step += 1
-                        if current_step > steps:
+                        if steps and current_step > steps:
                             break
                         record_buf = self._get_batch(reader, batch_size, self._codec.decode)
                         if not record_buf:
