@@ -6,6 +6,7 @@ import tensorflow as tf
 assert tf.executing_eagerly()
 
 import recordio
+import numpy as np
 
 from contextlib import closing
 from tensorflow.python.ops import math_ops
@@ -117,7 +118,7 @@ class Worker(object):
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         for k, v in evaluation_metrics.items():
             req.evaluation_metrics[k].CopyFrom(
-                ndarray_to_tensor(v.numpy()))
+                ndarray_to_tensor(v))
         req.model_version = self._model_version
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
@@ -248,6 +249,7 @@ class Worker(object):
                 with closing(recordio.Scanner(task.shard_file_name, task.start, task.end - task.start)) as reader:
                     min_model_version = task.model_version
                     current_step = 0
+                    evaluation_metrics_collection = {}
                     while True:
                         current_step += 1
                         if steps and current_step > steps:
@@ -262,9 +264,20 @@ class Worker(object):
                             outputs = self._model.call(features, training=False)
                             evaluation_metrics = self._eval_metrics_fn(outputs, labels)
 
+                            for k, v in evaluation_metrics.items():
+                                v_np = v.numpy()
+                                if len(v_np) != 1:
+                                    raise Exception("Only metric result of length 1 is supported currently")
+                                if k in evaluation_metrics_collection:
+                                    evaluation_metrics_collection[k] = np.append(
+                                        evaluation_metrics_collection[k], v_np)
+                                else:
+                                    evaluation_metrics_collection[k] = v_np
+
+                            evaluation_metrics = {k: np.mean(v) for k, v in evaluation_metrics_collection.items()}
                             accepted, min_model_version = self.report_evaluation_metrics(evaluation_metrics)
+
                             if accepted:
-                                evaluation_metrics = {k: v.numpy() for k, v in evaluation_metrics.items()}
                                 self.logger.info("Evaluation metrics: %s" % evaluation_metrics)
                                 break
                         else:
