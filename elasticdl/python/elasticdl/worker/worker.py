@@ -1,4 +1,4 @@
-import logging:
+import logging
 import traceback
 import tensorflow as tf
 assert tf.executing_eagerly()
