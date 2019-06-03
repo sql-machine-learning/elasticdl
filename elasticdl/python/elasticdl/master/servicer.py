@@ -77,6 +77,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 res.param[k].CopyFrom(ndarray_to_tensor(v.numpy()))
         return res
 
+    def _update_model_version(self):
+        assert self._lock.locked()
+        self._version += 1
+
     def _update_model(self):
         assert self._lock.locked()
         grad_var = []
@@ -84,7 +88,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._gradient_sum[k] = self._gradient_sum[k] / self._grad_to_wait
             grad_var.append((self._gradient_sum[k], self._model[k]))
         self._opt.apply_gradients(grad_var)
-        self._version += 1
+        self._update_model_version()
         self._gradient_sum.clear()
         self._grad_n = 0
 
@@ -167,7 +171,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 arr = tensor_to_ndarray(v)
                 self._evaluation_metrics[k] = arr
 
-            self._update_model()
+            self._update_model_version()
         res.accepted = True
         res.model_version = self._version
         return res
