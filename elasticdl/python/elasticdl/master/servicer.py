@@ -1,3 +1,4 @@
+import logging
 import threading
 import numpy as np
 
@@ -17,7 +18,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def __init__(
         self,
-        logger,
         grads_to_wait,
         minibatch_size,
         optimizer,
@@ -26,7 +26,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         init_var=[]
     ):
         # TODO: group params together into a single object.
-        self.logger = logger
+        self._logger = logging.getLogger(__name__)
         self._opt = optimizer
         self._task_q = task_q
         self._lock = threading.Lock()
@@ -94,12 +94,12 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 request_model_version,
                 self._version,
             )
-            self.logger.warning(err_msg)
+            self._logger.warning(err_msg)
             raise ValueError(err_msg)
 
         invalid_model_version = request_model_version < self._version
         if invalid_model_version:
-            self.logger.warning(
+            self._logger.warning(
                 "Task result for outdated version %d dropped",
                 request_model_version,
             )
@@ -145,7 +145,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def ReportTaskResult(self, request, _):
         if request.err_message:
-            self.logger.warning(
+            self._logger.warning(
                 "Worker reported error: " + request.err_message
             )
             self._task_q.report(request.task_id, False)
