@@ -10,6 +10,14 @@ docker build \
     -f elasticdl/docker/Dockerfile .
 ```
 
+To build the Docker image with GPU support, run the following command:
+
+```bash
+docker build \
+    -t elasticdl:dev-gpu \
+    -f elasticdl/docker/Dockerfile.gpu .
+```
+
 When having difficulties downloading from the main PYPI site, you could pass an extra PYPI index url to `docker build`, such as:
 
 ```bash
