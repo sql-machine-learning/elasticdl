@@ -94,7 +94,7 @@ class ServicerTest(unittest.TestCase):
 
     def testReportGradient(self):
         def makeGrad():
-            """ Make a ReportTaskResultRequest compatible with model"""
+            """ Make a ReportGradientRequest compatible with model"""
             req = elasticdl_pb2.ReportGradientRequest()
             req.gradient["x"].CopyFrom(
                 ndarray_to_tensor(np.array([0.1], dtype=np.float32))
