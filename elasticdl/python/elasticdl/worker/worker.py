@@ -9,6 +9,7 @@ import recordio
 import numpy as np
 
 from contextlib import closing
+from collections import defaultdict
 from tensorflow.python.ops import math_ops
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.proto import elasticdl_pb2
@@ -135,9 +136,7 @@ class Worker(object):
 
     def _get_features_and_labels_from_record(self, record_buf):
         batch_input_data, batch_label = self._input_fn(record_buf)
-        features = []
-        for f_col in self._feature_columns:
-            features.append(batch_input_data[f_col.key])
+        features = [batch_input_data[f_col.key] for f_col in self._feature_columns]
         if len(features) == 1:
             features = features[0]
         return features, batch_label.flatten()
@@ -246,10 +245,12 @@ class Worker(object):
             batch_size = task.minibatch_size
             err_msg = ""
             try:
-                with closing(recordio.Scanner(task.shard_file_name, task.start, task.end - task.start)) as reader:
+                with closing(
+                        recordio.Scanner(task.shard_file_name, task.start, task.end - task.start)
+                ) as reader:
                     min_model_version = task.model_version
                     current_step = 0
-                    evaluation_metrics_collection = {}
+                    evaluation_metrics_collection = defaultdict(list)
                     while True:
                         current_step += 1
                         if steps and current_step > steps:
@@ -268,11 +269,7 @@ class Worker(object):
                                 v_np = v.numpy()
                                 if len(v_np) != 1:
                                     raise Exception("Only metric result of length 1 is supported currently")
-                                if k in evaluation_metrics_collection:
-                                    evaluation_metrics_collection[k] = np.append(
-                                        evaluation_metrics_collection[k], v_np)
-                                else:
-                                    evaluation_metrics_collection[k] = v_np
+                                evaluation_metrics_collection[k].append(v_np)
 
                             evaluation_metrics = {k: np.mean(v) for k, v in evaluation_metrics_collection.items()}
                             accepted, min_model_version = self.report_evaluation_metrics(evaluation_metrics)
