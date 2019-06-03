@@ -157,7 +157,9 @@ def main():
             "--master_addr",
             master_addr,
             "--codec_type",
-            args.codec_type
+            args.codec_type,
+            "--log_level",
+            args.log_level
         ]
 
         worker_manager = WorkerManager(
