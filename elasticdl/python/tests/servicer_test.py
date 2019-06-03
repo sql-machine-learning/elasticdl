@@ -202,7 +202,11 @@ class ServicerTest(unittest.TestCase):
         # Report a future version, should raise exception
         req = makeEvaluationMetrics()
         req.model_version = 2
-        self.assertRaises(ValueError, master.ReportEvaluationMetrics, req, None)
+        self.assertRaisesRegex(
+            ValueError,
+            'Model version %s not available yet, current version: %s' % (
+                req.model_version, master._version
+            ), master.ReportEvaluationMetrics, req, None)
 
         # Report an old version, should not be accepted
         req = makeEvaluationMetrics()
