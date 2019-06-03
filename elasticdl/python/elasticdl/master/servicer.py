@@ -96,10 +96,15 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version += 1
 
     def save_checkpoint(self):
-        file_name = "%s/model_v%d.chkpt".format(self._checkpoint_dir, self._version)
+        file_name = "{}/model_v{}.chkpt".format(self._checkpoint_dir, self._version)
         pb_model = elasticdl_pb2.Model()
         pb_model = self._get_model_no_lock(pb_model)
         save_checkpoint_to_file(pb_model, file_name)
+        if self._keep_checkpoint_max:
+            self._checkpoint_list.append(file_name)
+            if len(self._checkpoint_list) > self._keep_checkpoint_max:
+                file_to_delete = self._checkpoint_list.pop(0)
+                os.remove(file_to_delete)
 
     def load_checkpoint_file(self, file_name):
         pb_model = elasticdl_pb2.Model()
