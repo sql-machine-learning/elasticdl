@@ -135,11 +135,11 @@ class Worker(object):
         return res
 
     def _get_features_and_labels_from_record(self, record_buf):
-        batch_input_data, batch_label = self._input_fn(record_buf)
+        batch_input_data, batch_labels = self._input_fn(record_buf)
         features = [batch_input_data[f_col.key] for f_col in self._feature_columns]
         if len(features) == 1:
             features = features[0]
-        return features, batch_label.flatten()
+        return features, batch_labels
 
     def distributed_train(self):
         """
