@@ -133,10 +133,8 @@ class WorkerManager(object):
                 del self._pod_name_to_id[pod_name]
                 self._task_q.recover_tasks(worker_id)
 
-                # If the pod being deleted was 'Running' or 'Pending'. Launch
-                # a worker.
-                relaunch = self._relaunch_deleted_live_worker and phase in [
-                        "Running", "Pending"]
+                # If the pod being deleted was not "Succeeded", relaunch a worker.
+                relaunch = self._relaunch_deleted_live_worker and phase != "Succeeded"
         if relaunch:
             self._logger.info("Relaunching worker.")
             self._start_worker(self._next_worker_id())
