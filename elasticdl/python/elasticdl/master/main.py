@@ -98,9 +98,9 @@ def _parse_args():
         help="the mount path in the docker container")
     parser.add_argument(
         "--log_level",
-        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         type=str.upper,
-        default='WARNING',
+        default="WARNING",
         help="the logging level",
     )
     parser.add_argument("--image_pull_policy",
