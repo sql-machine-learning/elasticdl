@@ -124,8 +124,7 @@ def input_fn(records):
     for r in records:
         get_np_val = (lambda data: data.numpy() if isinstance(data, EagerTensor) else data)
         label = get_np_val(r['label'])
-        image = np.frombuffer(get_np_val(r['image']), dtype="float32")
-        image = np.resize(image, new_shape=(3, 32, 32))
+        image = get_np_val(r['image'])
         image = image.astype(np.float32)
         image /= 255
         label = label.astype(np.int32)
