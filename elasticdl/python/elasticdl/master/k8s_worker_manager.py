@@ -117,6 +117,9 @@ class WorkerManager(object):
             return
 
         pod_name = evt_obj.metadata.name
+        phase = evt_obj.status.phase
+        self._logger.info("Got event %s, phase %s for pod: %s" % (evt_type, phase, pod_name))
+
         relaunch = False
         with self._lock:
             worker_id = self._pod_name_to_id.get(pod_name)
@@ -124,7 +127,6 @@ class WorkerManager(object):
                 self._logger.error("Unknown pod name: %s" % pod_name)
                 return
 
-            phase = evt_obj.status.phase
             self._pods_phase[worker_id] = (pod_name, phase)
             if evt_type == "DELETED":
                 del self._pods_phase[worker_id]
@@ -136,4 +138,5 @@ class WorkerManager(object):
                 relaunch = self._relaunch_deleted_live_worker and phase in [
                         "Running", "Pending"]
         if relaunch:
+            self._logger.info("Relaunching worker.")
             self._start_worker(self._next_worker_id())
