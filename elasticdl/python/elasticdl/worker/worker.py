@@ -275,7 +275,7 @@ class Worker(object):
                             accepted, min_model_version = self.report_evaluation_metrics(evaluation_metrics)
 
                             if accepted:
-                                self.logger.info("Evaluation metrics: %s" % evaluation_metrics)
+                                self._logger.info("Evaluation metrics: %s" % evaluation_metrics)
                                 break
                         else:
                             raise RuntimeError("Worker got stuck during model evaluation")
