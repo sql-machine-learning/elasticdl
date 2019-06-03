@@ -46,13 +46,11 @@ def main():
         format='%(asctime)s %(name)s %(levelname)-8s '
         '[%(filename)s:%(lineno)d] %(message)s',
     )
-    logger = logging.getLogger("worker-%d" % args.worker_id)
-    logger.setLevel(args.log_level)
+    logging.getLogger().setLevel(args.log_level)
 
     worker = Worker(
         args.worker_id,
         args.model_file,
-        logger,
         channel=channel,
         codec_type=args.codec_type,
     )

@@ -119,8 +119,9 @@ def main():
         format='%(asctime)s %(name)s %(levelname)-8s '
         '[%(filename)s:%(lineno)d] %(message)s',
     )
-    logger = logging.getLogger("master")
-    logger.setLevel(args.log_level)
+    # Set level for ROOT logger.
+    logging.getLogger().setLevel(args.log_level)
+    logger = logging.getLogger(__name__)
 
     task_q = _make_task_queue(
         args.train_data_dir, args.record_per_task, args.num_epoch
@@ -133,7 +134,6 @@ def main():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
     elasticdl_pb2_grpc.add_MasterServicer_to_server(
         MasterServicer(
-            logger,
             args.grads_to_wait,
             args.minibatch_size,
             optimizer,
@@ -192,5 +192,4 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig()
     main()

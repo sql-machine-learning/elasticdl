@@ -24,7 +24,7 @@ class _TaskQueue(object):
         """
         shards: a dictionary from RecordIO file name to number of records
         """
-        self._logger = logging.getLogger("TaskQueue")
+        self._logger = logging.getLogger(__name__)
         self._lock = threading.Lock()
 
         self._num_epoch = num_epoch

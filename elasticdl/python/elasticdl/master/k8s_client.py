@@ -30,7 +30,7 @@ class Client(object):
             config.load_kube_config()
 
         self._v1 = client.CoreV1Api()
-        self._logger = logging.getLogger("k8s")
+        self._logger = logging.getLogger(__name__)
         self._image = worker_image
         self._ns = namespace
         self._job_name = job_name

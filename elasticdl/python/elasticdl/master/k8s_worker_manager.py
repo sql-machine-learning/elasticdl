@@ -23,7 +23,7 @@ class WorkerManager(object):
             image_pull_policy=None,
             restart_policy="OnFailure",
             **kwargs):
-        self._logger = logging.getLogger("WorkerManager")
+        self._logger = logging.getLogger(__name__)
         self._command = command
         self._args = args
         self._num_worker = num_worker
