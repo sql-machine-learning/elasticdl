@@ -1,6 +1,5 @@
 import logging
 import traceback
-import time
 
 import tensorflow as tf
 assert tf.executing_eagerly()
@@ -37,7 +36,7 @@ class Worker(object):
                  codec_type=None):
         """
         Arguments:
-            model_module: A module to define the model
+            model_file: A module to define the model
             channel: grpc channel
             max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
         """
@@ -193,7 +192,7 @@ class Worker(object):
     def local_train(self, file_list, batch_size, epoch=1, kwargs=None):
         """
         Local training for local testing. Must in eager mode.
-        Argments:
+        Arguments:
             batch_size: batch size in training
             epoch: the number of epoch in training
             kwargs: contains a dict of parameters used in training

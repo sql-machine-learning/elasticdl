@@ -18,7 +18,6 @@ class Client(object):
             namespace: k8s namespace for ElasticDL pods.
             job_name: ElasticDL job name, should be unique in the namespace.
                 Used as worker pod name prefix and value for "elasticdl" label.
-            master_addr: Master's ip:port.
             event_callback: If not None, an event watcher will be created and
                 events passed to the callback.
         """
@@ -52,13 +51,11 @@ class Client(object):
             except Exception:
                 traceback.print_exc()
 
-
-
     def get_pod_name(self, worker_id):
         return "elasticdl-worker-" + self._job_name + "-" + str(worker_id)
 
     def _create_worker_pod(self, worker_id, resource_requests, resource_limits, priority,
-        mount_path, volume_name, image_pull_policy, command, args, restart_policy):
+                           mount_path, volume_name, image_pull_policy, command, args, restart_policy):
         # Worker container config
         container = client.V1Container(
             name=self.get_pod_name(worker_id),

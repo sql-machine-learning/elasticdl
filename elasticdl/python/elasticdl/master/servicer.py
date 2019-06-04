@@ -109,7 +109,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # Assumes all variables exist in pb_model.param.
             v.assign(
                 tensor_to_ndarray(pb_model.param[k]))
-        self._model_version = pb_model.version
+        self._version = pb_model.version
 
     def _update_model(self):
         assert self._lock.locked()
@@ -187,7 +187,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                         self._logger.warning(
                             "Failed to save checkpoint file for model version {}".format(self._version)
                         )
-
 
         res.accepted = True
         res.model_version = self._version
