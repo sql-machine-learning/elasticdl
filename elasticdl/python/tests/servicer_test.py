@@ -45,6 +45,7 @@ class ServicerTest(unittest.TestCase):
             3,
             None,
             _TaskQueue({}, record_per_task=3, num_epoch=2),
+            None,
             init_var=[],
             checkpoint_dir="",
             checkpoint_steps=0,
@@ -65,7 +66,7 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual(1, task.model_version)
 
     def testGetModel(self):
-        master = MasterServicer(2, 3, None, None,
+        master = MasterServicer(2, 3, None, None, None,
                                 init_var=[],
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
@@ -118,6 +119,7 @@ class ServicerTest(unittest.TestCase):
             3,
             3,
             tf.train.GradientDescentOptimizer(0.1),
+            None,
             None,
             init_var=[],
             checkpoint_dir="",
@@ -209,6 +211,7 @@ class ServicerTest(unittest.TestCase):
             3,
             tf.train.GradientDescentOptimizer(0.1),
             None,
+            None,
             init_var=[],
             checkpoint_dir="",
             checkpoint_steps=0,
@@ -242,18 +245,19 @@ class ServicerTest(unittest.TestCase):
         task_q = _TaskQueue(
             {"shard_1": 10, "shard_2": 9}, record_per_task=3, num_epoch=2
         )
-        master = MasterServicer(3, 3, None, task_q,
+        master = MasterServicer(3, 3, None, task_q, None,
                                 init_var=[],
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
                                 keep_checkpoint_max=0
-        )
+                                )
 
         # task to number of runs.
         tasks = defaultdict(int)
         while True:
             req = elasticdl_pb2.GetTaskRequest()
             req.worker_id = random.randint(1, 10)
+            req.task_type = elasticdl_pb2.TRAINING
             task = master.GetTask(req, None)
             if not task.shard_file_name:
                 break
@@ -281,12 +285,12 @@ class ServicerTest(unittest.TestCase):
         )
 
     def testUserDefinedModel(self):
-        master = MasterServicer(2, 3, None, None,
+        master = MasterServicer(2, 3, None, None, None,
                                 init_var=[],
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
                                 keep_checkpoint_max=0
-        )
+                                )
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 

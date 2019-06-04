@@ -75,7 +75,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         res = elasticdl_pb2.Task()
         res.model_version = self._version
         res.minibatch_size = self._minibatch_size
-        if request.task_type == elasticdl_pb2.TaskType.TRAINING:
+        if request.task_type == elasticdl_pb2.TRAINING:
             task_id, task = self._training_task_q.get(request.worker_id)
         else:
             task_id, task = self._evaluation_task_q.get(request.worker_id)
@@ -206,7 +206,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 "Worker reported error: " + request.err_message
             )
             success = False
-        if request.task_type == elasticdl_pb2.TaskType.TRAINING:
+        if request.task_type == elasticdl_pb2.TRAINING:
             self._training_task_q.report(request.task_id, success)
         else:
             self._evaluation_task_q.report(request.task_id, success)

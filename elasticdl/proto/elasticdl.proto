@@ -28,7 +28,7 @@ message Task {
 enum TaskType {
     TRAINING = 0;
     EVALUATION = 1;
-  }
+}
 
 message Tensor {
     // Dimensions of the tensor. The first entry in "dim" is the outermost

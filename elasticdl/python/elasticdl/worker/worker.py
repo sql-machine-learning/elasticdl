@@ -189,7 +189,7 @@ class Worker(object):
             except Exception as ex:
                 err_msg = str(ex)
                 traceback.print_exc()
-            self.report_task_result(task.task_id, elasticdl_pb2.TaskType.TRAINING, err_msg)
+            self.report_task_result(task.task_id, elasticdl_pb2.TRAINING, err_msg)
 
     def local_train(self, file_list, batch_size, epoch=1, kwargs=None):
         """
@@ -278,4 +278,4 @@ class Worker(object):
             except Exception as ex:
                 err_msg = str(ex)
                 traceback.print_exc()
-            self.report_task_result(task.task_id, elasticdl_pb2.TaskType.EVALUATION, err_msg)
+            self.report_task_result(task.task_id, elasticdl_pb2.EVALUATION, err_msg)
