@@ -27,7 +27,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         *,
         init_var=[],
         checkpoint_dir="",
-        save_checkpoint_steps=0,
+        checkpoint_steps=0,
         keep_checkpoint_max=3
     ):
         # TODO: group params together into a single object.
@@ -48,15 +48,19 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         for var in init_var:
             self.set_model_var(var.name, var.numpy())
         self._checkpoint_dir = checkpoint_dir
-        self._save_checkpoint_steps = save_checkpoint_steps
+        self._checkpoint_steps = checkpoint_steps
         self._keep_checkpoint_max = keep_checkpoint_max
-        if self._save_checkpoint_steps and not self._checkpoint_dir:
-            self.logger.warning(
+        if self._checkpoint_steps and not self._checkpoint_dir:
+            self._checkpoint_dir = os.getcwd() + "/checkpoint_dir"
+            try:
+                os.mkdir(self._checkpoint_dir)
+            except OSError:
+                self._checkpoint_dir = os.getcwd()
+            self._logger.warning(
                 "checkpoint_dir not set, checkpint files will be saved in %s",
-                os.getcwd()
+                self._checkpoint_dir
             )
-            self._checkpoint_dir = os.getcwd()
-        if self._save_checkpoint_steps and self._keep_checkpoint_max:
+        if self._checkpoint_steps and self._keep_checkpoint_max:
             self._checkpoint_list = []
 
     def set_model_var(self, name, value):
@@ -102,13 +106,12 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         save_checkpoint_to_file(pb_model, file_name)
         if self._keep_checkpoint_max:
             self._checkpoint_list.append(file_name)
-            if len(self._checkpoint_list) > self._keep_checkpoint_max:
+            while len(self._checkpoint_list) > self._keep_checkpoint_max:
                 file_to_delete = self._checkpoint_list.pop(0)
                 os.remove(file_to_delete)
 
     def load_checkpoint_file(self, file_name):
-        pb_model = elasticdl_pb2.Model()
-        pb_model = load_from_checkpoint_file(pb_model, file_name)
+        pb_model = load_from_checkpoint_file(file_name)
 
         for k, v in self._model.items():
             # Assumes all variables exist in pb_model.param.
@@ -184,8 +187,14 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._grad_n += 1
             if self._grad_n >= self._grad_to_wait:
                 self._update_model()
-                if self._save_checkpoint_steps and self._version % self._save_checkpoint_steps == 0:
-                    self.save_checkpoint()
+                if self._checkpoint_steps and self._version % self._checkpoint_steps == 0:
+                    try:
+                        self.save_checkpoint()
+                    except:
+                        self._logger.warning(
+                            "Failed to save checkpoint file for model version {}".format(self._version)
+                        )
+
 
         res.accepted = True
         res.model_version = self._version

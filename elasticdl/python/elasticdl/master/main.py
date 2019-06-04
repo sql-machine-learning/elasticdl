@@ -61,11 +61,11 @@ def _parse_args():
     )
     parser.add_argument(
         "--checkpoint_dir",
-        help="the directory to store the checkpoint files",
+        help="The directory to store the checkpoint files",
         default="",
     )
     parser.add_argument(
-        "--save_checkpoint_steps",
+        "--checkpoint_steps",
         type=int,
         help="Save checkpoint every this many steps. If 0, no checkpoints to save.",
         default=0,

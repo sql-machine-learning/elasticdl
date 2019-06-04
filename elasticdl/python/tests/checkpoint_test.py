@@ -62,8 +62,7 @@ class CheckpointTest(unittest.TestCase):
         tmp_file = tempfile.NamedTemporaryFile()
         save_checkpoint_to_file(model, tmp_file.name)
 
-        pb_model = elasticdl_pb2.Model()
-        pb_model = load_from_checkpoint_file(pb_model, tmp_file.name)
+        pb_model = load_from_checkpoint_file(tmp_file.name)
 
         self.assertEqual(model.version, pb_model.version)
         for k in model.param:
@@ -99,7 +98,7 @@ class CheckpointTest(unittest.TestCase):
         # save checkpoint file every 2 steps
         # keep at most 5 recent checkpoint files
         checkpoint_dir = tempfile.mkdtemp()
-        save_checkpoint_steps = 2
+        checkpoint_steps = 2
         keep_checkpoint_max = 5
 
         filename = create_recordio_file(128, codec_type)
@@ -109,7 +108,7 @@ class CheckpointTest(unittest.TestCase):
                                 worker._opt_fn(),
                                 task_q,
                                 checkpoint_dir=checkpoint_dir,
-                                save_checkpoint_steps=save_checkpoint_steps,
+                                checkpoint_steps=checkpoint_steps,
                                 keep_checkpoint_max=keep_checkpoint_max
                                 )
 
