@@ -149,12 +149,14 @@ def _valid_cpu_spec(arg):
     regexp = re.compile("([1-9]{1})([0-9]*)m$")
     if not regexp.match(arg):
         raise ValueError("invalid cpu request spec: " + arg)
+    return arg
 
 
 def _valid_mem_spec(arg):
     regexp = re.compile("([1-9]{1})([0-9]*)(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)$")
     if not regexp.match(arg):
         raise ValueError("invalid memory request spec: " + arg)
+    return arg
 
 
 def main():
