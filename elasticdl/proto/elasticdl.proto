@@ -78,7 +78,7 @@ message ReportTaskResultRequest {
     int32 task_id = 1;
 
     // When error occurred, err_message contains error message in plain text.
-    string err_message = 3;
+    string err_message = 2;
 }
 
 message ReportEvaluationMetricsResponse {
