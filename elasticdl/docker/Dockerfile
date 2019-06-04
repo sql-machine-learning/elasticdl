@@ -1,6 +1,5 @@
-FROM tensorflow/tensorflow:1.13.1-py3
-# for pytorch, use:
-# FROM pytorch/pytorch
+ARG BASE_IMAGE=tensorflow/tensorflow:1.13.1-py3
+FROM ${BASE_IMAGE}
 
 RUN apt-get update
 RUN apt-get install -y unzip curl

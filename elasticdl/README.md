@@ -15,7 +15,8 @@ To build the Docker image with GPU support, run the following command:
 ```bash
 docker build \
     -t elasticdl:dev-gpu \
-    -f elasticdl/docker/Dockerfile.gpu .
+    -f elasticdl/docker/Dockerfile \
+    --build-arg BASE_IMAGE=tensorflow/tensorflow:1.13.1-gpu-py3 .
 ```
 
 When having difficulties downloading from the main PYPI site, you could pass an extra PYPI index url to `docker build`, such as:
