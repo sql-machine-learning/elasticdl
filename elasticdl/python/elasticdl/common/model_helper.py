@@ -28,4 +28,3 @@ def load_from_checkpoint_file(file_name):
     with open(file_name, "rb") as f:
         pb_model.ParseFromString(f.read())
     return pb_model
-    

@@ -18,14 +18,14 @@ def _m_file_in_docker(model_file):
 def _build_docker_image(
     m_file, image_name, image_base="elasticdl:dev", repository=None
 ):
-    DOCKER_TEMPLATE = """
+    docker_template = """
 FROM {}
 COPY {} {}
 """
 
     with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
         df.write(
-            DOCKER_TEMPLATE.format(
+            docker_template.format(
                 image_base, m_file, _m_file_in_docker(m_file)
             )
         )

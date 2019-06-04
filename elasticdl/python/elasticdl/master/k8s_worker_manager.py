@@ -39,7 +39,7 @@ class WorkerManager(object):
         self._pod_priority = pod_priority
         self._mount_path = mount_path
         self._volume_name = volume_name
-        self._image_pull_policy=image_pull_policy
+        self._image_pull_policy = image_pull_policy
         self._task_q = task_q
         self._next_worker_id = itertools.count().__next__
 
