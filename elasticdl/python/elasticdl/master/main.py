@@ -60,6 +60,23 @@ def _parse_args():
         default=0,
     )
     parser.add_argument(
+        "--checkpoint_dir",
+        help="The directory to store the checkpoint files",
+        default="",
+    )
+    parser.add_argument(
+        "--checkpoint_steps",
+        type=int,
+        help="Save checkpoint every this many steps. If 0, no checkpoints to save.",
+        default=0,
+    )
+    parser.add_argument(
+        "--keep_checkpoint_max",
+        type=int,
+        help="The maximum number of recent checkpoint files to keep. If 0, keep all.",
+        default=3,
+    )
+    parser.add_argument(
         "--worker_cpu_request",
         help="the minimal cpu required by worker in training",
         default="1000m",
@@ -139,6 +156,9 @@ def main():
             optimizer,
             task_q,
             init_var=model_inst.trainable_variables,
+            checkpoint_dir=args.checkpoint_dir,
+            checkpoint_steps=args.checkpoint_steps,
+            keep_checkpoint_max=args.keep_checkpoint_max,
         ),
         server,
     )

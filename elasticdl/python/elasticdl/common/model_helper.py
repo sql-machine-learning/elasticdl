@@ -1,5 +1,6 @@
 # common helper methods for model manipulation.
 import importlib.util
+from elasticdl.proto import elasticdl_pb2
 
 
 def load_user_model(model_file):
@@ -16,3 +17,15 @@ def build_model(model, feature_columns):
     else:
         input_shapes = [(1,) + tuple(f_col.shape) for f_col in feature_columns]
         model.build(input_shapes)
+
+def save_checkpoint_to_file(pb_model, file_name):
+    encoded_model = pb_model.SerializeToString()
+    with open(file_name, "wb") as f:
+        f.write(encoded_model)
+
+def load_from_checkpoint_file(file_name):
+    pb_model = elasticdl_pb2.Model()
+    with open(file_name, "rb") as f:
+        pb_model.ParseFromString(f.read())
+    return pb_model
+    
