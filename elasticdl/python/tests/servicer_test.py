@@ -260,7 +260,6 @@ class ServicerTest(unittest.TestCase):
         while True:
             req = elasticdl_pb2.GetTaskRequest()
             req.worker_id = random.randint(1, 10)
-            req.task_type = elasticdl_pb2.TRAINING
             task = master.GetTask(req, None)
             if not task.shard_file_name:
                 break

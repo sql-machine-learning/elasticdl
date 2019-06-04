@@ -50,8 +50,6 @@ message Model {
 
 message GetTaskRequest {
     int32 worker_id = 1;
-    // Whether this is training or evaluation task.
-    TaskType task_type = 2;
 }
 
 message GetModelRequest {
