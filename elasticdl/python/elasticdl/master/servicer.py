@@ -25,10 +25,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         optimizer,
         task_q,
         *,
-        init_var=[],
-        checkpoint_dir="",
-        checkpoint_steps=0,
-        keep_checkpoint_max=3
+        init_var,
+        checkpoint_dir,
+        checkpoint_steps,
+        keep_checkpoint_max
     ):
         # TODO: group params together into a single object.
         self._logger = logging.getLogger(__name__)

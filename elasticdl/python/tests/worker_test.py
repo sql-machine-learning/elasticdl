@@ -96,7 +96,11 @@ class WorkerTest(unittest.TestCase):
 
         filename = create_recordio_file(128, codec_type)
         task_q = _TaskQueue({filename: 128}, record_per_task=64, num_epoch=1)
-        master = MasterServicer(2, 16, worker._opt_fn(), task_q)
+        master = MasterServicer(2, 16, worker._opt_fn(), task_q,
+                                init_var=[],
+                                checkpoint_dir="",
+                                checkpoint_steps=0,
+                                keep_checkpoint_max=0)
 
         for var in worker._model.trainable_variables:
             master.set_model_var(var.name, var.numpy())

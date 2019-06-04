@@ -157,7 +157,7 @@ def main():
             task_q,
             init_var=model_inst.trainable_variables,
             checkpoint_dir=args.checkpoint_dir,
-            save_checkpoint_steps=args.save_checkpoint_steps,
+            checkpoint_steps=args.checkpoint_steps,
             keep_checkpoint_max=args.keep_checkpoint_max,
         ),
         server,

@@ -48,7 +48,11 @@ def create_recordio_file(size, codec_type):
 class CheckpointTest(unittest.TestCase):
     def testSaveLoadCheckpoint(self):
         master = MasterServicer(
-            2, 3, None, None
+            2, 3, None, None,
+            init_var=[],
+            checkpoint_dir="",
+            checkpoint_steps=0,
+            keep_checkpoint_max=0
         )
 
         model_inst = m.model
@@ -107,6 +111,7 @@ class CheckpointTest(unittest.TestCase):
                                 2,
                                 worker._opt_fn(),
                                 task_q,
+                                init_var=[],
                                 checkpoint_dir=checkpoint_dir,
                                 checkpoint_steps=checkpoint_steps,
                                 keep_checkpoint_max=keep_checkpoint_max
