@@ -181,6 +181,46 @@ class ServicerTest(unittest.TestCase):
             master._model["y"].numpy(),
         )
 
+    def testReportEvaluationMetrics(self):
+        def makeEvaluationMetrics():
+            """ Make a ReportEvaluationMetricsRequest compatible with model"""
+            req = elasticdl_pb2.ReportEvaluationMetricsRequest()
+            req.evaluation_metrics['mse'].CopyFrom(
+                ndarray_to_tensor(np.array([100, 200], dtype=np.float32))
+            )
+            req.model_version = 1
+            return req
+
+        master = MasterServicer(
+            3,
+            3,
+            tf.train.GradientDescentOptimizer(0.1),
+            None,
+        )
+        master._version = 1
+
+        # Report a future version, should raise exception
+        req = makeEvaluationMetrics()
+        req.model_version = 2
+        self.assertRaisesRegex(
+            ValueError,
+            'Model version %s not available yet, current version: %s' % (
+                req.model_version, master._version
+            ), master.ReportEvaluationMetrics, req, None)
+
+        # Report an old version, should not be accepted
+        req = makeEvaluationMetrics()
+        req.model_version = 0
+        res = master.ReportEvaluationMetrics(req, None)
+        self.assertFalse(res.accepted)
+        self.assertEqual(1, res.model_version)
+
+        # Report a current version, should be accepted, and a new version is created
+        req = makeEvaluationMetrics()
+        res = master.ReportEvaluationMetrics(req, None)
+        self.assertTrue(res.accepted)
+        self.assertEqual(2, res.model_version)
+
     def testReportTaskResult(self):
         task_q = _TaskQueue(
             {"shard_1": 10, "shard_2": 9}, record_per_task=3, num_epoch=2
