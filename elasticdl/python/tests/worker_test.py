@@ -102,7 +102,8 @@ class WorkerTest(unittest.TestCase):
         )
 
         filename = create_recordio_file(128, codec_type)
-        task_q = _TaskQueue({filename: 128}, record_per_task=64, num_epoch=1)
+        task_type = elasticdl_pb2.TRAINING if training else elasticdl_pb2.EVALUATION
+        task_q = _TaskQueue({filename: 128}, record_per_task=64, num_epoch=1, task_type=task_type)
         master = MasterServicer(2, 16, worker._opt_fn(), task_q,
                                 init_var=[],
                                 checkpoint_dir="",
@@ -124,10 +125,7 @@ class WorkerTest(unittest.TestCase):
             worker._stub, "ReportTaskResult", mock_ReportTaskResult
         ):
             try:
-                if training:
-                    worker.distributed_train()
-                else:
-                    worker.distributed_evaluate(steps=2)
+                worker.run()
                 res = True
             except Exception as ex:
                 print(ex)
