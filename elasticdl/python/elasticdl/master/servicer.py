@@ -84,9 +84,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def GetModel(self, request, _):
         _ = self._validate_model_version(request.min_version)
 
-        res = elasticdl_pb2.Model()
         with self._lock:
-            res = self._get_model_no_lock(res)
+            res = self._get_model_no_lock()
         return res
 
     def _update_model_version(self):
@@ -95,8 +94,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def save_checkpoint(self):
         file_name = "{}/model_v{}.chkpt".format(self._checkpoint_dir, self._version)
-        pb_model = elasticdl_pb2.Model()
-        pb_model = self._get_model_no_lock(pb_model)
+        pb_model = self._get_model_no_lock()
         save_checkpoint_to_file(pb_model, file_name)
         if self._keep_checkpoint_max:
             self._checkpoint_list.append(file_name)
@@ -124,7 +122,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._gradient_sum.clear()
         self._grad_n = 0
 
-    def _get_model_no_lock(self, pb_model):
+    def _get_model_no_lock(self):
+        pb_model = elasticdl_pb2.Model()
         pb_model.version = self._version
         for k, v in self._model.items():
             pb_model.param[k].CopyFrom(ndarray_to_tensor(v.numpy()))
