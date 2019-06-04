@@ -18,7 +18,7 @@ def main(argv):
     parser = argparse.ArgumentParser(
         description="Generate CIFAR10 datasets in RecordIO format."
     )
-    parser.add_argument("dir", help="Output directory")
+    parser.add_argument("--dir", help="Output directory")
     parser.add_argument(
         "--num_record_per_chunk",
         default=1024,
@@ -44,10 +44,10 @@ def main(argv):
 
     feature_columns = [
         tf.feature_column.numeric_column(
-            key="image", dtype=tf.float32, shape=[3, 32, 32]
+            key="image", dtype=tf.float32, shape=[32, 32, 3]
         ),
         tf.feature_column.numeric_column(
-            key="label", dtype=tf.int64, shape=[1, 1]
+            key="label", dtype=tf.int64, shape=[1]
         ),
     ]
 

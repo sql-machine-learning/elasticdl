@@ -3,11 +3,9 @@ from tensorflow.python.framework.ops import EagerTensor
 import numpy as np
 
 
-class MnistModel(tf.keras.Model):
+class Cifar10Model(tf.keras.Model):
     def __init__(self, channel_last=True):
-        super(MnistModel, self).__init__(name='mnist_model')
-
-        self._inputs = tf.keras.layers.Input(shape=(32, 32, 3), name="image")
+        super(Cifar10Model, self).__init__(name='cifar10_model')
 
         use_bias = True
         self._conv_1 = tf.keras.layers.Conv2D(32,
@@ -45,7 +43,7 @@ class MnistModel(tf.keras.Model):
         self._bn_4 = tf.keras.layers.BatchNormalization(epsilon=1e-06, axis=-1, momentum=0.9)
         self._relu_4 = tf.keras.layers.Activation(tf.nn.relu)
 
-        self._max_pool_2 = tf.keras.layers.MaxPooling2D()
+        self._max_pool_2 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))
         self._dropout_2 = tf.keras.layers.Dropout(0.3)
 
         self._conv_5 = tf.keras.layers.Conv2D(128,
@@ -64,15 +62,14 @@ class MnistModel(tf.keras.Model):
         self._bn_6 = tf.keras.layers.BatchNormalization(epsilon=1e-06, axis=-1, momentum=0.9)
         self._relu_6 = tf.keras.layers.Activation(tf.nn.relu)
 
-        self._max_pool_3 = tf.keras.layers.MaxPooling2D()
+        self._max_pool_3 = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))
         self._dropout_3 = tf.keras.layers.Dropout(0.4)
 
         self._flatten_1 = tf.keras.layers.Flatten()
         self._dense_1 = tf.keras.layers.Dense(10, activation=tf.nn.softmax, name='output')
 
     def call(self, inputs, training=False):
-        x = self._inputs(inputs)
-        x = self._conv_1(x)
+        x = self._conv_1(inputs)
         x = self._bn_1(x)
         x = self._relu_1(x)
         x = self._conv_2(x)
@@ -97,17 +94,17 @@ class MnistModel(tf.keras.Model):
         x = self._max_pool_3(x)
         x = self._dropout_3(x)
         x = self._flatten_1(x)
-        x = self._dense_1(x)
+        return self._dense_1(x)
 
-model = MnistModel()
+model = Cifar10Model()
 
 def feature_columns():
     return [tf.feature_column.numeric_column(key="image",
-        dtype=tf.dtypes.float32, shape=[3, 32, 32])]
+        dtype=tf.dtypes.float32, shape=[32, 32, 3])]
 
 def label_columns():
     return [tf.feature_column.numeric_column(key="label",
-        dtype=tf.dtypes.int64, shape=[1, 1])]
+        dtype=tf.dtypes.int64, shape=[1])]
         
 def loss(output, labels):
     return tf.reduce_mean(
