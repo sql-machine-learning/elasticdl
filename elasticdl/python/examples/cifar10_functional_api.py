@@ -66,15 +66,15 @@ dropout = tf.keras.layers.Dropout(0.4)(max_pool)
 flatten = tf.keras.layers.Flatten()(dropout)
 outputs = tf.keras.layers.Dense(10, activation=tf.nn.softmax, name='output')(flatten)
 
-model = tf.keras.Model(inputs=inputs, outputs=outputs, name='mnist_model')
+model = tf.keras.Model(inputs=inputs, outputs=outputs, name='cifar10_model')
 
 def feature_columns():
     return [tf.feature_column.numeric_column(key="image",
-        dtype=tf.dtypes.float32, shape=[3, 32, 32])]
+        dtype=tf.dtypes.float32, shape=[32, 32, 3])]
 
 def label_columns():
     return [tf.feature_column.numeric_column(key="label",
-        dtype=tf.dtypes.int64, shape=[1, 1])]
+        dtype=tf.dtypes.int64, shape=[1])]
         
 def loss(output, labels):
     return tf.reduce_mean(

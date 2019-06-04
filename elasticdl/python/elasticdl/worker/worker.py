@@ -249,7 +249,7 @@ class Worker(object):
                     evaluation_metrics_collection = defaultdict(list)
                     while True:
                         current_step += 1
-                        if steps and current_step > steps:
+                        if steps and current_step > int(steps):
                             break
                         record_buf = self._get_batch(reader, batch_size, self._codec.decode)
                         if not record_buf:
