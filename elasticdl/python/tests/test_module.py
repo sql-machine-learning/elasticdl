@@ -10,7 +10,7 @@ model = Model(inputs, outputs)
 
 
 def loss(predictions, labels):
-    return tf.reduce_mean(tf.square(predictions - labels)) 
+    return tf.reduce_mean(tf.square(predictions - labels))
 
 
 def feature_columns():
@@ -37,5 +37,12 @@ def input_fn(records):
     ys = np.reshape(xs, (batch_size, 1))
     return {'x': xs}, ys
 
+
 def optimizer(lr=0.1):
     return tf.train.GradientDescentOptimizer(lr)
+
+
+def eval_metrics_fn(predictions, labels):
+    return {
+        'mse': tf.reduce_mean(tf.square(predictions - labels)),
+    }

@@ -64,9 +64,9 @@ class WorkerTest(unittest.TestCase):
     def test_local_train_tf_example(self):
         self.local_train("tf_example")
 
-    def distributed_train(self, codec_type):
+    def distributed_train_and_evaluate(self, codec_type, training=True):
         """
-        Run Worker.distributed_train with a local master.
+        Run distributed training and evaluation with a local master.
         grpc calls are mocked by local master call.
         """
 
@@ -82,6 +82,13 @@ class WorkerTest(unittest.TestCase):
                 # Increase master version so the gradient will not be accepted.
                 master._version += 1
             return master.ReportGradient(req, None)
+
+        def mock_ReportEvaluationMetrics(req):
+            if 2 < master._version < 80:
+                # For testing of evaluation retries when evaluation metrics are not accepted.
+                # Increase master version so the evaluation metrics will not be accepted.
+                master._version += 1
+            return master.ReportEvaluationMetrics(req, None)
 
         def mock_ReportTaskResult(req):
             return master.ReportTaskResult(req, None)
@@ -112,10 +119,15 @@ class WorkerTest(unittest.TestCase):
         ), mock.patch.object(
             worker._stub, "ReportGradient", mock_ReportGradient
         ), mock.patch.object(
+            worker._stub, 'ReportEvaluationMetrics', mock_ReportEvaluationMetrics
+        ), mock.patch.object(
             worker._stub, "ReportTaskResult", mock_ReportTaskResult
         ):
             try:
-                worker.distributed_train()
+                if training:
+                    worker.distributed_train()
+                else:
+                    worker.distributed_evaluate(steps=2)
                 res = True
             except Exception as ex:
                 print(ex)
@@ -129,10 +141,16 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(not task.shard_file_name)
 
     def test_distributed_train_bytes(self):
-        self.distributed_train("bytes")
+        self.distributed_train_and_evaluate("bytes", training=True)
+
+    def test_distributed_evaluate_bytes(self):
+        self.distributed_train_and_evaluate("bytes", training=False)
 
     def test_distributed_train_tf_example(self):
-        self.distributed_train("tf_example")
+        self.distributed_train_and_evaluate("tf_example", training=True)
+
+    def test_distributed_evaluate_tf_example(self):
+        self.distributed_train_and_evaluate("tf_example", training=False)
 
 
 if __name__ == "__main__":
