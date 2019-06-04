@@ -91,13 +91,14 @@ class Worker(object):
                 tensor_to_ndarray(model.param[var.name]))
         self._model_version = model.version
 
-    def report_task_result(self, task_id, err_msg):
+    def report_task_result(self, task_id, task_type, err_msg):
         """
         report task result to master
         """
         report = elasticdl_pb2.ReportTaskResultRequest()
         report.task_id = task_id
         report.err_message = err_msg
+        report.task_type = task_type
         return self._stub.ReportTaskResult(report)
 
     def report_gradient(self, grads):
@@ -188,7 +189,7 @@ class Worker(object):
             except Exception as ex:
                 err_msg = str(ex)
                 traceback.print_exc()
-            self.report_task_result(task.task_id, err_msg)
+            self.report_task_result(task.task_id, elasticdl_pb2.TaskType.TRAINING, err_msg)
 
     def local_train(self, file_list, batch_size, epoch=1, kwargs=None):
         """
@@ -277,4 +278,4 @@ class Worker(object):
             except Exception as ex:
                 err_msg = str(ex)
                 traceback.print_exc()
-            self.report_task_result(task.task_id, err_msg)
+            self.report_task_result(task.task_id, elasticdl_pb2.TaskType.EVALUATION, err_msg)

@@ -23,7 +23,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         grads_to_wait,
         minibatch_size,
         optimizer,
-        task_q,
+        training_task_q,
+        evaluation_task_q,
         *,
         init_var,
         checkpoint_dir,
@@ -33,7 +34,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # TODO: group params together into a single object.
         self._logger = logging.getLogger(__name__)
         self._opt = optimizer
-        self._task_q = task_q
+        self._training_task_q = training_task_q
+        self._evaluation_task_q = evaluation_task_q
         self._lock = threading.Lock()
         # A <string, tf.ResourceVariable> map. We use tf.ResourceVariable
         # instead ndarray to avoid copying and conversion when calling
@@ -73,7 +75,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         res = elasticdl_pb2.Task()
         res.model_version = self._version
         res.minibatch_size = self._minibatch_size
-        task_id, task = self._task_q.get(request.worker_id)
+        if request.task_type == elasticdl_pb2.TaskType.TRAINING:
+            task_id, task = self._training_task_q.get(request.worker_id)
+        else:
+            task_id, task = self._evaluation_task_q.get(request.worker_id)
+
         if task:
             res.task_id = task_id
             res.shard_file_name = task.file_name
@@ -194,13 +200,16 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return res
 
     def ReportTaskResult(self, request, _):
+        success = True
         if request.err_message:
             self._logger.warning(
                 "Worker reported error: " + request.err_message
             )
-            self._task_q.report(request.task_id, False)
+            success = False
+        if request.task_type == elasticdl_pb2.TaskType.TRAINING:
+            self._training_task_q.report(request.task_id, success)
         else:
-            self._task_q.report(request.task_id, True)
+            self._evaluation_task_q.report(request.task_id, success)
         return empty_pb2.Empty()
 
     def ReportEvaluationMetrics(self, request, _):

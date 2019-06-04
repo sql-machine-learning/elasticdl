@@ -25,6 +25,11 @@ message Task {
     int32 model_version = 6;
 }
 
+enum TaskType {
+    TRAINING = 0;
+    EVALUATION = 1;
+  }
+
 message Tensor {
     // Dimensions of the tensor. The first entry in "dim" is the outermost
     // dimension used to layout the values, the last entry is the innermost
@@ -42,6 +47,7 @@ message Model {
 
 message GetTaskRequest {
     int32 worker_id = 1;
+    TaskType task_type = 2;
 }
 
 message GetModelRequest {
@@ -66,11 +72,12 @@ message ReportGradientResponse {
 }
 
 message ReportTaskResultRequest {
-    // Task id assigned by master.
+    // Task id and type assigned by master.
     int32 task_id = 1;
+    TaskType task_type = 2;
 
     // When error occurred, err_message contains error message in plain text.
-    string err_message = 2;
+    string err_message = 3;
 }
 
 message ReportEvaluationMetricsResponse {
