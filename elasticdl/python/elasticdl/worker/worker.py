@@ -225,19 +225,14 @@ class Worker(object):
                             zip(grads, self._model.trainable_variables))
                         self._logger.info("Loss is %f" % loss.numpy())
 
-    def distributed_evaluate(self, steps=None, start_delay_secs=None, throttle_secs=None):
+    def distributed_evaluate(self, steps=None):
         """
         Distributed model evaluation.
 
         Arguments:
             steps: Evaluate the model by this many number of steps where the model is evaluated on one batch of samples
                 for each step. If `None`, evaluation will continue until reaching the end of input.
-            start_delay_secs: Start evaluating after waiting for this many seconds. if `None`, there's no delay.
-            throttle_secs: Do not re-evaluate unless the last evaluation was started at least this many seconds ago.
         """
-        if start_delay_secs:
-            time.sleep(start_delay_secs)
-        # TODO: Implement throttle_secs
         while True:
             task = self.get_task()
             if not task.shard_file_name:
