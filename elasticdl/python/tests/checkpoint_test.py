@@ -105,7 +105,12 @@ class CheckpointTest(unittest.TestCase):
         keep_checkpoint_max = 5
 
         filename = create_recordio_file(128, codec_type)
-        task_q = _TaskQueue({filename: 128}, record_per_task=64, num_epoch=1)
+        task_q = _TaskQueue(
+            {filename: 128},
+            record_per_task=64,
+            num_epoch=1,
+            task_type=elasticdl_pb2.TRAINING,
+        )
         master = MasterServicer(2,
                                 2,
                                 worker._opt_fn(),
@@ -129,7 +134,7 @@ class CheckpointTest(unittest.TestCase):
             worker._stub, "ReportTaskResult", mock_ReportTaskResult
         ):
             try:
-                worker.distributed_train()
+                worker.run()
                 res = True
             except Exception as ex:
                 print(ex)
