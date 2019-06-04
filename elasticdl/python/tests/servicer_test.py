@@ -69,7 +69,8 @@ class ServicerTest(unittest.TestCase):
                                 init_var=[],
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
-                                keep_checkpoint_max=0)
+                                keep_checkpoint_max=0
+        )
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 
@@ -208,6 +209,10 @@ class ServicerTest(unittest.TestCase):
             3,
             tf.train.GradientDescentOptimizer(0.1),
             None,
+            init_var=[],
+            checkpoint_dir="",
+            checkpoint_steps=0,
+            keep_checkpoint_max=0
         )
         master._version = 1
 
@@ -241,7 +246,8 @@ class ServicerTest(unittest.TestCase):
                                 init_var=[],
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
-                                keep_checkpoint_max=0)
+                                keep_checkpoint_max=0
+        )
 
         # task to number of runs.
         tasks = defaultdict(int)
@@ -279,7 +285,8 @@ class ServicerTest(unittest.TestCase):
                                 init_var=[],
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
-                                keep_checkpoint_max=0)
+                                keep_checkpoint_max=0
+        )
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 
