@@ -262,7 +262,7 @@ class Worker(object):
 
                             for k, v in evaluation_metrics.items():
                                 v_np = v.numpy()
-                                if len(v_np) != 1:
+                                if v_np.size != 1:
                                     raise Exception("Only metric result of length 1 is supported currently")
                                 evaluation_metrics_collection[k].append(v_np)
 

@@ -214,8 +214,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
         with self._lock:
             for k, v in request.evaluation_metrics.items():
-                arr = tensor_to_ndarray(v)
-                self._evaluation_metrics[k] = arr
+                if v.dim:
+                    arr = tensor_to_ndarray(v)
+                    self._evaluation_metrics[k] = arr
 
             self._update_model_version()
         res.accepted = True
