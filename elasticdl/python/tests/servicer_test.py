@@ -44,7 +44,10 @@ class ServicerTest(unittest.TestCase):
             2,
             3,
             None,
-            _TaskQueue({}, record_per_task=3, num_epoch=2),
+            _TaskQueue(
+                {}, record_per_task=3, num_epoch=2,
+                task_type=elasticdl_pb2.TRAINING
+            ),
             init_var=[],
             checkpoint_dir="",
             checkpoint_steps=0,
@@ -240,7 +243,10 @@ class ServicerTest(unittest.TestCase):
 
     def testReportTaskResult(self):
         task_q = _TaskQueue(
-            {"shard_1": 10, "shard_2": 9}, record_per_task=3, num_epoch=2
+            {"shard_1": 10, "shard_2": 9},
+            record_per_task=3,
+            num_epoch=2,
+            task_type=elasticdl_pb2.TRAINING,
         )
         master = MasterServicer(3, 3, None, task_q,
                                 init_var=[],
@@ -254,6 +260,7 @@ class ServicerTest(unittest.TestCase):
         while True:
             req = elasticdl_pb2.GetTaskRequest()
             req.worker_id = random.randint(1, 10)
+            req.task_type = elasticdl_pb2.TRAINING
             task = master.GetTask(req, None)
             if not task.shard_file_name:
                 break

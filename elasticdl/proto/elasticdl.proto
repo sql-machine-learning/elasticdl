@@ -4,6 +4,11 @@ import "google/protobuf/empty.proto";
 
 package master;
 
+enum TaskType {
+    TRAINING = 0;
+    EVALUATION = 1;
+}
+
 // A task is a unit of work for ElasticDL training workers, assigned by master.
 // Worker divides a task into multiple minibatches and compute a gradient for
 // each minibatch. For now, only RecordIO file format is supported.
@@ -23,6 +28,9 @@ message Task {
 
     // Current model version on master
     int32 model_version = 6;
+
+    // Whether this is training or evaluation task.
+    TaskType type = 7;
 }
 
 message Tensor {
@@ -42,6 +50,8 @@ message Model {
 
 message GetTaskRequest {
     int32 worker_id = 1;
+    // Whether this is training or evaluation task.
+    TaskType task_type = 2;
 }
 
 message GetModelRequest {
@@ -68,9 +78,11 @@ message ReportGradientResponse {
 message ReportTaskResultRequest {
     // Task id assigned by master.
     int32 task_id = 1;
+    // Whether this is training or evaluation task.
+    TaskType task_type = 2;
 
     // When error occurred, err_message contains error message in plain text.
-    string err_message = 2;
+    string err_message = 3;
 }
 
 message ReportEvaluationMetricsResponse {

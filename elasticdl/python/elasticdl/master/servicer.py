@@ -79,6 +79,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             res.shard_file_name = task.file_name
             res.start = task.start
             res.end = task.end
+            res.type = task.type
         return res
 
     def GetModel(self, request, _):

@@ -90,12 +90,13 @@ class Worker(object):
                 tensor_to_ndarray(model.param[var.name]))
         self._model_version = model.version
 
-    def report_task_result(self, task_id, err_msg):
+    def report_task_result(self, task_type, task_id, err_msg):
         """
         report task result to master
         """
         report = elasticdl_pb2.ReportTaskResultRequest()
         report.task_id = task_id
+        report.task_type = task_type
         report.err_message = err_msg
         return self._stub.ReportTaskResult(report)
 
@@ -140,10 +141,8 @@ class Worker(object):
             features = features[0]
         return features, batch_labels
 
-    def distributed_train(self):
-        """
-        Distributed training.
-        """
+    def run(self):
+        """This performs training or evaluation task based on the given task's type."""
         while True:
             task = self.get_task()
             if not task.shard_file_name:
@@ -154,6 +153,7 @@ class Worker(object):
             try:
                 with closing(recordio.Scanner(task.shard_file_name, task.start, task.end - task.start)) as reader:
                     min_model_version = task.model_version
+                    evaluation_metrics_collection = defaultdict(list)
                     while True:
                         record_buf = self._get_batch(reader, batch_size, self._codec.decode)
                         if not record_buf:
@@ -165,29 +165,45 @@ class Worker(object):
                                 max(self._model_version, min_model_version))
 
                             features, labels = self._get_features_and_labels_from_record(record_buf)
+                            if task.type == elasticdl_pb2.EVALUATION:
+                                outputs = self._model.call(features, training=False)
+                                evaluation_metrics = self._eval_metrics_fn(outputs, labels)
 
-                            with tf.GradientTape() as tape:
-                                outputs = self._model.call(features, training=True)
-                                loss = self._loss(outputs, labels)
+                                for k, v in evaluation_metrics.items():
+                                    v_np = v.numpy()
+                                    if v_np.size != 1:
+                                        raise Exception("Only metric result of length 1 is supported currently")
+                                    evaluation_metrics_collection[k].append(v_np)
 
-                                # TODO:  Add regularization loss if any,
-                                #        which should be divided by the number of contributing workers.
-                            grads = tape.gradient(
-                                loss, self._model.trainable_variables)
+                                evaluation_metrics = {k: np.mean(v) for k, v in evaluation_metrics_collection.items()}
+                                accepted, min_model_version = self.report_evaluation_metrics(evaluation_metrics)
 
-                            accepted, min_model_version = self.report_gradient(
-                                grads)
-                            if accepted:
-                                self._logger.info("Loss is %f" % loss.numpy())
-                                break
+                                if accepted:
+                                    self._logger.info("Evaluation metrics: %s" % evaluation_metrics)
+                                    break
+                            else:
+                                with tf.GradientTape() as tape:
+                                    outputs = self._model.call(features, training=True)
+                                    loss = self._loss(outputs, labels)
+
+                                    # TODO:  Add regularization loss if any,
+                                    #        which should be divided by the number of contributing workers.
+                                grads = tape.gradient(
+                                    loss, self._model.trainable_variables)
+
+                                accepted, min_model_version = self.report_gradient(
+                                    grads)
+                                if accepted:
+                                    self._logger.info("Loss is %f" % loss.numpy())
+                                    break
                         else:
                             # Worker got stuck, fail the task.
                             # TODO: stop the worker if it fails to make any progress for some time.
-                            raise RuntimeError("Worker got stuck during training")
+                            raise RuntimeError("Worker got stuck")
             except Exception as ex:
                 err_msg = str(ex)
                 traceback.print_exc()
-            self.report_task_result(task.task_id, err_msg)
+            self.report_task_result(task.task_id, task.type, err_msg)
 
     def local_train(self, file_list, batch_size, epoch=1, kwargs=None):
         """
@@ -223,57 +239,3 @@ class Worker(object):
                         optimizer.apply_gradients(
                             zip(grads, self._model.trainable_variables))
                         self._logger.info("Loss is %f" % loss.numpy())
-
-    def distributed_evaluate(self, steps=None):
-        """
-        Distributed model evaluation.
-
-        Arguments:
-            steps: Evaluate the model by this many number of steps where the model is evaluated on one batch of samples
-                for each step. If `None`, evaluation will continue until reaching the end of input.
-        """
-        while True:
-            task = self.get_task()
-            if not task.shard_file_name:
-                break
-            batch_size = task.minibatch_size
-            err_msg = ""
-            try:
-                with closing(
-                        recordio.Scanner(task.shard_file_name, task.start, task.end - task.start)
-                ) as reader:
-                    min_model_version = task.model_version
-                    current_step = 0
-                    evaluation_metrics_collection = defaultdict(list)
-                    while True:
-                        current_step += 1
-                        if steps and current_step > int(steps):
-                            break
-                        record_buf = self._get_batch(reader, batch_size, self._codec.decode)
-                        if not record_buf:
-                            break
-
-                        for _ in range(self._max_evaluate_retry_num):
-                            self.get_model(max(self._model_version, min_model_version))
-                            features, labels = self._get_features_and_labels_from_record(record_buf)
-                            outputs = self._model.call(features, training=False)
-                            evaluation_metrics = self._eval_metrics_fn(outputs, labels)
-
-                            for k, v in evaluation_metrics.items():
-                                v_np = v.numpy()
-                                if v_np.size != 1:
-                                    raise Exception("Only metric result of length 1 is supported currently")
-                                evaluation_metrics_collection[k].append(v_np)
-
-                            evaluation_metrics = {k: np.mean(v) for k, v in evaluation_metrics_collection.items()}
-                            accepted, min_model_version = self.report_evaluation_metrics(evaluation_metrics)
-
-                            if accepted:
-                                self._logger.info("Evaluation metrics: %s" % evaluation_metrics)
-                                break
-                        else:
-                            raise RuntimeError("Worker got stuck during model evaluation")
-            except Exception as ex:
-                err_msg = str(ex)
-                traceback.print_exc()
-            self.report_task_result(task.task_id, err_msg)
