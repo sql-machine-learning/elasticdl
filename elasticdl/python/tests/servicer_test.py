@@ -45,6 +45,10 @@ class ServicerTest(unittest.TestCase):
             3,
             None,
             _TaskQueue({}, record_per_task=3, num_epoch=2),
+            init_var=[],
+            checkpoint_dir="",
+            checkpoint_steps=0,
+            keep_checkpoint_max=0
         )
 
         req = elasticdl_pb2.GetTaskRequest()
@@ -61,7 +65,12 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual(1, task.model_version)
 
     def testGetModel(self):
-        master = MasterServicer(2, 3, None, None)
+        master = MasterServicer(2, 3, None, None,
+                                init_var=[],
+                                checkpoint_dir="",
+                                checkpoint_steps=0,
+                                keep_checkpoint_max=0
+        )
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 
@@ -94,7 +103,7 @@ class ServicerTest(unittest.TestCase):
 
     def testReportGradient(self):
         def makeGrad():
-            """ Make a ReportTaskResultRequest compatible with model"""
+            """ Make a ReportGradientRequest compatible with model"""
             req = elasticdl_pb2.ReportGradientRequest()
             req.gradient["x"].CopyFrom(
                 ndarray_to_tensor(np.array([0.1], dtype=np.float32))
@@ -110,6 +119,10 @@ class ServicerTest(unittest.TestCase):
             3,
             tf.train.GradientDescentOptimizer(0.1),
             None,
+            init_var=[],
+            checkpoint_dir="",
+            checkpoint_steps=0,
+            keep_checkpoint_max=0
         )
         master._version = 1
         master.set_model_var("x", np.array([2.0], dtype=np.float32))
@@ -181,11 +194,60 @@ class ServicerTest(unittest.TestCase):
             master._model["y"].numpy(),
         )
 
+    def testReportEvaluationMetrics(self):
+        def makeEvaluationMetrics():
+            """ Make a ReportEvaluationMetricsRequest compatible with model"""
+            req = elasticdl_pb2.ReportEvaluationMetricsRequest()
+            req.evaluation_metrics['mse'].CopyFrom(
+                ndarray_to_tensor(np.array([100, 200], dtype=np.float32))
+            )
+            req.model_version = 1
+            return req
+
+        master = MasterServicer(
+            3,
+            3,
+            tf.train.GradientDescentOptimizer(0.1),
+            None,
+            init_var=[],
+            checkpoint_dir="",
+            checkpoint_steps=0,
+            keep_checkpoint_max=0
+        )
+        master._version = 1
+
+        # Report a future version, should raise exception
+        req = makeEvaluationMetrics()
+        req.model_version = 2
+        self.assertRaisesRegex(
+            ValueError,
+            'Model version %s not available yet, current version: %s' % (
+                req.model_version, master._version
+            ), master.ReportEvaluationMetrics, req, None)
+
+        # Report an old version, should not be accepted
+        req = makeEvaluationMetrics()
+        req.model_version = 0
+        res = master.ReportEvaluationMetrics(req, None)
+        self.assertFalse(res.accepted)
+        self.assertEqual(1, res.model_version)
+
+        # Report a current version, should be accepted, and a new version is created
+        req = makeEvaluationMetrics()
+        res = master.ReportEvaluationMetrics(req, None)
+        self.assertTrue(res.accepted)
+        self.assertEqual(2, res.model_version)
+
     def testReportTaskResult(self):
         task_q = _TaskQueue(
             {"shard_1": 10, "shard_2": 9}, record_per_task=3, num_epoch=2
         )
-        master = MasterServicer(3, 3, None, task_q)
+        master = MasterServicer(3, 3, None, task_q,
+                                init_var=[],
+                                checkpoint_dir="",
+                                checkpoint_steps=0,
+                                keep_checkpoint_max=0
+        )
 
         # task to number of runs.
         tasks = defaultdict(int)
@@ -219,7 +281,12 @@ class ServicerTest(unittest.TestCase):
         )
 
     def testUserDefinedModel(self):
-        master = MasterServicer(2, 3, None, None)
+        master = MasterServicer(2, 3, None, None,
+                                init_var=[],
+                                checkpoint_dir="",
+                                checkpoint_steps=0,
+                                keep_checkpoint_max=0
+        )
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
 

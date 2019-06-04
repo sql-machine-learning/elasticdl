@@ -1,4 +1,5 @@
 import logging
+import os
 import threading
 import numpy as np
 
@@ -11,6 +12,7 @@ from google.protobuf import empty_pb2
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
+from elasticdl.python.elasticdl.common.model_helper import save_checkpoint_to_file, load_from_checkpoint_file
 
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
@@ -23,7 +25,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         optimizer,
         task_q,
         *,
-        init_var=[]
+        init_var,
+        checkpoint_dir,
+        checkpoint_steps,
+        keep_checkpoint_max
     ):
         # TODO: group params together into a single object.
         self._logger = logging.getLogger(__name__)
@@ -42,6 +47,15 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._evaluation_metrics = {}
         for var in init_var:
             self.set_model_var(var.name, var.numpy())
+        self._checkpoint_dir = checkpoint_dir
+        self._checkpoint_steps = checkpoint_steps
+        self._keep_checkpoint_max = keep_checkpoint_max
+        if not self._checkpoint_dir:
+            self._checkpoint_dir = os.getcwd() + "/checkpoint_dir"
+        if self._checkpoint_steps:
+            os.makedirs(self._checkpoint_dir, exist_ok=True)
+            if self._keep_checkpoint_max > 0:
+                self._checkpoint_list = []
 
     def set_model_var(self, name, value):
         """Add or set model variable. Value should be a float32 ndarray"""
@@ -70,12 +84,32 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def GetModel(self, request, _):
         _ = self._validate_model_version(request.min_version)
 
-        res = elasticdl_pb2.Model()
         with self._lock:
-            res.version = self._version
-            for k, v in self._model.items():
-                res.param[k].CopyFrom(ndarray_to_tensor(v.numpy()))
+            res = self._get_model_no_lock()
         return res
+
+    def _update_model_version(self):
+        assert self._lock.locked()
+        self._version += 1
+
+    def save_checkpoint(self):
+        file_name = "{}/model_v{}.chkpt".format(self._checkpoint_dir, self._version)
+        pb_model = self._get_model_no_lock()
+        save_checkpoint_to_file(pb_model, file_name)
+        if self._keep_checkpoint_max:
+            self._checkpoint_list.append(file_name)
+            while len(self._checkpoint_list) > self._keep_checkpoint_max:
+                file_to_delete = self._checkpoint_list.pop(0)
+                os.remove(file_to_delete)
+
+    def load_checkpoint_file(self, file_name):
+        pb_model = load_from_checkpoint_file(file_name)
+
+        for k, v in self._model.items():
+            # Assumes all variables exist in pb_model.param.
+            v.assign(
+                tensor_to_ndarray(pb_model.param[k]))
+        self._model_version = pb_model.version
 
     def _update_model(self):
         assert self._lock.locked()
@@ -84,9 +118,16 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._gradient_sum[k] = self._gradient_sum[k] / self._grad_to_wait
             grad_var.append((self._gradient_sum[k], self._model[k]))
         self._opt.apply_gradients(grad_var)
-        self._version += 1
+        self._update_model_version()
         self._gradient_sum.clear()
         self._grad_n = 0
+
+    def _get_model_no_lock(self):
+        pb_model = elasticdl_pb2.Model()
+        pb_model.version = self._version
+        for k, v in self._model.items():
+            pb_model.param[k].CopyFrom(ndarray_to_tensor(v.numpy()))
+        return pb_model
 
     def _validate_model_version(self, request_model_version):
         if request_model_version > self._version:
@@ -139,6 +180,15 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._grad_n += 1
             if self._grad_n >= self._grad_to_wait:
                 self._update_model()
+                if self._checkpoint_steps and self._version % self._checkpoint_steps == 0:
+                    try:
+                        self.save_checkpoint()
+                    except:
+                        self._logger.warning(
+                            "Failed to save checkpoint file for model version {}".format(self._version)
+                        )
+
+
         res.accepted = True
         res.model_version = self._version
         return res
@@ -164,10 +214,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
         with self._lock:
             for k, v in request.evaluation_metrics.items():
-                arr = tensor_to_ndarray(v)
-                self._evaluation_metrics[k] = arr
+                if v.dim:
+                    arr = tensor_to_ndarray(v)
+                    self._evaluation_metrics[k] = arr
 
-            self._update_model()
+            self._update_model_version()
         res.accepted = True
         res.model_version = self._version
         return res

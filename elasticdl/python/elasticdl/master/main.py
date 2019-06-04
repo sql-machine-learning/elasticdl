@@ -15,7 +15,10 @@ from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
-from elasticdl.python.elasticdl.common.model_helper import load_user_model, build_model
+from elasticdl.python.elasticdl.common.model_helper import (
+    load_user_model,
+    build_model,
+)
 
 
 def _make_task_queue(data_dir, record_per_task, num_epoch):
@@ -25,6 +28,22 @@ def _make_task_queue(data_dir, record_per_task, num_epoch):
         with closing(recordio.Index(p)) as rio:
             f_records[p] = rio.num_records()
     return _TaskQueue(f_records, record_per_task, num_epoch)
+
+
+def _pos_int(arg):
+    res = int(arg)
+    if res <= 0:
+        raise ValueError("Positive integer argument required. Got %s" % res)
+    return res
+
+
+def _non_neg_int(arg):
+    res = int(arg)
+    if res < 0:
+        raise ValueError(
+            "Non-negative integer argument required. Get %s" % res
+        )
+    return res
 
 
 def _parse_args():
@@ -39,25 +58,42 @@ def _parse_args():
         help="Training data directory. Files should be in RecordIO format",
         required=True,
     )
-    parser.add_argument("--record_per_task", type=int, required=True)
-    parser.add_argument("--num_epoch", type=int, required=True)
+    parser.add_argument("--record_per_task", type=_pos_int, required=True)
+    parser.add_argument("--num_epoch", type=_pos_int, required=True)
     parser.add_argument(
         "--grads_to_wait",
-        type=int,
+        type=_pos_int,
         help="Number of gradients to wait before updating model",
         required=True,
     )
     parser.add_argument(
         "--minibatch_size",
-        type=int,
+        type=_pos_int,
         help="Minibatch size used by workers to compute gradients",
         required=True,
     )
     parser.add_argument(
         "--num_worker",
-        type=int,
+        type=_pos_int,
         help="the number of workers used in training",
         default=0,
+    )
+    parser.add_argument(
+        "--checkpoint_dir",
+        help="The directory to store the checkpoint files",
+        default="",
+    )
+    parser.add_argument(
+        "--checkpoint_steps",
+        type=_non_neg_int,
+        help="Save checkpoint every this many steps. If 0, no checkpoints to save.",
+        default=0,
+    )
+    parser.add_argument(
+        "--keep_checkpoint_max",
+        type=_non_neg_int,
+        help="The maximum number of recent checkpoint files to keep. If 0, keep all.",
+        default=3,
     )
     parser.add_argument(
         "--worker_cpu_request",
@@ -80,10 +116,13 @@ def _parse_args():
         default="4096Mi",
     )
     parser.add_argument(
-        "--worker_pod_priority",
-        help="the requested priority of worker pod")
+        "--worker_pod_priority", help="the requested priority of worker pod"
+    )
     parser.add_argument(
-        "--worker_image", help="docker image for worker", default=None
+        "--worker_image",
+        help="docker image for worker",
+        default=None,
+        required=True,
     )
     parser.add_argument("--job_name", help="job name", required=True)
     parser.add_argument(
@@ -92,10 +131,12 @@ def _parse_args():
         choices=["tf_example", "bytes"],
         help="Type of codec(tf_example or bytes)",
     )
-    parser.add_argument("--volume_name",
-        help="the volume name of network filesytem")
-    parser.add_argument("--mount_path",
-        help="the mount path in the docker container")
+    parser.add_argument(
+        "--volume_name", help="the volume name of network filesytem"
+    )
+    parser.add_argument(
+        "--mount_path", help="the mount path in the docker container"
+    )
     parser.add_argument(
         "--log_level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
@@ -103,8 +144,10 @@ def _parse_args():
         default="WARNING",
         help="the logging level",
     )
-    parser.add_argument("--image_pull_policy",
-        help="the image pull policy of master and worker")
+    parser.add_argument(
+        "--image_pull_policy",
+        help="the image pull policy of master and worker",
+    )
     return parser.parse_args()
 
 
@@ -116,8 +159,8 @@ def main():
 
     # Initialize logger
     logging.basicConfig(
-        format='%(asctime)s %(name)s %(levelname)-8s '
-        '[%(filename)s:%(lineno)d] %(message)s',
+        format="%(asctime)s %(name)s %(levelname)-8s "
+        "[%(filename)s:%(lineno)d] %(message)s"
     )
     # Set level for ROOT logger.
     logging.getLogger().setLevel(args.log_level)
@@ -139,6 +182,9 @@ def main():
             optimizer,
             task_q,
             init_var=model_inst.trainable_variables,
+            checkpoint_dir=args.checkpoint_dir,
+            checkpoint_steps=args.checkpoint_steps,
+            keep_checkpoint_max=args.keep_checkpoint_max,
         ),
         server,
     )
@@ -159,7 +205,7 @@ def main():
             "--codec_type",
             args.codec_type,
             "--log_level",
-            args.log_level
+            args.log_level,
         ]
 
         worker_manager = WorkerManager(
