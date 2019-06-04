@@ -235,7 +235,6 @@ def main():
         help="the image pull policy of master and worker",
     )
     args, argv = parser.parse_known_args()
-    _validate_params(args)
 
     job_name = args.job_name
     image_name = args.image_base + "_" + job_name
