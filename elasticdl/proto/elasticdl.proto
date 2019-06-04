@@ -76,8 +76,6 @@ message ReportGradientResponse {
 message ReportTaskResultRequest {
     // Task id assigned by master.
     int32 task_id = 1;
-    // Whether this is training or evaluation task.
-    TaskType task_type = 2;
 
     // When error occurred, err_message contains error message in plain text.
     string err_message = 3;
