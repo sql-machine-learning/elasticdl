@@ -1,6 +1,8 @@
 import itertools
 import logging
 import threading
+import time
+import random
 
 from collections import Counter
 from elasticdl.python.elasticdl.master import k8s_client as k8s
@@ -9,7 +11,8 @@ from elasticdl.python.elasticdl.master import k8s_client as k8s
 class WorkerManager(object):
     def __init__(
             self,
-            task_q,
+            training_task_q,
+            evaluation_task_q,
             command,
             args,
             num_worker=1,
@@ -40,7 +43,8 @@ class WorkerManager(object):
         self._mount_path = mount_path
         self._volume_name = volume_name
         self._image_pull_policy=image_pull_policy
-        self._task_q = task_q
+        self._training_task_q = training_task_q
+        self._evaluation_task_q = evaluation_task_q
         self._next_worker_id = itertools.count().__next__
 
         # protects followed variables, which are accessed from event_cb.
@@ -67,7 +71,7 @@ class WorkerManager(object):
     def set_relaunch_deleted_live_worker(self, val):
         self._relaunch_deleted_live_worker = bool(val)
 
-    def _start_worker(self, worker_id):
+    def _start_worker(self, args, worker_id):
         self._logger.info("Starting worker: %d" % worker_id)
         with self._lock:
             pod = self._k8s_client.create_worker(
@@ -79,16 +83,26 @@ class WorkerManager(object):
                 self._volume_name,
                 self._image_pull_policy,
                 command=self._command,
-                args=self._args + ["--worker_id", str(worker_id)],
+                args=args + ["--worker_id", str(worker_id)],
                 restart_policy=self._restart_policy,
             )
             name = pod.metadata.name
             self._pod_name_to_id[name] = worker_id
             self._pods_phase[worker_id] = (name, None)
 
-    def start_workers(self):
+    def start_training_workers(self):
         for i in range(self._num_worker):
-            self._start_worker(self._next_worker_id())
+            self._start_worker(
+                self._args + ["--task_type", "training"],
+                self._next_worker_id()
+            )
+
+    def start_evaluation_worker(self):
+        # TODO: Support multiple evaluation workers
+        self._start_worker(
+            self._args + ["--task_type", "evaluation"],
+            int(time.time() + random.randint(1, 101)),
+        )
 
     def _remove_worker(self, worker_id):
         with self._lock:
@@ -131,10 +145,11 @@ class WorkerManager(object):
             if evt_type == "DELETED":
                 del self._pods_phase[worker_id]
                 del self._pod_name_to_id[pod_name]
-                self._task_q.recover_tasks(worker_id)
+                self._training_task_q.recover_tasks(worker_id)
 
                 # If the pod being deleted was not "Succeeded", relaunch a worker.
                 relaunch = self._relaunch_deleted_live_worker and phase != "Succeeded"
+        # TODO: Support relaunching evaluation worker
         if relaunch:
-            self._logger.info("Relaunching worker.")
-            self._start_worker(self._next_worker_id())
+            self._logger.info("Relaunching training workers.")
+            self._start_worker(self._args + ["--task_type", "training"], self._next_worker_id())

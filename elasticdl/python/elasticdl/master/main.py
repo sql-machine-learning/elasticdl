@@ -236,11 +236,13 @@ def main():
             image_pull_policy=args.image_pull_policy,
             restart_policy="Never",
         )
-        worker_manager.start_workers()
+        worker_manager.start_training_workers()
+        time.sleep(20)
+        worker_manager.start_evaluation_worker()
 
     try:
         while True:
-            if training_task_q.finished():
+            if training_task_q.finished() and evaluation_task_q.finished():
                 break
             time.sleep(30)
     except KeyboardInterrupt:
