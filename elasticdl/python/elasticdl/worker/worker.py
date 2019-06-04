@@ -168,7 +168,7 @@ class Worker(object):
 
                             with tf.GradientTape() as tape:
                                 outputs = self._model.call(features, training=True)
-                                loss = self._loss(outputs, labels)
+                                loss = self._loss(outputs, labels.flatten())
 
                                 # TODO:  Add regularization loss if any,
                                 #        which should be divided by the number of contributing workers.
