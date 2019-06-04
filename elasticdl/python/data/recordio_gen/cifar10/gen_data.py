@@ -44,7 +44,7 @@ def main(argv):
 
     feature_columns = [
         tf.feature_column.numeric_column(
-            key="image", dtype=tf.float32, shape=[3, 32, 32]
+            key="image", dtype=tf.float32, shape=[32, 32, 3]
         ),
         tf.feature_column.numeric_column(
             key="label", dtype=tf.int64, shape=[1]
