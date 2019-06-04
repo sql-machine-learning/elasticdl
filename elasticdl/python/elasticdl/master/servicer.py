@@ -60,7 +60,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 "checkpoint_dir not set, checkpint files will be saved in %s",
                 self._checkpoint_dir
             )
-        if self._checkpoint_steps and self._keep_checkpoint_max:
+        if self._checkpoint_steps and self._keep_checkpoint_max > 0:
             self._checkpoint_list = []
 
     def set_model_var(self, name, value):
