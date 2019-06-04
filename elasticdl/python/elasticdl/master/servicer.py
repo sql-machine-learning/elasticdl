@@ -50,18 +50,12 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._checkpoint_dir = checkpoint_dir
         self._checkpoint_steps = checkpoint_steps
         self._keep_checkpoint_max = keep_checkpoint_max
-        if self._checkpoint_steps and not self._checkpoint_dir:
+        if not self._checkpoint_dir:
             self._checkpoint_dir = os.getcwd() + "/checkpoint_dir"
-            try:
-                os.mkdir(self._checkpoint_dir)
-            except OSError:
-                self._checkpoint_dir = os.getcwd()
-            self._logger.warning(
-                "checkpoint_dir not set, checkpint files will be saved in %s",
-                self._checkpoint_dir
-            )
-        if self._checkpoint_steps and self._keep_checkpoint_max > 0:
-            self._checkpoint_list = []
+        if self._checkpoint_steps:
+            os.makedirs(self._checkpoint_dir, exist_ok=True)
+            if self._keep_checkpoint_max > 0:
+                self._checkpoint_list = []
 
     def set_model_var(self, name, value):
         """Add or set model variable. Value should be a float32 ndarray"""
