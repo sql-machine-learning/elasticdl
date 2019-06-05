@@ -57,16 +57,17 @@ class _TaskQueue(object):
                         type=elasticdl_pb2.TRAINING,
                     )
                 )
-        for name, num_records in self._evaluation_shards.items():
-            for start in range(0, num_records, self._record_per_task):
-                self._todo.append(
-                    _Task(
-                        file_name=name,
-                        start=start,
-                        end=min(start + self._record_per_task, num_records),
-                        type=elasticdl_pb2.EVALUATION,
-                    )
-                )
+        # TODO: Temporarily disable evaluation task generation until we find a better way
+        # for name, num_records in self._evaluation_shards.items():
+        #     for start in range(0, num_records, self._record_per_task):
+        #         self._todo.append(
+        #             _Task(
+        #                 file_name=name,
+        #                 start=start,
+        #                 end=min(start + self._record_per_task, num_records),
+        #                 type=elasticdl_pb2.EVALUATION,
+        #             )
+        #         )
         # TODO: This is to ensure that we have some training tasks at the beginning
         # so we have a partially trained model for evaluation tasks. See issue #555.
         shuffled_partial_todo = self._todo[NUM_WARM_UP_TRAINING_TASKS:]
