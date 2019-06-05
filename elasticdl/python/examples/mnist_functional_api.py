@@ -51,3 +51,11 @@ def input_fn(records):
     images = np.reshape(images, (batch_size, 28, 28))
     labels = np.array(label_list)
     return ({'image': images}, labels)
+
+
+def eval_metrics_fn(predictions, labels):
+    return {
+        'metric': tf.reduce_mean(
+            tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits=predictions, labels=labels.flatten())),
+    }
