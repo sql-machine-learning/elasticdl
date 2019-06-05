@@ -26,7 +26,7 @@ def label_columns():
 def loss(output, labels):
     return tf.reduce_mean(
         tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=output, labels=labels))
+            logits=output, labels=labels.flatten()))
 
 def optimizer(lr=0.1):
     return tf.train.GradientDescentOptimizer(lr)
