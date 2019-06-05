@@ -80,7 +80,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
     --log_level=INFO
 ```
-`MNIST_DATA_DIR` : The directory of MNIST training data with recordio format(e.g. /data/mnist_nfs/mnist).
+`MNIST_DATA_DIR` : The directory that contains MNIST training and evaluation data in recordio format(e.g. /data/mnist_nfs/mnist).
 
 `VOLUMN_NAME` : The name of the [Kerbunetes Volume](https://cloud.google.com/kubernetes-engine/docs/concepts/volumes) (e.g. data-volume).
 
