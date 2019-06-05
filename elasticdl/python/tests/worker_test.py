@@ -81,9 +81,18 @@ class WorkerTest(unittest.TestCase):
             codec_type=codec_type,
         )
 
-        filename = create_recordio_file(128, codec_type)
-        task_type = elasticdl_pb2.TRAINING if training else elasticdl_pb2.EVALUATION
-        task_q = _TaskQueue({filename: 128}, record_per_task=64, num_epoch=1, task_type=task_type)
+        shards = {create_recordio_file(128, codec_type): 128}
+        if training:
+            training_shards = shards
+            evaluation_shards = {}
+        else:
+            training_shards = {}
+            evaluation_shards = shards
+        task_q = _TaskQueue(
+            training_shards,
+            evaluation_shards,
+            record_per_task=64,
+            num_epoch=1)
         master = MasterServicer(2, 16, worker._opt_fn(), task_q,
                                 init_var=[],
                                 init_from_checkpoint="",
