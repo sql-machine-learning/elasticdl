@@ -6,7 +6,7 @@
 The input of ElasticDL is in [RecordIO](https://github.com/ElasticDL/pyrecordio) format. This project is to create an easy-to-use system to convert raw training data to RecordIO format.
 
 ## Design
-The system is to use Spark to prepare the data parallelly in a container. We'll provide the user with a docker image `data_preparation_image`. And the user can use it like this:
+The system is to use Spark to prepare the data parallelly either in a container (`local` mode) or in a Spark cluster (`cluster` mode). We'll provide the user with a docker image `data_preparation_image`. And the user can use it like this:
 ```bash
 docker run data_preparation_image \
     <user_defined_model_file> \
@@ -27,23 +27,22 @@ The general idea is to give user enough flexibility to prepare the data. The onl
  2. Data Preparation Function For a Single File: The signature for this function is:
     ```python
     def prepare_data_for_a_single_file(filename):
-    '''
-    This function is to read a single file and do whatever 
-    user-defined logic to prepare the data (e.g: IO from the user's file system, 
-    feature engineering), and return a tuple of numpy array, which should 
-    be compatible with the feature column above.
-    '''
-    pass
+        '''
+        This function is to read a single file and do whatever 
+        user-defined logic to prepare the data (e.g: IO from the user's file system, 
+        feature engineering), and return a tuple of numpy array, which should 
+        be compatible with the feature column above.
+        '''
+        pass
     ```
     This part is not in our current model definition and is to be implemented. I think this part is not for data preparation only. It is needed for online serving anyway because the online input is always raw (e.g: text) and this provides the functionality to bind the feature transformation with the model. The user may need to install dependencies that the user needs to prepare the data in a new image, which can be derived from the image we provide.
 
 
-### `output_recordio_data_directory`
-The output directory for prepared data in RecordIO format.
-
 ### `raw_data_directory`
 This directory should include all training data files. The directory will be traversed recursively to get all training data by our Spark job.
 
+### `output_recordio_data_directory`
+The output directory for prepared data in RecordIO format.
 
 ### `running_mode`
 The Spark job can be run in either `local` or `cluster`. If there's no Spark cluster available for the user, the user can still use `local` mode to process the data in the container which runs the image we provide.
