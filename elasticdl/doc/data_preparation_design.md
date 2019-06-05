@@ -1,11 +1,11 @@
 
 # Data Preparation Design Doc
 
- ## Background
+## Background
 
- The input of ElasticDL is in [RecordIO](https://github.com/ElasticDL/pyrecordio) format. This project is to create an easy-to-use system to convert raw training data to RecordIO format.
+The input of ElasticDL is in [RecordIO](https://github.com/ElasticDL/pyrecordio) format. This project is to create an easy-to-use system to convert raw training data to RecordIO format.
 
- ## Design
+## Design
 The system is to use Spark to prepare the data parallelly in a container. We'll provide the user with a docker image `data_preparation_image`. And the user can use it like this:
 ```bash
 docker run data_preparation_image \
