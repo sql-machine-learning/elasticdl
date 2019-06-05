@@ -8,19 +8,20 @@ import threading
 class _Task(object):
     """Internal representation of a task"""
 
-    def __init__(self, *, file_name, start, end):
+    def __init__(self, *, file_name, start, end, type):
         self.file_name = file_name
         self.start = start
         self.end = end
+        self.type = type
 
     def _info(self):
-        return self.file_name, self.start, self.end
+        return self.file_name, self.start, self.end, self.type
 
 
 class _TaskQueue(object):
     """Creates and dispatches Tasks. Keep track of a Task's lifecycle."""
 
-    def __init__(self, shards, record_per_task, num_epoch):
+    def __init__(self, shards, record_per_task, num_epoch, task_type):
         """
         shards: a dictionary from RecordIO file name to number of records
         """
@@ -31,6 +32,7 @@ class _TaskQueue(object):
         self._epoch = 0
         self._shards = shards
         self._record_per_task = record_per_task
+        self._task_type = task_type
 
         self._todo = []
         # dictionary from task id to Task.
@@ -47,6 +49,7 @@ class _TaskQueue(object):
                         file_name=name,
                         start=start,
                         end=min(start + self._record_per_task, num_records),
+                        type=self._task_type,
                     )
                 )
         random.shuffle(self._todo)

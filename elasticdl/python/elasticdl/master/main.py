@@ -12,6 +12,7 @@ tf.enable_eager_execution()
 from contextlib import closing
 from concurrent import futures
 from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
@@ -27,7 +28,7 @@ def _make_task_queue(data_dir, record_per_task, num_epoch):
         p = os.path.join(data_dir, f)
         with closing(recordio.Index(p)) as rio:
             f_records[p] = rio.num_records()
-    return _TaskQueue(f_records, record_per_task, num_epoch)
+    return _TaskQueue(f_records, record_per_task, num_epoch, elasticdl_pb2.TRAINING)
 
 
 def _pos_int(arg):
