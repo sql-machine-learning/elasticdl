@@ -16,7 +16,10 @@ from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.worker.worker import Worker
 from elasticdl.python.elasticdl.common.model_helper import load_user_model
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
-from elasticdl.python.elasticdl.common.model_helper import save_checkpoint_to_file, load_from_checkpoint_file
+from elasticdl.python.elasticdl.common.model_helper import (
+    save_checkpoint_to_file,
+    load_from_checkpoint_file,
+)
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.data.codec import BytesCodec, TFExampleCodec
 
@@ -46,17 +49,18 @@ def create_recordio_file(size, codec_type):
 
 class CheckpointTest(unittest.TestCase):
     def testSaveLoadCheckpoint(self):
+        init_var = m.model.trainable_variables
         master = MasterServicer(
-            2, 3, None, None,
-            init_var=[],
+            2,
+            3,
+            None,
+            None,
+            init_var=init_var,
+            init_from_checkpoint="",
             checkpoint_dir="",
             checkpoint_steps=0,
-            keep_checkpoint_max=0
+            keep_checkpoint_max=0,
         )
-
-        model_inst = m.model
-        for variable in model_inst.trainable_variables:
-            master.set_model_var(variable.name, variable.numpy())
 
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
@@ -70,6 +74,42 @@ class CheckpointTest(unittest.TestCase):
         self.assertEqual(model.version, pb_model.version)
         for k in model.param:
             self.assertEqual(model.param[k], pb_model.param[k])
+
+    def testInitCheckpoint(self):
+        init_var = m.model.trainable_variables
+        req = elasticdl_pb2.GetModelRequest()
+        req.min_version = 0
+
+        master = MasterServicer(
+            2,
+            3,
+            None,
+            None,
+            init_var=init_var,
+            init_from_checkpoint="",
+            checkpoint_dir="",
+            checkpoint_steps=0,
+            keep_checkpoint_max=0,
+        )
+        model = master.GetModel(req, None)
+
+        tmp_file = tempfile.NamedTemporaryFile()
+        save_checkpoint_to_file(model, tmp_file.name)
+
+        master2 = MasterServicer(
+            2,
+            3,
+            None,
+            None,
+            init_var=init_var,
+            init_from_checkpoint=tmp_file.name,
+            checkpoint_dir="",
+            checkpoint_steps=0,
+            keep_checkpoint_max=0,
+        )
+        model2 = master2.GetModel(req, None)
+
+        self.assertEqual(model, model2)
 
     def testCheckpintArguments(self):
         """
@@ -91,12 +131,7 @@ class CheckpointTest(unittest.TestCase):
 
         codec_type = "bytes"
         channel = grpc.insecure_channel("localhost:9999")
-        worker = Worker(
-            1,
-            _module_file,
-            channel=channel,
-            codec_type=codec_type,
-        )
+        worker = Worker(1, _module_file, channel=channel, codec_type=codec_type)
 
         # save checkpoint file every 2 steps
         # keep at most 5 recent checkpoint files
@@ -111,18 +146,20 @@ class CheckpointTest(unittest.TestCase):
             num_epoch=1,
             task_type=elasticdl_pb2.TRAINING,
         )
-        master = MasterServicer(2,
-                                2,
-                                worker._opt_fn(),
-                                task_q,
-                                init_var=[],
-                                checkpoint_dir=checkpoint_dir,
-                                checkpoint_steps=checkpoint_steps,
-                                keep_checkpoint_max=keep_checkpoint_max
-                                )
+        master = MasterServicer(
+            2,
+            2,
+            worker._opt_fn(),
+            task_q,
+            init_var=worker._model.trainable_variables,
+            init_from_checkpoint="",
+            checkpoint_dir=checkpoint_dir,
+            checkpoint_steps=checkpoint_steps,
+            keep_checkpoint_max=keep_checkpoint_max,
+        )
 
-        for var in worker._model.trainable_variables:
-            master.set_model_var(var.name, var.numpy())
+        # for var in worker._model.trainable_variables:
+        #    master.set_model_var(var.name, var.numpy())
 
         with mock.patch.object(
             worker._stub, "GetTask", mock_GetTask
@@ -142,8 +179,16 @@ class CheckpointTest(unittest.TestCase):
 
         self.assertTrue(res)
         checkpoint_files = sorted(os.listdir(checkpoint_dir))
-        self.assertEqual(checkpoint_files,
-                         ['model_v24.chkpt', 'model_v26.chkpt', 'model_v28.chkpt', 'model_v30.chkpt', 'model_v32.chkpt'])
+        self.assertEqual(
+            checkpoint_files,
+            [
+                "model_v24.chkpt",
+                "model_v26.chkpt",
+                "model_v28.chkpt",
+                "model_v30.chkpt",
+                "model_v32.chkpt",
+            ],
+        )
 
 
 if __name__ == "__main__":
