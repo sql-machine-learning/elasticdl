@@ -9,7 +9,6 @@ import numpy as np
 
 from contextlib import closing
 from collections import defaultdict
-from tensorflow.python.ops import math_ops
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
@@ -203,38 +202,3 @@ class Worker(object):
                 err_msg = str(ex)
                 traceback.print_exc()
             self.report_task_result(task.task_id, err_msg)
-
-    def local_train(self, file_list, batch_size, epoch=1, kwargs=None):
-        """
-        Local training for local testing. Must in eager mode.
-        Arguments:
-            batch_size: batch size in training
-            epoch: the number of epoch in training
-            kwargs: contains a dict of parameters used in training
-        """
-        optimizer = self._opt_fn()
-        for _ in range(epoch):
-            for f in file_list:
-                with closing(recordio.Scanner(f)) as reader:
-                    while True:
-                        record_buf = self._get_batch(reader, batch_size, self._codec.decode)
-                        if not record_buf:
-                            break
-
-                        features, labels = self._get_features_and_labels_from_record(record_buf)
-
-                        with tf.GradientTape() as tape:
-                            outputs = self._model.call(features, training=True)
-                            loss = self._loss(outputs, labels)
-
-                            # Add regularization loss if any.
-                            # Note: for distributed training, the regularization loss should
-                            #       be divided by the number of contributing workers, which
-                            #       might be difficult for elasticdl.
-                            if self._model.losses:
-                                loss += math_ops.add_n(self._model.losses)
-                        grads = tape.gradient(
-                            loss, self._model.trainable_variables)
-                        optimizer.apply_gradients(
-                            zip(grads, self._model.trainable_variables))
-                        self._logger.info("Loss is %f" % loss.numpy())
