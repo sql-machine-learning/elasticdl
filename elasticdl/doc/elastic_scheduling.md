@@ -75,16 +75,16 @@ python elasticdl/python/elasticdl/client/client.py \
     --grads_to_wait=2 \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
-    --volume_name=${VOLUMN_NAME} \
+    --volume_name=${VOLUME_NAME} \
     --repository=gcr.io \
     --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
     --log_level=INFO
 ```
 `MNIST_DATA_DIR` : The directory that contains MNIST training and evaluation data in recordio format(e.g. /data/mnist_nfs/mnist).
 
-`VOLUMN_NAME` : The name of the [Kerbunetes Volume](https://cloud.google.com/kubernetes-engine/docs/concepts/volumes) (e.g. data-volume).
+`VOLUME_NAME` : The name of the [Kerbunetes Volume](https://cloud.google.com/kubernetes-engine/docs/concepts/volumes) (e.g. data-volume).
 
-`MOUNT_PATH` : The mount path in the container of the kubernetes volumn (e.g. /data).
+`MOUNT_PATH` : The mount path in the container of the kubernetes volume (e.g. /data).
 
 
 Use the following command to check the job's pods statuses:
@@ -116,7 +116,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --grads_to_wait=2 \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
-    --volume_name=${VOLUMN_ID} \
+    --volume_name=${VOLUME_ID} \
     --repository=gcr.io \
     --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
     --log_level=INFO
