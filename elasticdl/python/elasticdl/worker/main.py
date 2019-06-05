@@ -33,18 +33,6 @@ def _parse_args():
         default='WARNING',
         help="Set the logging level",
     )
-    parser.add_argument(
-        "--task_type",
-        default="training",
-        choices=["training", "evaluation"],
-        help="Type of worker task (training or evaluation). Default is training task.",
-    )
-    parser.add_argument(
-        "--evaluate_steps",
-        default=None,
-        help="Evaluate the model by this many number of steps where the model is evaluated on one "
-             "batch of samples for each step. By default, evaluation will continue until reaching the end of input.",
-    )
 
     return parser.parse_args()
 
@@ -66,11 +54,7 @@ def main():
         channel=channel,
         codec_type=args.codec_type,
     )
-
-    if args.task_type == "training":
-        worker.distributed_train()
-    else:
-        worker.distributed_evaluate(steps=args.evaluate_steps)
+    worker.run()
 
 
 if __name__ == "__main__":
