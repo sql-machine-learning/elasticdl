@@ -2,7 +2,6 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-import logging
 import tempfile
 import mock
 import grpc
@@ -45,25 +44,6 @@ def create_recordio_file(size, codec_type):
 
 
 class WorkerTest(unittest.TestCase):
-    def local_train(self, codec_type):
-        worker = Worker(0, _module_file, codec_type=codec_type)
-        filename = create_recordio_file(128, codec_type)
-        batch_size = 32
-        epoch = 2
-        try:
-            worker.local_train([filename], batch_size, epoch)
-            res = True
-        except Exception as ex:
-            print(ex)
-            res = False
-        self.assertTrue(res)
-
-    def test_local_train_bytes(self):
-        self.local_train("bytes")
-
-    def test_local_train_tf_example(self):
-        self.local_train("tf_example")
-
     def distributed_train_and_evaluate(self, codec_type, training=True):
         """
         Run distributed training and evaluation with a local master.
