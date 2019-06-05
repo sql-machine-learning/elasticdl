@@ -79,7 +79,8 @@ docker run --net=host --rm -it elasticdl:dev \
           --num_epoch=2 \
           --codec_type=tf_example \
           --grads_to_wait=2 \
-          --minibatch_size=10"
+          --minibatch_size=10 \
+          --log_level=INFO"
 ```
 
 In another terminal, start a worker
@@ -90,7 +91,8 @@ docker run --net=host --rm -it elasticdl:dev \
           --worker_id=1 \
           --model_file=elasticdl/python/examples/mnist_functional_api.py \
           --codec_type=tf_example \
-          --master_addr=localhost:50001"
+          --master_addr=localhost:50001 \
+          --log_level=INFO"
 ```
 
 This will train MNIST data with a model defined in [python/examples/mnist_functional_api.py](python/examples/mnist_functional_api.py) for 2 epoches.
