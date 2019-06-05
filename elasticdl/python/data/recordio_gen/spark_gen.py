@@ -10,7 +10,7 @@ from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import \
     convert_numpy_to_recordio
 
 
-def process_data(image_shape, output_dir, record_per_file, codec_type):
+def process_data(image_shape, output_dir, records_per_file, codec_type):
     def _process_data(file_list):
         ctx = TaskContext()
         numpy_image_list = []
@@ -37,7 +37,7 @@ def process_data(image_shape, output_dir, record_per_file, codec_type):
             image_numpy_array,
             label_array,
             feature_columns,
-            record_per_file=record_per_file,
+            records_per_file=records_per_file,
             codec_type=codec_type,
             partition=str(ctx.partitionId()),
         )
@@ -62,12 +62,17 @@ def main():
                     "training_data_dir/1/image3, ..."
     )
     parser.add_argument(
-        "training_data_dir",
+        "--training_data_dir",
         help="Dir that contains training data organized by classes",
+        required=True,
     )
-    parser.add_argument("output_dir", help="Output dir")
     parser.add_argument(
-        "--record_per_file", default=1024, type=int, help="Record per file"
+        "--output_dir",
+        help="Dir of output RecordIO data",
+        required=True,
+    )
+    parser.add_argument(
+        "--records_per_file", default=1024, type=int, help="Record per file"
     )
     parser.add_argument(
         "--codec_type",
@@ -108,7 +113,7 @@ def main():
         process_data(
             image_shape,
             args.output_dir,
-            args.record_per_file,
+            args.records_per_file,
             args.codec_type,
         )
     ).collect()

@@ -13,7 +13,7 @@ from elasticdl.python.data.codec import BytesCodec
 
 
 def convert_numpy_to_recordio(
-    file_dir, data, label, feature_columns, record_per_file, codec_type, partition=''
+    file_dir, data, label, feature_columns, records_per_file, codec_type, partition=''
 ):
     """
     Convert data in numpy format to RecordIO format
@@ -35,7 +35,7 @@ def convert_numpy_to_recordio(
             else:
                 raise ValueError("invalid codec_type: " + codec_type)
             with closing(recordio.Writer(file_name)) as f:
-                for _ in range(record_per_file):
+                for _ in range(records_per_file):
                     row = next(it)
                     rec = encode_fn(
                         {

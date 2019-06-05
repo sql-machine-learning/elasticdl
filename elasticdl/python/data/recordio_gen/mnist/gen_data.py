@@ -41,7 +41,7 @@ def main(argv):
     )
     args = parser.parse_args(argv)
 
-    record_per_file = args.num_record_per_chunk * args.num_chunk
+    records_per_file = args.num_record_per_chunk * args.num_chunk
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     feature_columns = [
@@ -57,7 +57,7 @@ def main(argv):
         x_train,
         y_train,
         feature_columns,
-        record_per_file=record_per_file,
+        records_per_file=records_per_file,
         codec_type=args.codec_type,
     )
 
@@ -66,7 +66,7 @@ def main(argv):
         x_test,
         y_test,
         feature_columns,
-        record_per_file=record_per_file,
+        records_per_file=records_per_file,
         codec_type=args.codec_type,
     )
 
@@ -76,7 +76,7 @@ def main(argv):
         x_train,
         y_train,
         feature_columns,
-        record_per_file=record_per_file,
+        records_per_file=records_per_file,
         codec_type=args.codec_type,
     )
     convert_numpy_to_recordio(
@@ -84,7 +84,7 @@ def main(argv):
         x_test,
         y_test,
         feature_columns,
-        record_per_file=record_per_file,
+        records_per_file=records_per_file,
         codec_type=args.codec_type,
     )
 
