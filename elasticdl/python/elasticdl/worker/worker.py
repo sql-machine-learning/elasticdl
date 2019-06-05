@@ -16,11 +16,8 @@ from elasticdl.python.elasticdl.common.model_helper import load_user_model, buil
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.data.codec import BytesCodec
 
-# TODO: Move these args to train/evaluate specific functions
-# the default max number of a minibatch retrain as its gradients are not accepted by master.
-DEFAULT_MAX_MINIBATCH_RETRAIN_NUM = 64
-# the default max number of a minibatch retry as its calculated evaluation metrics are not accepted by master.
-DEFAULT_MAX_MINIBATCH_EVALUATE_RETRY_NUM = 10
+# The default maximum number of a minibatch retry as its results (e.g. gradients) are not accepted by master.
+DEFAULT_MAX_MINIBATCH_RETRY_NUM = 64
 
 
 class Worker(object):
@@ -30,14 +27,14 @@ class Worker(object):
                  worker_id,
                  model_file,
                  channel=None,
-                 max_retrain_num=DEFAULT_MAX_MINIBATCH_RETRAIN_NUM,
-                 max_evaluate_retry_num=DEFAULT_MAX_MINIBATCH_EVALUATE_RETRY_NUM,
+                 max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
                  codec_type=None):
         """
         Arguments:
             model_file: A module to define the model
             channel: grpc channel
-            max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
+            max_minibatch_retry_num: The maximum number of a minibatch retry as its results
+                (e.g. gradients) are not accepted by master.
         """
         self._logger = logging.getLogger(__name__)
         self._worker_id = worker_id
@@ -61,8 +58,7 @@ class Worker(object):
             self._stub = None
         else:
             self._stub = elasticdl_pb2_grpc.MasterStub(channel)
-        self._max_retrain_num = max_retrain_num
-        self._max_evaluate_retry_num = max_evaluate_retry_num
+        self._max_minibatch_retry_num = max_minibatch_retry_num
         self._model_version = -1
         self._codec_type = codec_type
 
@@ -157,7 +153,7 @@ class Worker(object):
                         if not record_buf:
                             break
 
-                        for _ in range(self._max_retrain_num):
+                        for _ in range(self._max_minibatch_retry_num):
                             # TODO: optimize the logic to avoid unnecessary get_model call.
                             self.get_model(
                                 max(self._model_version, min_model_version))
