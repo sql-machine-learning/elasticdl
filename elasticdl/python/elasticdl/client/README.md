@@ -50,7 +50,8 @@ python elasticdl/python/elasticdl/client/client.py \
     --grads_to_wait=2 \
     --codec_type=tf_example \
     --job_name=test \
-    --image_base=elasticdl:dev
+    --image_base=elasticdl:dev \
+    --log_level=INFO
 ```
 
 ### Submit to a GKE cluster
@@ -80,7 +81,8 @@ python elasticdl/python/elasticdl/client/client.py \
     --volume_name=data-volume \
     --repository=gcr.io \
     --image_base=gcr.io/elasticdl/mnist:dev \
-    --image_pull_policy=Always
+    --image_pull_policy=Always \
+    --log_level_INFO
 ```
 The difference is the additional `repository` argument that points to the Docker hub used by GKE.
 
