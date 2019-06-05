@@ -13,12 +13,11 @@ from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import \
     convert_numpy_to_recordio
 
 
-
 def main(argv):
     parser = argparse.ArgumentParser(
         description="Generate CIFAR10 datasets in RecordIO format."
     )
-    parser.add_argument("--dir", help="Output directory")
+    parser.add_argument("dir", help="Output directory")
     parser.add_argument(
         "--num_record_per_chunk",
         default=1024,

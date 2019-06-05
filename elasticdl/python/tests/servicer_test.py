@@ -44,8 +44,11 @@ class ServicerTest(unittest.TestCase):
             2,
             3,
             None,
-            _TaskQueue({}, record_per_task=3, num_epoch=2),
+            _TaskQueue(
+                {}, {}, record_per_task=3, num_epoch=2,
+            ),
             init_var=[],
+            init_from_checkpoint="",
             checkpoint_dir="",
             checkpoint_steps=0,
             keep_checkpoint_max=0
@@ -67,6 +70,7 @@ class ServicerTest(unittest.TestCase):
     def testGetModel(self):
         master = MasterServicer(2, 3, None, None,
                                 init_var=[],
+                                init_from_checkpoint="",
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
                                 keep_checkpoint_max=0
@@ -120,6 +124,7 @@ class ServicerTest(unittest.TestCase):
             tf.train.GradientDescentOptimizer(0.1),
             None,
             init_var=[],
+            init_from_checkpoint="",
             checkpoint_dir="",
             checkpoint_steps=0,
             keep_checkpoint_max=0
@@ -210,6 +215,7 @@ class ServicerTest(unittest.TestCase):
             tf.train.GradientDescentOptimizer(0.1),
             None,
             init_var=[],
+            init_from_checkpoint="",
             checkpoint_dir="",
             checkpoint_steps=0,
             keep_checkpoint_max=0
@@ -240,10 +246,14 @@ class ServicerTest(unittest.TestCase):
 
     def testReportTaskResult(self):
         task_q = _TaskQueue(
-            {"shard_1": 10, "shard_2": 9}, record_per_task=3, num_epoch=2
+            {"shard_1": 10, "shard_2": 9},
+            {},
+            record_per_task=3,
+            num_epoch=2,
         )
         master = MasterServicer(3, 3, None, task_q,
                                 init_var=[],
+                                init_from_checkpoint="",
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
                                 keep_checkpoint_max=0
@@ -283,6 +293,7 @@ class ServicerTest(unittest.TestCase):
     def testUserDefinedModel(self):
         master = MasterServicer(2, 3, None, None,
                                 init_var=[],
+                                init_from_checkpoint="",
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
                                 keep_checkpoint_max=0
