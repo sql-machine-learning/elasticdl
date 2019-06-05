@@ -80,7 +80,7 @@ def _parse_args():
         default=0,
     )
     parser.add_argument(
-        "--init_checkpoint",
+        "--init_from_checkpoint",
         help="The checkpoint file to initialize the training model",
         default="",
     )
@@ -188,7 +188,7 @@ def main():
             optimizer,
             task_q,
             init_var=model_inst.trainable_variables,
-            init_checkpoint=args.init_checkpoint,
+            init_from_checkpoint=args.init_from_checkpoint,
             checkpoint_dir=args.checkpoint_dir,
             checkpoint_steps=args.checkpoint_steps,
             keep_checkpoint_max=args.keep_checkpoint_max,
