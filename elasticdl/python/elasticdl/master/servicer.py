@@ -26,6 +26,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         task_q,
         *,
         init_var,
+        init_checkpoint,
         checkpoint_dir,
         checkpoint_steps,
         keep_checkpoint_max
@@ -47,6 +48,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._evaluation_metrics = {}
         for var in init_var:
             self.set_model_var(var.name, var.numpy())
+        if init_checkpoint:
+            self.load_checkpoint_file(init_checkpoint)
         self._checkpoint_dir = checkpoint_dir
         self._checkpoint_steps = checkpoint_steps
         self._keep_checkpoint_max = keep_checkpoint_max

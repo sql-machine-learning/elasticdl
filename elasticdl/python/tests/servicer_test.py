@@ -49,6 +49,7 @@ class ServicerTest(unittest.TestCase):
                 task_type=elasticdl_pb2.TRAINING
             ),
             init_var=[],
+            init_checkpoint="",
             checkpoint_dir="",
             checkpoint_steps=0,
             keep_checkpoint_max=0
@@ -70,6 +71,7 @@ class ServicerTest(unittest.TestCase):
     def testGetModel(self):
         master = MasterServicer(2, 3, None, None,
                                 init_var=[],
+                                init_checkpoint="",
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
                                 keep_checkpoint_max=0
@@ -123,6 +125,7 @@ class ServicerTest(unittest.TestCase):
             tf.train.GradientDescentOptimizer(0.1),
             None,
             init_var=[],
+            init_checkpoint="",
             checkpoint_dir="",
             checkpoint_steps=0,
             keep_checkpoint_max=0
@@ -213,6 +216,7 @@ class ServicerTest(unittest.TestCase):
             tf.train.GradientDescentOptimizer(0.1),
             None,
             init_var=[],
+            init_checkpoint="",
             checkpoint_dir="",
             checkpoint_steps=0,
             keep_checkpoint_max=0
@@ -250,6 +254,7 @@ class ServicerTest(unittest.TestCase):
         )
         master = MasterServicer(3, 3, None, task_q,
                                 init_var=[],
+                                init_checkpoint="",
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
                                 keep_checkpoint_max=0
@@ -289,6 +294,7 @@ class ServicerTest(unittest.TestCase):
     def testUserDefinedModel(self):
         master = MasterServicer(2, 3, None, None,
                                 init_var=[],
+                                init_checkpoint="",
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
                                 keep_checkpoint_max=0

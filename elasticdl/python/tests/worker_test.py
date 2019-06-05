@@ -86,6 +86,7 @@ class WorkerTest(unittest.TestCase):
         task_q = _TaskQueue({filename: 128}, record_per_task=64, num_epoch=1, task_type=task_type)
         master = MasterServicer(2, 16, worker._opt_fn(), task_q,
                                 init_var=[],
+                                init_checkpoint="",
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
                                 keep_checkpoint_max=0)
