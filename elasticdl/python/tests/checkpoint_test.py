@@ -142,9 +142,9 @@ class CheckpointTest(unittest.TestCase):
         filename = create_recordio_file(128, codec_type)
         task_q = _TaskQueue(
             {filename: 128},
+            {},
             record_per_task=64,
             num_epoch=1,
-            task_type=elasticdl_pb2.TRAINING,
         )
         master = MasterServicer(
             2,

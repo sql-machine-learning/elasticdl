@@ -4,6 +4,11 @@ import logging
 import random
 import threading
 
+from elasticdl.proto import elasticdl_pb2
+
+
+NUM_WARM_UP_TRAINING_TASKS = 2
+
 
 class _Task(object):
     """Internal representation of a task"""
@@ -21,7 +26,7 @@ class _Task(object):
 class _TaskQueue(object):
     """Creates and dispatches Tasks. Keep track of a Task's lifecycle."""
 
-    def __init__(self, shards, record_per_task, num_epoch, task_type):
+    def __init__(self, training_shards, evaluation_shards, record_per_task, num_epoch):
         """
         shards: a dictionary from RecordIO file name to number of records
         """
@@ -30,9 +35,9 @@ class _TaskQueue(object):
 
         self._num_epoch = num_epoch
         self._epoch = 0
-        self._shards = shards
+        self._training_shards = training_shards
+        self._evaluation_shards = evaluation_shards
         self._record_per_task = record_per_task
-        self._task_type = task_type
 
         self._todo = []
         # dictionary from task id to Task.
@@ -42,17 +47,32 @@ class _TaskQueue(object):
         self._create_tasks()
 
     def _create_tasks(self):
-        for name, num_records in self._shards.items():
+        for name, num_records in self._training_shards.items():
             for start in range(0, num_records, self._record_per_task):
                 self._todo.append(
                     _Task(
                         file_name=name,
                         start=start,
                         end=min(start + self._record_per_task, num_records),
-                        type=self._task_type,
+                        type=elasticdl_pb2.TRAINING,
                     )
                 )
-        random.shuffle(self._todo)
+        # TODO: Temporarily disable evaluation task generation until we find a better way
+        # for name, num_records in self._evaluation_shards.items():
+        #     for start in range(0, num_records, self._record_per_task):
+        #         self._todo.append(
+        #             _Task(
+        #                 file_name=name,
+        #                 start=start,
+        #                 end=min(start + self._record_per_task, num_records),
+        #                 type=elasticdl_pb2.EVALUATION,
+        #             )
+        #         )
+        # TODO: This is to ensure that we have some training tasks at the beginning
+        # so we have a partially trained model for evaluation tasks. See issue #555.
+        shuffled_partial_todo = self._todo[NUM_WARM_UP_TRAINING_TASKS:]
+        random.shuffle(shuffled_partial_todo)
+        self._todo[NUM_WARM_UP_TRAINING_TASKS:] = shuffled_partial_todo
 
     def get(self, worker_id):
         """Return next (task_id, Task) tuple"""

@@ -34,7 +34,8 @@ Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and subm
 ```bash
 python elasticdl/python/elasticdl/client/client.py \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
-    --train_data_dir=/data/mnist/train \
+    --training_data_dir=/data/mnist/train \
+    --evaluation_data_dir=/data/mnist/test \
     --num_epoch=1 \
     --master_cpu_request=1000m \
     --master_cpu_limit=1000m \
@@ -60,7 +61,8 @@ python elasticdl/python/elasticdl/client/client.py \
 python elasticdl/python/elasticdl/client/client.py \
     --job_name=test \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
-    --train_data_dir=/data/mnist_nfs/mnist/train \
+    --training_data_dir=/data/mnist_nfs/train \
+    --evaluation_data_dir=/data/mnist_nfs/test \
     --num_epoch=1 \
     --minibatch_size=10 \
     --record_per_task=100 \

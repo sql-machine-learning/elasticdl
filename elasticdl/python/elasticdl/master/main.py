@@ -12,7 +12,6 @@ tf.enable_eager_execution()
 from contextlib import closing
 from concurrent import futures
 from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
@@ -22,13 +21,17 @@ from elasticdl.python.elasticdl.common.model_helper import (
 )
 
 
-def _make_task_queue(data_dir, record_per_task, num_epoch):
-    f_records = {}
-    for f in os.listdir(data_dir):
-        p = os.path.join(data_dir, f)
-        with closing(recordio.Index(p)) as rio:
-            f_records[p] = rio.num_records()
-    return _TaskQueue(f_records, record_per_task, num_epoch, elasticdl_pb2.TRAINING)
+def _make_task_queue(training_data_dir, evaluation_data_dir, record_per_task, num_epoch):
+    def _collect_file_records_from_dir(data_dir):
+        f_records = {}
+        for f in os.listdir(data_dir):
+            p = os.path.join(data_dir, f)
+            with closing(recordio.Index(p)) as rio:
+                f_records[p] = rio.num_records()
+        return f_records
+    training_f_records = _collect_file_records_from_dir(training_data_dir)
+    evaluation_f_records = _collect_file_records_from_dir(evaluation_data_dir)
+    return _TaskQueue(training_f_records, evaluation_f_records, record_per_task, num_epoch)
 
 
 def _pos_int(arg):
@@ -55,8 +58,13 @@ def _parse_args():
         required=True,
     )
     parser.add_argument(
-        "--train_data_dir",
+        "--training_data_dir",
         help="Training data directory. Files should be in RecordIO format",
+        required=True,
+    )
+    parser.add_argument(
+        "--evaluation_data_dir",
+        help="Evaluation data directory. Files should be in RecordIO format",
         required=True,
     )
     parser.add_argument("--record_per_task", type=_pos_int, required=True)
@@ -180,7 +188,10 @@ def main():
     logger = logging.getLogger(__name__)
 
     task_q = _make_task_queue(
-        args.train_data_dir, args.record_per_task, args.num_epoch
+        args.training_data_dir,
+        args.evaluation_data_dir,
+        args.record_per_task,
+        args.num_epoch
     )
     model_module = load_user_model(args.model_file)
     model_inst = model_module.model

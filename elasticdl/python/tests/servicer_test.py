@@ -45,8 +45,7 @@ class ServicerTest(unittest.TestCase):
             3,
             None,
             _TaskQueue(
-                {}, record_per_task=3, num_epoch=2,
-                task_type=elasticdl_pb2.TRAINING
+                {}, {}, record_per_task=3, num_epoch=2,
             ),
             init_var=[],
             init_from_checkpoint="",
@@ -248,9 +247,9 @@ class ServicerTest(unittest.TestCase):
     def testReportTaskResult(self):
         task_q = _TaskQueue(
             {"shard_1": 10, "shard_2": 9},
+            {},
             record_per_task=3,
             num_epoch=2,
-            task_type=elasticdl_pb2.TRAINING,
         )
         master = MasterServicer(3, 3, None, task_q,
                                 init_var=[],
