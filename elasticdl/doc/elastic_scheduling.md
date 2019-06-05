@@ -66,7 +66,8 @@ Use the command below to submit your first ElasticDL job on GKE:
 python elasticdl/python/elasticdl/client/client.py \
     --job_name=hello-world \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
-    --train_data_dir=${MNIST_DATA_DIR} \
+    --training_data_dir=${MNIST_DATA_DIR}/train \
+    --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --num_epoch=1 \
     --minibatch_size=10 \
     --record_per_task=100 \
@@ -79,7 +80,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
     --log_level=INFO
 ```
-`MNIST_DATA_DIR` : The directory of MNIST training data with recordio format(e.g. /data/mnist_nfs/mnist/train).
+`MNIST_DATA_DIR` : The directory of MNIST training data with recordio format(e.g. /data/mnist_nfs/mnist).
 
 `VOLUMN_NAME` : The name of the [Kerbunetes Volume](https://cloud.google.com/kubernetes-engine/docs/concepts/volumes) (e.g. data-volume).
 
@@ -106,7 +107,8 @@ Same as the first example, submit a job on GKE using the command below:
 python elasticdl/python/elasticdl/client/client.py \
     --job_name=fault-tolerance \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
-    --train_data_dir=${MNIST_DATA_DIR} \
+    --training_data_dir=${MNIST_DATA_DIR}/train \
+    --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --num_epoch=1 \
     --minibatch_size=10 \
     --record_per_task=100 \
@@ -167,7 +169,8 @@ For more about PriorityClass, please check out [Pod Priority and Preemption](htt
 python elasticdl/python/elasticdl/client/client.py \
     --job_name=low-prio-job \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
-    --train_data_dir=${MNIST_DATA_DIR} \
+    --training_data_dir=${MNIST_DATA_DIR}/train \
+    --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --master_pod_priority=high-priority \
     --worker_pod_priority=low-priority \
     --num_epoch=1 \
@@ -203,7 +206,8 @@ kubectl get pods -l elasticdl_job_name=low-prio-job
 python elasticdl/python/elasticdl/client/client.py \
     --job_name=high-prio-job \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
-    --train_data_dir=${MNIST_DATA_DIR} \
+    --training_data_dir=${MNIST_DATA_DIR}/train \
+    --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --master_pod_priority=high-priority \
     --worker_pod_priority=high-priority \
     --num_epoch=1 \

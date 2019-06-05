@@ -74,7 +74,8 @@ docker run --net=host --rm -it elasticdl:dev \
     bash -c "python -m elasticdl.python.elasticdl.master.main \
           --model_file=elasticdl/python/examples/mnist_functional_api.py \
           --job_name=test \
-          --train_data_dir=elasticdl/python/data/mnist/train \
+          --training_data_dir=/data/mnist/train \
+          --evaluation_data_dir=/data/mnist/test \
           --record_per_task=100 \
           --num_epoch=2 \
           --codec_type=tf_example \
