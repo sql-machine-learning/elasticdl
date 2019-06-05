@@ -84,7 +84,7 @@ def _parse_args():
     parser.add_argument(
         "--num_worker",
         type=_pos_int,
-        help="the number of workers used in training",
+        help="Number of workers",
         default=0,
     )
     parser.add_argument(
@@ -111,56 +111,63 @@ def _parse_args():
     )
     parser.add_argument(
         "--worker_cpu_request",
-        help="the minimal cpu required by worker in training",
+        help="The minimal CPU required by each worker",
         default="1000m",
     )
     parser.add_argument(
         "--worker_cpu_limit",
-        help="the maximal cpu used by worker in training",
+        help="The maximal CPU used by each worker",
         default="1000m",
     )
     parser.add_argument(
         "--worker_memory_request",
-        help="the minimal memory required by worker in training",
+        help="The minimal memory required by each worker",
         default="4096Mi",
     )
     parser.add_argument(
         "--worker_memory_limit",
-        help="the maximal memory used by worker in training",
+        help="The maximal memory used by each worker",
         default="4096Mi",
     )
     parser.add_argument(
-        "--worker_pod_priority", help="the requested priority of worker pod"
+        "--worker_pod_priority",
+        help="Priority requested by workers",
     )
     parser.add_argument(
         "--worker_image",
-        help="docker image for worker",
+        help="Docker image for workers",
         default=None,
-        required=True,
     )
-    parser.add_argument("--job_name", help="job name", required=True)
+    parser.add_argument(
+        "--job_name",
+        help="Job name",
+        required=True
+    )
     parser.add_argument(
         "--codec_type",
         default="bytes",
         choices=["tf_example", "bytes"],
-        help="Type of codec(tf_example or bytes)",
+        help="Type of codec (tf_example or bytes)",
+    )
+    # TODO: better logic for handling volume configs
+    parser.add_argument(
+        "--volume_name",
+        help="Volume name of Network File System"
     )
     parser.add_argument(
-        "--volume_name", help="the volume name of network filesytem"
-    )
-    parser.add_argument(
-        "--mount_path", help="the mount path in the docker container"
+        "--mount_path",
+        help="Mount path in the docker container",
     )
     parser.add_argument(
         "--log_level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         type=str.upper,
         default="WARNING",
-        help="the logging level",
+        help="The logging level. Default to WARNING",
     )
     parser.add_argument(
         "--image_pull_policy",
-        help="the image pull policy of master and worker",
+        help="Image pull policy of master and workers",
     )
     return parser.parse_args()
 
@@ -211,6 +218,8 @@ def main():
     logger.info("Server started at port: %d", PORT)
 
     if args.num_worker:
+        assert args.worker_image, "Worker image cannot be empty"
+
         master_addr = "%s:%d" % (os.getenv("MY_POD_IP", "localhost"), PORT)
         worker_command = ["python"]
         worker_args = [

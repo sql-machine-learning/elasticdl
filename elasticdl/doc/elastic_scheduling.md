@@ -82,7 +82,7 @@ python elasticdl/python/elasticdl/client/client.py \
 ```
 `MNIST_DATA_DIR` : The directory that contains MNIST training and evaluation data in recordio format(e.g. /data/mnist_nfs/mnist).
 
-`VOLUME_NAME` : The name of the [Kerbunetes Volume](https://cloud.google.com/kubernetes-engine/docs/concepts/volumes) (e.g. data-volume).
+`VOLUME_NAME` : The name of the [Kubernetes Volume](https://cloud.google.com/kubernetes-engine/docs/concepts/volumes) (e.g. data-volume).
 
 `MOUNT_PATH` : The mount path in the container of the kubernetes volume (e.g. /data).
 
