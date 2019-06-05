@@ -16,7 +16,7 @@ from elasticdl.python.elasticdl.common.model_helper import load_user_model, buil
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.data.codec import BytesCodec
 
-# the default max number of a minibatch retry as its gradients are not accepted by master.
+# The default maximum number of a minibatch retry as its results (e.g. gradients) are not accepted by master.
 DEFAULT_MAX_MINIBATCH_RETRY_NUM = 64
 
 
@@ -33,7 +33,8 @@ class Worker(object):
         Arguments:
             model_file: A module to define the model
             channel: grpc channel
-            max_retrain_num: max number of a minibatch retrain as its gradients are not accepted by master
+            max_minibatch_retry_num: The maximum number of a minibatch retry as its results
+                (e.g. gradients) are not accepted by master.
         """
         self._logger = logging.getLogger(__name__)
         self._worker_id = worker_id
