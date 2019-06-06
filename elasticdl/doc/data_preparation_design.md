@@ -2,10 +2,10 @@
 # Data Preparation Design Doc
 
 ## Background
-For now, ElasticDL requires the input data in [RecordIO](https://github.com/ElasticDL/recordio) format. This project is to help users convert raw training data to the required RecordIO format.
+For now, ElasticDL requires the input data in [RecordIO]( https://github.com/wangkuiyi/recordio) format. This project is to help users convert raw training data to the required RecordIO format.
 
 ## Design
-The system is to use Spark to prepare the data in parallel either in a container (`local` mode) or in a Spark cluster (`cluster` mode). We'll provide users with a docker image `data_preparation_image`. And the user can use it like this:
+The system is to use Spark to prepare the data in parallel either in a container (`local` mode) or in a Spark cluster (`cluster` mode). We'll provide users with a docker image `data_preparation_image`. And the users can use it like this:
 ```bash
 docker run data_preparation_image \
     <user_defined_model_file> \
@@ -19,22 +19,22 @@ The general idea is to give users enough flexibility to prepare the data. The on
 
 ### `user_defined_model_file`
 
- This file defines the model that is going to be trained. In this file, there are 2 parts that are needed by data preparation:
+This file defines the [model](https://github.com/wangkuiyi/elasticdl/blob/0b7d75fd5073802f33e192244283b86ccf2684e0/elasticdl/doc/model_building.md) that is going to be trained. In this file, there are two parts that are needed by data preparation:
 
- 1. Feature Column: In order to convert data into RecordIO format, we have to know the feature column. Given that the current model file has already implemented this (e.g: https://github.com/wangkuiyi/elasticdl/blob/0b7d75fd5073802f33e192244283b86ccf2684e0/elasticdl/python/examples/mnist_functional_api.py#L18-L24), in order to keep the feature column consistency between data preparation and model training, we should get the feature column from this file directly.
+1. Feature Column: In order to convert data into RecordIO format, we have to know the feature column. Given that the current model file has already implemented this (e.g, https://github.com/wangkuiyi/elasticdl/blob/0b7d75fd5073802f33e192244283b86ccf2684e0/elasticdl/python/examples/mnist_functional_api.py#L18-L24), in order to keep the feature column consistency between data preparation and model training, we should get the feature column from this file directly.
 
- 2. Data Preparation Function For a Single File: The signature for this function is:
+1. Data Preparation Function For a Single File: The signature for this function is:
     ```python
     def prepare_data_for_a_single_file(filename):
         '''
         This function is to read a single file and do whatever 
-        user-defined logic to prepare the data (e.g: IO from the user's file system, 
+        user-defined logic to prepare the data (e.g, IO from the user's file system, 
         feature engineering), and return a tuple of numpy array, which should 
         be compatible with the feature column above.
         '''
         pass
     ```
-    This part is not in our current model definition and is to be implemented. This part is not for data preparation only. It is needed for online serving anyway because the online input is always raw (e.g: text) and this provides the functionality to bind the feature transformation with the model. The user may need to install dependencies that the user needs to prepare the data in a new image, which can be derived from the image we provide.
+    This part is not in our current model definition and is to be implemented. This part is not for data preparation only. It is needed for online serving anyway because the online input is always raw (e.g, text) and this provides the functionality to bind the feature transformation with the model. The user may need to install dependencies that the user needs to prepare the data in a new image, which can be derived from the image we provide.
 
 
 ### `raw_data_directory`
