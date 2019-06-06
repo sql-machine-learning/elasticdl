@@ -113,7 +113,6 @@ class _TaskQueue(object):
                 self._logger.warning("Unknown task_id: %d" % task_id)
             elif not success:
                 # TODO: keep count of retries.
-                # 这里就会有问题，如果放在最后面的话，就会导致evaluation和training的不一致
                 self._todo.insert(0, task)
 
     def finished(self):
