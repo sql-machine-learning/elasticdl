@@ -21,7 +21,7 @@ from elasticdl.python.elasticdl.common.model_helper import (
 )
 
 
-def _make_task_queue(training_data_dir, evaluation_data_dir, record_per_task, num_epoch):
+def _make_task_queue(training_data_dir, evaluation_data_dir, record_per_task, num_epoch, num_evaluation_epoch):
     def _collect_file_records_from_dir(data_dir):
         f_records = {}
         for f in os.listdir(data_dir):
@@ -31,7 +31,7 @@ def _make_task_queue(training_data_dir, evaluation_data_dir, record_per_task, nu
         return f_records
     training_f_records = _collect_file_records_from_dir(training_data_dir)
     evaluation_f_records = _collect_file_records_from_dir(evaluation_data_dir)
-    return _TaskQueue(training_f_records, evaluation_f_records, record_per_task, num_epoch)
+    return _TaskQueue(training_f_records, evaluation_f_records, record_per_task, num_epoch, num_evaluation_epoch)
 
 
 def _pos_int(arg):
@@ -66,6 +66,12 @@ def _parse_args():
         "--evaluation_data_dir",
         help="Evaluation data directory. Files should be in RecordIO format",
         required=True,
+    )
+    parser.add_argument(
+        "--evaluation_epoch",
+        type=_non_neg_int,
+        help="Do evaluation every this many epoches. If 0, not evaluate based on epoch intervals.",
+        default=0,
     )
     parser.add_argument("--record_per_task", type=_pos_int, required=True)
     parser.add_argument("--num_epoch", type=_pos_int, required=True)
@@ -191,7 +197,8 @@ def main():
         args.training_data_dir,
         args.evaluation_data_dir,
         args.record_per_task,
-        args.num_epoch
+        args.num_epoch,
+        args.num_evaluation_epoch,
     )
     model_module = load_user_model(args.model_file)
     model_inst = model_module.model
