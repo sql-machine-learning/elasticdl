@@ -25,7 +25,7 @@ spec:
       --num_worker=2
       --worker_image=elasticdl:dev
       --job_name=test-mnist
-    imagePullPolicy: IfNotPresent
+    imagePullPolicy: Always
     env:
       - name: MY_POD_IP
         valueFrom:
