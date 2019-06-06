@@ -67,8 +67,16 @@ def _parse_args():
         help="Evaluation data directory. Files should be in RecordIO format",
         required=True,
     )
-    parser.add_argument("--record_per_task", type=_pos_int, required=True)
-    parser.add_argument("--num_epoch", type=_pos_int, required=True)
+    parser.add_argument(
+        "--record_per_task",
+        type=_pos_int,
+        required=True,
+    )
+    parser.add_argument(
+        "--num_epoch",
+        type=_pos_int,
+        required=True,
+    )
     parser.add_argument(
         "--grads_to_wait",
         type=_pos_int,

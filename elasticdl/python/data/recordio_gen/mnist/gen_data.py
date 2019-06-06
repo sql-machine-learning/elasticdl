@@ -17,7 +17,10 @@ def main(argv):
     parser = argparse.ArgumentParser(
         description="Generate MNIST and Fashion-MNIST datasets in RecordIO format."
     )
-    parser.add_argument("dir", help="Output directory")
+    parser.add_argument(
+        "dir",
+        help="Output directory"
+    )
     parser.add_argument(
         "--num_record_per_chunk",
         default=1024,
