@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.python.framework.ops import EagerTensor
 import numpy as np
+import PIL.Image
 
 
 inputs = tf.keras.Input(shape=(28, 28), name="img")
@@ -15,6 +16,12 @@ outputs = tf.keras.layers.Dense(10)(x)
 
 model = tf.keras.Model(inputs=inputs, outputs=outputs, name="mnist_model")
 
+
+def prepare_data_for_a_single_file(filename):
+    label = int(filename.split('/')[-2])
+    image = PIL.Image.open(filename)
+    numpy_image = np.array(image)
+    return numpy_image, label
 
 def feature_columns():
     return [
