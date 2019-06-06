@@ -66,7 +66,7 @@ class Cifar10Model(tf.keras.Model):
         self._dropout_3 = tf.keras.layers.Dropout(0.4)
 
         self._flatten_1 = tf.keras.layers.Flatten()
-        self._dense_1 = tf.keras.layers.Dense(10, activation=tf.nn.softmax, name='output')
+        self._dense_1 = tf.keras.layers.Dense(10, name='output')
 
     def call(self, inputs, training=False):
         x = self._conv_1(inputs)

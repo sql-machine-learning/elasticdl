@@ -64,7 +64,7 @@ max_pool = tf.keras.layers.MaxPooling2D()(activation)
 dropout = tf.keras.layers.Dropout(0.4)(max_pool)
 
 flatten = tf.keras.layers.Flatten()(dropout)
-outputs = tf.keras.layers.Dense(10, activation=tf.nn.softmax, name='output')(flatten)
+outputs = tf.keras.layers.Dense(10, name='output')(flatten)
 
 model = tf.keras.Model(inputs=inputs, outputs=outputs, name='cifar10_model')
 
