@@ -5,6 +5,8 @@ import traceback
 
 from kubernetes import client, config, watch
 
+WORKER_POD_NAME_PREFIX = "elasticdl-worker-"
+
 
 class Client(object):
     def __init__(
@@ -51,14 +53,14 @@ class Client(object):
             except Exception:
                 traceback.print_exc()
 
-    def get_pod_name(self, worker_id):
-        return "elasticdl-worker-" + self._job_name + "-" + str(worker_id)
+    def get_worker_pod_name(self, worker_id):
+        return WORKER_POD_NAME_PREFIX + self._job_name + "-" + str(worker_id)
 
     def _create_worker_pod(self, worker_id, resource_requests, resource_limits, priority,
                            mount_path, volume_name, image_pull_policy, command, args, restart_policy):
         # Worker container config
         container = client.V1Container(
-            name=self.get_pod_name(worker_id),
+            name=self.get_worker_pod_name(worker_id),
             image=self._image,
             command=command,
             resources=client.V1ResourceRequirements(
@@ -90,7 +92,7 @@ class Client(object):
         pod = client.V1Pod(
             spec=spec,
             metadata=client.V1ObjectMeta(
-                name=self.get_pod_name(worker_id),
+                name=self.get_worker_pod_name(worker_id),
                 labels={
                     "app": "elasticdl",
                     "elasticdl_job_name": self._job_name
@@ -112,7 +114,7 @@ class Client(object):
     def delete_worker(self, worker_id):
         self._logger.info("Deleting worker: " + str(worker_id))
         self._v1.delete_namespaced_pod(
-            self.get_pod_name(worker_id),
+            self.get_worker_pod_name(worker_id),
             self._ns,
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )

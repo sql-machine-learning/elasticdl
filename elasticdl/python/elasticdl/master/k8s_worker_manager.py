@@ -123,8 +123,8 @@ class WorkerManager(object):
         relaunch = False
         with self._lock:
             worker_id = self._pod_name_to_id.get(pod_name)
-            if worker_id is None:
-                self._logger.error("Unknown pod name: %s" % pod_name)
+            if worker_id is None and k8s.WORKER_POD_NAME_PREFIX in pod_name:
+                self._logger.error("Unknown worker pod name: %s" % pod_name)
                 return
 
             self._pods_phase[worker_id] = (pod_name, phase)
