@@ -66,16 +66,27 @@ Use the command below to submit your first ElasticDL job on GKE:
 python elasticdl/python/elasticdl/client/client.py \
     --job_name=hello-world \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
-    --train_data_dir=/data/mnist/train \
+    --training_data_dir=${MNIST_DATA_DIR}/train \
+    --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --num_epoch=1 \
     --minibatch_size=10 \
     --record_per_task=100 \
     --num_worker=2 \
     --grads_to_wait=2 \
     --codec_type=bytes \
+    --mount_path=${MOUNT_PATH} \
+    --volume_name=${VOLUME_NAME} \
     --repository=gcr.io \
-    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev
+    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
+    --log_level=INFO
 ```
+`MNIST_DATA_DIR` : The directory that contains MNIST training and evaluation data in recordio format(e.g. /data/mnist_nfs/mnist).
+
+`VOLUME_NAME` : The name of the [Kubernetes Volume](https://cloud.google.com/kubernetes-engine/docs/concepts/volumes) (e.g. data-volume).
+
+`MOUNT_PATH` : The mount path in the container of the kubernetes volume (e.g. /data).
+
+
 Use the following command to check the job's pods statuses:
 
 ```bash
@@ -96,15 +107,19 @@ Same as the first example, submit a job on GKE using the command below:
 python elasticdl/python/elasticdl/client/client.py \
     --job_name=fault-tolerance \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
-    --train_data_dir=/data/mnist/train \
+    --training_data_dir=${MNIST_DATA_DIR}/train \
+    --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --num_epoch=1 \
     --minibatch_size=10 \
     --record_per_task=100 \
     --num_worker=2 \
     --grads_to_wait=2 \
     --codec_type=bytes \
+    --mount_path=${MOUNT_PATH} \
+    --volume_name=${VOLUME_ID} \
     --repository=gcr.io \
-    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev
+    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
+    --log_level=INFO
 ```
 Check the job's pods statuses and wait until all the pods become `Running`:
 
@@ -154,7 +169,8 @@ For more about PriorityClass, please check out [Pod Priority and Preemption](htt
 python elasticdl/python/elasticdl/client/client.py \
     --job_name=low-prio-job \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
-    --train_data_dir=/data/mnist/train \
+    --training_data_dir=${MNIST_DATA_DIR}/train \
+    --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --master_pod_priority=high-priority \
     --worker_pod_priority=low-priority \
     --num_epoch=1 \
@@ -171,8 +187,11 @@ python elasticdl/python/elasticdl/client/client.py \
     --worker_memory_limit=4096Mi \
     --grads_to_wait=2 \
     --codec_type=bytes \
+    --mount_path=${MOUNT_PATH} \
+    --volume_name=${VOLUMN_ID} \
     --repository=gcr.io \
-    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev
+    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
+    --log_level=INFO
 ```
 Please note that the master pod is configured priority `high-priority` which means the master cannot be preempted even for low priority jobs.
 
@@ -187,7 +206,8 @@ kubectl get pods -l elasticdl_job_name=low-prio-job
 python elasticdl/python/elasticdl/client/client.py \
     --job_name=high-prio-job \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
-    --train_data_dir=/data/mnist/train \
+    --training_data_dir=${MNIST_DATA_DIR}/train \
+    --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --master_pod_priority=high-priority \
     --worker_pod_priority=high-priority \
     --num_epoch=1 \
@@ -204,8 +224,11 @@ python elasticdl/python/elasticdl/client/client.py \
     --worker_memory_limit=4096Mi \
     --grads_to_wait=2 \
     --codec_type=bytes \
+    --mount_path=${MOUNT_PATH} \
+    --volume_name=${VOLUMN_ID} \
     --repository=gcr.io \
-    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev
+    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
+    --log_level=INFO
 ```
 Use the following command:
 

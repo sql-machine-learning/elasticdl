@@ -129,6 +129,12 @@ spec:
                 args.mount_path,
                 "--volume_name",
                 args.volume_name,
+            ]
+        )
+    
+    if args.image_pull_policy is not None:
+        master_def["spec"]["containers"][0]["args"].extend(
+            [
                 "--image_pull_policy",
                 args.image_pull_policy,
             ]

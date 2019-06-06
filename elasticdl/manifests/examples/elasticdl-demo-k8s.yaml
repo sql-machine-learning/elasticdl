@@ -15,7 +15,8 @@ spec:
     - >
       python -m elasticdl.python.elasticdl.master.main
       --model_file=/elasticdl/python/examples/mnist_functional_api.py
-      --train_data_dir=/elasticdl/python/data/mnist/train
+      --training_data_dir=/elasticdl/python/data/mnist/train
+      --evaluation_data_dir=/elasticdl/python/data/mnist/test
       --codec_type=tf_example
       --record_per_task=100
       --num_epoch=1

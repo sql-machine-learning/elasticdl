@@ -1,21 +1,22 @@
 import unittest
 
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
+from elasticdl.proto import elasticdl_pb2
 
 
 class TaskQueueTest(unittest.TestCase):
     def test_create_get(self):
-        task_q = _TaskQueue({"f1": 10, "f2": 10}, 3, 1)
+        task_q = _TaskQueue({"f1": 10, "f2": 10}, {}, 3, 1)
 
         all_tasks = [
-            ("f1", 0, 3),
-            ("f1", 3, 6),
-            ("f1", 6, 9),
-            ("f1", 9, 10),
-            ("f2", 0, 3),
-            ("f2", 3, 6),
-            ("f2", 6, 9),
-            ("f2", 9, 10),
+            ("f1", 0, 3, elasticdl_pb2.TRAINING),
+            ("f1", 3, 6, elasticdl_pb2.TRAINING),
+            ("f1", 6, 9, elasticdl_pb2.TRAINING),
+            ("f1", 9, 10, elasticdl_pb2.TRAINING),
+            ("f2", 0, 3, elasticdl_pb2.TRAINING),
+            ("f2", 3, 6, elasticdl_pb2.TRAINING),
+            ("f2", 6, 9, elasticdl_pb2.TRAINING),
+            ("f2", 9, 10, elasticdl_pb2.TRAINING),
         ]
 
         # get all tasks out, each worker is assigned 2 tasks.
@@ -55,17 +56,17 @@ class TaskQueueTest(unittest.TestCase):
         self.assertTrue(task_q.finished())
 
     def test_epoch(self):
-        task_q = _TaskQueue({"f1": 10, "f2": 10}, 3, 2)
+        task_q = _TaskQueue({"f1": 10, "f2": 10}, {}, 3, 2)
 
         epoch_tasks = [
-            ("f1", 0, 3),
-            ("f1", 3, 6),
-            ("f1", 6, 9),
-            ("f1", 9, 10),
-            ("f2", 0, 3),
-            ("f2", 3, 6),
-            ("f2", 6, 9),
-            ("f2", 9, 10),
+            ("f1", 0, 3, elasticdl_pb2.TRAINING),
+            ("f1", 3, 6, elasticdl_pb2.TRAINING),
+            ("f1", 6, 9, elasticdl_pb2.TRAINING),
+            ("f1", 9, 10, elasticdl_pb2.TRAINING),
+            ("f2", 0, 3, elasticdl_pb2.TRAINING),
+            ("f2", 3, 6, elasticdl_pb2.TRAINING),
+            ("f2", 6, 9, elasticdl_pb2.TRAINING),
+            ("f2", 9, 10, elasticdl_pb2.TRAINING),
         ]
 
         # get first epoch tasks

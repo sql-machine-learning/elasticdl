@@ -2,7 +2,6 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-import logging
 import tempfile
 import mock
 import grpc
@@ -45,25 +44,6 @@ def create_recordio_file(size, codec_type):
 
 
 class WorkerTest(unittest.TestCase):
-    def local_train(self, codec_type):
-        worker = Worker(0, _module_file, codec_type=codec_type)
-        filename = create_recordio_file(128, codec_type)
-        batch_size = 32
-        epoch = 2
-        try:
-            worker.local_train([filename], batch_size, epoch)
-            res = True
-        except Exception as ex:
-            print(ex)
-            res = False
-        self.assertTrue(res)
-
-    def test_local_train_bytes(self):
-        self.local_train("bytes")
-
-    def test_local_train_tf_example(self):
-        self.local_train("tf_example")
-
     def distributed_train_and_evaluate(self, codec_type, training=True):
         """
         Run distributed training and evaluation with a local master.
@@ -101,10 +81,21 @@ class WorkerTest(unittest.TestCase):
             codec_type=codec_type,
         )
 
-        filename = create_recordio_file(128, codec_type)
-        task_q = _TaskQueue({filename: 128}, record_per_task=64, num_epoch=1)
+        shards = {create_recordio_file(128, codec_type): 128}
+        if training:
+            training_shards = shards
+            evaluation_shards = {}
+        else:
+            training_shards = {}
+            evaluation_shards = shards
+        task_q = _TaskQueue(
+            training_shards,
+            evaluation_shards,
+            record_per_task=64,
+            num_epoch=1)
         master = MasterServicer(2, 16, worker._opt_fn(), task_q,
                                 init_var=[],
+                                init_from_checkpoint="",
                                 checkpoint_dir="",
                                 checkpoint_steps=0,
                                 keep_checkpoint_max=0)
@@ -124,10 +115,7 @@ class WorkerTest(unittest.TestCase):
             worker._stub, "ReportTaskResult", mock_ReportTaskResult
         ):
             try:
-                if training:
-                    worker.distributed_train()
-                else:
-                    worker.distributed_evaluate(steps=2)
+                worker.run()
                 res = True
             except Exception as ex:
                 print(ex)
