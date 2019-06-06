@@ -30,9 +30,9 @@ def main(argv):
     args = parser.parse_args(argv)
 
     feature_columns = [tf.feature_column.numeric_column(key="image",
-        dtype=tf.float32, shape=[3, 32, 32]),
+        dtype=tf.float32, shape=[32, 32, 3]),
         tf.feature_column.numeric_column(key="label",
-        dtype=tf.int64, shape=[1, 1])]
+        dtype=tf.int64, shape=[1])]
     if args.codec_type == "tf_example":
         decode_fn = TFExampleCodec(feature_columns).decode
     elif args.codec_type == "bytes":

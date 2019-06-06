@@ -30,7 +30,7 @@ def _make_task_queue(training_data_dir, evaluation_data_dir, record_per_task, nu
                 f_records[p] = rio.num_records()
         return f_records
     training_f_records = _collect_file_records_from_dir(training_data_dir)
-    evaluation_f_records = _collect_file_records_from_dir(evaluation_data_dir)
+    evaluation_f_records = {} if evaluation_data_dir == "" else _collect_file_records_from_dir(evaluation_data_dir)
     return _TaskQueue(training_f_records, evaluation_f_records, record_per_task, num_epoch)
 
 
@@ -65,7 +65,7 @@ def _parse_args():
     parser.add_argument(
         "--evaluation_data_dir",
         help="Evaluation data directory. Files should be in RecordIO format",
-        required=True,
+        default="",
     )
     parser.add_argument("--record_per_task", type=_pos_int, required=True)
     parser.add_argument("--num_epoch", type=_pos_int, required=True)
