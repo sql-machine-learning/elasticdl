@@ -18,8 +18,8 @@ spec:
       --training_data_dir=/elasticdl/python/data/mnist/train
       --evaluation_data_dir=/elasticdl/python/data/mnist/test
       --codec_type=tf_example
-      --record_per_task=100
-      --num_epoch=1
+      --records_per_task=100
+      --num_epochs=1
       --grads_to_wait=2
       --minibatch_size=64
       --num_workers=2

@@ -26,18 +26,18 @@ class _Task(object):
 class _TaskQueue(object):
     """Creates and dispatches Tasks. Keep track of a Task's lifecycle."""
 
-    def __init__(self, training_shards, evaluation_shards, record_per_task, num_epoch):
+    def __init__(self, training_shards, evaluation_shards, records_per_task, num_epochs):
         """
         shards: a dictionary from RecordIO file name to number of records
         """
         self._logger = logging.getLogger(__name__)
         self._lock = threading.Lock()
 
-        self._num_epoch = num_epoch
+        self._num_epochs = num_epochs
         self._epoch = 0
         self._training_shards = training_shards
         self._evaluation_shards = evaluation_shards
-        self._record_per_task = record_per_task
+        self._records_per_task = records_per_task
 
         self._todo = []
         # dictionary from task id to Task.
@@ -48,12 +48,12 @@ class _TaskQueue(object):
 
     def _create_tasks(self):
         for name, num_records in self._training_shards.items():
-            for start in range(0, num_records, self._record_per_task):
+            for start in range(0, num_records, self._records_per_task):
                 self._todo.append(
                     _Task(
                         file_name=name,
                         start=start,
-                        end=min(start + self._record_per_task, num_records),
+                        end=min(start + self._records_per_task, num_records),
                         type=elasticdl_pb2.TRAINING,
                     )
                 )
@@ -78,7 +78,7 @@ class _TaskQueue(object):
         """Return next (task_id, Task) tuple"""
 
         with self._lock:
-            if not self._todo and self._epoch < self._num_epoch - 1:
+            if not self._todo and self._epoch < self._num_epochs - 1:
                 # Start a new epoch
                 self._create_tasks()
                 self._epoch += 1

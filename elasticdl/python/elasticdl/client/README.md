@@ -36,7 +36,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=/data/mnist/train \
     --evaluation_data_dir=/data/mnist/test \
-    --num_epoch=1 \
+    --num_epochs=1 \
     --master_cpu_request=1000m \
     --master_cpu_limit=1000m \
     --master_memory_request=512Mi \
@@ -46,7 +46,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --worker_memory_request=1024Mi \
     --worker_memory_limit=1024Mi \
     --minibatch_size=10 \
-    --record_per_task=100 \
+    --records_per_task=100 \
     --num_workers=1 \
     --grads_to_wait=2 \
     --codec_type=tf_example \
@@ -63,9 +63,9 @@ python elasticdl/python/elasticdl/client/client.py \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=/data/mnist_nfs/train \
     --evaluation_data_dir=/data/mnist_nfs/test \
-    --num_epoch=1 \
+    --num_epochs=1 \
     --minibatch_size=10 \
-    --record_per_task=100 \
+    --records_per_task=100 \
     --num_workers=1 \
     --master_pod_priority=highest-priority \
     --worker_pod_priority=high-priority \

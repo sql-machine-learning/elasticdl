@@ -68,9 +68,9 @@ python elasticdl/python/elasticdl/client/client.py \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=${MNIST_DATA_DIR}/train \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
-    --num_epoch=1 \
+    --num_epochs=1 \
     --minibatch_size=10 \
-    --record_per_task=100 \
+    --records_per_task=100 \
     --num_workers=2 \
     --grads_to_wait=2 \
     --codec_type=bytes \
@@ -109,9 +109,9 @@ python elasticdl/python/elasticdl/client/client.py \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=${MNIST_DATA_DIR}/train \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
-    --num_epoch=1 \
+    --num_epochs=1 \
     --minibatch_size=10 \
-    --record_per_task=100 \
+    --records_per_task=100 \
     --num_workers=2 \
     --grads_to_wait=2 \
     --codec_type=bytes \
@@ -173,9 +173,9 @@ python elasticdl/python/elasticdl/client/client.py \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --master_pod_priority=high-priority \
     --worker_pod_priority=low-priority \
-    --num_epoch=1 \
+    --num_epochs=1 \
     --minibatch_size=10 \
-    --record_per_task=100 \
+    --records_per_task=100 \
     --num_workers=2 \
     --master_cpu_request=1000m \
     --master_cpu_limit=1000m \
@@ -210,9 +210,9 @@ python elasticdl/python/elasticdl/client/client.py \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --master_pod_priority=high-priority \
     --worker_pod_priority=high-priority \
-    --num_epoch=1 \
+    --num_epochs=1 \
     --minibatch_size=10 \
-    --record_per_task=100 \
+    --records_per_task=100 \
     --num_workers=1 \
     --master_cpu_request=1000m \
     --master_cpu_limit=1000m \
