@@ -91,8 +91,8 @@ class WorkerTest(unittest.TestCase):
         task_q = _TaskQueue(
             training_shards,
             evaluation_shards,
-            record_per_task=64,
-            num_epoch=1)
+            records_per_task=64,
+            num_epochs=1)
         master = MasterServicer(2, 16, worker._opt_fn(), task_q,
                                 init_var=[],
                                 init_from_checkpoint="",
