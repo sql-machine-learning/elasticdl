@@ -12,9 +12,16 @@ from elasticdl.python.elasticdl.worker.worker import Worker
 def _parse_args():
     parser = argparse.ArgumentParser(description="ElasticDL Worker")
     parser.add_argument(
-        "--worker_id", help="Id unique to the worker", type=int, required=True
+        "--worker_id",
+        help="Id unique to the worker",
+        type=int,
+        required=True
     )
-    parser.add_argument("--master_addr", help="Master ip:port", required=True)
+    parser.add_argument(
+        "--master_addr",
+        help="Master ip:port",
+        required=True,
+    )
     parser.add_argument(
         "--model_file",
         help="Full file path of user defined neural model",
