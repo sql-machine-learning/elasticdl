@@ -24,15 +24,10 @@ RUN apt-get install ca-certificates-java && \
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64/
 RUN export JAVA_HOME
 
-# Install gRPC tools in Python
-RUN pip install grpcio-tools --extra-index-url=${EXTRA_PYPI_INDEX}
-
 # Install RecordIO 
 RUN pip install 'pyrecordio>=0.0.6' --extra-index-url=${EXTRA_PYPI_INDEX}
 
 ENV PYTHONPATH=/
 WORKDIR /
 COPY elasticdl /elasticdl
-COPY Makefile /Makefile
-RUN make
 ENTRYPOINT ["spark-submit"]

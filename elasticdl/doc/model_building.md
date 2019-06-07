@@ -180,6 +180,26 @@ def eval_metrics_fn(predictions, labels):
     }
 ```
 
+### prepare_data_for_a_single_file
+```
+prepare_data_for_a_single_file(filename)
+```
+`prepare_data_for_a_single_file` is to read a single file and do whatever 
+user-defined logic to prepare the data (e.g, IO from the user's file system, feature engineering), and return a tuple of numpy array, which should be compatible with the feature and label columns above.
+
+Example:
+
+```
+def prepare_data_for_a_single_file(filename):
+    '''
+    A image classification dataset that images belonging to the same category located in the same directory.
+    '''
+    label = int(filename.split('/')[-2])
+    image = PIL.Image.open(filename)
+    numpy_image = np.array(image)
+    return numpy_image, label
+```
+
 
 ## Model Building Examples
 ### [MNIST model using Keras functional API](../python/examples/mnist_functional_api.py)
