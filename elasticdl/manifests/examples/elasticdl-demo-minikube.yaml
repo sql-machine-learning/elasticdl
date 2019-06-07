@@ -27,7 +27,7 @@ spec:
       --worker_cpu_request=100m
       --worker_memory_request=100Mi
       --job_name=test-mnist
-    imagePullPolicy: Never
+    imagePullPolicy: Always
     env:
       - name: MY_POD_IP
         valueFrom:
