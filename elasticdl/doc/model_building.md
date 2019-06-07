@@ -192,7 +192,7 @@ Example:
 ```
 def prepare_data_for_a_single_file(filename):
     '''
-    A image classification dataset that images belonging to the same category located in the same directory.
+    An image classification dataset that images belonging to the same category located in the same directory.
     '''
     label = int(filename.split('/')[-2])
     image = PIL.Image.open(filename)

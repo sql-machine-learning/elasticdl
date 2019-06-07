@@ -5,7 +5,7 @@
 ## Background
 Currently, ElasticDL requires the input data in [RecordIO](https://github.com/wangkuiyi/recordio) format. This tutorial is to help users convert raw training data to the required RecordIO format. The RecordIO API is written in Golang and you can see how to use that [here](https://github.com/wangkuiyi/recordio/blob/develop/recordio_test.go). Because we process our data via PySpark job, what we use is the [python wrapper](https://github.com/wangkuiyi/recordio/tree/develop/python) outside its Golang implementation.
 
-This tutorial provides three approaches to process the data: [local Python script](#python-script), [local PySpark job](#local-pySpark-job) and [PySpark job running on Google Cloud](#pyspark-job-on-google-cloud).
+This tutorial provides three approaches to process the data: [local Python script](#python-script), [local PySpark job](#local-pyspark-job) and [PySpark job running on Google Cloud](#pyspark-job-on-google-cloud).
 
 
 ## Python Script
@@ -49,27 +49,31 @@ If your data amount is huge so that it can't fit into your local disk, this is t
 ```bash
 LOCAL_INIT_SCRIPT=elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/go-pip-install.sh
 GS_INIT_SCRIPT=gs://elasticdl.appspot.com/go-pip-install.sh
+
 gsutil cp $LOCAL_INIT_SCRIPT $GS_INIT_SCRIPT
 ```
 3. [Create a Dataproc cluster](https://cloud.google.com/dataproc/docs/guides/create-cluster) with the [initialization actions](https://cloud.google.com/dataproc/docs/concepts/configuring-clusters/init-actions#using_initialization_actions) by the script above.
 ```bash
 CLUSTER_NAME=test-cluster
+
 gcloud beta dataproc clusters create CLUSTER_NAME \
 	--image-version=preview \
     --optional-components=ANACONDA \
     --initialization-actions $GS_INIT_SCRIPT
 ```
-5. Upload the sample training data to Google Cloud Storage.
+4. Upload the sample training data to Google Cloud Storage.
 ```bash
 LOCAL_TRAINING_DATA=elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/sample_image_classification_training_data
 GS_TRAINING_DATA=gs://elasticdl.appspot.com/sample_image_classification_training_data
+
 gsutil cp -r LOCAL_TRAINING_DATA GS_TRAINING_DATA
 ```
-6. Submit the PySpark job following [here](https://cloud.google.com/dataproc/docs/guides/submit-job).
+5. Submit the PySpark job following [here](https://cloud.google.com/dataproc/docs/guides/submit-job).
 ```bash
 gcloud dataproc jobs submit pyspark \
 	--cluster=CLUSTER_NAME
     --region=global \
     elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/spark_gen_recordio.py
+
 TODO: Finish this part once we are able to write RecordIO data to Google Cloud Storage.
 ```
