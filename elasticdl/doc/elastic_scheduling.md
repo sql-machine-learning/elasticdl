@@ -71,7 +71,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --num_epoch=1 \
     --minibatch_size=10 \
     --record_per_task=100 \
-    --num_worker=2 \
+    --num_workers=2 \
     --grads_to_wait=2 \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
@@ -112,7 +112,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --num_epoch=1 \
     --minibatch_size=10 \
     --record_per_task=100 \
-    --num_worker=2 \
+    --num_workers=2 \
     --grads_to_wait=2 \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
@@ -176,7 +176,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --num_epoch=1 \
     --minibatch_size=10 \
     --record_per_task=100 \
-    --num_worker=2 \
+    --num_workers=2 \
     --master_cpu_request=1000m \
     --master_cpu_limit=1000m \
     --master_memory_request=1024Mi \
@@ -213,7 +213,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --num_epoch=1 \
     --minibatch_size=10 \
     --record_per_task=100 \
-    --num_worker=1 \
+    --num_workers=1 \
     --master_cpu_request=1000m \
     --master_cpu_limit=1000m \
     --master_memory_request=1024Mi \

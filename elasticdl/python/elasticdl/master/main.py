@@ -90,7 +90,7 @@ def _parse_args():
         required=True,
     )
     parser.add_argument(
-        "--num_worker",
+        "--num_workers",
         type=_pos_int,
         help="Number of workers",
         default=0,
@@ -225,7 +225,7 @@ def main():
     server.start()
     logger.info("Server started at port: %d", PORT)
 
-    if args.num_worker:
+    if args.num_workers:
         assert args.worker_image, "Worker image cannot be empty"
 
         master_addr = "%s:%d" % (os.getenv("MY_POD_IP", "localhost"), PORT)
@@ -250,7 +250,7 @@ def main():
             command=worker_command,
             args=worker_args,
             namespace="default",
-            num_worker=args.num_worker,
+            num_workers=args.num_workers,
             cpu_request=args.worker_cpu_request,
             cpu_limit=args.worker_cpu_limit,
             memory_request=args.worker_memory_request,

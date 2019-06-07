@@ -12,7 +12,7 @@ class WorkerManager(object):
             task_q,
             command,
             args,
-            num_worker=1,
+            num_workers=1,
             cpu_request="1000m",
             cpu_limit="1000m",
             memory_request="4096Mi",
@@ -26,7 +26,7 @@ class WorkerManager(object):
         self._logger = logging.getLogger(__name__)
         self._command = command
         self._args = args
-        self._num_worker = num_worker
+        self._num_workers = num_workers
         self._resource_requests = {
             "cpu": cpu_request,
             "memory": memory_request
@@ -87,7 +87,7 @@ class WorkerManager(object):
             self._pods_phase[worker_id] = (name, None)
 
     def start_workers(self):
-        for i in range(self._num_worker):
+        for i in range(self._num_workers):
             self._start_worker(self._next_worker_id())
 
     def _remove_worker(self, worker_id):

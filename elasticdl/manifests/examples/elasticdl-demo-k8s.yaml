@@ -22,7 +22,7 @@ spec:
       --num_epoch=1
       --grads_to_wait=2
       --minibatch_size=64
-      --num_worker=2
+      --num_workers=2
       --worker_image=elasticdl:dev
       --job_name=test-mnist
     imagePullPolicy: Always

@@ -26,7 +26,7 @@ class WorkerManagerTest(unittest.TestCase):
             command=["echo"],
             args=[],
             namespace="default",
-            num_worker=3,
+            num_workers=3,
         )
 
         worker_manager.start_workers()
@@ -67,7 +67,7 @@ class WorkerManagerTest(unittest.TestCase):
             command=["badcommand"],
             args=["badargs"],
             namespace="default",
-            num_worker=3,
+            num_workers=3,
             restart_policy="Never",
         )
         worker_manager.start_workers()
@@ -103,7 +103,7 @@ class WorkerManagerTest(unittest.TestCase):
             command=["sleep 10"],
             args=[],
             namespace="default",
-            num_worker=3,
+            num_workers=3,
         )
 
         worker_manager.start_workers()

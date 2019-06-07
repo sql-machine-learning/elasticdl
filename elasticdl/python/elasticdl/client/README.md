@@ -47,7 +47,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --worker_memory_limit=1024Mi \
     --minibatch_size=10 \
     --record_per_task=100 \
-    --num_worker=1 \
+    --num_workers=1 \
     --grads_to_wait=2 \
     --codec_type=tf_example \
     --job_name=test \
@@ -66,7 +66,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --num_epoch=1 \
     --minibatch_size=10 \
     --record_per_task=100 \
-    --num_worker=1 \
+    --num_workers=1 \
     --master_pod_priority=highest-priority \
     --worker_pod_priority=high-priority \
     --master_cpu_request=1000m \
