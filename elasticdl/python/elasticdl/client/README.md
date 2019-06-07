@@ -94,3 +94,28 @@ The difference is the additional `repository` argument that points to the Docker
 kubectl get pods
 kubectl logs ${pod_name}
 ```
+
+## Evaluate the trained model
+
+After the training job finished, the trained model will be exported to the directory specified by parameter `--checkpoint_dir`, and ElasticDL provide user a command to reevaluate the trained model with the specified dataset using the command below to see the loss and accuracy of the trainded model:
+
+```bash
+python3 elasticdl/python/elasticdl/client/client.py \
+    --job_type=evaluation \
+    --job_name=high-eval-job \
+    --model_file=elasticdl/python/examples/mnist_subclass.py \
+    --trained_model=/data/cp/model_${version}.chkpt \
+    --data_dir=/data/mnist_nfs/mnist/train \
+    --pod_priority=high-priority \
+    --cpu_request=1000m \
+    --cpu_limit=1000m \
+    --memory_request=1024Mi \
+    --memory_limit=1024Mi \
+    --codec_type=bytes \
+    --repository=gcr.io \
+    --mount_path=/data \
+    --volume_name=data-volume \
+    --image_base=gcr.io/elasticdl/elasticdl:dev \
+    --image_pull_policy=Always \
+    --log_level=INFO
+```
