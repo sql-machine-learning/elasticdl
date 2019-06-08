@@ -75,5 +75,5 @@ gcloud dataproc jobs submit pyspark \
     --region=global \
     elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/spark_gen_recordio.py
 
-TODO: Finish this part once we are able to write RecordIO data to Google Cloud Storage.
+TODO: Finish this part once we are able to write RecordIO data to Google Cloud Storage. A related issue is [here](https://github.com/wangkuiyi/elasticdl/issues/381).
 ```
