@@ -19,6 +19,16 @@ docker build \
     --build-arg BASE_IMAGE=tensorflow/tensorflow:1.13.1-gpu-py3 .
 ```
 
+If you are running the examples in the repo, the datasets need to be generated when building the image, which
+could be achieved by adding `GEN_DATA=yes` to the build arg like the following:
+
+```bash
+docker build \
+    --build-arg GEN_DATA=yes \
+    -t elasticdl:dev \
+    -f elasticdl/docker/Dockerfile .
+```
+
 When having difficulties downloading from the main PYPI site, you could pass an extra PYPI index url to `docker build`, such as:
 
 ```bash
