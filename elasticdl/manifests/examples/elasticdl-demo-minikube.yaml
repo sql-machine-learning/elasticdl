@@ -18,16 +18,16 @@ spec:
       --training_data_dir=/elasticdl/python/data/mnist/train
       --evaluation_data_dir=/elasticdl/python/data/mnist/test
       --codec_type=tf_example
-      --record_per_task=100
-      --num_epoch=1
+      --records_per_task=100
+      --num_epochs=1
       --grads_to_wait=2
       --minibatch_size=64
-      --num_worker=2
+      --num_workers=2
       --worker_image=elasticdl:dev
       --worker_cpu_request=100m
       --worker_memory_request=100Mi
       --job_name=test-mnist
-    imagePullPolicy: Never
+    imagePullPolicy: Always
     env:
       - name: MY_POD_IP
         valueFrom:

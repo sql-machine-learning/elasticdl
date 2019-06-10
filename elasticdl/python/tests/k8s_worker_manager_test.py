@@ -17,7 +17,7 @@ class WorkerManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def testCreateDeleteWorkerPod(self):
-        task_q = _TaskQueue({"f": 10}, 1, 1)
+        task_q = _TaskQueue({"f": 10}, {}, 1, 1)
         task_q.recover_tasks = MagicMock()
         worker_manager = WorkerManager(
             task_q,
@@ -26,7 +26,7 @@ class WorkerManagerTest(unittest.TestCase):
             command=["echo"],
             args=[],
             namespace="default",
-            num_worker=3,
+            num_workers=3,
         )
 
         worker_manager.start_workers()
@@ -58,7 +58,7 @@ class WorkerManagerTest(unittest.TestCase):
         Start a pod running a python program destined to fail with restart_policy="Never"
         to test failed_worker_count
         """
-        task_q = _TaskQueue({"f": 10}, 1, 1)
+        task_q = _TaskQueue({"f": 10}, {}, 1, 1)
         task_q.recover_tasks = MagicMock()
         worker_manager = WorkerManager(
             task_q,
@@ -67,7 +67,7 @@ class WorkerManagerTest(unittest.TestCase):
             command=["badcommand"],
             args=["badargs"],
             namespace="default",
-            num_worker=3,
+            num_workers=3,
             restart_policy="Never",
         )
         worker_manager.start_workers()
@@ -95,7 +95,7 @@ class WorkerManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def testRelaunchWorkerPod(self):
-        task_q = _TaskQueue({"f": 10}, 1, 1)
+        task_q = _TaskQueue({"f": 10}, {}, 1, 1)
         worker_manager = WorkerManager(
             task_q,
             job_name="test-relaunch-worker-pod",
@@ -103,7 +103,7 @@ class WorkerManagerTest(unittest.TestCase):
             command=["sleep 10"],
             args=[],
             namespace="default",
-            num_worker=3,
+            num_workers=3,
         )
 
         worker_manager.start_workers()

@@ -143,8 +143,8 @@ class CheckpointTest(unittest.TestCase):
         task_q = _TaskQueue(
             {filename: 128},
             {},
-            record_per_task=64,
-            num_epoch=1,
+            records_per_task=64,
+            num_epochs=1,
         )
         master = MasterServicer(
             2,

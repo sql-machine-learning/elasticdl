@@ -242,17 +242,24 @@ def main():
     parser = argparse.ArgumentParser(description="ElasticDL Client")
     # Rewrite model_file argument and pass all other arguments to master.
     parser.add_argument(
-        "--model_file", help="Path to Model file", required=True
-    )
-    parser.add_argument(
-        "--image_base",
-        help="Base image containing elasticdl runtime environment.",
+        "--model_file",
+        help="Path to the model file",
         required=True,
     )
     parser.add_argument(
-        "--repository", help="The repository to push docker image to."
+        "--image_base",
+        help="Base image containing ElasticDL runtime environment",
+        required=True,
     )
-    parser.add_argument("--job_name", help="ElasticDL job name", required=True)
+    parser.add_argument(
+        "--repository",
+        help="The repository to push docker image to",
+    )
+    parser.add_argument(
+        "--job_name",
+        help="ElasticDL job name",
+        required=True
+    )
     parser.add_argument(
         "--job_type", 
         choices=["training", "evaluation"],
@@ -262,90 +269,94 @@ def main():
         "--master_cpu_request",
         default="100m",
         type=_valid_cpu_spec,
-        help="the minimal cpu required by master in training",
+        help="The minimal CPU required by master in training",
     )
     parser.add_argument(
         "--master_cpu_limit",
         default="100m",
         type=_valid_cpu_spec,
-        help="the maximal cpu used by master in training",
+        help="The maximal CPU used by master in training",
     )
     parser.add_argument(
         "--master_memory_request",
         default="1024Mi",
         type=_valid_mem_spec,
-        help="the minimal memory required by master in training",
+        help="The minimal memory required by master in training",
     )
     parser.add_argument(
         "--master_memory_limit",
         default="1024Mi",
         type=_valid_mem_spec,
-        help="the maximal memory used by master in training",
+        help="The maximal memory used by master in training",
     )
     parser.add_argument(
         "--worker_cpu_request",
         default="1000m",
         type=_valid_cpu_spec,
-        help="the minimal cpu required by worker in training",
+        help="The minimal cpu required by worker",
     )
     parser.add_argument(
         "--worker_cpu_limit",
         default="1000m",
         type=_valid_cpu_spec,
-        help="the maximal cpu used by worker in training",
+        help="The maximal cpu used by worker",
     )
     parser.add_argument(
         "--worker_memory_request",
         default="4096Mi",
         type=_valid_mem_spec,
-        help="the minimal memory required by worker in training",
+        help="The minimal memory required by worker",
     )
     parser.add_argument(
         "--worker_memory_limit",
         default="4096Mi",
         type=_valid_mem_spec,
-        help="the maximal memory used by worker in training",
+        help="The maximal memory used by worker",
     )
     parser.add_argument(
-        "--cpu_request",
+        "--eval_cpu_request",
         default="1000m",
         type=_valid_cpu_spec,
         help="the minimal cpu required by worker in training",
     )
     parser.add_argument(
-        "--cpu_limit",
+        "--eval_cpu_limit",
         default="1000m",
         type=_valid_cpu_spec,
         help="the maximal cpu used by worker in training",
     )
     parser.add_argument(
-        "--memory_request",
+        "--eval_memory_request",
         default="4096Mi",
         type=_valid_mem_spec,
         help="the minimal memory required by worker in training",
     )
     parser.add_argument(
-        "--memory_limit",
+        "--eval_memory_limit",
         default="4096Mi",
         type=_valid_mem_spec,
         help="the maximal memory used by worker in training",
     )
     parser.add_argument(
-        "--master_pod_priority", help="the requested priority of master pod"
+        "--eval_pod_priority", 
+        help="the requested priority of evaluation pod"
     )
     parser.add_argument(
-        "--pod_priority", help="the requested priority of master pod"
+        "--master_pod_priority",
+        help="The requested priority of master pod",
     )
     parser.add_argument(
-        "--volume_name", help="the volume name of network filesytem"
+        "--volume_name",
+        help="The volume name of network file system",
     )
     parser.add_argument(
-        "--mount_path", help="the mount path in the docker container"
+        "--mount_path",
+        help="The mount path in the docker container",
     )
     parser.add_argument(
         "--image_pull_policy",
         default="Always",
-        help="the image pull policy of master and worker",
+        help="The image pull policy of master and worker",
     )
     args, argv = parser.parse_known_args()
 
