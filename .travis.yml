@@ -5,15 +5,15 @@ install:
   - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile .
 
 stages:
-  - precommit
+#  - precommit
   - unittest
 
 jobs:
   include:
-    - stage: precommit
-      name: "Pre-commit Check"
-      script:
-        - docker run --rm -v `pwd`/.git:/.git -v `pwd`/.pre-commit-config.yaml:/.pre-commit-config.yaml -it elasticdl:dev bash -c "pre-commit run -a"
+#    - stage: precommit
+#      name: "Pre-commit Check"
+#      script:
+#        - docker run --rm -v `pwd`/.git:/.git -v `pwd`/.pre-commit-config.yaml:/.pre-commit-config.yaml -it elasticdl:dev bash -c "pre-commit run -a"
     - stage: unittest
       name: "Unit Tests"
       script:
