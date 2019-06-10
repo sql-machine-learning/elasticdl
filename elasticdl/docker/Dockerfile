@@ -21,6 +21,9 @@ RUN pip install pytest --extra-index-url=${EXTRA_PYPI_INDEX}
 # Install RecordIO 
 RUN pip install 'pyrecordio>=0.0.6' --extra-index-url=${EXTRA_PYPI_INDEX}
 
+# Dependencies for pre-commit hooks
+RUN pip install pre-commit --extra-index-url=${EXTRA_PYPI_INDEX}
+
 ENV PYTHONPATH=/
 
 WORKDIR /
