@@ -1,7 +1,5 @@
 import random
 import os
-import mock
-import grpc
 import tempfile
 import unittest
 import numpy as np
@@ -22,6 +20,7 @@ from elasticdl.python.elasticdl.common.model_helper import (
 )
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.data.codec import BytesCodec, TFExampleCodec
+from elasticdl.python.tests.in_process_master import InProcessMaster
 
 _module_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "test_module.py"
@@ -117,21 +116,8 @@ class CheckpointTest(unittest.TestCase):
         grpc calls are mocked by local master call.
         """
 
-        def mock_GetTask(req):
-            return master.GetTask(req, None)
-
-        def mock_GetModel(req):
-            return master.GetModel(req, None)
-
-        def mock_ReportGradient(req):
-            return master.ReportGradient(req, None)
-
-        def mock_ReportTaskResult(req):
-            return master.ReportTaskResult(req, None)
-
         codec_type = "bytes"
-        channel = grpc.insecure_channel("localhost:9999")
-        worker = Worker(1, _module_file, channel=channel, codec_type=codec_type)
+        worker = Worker(1, _module_file, channel=None, codec_type=codec_type)
 
         # save checkpoint file every 2 steps
         # keep at most 5 recent checkpoint files
@@ -141,10 +127,7 @@ class CheckpointTest(unittest.TestCase):
 
         filename = create_recordio_file(128, codec_type)
         task_q = _TaskQueue(
-            {filename: 128},
-            {},
-            records_per_task=64,
-            num_epochs=1,
+            {filename: 128}, {}, records_per_task=64, num_epochs=1
         )
         master = MasterServicer(
             2,
@@ -157,27 +140,13 @@ class CheckpointTest(unittest.TestCase):
             checkpoint_steps=checkpoint_steps,
             keep_checkpoint_max=keep_checkpoint_max,
         )
+        worker._stub = InProcessMaster(master)
 
         # for var in worker._model.trainable_variables:
         #    master.set_model_var(var.name, var.numpy())
 
-        with mock.patch.object(
-            worker._stub, "GetTask", mock_GetTask
-        ), mock.patch.object(
-            worker._stub, "GetModel", mock_GetModel
-        ), mock.patch.object(
-            worker._stub, "ReportGradient", mock_ReportGradient
-        ), mock.patch.object(
-            worker._stub, "ReportTaskResult", mock_ReportTaskResult
-        ):
-            try:
-                worker.run()
-                res = True
-            except Exception as ex:
-                print(ex)
-                res = False
+        worker.run()
 
-        self.assertTrue(res)
         checkpoint_files = sorted(os.listdir(checkpoint_dir))
         self.assertEqual(
             checkpoint_files,

@@ -5,10 +5,8 @@ import tensorflow as tf
 assert tf.executing_eagerly()
 
 import recordio
-import numpy as np
 
 from contextlib import closing
-from collections import defaultdict
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
@@ -46,7 +44,6 @@ class Worker(object):
         self._opt_fn = model_module.optimizer
         self._loss = model_module.loss
         self._eval_metrics_fn = model_module.eval_metrics_fn
-        self._evaluation_metrics_collection = defaultdict(list)
         all_columns = self._feature_columns + model_module.label_columns()
         if codec_type == "tf_example":
             self._codec = TFExampleCodec(all_columns)
@@ -113,8 +110,11 @@ class Worker(object):
         """
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         for k, v in evaluation_metrics.items():
+            v_np = v.numpy()
+            if v_np.size != 1:
+                raise Exception("Only metric result of length 1 is supported currently")
             req.evaluation_metrics[k].CopyFrom(
-                ndarray_to_tensor(v))
+                ndarray_to_tensor(v_np))
         req.model_version = self._model_version
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
@@ -163,19 +163,9 @@ class Worker(object):
                                 outputs = self._model.call(features, training=False)
                                 evaluation_metrics = self._eval_metrics_fn(outputs, labels)
 
-                                for k, v in evaluation_metrics.items():
-                                    v_np = v.numpy()
-                                    if v_np.size != 1:
-                                        raise Exception("Only metric result of length 1 is supported currently")
-                                    self._evaluation_metrics_collection[k].append(v_np)
-
-                                evaluation_metrics = {
-                                    k: np.mean(v) for k, v in self._evaluation_metrics_collection.items()
-                                }
                                 accepted, min_model_version = self.report_evaluation_metrics(evaluation_metrics)
 
                                 if accepted:
-                                    self._logger.info("Evaluation metrics: %s" % evaluation_metrics)
                                     break
                             else:
                                 with tf.GradientTape() as tape:
