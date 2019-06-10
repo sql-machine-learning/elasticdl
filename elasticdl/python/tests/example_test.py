@@ -3,13 +3,12 @@ import tensorflow as tf
 tf.enable_eager_execution()
 
 import tempfile
-import mock
-import grpc
 import os
 import unittest
 import numpy as np
 import recordio
 
+from .in_process_master import InProcessMaster
 from contextlib import closing
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.elasticdl.common.model_helper import load_user_model
@@ -43,7 +42,9 @@ def create_recordio_file(size, shape, codec_type, columns):
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     with closing(recordio.Writer(temp_file.name)) as f:
         for _ in range(size):
-            image = np.random.rand(image_size).astype(np.float32).reshape(shape)
+            image = (
+                np.random.rand(image_size).astype(np.float32).reshape(shape)
+            )
             label = np.ndarray([1], dtype=np.int64)
             label[0] = np.random.randint(0, 10)
             f.write(codec.encode({"image": image, "label": label}))
@@ -59,27 +60,13 @@ class ExampleTest(unittest.TestCase):
         grpc calls are mocked by local master call.
         """
 
-        def mock_GetTask(req):
-            return master.GetTask(req, None)
-
-        def mock_GetModel(req):
-            return master.GetModel(req, None)
-
-        def mock_ReportGradient(req):
-            return master.ReportGradient(req, None)
-
-        def mock_ReportEvaluationMetrics(req):
-            return master.ReportEvaluationMetrics(req, None)
-
-        def mock_ReportTaskResult(req):
-            return master.ReportTaskResult(req, None)
-
         module_file, columns = _get_model_info(file_name)
 
-        channel = grpc.insecure_channel("localhost:9999")
-        worker = Worker(1, module_file, channel, codec_type=codec_type)
+        worker = Worker(1, module_file, None, codec_type=codec_type)
 
-        shards = {create_recordio_file(128, image_shape, codec_type, columns): 128}
+        shards = {
+            create_recordio_file(128, image_shape, codec_type, columns): 128
+        }
         if training:
             training_shards = shards
             evaluation_shards = {}
@@ -87,7 +74,10 @@ class ExampleTest(unittest.TestCase):
             training_shards = {}
             evaluation_shards = shards
         task_q = _TaskQueue(
-            training_shards, evaluation_shards, records_per_task=64, num_epochs=1
+            training_shards,
+            evaluation_shards,
+            records_per_task=64,
+            num_epochs=1,
         )
         master = MasterServicer(
             2,
@@ -100,32 +90,22 @@ class ExampleTest(unittest.TestCase):
             checkpoint_steps=0,
             keep_checkpoint_max=0,
         )
+        worker._stub = InProcessMaster(master)
 
         for var in worker._model.trainable_variables:
             master.set_model_var(var.name, var.numpy())
 
-        with mock.patch.object(
-            worker._stub, "GetTask", mock_GetTask
-        ), mock.patch.object(
-            worker._stub, "GetModel", mock_GetModel
-        ), mock.patch.object(
-            worker._stub, "ReportGradient", mock_ReportGradient
-        ), mock.patch.object(
-            worker._stub, "ReportEvaluationMetrics", mock_ReportEvaluationMetrics
-        ), mock.patch.object(
-            worker._stub, "ReportTaskResult", mock_ReportTaskResult
-        ):
-            try:
-                worker.run()
-                res = True
-            except Exception as ex:
-                print(ex)
-                res = False
+        try:
+            worker.run()
+            res = True
+        except Exception as ex:
+            print(ex)
+            res = False
 
         self.assertTrue(res)
         req = elasticdl_pb2.GetTaskRequest()
         req.worker_id = 1
-        task = mock_GetTask(req)
+        task = master.GetTask(req, None)
         # No more task.
         self.assertTrue(not task.shard_file_name)
 
@@ -181,12 +161,18 @@ class ExampleTest(unittest.TestCase):
 
     def test_cifar10_functional_tfexample_train(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api.py", "tf_example", [32, 32, 3], training=True
+            "cifar10_functional_api.py",
+            "tf_example",
+            [32, 32, 3],
+            training=True,
         )
 
     def test_cifar10_functional_tfexample_evaluate(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api.py", "tf_example", [32, 32, 3], training=False
+            "cifar10_functional_api.py",
+            "tf_example",
+            [32, 32, 3],
+            training=False,
         )
 
     def test_cifar10_subclass_bytes_train(self):
