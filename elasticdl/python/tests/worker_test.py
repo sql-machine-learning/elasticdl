@@ -3,8 +3,6 @@ import tensorflow as tf
 tf.enable_eager_execution()
 
 import tempfile
-import mock
-import grpc
 import os
 import unittest
 import numpy as np
@@ -18,6 +16,7 @@ from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.worker.worker import Worker
 from elasticdl.python.data.codec import BytesCodec
 from elasticdl.python.data.codec import TFExampleCodec
+from elasticdl.python.tests.in_process_master import InProcessMaster
 
 _module_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "test_module.py"
@@ -50,36 +49,22 @@ class WorkerTest(unittest.TestCase):
         grpc calls are mocked by local master call.
         """
 
-        def mock_GetTask(req):
-            return master.GetTask(req, None)
+        class _Master(InProcessMaster):
+            def ReportGradient(self, req):
+                if 2 < self._m._version < 80:
+                    # For testing of retrain when gradient not accepted.
+                    # Increase master version so the gradient will not be accepted.
+                    self._m._version += 1
+                return self._m.ReportGradient(req, None)
 
-        def mock_GetModel(req):
-            return master.GetModel(req, None)
+            def ReportEvaluationMetrics(self, req):
+                if 2 < self._m._version < 80:
+                    # For testing of evaluation retries when evaluation metrics are not accepted.
+                    # Increase master version so the evaluation metrics will not be accepted.
+                    self._m._version += 1
+                return self._m.ReportEvaluationMetrics(req, None)
 
-        def mock_ReportGradient(req):
-            if 2 < master._version < 80:
-                # For testing of retrain when gradient not accepted.
-                # Increase master version so the gradient will not be accepted.
-                master._version += 1
-            return master.ReportGradient(req, None)
-
-        def mock_ReportEvaluationMetrics(req):
-            if 2 < master._version < 80:
-                # For testing of evaluation retries when evaluation metrics are not accepted.
-                # Increase master version so the evaluation metrics will not be accepted.
-                master._version += 1
-            return master.ReportEvaluationMetrics(req, None)
-
-        def mock_ReportTaskResult(req):
-            return master.ReportTaskResult(req, None)
-
-        channel = grpc.insecure_channel("localhost:9999")
-        worker = Worker(
-            1,
-            _module_file,
-            channel,
-            codec_type=codec_type,
-        )
+        worker = Worker(1, _module_file, None, codec_type=codec_type)
 
         shards = {create_recordio_file(128, codec_type): 128}
         if training:
@@ -92,39 +77,29 @@ class WorkerTest(unittest.TestCase):
             training_shards,
             evaluation_shards,
             records_per_task=64,
-            num_epochs=1)
-        master = MasterServicer(2, 16, worker._opt_fn(), task_q,
-                                init_var=[],
-                                init_from_checkpoint="",
-                                checkpoint_dir="",
-                                checkpoint_steps=0,
-                                keep_checkpoint_max=0)
+            num_epochs=1,
+        )
+        master = MasterServicer(
+            2,
+            16,
+            worker._opt_fn(),
+            task_q,
+            init_var=[],
+            init_from_checkpoint="",
+            checkpoint_dir="",
+            checkpoint_steps=0,
+            keep_checkpoint_max=0,
+        )
+        worker._stub = _Master(master)
 
         for var in worker._model.trainable_variables:
             master.set_model_var(var.name, var.numpy())
 
-        with mock.patch.object(
-            worker._stub, "GetTask", mock_GetTask
-        ), mock.patch.object(
-            worker._stub, "GetModel", mock_GetModel
-        ), mock.patch.object(
-            worker._stub, "ReportGradient", mock_ReportGradient
-        ), mock.patch.object(
-            worker._stub, 'ReportEvaluationMetrics', mock_ReportEvaluationMetrics
-        ), mock.patch.object(
-            worker._stub, "ReportTaskResult", mock_ReportTaskResult
-        ):
-            try:
-                worker.run()
-                res = True
-            except Exception as ex:
-                print(ex)
-                res = False
+        worker.run()
 
-        self.assertTrue(res)
         req = elasticdl_pb2.GetTaskRequest()
         req.worker_id = 1
-        task = mock_GetTask(req)
+        task = master.GetTask(req, None)
         # No more task.
         self.assertTrue(not task.shard_file_name)
 
