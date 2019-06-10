@@ -46,37 +46,4 @@ If your data amount is large but can fit in your local disk, and you want to pro
 
 
 ## PySpark Job on Google Cloud
-If your data amount is huge so that it can't fit into your local disk, this is the approach you want to use. Here are the steps to run our PySpark job on Google Cloud:
-1. Set up the Google Cloud SDK and project following [here](https://cloud.google.com/sdk/docs/quickstarts) based on your OS.
-2. Upload the [initialization script](TODO: add the link here once this PR is merged), which will install all dependencies we need to Spark cluster, to your Google Cloud Storage. 
-```bash
-LOCAL_INIT_SCRIPT=elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/go-pip-install.sh
-GS_INIT_SCRIPT=gs://elasticdl.appspot.com/go-pip-install.sh
-
-gsutil cp $LOCAL_INIT_SCRIPT $GS_INIT_SCRIPT
-```
-3. [Create a Dataproc cluster](https://cloud.google.com/dataproc/docs/guides/create-cluster) with the [initialization actions](https://cloud.google.com/dataproc/docs/concepts/configuring-clusters/init-actions#using_initialization_actions) by the script above.
-```bash
-CLUSTER_NAME=test-cluster
-
-gcloud beta dataproc clusters create CLUSTER_NAME \
-    --image-version=preview \
-    --optional-components=ANACONDA \
-    --initialization-actions $GS_INIT_SCRIPT
-```
-4. Upload the sample training data to Google Cloud Storage.
-```bash
-LOCAL_TRAINING_DATA=elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/sample_image_classification_training_data
-GS_TRAINING_DATA=gs://elasticdl.appspot.com/sample_image_classification_training_data
-
-gsutil cp -r LOCAL_TRAINING_DATA GS_TRAINING_DATA
-```
-5. Submit the PySpark job following [here](https://cloud.google.com/dataproc/docs/guides/submit-job).
-```bash
-gcloud dataproc jobs submit pyspark \
-    --cluster=CLUSTER_NAME
-    --region=global \
-    elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/spark_gen_recordio.py
-
-TODO: Finish this part once we are able to write RecordIO data to Google Cloud Storage. A related issue is [here](https://github.com/wangkuiyi/elasticdl/issues/381).
-```
+TODO.

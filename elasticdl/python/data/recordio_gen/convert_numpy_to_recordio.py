@@ -26,7 +26,10 @@ def convert_numpy_to_recordio(
     it = zip(data, label)
     try:
         for i in itertools.count():
-            file_name = file_dir + "/data-%s-%04d" % (partition, i)
+            if partition == '':
+                file_name = file_dir + "/data-%04d" % i
+            else:
+                file_name = file_dir + "/data-%s-%04d" % (partition, i)
             print("writing:", file_name)
             if codec_type == "tf_example":
                 encode_fn = TFExampleCodec(feature_columns).encode

@@ -45,13 +45,13 @@ def main():
     )
     parser.add_argument(
         "--training_data_dir",
-        help="Dir that contains training data and will be traversed \
+        help="Directory that contains training data and will be traversed \
             recursively",
         required=True,
     )
     parser.add_argument(
         "--output_dir",
-        help="Dir of output RecordIO data",
+        help="Directory of output RecordIO data",
         required=True,
     )
     parser.add_argument(
@@ -81,17 +81,16 @@ def main():
     file_list = []
     for dir_name, subdir_list, files in os.walk(args.training_data_dir):
         for fname in files:
-            if fname == '.DS_Store':
-                continue
-            file_list.append(os.path.join(dir_name, fname))
+            if not fname.startswith('.'):
+                file_list.append(os.path.join(dir_name, fname))
 
     # Load user-defined model
     model_module = load_user_model(args.model_file)
     
     # Start the Spark job
     sc = SparkContext()
-    rdd1 = sc.parallelize(file_list, args.num_workers)
-    rdd1.mapPartitions(
+    rdd = sc.parallelize(file_list, args.num_workers)
+    rdd.mapPartitions(
         process_data(
             model_module.feature_columns() + model_module.label_columns(),
             model_module.prepare_data_for_a_single_file,
