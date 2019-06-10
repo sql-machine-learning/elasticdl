@@ -95,14 +95,8 @@ class WorkerTest(unittest.TestCase):
         for var in worker._model.trainable_variables:
             master.set_model_var(var.name, var.numpy())
 
-        try:
-            worker.run()
-            res = True
-        except Exception as ex:
-            print(ex)
-            res = False
+        worker.run()
 
-        self.assertTrue(res)
         req = elasticdl_pb2.GetTaskRequest()
         req.worker_id = 1
         task = master.GetTask(req, None)

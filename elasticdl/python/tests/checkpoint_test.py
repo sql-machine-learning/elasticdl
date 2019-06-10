@@ -145,14 +145,8 @@ class CheckpointTest(unittest.TestCase):
         # for var in worker._model.trainable_variables:
         #    master.set_model_var(var.name, var.numpy())
 
-        try:
-            worker.run()
-            res = True
-        except Exception as ex:
-            print(ex)
-            res = False
+        worker.run()
 
-        self.assertTrue(res)
         checkpoint_files = sorted(os.listdir(checkpoint_dir))
         self.assertEqual(
             checkpoint_files,
