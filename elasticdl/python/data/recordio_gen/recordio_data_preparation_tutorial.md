@@ -26,7 +26,7 @@ If your data amount is large but can fit in your local disk, and you want to pro
     ```bash
     OUTPUT_DIR=~/Desktop/sample_recordio_output
     TRAINING_DATA_DIR=~/Desktop/training_data
-	MODEL_FILE=/elasticdl/python/examples/mnist_functional_api.py
+    MODEL_FILE=/elasticdl/python/examples/mnist_functional_api.py
 
     docker run --rm -v $OUTPUT_DIR:/output_dir \
         -v $TRAINING_DATA_DIR:/training_data_dir \
@@ -60,7 +60,7 @@ gsutil cp $LOCAL_INIT_SCRIPT $GS_INIT_SCRIPT
 CLUSTER_NAME=test-cluster
 
 gcloud beta dataproc clusters create CLUSTER_NAME \
-	--image-version=preview \
+    --image-version=preview \
     --optional-components=ANACONDA \
     --initialization-actions $GS_INIT_SCRIPT
 ```
@@ -74,7 +74,7 @@ gsutil cp -r LOCAL_TRAINING_DATA GS_TRAINING_DATA
 5. Submit the PySpark job following [here](https://cloud.google.com/dataproc/docs/guides/submit-job).
 ```bash
 gcloud dataproc jobs submit pyspark \
-	--cluster=CLUSTER_NAME
+    --cluster=CLUSTER_NAME
     --region=global \
     elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/spark_gen_recordio.py
 
