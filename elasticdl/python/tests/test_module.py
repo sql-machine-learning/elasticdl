@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
-from tensorflow.keras.layers import *
+from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras import Model
 
 inputs = Input(shape=(1, 1))
