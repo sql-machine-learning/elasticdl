@@ -9,7 +9,6 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-from .in_process_master import InProcessMaster
 from contextlib import closing
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.worker.worker import Worker
@@ -21,6 +20,7 @@ from elasticdl.python.elasticdl.common.model_helper import (
 )
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.data.codec import BytesCodec, TFExampleCodec
+from elasticdl.python.tests.in_process_master import InProcessMaster
 
 _module_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "test_module.py"

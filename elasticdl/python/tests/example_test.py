@@ -8,7 +8,6 @@ import unittest
 import numpy as np
 import recordio
 
-from .in_process_master import InProcessMaster
 from contextlib import closing
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.elasticdl.common.model_helper import load_user_model
@@ -17,6 +16,7 @@ from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.worker.worker import Worker
 from elasticdl.python.data.codec import BytesCodec
 from elasticdl.python.data.codec import TFExampleCodec
+from elasticdl.python.tests.in_process_master import InProcessMaster
 
 
 def _get_model_info(file_name):
