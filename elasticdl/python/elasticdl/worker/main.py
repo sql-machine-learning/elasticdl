@@ -6,22 +6,15 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-from elasticdl.python.elasticdl.worker.worker import Worker
+from elasticdl.python.elasticdl.worker.worker import Worker  # noqa
 
 
 def _parse_args():
     parser = argparse.ArgumentParser(description="ElasticDL Worker")
     parser.add_argument(
-        "--worker_id",
-        help="Id unique to the worker",
-        type=int,
-        required=True
+        "--worker_id", help="Id unique to the worker", type=int, required=True
     )
-    parser.add_argument(
-        "--master_addr",
-        help="Master ip:port",
-        required=True,
-    )
+    parser.add_argument("--master_addr", help="Master ip:port", required=True)
     parser.add_argument(
         "--model_file",
         help="Full file path of user defined neural model",
@@ -35,9 +28,9 @@ def _parse_args():
     )
     parser.add_argument(
         "--log_level",
-        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         type=str.upper,
-        default='WARNING',
+        default="WARNING",
         help="Set the logging level",
     )
 
@@ -50,8 +43,8 @@ def main():
 
     # Initialize logger
     logging.basicConfig(
-        format='%(asctime)s %(name)s %(levelname)-8s '
-        '[%(filename)s:%(lineno)d] %(message)s',
+        format="%(asctime)s %(name)s %(levelname)-8s "
+        "[%(filename)s:%(lineno)d] %(message)s"
     )
     logging.getLogger().setLevel(args.log_level)
 
