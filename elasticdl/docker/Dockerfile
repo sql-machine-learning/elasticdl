@@ -1,8 +1,7 @@
 ARG BASE_IMAGE=tensorflow/tensorflow:1.13.1-py3
 FROM ${BASE_IMAGE}
 
-RUN apt-get update
-RUN apt-get install -y unzip curl git
+RUN apt-get update && apt-get install -y unzip curl git
 
 ARG EXTRA_PYPI_INDEX
 
