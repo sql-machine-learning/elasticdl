@@ -73,7 +73,7 @@ spec:
         "--worker_memory_request", "{worker_memory_request}",
         "--worker_memory_limit", "{worker_memory_limit}"
     ]
-    imagePullPolicy: {image_pull_policy} 
+    imagePullPolicy: {image_pull_policy}
     resources:
       limits:
         cpu:  "{master_cpu_limit}"
