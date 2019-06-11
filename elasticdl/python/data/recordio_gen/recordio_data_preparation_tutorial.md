@@ -62,9 +62,9 @@ gsutil cp $LOCAL_INIT_SCRIPT $GS_INIT_SCRIPT
 CLUSTER_NAME=test-cluster
 
 gcloud beta dataproc clusters create $CLUSTER_NAME \
---image-version=preview \
---optional-components=ANACONDA \
---initialization-actions $GS_INIT_SCRIPT
+    --image-version=preview \
+    --optional-components=ANACONDA \
+    --initialization-actions $GS_INIT_SCRIPT
 ```
 
 4. [Create a Google Filestore instance](https://cloud.google.com/filestore/docs/creating-instances#create-instance-gcloud), which is used to store our training data:
