@@ -15,6 +15,7 @@ def _pos_int(arg):
         raise ValueError("Positive integer argument required. Got %s" % res)
     return res
 
+
 def _parse_args():
     parser = argparse.ArgumentParser(description="ElasticDL Evaluator")
     parser.add_argument(
@@ -28,9 +29,7 @@ def _parse_args():
         required=True,
     )
     parser.add_argument(
-        "--data_dir",
-        help="The data directory for evaluation",
-        required=True,
+        "--data_dir", help="The data directory for evaluation", required=True
     )
     parser.add_argument(
         "--codec_type",
@@ -42,25 +41,26 @@ def _parse_args():
         "--minibatch_size",
         type=_pos_int,
         help="Minibatch size used by evaluator to compute metrics",
-        default='10',
+        default="10",
     )
     parser.add_argument(
         "--log_level",
-        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         type=str.upper,
-        default='WARNING',
+        default="WARNING",
         help="Set the logging level",
     )
 
     return parser.parse_args()
+
 
 def main():
     args = _parse_args()
 
     # Initialize logger
     logging.basicConfig(
-        format='%(asctime)s %(name)s %(levelname)-8s '
-        '[%(filename)s:%(lineno)d] %(message)s',
+        format="%(asctime)s %(name)s %(levelname)-8s "
+        "[%(filename)s:%(lineno)d] %(message)s"
     )
     logging.getLogger().setLevel(args.log_level)
 
