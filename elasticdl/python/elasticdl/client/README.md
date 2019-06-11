@@ -52,8 +52,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --worker_memory_limit=1024Mi \
     --grads_to_wait=1 \
     --codec_type=bytes \
-    --image_base=gcr.io/elasticdl/elasticdl:dev \
-    --image_pull_policy=Always \
+    --image_base=elasticdl:dev \
     --checkpoint_dir=/tmp \
     --checkpoint_step=10 \
     --keep_checkpoint_max=1 \
