@@ -2,12 +2,11 @@ import sys
 import argparse
 import recordio
 import tensorflow as tf
+tf.enable_eager_execution() # noqa
 
 from contextlib import closing
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.data.codec import BytesCodec
-
-tf.enable_eager_execution()
 
 
 # TODO: share code with MNIST dataset.

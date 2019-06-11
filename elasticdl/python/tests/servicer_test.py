@@ -5,14 +5,13 @@ import numpy as np
 from collections import defaultdict
 
 import tensorflow as tf
+tf.enable_eager_execution() # noqa
 
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor
 from elasticdl.python.elasticdl.common.ndarray import tensor_to_ndarray
 from elasticdl.proto import elasticdl_pb2
-
-tf.enable_eager_execution()
 
 
 class SimpleModel(tf.keras.Model):
