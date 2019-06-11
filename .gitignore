@@ -8,3 +8,4 @@ build/
 *.pb.go
 *~
 .DS_Store
+.mypy_cache/
