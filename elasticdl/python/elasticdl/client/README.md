@@ -64,7 +64,7 @@ python elasticdl/python/elasticdl/client/client.py \
 ```bash
 python elasticdl/python/elasticdl/client/client.py \
     --job_type=training \
-    --job_name=high-prio-job \
+    --job_name=test \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=/data/mnist_nfs/mnist/train \
     --evaluation_data_dir=/data/mnist_nfs/mnist/test \
@@ -72,6 +72,8 @@ python elasticdl/python/elasticdl/client/client.py \
     --minibatch_size=64 \
     --records_per_task=100 \
     --num_workers=1 \
+    --master_pod_priority=highest-priority \
+    --worker_pod_priority=high-priority \
     --master_cpu_request=1000m \
     --master_cpu_limit=1000m \
     --master_memory_request=1024Mi \
