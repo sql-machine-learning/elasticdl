@@ -139,7 +139,7 @@ class Worker(object):
             res.append(decode(record))
         return res
 
-    def _get_features_and_labels_from_record(self, record_buf):
+    def _get_features_and_labels(self, record_buf):
         batch_input_data, batch_labels = self._input_fn(record_buf)
         features = [
             batch_input_data[f_col.key] for f_col in self._feature_columns
@@ -165,65 +165,60 @@ class Worker(object):
         evaluation_metrics = self._eval_metrics_fn(outputs, labels)
         return self.report_evaluation_metrics(evaluation_metrics)
 
+    def _handle_task(self, task):
+        with closing(
+            recordio.Scanner(
+                task.shard_file_name, task.start, task.end - task.start
+            )
+        ) as reader:
+            while True:
+                record_buf = self._get_batch(
+                    reader, task.minibatch_size, self._codec.decode
+                )
+                if not record_buf:
+                    break
+                self._process_minibatch(task, record_buf)
+
+    def _process_minibatch(self, task, record_buf):
+        min_model_version = task.model_version
+        for _ in range(self._max_minibatch_retry_num):
+            # TODO: optimize the logic to avoid unnecessary
+            #       get_model call.
+            self.get_model(max(self._model_version, min_model_version))
+            features, labels = self._get_features_and_labels(record_buf)
+            if task.type == elasticdl_pb2.EVALUATION:
+                accepted, min_model_version = self._run_evaluation_task(
+                    features, labels
+                )
+                if accepted:
+                    break
+            elif task.type == elasticdl_pb2.TRAINING:
+                accepted, min_model_version, loss = self._run_training_task(
+                    features, labels
+                )
+                if accepted:
+                    self._logger.info("Loss is %f" % loss.numpy())
+                    break
+            else:
+                raise RuntimeError("Unrecognized task type, %s" % task.type)
+        else:
+            # Worker got stuck, fail the task.
+            # TODO: stop the worker if it fails to make any
+            #       progress for some time.
+            raise RuntimeError("Worker got stuck")
+
     def run(self):
         """
-        This performs training or evaluation task based on
-        the given task's type.
+        Fetches task from master and performs training or evaluation.
         """
         while True:
             task = self.get_task()
             if not task.shard_file_name:
                 # No more task
                 break
-            batch_size = task.minibatch_size
             err_msg = ""
             try:
-                with closing(
-                    recordio.Scanner(
-                        task.shard_file_name, task.start, task.end - task.start
-                    )
-                ) as reader:
-                    min_model_version = task.model_version
-                    while True:
-                        record_buf = self._get_batch(
-                            reader, batch_size, self._codec.decode
-                        )
-                        if not record_buf:
-                            break
-
-                        for _ in range(self._max_minibatch_retry_num):
-                            # TODO: optimize the logic to avoid unnecessary
-                            #       get_model call.
-                            self.get_model(
-                                max(self._model_version, min_model_version)
-                            )
-
-                            features, labels = \
-                                self._get_features_and_labels_from_record(
-                                    record_buf
-                                )
-                            if task.type == elasticdl_pb2.EVALUATION:
-                                accepted, min_model_version = \
-                                    self._run_evaluation_task(
-                                        features, labels
-                                    )
-                                if accepted:
-                                    break
-                            else:
-                                accepted, min_model_version, loss = \
-                                    self._run_training_task(
-                                        features, labels
-                                    )
-                                if accepted:
-                                    self._logger.info(
-                                        "Loss is %f" % loss.numpy()
-                                    )
-                                    break
-                        else:
-                            # Worker got stuck, fail the task.
-                            # TODO: stop the worker if it fails to make any
-                            #       progress for some time.
-                            raise RuntimeError("Worker got stuck")
+                self._handle_task(task)
             except Exception as ex:
                 err_msg = str(ex)
                 traceback.print_exc()
