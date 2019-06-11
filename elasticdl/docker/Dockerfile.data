@@ -1,0 +1,17 @@
+FROM tensorflow/tensorflow:1.13.1-py3
+
+RUN apt-get update
+RUN apt-get install -y unzip curl
+
+ARG EXTRA_PYPI_INDEX
+
+# Install RecordIO 
+RUN pip install 'pyrecordio>=0.0.6' --extra-index-url=${EXTRA_PYPI_INDEX}
+
+ENV PYTHONPATH=/
+
+WORKDIR /
+COPY elasticdl/python/data /elasticdl/python/data
+
+RUN python elasticdl/python/data/recordio_gen/mnist/gen_data.py --codec_type tf_example /data
+RUN python elasticdl/python/data/recordio_gen/cifar10/gen_data.py --codec_type tf_example /data

@@ -26,17 +26,10 @@ RUN pip install pre-commit --extra-index-url=${EXTRA_PYPI_INDEX}
 # Install Pillow for sample data processing Spark job
 RUN pip install Pillow --extra-index-url=${EXTRA_PYPI_INDEX}
 
-ENV PYTHONPATH=/
+COPY --from=elasticdl:data /data /data
 
+ENV PYTHONPATH=/
 WORKDIR /
 COPY elasticdl /elasticdl
-
-# ElasticDL dataset generator and codecs
-ARG GEN_DATA="no"
-RUN if [ "$GEN_DATA" = "yes" ]; then \
-        python elasticdl/python/data/recordio_gen/mnist/gen_data.py --codec_type tf_example elasticdl/python/data && \
-        python elasticdl/python/data/recordio_gen/cifar10/gen_data.py --codec_type tf_example elasticdl/python/data; \
-    else echo "Data generation skipped."; fi
-
 COPY Makefile /Makefile
 RUN make
