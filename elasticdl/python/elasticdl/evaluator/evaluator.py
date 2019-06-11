@@ -93,7 +93,7 @@ class Evaluator(object):
                     outputs = self._model.call(features, training=False)
                     evaluation_metrics = self._eval_metrics_fn(outputs, labels)
                     self._loss = self._loss + evaluation_metrics['loss']
-                    self._accuracy = self._accuracy + evaluation_metrics['acc']
+                    self._accuracy = self._accuracy + evaluation_metrics['accuracy']
                     self._num_samples = self._num_samples + 1
         avg_loss = self._loss / self._num_samples
         avg_accuracy = self._accuracy / self._num_samples
