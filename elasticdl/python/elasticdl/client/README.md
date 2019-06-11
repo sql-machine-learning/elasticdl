@@ -106,7 +106,7 @@ kubectl logs ${pod_name}
 
 ## Evaluate the trained model
 
-After the training job finished, the trained model will be exported to the directory specified by parameter `--checkpoint_dir`, and ElasticDL provide user a command to reevaluate the trained model with the specified dataset using the command below to see the loss and accuracy of the trainded model:
+After the training job finished, the trained model will be saved in the directory specified by the parameter --checkpoint_dir. ElasticDL client provides a command to evaluate the trained model with a specified dataset. Use the command below to see the loss and accuracy of the trained model:
 
 ```bash
 python elasticdl/python/elasticdl/client/client.py \
