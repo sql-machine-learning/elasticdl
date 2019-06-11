@@ -1,6 +1,8 @@
 import logging
 import os
 import threading
+from collections import defaultdict
+
 import numpy as np
 
 import tensorflow as tf
@@ -45,7 +47,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._grad_to_wait = grads_to_wait
         self._grad_n = 0
         self._minibatch_size = minibatch_size
-        self._evaluation_metrics = {}
+        self._evaluation_metrics = defaultdict(list)
         for var in init_var:
             self.set_model_var(var.name, var.numpy())
         if init_from_checkpoint:
@@ -218,10 +220,14 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         with self._lock:
             for k, v in request.evaluation_metrics.items():
                 if v.dim:
-                    arr = tensor_to_ndarray(v)
-                    self._evaluation_metrics[k] = arr
-
+                    self._evaluation_metrics[k].append(
+                        tensor_to_ndarray(v)
+                    )
             self._update_model_version()
+            evaluation_metrics_summary = {
+                k: np.mean(v) for k, v in self._evaluation_metrics.items()
+            }
+            self._logger.info("Evaluation metrics: %s" % evaluation_metrics_summary)
         res.accepted = True
         res.model_version = self._version
         return res

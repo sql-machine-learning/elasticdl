@@ -92,9 +92,10 @@ python elasticdl/python/elasticdl/client/client.py \
     --checkpoint_dir=/data/cp \
     --checkpoint_step=10 \
     --keep_checkpoint_max=1 \
-    --log_level=INFO
+    --log_level=INFO \
+    --push_image
 ```
-The difference is the additional `repository` argument that points to the Docker hub used by GKE.
+The difference is that we need to push the built image to a remote image registry used by GKE.
 
 ## Check the pod status
 

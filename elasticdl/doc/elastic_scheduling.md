@@ -77,13 +77,13 @@ python elasticdl/python/elasticdl/client/client.py \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUME_NAME} \
-    --repository=gcr.io \
     --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
     --image_pull_policy=Always \
     --checkpoint_dir=${MODEL_SAVING_PATH} \
     --checkpoint_step=10 \
     --keep_checkpoint_max=1 \
-    --log_level=INFO
+    --log_level=INFO \
+    --push_image
 ```
 `MNIST_DATA_DIR` : The directory that contains MNIST training and evaluation data in recordio format(e.g. /data/mnist_nfs/mnist).
 
@@ -125,9 +125,9 @@ python elasticdl/python/elasticdl/client/client.py \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUME_ID} \
-    --repository=gcr.io \
     --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
-    --log_level=INFO
+    --log_level=INFO \
+    --push_image
 ```
 Check the job's pods statuses and wait until all the pods become `Running`:
 
@@ -198,9 +198,9 @@ python elasticdl/python/elasticdl/client/client.py \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUMN_ID} \
-    --repository=gcr.io \
     --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
-    --log_level=INFO
+    --log_level=INFO \
+    --push_image
 ```
 Please note that the master pod is configured priority `high-priority` which means the master cannot be preempted even for low priority jobs.
 
@@ -236,9 +236,9 @@ python elasticdl/python/elasticdl/client/client.py \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUMN_ID} \
-    --repository=gcr.io \
     --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
-    --log_level=INFO
+    --log_level=INFO \
+    --push_image
 ```
 Use the following command:
 

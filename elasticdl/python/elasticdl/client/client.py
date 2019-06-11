@@ -16,7 +16,7 @@ def _m_file_in_docker(model_file):
 
 
 def _build_docker_image(
-    m_file, image_name, image_base="elasticdl:dev", repository=None
+    m_file, image_name, push_image, image_base="elasticdl:dev"
 ):
     docker_template = """
 FROM {}
@@ -43,8 +43,8 @@ COPY {} {}
         if text:
             sys.stdout.write(text)
             sys.stdout.flush()
-    print("===== Docker Image Built =====")
-    if repository is not None:
+    if push_image:
+        print("===== Pushing Docker Image =====")
         for line in client.push(image_name, stream=True, decode=True):
             print(line)
 
@@ -252,8 +252,9 @@ def main():
         required=True,
     )
     parser.add_argument(
-        "--repository",
-        help="The repository to push docker image to",
+        "--push_image",
+        action='store_true',
+        help="Whether to push the newly built image to remote registry",
     )
     parser.add_argument(
         "--job_name",
@@ -365,8 +366,8 @@ def main():
     _build_docker_image(
         args.model_file,
         image_name,
+        args.push_image,
         image_base=args.image_base,
-        repository=args.repository,
     )
     if args.job_type == "training":
         _submit_training_job(image_name, args.model_file, job_name, args, argv)
