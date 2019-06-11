@@ -92,9 +92,12 @@ class Evaluator(object):
                     features, labels = self._get_features_and_labels_from_record(record_buf)
                     outputs = self._model.call(features, training=False)
                     evaluation_metrics = self._eval_metrics_fn(outputs, labels)
-                    self._loss = self._loss + evaluation_metrics['loss']
-                    self._accuracy = self._accuracy + evaluation_metrics['accuracy']
+                    loss = evaluation_metrics['loss']
+                    accuracy = evaluation_metrics['accuracy']
+                    self._logger.info("Model loss: %f, accuracy: %f" % (loss, accuracy))
+                    self._loss = self._loss + loss
+                    self._accuracy = self._accuracy + accuracy
                     self._num_samples = self._num_samples + 1
         avg_loss = self._loss / self._num_samples
         avg_accuracy = self._accuracy / self._num_samples
-        self._logger.info("Model loss: %f, accuracy: %f" % (avg_loss, avg_accuracy))
+        self._logger.info("Averaged model loss: %f, accuracy: %f" % (avg_loss, avg_accuracy))
