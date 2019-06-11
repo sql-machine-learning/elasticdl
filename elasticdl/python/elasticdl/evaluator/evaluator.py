@@ -43,8 +43,6 @@ class Evaluator(object):
         self._feature_columns = model_module.feature_columns()
         build_model(self._model, self._feature_columns)
         self._input_fn = model_module.input_fn 
-        self._opt_fn = model_module.optimizer
-        self._loss = model_module.loss
         self._eval_metrics_fn = model_module.eval_metrics_fn
         all_columns = self._feature_columns + model_module.label_columns()
         if codec_type == "tf_example":
@@ -54,7 +52,6 @@ class Evaluator(object):
         else:
             raise ValueError("invalid codec_type: " + codec_type)
 
-        self._codec_type = codec_type
         self._batch_size = batch_size
         self._loss = 0
         self._accuracy = 0
@@ -86,7 +83,7 @@ class Evaluator(object):
         # Initialize model from checkpoint
         self._initialize_model()
         for file_name in os.listdir(self._data_dir):
-            self._logger.info("evaluating file " + file_name)            
+            self._logger.info("Evaluating file " + file_name)            
             with closing(recordio.Scanner(self._data_dir + "/" + file_name)) as reader:
                 while True:
                     record_buf = self._get_batch(reader, self._batch_size, self._codec.decode)
@@ -100,4 +97,4 @@ class Evaluator(object):
                     self._num_samples = self._num_samples + 1
         avg_loss = self._loss / self._num_samples
         avg_accuracy = self._accuracy / self._num_samples
-        self._logger.info("Model loss: %f accuracy: %f" % (avg_loss, avg_accuracy))
+        self._logger.info("Model loss: %f, accuracy: %f" % (avg_loss, avg_accuracy))
