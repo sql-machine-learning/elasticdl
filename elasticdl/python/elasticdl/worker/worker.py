@@ -3,15 +3,21 @@ import traceback
 
 import tensorflow as tf
 
+assert tf.executing_eagerly()  # noqa
+
 import recordio
 
 from contextlib import closing
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.elasticdl.common.ndarray import (ndarray_to_tensor,
-                                                       tensor_to_ndarray)
-from elasticdl.python.elasticdl.common.model_helper import (load_user_model,
-                                                            build_model)
+from elasticdl.python.elasticdl.common.ndarray import (
+    ndarray_to_tensor,
+    tensor_to_ndarray,
+)
+from elasticdl.python.elasticdl.common.model_helper import (
+    load_user_model,
+    build_model,
+)
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.data.codec import BytesCodec
 
@@ -19,18 +25,18 @@ from elasticdl.python.data.codec import BytesCodec
 # (e.g. gradients) are not accepted by master.
 DEFAULT_MAX_MINIBATCH_RETRY_NUM = 64
 
-assert tf.executing_eagerly()
-
 
 class Worker(object):
     """ElasticDL worker"""
 
-    def __init__(self,
-                 worker_id,
-                 model_file,
-                 channel=None,
-                 max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
-                 codec_type=None):
+    def __init__(
+        self,
+        worker_id,
+        model_file,
+        channel=None,
+        max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
+        codec_type=None,
+    ):
         """
         Arguments:
             model_file: A module to define the model
@@ -83,8 +89,7 @@ class Worker(object):
 
         for var in self._model.trainable_variables:
             # Assumes all trainable variables exist in model.param.
-            var.assign(
-                tensor_to_ndarray(model.param[var.name]))
+            var.assign(tensor_to_ndarray(model.param[var.name]))
         self._model_version = model.version
 
     def report_task_result(self, task_id, err_msg):
@@ -102,8 +107,7 @@ class Worker(object):
         """
         req = elasticdl_pb2.ReportGradientRequest()
         for g, v in zip(grads, self._model.trainable_variables):
-            req.gradient[v.name].CopyFrom(
-                ndarray_to_tensor(g.numpy()))
+            req.gradient[v.name].CopyFrom(ndarray_to_tensor(g.numpy()))
         req.model_version = self._model_version
         res = self._stub.ReportGradient(req)
         return res.accepted, res.model_version
@@ -117,10 +121,10 @@ class Worker(object):
         for k, v in evaluation_metrics.items():
             v_np = v.numpy()
             if v_np.size != 1:
-                raise Exception("Only metric result of length 1 is "
-                                "supported currently")
-            req.evaluation_metrics[k].CopyFrom(
-                ndarray_to_tensor(v_np))
+                raise Exception(
+                    "Only metric result of length 1 is " "supported currently"
+                )
+            req.evaluation_metrics[k].CopyFrom(ndarray_to_tensor(v_np))
         req.model_version = self._model_version
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
@@ -137,8 +141,9 @@ class Worker(object):
 
     def _get_features_and_labels_from_record(self, record_buf):
         batch_input_data, batch_labels = self._input_fn(record_buf)
-        features = [batch_input_data[f_col.key]
-                    for f_col in self._feature_columns]
+        features = [
+            batch_input_data[f_col.key] for f_col in self._feature_columns
+        ]
         if len(features) == 1:
             features = features[0]
         return features, batch_labels
@@ -173,15 +178,16 @@ class Worker(object):
             batch_size = task.minibatch_size
             err_msg = ""
             try:
-                with closing(recordio.Scanner(task.shard_file_name,
-                                              task.start,
-                                              task.end - task.start))\
-                        as reader:
+                with closing(
+                    recordio.Scanner(
+                        task.shard_file_name, task.start, task.end - task.start
+                    )
+                ) as reader:
                     min_model_version = task.model_version
                     while True:
-                        record_buf = self._get_batch(reader,
-                                                     batch_size,
-                                                     self._codec.decode)
+                        record_buf = self._get_batch(
+                            reader, batch_size, self._codec.decode
+                        )
                         if not record_buf:
                             break
 
@@ -189,22 +195,29 @@ class Worker(object):
                             # TODO: optimize the logic to avoid unnecessary
                             #       get_model call.
                             self.get_model(
-                                max(self._model_version, min_model_version))
+                                max(self._model_version, min_model_version)
+                            )
 
-                            features, labels =\
+                            features, labels = \
                                 self._get_features_and_labels_from_record(
-                                    record_buf)
+                                    record_buf
+                                )
                             if task.type == elasticdl_pb2.EVALUATION:
-                                accepted, min_model_version =\
-                                    self._run_evaluation_task(features, labels)
+                                accepted, min_model_version = \
+                                    self._run_evaluation_task(
+                                        features, labels
+                                    )
                                 if accepted:
                                     break
                             else:
-                                accepted, min_model_version, loss =\
-                                    self._run_training_task(features, labels)
+                                accepted, min_model_version, loss = \
+                                    self._run_training_task(
+                                        features, labels
+                                    )
                                 if accepted:
                                     self._logger.info(
-                                        "Loss is %f" % loss.numpy())
+                                        "Loss is %f" % loss.numpy()
+                                    )
                                     break
                         else:
                             # Worker got stuck, fail the task.
