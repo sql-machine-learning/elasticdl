@@ -7,8 +7,6 @@ import recordio
 import grpc
 import tensorflow as tf
 
-tf.enable_eager_execution()
-
 from contextlib import closing
 from concurrent import futures
 from elasticdl.proto import elasticdl_pb2_grpc
@@ -20,8 +18,11 @@ from elasticdl.python.elasticdl.common.model_helper import (
     build_model,
 )
 
+tf.enable_eager_execution()
 
-def _make_task_queue(training_data_dir, evaluation_data_dir, records_per_task, num_epochs):
+
+def _make_task_queue(training_data_dir, evaluation_data_dir,
+                     records_per_task, num_epochs):
     def _collect_file_records_from_dir(data_dir):
         f_records = {}
         for f in os.listdir(data_dir):
@@ -30,8 +31,11 @@ def _make_task_queue(training_data_dir, evaluation_data_dir, records_per_task, n
                 f_records[p] = rio.num_records()
         return f_records
     training_f_records = _collect_file_records_from_dir(training_data_dir)
-    evaluation_f_records = {} if evaluation_data_dir == "" else _collect_file_records_from_dir(evaluation_data_dir)
-    return _TaskQueue(training_f_records, evaluation_f_records, records_per_task, num_epochs)
+    evaluation_f_records = (
+        {} if evaluation_data_dir == ""
+        else _collect_file_records_from_dir(evaluation_data_dir))
+    return _TaskQueue(training_f_records, evaluation_f_records,
+                      records_per_task, num_epochs)
 
 
 def _pos_int(arg):
@@ -108,13 +112,15 @@ def _parse_args():
     parser.add_argument(
         "--checkpoint_steps",
         type=_non_neg_int,
-        help="Save checkpoint every this many steps. If 0, no checkpoints to save.",
+        help="Save checkpoint every this many steps. \
+              If 0, no checkpoints to save.",
         default=0,
     )
     parser.add_argument(
         "--keep_checkpoint_max",
         type=_non_neg_int,
-        help="The maximum number of recent checkpoint files to keep. If 0, keep all.",
+        help="The maximum number of recent checkpoint files to keep. \
+              If 0, keep all.",
         default=3,
     )
     parser.add_argument(

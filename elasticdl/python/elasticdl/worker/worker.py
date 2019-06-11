@@ -2,20 +2,24 @@ import logging
 import traceback
 
 import tensorflow as tf
-assert tf.executing_eagerly()
 
 import recordio
 
 from contextlib import closing
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
-from elasticdl.python.elasticdl.common.model_helper import load_user_model, build_model
+from elasticdl.python.elasticdl.common.ndarray import (ndarray_to_tensor,
+                                                       tensor_to_ndarray)
+from elasticdl.python.elasticdl.common.model_helper import (load_user_model,
+                                                            build_model)
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.data.codec import BytesCodec
 
-# The default maximum number of a minibatch retry as its results (e.g. gradients) are not accepted by master.
+# The default maximum number of a minibatch retry as its results
+# (e.g. gradients) are not accepted by master.
 DEFAULT_MAX_MINIBATCH_RETRY_NUM = 64
+
+assert tf.executing_eagerly()
 
 
 class Worker(object):
@@ -31,8 +35,8 @@ class Worker(object):
         Arguments:
             model_file: A module to define the model
             channel: grpc channel
-            max_minibatch_retry_num: The maximum number of a minibatch retry as its results
-                (e.g. gradients) are not accepted by master.
+            max_minibatch_retry_num: The maximum number of a minibatch retry
+                as its results (e.g. gradients) are not accepted by master.
         """
         self._logger = logging.getLogger(__name__)
         self._worker_id = worker_id
@@ -40,7 +44,7 @@ class Worker(object):
         self._model = model_module.model
         self._feature_columns = model_module.feature_columns()
         build_model(self._model, self._feature_columns)
-        self._input_fn = model_module.input_fn 
+        self._input_fn = model_module.input_fn
         self._opt_fn = model_module.optimizer
         self._loss = model_module.loss
         self._eval_metrics_fn = model_module.eval_metrics_fn
@@ -66,7 +70,7 @@ class Worker(object):
         """
         req = elasticdl_pb2.GetTaskRequest()
         req.worker_id = self._worker_id
-        
+
         return self._stub.GetTask(req)
 
     def get_model(self, min_version):
@@ -106,13 +110,15 @@ class Worker(object):
 
     def report_evaluation_metrics(self, evaluation_metrics):
         """
-        report evaluation metrics to ps, return (accepted, model_version) from rpc call.
+        report evaluation metrics to ps, return (accepted, model_version)
+        from rpc call.
         """
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         for k, v in evaluation_metrics.items():
             v_np = v.numpy()
             if v_np.size != 1:
-                raise Exception("Only metric result of length 1 is supported currently")
+                raise Exception("Only metric result of length 1 is "
+                                "supported currently")
             req.evaluation_metrics[k].CopyFrom(
                 ndarray_to_tensor(v_np))
         req.model_version = self._model_version
@@ -131,13 +137,34 @@ class Worker(object):
 
     def _get_features_and_labels_from_record(self, record_buf):
         batch_input_data, batch_labels = self._input_fn(record_buf)
-        features = [batch_input_data[f_col.key] for f_col in self._feature_columns]
+        features = [batch_input_data[f_col.key]
+                    for f_col in self._feature_columns]
         if len(features) == 1:
             features = features[0]
         return features, batch_labels
 
+    def _run_training_task(self, features, labels):
+        with tf.GradientTape() as tape:
+            outputs = self._model.call(features, training=True)
+            loss = self._loss(outputs, labels)
+
+            # TODO:  Add regularization loss if any,
+            #        which should be divided by the
+            #        number of contributing workers.
+        grads = tape.gradient(loss, self._model.trainable_variables)
+        accepted, min_model_version = self.report_gradient(grads)
+        return accepted, min_model_version, loss
+
+    def _run_evaluation_task(self, features, labels):
+        outputs = self._model.call(features, training=False)
+        evaluation_metrics = self._eval_metrics_fn(outputs, labels)
+        return self.report_evaluation_metrics(evaluation_metrics)
+
     def run(self):
-        """This performs training or evaluation task based on the given task's type."""
+        """
+        This performs training or evaluation task based on
+        the given task's type.
+        """
         while True:
             task = self.get_task()
             if not task.shard_file_name:
@@ -146,45 +173,43 @@ class Worker(object):
             batch_size = task.minibatch_size
             err_msg = ""
             try:
-                with closing(recordio.Scanner(task.shard_file_name, task.start, task.end - task.start)) as reader:
+                with closing(recordio.Scanner(task.shard_file_name,
+                                              task.start,
+                                              task.end - task.start))\
+                        as reader:
                     min_model_version = task.model_version
                     while True:
-                        record_buf = self._get_batch(reader, batch_size, self._codec.decode)
+                        record_buf = self._get_batch(reader,
+                                                     batch_size,
+                                                     self._codec.decode)
                         if not record_buf:
                             break
 
                         for _ in range(self._max_minibatch_retry_num):
-                            # TODO: optimize the logic to avoid unnecessary get_model call.
+                            # TODO: optimize the logic to avoid unnecessary
+                            #       get_model call.
                             self.get_model(
                                 max(self._model_version, min_model_version))
 
-                            features, labels = self._get_features_and_labels_from_record(record_buf)
+                            features, labels =\
+                                self._get_features_and_labels_from_record(
+                                    record_buf)
                             if task.type == elasticdl_pb2.EVALUATION:
-                                outputs = self._model.call(features, training=False)
-                                evaluation_metrics = self._eval_metrics_fn(outputs, labels)
-
-                                accepted, min_model_version = self.report_evaluation_metrics(evaluation_metrics)
-
+                                accepted, min_model_version =\
+                                    self._run_evaluation_task(features, labels)
                                 if accepted:
                                     break
                             else:
-                                with tf.GradientTape() as tape:
-                                    outputs = self._model.call(features, training=True)
-                                    loss = self._loss(outputs, labels)
-
-                                    # TODO:  Add regularization loss if any,
-                                    #        which should be divided by the number of contributing workers.
-                                grads = tape.gradient(
-                                    loss, self._model.trainable_variables)
-
-                                accepted, min_model_version = self.report_gradient(
-                                    grads)
+                                accepted, min_model_version, loss =\
+                                    self._run_training_task(features, labels)
                                 if accepted:
-                                    self._logger.info("Loss is %f" % loss.numpy())
+                                    self._logger.info(
+                                        "Loss is %f" % loss.numpy())
                                     break
                         else:
                             # Worker got stuck, fail the task.
-                            # TODO: stop the worker if it fails to make any progress for some time.
+                            # TODO: stop the worker if it fails to make any
+                            #       progress for some time.
                             raise RuntimeError("Worker got stuck")
             except Exception as ex:
                 err_msg = str(ex)
