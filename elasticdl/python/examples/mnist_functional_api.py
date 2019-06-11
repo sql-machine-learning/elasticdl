@@ -28,7 +28,7 @@ def loss(output, labels):
         tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=output, labels=labels.flatten()))
 
-def optimizer(lr=0.1):
+def optimizer(lr=0.01):
     return tf.train.GradientDescentOptimizer(lr)
 
 def input_fn(records):
@@ -52,10 +52,12 @@ def input_fn(records):
     labels = np.array(label_list)
     return ({'image': images}, labels)
 
-
 def eval_metrics_fn(predictions, labels):
     return {
-        'metric': tf.reduce_mean(
+        'loss': tf.reduce_mean(
             tf.nn.sparse_softmax_cross_entropy_with_logits(
                 logits=predictions, labels=labels.flatten())),
+        'accuracy': tf.reduce_mean(
+            tf.cast(tf.equal(tf.argmax(predictions, 1),
+            labels.flatten()), tf.float32)),
     }

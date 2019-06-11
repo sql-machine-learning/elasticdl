@@ -33,10 +33,15 @@ Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and subm
 
 ```bash
 python elasticdl/python/elasticdl/client/client.py \
+    --job_type=training \
+    --job_name=local-job \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=/data/mnist/train \
     --evaluation_data_dir=/data/mnist/test \
     --num_epochs=1 \
+    --minibatch_size=64 \
+    --records_per_task=100 \
+    --num_workers=1 \
     --master_cpu_request=1000m \
     --master_cpu_limit=1000m \
     --master_memory_request=512Mi \
@@ -45,13 +50,13 @@ python elasticdl/python/elasticdl/client/client.py \
     --worker_cpu_limit=1000m \
     --worker_memory_request=1024Mi \
     --worker_memory_limit=1024Mi \
-    --minibatch_size=10 \
-    --records_per_task=100 \
-    --num_workers=1 \
-    --grads_to_wait=2 \
-    --codec_type=tf_example \
-    --job_name=test \
-    --image_base=elasticdl:dev \
+    --grads_to_wait=1 \
+    --codec_type=bytes \
+    --image_base=gcr.io/elasticdl/elasticdl:dev \
+    --image_pull_policy=Always \
+    --checkpoint_dir=/tmp \
+    --checkpoint_step=10 \
+    --keep_checkpoint_max=1 \
     --log_level=INFO
 ```
 
@@ -59,32 +64,34 @@ python elasticdl/python/elasticdl/client/client.py \
 
 ```bash
 python elasticdl/python/elasticdl/client/client.py \
-    --job_name=test \
+    --job_type=training \
+    --job_name=high-prio-job \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
-    --training_data_dir=/data/mnist_nfs/train \
-    --evaluation_data_dir=/data/mnist_nfs/test \
+    --training_data_dir=/data/mnist_nfs/mnist/train \
+    --evaluation_data_dir=/data/mnist_nfs/mnist/test \
     --num_epochs=1 \
-    --minibatch_size=10 \
+    --minibatch_size=64 \
     --records_per_task=100 \
     --num_workers=1 \
-    --master_pod_priority=highest-priority \
-    --worker_pod_priority=high-priority \
     --master_cpu_request=1000m \
     --master_cpu_limit=1000m \
-    --master_memory_request=2048Mi \
-    --master_memory_limit=2048Mi \
-    --worker_cpu_request=2000m \
-    --worker_cpu_limit=2000m \
+    --master_memory_request=1024Mi \
+    --master_memory_limit=1024Mi \
+    --worker_cpu_request=3000m \
+    --worker_cpu_limit=3000m \
     --worker_memory_request=4096Mi \
     --worker_memory_limit=4096Mi \
-    --grads_to_wait=2 \
-    --codec_type=tf_example \
+    --grads_to_wait=1 \
+    --codec_type=bytes \
     --mount_path=/data \
     --volume_name=data-volume \
     --repository=gcr.io \
-    --image_base=gcr.io/elasticdl/mnist:dev \
+    --image_base=gcr.io/elasticdl/elasticdl:dev \
     --image_pull_policy=Always \
-    --log_level_INFO
+    --checkpoint_dir=/data/cp \
+    --checkpoint_step=10 \
+    --keep_checkpoint_max=1 \
+    --log_level=INFO
 ```
 The difference is the additional `repository` argument that points to the Docker hub used by GKE.
 
@@ -100,17 +107,17 @@ kubectl logs ${pod_name}
 After the training job finished, the trained model will be exported to the directory specified by parameter `--checkpoint_dir`, and ElasticDL provide user a command to reevaluate the trained model with the specified dataset using the command below to see the loss and accuracy of the trainded model:
 
 ```bash
-python3 elasticdl/python/elasticdl/client/client.py \
+python elasticdl/python/elasticdl/client/client.py \
     --job_type=evaluation \
-    --job_name=high-eval-job \
-    --model_file=elasticdl/python/examples/mnist_subclass.py \
-    --trained_model=/data/cp/model_${version}.chkpt \
+    --job_name=eval-job \
+    --model_file=elasticdl/python/examples/mnist_functional_api.py \
+    --trained_model=/data/cp/model_${VERSION}.chkpt \
     --data_dir=/data/mnist_nfs/mnist/train \
-    --pod_priority=high-priority \
-    --cpu_request=1000m \
-    --cpu_limit=1000m \
-    --memory_request=1024Mi \
-    --memory_limit=1024Mi \
+    --minibatch_size=64 \
+    --eval_cpu_request=1000m \
+    --eval_cpu_limit=1000m \
+    --eval_memory_request=1024Mi \
+    --eval_memory_limit=1024Mi \
     --codec_type=bytes \
     --repository=gcr.io \
     --mount_path=/data \

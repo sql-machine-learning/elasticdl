@@ -1,3 +1,4 @@
+import os
 import logging
 import traceback
 
@@ -9,8 +10,12 @@ import numpy as np
 
 from contextlib import closing
 from collections import defaultdict
-from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
-from elasticdl.python.elasticdl.common.model_helper import load_user_model, build_model, load_from_checkpoint_file
+from elasticdl.python.elasticdl.common.ndarray import tensor_to_ndarray
+from elasticdl.python.elasticdl.common.model_helper import (
+    load_user_model,
+    build_model,
+    load_from_checkpoint_file,
+)
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.data.codec import BytesCodec
 
@@ -22,7 +27,8 @@ class Evaluator(object):
                  model_file,
                  trained_model,
                  data_dir,
-                 codec_type=None):
+                 codec_type=None,
+                 batch_size=10):
         """
         Arguments:
             model_file: A module to define the model
@@ -49,10 +55,14 @@ class Evaluator(object):
             raise ValueError("invalid codec_type: " + codec_type)
 
         self._codec_type = codec_type
+        self._batch_size = batch_size
+        self._loss = 0
+        self._accuracy = 0
+        self._num_samples = 0
 
     def _initialize_model(self):
         pb_model = load_from_checkpoint_file(self._trained_model)
-        for var in self._model.trainable_variables
+        for var in self._model.trainable_variables:
             var.assign(tensor_to_ndarray(pb_model.param[var.name]))
 
     @staticmethod
@@ -77,14 +87,17 @@ class Evaluator(object):
         self._initialize_model()
         for file_name in os.listdir(self._data_dir):
             self._logger.info("evaluating file " + file_name)            
-            try:
-                with closing(recordio.Scanner(file_name)) as reader:
-                    while True:
-                        record_buf = self._get_batch(reader, batch_size, self._codec.decode)
-                        if not record_buf:
-                            break
-                        features, labels = self._get_features_and_labels_from_record(record_buf)
-                        outputs = self._model.call(features, training=False)
-                        evaluation_metrics = self._eval_metrics_fn(outputs, labels)
-            except Exception as ex:
-                traceback.print_exc()
+            with closing(recordio.Scanner(self._data_dir + "/" + file_name)) as reader:
+                while True:
+                    record_buf = self._get_batch(reader, self._batch_size, self._codec.decode)
+                    if not record_buf:
+                        break
+                    features, labels = self._get_features_and_labels_from_record(record_buf)
+                    outputs = self._model.call(features, training=False)
+                    evaluation_metrics = self._eval_metrics_fn(outputs, labels)
+                    self._loss = self._loss + evaluation_metrics['loss']
+                    self._accuracy = self._accuracy + evaluation_metrics['acc']
+                    self._num_samples = self._num_samples + 1
+        avg_loss = self._loss / self._num_samples
+        avg_accuracy = self._accuracy / self._num_samples
+        self._logger.info("Model loss: %f accuracy: %f" % (avg_loss, avg_accuracy))

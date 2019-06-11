@@ -64,12 +64,13 @@ Use the command below to submit your first ElasticDL job on GKE:
 
 ```
 python elasticdl/python/elasticdl/client/client.py \
+    --job_type=training \
     --job_name=hello-world \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=${MNIST_DATA_DIR}/train \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --num_epochs=1 \
-    --minibatch_size=10 \
+    --minibatch_size=64 \
     --records_per_task=100 \
     --num_workers=2 \
     --grads_to_wait=2 \
@@ -78,6 +79,10 @@ python elasticdl/python/elasticdl/client/client.py \
     --volume_name=${VOLUME_NAME} \
     --repository=gcr.io \
     --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
+    --image_pull_policy=Always \
+    --checkpoint_dir=${EXPORTED_MODEL_PATH} \
+    --checkpoint_step=10 \
+    --keep_checkpoint_max=1 \
     --log_level=INFO
 ```
 `MNIST_DATA_DIR` : The directory that contains MNIST training and evaluation data in recordio format(e.g. /data/mnist_nfs/mnist).
@@ -85,6 +90,8 @@ python elasticdl/python/elasticdl/client/client.py \
 `VOLUME_NAME` : The name of the [Kubernetes Volume](https://cloud.google.com/kubernetes-engine/docs/concepts/volumes) (e.g. data-volume).
 
 `MOUNT_PATH` : The mount path in the container of the kubernetes volume (e.g. /data).
+
+`EXPORTED_MODEL_PATH ` : The path for saving the exported model (e.g. /data/cp).
 
 
 Use the following command to check the job's pods statuses:
@@ -105,6 +112,7 @@ Same as the first example, submit a job on GKE using the command below:
 
 ```
 python elasticdl/python/elasticdl/client/client.py \
+    --job_type=training \
     --job_name=fault-tolerance \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=${MNIST_DATA_DIR}/train \
@@ -167,6 +175,7 @@ For more about PriorityClass, please check out [Pod Priority and Preemption](htt
 ### Submit the first job with `low-priority`
 ```
 python elasticdl/python/elasticdl/client/client.py \
+    --job_type=training \
     --job_name=low-prio-job \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=${MNIST_DATA_DIR}/train \
@@ -204,6 +213,7 @@ kubectl get pods -l elasticdl_job_name=low-prio-job
 ### Submit the second job with `high-priority`
 ```
 python elasticdl/python/elasticdl/client/client.py \
+    --job_type=training \
     --job_name=high-prio-job \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=${MNIST_DATA_DIR}/train \

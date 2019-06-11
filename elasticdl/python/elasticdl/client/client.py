@@ -178,10 +178,10 @@ spec:
         model_file=_m_file_in_docker(model_file),
         image_name=image_name,
         job_name=job_name,
-        cpu_limit=args.cpu_limit,
-        cpu_request=args.cpu_request,
-        memory_limit=args.memory_limit,
-        memory_request=args.memory_request,
+        cpu_limit=args.eval_cpu_limit,
+        cpu_request=args.eval_cpu_request,
+        memory_limit=args.eval_memory_limit,
+        memory_request=args.eval_memory_request,
         image_pull_policy=args.image_pull_policy,
     )
 
@@ -190,8 +190,8 @@ spec:
     # Build evaluator arguments
     evaluator_def["spec"]["containers"][0]["args"].extend(argv)
 
-    if args.pod_priority is not None:
-        evaluator_def["spec"]["priorityClassName"] = args.pod_priority
+    if args.eval_pod_priority is not None:
+        evaluator_def["spec"]["priorityClassName"] = args.eval_pod_priority
 
     if args.volume_name is not None and args.mount_path is not None:
         persistent_volume_claim = {

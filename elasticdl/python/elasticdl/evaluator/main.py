@@ -9,6 +9,12 @@ tf.enable_eager_execution()
 from elasticdl.python.elasticdl.evaluator.evaluator import Evaluator
 
 
+def _pos_int(arg):
+    res = int(arg)
+    if res <= 0:
+        raise ValueError("Positive integer argument required. Got %s" % res)
+    return res
+
 def _parse_args():
     parser = argparse.ArgumentParser(description="ElasticDL Evaluator")
     parser.add_argument(
@@ -33,6 +39,12 @@ def _parse_args():
         help="Type of codec(tf_example or bytes)",
     )
     parser.add_argument(
+        "--minibatch_size",
+        type=_pos_int,
+        help="Minibatch size used by evaluator to compute metrics",
+        default='10',
+    )
+    parser.add_argument(
         "--log_level",
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
         type=str.upper,
@@ -41,7 +53,6 @@ def _parse_args():
     )
 
     return parser.parse_args()
-
 
 def main():
     args = _parse_args()
@@ -58,6 +69,7 @@ def main():
         args.trained_model,
         args.data_dir,
         codec_type=args.codec_type,
+        batch_size=args.minibatch_size,
     )
     evaluator.run()
 
