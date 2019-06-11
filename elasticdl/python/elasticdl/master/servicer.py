@@ -197,7 +197,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 ):
                     try:
                         self.save_checkpoint()
-                    except:
+                    except Exception:
                         self._logger.warning(
                             "Failed to save checkpoint file for "
                             "model version {}".format(self._version)
