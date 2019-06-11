@@ -2,11 +2,12 @@ import sys
 import argparse
 import recordio
 import tensorflow as tf
-tf.enable_eager_execution()
 
 from contextlib import closing
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.data.codec import BytesCodec
+
+tf.enable_eager_execution()
 
 
 # TODO: share code with MNIST dataset.
@@ -38,10 +39,18 @@ def main(argv):
     )
     args = parser.parse_args(argv)
 
-    feature_columns = [tf.feature_column.numeric_column(key="image",
-        dtype=tf.float32, shape=[32, 32, 3]),
-        tf.feature_column.numeric_column(key="label",
-        dtype=tf.int64, shape=[1])]
+    feature_columns = [
+        tf.feature_column.numeric_column(
+            key="image",
+            dtype=tf.float32,
+            shape=[32, 32, 3],
+        ),
+        tf.feature_column.numeric_column(
+            key="label",
+            dtype=tf.int64,
+            shape=[1],
+        ),
+    ]
     if args.codec_type == "tf_example":
         decode_fn = TFExampleCodec(feature_columns).decode
     elif args.codec_type == "bytes":

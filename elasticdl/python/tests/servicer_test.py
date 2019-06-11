@@ -6,13 +6,13 @@ from collections import defaultdict
 
 import tensorflow as tf
 
-tf.enable_eager_execution()
-
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor
 from elasticdl.python.elasticdl.common.ndarray import tensor_to_ndarray
 from elasticdl.proto import elasticdl_pb2
+
+tf.enable_eager_execution()
 
 
 class SimpleModel(tf.keras.Model):
@@ -68,12 +68,13 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual(1, task.model_version)
 
     def testGetModel(self):
-        master = MasterServicer(2, 3, None, None,
-                                init_var=[],
-                                init_from_checkpoint="",
-                                checkpoint_dir="",
-                                checkpoint_steps=0,
-                                keep_checkpoint_max=0
+        master = MasterServicer(
+            2, 3, None, None,
+            init_var=[],
+            init_from_checkpoint="",
+            checkpoint_dir="",
+            checkpoint_steps=0,
+            keep_checkpoint_max=0,
         )
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
@@ -238,7 +239,8 @@ class ServicerTest(unittest.TestCase):
         self.assertFalse(res.accepted)
         self.assertEqual(1, res.model_version)
 
-        # Report a current version, should be accepted, and a new version is created
+        # Report a current version, should be accepted, and a new version is
+        # created
         req = makeEvaluationMetrics()
         res = master.ReportEvaluationMetrics(req, None)
         self.assertTrue(res.accepted)
@@ -251,12 +253,13 @@ class ServicerTest(unittest.TestCase):
             records_per_task=3,
             num_epochs=2,
         )
-        master = MasterServicer(3, 3, None, task_q,
-                                init_var=[],
-                                init_from_checkpoint="",
-                                checkpoint_dir="",
-                                checkpoint_steps=0,
-                                keep_checkpoint_max=0
+        master = MasterServicer(
+            3, 3, None, task_q,
+            init_var=[],
+            init_from_checkpoint="",
+            checkpoint_dir="",
+            checkpoint_steps=0,
+            keep_checkpoint_max=0,
         )
 
         # task to number of runs.
@@ -291,12 +294,13 @@ class ServicerTest(unittest.TestCase):
         )
 
     def testUserDefinedModel(self):
-        master = MasterServicer(2, 3, None, None,
-                                init_var=[],
-                                init_from_checkpoint="",
-                                checkpoint_dir="",
-                                checkpoint_steps=0,
-                                keep_checkpoint_max=0
+        master = MasterServicer(
+            2, 3, None, None,
+            init_var=[],
+            init_from_checkpoint="",
+            checkpoint_dir="",
+            checkpoint_steps=0,
+            keep_checkpoint_max=0,
         )
         req = elasticdl_pb2.GetModelRequest()
         req.min_version = 0
