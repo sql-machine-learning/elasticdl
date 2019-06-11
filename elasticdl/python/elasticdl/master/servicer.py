@@ -3,18 +3,22 @@ import os
 import threading
 from collections import defaultdict
 
+from google.protobuf import empty_pb2
+
+from elasticdl.proto import elasticdl_pb2
+from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.python.elasticdl.common.ndarray import (
+    ndarray_to_tensor, tensor_to_ndarray
+)
+from elasticdl.python.elasticdl.common.model_helper import (
+    save_checkpoint_to_file, load_from_checkpoint_file
+)
+
 import numpy as np
 
 import tensorflow as tf
 
 assert tf.executing_eagerly()
-
-from google.protobuf import empty_pb2
-
-from elasticdl.proto import elasticdl_pb2
-from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor, tensor_to_ndarray
-from elasticdl.python.elasticdl.common.model_helper import save_checkpoint_to_file, load_from_checkpoint_file
 
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
@@ -99,7 +103,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version += 1
 
     def save_checkpoint(self):
-        file_name = "{}/model_v{}.chkpt".format(self._checkpoint_dir, self._version)
+        file_name = "{}/model_v{}.chkpt".format(
+            self._checkpoint_dir, self._version)
         pb_model = self._get_model_no_lock()
         save_checkpoint_to_file(pb_model, file_name)
         if self._keep_checkpoint_max:
@@ -137,10 +142,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def _validate_model_version(self, request_model_version):
         if request_model_version > self._version:
-            err_msg = "Model version %d not available yet, current version: %d" % (
-                request_model_version,
-                self._version,
-            )
+            err_msg = "Model version %d not available yet," \
+                      "current version: %d" % (request_model_version,
+                                               self._version)
             self._logger.warning(err_msg)
             raise ValueError(err_msg)
 
@@ -153,7 +157,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return invalid_model_version
 
     def ReportGradient(self, request, _):
-        invalid_model_version = self._validate_model_version(request.model_version)
+        invalid_model_version = self._validate_model_version(
+            request.model_version
+        )
 
         res = elasticdl_pb2.ReportGradientResponse()
         if invalid_model_version:
@@ -186,12 +192,15 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._grad_n += 1
             if self._grad_n >= self._grad_to_wait:
                 self._update_model()
-                if self._checkpoint_steps and self._version % self._checkpoint_steps == 0:
+                if self._checkpoint_steps and (
+                        self._version % self._checkpoint_steps == 0
+                ):
                     try:
                         self.save_checkpoint()
                     except:
                         self._logger.warning(
-                            "Failed to save checkpoint file for model version {}".format(self._version)
+                            "Failed to save checkpoint file for "
+                            "model version {}".format(self._version)
                         )
 
         res.accepted = True
@@ -209,7 +218,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return empty_pb2.Empty()
 
     def ReportEvaluationMetrics(self, request, _):
-        invalid_model_version = self._validate_model_version(request.model_version)
+        invalid_model_version = self._validate_model_version(
+            request.model_version
+        )
 
         res = elasticdl_pb2.ReportEvaluationMetricsResponse()
         if invalid_model_version:
@@ -227,7 +238,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             evaluation_metrics_summary = {
                 k: np.mean(v) for k, v in self._evaluation_metrics.items()
             }
-            self._logger.info("Evaluation metrics: %s" % evaluation_metrics_summary)
+            self._logger.info(
+                "Evaluation metrics: %s" % evaluation_metrics_summary
+            )
         res.accepted = True
         res.model_version = self._version
         return res

@@ -12,7 +12,10 @@ class BytesCodec(object):
         # Check that all columns are present.
         if data.keys() != self._col_id.keys():
             raise ValueError(
-                "Column keys mismatch: expected %s, got %s " % (self._col_id.keys(), data.keys())
+                "Column keys mismatch: expected %s, got %s " % (
+                    self._col_id.keys(),
+                    data.keys()
+                )
             )
 
         # Rearrange the data in order of the columns.
@@ -22,8 +25,13 @@ class BytesCodec(object):
             column = self._feature_columns[col_id]
             if column.dtype != f_value.dtype or column.shape != f_value.shape:
                 raise ValueError(
-                    "Input data doesn't match column %s definition: column: (%s, %s) data: (%s, %s)" % (
-                    f_name, column.dtype, column.shape, f_value.dtype, f_value.shape)
+                    "Input data doesn't match column %s definition: column: "
+                    "(%s, %s) data: (%s, %s)" % (
+                        f_name,
+                        column.dtype,
+                        column.shape,
+                        f_value.dtype,
+                        f_value.shape)
                 )
             values[col_id] = f_value.tobytes()
         return b"".join(values)
