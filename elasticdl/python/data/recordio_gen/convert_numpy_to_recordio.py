@@ -13,17 +13,23 @@ from elasticdl.python.data.codec import BytesCodec
 
 
 def convert_numpy_to_recordio(
-    file_dir, data, label, feature_columns, record_per_file, codec_type
+    file_dir, data, label, feature_columns, records_per_file, codec_type, partition=''
 ):
     """
     Convert data in numpy format to RecordIO format
     """
     assert len(data) == len(label) and len(data) > 0
-    os.makedirs(file_dir)
+
+    if not os.path.exists(file_dir):
+        os.makedirs(file_dir)
+
     it = zip(data, label)
     try:
         for i in itertools.count():
-            file_name = file_dir + "/data-%04d" % i
+            if partition == '':
+                file_name = file_dir + "/data-%04d" % i
+            else:
+                file_name = file_dir + "/data-%s-%04d" % (partition, i)
             print("writing:", file_name)
             if codec_type == "tf_example":
                 encode_fn = TFExampleCodec(feature_columns).encode
@@ -32,7 +38,7 @@ def convert_numpy_to_recordio(
             else:
                 raise ValueError("invalid codec_type: " + codec_type)
             with closing(recordio.Writer(file_name)) as f:
-                for _ in range(record_per_file):
+                for _ in range(records_per_file):
                     row = next(it)
                     rec = encode_fn(
                         {

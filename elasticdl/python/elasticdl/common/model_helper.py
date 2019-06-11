@@ -1,7 +1,5 @@
 # common helper methods for model manipulation.
 import importlib.util
-from elasticdl.proto import elasticdl_pb2
-
 
 def load_user_model(model_file):
     spec = importlib.util.spec_from_file_location(model_file, model_file)
@@ -24,6 +22,7 @@ def save_checkpoint_to_file(pb_model, file_name):
         f.write(encoded_model)
 
 def load_from_checkpoint_file(file_name):
+    from elasticdl.proto import elasticdl_pb2
     pb_model = elasticdl_pb2.Model()
     with open(file_name, "rb") as f:
         pb_model.ParseFromString(f.read())
