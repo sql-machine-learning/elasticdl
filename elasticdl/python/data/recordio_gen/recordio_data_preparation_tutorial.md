@@ -102,4 +102,4 @@ gcloud dataproc jobs submit pyspark \
     --output_dir=/filestore_mnt --model_file=$MODEL_FILE --records_per_file=200
 ```
 
-Then you can see four generated RecordIO files `data-0-0000`, `data-0-0001`, `data-1-0000` and `data-1-0001` located in the mounted directory `/filestore_mnt`.
+After the job is finished, you can see four generated RecordIO files `data-0-0000`, `data-0-0001`, `data-1-0000` and `data-1-0001` located in the mounted directory `/filestore_mnt`.
