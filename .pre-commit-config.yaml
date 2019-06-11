@@ -9,7 +9,7 @@ repos:
     hooks:
     -   id: isort
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v1.3.0
+    rev: v2.2.3
     hooks:
     -   id: flake8
 -   repo: git://github.com/skorokithakis/pre-commit-mypy

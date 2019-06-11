@@ -1,7 +1,3 @@
-import tensorflow as tf
-
-tf.enable_eager_execution()
-
 import tempfile
 import os
 import unittest
@@ -17,6 +13,10 @@ from elasticdl.python.elasticdl.worker.worker import Worker
 from elasticdl.python.data.codec import BytesCodec
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.tests.in_process_master import InProcessMaster
+
+import tensorflow as tf
+
+tf.enable_eager_execution()
 
 
 def _get_model_info(file_name):
