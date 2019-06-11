@@ -142,7 +142,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def _validate_model_version(self, request_model_version):
         if request_model_version > self._version:
-            err_msg = "Model version %d not available yet," \
+            err_msg = "Model version %d not available yet, " \
                       "current version: %d" % (request_model_version,
                                                self._version)
             self._logger.warning(err_msg)
