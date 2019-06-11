@@ -7,7 +7,7 @@ import recordio
 import grpc
 import tensorflow as tf
 
-tf.enable_eager_execution()
+tf.enable_eager_execution()  # noqa
 
 from contextlib import closing
 from concurrent import futures
@@ -21,7 +21,9 @@ from elasticdl.python.elasticdl.common.model_helper import (
 )
 
 
-def _make_task_queue(training_data_dir, evaluation_data_dir, records_per_task, num_epochs):
+def _make_task_queue(
+    training_data_dir, evaluation_data_dir, records_per_task, num_epochs
+):
     def _collect_file_records_from_dir(data_dir):
         f_records = {}
         for f in os.listdir(data_dir):
@@ -29,9 +31,16 @@ def _make_task_queue(training_data_dir, evaluation_data_dir, records_per_task, n
             with closing(recordio.Index(p)) as rio:
                 f_records[p] = rio.num_records()
         return f_records
+
     training_f_records = _collect_file_records_from_dir(training_data_dir)
-    evaluation_f_records = {} if evaluation_data_dir == "" else _collect_file_records_from_dir(evaluation_data_dir)
-    return _TaskQueue(training_f_records, evaluation_f_records, records_per_task, num_epochs)
+    evaluation_f_records = (
+        {}
+        if evaluation_data_dir == ""
+        else _collect_file_records_from_dir(evaluation_data_dir)
+    )
+    return _TaskQueue(
+        training_f_records, evaluation_f_records, records_per_task, num_epochs
+    )
 
 
 def _pos_int(arg):
@@ -67,16 +76,8 @@ def _parse_args():
         help="Evaluation data directory. Files should be in RecordIO format",
         default="",
     )
-    parser.add_argument(
-        "--records_per_task",
-        type=_pos_int,
-        required=True,
-    )
-    parser.add_argument(
-        "--num_epochs",
-        type=_pos_int,
-        required=True,
-    )
+    parser.add_argument("--records_per_task", type=_pos_int, required=True)
+    parser.add_argument("--num_epochs", type=_pos_int, required=True)
     parser.add_argument(
         "--grads_to_wait",
         type=_pos_int,
@@ -90,10 +91,7 @@ def _parse_args():
         required=True,
     )
     parser.add_argument(
-        "--num_workers",
-        type=_pos_int,
-        help="Number of workers",
-        default=0,
+        "--num_workers", type=_pos_int, help="Number of workers", default=0
     )
     parser.add_argument(
         "--init_from_checkpoint",
@@ -108,13 +106,15 @@ def _parse_args():
     parser.add_argument(
         "--checkpoint_steps",
         type=_non_neg_int,
-        help="Save checkpoint every this many steps. If 0, no checkpoints to save.",
+        help="Save checkpoint every this many steps."
+        "If 0, no checkpoints to save.",
         default=0,
     )
     parser.add_argument(
         "--keep_checkpoint_max",
         type=_non_neg_int,
-        help="The maximum number of recent checkpoint files to keep. If 0, keep all.",
+        help="The maximum number of recent checkpoint files to keep."
+        "If 0, keep all.",
         default=3,
     )
     parser.add_argument(
@@ -138,19 +138,12 @@ def _parse_args():
         default="4096Mi",
     )
     parser.add_argument(
-        "--worker_pod_priority",
-        help="Priority requested by workers",
+        "--worker_pod_priority", help="Priority requested by workers"
     )
     parser.add_argument(
-        "--worker_image",
-        help="Docker image for workers",
-        default=None,
+        "--worker_image", help="Docker image for workers", default=None
     )
-    parser.add_argument(
-        "--job_name",
-        help="Job name",
-        required=True
-    )
+    parser.add_argument("--job_name", help="Job name", required=True)
     parser.add_argument(
         "--codec_type",
         default="bytes",
@@ -159,12 +152,10 @@ def _parse_args():
     )
     # TODO: better logic for handling volume configs
     parser.add_argument(
-        "--volume_name",
-        help="Volume name of Network File System"
+        "--volume_name", help="Volume name of Network File System"
     )
     parser.add_argument(
-        "--mount_path",
-        help="Mount path in the docker container",
+        "--mount_path", help="Mount path in the docker container"
     )
     parser.add_argument(
         "--log_level",
@@ -174,8 +165,7 @@ def _parse_args():
         help="The logging level. Default to WARNING",
     )
     parser.add_argument(
-        "--image_pull_policy",
-        help="Image pull policy of master and workers",
+        "--image_pull_policy", help="Image pull policy of master and workers"
     )
     return parser.parse_args()
 
@@ -199,7 +189,7 @@ def main():
         args.training_data_dir,
         args.evaluation_data_dir,
         args.records_per_task,
-        args.num_epochs
+        args.num_epochs,
     )
     model_module = load_user_model(args.model_file)
     model_inst = model_module.model
