@@ -80,7 +80,7 @@ python elasticdl/python/elasticdl/client/client.py \
     --repository=gcr.io \
     --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
     --image_pull_policy=Always \
-    --checkpoint_dir=${EXPORTED_MODEL_PATH} \
+    --checkpoint_dir=${MODEL_SAVING_PATH} \
     --checkpoint_step=10 \
     --keep_checkpoint_max=1 \
     --log_level=INFO
@@ -91,7 +91,7 @@ python elasticdl/python/elasticdl/client/client.py \
 
 `MOUNT_PATH` : The mount path in the container of the kubernetes volume (e.g. /data).
 
-`EXPORTED_MODEL_PATH ` : The path for saving the exported model (e.g. /data/cp).
+`MODEL_SAVING_PATH ` : The path for saving the exported model (e.g. /data/cp).
 
 
 Use the following command to check the job's pods statuses:
