@@ -2,9 +2,6 @@ import os
 import unittest
 import time
 
-import tensorflow as tf
-
-tf.enable_eager_execution()
 
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
@@ -55,8 +52,8 @@ class WorkerManagerTest(unittest.TestCase):
     )
     def testFailedWorkerPod(self):
         """
-        Start a pod running a python program destined to fail with restart_policy="Never"
-        to test failed_worker_count
+        Start a pod running a python program destined to fail with
+        restart_policy="Never" to test failed_worker_count
         """
         task_q = _TaskQueue({"f": 10}, {}, 1, 1)
         task_q.recover_tasks = MagicMock()

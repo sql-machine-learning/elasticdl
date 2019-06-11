@@ -6,25 +6,42 @@ import tensorflow as tf
 
 tf.enable_eager_execution()
 
-from elasticdl.python.elasticdl.worker.worker import Worker  # noqa
+from elasticdl.python.elasticdl.evaluator.evaluator import Evaluator
+
+
+def _pos_int(arg):
+    res = int(arg)
+    if res <= 0:
+        raise ValueError("Positive integer argument required. Got %s" % res)
+    return res
 
 
 def _parse_args():
-    parser = argparse.ArgumentParser(description="ElasticDL Worker")
-    parser.add_argument(
-        "--worker_id", help="Id unique to the worker", type=int, required=True
-    )
-    parser.add_argument("--master_addr", help="Master ip:port", required=True)
+    parser = argparse.ArgumentParser(description="ElasticDL Evaluator")
     parser.add_argument(
         "--model_file",
         help="Full file path of user defined neural model",
         required=True,
     )
     parser.add_argument(
+        "--trained_model",
+        help="The trained model file path produced by ElasticDL training job",
+        required=True,
+    )
+    parser.add_argument(
+        "--data_dir", help="The data directory for evaluation", required=True
+    )
+    parser.add_argument(
         "--codec_type",
         default="bytes",
         choices=["tf_example", "bytes"],
         help="Type of codec(tf_example or bytes)",
+    )
+    parser.add_argument(
+        "--minibatch_size",
+        type=_pos_int,
+        help="Minibatch size used by evaluator to compute metrics",
+        default="10",
     )
     parser.add_argument(
         "--log_level",
@@ -39,7 +56,6 @@ def _parse_args():
 
 def main():
     args = _parse_args()
-    channel = grpc.insecure_channel(args.master_addr)
 
     # Initialize logger
     logging.basicConfig(
@@ -48,13 +64,14 @@ def main():
     )
     logging.getLogger().setLevel(args.log_level)
 
-    worker = Worker(
-        args.worker_id,
+    evaluator = Evaluator(
         args.model_file,
-        channel=channel,
+        args.trained_model,
+        args.data_dir,
         codec_type=args.codec_type,
+        batch_size=args.minibatch_size,
     )
-    worker.run()
+    evaluator.run()
 
 
 if __name__ == "__main__":

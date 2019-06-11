@@ -73,7 +73,7 @@ spec:
         "--worker_memory_request", "{worker_memory_request}",
         "--worker_memory_limit", "{worker_memory_limit}"
     ]
-    imagePullPolicy: {image_pull_policy} 
+    imagePullPolicy: {image_pull_policy}
     resources:
       limits:
         cpu:  "{master_cpu_limit}"
@@ -131,24 +131,99 @@ spec:
                 args.volume_name,
             ]
         )
-    
+
     if args.image_pull_policy is not None:
         master_def["spec"]["containers"][0]["args"].extend(
-            [
-                "--image_pull_policy",
-                args.image_pull_policy,
-            ]
+            ["--image_pull_policy", args.image_pull_policy]
         )
 
     return master_def
 
 
-def _submit(image_name, model_file, job_name, args, argv):
+def _gen_evaluator_def(image_name, model_file, job_name, args, argv):
+    evaluator_yaml = """
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "elasticdl-evaluation-{job_name}"
+  labels:
+    app: elasticdl
+    elasticdl_job_name: {job_name}
+spec:
+  containers:
+  - name: "elasticdl-evaluation-{job_name}"
+    image: "{image_name}"
+    command: ["python"]
+    args: [
+        "-m", "elasticdl.python.elasticdl.evaluator.main",
+        "--model_file", "{model_file}",
+    ]
+    imagePullPolicy: {image_pull_policy}
+    resources:
+      limits:
+        cpu:  "{cpu_limit}"
+        memory: "{memory_limit}"
+      requests:
+        cpu:  "{cpu_request}"
+        memory: "{memory_request}"
+    env:
+    - name: MY_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+  restartPolicy: Never
+""".format(
+        model_file=_m_file_in_docker(model_file),
+        image_name=image_name,
+        job_name=job_name,
+        cpu_limit=args.eval_cpu_limit,
+        cpu_request=args.eval_cpu_request,
+        memory_limit=args.eval_memory_limit,
+        memory_request=args.eval_memory_request,
+        image_pull_policy=args.image_pull_policy,
+    )
+
+    evaluator_def = yaml.safe_load(evaluator_yaml)
+
+    # Build evaluator arguments
+    evaluator_def["spec"]["containers"][0]["args"].extend(argv)
+
+    if args.eval_pod_priority is not None:
+        evaluator_def["spec"]["priorityClassName"] = args.eval_pod_priority
+
+    if args.volume_name is not None and args.mount_path is not None:
+        persistent_volume_claim = {
+            "claimName": "fileserver-claim",
+            "readOnly": False,
+        }
+        volume = {
+            "name": args.volume_name,
+            "persistentVolumeClaim": persistent_volume_claim,
+        }
+        evaluator_def["spec"]["volumes"] = [volume]
+        evaluator_def["spec"]["containers"][0]["volumeMounts"] = [
+            {"mountPath": args.mount_path, "name": args.volume_name}
+        ]
+
+    return evaluator_def
+
+
+def _submit_training_job(image_name, model_file, job_name, args, argv):
     master_def = _gen_master_def(image_name, model_file, job_name, args, argv)
     config.load_kube_config()
     api = core_v1_api.CoreV1Api()
     resp = api.create_namespaced_pod(body=master_def, namespace="default")
     print("Master launched. status='%s'" % str(resp.status))
+
+
+def _submit_evaluation_job(image_name, model_file, job_name, args, argv):
+    evaluator_def = _gen_evaluator_def(
+        image_name, model_file, job_name, args, argv
+    )
+    config.load_kube_config()
+    api = core_v1_api.CoreV1Api()
+    resp = api.create_namespaced_pod(body=evaluator_def, namespace="default")
+    print("Evaluator launched. status='%s'" % str(resp.status))
 
 
 def _valid_cpu_spec(arg):
@@ -169,9 +244,7 @@ def main():
     parser = argparse.ArgumentParser(description="ElasticDL Client")
     # Rewrite model_file argument and pass all other arguments to master.
     parser.add_argument(
-        "--model_file",
-        help="Path to the model file",
-        required=True,
+        "--model_file", help="Path to the model file", required=True
     )
     parser.add_argument(
         "--image_base",
@@ -180,13 +253,15 @@ def main():
     )
     parser.add_argument(
         "--push_image",
-        action='store_true',
+        action="store_true",
         help="Whether to push the newly built image to remote registry",
     )
+    parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
-        "--job_name",
-        help="ElasticDL job name",
-        required=True
+        "--job_type",
+        choices=["training", "evaluation"],
+        help="The type of this ElasticDL job",
+        required=True,
     )
     parser.add_argument(
         "--master_cpu_request",
@@ -237,16 +312,40 @@ def main():
         help="The maximal memory used by worker",
     )
     parser.add_argument(
-        "--master_pod_priority",
-        help="The requested priority of master pod",
+        "--eval_cpu_request",
+        default="1000m",
+        type=_valid_cpu_spec,
+        help="the minimal cpu required by worker in training",
     )
     parser.add_argument(
-        "--volume_name",
-        help="The volume name of network file system",
+        "--eval_cpu_limit",
+        default="1000m",
+        type=_valid_cpu_spec,
+        help="the maximal cpu used by worker in training",
     )
     parser.add_argument(
-        "--mount_path",
-        help="The mount path in the docker container",
+        "--eval_memory_request",
+        default="4096Mi",
+        type=_valid_mem_spec,
+        help="the minimal memory required by worker in training",
+    )
+    parser.add_argument(
+        "--eval_memory_limit",
+        default="4096Mi",
+        type=_valid_mem_spec,
+        help="the maximal memory used by worker in training",
+    )
+    parser.add_argument(
+        "--eval_pod_priority", help="the requested priority of evaluation pod"
+    )
+    parser.add_argument(
+        "--master_pod_priority", help="The requested priority of master pod"
+    )
+    parser.add_argument(
+        "--volume_name", help="The volume name of network file system"
+    )
+    parser.add_argument(
+        "--mount_path", help="The mount path in the docker container"
     )
     parser.add_argument(
         "--image_pull_policy",
@@ -263,7 +362,14 @@ def main():
         args.push_image,
         image_base=args.image_base,
     )
-    _submit(image_name, args.model_file, job_name, args, argv)
+    if args.job_type == "training":
+        _submit_training_job(image_name, args.model_file, job_name, args, argv)
+    elif args.job_type == "evaluation":
+        _submit_evaluation_job(
+            image_name, args.model_file, job_name, args, argv
+        )
+    else:
+        raise ValueError("invalid job type: " + args.job_type)
 
 
 if __name__ == "__main__":
