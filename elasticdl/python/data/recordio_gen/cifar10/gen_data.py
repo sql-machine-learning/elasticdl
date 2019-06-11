@@ -41,8 +41,8 @@ def main(argv):
     )
     args = parser.parse_args(argv)
 
-    record_per_file = args.num_record_per_chunk * args.num_chunk
-    backend.set_image_data_format("channels_last")
+    records_per_file = args.num_record_per_chunk * args.num_chunk
+    backend.set_image_data_format("channels_first")
 
     feature_columns = [
         tf.feature_column.numeric_column(
@@ -59,7 +59,7 @@ def main(argv):
         x_train,
         y_train,
         feature_columns,
-        record_per_file=record_per_file,
+        records_per_file=records_per_file,
         codec_type=args.codec_type,
     )
 
@@ -71,7 +71,7 @@ def main(argv):
         x_test,
         y_test,
         feature_columns,
-        record_per_file=record_per_file,
+        records_per_file=records_per_file,
         codec_type=args.codec_type,
     )
 
