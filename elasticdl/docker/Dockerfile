@@ -2,7 +2,7 @@ ARG BASE_IMAGE=tensorflow/tensorflow:1.13.1-py3
 FROM ${BASE_IMAGE}
 
 RUN apt-get update
-RUN apt-get install -y unzip curl
+RUN apt-get install -y unzip curl git
 
 ARG EXTRA_PYPI_INDEX
 
@@ -20,6 +20,9 @@ RUN pip install pytest --extra-index-url=${EXTRA_PYPI_INDEX}
 
 # Install RecordIO 
 RUN pip install 'pyrecordio>=0.0.6' --extra-index-url=${EXTRA_PYPI_INDEX}
+
+# Dependencies for pre-commit hooks
+RUN pip install pre-commit --extra-index-url=${EXTRA_PYPI_INDEX}
 
 ENV PYTHONPATH=/
 
