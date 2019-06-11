@@ -73,7 +73,7 @@ spec:
         "--worker_memory_request", "{worker_memory_request}",
         "--worker_memory_limit", "{worker_memory_limit}"
     ]
-    imagePullPolicy: {image_pull_policy} 
+    imagePullPolicy: {image_pull_policy}
     resources:
       limits:
         cpu:  "{master_cpu_limit}"
@@ -131,13 +131,10 @@ spec:
                 args.volume_name,
             ]
         )
-    
+
     if args.image_pull_policy is not None:
         master_def["spec"]["containers"][0]["args"].extend(
-            [
-                "--image_pull_policy",
-                args.image_pull_policy,
-            ]
+            ["--image_pull_policy", args.image_pull_policy]
         )
 
     return master_def
@@ -169,9 +166,7 @@ def main():
     parser = argparse.ArgumentParser(description="ElasticDL Client")
     # Rewrite model_file argument and pass all other arguments to master.
     parser.add_argument(
-        "--model_file",
-        help="Path to the model file",
-        required=True,
+        "--model_file", help="Path to the model file", required=True
     )
     parser.add_argument(
         "--image_base",
@@ -180,14 +175,10 @@ def main():
     )
     parser.add_argument(
         "--push_image",
-        action='store_true',
+        action="store_true",
         help="Whether to push the newly built image to remote registry",
     )
-    parser.add_argument(
-        "--job_name",
-        help="ElasticDL job name",
-        required=True
-    )
+    parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
         "--master_cpu_request",
         default="100m",
@@ -237,16 +228,13 @@ def main():
         help="The maximal memory used by worker",
     )
     parser.add_argument(
-        "--master_pod_priority",
-        help="The requested priority of master pod",
+        "--master_pod_priority", help="The requested priority of master pod"
     )
     parser.add_argument(
-        "--volume_name",
-        help="The volume name of network file system",
+        "--volume_name", help="The volume name of network file system"
     )
     parser.add_argument(
-        "--mount_path",
-        help="The mount path in the docker container",
+        "--mount_path", help="The mount path in the docker container"
     )
     parser.add_argument(
         "--image_pull_policy",
