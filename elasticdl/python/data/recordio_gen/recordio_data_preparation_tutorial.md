@@ -30,7 +30,7 @@ If your data amount is large but can fit in your local disk, and you want to pro
 
     docker run --rm -v $OUTPUT_DIR:/output_dir \
         -v $TRAINING_DATA_DIR:/training_data_dir \
-        elasticdl:data_process_new \
+        elasticdl:data_process \
         /elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/spark_gen_recordio.py \
         --training_data_dir=/training_data_dir/ \
         --output_dir=/output_dir/  \
