@@ -8,10 +8,12 @@ from google.protobuf import empty_pb2
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.elasticdl.common.ndarray import (
-    ndarray_to_tensor, tensor_to_ndarray
+    ndarray_to_tensor,
+    tensor_to_ndarray,
 )
 from elasticdl.python.elasticdl.common.model_helper import (
-    save_checkpoint_to_file, load_from_checkpoint_file
+    save_checkpoint_to_file,
+    load_from_checkpoint_file,
 )
 
 import numpy as np
@@ -30,7 +32,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         minibatch_size,
         optimizer,
         task_q,
-        *,
         init_var,
         init_from_checkpoint,
         checkpoint_dir,
@@ -104,7 +105,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def save_checkpoint(self):
         file_name = "{}/model_v{}.chkpt".format(
-            self._checkpoint_dir, self._version)
+            self._checkpoint_dir, self._version
+        )
         pb_model = self._get_model_no_lock()
         save_checkpoint_to_file(pb_model, file_name)
         if self._keep_checkpoint_max:
@@ -118,8 +120,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
         for k, v in self._model.items():
             # Assumes all variables exist in pb_model.param.
-            v.assign(
-                tensor_to_ndarray(pb_model.param[k]))
+            v.assign(tensor_to_ndarray(pb_model.param[k]))
         self._version = pb_model.version
 
     def _update_model(self):
@@ -142,27 +143,29 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def _validate_model_version(self, request_model_version):
         if request_model_version > self._version:
-            err_msg = "Model version %d not available yet, " \
-                      "current version: %d" % (request_model_version,
-                                               self._version)
+            err_msg = (
+                "Model version %d not available yet, "
+                "current version: %d" % (request_model_version, self._version)
+            )
             self._logger.warning(err_msg)
             raise ValueError(err_msg)
 
-        invalid_model_version = request_model_version < self._version
-        if invalid_model_version:
+        if request_model_version != self._version:
             self._logger.warning(
                 "Task result for outdated version %d dropped",
                 request_model_version,
             )
-        return invalid_model_version
+            return False
+        else:
+            return True
 
     def ReportGradient(self, request, _):
-        invalid_model_version = self._validate_model_version(
+        model_version_valid = self._validate_model_version(
             request.model_version
         )
 
         res = elasticdl_pb2.ReportGradientResponse()
-        if invalid_model_version:
+        if not model_version_valid:
             res.accepted = False
             res.model_version = self._version
             return res
@@ -193,7 +196,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             if self._grad_n >= self._grad_to_wait:
                 self._update_model()
                 if self._checkpoint_steps and (
-                        self._version % self._checkpoint_steps == 0
+                    self._version % self._checkpoint_steps == 0
                 ):
                     try:
                         self.save_checkpoint()
@@ -218,12 +221,12 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return empty_pb2.Empty()
 
     def ReportEvaluationMetrics(self, request, _):
-        invalid_model_version = self._validate_model_version(
+        model_version_valid = self._validate_model_version(
             request.model_version
         )
 
         res = elasticdl_pb2.ReportEvaluationMetricsResponse()
-        if invalid_model_version:
+        if not model_version_valid:
             res.accepted = False
             res.model_version = self._version
             return res
@@ -231,9 +234,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         with self._lock:
             for k, v in request.evaluation_metrics.items():
                 if v.dim:
-                    self._evaluation_metrics[k].append(
-                        tensor_to_ndarray(v)
-                    )
+                    self._evaluation_metrics[k].append(tensor_to_ndarray(v))
             self._update_model_version()
             evaluation_metrics_summary = {
                 k: np.mean(v) for k, v in self._evaluation_metrics.items()
