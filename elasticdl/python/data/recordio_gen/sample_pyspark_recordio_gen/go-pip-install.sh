@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+# Some of the code here is copied from https://github.com/canha/golang-tools-install-script/blob/master/goinstall.sh
+
 # Install Golang, which is needed to install pyrecordio
 VERSION="1.12.5"
 
