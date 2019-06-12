@@ -103,12 +103,15 @@ class Client(object):
         if priority is not None:
             spec.priority_class_name = priority
 
-        # Find that master pod that will be used as the owner reference for this worker pod
+        # Find that master pod that will be used as the owner reference
+        # for this worker pod.
         pods = self._v1.list_namespaced_pod(
             namespace=self._ns,
             label_selector="elasticdl_job_name=" + self._job_name
         ).items
-        master_pod = [pod for pod in pods if pod.metadata.name == "elasticdl-master-" + self._job_name][0]
+        master_pod = [pod for pod in pods if (
+                pod.metadata.name == "elasticdl-master-" + self._job_name
+        )][0]
 
         pod = client.V1Pod(
             spec=spec,
