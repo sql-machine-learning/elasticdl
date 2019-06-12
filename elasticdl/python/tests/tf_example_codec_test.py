@@ -30,13 +30,13 @@ class TestTFExampleCodec(unittest.TestCase):
         encoded = [codec.encode(e) for e in examples]
 
         # Verify decoded content.
-        with tf.Session() as session:
-            for idx, e in enumerate(encoded):
-                exp = codec.decode(e)
-                expected_exp = examples[idx]
-                f_0, label = session.run([exp["f0"], exp["label"]])
-                self.assertEqual(f_0, np.float32(expected_exp["f0"]))
-                self.assertEqual(label, np.int64(expected_exp["label"]))
+        for idx, e in enumerate(encoded):
+            exp = codec.decode(e)
+            expected_exp = examples[idx]
+            f_0 = exp["f0"].numpy()
+            label = exp["label"].numpy()
+            self.assertEqual(f_0, np.float32(expected_exp["f0"]))
+            self.assertEqual(label, np.int64(expected_exp["label"]))
 
 
 if __name__ == "__main__":

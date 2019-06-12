@@ -16,8 +16,6 @@ from elasticdl.python.tests.in_process_master import InProcessMaster
 
 import tensorflow as tf
 
-tf.enable_eager_execution()
-
 
 def _get_model_info(file_name):
     module_file = os.path.join(
