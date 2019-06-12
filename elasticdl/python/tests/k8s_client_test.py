@@ -12,7 +12,6 @@ class WorkerTracker(object):
         self._count = 0
 
     def event_cb(self, event):
-        print("----- %s %s -----\n" % (event["type"], event["object"].status))
         if event["type"] == "ADDED":
             self._count += 1
         elif event["type"] == "DELETED":
