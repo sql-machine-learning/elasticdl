@@ -86,6 +86,9 @@ def main():
 
     # Load user-defined model
     model_module = load_user_model(args.model_file)
+    
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
 
     # Start the Spark job
     sc = SparkContext()
