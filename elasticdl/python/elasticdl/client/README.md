@@ -32,7 +32,7 @@ Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and subm
 ### Submit to local Kubernetes on Your Machine
 
 ```bash
-python elasticdl/python/elasticdl/client/client.py \
+python elasticdl/python/elasticdl/client/client.py train \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=/data/mnist/train \
     --evaluation_data_dir=/data/mnist/test \
@@ -58,7 +58,7 @@ python elasticdl/python/elasticdl/client/client.py \
 ### Submit to a GKE cluster
 
 ```bash
-python elasticdl/python/elasticdl/client/client.py \
+python elasticdl/python/elasticdl/client/client.py train \
     --job_name=test \
     --model_file=elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=/data/mnist_nfs/train \

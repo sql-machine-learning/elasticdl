@@ -11,6 +11,131 @@ from kubernetes.client.apis import core_v1_api
 from kubernetes import config
 
 
+def main():
+    parser = argparse.ArgumentParser(
+        usage="""client.py <command> [<args>]
+
+There are all the supported commands:
+train         Submit a ElasticDL distributed training job.
+evaluate      Submit a ElasticDL distributed evaluation job.
+"""
+    )
+    subparsers = parser.add_subparsers()
+    train_parser = subparsers.add_parser("train", help="client.py train -h")
+    train_parser.set_defaults(func=_train)
+    _add_train_params(train_parser)
+
+    evaluate_parser = subparsers.add_parser(
+        "evaluate", help="client.py evaluate -h"
+    )
+    evaluate_parser.set_defaults(func=_evaluate)
+    _add_evaluate_params(evaluate_parser)
+
+    args, argv = parser.parse_known_args()
+    args.func(args, argv)
+
+
+def _add_train_params(parser):
+    parser.add_argument(
+        "--model_file", help="Path to the model file", required=True
+    )
+    parser.add_argument(
+        "--image_base",
+        help="Base image containing ElasticDL runtime environment",
+        required=True,
+    )
+    parser.add_argument(
+        "--push_image",
+        action="store_true",
+        help="Whether to push the newly built image to remote registry",
+    )
+    parser.add_argument("--job_name", help="ElasticDL job name", required=True)
+    parser.add_argument(
+        "--master_cpu_request",
+        default="100m",
+        type=_valid_cpu_spec,
+        help="The minimal CPU required by master in training",
+    )
+    parser.add_argument(
+        "--master_cpu_limit",
+        default="100m",
+        type=_valid_cpu_spec,
+        help="The maximal CPU used by master in training",
+    )
+    parser.add_argument(
+        "--master_memory_request",
+        default="1024Mi",
+        type=_valid_mem_spec,
+        help="The minimal memory required by master in training",
+    )
+    parser.add_argument(
+        "--master_memory_limit",
+        default="1024Mi",
+        type=_valid_mem_spec,
+        help="The maximal memory used by master in training",
+    )
+    parser.add_argument(
+        "--worker_cpu_request",
+        default="1000m",
+        type=_valid_cpu_spec,
+        help="The minimal cpu required by worker",
+    )
+    parser.add_argument(
+        "--worker_cpu_limit",
+        default="1000m",
+        type=_valid_cpu_spec,
+        help="The maximal cpu used by worker",
+    )
+    parser.add_argument(
+        "--worker_memory_request",
+        default="4096Mi",
+        type=_valid_mem_spec,
+        help="The minimal memory required by worker",
+    )
+    parser.add_argument(
+        "--worker_memory_limit",
+        default="4096Mi",
+        type=_valid_mem_spec,
+        help="The maximal memory used by worker",
+    )
+    parser.add_argument(
+        "--master_pod_priority", help="The requested priority of master pod"
+    )
+    parser.add_argument(
+        "--volume_name", help="The volume name of network file system"
+    )
+    parser.add_argument(
+        "--mount_path", help="The mount path in the docker container"
+    )
+    parser.add_argument(
+        "--image_pull_policy",
+        default="Always",
+        help="The image pull policy of master and worker",
+    )
+
+
+def _add_evaluate_params(parser):
+    # TODO add parameters for evaluation parser..
+    pass
+
+
+def _train(args, argv):
+    job_name = args.job_name
+    image_name = args.image_base + "_" + job_name
+    _build_docker_image(
+        args.model_file,
+        image_name,
+        args.push_image,
+        image_base=args.image_base,
+    )
+    _submit(image_name, args.model_file, job_name, args, argv)
+
+
+def _evaluate(args, argv):
+    # TODO implement distributed evaluation.
+    raise NotImplementedError()
+
+
 def _m_file_in_docker(model_file):
     return "/model/" + os.path.basename(model_file)
 
@@ -160,98 +285,6 @@ def _valid_mem_spec(arg):
     if not regexp.match(arg):
         raise ValueError("invalid memory request spec: " + arg)
     return arg
-
-
-def main():
-    parser = argparse.ArgumentParser(description="ElasticDL Client")
-    # Rewrite model_file argument and pass all other arguments to master.
-    parser.add_argument(
-        "--model_file", help="Path to the model file", required=True
-    )
-    parser.add_argument(
-        "--image_base",
-        help="Base image containing ElasticDL runtime environment",
-        required=True,
-    )
-    parser.add_argument(
-        "--push_image",
-        action="store_true",
-        help="Whether to push the newly built image to remote registry",
-    )
-    parser.add_argument("--job_name", help="ElasticDL job name", required=True)
-    parser.add_argument(
-        "--master_cpu_request",
-        default="100m",
-        type=_valid_cpu_spec,
-        help="The minimal CPU required by master in training",
-    )
-    parser.add_argument(
-        "--master_cpu_limit",
-        default="100m",
-        type=_valid_cpu_spec,
-        help="The maximal CPU used by master in training",
-    )
-    parser.add_argument(
-        "--master_memory_request",
-        default="1024Mi",
-        type=_valid_mem_spec,
-        help="The minimal memory required by master in training",
-    )
-    parser.add_argument(
-        "--master_memory_limit",
-        default="1024Mi",
-        type=_valid_mem_spec,
-        help="The maximal memory used by master in training",
-    )
-    parser.add_argument(
-        "--worker_cpu_request",
-        default="1000m",
-        type=_valid_cpu_spec,
-        help="The minimal cpu required by worker",
-    )
-    parser.add_argument(
-        "--worker_cpu_limit",
-        default="1000m",
-        type=_valid_cpu_spec,
-        help="The maximal cpu used by worker",
-    )
-    parser.add_argument(
-        "--worker_memory_request",
-        default="4096Mi",
-        type=_valid_mem_spec,
-        help="The minimal memory required by worker",
-    )
-    parser.add_argument(
-        "--worker_memory_limit",
-        default="4096Mi",
-        type=_valid_mem_spec,
-        help="The maximal memory used by worker",
-    )
-    parser.add_argument(
-        "--master_pod_priority", help="The requested priority of master pod"
-    )
-    parser.add_argument(
-        "--volume_name", help="The volume name of network file system"
-    )
-    parser.add_argument(
-        "--mount_path", help="The mount path in the docker container"
-    )
-    parser.add_argument(
-        "--image_pull_policy",
-        default="Always",
-        help="The image pull policy of master and worker",
-    )
-    args, argv = parser.parse_known_args()
-
-    job_name = args.job_name
-    image_name = args.image_base + "_" + job_name
-    _build_docker_image(
-        args.model_file,
-        image_name,
-        args.push_image,
-        image_base=args.image_base,
-    )
-    _submit(image_name, args.model_file, job_name, args, argv)
 
 
 if __name__ == "__main__":
