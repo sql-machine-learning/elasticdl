@@ -45,7 +45,7 @@ message Tensor {
 
 message Model {
     int32 version = 1;
-    map<string, Tensor> param = 2; 
+    map<string, Tensor> param = 2;
 }
 
 message GetTaskRequest {
@@ -54,6 +54,10 @@ message GetTaskRequest {
 
 message GetModelRequest {
     int32 min_version = 1;
+}
+
+message GetFixVersionModelRequest {
+    int32 version = 1;
 }
 
 message ReportGradientRequest {
@@ -97,6 +101,7 @@ message ReportEvaluationMetricsRequest {
 service Master {
     rpc GetTask(GetTaskRequest) returns (Task);
     rpc GetModel(GetModelRequest) returns (Model);
+    rpc GetFixVersionModel(GetFixVersionModelRequest) returns (Model);
     rpc ReportGradient(ReportGradientRequest) returns (ReportGradientResponse);
     rpc ReportEvaluationMetrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsResponse);
     rpc ReportTaskResult(ReportTaskResultRequest) returns (google.protobuf.Empty);

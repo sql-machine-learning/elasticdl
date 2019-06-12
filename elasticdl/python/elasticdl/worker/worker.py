@@ -92,6 +92,19 @@ class Worker(object):
             var.assign(tensor_to_ndarray(model.param[var.name]))
         self._model_version = model.version
 
+    def get_model_with_fix_version(self, version):
+        """
+        get the given version model from master
+        """
+        req = elasticdl_pb2.GetFixVersionModelRequest()
+        req.version = version
+        model = self._stub.GetFixVersionModel(req)
+
+        for var in self._model.trainable_variables:
+            # Assumes all trainable variables exist in model.param.
+            var.assign(tensor_to_ndarray(model.param[var.name]))
+        self._model_version = model.version
+
     def report_task_result(self, task_id, err_msg):
         """
         report task result to master
@@ -181,18 +194,19 @@ class Worker(object):
 
     def _process_minibatch(self, task, record_buf):
         min_model_version = task.model_version
+        features, labels = self._get_features_and_labels(record_buf)
         for _ in range(self._max_minibatch_retry_num):
-            # TODO: optimize the logic to avoid unnecessary
-            #       get_model call.
-            self.get_model(max(self._model_version, min_model_version))
-            features, labels = self._get_features_and_labels(record_buf)
             if task.type == elasticdl_pb2.EVALUATION:
+                self.get_model_with_fix_version(min_model_version)
                 accepted, min_model_version = self._run_evaluation_task(
                     features, labels
                 )
                 if accepted:
                     break
             elif task.type == elasticdl_pb2.TRAINING:
+                # TODO: optimize the logic to avoid unnecessary
+                #       get_model call.
+                self.get_model(max(self._model_version, min_model_version))
                 accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )

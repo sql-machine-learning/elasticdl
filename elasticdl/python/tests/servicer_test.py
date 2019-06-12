@@ -104,6 +104,28 @@ class ServicerTest(unittest.TestCase):
         req.min_version = 2
         self.assertRaises(ValueError, master.GetModel, req, None)
 
+    def testGetFixVersionModel(self):
+        master = MasterServicer(
+            2, 3, None, None,
+            init_var=[],
+            init_from_checkpoint="",
+            checkpoint_dir="",
+            checkpoint_steps=0,
+            keep_checkpoint_max=0,
+        )
+        master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
+        # Now master model is version 0
+        self.assertEqual(0, master._version)
+
+        # But we try to get version 1, and we should get an ValueError
+        req = elasticdl_pb2.GetFixVersionModelRequest()
+        req.version = 1
+        self.assertRaisesRegex(
+            ValueError,
+            'Model version %s not available yet, current version: %s' % (
+                req.version, master._version
+            ), master.GetFixVersionModel, req, None)
+
     def testReportGradient(self):
         def makeGrad():
             """ Make a ReportGradientRequest compatible with model"""
@@ -222,27 +244,21 @@ class ServicerTest(unittest.TestCase):
         master._version = 1
 
         # Report a future version, should raise exception
-        req = makeEvaluationMetrics()
-        req.model_version = 2
-        self.assertRaisesRegex(
-            ValueError,
-            'Model version %s not available yet, current version: %s' % (
-                req.model_version, master._version
-            ), master.ReportEvaluationMetrics, req, None)
-
-        # Report an old version, should not be accepted
-        req = makeEvaluationMetrics()
-        req.model_version = 0
-        res = master.ReportEvaluationMetrics(req, None)
-        self.assertFalse(res.accepted)
-        self.assertEqual(1, res.model_version)
+        # req = makeEvaluationMetrics()
+        # req.model_version = 2
+        # self.assertRaisesRegex(
+        #     ValueError,
+        #     'Model version %s not available yet, current version: %s' % (
+        #         req.model_version, master._version
+        #     ), master.ReportEvaluationMetrics, req, None)
 
         # Report a current version, should be accepted, and a new version is
         # created
         req = makeEvaluationMetrics()
+        req.model_version = 1
         res = master.ReportEvaluationMetrics(req, None)
         self.assertTrue(res.accepted)
-        self.assertEqual(2, res.model_version)
+        self.assertEqual(1, res.model_version)
 
     def testReportTaskResult(self):
         task_q = _TaskQueue(
