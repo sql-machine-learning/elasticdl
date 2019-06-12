@@ -6,28 +6,18 @@ from contextlib import closing
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.data.codec import BytesCodec
 import tensorflow as tf
-tf.enable_eager_execution()
 
 
 def main(argv):
     parser = argparse.ArgumentParser(
         description="Show some data from mnist recordio"
     )
+    parser.add_argument("file", help="RecordIo file to read")
     parser.add_argument(
-        "file",
-        help="RecordIo file to read"
+        "--start", default=0, type=int, help="Start record number"
     )
     parser.add_argument(
-        "--start",
-        default=0,
-        type=int,
-        help="Start record number"
-    )
-    parser.add_argument(
-        "--n",
-        default=20,
-        type=int,
-        help="How many records to show"
+        "--n", default=20, type=int, help="How many records to show"
     )
     parser.add_argument(
         "--codec_type",
@@ -37,10 +27,14 @@ def main(argv):
     )
     args = parser.parse_args(argv)
 
-    feature_columns = [tf.feature_column.numeric_column(key="image",
-        dtype=tf.float32, shape=[1, 28, 28]),
-        tf.feature_column.numeric_column(key="label",
-        dtype=tf.int64, shape=[1])]
+    feature_columns = [
+        tf.feature_column.numeric_column(
+            key="image", dtype=tf.float32, shape=[1, 28, 28]
+        ),
+        tf.feature_column.numeric_column(
+            key="label", dtype=tf.int64, shape=[1]
+        ),
+    ]
     if args.codec_type == "tf_example":
         decode_fn = TFExampleCodec(feature_columns).decode
     elif args.codec_type == "bytes":
@@ -57,8 +51,8 @@ def main(argv):
             print("-" * 10)
             print("record:", i)
             if args.codec_type == "tf_example":
-                print(rec['image'].numpy())
-                print(rec['label'].numpy())
+                print(rec["image"].numpy())
+                print(rec["label"].numpy())
             elif args.codec_type == "bytes":
                 print(rec)
 

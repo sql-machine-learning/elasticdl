@@ -2,7 +2,15 @@
 
 ## The Development Docker Image
 
-To build the development Docker image, in repo's root directory, run the following command:
+Development Docker image contains ElasticDL system code and processed demo data in RecordIO format. We first build the demo data image. This only need to be built once.
+
+```bash
+docker build \
+    -t elasticdl:data \
+    -f elasticdl/docker/Dockerfile.data .
+```
+
+When building the development Docker image, the data will be copied from data image to development image. Development image needs to be rebuilt when there are code changes. In repo's root directory, run the following command:
 
 ```bash
 docker build \

@@ -26,7 +26,9 @@ class _Task(object):
 class _TaskQueue(object):
     """Creates and dispatches Tasks. Keep track of a Task's lifecycle."""
 
-    def __init__(self, training_shards, evaluation_shards, records_per_task, num_epochs):
+    def __init__(
+        self, training_shards, evaluation_shards, records_per_task, num_epochs
+    ):
         """
         shards: a dictionary from RecordIO file name to number of records
         """
@@ -57,7 +59,8 @@ class _TaskQueue(object):
                         type=elasticdl_pb2.TRAINING,
                     )
                 )
-        # TODO: Temporarily disable evaluation task generation until we find a better way
+        # TODO: Temporarily disable evaluation task
+        # generation until we find a better way
         # for name, num_records in self._evaluation_shards.items():
         #     for start in range(0, num_records, self._record_per_task):
         #         self._todo.append(
@@ -68,8 +71,9 @@ class _TaskQueue(object):
         #                 type=elasticdl_pb2.EVALUATION,
         #             )
         #         )
-        # TODO: This is to ensure that we have some training tasks at the beginning
-        # so we have a partially trained model for evaluation tasks. See issue #555.
+        # TODO: This is to ensure that we have some training tasks
+        # at the beginning so we have a partially trained model
+        # for evaluation tasks. See issue #555.
         shuffled_partial_todo = self._todo[NUM_WARM_UP_TRAINING_TASKS:]
         random.shuffle(shuffled_partial_todo)
         self._todo[NUM_WARM_UP_TRAINING_TASKS:] = shuffled_partial_todo

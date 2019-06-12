@@ -5,7 +5,6 @@ import numpy as np
 from collections import defaultdict
 
 import tensorflow as tf
-tf.enable_eager_execution() # noqa
 
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
@@ -34,7 +33,7 @@ class SimpleModel(tf.keras.Model):
 
     @staticmethod
     def optimizer(lr=0.1):
-        return tf.train.GradientDescentOptimizer(lr)
+        return tf.optimizers.SGD(lr)
 
 
 class ServicerTest(unittest.TestCase):
@@ -121,7 +120,7 @@ class ServicerTest(unittest.TestCase):
         master = MasterServicer(
             3,
             3,
-            tf.train.GradientDescentOptimizer(0.1),
+            tf.optimizers.SGD(0.1),
             None,
             init_var=[],
             init_from_checkpoint="",
@@ -212,7 +211,7 @@ class ServicerTest(unittest.TestCase):
         master = MasterServicer(
             3,
             3,
-            tf.train.GradientDescentOptimizer(0.1),
+            tf.optimizers.SGD(0.1),
             None,
             init_var=[],
             init_from_checkpoint="",

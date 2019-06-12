@@ -1,7 +1,3 @@
-import tensorflow as tf
-
-tf.enable_eager_execution()
-
 import tempfile
 import os
 import unittest
@@ -53,14 +49,14 @@ class WorkerTest(unittest.TestCase):
             def ReportGradient(self, req):
                 if 2 < self._m._version < 80:
                     # For testing of retrain when gradient not accepted.
-                    # Increase master version so the gradient will not be accepted.
+                    # Increase master version to reject the gradient.
                     self._m._version += 1
                 return self._m.ReportGradient(req, None)
 
             def ReportEvaluationMetrics(self, req):
                 if 2 < self._m._version < 80:
-                    # For testing of evaluation retries when evaluation metrics are not accepted.
-                    # Increase master version so the evaluation metrics will not be accepted.
+                    # Testing of evaluation retries. Increase the master
+                    # version so the evaluation metrics will not be accepted.
                     self._m._version += 1
                 return self._m.ReportEvaluationMetrics(req, None)
 

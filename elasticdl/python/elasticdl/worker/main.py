@@ -4,8 +4,6 @@ import logging
 
 import tensorflow as tf
 
-tf.enable_eager_execution()
-
 from elasticdl.python.elasticdl.worker.worker import Worker  # noqa
 
 

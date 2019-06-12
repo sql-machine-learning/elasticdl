@@ -40,4 +40,4 @@ class TFExampleCodec(object):
         return example.SerializeToString()
 
     def decode(self, raw):
-        return tf.parse_single_example(raw, self._example_spec)
+        return tf.io.parse_single_example(raw, self._example_spec)

@@ -2,7 +2,6 @@ import sys
 import argparse
 import recordio
 import tensorflow as tf
-tf.enable_eager_execution() # noqa
 
 from contextlib import closing
 from elasticdl.python.data.codec import TFExampleCodec
