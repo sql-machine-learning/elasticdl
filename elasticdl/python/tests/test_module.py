@@ -40,7 +40,7 @@ def input_fn(records):
 
 
 def optimizer(lr=0.1):
-    return  tf.optimizers.SGD(lr)
+    return tf.optimizers.SGD(lr)
 
 
 def eval_metrics_fn(predictions, labels):

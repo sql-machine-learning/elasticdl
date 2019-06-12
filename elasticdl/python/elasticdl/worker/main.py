@@ -2,8 +2,6 @@ import argparse
 import grpc
 import logging
 
-import tensorflow as tf
-
 from elasticdl.python.elasticdl.worker.worker import Worker  # noqa
 
 

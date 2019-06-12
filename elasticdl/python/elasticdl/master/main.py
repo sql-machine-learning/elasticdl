@@ -5,7 +5,6 @@ import os
 import recordio
 
 import grpc
-import tensorflow as tf
 
 from contextlib import closing
 from concurrent import futures
