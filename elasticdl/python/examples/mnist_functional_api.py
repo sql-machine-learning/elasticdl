@@ -19,6 +19,7 @@ model = tf.keras.Model(inputs=inputs, outputs=outputs, name="mnist_model")
 
 def prepare_data_for_a_single_file(filename):
     label = int(filename.split('/')[-2])
+    # TODO(jialu.zhu): Read raw training data from tar file
     image = PIL.Image.open(filename)
     numpy_image = np.array(image)
     return numpy_image, label
