@@ -4,14 +4,15 @@ import threading
 import traceback
 
 from kubernetes import client, config, watch
+from kubernetes.client import (
+    V1PersistentVolumeClaimVolumeSource as pvcVolumeSource,
+)
 
 WORKER_POD_NAME_PREFIX = "elasticdl-worker-"
 
 
 class Client(object):
-    def __init__(
-        self, *, worker_image, namespace, job_name, event_callback
-    ):
+    def __init__(self, *, worker_image, namespace, job_name, event_callback):
         """
         ElasticDL k8s client.
 
@@ -56,35 +57,48 @@ class Client(object):
     def get_worker_pod_name(self, worker_id):
         return WORKER_POD_NAME_PREFIX + self._job_name + "-" + str(worker_id)
 
-    def _create_worker_pod(self, worker_id, resource_requests, resource_limits, priority,
-                           mount_path, volume_name, image_pull_policy, command, args, restart_policy):
+    def _create_worker_pod(
+        self,
+        worker_id,
+        resource_requests,
+        resource_limits,
+        priority,
+        mount_path,
+        volume_name,
+        image_pull_policy,
+        command,
+        args,
+        restart_policy,
+    ):
         # Worker container config
         container = client.V1Container(
             name=self.get_worker_pod_name(worker_id),
             image=self._image,
             command=command,
             resources=client.V1ResourceRequirements(
-                requests=resource_requests,
-                limits=resource_limits
+                requests=resource_requests, limits=resource_limits
             ),
             image_pull_policy=image_pull_policy,
-            args=args
+            args=args,
         )
 
         # Pod
         spec = client.V1PodSpec(
-            containers=[container],
-            restart_policy=restart_policy,
+            containers=[container], restart_policy=restart_policy
         )
 
         # Mount data path
         if mount_path is not None and volume_name is not None:
             volume = client.V1Volume(
-                name='data-volume',
-                persistent_volume_claim=client.V1PersistentVolumeClaimVolumeSource(
-                    claim_name="fileserver-claim", read_only=False))
+                name="data-volume",
+                persistent_volume_claim=pvcVolumeSource(
+                    claim_name="fileserver-claim", read_only=False
+                ),
+            )
             spec.volumes = [volume]
-            container.volume_mounts = [client.V1VolumeMount(name=volume_name, mount_path=mount_path)]
+            container.volume_mounts = [
+                client.V1VolumeMount(name=volume_name, mount_path=mount_path)
+            ]
 
         if priority is not None:
             spec.priority_class_name = priority
@@ -95,20 +109,38 @@ class Client(object):
                 name=self.get_worker_pod_name(worker_id),
                 labels={
                     "app": "elasticdl",
-                    "elasticdl_job_name": self._job_name
+                    "elasticdl_job_name": self._job_name,
                 },
             ),
         )
         return pod
 
-    def create_worker(self, worker_id, resource_requests, resource_limits, priority=None,
-                      mount_path=None, volume_name=None, image_pull_policy=None,
-                      command=None, args=None, restart_policy="OnFailure"):
+    def create_worker(
+        self,
+        worker_id,
+        resource_requests,
+        resource_limits,
+        priority=None,
+        mount_path=None,
+        volume_name=None,
+        image_pull_policy=None,
+        command=None,
+        args=None,
+        restart_policy="OnFailure",
+    ):
         self._logger.info("Creating worker: " + str(worker_id))
         pod = self._create_worker_pod(
-            worker_id, resource_requests, resource_limits, priority,
-            mount_path, volume_name, image_pull_policy, command=command,
-            args=args, restart_policy=restart_policy)
+            worker_id,
+            resource_requests,
+            resource_limits,
+            priority,
+            mount_path,
+            volume_name,
+            image_pull_policy,
+            command=command,
+            args=args,
+            restart_policy=restart_policy,
+        )
         return self._v1.create_namespaced_pod(self._ns, pod)
 
     def delete_worker(self, worker_id):

@@ -1,11 +1,8 @@
-import random
 import os
 import tempfile
 import unittest
 import numpy as np
 import recordio
-
-import tensorflow as tf
 
 from contextlib import closing
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
