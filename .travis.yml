@@ -1,5 +1,10 @@
 language: minimal
 
+addons:
+  apt:
+    packages:
+      - docker-ce
+
 install:
   - set -e
   - docker version
