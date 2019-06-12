@@ -7,8 +7,6 @@ import recordio
 import grpc
 import tensorflow as tf
 
-tf.enable_eager_execution()  # noqa
-
 from contextlib import closing
 from concurrent import futures
 from elasticdl.proto import elasticdl_pb2_grpc

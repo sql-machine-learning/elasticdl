@@ -35,11 +35,12 @@ def input_fn(records):
     xs = np.concatenate(x_list, axis=0)
     xs = np.reshape(xs, (batch_size, 1))
     ys = np.reshape(xs, (batch_size, 1))
+    xs = tf.convert_to_tensor(xs)
     return {'x': xs}, ys
 
 
 def optimizer(lr=0.1):
-    return tf.train.GradientDescentOptimizer(lr)
+    return  tf.optimizers.SGD(lr)
 
 
 def eval_metrics_fn(predictions, labels):

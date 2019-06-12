@@ -7,8 +7,6 @@ import recordio
 
 import tensorflow as tf
 
-tf.enable_eager_execution()
-
 from contextlib import closing
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.worker.worker import Worker

@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=tensorflow/tensorflow:1.13.1-py3
+ARG BASE_IMAGE=tensorflow/tensorflow:2.0.0b0-py3
 FROM ${BASE_IMAGE}
 
 RUN apt-get update && apt-get install -y unzip curl git

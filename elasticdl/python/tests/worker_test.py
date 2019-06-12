@@ -1,7 +1,5 @@
 import tensorflow as tf
 
-tf.enable_eager_execution()
-
 import tempfile
 import os
 import unittest
