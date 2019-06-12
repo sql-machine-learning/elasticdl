@@ -1,5 +1,6 @@
 ARG BASE_IMAGE=tensorflow/tensorflow:2.0.0b0-py3
-FROM ${BASE_IMAGE}
+ARG BUILD_ENV=data
+FROM ${BASE_IMAGE} as base
 
 RUN apt-get update && apt-get install -y unzip curl git
 
@@ -26,8 +27,13 @@ RUN pip install pre-commit --extra-index-url=${EXTRA_PYPI_INDEX}
 # Install Pillow for sample data processing Spark job
 RUN pip install Pillow --extra-index-url=${EXTRA_PYPI_INDEX}
 
-COPY --from=elasticdl:data /data /data
+FROM base as build_data
+ONBUILD COPY --from=elasticdl:data /data /data
 
+FROM base as build_no_data
+ONBUILD RUN echo "Skipped copying demo data"
+
+FROM build_${BUILD_ENV}
 ENV PYTHONPATH=/
 WORKDIR /
 COPY elasticdl /elasticdl
