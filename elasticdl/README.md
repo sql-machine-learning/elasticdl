@@ -2,7 +2,7 @@
 
 ## The Development Docker Image
 
-Development Docker image contains ElasticDL system code and processed demo data in RecordIO format. We first build the demo data image. This only need to be built once.
+Development Docker image contains ElasticDL system code and processed demo data in RecordIO format. We first build the demo data image. This only needs to be built once.
 
 ```bash
 docker build \
@@ -27,17 +27,7 @@ docker build \
     --build-arg BASE_IMAGE=tensorflow/tensorflow:2.0.0b0-gpu-py3 .
 ```
 
-If you are running the examples in the repo, the datasets need to be generated when building the image, which
-could be achieved by adding `GEN_DATA=yes` to the build arg like the following:
-
-```bash
-docker build \
-    --build-arg GEN_DATA=yes \
-    -t elasticdl:dev \
-    -f elasticdl/docker/Dockerfile .
-```
-
-When having difficulties downloading from the main PYPI site, you could pass an extra PYPI index url to `docker build`, such as:
+When having difficulties downloading from the main PyPI site, you could pass an extra PyPI index url to `docker build`, such as:
 
 ```bash
 docker build \
