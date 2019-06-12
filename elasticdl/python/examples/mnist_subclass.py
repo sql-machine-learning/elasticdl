@@ -55,7 +55,7 @@ def label_columns():
             shape=[1],
         ),
     ]
-        
+
 
 def loss(output, labels):
     return tf.reduce_mean(
