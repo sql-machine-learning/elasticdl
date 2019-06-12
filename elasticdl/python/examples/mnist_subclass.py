@@ -64,7 +64,7 @@ def loss(output, labels):
 
 
 def optimizer(lr=0.01):
-    return tf.train.GradientDescentOptimizer(lr)
+    return tf.optimizers.SGD(lr)
 
 
 def input_fn(records):
@@ -88,6 +88,7 @@ def input_fn(records):
     batch_size = len(image_list)
     images = np.concatenate(image_list, axis=0)
     images = np.reshape(images, (batch_size, 28, 28))
+    images = tf.convert_to_tensor(images)
     labels = np.array(label_list)
     return ({'image': images}, labels)
 

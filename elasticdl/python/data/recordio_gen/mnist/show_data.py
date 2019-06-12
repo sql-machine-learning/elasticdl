@@ -7,8 +7,6 @@ from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.data.codec import BytesCodec
 import tensorflow as tf
 
-tf.enable_eager_execution()
-
 
 def main(argv):
     parser = argparse.ArgumentParser(

@@ -47,8 +47,8 @@ def loss(output, labels):
     )
 
 
-def optimizer(lr=0.01):
-    return tf.train.GradientDescentOptimizer(lr)
+def optimizer(lr=0.1):
+    return tf.optimizers.SGD(lr)
 
 
 def input_fn(records):
@@ -73,15 +73,16 @@ def input_fn(records):
     batch_size = len(image_list)
     images = np.concatenate(image_list, axis=0)
     images = np.reshape(images, (batch_size, 28, 28))
+    images = tf.convert_to_tensor(images)
     labels = np.array(label_list)
     return ({"image": images}, labels)
 
+
 def eval_metrics_fn(predictions, labels):
     return {
-        'loss': tf.reduce_mean(
+        "metric": tf.reduce_mean(
             tf.nn.sparse_softmax_cross_entropy_with_logits(
-                logits=predictions, labels=labels.flatten())),
-        'accuracy': tf.reduce_mean(
-            tf.cast(tf.equal(tf.argmax(predictions, 1),
-            labels.flatten()), tf.float32)),
+                logits=predictions, labels=labels.flatten()
+            )
+        )
     }
