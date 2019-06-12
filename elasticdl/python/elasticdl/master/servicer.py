@@ -149,8 +149,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             )
             self._logger.warning(err_msg)
             raise ValueError(err_msg)
-
-        if request_model_version != self._version:
+        elif request_model_version < self._version:
             self._logger.warning(
                 "Task result for outdated version %d dropped",
                 request_model_version,
