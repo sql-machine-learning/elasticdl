@@ -11,82 +11,51 @@ OS="$(uname -s)"
 ARCH="$(uname -m)"
 
 case $OS in
-"Linux")
-case $ARCH in
-"x86_64")
-ARCH=amd64
-;;
-"armv6")
-ARCH=armv6l
-;;
-"armv8")
-ARCH=arm64
-;;
-.*386.*)
-ARCH=386
-;;
+  "Linux")
+    case $ARCH in
+      "x86_64")
+        ARCH=amd64
+      ;;
+      "armv6")
+        ARCH=armv6l
+      ;;
+      "armv8")
+        ARCH=arm64
+      ;;
+      .*386.*)
+        ARCH=386
+      ;;
+    esac
+    PLATFORM="linux-$ARCH"
+  ;;
+  "Darwin")
+    PLATFORM="darwin-amd64"
+  ;;
 esac
-PLATFORM="linux-$ARCH"
-;;
-"Darwin")
-PLATFORM="darwin-amd64"
-;;
-esac
-
-print_help() {
-echo "Usage: bash goinstall.sh OPTIONS"
-echo -e "\nOPTIONS:"
-echo -e " --remove\tRemove currently installed version"
-}
 
 if [ -n "`$SHELL -c 'echo $ZSH_VERSION'`" ]; then
-shell_profile="zshrc"
-elif [ -n "`$SHELL -c 'echo $BASH_VERSION'`" ]; then
-shell_profile="bashrc"
+  shell_profile="zshrc"
+  elif [ -n "`$SHELL -c 'echo $BASH_VERSION'`" ]; then
+  shell_profile="bashrc"
 fi
 
 PACKAGE_NAME="go$VERSION.$PLATFORM.tar.gz"
 
-if [ "$1" == "--remove" ]; then
-rm -rf "$GOROOT"
-if [ "$OS" == "Darwin" ]; then
-sed -i "" '/# GoLang/d' "$HOME/.${shell_profile}"
-sed -i "" '/export GOROOT/d' "$HOME/.${shell_profile}"
-sed -i "" '/:$GOROOT/d' "$HOME/.${shell_profile}"
-sed -i "" '/export GOPATH/d' "$HOME/.${shell_profile}"
-sed -i "" '/:$GOPATH/d' "$HOME/.${shell_profile}"
-else
-sed -i '/# GoLang/d' "$HOME/.${shell_profile}"
-sed -i '/export GOROOT/d' "$HOME/.${shell_profile}"
-sed -i '/:$GOROOT/d' "$HOME/.${shell_profile}"
-sed -i '/export GOPATH/d' "$HOME/.${shell_profile}"
-sed -i '/:$GOPATH/d' "$HOME/.${shell_profile}"
-fi
-echo "Go removed."
-exit 0
-elif [ "$1" == "--help" ]; then
-print_help
-exit 0
-elif [ ! -z "$1" ]; then
-echo "Unrecognized option: $1"
-exit 1
-fi
-
 if [ -d "$HOME/.go" ]; then
-echo "The '.go' directory already exists. Exiting."
-exit 1
+  echo "The '.go' directory already exists. Exiting."
+  exit 1
 fi
 
 echo "Downloading $PACKAGE_NAME ..."
 if hash wget 2>/dev/null; then
-wget https://storage.googleapis.com/golang/$PACKAGE_NAME -O /tmp/go.tar.gz
+  wget https://storage.googleapis.com/golang/$PACKAGE_NAME -O /tmp/go.tar.gz
 else
-curl -o /tmp/go.tar.gz https://storage.googleapis.com/golang/$PACKAGE_NAME
+  curl -o /tmp/go.tar.gz https://storage.googleapis.com/golang/$PACKAGE_NAME
 fi
 
 if [ $? -ne 0 ]; then
-echo "Download failed! Exiting."
-exit 1
+  echo "Download failed! Exiting."
+  exit 1
 fi
 
 echo "Extracting File..."
@@ -94,11 +63,11 @@ mkdir -p "$HOME/.go/"
 tar -C "$HOME/.go" --strip-components=1 -xzf /tmp/go.tar.gz
 touch "$HOME/.${shell_profile}"
 {
-echo '# GoLang'
-echo "export GOROOT=${GOROOT}"
-echo 'export PATH=$PATH:$GOROOT/bin'
-echo "export GOPATH=$GOPATH"
-echo 'export PATH=$PATH:$GOPATH/bin'
+  echo '# GoLang'
+  echo "export GOROOT=${GOROOT}"
+  echo 'export PATH=$PATH:$GOROOT/bin'
+  echo "export GOPATH=$GOPATH"
+  echo 'export PATH=$PATH:$GOPATH/bin'
 } >> "$HOME/.${shell_profile}"
 
 mkdir -p $GOPATH/{src,pkg,bin}

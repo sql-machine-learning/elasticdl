@@ -46,7 +46,7 @@ If your data amount is large but can fit in your local disk, and you want to pro
 
 
 ## PySpark Job on Google Cloud
-If your data amount is huge so that it can't fit into your local disk, this is the approach you want to use. In this tutorial we use [Google Filestore](https://cloud.google.com/filestore/) as our training data storage. We also tried [Google Cloud Storage](https://cloud.google.com/storage/), which is not a good fit for our use case(see [here](https://github.com/wangkuiyi/elasticdl/issues/381#issuecomment-500686228)). Here are the steps to run our PySpark job on Google Cloud:
+If your amount of data is so huge that it can't fit into your local disk, this is the approach you want to use. In this tutorial we use [Google Filestore](https://cloud.google.com/filestore/) as our training data storage. We also tried [Google Cloud Storage](https://cloud.google.com/storage/), which is not a good fit for our use case(see [here](https://github.com/wangkuiyi/elasticdl/issues/381#issuecomment-500686228)). Here are the steps to run our PySpark job on Google Cloud:
 1. Set up the Google Cloud SDK and project following [here](https://cloud.google.com/sdk/docs/quickstarts) based on your OS.
 
 2. Upload the [initialization script](TODO: add the link here once this PR is merged), which will install all dependencies we need to Spark cluster, to your Google Cloud Storage:
@@ -57,7 +57,7 @@ GS_INIT_SCRIPT=gs://elasticdl.appspot.com/go-pip-install.sh
 gsutil cp $LOCAL_INIT_SCRIPT $GS_INIT_SCRIPT
 ```
 
-3. [Create a Dataproc cluster](https://cloud.google.com/dataproc/docs/guides/create-cluster) with the [initialization actions](https://cloud.google.com/dataproc/docs/concepts/configuring-clusters/init-actions#using_initialization_actions) by the script above:
+3. [Create a Dataproc cluster](https://cloud.google.com/dataproc/docs/guides/create-cluster) with the [initialization actions](https://cloud.google.com/dataproc/docs/concepts/configuring-clusters/init-actions#using_initialization_actions) by the script `$GS_INIT_SCRIPT`:
 ```bash
 CLUSTER_NAME=test-cluster
 
@@ -78,7 +78,7 @@ gcloud filestore instances create $FILESTORE_NAME $PROJECT_NAME \
     --network=name="default"
 ```
 
-5. Mount the Filestore to every node of your Spark cluster per [here](https://cloud.google.com/filestore/docs/quickstart-gcloud#mount-filestore-fileshare). In this tutorial, I mounted it to `/filestore_mnt`.
+5. Mount the Filestore to every node of your Spark cluster per [here](https://cloud.google.com/filestore/docs/quickstart-gcloud#mount-filestore-fileshare). In this tutorial, we mount it to `/filestore_mnt`.
 
 6. [Copy the training data from local to Filestore](https://cloud.google.com/filestore/docs/copying-data#computer-to-fileshare):
 ```bash
