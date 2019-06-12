@@ -103,6 +103,13 @@ class Client(object):
         if priority is not None:
             spec.priority_class_name = priority
 
+        # Find that master pod that will be used as the owner reference for this worker pod
+        pods = self._v1.list_namespaced_pod(
+            namespace=self._ns,
+            label_selector="elasticdl_job_name=" + self._job_name
+        ).items
+        master_pod = [pod for pod in pods if pod.metadata.name == "elasticdl-master-" + self._job_name][0]
+
         pod = client.V1Pod(
             spec=spec,
             metadata=client.V1ObjectMeta(
@@ -111,6 +118,15 @@ class Client(object):
                     "app": "elasticdl",
                     "elasticdl_job_name": self._job_name,
                 },
+                owner_references=[
+                    client.V1OwnerReference(
+                        api_version="v1",
+                        block_owner_deletion=True,
+                        kind="Pod",
+                        name=master_pod.metadata.name,
+                        uid=master_pod.metadata.uid,
+                    ),
+                ],
             ),
         )
         return pod
