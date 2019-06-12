@@ -14,8 +14,6 @@ from elasticdl.python.data.codec import BytesCodec
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.tests.in_process_master import InProcessMaster
 
-import tensorflow as tf
-
 
 def _get_model_info(file_name):
     module_file = os.path.join(

@@ -1,6 +1,6 @@
 import argparse
 import os
-import tensorflow as tf
+
 from pyspark import SparkContext
 from pyspark import TaskContext
 
@@ -86,7 +86,7 @@ def main():
 
     # Load user-defined model
     model_module = load_user_model(args.model_file)
-    
+
     # Start the Spark job
     sc = SparkContext()
     rdd = sc.parallelize(file_list, args.num_workers)
@@ -99,6 +99,7 @@ def main():
             args.codec_type,
         )
     ).collect()
+
 
 if __name__ == "__main__":
     main()

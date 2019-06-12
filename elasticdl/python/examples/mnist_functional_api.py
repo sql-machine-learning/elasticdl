@@ -23,6 +23,7 @@ def prepare_data_for_a_single_file(filename):
     numpy_image = np.array(image)
     return numpy_image, label
 
+
 def feature_columns():
     return [
         tf.feature_column.numeric_column(
