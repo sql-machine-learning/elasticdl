@@ -19,7 +19,7 @@ If your data amount is large but can fit in your local disk, and you want to pro
 1. Build Docker image:
     ```bash
     docker build -t elasticdl:data_process \
-        -f elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/Docker/Dockerfile .
+        -f elasticdl/docker/Dockerfile.data_process .
     ```
 
 2. Run PySpark job in Docker Container:
