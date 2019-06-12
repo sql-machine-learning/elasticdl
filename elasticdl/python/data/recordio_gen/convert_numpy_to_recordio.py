@@ -13,7 +13,13 @@ from elasticdl.python.data.codec import BytesCodec
 
 
 def convert_numpy_to_recordio(
-    file_dir, data, label, feature_columns, records_per_file, codec_type, partition=''
+    file_dir,
+    data,
+    label,
+    feature_columns,
+    records_per_file,
+    codec_type,
+    partition="",
 ):
     """
     Convert data in numpy format to RecordIO format
@@ -26,7 +32,7 @@ def convert_numpy_to_recordio(
     it = zip(data, label)
     try:
         for i in itertools.count():
-            if partition == '':
+            if partition == "":
                 file_name = file_dir + "/data-%04d" % i
             else:
                 file_name = file_dir + "/data-%s-%04d" % (partition, i)
@@ -51,4 +57,3 @@ def convert_numpy_to_recordio(
                     f.write(rec)
     except StopIteration:
         pass
-

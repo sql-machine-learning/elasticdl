@@ -8,33 +8,31 @@ from elasticdl.python.elasticdl.master import k8s_client as k8s
 
 class WorkerManager(object):
     def __init__(
-            self,
-            task_q,
-            command,
-            args,
-            num_workers=1,
-            cpu_request="1000m",
-            cpu_limit="1000m",
-            memory_request="4096Mi",
-            memory_limit="4096Mi",
-            pod_priority=None,
-            mount_path=None,
-            volume_name=None,
-            image_pull_policy=None,
-            restart_policy="OnFailure",
-            **kwargs):
+        self,
+        task_q,
+        command,
+        args,
+        num_workers=1,
+        cpu_request="1000m",
+        cpu_limit="1000m",
+        memory_request="4096Mi",
+        memory_limit="4096Mi",
+        pod_priority=None,
+        mount_path=None,
+        volume_name=None,
+        image_pull_policy=None,
+        restart_policy="OnFailure",
+        **kwargs
+    ):
         self._logger = logging.getLogger(__name__)
         self._command = command
         self._args = args
         self._num_workers = num_workers
         self._resource_requests = {
             "cpu": cpu_request,
-            "memory": memory_request
+            "memory": memory_request,
         }
-        self._resource_limits = {
-            "cpu": cpu_limit,
-            "memory": memory_limit
-        }
+        self._resource_limits = {"cpu": cpu_limit, "memory": memory_limit}
         self._restart_policy = restart_policy
         self._pod_priority = pod_priority
         self._mount_path = mount_path
@@ -60,9 +58,7 @@ class WorkerManager(object):
 
         self._relaunch_deleted_live_worker = True
 
-        self._k8s_client = k8s.Client(
-            event_callback=self._event_cb, **kwargs
-        )
+        self._k8s_client = k8s.Client(event_callback=self._event_cb, **kwargs)
 
     def set_relaunch_deleted_live_worker(self, val):
         self._relaunch_deleted_live_worker = bool(val)
@@ -118,7 +114,9 @@ class WorkerManager(object):
 
         pod_name = evt_obj.metadata.name
         phase = evt_obj.status.phase
-        self._logger.info("Got event %s, phase %s for pod: %s" % (evt_type, phase, pod_name))
+        self._logger.info(
+            "Got event %s, phase %s for pod: %s" % (evt_type, phase, pod_name)
+        )
 
         relaunch = False
         with self._lock:
@@ -133,8 +131,10 @@ class WorkerManager(object):
                 del self._pod_name_to_id[pod_name]
                 self._task_q.recover_tasks(worker_id)
 
-                # If the pod being deleted was not "Succeeded", relaunch a worker.
-                relaunch = self._relaunch_deleted_live_worker and phase != "Succeeded"
+                # If a deleted pod was not "Succeeded", relaunch a worker.
+                relaunch = (
+                    self._relaunch_deleted_live_worker and phase != "Succeeded"
+                )
         if relaunch:
             self._logger.info("Relaunching worker.")
             self._start_worker(self._next_worker_id())
