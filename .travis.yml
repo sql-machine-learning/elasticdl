@@ -2,6 +2,7 @@ language: minimal
 
 install:
   - set -e
+  - docker version
   - docker build --build-arg BUILD_ENV=no_data -t elasticdl:dev -f elasticdl/docker/Dockerfile .
 
 stages:
