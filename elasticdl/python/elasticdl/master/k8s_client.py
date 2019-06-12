@@ -121,6 +121,8 @@ class Client(object):
                     "app": "elasticdl",
                     "elasticdl_job_name": self._job_name,
                 },
+                # TODO: Add tests for this once we've done refactoring on
+                # k8s client code and the constant strings
                 owner_references=[
                     client.V1OwnerReference(
                         api_version="v1",
