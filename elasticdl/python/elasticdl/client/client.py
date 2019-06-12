@@ -21,17 +21,23 @@ There are all the supported commands:
    evaluate      Submit a ElasticDL distributed evaluation job.
 """
         )
-        parser.add_argument("command")
-        args = parser.parse_args(sys.argv[1:2])
+        subparsers = parser.add_subparsers()
+        train_parser = subparsers.add_parser(
+            "train", help="client.py train -h"
+        )
+        train_parser.set_defaults(func=self._train)
+        self._add_train_params(train_parser)
 
-        if not hasattr(self, args.command):
-            print("Unrecognized command %s\n" % (args.command))
-            parser.print_help()
-            exit(1)
-        getattr(self, args.command)(args)
+        evaluate_parser = subparsers.add_parser(
+            "evaluate", help="client.py evaluate -h"
+        )
+        evaluate_parser.set_defaults(func=self._evaluate)
+        self._add_evaluate_params(evaluate_parser)
 
-    def train(self, args):
-        parser = argparse.ArgumentParser(description="Submit a training job")
+        args, argv = parser.parse_known_args()
+        args.func(args, argv)
+
+    def _add_train_params(self, parser):
         parser.add_argument(
             "--model_file", help="Path to the model file", required=True
         )
@@ -111,8 +117,12 @@ There are all the supported commands:
             default="Always",
             help="The image pull policy of master and worker",
         )
-        args, argv = parser.parse_known_args(sys.argv[2:])
 
+    def _add_evaluate_params(self, parser):
+        # TODO add parameters for evaluation parser..
+        pass
+
+    def _train(self, args, argv):
         job_name = args.job_name
         image_name = args.image_base + "_" + job_name
         self._build_docker_image(
@@ -123,7 +133,7 @@ There are all the supported commands:
         )
         self._submit(image_name, args.model_file, job_name, args, argv)
 
-    def evaluate(self, args):
+    def _evaluate(self, args, argv):
         # TODO implement distributed evaluation.
         raise NotImplementedError()
 
