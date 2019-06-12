@@ -1,6 +1,7 @@
 import argparse
 import os
-
+import tarfile
+import tensorflow as tf
 from pyspark import SparkContext
 from pyspark import TaskContext
 
@@ -14,16 +15,20 @@ from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import (
 def process_data(
     feature_label_columns,
     single_file_preparation_func,
+    filename_to_object,
     output_dir,
     records_per_file,
     codec_type,
 ):
-    def _process_data(file_list):
+    def _process_data(filename_list):
         ctx = TaskContext()
         feature_list = []
         label_list = []
-        for file in file_list:
-            feature_label_tuple = single_file_preparation_func(file)
+        for filename in filename_list:
+            feature_label_tuple = single_file_preparation_func(
+                filename_to_object[filename],
+                filename,
+            )
             assert len(feature_label_tuple) == 2
             feature_list.append(feature_label_tuple[0])
             label_list.append(feature_label_tuple[1])
@@ -36,8 +41,7 @@ def process_data(
             codec_type,
             str(ctx.partitionId()),
         )
-        return file_list
-
+        return filename_list
     return _process_data
 
 
@@ -46,9 +50,8 @@ def main():
         description="Spark job to convert training data to RecordIO format"
     )
     parser.add_argument(
-        "--training_data_dir",
-        help="Directory that contains training data and will be traversed \
-            recursively",
+        "--training_data_tar_file",
+        help="Tar file that contains all training data",
         required=True,
     )
     parser.add_argument(
@@ -77,12 +80,16 @@ def main():
 
     args = parser.parse_args()
 
-    # Get training data files recursively from training_data_dir
-    file_list = []
-    for dir_name, subdir_list, files in os.walk(args.training_data_dir):
-        for fname in files:
-            if not fname.startswith("."):
-                file_list.append(os.path.join(dir_name, fname))
+    # Get training data files from training_data_tar_file
+    tar = tarfile.open(args.training_data_tar_file)
+    tar_info_list = tar.getmembers()
+    file_name_list = []
+    filename_to_object = {}
+    for tar_info in tar_info_list:
+        f = tar.extractfile(tar_info)
+        if f is not None and not tar_info.name.split('/')[-1].startswith('.'):
+            filename_to_object[tar_info.name] = f
+            file_name_list.append(tar_info.name)
 
     # Load user-defined model
     model_module = load_user_model(args.model_file)
@@ -91,18 +98,19 @@ def main():
         os.makedirs(args.output_dir)
 
     # Start the Spark job
+    print('zjl', file_name_list[:10], len(file_name_list))
     sc = SparkContext()
-    rdd = sc.parallelize(file_list, args.num_workers)
+    rdd = sc.parallelize(file_name_list, args.num_workers)
     rdd.mapPartitions(
         process_data(
             model_module.feature_columns() + model_module.label_columns(),
             model_module.prepare_data_for_a_single_file,
+            filename_to_object,
             args.output_dir,
             args.records_per_file,
             args.codec_type,
         )
     ).collect()
-
 
 if __name__ == "__main__":
     main()
