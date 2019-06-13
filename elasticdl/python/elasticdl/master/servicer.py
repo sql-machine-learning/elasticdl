@@ -123,8 +123,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version += 1
 
     def _get_checkpoint_file_path(self, version):
-        return "{}/model_v{}.chkpt".format(
-            self._checkpoint_dir, version)
+        return "{}/model_v{}.chkpt".format(self._checkpoint_dir, version)
 
     def save_checkpoint(self):
         file_name = self._get_checkpoint_file_path(self._version)
@@ -162,7 +161,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             pb_model.param[k].CopyFrom(ndarray_to_tensor(v.numpy()))
         return pb_model
 
-    def _validate_model_version(self, request_model_version, warning_outdated=True):
+    def _validate_model_version(
+        self, request_model_version, warning_outdated=True
+    ):
         if request_model_version > self._version:
             err_msg = (
                 "Model version %d not available yet, "
@@ -242,8 +243,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def ReportEvaluationMetrics(self, request, _):
         model_version_valid = self._validate_model_version(
-            request.model_version,
-            False
+            request.model_version, False
         )
 
         res = elasticdl_pb2.ReportEvaluationMetricsResponse()

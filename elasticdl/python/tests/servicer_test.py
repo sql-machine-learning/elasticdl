@@ -42,14 +42,12 @@ class ServicerTest(unittest.TestCase):
             2,
             3,
             None,
-            _TaskQueue(
-                {}, {}, records_per_task=3, num_epochs=2,
-            ),
+            _TaskQueue({}, {}, records_per_task=3, num_epochs=2),
             init_var=[],
             init_from_checkpoint="",
             checkpoint_dir="",
             checkpoint_steps=0,
-            keep_checkpoint_max=0
+            keep_checkpoint_max=0,
         )
 
         req = elasticdl_pb2.GetTaskRequest()
@@ -67,7 +65,10 @@ class ServicerTest(unittest.TestCase):
 
     def testGetModel(self):
         master = MasterServicer(
-            2, 3, None, None,
+            2,
+            3,
+            None,
+            None,
             init_var=[],
             init_from_checkpoint="",
             checkpoint_dir="",
@@ -106,7 +107,10 @@ class ServicerTest(unittest.TestCase):
 
     def testGetFixVersionModel(self):
         master = MasterServicer(
-            2, 3, None, None,
+            2,
+            3,
+            None,
+            None,
             init_var=[],
             init_from_checkpoint="",
             checkpoint_dir="",
@@ -122,9 +126,12 @@ class ServicerTest(unittest.TestCase):
         req.version = 1
         self.assertRaisesRegex(
             ValueError,
-            'Model version %s not available yet, current version: %s' % (
-                req.version, master._version
-            ), master.GetFixVersionModel, req, None)
+            "Model version %s not available yet, current version: %s"
+            % (req.version, master._version),
+            master.GetFixVersionModel,
+            req,
+            None,
+        )
 
         # Previous model unavailable
         master._version = 2
@@ -154,7 +161,7 @@ class ServicerTest(unittest.TestCase):
             init_from_checkpoint="",
             checkpoint_dir="",
             checkpoint_steps=0,
-            keep_checkpoint_max=0
+            keep_checkpoint_max=0,
         )
         master._version = 1
         master.set_model_var("x", np.array([2.0], dtype=np.float32))
@@ -230,7 +237,7 @@ class ServicerTest(unittest.TestCase):
         def makeEvaluationMetrics():
             """ Make a ReportEvaluationMetricsRequest compatible with model"""
             req = elasticdl_pb2.ReportEvaluationMetricsRequest()
-            req.evaluation_metrics['mse'].CopyFrom(
+            req.evaluation_metrics["mse"].CopyFrom(
                 ndarray_to_tensor(np.array([100, 200], dtype=np.float32))
             )
             req.model_version = 1
@@ -245,7 +252,7 @@ class ServicerTest(unittest.TestCase):
             init_from_checkpoint="",
             checkpoint_dir="",
             checkpoint_steps=0,
-            keep_checkpoint_max=0
+            keep_checkpoint_max=0,
         )
         master._version = 1
 
@@ -254,9 +261,12 @@ class ServicerTest(unittest.TestCase):
         req.model_version = 2
         self.assertRaisesRegex(
             ValueError,
-            'Model version %s not available yet, current version: %s' % (
-                req.model_version, master._version
-            ), master.ReportEvaluationMetrics, req, None)
+            "Model version %s not available yet, current version: %s"
+            % (req.model_version, master._version),
+            master.ReportEvaluationMetrics,
+            req,
+            None,
+        )
 
         # Report a current version, should be accepted
         req = makeEvaluationMetrics()
@@ -267,13 +277,13 @@ class ServicerTest(unittest.TestCase):
 
     def testReportTaskResult(self):
         task_q = _TaskQueue(
-            {"shard_1": 10, "shard_2": 9},
-            {},
-            records_per_task=3,
-            num_epochs=2,
+            {"shard_1": 10, "shard_2": 9}, {}, records_per_task=3, num_epochs=2
         )
         master = MasterServicer(
-            3, 3, None, task_q,
+            3,
+            3,
+            None,
+            task_q,
             init_var=[],
             init_from_checkpoint="",
             checkpoint_dir="",
@@ -314,7 +324,10 @@ class ServicerTest(unittest.TestCase):
 
     def testUserDefinedModel(self):
         master = MasterServicer(
-            2, 3, None, None,
+            2,
+            3,
+            None,
+            None,
             init_var=[],
             init_from_checkpoint="",
             checkpoint_dir="",
