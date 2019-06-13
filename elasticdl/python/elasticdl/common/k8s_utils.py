@@ -16,6 +16,15 @@ def _valid_mem_spec(mem_str):
 
 
 def parse_resource(resource_str):
+    """Parse combined k8s resource string into a dict.
+
+    Args:
+        resource_str: The string representation for k8s resource,
+            e.g. "cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1024Mi".
+
+    Return:
+        A Python dictionary parsed from the given resource string.
+    """
     kvs = resource_str.split(',')
     parsed_res_dict = {}
     for kv in kvs:
