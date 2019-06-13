@@ -88,6 +88,7 @@ def input_fn(records):
     batch_size = len(image_list)
     images = np.concatenate(image_list, axis=0)
     images = np.reshape(images, (batch_size, 28, 28))
+    images = tf.convert_to_tensor(value=images)
     labels = np.array(label_list)
     return ({'image': images}, labels)
 ```
@@ -145,8 +146,10 @@ Example:
 ```
 def loss(output, labels):
     return tf.reduce_mean(
-        tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=output, labels=labels))
+        input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
+            logits=output, labels=labels.flatten()
+        )
+    )
 ```
 
 ### optimizer
@@ -159,7 +162,7 @@ Example:
 
 ```
 def optimizer(lr=0.1):
-    return tf.train.GradientDescentOptimizer(lr)
+    return tf.optimizers.SGD(lr)
 ```
 
 ### eval_metrics_fn
@@ -174,9 +177,14 @@ Example:
 ```
 def eval_metrics_fn(predictions, labels):
     return {
-        'metric': tf.reduce_mean(
-            tf.nn.sparse_softmax_cross_entropy_with_logits(
-                logits=predictions, labels=labels.flatten())),
+        "accuracy": tf.reduce_mean(
+            input_tensor=tf.cast(
+                tf.equal(
+                    tf.argmax(input=predictions, axis=1), labels.flatten()
+                ),
+                tf.float32,
+            )
+        )
     }
 ```
 
@@ -204,3 +212,5 @@ def prepare_data_for_a_single_file(filename):
 ## Model Building Examples
 ### [MNIST model using Keras functional API](../python/examples/mnist_functional_api.py)
 ### [MNIST model using Keras model subclassing](../python/examples/mnist_sublcass.py)
+### [CIFAR10 model using Keras functional API](../python/examples/cifar10_functional_api.py)
+### [CIFAR10 model using Keras model subclassing](../python/examples/cifar10_sublcass.py)
