@@ -6,8 +6,9 @@ from pyspark import TaskContext
 
 import numpy as np
 from elasticdl.python.elasticdl.common.model_helper import load_user_model
-from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import \
-    convert_numpy_to_recordio
+from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import (
+    convert_numpy_to_recordio,
+)
 
 
 def process_data(
@@ -36,6 +37,7 @@ def process_data(
             str(ctx.partitionId()),
         )
         return file_list
+
     return _process_data
 
 
@@ -50,9 +52,7 @@ def main():
         required=True,
     )
     parser.add_argument(
-        "--output_dir",
-        help="Directory of output RecordIO data",
-        required=True,
+        "--output_dir", help="Directory of output RecordIO data", required=True
     )
     parser.add_argument(
         "--model_file",
@@ -81,12 +81,12 @@ def main():
     file_list = []
     for dir_name, subdir_list, files in os.walk(args.training_data_dir):
         for fname in files:
-            if not fname.startswith('.'):
+            if not fname.startswith("."):
                 file_list.append(os.path.join(dir_name, fname))
 
     # Load user-defined model
     model_module = load_user_model(args.model_file)
-    
+
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
 
