@@ -59,5 +59,5 @@ def parse_resource(resource_str):
                     k, _ALLOWED_RESOURCE_TYPES
                 )
             )
-        parsed_res_dict[k.lower()] = v
+        parsed_res_dict[k] = v
     return parsed_res_dict
