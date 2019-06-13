@@ -28,6 +28,7 @@ def save_checkpoint_to_file(pb_model, file_name):
 
 def load_from_checkpoint_file(file_name):
     from elasticdl.proto import elasticdl_pb2
+
     pb_model = elasticdl_pb2.Model()
     with open(file_name, "rb") as f:
         pb_model.ParseFromString(f.read())
