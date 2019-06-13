@@ -150,10 +150,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             )
             self._logger.warning(err_msg)
             raise ValueError(err_msg)
-        elif request_model_version < self._version:
-            return False
-        else:
-            return True
+        return request_model_version == self._version:
 
     def ReportGradient(self, request, _):
         model_version_valid = self._validate_model_version(
