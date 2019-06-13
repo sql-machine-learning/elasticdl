@@ -19,8 +19,8 @@ jobs:
     - stage: precommit
       name: "Pre-commit Check"
       script:
-        - docker run --rm -v `pwd`/.git:/.git -v `pwd`/.pre-commit-config.yaml:/.pre-commit-config.yaml -it elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python -name *.py -print0 | tr '\0' ' ')"
+        - docker run --rm -it -v $(pwd):/v -w /v elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python -name *.py -print0 | tr '\0' ' ')"
     - stage: unittest
       name: "Unit Tests"
       script:
-        - docker run --rm -it elasticdl:dev bash -c "make && K8S_TESTS=False pytest elasticdl/python/tests"
+        - docker run --rm -it -v $(pwd):/v -w /v elasticdl:dev bash -c "make && K8S_TESTS=False pytest elasticdl/python/tests"
