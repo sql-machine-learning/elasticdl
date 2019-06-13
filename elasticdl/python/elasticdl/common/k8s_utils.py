@@ -12,13 +12,21 @@ def _is_numeric(n):
     return True
 
 
-def _valid_processing_units_spec(pu_str):
-    regexp = re.compile("([1-9]{1})([0-9]*)m$")
-    if not regexp.match(pu_str) and not _is_numeric(pu_str):
+def _valid_gpu_spec(gpu_str):
+    if not gpu_str.isnumeric():
         raise ValueError(
-            "invalid processing units (cpu or gpu) request spec: " + pu_str
+            "invalid gpu request spec: " + gpu_str
         )
-    return pu_str
+    return gpu_str
+
+
+def _valid_cpu_spec(cpu_str):
+    regexp = re.compile("([1-9]{1})([0-9]*)m$")
+    if not regexp.match(cpu_str) and not _is_numeric(cpu_str):
+        raise ValueError(
+            "invalid cpu request spec: " + cpu_str
+        )
+    return cpu_str
 
 
 def _valid_mem_spec(mem_str):
@@ -33,7 +41,7 @@ def parse_resource(resource_str):
 
     Args:
         resource_str: The string representation for k8s resource,
-            e.g. "cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1024Mi".
+            e.g. "cpu=250m,memory=32Mi,disk=64Mi,gpu=1,ephemeral-storage=32Mi".
 
     Return:
         A Python dictionary parsed from the given resource string.
@@ -51,8 +59,10 @@ def parse_resource(resource_str):
             )
         if k in ["memory", "disk", "ephemeral-storage"]:
             _valid_mem_spec(v)
-        elif k in ["cpu", "gpu"]:
-            _valid_processing_units_spec(v)
+        elif k == "cpu":
+            _valid_cpu_spec(v)
+        elif k == "gpu":
+            _valid_gpu_spec(v)
         else:
             raise ValueError(
                 "%s is not in the allowed list of resource types: %s" % (

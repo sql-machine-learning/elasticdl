@@ -58,16 +58,23 @@ class K8SUtilsTest(unittest.TestCase):
         # When cpu is non-numeric, raise an error
         self.assertRaisesRegex(
             ValueError,
-            r'invalid processing units \(cpu or gpu\) request spec: 250Mi',
+            'invalid cpu request spec: 250Mi',
             parse_resource,
             'cpu=250Mi,memory=32Mi,disk=64Mi,gpu=1'
         )
         # When gpu is non-numeric, raise an error
         self.assertRaisesRegex(
             ValueError,
-            r'invalid processing units \(cpu or gpu\) request spec: 1Mi',
+            'invalid gpu request spec: 1Mi',
             parse_resource,
             'cpu=2,memory=32Mi,disk=64Mi,gpu=1Mi'
+        )
+        # When gpu is not integer, raise an error
+        self.assertRaisesRegex(
+            ValueError,
+            'invalid gpu request spec: 0.1',
+            parse_resource,
+            'cpu=2,memory=32Mi,disk=64Mi,gpu=0.1'
         )
         # When memory does not contain expected regex, raise an error
         self.assertRaisesRegex(
