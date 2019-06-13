@@ -107,8 +107,15 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             if request.version == self._version:
                 return self._get_model_no_lock()
         # Read from checkpoint
-        file_name = self._get_checkpoint_file_path(request.version)
-        pb_model = load_from_checkpoint_file(file_name)
+        pb_model = elasticdl_pb2.Model()
+        try:
+            file_name = self._get_checkpoint_file_path(request.version)
+            pb_model = load_from_checkpoint_file(file_name)
+        except Exception:
+            self._logger.error(
+                "Failed to fetch checkpoint model for "
+                "model version {}".format(request.version)
+            )
         return pb_model
 
     def _update_model_version(self):
@@ -249,7 +256,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             for k, v in request.evaluation_metrics.items():
                 if v.dim:
                     self._evaluation_metrics[k].append(tensor_to_ndarray(v))
-            self._update_model_version()
             evaluation_metrics_summary = {
                 k: np.mean(v) for k, v in self._evaluation_metrics.items()
             }

@@ -193,12 +193,12 @@ class Worker(object):
                 self._process_minibatch(task, record_buf)
 
     def _process_minibatch(self, task, record_buf):
-        min_model_version = task.model_version
+        model_version = task.model_version
         features, labels = self._get_features_and_labels(record_buf)
         for _ in range(self._max_minibatch_retry_num):
             if task.type == elasticdl_pb2.EVALUATION:
-                self.get_model_with_fix_version(min_model_version)
-                accepted, min_model_version = self._run_evaluation_task(
+                self.get_model_with_fix_version(model_version)
+                accepted, model_version = self._run_evaluation_task(
                     features, labels
                 )
                 if accepted:
@@ -206,8 +206,8 @@ class Worker(object):
             elif task.type == elasticdl_pb2.TRAINING:
                 # TODO: optimize the logic to avoid unnecessary
                 #       get_model call.
-                self.get_model(max(self._model_version, min_model_version))
-                accepted, min_model_version, loss = self._run_training_task(
+                self.get_model(max(self._model_version, model_version))
+                accepted, model_version, loss = self._run_training_task(
                     features, labels
                 )
                 if accepted:

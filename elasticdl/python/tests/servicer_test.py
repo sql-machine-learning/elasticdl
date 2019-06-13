@@ -126,6 +126,12 @@ class ServicerTest(unittest.TestCase):
                 req.version, master._version
             ), master.GetFixVersionModel, req, None)
 
+        # Previous model unavailable
+        master._version = 2
+        model = master.GetFixVersionModel(req, None)
+        self.assertFalse(model.param)
+        # TODO(weiyan): more tests after we add checkpoint-related UTs
+
     def testReportGradient(self):
         def makeGrad():
             """ Make a ReportGradientRequest compatible with model"""
@@ -244,16 +250,15 @@ class ServicerTest(unittest.TestCase):
         master._version = 1
 
         # Report a future version, should raise exception
-        # req = makeEvaluationMetrics()
-        # req.model_version = 2
-        # self.assertRaisesRegex(
-        #     ValueError,
-        #     'Model version %s not available yet, current version: %s' % (
-        #         req.model_version, master._version
-        #     ), master.ReportEvaluationMetrics, req, None)
+        req = makeEvaluationMetrics()
+        req.model_version = 2
+        self.assertRaisesRegex(
+            ValueError,
+            'Model version %s not available yet, current version: %s' % (
+                req.model_version, master._version
+            ), master.ReportEvaluationMetrics, req, None)
 
-        # Report a current version, should be accepted, and a new version is
-        # created
+        # Report a current version, should be accepted
         req = makeEvaluationMetrics()
         req.model_version = 1
         res = master.ReportEvaluationMetrics(req, None)
