@@ -150,14 +150,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             )
             self._logger.warning(err_msg)
             raise ValueError(err_msg)
-        elif request_model_version < self._version:
-            self._logger.warning(
-                "Task result for outdated version %d dropped",
-                request_model_version,
-            )
-            return False
-        else:
-            return True
+        return request_model_version == self._version
 
     def ReportGradient(self, request, _):
         model_version_valid = self._validate_model_version(
@@ -166,6 +159,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
         res = elasticdl_pb2.ReportGradientResponse()
         if not model_version_valid:
+            self._logger.warning(
+                "Task result for outdated version %d dropped",
+                request.model_version,
+            )
             res.accepted = False
             res.model_version = self._version
             return res
