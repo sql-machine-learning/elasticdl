@@ -94,18 +94,16 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return res
 
     def GetModel(self, request, _):
-        self._validate_model_version(request.min_version)
+        if request.method == elasticdl_pb2.MINIMUM:
+            self._validate_model_version(request.version)
+        elif request.method == elasticdl_pb2.FIXED:
+            self._validate_model_version(request.version, False)
 
         with self._lock:
-            res = self._get_model_no_lock()
-        return res
-
-    def GetFixVersionModel(self, request, _):
-        self._validate_model_version(request.version, False)
-
-        with self._lock:
-            if request.version == self._version:
-                return self._get_model_no_lock()
+            if request.method == elasticdl_pb2.MINIMUM \
+                    or (request.method == elasticdl_pb2.FIXED and request.version == self._version):
+                res = self._get_model_no_lock()
+                return res
         # Read from checkpoint
         pb_model = elasticdl_pb2.Model()
         try:
