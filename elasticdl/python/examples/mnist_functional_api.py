@@ -18,10 +18,16 @@ model = tf.keras.Model(inputs=inputs, outputs=outputs, name="mnist_model")
 
 
 def prepare_data_for_a_single_file(file_object, filename):
+    '''
+    :param filename: training data file name
+    :param file_object: a file object associated with filename
+    '''
     label = int(filename.split('/')[-2])
     image = PIL.Image.open(file_object)
     numpy_image = np.array(image)
+    print(numpy_image, label)
     return numpy_image, label
+
 
 def feature_columns():
     return [

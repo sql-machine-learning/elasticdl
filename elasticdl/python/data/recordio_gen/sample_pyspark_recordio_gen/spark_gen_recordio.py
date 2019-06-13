@@ -15,16 +15,28 @@ from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import (
 def process_data(
     feature_label_columns,
     single_file_preparation_func,
-    filename_to_object,
+    training_data_tar_file,
     output_dir,
     records_per_file,
     codec_type,
 ):
     def _process_data(filename_list):
-        ctx = TaskContext()
+        filename_set = set()
+        for filename in filename_list:
+            filename_set.add(filename)
+
+        tar = tarfile.open(training_data_tar_file)
+        tar_info_list = tar.getmembers()
+        filename_to_object = {}
+        for tar_info in tar_info_list:
+            if tar_info.name in filename_set:
+                f = tar.extractfile(tar_info)
+                assert f is not None
+                filename_to_object[tar_info.name] = f
+        
         feature_list = []
         label_list = []
-        for filename in filename_list:
+        for filename in filename_set:
             feature_label_tuple = single_file_preparation_func(
                 filename_to_object[filename],
                 filename,
@@ -32,6 +44,7 @@ def process_data(
             assert len(feature_label_tuple) == 2
             feature_list.append(feature_label_tuple[0])
             label_list.append(feature_label_tuple[1])
+        ctx = TaskContext()
         convert_numpy_to_recordio(
             output_dir,
             np.array(feature_list),
@@ -80,16 +93,14 @@ def main():
 
     args = parser.parse_args()
 
-    # Get training data files from training_data_tar_file
+    # Get training data file names from training_data_tar_file
     tar = tarfile.open(args.training_data_tar_file)
     tar_info_list = tar.getmembers()
-    file_name_list = []
-    filename_to_object = {}
+    filename_list = []
     for tar_info in tar_info_list:
         f = tar.extractfile(tar_info)
         if f is not None and not tar_info.name.split('/')[-1].startswith('.'):
-            filename_to_object[tar_info.name] = f
-            file_name_list.append(tar_info.name)
+            filename_list.append(tar_info.name)
 
     # Load user-defined model
     model_module = load_user_model(args.model_file)
@@ -98,14 +109,13 @@ def main():
         os.makedirs(args.output_dir)
 
     # Start the Spark job
-    print('zjl', file_name_list[:10], len(file_name_list))
     sc = SparkContext()
-    rdd = sc.parallelize(file_name_list, args.num_workers)
+    rdd = sc.parallelize(filename_list, args.num_workers)
     rdd.mapPartitions(
         process_data(
             model_module.feature_columns() + model_module.label_columns(),
             model_module.prepare_data_for_a_single_file,
-            filename_to_object,
+            args.training_data_tar_file,
             args.output_dir,
             args.records_per_file,
             args.codec_type,
