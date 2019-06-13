@@ -121,7 +121,6 @@ class _TaskQueue(object):
         self._todo.extend(tasks)
         return tasks
 
-    # 这地方不加锁的话 create_evaluation_tasks，就麻烦了。。。
     def create_evaluation_tasks(self, eval_model_version):
         # with self._lock:
         self._logger.info(
@@ -156,6 +155,8 @@ class _TaskQueue(object):
         """Return next (task_id, Task) tuple"""
 
         with self._lock:
+            # TODO: check if task queue doesn't have training task,
+            #       to avoid the queue is overwhelmed by evaluation tasks.
             if not self._todo and self._epoch < self._num_epochs - 1:
                 # Start a new epoch
                 self.create_training_tasks()
