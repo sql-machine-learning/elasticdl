@@ -1,11 +1,24 @@
 import re
 
 
-def _valid_cpu_spec(cpu_str):
+_ALLOWED_RESOURCE_TYPES = ['memory', 'disk', 'ephemeral-storage', 'cpu', 'gpu']
+
+
+def _is_numeric(n):
+    try:
+        float(n)
+    except ValueError:
+        return False
+    return True
+
+
+def _valid_processing_units_spec(pu_str):
     regexp = re.compile("([1-9]{1})([0-9]*)m$")
-    if not regexp.match(cpu_str):
-        raise ValueError("invalid cpu request spec: " + cpu_str)
-    return cpu_str
+    if not regexp.match(pu_str) and not _is_numeric(pu_str):
+        raise ValueError(
+            "invalid processing units (cpu or gpu) request spec: " + pu_str
+        )
+    return pu_str
 
 
 def _valid_mem_spec(mem_str):
@@ -26,12 +39,17 @@ def parse_resource(resource_str):
         A Python dictionary parsed from the given resource string.
     """
     kvs = resource_str.split(',')
+    keys = kvs.keys()
+    if len(set(keys)) != len(keys):
+        raise ValueError(
+            "The k8s resource string cannot contain duplicate resource names."
+        )
     parsed_res_dict = {}
     for kv in kvs:
         k, v = kv.split('=')
-        if k in ['gpu', 'memory', 'disk']:
+        if k in ['memory', 'disk', 'ephemeral-storage']:
             _valid_mem_spec(v)
-        elif k == 'cpu':
-            _valid_cpu_spec(v)
+        elif k in ['cpu', 'gpu']:
+            _valid_processing_units_spec(v)
         parsed_res_dict[k.lower()] = v
     return parsed_res_dict
