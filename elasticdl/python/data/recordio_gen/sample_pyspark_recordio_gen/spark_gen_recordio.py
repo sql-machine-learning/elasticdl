@@ -1,7 +1,6 @@
 import argparse
 import os
 import tarfile
-import tensorflow as tf
 from pyspark import SparkContext
 from pyspark import TaskContext
 
@@ -33,7 +32,7 @@ def process_data(
                 f = tar.extractfile(tar_info)
                 assert f is not None
                 filename_to_object[tar_info.name] = f
-        
+
         feature_list = []
         label_list = []
         for filename in filename_set:
