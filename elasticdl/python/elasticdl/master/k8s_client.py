@@ -107,11 +107,13 @@ class Client(object):
         # for this worker pod.
         pods = self._v1.list_namespaced_pod(
             namespace=self._ns,
-            label_selector="elasticdl_job_name=" + self._job_name
+            label_selector="elasticdl_job_name=" + self._job_name,
         ).items
-        master_pod = [pod for pod in pods if (
-                pod.metadata.name == "elasticdl-master-" + self._job_name
-        )][0]
+        master_pod = [
+            pod
+            for pod in pods
+            if (pod.metadata.name == "elasticdl-master-" + self._job_name)
+        ][0]
 
         pod = client.V1Pod(
             spec=spec,
@@ -130,7 +132,7 @@ class Client(object):
                         kind="Pod",
                         name=master_pod.metadata.name,
                         uid=master_pod.metadata.uid,
-                    ),
+                    )
                 ],
             ),
         )

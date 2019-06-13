@@ -14,13 +14,19 @@ def loss(predictions, labels):
 
 
 def feature_columns():
-    return [tf.feature_column.numeric_column(
-        key="x", dtype=tf.dtypes.float32, shape=[1])]
+    return [
+        tf.feature_column.numeric_column(
+            key="x", dtype=tf.dtypes.float32, shape=[1]
+        )
+    ]
 
 
 def label_columns():
-    return [tf.feature_column.numeric_column(
-        key="y", dtype=tf.dtypes.float32, shape=[1])]
+    return [
+        tf.feature_column.numeric_column(
+            key="y", dtype=tf.dtypes.float32, shape=[1]
+        )
+    ]
 
 
 def input_fn(records):
@@ -36,7 +42,7 @@ def input_fn(records):
     xs = np.reshape(xs, (batch_size, 1))
     ys = np.reshape(xs, (batch_size, 1))
     xs = tf.convert_to_tensor(xs)
-    return {'x': xs}, ys
+    return {"x": xs}, ys
 
 
 def optimizer(lr=0.1):
@@ -44,6 +50,4 @@ def optimizer(lr=0.1):
 
 
 def eval_metrics_fn(predictions, labels):
-    return {
-        'mse': tf.reduce_mean(tf.square(predictions - labels)),
-    }
+    return {"mse": tf.reduce_mean(tf.square(predictions - labels))}

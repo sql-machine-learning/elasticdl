@@ -72,8 +72,9 @@ def input_fn(records):
     # deserialize
     for r in records:
         get_np_val = (
-            lambda data:
-                data.numpy() if isinstance(data, EagerTensor) else data
+            lambda data: data.numpy()
+            if isinstance(data, EagerTensor)
+            else data
         )
         label = get_np_val(r["label"])
         image = get_np_val(r["image"])
