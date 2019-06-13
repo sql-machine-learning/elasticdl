@@ -1,7 +1,7 @@
 import re
 
 
-_ALLOWED_RESOURCE_TYPES = ['memory', 'disk', 'ephemeral-storage', 'cpu', 'gpu']
+_ALLOWED_RESOURCE_TYPES = ["memory", "disk", "ephemeral-storage", "cpu", "gpu"]
 
 
 def _is_numeric(n):
@@ -38,18 +38,26 @@ def parse_resource(resource_str):
     Return:
         A Python dictionary parsed from the given resource string.
     """
-    kvs = resource_str.split(',')
-    keys = kvs.keys()
-    if len(set(keys)) != len(keys):
-        raise ValueError(
-            "The k8s resource string cannot contain duplicate resource names."
-        )
+    kvs = resource_str.split(",")
+    resource_names = []
     parsed_res_dict = {}
     for kv in kvs:
-        k, v = kv.split('=')
-        if k in ['memory', 'disk', 'ephemeral-storage']:
+        k, v = kv.split("=")
+        if k not in resource_names:
+            resource_names.append(k)
+        else:
+            raise ValueError(
+                "The resource string contains duplicate resource names: %s" % k
+            )
+        if k in ["memory", "disk", "ephemeral-storage"]:
             _valid_mem_spec(v)
-        elif k in ['cpu', 'gpu']:
+        elif k in ["cpu", "gpu"]:
             _valid_processing_units_spec(v)
+        else:
+            raise ValueError(
+                "%s is not in the allowed list of resource types: %s" % (
+                    k, _ALLOWED_RESOURCE_TYPES
+                )
+            )
         parsed_res_dict[k.lower()] = v
     return parsed_res_dict
