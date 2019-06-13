@@ -33,13 +33,15 @@ tar -cvf $TRAINING_DATA_DIR/$TAR_FILE $TRAINING_DATA_DIR/$DATA
     ```bash
     OUTPUT_DIR=~/Desktop/sample_recordio_output
     MODEL_FILE=/elasticdl/python/examples/mnist_functional_api.py
+    MOUNTED_TRAINING_DATA_DIR=/data/training
+    MOUNTED_OUTPUT_DIR=/data/output
 
-    docker run --rm -v $OUTPUT_DIR:/output_dir \
-        -v $TRAINING_DATA_DIR:/training_data_dir \
+    docker run --rm -v $OUTPUT_DIR:$MOUNTED_OUTPUT_DIR \
+        -v $TRAINING_DATA_DIR:$MOUNTED_TRAINING_DATA_DIR \
         elasticdl:data_process \
         /elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/spark_gen_recordio.py \
-        --training_data_tar_file=/training_data_dir/$TAR_FILE \
-        --output_dir=/output_dir/  \
+        --training_data_tar_file=$MOUNTED_TRAINING_DATA_DIR/$TAR_FILE \
+        --output_dir=$MOUNTED_OUTPUT_DIR  \
         --model_file=$MODEL_FILE \
         --records_per_file=200
     ```
