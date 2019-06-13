@@ -13,21 +13,12 @@ def main(argv):
     parser = argparse.ArgumentParser(
         description="Show some data from CIFAR10 recordio"
     )
+    parser.add_argument("file", help="RecordIo file to read")
     parser.add_argument(
-        "file",
-        help="RecordIo file to read"
+        "--start", default=0, type=int, help="Start record number"
     )
     parser.add_argument(
-        "--start",
-        default=0,
-        type=int,
-        help="Start record number"
-    )
-    parser.add_argument(
-        "--n",
-        default=20,
-        type=int,
-        help="How many record to show"
+        "--n", default=20, type=int, help="How many record to show"
     )
     parser.add_argument(
         "--codec_type",
@@ -39,14 +30,10 @@ def main(argv):
 
     feature_columns = [
         tf.feature_column.numeric_column(
-            key="image",
-            dtype=tf.float32,
-            shape=[32, 32, 3],
+            key="image", dtype=tf.float32, shape=[32, 32, 3]
         ),
         tf.feature_column.numeric_column(
-            key="label",
-            dtype=tf.int64,
-            shape=[1],
+            key="label", dtype=tf.int64, shape=[1]
         ),
     ]
     if args.codec_type == "tf_example":
@@ -66,8 +53,8 @@ def main(argv):
             print("-" * 10)
             print("record:", i)
             if args.codec_type == "tf_example":
-                print(rec['image'].numpy())
-                print(rec['label'].numpy())
+                print(rec["image"].numpy())
+                print(rec["label"].numpy())
             elif args.codec_type == "bytes":
                 print(rec)
 
