@@ -94,20 +94,37 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return res
 
     def GetModel(self, request, _):
-        _ = self._validate_model_version(request.min_version)
+        self._validate_model_version(request.version)
 
-        with self._lock:
-            res = self._get_model_no_lock()
-        return res
+        if (
+            request.method == elasticdl_pb2.MINIMUM
+            or request.version == self._version
+        ):
+            with self._lock:
+                res = self._get_model_no_lock()
+            return res
+
+        # Read from checkpoint for the fixed version model
+        pb_model = elasticdl_pb2.Model()
+        try:
+            file_name = self._get_checkpoint_file_path(request.version)
+            pb_model = load_from_checkpoint_file(file_name)
+        except Exception:
+            self._logger.error(
+                "Failed to fetch checkpoint model for "
+                "model version {}".format(request.version)
+            )
+        return pb_model
 
     def _update_model_version(self):
         assert self._lock.locked()
         self._version += 1
 
+    def _get_checkpoint_file_path(self, version):
+        return "{}/model_v{}.chkpt".format(self._checkpoint_dir, version)
+
     def save_checkpoint(self):
-        file_name = "{}/model_v{}.chkpt".format(
-            self._checkpoint_dir, self._version
-        )
+        file_name = self._get_checkpoint_file_path(self._version)
         pb_model = self._get_model_no_lock()
         save_checkpoint_to_file(pb_model, file_name)
         if self._keep_checkpoint_max:
@@ -232,7 +249,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             for k, v in request.evaluation_metrics.items():
                 if v.dim:
                     self._evaluation_metrics[k].append(tensor_to_ndarray(v))
-            self._update_model_version()
             evaluation_metrics_summary = {
                 k: np.mean(v) for k, v in self._evaluation_metrics.items()
             }

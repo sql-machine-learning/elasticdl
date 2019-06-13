@@ -57,7 +57,8 @@ class CheckpointTest(unittest.TestCase):
         )
 
         req = elasticdl_pb2.GetModelRequest()
-        req.min_version = 0
+        req.method = elasticdl_pb2.MINIMUM
+        req.version = 0
         model = master.GetModel(req, None)
 
         tmp_file = tempfile.NamedTemporaryFile()
@@ -72,7 +73,8 @@ class CheckpointTest(unittest.TestCase):
     def testInitCheckpoint(self):
         init_var = m.model.trainable_variables
         req = elasticdl_pb2.GetModelRequest()
-        req.min_version = 0
+        req.method = elasticdl_pb2.MINIMUM
+        req.version = 0
 
         master = MasterServicer(
             2,
@@ -105,7 +107,7 @@ class CheckpointTest(unittest.TestCase):
 
         self.assertEqual(model, model2)
 
-    def testCheckpintArguments(self):
+    def testCheckpointArguments(self):
         """
         Run Worker.distributed_train with a local master.
         grpc calls are mocked by local master call.
