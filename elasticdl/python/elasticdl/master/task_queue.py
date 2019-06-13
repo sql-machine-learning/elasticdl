@@ -3,24 +3,84 @@
 import logging
 import random
 import threading
+import time
 
+from threading import Thread
 from elasticdl.proto import elasticdl_pb2
-
-
-NUM_WARM_UP_TRAINING_TASKS = 2
 
 
 class _Task(object):
     """Internal representation of a task"""
 
-    def __init__(self, *, file_name, start, end, type):
+    def __init__(self, *, file_name, start, end, type, model_version=-1):
         self.file_name = file_name
         self.start = start
         self.end = end
         self.type = type
+        self.model_version = model_version
 
     def _info(self):
-        return self.file_name, self.start, self.end, self.type
+        return (
+            self.file_name,
+            self.start,
+            self.end,
+            self.type,
+            self.model_version,
+        )
+
+
+class _EvaluationJob(object):
+    """Internal representation of an evaluation job"""
+
+    def __init__(self, model_version, total_tasks=-1):
+        self._model_version = model_version
+        self._total_tasks = total_tasks
+        self._completed_tasks = 0
+        self._start_time = time.time()
+
+    def complete_task(self):
+        self._completed_tasks += 1
+
+    def finished(self):
+        return self._completed_tasks >= self._total_tasks
+
+    def ok_to_new_job(self, throttle_secs, latest_chkp_version):
+        return (
+            self.finished()
+            and latest_chkp_version > self._model_version
+            and (time.time() - self._start_time) >= throttle_secs
+        )
+
+
+class _EvaluationTrigger(Thread):
+    """A trigger which generates evaluation tasks periodically"""
+
+    def __init__(
+        self, master_servicer, task_q, stopped, start_delay_secs, throttle_secs
+    ):
+        Thread.__init__(self)
+        self._master_servicer = master_servicer
+        self._task_q = task_q
+        self._stopped = stopped
+        self._start_delay_secs = start_delay_secs
+        self._throttle_secs = throttle_secs
+        self._eval_job = None
+
+    def run(self):
+        time.sleep(self._start_delay_secs)
+        while not self._stopped(1):
+            latest_chkp_version = (
+                self._master_servicer.get_last_checkpoint_version()
+            )
+            if self._eval_job is None or self._eval_job.ok_to_new_job(
+                self._throttle_secs, latest_chkp_version
+            ):
+                self._eval_job = _EvaluationJob(latest_chkp_version)
+                tasks = self._task_q.create_evaluation_tasks(
+                    latest_chkp_version
+                )
+                self._eval_job._total_tasks = len(tasks)
+                self._task_q.set_eval_job(self._eval_job)
 
 
 class _TaskQueue(object):
@@ -45,38 +105,52 @@ class _TaskQueue(object):
         # dictionary from task id to Task.
         self._doing = {}
         self._task_id = 0
+        self._eval_job = None
 
-        self._create_tasks()
+        self.create_training_tasks()
 
-    def _create_tasks(self):
-        for name, num_records in self._training_shards.items():
+    def create_training_tasks(self):
+        # with self._lock:
+        self._logger.info(
+            "Creating a new set of training tasks with epoch=%d" % self._epoch
+        )
+        tasks = self._create_tasks(
+            self._training_shards, elasticdl_pb2.TRAINING
+        )
+        random.shuffle(tasks)
+        self._todo.extend(tasks)
+        return tasks
+
+    # 这地方不加锁的话 create_evaluation_tasks，就麻烦了。。。
+    def create_evaluation_tasks(self, eval_model_version):
+        # with self._lock:
+        self._logger.info(
+            "Creating a new set of evaluation tasks for model version %d"
+            % eval_model_version
+        )
+        tasks = self._create_tasks(
+            self._evaluation_shards,
+            elasticdl_pb2.EVALUATION,
+            eval_model_version,
+        )
+        with self._lock:
+            self._todo.extend(tasks)
+        return tasks
+
+    def _create_tasks(self, shards, task_type, model_version=-1):
+        tasks = []
+        for name, num_records in shards.items():
             for start in range(0, num_records, self._records_per_task):
-                self._todo.append(
+                tasks.append(
                     _Task(
                         file_name=name,
                         start=start,
                         end=min(start + self._records_per_task, num_records),
-                        type=elasticdl_pb2.TRAINING,
+                        type=task_type,
+                        model_version=model_version,
                     )
                 )
-        # TODO: Temporarily disable evaluation task
-        # generation until we find a better way
-        # for name, num_records in self._evaluation_shards.items():
-        #     for start in range(0, num_records, self._record_per_task):
-        #         self._todo.append(
-        #             _Task(
-        #                 file_name=name,
-        #                 start=start,
-        #                 end=min(start + self._record_per_task, num_records),
-        #                 type=elasticdl_pb2.EVALUATION,
-        #             )
-        #         )
-        # TODO: This is to ensure that we have some training tasks
-        # at the beginning so we have a partially trained model
-        # for evaluation tasks. See issue #555.
-        shuffled_partial_todo = self._todo[NUM_WARM_UP_TRAINING_TASKS:]
-        random.shuffle(shuffled_partial_todo)
-        self._todo[NUM_WARM_UP_TRAINING_TASKS:] = shuffled_partial_todo
+        return tasks
 
     def get(self, worker_id):
         """Return next (task_id, Task) tuple"""
@@ -84,7 +158,7 @@ class _TaskQueue(object):
         with self._lock:
             if not self._todo and self._epoch < self._num_epochs - 1:
                 # Start a new epoch
-                self._create_tasks()
+                self.create_training_tasks()
                 self._epoch += 1
                 self._logger.info("Starting epoch %d" % self._epoch)
 
@@ -103,12 +177,18 @@ class _TaskQueue(object):
         """Report if the task is successful or not"""
 
         with self._lock:
+            print("acquire lock in report")
             _, task = self._doing.pop(task_id, (-1, None))
             if not task:
                 self._logger.warning("Unknown task_id: %d" % task_id)
             elif not success:
                 # TODO: keep count of retries.
                 self._todo.append(task)
+            elif (
+                task.type == elasticdl_pb2.EVALUATION
+                and self._eval_job is not None
+            ):
+                self._eval_job.complete_task()
 
     def finished(self):
         """Return if all tasks are done"""
@@ -118,8 +198,15 @@ class _TaskQueue(object):
         """Recover doing tasks for a dead worker"""
 
         with self._lock:
+            print("acquire lock in recover")
             ids = [
                 id for id, (wid, _) in self._doing.items() if wid == worker_id
             ]
         for id in ids:
             self.report(id, False)
+
+    # TODO: need to re-check after refactoring servicer.py
+    def set_eval_job(self, eval_job):
+        with self._lock:
+            print("acquire lock in set_eval")
+            self._eval_job = eval_job

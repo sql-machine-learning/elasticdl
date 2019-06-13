@@ -8,9 +8,13 @@ import grpc
 
 from contextlib import closing
 from concurrent import futures
+from threading import Event
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
-from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
+from elasticdl.python.elasticdl.master.task_queue import (
+    _EvaluationTrigger,
+    _TaskQueue,
+)
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
 from elasticdl.python.elasticdl.common.model_helper import (
     load_user_model,
@@ -72,6 +76,19 @@ def _parse_args():
         "--evaluation_data_dir",
         help="Evaluation data directory. Files should be in RecordIO format",
         default="",
+    )
+    parser.add_argument(
+        "--evaluation_start_delay_secs",
+        type=_pos_int,
+        help="Start evaluation only after waiting for this many seconds",
+        default=100,
+    )
+    parser.add_argument(
+        "--evaluation_throttle_secs",
+        type=_pos_int,
+        help="Do not re-evaluate unless the last evaluation was started "
+        "at least this many seconds ago",
+        default=100,
     )
     parser.add_argument("--records_per_task", type=_pos_int, required=True)
     parser.add_argument("--num_epochs", type=_pos_int, required=True)
@@ -188,29 +205,43 @@ def main():
         args.records_per_task,
         args.num_epochs,
     )
+
     model_module = load_user_model(args.model_file)
     model_inst = model_module.model
     build_model(model_inst, model_module.feature_columns())
     optimizer = model_module.optimizer()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
-    elasticdl_pb2_grpc.add_MasterServicer_to_server(
-        MasterServicer(
-            args.grads_to_wait,
-            args.minibatch_size,
-            optimizer,
-            task_q,
-            init_var=model_inst.trainable_variables,
-            init_from_checkpoint=args.init_from_checkpoint,
-            checkpoint_dir=args.checkpoint_dir,
-            checkpoint_steps=args.checkpoint_steps,
-            keep_checkpoint_max=args.keep_checkpoint_max,
-        ),
-        server,
+    master_servicer = MasterServicer(
+        args.grads_to_wait,
+        args.minibatch_size,
+        optimizer,
+        task_q,
+        init_var=model_inst.trainable_variables,
+        init_from_checkpoint=args.init_from_checkpoint,
+        checkpoint_dir=args.checkpoint_dir,
+        checkpoint_steps=args.checkpoint_steps,
+        keep_checkpoint_max=args.keep_checkpoint_max,
     )
+    elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
     server.add_insecure_port("[::]:{}".format(PORT))
     server.start()
     logger.info("Server started at port: %d", PORT)
+
+    stop_flag = Event()
+    if args.evaluation_data_dir:
+        if args.checkpoint_steps <= 0:
+            raise ValueError(
+                "Checkpoint should be also enabled when evaluation is enabled"
+            )
+        evaluation_timer = _EvaluationTrigger(
+            master_servicer,
+            task_q,
+            stop_flag,
+            args.evaluation_start_delay_secs,
+            args.evaluation_throttle_secs,
+        )
+        evaluation_timer.start()
 
     if args.num_workers:
         assert args.worker_image, "Worker image cannot be empty"
@@ -253,9 +284,11 @@ def main():
     try:
         while True:
             if task_q.finished():
+                stop_flag.set()
                 break
             time.sleep(30)
     except KeyboardInterrupt:
+        stop_flag.set()
         logger.warning("Server stopping")
 
     server.stop(0)

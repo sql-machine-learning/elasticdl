@@ -14,18 +14,14 @@ def _is_numeric(n):
 
 def _valid_gpu_spec(gpu_str):
     if not gpu_str.isnumeric():
-        raise ValueError(
-            "invalid gpu request spec: " + gpu_str
-        )
+        raise ValueError("invalid gpu request spec: " + gpu_str)
     return gpu_str
 
 
 def _valid_cpu_spec(cpu_str):
     regexp = re.compile("([1-9]{1})([0-9]*)m$")
     if not regexp.match(cpu_str) and not _is_numeric(cpu_str):
-        raise ValueError(
-            "invalid cpu request spec: " + cpu_str
-        )
+        raise ValueError("invalid cpu request spec: " + cpu_str)
     return cpu_str
 
 
@@ -65,9 +61,8 @@ def parse_resource(resource_str):
             _valid_gpu_spec(v)
         else:
             raise ValueError(
-                "%s is not in the allowed list of resource types: %s" % (
-                    k, _ALLOWED_RESOURCE_TYPES
-                )
+                "%s is not in the allowed list of resource types: %s"
+                % (k, _ALLOWED_RESOURCE_TYPES)
             )
         parsed_res_dict[k] = v
     return parsed_res_dict

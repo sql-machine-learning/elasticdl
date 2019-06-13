@@ -9,14 +9,14 @@ class TaskQueueTest(unittest.TestCase):
         task_q = _TaskQueue({"f1": 10, "f2": 10}, {}, 3, 1)
 
         all_tasks = [
-            ("f1", 0, 3, elasticdl_pb2.TRAINING),
-            ("f1", 3, 6, elasticdl_pb2.TRAINING),
-            ("f1", 6, 9, elasticdl_pb2.TRAINING),
-            ("f1", 9, 10, elasticdl_pb2.TRAINING),
-            ("f2", 0, 3, elasticdl_pb2.TRAINING),
-            ("f2", 3, 6, elasticdl_pb2.TRAINING),
-            ("f2", 6, 9, elasticdl_pb2.TRAINING),
-            ("f2", 9, 10, elasticdl_pb2.TRAINING),
+            ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
+            ("f1", 3, 6, elasticdl_pb2.TRAINING, -1),
+            ("f1", 6, 9, elasticdl_pb2.TRAINING, -1),
+            ("f1", 9, 10, elasticdl_pb2.TRAINING, -1),
+            ("f2", 0, 3, elasticdl_pb2.TRAINING, -1),
+            ("f2", 3, 6, elasticdl_pb2.TRAINING, -1),
+            ("f2", 6, 9, elasticdl_pb2.TRAINING, -1),
+            ("f2", 9, 10, elasticdl_pb2.TRAINING, -1),
         ]
 
         # get all tasks out, each worker is assigned 2 tasks.
@@ -59,14 +59,14 @@ class TaskQueueTest(unittest.TestCase):
         task_q = _TaskQueue({"f1": 10, "f2": 10}, {}, 3, 2)
 
         epoch_tasks = [
-            ("f1", 0, 3, elasticdl_pb2.TRAINING),
-            ("f1", 3, 6, elasticdl_pb2.TRAINING),
-            ("f1", 6, 9, elasticdl_pb2.TRAINING),
-            ("f1", 9, 10, elasticdl_pb2.TRAINING),
-            ("f2", 0, 3, elasticdl_pb2.TRAINING),
-            ("f2", 3, 6, elasticdl_pb2.TRAINING),
-            ("f2", 6, 9, elasticdl_pb2.TRAINING),
-            ("f2", 9, 10, elasticdl_pb2.TRAINING),
+            ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
+            ("f1", 3, 6, elasticdl_pb2.TRAINING, -1),
+            ("f1", 6, 9, elasticdl_pb2.TRAINING, -1),
+            ("f1", 9, 10, elasticdl_pb2.TRAINING, -1),
+            ("f2", 0, 3, elasticdl_pb2.TRAINING, -1),
+            ("f2", 3, 6, elasticdl_pb2.TRAINING, -1),
+            ("f2", 6, 9, elasticdl_pb2.TRAINING, -1),
+            ("f2", 9, 10, elasticdl_pb2.TRAINING, -1),
         ]
 
         # get first epoch tasks
