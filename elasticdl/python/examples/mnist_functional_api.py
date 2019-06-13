@@ -25,7 +25,6 @@ def prepare_data_for_a_single_file(file_object, filename):
     label = int(filename.split('/')[-2])
     image = PIL.Image.open(file_object)
     numpy_image = np.array(image)
-    print(numpy_image, label)
     return numpy_image, label
 
 
@@ -53,11 +52,11 @@ def loss(output, labels):
     )
 
 
-def optimizer(lr=0.01):
-    return tf.train.GradientDescentOptimizer(lr)
+def optimizer(lr=0.1):
+    return tf.optimizers.SGD(lr)
 
 
-def input_fn(records):def input_fn(records):
+def input_fn(records):
     image_list = []
     label_list = []
     # deserialize
