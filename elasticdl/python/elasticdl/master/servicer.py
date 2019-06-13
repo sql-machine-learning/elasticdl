@@ -94,17 +94,17 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return res
 
     def GetModel(self, request, _):
-        if request.method == elasticdl_pb2.MINIMUM:
-            self._validate_model_version(request.version)
-        elif request.method == elasticdl_pb2.FIXED:
-            self._validate_model_version(request.version, False)
+        self._validate_model_version(request.version)
 
-        with self._lock:
-            if request.method == elasticdl_pb2.MINIMUM \
-                    or (request.method == elasticdl_pb2.FIXED and request.version == self._version):
+        if (
+            request.method == elasticdl_pb2.MINIMUM
+            or request.version == self._version
+        ):
+            with self._lock:
                 res = self._get_model_no_lock()
-                return res
-        # Read from checkpoint
+            return res
+
+        # Read from checkpoint for the fixed version model
         pb_model = elasticdl_pb2.Model()
         try:
             file_name = self._get_checkpoint_file_path(request.version)
@@ -159,9 +159,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             pb_model.param[k].CopyFrom(ndarray_to_tensor(v.numpy()))
         return pb_model
 
-    def _validate_model_version(
-        self, request_model_version, warning_outdated=True
-    ):
+    def _validate_model_version(self, request_model_version):
         if request_model_version > self._version:
             err_msg = (
                 "Model version %d not available yet, "
@@ -169,14 +167,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             )
             self._logger.warning(err_msg)
             raise ValueError(err_msg)
-        elif request_model_version < self._version and warning_outdated:
-            self._logger.warning(
-                "Task result for outdated version %d dropped",
-                request_model_version,
-            )
-            return False
-        else:
-            return True
+        return request_model_version == self._version
 
     def ReportGradient(self, request, _):
         model_version_valid = self._validate_model_version(
@@ -185,6 +176,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
         res = elasticdl_pb2.ReportGradientResponse()
         if not model_version_valid:
+            self._logger.warning(
+                "Task result for outdated version %d dropped",
+                request.model_version,
+            )
             res.accepted = False
             res.model_version = self._version
             return res
@@ -241,7 +236,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def ReportEvaluationMetrics(self, request, _):
         model_version_valid = self._validate_model_version(
-            request.model_version, False
+            request.model_version
         )
 
         res = elasticdl_pb2.ReportEvaluationMetricsResponse()

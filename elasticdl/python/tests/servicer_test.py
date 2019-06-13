@@ -1,6 +1,8 @@
 import random
 import unittest
 import numpy as np
+import os
+import tempfile
 
 from collections import defaultdict
 
@@ -75,11 +77,14 @@ class ServicerTest(unittest.TestCase):
             checkpoint_steps=0,
             keep_checkpoint_max=0,
         )
-        req = elasticdl_pb2.GetModelRequest()
-        req.min_version = 0
-
-        # Get version 0
         master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
+        # Now master model is version 0
+        self.assertEqual(0, master._version)
+
+        # Get version 0 with minimum method
+        req = elasticdl_pb2.GetModelRequest()
+        req.version = 0
+        req.method = elasticdl_pb2.MINIMUM
         model = master.GetModel(req, None)
         self.assertEqual(0, model.version)
         self.assertEqual(["x"], list(model.param.keys()))
@@ -87,7 +92,8 @@ class ServicerTest(unittest.TestCase):
             np.array([1.0, 1.0]), tensor_to_ndarray(model.param["x"])
         )
 
-        # increase master's model version, now should get version 1
+        # Increase master model version to 1, but still request
+        # version 0 with minimum method, we should get version 1
         master._version = 1
         master.set_model_var("x", np.array([2.0, 2.0], dtype=np.float32))
         master.set_model_var("y", np.array([12.0, 13.0], dtype=np.float32))
@@ -101,43 +107,46 @@ class ServicerTest(unittest.TestCase):
             np.array([12.0, 13.0]), tensor_to_ndarray(model.param["y"])
         )
 
-        # try to get version 2, it should raise exception.
-        req.min_version = 2
+        # Try to get version 2, it should raise exception.
+        req.version = 2
         self.assertRaises(ValueError, master.GetModel, req, None)
 
-    def testGetFixVersionModel(self):
-        master = MasterServicer(
-            2,
-            3,
-            None,
-            None,
-            init_var=[],
-            init_from_checkpoint="",
-            checkpoint_dir="",
-            checkpoint_steps=0,
-            keep_checkpoint_max=0,
-        )
-        master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
-        # Now master model is version 0
-        self.assertEqual(0, master._version)
-
-        # But we try to get version 1, and we should get an ValueError
-        req = elasticdl_pb2.GetFixVersionModelRequest()
+        # Get fixed version 1
+        req.method = elasticdl_pb2.FIXED
         req.version = 1
-        self.assertRaisesRegex(
-            ValueError,
-            "Model version %s not available yet, current version: %s"
-            % (req.version, master._version),
-            master.GetFixVersionModel,
-            req,
-            None,
+        model = master.GetModel(req, None)
+        self.assertEqual(1, model.version)
+        self.assertEqual(["x", "y"], list(sorted(model.param.keys())))
+        np.testing.assert_array_equal(
+            np.array([2.0, 2.0]), tensor_to_ndarray(model.param["x"])
+        )
+        np.testing.assert_array_equal(
+            np.array([12.0, 13.0]), tensor_to_ndarray(model.param["y"])
         )
 
-        # Previous model unavailable
-        master._version = 2
-        model = master.GetFixVersionModel(req, None)
+        # Previous model unavailable due to no checkpoint
+        req.version = 0
+        model = master.GetModel(req, None)
         self.assertFalse(model.param)
-        # TODO(weiyan): more tests after we add checkpoint-related UTs
+
+        # Previous model available through checkpoint
+        with tempfile.TemporaryDirectory() as tempdir:
+            chk_dir = os.path.join(tempdir, "testGetModel")
+            os.makedirs(chk_dir)
+            master._checkpoint_dir = chk_dir
+            master.save_checkpoint()
+            master._version = 2
+            master.set_model_var("z", np.array([2.0, 2.0], dtype=np.float32))
+            req.version = 1
+            model = master.GetModel(req, None)
+            self.assertEqual(1, model.version)
+            self.assertEqual(["x", "y"], list(sorted(model.param.keys())))
+            np.testing.assert_array_equal(
+                np.array([2.0, 2.0]), tensor_to_ndarray(model.param["x"])
+            )
+            np.testing.assert_array_equal(
+                np.array([12.0, 13.0]), tensor_to_ndarray(model.param["y"])
+            )
 
     def testReportGradient(self):
         def makeGrad():
@@ -335,7 +344,8 @@ class ServicerTest(unittest.TestCase):
             keep_checkpoint_max=0,
         )
         req = elasticdl_pb2.GetModelRequest()
-        req.min_version = 0
+        req.method = elasticdl_pb2.MINIMUM
+        req.version = 0
 
         model_inst = SimpleModel()
         model_inst.build(SimpleModel.input_shapes())
