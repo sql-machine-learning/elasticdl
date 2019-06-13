@@ -16,11 +16,11 @@ If your data amount is small and it locates in your local disk, the following se
 If your data amount is large but can fit in your local disk, and you want to process your data in parallel, the following section is the approach you want to use. You can [set up your own Spark environment locally](https://www.tutorialkart.com/apache-spark/how-to-install-spark-on-mac-os/). But we recommend to run the PySpark job in the Docker container. Here are the steps to run our sample PySpark job, which processes the MNIST data, in the Docker container:
 0. Download MNIST sampled training data in `jpg` format [here](https://www.kaggle.com/scolianni/mnistasjpg/downloads/trainingSample.zip/1), and unzip it to your training data directory, and make the `tar` file:
 ```bash
-DATA_DIR=~/Desktop/mnist_sampled_training_data
+DATA=mnist_sampled_training_data
 TRAINING_DATA_DIR=~/Desktop
-TAR_FILE=mnist_sampled_training_data.tar
+TAR_FILE=$DATA.tar
 
-tar -cvf $TRAINING_DATA_DIR/$TAR_FILE $DATA_DIR
+tar -cvf $TRAINING_DATA_DIR/$TAR_FILE $TRAINING_DATA_DIR/$DATA
 ```
 
 1. Build Docker image:
