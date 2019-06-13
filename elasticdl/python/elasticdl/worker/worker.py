@@ -166,6 +166,7 @@ class Worker(object):
         return self.report_evaluation_metrics(evaluation_metrics)
 
     def _handle_task(self, task):
+        min_model_version = task.model_version
         with closing(
             recordio.Scanner(
                 task.shard_file_name, task.start, task.end - task.start
@@ -177,10 +178,11 @@ class Worker(object):
                 )
                 if not record_buf:
                     break
-                self._process_minibatch(task, record_buf)
+                min_model_version = self._process_minibatch(
+                    task, record_buf, min_model_version
+                )
 
-    def _process_minibatch(self, task, record_buf):
-        min_model_version = task.model_version
+    def _process_minibatch(self, task, record_buf, min_model_version):
         for _ in range(self._max_minibatch_retry_num):
             # TODO: optimize the logic to avoid unnecessary
             #       get_model call.
@@ -206,6 +208,7 @@ class Worker(object):
             # TODO: stop the worker if it fails to make any
             #       progress for some time.
             raise RuntimeError("Worker got stuck")
+        return min_model_version
 
     def run(self):
         """
