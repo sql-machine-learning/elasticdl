@@ -32,6 +32,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         minibatch_size,
         optimizer,
         task_q,
+        *,
         init_var,
         init_from_checkpoint,
         checkpoint_dir,
