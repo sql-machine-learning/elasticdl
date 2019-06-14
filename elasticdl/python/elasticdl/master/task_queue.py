@@ -110,7 +110,6 @@ class _TaskQueue(object):
         self.create_training_tasks()
 
     def create_training_tasks(self):
-        # with self._lock:
         self._logger.info(
             "Creating a new set of training tasks with epoch=%d" % self._epoch
         )
@@ -122,7 +121,6 @@ class _TaskQueue(object):
         return tasks
 
     def create_evaluation_tasks(self, eval_model_version):
-        # with self._lock:
         self._logger.info(
             "Creating a new set of evaluation tasks for model version %d"
             % eval_model_version
@@ -178,7 +176,6 @@ class _TaskQueue(object):
         """Report if the task is successful or not"""
 
         with self._lock:
-            print("acquire lock in report")
             _, task = self._doing.pop(task_id, (-1, None))
             if not task:
                 self._logger.warning("Unknown task_id: %d" % task_id)
@@ -199,7 +196,6 @@ class _TaskQueue(object):
         """Recover doing tasks for a dead worker"""
 
         with self._lock:
-            print("acquire lock in recover")
             ids = [
                 id for id, (wid, _) in self._doing.items() if wid == worker_id
             ]
@@ -209,5 +205,4 @@ class _TaskQueue(object):
     # TODO: need to re-check after refactoring servicer.py
     def set_eval_job(self, eval_job):
         with self._lock:
-            print("acquire lock in set_eval")
             self._eval_job = eval_job
