@@ -142,7 +142,7 @@ def label_columns():
 
 def loss(output, labels):
     return tf.reduce_mean(
-        tf.nn.sparse_softmax_cross_entropy_with_logits(
+        input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=output, labels=labels.flatten()
         )
     )
@@ -174,16 +174,19 @@ def input_fn(records):
     batch_size = len(image_list)
     images = np.concatenate(image_list, axis=0)
     images = np.reshape(images, (batch_size, 32, 32, 3))
-    images = tf.convert_to_tensor(images)
+    images = tf.convert_to_tensor(value=images)
     labels = np.array(label_list)
     return ({"image": images}, labels)
 
 
 def eval_metrics_fn(predictions, labels):
     return {
-        "metric": tf.reduce_mean(
-            tf.nn.sparse_softmax_cross_entropy_with_logits(
-                logits=predictions, labels=labels.flatten()
+        "accuracy": tf.reduce_mean(
+            input_tensor=tf.cast(
+                tf.equal(
+                    tf.argmax(input=predictions, axis=1), labels.flatten()
+                ),
+                tf.float32,
             )
         )
     }
