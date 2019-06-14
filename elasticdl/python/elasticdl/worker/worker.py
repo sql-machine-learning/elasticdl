@@ -79,12 +79,13 @@ class Worker(object):
 
         return self._stub.GetTask(req)
 
-    def get_model(self, min_version):
+    def get_model(self, version, method):
         """
         get model from master, and update model_version
         """
         req = elasticdl_pb2.GetModelRequest()
-        req.min_version = min_version
+        req.version = version
+        req.method = method
         model = self._stub.GetModel(req)
 
         for var in self._model.trainable_variables:
@@ -166,6 +167,7 @@ class Worker(object):
         return self.report_evaluation_metrics(evaluation_metrics)
 
     def _handle_task(self, task):
+        min_model_version = task.model_version
         with closing(
             recordio.Scanner(
                 task.shard_file_name, task.start, task.end - task.start
@@ -177,23 +179,28 @@ class Worker(object):
                 )
                 if not record_buf:
                     break
-                self._process_minibatch(task, record_buf)
+                min_model_version = self._process_minibatch(
+                    task, record_buf, min_model_version
+                )
 
-    def _process_minibatch(self, task, record_buf):
-        min_model_version = task.model_version
+    def _process_minibatch(self, task, record_buf, min_model_version):
+        features, labels = self._get_features_and_labels(record_buf)
         for _ in range(self._max_minibatch_retry_num):
-            # TODO: optimize the logic to avoid unnecessary
-            #       get_model call.
-            self.get_model(max(self._model_version, min_model_version))
-            features, labels = self._get_features_and_labels(record_buf)
             if task.type == elasticdl_pb2.EVALUATION:
-                accepted, min_model_version = self._run_evaluation_task(
+                self.get_model(min_model_version, elasticdl_pb2.FIXED)
+                accepted, model_version = self._run_evaluation_task(
                     features, labels
                 )
                 if accepted:
                     break
             elif task.type == elasticdl_pb2.TRAINING:
-                accepted, min_model_version, loss = self._run_training_task(
+                # TODO: optimize the logic to avoid unnecessary
+                #       get_model call.
+                self.get_model(
+                    max(self._model_version, min_model_version),
+                    elasticdl_pb2.MINIMUM,
+                )
+                accepted, model_version, loss = self._run_training_task(
                     features, labels
                 )
                 if accepted:
@@ -206,6 +213,7 @@ class Worker(object):
             # TODO: stop the worker if it fails to make any
             #       progress for some time.
             raise RuntimeError("Worker got stuck")
+        return min_model_version
 
     def run(self):
         """
