@@ -1,6 +1,6 @@
 import argparse
 import os
-
+import tarfile
 from pyspark import SparkContext
 from pyspark import TaskContext
 
@@ -14,19 +14,35 @@ from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import (
 def process_data(
     feature_label_columns,
     single_file_preparation_func,
+    training_data_tar_file,
     output_dir,
     records_per_file,
     codec_type,
 ):
-    def _process_data(file_list):
-        ctx = TaskContext()
+    def _process_data(filename_list):
+        filename_set = set()
+        for filename in filename_list:
+            filename_set.add(filename)
+
+        tar = tarfile.open(training_data_tar_file)
+        tar_info_list = tar.getmembers()
+        filename_to_object = {}
+        for tar_info in tar_info_list:
+            if tar_info.name in filename_set:
+                f = tar.extractfile(tar_info)
+                assert f is not None
+                filename_to_object[tar_info.name] = f
+
         feature_list = []
         label_list = []
-        for file in file_list:
-            feature_label_tuple = single_file_preparation_func(file)
+        for filename in filename_set:
+            feature_label_tuple = single_file_preparation_func(
+                filename_to_object[filename], filename
+            )
             assert len(feature_label_tuple) == 2
             feature_list.append(feature_label_tuple[0])
             label_list.append(feature_label_tuple[1])
+        ctx = TaskContext()
         convert_numpy_to_recordio(
             output_dir,
             np.array(feature_list),
@@ -36,7 +52,7 @@ def process_data(
             codec_type,
             str(ctx.partitionId()),
         )
-        return file_list
+        return filename_list
 
     return _process_data
 
@@ -46,9 +62,8 @@ def main():
         description="Spark job to convert training data to RecordIO format"
     )
     parser.add_argument(
-        "--training_data_dir",
-        help="Directory that contains training data and will be traversed \
-            recursively",
+        "--training_data_tar_file",
+        help="Tar file that contains all training data",
         required=True,
     )
     parser.add_argument(
@@ -77,12 +92,14 @@ def main():
 
     args = parser.parse_args()
 
-    # Get training data files recursively from training_data_dir
-    file_list = []
-    for dir_name, subdir_list, files in os.walk(args.training_data_dir):
-        for fname in files:
-            if not fname.startswith("."):
-                file_list.append(os.path.join(dir_name, fname))
+    # Get training data file names from training_data_tar_file
+    tar = tarfile.open(args.training_data_tar_file)
+    tar_info_list = tar.getmembers()
+    filename_list = []
+    for tar_info in tar_info_list:
+        f = tar.extractfile(tar_info)
+        if f is not None and not tar_info.name.split("/")[-1].startswith("."):
+            filename_list.append(tar_info.name)
 
     # Load user-defined model
     model_module = load_user_model(args.model_file)
@@ -92,11 +109,12 @@ def main():
 
     # Start the Spark job
     sc = SparkContext()
-    rdd = sc.parallelize(file_list, args.num_workers)
+    rdd = sc.parallelize(filename_list, args.num_workers)
     rdd.mapPartitions(
         process_data(
             model_module.feature_columns() + model_module.label_columns(),
             model_module.prepare_data_for_a_single_file,
+            args.training_data_tar_file,
             args.output_dir,
             args.records_per_file,
             args.codec_type,

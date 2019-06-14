@@ -24,7 +24,8 @@ def convert_numpy_to_recordio(
     """
     Convert data in numpy format to RecordIO format
     """
-    assert len(data) == len(label) and len(data) > 0
+    assert len(data) > 0
+    assert len(data) == len(label)
 
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
