@@ -37,10 +37,10 @@ python elasticdl/python/elasticdl/client/client.py train \
     --training_data_dir=/data/mnist/train \
     --evaluation_data_dir=/data/mnist/test \
     --num_epochs=1 \
-    --master_resource_request="cpu=1000m,memory=512Mi" \
-    --master_resource_limit="cpu=1000m,memory=512Mi" \
-    --worker_resource_request="cpu=1000m,memory=1024Mi" \
-    --worker_resource_limit="cpu=1000m,memory=1024Mi" \
+    --master_resource_request="cpu=1,memory=512Mi" \
+    --master_resource_limit="cpu=1,memory=512Mi" \
+    --worker_resource_request="cpu=1,memory=1024Mi" \
+    --worker_resource_limit="cpu=1,memory=1024Mi" \
     --minibatch_size=10 \
     --records_per_task=100 \
     --num_workers=1 \
@@ -65,10 +65,10 @@ python elasticdl/python/elasticdl/client/client.py train \
     --num_workers=1 \
     --master_pod_priority=highest-priority \
     --worker_pod_priority=high-priority \
-    --master_resource_request="cpu=1000m,memory=2048Mi" \
-    --master_resource_limit="cpu=1000m,memory=2048Mi" \
-    --worker_resource_request="cpu=2000m,memory=4096Mi" \
-    --worker_resource_limit="cpu=2000m,memory=4096Mi" \
+    --master_resource_request="cpu=1,memory=2048Mi" \
+    --master_resource_limit="cpu=1,memory=2048Mi" \
+    --worker_resource_request="cpu=2,memory=4096Mi" \
+    --worker_resource_limit="cpu=2,memory=4096Mi" \
     --grads_to_wait=2 \
     --codec_type=tf_example \
     --mount_path=/data \

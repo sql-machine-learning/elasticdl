@@ -177,10 +177,10 @@ python elasticdl/python/elasticdl/client/client.py train \
     --minibatch_size=10 \
     --records_per_task=100 \
     --num_workers=2 \
-    --master_resource_request="cpu=1000m,memory=1024Mi" \
-    --master_resource_limit="cpu=1000m,memory=1024Mi" \
-    --worker_resource_request="cpu=3000m,memory=4096Mi" \
-    --worker_resource_limit="cpu=3000m,memory=4096Mi" \
+    --master_resource_request="cpu=1,memory=1024Mi" \
+    --master_resource_limit="cpu=1,memory=1024Mi" \
+    --worker_resource_request="cpu=3,memory=4096Mi" \
+    --worker_resource_limit="cpu=3,memory=4096Mi" \
     --grads_to_wait=2 \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
@@ -210,10 +210,10 @@ python elasticdl/python/elasticdl/client/client.py train \
     --minibatch_size=10 \
     --records_per_task=100 \
     --num_workers=1 \
-    --master_resource_request="cpu=1000m,memory=1024Mi" \
-    --master_resource_limit="cpu=1000m,memory=1024Mi" \
-    --worker_resource_request="cpu=3000m,memory=4096Mi" \
-    --worker_resource_limit="cpu=3000m,memory=4096Mi" \
+    --master_resource_request="cpu=1,memory=1024Mi" \
+    --master_resource_limit="cpu=1,memory=1024Mi" \
+    --worker_resource_request="cpu=3,memory=4096Mi" \
+    --worker_resource_limit="cpu=3,memory=4096Mi" \
     --grads_to_wait=2 \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
