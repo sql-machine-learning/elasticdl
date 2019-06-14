@@ -37,5 +37,5 @@ FROM build_${BUILD_ENV}
 ENV PYTHONPATH=/
 WORKDIR /
 COPY elasticdl /elasticdl
-COPY Makefile /Makefile
+COPY elasticdl/Makefile /Makefile
 RUN make
