@@ -12,6 +12,8 @@
 
     3. model building: The shape of the model input ([here](https://github.com/wangkuiyi/elasticdl/blob/f83834067fbc610fa7a7261a758c9d13aff09a0c/elasticdl/python/elasticdl/common/model_helper.py#L20)). Please note that the `model input` here doesn't necessarily mean the data in RecordIO -- we may need to do some transformation for the data in RecordIO (e.g: normalize the size of the images in RecordIO) before we feed them into the data.
 
+	So there are three groups of objects mentioned here: A.`Feature Column(e.g, numeric_column/bucketized_column/...)`, B.`BytesList, FloatList and Int64List` and C.`tf.FixedLenFeature/tf.VarLenFeature`. Except we can map from group A to group B with [make_parse_example_spec()](https://www.tensorflow.org/api_docs/python/tf/feature_column/make_parse_example_spec), there's not mapping between each other. While in our current system, we map them in some hacky ways(e.g, we map A to B [here](elasticdl/python/data/recordio_gen/convert_numpy_to_recordio.py), which won't work at all if `Feature Column` is not `numeric_column`). So I'd like to propose a way to decouple all of them.
+
 ### New Design:
 In the new design, I propose:
 1. Remove the `byte_codec` and only keep `tfexample_codec`
@@ -58,8 +60,3 @@ In the new design, I propose:
         # User must implement the logic here
     ```
     `example_to_tensor(example_proto)` and `tensor_to_model_input(tensor)` can be wrapped in [input_fn(records)](https://github.com/wangkuiyi/elasticdl/blob/376a228b011e360d5d19e576a07ec93196599728/elasticdl/python/examples/mnist_functional_api.py#L59).
-
-
-
-
-
