@@ -8,8 +8,6 @@ from kubernetes.client import (
     V1PersistentVolumeClaimVolumeSource as pvcVolumeSource,
 )
 
-WORKER_POD_NAME_PREFIX = "elasticdl-worker-"
-
 
 class Client(object):
     def __init__(self, *, worker_image, namespace, job_name, event_callback):
@@ -54,8 +52,11 @@ class Client(object):
             except Exception:
                 traceback.print_exc()
 
+    def get_master_pod_name(self):
+        return "elasticdl-%s-master" % self._job_name
+
     def get_worker_pod_name(self, worker_id):
-        return WORKER_POD_NAME_PREFIX + self._job_name + "-" + str(worker_id)
+        return "elasticdl-%s-worker-%s" % (self._job_name, str(worker_id))
 
     def _create_worker_pod(
         self,
@@ -112,8 +113,21 @@ class Client(object):
         master_pod = [
             pod
             for pod in pods
-            if (pod.metadata.name == "elasticdl-master-" + self._job_name)
-        ][0]
+            if (pod.metadata.name == self.get_master_pod_name())
+        ]
+        owner_ref = (
+            [
+                client.V1OwnerReference(
+                    api_version="v1",
+                    block_owner_deletion=True,
+                    kind="Pod",
+                    name=master_pod[0].metadata.name,
+                    uid=master_pod[0].metadata.uid,
+                )
+            ]
+            if len(master_pod) != 0
+            else None
+        )
 
         pod = client.V1Pod(
             spec=spec,
@@ -125,15 +139,7 @@ class Client(object):
                 },
                 # TODO: Add tests for this once we've done refactoring on
                 # k8s client code and the constant strings
-                owner_references=[
-                    client.V1OwnerReference(
-                        api_version="v1",
-                        block_owner_deletion=True,
-                        kind="Pod",
-                        name=master_pod.metadata.name,
-                        uid=master_pod.metadata.uid,
-                    )
-                ],
+                owner_references=owner_ref,
             ),
         )
         return pod

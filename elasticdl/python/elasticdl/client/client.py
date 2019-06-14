@@ -163,13 +163,13 @@ def _gen_master_def(image_name, model_file, job_name, args, argv):
 apiVersion: v1
 kind: Pod
 metadata:
-  name: "elasticdl-master-{job_name}"
+  name: "elasticdl-{job_name}-master"
   labels:
     app: elasticdl
     elasticdl_job_name: {job_name}
 spec:
   containers:
-  - name: "elasticdl-master-{job_name}"
+  - name: "elasticdl-{job_name}-master"
     image: "{image_name}"
     command: ["python"]
     args: [

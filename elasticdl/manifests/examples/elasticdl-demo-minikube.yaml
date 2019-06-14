@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: elasticdl-master-test-mnist
+  name: elasticdl-test-mnist-master
   labels:
     app: elasticdl
     elasticdl_job_name: test-mnist
