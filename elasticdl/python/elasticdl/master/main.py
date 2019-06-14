@@ -115,24 +115,18 @@ def _parse_args():
         default=3,
     )
     parser.add_argument(
-        "--worker_cpu_request",
-        help="The minimal CPU required by each worker",
-        default="1000m",
+        "--worker_resource_request",
+        default="cpu=1000m,memory=4096Mi",
+        type=str,
+        help="The minimal resource required by worker, "
+             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1,ephemeral-storage=32Mi",
     )
     parser.add_argument(
-        "--worker_cpu_limit",
-        help="The maximal CPU used by each worker",
-        default="1000m",
-    )
-    parser.add_argument(
-        "--worker_memory_request",
-        help="The minimal memory required by each worker",
-        default="4096Mi",
-    )
-    parser.add_argument(
-        "--worker_memory_limit",
-        help="The maximal memory used by each worker",
-        default="4096Mi",
+        "--worker_resource_limit",
+        default="cpu=1000m,memory=4096Mi",
+        type=str,
+        help="The maximal resource required by worker, "
+             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1,ephemeral-storage=32Mi",
     )
     parser.add_argument(
         "--worker_pod_priority", help="Priority requested by workers"
@@ -238,10 +232,8 @@ def main():
             args=worker_args,
             namespace="default",
             num_workers=args.num_workers,
-            cpu_request=args.worker_cpu_request,
-            cpu_limit=args.worker_cpu_limit,
-            memory_request=args.worker_memory_request,
-            memory_limit=args.worker_memory_limit,
+            worker_resource_request=args.worker_resource_request,
+            worker_resource_limit=args.worker_resource_limit,
             pod_priority=args.worker_pod_priority,
             mount_path=args.mount_path,
             volume_name=args.volume_name,
