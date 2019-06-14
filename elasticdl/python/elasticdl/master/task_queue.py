@@ -32,6 +32,8 @@ class _Task(object):
 class _EvaluationJob(object):
     """Internal representation of an evaluation job"""
 
+    # TODO(weiyan): rethink whether we should keep track of list<taskID> here,
+    #               to be more reliable
     def __init__(self, model_version, total_tasks=-1):
         self._model_version = model_version
         self._total_tasks = total_tasks
@@ -44,11 +46,11 @@ class _EvaluationJob(object):
     def finished(self):
         return self._completed_tasks >= self._total_tasks
 
-    def ok_to_new_job(self, throttle_secs, latest_chkp_version):
+    def ok_to_new_job(self, time_now_secs, throttle_secs, latest_chkp_version):
         return (
             self.finished()
             and latest_chkp_version > self._model_version
-            and (time.time() - self._start_time) >= throttle_secs
+            and (time_now_secs - self._start_time) >= throttle_secs
         )
 
 
@@ -73,7 +75,7 @@ class _EvaluationTrigger(Thread):
                 self._master_servicer.get_last_checkpoint_version()
             )
             if self._eval_job is None or self._eval_job.ok_to_new_job(
-                self._throttle_secs, latest_chkp_version
+                time.time(), self._throttle_secs, latest_chkp_version
             ):
                 self._eval_job = _EvaluationJob(latest_chkp_version)
                 tasks = self._task_q.create_evaluation_tasks(

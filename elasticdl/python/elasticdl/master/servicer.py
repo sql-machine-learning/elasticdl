@@ -153,7 +153,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def get_last_checkpoint_version(self):
         if not self._checkpoint_list:
-            raise RuntimeError("No checkpoint model available")
+            raise RuntimeError("No model checkpoint available")
         last_checkpoint_file = self._checkpoint_list[-1]
         return self._get_version_from_checkpoint_file(last_checkpoint_file)
 
