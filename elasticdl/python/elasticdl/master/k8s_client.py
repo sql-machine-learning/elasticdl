@@ -56,7 +56,7 @@ class Client(object):
         return "elasticdl-%s-master" % self._job_name
 
     def get_worker_pod_name(self, worker_id):
-        return "elasticdl-%s-worker-%d" % (self._job_name, worker_id)
+        return "elasticdl-%s-worker-%s" % (self._job_name, str(worker_id))
 
     def _create_worker_pod(
         self,
@@ -114,7 +114,20 @@ class Client(object):
             pod
             for pod in pods
             if (pod.metadata.name == self.get_master_pod_name())
-        ][0]
+        ]
+        owner_ref = (
+            [
+                client.V1OwnerReference(
+                    api_version="v1",
+                    block_owner_deletion=True,
+                    kind="Pod",
+                    name=master_pod[0].metadata.name,
+                    uid=master_pod[0].metadata.uid,
+                )
+            ]
+            if len(master_pod) != 0
+            else None
+        )
 
         pod = client.V1Pod(
             spec=spec,
@@ -126,15 +139,7 @@ class Client(object):
                 },
                 # TODO: Add tests for this once we've done refactoring on
                 # k8s client code and the constant strings
-                owner_references=[
-                    client.V1OwnerReference(
-                        api_version="v1",
-                        block_owner_deletion=True,
-                        kind="Pod",
-                        name=master_pod.metadata.name,
-                        uid=master_pod.metadata.uid,
-                    )
-                ],
+                owner_references=owner_ref,
             ),
         )
         return pod
