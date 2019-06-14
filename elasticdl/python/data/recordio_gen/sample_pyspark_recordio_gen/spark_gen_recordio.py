@@ -37,8 +37,7 @@ def process_data(
         label_list = []
         for filename in filename_set:
             feature_label_tuple = single_file_preparation_func(
-                filename_to_object[filename],
-                filename,
+                filename_to_object[filename], filename
             )
             assert len(feature_label_tuple) == 2
             feature_list.append(feature_label_tuple[0])
@@ -54,6 +53,7 @@ def process_data(
             str(ctx.partitionId()),
         )
         return filename_list
+
     return _process_data
 
 
@@ -98,7 +98,7 @@ def main():
     filename_list = []
     for tar_info in tar_info_list:
         f = tar.extractfile(tar_info)
-        if f is not None and not tar_info.name.split('/')[-1].startswith('.'):
+        if f is not None and not tar_info.name.split("/")[-1].startswith("."):
             filename_list.append(tar_info.name)
 
     # Load user-defined model
