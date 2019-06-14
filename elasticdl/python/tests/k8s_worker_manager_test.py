@@ -110,7 +110,7 @@ class WorkerManagerTest(unittest.TestCase):
             time.sleep(1)
             counters = worker_manager.get_counters()
             print(counters)
-            if counters["Runing"] + counters["Pending"] > 0:
+            if counters["Running"] + counters["Pending"] > 0:
                 break
         # Note: There is a slight chance of race condition.
         # Hack to find a worker to remove
