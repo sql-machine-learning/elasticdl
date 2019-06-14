@@ -157,9 +157,6 @@ RUN pip install docker --extra-index-url={EXTRA_PYPI_INDEX}
 # Install RecordIO
 RUN pip install 'pyrecordio>=0.0.6' --extra-index-url={EXTRA_PYPI_INDEX}
 
-# Install Pillow for sample data processing Spark job
-RUN pip install Pillow --extra-index-url={EXTRA_PYPI_INDEX}
-
 ENV PYTHONPATH=/
 WORKDIR /
 COPY elasticdl /elasticdl
