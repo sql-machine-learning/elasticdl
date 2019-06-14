@@ -23,4 +23,4 @@ jobs:
     - stage: unittest
       name: "Unit Tests"
       script:
-        - docker run --rm -it -v $(pwd):/v -w /v elasticdl:dev bash -c "make && K8S_TESTS=False pytest elasticdl/python/tests"
+        - docker run --rm -it -v $(pwd):/v -w / elasticdl:dev bash -c "make && K8S_TESTS=False pytest elasticdl/python/tests"
