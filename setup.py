@@ -4,8 +4,8 @@ from setuptools import setup, find_packages
 setup(
     name="ElasticDL",
     version='0.0.1',
-    description="A Kubernetes Naitve Elastic Deep Learning Training Framework",
-    author="Ant",
+    description="A Kubernetes-naitve Elastic Deep Learning Framework",
+    author="Ant Financial",
     url="https://github.com/wangkuiyi/elasticdl",
     packages=find_packages(exclude=['*test*']),
     package_data={'': ['proto/elasticdl.proto', 'docker/*', 'Makefile']},
