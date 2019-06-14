@@ -2,7 +2,6 @@ import argparse
 import os
 import tempfile
 import sys
-import re
 
 import docker
 import yaml
@@ -11,6 +10,8 @@ from string import Template
 
 from kubernetes.client.apis import core_v1_api
 from kubernetes import config
+
+from elasticdl.python.elasticdl.common.k8s_utils import parse_resource
 
 
 def main():
@@ -52,52 +53,32 @@ def _add_train_params(parser):
     )
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
-        "--master_cpu_request",
-        default="100m",
-        type=_valid_cpu_spec,
-        help="The minimal CPU required by master in training",
+        "--master_resource_request",
+        default="cpu=0.1,memory=1024Mi",
+        type=str,
+        help="The minimal resource required by master, "
+             "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
-        "--master_cpu_limit",
-        default="100m",
-        type=_valid_cpu_spec,
-        help="The maximal CPU used by master in training",
+        "--master_resource_limit",
+        default="cpu=0.1,memory=1024Mi",
+        type=str,
+        help="The maximal resource required by master, "
+             "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
-        "--master_memory_request",
-        default="1024Mi",
-        type=_valid_mem_spec,
-        help="The minimal memory required by master in training",
+        "--worker_resource_request",
+        default="cpu=1,memory=4096Mi",
+        type=str,
+        help="The minimal resource required by worker, "
+             "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
-        "--master_memory_limit",
-        default="1024Mi",
-        type=_valid_mem_spec,
-        help="The maximal memory used by master in training",
-    )
-    parser.add_argument(
-        "--worker_cpu_request",
-        default="1000m",
-        type=_valid_cpu_spec,
-        help="The minimal cpu required by worker",
-    )
-    parser.add_argument(
-        "--worker_cpu_limit",
-        default="1000m",
-        type=_valid_cpu_spec,
-        help="The maximal cpu used by worker",
-    )
-    parser.add_argument(
-        "--worker_memory_request",
-        default="4096Mi",
-        type=_valid_mem_spec,
-        help="The minimal memory required by worker",
-    )
-    parser.add_argument(
-        "--worker_memory_limit",
-        default="4096Mi",
-        type=_valid_mem_spec,
-        help="The maximal memory used by worker",
+        "--worker_resource_limit",
+        default="cpu=1,memory=4096Mi",
+        type=str,
+        help="The maximal resource required by worker, "
+             "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--master_pod_priority", help="The requested priority of master pod"
@@ -203,17 +184,20 @@ COPY {SOURCE_MODEL_FILE} {TARGET_MODEL_FILE}
 
 
 def _gen_master_def(image_name, model_file, job_name, args, argv):
+    master_resource_request = parse_resource(args.master_resource_request)
+    master_resource_limit = parse_resource(args.master_resource_limit)
+
     master_yaml = """
 apiVersion: v1
 kind: Pod
 metadata:
-  name: "elasticdl-master-{job_name}"
+  name: "elasticdl-{job_name}-master"
   labels:
     app: elasticdl
     elasticdl_job_name: {job_name}
 spec:
   containers:
-  - name: "elasticdl-master-{job_name}"
+  - name: "elasticdl-{job_name}-master"
     image: "{image_name}"
     command: ["python"]
     args: [
@@ -221,10 +205,8 @@ spec:
         "--job_name", "{job_name}",
         "--worker_image", "{image_name}",
         "--model_file", "{m_file}",
-        "--worker_cpu_request", "{worker_cpu_request}",
-        "--worker_cpu_limit", "{worker_cpu_limit}",
-        "--worker_memory_request", "{worker_memory_request}",
-        "--worker_memory_limit", "{worker_memory_limit}"
+        "--worker_resource_request", "{worker_resource_request}",
+        "--worker_resource_limit", "{worker_resource_limit}"
     ]
     imagePullPolicy: {image_pull_policy}
     resources:
@@ -244,14 +226,17 @@ spec:
         m_file=_m_file_in_docker(model_file),
         image_name=image_name,
         job_name=job_name,
-        master_cpu_limit=args.master_cpu_limit,
-        master_cpu_request=args.master_cpu_request,
-        master_memory_limit=args.master_memory_limit,
-        master_memory_request=args.master_memory_request,
-        worker_cpu_limit=args.worker_cpu_limit,
-        worker_cpu_request=args.worker_cpu_request,
-        worker_memory_limit=args.worker_memory_limit,
-        worker_memory_request=args.worker_memory_request,
+        # TODO: Use resource string directly similar to
+        # what's done in WorkerManager. Need to wait until
+        # we switch to use k8s Python API in:
+        # https://github.com/wangkuiyi/elasticdl/issues/600
+        master_cpu_limit=master_resource_limit["cpu"],
+        master_memory_limit=master_resource_limit["memory"],
+        master_cpu_request=master_resource_request["cpu"],
+        master_memory_request=master_resource_request["memory"],
+        master_resource_limit=args.master_resource_limit,
+        worker_resource_request=args.worker_resource_request,
+        worker_resource_limit=args.worker_resource_limit,
         image_pull_policy=args.image_pull_policy,
     )
 
@@ -299,20 +284,6 @@ def _submit(image_name, model_file, job_name, args, argv):
     api = core_v1_api.CoreV1Api()
     resp = api.create_namespaced_pod(body=master_def, namespace="default")
     print("Master launched. status='%s'" % str(resp.status))
-
-
-def _valid_cpu_spec(arg):
-    regexp = re.compile("([1-9]{1})([0-9]*)m$")
-    if not regexp.match(arg):
-        raise ValueError("invalid cpu request spec: " + arg)
-    return arg
-
-
-def _valid_mem_spec(arg):
-    regexp = re.compile("([1-9]{1})([0-9]*)(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)$")
-    if not regexp.match(arg):
-        raise ValueError("invalid memory request spec: " + arg)
-    return arg
 
 
 if __name__ == "__main__":
