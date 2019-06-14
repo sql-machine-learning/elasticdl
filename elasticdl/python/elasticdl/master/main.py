@@ -119,14 +119,14 @@ def _parse_args():
         default="cpu=1000m,memory=4096Mi",
         type=str,
         help="The minimal resource required by worker, "
-             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1,ephemeral-storage=32Mi",
+             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--worker_resource_limit",
         default="cpu=1000m,memory=4096Mi",
         type=str,
         help="The maximal resource required by worker, "
-             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1,ephemeral-storage=32Mi",
+             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--worker_pod_priority", help="Priority requested by workers"

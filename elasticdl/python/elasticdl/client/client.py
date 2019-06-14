@@ -56,28 +56,28 @@ def _add_train_params(parser):
         default="cpu=100m,memory=1024Mi",
         type=str,
         help="The minimal resource required by master, "
-             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1,ephemeral-storage=32Mi",
+             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--master_resource_limit",
         default="cpu=100m,memory=1024Mi",
         type=str,
         help="The maximal resource required by master, "
-             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1,ephemeral-storage=32Mi",
+             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--worker_resource_request",
         default="cpu=1000m,memory=4096Mi",
         type=str,
         help="The minimal resource required by worker, "
-             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1,ephemeral-storage=32Mi",
+             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--worker_resource_limit",
         default="cpu=1000m,memory=4096Mi",
         type=str,
         help="The maximal resource required by worker, "
-             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1,ephemeral-storage=32Mi",
+             "e.g. cpu=100m,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--master_pod_priority", help="The requested priority of master pod"
@@ -198,8 +198,9 @@ spec:
         m_file=_m_file_in_docker(model_file),
         image_name=image_name,
         job_name=job_name,
-        # TODO: Use resource string directly similar to what's done in WorkerManager.
-        # Need to wait until we switch to use k8s Python API.
+        # TODO: Use resource string directly similar to
+        # what's done in WorkerManager. Need to wait until
+        # we switch to use k8s Python API in:
         # https://github.com/wangkuiyi/elasticdl/issues/600
         master_cpu_limit=master_resource_limit["cpu"],
         master_memory_limit=master_resource_limit["memory"],

@@ -24,8 +24,7 @@ spec:
       --minibatch_size=64
       --num_workers=2
       --worker_image=elasticdl:dev
-      --worker_cpu_request=100m
-      --worker_memory_request=100Mi
+      --worker_resource_request="cpu=100m,memory=100Mi"
       --job_name=test-mnist
     imagePullPolicy: Always
     env:
