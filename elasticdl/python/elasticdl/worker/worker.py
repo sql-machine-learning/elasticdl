@@ -188,9 +188,7 @@ class Worker(object):
         for _ in range(self._max_minibatch_retry_num):
             if task.type == elasticdl_pb2.EVALUATION:
                 self.get_model(min_model_version, elasticdl_pb2.FIXED)
-                accepted, model_version = self._run_evaluation_task(
-                    features, labels
-                )
+                accepted, _ = self._run_evaluation_task(features, labels)
                 if accepted:
                     break
             elif task.type == elasticdl_pb2.TRAINING:
@@ -200,7 +198,7 @@ class Worker(object):
                     max(self._model_version, min_model_version),
                     elasticdl_pb2.MINIMUM,
                 )
-                accepted, model_version, loss = self._run_training_task(
+                accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )
                 if accepted:
