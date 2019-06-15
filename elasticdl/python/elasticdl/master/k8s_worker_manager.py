@@ -4,6 +4,7 @@ import threading
 
 from collections import Counter
 from elasticdl.python.elasticdl.master import k8s_client as k8s
+from elasticdl.python.elasticdl.common.k8s_utils import parse_resource
 
 
 class WorkerManager(object):
@@ -13,10 +14,8 @@ class WorkerManager(object):
         command,
         args,
         num_workers=1,
-        cpu_request="1000m",
-        cpu_limit="1000m",
-        memory_request="4096Mi",
-        memory_limit="4096Mi",
+        worker_resource_request="cpu=1,memory=4096Mi",
+        worker_resource_limit="cpu=1,memory=4096Mi",
         pod_priority=None,
         mount_path=None,
         volume_name=None,
@@ -28,11 +27,9 @@ class WorkerManager(object):
         self._command = command
         self._args = args
         self._num_workers = num_workers
-        self._resource_requests = {
-            "cpu": cpu_request,
-            "memory": memory_request,
-        }
-        self._resource_limits = {"cpu": cpu_limit, "memory": memory_limit}
+
+        self._resource_requests = parse_resource(worker_resource_request)
+        self._resource_limits = parse_resource(worker_resource_limit)
         self._restart_policy = restart_policy
         self._pod_priority = pod_priority
         self._mount_path = mount_path
@@ -121,7 +118,7 @@ class WorkerManager(object):
         relaunch = False
         with self._lock:
             worker_id = self._pod_name_to_id.get(pod_name)
-            if worker_id is None and k8s.WORKER_POD_NAME_PREFIX in pod_name:
+            if worker_id is None:
                 self._logger.error("Unknown worker pod name: %s" % pod_name)
                 return
 
