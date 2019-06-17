@@ -226,7 +226,7 @@ def main():
     if args.evaluation_data_dir:
         if args.checkpoint_steps <= 0:
             raise ValueError(
-                "Checkpoint should be also enabled when evaluation is enabled"
+                "Checkpoint should also be enabled when evaluation is enabled"
             )
         evaluation_timer = _EvaluationTrigger(
             master_servicer,
