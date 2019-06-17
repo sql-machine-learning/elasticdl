@@ -14,7 +14,7 @@ from elasticdl.python.elasticdl.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
-from elasticdl.python.elasticdl.common.model_helper import  load_user_model
+from elasticdl.python.elasticdl.common.model_helper import load_user_model
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.data.codec import BytesCodec
 

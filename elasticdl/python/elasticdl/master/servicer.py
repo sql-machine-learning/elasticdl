@@ -201,7 +201,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         with self._lock:
             if not self._var_created:
                 self._create_var_from_tensor_dict(request.variable)
-                self._var_created= True
+                self._var_created = True
         res.var_created = self._var_created
         return res
 
