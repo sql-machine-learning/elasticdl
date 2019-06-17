@@ -4,9 +4,6 @@ from elasticdl.python.data.codec import Codec
 
 
 class TFExampleCodec(Codec):
-    def __init__(self, feature_columns):
-        self._is_initialized = False
-
     def init(self, feature_columns):
         self._example_spec = tf.feature_column.make_parse_example_spec(
             feature_columns
@@ -15,7 +12,6 @@ class TFExampleCodec(Codec):
             f_col.key: f_col.dtype for f_col in feature_columns
         }
         self._is_initialized = True
-        
 
     def encode(self, example):
         assert self._is_initialized, "Codec should be initialized before used!"

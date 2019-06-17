@@ -17,7 +17,7 @@ def process_data(
     training_data_tar_file,
     output_dir,
     records_per_file,
-    codec_type,
+    codec_file,
 ):
     def _process_data(filename_list):
         filename_set = set()
@@ -45,7 +45,7 @@ def process_data(
 
         # Initilize codec
         codec_module = load_module(codec_file)
-        codec_module.codec.init(all_columns)
+        codec_module.codec.init(feature_label_columns)
 
         ctx = TaskContext()
         convert_numpy_to_recordio(

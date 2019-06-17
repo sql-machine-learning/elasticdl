@@ -52,7 +52,7 @@ def main(argv):
     ]
 
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-    
+
     # Initilize codec
     codec_module = load_module(args.codec_file)
     codec_module.codec.init(feature_columns)
@@ -75,7 +75,6 @@ def main(argv):
         y_test,
         feature_columns,
         records_per_file=records_per_file,
-        # codec_type=args.codec_type,
         codec=codec_module.codec,
     )
 

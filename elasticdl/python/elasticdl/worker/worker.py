@@ -50,7 +50,7 @@ class Worker(object):
         self._loss = model_module.loss
         self._eval_metrics_fn = model_module.eval_metrics_fn
         all_columns = self._feature_columns + model_module.label_columns()
-        
+
         # Initilize codec
         codec_module = load_module(codec_file)
         codec_module.codec.init(all_columns)
