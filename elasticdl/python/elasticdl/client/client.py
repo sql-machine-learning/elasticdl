@@ -95,6 +95,13 @@ def _add_train_params(parser):
     parser.add_argument(
         "--extra_pypi_index", help="The extra python package repository"
     )
+    parser.add_argument(
+        "--namespace",
+        default="default",
+        type=str,
+        help="The name of the Kubernetes namespace where ElasticDL "
+             "pods will be created",
+    )
 
 
 def _add_evaluate_params(parser):
@@ -200,6 +207,8 @@ def _submit(image_name, model_file, job_name, args, argv):
         args.worker_resource_request,
         "--worker_resource_limit",
         args.worker_resource_request,
+        "--namespace",
+        args.namespace,
     ]
     container_args.extend(["--image_pull_policy", args.image_pull_policy])
     container_args.extend(["--restart_policy", args.restart_policy])
@@ -223,7 +232,7 @@ def _submit(image_name, model_file, job_name, args, argv):
 
     k8s.Client(
         image_name=image_name,
-        namespace="default",
+        namespace=args.namespace,
         job_name=job_name,
         event_callback=None,
     ).create_master(

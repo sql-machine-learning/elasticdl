@@ -180,6 +180,13 @@ def _parse_args():
         default="Never",
         help="The pod restart policy when pod crashed",
     )
+    parser.add_argument(
+        "--namespace",
+        default="default",
+        type=str,
+        help="The name of the Kubernetes namespace where ElasticDL "
+             "pods will be created",
+    )
     return parser.parse_args()
 
 
@@ -270,7 +277,7 @@ def main():
             image_name=args.worker_image,
             command=worker_command,
             args=worker_args,
-            namespace="default",
+            namespace=args.namespace,
             num_workers=args.num_workers,
             worker_resource_request=args.worker_resource_request,
             worker_resource_limit=args.worker_resource_limit,
