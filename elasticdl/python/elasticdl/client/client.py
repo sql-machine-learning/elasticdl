@@ -56,28 +56,28 @@ def _add_train_params(parser):
         default="cpu=0.1,memory=1024Mi",
         type=str,
         help="The minimal resource required by master, "
-             "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--master_resource_limit",
         default="cpu=0.1,memory=1024Mi",
         type=str,
         help="The maximal resource required by master, "
-             "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--worker_resource_request",
         default="cpu=1,memory=4096Mi",
         type=str,
         help="The minimal resource required by worker, "
-             "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--worker_resource_limit",
         default="cpu=1,memory=4096Mi",
         type=str,
         help="The maximal resource required by worker, "
-             "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--master_pod_priority", help="The requested priority of master pod"
