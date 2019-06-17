@@ -13,7 +13,7 @@ from elasticdl.python.elasticdl.worker.worker import Worker
 from elasticdl.python.elasticdl.common.model_helper import load_module
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.data.codec import BytesCodec, TFExampleCodec
+from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.tests.in_process_master import InProcessMaster
 
 _module_file = os.path.join(
@@ -24,12 +24,8 @@ m = load_module(_module_file)
 columns = m.feature_columns() + m.label_columns()
 
 
-def create_recordio_file(size, codec_type):
-    codec = None
-    if codec_type == "bytes":
-        codec = BytesCodec(columns)
-    elif codec_type == "tf_example":
-        codec = TFExampleCodec(columns)
+def create_recordio_file(size):
+    codec = TFExampleCodec(columns)
 
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     with closing(recordio.Writer(temp_file.name)) as f:
@@ -91,8 +87,9 @@ class CheckpointTest(unittest.TestCase):
             self.assertTrue(checkpointer.is_enabled())
 
             # Launch the training
-            worker = Worker(1, _module_file, channel=None, codec_type="bytes")
-            filename = create_recordio_file(128, "bytes")
+            codec_file = 'elasticdl/python/data/codec/tf_example_codec.py'
+            worker = Worker(1, _module_file, channel=None, codec_file=codec_file)
+            filename = create_recordio_file(128)
             task_q = _TaskQueue(
                 {filename: 128}, {}, records_per_task=64, num_epochs=1
             )
