@@ -28,7 +28,8 @@ def _get_model_info(file_name):
 
 
 def create_recordio_file(size, shape, columns):
-    codec = TFExampleCodec(columns)
+    codec = TFExampleCodec()
+    codec.init(columns)
 
     image_size = 1
     for s in shape:

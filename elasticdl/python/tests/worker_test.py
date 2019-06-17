@@ -25,7 +25,8 @@ columns = m.feature_columns() + m.label_columns()
 
 
 def create_recordio_file(size):
-    codec = TFExampleCodec(columns)
+    codec = TFExampleCodec()
+    codec.init(columns)
 
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     with closing(recordio.Writer(temp_file.name)) as f:
