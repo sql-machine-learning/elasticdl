@@ -26,7 +26,7 @@ spec:
       --worker_image=elasticdl:dev
       --worker_resource_request="cpu=0.1,memory=100Mi"
       --job_name=test-mnist
-    imagePullPolicy: Always
+    imagePullPolicy: Never
     env:
       - name: MY_POD_IP
         valueFrom:
