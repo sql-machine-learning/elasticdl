@@ -16,10 +16,7 @@ from elasticdl.python.elasticdl.master.task_queue import (
     _TaskQueue,
 )
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
-from elasticdl.python.elasticdl.common.model_helper import (
-    load_user_model,
-    build_model,
-)
+from elasticdl.python.elasticdl.common.model_helper import load_user_model
 
 
 def _make_task_queue(
@@ -202,7 +199,6 @@ def main():
 
     model_module = load_user_model(args.model_file)
     model_inst = model_module.model
-    build_model(model_inst, model_module.feature_columns())
     optimizer = model_module.optimizer()
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))

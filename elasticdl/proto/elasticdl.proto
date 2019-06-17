@@ -62,6 +62,15 @@ message GetModelRequest {
     int32 version = 2;
 }
 
+message ReportVariableRequest {
+    map<string, Tensor> variable = 1;
+}
+
+message ReportVariableResponse {
+    // If the PS has created variables.
+    bool var_created = 1;
+}
+
 message ReportGradientRequest {
     // Used by worker to identify the report. Not used by master. It will be
     // copied directly into ReportGradientResponse
@@ -103,6 +112,7 @@ message ReportEvaluationMetricsRequest {
 service Master {
     rpc GetTask(GetTaskRequest) returns (Task);
     rpc GetModel(GetModelRequest) returns (Model);
+    rpc ReportVariable(ReportVariableRequest) returns (ReportVariableResponse);
     rpc ReportGradient(ReportGradientRequest) returns (ReportGradientResponse);
     rpc ReportEvaluationMetrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsResponse);
     rpc ReportTaskResult(ReportTaskResultRequest) returns (google.protobuf.Empty);

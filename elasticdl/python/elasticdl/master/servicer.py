@@ -56,6 +56,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._evaluation_metrics = defaultdict(list)
         for var in init_var:
             self.set_model_var(var.name, var.numpy())
+        self._var_created = len(init_var) > 0
         if init_from_checkpoint:
             self.load_checkpoint_file(init_from_checkpoint)
         self._checkpoint_dir = checkpoint_dir
@@ -133,6 +134,12 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         file_name = os.path.basename(file_path)
         return int(file_name.split(".")[0][7:])
 
+    def _create_var_from_tensor_dict(self, tensor_dict):
+        for k, v in tensor_dict.items():
+            self.set_model_var(k, tensor_to_ndarray(v))
+        if tensor_dict:
+            self._var_initialized = True
+
     def save_checkpoint(self):
         file_name = self._get_checkpoint_file_path(self._version)
         pb_model = self._get_model_no_lock()
@@ -146,9 +153,13 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def load_checkpoint_file(self, file_name):
         pb_model = load_from_checkpoint_file(file_name)
 
-        for k, v in self._model.items():
-            # Assumes all variables exist in pb_model.param.
-            v.assign(tensor_to_ndarray(pb_model.param[k]))
+        if self._var_created:
+            for k, v in self._model.items():
+                # Assumes all variables exist in pb_model.param.
+                v.assign(tensor_to_ndarray(pb_model.param[k]))
+        else:
+            # Create variables from pb_model.param
+            self._create_var_from_tensor_dict(pb_model.param)
         self._version = pb_model.version
 
     def get_last_checkpoint_version(self):
@@ -184,6 +195,15 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._logger.warning(err_msg)
             raise ValueError(err_msg)
         return request_model_version == self._version
+
+    def ReportVariable(self, request, _):
+        res = elasticdl_pb2.ReportVariableResponse()
+        with self._lock:
+            if not self._var_created:
+                self._create_var_from_tensor_dict(request.variable)
+                self._var_created= True
+        res.var_created = self._var_created
+        return res
 
     def ReportGradient(self, request, _):
         model_version_valid = self._validate_model_version(

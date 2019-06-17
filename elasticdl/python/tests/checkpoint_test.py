@@ -92,6 +92,7 @@ class CheckpointTest(unittest.TestCase):
         tmp_file = tempfile.NamedTemporaryFile()
         save_checkpoint_to_file(model, tmp_file.name)
 
+        # Create variables from init_var, get init value from checkpoint.
         master2 = MasterServicer(
             2,
             3,
@@ -104,8 +105,22 @@ class CheckpointTest(unittest.TestCase):
             keep_checkpoint_max=0,
         )
         model2 = master2.GetModel(req, None)
-
         self.assertEqual(model, model2)
+
+        # Create variables from checkpoint.
+        master3 = MasterServicer(
+            2,
+            3,
+            None,
+            None,
+            init_var=[],
+            init_from_checkpoint=tmp_file.name,
+            checkpoint_dir="",
+            checkpoint_steps=0,
+            keep_checkpoint_max=0,
+        )
+        model3 = master3.GetModel(req, None)
+        self.assertEqual(model, model3)
 
     def testCheckpointArguments(self):
         """
