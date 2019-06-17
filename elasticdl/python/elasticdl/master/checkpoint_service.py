@@ -15,10 +15,18 @@ class Checkpoint(object):
 class CheckpointService(object):
     """Checkpoint Service implementation"""
 
-    def __init__(self, directory, steps, max_versions):
-        self._directory = directory
-        self._steps = steps
-        self._max_versions = max_versions
+    def __init__(self, checkpoint_dir, checkpoint_steps, keep_checkpoint_max):
+        """
+        Arguments:
+            checkpoint_dir: The directory to store the checkpoint files.
+                            Directory will be created if not exist.
+            checkpoint_steps: Save checkpoint every this many steps.
+            keep_checkpoint_max: The maximum number of recent checkpoint
+                                 files to keep.
+        """
+        self._directory = checkpoint_dir
+        self._steps = checkpoint_steps
+        self._max_versions = keep_checkpoint_max
         if not self._directory:
             self._directory = os.getcwd() + "/checkpoint_dir"
         if self._steps:
