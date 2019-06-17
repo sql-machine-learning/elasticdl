@@ -86,6 +86,7 @@ docker run --net=host --rm -it elasticdl:dev \
           --evaluation_data_dir=/data/mnist/test \
           --records_per_task=100 \
           --num_epochs=2 \
+          --checkpoint_steps=2 \
           --codec_type=tf_example \
           --grads_to_wait=2 \
           --minibatch_size=10 \
