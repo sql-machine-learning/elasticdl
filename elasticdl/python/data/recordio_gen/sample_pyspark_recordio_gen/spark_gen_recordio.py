@@ -5,7 +5,7 @@ from pyspark import SparkContext
 from pyspark import TaskContext
 
 import numpy as np
-from elasticdl.python.elasticdl.common.model_helper import load_user_model
+from elasticdl.python.elasticdl.common.model_helper import load_module
 from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import (
     convert_numpy_to_recordio,
 )
@@ -42,6 +42,11 @@ def process_data(
             assert len(feature_label_tuple) == 2
             feature_list.append(feature_label_tuple[0])
             label_list.append(feature_label_tuple[1])
+
+        # Initilize codec
+        codec_module = load_module(codec_file)
+        codec_module.codec.init(all_columns)
+
         ctx = TaskContext()
         convert_numpy_to_recordio(
             output_dir,
@@ -49,7 +54,7 @@ def process_data(
             np.array(label_list),
             feature_label_columns,
             records_per_file,
-            codec_type,
+            codec_module.codec,
             str(ctx.partitionId()),
         )
         return filename_list
@@ -78,10 +83,9 @@ def main():
         "--records_per_file", default=1024, type=int, help="Record per file"
     )
     parser.add_argument(
-        "--codec_type",
-        default="tf_example",
-        choices=["tf_example", "bytes"],
-        help="Type of codec(tf_example or bytes)",
+        "--codec_file",
+        default="elasticdl/python/data/codec/tf_example_codec.py",
+        help="Codec file name",
     )
     parser.add_argument(
         "--num_workers",
@@ -102,7 +106,7 @@ def main():
             filename_list.append(tar_info.name)
 
     # Load user-defined model
-    model_module = load_user_model(args.model_file)
+    model_module = load_module(args.model_file)
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
@@ -117,7 +121,7 @@ def main():
             args.training_data_tar_file,
             args.output_dir,
             args.records_per_file,
-            args.codec_type,
+            args.codec_file,
         )
     ).collect()
 

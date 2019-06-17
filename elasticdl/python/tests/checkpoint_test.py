@@ -10,7 +10,7 @@ from elasticdl.python.elasticdl.master.checkpoint_service import (
     CheckpointService,
 )
 from elasticdl.python.elasticdl.worker.worker import Worker
-from elasticdl.python.elasticdl.common.model_helper import load_user_model
+from elasticdl.python.elasticdl.common.model_helper import load_module
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.data.codec import BytesCodec, TFExampleCodec
@@ -20,7 +20,7 @@ _module_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "test_module.py"
 )
 
-m = load_user_model(_module_file)
+m = load_module(_module_file)
 columns = m.feature_columns() + m.label_columns()
 
 

@@ -44,6 +44,14 @@ def main(argv):
     records_per_file = args.num_record_per_chunk * args.num_chunk
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    feature = {
+      'height': _int64_feature(image_shape[0]),
+      'width': _int64_feature(image_shape[1]),
+      'depth': _int64_feature(image_shape[2]),
+      'label': _int64_feature(label),
+      'image_raw': _bytes_feature(image_string),
+    }
+
     feature_columns = [
         tf.feature_column.numeric_column(
             key="image", dtype=tf.float32, shape=[28, 28]
@@ -52,6 +60,16 @@ def main(argv):
             key="label", dtype=tf.int64, shape=[1]
         ),
     ]
+
+
+    # feature_columns = [
+    #     tf.feature_column.numeric_column(
+    #         key="image", dtype=tf.float32, shape=[28, 28]
+    #     ),
+    #     tf.feature_column.numeric_column(
+    #         key="label", dtype=tf.int64, shape=[1]
+    #     ),
+    # ]
     convert_numpy_to_recordio(
         args.dir + "/mnist/train",
         x_train,

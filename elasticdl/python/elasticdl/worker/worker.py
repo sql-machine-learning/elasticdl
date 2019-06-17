@@ -14,7 +14,7 @@ from elasticdl.python.elasticdl.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
-from elasticdl.python.elasticdl.common.model_helper import load_user_model
+from elasticdl.python.elasticdl.common.model_helper import load_module
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.data.codec import BytesCodec
 
@@ -32,7 +32,7 @@ class Worker(object):
         model_file,
         channel=None,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
-        codec_type=None,
+        codec_file=None,
     ):
         """
         Arguments:
@@ -43,7 +43,7 @@ class Worker(object):
         """
         self._logger = logging.getLogger(__name__)
         self._worker_id = worker_id
-        model_module = load_user_model(model_file)
+        model_module = load_module(model_file)
         self._model = model_module.model
         self._feature_columns = model_module.feature_columns()
         self._var_created = self._model.built
@@ -52,12 +52,17 @@ class Worker(object):
         self._loss = model_module.loss
         self._eval_metrics_fn = model_module.eval_metrics_fn
         all_columns = self._feature_columns + model_module.label_columns()
-        if codec_type == "tf_example":
-            self._codec = TFExampleCodec(all_columns)
-        elif codec_type == "bytes":
-            self._codec = BytesCodec(all_columns)
-        else:
-            raise ValueError("invalid codec_type: " + codec_type)
+        
+        # Initilize codec
+        codec_module = load_module(codec_file)
+        codec_module.codec.init(all_columns)
+        self._codec = codec_module.codec
+        # if codec_type == "tf_example":
+        #     self._codec = TFExampleCodec(all_columns)
+        # elif codec_type == "bytes":
+        #     self._codec = BytesCodec(all_columns)
+        # else:
+        #     raise ValueError("invalid codec_type: " + codec_type)
 
         if channel is None:
             self._stub = None

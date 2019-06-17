@@ -12,7 +12,7 @@ from tensorflow.python.keras.datasets import cifar10
 from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import (
     convert_numpy_to_recordio,
 )
-
+from elasticdl.python.elasticdl.common.model_helper import load_module
 
 def main(argv):
     parser = argparse.ArgumentParser(
@@ -32,10 +32,9 @@ def main(argv):
         help="Number of chunks in a RecordIO file",
     )
     parser.add_argument(
-        "--codec_type",
-        default="bytes",
-        choices=["tf_example", "bytes"],
-        help="Type of codec(tf_example or bytes)",
+        "--codec_file",
+        default="elasticdl/python/data/codec/tf_example_codec.py",
+        help="Codec file name",
     )
     args = parser.parse_args(argv)
 
@@ -52,13 +51,17 @@ def main(argv):
     ]
 
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    # Initilize codec
+    codec_module = load_module(codec_file)
+    codec_module.codec.init(all_columns)
     convert_numpy_to_recordio(
         args.dir + "/cifar10/train",
         x_train,
         y_train,
         feature_columns,
         records_per_file=records_per_file,
-        codec_type=args.codec_type,
+        # codec_type=args.codec_type,
+        codec=codec_module.codec,
     )
 
     # Work around a bug in cifar10.load_data() where y_test is not converted
@@ -70,7 +73,8 @@ def main(argv):
         y_test,
         feature_columns,
         records_per_file=records_per_file,
-        codec_type=args.codec_type,
+        # codec_type=args.codec_type,
+        codec=codec_module.codec,
     )
 
 

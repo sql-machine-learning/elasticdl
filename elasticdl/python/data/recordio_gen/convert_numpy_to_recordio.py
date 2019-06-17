@@ -8,8 +8,8 @@ import os
 from contextlib import closing
 import recordio
 
-from elasticdl.python.data.codec import TFExampleCodec
-from elasticdl.python.data.codec import BytesCodec
+# from elasticdl.python.data.codec import TFExampleCodec
+# from elasticdl.python.data.codec import BytesCodec
 
 
 def convert_numpy_to_recordio(
@@ -18,7 +18,7 @@ def convert_numpy_to_recordio(
     label,
     feature_columns,
     records_per_file,
-    codec_type,
+    codec,
     partition="",
 ):
     """
@@ -38,12 +38,8 @@ def convert_numpy_to_recordio(
             else:
                 file_name = file_dir + "/data-%s-%04d" % (partition, i)
             print("writing:", file_name)
-            if codec_type == "tf_example":
-                encode_fn = TFExampleCodec(feature_columns).encode
-            elif codec_type == "bytes":
-                encode_fn = BytesCodec(feature_columns).encode
-            else:
-                raise ValueError("invalid codec_type: " + codec_type)
+
+            encode_fn = codec.encode
             with closing(recordio.Writer(file_name)) as f:
                 for _ in range(records_per_file):
                     row = next(it)

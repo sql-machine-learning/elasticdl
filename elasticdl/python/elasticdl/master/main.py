@@ -19,7 +19,7 @@ from elasticdl.python.elasticdl.master.task_queue import (
     _TaskQueue,
 )
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
-from elasticdl.python.elasticdl.common.model_helper import load_user_model
+from elasticdl.python.elasticdl.common.model_helper import load_module
 
 
 def _make_task_queue(
@@ -153,10 +153,9 @@ def _parse_args():
     )
     parser.add_argument("--job_name", help="Job name", required=True)
     parser.add_argument(
-        "--codec_type",
-        default="bytes",
-        choices=["tf_example", "bytes"],
-        help="Type of codec (tf_example or bytes)",
+        "--codec_file",
+        default="elasticdl/python/data/codec/tf_example_codec.py",
+        help="Codec file name",
     )
     # TODO: better logic for handling volume configs
     parser.add_argument(
@@ -199,8 +198,7 @@ def main():
         args.records_per_task,
         args.num_epochs,
     )
-
-    model_module = load_user_model(args.model_file)
+    model_module = load_module(args.model_file)
     model_inst = model_module.model
     optimizer = model_module.optimizer()
 
@@ -251,8 +249,8 @@ def main():
             args.model_file,
             "--master_addr",
             master_addr,
-            "--codec_type",
-            args.codec_type,
+            "--codec_file",
+            args.codec_file,
             "--log_level",
             args.log_level,
         ]
