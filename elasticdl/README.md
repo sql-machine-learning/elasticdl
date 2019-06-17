@@ -108,13 +108,13 @@ This will train MNIST data with a model defined in [python/examples/mnist_functi
 
 ### Test with Kubernetes
 
-We can also test ElasticDL job in a Kubernetes environment using the previous built [image](#the-development-docker-image).
+We can also test ElasticDL job in a Kubernetes environment using the previously built [image](#the-development-docker-image).
 
 For Minikube, run the following command to launch the job.
 ```bash
 kubectl apply -f manifests/examples/elasticdl-demo-minikube.yaml
 ```
-Note that, to let Minikube use local image instead of remote registries, you need to run `eval $(minikube docker-env)` first, and then build the image following [instructions](#the-development-docker-image).
+Note that in order for Minikube to use local image instead of remote registries, you need to run `eval $(minikube docker-env)` first, and then build the image following [instructions](#the-development-docker-image).
 
 For other Kubernetes clusters, first make sure the built image has been pushed to some registries, and then run the following command to launch the job. 
 ```bash
