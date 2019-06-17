@@ -14,6 +14,7 @@ from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import (
 )
 from elasticdl.python.elasticdl.common.model_helper import load_module
 
+
 def main(argv):
     parser = argparse.ArgumentParser(
         description="Generate CIFAR10 datasets in RecordIO format."
@@ -51,16 +52,17 @@ def main(argv):
     ]
 
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    
     # Initilize codec
-    codec_module = load_module(codec_file)
-    codec_module.codec.init(all_columns)
+    codec_module = load_module(args.codec_file)
+    codec_module.codec.init(feature_columns)
+
     convert_numpy_to_recordio(
         args.dir + "/cifar10/train",
         x_train,
         y_train,
         feature_columns,
         records_per_file=records_per_file,
-        # codec_type=args.codec_type,
         codec=codec_module.codec,
     )
 

@@ -8,9 +8,6 @@ import os
 from contextlib import closing
 import recordio
 
-# from elasticdl.python.data.codec import TFExampleCodec
-# from elasticdl.python.data.codec import BytesCodec
-
 
 def convert_numpy_to_recordio(
     file_dir,

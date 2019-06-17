@@ -15,8 +15,6 @@ from elasticdl.python.elasticdl.common.ndarray import (
     tensor_to_ndarray,
 )
 from elasticdl.python.elasticdl.common.model_helper import load_module
-from elasticdl.python.data.codec import TFExampleCodec
-from elasticdl.python.data.codec import BytesCodec
 
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.
@@ -57,12 +55,6 @@ class Worker(object):
         codec_module = load_module(codec_file)
         codec_module.codec.init(all_columns)
         self._codec = codec_module.codec
-        # if codec_type == "tf_example":
-        #     self._codec = TFExampleCodec(all_columns)
-        # elif codec_type == "bytes":
-        #     self._codec = BytesCodec(all_columns)
-        # else:
-        #     raise ValueError("invalid codec_type: " + codec_type)
 
         if channel is None:
             self._stub = None
@@ -70,7 +62,6 @@ class Worker(object):
             self._stub = elasticdl_pb2_grpc.MasterStub(channel)
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._model_version = -1
-        self._codec_type = codec_type
 
     def get_task(self):
         """
