@@ -91,6 +91,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             res.start = task.start
             res.end = task.end
             res.type = task.type
+            # For evaluation task, it will use the fixed version model
+            if task.type == elasticdl_pb2.EVALUATION:
+                res.model_version = task.model_version
         return res
 
     def GetModel(self, request, _):
@@ -123,6 +126,13 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def _get_checkpoint_file_path(self, version):
         return "{}/model_v{}.chkpt".format(self._checkpoint_dir, version)
 
+    def _get_version_from_checkpoint_file(self, file_path):
+        # TODO: we need to move checkpoint-related code to a separate file,
+        #       and each checkpoint object should be a version + file pair.
+        #       Thus, we don't need to parse from file name.
+        file_name = os.path.basename(file_path)
+        return int(file_name.split(".")[0][7:])
+
     def save_checkpoint(self):
         file_name = self._get_checkpoint_file_path(self._version)
         pb_model = self._get_model_no_lock()
@@ -140,6 +150,12 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # Assumes all variables exist in pb_model.param.
             v.assign(tensor_to_ndarray(pb_model.param[k]))
         self._version = pb_model.version
+
+    def get_last_checkpoint_version(self):
+        if not self._checkpoint_list:
+            raise RuntimeError("No model checkpoint available")
+        last_checkpoint_file = self._checkpoint_list[-1]
+        return self._get_version_from_checkpoint_file(last_checkpoint_file)
 
     def _update_model(self):
         assert self._lock.locked()
