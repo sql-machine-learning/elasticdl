@@ -13,6 +13,9 @@ from elasticdl.python.elasticdl.worker.worker import Worker
 from elasticdl.python.data.codec import BytesCodec
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.tests.in_process_master import InProcessMaster
+from elasticdl.python.elasticdl.master.checkpoint_service import (
+    CheckpointService,
+)
 
 
 def _get_model_info(file_name):
@@ -82,9 +85,7 @@ class ExampleTest(unittest.TestCase):
             task_q,
             init_var=[],
             init_from_checkpoint="",
-            checkpoint_dir="",
-            checkpoint_steps=0,
-            keep_checkpoint_max=0,
+            checkpoint_service=CheckpointService("", 0, 0),
         )
         worker._stub = InProcessMaster(master)
 

@@ -10,6 +10,9 @@ from contextlib import closing
 from concurrent import futures
 from threading import Event
 from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.python.elasticdl.master.checkpoint_service import (
+    CheckpointService,
+)
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import (
     _EvaluationTrigger,
@@ -136,14 +139,14 @@ def _parse_args():
         default="cpu=1,memory=4096Mi",
         type=str,
         help="The minimal resource required by worker, "
-             "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--worker_resource_limit",
         default="cpu=1,memory=4096Mi",
         type=str,
         help="The maximal resource required by worker, "
-             "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--worker_pod_priority", help="Priority requested by workers"
@@ -205,6 +208,11 @@ def main():
     build_model(model_inst, model_module.feature_columns())
     optimizer = model_module.optimizer()
 
+    # Initialize checkpoint service
+    checkpoint_service = CheckpointService(
+        args.checkpoint_dir, args.checkpoint_steps, args.keep_checkpoint_max
+    )
+
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
     master_servicer = MasterServicer(
         args.grads_to_wait,
@@ -213,9 +221,7 @@ def main():
         task_q,
         init_var=model_inst.trainable_variables,
         init_from_checkpoint=args.init_from_checkpoint,
-        checkpoint_dir=args.checkpoint_dir,
-        checkpoint_steps=args.checkpoint_steps,
-        keep_checkpoint_max=args.keep_checkpoint_max,
+        checkpoint_service=checkpoint_service,
     )
     elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
     server.add_insecure_port("[::]:{}".format(PORT))

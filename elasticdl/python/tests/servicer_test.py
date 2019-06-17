@@ -10,6 +10,9 @@ import tensorflow as tf
 
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
+from elasticdl.python.elasticdl.master.checkpoint_service import (
+    CheckpointService,
+)
 from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor
 from elasticdl.python.elasticdl.common.ndarray import tensor_to_ndarray
 from elasticdl.proto import elasticdl_pb2
@@ -31,7 +34,7 @@ class SimpleModel(tf.keras.Model):
 
     @staticmethod
     def input_shapes():
-        return (10, 10)
+        return 10, 10
 
     @staticmethod
     def optimizer(lr=0.1):
@@ -47,9 +50,7 @@ class ServicerTest(unittest.TestCase):
             _TaskQueue({}, {}, records_per_task=3, num_epochs=2),
             init_var=[],
             init_from_checkpoint="",
-            checkpoint_dir="",
-            checkpoint_steps=0,
-            keep_checkpoint_max=0,
+            checkpoint_service=CheckpointService("", 0, 0),
         )
 
         req = elasticdl_pb2.GetTaskRequest()
@@ -73,9 +74,7 @@ class ServicerTest(unittest.TestCase):
             None,
             init_var=[],
             init_from_checkpoint="",
-            checkpoint_dir="",
-            checkpoint_steps=0,
-            keep_checkpoint_max=0,
+            checkpoint_service=CheckpointService("", 0, 0),
         )
         master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
         # Now master model is version 0
@@ -133,11 +132,15 @@ class ServicerTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempdir:
             chk_dir = os.path.join(tempdir, "testGetModel")
             os.makedirs(chk_dir)
-            master._checkpoint_dir = chk_dir
-            master.save_checkpoint()
+            req.version = master._version
+            req.method = elasticdl_pb2.MINIMUM
+            model = master.GetModel(req, None)
+            master._checkpoint_service = CheckpointService(chk_dir, 2, 5)
+            master._checkpoint_service.save(master._version, model)
             master._version = 2
             master.set_model_var("z", np.array([2.0, 2.0], dtype=np.float32))
             req.version = 1
+            req.method = elasticdl_pb2.FIXED
             model = master.GetModel(req, None)
             self.assertEqual(1, model.version)
             self.assertEqual(["x", "y"], list(sorted(model.param.keys())))
@@ -168,9 +171,7 @@ class ServicerTest(unittest.TestCase):
             None,
             init_var=[],
             init_from_checkpoint="",
-            checkpoint_dir="",
-            checkpoint_steps=0,
-            keep_checkpoint_max=0,
+            checkpoint_service=CheckpointService("", 0, 0),
         )
         master._version = 1
         master.set_model_var("x", np.array([2.0], dtype=np.float32))
@@ -259,9 +260,7 @@ class ServicerTest(unittest.TestCase):
             None,
             init_var=[],
             init_from_checkpoint="",
-            checkpoint_dir="",
-            checkpoint_steps=0,
-            keep_checkpoint_max=0,
+            checkpoint_service=CheckpointService("", 0, 0),
         )
         master._version = 1
 
@@ -295,9 +294,7 @@ class ServicerTest(unittest.TestCase):
             task_q,
             init_var=[],
             init_from_checkpoint="",
-            checkpoint_dir="",
-            checkpoint_steps=0,
-            keep_checkpoint_max=0,
+            checkpoint_service=CheckpointService("", 0, 0),
         )
 
         # task to number of runs.
@@ -339,9 +336,7 @@ class ServicerTest(unittest.TestCase):
             None,
             init_var=[],
             init_from_checkpoint="",
-            checkpoint_dir="",
-            checkpoint_steps=0,
-            keep_checkpoint_max=0,
+            checkpoint_service=CheckpointService("", 0, 0),
         )
         req = elasticdl_pb2.GetModelRequest()
         req.method = elasticdl_pb2.MINIMUM
