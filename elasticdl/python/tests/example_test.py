@@ -10,7 +10,6 @@ from elasticdl.python.elasticdl.common.model_helper import load_module
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.worker.worker import Worker
-from elasticdl.python.data.codec import BytesCodec
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.elasticdl.master.checkpoint_service import (
@@ -28,12 +27,8 @@ def _get_model_info(file_name):
     return module_file, columns
 
 
-def create_recordio_file(size, shape, codec_type, columns):
-    codec = None
-    if codec_type == "bytes":
-        codec = BytesCodec(columns)
-    elif codec_type == "tf_example":
-        codec = TFExampleCodec(columns)
+def create_recordio_file(size, shape, columns):
+    codec = TFExampleCodec(columns)
 
     image_size = 1
     for s in shape:
@@ -52,19 +47,19 @@ def create_recordio_file(size, shape, codec_type, columns):
 
 class ExampleTest(unittest.TestCase):
     def distributed_train_and_evaluate(
-        self, file_name, codec_type, image_shape, training=True
+        self, file_name, image_shape, training=True
     ):
         """
         Run distributed training and evaluation with a local master.
         grpc calls are mocked by local master call.
         """
-
+        codec_file = 'elasticdl/python/data/codec/tf_example_codec.py'
         module_file, columns = _get_model_info(file_name)
 
-        worker = Worker(1, module_file, None, codec_type=codec_type)
+        worker = Worker(1, module_file, None, codec_file=codec_file)
 
         shards = {
-            create_recordio_file(128, image_shape, codec_type, columns): 128
+            create_recordio_file(128, image_shape, columns): 128
         }
         if training:
             training_shards = shards
@@ -102,88 +97,42 @@ class ExampleTest(unittest.TestCase):
 
     def test_mnist_functional_bytes_train(self):
         self.distributed_train_and_evaluate(
-            "mnist_functional_api.py", "bytes", [28, 28], training=True
+            "mnist_functional_api.py", [28, 28], training=True
         )
 
     def test_mnist_functional_bytes_evaluate(self):
         self.distributed_train_and_evaluate(
-            "mnist_functional_api.py", "bytes", [28, 28], training=False
-        )
-
-    def test_mnist_functional_tfexample_train(self):
-        self.distributed_train_and_evaluate(
-            "mnist_functional_api.py", "tf_example", [28, 28], training=True
-        )
-
-    def test_mnist_functional_tfexample_evaluate(self):
-        self.distributed_train_and_evaluate(
-            "mnist_functional_api.py", "tf_example", [28, 28], training=False
+            "mnist_functional_api.py", [28, 28], training=False
         )
 
     def test_mnist_subclass_bytes_train(self):
         self.distributed_train_and_evaluate(
-            "mnist_subclass.py", "bytes", [28, 28], training=True
+            "mnist_subclass.py", [28, 28], training=True
         )
 
     def test_mnist_subclass_bytes_evaluate(self):
         self.distributed_train_and_evaluate(
-            "mnist_subclass.py", "bytes", [28, 28], training=False
-        )
-
-    def test_mnist_subclass_tfexample_train(self):
-        self.distributed_train_and_evaluate(
-            "mnist_subclass.py", "tf_example", [28, 28], training=True
-        )
-
-    def test_mnist_subclass_tfexample_evaluate(self):
-        self.distributed_train_and_evaluate(
-            "mnist_subclass.py", "tf_example", [28, 28], training=False
+            "mnist_subclass.py", [28, 28], training=False
         )
 
     def test_cifar10_functional_bytes_train(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api.py", "bytes", [32, 32, 3], training=True
+            "cifar10_functional_api.py", [32, 32, 3], training=True
         )
 
     def test_cifar10_functional_bytes_evaluate(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api.py", "bytes", [32, 32, 3], training=False
-        )
-
-    def test_cifar10_functional_tfexample_train(self):
-        self.distributed_train_and_evaluate(
-            "cifar10_functional_api.py",
-            "tf_example",
-            [32, 32, 3],
-            training=True,
-        )
-
-    def test_cifar10_functional_tfexample_evaluate(self):
-        self.distributed_train_and_evaluate(
-            "cifar10_functional_api.py",
-            "tf_example",
-            [32, 32, 3],
-            training=False,
+            "cifar10_functional_api.py", [32, 32, 3], training=False
         )
 
     def test_cifar10_subclass_bytes_train(self):
         self.distributed_train_and_evaluate(
-            "cifar10_subclass.py", "bytes", [32, 32, 3], training=True
+            "cifar10_subclass.py", [32, 32, 3], training=True
         )
 
     def test_cifar10_subclass_bytes_evaluate(self):
         self.distributed_train_and_evaluate(
-            "cifar10_subclass.py", "bytes", [32, 32, 3], training=False
-        )
-
-    def test_cifar10_subclass_tfexample_train(self):
-        self.distributed_train_and_evaluate(
-            "cifar10_subclass.py", "tf_example", [32, 32, 3], training=True
-        )
-
-    def test_cifar10_subclass_tfexample_evaluate(self):
-        self.distributed_train_and_evaluate(
-            "cifar10_subclass.py", "tf_example", [32, 32, 3], training=False
+            "cifar10_subclass.py", [32, 32, 3], training=False
         )
 
 
