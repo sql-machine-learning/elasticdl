@@ -71,8 +71,8 @@ class Client(object):
         job_name,
         image_name,
         command,
-        resource_request,
-        resource_limit,
+        resource_requests,
+        resource_limits,
         container_args,
         pod_priority,
         image_pull_policy,
@@ -83,14 +83,6 @@ class Client(object):
         env,
     ):
         # Container
-        resource_requests = {
-            "cpu": resource_request["cpu"],
-            "memory": resource_request["memory"],
-        }
-        resource_limits = {
-            "cpu": resource_limit["cpu"],
-            "memory": resource_limit["memory"],
-        }
         container = client.V1Container(
             name=pod_name,
             image=image_name,
@@ -161,10 +153,8 @@ class Client(object):
         job_name,
         image_name,
         model_file,
-        master_resource_request,
-        master_resource_limit,
-        worker_resource_request,
-        worker_resource_limit,
+        master_resource_requests,
+        master_resource_limits,
         master_pod_priority,
         image_pull_policy,
         volume_name,
@@ -185,8 +175,8 @@ class Client(object):
             job_name,
             image_name,
             ["python"],
-            parse_resource(master_resource_request),
-            parse_resource(master_resource_limit),
+            parse_resource(master_resource_requests),
+            parse_resource(master_resource_limits),
             args,
             master_pod_priority,
             image_pull_policy,
@@ -197,7 +187,7 @@ class Client(object):
             env,
         )
         resp = self._v1.create_namespaced_pod(self._ns, pod)
-        print("Master launched. status='%s'" % str(resp.status))
+        self._logger.info("Master launched. status='%s'" % str(resp.status))
 
     def create_worker(
         self,

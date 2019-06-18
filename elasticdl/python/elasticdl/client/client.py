@@ -228,8 +228,6 @@ def _submit(image_name, model_file, job_name, args, argv):
         _m_file_in_docker(model_file),
         args.master_resource_request,
         args.master_resource_limit,
-        args.worker_resource_request,
-        args.worker_resource_limit,
         args.master_pod_priority,
         args.image_pull_policy,
         args.volume_name,
