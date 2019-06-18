@@ -44,6 +44,7 @@ python elasticdl/python/elasticdl/client/client.py train \
     --minibatch_size=10 \
     --records_per_task=100 \
     --num_workers=1 \
+    --checkpoint_steps=2 \
     --grads_to_wait=2 \
     --codec_type=tf_example \
     --job_name=test \
@@ -63,6 +64,7 @@ python elasticdl/python/elasticdl/client/client.py train \
     --minibatch_size=10 \
     --records_per_task=100 \
     --num_workers=1 \
+    --checkpoint_steps=2 \
     --master_pod_priority=highest-priority \
     --worker_pod_priority=high-priority \
     --master_resource_request="cpu=1,memory=2048Mi" \

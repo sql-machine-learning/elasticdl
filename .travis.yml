@@ -1,5 +1,17 @@
 language: minimal
 
+dist: xenial
+
+env:
+  global:
+    - MINIKUBE_WANTUPDATENOTIFICATION=false
+    - MINIKUBE_WANTREPORTERRORPROMPT=false
+    - MINIKUBE_HOME=$HOME
+    - CHANGE_MINIKUBE_NONE_USER=true
+    - KUBECONFIG=$HOME/.kube/config
+    - K8S_VERSION=1.13.0
+    - MINIKUBE_VERSION=0.35.0
+
 addons:
   apt:
     packages:
@@ -13,6 +25,7 @@ install:
 stages:
   - precommit
   - unittest
+  - integrationtest
 
 jobs:
   include:
@@ -24,3 +37,17 @@ jobs:
       name: "Unit Tests"
       script:
         - docker run --rm -it -v $(pwd):/v -w /v elasticdl:dev bash -c "make && K8S_TESTS=False pytest elasticdl/python/tests"
+    - stage: integrationtest
+      name: "Integration Tests"
+      script:
+        - curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v$K8S_VERSION/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+        - curl -Lo minikube https://storage.googleapis.com/minikube/releases/v$MINIKUBE_VERSION/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+        - mkdir -p $HOME/.kube $HOME/.minikube
+        - touch $KUBECONFIG
+        # Start minikube
+        - sudo minikube start --vm-driver=none --kubernetes-version=v$K8S_VERSION
+        - "sudo chown -R travis: /home/travis/.minikube/"
+        - kubectl cluster-info
+        # Run unit tests related to k8s
+        - docker run --rm -it --net=host -v$HOME/.kube:/root/.kube -v/home/travis/.minikube/:/home/travis/.minikube/ -v $(pwd):/v -w /v elasticdl:dev bash -c "make && K8S_TESTS=True pytest elasticdl/python/tests/k8s*.py"
+        # TODO: Add integration test with elasticdl-demo-minikube.yaml

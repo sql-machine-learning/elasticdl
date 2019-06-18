@@ -6,13 +6,12 @@ import recordio
 
 from contextlib import closing
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
+from elasticdl.python.elasticdl.master.checkpoint_service import (
+    CheckpointService,
+)
 from elasticdl.python.elasticdl.worker.worker import Worker
 from elasticdl.python.elasticdl.common.model_helper import load_user_model
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
-from elasticdl.python.elasticdl.common.model_helper import (
-    save_checkpoint_to_file,
-    load_from_checkpoint_file,
-)
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.data.codec import BytesCodec, TFExampleCodec
 from elasticdl.python.tests.in_process_master import InProcessMaster
@@ -35,141 +34,154 @@ def create_recordio_file(size, codec_type):
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     with closing(recordio.Writer(temp_file.name)) as f:
         for _ in range(size):
-            x = np.random.rand((1)).astype(np.float32)
+            x = np.random.rand(1).astype(np.float32)
             y = 2 * x + 1
             f.write(codec.encode({"x": x, "y": y}))
     return temp_file.name
 
 
 class CheckpointTest(unittest.TestCase):
+    def testNeedToCheckpoint(self):
+        checkpointer = CheckpointService("", 0, 5)
+        self.assertFalse(checkpointer.is_enabled())
+        checkpointer._steps = 3
+        self.assertTrue(checkpointer.is_enabled())
+
+        self.assertFalse(checkpointer.need_to_checkpoint(1))
+        self.assertFalse(checkpointer.need_to_checkpoint(2))
+        self.assertTrue(checkpointer.need_to_checkpoint(3))
+        self.assertFalse(checkpointer.need_to_checkpoint(4))
+        self.assertFalse(checkpointer.need_to_checkpoint(5))
+        self.assertTrue(checkpointer.need_to_checkpoint(6))
+
     def testSaveLoadCheckpoint(self):
         init_var = m.model.trainable_variables
-        master = MasterServicer(
-            2,
-            3,
-            None,
-            None,
-            init_var=init_var,
-            init_from_checkpoint="",
-            checkpoint_dir="",
-            checkpoint_steps=0,
-            keep_checkpoint_max=0,
-        )
+        with tempfile.TemporaryDirectory() as tempdir:
+            chkp_dir = os.path.join(tempdir, "testSaveLoadCheckpoint")
+            os.makedirs(chkp_dir)
+            checkpointer = CheckpointService(chkp_dir, 3, 5)
+            self.assertTrue(checkpointer.is_enabled())
 
-        req = elasticdl_pb2.GetModelRequest()
-        req.method = elasticdl_pb2.MINIMUM
-        req.version = 0
-        model = master.GetModel(req, None)
+            master = MasterServicer(
+                2,
+                3,
+                None,
+                None,
+                init_var=init_var,
+                init_from_checkpoint="",
+                checkpoint_service=checkpointer,
+            )
 
-        tmp_file = tempfile.NamedTemporaryFile()
-        save_checkpoint_to_file(model, tmp_file.name)
+            req = elasticdl_pb2.GetModelRequest()
+            req.method = elasticdl_pb2.MINIMUM
+            req.version = 0
+            model = master.GetModel(req, None)
+            checkpointer.save(0, model)
+            loaded_model = checkpointer.get_checkpoint_model(0)
+            self.assertEqual(model.version, loaded_model.version)
+            for k in model.param:
+                self.assertEqual(model.param[k], loaded_model.param[k])
 
-        pb_model = load_from_checkpoint_file(tmp_file.name)
+    def testMaxCheckpointVersions(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            chkp_dir = os.path.join(tempdir, "testMaxCheckpointVersions")
+            os.makedirs(chkp_dir)
+            # Save checkpoints every 2 steps, and keep 5 checkpoints at most
+            checkpointer = CheckpointService(chkp_dir, 2, 5)
+            self.assertTrue(checkpointer.is_enabled())
 
-        self.assertEqual(model.version, pb_model.version)
-        for k in model.param:
-            self.assertEqual(model.param[k], pb_model.param[k])
+            # Launch the training
+            worker = Worker(1, _module_file, channel=None, codec_type="bytes")
+            filename = create_recordio_file(128, "bytes")
+            task_q = _TaskQueue(
+                {filename: 128}, {}, records_per_task=64, num_epochs=1
+            )
+            master = MasterServicer(
+                2,
+                2,
+                worker._opt_fn(),
+                task_q,
+                init_var=worker._model.trainable_variables,
+                init_from_checkpoint="",
+                checkpoint_service=checkpointer,
+            )
 
-    def testInitCheckpoint(self):
+            worker._stub = InProcessMaster(master)
+            worker.run()
+
+            # We should have 5 checkpoints when the training finishes
+            checkpoint_files = sorted(os.listdir(checkpointer._directory))
+            self.assertEqual(
+                checkpoint_files,
+                [
+                    "model_v24.chkpt",
+                    "model_v26.chkpt",
+                    "model_v28.chkpt",
+                    "model_v30.chkpt",
+                    "model_v32.chkpt",
+                ],
+            )
+            # Latest version should be 32
+            self.assertEqual(32, checkpointer.get_latest_checkpoint_version())
+            # Check all checkpoints
+            for version in [24, 26, 28, 30, 32]:
+                model = checkpointer.get_checkpoint_model(version)
+                self.assertEqual(version, model.version)
+            # Checkpoint not found
+            self.assertRaisesRegex(
+                RuntimeError,
+                "Failed to read model checkpoint from file",
+                checkpointer.get_checkpoint_model,
+                100,
+            )
+
+    def testInitFromCheckpoint(self):
         init_var = m.model.trainable_variables
-        req = elasticdl_pb2.GetModelRequest()
-        req.method = elasticdl_pb2.MINIMUM
-        req.version = 0
+        with tempfile.TemporaryDirectory() as tempdir:
+            chkp_dir = os.path.join(tempdir, "testInitFromCheckpoint")
+            os.makedirs(chkp_dir)
+            master = MasterServicer(
+                2,
+                3,
+                None,
+                None,
+                init_var=init_var,
+                init_from_checkpoint="",
+                checkpoint_service=CheckpointService(chkp_dir, 2, 3),
+            )
+            req = elasticdl_pb2.GetModelRequest()
+            req.method = elasticdl_pb2.MINIMUM
+            req.version = 0
+            model = master.GetModel(req, None)
+            master._checkpoint_service.save(master._version, model)
 
-        master = MasterServicer(
-            2,
-            3,
-            None,
-            None,
-            init_var=init_var,
-            init_from_checkpoint="",
-            checkpoint_dir="",
-            checkpoint_steps=0,
-            keep_checkpoint_max=0,
-        )
-        model = master.GetModel(req, None)
-
-        tmp_file = tempfile.NamedTemporaryFile()
-        save_checkpoint_to_file(model, tmp_file.name)
-
-        # Create variables from init_var, get init value from checkpoint.
-        master2 = MasterServicer(
-            2,
-            3,
-            None,
-            None,
-            init_var=init_var,
-            init_from_checkpoint=tmp_file.name,
-            checkpoint_dir="",
-            checkpoint_steps=0,
-            keep_checkpoint_max=0,
-        )
-        model2 = master2.GetModel(req, None)
-        self.assertEqual(model, model2)
-
-        # Create variables from checkpoint.
-        master3 = MasterServicer(
-            2,
-            3,
-            None,
-            None,
-            init_var=[],
-            init_from_checkpoint=tmp_file.name,
-            checkpoint_dir="",
-            checkpoint_steps=0,
-            keep_checkpoint_max=0,
-        )
-        model3 = master3.GetModel(req, None)
-        self.assertEqual(model, model3)
-
-    def testCheckpointArguments(self):
-        """
-        Run Worker.distributed_train with a local master.
-        grpc calls are mocked by local master call.
-        """
-
-        codec_type = "bytes"
-        worker = Worker(1, _module_file, channel=None, codec_type=codec_type)
-
-        # save checkpoint file every 2 steps
-        # keep at most 5 recent checkpoint files
-        checkpoint_dir = tempfile.mkdtemp()
-        checkpoint_steps = 2
-        keep_checkpoint_max = 5
-
-        filename = create_recordio_file(128, codec_type)
-        task_q = _TaskQueue(
-            {filename: 128}, {}, records_per_task=64, num_epochs=1
-        )
-        master = MasterServicer(
-            2,
-            2,
-            worker._opt_fn(),
-            task_q,
-            init_var=worker._model.trainable_variables,
-            init_from_checkpoint="",
-            checkpoint_dir=checkpoint_dir,
-            checkpoint_steps=checkpoint_steps,
-            keep_checkpoint_max=keep_checkpoint_max,
-        )
-        worker._stub = InProcessMaster(master)
-
-        # for var in worker._model.trainable_variables:
-        #    master.set_model_var(var.name, var.numpy())
-
-        worker.run()
-
-        checkpoint_files = sorted(os.listdir(checkpoint_dir))
-        self.assertEqual(
-            checkpoint_files,
-            [
-                "model_v24.chkpt",
-                "model_v26.chkpt",
-                "model_v28.chkpt",
-                "model_v30.chkpt",
-                "model_v32.chkpt",
-            ],
-        )
+            chkp_file = master._checkpoint_service.get_checkpoint_path(
+                master._version
+            )
+            # Create variables from init_var, get init value from checkpoint.
+            master2 = MasterServicer(
+                2,
+                3,
+                None,
+                None,
+                init_var=init_var,
+                init_from_checkpoint=chkp_file,
+                checkpoint_service=CheckpointService("", 0, 0),
+            )
+            model2 = master2.GetModel(req, None)
+            self.assertEqual(model, model2)
+            # Create variables from checkpoint.
+            master3 = MasterServicer(
+                2,
+                3,
+                None,
+                None,
+                init_var=[],
+                init_from_checkpoint=chkp_file,
+                checkpoint_service=CheckpointService("", 0, 0),
+            )
+            model3 = master3.GetModel(req, None)
+            self.assertEqual(model, model3)
 
 
 if __name__ == "__main__":
