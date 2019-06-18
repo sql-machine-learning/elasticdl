@@ -8,6 +8,8 @@ from kubernetes.client import (
     V1PersistentVolumeClaimVolumeSource as pvcVolumeSource,
 )
 
+ELASTICDL_JOB_KEY = "elasticdl_job_name"
+
 
 class Client(object):
     def __init__(self, *, worker_image, namespace, job_name, event_callback):
@@ -44,7 +46,7 @@ class Client(object):
         stream = watch.Watch().stream(
             self._v1.list_namespaced_pod,
             self._ns,
-            label_selector="elasticdl_job_name=" + self._job_name,
+            label_selector=ELASTICDL_JOB_KEY + "=" + self._job_name,
         )
         for event in stream:
             try:
@@ -108,7 +110,7 @@ class Client(object):
         # for this worker pod.
         pods = self._v1.list_namespaced_pod(
             namespace=self._ns,
-            label_selector="elasticdl_job_name=" + self._job_name,
+            label_selector=ELASTICDL_JOB_KEY + "=" + self._job_name,
         ).items
         master_pod = [
             pod
@@ -135,7 +137,7 @@ class Client(object):
                 name=self.get_worker_pod_name(worker_id),
                 labels={
                     "app": "elasticdl",
-                    "elasticdl_job_name": self._job_name,
+                    ELASTICDL_JOB_KEY: self._job_name,
                 },
                 # TODO: Add tests for this once we've done refactoring on
                 # k8s client code and the constant strings
