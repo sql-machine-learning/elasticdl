@@ -6,6 +6,7 @@ import sys
 import docker
 import yaml
 import shutil
+from string import Template
 
 from kubernetes.client.apis import core_v1_api
 from kubernetes import config
