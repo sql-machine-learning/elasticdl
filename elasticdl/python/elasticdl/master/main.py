@@ -173,7 +173,9 @@ def _parse_args():
         help="The logging level. Default to WARNING",
     )
     parser.add_argument(
-        "--image_pull_policy", help="Image pull policy of master and workers"
+        "--image_pull_policy",
+        default="Always",
+        help="Image pull policy of master and workers"
     )
     return parser.parse_args()
 
