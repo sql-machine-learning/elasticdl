@@ -51,11 +51,17 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._grad_n = 0
         self._minibatch_size = minibatch_size
         self._evaluation_metrics = defaultdict(list)
-        for var in init_var:
-            self.set_model_var(var.name, var.numpy())
+        self.init_model_var(init_from_checkpoint, init_var)
+        self._checkpoint_service = checkpoint_service
+
+    def init_model_var(self, init_from_checkpoint, init_var):
+        self._var_created = False
         if init_from_checkpoint:
             self.load_checkpoint_file(init_from_checkpoint)
-        self._checkpoint_service = checkpoint_service
+        elif len(init_var) > 0:
+            for var in init_var:
+                self.set_model_var(var.name, var.numpy())
+            self._var_created = True
 
     def set_model_var(self, name, value):
         """Add or set model variable. Value should be a float32 ndarray"""
@@ -113,12 +119,15 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         assert self._lock.locked()
         self._version += 1
 
+    def _create_var_from_tensor_dict(self, tensor_dict):
+        assert tensor_dict
+        for k, v in tensor_dict.items():
+            self.set_model_var(k, tensor_to_ndarray(v))
+        self._var_created = True
+
     def load_checkpoint_file(self, file_name):
         pb_model = load_from_checkpoint_file(file_name)
-
-        for k, v in self._model.items():
-            # Assumes all variables exist in pb_model.param.
-            v.assign(tensor_to_ndarray(pb_model.param[k]))
+        self._create_var_from_tensor_dict(pb_model.param)
         self._version = pb_model.version
 
     def _update_model(self):
@@ -162,6 +171,12 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._logger.warning(err_msg)
             raise ValueError(err_msg)
         return request_model_version == self._version
+
+    def ReportVariable(self, request, _):
+        with self._lock:
+            if not self._var_created:
+                self._create_var_from_tensor_dict(request.variable)
+        return empty_pb2.Empty()
 
     def ReportGradient(self, request, _):
         model_version_valid = self._validate_model_version(
