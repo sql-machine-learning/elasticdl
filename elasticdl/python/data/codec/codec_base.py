@@ -5,7 +5,7 @@ class Codec(object):
     def encode(self, data):
         """
         Take a {feature_name: ndarray} object and return the encoded data
-        TODO: This should be changed totake a {feature_name: example}
+        TODO: This should be changed to take a {feature_name: example}
               once we implement https://github.com/wangkuiyi/elasticdl/pull/675
         """
         raise("encode function is not implemented!")
