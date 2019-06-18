@@ -2,6 +2,8 @@
 import importlib.util
 
 
+# TODO: This is not only used for model. Maybe we should put it into another
+# file
 def load_module(module_file):
     spec = importlib.util.spec_from_file_location(module_file, module_file)
     module = importlib.util.module_from_spec(spec)

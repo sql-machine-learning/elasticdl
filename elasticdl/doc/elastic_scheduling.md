@@ -75,7 +75,6 @@ python elasticdl/python/elasticdl/client/client.py train \
     --num_workers=2 \
     --checkpoint_steps=2 \
     --grads_to_wait=2 \
-    --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUME_NAME} \
     --log_level=INFO \
@@ -117,7 +116,6 @@ python elasticdl/python/elasticdl/client/client.py train \
     --num_workers=2 \
     --checkpoint_steps=2 \
     --grads_to_wait=2 \
-    --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUME_ID} \
     --log_level=INFO \
@@ -186,7 +184,6 @@ python elasticdl/python/elasticdl/client/client.py train \
     --worker_resource_request="cpu=3,memory=4096Mi" \
     --worker_resource_limit="cpu=3,memory=4096Mi" \
     --grads_to_wait=2 \
-    --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUMN_ID} \
     --log_level=INFO \
@@ -220,7 +217,6 @@ python elasticdl/python/elasticdl/client/client.py train \
     --worker_resource_request="cpu=3,memory=4096Mi" \
     --worker_resource_limit="cpu=3,memory=4096Mi" \
     --grads_to_wait=2 \
-    --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUMN_ID} \
     --log_level=INFO \
