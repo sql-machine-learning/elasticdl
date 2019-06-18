@@ -36,7 +36,7 @@ jobs:
     - stage: unittest
       name: "Unit Tests"
       script:
-        - docker run --rm -it -v $(pwd):/v -w /v elasticdl:dev bash -c "make && K8S_TESTS=False pytest elasticdl/python/tests"
+        - docker run --rm -it -v $(pwd):/v -w / elasticdl:dev bash -c "make && K8S_TESTS=False pytest elasticdl/python/tests"
     - stage: integrationtest
       name: "Integration Tests"
       script:
@@ -49,5 +49,5 @@ jobs:
         - "sudo chown -R travis: /home/travis/.minikube/"
         - kubectl cluster-info
         # Run unit tests related to k8s
-        - docker run --rm -it --net=host -v$HOME/.kube:/root/.kube -v/home/travis/.minikube/:/home/travis/.minikube/ -v $(pwd):/v -w /v elasticdl:dev bash -c "make && K8S_TESTS=True pytest elasticdl/python/tests/k8s*.py"
+        - docker run --rm -it --net=host -v$HOME/.kube:/root/.kube -v/home/travis/.minikube/:/home/travis/.minikube/ -v $(pwd):/v -w / elasticdl:dev bash -c "make && K8S_TESTS=True pytest elasticdl/python/tests/k8s*.py"
         # TODO: Add integration test with elasticdl-demo-minikube.yaml
