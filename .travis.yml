@@ -32,7 +32,7 @@ jobs:
       name: "Pre-commit Check"
       script:
         - docker build --build-arg BUILD_ENV=no_data -t elasticdl:dev -f elasticdl/docker/Dockerfile .
-        - docker run --rm -it -v $(pwd):/v -w /v elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python -name *.py -print0 | tr '\0' ' ')"
+        - docker run --rm -it -v $(pwd):/v -w /v elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python *.py -print0 | tr '\0' ' ')"
     - stage: unittest
       name: "Unit Tests"
       script:
