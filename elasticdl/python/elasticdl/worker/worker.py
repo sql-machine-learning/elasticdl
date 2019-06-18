@@ -14,10 +14,7 @@ from elasticdl.python.elasticdl.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
-from elasticdl.python.elasticdl.common.model_helper import (
-    load_user_model,
-    build_model,
-)
+from elasticdl.python.elasticdl.common.model_helper import load_user_model
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.data.codec import BytesCodec
 
@@ -49,7 +46,7 @@ class Worker(object):
         model_module = load_user_model(model_file)
         self._model = model_module.model
         self._feature_columns = model_module.feature_columns()
-        build_model(self._model, self._feature_columns)
+        self._var_created = len(self._model.trainable_variables) > 0
         self._input_fn = model_module.input_fn
         self._opt_fn = model_module.optimizer
         self._loss = model_module.loss
@@ -102,6 +99,15 @@ class Worker(object):
         report.err_message = err_msg
         return self._stub.ReportTaskResult(report)
 
+    def report_variable(self):
+        """
+        report variable to ps.
+        """
+        req = elasticdl_pb2.ReportVariableRequest()
+        for v in self._model.trainable_variables:
+            req.variable[v.name].CopyFrom(ndarray_to_tensor(v.numpy()))
+        self._stub.ReportVariable(req)
+
     def report_gradient(self, grads):
         """
         report gradient to ps, return (accepted, model_version) from rpc call.
@@ -149,6 +155,12 @@ class Worker(object):
             features = features[0]
         return features, batch_labels
 
+    def _create_variable_and_report(self, features):
+        # Use model.call to create variables, then report to ps
+        _ = self._model.call(features)
+        self.report_variable()
+        self._var_created = True
+
     def _run_training_task(self, features, labels):
         with tf.GradientTape() as tape:
             outputs = self._model.call(features, training=True)
@@ -185,6 +197,8 @@ class Worker(object):
 
     def _process_minibatch(self, task, record_buf, min_model_version):
         features, labels = self._get_features_and_labels(record_buf)
+        if not self._var_created:
+            self._create_variable_and_report(features)
         for _ in range(self._max_minibatch_retry_num):
             if task.type == elasticdl_pb2.EVALUATION:
                 self.get_model(min_model_version, elasticdl_pb2.FIXED)
