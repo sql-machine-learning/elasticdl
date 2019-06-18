@@ -185,7 +185,7 @@ def _submit(image_name, model_file, job_name, args, argv):
     container_args.extend(argv)
 
     k8s.Client(
-        worker_image=image_name,
+        image_name=image_name,
         namespace="default",
         job_name=job_name,
         event_callback=None,
