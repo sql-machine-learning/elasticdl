@@ -59,7 +59,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def _init_model_from_numpy_dict(self, numpy_dict):
         for name, value in numpy_dict.items():
-            if value.dtype != np.float32:	
+            if value.dtype != np.float32:
                 raise ValueError("Value should be a float32 numpy array")
             self._model[name] = tf.Variable(
                 value, name=MasterServicer.var_name_encode(name)
