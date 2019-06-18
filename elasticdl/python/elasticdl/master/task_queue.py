@@ -3,9 +3,7 @@
 import logging
 import random
 import threading
-import time
 
-from threading import Thread
 from elasticdl.proto import elasticdl_pb2
 
 
@@ -27,67 +25,6 @@ class _Task(object):
             self.type,
             self.model_version,
         )
-
-
-class _EvaluationJob(object):
-    """Internal representation of an evaluation job"""
-
-    # TODO(weiyan): rethink whether we should keep track of list<taskID> here,
-    #               to be more reliable
-    def __init__(self, model_version, total_tasks=-1):
-        self._model_version = model_version
-        self._total_tasks = total_tasks
-        self._completed_tasks = 0
-        self._start_time = time.time()
-
-    def complete_task(self):
-        self._completed_tasks += 1
-
-    def finished(self):
-        return self._completed_tasks >= self._total_tasks
-
-    def ok_to_new_job(self, time_now_secs, throttle_secs, latest_chkp_version):
-        return (
-            self.finished()
-            and latest_chkp_version > self._model_version
-            and (time_now_secs - self._start_time) >= throttle_secs
-        )
-
-
-class _EvaluationTrigger(Thread):
-    """A trigger which generates evaluation tasks periodically"""
-
-    def __init__(
-        self,
-        checkpoint_service,
-        task_q,
-        stopped,
-        start_delay_secs,
-        throttle_secs,
-    ):
-        Thread.__init__(self)
-        self._checkpoint_service = checkpoint_service
-        self._task_q = task_q
-        self._stopped = stopped
-        self._start_delay_secs = start_delay_secs
-        self._throttle_secs = throttle_secs
-        self._eval_job = None
-
-    def run(self):
-        time.sleep(self._start_delay_secs)
-        while not self._stopped(1):
-            latest_chkp_version = (
-                self._checkpoint_service.get_latest_checkpoint_version()
-            )
-            if self._eval_job is None or self._eval_job.ok_to_new_job(
-                time.time(), self._throttle_secs, latest_chkp_version
-            ):
-                self._eval_job = _EvaluationJob(latest_chkp_version)
-                tasks = self._task_q.create_evaluation_tasks(
-                    latest_chkp_version
-                )
-                self._eval_job._total_tasks = len(tasks)
-                self._task_q.set_eval_job(self._eval_job)
 
 
 class _TaskQueue(object):
@@ -112,7 +49,7 @@ class _TaskQueue(object):
         # dictionary from task id to Task.
         self._doing = {}
         self._task_id = 0
-        self._eval_job = None
+        self._evaluation_service = None
 
         self.create_training_tasks()
 
@@ -191,9 +128,9 @@ class _TaskQueue(object):
                 self._todo.append(task)
             elif (
                 task.type == elasticdl_pb2.EVALUATION
-                and self._eval_job is not None
+                and self._evaluation_service is not None
             ):
-                self._eval_job.complete_task()
+                self._evaluation_service.complete_task()
 
     def finished(self):
         """Return if all tasks are done"""
@@ -210,6 +147,6 @@ class _TaskQueue(object):
             self.report(id, False)
 
     # TODO: need to re-check after refactoring servicer.py
-    def set_eval_job(self, eval_job):
+    def set_evaluation_service(self, evaluation_service):
         with self._lock:
-            self._eval_job = eval_job
+            self._evaluation_service = evaluation_service

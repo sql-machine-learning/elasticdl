@@ -1,6 +1,5 @@
 import logging
 import threading
-from collections import defaultdict
 
 from google.protobuf import empty_pb2
 
@@ -34,7 +33,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         *,
         init_var,
         init_from_checkpoint,
-        checkpoint_service
+        checkpoint_service,
+        evaluation_service,
     ):
         # TODO: group params together into a single object.
         self._logger = logging.getLogger(__name__)
@@ -50,9 +50,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._grad_to_wait = grads_to_wait
         self._grad_n = 0
         self._minibatch_size = minibatch_size
-        self._evaluation_metrics = defaultdict(list)
         self.init_model_var(init_from_checkpoint, init_var)
         self._checkpoint_service = checkpoint_service
+        self._evaluation_service = evaluation_service
 
     def init_model_var(self, init_from_checkpoint, init_var):
         self._var_created = False
@@ -235,26 +235,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return empty_pb2.Empty()
 
     def ReportEvaluationMetrics(self, request, _):
-        model_version_valid = self._validate_model_version(
-            request.model_version
+        report_metrics = self._evaluation_service.report_evaluation_metrics(
+            request.model_version, request.evaluation_metrics
         )
-
         res = elasticdl_pb2.ReportEvaluationMetricsResponse()
-        if not model_version_valid:
-            res.accepted = False
-            res.model_version = self._version
-            return res
-
-        with self._lock:
-            for k, v in request.evaluation_metrics.items():
-                if v.dim:
-                    self._evaluation_metrics[k].append(tensor_to_ndarray(v))
-            evaluation_metrics_summary = {
-                k: np.mean(v) for k, v in self._evaluation_metrics.items()
-            }
-            self._logger.info(
-                "Evaluation metrics: %s" % evaluation_metrics_summary
-            )
-        res.accepted = True
         res.model_version = self._version
+        res.accepted = report_metrics
         return res

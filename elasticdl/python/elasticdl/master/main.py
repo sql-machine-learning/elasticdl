@@ -13,11 +13,11 @@ from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.elasticdl.master.checkpoint_service import (
     CheckpointService,
 )
-from elasticdl.python.elasticdl.master.servicer import MasterServicer
-from elasticdl.python.elasticdl.master.task_queue import (
-    _EvaluationTrigger,
-    _TaskQueue,
+from elasticdl.python.elasticdl.master.evaluation_service import (
+    EvaluationService,
 )
+from elasticdl.python.elasticdl.master.servicer import MasterServicer
+from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
 from elasticdl.python.elasticdl.common.model_helper import load_user_model
 
@@ -209,6 +209,25 @@ def main():
         args.checkpoint_dir, args.checkpoint_steps, args.keep_checkpoint_max
     )
 
+    # Initialize evaluation service
+    stop_flag = Event()
+    evaluation_service = None
+    if args.evaluation_data_dir:
+        if args.checkpoint_steps <= 0:
+            raise ValueError(
+                "Checkpoint should also be enabled when evaluation is enabled"
+            )
+        evaluation_service = EvaluationService(
+            checkpoint_service,
+            task_q,
+            stop_flag,
+            args.evaluation_start_delay_secs,
+            args.evaluation_throttle_secs,
+        )
+        evaluation_service.start()
+        task_q.set_evaluation_service(evaluation_service)
+
+    # The master service
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
     master_servicer = MasterServicer(
         args.grads_to_wait,
@@ -218,26 +237,12 @@ def main():
         init_var=model_inst.trainable_variables if model_inst.built else [],
         init_from_checkpoint=args.init_from_checkpoint,
         checkpoint_service=checkpoint_service,
+        evaluation_service=evaluation_service,
     )
     elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
     server.add_insecure_port("[::]:{}".format(PORT))
     server.start()
     logger.info("Server started at port: %d", PORT)
-
-    stop_flag = Event()
-    if args.evaluation_data_dir:
-        if args.checkpoint_steps <= 0:
-            raise ValueError(
-                "Checkpoint should also be enabled when evaluation is enabled"
-            )
-        evaluation_timer = _EvaluationTrigger(
-            master_servicer,
-            task_q,
-            stop_flag,
-            args.evaluation_start_delay_secs,
-            args.evaluation_throttle_secs,
-        )
-        evaluation_timer.start()
 
     if args.num_workers:
         assert args.worker_image, "Worker image cannot be empty"
