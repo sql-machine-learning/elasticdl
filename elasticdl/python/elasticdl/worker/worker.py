@@ -46,7 +46,7 @@ class Worker(object):
         model_module = load_user_model(model_file)
         self._model = model_module.model
         self._feature_columns = model_module.feature_columns()
-        self._var_created = len(self._model.trainable_variables) > 0
+        self._var_created = self._model.built
         self._input_fn = model_module.input_fn
         self._opt_fn = model_module.optimizer
         self._loss = model_module.loss
