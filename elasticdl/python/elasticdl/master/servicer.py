@@ -51,12 +51,17 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._grad_n = 0
         self._minibatch_size = minibatch_size
         self._evaluation_metrics = defaultdict(list)
-        for var in init_var:
-            self.set_model_var(var.name, var.numpy())
-        self._var_created = len(init_var) > 0
+        self.init_model_var(init_from_checkpoint, init_var)
+        self._checkpoint_service = checkpoint_service
+
+    def init_model_var(self, init_from_checkpoint, init_var):
+        self._var_created = False
         if init_from_checkpoint:
             self.load_checkpoint_file(init_from_checkpoint)
-        self._checkpoint_service = checkpoint_service
+        elif len(init_var) > 0:
+            for var in init_var:
+                self.set_model_var(var.name, var.numpy())
+            self._var_created = True
 
     def set_model_var(self, name, value):
         """Add or set model variable. Value should be a float32 ndarray"""
