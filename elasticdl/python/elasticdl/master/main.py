@@ -107,7 +107,7 @@ def _parse_args():
         "--num_workers", type=_pos_int, help="Number of workers", default=0
     )
     parser.add_argument(
-        "--init_from_checkpoint",
+        "--checkpoint_filename",
         help="The checkpoint file to initialize the training model",
         default="",
     )
@@ -244,7 +244,7 @@ def main():
         optimizer,
         task_q,
         init_var=model_inst.trainable_variables if model_inst.built else [],
-        init_from_checkpoint=args.init_from_checkpoint,
+        checkpoint_filename=args.checkpoint_filename,
         checkpoint_service=checkpoint_service,
         evaluation_service=evaluation_service,
     )
