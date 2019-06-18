@@ -11,6 +11,9 @@ class InProcessMaster(object):
     def GetModel(self, req):
         return self._m.GetModel(req, None)
 
+    def ReportVariable(self, req):
+        return self._m.ReportVariable(req, None)
+
     def ReportGradient(self, req):
         return self._m.ReportGradient(req, None)
 

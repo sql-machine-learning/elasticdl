@@ -10,16 +10,16 @@ from contextlib import closing
 from concurrent import futures
 from threading import Event
 from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.python.elasticdl.master.checkpoint_service import (
+    CheckpointService,
+)
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import (
     _EvaluationTrigger,
     _TaskQueue,
 )
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
-from elasticdl.python.elasticdl.common.model_helper import (
-    load_user_model,
-    build_model,
-)
+from elasticdl.python.elasticdl.common.model_helper import load_user_model
 
 
 def _make_task_queue(
@@ -136,14 +136,14 @@ def _parse_args():
         default="cpu=1,memory=4096Mi",
         type=str,
         help="The minimal resource required by worker, "
-             "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--worker_resource_limit",
         default="cpu=1,memory=4096Mi",
         type=str,
         help="The maximal resource required by worker, "
-             "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--worker_pod_priority", help="Priority requested by workers"
@@ -175,6 +175,11 @@ def _parse_args():
     parser.add_argument(
         "--image_pull_policy", help="Image pull policy of master and workers"
     )
+    parser.add_argument(
+        "--restart_policy",
+        default="Never",
+        help="The pod restart policy when pod crashed",
+    )
     return parser.parse_args()
 
 
@@ -202,8 +207,12 @@ def main():
 
     model_module = load_user_model(args.model_file)
     model_inst = model_module.model
-    build_model(model_inst, model_module.feature_columns())
     optimizer = model_module.optimizer()
+
+    # Initialize checkpoint service
+    checkpoint_service = CheckpointService(
+        args.checkpoint_dir, args.checkpoint_steps, args.keep_checkpoint_max
+    )
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
     master_servicer = MasterServicer(
@@ -213,9 +222,7 @@ def main():
         task_q,
         init_var=model_inst.trainable_variables,
         init_from_checkpoint=args.init_from_checkpoint,
-        checkpoint_dir=args.checkpoint_dir,
-        checkpoint_steps=args.checkpoint_steps,
-        keep_checkpoint_max=args.keep_checkpoint_max,
+        checkpoint_service=checkpoint_service,
     )
     elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
     server.add_insecure_port("[::]:{}".format(PORT))
@@ -226,7 +233,7 @@ def main():
     if args.evaluation_data_dir:
         if args.checkpoint_steps <= 0:
             raise ValueError(
-                "Checkpoint should be also enabled when evaluation is enabled"
+                "Checkpoint should also be enabled when evaluation is enabled"
             )
         evaluation_timer = _EvaluationTrigger(
             master_servicer,
@@ -258,7 +265,7 @@ def main():
         worker_manager = WorkerManager(
             task_q,
             job_name=args.job_name,
-            worker_image=args.worker_image,
+            image_name=args.worker_image,
             command=worker_command,
             args=worker_args,
             namespace="default",
@@ -269,7 +276,7 @@ def main():
             mount_path=args.mount_path,
             volume_name=args.volume_name,
             image_pull_policy=args.image_pull_policy,
-            restart_policy="Never",
+            restart_policy=args.restart_policy,
         )
         worker_manager.start_workers()
 

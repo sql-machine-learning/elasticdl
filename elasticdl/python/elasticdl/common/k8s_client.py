@@ -12,6 +12,8 @@ from kubernetes.client import (
 )
 from elasticdl.python.elasticdl.common.k8s_utils import parse_resource
 
+ELASTICDL_JOB_KEY = "elasticdl_job_name"
+
 
 class Client(object):
     def __init__(self, *, image_name, namespace, job_name, event_callback):
@@ -49,7 +51,7 @@ class Client(object):
         stream = watch.Watch().stream(
             self._v1.list_namespaced_pod,
             self._ns,
-            label_selector="elasticdl_job_name=" + self._job_name,
+            label_selector=ELASTICDL_JOB_KEY + "=" + self._job_name,
         )
         for event in stream:
             try:
@@ -143,7 +145,12 @@ class Client(object):
             spec=spec,
             metadata=client.V1ObjectMeta(
                 name=pod_name,
-                labels={"app": "elasticdl", "elasticdl_job_name": job_name},
+                labels={
+                    "app": "elasticdl",
+                    ELASTICDL_JOB_KEY: job_name,
+                },
+                # TODO: Add tests for this once we've done refactoring on
+                # k8s client code and the constant strings
                 owner_references=owner_ref,
             ),
         )
@@ -203,7 +210,7 @@ class Client(object):
         image_pull_policy=None,
         command=None,
         args=None,
-        restart_policy="OnFailure",
+        restart_policy="Never",
     ):
         self._logger.info("Creating worker: " + str(worker_id))
         # Find that master pod that will be used as the owner reference

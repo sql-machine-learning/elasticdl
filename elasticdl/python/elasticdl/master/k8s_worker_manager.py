@@ -20,7 +20,7 @@ class WorkerManager(object):
         mount_path=None,
         volume_name=None,
         image_pull_policy=None,
-        restart_policy="OnFailure",
+        restart_policy="Never",
         **kwargs
     ):
         self._logger = logging.getLogger(__name__)

@@ -23,6 +23,7 @@ spec:
       --grads_to_wait=2
       --minibatch_size=64
       --num_workers=2
+      --checkpoint_steps=2
       --worker_image=elasticdl:dev
       --worker_resource_request="cpu=0.1,memory=100Mi"
       --job_name=test-mnist

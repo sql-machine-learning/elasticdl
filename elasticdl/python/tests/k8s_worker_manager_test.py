@@ -1,5 +1,6 @@
 import os
 import unittest
+import random
 import time
 
 
@@ -18,7 +19,8 @@ class WorkerManagerTest(unittest.TestCase):
         task_q.recover_tasks = MagicMock()
         worker_manager = WorkerManager(
             task_q,
-            job_name="test-create-worker-pod",
+            job_name="test-create-worker-pod-%d-%d"
+            % (int(time.time()), random.randint(1, 101)),
             worker_image="gcr.io/google-samples/hello-app:1.0",
             command=["echo"],
             args=[],
@@ -59,7 +61,8 @@ class WorkerManagerTest(unittest.TestCase):
         task_q.recover_tasks = MagicMock()
         worker_manager = WorkerManager(
             task_q,
-            job_name="test-create-worker-pod",
+            job_name="test-failed-worker-pod-%d-%d"
+            % (int(time.time()), random.randint(1, 101)),
             worker_image="gcr.io/google-samples/hello-app:1.0",
             command=["badcommand"],
             args=["badargs"],
@@ -95,7 +98,8 @@ class WorkerManagerTest(unittest.TestCase):
         task_q = _TaskQueue({"f": 10}, {}, 1, 1)
         worker_manager = WorkerManager(
             task_q,
-            job_name="test-relaunch-worker-pod",
+            job_name="test-relaunch-worker-pod-%d-%d"
+            % (int(time.time()), random.randint(1, 101)),
             worker_image="gcr.io/google-samples/hello-app:1.0",
             command=["sleep 10"],
             args=[],

@@ -65,18 +65,19 @@ Use the command below to submit your first ElasticDL job on GKE:
 ```
 python elasticdl/python/elasticdl/client/client.py train \
     --job_name=hello-world \
-    --model_file=elasticdl/python/examples/mnist_functional_api.py \
+    --image_name=gcr.io/${PROJECT_ID}/mnist:dev \
+    --model_file=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=${MNIST_DATA_DIR}/train \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --num_epochs=1 \
     --minibatch_size=10 \
     --records_per_task=100 \
     --num_workers=2 \
+    --checkpoint_steps=2 \
     --grads_to_wait=2 \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUME_NAME} \
-    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
     --log_level=INFO \
     --push_image
 ```
@@ -106,18 +107,19 @@ Same as the first example, submit a job on GKE using the command below:
 ```
 python elasticdl/python/elasticdl/client/client.py train \
     --job_name=fault-tolerance \
-    --model_file=elasticdl/python/examples/mnist_functional_api.py \
+    --image_name=gcr.io/${PROJECT_ID}/mnist:dev \
+    --model_file=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=${MNIST_DATA_DIR}/train \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --num_epochs=1 \
     --minibatch_size=10 \
     --records_per_task=100 \
     --num_workers=2 \
+    --checkpoint_steps=2 \
     --grads_to_wait=2 \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUME_ID} \
-    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
     --log_level=INFO \
     --push_image
 ```
@@ -168,7 +170,8 @@ For more about PriorityClass, please check out [Pod Priority and Preemption](htt
 ```
 python elasticdl/python/elasticdl/client/client.py train \
     --job_name=low-prio-job \
-    --model_file=elasticdl/python/examples/mnist_functional_api.py \
+    --image_name=gcr.io/${PROJECT_ID}/mnist:dev \
+    --model_file=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=${MNIST_DATA_DIR}/train \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --master_pod_priority=high-priority \
@@ -177,6 +180,7 @@ python elasticdl/python/elasticdl/client/client.py train \
     --minibatch_size=10 \
     --records_per_task=100 \
     --num_workers=2 \
+    --checkpoint_steps=2 \
     --master_resource_request="cpu=1,memory=1024Mi" \
     --master_resource_limit="cpu=1,memory=1024Mi" \
     --worker_resource_request="cpu=3,memory=4096Mi" \
@@ -185,7 +189,6 @@ python elasticdl/python/elasticdl/client/client.py train \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUMN_ID} \
-    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
     --log_level=INFO \
     --push_image
 ```
@@ -201,7 +204,8 @@ kubectl get pods -l elasticdl_job_name=low-prio-job
 ```
 python elasticdl/python/elasticdl/client/client.py train \
     --job_name=high-prio-job \
-    --model_file=elasticdl/python/examples/mnist_functional_api.py \
+    --image_name=gcr.io/${PROJECT_ID}/mnist:dev \
+    --model_file=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_functional_api.py \
     --training_data_dir=${MNIST_DATA_DIR}/train \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --master_pod_priority=high-priority \
@@ -210,6 +214,7 @@ python elasticdl/python/elasticdl/client/client.py train \
     --minibatch_size=10 \
     --records_per_task=100 \
     --num_workers=1 \
+    --checkpoint_steps=2 \
     --master_resource_request="cpu=1,memory=1024Mi" \
     --master_resource_limit="cpu=1,memory=1024Mi" \
     --worker_resource_request="cpu=3,memory=4096Mi" \
@@ -218,7 +223,6 @@ python elasticdl/python/elasticdl/client/client.py train \
     --codec_type=bytes \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUMN_ID} \
-    --image_base=gcr.io/${PROJECT_ID}/elasticdl:dev \
     --log_level=INFO \
     --push_image
 ```
