@@ -138,7 +138,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         for k, v in tensor_dict.items():
             self.set_model_var(k, tensor_to_ndarray(v))
         if tensor_dict:
-            self._var_initialized = True
+            self._var_created = True
 
     def save_checkpoint(self):
         file_name = self._get_checkpoint_file_path(self._version)
@@ -197,13 +197,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return request_model_version == self._version
 
     def ReportVariable(self, request, _):
-        res = elasticdl_pb2.ReportVariableResponse()
         with self._lock:
             if not self._var_created:
                 self._create_var_from_tensor_dict(request.variable)
                 self._var_created = True
-        res.var_created = self._var_created
-        return res
+        return empty_pb2.Empty()
 
     def ReportGradient(self, request, _):
         model_version_valid = self._validate_model_version(

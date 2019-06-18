@@ -101,13 +101,12 @@ class Worker(object):
 
     def report_variable(self):
         """
-        report variable to ps, return var_created from rpc call.
+        report variable to ps.
         """
         req = elasticdl_pb2.ReportVariableRequest()
         for v in self._model.trainable_variables:
             req.variable[v.name].CopyFrom(ndarray_to_tensor(v.numpy()))
-        res = self._stub.ReportVariable(req)
-        return res.var_created
+        self._stub.ReportVariable(req)
 
     def report_gradient(self, grads):
         """
@@ -159,7 +158,8 @@ class Worker(object):
     def _create_variable_and_report(self, features):
         # Use model.call to create variables, then report to ps
         _ = self._model.call(features)
-        self._var_created = self.report_variable()
+        self.report_variable()
+        self._var_created = True
 
     def _run_training_task(self, features, labels):
         with tf.GradientTape() as tape:
@@ -199,7 +199,6 @@ class Worker(object):
         features, labels = self._get_features_and_labels(record_buf)
         if not self._var_created:
             self._create_variable_and_report(features)
-            assert self._var_created
         for _ in range(self._max_minibatch_retry_num):
             if task.type == elasticdl_pb2.EVALUATION:
                 self.get_model(min_model_version, elasticdl_pb2.FIXED)
