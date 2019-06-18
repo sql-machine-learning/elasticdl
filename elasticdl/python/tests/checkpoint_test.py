@@ -65,7 +65,7 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 None,
                 init_var=init_var,
-                init_from_checkpoint="",
+                checkpoint_filename="",
                 checkpoint_service=checkpointer,
                 evaluation_service=None,
             )
@@ -106,7 +106,7 @@ class CheckpointTest(unittest.TestCase):
                 worker._opt_fn(),
                 task_q,
                 init_var=worker._model.trainable_variables,
-                init_from_checkpoint="",
+                checkpoint_filename="",
                 checkpoint_service=checkpointer,
                 evaluation_service=None,
             )
@@ -151,7 +151,7 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 None,
                 init_var=init_var,
-                init_from_checkpoint="",
+                checkpoint_filename="",
                 checkpoint_service=CheckpointService(chkp_dir, 2, 3),
                 evaluation_service=None,
             )
@@ -171,7 +171,7 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 None,
                 init_var=init_var,
-                init_from_checkpoint=chkp_file,
+                checkpoint_filename=chkp_file,
                 checkpoint_service=CheckpointService("", 0, 0),
                 evaluation_service=None,
             )
@@ -184,7 +184,7 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 None,
                 init_var=[],
-                init_from_checkpoint=chkp_file,
+                checkpoint_filename=chkp_file,
                 checkpoint_service=CheckpointService("", 0, 0),
                 evaluation_service=None,
             )

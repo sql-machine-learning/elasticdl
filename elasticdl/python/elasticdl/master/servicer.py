@@ -59,6 +59,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def _init_model_from_numpy_dict(self, numpy_dict):
         for name, value in numpy_dict.items():
+            if value.dtype != np.float32:	
+                raise ValueError("Value should be a float32 numpy array")
             self._model[name] = tf.Variable(
                 value, name=MasterServicer.var_name_encode(name)
             )
@@ -71,8 +73,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._init_model_from_numpy_dict(numpy_dict)
 
     def _init_model(self, checkpoint_filename, init_var):
-        if checkpoint_filename:
-            self._load_checkpoint_file(checkpoint_filename)
+        if checkpoint_filename != '':
+            pb_model = load_from_checkpoint_file(checkpoint_filename)
+            self._version = pb_model.version
+            self._init_model_from_tensor_dict(pb_model.param)
         elif len(init_var) > 0:
             numpy_dict = {}
             for var in init_var:
@@ -81,11 +85,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         else:
             self._logger.info("Model is not intialized. It will be \
                 initialized by the first update from the worker.")
-
-    def _load_checkpoint_file(self, file_name):
-        pb_model = load_from_checkpoint_file(file_name)
-        self._init_model_from_tensor_dict(pb_model.param)
-        self._version = pb_model.version
 
     @staticmethod
     def var_name_encode(name):
