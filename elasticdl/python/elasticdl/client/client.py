@@ -48,8 +48,8 @@ def _add_train_params(parser):
         help="Whether to push the newly built image to remote registry",
     )
     parser.add_argument(
-        "--image_repository",
-        help="Which cloud docker image reposotory to uplaod local built image",
+        "--image_name",
+        help="The docker image name built by ElasticDL client",
     )
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
@@ -106,11 +106,10 @@ def _add_evaluate_params(parser):
 
 def _train(args, argv):
     job_name = args.job_name
-    image_name = args.image_repository + "/elasticdl:job_" + job_name
     _build_docker_image(
-        args.model_file, image_name, args.push_image, args.extra_pypi_index
+        args.model_file, args.image_name, args.push_image, args.extra_pypi_index
     )
-    _submit(image_name, args.model_file, job_name, args, argv)
+    _submit(args.image_name, args.model_file, job_name, args, argv)
 
 
 def _evaluate(args, argv):
@@ -137,6 +136,9 @@ RUN pip install docker --extra-index-url={EXTRA_PYPI_INDEX}
 
 # Install RecordIO
 RUN pip install 'pyrecordio>=0.0.6' --extra-index-url={EXTRA_PYPI_INDEX}
+
+# Install Pillow for sample data processing Spark job
+RUN pip install Pillow --extra-index-url=${EXTRA_PYPI_INDEX}
 
 ENV PYTHONPATH=/
 WORKDIR /
