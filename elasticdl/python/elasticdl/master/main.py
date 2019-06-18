@@ -8,7 +8,6 @@ import grpc
 
 from contextlib import closing
 from concurrent import futures
-from threading import Event
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.elasticdl.master.checkpoint_service import (
     CheckpointService,
@@ -210,7 +209,6 @@ def main():
     )
 
     # Initialize evaluation service
-    stop_flag = Event()
     evaluation_service = None
     if args.evaluation_data_dir:
         if args.checkpoint_steps <= 0:
@@ -220,7 +218,6 @@ def main():
         evaluation_service = EvaluationService(
             checkpoint_service,
             task_q,
-            stop_flag,
             args.evaluation_start_delay_secs,
             args.evaluation_throttle_secs,
         )
@@ -283,12 +280,13 @@ def main():
     try:
         while True:
             if task_q.finished():
-                stop_flag.set()
                 break
             time.sleep(30)
     except KeyboardInterrupt:
-        stop_flag.set()
         logger.warning("Server stopping")
+
+    if evaluation_service:
+        evaluation_service.stop()
 
     server.stop(0)
 

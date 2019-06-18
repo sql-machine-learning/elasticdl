@@ -1,4 +1,5 @@
 import logging
+import threading
 import time
 import numpy as np
 
@@ -12,6 +13,7 @@ class _EvaluationJob(object):
     """Representation of an evaluation job"""
 
     def __init__(self, model_version, total_tasks=-1):
+        self._logger = logging.getLogger(__name__)
         self._model_version = model_version
         self._total_tasks = total_tasks
         self._completed_tasks = 0
@@ -30,6 +32,10 @@ class _EvaluationJob(object):
         self, evaluation_version, evaluation_metrics
     ):
         if evaluation_version != self._model_version:
+            self._logger.error(
+                "Drop a wrong version evaluation: request %d, receive %d"
+                % (self._model_version, evaluation_version)
+            )
             return False
         for k, v in evaluation_metrics.items():
             if v.dim:
@@ -43,12 +49,15 @@ class _EvaluationJob(object):
 class _EvaluationTrigger(Thread):
     """A trigger which generates evaluation tasks periodically"""
 
-    def __init__(self, eval_service, stopped, start_delay_secs, throttle_secs):
+    def __init__(self, eval_service, start_delay_secs, throttle_secs):
         Thread.__init__(self)
         self._eval_service = eval_service
-        self._stopped = stopped
+        self._stop = threading.Event()
         self._throttle_secs = throttle_secs
         self._eval_min_time = time.time() + start_delay_secs
+
+    def stop(self):
+        self._stop.set()
 
     def _wait_enough_time(self, cur_time_secs, previous_round_start_secs):
         if cur_time_secs < self._eval_min_time:
@@ -62,7 +71,8 @@ class _EvaluationTrigger(Thread):
 
     def run(self):
         previous_round_start_secs = -1
-        while not self._stopped(5):
+
+        while not self._stop.is_set():
             time_now = time.time()
             if self._wait_enough_time(time_now, previous_round_start_secs):
                 # Time is up, trying to start a new round evaluation
@@ -70,29 +80,28 @@ class _EvaluationTrigger(Thread):
                 previous_round_start_secs = (
                     time_now if new_round else previous_round_start_secs
                 )
+            time.sleep(5)
 
 
 class EvaluationService(object):
     """Evaluation service"""
 
     def __init__(
-        self,
-        checkpoint_service,
-        task_q,
-        stopped,
-        start_delay_secs,
-        throttle_secs,
+        self, checkpoint_service, task_q, start_delay_secs, throttle_secs
     ):
         self._logger = logging.getLogger(__name__)
         self._checkpoint_service = checkpoint_service
         self._task_q = task_q
         self._eval_job = None
         self.trigger = _EvaluationTrigger(
-            checkpoint_service, stopped, start_delay_secs, throttle_secs
+            self, start_delay_secs, throttle_secs
         )
 
     def start(self):
         self.trigger.start()
+
+    def stop(self):
+        self.trigger.stop()
 
     def try_to_create_new_round(self):
         try:
