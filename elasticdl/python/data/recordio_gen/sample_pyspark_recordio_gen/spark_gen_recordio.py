@@ -12,7 +12,7 @@ from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import (
 
 
 def process_data(
-    feature_label_columns,
+    # feature_label_columns,
     single_file_preparation_func,
     training_data_tar_file,
     output_dir,
@@ -33,15 +33,22 @@ def process_data(
                 assert f is not None
                 filename_to_object[tar_info.name] = f
 
-        feature_list = []
-        label_list = []
+        # feature_list = []
+        # label_list = []
+        # for filename in filename_set:
+        #     feature_label_tuple = single_file_preparation_func(
+        #         filename_to_object[filename], filename
+        #     )
+        #     assert len(feature_label_tuple) == 2
+        #     feature_list.append(feature_label_tuple[0])
+        #     label_list.append(feature_label_tuple[1])
+
+        example_list = []
         for filename in filename_set:
-            feature_label_tuple = single_file_preparation_func(
+            example = single_file_preparation_func(
                 filename_to_object[filename], filename
             )
-            assert len(feature_label_tuple) == 2
-            feature_list.append(feature_label_tuple[0])
-            label_list.append(feature_label_tuple[1])
+            example_list.append(example)
 
         # Initilize codec
         codec_module = load_module(codec_file)
@@ -50,9 +57,10 @@ def process_data(
         ctx = TaskContext()
         convert_numpy_to_recordio(
             output_dir,
-            np.array(feature_list),
-            np.array(label_list),
-            feature_label_columns,
+            example_list,
+            # np.array(feature_list),
+            # np.array(label_list),
+            # feature_label_columns,
             records_per_file,
             codec_module.codec,
             str(ctx.partitionId()),
@@ -116,7 +124,7 @@ def main():
     rdd = sc.parallelize(filename_list, args.num_workers)
     rdd.mapPartitions(
         process_data(
-            model_module.feature_columns() + model_module.label_columns(),
+            # model_module.feature_columns() + model_module.label_columns(),
             model_module.prepare_data_for_a_single_file,
             args.training_data_tar_file,
             args.output_dir,

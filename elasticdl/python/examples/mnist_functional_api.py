@@ -15,17 +15,34 @@ x = tf.keras.layers.Flatten()(x)
 outputs = tf.keras.layers.Dense(10)(x)
 
 model = tf.keras.Model(inputs=inputs, outputs=outputs, name="mnist_model")
-
+                    #         f_col.key: row[i]
+                    #         .astype(f_col.dtype.as_numpy_dtype)
+                    #         .reshape(f_col.shape)
+                    #         for i, f_col in enumerate(feature_columns)
+# example = tf.train.Example(features=tf.train.Features(feature=f_dict))
 
 def prepare_data_for_a_single_file(file_object, filename):
     """
     :param filename: training data file name
     :param file_object: a file object associated with filename
+    :return: an exmaple object
     """
     label = int(filename.split("/")[-2])
     image = PIL.Image.open(file_object)
     numpy_image = np.array(image)
-    return numpy_image, label
+    # example = tf.train.Example
+    feature_name_to_feature = {}
+    feature_name_to_feature['image'] = tf.train.Feature(
+        float_list=tf.train.FloatList(
+            value=numpy_image.astype(tf.float32.as_numpy_dtype).flatten(),
+        ),
+    )
+    feature_name_to_feature['label'] = tf.train.Feature(
+        int64_list=tf.train.Int64List(value=[label]),
+    )
+    return tf.train.Example(
+        features=tf.train.Features(feature=feature_name_to_feature),
+    )
 
 
 def feature_columns():

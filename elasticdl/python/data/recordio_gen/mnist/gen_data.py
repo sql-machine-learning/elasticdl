@@ -63,6 +63,7 @@ def main(argv):
             key="label", dtype=tf.int64, shape=[1]
         ),
     ]
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
     # Initilize codec
     codec_module = load_module(args.codec_file)
@@ -115,6 +116,54 @@ def main(argv):
             records_per_file=records_per_file,
             codec=codec_module.codec,
         )
+    # convert_numpy_to_recordio(
+    # feature_columns = [
+    #     tf.feature_column.numeric_column(
+    #         key="image", dtype=tf.float32, shape=[28, 28]
+    #     ),
+    #     tf.feature_column.numeric_column(
+    #         key="label", dtype=tf.int64, shape=[1]
+    #     ),
+    # ]
+    convert_example_to_recordio(
+        args.dir + "/mnist/train",
+        example,
+        # x_train,
+        # y_train,
+        # feature_columns,
+        records_per_file=records_per_file,
+        codec=codec_module.codec,
+    )
+
+    convert_numpy_to_recordio(
+        args.dir + "/mnist/test",
+        example,
+        # x_test,
+        # y_test,
+        # feature_columns,
+        records_per_file=records_per_file,
+        codec=codec_module.codec,
+    )
+
+    (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+    convert_numpy_to_recordio(
+        args.dir + "/fashion/train",
+        example,
+        # x_train,
+        # y_train,
+        # feature_columns,
+        records_per_file=records_per_file,
+        codec=codec_module.codec,
+    )
+    convert_numpy_to_recordio(
+        args.dir + "/fashion/test",
+        example,
+        # x_test,
+        # y_test,
+        # feature_columns,
+        records_per_file=records_per_file,
+        codec=codec_module.codec,
+    )
 
 
 if __name__ == "__main__":
