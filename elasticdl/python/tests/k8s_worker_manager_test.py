@@ -21,7 +21,7 @@ class WorkerManagerTest(unittest.TestCase):
             task_q,
             job_name="test-create-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
-            worker_image="gcr.io/google-samples/hello-app:1.0",
+            image_name="gcr.io/google-samples/hello-app:1.0",
             command=["echo"],
             args=[],
             namespace="default",
@@ -63,7 +63,7 @@ class WorkerManagerTest(unittest.TestCase):
             task_q,
             job_name="test-failed-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
-            worker_image="gcr.io/google-samples/hello-app:1.0",
+            image_name="gcr.io/google-samples/hello-app:1.0",
             command=["badcommand"],
             args=["badargs"],
             namespace="default",
@@ -100,7 +100,7 @@ class WorkerManagerTest(unittest.TestCase):
             task_q,
             job_name="test-relaunch-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
-            worker_image="gcr.io/google-samples/hello-app:1.0",
+            image_name="gcr.io/google-samples/hello-app:1.0",
             command=["sleep 10"],
             args=[],
             namespace="default",
