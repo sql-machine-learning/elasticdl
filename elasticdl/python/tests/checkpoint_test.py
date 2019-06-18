@@ -137,7 +137,6 @@ class CheckpointTest(unittest.TestCase):
 
     def testInitFromCheckpoint(self):
         init_var = m.model.trainable_variables
-
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testInitFromCheckpoint")
             os.makedirs(chkp_dir)
@@ -159,6 +158,7 @@ class CheckpointTest(unittest.TestCase):
             chkp_file = master._checkpoint_service.get_checkpoint_path(
                 master._version
             )
+            # Create variables from init_var, get init value from checkpoint.
             master2 = MasterServicer(
                 2,
                 3,
@@ -170,6 +170,18 @@ class CheckpointTest(unittest.TestCase):
             )
             model2 = master2.GetModel(req, None)
             self.assertEqual(model, model2)
+            # Create variables from checkpoint.
+            master3 = MasterServicer(
+                2,
+                3,
+                None,
+                None,
+                init_var=[],
+                init_from_checkpoint=chkp_file,
+                checkpoint_service=CheckpointService("", 0, 0),
+            )
+            model3 = master3.GetModel(req, None)
+            self.assertEqual(model, model3)
 
 
 if __name__ == "__main__":

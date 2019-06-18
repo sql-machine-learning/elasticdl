@@ -9,17 +9,6 @@ def load_user_model(model_file):
     return module
 
 
-def build_model(model, feature_columns):
-    if len(feature_columns) == 1:
-        # add 1 as the first item in input_shape tuple, as tf.keras requires
-        # this additional shape dimension.
-        # https://github.com/tensorflow/tensorflow/blob/fac9d70abfb1465da53d9574173f19f235ee6d02/tensorflow/python/keras/layers/core.py#L467
-        model.build((1,) + tuple(feature_columns[0].shape))
-    else:
-        input_shapes = [(1,) + tuple(f_col.shape) for f_col in feature_columns]
-        model.build(input_shapes)
-
-
 def save_checkpoint_to_file(pb_model, file_name):
     encoded_model = pb_model.SerializeToString()
     with open(file_name, "wb") as f:
