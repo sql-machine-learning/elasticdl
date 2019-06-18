@@ -57,20 +57,24 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._checkpoint_service = checkpoint_service
         self._evaluation_service = evaluation_service
 
-    def _init_model_from_numpy_dict(self, numpy_dict):
-        for name, value in numpy_dict.items():
-            if value.dtype != np.float32:
-                raise ValueError("Value should be a float32 numpy array")
-            self._model[name] = tf.Variable(
-                value, name=MasterServicer.var_name_encode(name)
-            )
+    # TODO: This is currently being used by multiple tests to initilize
+    # self._model, where the initialization should be done via constructor.
+    def set_model_var(self, name, value):
+        """Add or set model variable. Value should be a float32 ndarray"""
+        if value.dtype != np.float32:
+            raise ValueError("Value should be a float32 numpy array")
+        self._model[name] = tf.Variable(
+            value, name=MasterServicer.var_name_encode(name)
+        )
+
+    def _init_model_from_var_list(self, var_list):
+        for var in var_list:
+            self.set_model_var(var.name, var.numpy())
 
     def _init_model_from_tensor_dict(self, tensor_dict):
         assert tensor_dict
-        numpy_dict = {}
         for name, val in tensor_dict.items():
-            numpy_dict[name] = tensor_to_ndarray(val)
-        self._init_model_from_numpy_dict(numpy_dict)
+            self.set_model_var(name, tensor_to_ndarray(val))
 
     def _init_model(self, checkpoint_filename, init_var):
         if checkpoint_filename != '':
@@ -78,10 +82,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._version = pb_model.version
             self._init_model_from_tensor_dict(pb_model.param)
         elif len(init_var) > 0:
-            numpy_dict = {}
-            for var in init_var:
-                numpy_dict[var.name] = var.numpy()
-            self._init_model_from_numpy_dict(numpy_dict)
+            self._init_model_from_var_list(init_var)
         else:
             self._logger.info("Model is not intialized. It will be \
                 initialized by the first update from the worker.")
