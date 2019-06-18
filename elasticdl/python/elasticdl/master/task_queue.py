@@ -58,10 +58,15 @@ class _EvaluationTrigger(Thread):
     """A trigger which generates evaluation tasks periodically"""
 
     def __init__(
-        self, master_servicer, task_q, stopped, start_delay_secs, throttle_secs
+        self,
+        checkpoint_service,
+        task_q,
+        stopped,
+        start_delay_secs,
+        throttle_secs,
     ):
         Thread.__init__(self)
-        self._master_servicer = master_servicer
+        self._checkpoint_service = checkpoint_service
         self._task_q = task_q
         self._stopped = stopped
         self._start_delay_secs = start_delay_secs
@@ -72,7 +77,7 @@ class _EvaluationTrigger(Thread):
         time.sleep(self._start_delay_secs)
         while not self._stopped(1):
             latest_chkp_version = (
-                self._master_servicer.get_last_checkpoint_version()
+                self._checkpoint_service.get_latest_checkpoint_version()
             )
             if self._eval_job is None or self._eval_job.ok_to_new_job(
                 time.time(), self._throttle_secs, latest_chkp_version
