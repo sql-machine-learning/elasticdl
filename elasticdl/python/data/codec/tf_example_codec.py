@@ -1,9 +1,10 @@
 import tensorflow as tf
 
-from elasticdl.python.data.codec import Codec
 
+class TFExampleCodec(object):
+    def __init__(self):
+        self._is_initialized = False
 
-class TFExampleCodec(Codec):
     def init(self, feature_columns):
         self._example_spec = tf.feature_column.make_parse_example_spec(
             feature_columns

@@ -8,7 +8,8 @@ ARG EXTRA_PYPI_INDEX
 # Install RecordIO 
 RUN pip install 'pyrecordio>=0.0.6' --extra-index-url=${EXTRA_PYPI_INDEX}
 
-COPY elasticdl/python /elasticdl/python
+COPY elasticdl/python/data /elasticdl/python/data
+COPY elasticdl/python/elasticdl/common /elasticdl/python/elasticdl/common
 
 ENV PYTHONPATH=/
 WORKDIR /
