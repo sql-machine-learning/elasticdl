@@ -6,19 +6,23 @@ import traceback
 from kubernetes import client, config, watch
 from kubernetes.client import (
     V1PersistentVolumeClaimVolumeSource as pvcVolumeSource,
+    V1EnvVar,
+    V1EnvVarSource,
+    V1ObjectFieldSelector,
 )
+from elasticdl.python.elasticdl.common.k8s_utils import parse_resource
 
 
 class Client(object):
-    def __init__(self, *, worker_image, namespace, job_name, event_callback):
+    def __init__(self, *, image_name, namespace, job_name, event_callback):
         """
         ElasticDL k8s client.
 
         Args:
-            worker_image: Docker image path for ElasticDL workers.
+            image_name: Docker image path for ElasticDL pod.
             namespace: k8s namespace for ElasticDL pods.
             job_name: ElasticDL job name, should be unique in the namespace.
-                Used as worker pod name prefix and value for "elasticdl" label.
+                Used as pod name prefix and value for "elasticdl" label.
             event_callback: If not None, an event watcher will be created and
                 events passed to the callback.
         """
@@ -31,7 +35,7 @@ class Client(object):
 
         self._v1 = client.CoreV1Api()
         self._logger = logging.getLogger(__name__)
-        self._image = worker_image
+        self._image = image_name
         self._ns = namespace
         self._job_name = job_name
         self._event_cb = event_callback
@@ -41,6 +45,7 @@ class Client(object):
             ).start()
 
     def _watch(self):
+        self._logger.info(self._ns)
         stream = watch.Watch().stream(
             self._v1.list_namespaced_pod,
             self._ns,
@@ -58,30 +63,46 @@ class Client(object):
     def get_worker_pod_name(self, worker_id):
         return "elasticdl-%s-worker-%s" % (self._job_name, str(worker_id))
 
-    def _create_worker_pod(
-        self,
-        worker_id,
-        resource_requests,
-        resource_limits,
-        priority,
-        mount_path,
-        volume_name,
-        image_pull_policy,
+    @staticmethod
+    def _create_pod(
+        pod_name,
+        job_name,
+        image_name,
         command,
-        args,
+        resource_request,
+        resource_limit,
+        container_args,
+        pod_priority,
+        image_pull_policy,
         restart_policy,
+        volume_name,
+        mount_path,
+        owner_pod,
+        env,
     ):
-        # Worker container config
+        # Container
+        resource_requests = {
+            "cpu": resource_request["cpu"],
+            "memory": resource_request["memory"],
+        }
+        resource_limits = {
+            "cpu": resource_limit["cpu"],
+            "memory": resource_limit["memory"],
+        }
         container = client.V1Container(
-            name=self.get_worker_pod_name(worker_id),
-            image=self._image,
+            name=pod_name,
+            image=image_name,
             command=command,
             resources=client.V1ResourceRequirements(
                 requests=resource_requests, limits=resource_limits
             ),
-            image_pull_policy=image_pull_policy,
-            args=args,
+            args=container_args,
         )
+        if image_pull_policy is not None:
+            container.image_pull_policy = image_pull_policy
+
+        if env is not None:
+            container.env = env
 
         # Pod
         spec = client.V1PodSpec(
@@ -89,9 +110,9 @@ class Client(object):
         )
 
         # Mount data path
-        if mount_path is not None and volume_name is not None:
+        if volume_name is not None and mount_path is not None:
             volume = client.V1Volume(
-                name="data-volume",
+                name=volume_name,
                 persistent_volume_claim=pvcVolumeSource(
                     claim_name="fileserver-claim", read_only=False
                 ),
@@ -101,48 +122,75 @@ class Client(object):
                 client.V1VolumeMount(name=volume_name, mount_path=mount_path)
             ]
 
-        if priority is not None:
-            spec.priority_class_name = priority
+        if pod_priority is not None:
+            spec.priority_class_name = pod_priority
 
-        # Find that master pod that will be used as the owner reference
-        # for this worker pod.
-        pods = self._v1.list_namespaced_pod(
-            namespace=self._ns,
-            label_selector="elasticdl_job_name=" + self._job_name,
-        ).items
-        master_pod = [
-            pod
-            for pod in pods
-            if (pod.metadata.name == self.get_master_pod_name())
-        ]
         owner_ref = (
             [
                 client.V1OwnerReference(
                     api_version="v1",
                     block_owner_deletion=True,
                     kind="Pod",
-                    name=master_pod[0].metadata.name,
-                    uid=master_pod[0].metadata.uid,
+                    name=owner_pod[0].metadata.name,
+                    uid=owner_pod[0].metadata.uid,
                 )
             ]
-            if len(master_pod) != 0
+            if owner_pod is not None and len(owner_pod) != 0
             else None
         )
 
         pod = client.V1Pod(
             spec=spec,
             metadata=client.V1ObjectMeta(
-                name=self.get_worker_pod_name(worker_id),
-                labels={
-                    "app": "elasticdl",
-                    "elasticdl_job_name": self._job_name,
-                },
-                # TODO: Add tests for this once we've done refactoring on
-                # k8s client code and the constant strings
+                name=pod_name,
+                labels={"app": "elasticdl", "elasticdl_job_name": job_name},
                 owner_references=owner_ref,
             ),
         )
         return pod
+
+    def create_master(
+        self,
+        job_name,
+        image_name,
+        model_file,
+        master_resource_request,
+        master_resource_limit,
+        worker_resource_request,
+        worker_resource_limit,
+        master_pod_priority,
+        image_pull_policy,
+        volume_name,
+        mount_path,
+        restart_policy,
+        args,
+    ):
+        env = [
+            V1EnvVar(
+                name="MY_POD_IP",
+                value_from=V1EnvVarSource(
+                    field_ref=V1ObjectFieldSelector(field_path="status.podIP")
+                ),
+            )
+        ]
+        pod = self._create_pod(
+            "elasticdl-" + job_name + "-master",
+            job_name,
+            image_name,
+            ["python"],
+            parse_resource(master_resource_request),
+            parse_resource(master_resource_limit),
+            args,
+            master_pod_priority,
+            image_pull_policy,
+            restart_policy,
+            volume_name,
+            mount_path,
+            None,
+            env,
+        )
+        resp = self._v1.create_namespaced_pod(self._ns, pod)
+        print("Master launched. status='%s'" % str(resp.status))
 
     def create_worker(
         self,
@@ -158,17 +206,33 @@ class Client(object):
         restart_policy="OnFailure",
     ):
         self._logger.info("Creating worker: " + str(worker_id))
-        pod = self._create_worker_pod(
-            worker_id,
+        # Find that master pod that will be used as the owner reference
+        # for this worker pod.
+        pods = self._v1.list_namespaced_pod(
+            namespace=self._ns,
+            label_selector="elasticdl_job_name=" + self._job_name,
+        ).items
+        master_pod = [
+            pod
+            for pod in pods
+            if (pod.metadata.name == self.get_master_pod_name())
+        ]
+        self._logger.info("image pull policy : " + image_pull_policy)
+        pod = self._create_pod(
+            self.get_worker_pod_name(worker_id),
+            self._job_name,
+            self._image,
+            command,
             resource_requests,
             resource_limits,
+            args,
             priority,
-            mount_path,
-            volume_name,
             image_pull_policy,
-            command=command,
-            args=args,
-            restart_policy=restart_policy,
+            restart_policy,
+            volume_name,
+            mount_path,
+            master_pod,
+            None,
         )
         return self._v1.create_namespaced_pod(self._ns, pod)
 
