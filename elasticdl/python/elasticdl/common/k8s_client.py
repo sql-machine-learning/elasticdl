@@ -224,7 +224,6 @@ class Client(object):
             for pod in pods
             if (pod.metadata.name == self.get_master_pod_name())
         ]
-        self._logger.info("image pull policy : " + image_pull_policy)
         pod = self._create_pod(
             self.get_worker_pod_name(worker_id),
             self._job_name,
