@@ -106,7 +106,10 @@ def _add_evaluate_params(parser):
 def _train(args, argv):
     job_name = args.job_name
     _build_docker_image(
-        args.model_file, args.image_name, args.push_image, args.extra_pypi_index
+        args.model_file,
+        args.image_name,
+        args.push_image,
+        args.extra_pypi_index,
     )
     _submit(args.image_name, args.model_file, job_name, args, argv)
 
