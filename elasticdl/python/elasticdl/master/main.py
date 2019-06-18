@@ -220,7 +220,7 @@ def main():
         args.minibatch_size,
         optimizer,
         task_q,
-        init_var=model_inst.trainable_variables if model.built else [],
+        init_var=model_inst.trainable_variables if model_inst.built else [],
         init_from_checkpoint=args.init_from_checkpoint,
         checkpoint_service=checkpoint_service,
     )
