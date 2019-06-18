@@ -120,21 +120,14 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version += 1
 
     def _create_var_from_tensor_dict(self, tensor_dict):
+        assert tensor_dict
         for k, v in tensor_dict.items():
             self.set_model_var(k, tensor_to_ndarray(v))
-        if tensor_dict:
-            self._var_created = True
+        self._var_created = True
 
     def load_checkpoint_file(self, file_name):
         pb_model = load_from_checkpoint_file(file_name)
-
-        if self._var_created:
-            for k, v in self._model.items():
-                # Assumes all variables exist in pb_model.param.
-                v.assign(tensor_to_ndarray(pb_model.param[k]))
-        else:
-            # Create variables from pb_model.param
-            self._create_var_from_tensor_dict(pb_model.param)
+        self._create_var_from_tensor_dict(pb_model.param)
         self._version = pb_model.version
 
     def _update_model(self):
@@ -183,7 +176,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         with self._lock:
             if not self._var_created:
                 self._create_var_from_tensor_dict(request.variable)
-                self._var_created = True
         return empty_pb2.Empty()
 
     def ReportGradient(self, request, _):
