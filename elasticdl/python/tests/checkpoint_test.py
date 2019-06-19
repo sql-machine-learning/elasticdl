@@ -67,6 +67,7 @@ class CheckpointTest(unittest.TestCase):
                 init_var=init_var,
                 init_from_checkpoint="",
                 checkpoint_service=checkpointer,
+                evaluation_service=None,
             )
 
             req = elasticdl_pb2.GetModelRequest()
@@ -107,6 +108,7 @@ class CheckpointTest(unittest.TestCase):
                 init_var=worker._model.trainable_variables,
                 init_from_checkpoint="",
                 checkpoint_service=checkpointer,
+                evaluation_service=None,
             )
 
             worker._stub = InProcessMaster(master)
@@ -151,6 +153,7 @@ class CheckpointTest(unittest.TestCase):
                 init_var=init_var,
                 init_from_checkpoint="",
                 checkpoint_service=CheckpointService(chkp_dir, 2, 3),
+                evaluation_service=None,
             )
             req = elasticdl_pb2.GetModelRequest()
             req.method = elasticdl_pb2.MINIMUM
@@ -170,6 +173,7 @@ class CheckpointTest(unittest.TestCase):
                 init_var=init_var,
                 init_from_checkpoint=chkp_file,
                 checkpoint_service=CheckpointService("", 0, 0),
+                evaluation_service=None,
             )
             model2 = master2.GetModel(req, None)
             self.assertEqual(model, model2)
@@ -182,6 +186,7 @@ class CheckpointTest(unittest.TestCase):
                 init_var=[],
                 init_from_checkpoint=chkp_file,
                 checkpoint_service=CheckpointService("", 0, 0),
+                evaluation_service=None,
             )
             model3 = master3.GetModel(req, None)
             self.assertEqual(model, model3)
