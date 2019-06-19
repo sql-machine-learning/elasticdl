@@ -45,7 +45,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._grad_to_wait = grads_to_wait
         self._grad_n = 0
         self._minibatch_size = minibatch_size
-        self._evaluation_metrics = defaultdict(list)
 
         # A <string, tf.ResourceVariable> map. We use tf.ResourceVariable
         # instead ndarray to avoid copying and conversion when calling
@@ -85,7 +84,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._init_model_from_var_list(init_var)
         else:
             self._logger.info("Model is not intialized. It will be "
-                "initialized by the first update from the worker.")
+                              "initialized by the first update from "
+                              "the worker.")
 
     @staticmethod
     def var_name_encode(name):
