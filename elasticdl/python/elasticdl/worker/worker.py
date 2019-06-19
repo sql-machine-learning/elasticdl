@@ -132,23 +132,24 @@ class Worker(object):
         return res.accepted, res.model_version
 
     @staticmethod
-    def _get_batch(reader, batch_size, decode):
+    def _get_batch(reader, batch_size):
         res = []
         for i in range(batch_size):
             record = reader.record()
             if record is None:
                 break
-            res.append(decode(record))
+            res.append(record)
+            # res.append(decode(record))
         return res
 
-    def _get_features_and_labels(self, record_buf):
-        batch_input_data, batch_labels = self._input_fn(record_buf)
-        features = [
-            batch_input_data[f_col.key] for f_col in self._feature_columns
-        ]
-        if len(features) == 1:
-            features = features[0]
-        return features, batch_labels
+    # def _get_features_and_labels(self, record_buf):
+    #     batch_input_data, batch_labels = self._input_fn(record_buf)
+    #     features = [
+    #         batch_input_data[f_col.key] for f_col in self._feature_columns
+    #     ]
+    #     if len(features) == 1:
+    #         features = features[0]
+    #     return features, batch_labels
 
     def _create_variable_and_report(self, features):
         # Use model.call to create variables, then report to ps
@@ -181,9 +182,7 @@ class Worker(object):
             )
         ) as reader:
             while True:
-                record_buf = self._get_batch(
-                    reader, task.minibatch_size, self._codec.decode
-                )
+                record_buf = self._get_batch(reader, task.minibatch_size)
                 if not record_buf:
                     break
                 min_model_version = self._process_minibatch(
@@ -191,13 +190,18 @@ class Worker(object):
                 )
 
     def _process_minibatch(self, task, record_buf, min_model_version):
-        features, labels = self._get_features_and_labels(record_buf)
+        feature_tensor_list, label_nparray = self._input_fn(record_buf, self._codec.decode)
+        # zjl?: why?
+        if len(feature_tensor_list) == 1:
+            features = feature_tensor_list[0]
+        # features, labels = self._get_features_and_labels(record_buf)
+
         if not self._var_created:
             self._create_variable_and_report(features)
         for _ in range(self._max_minibatch_retry_num):
             if task.type == elasticdl_pb2.EVALUATION:
                 self.get_model(min_model_version, elasticdl_pb2.FIXED)
-                accepted, _ = self._run_evaluation_task(features, labels)
+                accepted, _ = self._run_evaluation_task(features, label_nparray)
                 if accepted:
                     break
             elif task.type == elasticdl_pb2.TRAINING:

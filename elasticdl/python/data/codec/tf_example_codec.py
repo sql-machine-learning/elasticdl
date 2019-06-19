@@ -46,11 +46,11 @@ class TFExampleCodec(object):
         # example = tf.train.Example(features=tf.train.Features(feature=f_dict))
         return example.SerializeToString()
 
-    def decode(self, raw):
+    def decode(self, string_list):
         '''
-        Take a string and return a decoded example object 
+        Take a list of string and return a decoded tensor dict
         '''
-        example = tf.train.Example()
-        example.ParseFromString(raw)
-        return example
-        # return tf.io.parse_single_example(raw, self._example_spec)
+        # example = tf.train.Example()
+        # example.ParseFromString(raw)
+        # return example
+        return tf.io.parse_single_example(raw, self._example_spec)
