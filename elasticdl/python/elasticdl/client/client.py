@@ -199,13 +199,10 @@ def _submit(image_name, model_file, job_name, args, argv):
         "--worker_resource_limit",
         args.worker_resource_request,
     ]
-    if args.image_pull_policy is not None:
-        container_args.extend(["--image_pull_policy", args.image_pull_policy])
+    container_args.extend(["--image_pull_policy", args.image_pull_policy])
+    container_args.extend(["--restart_policy", args.restart_policy])
 
-    if args.restart_policy is not None:
-        container_args.extend(["--restart_policy", args.restart_policy])
-
-    if args.volume_name is not None and args.mount_path is not None:
+    if all([args.volume_name, args.mount_path]):
         container_args.extend(
             [
                 "--mount_path",
@@ -214,6 +211,8 @@ def _submit(image_name, model_file, job_name, args, argv):
                 args.volume_name,
             ]
         )
+    elif not any([args.volume_name, args.mount_path]):
+        raise ValueError("Not both of the parameters volume_name and mount_path are provided.") 
 
     container_args.extend(argv)
 

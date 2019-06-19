@@ -92,8 +92,7 @@ class Client(object):
             ),
             args=container_args,
         )
-        if image_pull_policy is not None:
-            container.image_pull_policy = image_pull_policy
+        container.image_pull_policy = image_pull_policy
 
         if env is not None:
             container.env = env
@@ -104,7 +103,7 @@ class Client(object):
         )
 
         # Mount data path
-        if volume_name is not None and mount_path is not None:
+        if all([volume_name, mount_path]):
             volume = client.V1Volume(
                 name=volume_name,
                 persistent_volume_claim=pvcVolumeSource(
@@ -115,6 +114,8 @@ class Client(object):
             container.volume_mounts = [
                 client.V1VolumeMount(name=volume_name, mount_path=mount_path)
             ]
+        elif not any([volume_name, mount_path]):
+            raise ValueError("Not both of the parameters volume_name and mount_path are provided.")
 
         if pod_priority is not None:
             spec.priority_class_name = pod_priority
@@ -129,7 +130,7 @@ class Client(object):
                     uid=owner_pod[0].metadata.uid,
                 )
             ]
-            if owner_pod is not None and len(owner_pod) != 0
+            if owner_pod
             else None
         )
 
