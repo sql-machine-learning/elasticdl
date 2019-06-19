@@ -89,7 +89,12 @@ class CheckpointTest(unittest.TestCase):
 
             # Launch the training
             codec_file = 'elasticdl/python/data/codec/tf_example_codec.py'
-            worker = Worker(1, _module_file, channel=None, codec_file=codec_file)
+            worker = Worker(
+                1,
+                _module_file,
+                channel=None,
+                codec_file=codec_file,
+            )
             filename = create_recordio_file(128)
             task_q = _TaskQueue(
                 {filename: 128}, {}, records_per_task=64, num_epochs=1
