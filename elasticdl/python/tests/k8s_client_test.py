@@ -4,7 +4,7 @@ import os
 import random
 import time
 
-from elasticdl.python.elasticdl.master import k8s_client as k8s
+from elasticdl.python.elasticdl.common import k8s_client as k8s
 
 
 class WorkerTracker(object):
@@ -27,7 +27,7 @@ class K8sClientTest(unittest.TestCase):
         tracker = WorkerTracker()
 
         c = k8s.Client(
-            worker_image="gcr.io/google-samples/hello-app:1.0",
+            image_name="gcr.io/google-samples/hello-app:1.0",
             namespace="default",
             job_name="test-job-%d-%d"
             % (int(time.time()), random.randint(1, 101)),

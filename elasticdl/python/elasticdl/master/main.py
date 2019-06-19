@@ -175,6 +175,11 @@ def _parse_args():
         default="Always",
         help="Image pull policy of master and workers"
     )
+    parser.add_argument(
+        "--restart_policy",
+        default="Never",
+        help="The pod restart policy when pod crashed",
+    )
     return parser.parse_args()
 
 
@@ -262,7 +267,7 @@ def main():
         worker_manager = WorkerManager(
             task_q,
             job_name=args.job_name,
-            worker_image=args.worker_image,
+            image_name=args.worker_image,
             command=worker_command,
             args=worker_args,
             namespace="default",
@@ -273,7 +278,7 @@ def main():
             mount_path=args.mount_path,
             volume_name=args.volume_name,
             image_pull_policy=args.image_pull_policy,
-            restart_policy="Never",
+            restart_policy=args.restart_policy,
         )
         worker_manager.start_workers()
 

@@ -4,13 +4,8 @@ import tempfile
 import sys
 
 import docker
-import yaml
+from elasticdl.python.elasticdl.common import k8s_client as k8s
 import shutil
-
-from kubernetes.client.apis import core_v1_api
-from kubernetes import config
-
-from elasticdl.python.elasticdl.common.k8s_utils import parse_resource
 
 
 def main():
@@ -91,6 +86,11 @@ def _add_train_params(parser):
         "--image_pull_policy",
         default="Always",
         help="The image pull policy of master and worker",
+    )
+    parser.add_argument(
+        "--restart_policy",
+        default="Never",
+        help="The pod restart policy when pod crashed",
     )
     parser.add_argument(
         "--extra_pypi_index", help="The extra python package repository"
@@ -186,85 +186,26 @@ COPY {SOURCE_MODEL_FILE} {TARGET_MODEL_FILE}
             print(line)
 
 
-def _gen_master_def(image_name, model_file, job_name, args, argv):
-    master_resource_request = parse_resource(args.master_resource_request)
-    master_resource_limit = parse_resource(args.master_resource_limit)
-
-    master_yaml = """
-apiVersion: v1
-kind: Pod
-metadata:
-  name: "elasticdl-{job_name}-master"
-  labels:
-    app: elasticdl
-    elasticdl_job_name: {job_name}
-spec:
-  containers:
-  - name: "elasticdl-{job_name}-master"
-    image: "{image_name}"
-    command: ["python"]
-    args: [
-        "-m", "elasticdl.python.elasticdl.master.main",
-        "--job_name", "{job_name}",
-        "--worker_image", "{image_name}",
-        "--model_file", "{m_file}",
-        "--worker_resource_request", "{worker_resource_request}",
-        "--worker_resource_limit", "{worker_resource_limit}"
+def _submit(image_name, model_file, job_name, args, argv):
+    container_args = [
+        "-m",
+        "elasticdl.python.elasticdl.master.main",
+        "--job_name",
+        job_name,
+        "--worker_image",
+        image_name,
+        "--model_file",
+        _m_file_in_docker(model_file),
+        "--worker_resource_request",
+        args.worker_resource_request,
+        "--worker_resource_limit",
+        args.worker_resource_request,
     ]
-    imagePullPolicy: {image_pull_policy}
-    resources:
-      limits:
-        cpu:  "{master_cpu_limit}"
-        memory: "{master_memory_limit}"
-      requests:
-        cpu:  "{master_cpu_request}"
-        memory: "{master_memory_request}"
-    env:
-    - name: MY_POD_IP
-      valueFrom:
-        fieldRef:
-          fieldPath: status.podIP
-  restartPolicy: Never
-""".format(
-        m_file=_m_file_in_docker(model_file),
-        image_name=image_name,
-        job_name=job_name,
-        # TODO: Use resource string directly similar to
-        # what's done in WorkerManager. Need to wait until
-        # we switch to use k8s Python API in:
-        # https://github.com/wangkuiyi/elasticdl/issues/600
-        master_cpu_limit=master_resource_limit["cpu"],
-        master_memory_limit=master_resource_limit["memory"],
-        master_cpu_request=master_resource_request["cpu"],
-        master_memory_request=master_resource_request["memory"],
-        master_resource_limit=args.master_resource_limit,
-        worker_resource_request=args.worker_resource_request,
-        worker_resource_limit=args.worker_resource_limit,
-        image_pull_policy=args.image_pull_policy,
-    )
+    container_args.extend(["--image_pull_policy", args.image_pull_policy])
+    container_args.extend(["--restart_policy", args.restart_policy])
 
-    master_def = yaml.safe_load(master_yaml)
-
-    # Build master arguments
-    master_def["spec"]["containers"][0]["args"].extend(argv)
-
-    if args.master_pod_priority is not None:
-        master_def["spec"]["priorityClassName"] = args.master_pod_priority
-
-    if args.volume_name is not None and args.mount_path is not None:
-        persistent_volume_claim = {
-            "claimName": "fileserver-claim",
-            "readOnly": False,
-        }
-        volume = {
-            "name": args.volume_name,
-            "persistentVolumeClaim": persistent_volume_claim,
-        }
-        master_def["spec"]["volumes"] = [volume]
-        master_def["spec"]["containers"][0]["volumeMounts"] = [
-            {"mountPath": args.mount_path, "name": args.volume_name}
-        ]
-        master_def["spec"]["containers"][0]["args"].extend(
+    if all([args.volume_name, args.mount_path]):
+        container_args.extend(
             [
                 "--mount_path",
                 args.mount_path,
@@ -272,21 +213,32 @@ spec:
                 args.volume_name,
             ]
         )
-
-    if args.image_pull_policy is not None:
-        master_def["spec"]["containers"][0]["args"].extend(
-            ["--image_pull_policy", args.image_pull_policy]
+    elif any([args.volume_name, args.mount_path]):
+        raise ValueError(
+            "Not both of the parameters volume_name and "
+            "mount_path are provided."
         )
 
-    return master_def
+    container_args.extend(argv)
 
-
-def _submit(image_name, model_file, job_name, args, argv):
-    master_def = _gen_master_def(image_name, model_file, job_name, args, argv)
-    config.load_kube_config()
-    api = core_v1_api.CoreV1Api()
-    resp = api.create_namespaced_pod(body=master_def, namespace="default")
-    print("Master launched. status='%s'" % str(resp.status))
+    k8s.Client(
+        image_name=image_name,
+        namespace="default",
+        job_name=job_name,
+        event_callback=None,
+    ).create_master(
+        job_name,
+        image_name,
+        _m_file_in_docker(model_file),
+        args.master_resource_request,
+        args.master_resource_limit,
+        args.master_pod_priority,
+        args.image_pull_policy,
+        args.volume_name,
+        args.mount_path,
+        args.restart_policy,
+        container_args,
+    )
 
 
 if __name__ == "__main__":
