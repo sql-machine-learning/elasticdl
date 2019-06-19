@@ -75,7 +75,7 @@ class _TaskQueue(object):
             eval_model_version,
         )
         with self._lock:
-            self._todo.extend(tasks)
+            self._todo[0:0] = tasks
         return tasks
 
     def _create_tasks(self, shards, task_type, model_version=-1):
@@ -125,7 +125,7 @@ class _TaskQueue(object):
                 self._logger.warning("Unknown task_id: %d" % task_id)
             elif not success:
                 # TODO: keep count of retries.
-                self._todo.append(task)
+                self._todo.insert(0, task)
             elif (
                 task.type == elasticdl_pb2.EVALUATION
                 and self._evaluation_service is not None
