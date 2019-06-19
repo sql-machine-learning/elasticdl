@@ -25,9 +25,9 @@ spec:
       --num_workers=2
       --checkpoint_steps=2
       --worker_image=elasticdl:dev
-      --worker_resource_request="cpu=0.1,memory=100Mi"
+      --worker_resource_request="cpu=1,memory=1024Mi"
       --job_name=test-mnist
-    imagePullPolicy: Always
+    imagePullPolicy: Never
     env:
       - name: MY_POD_IP
         valueFrom:
