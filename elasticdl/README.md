@@ -87,7 +87,6 @@ docker run --net=host --rm -it elasticdl:dev \
           --records_per_task=100 \
           --num_epochs=2 \
           --checkpoint_steps=2 \
-          --codec_type=tf_example \
           --grads_to_wait=2 \
           --minibatch_size=10 \
           --log_level=INFO"
@@ -100,7 +99,6 @@ docker run --net=host --rm -it elasticdl:dev \
     bash -c "python -m elasticdl.python.elasticdl.worker.main \
           --worker_id=1 \
           --model_file=elasticdl/python/examples/mnist_functional_api.py \
-          --codec_type=tf_example \
           --master_addr=localhost:50001 \
           --log_level=INFO"
 ```
