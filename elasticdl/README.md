@@ -49,6 +49,18 @@ docker run --rm -u $(id -u):$(id -g) -it \
 
 ## Test and Debug
 
+
+### Pre-commit Check
+
+We have set up pre-commit checks in the Github repo for pull requests, which can catch some Python style problems. However, to avoid waiting in the Travis CI queue, you can run the pre-commit checks locally:
+
+```bash
+docker run --rm -it -v $EDL_REPO:/v -w /v \
+    elasticdl:dev \
+    bash -c \
+    "pre-commit run --files $(find elasticdl/python -name '*.py' -print0 | tr '\0' ' ')"
+```
+
 ### Unittests
 
 In dev Docker container's `elasticdl` repo's root directory, do the following:
