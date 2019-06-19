@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tensorflow.python.framework.ops import EagerTensor
 import numpy as np
 import PIL.Image
 
@@ -15,11 +14,12 @@ x = tf.keras.layers.Flatten()(x)
 outputs = tf.keras.layers.Dense(10)(x)
 
 model = tf.keras.Model(inputs=inputs, outputs=outputs, name="mnist_model")
-                    #         f_col.key: row[i]
-                    #         .astype(f_col.dtype.as_numpy_dtype)
-                    #         .reshape(f_col.shape)
-                    #         for i, f_col in enumerate(feature_columns)
+#         f_col.key: row[i]
+#         .astype(f_col.dtype.as_numpy_dtype)
+#         .reshape(f_col.shape)
+#         for i, f_col in enumerate(feature_columns)
 # example = tf.train.Example(features=tf.train.Features(feature=f_dict))
+
 
 def prepare_data_for_a_single_file(file_object, filename):
     """
@@ -43,6 +43,7 @@ def prepare_data_for_a_single_file(file_object, filename):
     return tf.train.Example(
         features=tf.train.Features(feature=feature_name_to_feature),
     )
+
 
 def loss(output, labels):
     return tf.reduce_mean(

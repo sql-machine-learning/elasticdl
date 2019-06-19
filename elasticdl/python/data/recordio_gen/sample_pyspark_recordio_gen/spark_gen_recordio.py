@@ -4,7 +4,6 @@ import tarfile
 from pyspark import SparkContext
 from pyspark import TaskContext
 
-import numpy as np
 from elasticdl.python.elasticdl.common.model_helper import load_module
 from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import (
     convert_numpy_to_recordio,
@@ -33,16 +32,6 @@ def process_data(
                 assert f is not None
                 filename_to_object[tar_info.name] = f
 
-        # feature_list = []
-        # label_list = []
-        # for filename in filename_set:
-        #     feature_label_tuple = single_file_preparation_func(
-        #         filename_to_object[filename], filename
-        #     )
-        #     assert len(feature_label_tuple) == 2
-        #     feature_list.append(feature_label_tuple[0])
-        #     label_list.append(feature_label_tuple[1])
-
         example_list = []
         for filename in filename_set:
             example = single_file_preparation_func(
@@ -52,17 +41,14 @@ def process_data(
 
         # Initilize codec
         codec_module = load_module(codec_file)
-        codec_module.codec.init(feature_label_columns)
+        # codec_module.codec.init(feature_label_columns)
 
         ctx = TaskContext()
         convert_numpy_to_recordio(
             output_dir,
             example_list,
-            # np.array(feature_list),
-            # np.array(label_list),
-            # feature_label_columns,
             records_per_file,
-            codec_module.codec,
+            codec_module.codec.encode,
             str(ctx.partitionId()),
         )
         return filename_list
