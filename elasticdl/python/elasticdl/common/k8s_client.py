@@ -115,7 +115,9 @@ class Client(object):
                 client.V1VolumeMount(name=volume_name, mount_path=mount_path)
             ]
         elif not any([volume_name, mount_path]):
-            raise ValueError("Not both of the parameters volume_name and mount_path are provided.")
+            raise ValueError(
+                "Not both of the parameters volume_name and mount_path are provided."
+            )
 
         if pod_priority is not None:
             spec.priority_class_name = pod_priority
@@ -138,10 +140,7 @@ class Client(object):
             spec=spec,
             metadata=client.V1ObjectMeta(
                 name=pod_name,
-                labels={
-                    "app": "elasticdl",
-                    ELASTICDL_JOB_KEY: job_name,
-                },
+                labels={"app": "elasticdl", ELASTICDL_JOB_KEY: job_name},
                 # TODO: Add tests for this once we've done refactoring on
                 # k8s client code and the constant strings
                 owner_references=owner_ref,

@@ -42,8 +42,7 @@ def _add_train_params(parser):
         help="Whether to push the newly built image to remote registry",
     )
     parser.add_argument(
-        "--image_name",
-        help="The docker image name built by ElasticDL client",
+        "--image_name", help="The docker image name built by ElasticDL client"
     )
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
@@ -215,7 +214,9 @@ def _submit(image_name, model_file, job_name, args, argv):
             ]
         )
     elif not any([args.volume_name, args.mount_path]):
-        raise ValueError("Not both of the parameters volume_name and mount_path are provided.") 
+        raise ValueError(
+            "Not both of the parameters volume_name and mount_path are provided."
+        )
 
     container_args.extend(argv)
 
@@ -235,7 +236,7 @@ def _submit(image_name, model_file, job_name, args, argv):
         args.volume_name,
         args.mount_path,
         args.restart_policy,
-        container_args
+        container_args,
     )
 
 
