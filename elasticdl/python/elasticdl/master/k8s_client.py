@@ -135,10 +135,7 @@ class Client(object):
             spec=spec,
             metadata=client.V1ObjectMeta(
                 name=self.get_worker_pod_name(worker_id),
-                labels={
-                    "app": "elasticdl",
-                    ELASTICDL_JOB_KEY: self._job_name,
-                },
+                labels={"app": "elasticdl", ELASTICDL_JOB_KEY: self._job_name},
                 # TODO: Add tests for this once we've done refactoring on
                 # k8s client code and the constant strings
                 owner_references=owner_ref,

@@ -47,8 +47,7 @@ def _add_train_params(parser):
         help="Whether to push the newly built image to remote registry",
     )
     parser.add_argument(
-        "--image_name",
-        help="The docker image name built by ElasticDL client",
+        "--image_name", help="The docker image name built by ElasticDL client"
     )
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(

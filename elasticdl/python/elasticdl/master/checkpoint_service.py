@@ -31,8 +31,7 @@ class CheckpointService(object):
             self._directory = os.getcwd() + "/checkpoint_dir"
         if self._steps:
             os.makedirs(self._directory, exist_ok=True)
-            if self._max_versions:
-                self._checkpoint_list = []
+        self._checkpoint_list = []
 
     def _get_checkpoint_file(self, version):
         return "%s/model_v%s.chkpt" % (self._directory, str(version))
@@ -49,8 +48,8 @@ class CheckpointService(object):
         """Checkpoint the given model"""
         file = self._get_checkpoint_file(version)
         save_checkpoint_to_file(model, file)
+        self._checkpoint_list.append(Checkpoint(version, file))
         if self._max_versions:
-            self._checkpoint_list.append(Checkpoint(version, file))
             while len(self._checkpoint_list) > self._max_versions:
                 file_to_delete = self._checkpoint_list.pop(0).file
                 os.remove(file_to_delete)

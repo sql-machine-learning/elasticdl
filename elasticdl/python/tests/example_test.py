@@ -82,6 +82,7 @@ class ExampleTest(unittest.TestCase):
             init_var=[],
             init_from_checkpoint="",
             checkpoint_service=CheckpointService("", 0, 0),
+            evaluation_service=None,
         )
         worker._stub = InProcessMaster(master)
 
