@@ -92,13 +92,15 @@ class Client(object):
                 requests=resource_requests, limits=resource_limits
             ),
             args=container_args,
+            image_pull_policy=image_pull_policy,
+            env=env,
         )
-        container.image_pull_policy = image_pull_policy
-        container.env = env
 
         # Pod
         spec = client.V1PodSpec(
-            containers=[container], restart_policy=restart_policy
+            containers=[container],
+            restart_policy=restart_policy,
+            priority_class_name=pod_priority,
         )
 
         # Mount data path
@@ -118,8 +120,6 @@ class Client(object):
                 "Not both of the parameters volume_name and "
                 "mount_path are provided."
             )
-
-        spec.priority_class_name = pod_priority
 
         owner_ref = (
             [
