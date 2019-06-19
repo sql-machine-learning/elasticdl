@@ -123,10 +123,9 @@ class Worker(object):
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         for k, v in evaluation_metrics.items():
             v_np = v.numpy()
-            if v_np.size != 1:
-                raise Exception(
-                    "Only metric result of length 1 is " "supported currently"
-                )
+            # If scalar, convert to numpy 1D array with size 1
+            if not v_np.shape:
+                v_np = v_np.reshape(1)
             req.evaluation_metrics[k].CopyFrom(ndarray_to_tensor(v_np))
         req.model_version = self._model_version
         res = self._stub.ReportEvaluationMetrics(req)
