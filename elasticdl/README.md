@@ -124,9 +124,3 @@ If you find permission error in the main pod log, e.g., `"pods is forbidden: Use
 ```bash
 kubectl apply -f manifests/examples/elasticdl-rbac.yaml
 ```
-
-### Run ElasticDL On GKE
-https://docs.google.com/document/d/1cbzYjHTd7SUAPUGbT82AcmVu_4iWWjwykrryIDH-fOU/edit#heading=h.mbjsiz6n6jlo
-
-### ElasticDL Priority-Based Elastic Scheduling
-https://docs.google.com/document/d/1H4rhRc5Ll0uxTkiVf2fV_Q0xFf0HlKas1IAqPtWGHcQ/edit#heading=h.vb8p0lepu9vn (Note: The doc is currently in Chinese.)
