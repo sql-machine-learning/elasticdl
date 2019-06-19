@@ -32,7 +32,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         task_q,
         *,
         init_var,
-        checkpoint_filename,
+        checkpoint_filename_for_init,
         checkpoint_service,
         evaluation_service,
     ):
@@ -52,7 +52,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # optimizer's apply_gradients() function.
         self._model = {}
         self._version = 0
-        self._init_model(checkpoint_filename, init_var)
+        self._init_model(checkpoint_filename_for_init, init_var)
 
         self._checkpoint_service = checkpoint_service
         self._evaluation_service = evaluation_service
@@ -76,16 +76,16 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         for name, val in tensor_dict.items():
             self.set_model_var(name, tensor_to_ndarray(val))
 
-    def _init_model(self, checkpoint_filename, init_var):
-        if checkpoint_filename != '':
-            pb_model = load_from_checkpoint_file(checkpoint_filename)
+    def _init_model(self, checkpoint_filename_for_init, init_var):
+        if checkpoint_filename_for_init != '':
+            pb_model = load_from_checkpoint_file(checkpoint_filename_for_init)
             self._version = pb_model.version
             self._init_model_from_tensor_dict(pb_model.param)
         elif len(init_var) > 0:
             self._init_model_from_var_list(init_var)
         else:
-            self._logger.info("Model is not intialized. It will be \
-                initialized by the first update from the worker.")
+            self._logger.info("Model is not intialized. It will be "
+                "initialized by the first update from the worker.")
 
     @staticmethod
     def var_name_encode(name):
