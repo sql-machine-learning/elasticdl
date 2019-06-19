@@ -39,12 +39,11 @@ class _EvaluationJob(object):
             )
             return False
         for k, v in evaluation_metrics.items():
-            if v.dim:
-                self._completed_minibatches += 1
-                if k in self._evaluation_metrics:
-                    self._evaluation_metrics[k] += tensor_to_ndarray(v)
-                else:
-                    self._evaluation_metrics[k] = np.copy(tensor_to_ndarray(v))
+            if k in self._evaluation_metrics:
+                self._evaluation_metrics[k] += tensor_to_ndarray(v)
+            else:
+                self._evaluation_metrics[k] = np.copy(tensor_to_ndarray(v))
+        self._completed_minibatches += 1
         return True
 
     def get_evaluation_summary(self):
