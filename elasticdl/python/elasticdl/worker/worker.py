@@ -53,7 +53,6 @@ class Worker(object):
 
         # Initilize codec
         codec_module = load_module(codec_file)
-        # codec_module.codec.init(all_columns)
         self._codec = codec_module.codec
 
         if channel is None:

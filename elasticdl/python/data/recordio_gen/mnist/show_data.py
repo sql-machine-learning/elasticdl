@@ -36,7 +36,6 @@ def main(argv):
 
     # Initilize codec
     codec_module = load_module(args.codec_file)
-    # codec_module.codec.init(feature_columns)
 
     decode_fn = codec_module.codec.decode
 

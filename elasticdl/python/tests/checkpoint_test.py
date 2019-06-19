@@ -3,6 +3,7 @@ import tempfile
 import unittest
 import numpy as np
 import recordio
+import tensorflow as tf
 
 from contextlib import closing
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
@@ -21,19 +22,31 @@ _module_file = os.path.join(
 )
 
 m = load_module(_module_file)
-columns = m.feature_columns() + m.label_columns()
+columns = []
 
 
 def create_recordio_file(size):
     codec = TFExampleCodec()
-    codec.init(columns)
-
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     with closing(recordio.Writer(temp_file.name)) as f:
         for _ in range(size):
             x = np.random.rand(1).astype(np.float32)
             y = 2 * x + 1
-            f.write(codec.encode({"x": x, "y": y}))
+
+            feature_name_to_feature = {}
+            feature_name_to_feature['x'] = tf.train.Feature(
+                float_list=tf.train.FloatList(
+                    value=x,
+                ),
+            )
+            feature_name_to_feature['y'] = tf.train.Feature(
+                float_list=tf.train.FloatList(value=y),
+            )
+            example = tf.train.Example(
+                features=tf.train.Features(feature=feature_name_to_feature),
+            )
+
+            f.write(codec.encode(example))
     return temp_file.name
 
 

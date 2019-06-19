@@ -2,6 +2,10 @@ import tensorflow as tf
 
 
 class TFExampleCodec(object):
+    '''
+    Codec should be a stateless class. Any parameters needed by encode/decode
+    should be passed in as the arguments of encode/decode function
+    '''
     def encode(self, example):
         '''
         Take a tf example and return a string of encoded example
@@ -14,3 +18,6 @@ class TFExampleCodec(object):
         return a decoded tensor dict
         '''
         return tf.io.parse_single_example(raw, example_spec)
+
+
+codec = TFExampleCodec()

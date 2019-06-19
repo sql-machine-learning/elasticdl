@@ -64,18 +64,8 @@ def main(argv):
     records_per_file = args.num_record_per_chunk * args.num_chunk
     backend.set_image_data_format("channels_first")
 
-    # feature_columns = [
-    #     tf.feature_column.numeric_column(
-    #         key="image", dtype=tf.float32, shape=[32, 32, 3]
-    #     ),
-    #     tf.feature_column.numeric_column(
-    #         key="label", dtype=tf.int64, shape=[1]
-    #     ),
-    # ]
-
     # Initilize codec
     codec_module = load_module(args.codec_file)
-    # codec_module.codec.init(feature_columns)
 
     (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 

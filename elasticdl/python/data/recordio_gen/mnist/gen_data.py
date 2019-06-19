@@ -55,22 +55,13 @@ def main(argv):
 
     records_per_file = args.num_record_per_chunk * args.num_chunk
 
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
-
     # Initilize codec
     codec_module = load_module(args.codec_file)
-    codec_module.codec.init(feature_columns)
 
-    # convert_numpy_to_recordio(
-    # feature_columns = [
-    #     tf.feature_column.numeric_column(
-    #         key="image", dtype=tf.float32, shape=[28, 28]
-    #     ),
-    #     tf.feature_column.numeric_column(
-    #         key="label", dtype=tf.int64, shape=[1]
-    #     ),
-    # ]
-    convert_example_to_recordio(
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+    train_example_list = numpy_to_examples(x_train, y_train)
+    convert_examples_to_recordio(
         args.dir + "/mnist/train",
         example,
         # x_train,

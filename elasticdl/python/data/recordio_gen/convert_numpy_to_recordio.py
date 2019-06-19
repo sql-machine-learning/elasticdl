@@ -12,9 +12,6 @@ import recordio
 def convert_examples_to_recordio(
     file_dir,
     examples,
-    # data,
-    # label,
-    # feature_columns,
     records_per_file,
     encode_fn,
     partition="",
@@ -25,6 +22,7 @@ def convert_examples_to_recordio(
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
 
+    example_iter = iter(examples)
     try:
         for i in itertools.count():
             if partition == "":
@@ -35,7 +33,7 @@ def convert_examples_to_recordio(
 
             with closing(recordio.Writer(file_name)) as f:
                 for _ in range(records_per_file):
-                    for example in examples:
-                        f.write(encode_fn(example))
+                    example = next(example_iter)
+                    f.write(encode_fn(example))
     except StopIteration:
         pass

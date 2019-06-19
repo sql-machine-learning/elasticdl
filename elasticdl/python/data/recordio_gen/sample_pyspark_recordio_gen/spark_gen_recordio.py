@@ -6,7 +6,7 @@ from pyspark import TaskContext
 
 from elasticdl.python.elasticdl.common.model_helper import load_module
 from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import (
-    convert_numpy_to_recordio,
+    convert_examples_to_recordio,
 )
 
 
@@ -41,10 +41,9 @@ def process_data(
 
         # Initilize codec
         codec_module = load_module(codec_file)
-        # codec_module.codec.init(feature_label_columns)
 
         ctx = TaskContext()
-        convert_numpy_to_recordio(
+        convert_examples_to_recordio(
             output_dir,
             example_list,
             records_per_file,
