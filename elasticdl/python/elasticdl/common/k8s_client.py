@@ -22,7 +22,8 @@ class Client(object):
 
         Args:
             image_name: Docker image path for ElasticDL pod.
-            namespace: k8s namespace for ElasticDL pods.
+            namespace: The name of the Kubernetes namespace where ElasticDL
+                pods will be created.
             job_name: ElasticDL job name, should be unique in the namespace.
                 Used as pod name prefix and value for "elasticdl" label.
             event_callback: If not None, an event watcher will be created and
@@ -65,8 +66,8 @@ class Client(object):
     def get_worker_pod_name(self, worker_id):
         return "elasticdl-%s-worker-%s" % (self._job_name, str(worker_id))
 
-    @staticmethod
     def _create_pod(
+        self,
         pod_name,
         job_name,
         image_name,
@@ -142,6 +143,7 @@ class Client(object):
                 # TODO: Add tests for this once we've done refactoring on
                 # k8s client code and the constant strings
                 owner_references=owner_ref,
+                namespace=self._ns,
             ),
         )
         return pod
