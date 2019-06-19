@@ -215,7 +215,8 @@ def _submit(image_name, model_file, job_name, args, argv):
         )
     elif any([args.volume_name, args.mount_path]):
         raise ValueError(
-            "Not both of the parameters volume_name and mount_path are provided."
+            "Not both of the parameters volume_name and "
+            "mount_path are provided."
         )
 
     container_args.extend(argv)

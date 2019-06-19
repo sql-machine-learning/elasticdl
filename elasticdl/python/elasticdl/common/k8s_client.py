@@ -116,7 +116,8 @@ class Client(object):
             ]
         elif any([volume_name, mount_path]):
             raise ValueError(
-                "Not both of the parameters volume_name and mount_path are provided."
+                "Not both of the parameters volume_name and "
+                "mount_path are provided."
             )
 
         if pod_priority is not None:
