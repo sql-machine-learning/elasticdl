@@ -2,21 +2,21 @@ import tensorflow as tf
 
 
 class TFExampleCodec(object):
-    def __init__(self):
-        self._is_initialized = False
+    # def __init__(self):
+    #     self._is_initialized = False
 
-    def init(self, feature_columns):
-        self._example_spec = tf.feature_column.make_parse_example_spec(
-            feature_columns
-        )
-        self._f_name2type = {
-            f_col.key: f_col.dtype for f_col in feature_columns
-        }
-        self._is_initialized = True
+    # def init(self, feature_columns):
+    #     self._example_spec = tf.feature_column.make_parse_example_spec(
+    #         feature_columns
+    #     )
+    #     self._f_name2type = {
+    #         f_col.key: f_col.dtype for f_col in feature_columns
+    #     }
+    #     self._is_initialized = True
 
     def encode(self, example):
         '''
-        Take an example and return a encoded example
+        Take a tf example and return a string of encoded example
         '''
         # if self._example_spec.keys() != example.keys():
         #     raise ValueError(
@@ -46,11 +46,12 @@ class TFExampleCodec(object):
         # example = tf.train.Example(features=tf.train.Features(feature=f_dict))
         return example.SerializeToString()
 
-    def decode(self, string_list):
+    def decode(self, raw, example_spec):
         '''
-        Take a list of string and return a decoded tensor dict
+        Take an encoded string of tf example object and
+        return a decoded tensor dict
         '''
         # example = tf.train.Example()
         # example.ParseFromString(raw)
         # return example
-        return tf.io.parse_single_example(raw, self._example_spec)
+        return tf.io.parse_single_example(raw, example_spec)

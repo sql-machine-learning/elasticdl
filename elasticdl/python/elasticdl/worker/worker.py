@@ -43,17 +43,17 @@ class Worker(object):
         self._worker_id = worker_id
         model_module = load_module(model_file)
         self._model = model_module.model
-        self._feature_columns = model_module.feature_columns()
+        # self._feature_columns = model_module.feature_columns()
         self._var_created = self._model.built
         self._input_fn = model_module.input_fn
         self._opt_fn = model_module.optimizer
         self._loss = model_module.loss
         self._eval_metrics_fn = model_module.eval_metrics_fn
-        all_columns = self._feature_columns + model_module.label_columns()
+        # all_columns = self._feature_columns + model_module.label_columns()
 
         # Initilize codec
         codec_module = load_module(codec_file)
-        codec_module.codec.init(all_columns)
+        # codec_module.codec.init(all_columns)
         self._codec = codec_module.codec
 
         if channel is None:
@@ -190,10 +190,15 @@ class Worker(object):
                 )
 
     def _process_minibatch(self, task, record_buf, min_model_version):
-        feature_tensor_list, label_nparray = self._input_fn(record_buf, self._codec.decode)
+        feature_tensor_list, label_nparray = self._input_fn(
+            record_buf,
+            self._codec.decode,
+        )
         # zjl?: why?
-        if len(feature_tensor_list) == 1:
-            features = feature_tensor_list[0]
+        features = feature_tensor_list if len(feature_tensor_list) != 1 else \
+            feature_tensor_list[0]
+        # if len(feature_tensor_list) == 1:
+        #     features = feature_tensor_list[0]
         # features, labels = self._get_features_and_labels(record_buf)
 
         if not self._var_created:
@@ -201,7 +206,10 @@ class Worker(object):
         for _ in range(self._max_minibatch_retry_num):
             if task.type == elasticdl_pb2.EVALUATION:
                 self.get_model(min_model_version, elasticdl_pb2.FIXED)
-                accepted, _ = self._run_evaluation_task(features, label_nparray)
+                accepted, _ = self._run_evaluation_task(
+                    features,
+                    label_nparray,
+                )
                 if accepted:
                     break
             elif task.type == elasticdl_pb2.TRAINING:
@@ -212,7 +220,7 @@ class Worker(object):
                     elasticdl_pb2.MINIMUM,
                 )
                 accepted, min_model_version, loss = self._run_training_task(
-                    features, labels
+                    features, label_nparray
                 )
                 if accepted:
                     self._logger.info("Loss is %f" % loss.numpy())
