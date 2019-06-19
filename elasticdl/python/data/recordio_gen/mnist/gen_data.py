@@ -12,6 +12,7 @@ from tensorflow.python.keras.datasets import mnist, fashion_mnist
 from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import (
     convert_numpy_to_recordio,
 )
+from elasticdl.python.elasticdl.common.model_helper import load_module
 
 
 def main(argv):
@@ -34,16 +35,16 @@ def main(argv):
         help="Number of chunks in a RecordIO file",
     )
     parser.add_argument(
-        "--codec_type",
-        default="bytes",
-        choices=["tf_example", "bytes"],
-        help="Type of codec(tf_example or bytes)",
+        "--codec_file",
+        default="elasticdl/python/data/codec/tf_example_codec.py",
+        help="Codec file name",
     )
     args = parser.parse_args(argv)
 
     records_per_file = args.num_record_per_chunk * args.num_chunk
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
+
     feature_columns = [
         tf.feature_column.numeric_column(
             key="image", dtype=tf.float32, shape=[28, 28]
@@ -52,13 +53,18 @@ def main(argv):
             key="label", dtype=tf.int64, shape=[1]
         ),
     ]
+
+    # Initilize codec
+    codec_module = load_module(args.codec_file)
+    codec_module.codec.init(feature_columns)
+
     convert_numpy_to_recordio(
         args.dir + "/mnist/train",
         x_train,
         y_train,
         feature_columns,
         records_per_file=records_per_file,
-        codec_type=args.codec_type,
+        codec=codec_module.codec,
     )
 
     convert_numpy_to_recordio(
@@ -67,7 +73,7 @@ def main(argv):
         y_test,
         feature_columns,
         records_per_file=records_per_file,
-        codec_type=args.codec_type,
+        codec=codec_module.codec,
     )
 
     (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
@@ -77,7 +83,7 @@ def main(argv):
         y_train,
         feature_columns,
         records_per_file=records_per_file,
-        codec_type=args.codec_type,
+        codec=codec_module.codec,
     )
     convert_numpy_to_recordio(
         args.dir + "/fashion/test",
@@ -85,7 +91,7 @@ def main(argv):
         y_test,
         feature_columns,
         records_per_file=records_per_file,
-        codec_type=args.codec_type,
+        codec=codec_module.codec,
     )
 
 
