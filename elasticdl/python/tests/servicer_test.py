@@ -51,6 +51,7 @@ class ServicerTest(unittest.TestCase):
             init_var=[],
             init_from_checkpoint="",
             checkpoint_service=CheckpointService("", 0, 0),
+            evaluation_service=None,
         )
 
         req = elasticdl_pb2.GetTaskRequest()
@@ -75,6 +76,7 @@ class ServicerTest(unittest.TestCase):
             init_var=[],
             init_from_checkpoint="",
             checkpoint_service=CheckpointService("", 0, 0),
+            evaluation_service=None,
         )
         master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
         # Now master model is version 0
@@ -172,6 +174,7 @@ class ServicerTest(unittest.TestCase):
             init_var=[],
             init_from_checkpoint="",
             checkpoint_service=CheckpointService("", 0, 0),
+            evaluation_service=None,
         )
         master._version = 1
         master.set_model_var("x", np.array([2.0], dtype=np.float32))
@@ -243,46 +246,6 @@ class ServicerTest(unittest.TestCase):
             master._model["y"].numpy(),
         )
 
-    def testReportEvaluationMetrics(self):
-        def makeEvaluationMetrics():
-            """ Make a ReportEvaluationMetricsRequest compatible with model"""
-            req = elasticdl_pb2.ReportEvaluationMetricsRequest()
-            req.evaluation_metrics["mse"].CopyFrom(
-                ndarray_to_tensor(np.array([100, 200], dtype=np.float32))
-            )
-            req.model_version = 1
-            return req
-
-        master = MasterServicer(
-            3,
-            3,
-            tf.optimizers.SGD(0.1),
-            None,
-            init_var=[],
-            init_from_checkpoint="",
-            checkpoint_service=CheckpointService("", 0, 0),
-        )
-        master._version = 1
-
-        # Report a future version, should raise exception
-        req = makeEvaluationMetrics()
-        req.model_version = 2
-        self.assertRaisesRegex(
-            ValueError,
-            "Model version %s not available yet, current version: %s"
-            % (req.model_version, master._version),
-            master.ReportEvaluationMetrics,
-            req,
-            None,
-        )
-
-        # Report a current version, should be accepted
-        req = makeEvaluationMetrics()
-        req.model_version = 1
-        res = master.ReportEvaluationMetrics(req, None)
-        self.assertTrue(res.accepted)
-        self.assertEqual(1, res.model_version)
-
     def testReportTaskResult(self):
         task_q = _TaskQueue(
             {"shard_1": 10, "shard_2": 9}, {}, records_per_task=3, num_epochs=2
@@ -295,6 +258,7 @@ class ServicerTest(unittest.TestCase):
             init_var=[],
             init_from_checkpoint="",
             checkpoint_service=CheckpointService("", 0, 0),
+            evaluation_service=None,
         )
 
         # task to number of runs.
@@ -337,6 +301,7 @@ class ServicerTest(unittest.TestCase):
             init_var=[],
             init_from_checkpoint="",
             checkpoint_service=CheckpointService("", 0, 0),
+            evaluation_service=None,
         )
         req = elasticdl_pb2.GetModelRequest()
         req.method = elasticdl_pb2.MINIMUM

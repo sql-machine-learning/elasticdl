@@ -14,9 +14,7 @@ from elasticdl.python.elasticdl.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
-from elasticdl.python.elasticdl.common.model_helper import load_user_model
-from elasticdl.python.data.codec import TFExampleCodec
-from elasticdl.python.data.codec import BytesCodec
+from elasticdl.python.elasticdl.common.model_helper import load_module
 
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.
@@ -32,7 +30,7 @@ class Worker(object):
         model_file,
         channel=None,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
-        codec_type=None,
+        codec_file=None,
     ):
         """
         Arguments:
@@ -43,7 +41,7 @@ class Worker(object):
         """
         self._logger = logging.getLogger(__name__)
         self._worker_id = worker_id
-        model_module = load_user_model(model_file)
+        model_module = load_module(model_file)
         self._model = model_module.model
         self._feature_columns = model_module.feature_columns()
         self._var_created = self._model.built
@@ -52,12 +50,11 @@ class Worker(object):
         self._loss = model_module.loss
         self._eval_metrics_fn = model_module.eval_metrics_fn
         all_columns = self._feature_columns + model_module.label_columns()
-        if codec_type == "tf_example":
-            self._codec = TFExampleCodec(all_columns)
-        elif codec_type == "bytes":
-            self._codec = BytesCodec(all_columns)
-        else:
-            raise ValueError("invalid codec_type: " + codec_type)
+
+        # Initilize codec
+        codec_module = load_module(codec_file)
+        codec_module.codec.init(all_columns)
+        self._codec = codec_module.codec
 
         if channel is None:
             self._stub = None
@@ -65,7 +62,6 @@ class Worker(object):
             self._stub = elasticdl_pb2_grpc.MasterStub(channel)
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._model_version = -1
-        self._codec_type = codec_type
 
     def get_task(self):
         """
@@ -127,10 +123,9 @@ class Worker(object):
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         for k, v in evaluation_metrics.items():
             v_np = v.numpy()
-            if v_np.size != 1:
-                raise Exception(
-                    "Only metric result of length 1 is " "supported currently"
-                )
+            # If scalar, convert to numpy 1D array with size 1
+            if not v_np.shape:
+                v_np = v_np.reshape(1)
             req.evaluation_metrics[k].CopyFrom(ndarray_to_tensor(v_np))
         req.model_version = self._model_version
         res = self._stub.ReportEvaluationMetrics(req)

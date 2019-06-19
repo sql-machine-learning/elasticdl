@@ -24,7 +24,8 @@ class TestTFExampleCodec(unittest.TestCase):
         examples = [example_1, example_2, example_3]
 
         # Create the codec for tf.train.Exampel data.
-        codec = TFExampleCodec(feature_columns)
+        codec = TFExampleCodec()
+        codec.init(feature_columns)
 
         # Encode
         encoded = [codec.encode(e) for e in examples]

@@ -77,3 +77,8 @@ jobs:
           done
           echo "ElasticDL job timed out."
           exit 1
+
+# Only build on this list of branches
+branches:
+  only:
+  - develop

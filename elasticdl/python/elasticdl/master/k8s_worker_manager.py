@@ -3,7 +3,7 @@ import logging
 import threading
 
 from collections import Counter
-from elasticdl.python.elasticdl.master import k8s_client as k8s
+from elasticdl.python.elasticdl.common import k8s_client as k8s
 from elasticdl.python.elasticdl.common.k8s_utils import parse_resource
 
 
@@ -20,7 +20,7 @@ class WorkerManager(object):
         mount_path=None,
         volume_name=None,
         image_pull_policy=None,
-        restart_policy="OnFailure",
+        restart_policy="Never",
         **kwargs
     ):
         self._logger = logging.getLogger(__name__)

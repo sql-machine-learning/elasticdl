@@ -2,8 +2,10 @@
 import importlib.util
 
 
-def load_user_model(model_file):
-    spec = importlib.util.spec_from_file_location(model_file, model_file)
+# TODO: This is not only used for model. Maybe we should put it into another
+# file
+def load_module(module_file):
+    spec = importlib.util.spec_from_file_location(module_file, module_file)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module

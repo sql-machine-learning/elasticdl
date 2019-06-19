@@ -8,18 +8,17 @@ import grpc
 
 from contextlib import closing
 from concurrent import futures
-from threading import Event
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.elasticdl.master.checkpoint_service import (
     CheckpointService,
 )
-from elasticdl.python.elasticdl.master.servicer import MasterServicer
-from elasticdl.python.elasticdl.master.task_queue import (
-    _EvaluationTrigger,
-    _TaskQueue,
+from elasticdl.python.elasticdl.master.evaluation_service import (
+    EvaluationService,
 )
+from elasticdl.python.elasticdl.master.servicer import MasterServicer
+from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
-from elasticdl.python.elasticdl.common.model_helper import load_user_model
+from elasticdl.python.elasticdl.common.model_helper import load_module
 
 
 def _make_task_queue(
@@ -129,7 +128,7 @@ def _parse_args():
         type=_non_neg_int,
         help="The maximum number of recent checkpoint files to keep."
         "If 0, keep all.",
-        default=3,
+        default=0,
     )
     parser.add_argument(
         "--worker_resource_request",
@@ -153,10 +152,9 @@ def _parse_args():
     )
     parser.add_argument("--job_name", help="Job name", required=True)
     parser.add_argument(
-        "--codec_type",
-        default="bytes",
-        choices=["tf_example", "bytes"],
-        help="Type of codec (tf_example or bytes)",
+        "--codec_file",
+        default="elasticdl/python/data/codec/tf_example_codec.py",
+        help="Codec file name",
     )
     # TODO: better logic for handling volume configs
     parser.add_argument(
@@ -173,7 +171,21 @@ def _parse_args():
         help="The logging level. Default to WARNING",
     )
     parser.add_argument(
-        "--image_pull_policy", help="Image pull policy of master and workers"
+        "--image_pull_policy",
+        default="Always",
+        help="Image pull policy of master and workers"
+    )
+    parser.add_argument(
+        "--restart_policy",
+        default="Never",
+        help="The pod restart policy when pod crashed",
+    )
+    parser.add_argument(
+        "--namespace",
+        default="default",
+        type=str,
+        help="The name of the Kubernetes namespace where ElasticDL "
+             "pods will be created",
     )
     return parser.parse_args()
 
@@ -199,8 +211,7 @@ def main():
         args.records_per_task,
         args.num_epochs,
     )
-
-    model_module = load_user_model(args.model_file)
+    model_module = load_module(args.model_file)
     model_inst = model_module.model
     optimizer = model_module.optimizer()
 
@@ -209,6 +220,23 @@ def main():
         args.checkpoint_dir, args.checkpoint_steps, args.keep_checkpoint_max
     )
 
+    # Initialize evaluation service
+    evaluation_service = None
+    if args.evaluation_data_dir:
+        if args.checkpoint_steps <= 0:
+            raise ValueError(
+                "Checkpoint should also be enabled when evaluation is enabled"
+            )
+        evaluation_service = EvaluationService(
+            checkpoint_service,
+            task_q,
+            args.evaluation_start_delay_secs,
+            args.evaluation_throttle_secs,
+        )
+        evaluation_service.start()
+        task_q.set_evaluation_service(evaluation_service)
+
+    # The master service
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
     master_servicer = MasterServicer(
         args.grads_to_wait,
@@ -218,26 +246,12 @@ def main():
         init_var=model_inst.trainable_variables if model_inst.built else [],
         init_from_checkpoint=args.init_from_checkpoint,
         checkpoint_service=checkpoint_service,
+        evaluation_service=evaluation_service,
     )
     elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
     server.add_insecure_port("[::]:{}".format(PORT))
     server.start()
     logger.info("Server started at port: %d", PORT)
-
-    stop_flag = Event()
-    if args.evaluation_data_dir:
-        if args.checkpoint_steps <= 0:
-            raise ValueError(
-                "Checkpoint should also be enabled when evaluation is enabled"
-            )
-        evaluation_timer = _EvaluationTrigger(
-            master_servicer,
-            task_q,
-            stop_flag,
-            args.evaluation_start_delay_secs,
-            args.evaluation_throttle_secs,
-        )
-        evaluation_timer.start()
 
     if args.num_workers:
         assert args.worker_image, "Worker image cannot be empty"
@@ -251,8 +265,8 @@ def main():
             args.model_file,
             "--master_addr",
             master_addr,
-            "--codec_type",
-            args.codec_type,
+            "--codec_file",
+            args.codec_file,
             "--log_level",
             args.log_level,
         ]
@@ -260,10 +274,10 @@ def main():
         worker_manager = WorkerManager(
             task_q,
             job_name=args.job_name,
-            worker_image=args.worker_image,
+            image_name=args.worker_image,
             command=worker_command,
             args=worker_args,
-            namespace="default",
+            namespace=args.namespace,
             num_workers=args.num_workers,
             worker_resource_request=args.worker_resource_request,
             worker_resource_limit=args.worker_resource_limit,
@@ -271,19 +285,20 @@ def main():
             mount_path=args.mount_path,
             volume_name=args.volume_name,
             image_pull_policy=args.image_pull_policy,
-            restart_policy="Never",
+            restart_policy=args.restart_policy,
         )
         worker_manager.start_workers()
 
     try:
         while True:
             if task_q.finished():
-                stop_flag.set()
                 break
             time.sleep(30)
     except KeyboardInterrupt:
-        stop_flag.set()
         logger.warning("Server stopping")
+
+    if evaluation_service:
+        evaluation_service.stop()
 
     server.stop(0)
 
