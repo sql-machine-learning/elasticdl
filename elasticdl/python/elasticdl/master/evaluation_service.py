@@ -17,7 +17,8 @@ class _EvaluationJob(object):
         self._model_version = model_version
         self._total_tasks = total_tasks
         self._completed_tasks = 0
-        self._evaluation_metrics = defaultdict(list)
+        self._completed_minibatches = 0
+        self._evaluation_metrics = defaultdict()
 
     def complete_task(self):
         self._completed_tasks += 1
@@ -39,11 +40,18 @@ class _EvaluationJob(object):
             return False
         for k, v in evaluation_metrics.items():
             if v.dim:
-                self._evaluation_metrics[k].append(tensor_to_ndarray(v))
+                self._completed_minibatches += 1
+                if k in self._evaluation_metrics:
+                    self._evaluation_metrics[k] += tensor_to_ndarray(v)
+                else:
+                    self._evaluation_metrics[k] = np.copy(tensor_to_ndarray(v))
         return True
 
     def get_evaluation_summary(self):
-        return {k: np.mean(v) for k, v in self._evaluation_metrics.items()}
+        return {
+            k: v / self._completed_minibatches
+            for k, v in self._evaluation_metrics.items()
+        }
 
 
 class _EvaluationTrigger(Thread):
@@ -138,4 +146,6 @@ class EvaluationService(object):
         self._eval_job.complete_task()
         if self._eval_job.finished():
             evaluation_metrics = self._eval_job.get_evaluation_summary()
-            self._logger.info("Evaluation metrics: %s" % evaluation_metrics)
+            self._logger.info(
+                "Evaluation metrics: %s" % str(evaluation_metrics)
+            )

@@ -128,7 +128,7 @@ def _parse_args():
         type=_non_neg_int,
         help="The maximum number of recent checkpoint files to keep."
         "If 0, keep all.",
-        default=3,
+        default=0,
     )
     parser.add_argument(
         "--worker_resource_request",

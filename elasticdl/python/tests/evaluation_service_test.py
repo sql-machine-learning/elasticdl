@@ -65,7 +65,17 @@ class EvaluationServiceTest(unittest.TestCase):
                 evaluation_version, evaluation_metrics
             )
         )
-        self.assertEqual(150.0, job.get_evaluation_summary().get("mse"))
+        # One more
+        evaluation_metrics = {
+            "mse": ndarray_to_tensor(np.array([300, 400], dtype=np.float32))
+        }
+        job.report_evaluation_metrics(evaluation_version, evaluation_metrics)
+        self.assertTrue(
+            np.array_equal(
+                np.array([200, 300], dtype=np.float32),
+                job.get_evaluation_summary().get("mse"),
+            )
+        )
 
     def testEvaluationService(self):
         with tempfile.TemporaryDirectory() as tempdir:
