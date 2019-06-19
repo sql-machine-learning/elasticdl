@@ -114,7 +114,7 @@ class Client(object):
             container.volume_mounts = [
                 client.V1VolumeMount(name=volume_name, mount_path=mount_path)
             ]
-        elif not any([volume_name, mount_path]):
+        elif any([volume_name, mount_path]):
             raise ValueError(
                 "Not both of the parameters volume_name and mount_path are provided."
             )

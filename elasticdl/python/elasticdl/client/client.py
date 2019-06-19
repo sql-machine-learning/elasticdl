@@ -213,7 +213,7 @@ def _submit(image_name, model_file, job_name, args, argv):
                 args.volume_name,
             ]
         )
-    elif not any([args.volume_name, args.mount_path]):
+    elif any([args.volume_name, args.mount_path]):
         raise ValueError(
             "Not both of the parameters volume_name and mount_path are provided."
         )
