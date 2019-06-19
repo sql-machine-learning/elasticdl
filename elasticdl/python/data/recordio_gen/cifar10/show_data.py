@@ -4,8 +4,7 @@ import recordio
 import tensorflow as tf
 
 from contextlib import closing
-from elasticdl.python.data.codec import TFExampleCodec
-from elasticdl.python.data.codec import BytesCodec
+from elasticdl.python.elasticdl.common.model_helper import load_module
 
 
 # TODO: share code with MNIST dataset.
@@ -21,10 +20,9 @@ def main(argv):
         "--n", default=20, type=int, help="How many record to show"
     )
     parser.add_argument(
-        "--codec_type",
-        default="bytes",
-        choices=["tf_example", "bytes"],
-        help="Type of codec(tf_example or bytes)",
+        "--codec_file",
+        default="elasticdl/python/data/codec/tf_example_codec.py",
+        help="Codec file name",
     )
     args = parser.parse_args(argv)
 
@@ -36,12 +34,12 @@ def main(argv):
             key="label", dtype=tf.int64, shape=[1]
         ),
     ]
-    if args.codec_type == "tf_example":
-        decode_fn = TFExampleCodec(feature_columns).decode
-    elif args.codec_type == "bytes":
-        decode_fn = BytesCodec(feature_columns).decode
-    else:
-        raise ValueError("invalid codec_type: " + args.codec_type)
+
+    # Initilize codec
+    codec_module = load_module(args.codec_file)
+    codec_module.codec.init(feature_columns)
+
+    decode_fn = codec_module.codec.decode
 
     with closing(recordio.Scanner(args.file, args.start, args.n)) as f:
         for i in range(args.start, args.start + args.n):
@@ -52,11 +50,8 @@ def main(argv):
 
             print("-" * 10)
             print("record:", i)
-            if args.codec_type == "tf_example":
-                print(rec["image"].numpy())
-                print(rec["label"].numpy())
-            elif args.codec_type == "bytes":
-                print(rec)
+            print(rec["image"].numpy())
+            print(rec["label"].numpy())
 
 
 if __name__ == "__main__":

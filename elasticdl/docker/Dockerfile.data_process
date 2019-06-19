@@ -27,7 +27,11 @@ RUN export JAVA_HOME
 # Install RecordIO 
 RUN pip install 'pyrecordio>=0.0.6' --extra-index-url=${EXTRA_PYPI_INDEX}
 
+COPY elasticdl/docker/bashrc /etc/bash.bashrc
+RUN chmod a+rwx /etc/bash.bashrc
+
 ENV PYTHONPATH=/
 WORKDIR /
 COPY elasticdl /elasticdl
 ENTRYPOINT ["spark-submit"]
+

@@ -40,7 +40,6 @@ python elasticdl/python/elasticdl/client/client.py train \
     --num_workers=1 \
     --checkpoint_steps=2 \
     --grads_to_wait=2 \
-    --codec_type=tf_example \
     --job_name=test \
     --image_base=elasticdl:dev \
     --log_level=INFO
@@ -67,7 +66,6 @@ python elasticdl/python/elasticdl/client/client.py train \
     --worker_resource_request="cpu=2,memory=4096Mi" \
     --worker_resource_limit="cpu=2,memory=4096Mi" \
     --grads_to_wait=2 \
-    --codec_type=tf_example \
     --mount_path=/data \
     --volume_name=data-volume \
     --image_pull_policy=Always \
@@ -107,7 +105,6 @@ elasticdl train \
     --num_workers=1 \
     --checkpoint_steps=2 \
     --grads_to_wait=2 \
-    --codec_type=tf_example \
     --job_name=test \
     --image_base=elasticdl:dev \
     --log_level=INFO
@@ -134,7 +131,6 @@ elasticdl train \
     --worker_resource_request="cpu=2,memory=4096Mi" \
     --worker_resource_limit="cpu=2,memory=4096Mi" \
     --grads_to_wait=2 \
-    --codec_type=tf_example \
     --mount_path=/data \
     --volume_name=data-volume \
     --image_pull_policy=Always \
