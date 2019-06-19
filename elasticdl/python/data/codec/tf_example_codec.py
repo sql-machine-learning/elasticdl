@@ -15,6 +15,9 @@ class TFExampleCodec(object):
         self._is_initialized = True
 
     def encode(self, example):
+        '''
+        Take an example and return a encoded example
+        '''
         # if self._example_spec.keys() != example.keys():
         #     raise ValueError(
         #         "Column keys mismatch: expected %s, got %s "
@@ -44,7 +47,10 @@ class TFExampleCodec(object):
         return example.SerializeToString()
 
     def decode(self, raw):
-        example = tf.train.Example
+        '''
+        Take a string and return a decoded example object 
+        '''
+        example = tf.train.Example()
         example.ParseFromString(raw)
         return example
         # return tf.io.parse_single_example(raw, self._example_spec)

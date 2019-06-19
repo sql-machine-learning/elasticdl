@@ -14,6 +14,26 @@ from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import (
 )
 from elasticdl.python.elasticdl.common.model_helper import load_module
 
+def numpy_to_examples(x, y):
+    train_example_list = []
+    assert len(x) == len(y)
+    for i in xrange(len(x)):
+        numpy_image = x[i]
+        label = y[i]
+        feature_name_to_feature = {}
+        feature_name_to_feature['image'] = tf.train.Feature(
+            float_list=tf.train.FloatList(
+                value=numpy_image.astype(tf.float32.as_numpy_dtype).flatten(),
+            ),
+        )
+        feature_name_to_feature['label'] = tf.train.Feature(
+            int64_list=tf.train.Int64List(value=[label]),
+        )
+        example = tf.train.Example(
+            features=tf.train.Features(feature=feature_name_to_feature),
+        )
+        train_example_list.append(example)
+    return train_example_list
 
 def main(argv):
     parser = argparse.ArgumentParser(
@@ -117,6 +137,8 @@ def main(argv):
             codec=codec_module.codec,
         )
     # convert_numpy_to_recordio(
+    train_example_list = numpy_to_examples(x_train, y_train)
+
     # feature_columns = [
     #     tf.feature_column.numeric_column(
     #         key="image", dtype=tf.float32, shape=[28, 28]
@@ -127,7 +149,7 @@ def main(argv):
     # ]
     convert_example_to_recordio(
         args.dir + "/mnist/train",
-        example,
+        train_example_list,
         # x_train,
         # y_train,
         # feature_columns,
@@ -135,9 +157,11 @@ def main(argv):
         codec=codec_module.codec,
     )
 
+    test_example_list = numpy_to_examples(x_test, y_test)
+
     convert_numpy_to_recordio(
         args.dir + "/mnist/test",
-        example,
+        test_example_list,
         # x_test,
         # y_test,
         # feature_columns,
