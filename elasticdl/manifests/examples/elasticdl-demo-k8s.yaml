@@ -17,7 +17,6 @@ spec:
       --model_file=/elasticdl/python/examples/mnist_functional_api.py
       --training_data_dir=/data/mnist/train
       --evaluation_data_dir=/data/mnist/test
-      --codec_type=tf_example
       --records_per_task=100
       --num_epochs=1
       --grads_to_wait=10

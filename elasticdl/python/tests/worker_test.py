@@ -6,11 +6,10 @@ import recordio
 
 from contextlib import closing
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.elasticdl.common.model_helper import load_user_model
+from elasticdl.python.elasticdl.common.model_helper import load_module
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.worker.worker import Worker
-from elasticdl.python.data.codec import BytesCodec
 from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.elasticdl.master.checkpoint_service import (
@@ -20,17 +19,14 @@ from elasticdl.python.elasticdl.master.checkpoint_service import (
 _module_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "test_module.py"
 )
-
-m = load_user_model(_module_file)
+m = load_module(_module_file)
+_codec_file = 'elasticdl/python/data/codec/tf_example_codec.py'
 columns = m.feature_columns() + m.label_columns()
 
 
-def create_recordio_file(size, codec_type):
-    codec = None
-    if codec_type == "bytes":
-        codec = BytesCodec(columns)
-    elif codec_type == "tf_example":
-        codec = TFExampleCodec(columns)
+def create_recordio_file(size):
+    codec = TFExampleCodec()
+    codec.init(columns)
 
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     with closing(recordio.Writer(temp_file.name)) as f:
@@ -42,7 +38,7 @@ def create_recordio_file(size, codec_type):
 
 
 class WorkerTest(unittest.TestCase):
-    def distributed_train_and_evaluate(self, codec_type, training=True):
+    def distributed_train_and_evaluate(self, training=True):
         """
         Run distributed training and evaluation with a local master.
         grpc calls are mocked by local master call.
@@ -63,9 +59,9 @@ class WorkerTest(unittest.TestCase):
                     self._m._version += 1
                 return self._m.ReportEvaluationMetrics(req, None)
 
-        worker = Worker(1, _module_file, None, codec_type=codec_type)
+        worker = Worker(1, _module_file, None, codec_file=_codec_file)
 
-        shards = {create_recordio_file(128, codec_type): 128}
+        shards = {create_recordio_file(128): 128}
         if training:
             training_shards = shards
             evaluation_shards = {}
@@ -101,17 +97,11 @@ class WorkerTest(unittest.TestCase):
         # No more task.
         self.assertTrue(not task.shard_file_name)
 
-    def test_distributed_train_bytes(self):
-        self.distributed_train_and_evaluate("bytes", training=True)
-
-    def test_distributed_evaluate_bytes(self):
-        self.distributed_train_and_evaluate("bytes", training=False)
-
     def test_distributed_train_tf_example(self):
-        self.distributed_train_and_evaluate("tf_example", training=True)
+        self.distributed_train_and_evaluate(training=True)
 
     def test_distributed_evaluate_tf_example(self):
-        self.distributed_train_and_evaluate("tf_example", training=False)
+        self.distributed_train_and_evaluate(training=False)
 
 
 if __name__ == "__main__":
