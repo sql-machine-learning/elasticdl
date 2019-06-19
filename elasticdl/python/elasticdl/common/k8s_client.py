@@ -93,9 +93,7 @@ class Client(object):
             args=container_args,
         )
         container.image_pull_policy = image_pull_policy
-
-        if env is not None:
-            container.env = env
+        container.env = env
 
         # Pod
         spec = client.V1PodSpec(
@@ -120,8 +118,7 @@ class Client(object):
                 "mount_path are provided."
             )
 
-        if pod_priority is not None:
-            spec.priority_class_name = pod_priority
+        spec.priority_class_name = pod_priority
 
         owner_ref = (
             [
