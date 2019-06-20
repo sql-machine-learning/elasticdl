@@ -48,7 +48,6 @@ class Client(object):
             ).start()
 
     def _watch(self):
-        self._logger.info(self._ns)
         stream = watch.Watch().stream(
             self._v1.list_namespaced_pod,
             self._ns,
