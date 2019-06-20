@@ -31,18 +31,20 @@ jobs:
     - stage: precommit
       name: "Pre-commit Check"
       script:
-        - docker build --build-arg BUILD_ENV=no_data -t elasticdl:dev -f elasticdl/docker/Dockerfile .
-        - docker run --rm -it -v $(pwd):/v -w /v elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python -name '*.py' -print0 | tr '\0' ' ')"
+        - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
+        - docker run --rm -it -v $(pwd):/work -w /work elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python -name '*.py' -print0 | tr '\0' ' ')"
     - stage: unittest
       name: "Unit Tests"
       script:
-        - docker build --build-arg BUILD_ENV=no_data -t elasticdl:dev -f elasticdl/docker/Dockerfile .
-        - docker run --rm -it -v $(pwd):/v -w / elasticdl:dev bash -c "make && K8S_TESTS=False pytest elasticdl/python/tests"
+        - docker build -t elasticdl:data -f elasticdl/docker/Dockerfile.data .
+        - docker run --rm -v ElasticDLData:/data elasticdl:data
+        - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
+        - docker run --rm -it -v ElasticDLData:/data -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests"
     - stage: integrationtest
       name: "Integration Tests"
       script:
-        - curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v$K8S_VERSION/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-        - curl -Lo minikube https://storage.googleapis.com/minikube/releases/v$MINIKUBE_VERSION/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+        - curl --silent -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v$K8S_VERSION/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+        - curl --silent -Lo minikube https://storage.googleapis.com/minikube/releases/v$MINIKUBE_VERSION/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
         - mkdir -p $HOME/.kube $HOME/.minikube
         - touch $KUBECONFIG
         # Start minikube

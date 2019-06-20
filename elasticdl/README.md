@@ -1,82 +1,47 @@
-# ElasticDL: A Kubernetes-native Deep Learning Framework
+# ElasticDL: Build, Test, and Run
 
-## The Development Docker Image
+This document is for developers who need to know details about how ElasticDL works.
 
-Development Docker image contains ElasticDL system code and processed demo data in RecordIO format. We first build the demo data image. This only needs to be built once.
 
-```bash
-docker build \
-    -t elasticdl:data \
-    -f elasticdl/docker/Dockerfile.data .
-```
+## Develop using Docker 
 
-When building the development Docker image, the data will be copied from data image to development image. Development image needs to be rebuilt when there are code changes. In repo's root directory, run the following command:
+Before we start, please follow [this guide](./docker/README.md) to build the Docker images we need.
+
+Developing ElasticDL often includes running unit tests, which depend on datasets in the data Docker image.  To load the datasets into a Docker volume, which will be mount to the development Docker container, please run the following command:
 
 ```bash
-docker build \
-    -t elasticdl:dev \
-    -f elasticdl/docker/Dockerfile .
+docker run --rm -v ElasticDLData:/data elasticdl:data
 ```
 
-To build the Docker image with GPU support, run the following command:
+This command maps the `/data` directory of the container, which contains datasets downloaded when we build the Docker image, to a Docker volume named `ElasticDLData`.  A Docker volume is a directory on the host machine managed by Docker.
 
-```bash
-docker build \
-    -t elasticdl:dev-gpu \
-    -f elasticdl/docker/Dockerfile \
-    --build-arg BASE_IMAGE=tensorflow/tensorflow:2.0.0b0-gpu-py3 .
-```
-
-When having difficulties downloading from the main PyPI site, you could pass an extra PyPI index url to `docker build`, such as:
-
-```bash
-docker build \
-    --build-arg EXTRA_PYPI_INDEX=https://mirrors.aliyun.com/pypi/simple \
-    -t elasticdl:dev \
-    -f elasticdl/docker/Dockerfile .
-```
-
-
-To develop in the Docker container, run the following command to mount your cloned `elasticdl` git repo directory (e.g. `EDL_REPO` below) to `/elasticdl` directory in the container and start container:
-
-```bash
-EDL_REPO=<your_elasticdl_git_repo>
-docker run --rm -u $(id -u):$(id -g) -it \
-    -v $EDL_REPO:/v \
-    -w /v \
-    elasticdl:dev
-```
-
-## Test and Debug
-
-
-### Pre-commit Check
-
-We have set up pre-commit checks in the Github repo for pull requests, which can catch some Python style problems. However, to avoid waiting in the Travis CI queue, you can run the pre-commit checks locally:
-
-```bash
-docker run --rm -it -v $EDL_REPO:/v -w /v \
-    elasticdl:dev \
-    bash -c \
-    "pre-commit run --files $(find elasticdl/python -name '*.py' -print0 | tr '\0' ' ')"
-```
-
-### Unittests
-
-In dev Docker container's `elasticdl` repo's root directory, do the following:
-
-```bash
-make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests
-```
-
-Could also start Docker container and run unittests in a single command:
+Then, we can run the development image, while mounting the volume `ElasticDLData` to its `/data` directory by running the following command.
 
 ```bash
 docker run --rm -u $(id -u):$(id -g) -it \
-    -v $EDL_REPO:/v \
-    -w /v \
-    elasticdl:dev \
-    bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests"
+    -v ElasticDLData:/data \
+    -v $PWD:/work -w /work elasticdl:dev
+```
+
+Please be aware that in addition to mounting the data volume, we also mount the current directory (the root source directory) to the `/work` directory in the container.
+
+
+### Build Protobuf Files
+
+Python is an interpreted language, which means we don't need to build ElasticDL.  However, ElasticDL relies on gRPC, so we need a build process to convert the `.proto` files into Python source code.  We can do this inside the development container by running the following commands.
+
+```bash
+cd /work
+make -f elasticdl/Makefile
+```
+
+
+### Run Unit Tests
+
+The following commands run the unit tests disabling Kubernetes-related cases.
+
+```bash
+K8S_TESTS=False pytest elasticdl/python/tests
 ```
 
 Note that, some unittests may require a running Kubernetes cluster available. To include those unittests, use:
@@ -85,12 +50,26 @@ Note that, some unittests may require a running Kubernetes cluster available. To
 make -f elasticdl/Makefile && pytest elasticdl/python/tests
 ```
 
-### Test in Docker
 
-In a terminal, start master to distribute mnist training tasks.
+### Run Pre-commit Check
+
+We have set up pre-commit checks in the Github repo for pull requests, which can catch some Python style problems. However, to avoid waiting in the Travis CI queue, you can run the pre-commit checks in the container.
+
+```bash
+pre-commit run --files $(find elasticdl/python -name '*.py' -print0 | tr '\0' ' ')
+```
+
+
+## Run a Distributed Job 
+
+### Locally and Manually
+
+To run a distributed training job locally, we can start Docker containers manually.
+
+The following command starts a container running the master process.  The option `-v ElasticDLData:/data` mounts the testdata volume into the container.
 
 ```
-docker run --net=host --rm -it elasticdl:dev \
+docker run --net=host -v ElasticDLData:/data --rm -it elasticdl \
     bash -c "python -m elasticdl.python.elasticdl.master.main \
           --model_file=elasticdl/python/examples/mnist_functional_api.py \
           --job_name=test \
@@ -104,10 +83,10 @@ docker run --net=host --rm -it elasticdl:dev \
           --log_level=INFO"
 ```
 
-In another terminal, start a worker
+In another terminal, run the following command to start a worker.
 
 ```
-docker run --net=host --rm -it elasticdl:dev \
+docker run --net=host -v ElasticDLData:/data --rm -it elasticdl \
     bash -c "python -m elasticdl.python.elasticdl.worker.main \
           --worker_id=1 \
           --model_file=elasticdl/python/examples/mnist_functional_api.py \
@@ -115,9 +94,10 @@ docker run --net=host --rm -it elasticdl:dev \
           --log_level=INFO"
 ```
 
-This will train MNIST data with a model defined in [python/examples/mnist_functional_api.py](python/examples/mnist_functional_api.py) for 2 epoches.
+This trains a model defined in [python/examples/mnist_functional_api.py](python/examples/mnist_functional_api.py) using the MNIST dataset for 2 epoches.
 
-### Test with Kubernetes
+
+### On Kubernetes Clusters
 
 We can also test ElasticDL job in a Kubernetes environment using the previously built [image](#the-development-docker-image).
 

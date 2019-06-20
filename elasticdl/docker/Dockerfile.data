@@ -1,11 +1,12 @@
-ARG BASE_IMAGE=tensorflow/tensorflow:2.0.0b0-py3
-FROM ${BASE_IMAGE}
+FROM tensorflow/tensorflow:2.0.0b0-py3
+
+# Replace the Splash screen from TensorFlow image.
+COPY elasticdl/docker/bashrc /etc/bash.bashrc
+RUN chmod a+rwx /etc/bash.bashrc
 
 RUN apt-get update && apt-get install -y unzip curl
 
 ARG EXTRA_PYPI_INDEX
-
-# Install RecordIO 
 RUN pip install 'pyrecordio>=0.0.6' --extra-index-url=${EXTRA_PYPI_INDEX}
 
 COPY elasticdl/python/data /elasticdl/python/data
@@ -16,5 +17,3 @@ WORKDIR /
 RUN python elasticdl/python/data/recordio_gen/mnist/gen_data.py /data
 RUN python elasticdl/python/data/recordio_gen/cifar10/gen_data.py /data
 
-COPY elasticdl/docker/bashrc /etc/bash.bashrc
-RUN chmod a+rwx /etc/bash.bashrc

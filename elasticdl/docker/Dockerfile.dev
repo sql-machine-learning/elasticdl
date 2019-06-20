@@ -9,10 +9,9 @@ RUN chmod a+rwx /etc/bash.bashrc
 RUN apt-get update && apt-get install -y unzip curl git
 
 ARG EXTRA_PYPI_INDEX
-RUN pip install kubernetes docker 'pyrecordio>=0.0.6' Pillow \
+RUN pip install grpcio-tools kubernetes docker pytest 'pyrecordio>=0.0.6' pre-commit Pillow \
 	--extra-index-url=${EXTRA_PYPI_INDEX}
 
-ENV PYTHONPATH=/
-WORKDIR /
-COPY elasticdl /elasticdl
-
+# This is a hachy fix to allow pre-commit to cache downloaded hooks.
+RUN mkdir /.cache
+RUN chmod a+rwx /.cache
