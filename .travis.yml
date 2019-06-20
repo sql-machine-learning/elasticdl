@@ -52,7 +52,6 @@ jobs:
         - "sudo chown -R travis: /home/travis/.minikube/"
         - kubectl cluster-info
         - docker build -t elasticdl:data -f elasticdl/docker/Dockerfile.data .
-        - docker build -t elasticdl -f elasticdl/docker/Dockerfile .
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
         # Run unit tests related to k8s
         - docker run --rm -it --net=host -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=True pytest elasticdl/python/tests/k8s*.py"
