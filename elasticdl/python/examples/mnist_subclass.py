@@ -62,22 +62,6 @@ def prepare_data_for_a_single_file(file_object, filename):
     )
 
 
-def feature_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="image", dtype=tf.dtypes.float32, shape=[28, 28]
-        )
-    ]
-
-
-def label_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="label", dtype=tf.dtypes.int64, shape=[1]
-        )
-    ]
-
-
 def loss(output, labels):
     return tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -88,6 +72,17 @@ def loss(output, labels):
 
 def optimizer(lr=0.01):
     return tf.optimizers.SGD(lr)
+
+
+feature_label_colums = [
+    tf.feature_column.numeric_column(
+        key="image", dtype=tf.dtypes.float32, shape=[28, 28]
+    ),
+    tf.feature_column.numeric_column(
+        key="label", dtype=tf.dtypes.int64, shape=[1]
+    ),
+]
+feature_spec = tf.feature_column.make_parse_example_spec(feature_label_colums)
 
 
 def input_fn(record_list, decode_fn):

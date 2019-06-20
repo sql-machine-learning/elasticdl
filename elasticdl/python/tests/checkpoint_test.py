@@ -22,7 +22,6 @@ _module_file = os.path.join(
 )
 
 m = load_module(_module_file)
-columns = []
 
 
 def create_recordio_file(size):

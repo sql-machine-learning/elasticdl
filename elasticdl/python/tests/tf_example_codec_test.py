@@ -44,7 +44,7 @@ class TestTFExampleCodec(unittest.TestCase):
         example_spec = tf.feature_column.make_parse_example_spec(
             feature_columns
         )
-        
+
         # Verify decoded content.
         for idx, e in enumerate(encoded):
             exp = codec.decode(e, example_spec)
