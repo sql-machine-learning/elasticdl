@@ -32,7 +32,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         task_q,
         *,
         init_var,
-        init_from_checkpoint,
+        checkpoint_filename_for_init,
         checkpoint_service,
         evaluation_service,
     ):
@@ -41,28 +41,23 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._opt = optimizer
         self._task_q = task_q
         self._lock = threading.Lock()
+        self._gradient_sum = {}
+        self._grad_to_wait = grads_to_wait
+        self._grad_n = 0
+        self._minibatch_size = minibatch_size
+
         # A <string, tf.ResourceVariable> map. We use tf.ResourceVariable
         # instead ndarray to avoid copying and conversion when calling
         # optimizer's apply_gradients() function.
         self._model = {}
         self._version = 0
-        self._gradient_sum = {}
-        self._grad_to_wait = grads_to_wait
-        self._grad_n = 0
-        self._minibatch_size = minibatch_size
-        self.init_model_var(init_from_checkpoint, init_var)
+        self._init_model(checkpoint_filename_for_init, init_var)
+
         self._checkpoint_service = checkpoint_service
         self._evaluation_service = evaluation_service
 
-    def init_model_var(self, init_from_checkpoint, init_var):
-        self._var_created = False
-        if init_from_checkpoint:
-            self.load_checkpoint_file(init_from_checkpoint)
-        elif len(init_var) > 0:
-            for var in init_var:
-                self.set_model_var(var.name, var.numpy())
-            self._var_created = True
-
+    # TODO: This is currently being used by multiple tests to initilize
+    # self._model, where the initialization should be done via constructor.
     def set_model_var(self, name, value):
         """Add or set model variable. Value should be a float32 ndarray"""
         if value.dtype != np.float32:
@@ -70,6 +65,27 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._model[name] = tf.Variable(
             value, name=MasterServicer.var_name_encode(name)
         )
+
+    def _init_model_from_var_list(self, var_list):
+        for var in var_list:
+            self.set_model_var(var.name, var.numpy())
+
+    def _init_model_from_tensor_dict(self, tensor_dict):
+        assert tensor_dict
+        for name, val in tensor_dict.items():
+            self.set_model_var(name, tensor_to_ndarray(val))
+
+    def _init_model(self, checkpoint_filename_for_init, init_var):
+        if checkpoint_filename_for_init:
+            pb_model = load_from_checkpoint_file(checkpoint_filename_for_init)
+            self._version = pb_model.version
+            self._init_model_from_tensor_dict(pb_model.param)
+        elif init_var:
+            self._init_model_from_var_list(init_var)
+        else:
+            self._logger.info("Model is not intialized. It will be "
+                              "initialized by the first update from "
+                              "the worker.")
 
     @staticmethod
     def var_name_encode(name):
@@ -119,17 +135,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         assert self._lock.locked()
         self._version += 1
 
-    def _create_var_from_tensor_dict(self, tensor_dict):
-        assert tensor_dict
-        for k, v in tensor_dict.items():
-            self.set_model_var(k, tensor_to_ndarray(v))
-        self._var_created = True
-
-    def load_checkpoint_file(self, file_name):
-        pb_model = load_from_checkpoint_file(file_name)
-        self._create_var_from_tensor_dict(pb_model.param)
-        self._version = pb_model.version
-
     def _update_model(self):
         assert self._lock.locked()
         grad_var = []
@@ -174,8 +179,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def ReportVariable(self, request, _):
         with self._lock:
-            if not self._var_created:
-                self._create_var_from_tensor_dict(request.variable)
+            if not self._model:
+                self._init_model_from_tensor_dict(request.variable)
         return empty_pb2.Empty()
 
     def ReportGradient(self, request, _):
