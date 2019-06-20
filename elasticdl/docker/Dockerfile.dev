@@ -1,4 +1,4 @@
-FROM elasticdl:data
+FROM sqlflow/elasticdl:data
 
 RUN apt-get update && apt-get install -y unzip curl git
 
