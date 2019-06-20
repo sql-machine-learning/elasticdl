@@ -7,7 +7,6 @@ import tensorflow as tf
 
 from contextlib import closing
 from elasticdl.proto import elasticdl_pb2
-# from elasticdl.python.elasticdl.common.model_helper import load_module
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.worker.worker import Worker
@@ -22,8 +21,6 @@ def _get_model_info(file_name):
     module_file = os.path.join(
         os.path.dirname(os.path.realpath(__file__)), "../examples", file_name
     )
-    # m = load_module(module_file)
-
     return module_file
 
 
@@ -109,45 +106,45 @@ class ExampleTest(unittest.TestCase):
         # No more task.
         self.assertTrue(not task.shard_file_name)
 
-    def test_mnist_functional_bytes_train(self):
+    def test_mnist_functional_train(self):
         self.distributed_train_and_evaluate(
             "mnist_functional_api.py", [28, 28], training=True
         )
 
-    def test_mnist_functional_bytes_evaluate(self):
+    def test_mnist_functional_evaluate(self):
         self.distributed_train_and_evaluate(
             "mnist_functional_api.py", [28, 28], training=False
         )
 
-    # def test_mnist_subclass_bytes_train(self):
-    #     self.distributed_train_and_evaluate(
-    #         "mnist_subclass.py", [28, 28], training=True
-    #     )
+    def test_mnist_subclass_train(self):
+        self.distributed_train_and_evaluate(
+            "mnist_subclass.py", [28, 28], training=True
+        )
 
-    # def test_mnist_subclass_bytes_evaluate(self):
-    #     self.distributed_train_and_evaluate(
-    #         "mnist_subclass.py", [28, 28], training=False
-    #     )
+    def test_mnist_subclass_evaluate(self):
+        self.distributed_train_and_evaluate(
+            "mnist_subclass.py", [28, 28], training=False
+        )
 
-    # def test_cifar10_functional_bytes_train(self):
-    #     self.distributed_train_and_evaluate(
-    #         "cifar10_functional_api.py", [32, 32, 3], training=True
-    #     )
+    def test_cifar10_functional_train(self):
+        self.distributed_train_and_evaluate(
+            "cifar10_functional_api.py", [32, 32, 3], training=True
+        )
 
-    # def test_cifar10_functional_bytes_evaluate(self):
-    #     self.distributed_train_and_evaluate(
-    #         "cifar10_functional_api.py", [32, 32, 3], training=False
-    #     )
+    def test_cifar10_functional_evaluate(self):
+        self.distributed_train_and_evaluate(
+            "cifar10_functional_api.py", [32, 32, 3], training=False
+        )
 
-    # def test_cifar10_subclass_bytes_train(self):
-    #     self.distributed_train_and_evaluate(
-    #         "cifar10_subclass.py", [32, 32, 3], training=True
-    #     )
+    def test_cifar10_subclass_train(self):
+        self.distributed_train_and_evaluate(
+            "cifar10_subclass.py", [32, 32, 3], training=True
+        )
 
-    # def test_cifar10_subclass_bytes_evaluate(self):
-    #     self.distributed_train_and_evaluate(
-    #         "cifar10_subclass.py", [32, 32, 3], training=False
-    #     )
+    def test_cifar10_subclass_evaluate(self):
+        self.distributed_train_and_evaluate(
+            "cifar10_subclass.py", [32, 32, 3], training=False
+        )
 
 
 if __name__ == "__main__":

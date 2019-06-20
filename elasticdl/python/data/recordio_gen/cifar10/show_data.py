@@ -34,10 +34,9 @@ def main(argv):
             key="label", dtype=tf.int64, shape=[1]
         ),
     ]
-
+    feature_spec = tf.feature_column.make_parse_example_spec(feature_columns)
     # Initilize codec
     codec_module = load_module(args.codec_file)
-
     decode_fn = codec_module.codec.decode
 
     with closing(recordio.Scanner(args.file, args.start, args.n)) as f:
@@ -45,7 +44,7 @@ def main(argv):
             rec = f.record()
             if rec is None:
                 break
-            rec = decode_fn(rec)
+            rec = decode_fn(rec, feature_spec)
 
             print("-" * 10)
             print("record:", i)

@@ -14,11 +14,6 @@ x = tf.keras.layers.Flatten()(x)
 outputs = tf.keras.layers.Dense(10)(x)
 
 model = tf.keras.Model(inputs=inputs, outputs=outputs, name="mnist_model")
-#         f_col.key: row[i]
-#         .astype(f_col.dtype.as_numpy_dtype)
-#         .reshape(f_col.shape)
-#         for i, f_col in enumerate(feature_columns)
-# example = tf.train.Example(features=tf.train.Features(feature=f_dict))
 
 
 def prepare_data_for_a_single_file(file_object, filename):
@@ -30,7 +25,6 @@ def prepare_data_for_a_single_file(file_object, filename):
     label = int(filename.split("/")[-2])
     image = PIL.Image.open(file_object)
     numpy_image = np.array(image)
-    # example = tf.train.Example
     feature_name_to_feature = {}
     feature_name_to_feature['image'] = tf.train.Feature(
         float_list=tf.train.FloatList(
@@ -79,19 +73,6 @@ def input_fn(record_list, decode_fn):
 
         image_numpy = tensor_dict['image'].numpy().astype(np.float32) / 255
         image_numpy_list.append(image_numpy)
-        # feature_tensor_list.append()
-        # get_np_val = (
-        #     lambda data: data.numpy()
-        #     if isinstance(data, EagerTensor)
-        #     else data
-        # )
-        # label = get_np_val(r["label"])
-        # image = get_np_val(r["image"])
-        # image = image.astype(np.float32)
-        # image /= 255
-        # label = label.astype(np.int32)
-        # image_list.append(image)
-        # label_list.append(label)
 
     # batching
     batch_size = len(image_numpy_list)
@@ -100,7 +81,6 @@ def input_fn(record_list, decode_fn):
     image_tensor = tf.convert_to_tensor(value=images)
     label_nparray = np.array(label_list)
     return ([image_tensor], label_nparray)
-    # return ({"image": images}, labels)
 
 
 def eval_metrics_fn(predictions, labels):

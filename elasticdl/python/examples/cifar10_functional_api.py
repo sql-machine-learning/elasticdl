@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tensorflow.python.framework.ops import EagerTensor
 import numpy as np
 
 
@@ -69,22 +68,6 @@ outputs = tf.keras.layers.Dense(10, name="output")(flatten)
 model = tf.keras.Model(inputs=inputs, outputs=outputs, name="cifar10_model")
 
 
-def feature_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="image", dtype=tf.dtypes.float32, shape=[32, 32, 3]
-        )
-    ]
-
-
-def label_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="label", dtype=tf.dtypes.int64, shape=[1]
-        )
-    ]
-
-
 def loss(output, labels):
     return tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -97,31 +80,36 @@ def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
 
-def input_fn(records):
-    image_list = []
+feature_label_colums = [
+    tf.feature_column.numeric_column(
+        key="image", dtype=tf.dtypes.float32, shape=[32, 32, 3]
+    ),
+    tf.feature_column.numeric_column(
+        key="label", dtype=tf.dtypes.int64, shape=[1]
+    )
+]
+feature_spec = tf.feature_column.make_parse_example_spec(feature_label_colums)
+
+
+def input_fn(record_list, decode_fn):
+    image_numpy_list = []
     label_list = []
     # deserialize
-    for r in records:
-        get_np_val = (
-            lambda data: data.numpy()
-            if isinstance(data, EagerTensor)
-            else data
-        )
-        label = get_np_val(r["label"])
-        image = get_np_val(r["image"])
-        image = image.astype(np.float32)
-        image /= 255
-        label = label.astype(np.int32)
-        image_list.append(image)
+    for r in record_list:
+        tensor_dict = decode_fn(r, feature_spec)
+        label = tensor_dict['label'].numpy().astype(np.int32)
         label_list.append(label)
 
+        image_numpy = tensor_dict['image'].numpy().astype(np.float32) / 255
+        image_numpy_list.append(image_numpy)
+
     # batching
-    batch_size = len(image_list)
-    images = np.concatenate(image_list, axis=0)
+    batch_size = len(image_numpy_list)
+    images = np.concatenate(image_numpy_list, axis=0)
     images = np.reshape(images, (batch_size, 32, 32, 3))
-    images = tf.convert_to_tensor(value=images)
-    labels = np.array(label_list)
-    return ({"image": images}, labels)
+    image_tensor = tf.convert_to_tensor(value=images)
+    label_nparray = np.array(label_list)
+    return ([image_tensor], label_nparray)
 
 
 def eval_metrics_fn(predictions, labels):

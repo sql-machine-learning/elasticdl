@@ -43,13 +43,11 @@ class Worker(object):
         self._worker_id = worker_id
         model_module = load_module(model_file)
         self._model = model_module.model
-        # self._feature_columns = model_module.feature_columns()
         self._var_created = self._model.built
         self._input_fn = model_module.input_fn
         self._opt_fn = model_module.optimizer
         self._loss = model_module.loss
         self._eval_metrics_fn = model_module.eval_metrics_fn
-        # all_columns = self._feature_columns + model_module.label_columns()
 
         # Initilize codec
         codec_module = load_module(codec_file)
@@ -138,17 +136,7 @@ class Worker(object):
             if record is None:
                 break
             res.append(record)
-            # res.append(decode(record))
         return res
-
-    # def _get_features_and_labels(self, record_buf):
-    #     batch_input_data, batch_labels = self._input_fn(record_buf)
-    #     features = [
-    #         batch_input_data[f_col.key] for f_col in self._feature_columns
-    #     ]
-    #     if len(features) == 1:
-    #         features = features[0]
-    #     return features, batch_labels
 
     def _create_variable_and_report(self, features):
         # Use model.call to create variables, then report to ps
@@ -193,12 +181,9 @@ class Worker(object):
             record_buf,
             self._codec.decode,
         )
-        # zjl?: why?
+
         features = feature_tensor_list if len(feature_tensor_list) != 1 else \
             feature_tensor_list[0]
-        # if len(feature_tensor_list) == 1:
-        #     features = feature_tensor_list[0]
-        # features, labels = self._get_features_and_labels(record_buf)
 
         if not self._var_created:
             self._create_variable_and_report(features)
