@@ -234,6 +234,9 @@ class Worker(object):
             err_msg = ""
             try:
                 self._handle_task(task)
+            except RuntimeError as err:
+                err_msg = str(err)
+                traceback.print_exc()
             except Exception as ex:
                 err_msg = str(ex)
                 traceback.print_exc()
