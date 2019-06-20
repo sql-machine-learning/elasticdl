@@ -237,4 +237,5 @@ class Worker(object):
             except Exception as ex:
                 err_msg = str(ex)
                 traceback.print_exc()
+                raise ex
             self.report_task_result(task.task_id, err_msg)
