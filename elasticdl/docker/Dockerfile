@@ -8,9 +8,9 @@ RUN chmod a+rwx /etc/bash.bashrc
 
 RUN apt-get update && apt-get install -y unzip curl git
 
+COPY requirements.txt /requirements.txt
 ARG EXTRA_PYPI_INDEX
-RUN pip install grpcio-tools kubernetes docker 'pyrecordio>=0.0.6' Pillow \
-	--extra-index-url=${EXTRA_PYPI_INDEX}
+RUN pip install -r /requirements.txt --extra-index-url=${EXTRA_PYPI_INDEX}
 
 WORKDIR /
 ENV PYTHONPATH=/
