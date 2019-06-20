@@ -76,11 +76,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self.set_model_var(name, tensor_to_ndarray(val))
 
     def _init_model(self, checkpoint_filename_for_init, init_var):
-        if checkpoint_filename_for_init != '':
+        if checkpoint_filename_for_init:
             pb_model = load_from_checkpoint_file(checkpoint_filename_for_init)
             self._version = pb_model.version
             self._init_model_from_tensor_dict(pb_model.param)
-        elif len(init_var) > 0:
+        elif init_var:
             self._init_model_from_var_list(init_var)
         else:
             self._logger.info("Model is not intialized. It will be "
@@ -179,7 +179,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def ReportVariable(self, request, _):
         with self._lock:
-            if len(self._model) == 0:
+            if not self._model:
                 self._init_model_from_tensor_dict(request.variable)
         return empty_pb2.Empty()
 
