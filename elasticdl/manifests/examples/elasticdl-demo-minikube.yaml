@@ -8,7 +8,7 @@ metadata:
 spec:
   containers:
   - name: mnist-demo-container
-    image: elasticdl:dev
+    image: elasticdl:ci
     command: ["/bin/bash"]
     args:
     - -c
@@ -23,7 +23,7 @@ spec:
       --minibatch_size=64
       --num_workers=2
       --checkpoint_steps=2
-      --worker_image=elasticdl:dev
+      --worker_image=elasticdl:ci
       --worker_resource_request="cpu=1,memory=1024Mi"
       --job_name=test-mnist
       --image_pull_policy=Never
