@@ -9,8 +9,8 @@ env:
     - MINIKUBE_HOME=$HOME
     - CHANGE_MINIKUBE_NONE_USER=true
     - KUBECONFIG=$HOME/.kube/config
-    - K8S_VERSION=1.13.0
-    - MINIKUBE_VERSION=0.35.0
+    - K8S_VERSION=1.14.0
+    - MINIKUBE_VERSION=1.1.1
 
 addons:
   apt:
@@ -52,9 +52,10 @@ jobs:
         - "sudo chown -R travis: /home/travis/.minikube/"
         - kubectl cluster-info
         - docker build -t elasticdl:data -f elasticdl/docker/Dockerfile.data .
-        - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile .
+        - docker build -t elasticdl -f elasticdl/docker/Dockerfile .
+        - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
         # Run unit tests related to k8s
-        - docker run --rm -it --net=host -v $HOME/.kube:/root/.kube -v /home/travis/.minikube/:/home/travis/.minikube/ -v $(pwd):/v -w / elasticdl:dev bash -c "make && K8S_TESTS=True pytest elasticdl/python/tests/k8s*.py"
+        - docker run --rm -it --net=host -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=True pytest elasticdl/python/tests/k8s*.py"
         # Run integration tests
         - kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
         - kubectl apply -f elasticdl/manifests/examples/elasticdl-demo-minikube.yaml
