@@ -18,10 +18,10 @@ spec:
       --training_data_dir=/data/mnist/train
       --evaluation_data_dir=/data/mnist/test
       --records_per_task=100
-      --num_epochs=1
+      --num_epochs=2
       --grads_to_wait=10
       --minibatch_size=64
-      --num_workers=2
+      --num_workers=4
       --checkpoint_steps=10
       --worker_image=elasticdl:dev
       --job_name=test-mnist
