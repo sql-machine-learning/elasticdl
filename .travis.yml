@@ -52,7 +52,7 @@ jobs:
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
         - docker build -t elasticdl:ci -f elasticdl/docker/Dockerfile.ci .
         # Run unit tests related to k8s
-        - docker run --rm -it --net=host -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/USER/.minikube/ -v $(pwd):/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=True pytest elasticdl/python/tests/k8s*.py"
+        - docker run --rm -it --net=host -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=True pytest elasticdl/python/tests/k8s*.py"
         # Run integration tests
         - kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
         - kubectl apply -f elasticdl/manifests/examples/elasticdl-demo-minikube.yaml
