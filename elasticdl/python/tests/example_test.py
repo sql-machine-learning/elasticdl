@@ -80,7 +80,7 @@ class ExampleTest(unittest.TestCase):
             worker._opt_fn(),
             task_q,
             init_var=[],
-            init_from_checkpoint="",
+            checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0),
             evaluation_service=None,
         )
