@@ -1,0 +1,12 @@
+FROM elasticdl:data
+
+RUN apt-get update && apt-get install -y unzip curl git
+
+ARG EXTRA_PYPI_INDEX
+RUN pip install grpcio-tools kubernetes docker pytest 'pyrecordio>=0.0.6' pre-commit Pillow \
+	--extra-index-url=${EXTRA_PYPI_INDEX}
+
+WORKDIR /
+ENV PYTHONPATH=/
+COPY elasticdl /elasticdl
+RUN make -f elasticdl/Makefile
