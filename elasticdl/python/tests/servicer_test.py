@@ -49,7 +49,7 @@ class ServicerTest(unittest.TestCase):
             None,
             _TaskQueue({}, {}, records_per_task=3, num_epochs=2),
             init_var=[],
-            init_from_checkpoint="",
+            checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0),
             evaluation_service=None,
         )
@@ -74,7 +74,7 @@ class ServicerTest(unittest.TestCase):
             None,
             None,
             init_var=[],
-            init_from_checkpoint="",
+            checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0),
             evaluation_service=None,
         )
@@ -172,7 +172,7 @@ class ServicerTest(unittest.TestCase):
             tf.optimizers.SGD(0.1),
             None,
             init_var=[],
-            init_from_checkpoint="",
+            checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0),
             evaluation_service=None,
         )
@@ -256,7 +256,7 @@ class ServicerTest(unittest.TestCase):
             None,
             task_q,
             init_var=[],
-            init_from_checkpoint="",
+            checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0),
             evaluation_service=None,
         )
@@ -299,7 +299,7 @@ class ServicerTest(unittest.TestCase):
             None,
             None,
             init_var=[],
-            init_from_checkpoint="",
+            checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0),
             evaluation_service=None,
         )
