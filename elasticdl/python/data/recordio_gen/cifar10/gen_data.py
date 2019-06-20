@@ -74,7 +74,7 @@ def main(argv):
         train_example_list,
         args.dir + "/cifar10/train",
         records_per_file=records_per_file,
-        codec=codec_module.codec,
+        codec=codec_module.codec.encode,
     )
 
     # Work around a bug in cifar10.load_data() where y_test is not converted
@@ -85,7 +85,7 @@ def main(argv):
         test_example_list,
         args.dir + "/cifar10/test",
         records_per_file=records_per_file,
-        codec=codec_module.codec,
+        codec=codec_module.codec.encode,
     )
 
 
