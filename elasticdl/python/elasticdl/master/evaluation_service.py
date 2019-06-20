@@ -59,12 +59,12 @@ class _EvaluationTrigger(Thread):
     def __init__(self, eval_service, start_delay_secs, throttle_secs):
         Thread.__init__(self)
         self._eval_service = eval_service
-        self._stop = threading.Event()
+        self._stopper = threading.Event()
         self._throttle_secs = throttle_secs
         self._eval_min_time = time.time() + start_delay_secs
 
     def stop(self):
-        self._stop.set()
+        self._stopper.set()
 
     def _wait_enough_time(self, cur_time_secs, previous_round_start_secs):
         if cur_time_secs < self._eval_min_time:
@@ -79,7 +79,7 @@ class _EvaluationTrigger(Thread):
     def run(self):
         previous_round_start_secs = -1
 
-        while not self._stop.is_set():
+        while not self._stopper.is_set():
             time_now = time.time()
             if self._wait_enough_time(time_now, previous_round_start_secs):
                 # Time is up, trying to start a new round evaluation
