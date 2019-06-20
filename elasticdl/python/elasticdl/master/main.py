@@ -173,7 +173,7 @@ def _parse_args():
     parser.add_argument(
         "--image_pull_policy",
         default="Always",
-        help="Image pull policy of master and workers"
+        help="Image pull policy of master and workers",
     )
     parser.add_argument(
         "--restart_policy",
@@ -185,7 +185,7 @@ def _parse_args():
         default="default",
         type=str,
         help="The name of the Kubernetes namespace where ElasticDL "
-             "pods will be created",
+        "pods will be created",
     )
     return parser.parse_args()
 
@@ -237,7 +237,13 @@ def main():
         task_q.set_evaluation_service(evaluation_service)
 
     # The master service
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=64),
+        options=[
+            ("grpc.max_send_message_length", 1024 * 1024 * 1024),
+            ("grpc.max_receive_message_length", 1024 * 1024 * 1024),
+        ],
+    )
     master_servicer = MasterServicer(
         args.grads_to_wait,
         args.minibatch_size,
