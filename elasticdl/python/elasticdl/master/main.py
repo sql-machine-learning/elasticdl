@@ -184,8 +184,7 @@ def _parse_args():
         "--namespace",
         default="default",
         type=str,
-        help="The name of the Kubernetes namespace where ElasticDL "
-        "pods will be created",
+        help="The Kubernetes namespace where ElasticDL jobs run",
     )
     return parser.parse_args()
 
