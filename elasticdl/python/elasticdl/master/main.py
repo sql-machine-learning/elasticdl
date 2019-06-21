@@ -3,8 +3,12 @@ import time
 import argparse
 import os
 import recordio
+import datetime
+import subprocess
 
 import grpc
+
+import tensorflow as tf
 
 from contextlib import closing
 from concurrent import futures
@@ -14,6 +18,9 @@ from elasticdl.python.elasticdl.master.checkpoint_service import (
 )
 from elasticdl.python.elasticdl.master.evaluation_service import (
     EvaluationService,
+)
+from elasticdl.python.elasticdl.master.tensorboard_service import (
+    TensorboardService,
 )
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
@@ -187,6 +194,12 @@ def _parse_args():
         help="The name of the Kubernetes namespace where ElasticDL "
              "pods will be created",
     )
+    parser.add_argument(
+        "--tensorboard_log_dir",
+        default="",
+        type=str,
+        help="The log directory for TensorBoard",
+    )
     return parser.parse_args()
 
 
@@ -195,6 +208,9 @@ def main():
 
     # TODO: pass port via flags.
     PORT = 50001
+
+    tb_service = TensorboardService(args.tensorboard_log_dir)
+    tb_service.start()
 
     # Initialize logger
     logging.basicConfig(
@@ -247,6 +263,7 @@ def main():
         init_from_checkpoint=args.init_from_checkpoint,
         checkpoint_service=checkpoint_service,
         evaluation_service=evaluation_service,
+        tensorboard_service=tb_service,
     )
     elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
     server.add_insecure_port("[::]:{}".format(PORT))
@@ -301,6 +318,10 @@ def main():
         evaluation_service.stop()
 
     server.stop(0)
+
+    # Keep TensorBoard running when all the tasks are finished
+    logger.info("All tasks finished. Keeping TensorBoard service running...")
+    tb_service.keep_running()
 
 
 if __name__ == "__main__":
