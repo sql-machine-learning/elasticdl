@@ -19,7 +19,7 @@ spec:
       --evaluation_data_dir=/data/mnist/test
       --records_per_task=100
       --num_epochs=2
-      --grads_to_wait=10
+      --grads_to_wait=2
       --minibatch_size=64
       --num_workers=2
       --checkpoint_steps=10
@@ -31,11 +31,11 @@ spec:
     imagePullPolicy: Never
     resources:
       requests:
-        memory: "1024Mi"
         cpu: "400m"
+        memory: "1024Mi"
       limits:
-        memory: "2048Mi"
         cpu: "1"
+        memory: "2048Mi"
     env:
       - name: MY_POD_IP
         valueFrom:
