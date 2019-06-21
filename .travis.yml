@@ -74,6 +74,7 @@ jobs:
               echo "Pod status: $POD_STATUS. Continue checking..."
               sleep $CHECK_INTERVAL_SECS;
             fi
+            top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}'
           done
           echo "ElasticDL job timed out."
           exit 1
