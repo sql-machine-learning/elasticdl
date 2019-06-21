@@ -38,7 +38,16 @@ class K8sClientTest(unittest.TestCase):
         resource = {"cpu": "100m", "memory": "64M"}
         for i in range(3):
             _ = c.create_worker(
-                "worker-%d" % i, resource, resource, command=["echo"]
+                worker_id="worker-%d" % i,
+                resource_requests=resource,
+                resource_limits=resource,
+                command=["echo"],
+                priority=None,
+                args=None,
+                mount_path=None,
+                volume_name=None,
+                image_pull_policy="Never",
+                restart_policy="Never"
             )
             time.sleep(5)
 

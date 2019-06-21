@@ -236,17 +236,16 @@ def _submit(image_name, model_file, job_name, args, argv):
         job_name=job_name,
         event_callback=None,
     ).create_master(
-        job_name,
-        image_name,
-        _m_file_in_docker(model_file),
-        args.master_resource_request,
-        args.master_resource_limit,
-        args.master_pod_priority,
-        args.image_pull_policy,
-        args.volume_name,
-        args.mount_path,
-        args.restart_policy,
-        container_args,
+        job_name=job_name,
+        image_name=image_name,
+        resource_requests=args.master_resource_request,
+        resource_limits=args.master_resource_limit,
+        pod_priority=args.master_pod_priority,
+        image_pull_policy=args.image_pull_policy,
+        volume_name=args.volume_name,
+        mount_path=args.mount_path,
+        restart_policy=args.restart_policy,
+        args=container_args,
     )
 
 
