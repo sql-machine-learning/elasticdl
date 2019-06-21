@@ -68,11 +68,11 @@ def main(argv):
     codec_module = load_module(args.codec_file)
     codec_module.codec.init(feature_columns)
 
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
     n = max(0, min(100, args.mnist_fraction)) / 100
-    n = round(x_train.shape[0] * n)
-
     if n > 0:
+        (x_train, y_train), (x_test, y_test) = mnist.load_data()
+        n = round(x_train.shape[0] * n)
+
         convert_numpy_to_recordio(
             args.dir + "/mnist/train",
             x_train[:n],
@@ -90,11 +90,11 @@ def main(argv):
             codec=codec_module.codec,
         )
 
-    (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
     n = max(0, min(100, args.fashion_mnist_fraction)) / 100
-    n = round(x_train.shape[0] * n)
-
     if n > 0:
+        (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+        n = round(x_train.shape[0] * n)
+
         convert_numpy_to_recordio(
             args.dir + "/fashion/train",
             x_train[:n],
