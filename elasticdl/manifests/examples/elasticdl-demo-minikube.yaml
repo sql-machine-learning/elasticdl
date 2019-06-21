@@ -24,8 +24,8 @@ spec:
       --num_workers=2
       --checkpoint_steps=10
       --worker_image=elasticdl:ci
-      --worker_resource_request="cpu=600m,memory=1024Mi"
-      --worker_resource_limit="cpu=600m,memory=1024Mi"
+      --worker_resource_request="cpu=500m,memory=2048Mi"
+      --worker_resource_limit="cpu=1,memory=3072Mi"
       --job_name=test-mnist
       --image_pull_policy=Never
     imagePullPolicy: Never
@@ -34,8 +34,8 @@ spec:
         memory: "1024Mi"
         cpu: "200m"
       limits:
-        memory: "1024Mi"
-        cpu: "200m"
+        memory: "2048Mi"
+        cpu: "1"
     env:
       - name: MY_POD_IP
         valueFrom:
