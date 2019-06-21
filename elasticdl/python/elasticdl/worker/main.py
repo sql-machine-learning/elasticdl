@@ -34,7 +34,13 @@ def _parse_args():
 
 def main():
     args = _parse_args()
-    channel = grpc.insecure_channel(args.master_addr)
+    channel = grpc.insecure_channel(
+        args.master_addr,
+        options=[
+            ("grpc.max_send_message_length", 1024 * 1024 * 1024),
+            ("grpc.max_receive_message_length", 1024 * 1024 * 1024),
+        ],
+    )
 
     # Initialize logger
     logging.basicConfig(
