@@ -72,45 +72,45 @@ def main(argv):
     n = max(0, min(100, args.mnist_fraction)) / 100
     n = round(x_train.shape[0] * n)
 
-    convert_numpy_to_recordio(
-        args.dir + "/mnist/train",
-        x_train[:n],
-        y_train[:n],
-        feature_columns,
-        records_per_file=records_per_file,
-        codec=codec_module.codec,
-    )
-
-    convert_numpy_to_recordio(
-        args.dir + "/mnist/test",
-        x_test[:n],
-        y_test[:n],
-        feature_columns,
-        records_per_file=records_per_file,
-        codec=codec_module.codec,
-    )
+    if n > 0:
+        convert_numpy_to_recordio(
+            args.dir + "/mnist/train",
+            x_train[:n],
+            y_train[:n],
+            feature_columns,
+            records_per_file=records_per_file,
+            codec=codec_module.codec,
+        )
+        convert_numpy_to_recordio(
+            args.dir + "/mnist/test",
+            x_test[:n],
+            y_test[:n],
+            feature_columns,
+            records_per_file=records_per_file,
+            codec=codec_module.codec,
+        )
 
     (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
     n = max(0, min(100, args.fashion_mnist_fraction)) / 100
     n = round(x_train.shape[0] * n)
 
-    convert_numpy_to_recordio(
-        args.dir + "/fashion/train",
-        x_train[:n],
-        y_train[:n],
-        feature_columns,
-        records_per_file=records_per_file,
-        codec=codec_module.codec,
-    )
-
-    convert_numpy_to_recordio(
-        args.dir + "/fashion/test",
-        x_test[:n],
-        y_test[:n],
-        feature_columns,
-        records_per_file=records_per_file,
-        codec=codec_module.codec,
-    )
+    if n > 0:
+        convert_numpy_to_recordio(
+            args.dir + "/fashion/train",
+            x_train[:n],
+            y_train[:n],
+            feature_columns,
+            records_per_file=records_per_file,
+            codec=codec_module.codec,
+        )
+        convert_numpy_to_recordio(
+            args.dir + "/fashion/test",
+            x_test[:n],
+            y_test[:n],
+            feature_columns,
+            records_per_file=records_per_file,
+            codec=codec_module.codec,
+        )
 
 
 if __name__ == "__main__":
