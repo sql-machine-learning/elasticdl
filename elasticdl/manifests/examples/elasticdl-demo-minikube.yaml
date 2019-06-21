@@ -8,7 +8,7 @@ metadata:
 spec:
   containers:
   - name: mnist-demo-container
-    image: elasticdl:dev
+    image: elasticdl:ci
     command: ["/bin/bash"]
     args:
     - -c
@@ -21,13 +21,20 @@ spec:
       --num_epochs=2
       --grads_to_wait=10
       --minibatch_size=64
-      --num_workers=4
+      --num_workers=2
       --checkpoint_steps=10
-      --worker_image=elasticdl:dev
-      --worker_resource_request="cpu=0.5,memory=512Mi"
+      --worker_image=elasticdl:ci
+      --worker_resource_request="cpu=900m,memory=2048Mi"
       --job_name=test-mnist
       --image_pull_policy=Never
     imagePullPolicy: Never
+    resources:
+      requests:
+        memory: "1024Mi"
+        cpu: "200m"
+      limits:
+        memory: "1024Mi"
+        cpu: "200m"
     env:
       - name: MY_POD_IP
         valueFrom:
