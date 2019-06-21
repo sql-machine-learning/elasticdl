@@ -49,7 +49,7 @@ tar -cvf $TRAINING_DATA_DIR/$TAR_FILE $TRAINING_DATA_DIR/mnist_sampled_training_
     Notes:
     1. If your PySpark job needs other dependencies in the image, you can create your own image derived from the sample Dockerfile.
     2. You need to provide your own [model file](https://github.com/wangkuiyi/elasticdl/blob/0b7d75fd5073802f33e192244283b86ccf2684e0/elasticdl/doc/model_building.md), from which we need the [feature](https://github.com/wangkuiyi/elasticdl/blob/develop/elasticdl/doc/model_building.md#feature_columns) and [label](https://github.com/wangkuiyi/elasticdl/blob/develop/elasticdl/doc/model_building.md#label_columns) columns, as well as the [user-defined data processing logic](prepare_data_for_a_single_file).
-    3. There are some other arguments you can pass to our backbone PySpark file as you can see [here](https://github.com/wangkuiyi/elasticdl/blob/7495659ff5357bdb2e99fedf46d2e49a80b78767/elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/spark_gen_recordio.py#L61-L91).
+    3. There are some other arguments you can pass to our backbone PySpark file as you can see in the main() function of [spark_gen_recordio.py](https://github.com/wangkuiyi/elasticdl/blob/develop/elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/spark_gen_recordio.py).
 
 
 ## PySpark Job on Google Cloud
@@ -93,7 +93,7 @@ gcloud filestore instances create $FILESTORE_NAME \
 6. [Copy the training data from local to Filestore](https://cloud.google.com/filestore/docs/copying-data#computer-to-fileshare):
 ```bash
 gcloud compute scp $TRAINING_DATA_DIR --recurse \
-    test-cluster-m:/filestore_mnt/$TRAINING_DATA_DIR \
+    $CLUSTER_NAME-m:/filestore_mnt/$TRAINING_DATA_DIR \
     --project elasticdl --zone us-west1-a
 ```
 
