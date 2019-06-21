@@ -1,10 +1,10 @@
 import recordio
 import sys
 import argparse
+import numpy as np
 
 from contextlib import closing
 from elasticdl.python.elasticdl.common.model_helper import load_module
-import tensorflow as tf
 
 
 def main(argv):
@@ -25,16 +25,6 @@ def main(argv):
     )
     args = parser.parse_args(argv)
 
-    feature_columns = [
-        tf.feature_column.numeric_column(
-            key="image", dtype=tf.float32, shape=[1, 28, 28]
-        ),
-        tf.feature_column.numeric_column(
-            key="label", dtype=tf.int64, shape=[1]
-        ),
-    ]
-    feature_spec = tf.feature_column.make_parse_example_spec(feature_columns)
-
     # Initilize codec
     codec_module = load_module(args.codec_file)
     decode_fn = codec_module.codec.decode
@@ -44,12 +34,14 @@ def main(argv):
             rec = f.record()
             if rec is None:
                 break
-            rec = decode_fn(rec, feature_spec)
-
+            example = decode_fn(rec)
+            image_array = example.features.feature['image'].float_list.value
+            image_numpy = np.asarray(image_array).reshape(28, 28)
+            label = example.features.feature['label'].int64_list.value[0]
             print("-" * 10)
             print("record:", i)
-            print(rec["image"].numpy())
-            print(rec["label"].numpy())
+            print(image_numpy)
+            print(label)
 
 
 if __name__ == "__main__":
