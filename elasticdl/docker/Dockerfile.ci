@@ -1,0 +1,6 @@
+FROM elasticdl:dev
+
+WORKDIR /
+ENV PYTHONPATH=/
+COPY elasticdl /elasticdl
+RUN make -f elasticdl/Makefile
