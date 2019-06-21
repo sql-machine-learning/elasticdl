@@ -3,12 +3,8 @@ import time
 import argparse
 import os
 import recordio
-import datetime
-import subprocess
 
 import grpc
-
-import tensorflow as tf
 
 from contextlib import closing
 from concurrent import futures
