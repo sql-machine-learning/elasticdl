@@ -46,7 +46,7 @@ jobs:
         - mkdir -p $HOME/.kube $HOME/.minikube
         - touch $KUBECONFIG
         # Start minikube
-        - sudo minikube start --vm-driver=none --kubernetes-version=v$K8S_VERSION
+        - sudo minikube start --vm-driver=none --kubernetes-version=v$K8S_VERSION --cpus 2 --memory 6144
         - "sudo chown -R travis: /home/travis/.minikube/"
         - kubectl cluster-info
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
@@ -74,6 +74,7 @@ jobs:
               echo "Pod status: $POD_STATUS. Continue checking..."
               sleep $CHECK_INTERVAL_SECS;
             fi
+            top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}'
           done
           echo "ElasticDL job timed out."
           exit 1
