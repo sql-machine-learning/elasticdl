@@ -19,5 +19,6 @@ RUN pip install pre-commit --extra-index-url=${EXTRA_PYPI_INDEX}
 COPY elasticdl/python/data /var/elasticdl/python/data
 COPY elasticdl/python/elasticdl/common /var/elasticdl/python/elasticdl/common
 RUN cd /var && \
-    PYTHONPATH=/var python elasticdl/python/data/recordio_gen/mnist/gen_data.py /data && \
+    PYTHONPATH=/var python elasticdl/python/data/recordio_gen/mnist/gen_data.py \
+      --mnist_fraction 0.25 --fashion_mnist_fraction 0 /data && \
     rm -rf /root/.keras/datasets
