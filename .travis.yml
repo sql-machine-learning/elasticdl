@@ -62,7 +62,6 @@ jobs:
         # Validate pod statuses
         - |
           MASTER_POD_NAME=elasticdl-test-mnist-master
-          kubectl get no minikube -o jsonpath='{.status.allocatable}'
           CHECK_INTERVAL_SECS=10
           for i in {1..200}; do
             POD_STATUS=$(kubectl get pod $MASTER_POD_NAME -o jsonpath='{.status.phase}')
@@ -76,9 +75,6 @@ jobs:
               exit 1
             else
               echo "Pod status: $POD_STATUS. Continue checking..."
-              for name in $(kubectl get pods -o jsonpath='{.items[*].metadata.name}'); do
-                echo "$name: $(kubectl get pod $name -o jsonpath='{.status.phase}')"
-              done
               sleep $CHECK_INTERVAL_SECS;
             fi
             top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}'
