@@ -71,9 +71,10 @@ jobs:
               kubectl logs $MASTER_POD_NAME | tail
               exit 1
             else
-              WORKER1_STATUS=$(kubectl get pod elasticdl-test-mnist-worker-0 -o jsonpath='{.status.phase}')
-              WORKER2_STATUS=$(kubectl get pod elasticdl-test-mnist-worker-1 -o jsonpath='{.status.phase}')
-              echo "Pod status: $POD_STATUS. Workers status: $WORKER1_STATUS $WORKER2_STATUS. Continue checking..."
+              echo "Pod status: $POD_STATUS. Continue checking..."
+              for name in $(kubectl get pods -o jsonpath='{.items[*].metadata.name}'); do
+                echo "$name: $(kubectl get pod $name -o jsonpath='{.status.phase}')"
+              done
               sleep $CHECK_INTERVAL_SECS;
             fi
             top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}'
