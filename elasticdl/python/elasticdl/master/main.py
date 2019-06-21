@@ -15,6 +15,9 @@ from elasticdl.python.elasticdl.master.checkpoint_service import (
 from elasticdl.python.elasticdl.master.evaluation_service import (
     EvaluationService,
 )
+from elasticdl.python.elasticdl.master.tensorboard_service import (
+    TensorboardService,
+)
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
@@ -187,6 +190,12 @@ def _parse_args():
         type=str,
         help="The Kubernetes namespace where ElasticDL jobs run",
     )
+    parser.add_argument(
+        "--tensorboard_log_dir",
+        default="",
+        type=str,
+        help="The log directory for TensorBoard",
+    )
     return parser.parse_args()
 
 
@@ -195,6 +204,12 @@ def main():
 
     # TODO: pass port via flags.
     PORT = 50001
+
+    if args.tensorboard_log_dir:
+        tb_service = TensorboardService(args.tensorboard_log_dir)
+        tb_service.start()
+    else:
+        tb_service = None
 
     # Initialize logger
     logging.basicConfig(
@@ -229,6 +244,7 @@ def main():
             )
         evaluation_service = EvaluationService(
             checkpoint_service,
+            tb_service,
             task_q,
             args.evaluation_start_delay_secs,
             args.evaluation_throttle_secs,
@@ -313,6 +329,11 @@ def main():
         evaluation_service.stop()
 
     server.stop(0)
+
+    # Keep TensorBoard running when all the tasks are finished
+    logger.info("All tasks finished. Keeping TensorBoard service running...")
+    if tb_service:
+        tb_service.keep_running()
 
 
 if __name__ == "__main__":
