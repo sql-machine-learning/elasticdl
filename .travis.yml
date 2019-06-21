@@ -31,11 +31,13 @@ jobs:
     - stage: precommit
       name: "Pre-commit Check"
       script:
+        - docker build -t elasticdl:data -f elasticdl/docker/Dockerfile.data .
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
         - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python -name '*.py' -print0 | tr '\0' ' ')"
     - stage: unittest
       name: "Unit Tests"
       script:
+        - docker build -t elasticdl:data -f elasticdl/docker/Dockerfile.data .        
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
         - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests"
     - stage: integrationtest
@@ -49,6 +51,7 @@ jobs:
         - sudo minikube start --vm-driver=none --kubernetes-version=v$K8S_VERSION --cpus 2 --memory 6144
         - "sudo chown -R travis: /home/travis/.minikube/"
         - kubectl cluster-info
+        - docker build -t elasticdl:data -f elasticdl/docker/Dockerfile.data .        
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
         - docker build -t elasticdl:ci -f elasticdl/docker/Dockerfile.ci .
         # Run unit tests related to k8s
