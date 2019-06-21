@@ -51,28 +51,19 @@ def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
 
-feature_label_colums = [
-    tf.feature_column.numeric_column(
-        key="image", dtype=tf.dtypes.float32, shape=[28, 28]
-    ),
-    tf.feature_column.numeric_column(
-        key="label", dtype=tf.dtypes.int64, shape=[1]
-    ),
-]
-feature_spec = tf.feature_column.make_parse_example_spec(feature_label_colums)
-
-
 def input_fn(record_list, decode_fn):
     image_numpy_list = []
     label_list = []
     # deserialize
     for r in record_list:
-        tensor_dict = decode_fn(r, feature_spec)
-        label = tensor_dict['label'].numpy().astype(np.int32)
-        label_list.append(label)
+        example = decode_fn(r)
 
-        image_numpy = tensor_dict['image'].numpy().astype(np.float32) / 255
-        image_numpy_list.append(image_numpy)
+        image_array = example.features.feature['image'].float_list.value
+        image_numpy = np.asarray(image_array).reshape(28, 28)
+        image_numpy_list.append(image_numpy.astype(np.float32) / 255)
+
+        label = example.features.feature['label'].int64_list.value[0]
+        label_list.append(label)
 
     # batching
     batch_size = len(image_numpy_list)

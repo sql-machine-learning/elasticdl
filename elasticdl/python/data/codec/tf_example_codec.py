@@ -12,12 +12,15 @@ class TFExampleCodec(object):
         '''
         return example.SerializeToString()
 
-    def decode(self, raw, example_spec):
+    def decode(self, raw):
         '''
         Take an encoded string of tf example object and
         return a decoded tensor dict
         '''
-        return tf.io.parse_single_example(raw, example_spec)
+        example = tf.train.Example()
+        example.ParseFromString(raw)
+        return example
+        # return tf.io.parse_single_example(raw, example_spec)
 
 
 codec = TFExampleCodec()

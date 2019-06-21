@@ -29,11 +29,13 @@ def input_fn(records, decode_fn):
     y_list = []
     # deserialize
     for r in records:
-        tensor_dict = decode_fn(r, feature_spec)
-        label = tensor_dict['y'].numpy().astype(np.int32)
-        y_list.append(label)
-        feature = tensor_dict['x'].numpy().astype(np.float32)
-        x_list.append(feature)
+        example = decode_fn(r)
+
+        x = np.asarray(example.features.feature['x'].float_list.value)
+        x_list.append(x.astype(np.float32))
+
+        y = np.asarray(example.features.feature['y'].float_list.value)
+        y_list.append(y[0])
 
     # batching
     batch_size = len(x_list)

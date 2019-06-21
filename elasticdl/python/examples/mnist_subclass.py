@@ -89,12 +89,14 @@ def input_fn(record_list, decode_fn):
     label_list = []
     # deserialize
     for r in record_list:
-        tensor_dict = decode_fn(r, feature_spec)
-        label = tensor_dict['label'].numpy().astype(np.int32)
-        label_list.append(label)
+        example = decode_fn(r)
 
-        image_numpy = tensor_dict['image'].numpy().astype(np.float32) / 255
-        image_numpy_list.append(image_numpy)
+        image_array = example.features.feature['image'].float_list.value
+        image_numpy = np.asarray(image_array).reshape(28, 28)
+        image_numpy_list.append(image_numpy.astype(np.float32) / 255)
+
+        label = example.features.feature['label'].int64_list.value[0]
+        label_list.append(label)
 
     # batching
     batch_size = len(image_numpy_list)

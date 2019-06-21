@@ -33,23 +33,24 @@ class TestTFExampleCodec(unittest.TestCase):
         # Encode
         encoded = [codec.encode(e) for e in examples]
 
-        feature_columns = [
-            tf.feature_column.numeric_column(
-                key="f0", dtype=tf.float32, shape=[1]
-            ),
-            tf.feature_column.numeric_column(
-                key="label", dtype=tf.int64, shape=[1]
-            ),
-        ]
-        example_spec = tf.feature_column.make_parse_example_spec(
-            feature_columns
-        )
+        # feature_columns = [
+        #     tf.feature_column.numeric_column(
+        #         key="f0", dtype=tf.float32, shape=[1]
+        #     ),
+        #     tf.feature_column.numeric_column(
+        #         key="label", dtype=tf.int64, shape=[1]
+        #     ),
+        # ]
+        # example_spec = tf.feature_column.make_parse_example_spec(
+        #     feature_columns
+        # )
 
         # Verify decoded content.
         for idx, e in enumerate(encoded):
-            exp = codec.decode(e, example_spec)
-            f_0 = exp["f0"].numpy()
-            label = exp["label"].numpy()
+            example = codec.decode(e)
+            # exp = codec.decode(e, example_spec)
+            f_0 = example.features.feature["f0"].float_list.value[0]
+            label = example.features.feature["label"].int64_list.value[0]
             self.assertEqual(f_0, np.float32(expected[idx][0]))
             self.assertEqual(label, np.int64(expected[idx][1]))
 
