@@ -39,24 +39,17 @@ In the new design, I propose:
         # This is the common logic. So we provide the implementation here.
     ```
 
-    2. RecordIO to Tensor:
-    As [here](https://www.tensorflow.org/tutorials/load_data/tf_records#read_the_tfrecord_file), the only thing we need to decode a Example object to Tensor object is a dictionary which maps `feature_name` to `tf.FixedLenFeature/tf.VarLenFeature`. So we can keep such a dictionary as the private member in our model definition, which will be used in:
+    2. RecordIO to the data that is ready to feed into the model:
+    This is done in `input_fn(records, decode_fn)` defined in model file.
     ```python
-    def example_to_tensor(example_proto):
+    def decode(raw):
         ```
-        Take a serialized example object from RecordIO and return a Tensor object
+        Take an encoded string of tf example object and return a tf example object
         ```
-        # This is the common logic. So we provide the implementation here.
-        return tf.parse_single_example(example_proto, <user_defined_member_dictionary>)
     ```
-    Please note that the member dictionary is actually can be generated from Feature Column via function [make_parse_example_spec()](https://www.tensorflow.org/api_docs/python/tf/feature_column/make_parse_example_spec). Users can generate the member dictionary from Feature Column in the constructor of the model. But that's users' choice, not forced by our framework.
-
-    3. Tensor to the data which will be feed into the model(i.e: model input):
     ```python
-    def tensor_to_model_input(tensor):
+    def input_fn(records, decode_fn):
         ```
-        Transorm the tensor to model input. The shape of function output(i.e, model input) must match the model definition.
+        Take a list of record and the decode function, and return a tuple (feature_tensor_list, label_numpy_array)
         ```
-        # User must implement the logic here
     ```
-    `example_to_tensor(example_proto)` and `tensor_to_model_input(tensor)` can be wrapped in [input_fn(records)](https://github.com/wangkuiyi/elasticdl/blob/376a228b011e360d5d19e576a07ec93196599728/elasticdl/python/examples/mnist_functional_api.py#L59).
