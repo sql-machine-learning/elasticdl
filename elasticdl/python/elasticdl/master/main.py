@@ -205,8 +205,11 @@ def main():
     # TODO: pass port via flags.
     PORT = 50001
 
-    tb_service = TensorboardService(args.tensorboard_log_dir)
-    tb_service.start()
+    if args.tensorboard_log_dir:
+        tb_service = TensorboardService(args.tensorboard_log_dir)
+        tb_service.start()
+    else:
+        tb_service = None
 
     # Initialize logger
     logging.basicConfig(
@@ -317,7 +320,8 @@ def main():
 
     # Keep TensorBoard running when all the tasks are finished
     logger.info("All tasks finished. Keeping TensorBoard service running...")
-    tb_service.keep_running()
+    if tb_service:
+        tb_service.keep_running()
 
 
 if __name__ == "__main__":

@@ -4,6 +4,8 @@ import time
 
 import tensorflow as tf
 
+import numpy as np
+
 
 class TensorboardService(object):
     """Tensorboard Service implementation"""
@@ -26,6 +28,8 @@ class TensorboardService(object):
     def write_dict_to_summary(self, dictionary, version):
         with self.summary_writer.as_default():
             for k, v in dictionary.items():
+                if isinstance(v, np.ndarray) and len(v) == 1:
+                    v = v[0]
                 tf.summary.scalar(k, v, step=version)
 
     def start(self):

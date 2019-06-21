@@ -48,7 +48,7 @@ class _EvaluationJob(object):
 
     def get_evaluation_summary(self):
         return {
-            k: (v / self._completed_minibatches)[0]
+            k: v / self._completed_minibatches
             for k, v in self._evaluation_metrics.items()
         }
 
