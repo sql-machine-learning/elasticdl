@@ -63,7 +63,7 @@ jobs:
         - |
           MASTER_POD_NAME=elasticdl-test-mnist-master
           CHECK_INTERVAL_SECS=10
-          for i in {1..150}; do
+          for i in {1..200}; do
             POD_STATUS=$(kubectl get pod $MASTER_POD_NAME -o jsonpath='{.status.phase}')
             if [ "$POD_STATUS" == "Succeeded" ]; then
               echo "Pod succeeded."
