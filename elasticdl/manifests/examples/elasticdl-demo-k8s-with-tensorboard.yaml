@@ -9,9 +9,6 @@ spec:
   containers:
   - name: mnist-demo-container
     image: gcr.io/elasticdl/elasticdl:tb-dev
-    volumeMounts:
-    - mountPath: /data
-      name: data-volume
     command: ["/bin/bash"]
     args:
     - -c
@@ -30,17 +27,11 @@ spec:
       --job_name=test-mnist-with-tb
       --log_level=INFO
       --image_pull_policy=Always
-      --mount_path=/data
-      --volume_name=data-volume
+      --tensorboard_log_dir=/tensorboard-log
     imagePullPolicy: Always
     env:
       - name: MY_POD_IP
         valueFrom:
           fieldRef:
             fieldPath: status.podIP
-  volumes:
-  - name: data-volume
-    persistentVolumeClaim:
-      claimName: fileserver-claim
-      readOnly: false
   restartPolicy: Never
