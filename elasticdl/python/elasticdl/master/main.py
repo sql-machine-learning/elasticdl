@@ -19,6 +19,10 @@ from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
 from elasticdl.python.elasticdl.common.model_helper import load_module
+from elasticdl.python.elasticdl.common.constants import (
+    GRPC_MAX_SEND_MESSAGE_LENGTH,
+    GRPC_MAX_RECEIVE_MESSAGE_LENGTH
+)
 
 
 def _make_task_queue(
@@ -239,8 +243,8 @@ def main():
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=64),
         options=[
-            ("grpc.max_send_message_length", 1024 * 1024 * 1024),
-            ("grpc.max_receive_message_length", 1024 * 1024 * 1024),
+            ("grpc.max_send_message_length", GRPC_MAX_SEND_MESSAGE_LENGTH),
+            ("grpc.max_receive_message_length", GRPC_MAX_RECEIVE_MESSAGE_LENGTH),
         ],
     )
     master_servicer = MasterServicer(
