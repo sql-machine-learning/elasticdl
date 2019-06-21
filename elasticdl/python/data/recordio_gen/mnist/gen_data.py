@@ -42,13 +42,13 @@ def main(argv):
     parser.add_argument(
         "--mnist_fraction",
         default=100,            # 100%
-        type=int,
+        type=float,
         help="The fraction of the MNIST dataset to be converted",
     )
     parser.add_argument(
         "--fashion_mnist_fraction",
         default=0,              # 0%
-        type=int,
+        type=float,
         help="The fraction of the Fashion MNIST dataset to be converted",
     )
     args = parser.parse_args(argv)
