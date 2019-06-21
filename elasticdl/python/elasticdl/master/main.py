@@ -19,6 +19,7 @@ from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
 from elasticdl.python.elasticdl.common.model_helper import load_module
+from elasticdl.python.elasticdl.common.constants import GRPC
 
 
 def _make_task_queue(
@@ -173,7 +174,7 @@ def _parse_args():
     parser.add_argument(
         "--image_pull_policy",
         default="Always",
-        help="Image pull policy of master and workers"
+        help="Image pull policy of master and workers",
     )
     parser.add_argument(
         "--restart_policy",
@@ -184,8 +185,7 @@ def _parse_args():
         "--namespace",
         default="default",
         type=str,
-        help="The name of the Kubernetes namespace where ElasticDL "
-             "pods will be created",
+        help="The Kubernetes namespace where ElasticDL jobs run",
     )
     return parser.parse_args()
 
@@ -237,7 +237,19 @@ def main():
         task_q.set_evaluation_service(evaluation_service)
 
     # The master service
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=64))
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=64),
+        options=[
+            (
+                "grpc.max_send_message_length",
+                GRPC.MAX_SEND_MESSAGE_LENGTH,
+            ),
+            (
+                "grpc.max_receive_message_length",
+                GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
+            ),
+        ],
+    )
     master_servicer = MasterServicer(
         args.grads_to_wait,
         args.minibatch_size,
