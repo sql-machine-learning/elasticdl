@@ -24,7 +24,8 @@ spec:
       --num_workers=2
       --checkpoint_steps=10
       --worker_image=elasticdl:ci
-      --worker_resource_request="cpu=900m,memory=2048Mi"
+      --worker_resource_request="cpu=800m,memory=2048Mi"
+      --worker_resource_limit="cpu=800m,memory=2048Mi"
       --job_name=test-mnist
       --image_pull_policy=Never
     imagePullPolicy: Never

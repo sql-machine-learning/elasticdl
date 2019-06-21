@@ -59,6 +59,7 @@ jobs:
         # Validate pod statuses
         - |
           MASTER_POD_NAME=elasticdl-test-mnist-master
+          kubectl get no minikube -o jsonpath='{.status.allocatable}'
           CHECK_INTERVAL_SECS=10
           for i in {1..150}; do
             POD_STATUS=$(kubectl get pod $MASTER_POD_NAME -o jsonpath='{.status.phase}')
