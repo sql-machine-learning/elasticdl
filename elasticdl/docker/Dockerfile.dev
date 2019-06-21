@@ -6,7 +6,7 @@ FROM ${BASE_IMAGE}
 COPY elasticdl/docker/bashrc /etc/bash.bashrc
 RUN chmod a+rwx /etc/bash.bashrc
 
-RUN apt-get update && apt-get install -y unzip curl
+RUN apt-get update && apt-get install -y unzip curl git
 
 COPY requirements.txt /requirements.txt
 ARG EXTRA_PYPI_INDEX
