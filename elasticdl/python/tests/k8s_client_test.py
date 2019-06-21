@@ -42,6 +42,12 @@ class K8sClientTest(unittest.TestCase):
                 resource_requests=resource,
                 resource_limits=resource,
                 command=["echo"],
+                priority=None,
+                args=None,
+                mount_path=None,
+                volume_name=None,
+                image_pull_policy="Never",
+                restart_policy="Never"
             )
             time.sleep(5)
 
