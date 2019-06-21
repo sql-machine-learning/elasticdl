@@ -14,8 +14,8 @@ class TFExampleCodec(object):
 
     def decode(self, raw):
         '''
-        Take an encoded string of tf example object and
-        return a decoded tensor dict
+        Take an encoded string of tf example object and return a
+        tf example object
         '''
         example = tf.train.Example()
         example.ParseFromString(raw)
