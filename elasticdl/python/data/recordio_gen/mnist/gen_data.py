@@ -41,13 +41,13 @@ def main(argv):
     )
     parser.add_argument(
         "--mnist_fraction",
-        default=100,            # 100%
+        default=100.0,            # 100%
         type=float,
         help="The fraction of the MNIST dataset to be converted",
     )
     parser.add_argument(
         "--fashion_mnist_fraction",
-        default=0,              # 0%
+        default=0.0,              # 0%
         type=float,
         help="The fraction of the Fashion MNIST dataset to be converted",
     )
@@ -68,11 +68,11 @@ def main(argv):
     codec_module = load_module(args.codec_file)
     codec_module.codec.init(feature_columns)
 
-    n = max(0, min(100, args.mnist_fraction)) / 100
+    n = max(0, min(100, args.mnist_fraction))
     if n > 0:
         (x_train, y_train), (x_test, y_test) = mnist.load_data()
-        n = round(x_train.shape[0] * n)
 
+        n = round(x_train.shape[0] * n / 100)
         convert_numpy_to_recordio(
             args.dir + "/mnist/train",
             x_train[:n],
@@ -81,6 +81,8 @@ def main(argv):
             records_per_file=records_per_file,
             codec=codec_module.codec,
         )
+
+        n = round(x_test.shape[0] * n / 100)
         convert_numpy_to_recordio(
             args.dir + "/mnist/test",
             x_test[:n],
@@ -90,11 +92,11 @@ def main(argv):
             codec=codec_module.codec,
         )
 
-    n = max(0, min(100, args.fashion_mnist_fraction)) / 100
+    n = max(0, min(100, args.fashion_mnist_fraction))
     if n > 0:
         (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
-        n = round(x_train.shape[0] * n)
 
+        n = round(x_train.shape[0] * n / 100)
         convert_numpy_to_recordio(
             args.dir + "/fashion/train",
             x_train[:n],
@@ -103,6 +105,8 @@ def main(argv):
             records_per_file=records_per_file,
             codec=codec_module.codec,
         )
+
+        n = round(x_test.shape[0] * n / 100)
         convert_numpy_to_recordio(
             args.dir + "/fashion/test",
             x_test[:n],
