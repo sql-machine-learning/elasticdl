@@ -3,10 +3,7 @@ import grpc
 import logging
 
 from elasticdl.python.elasticdl.worker.worker import Worker  # noqa
-from elasticdl.python.elasticdl.common.constants import (
-    GRPC_MAX_SEND_MESSAGE_LENGTH,
-    GRPC_MAX_RECEIVE_MESSAGE_LENGTH,
-)
+from elasticdl.python.elasticdl.common.constants import GRPCOptions
 
 
 def _parse_args():
@@ -41,10 +38,13 @@ def main():
     channel = grpc.insecure_channel(
         args.master_addr,
         options=[
-            ("grpc.max_send_message_length", GRPC_MAX_SEND_MESSAGE_LENGTH),
+            (
+                "grpc.max_send_message_length",
+                GRPCOptions.GRPC_MAX_SEND_MESSAGE_LENGTH,
+            ),
             (
                 "grpc.max_receive_message_length",
-                GRPC_MAX_RECEIVE_MESSAGE_LENGTH,
+                GRPCOptions.GRPC_MAX_RECEIVE_MESSAGE_LENGTH,
             ),
         ],
     )
