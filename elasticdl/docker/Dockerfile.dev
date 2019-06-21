@@ -1,4 +1,10 @@
-FROM elasticdl:data
+ARG BASE_IMAGE=tensorflow/tensorflow:2.0.0b0-py3
+# Use tensorflow/tensorflow:2.0.0b0-gpu-py3 if you want GPU-support.
+FROM ${BASE_IMAGE}
+
+# Replace the Splash screen from TensorFlow image.
+COPY elasticdl/docker/bashrc /etc/bash.bashrc
+RUN chmod a+rwx /etc/bash.bashrc
 
 RUN apt-get update && apt-get install -y unzip curl git
 
@@ -6,3 +12,13 @@ COPY requirements.txt /requirements.txt
 ARG EXTRA_PYPI_INDEX
 RUN pip install -r /requirements.txt --extra-index-url=${EXTRA_PYPI_INDEX}
 RUN pip install pre-commit --extra-index-url=${EXTRA_PYPI_INDEX}
+
+# Copy the data generation package to /var and run them from there.
+# This assumes that the data generation pacakge is indepenent with the
+# rest part of ElasticDL.  The generated data will be in /data.
+COPY elasticdl/python/data /var/elasticdl/python/data
+COPY elasticdl/python/elasticdl/common /var/elasticdl/python/elasticdl/common
+RUN cd /var && \
+    PYTHONPATH=/var python elasticdl/python/data/recordio_gen/mnist/gen_data.py \
+      --mnist_fraction 0.25 --fashion_mnist_fraction 0 /data && \
+    rm -rf /root/.keras/datasets

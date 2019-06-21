@@ -24,7 +24,7 @@ def main(argv):
     parser.add_argument("dir", help="Output directory")
     parser.add_argument(
         "--num_record_per_chunk",
-        default=1024,
+        default=256,
         type=int,
         help="Approximate number of records in a chunk.",
     )

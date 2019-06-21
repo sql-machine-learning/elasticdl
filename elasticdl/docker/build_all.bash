@@ -12,8 +12,6 @@ else
     base_img="tensorflow/tensorflow:2.0.0b0-py3"
 fi
 
-docker build -t elasticdl:data -f elasticdl/docker/Dockerfile.data --build-arg BASE_IMAGE=$base_img .
-
 docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev --build-arg BASE_IMAGE=$base_img .
 
 docker build -t elasticdl -f elasticdl/docker/Dockerfile --build-arg BASE_IMAGE=$base_img .
