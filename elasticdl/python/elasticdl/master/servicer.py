@@ -35,7 +35,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         init_from_checkpoint,
         checkpoint_service,
         evaluation_service,
-        tensorboard_service,
     ):
         # TODO: group params together into a single object.
         self._logger = logging.getLogger(__name__)
@@ -54,7 +53,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self.init_model_var(init_from_checkpoint, init_var)
         self._checkpoint_service = checkpoint_service
         self._evaluation_service = evaluation_service
-        self._tensorboard_service = tensorboard_service
 
     def init_model_var(self, init_from_checkpoint, init_var):
         self._var_created = False
@@ -221,12 +219,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             if self._grad_n >= self._grad_to_wait:
                 self._update_model()
                 self._update_checkpoint()
-            self._tensorboard_service.write_dict_to_summary(
-                {
-                    'grad_n': self._grad_n,
-                    'random': self._version + np.random.randn(),
-                },
-                version=self._version)
 
         res.accepted = True
         res.model_version = self._version

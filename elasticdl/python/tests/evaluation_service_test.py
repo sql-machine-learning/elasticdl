@@ -40,16 +40,16 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertTrue(job.ok_to_new_job(latest_chkp_version))
 
         # No new model checkpoint
-        latest_chkp_version = job._model_version
+        latest_chkp_version = job.model_version
         self.assertFalse(job.ok_to_new_job(latest_chkp_version))
-        latest_chkp_version = job._model_version + 1
+        latest_chkp_version = job.model_version + 1
         self.assertTrue(job.ok_to_new_job(latest_chkp_version))
 
         # At the beginning, no metrics
         self.assertFalse(job._evaluation_metrics)
 
         # Start to report metrics
-        evaluation_version = job._model_version + 1
+        evaluation_version = job.model_version + 1
         evaluation_metrics = {
             "mse": ndarray_to_tensor(np.array([100, 200], dtype=np.float32))
         }
@@ -59,7 +59,7 @@ class EvaluationServiceTest(unittest.TestCase):
             )
         )
         self.assertFalse(job._evaluation_metrics)
-        evaluation_version = job._model_version
+        evaluation_version = job.model_version
         self.assertTrue(
             job.report_evaluation_metrics(
                 evaluation_version, evaluation_metrics
@@ -85,7 +85,7 @@ class EvaluationServiceTest(unittest.TestCase):
 
             # Evaluation metrics will not be accepted if no evaluation ongoing
             evaluation_service = EvaluationService(
-                checkpoint_service, task_q, 10, 20
+                checkpoint_service, None, task_q, 10, 20
             )
             evaluation_metrics = {
                 "mse": ndarray_to_tensor(

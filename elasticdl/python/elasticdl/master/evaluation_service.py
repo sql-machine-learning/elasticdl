@@ -14,7 +14,7 @@ class _EvaluationJob(object):
 
     def __init__(self, model_version, total_tasks=-1):
         self._logger = logging.getLogger(__name__)
-        self._model_version = model_version
+        self.model_version = model_version
         self._total_tasks = total_tasks
         self._completed_tasks = 0
         self._completed_minibatches = 0
@@ -27,15 +27,15 @@ class _EvaluationJob(object):
         return self._completed_tasks >= self._total_tasks
 
     def ok_to_new_job(self, latest_chkp_version):
-        return self.finished() and latest_chkp_version > self._model_version
+        return self.finished() and latest_chkp_version > self.model_version
 
     def report_evaluation_metrics(
         self, evaluation_version, evaluation_metrics
     ):
-        if evaluation_version != self._model_version:
+        if evaluation_version != self.model_version:
             self._logger.error(
                 "Drop a wrong version evaluation: request %d, receive %d"
-                % (self._model_version, evaluation_version)
+                % (self.model_version, evaluation_version)
             )
             return False
         for k, v in evaluation_metrics.items():
@@ -48,7 +48,7 @@ class _EvaluationJob(object):
 
     def get_evaluation_summary(self):
         return {
-            k: v / self._completed_minibatches
+            k: (v / self._completed_minibatches)[0]
             for k, v in self._evaluation_metrics.items()
         }
 
@@ -94,10 +94,16 @@ class EvaluationService(object):
     """Evaluation service"""
 
     def __init__(
-        self, checkpoint_service, task_q, start_delay_secs, throttle_secs
+            self,
+            checkpoint_service,
+            tensorboard_service,
+            task_q,
+            start_delay_secs,
+            throttle_secs,
     ):
         self._logger = logging.getLogger(__name__)
         self._checkpoint_service = checkpoint_service
+        self._tensorboard_service = tensorboard_service
         self._task_q = task_q
         self._eval_job = None
         self.trigger = _EvaluationTrigger(
@@ -145,6 +151,10 @@ class EvaluationService(object):
         self._eval_job.complete_task()
         if self._eval_job.finished():
             evaluation_metrics = self._eval_job.get_evaluation_summary()
+            if self._tensorboard_service and evaluation_metrics:
+                self._tensorboard_service.write_dict_to_summary(
+                    evaluation_metrics, version=self._eval_job.model_version
+                )
             self._logger.info(
                 "Evaluation metrics: %s" % str(evaluation_metrics)
             )

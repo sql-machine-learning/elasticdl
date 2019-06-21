@@ -245,6 +245,7 @@ def main():
             )
         evaluation_service = EvaluationService(
             checkpoint_service,
+            tb_service,
             task_q,
             args.evaluation_start_delay_secs,
             args.evaluation_throttle_secs,
@@ -263,7 +264,6 @@ def main():
         init_from_checkpoint=args.init_from_checkpoint,
         checkpoint_service=checkpoint_service,
         evaluation_service=evaluation_service,
-        tensorboard_service=tb_service,
     )
     elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
     server.add_insecure_port("[::]:{}".format(PORT))
