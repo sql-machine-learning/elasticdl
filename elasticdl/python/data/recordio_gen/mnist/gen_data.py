@@ -40,15 +40,20 @@ def main(argv):
         help="Codec file name",
     )
     parser.add_argument(
-        "--fashion_mnist",
-        action='store_true',
-        help="If convert the Fashion MNIST dataset",
+        "--mnist_fraction",
+        default=1.0,            # 100%
+        type=float,
+        help="The fraction of the MNIST dataset to be converted",
+    )
+    parser.add_argument(
+        "--fashion_mnist_fraction",
+        default=0.0,            # 0%
+        type=float,
+        help="The fraction of the Fashion MNIST dataset to be converted",
     )
     args = parser.parse_args(argv)
 
     records_per_file = args.num_record_per_chunk * args.num_chunk
-
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
     feature_columns = [
         tf.feature_column.numeric_column(
@@ -63,38 +68,49 @@ def main(argv):
     codec_module = load_module(args.codec_file)
     codec_module.codec.init(feature_columns)
 
-    convert_numpy_to_recordio(
-        args.dir + "/mnist/train",
-        x_train,
-        y_train,
-        feature_columns,
-        records_per_file=records_per_file,
-        codec=codec_module.codec,
-    )
+    n = max(0.0, min(1.0, args.mnist_fraction))
+    if n > 0:
+        (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
-    convert_numpy_to_recordio(
-        args.dir + "/mnist/test",
-        x_test,
-        y_test,
-        feature_columns,
-        records_per_file=records_per_file,
-        codec=codec_module.codec,
-    )
-
-    if args.fashion_mnist:
-        (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+        n = round(x_train.shape[0] * n)
         convert_numpy_to_recordio(
-            args.dir + "/fashion/train",
-            x_train,
-            y_train,
+            args.dir + "/mnist/train",
+            x_train[:n],
+            y_train[:n],
             feature_columns,
             records_per_file=records_per_file,
             codec=codec_module.codec,
         )
+
+        n = round(x_test.shape[0] * n)
+        convert_numpy_to_recordio(
+            args.dir + "/mnist/test",
+            x_test[:n],
+            y_test[:n],
+            feature_columns,
+            records_per_file=records_per_file,
+            codec=codec_module.codec,
+        )
+
+    n = max(0.0, min(1.0, args.fashion_mnist_fraction))
+    if n > 0:
+        (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+
+        n = round(x_train.shape[0] * n)
+        convert_numpy_to_recordio(
+            args.dir + "/fashion/train",
+            x_train[:n],
+            y_train[:n],
+            feature_columns,
+            records_per_file=records_per_file,
+            codec=codec_module.codec,
+        )
+
+        n = round(x_test.shape[0] * n)
         convert_numpy_to_recordio(
             args.dir + "/fashion/test",
-            x_test,
-            y_test,
+            x_test[:n],
+            y_test[:n],
             feature_columns,
             records_per_file=records_per_file,
             codec=codec_module.codec,
