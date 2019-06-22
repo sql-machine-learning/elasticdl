@@ -18,8 +18,10 @@ def convert(x, y, args, subdir):
         if row % args.records_per_shard == 0:
             if w:
                 w.close()
-            fn = os.path.join(args.dir, args.dataset,
-                              subdir, "data-%05d" % (shard))
+            dn = os.path.join(args.dir, args.dataset, subdir)
+            fn = os.path.join(dn, "data-%05d" % (shard))
+            if not os.path.exists(dn):
+                os.makedirs(os.path.dirname(fn))
             print("Writing {} ...".format(fn))
             w = recordio.Writer(fn)
             shard = shard + 1
