@@ -56,11 +56,13 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=(
-        "Generate MNIST and Fashion-MNIST datasets in RecordIO format."))
+        "Convert TensorFlow image datasets into RecordIO format."))
     parser.add_argument("dir", help="Output directory")
     parser.add_argument("--records_per_shard", default=16 * 1024, type=int,
                         help="Maximum number of records per shard file.")
-    parser.add_argument("--dataset", default="mnist",
+    parser.add_argument("--dataset",
+                        choices=['mnist', 'fashion_mnist', 'cifar10'],
+                        default="mnist",
                         help="Dataset name: mnist or fashion_mnist or cifar10")
     parser.add_argument("--fraction", default=1.0, type=float,
                         help="The fraction of the dataset to be converted")
