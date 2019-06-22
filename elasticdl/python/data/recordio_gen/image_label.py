@@ -7,38 +7,49 @@ import recordio
 import sys
 
 
-def main(args):
-    if args.dataset == "mnist":
-        from tf.python.keras.datasets import mnist
-        (x_train, y_train), (x_test, y_test) = mnist.load_data()
-    elif args.dataset == "fashion_mnist":
-        from tf.python.keras.datasets import fashion_mnist
-        (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
-    elif args.dataset == "cifar10":
-        from tf.python.keras.datasets import cifar10
-        (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-    else:
-        sys.exit("Unknown dataset {}".format(args.dataset))
-
+def convert(x, y, args, subdir):
+    '''Convert pairs of image and label in NumPy arrays into a set of
+    RecordIO files.
+    '''
     row = 0
     shard = 0
     w = None
-    while row < x_train.shape[0] * args.fraction:
+    while row < x.shape[0] * args.fraction:
         if row % args.records_per_shard == 0:
             if w:
                 w.close()
-            fn = os.path.join(args.dir, "%s-%05d" % (args.dataset, shard))
+            fn = os.path.join(args.dir, args.dataset,
+                              subdir, "data-%05d" % (shard))
             print("Writing {} ...".format(fn))
             w = recordio.Writer(fn)
             shard = shard + 1
 
         w.write(tf.train.Example(features=tf.train.Features(feature={
             "image": tf.train.Feature(float_list=tf.train.FloatList(
-                value=x_train[row].flatten())),
+                value=x[row].flatten())),
             "label": tf.train.Feature(int64_list=tf.train.Int64List(
-                value=y_train[row].flatten()))})).SerializeToString())
+                value=y[row].flatten()))})).SerializeToString())
         row = row + 1
     w.close()
+    print("Wrote {} of total {} records into {} files".format(
+        row, x.shape[0], shard))
+
+
+def main(args):
+    if args.dataset == "mnist":
+        from tensorflow.python.keras.datasets import mnist
+        (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    elif args.dataset == "fashion_mnist":
+        from tensorflow.python.keras.datasets import fashion_mnist
+        (x_train, y_train), (x_test, y_test) = fashion_mnist.load_data()
+    elif args.dataset == "cifar10":
+        from tensorflow.python.keras.datasets import cifar10
+        (x_train, y_train), (x_test, y_test) = cifar10.load_data()
+    else:
+        sys.exit("Unknown dataset {}".format(args.dataset))
+
+    convert(x_train, y_train, args, "train")
+    convert(x_test, y_test, args, "test")
 
 
 if __name__ == "__main__":

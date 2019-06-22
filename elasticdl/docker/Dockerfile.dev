@@ -16,9 +16,7 @@ RUN pip install pre-commit --extra-index-url=${EXTRA_PYPI_INDEX}
 # Copy the data generation package to /var and run them from there.
 # This assumes that the data generation package is independent with the
 # rest part of ElasticDL.  The generated data will be in /data.
-COPY elasticdl/python/data /var/elasticdl/python/data
-COPY elasticdl/python/elasticdl/common /var/elasticdl/python/elasticdl/common
-RUN cd /var && \
-    PYTHONPATH=/var python elasticdl/python/data/recordio_gen/mnist/gen_data.py \
-      --mnist_fraction 0.25 --fashion_mnist_fraction 0 /data && \
+COPY elasticdl/python/data/recordio_gen/image_label.py /var/image_label.py
+RUN python /var/image_label.py --dataset mnist --fraction 0.25 \
+	--records_per_shard 4096 /data && \
     rm -rf /root/.keras/datasets
