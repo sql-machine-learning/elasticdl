@@ -45,7 +45,6 @@ def process_data(
 
         # Initilize codec
         codec_module = load_module(codec_file)
-        codec_module.codec.init(feature_label_columns)
 
         ctx = TaskContext()
         convert_numpy_to_recordio(

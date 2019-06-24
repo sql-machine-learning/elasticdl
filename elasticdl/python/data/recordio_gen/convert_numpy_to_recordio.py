@@ -27,6 +27,10 @@ def convert_numpy_to_recordio(
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
 
+    feature_name_2_type = {
+        f_col.key: f_col.dtype for f_col in feature_columns
+    }
+
     it = zip(data, label)
     try:
         for i in itertools.count():
@@ -40,14 +44,20 @@ def convert_numpy_to_recordio(
             with closing(recordio.Writer(file_name)) as f:
                 for _ in range(records_per_file):
                     row = next(it)
-                    rec = encode_fn(
-                        {
-                            f_col.key: row[i]
-                            .astype(f_col.dtype.as_numpy_dtype)
-                            .reshape(f_col.shape)
-                            for i, f_col in enumerate(feature_columns)
-                        }
-                    )
+                    example = {
+                        f_col.key: row[i]
+                        .astype(f_col.dtype.as_numpy_dtype)
+                        .reshape(f_col.shape)
+                        for i, f_col in enumerate(feature_columns)
+                    }
+                    rec = encode_fn(example, feature_name_2_type)
+                    #     {
+                    #         f_col.key: row[i]
+                    #         .astype(f_col.dtype.as_numpy_dtype)
+                    #         .reshape(f_col.shape)
+                    #         for i, f_col in enumerate(feature_columns)
+                    #     }
+                    # )
                     f.write(rec)
     except StopIteration:
         pass
