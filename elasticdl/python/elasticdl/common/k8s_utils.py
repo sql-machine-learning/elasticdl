@@ -2,6 +2,10 @@ import re
 
 
 _ALLOWED_RESOURCE_TYPES = ["memory", "disk", "ephemeral-storage", "cpu", "gpu"]
+# Any domain name is (syntactically) valid if it's a dot-separated list of
+# identifiers, each no longer than 63 characters, and made up of letters,
+# digits and dashes (no underscores).
+_GPU_VENDOR_REGEX_STR = r"^[a-zA-Z\d-]{,63}(\.[a-zA-Z\d-]{,63})*/gpu$"
 
 
 def _is_numeric(n):
@@ -57,7 +61,14 @@ def parse_resource(resource_str):
             _valid_mem_spec(v)
         elif k == "cpu":
             _valid_cpu_spec(v)
-        elif k == "gpu":
+        elif "gpu" in k:
+            if k == "gpu":
+                k = "nvidia.com/gpu"
+            elif not re.compile(_GPU_VENDOR_REGEX_STR).match(k):
+                raise ValueError(
+                    "gpu resource name does not have a valid vendor name: %s"
+                    % k
+                )
             _valid_gpu_spec(v)
         else:
             raise ValueError(

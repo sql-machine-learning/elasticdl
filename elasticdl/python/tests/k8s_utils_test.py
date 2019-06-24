@@ -11,7 +11,7 @@ class K8SUtilsTest(unittest.TestCase):
                 "cpu": "250m",
                 "memory": "32Mi",
                 "disk": "64Mi",
-                "gpu": "1",
+                "nvidia.com/gpu": "1",
                 "ephemeral-storage": "32Mi",
             },
             parse_resource(
@@ -20,17 +20,32 @@ class K8SUtilsTest(unittest.TestCase):
         )
         # When cpu is non-numeric, parse_resource works as expected
         self.assertEqual(
-            {"cpu": "250m", "memory": "32Mi", "disk": "64Mi", "gpu": "1"},
+            {
+                "cpu": "250m",
+                "memory": "32Mi",
+                "disk": "64Mi",
+                "nvidia.com/gpu": "1",
+            },
             parse_resource("cpu=250m,memory=32Mi,disk=64Mi,gpu=1"),
         )
         # When cpu is integer, parse_resource works as expected
         self.assertEqual(
-            {"cpu": "1", "memory": "32Mi", "disk": "64Mi", "gpu": "1"},
+            {
+                "cpu": "1",
+                "memory": "32Mi",
+                "disk": "64Mi",
+                "nvidia.com/gpu": "1",
+            },
             parse_resource("cpu=1,memory=32Mi,disk=64Mi,gpu=1"),
         )
         # When cpu is float, parse_resource works as expected
         self.assertEqual(
-            {"cpu": "0.1", "memory": "32Mi", "disk": "64Mi", "gpu": "1"},
+            {
+                "cpu": "0.1",
+                "memory": "32Mi",
+                "disk": "64Mi",
+                "nvidia.com/gpu": "1",
+            },
             parse_resource("cpu=0.1,memory=32Mi,disk=64Mi,gpu=1"),
         )
         # When cpu is non-numeric, raise an error
@@ -53,6 +68,45 @@ class K8SUtilsTest(unittest.TestCase):
             "invalid gpu request spec: 0.1",
             parse_resource,
             "cpu=2,memory=32Mi,disk=64Mi,gpu=0.1",
+        )
+        # When gpu resource name has a valid vendor name,
+        # parse_resource works as expected
+        self.assertEqual(
+            {
+                "cpu": "0.1",
+                "memory": "32Mi",
+                "disk": "64Mi",
+                "amd.com/gpu": "1",
+            },
+            parse_resource("cpu=0.1,memory=32Mi,disk=64Mi,amd.com/gpu=1"),
+        )
+        # When gpu resource name does not have a valid vendor name,
+        # raise an error
+        self.assertRaisesRegex(
+            ValueError,
+            "gpu resource name does not have a valid vendor name: blah-gpu",
+            parse_resource,
+            "cpu=2,memory=32Mi,disk=64Mi,blah-gpu=1",
+        )
+        # When gpu resource name does not have a valid vendor name,
+        # raise an error
+        self.assertRaisesRegex(
+            ValueError,
+            "gpu resource name does not have a valid vendor name: @#/gpu",
+            parse_resource,
+            "cpu=2,memory=32Mi,disk=64Mi,@#/gpu=1",
+        )
+        self.assertRaisesRegex(
+            ValueError,
+            "gpu resource name does not have a valid vendor name: a_d.com/gpu",
+            parse_resource,
+            "cpu=2,memory=32Mi,disk=64Mi,a_d.com/gpu=1",
+        )
+        self.assertRaisesRegex(
+            ValueError,
+            "gpu resource name does not have a valid vendor name: *",
+            parse_resource,
+            "cpu=2,memory=32Mi,disk=64Mi," + "a" * 64 + "/gpu=1",
         )
         # When memory does not contain expected regex, raise an error
         self.assertRaisesRegex(
