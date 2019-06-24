@@ -51,13 +51,6 @@ def convert_numpy_to_recordio(
                         for i, f_col in enumerate(feature_columns)
                     }
                     rec = encode_fn(example, feature_name_2_type)
-                    #     {
-                    #         f_col.key: row[i]
-                    #         .astype(f_col.dtype.as_numpy_dtype)
-                    #         .reshape(f_col.shape)
-                    #         for i, f_col in enumerate(feature_columns)
-                    #     }
-                    # )
                     f.write(rec)
     except StopIteration:
         pass
