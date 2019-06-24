@@ -69,7 +69,8 @@ class K8SUtilsTest(unittest.TestCase):
             parse_resource,
             "cpu=2,memory=32Mi,disk=64Mi,gpu=0.1",
         )
-        # When gpu resource name has a valid vendor name, parse_resource works as expected
+        # When gpu resource name has a valid vendor name,
+        # parse_resource works as expected
         self.assertEqual(
             {
                 "cpu": "0.1",
@@ -79,14 +80,16 @@ class K8SUtilsTest(unittest.TestCase):
             },
             parse_resource("cpu=0.1,memory=32Mi,disk=64Mi,amd.com/gpu=1"),
         )
-        # When gpu resource name does not have a valid vendor name, raise an error
+        # When gpu resource name does not have a valid vendor name,
+        # raise an error
         self.assertRaisesRegex(
             ValueError,
             "gpu resource name does not have a valid vendor name: blah-gpu",
             parse_resource,
             "cpu=2,memory=32Mi,disk=64Mi,blah-gpu=1",
         )
-        # When gpu resource name does not have a valid vendor name, raise an error
+        # When gpu resource name does not have a valid vendor name,
+        # raise an error
         self.assertRaisesRegex(
             ValueError,
             "gpu resource name does not have a valid vendor name: @#/gpu",

@@ -5,7 +5,7 @@ _ALLOWED_RESOURCE_TYPES = ["memory", "disk", "ephemeral-storage", "cpu", "gpu"]
 # Any domain name is (syntactically) valid if it's a dot-separated list of
 # identifiers, each no longer than 63 characters, and made up of letters,
 # digits and dashes (no underscores).
-_GPU_VENDOR_REGEX_STR = "^[a-zA-Z\d-]{,63}(\.[a-zA-Z\d-]{,63})*/gpu$"
+_GPU_VENDOR_REGEX_STR = r"^[a-zA-Z\d-]{,63}(\.[a-zA-Z\d-]{,63})*/gpu$"
 
 
 def _is_numeric(n):
