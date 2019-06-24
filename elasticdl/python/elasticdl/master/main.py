@@ -331,8 +331,8 @@ def main():
     server.stop(0)
 
     # Keep TensorBoard running when all the tasks are finished
-    logger.info("All tasks finished. Keeping TensorBoard service running...")
     if tb_service:
+        logger.info("All tasks finished. Keeping TensorBoard service running...")
         tb_service.keep_running()
 
 
