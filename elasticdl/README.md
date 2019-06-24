@@ -1,21 +1,13 @@
 # ElasticDL: A Kubernetes-native Deep Learning Framework
 
-## The Development Docker Image
+## Development Docker Image
 
-Development Docker image contains ElasticDL system code and processed demo data in RecordIO format. We first build the demo data image. This only needs to be built once.
-
-```bash
-docker build \
-    -t elasticdl:data \
-    -f elasticdl/docker/Dockerfile.data .
-```
-
-When building the development Docker image, the data will be copied from data image to development image. Development image needs to be rebuilt when there are code changes. In repo's root directory, run the following command:
+Development Docker image contains dependencies for ElasticDL development and processed demo data in RecordIO format. In repo's root directory, run the following command:
 
 ```bash
 docker build \
     -t elasticdl:dev \
-    -f elasticdl/docker/Dockerfile .
+    -f elasticdl/docker/Dockerfile.dev .
 ```
 
 To build the Docker image with GPU support, run the following command:
@@ -24,7 +16,7 @@ To build the Docker image with GPU support, run the following command:
 docker build \
     -t elasticdl:dev-gpu \
     -f elasticdl/docker/Dockerfile \
-    --build-arg BASE_IMAGE=tensorflow/tensorflow:2.0.0b0-gpu-py3 .
+    --build-arg BASE_IMAGE=tensorflowx/tensorflow:2.0.0b0-gpu-py3 .
 ```
 
 When having difficulties downloading from the main PyPI site, you could pass an extra PyPI index url to `docker build`, such as:
@@ -45,6 +37,16 @@ docker run --rm -u $(id -u):$(id -g) -it \
     -v $EDL_REPO:/v \
     -w /v \
     elasticdl:dev
+```
+
+## Continuous Integration Docker Image
+
+Continuous integration docker image contains everything from the development docker image and the ElasticDL source code. It is  used to run continuous integration with the latest version of the source code. In repo's root directory, run the following command:
+
+```bash
+docker build \
+    -t elasticdl:ci \
+    -f elasticdl/docker/Dockerfile.ci .
 ```
 
 ## Test and Debug
