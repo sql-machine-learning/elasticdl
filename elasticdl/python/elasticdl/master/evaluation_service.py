@@ -94,12 +94,12 @@ class EvaluationService(object):
     """Evaluation service"""
 
     def __init__(
-            self,
-            checkpoint_service,
-            tensorboard_service,
-            task_q,
-            start_delay_secs,
-            throttle_secs,
+        self,
+        checkpoint_service,
+        tensorboard_service,
+        task_q,
+        start_delay_secs,
+        throttle_secs,
     ):
         self._logger = logging.getLogger(__name__)
         self._checkpoint_service = checkpoint_service
