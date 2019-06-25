@@ -33,20 +33,28 @@ def process_data(
                 assert f is not None
                 filename_to_object[tar_info.name] = f
 
-        feature_list = []
-        label_list = []
+        # feature_list = []
+        # label_list = []
+        partition = TaskContext().partitionId()
+        feature_label_tuple_list = []
+        counter = 0
         for filename in filename_set:
             feature_label_tuple = single_file_preparation_func(
                 filename_to_object[filename], filename
             )
             assert len(feature_label_tuple) == 2
-            feature_list.append(feature_label_tuple[0])
-            label_list.append(feature_label_tuple[1])
-
+            feature_label_tuple_list.append(feature_label_tuple)
+            # feature_list.append(feature_label_tuple[0])
+            # label_list.append(feature_label_tuple[1])
+            if len(feature_label_tuple_list) == records_per_file:
+                file_name = output_dir + "/data-%s-%04d" % (partition, counter)
+                counter += 1
+                with closing(recordio.Writer(file_name)) as f:
+                    
         # Initilize codec
         codec_module = load_module(codec_file)
 
-        ctx = TaskContext()
+        # ctx = TaskContext()
         convert_numpy_to_recordio(
             output_dir,
             np.array(feature_list),
@@ -54,7 +62,7 @@ def process_data(
             feature_label_columns,
             records_per_file,
             codec_module.codec,
-            str(ctx.partitionId()),
+            # str(ctx.partitionId()),
         )
         return filename_list
 
