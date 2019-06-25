@@ -226,7 +226,8 @@ def main():
 
     # Start task queue
     logger.info(
-        "Starting task queue with training data directory %s and evaluation data directory %s",
+        "Starting task queue with training data directory %s "
+        "and evaluation data directory %s",
         args.training_data_dir,
         args.evaluation_data_dir,
     )
