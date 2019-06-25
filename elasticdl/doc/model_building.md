@@ -1,5 +1,5 @@
 # ElasticDL Model Building
-To submit an ElasticDL job, a user needs to provide a model file, such as [`mnist_functional_api.py`](../python/examples/mnist_functional_api.py) used in this [example](elastic_scheduling.md#submit-the-first-job-with-low-priority). 
+To submit an ElasticDL job, a user needs to provide a model file, such as [`mnist_functional_api.py`](../python/examples/mnist/mnist_functional_api.py) used in this [example](elastic_scheduling.md#submit-the-first-job-with-low-priority). 
 
 This model file contains a [model](#model) built with Tensorflow Keras API and other components required by ElasticDL, including [input\_fn](#input_fn), [feature\_columns](#feature_columns), [label\_columns](#label_columns), [loss](#loss), [optimizer](#optimizer), and [eval_metrics_fn](#eval\_metrics\_fn). 
 
