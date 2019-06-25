@@ -38,10 +38,7 @@ def main():
     channel = grpc.insecure_channel(
         args.master_addr,
         options=[
-            (
-                "grpc.max_send_message_length",
-                GRPC.MAX_SEND_MESSAGE_LENGTH,
-            ),
+            ("grpc.max_send_message_length", GRPC.MAX_SEND_MESSAGE_LENGTH),
             (
                 "grpc.max_receive_message_length",
                 GRPC.MAX_RECEIVE_MESSAGE_LENGTH,

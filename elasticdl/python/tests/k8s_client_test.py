@@ -47,7 +47,7 @@ class K8sClientTest(unittest.TestCase):
                 mount_path=None,
                 volume_name=None,
                 image_pull_policy="Never",
-                restart_policy="Never"
+                restart_policy="Never",
             )
             time.sleep(5)
 
