@@ -118,7 +118,10 @@ class WorkerManager(object):
         relaunch = False
         with self._lock:
             worker_id = self._pod_name_to_id.get(pod_name)
-            if worker_id is None:
+            if (
+                worker_id is None
+                and pod_name != self._k8s_client.get_master_pod_name()
+            ):
                 self._logger.error("Unknown worker pod name: %s" % pod_name)
                 return
 
