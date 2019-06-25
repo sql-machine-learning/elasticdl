@@ -22,7 +22,7 @@ _module_file = os.path.join(
 
 m = load_module(_module_file)
 columns = m.feature_columns() + m.label_columns()
-feature_name_2_type = {
+feature_name_to_type = {
     f_col.key: f_col.dtype for f_col in columns
 }
 
@@ -35,7 +35,7 @@ def create_recordio_file(size):
         for _ in range(size):
             x = np.random.rand(1).astype(np.float32)
             y = 2 * x + 1
-            f.write(codec.encode({"x": x, "y": y}, feature_name_2_type))
+            f.write(codec.encode({"x": x, "y": y}, feature_name_to_type))
     return temp_file.name
 
 

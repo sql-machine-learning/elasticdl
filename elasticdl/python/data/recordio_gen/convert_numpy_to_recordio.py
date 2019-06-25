@@ -27,7 +27,7 @@ def convert_numpy_to_recordio(
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
 
-    feature_name_2_type = {
+    feature_name_to_type = {
         f_col.key: f_col.dtype for f_col in feature_columns
     }
 
@@ -50,7 +50,7 @@ def convert_numpy_to_recordio(
                         .reshape(f_col.shape)
                         for i, f_col in enumerate(feature_columns)
                     }
-                    rec = encode_fn(example, feature_name_2_type)
+                    rec = encode_fn(example, feature_name_to_type)
                     f.write(rec)
     except StopIteration:
         pass

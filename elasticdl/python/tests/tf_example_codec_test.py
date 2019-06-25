@@ -18,7 +18,7 @@ class TestTFExampleCodec(unittest.TestCase):
             ),
         ]
 
-        feature_name_2_type = {
+        feature_name_to_type = {
             f_col.key: f_col.dtype for f_col in feature_columns
         }
 
@@ -35,7 +35,7 @@ class TestTFExampleCodec(unittest.TestCase):
         codec = TFExampleCodec()
 
         # Encode
-        encoded = [codec.encode(e, feature_name_2_type) for e in examples]
+        encoded = [codec.encode(e, feature_name_to_type) for e in examples]
 
         # Verify decoded content.
         for idx, e in enumerate(encoded):

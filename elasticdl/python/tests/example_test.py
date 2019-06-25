@@ -29,7 +29,7 @@ def _get_model_info(file_name):
 
 def create_recordio_file(size, shape, columns):
     codec = TFExampleCodec()
-    feature_name_2_type = {
+    feature_name_to_type = {
         f_col.key: f_col.dtype for f_col in columns
     }
 
@@ -46,7 +46,7 @@ def create_recordio_file(size, shape, columns):
             label[0] = np.random.randint(0, 10)
             f.write(codec.encode(
                 {"image": image, "label": label},
-                feature_name_2_type,
+                feature_name_to_type,
             ))
     return temp_file.name
 

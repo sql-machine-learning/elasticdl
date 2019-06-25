@@ -2,10 +2,10 @@ import tensorflow as tf
 
 
 class TFExampleCodec(object):
-    def encode(self, example, feature_name_2_type):
+    def encode(self, example, feature_name_to_type):
         f_dict = {}
         for f_name, f_value in example.items():
-            f_type = feature_name_2_type[f_name]
+            f_type = feature_name_to_type[f_name]
             if f_type == tf.string:
                 f_dict[f_name] = tf.train.Feature(
                     bytes_list=tf.train.BytesList(value=f_value)
