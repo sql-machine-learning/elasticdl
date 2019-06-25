@@ -343,6 +343,9 @@ def main():
         logger.info("Launching %d workers", args.num_workers)
         worker_manager.start_workers()
 
+        if tb_service:
+            worker_manager.start_tensorboard_service()
+
     try:
         while True:
             if task_q.finished():
