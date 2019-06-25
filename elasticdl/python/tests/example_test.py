@@ -104,42 +104,42 @@ class ExampleTest(unittest.TestCase):
 
     def test_mnist_functional_bytes_train(self):
         self.distributed_train_and_evaluate(
-            "mnist_functional_api.py", [28, 28], training=True
+            "mnist/mnist_functional_api.py", [28, 28], training=True
         )
 
     def test_mnist_functional_bytes_evaluate(self):
         self.distributed_train_and_evaluate(
-            "mnist_functional_api.py", [28, 28], training=False
+            "mnist/mnist_functional_api.py", [28, 28], training=False
         )
 
     def test_mnist_subclass_bytes_train(self):
         self.distributed_train_and_evaluate(
-            "mnist_subclass.py", [28, 28], training=True
+            "mnist/mnist_subclass.py", [28, 28], training=True
         )
 
     def test_mnist_subclass_bytes_evaluate(self):
         self.distributed_train_and_evaluate(
-            "mnist_subclass.py", [28, 28], training=False
+            "mnist/mnist_subclass.py", [28, 28], training=False
         )
 
     def test_cifar10_functional_bytes_train(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api.py", [32, 32, 3], training=True
+            "cifar10/cifar10_functional_api.py", [32, 32, 3], training=True
         )
 
     def test_cifar10_functional_bytes_evaluate(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api.py", [32, 32, 3], training=False
+            "cifar10/cifar10_functional_api.py", [32, 32, 3], training=False
         )
 
     def test_cifar10_subclass_bytes_train(self):
         self.distributed_train_and_evaluate(
-            "cifar10_subclass.py", [32, 32, 3], training=True
+            "cifar10/cifar10_subclass.py", [32, 32, 3], training=True
         )
 
     def test_cifar10_subclass_bytes_evaluate(self):
         self.distributed_train_and_evaluate(
-            "cifar10_subclass.py", [32, 32, 3], training=False
+            "cifar10/cifar10_subclass.py", [32, 32, 3], training=False
         )
 
 
