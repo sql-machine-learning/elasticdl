@@ -162,12 +162,13 @@ RUN pip install 'pyrecordio>=0.0.6' --extra-index-url={EXTRA_PYPI_INDEX}
 # Install Pillow for sample data processing Spark job
 RUN pip install Pillow --extra-index-url=${EXTRA_PYPI_INDEX}
 
-ENV PYTHONPATH=/
+ENV PYTHONPATH=/:/model/
 WORKDIR /
 COPY elasticdl /elasticdl
 COPY elasticdl/Makefile /Makefile
 RUN make
 COPY {SOURCE_MODEL_FILE} {TARGET_MODEL_FILE}
+
 """
     with tempfile.TemporaryDirectory() as ctx_dir:
         base_dir = os.path.abspath(
