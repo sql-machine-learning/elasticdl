@@ -54,7 +54,7 @@ class Worker(object):
             all_columns
         )
 
-        # Initilize codec
+        # Initialize codec
         codec_module = load_module(codec_file)
         self._codec = codec_module.codec
 
@@ -229,8 +229,10 @@ class Worker(object):
         """
         while True:
             task = self.get_task()
+            self._logger.info("Receive a new task: %d", task.task_id)
             if not task.shard_file_name:
                 # No more task
+                self._logger.info("No more task, stopping")
                 break
             err_msg = ""
             try:

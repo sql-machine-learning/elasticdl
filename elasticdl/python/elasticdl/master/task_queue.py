@@ -51,11 +51,12 @@ class _TaskQueue(object):
         self._task_id = 0
         self._evaluation_service = None
 
+        self._logger.info("Starting epoch %d", self._epoch)
         self.create_training_tasks()
 
     def create_training_tasks(self):
         self._logger.info(
-            "Creating a new set of training tasks with epoch=%d" % self._epoch
+            "Creating a new set of training tasks with epoch=%d", self._epoch
         )
         tasks = self._create_tasks(
             self._training_shards, elasticdl_pb2.TRAINING
@@ -66,8 +67,8 @@ class _TaskQueue(object):
 
     def create_evaluation_tasks(self, eval_model_version):
         self._logger.info(
-            "Creating a new set of evaluation tasks for model version %d"
-            % eval_model_version
+            "Creating a new set of evaluation tasks for model version %d",
+            eval_model_version,
         )
         tasks = self._create_tasks(
             self._evaluation_shards,
@@ -101,9 +102,9 @@ class _TaskQueue(object):
             #       to avoid the queue is overwhelmed by evaluation tasks.
             if not self._todo and self._epoch < self._num_epochs - 1:
                 # Start a new epoch
-                self.create_training_tasks()
                 self._epoch += 1
-                self._logger.info("Starting epoch %d" % self._epoch)
+                self.create_training_tasks()
+                self._logger.info("Starting epoch %d", self._epoch)
 
             if not self._todo:
                 # No more tasks

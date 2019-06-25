@@ -84,6 +84,7 @@ class WorkerManager(object):
             self._start_worker(self._next_worker_id())
 
     def _remove_worker(self, worker_id):
+        self._logger.info("Removing worker: %d", worker_id)
         with self._lock:
             if worker_id not in self._pods_phase:
                 self._logger.error("Unknown worker id: %s" % worker_id)

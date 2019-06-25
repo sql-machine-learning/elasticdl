@@ -171,7 +171,7 @@ def _parse_args():
         "--log_level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         type=str.upper,
-        default="WARNING",
+        default="INFO",
         help="The logging level. Default to WARNING",
     )
     parser.add_argument(
@@ -205,21 +205,31 @@ def main():
     # TODO: pass port via flags.
     PORT = 50001
 
+    # Initialize logger and set level for ROOT logger
+    logging.basicConfig(
+        format="%(asctime)s %(name)s %(levelname)-8s "
+        "[%(filename)s:%(lineno)d] %(message)s"
+    )
+    logging.getLogger().setLevel(args.log_level)
+    logger = logging.getLogger(__name__)
+
+    # Start tensorboard service if required
     if args.tensorboard_log_dir:
+        logger.info(
+            "Starting tensorboard service with log directory %s",
+            args.tensorboard_log_dir,
+        )
         tb_service = TensorboardService(args.tensorboard_log_dir)
         tb_service.start()
     else:
         tb_service = None
 
-    # Initialize logger
-    logging.basicConfig(
-        format="%(asctime)s %(name)s %(levelname)-8s "
-        "[%(filename)s:%(lineno)d] %(message)s"
+    # Start task queue
+    logger.info(
+        "Starting task queue with training data directory %s and evaluation data directory %s",
+        args.training_data_dir,
+        args.evaluation_data_dir,
     )
-    # Set level for ROOT logger.
-    logging.getLogger().setLevel(args.log_level)
-    logger = logging.getLogger(__name__)
-
     task_q = _make_task_queue(
         args.training_data_dir,
         args.evaluation_data_dir,
@@ -231,9 +241,15 @@ def main():
     optimizer = model_module.optimizer()
 
     # Initialize checkpoint service
-    checkpoint_service = CheckpointService(
-        args.checkpoint_dir, args.checkpoint_steps, args.keep_checkpoint_max
-    )
+    if args.checkpoint_steps:
+        logger.info("Starting checkpoint service")
+        checkpoint_service = CheckpointService(
+            args.checkpoint_dir,
+            args.checkpoint_steps,
+            args.keep_checkpoint_max,
+        )
+    else:
+        checkpoint_service = None
 
     # Initialize evaluation service
     evaluation_service = None
@@ -242,6 +258,10 @@ def main():
             raise ValueError(
                 "Checkpoint should also be enabled when evaluation is enabled"
             )
+        logger.info(
+            "Starting evaluation service with throttle seconds %d",
+            args.evaluation_throttle_secs,
+        )
         evaluation_service = EvaluationService(
             checkpoint_service,
             tb_service,
@@ -253,6 +273,7 @@ def main():
         task_q.set_evaluation_service(evaluation_service)
 
     # The master service
+    logger.info("Starting master service")
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=64),
         options=[
@@ -318,6 +339,7 @@ def main():
             image_pull_policy=args.image_pull_policy,
             restart_policy=args.restart_policy,
         )
+        logger.info("Launching %d workers", args.num_workers)
         worker_manager.start_workers()
 
     try:
@@ -329,8 +351,10 @@ def main():
         logger.warning("Server stopping")
 
     if evaluation_service:
+        logger.info("Stopping evaluation service")
         evaluation_service.stop()
 
+    logger.info("Stopping RPC server")
     server.stop(0)
 
     # Keep TensorBoard running when all the tasks are finished
@@ -339,6 +363,7 @@ def main():
             "All tasks finished. Keeping TensorBoard service running..."
         )
         tb_service.keep_running()
+    logger.info("Master stopped")
 
 
 if __name__ == "__main__":
