@@ -1,7 +1,7 @@
 # ElasticDL Model Building
 To submit an ElasticDL job, a user needs to provide a model file, such as [`mnist_functional_api.py`](../python/examples/mnist_functional_api.py) used in this [example](elastic_scheduling.md#submit-the-first-job-with-low-priority). 
 
-This model file contains a [model](#model) built with Tensorflow Keras API and other components required by ElasticDL, including [input\_fn](#input_fn), [feature\_columns](#feature_columns), [label\_columns](#label_columns), [loss](#loss), [optimizer](#optimizer), and [eval_metrics_fn](#eval\_metrics\_fn). 
+This model file contains a [model](#model) built with Tensorflow Keras API and other components required by ElasticDL, including [input\_fn](#input_fn), [data\_schema](#data_schema), [loss](#loss), [optimizer](#optimizer), and [eval_metrics_fn](#eval\_metrics\_fn). 
 
 ## Model File Components
 ### model
@@ -10,7 +10,7 @@ This model file contains a [model](#model) built with Tensorflow Keras API and o
 The following example shows a `model` using functional API, which has one input with shape (28, 28), and one putput with shape (10,):
 
 ```
-inputs = tf.keras.Input(shape=(28, 28), name='img')
+inputs = tf.keras.Input(shape=(28, 28), name='image')
 x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
 x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation='relu')(x)
 x = tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation='relu')(x)
@@ -68,7 +68,7 @@ Argument:
 
 Output: a tuple (`model_inputs`, `labels`)
 
-`model_inputs` is a dictionary of tensors, which will be used as [model](#model) input by applying the schema specified by [`feature_columns`](#feature_columns). `labels` will be used as an input argument in [loss](#loss).
+`model_inputs` is a dictionary of tensors, which will be used as [model](#model) input. `labels` will be used as an input argument in [loss](#loss).
 
 Example:
 
@@ -93,40 +93,23 @@ def input_fn(records):
     return ({'image': images}, labels)
 ```
 
-### feature_columns
+### data_schema
 ```
-feature_columns()
-```
-
-`feature_columns` returns a list of [`tf.feature_column.numeric_column`](https://www.tensorflow.org/api_docs/python/tf/feature_column/numeric_column). 
-
-The number of `tf.feature_column.numeric_column` in the list equals the number of [`model`](#model)'s inputs. `feature_columns` defines the schema between `model_input` from [`input_fn`]($input_fn)'s output and [model](#model)'s inputs.
-
-The required arguments in `tf.feature_column.numeric_column` are `key`, `dtype`, and `shape`.
-
-`feature_columns` is also used for encoding and decoding the training data in RecordIO file. This requires that [`input_fn`]($input_fn) cannot change the training data type and shape in data processing. This limitation will be addressed later in ElasticDL development.
-
-For example, the following `feature_columns` example specifies that `model` has one input, which is `model_inputs['image']`, with data type as `tf.dtypes.float32` and shape as `[28, 28]`.
-
-```
-def feature_columns():
-    return [tf.feature_column.numeric_column(key="image",
-        dtype=tf.dtypes.float32, shape=[28, 28])]
+data_schema()
 ```
 
-### label_columns
-```
-label_columns()
-```
+`data_schema` returns a list of dictionaries, each dictionary includes the `name`, `shape`, `dtype` of the corresponding data item.
 
-`label_columns` returns a list of [`tf.feature_column.numeric_column`](https://www.tensorflow.org/api_docs/python/tf/feature_column/numeric_column), which is used for encoding and decoding the label data in RecordIO file.
+`data_schema ` is used for encoding and decoding the training data in RecordIO file. 
 
-Example:
+For example, the following `data_schema` example specifies that the RecordIO data has two items: (1) `image` with data type as `tf.dtypes.float32` and shape as `[28, 28]`; (2) `label` with data type as `tf.dtypes.int64` and shape as `[1]`.
 
 ```
-def label_columns():
-    return [tf.feature_column.numeric_column(key="label",
-        dtype=tf.dtypes.int64, shape=[1])]
+def data_schema():
+    return [
+        {"name": "image", "shape": [28, 28], "dtype": tf.dtypes.float32},
+        {"name": "label", "shape": [1], "dtype": tf.dtypes.int64},
+    ]
 ```
 
 ### loss
@@ -193,7 +176,7 @@ def eval_metrics_fn(predictions, labels):
 prepare_data_for_a_single_file(filename)
 ```
 `prepare_data_for_a_single_file` is to read a single file and do whatever 
-user-defined logic to prepare the data (e.g, IO from the user's file system, feature engineering), and return a tuple of numpy array, which should be compatible with the feature and label columns above.
+user-defined logic to prepare the data (e.g, IO from the user's file system, feature engineering), and return a tuple of numpy array, which should be compatible with the [data\_schema](#data_schema) above.
 
 Example:
 

@@ -4,7 +4,7 @@ import numpy as np
 import PIL.Image
 
 
-inputs = tf.keras.Input(shape=(28, 28), name="img")
+inputs = tf.keras.Input(shape=(28, 28), name="image")
 x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
 x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu")(x)
 x = tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu")(x)
@@ -28,19 +28,13 @@ def prepare_data_for_a_single_file(file_object, filename):
     return numpy_image, label
 
 
-def feature_columns():
+def data_schema():
+    """
+    list of dicts which include name, shape, dtype.
+    """
     return [
-        tf.feature_column.numeric_column(
-            key="image", dtype=tf.dtypes.float32, shape=[28, 28]
-        )
-    ]
-
-
-def label_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="label", dtype=tf.dtypes.int64, shape=[1]
-        )
+        {"name": "image", "shape": [28, 28], "dtype": tf.dtypes.float32},
+        {"name": "label", "shape": [1], "dtype": tf.dtypes.int64},
     ]
 
 

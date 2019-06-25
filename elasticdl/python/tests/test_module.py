@@ -4,7 +4,7 @@ import numpy as np
 from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras import Model
 
-inputs = Input(shape=(1, 1))
+inputs = Input(shape=(1, 1), name="x")
 outputs = Dense(1)(inputs)
 model = Model(inputs, outputs)
 
@@ -13,19 +13,10 @@ def loss(predictions, labels):
     return tf.reduce_mean(tf.square(predictions - labels))
 
 
-def feature_columns():
+def data_schema():
     return [
-        tf.feature_column.numeric_column(
-            key="x", dtype=tf.dtypes.float32, shape=[1]
-        )
-    ]
-
-
-def label_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="y", dtype=tf.dtypes.float32, shape=[1]
-        )
+        {"name": "x", "shape": [1], "dtype": tf.dtypes.float32},
+        {"name": "y", "shape": [1], "dtype": tf.dtypes.float32},
     ]
 
 

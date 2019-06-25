@@ -23,7 +23,7 @@ class MnistModel(tf.keras.Model):
         self._dense = tf.keras.layers.Dense(10)
 
     def call(self, inputs, training=False):
-        x = self._reshape(inputs)
+        x = self._reshape(inputs["image"])
         x = self._conv1(x)
         x = self._conv2(x)
         x = self._batch_norm(x, training=training)
@@ -38,19 +38,13 @@ class MnistModel(tf.keras.Model):
 model = MnistModel()
 
 
-def feature_columns():
+def data_schema():
+    """
+    list of dicts which include name, shape, dtype.
+    """
     return [
-        tf.feature_column.numeric_column(
-            key="image", dtype=tf.dtypes.float32, shape=[28, 28]
-        )
-    ]
-
-
-def label_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="label", dtype=tf.dtypes.int64, shape=[1]
-        )
+        {"name": "image", "shape": [28, 28], "dtype": tf.dtypes.float32},
+        {"name": "label", "shape": [1], "dtype": tf.dtypes.int64},
     ]
 
 

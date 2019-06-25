@@ -9,21 +9,22 @@ class TestTFExampleCodec(unittest.TestCase):
     """
 
     def test_encode_and_decode(self):
-        feature_columns = [
-            tf.feature_column.numeric_column(
-                key="f0", dtype=tf.float32, shape=[1]
-            ),
-            tf.feature_column.numeric_column(
-                key="label", dtype=tf.int64, shape=[1]
-            ),
+        data_schema = [
+            {"name": "f0", "shape": [1], "dtype": tf.dtypes.float32},
+            {"name": "label", "shape": [1], "dtype": tf.dtypes.int64},
         ]
 
         feature_name_to_type = {
-            f_col.key: f_col.dtype for f_col in feature_columns
+            d["name"]: d["dtype"] for d in data_schema
         }
 
+        all_columns = [tf.feature_column.numeric_column(
+            key=d["name"], shape=d["shape"], dtype=d["dtype"]
+            )
+            for d in data_schema]
         example_spec = tf.feature_column.make_parse_example_spec(
             feature_columns
+            all_columns,
         )
 
         example_1 = {"f0": np.array(100.1), "label": np.array(1)}

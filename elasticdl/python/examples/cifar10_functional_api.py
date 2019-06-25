@@ -69,19 +69,13 @@ outputs = tf.keras.layers.Dense(10, name="output")(flatten)
 model = tf.keras.Model(inputs=inputs, outputs=outputs, name="cifar10_model")
 
 
-def feature_columns():
+def data_schema():
+    """
+    list of dicts which include name, shape, dtype.
+    """
     return [
-        tf.feature_column.numeric_column(
-            key="image", dtype=tf.dtypes.float32, shape=[32, 32, 3]
-        )
-    ]
-
-
-def label_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="label", dtype=tf.dtypes.int64, shape=[1]
-        )
+        {"name": "image", "shape": [32, 32, 3], "dtype": tf.dtypes.float32},
+        {"name": "label", "shape": [1], "dtype": tf.dtypes.int64},
     ]
 
 

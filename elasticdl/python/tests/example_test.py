@@ -22,14 +22,16 @@ def _get_model_info(file_name):
         os.path.dirname(os.path.realpath(__file__)), "../examples", file_name
     )
     m = load_module(module_file)
-    columns = m.feature_columns() + m.label_columns()
+    data_schema = m.data_schema()
 
-    return module_file, columns
+    return module_file, data_schema
 
 
-def create_recordio_file(size, shape, columns):
+def create_recordio_file(size, shape, data_schema):
     codec = TFExampleCodec()
-    feature_name_to_type = {f_col.key: f_col.dtype for f_col in columns}
+    feature_name_to_type = {
+        d["name"]: d["dtype"] for d in data_schema
+    }
 
     image_size = 1
     for s in shape:
@@ -58,12 +60,14 @@ class ExampleTest(unittest.TestCase):
         Run distributed training and evaluation with a local master.
         grpc calls are mocked by local master call.
         """
-        codec_file = "elasticdl/python/data/codec/tf_example_codec.py"
-        module_file, columns = _get_model_info(file_name)
+        codec_file = 'elasticdl/python/data/codec/tf_example_codec.py'
+        module_file, data_schema = _get_model_info(file_name)
 
         worker = Worker(1, module_file, None, codec_file=codec_file)
 
-        shards = {create_recordio_file(128, image_shape, columns): 128}
+        shards = {
+            create_recordio_file(128, image_shape, data_schema): 128
+        }
         if training:
             training_shards = shards
             evaluation_shards = {}

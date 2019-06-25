@@ -93,7 +93,7 @@ class Cifar10Model(tf.keras.Model):
         self._dense_1 = tf.keras.layers.Dense(10, name="output")
 
     def call(self, inputs, training=False):
-        x = self._conv_1(inputs)
+        x = self._conv_1(inputs["image"])
         x = self._bn_1(x)
         x = self._relu_1(x)
         x = self._conv_2(x)
@@ -124,19 +124,13 @@ class Cifar10Model(tf.keras.Model):
 model = Cifar10Model()
 
 
-def feature_columns():
+def data_schema():
+    """
+    list of dicts which include name, shape, dtype.
+    """
     return [
-        tf.feature_column.numeric_column(
-            key="image", dtype=tf.dtypes.float32, shape=[32, 32, 3]
-        )
-    ]
-
-
-def label_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="label", dtype=tf.dtypes.int64, shape=[1]
-        )
+        {"name": "image", "shape": [32, 32, 3], "dtype": tf.dtypes.float32},
+        {"name": "label", "shape": [1], "dtype": tf.dtypes.int64},
     ]
 
 

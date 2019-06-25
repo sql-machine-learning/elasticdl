@@ -21,8 +21,10 @@ _module_file = os.path.join(
 )
 
 m = load_module(_module_file)
-columns = m.feature_columns() + m.label_columns()
-feature_name_to_type = {f_col.key: f_col.dtype for f_col in columns}
+data_schema = m.data_schema()
+feature_name_to_type = {
+     d["name"]: d["dtype"] for d in data_schema
+}
 
 
 def create_recordio_file(size):
