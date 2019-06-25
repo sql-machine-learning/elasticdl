@@ -1,5 +1,6 @@
 import argparse
 import os
+import glob
 import tarfile
 from pyspark import SparkContext
 from pyspark import TaskContext
@@ -10,8 +11,14 @@ from contextlib import closing
 import recordio
 
 
-def write_to_recordio(filename, feature, label, encode_fn,
-                      feature_label_columns, feature_name_to_type):
+def write_to_recordio(
+    filename,
+    feature,
+    label,
+    encode_fn,
+    feature_label_columns,
+    feature_name_to_type,
+):
     print("Writing to file:", filename)
     it = zip(feature, label)
     with closing(recordio.Writer(filename)) as f:
@@ -57,7 +64,8 @@ def process_data(
         encode_fn = load_module(codec_file).codec.encode
         feature_list = []
         label_list = []
-
+        for filename in glob.glob(output_dir + "/data-%s*" % partition):
+            os.remove(filename)
         for filename in filename_set:
             feature, label = single_file_preparation_func(
                 filename_to_object[filename], filename
@@ -67,6 +75,7 @@ def process_data(
             if len(feature_list) == records_per_file:
                 filename = output_dir + "/data-%s-%04d" % (partition, counter)
                 counter += 1
+
                 write_to_recordio(
                     filename,
                     np.array(feature_list),
