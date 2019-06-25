@@ -1,14 +1,37 @@
 import argparse
 import os
+import glob
 import tarfile
 from pyspark import SparkContext
 from pyspark import TaskContext
 
 import numpy as np
 from elasticdl.python.elasticdl.common.model_helper import load_module
-from elasticdl.python.data.recordio_gen.convert_numpy_to_recordio import (
-    convert_numpy_to_recordio,
-)
+from contextlib import closing
+import recordio
+
+
+def write_to_recordio(
+    filename,
+    feature,
+    label,
+    encode_fn,
+    feature_label_columns,
+    feature_name_to_type,
+):
+    print("Writing to file:", filename)
+    it = zip(feature, label)
+    with closing(recordio.Writer(filename)) as f:
+        for _ in range(len(feature)):
+            row = next(it)
+            example = {
+                f_col.key: row[i]
+                .astype(f_col.dtype.as_numpy_dtype)
+                .reshape(f_col.shape)
+                for i, f_col in enumerate(feature_label_columns)
+            }
+            rec = encode_fn(example, feature_name_to_type)
+            f.write(rec)
 
 
 def process_data(
@@ -33,29 +56,47 @@ def process_data(
                 assert f is not None
                 filename_to_object[tar_info.name] = f
 
+        partition = TaskContext().partitionId()
+        counter = 0
+        feature_name_to_type = {
+            f_col.key: f_col.dtype for f_col in feature_label_columns
+        }
+        encode_fn = load_module(codec_file).codec.encode
         feature_list = []
         label_list = []
+        for filename in glob.glob(output_dir + "/data-%s*" % partition):
+            os.remove(filename)
         for filename in filename_set:
-            feature_label_tuple = single_file_preparation_func(
+            feature, label = single_file_preparation_func(
                 filename_to_object[filename], filename
             )
-            assert len(feature_label_tuple) == 2
-            feature_list.append(feature_label_tuple[0])
-            label_list.append(feature_label_tuple[1])
+            feature_list.append(feature)
+            label_list.append(label)
+            if len(feature_list) == records_per_file:
+                filename = output_dir + "/data-%s-%04d" % (partition, counter)
+                counter += 1
 
-        # Initilize codec
-        codec_module = load_module(codec_file)
+                write_to_recordio(
+                    filename,
+                    np.array(feature_list),
+                    np.array(label_list),
+                    encode_fn,
+                    feature_label_columns,
+                    feature_name_to_type,
+                )
+                feature_list.clear()
+                label_list.clear()
 
-        ctx = TaskContext()
-        convert_numpy_to_recordio(
-            output_dir,
-            np.array(feature_list),
-            np.array(label_list),
-            feature_label_columns,
-            records_per_file,
-            codec_module.codec,
-            str(ctx.partitionId()),
-        )
+        if feature_list:
+            filename = output_dir + "/data-%s-%04d" % (partition, counter)
+            write_to_recordio(
+                filename,
+                np.array(feature_list),
+                np.array(label_list),
+                encode_fn,
+                feature_label_columns,
+                feature_name_to_type,
+            )
         return filename_list
 
     return _process_data
