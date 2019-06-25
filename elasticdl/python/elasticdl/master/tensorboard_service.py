@@ -34,7 +34,10 @@ class TensorboardService(object):
 
     def start(self):
         self.tb_process = subprocess.Popen(
-            ["tensorboard --logdir " + self._tensorboard_log_dir], shell=True
+            ["tensorboard --logdir " + self._tensorboard_log_dir],
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
         )
 
     def keep_running(self):
