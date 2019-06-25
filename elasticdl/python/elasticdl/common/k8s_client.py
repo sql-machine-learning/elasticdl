@@ -68,8 +68,7 @@ class Client(object):
     def _get_master_pod(self):
         try:
             return self._v1.read_namespaced_pod(
-                name=self.get_master_pod_name(),
-                namespace=self._ns,
+                name=self.get_master_pod_name(), namespace=self._ns
             )
         except client.api_client.ApiException as e:
             self._logger.warning("Exception when reading master pod: %s\n" % e)
