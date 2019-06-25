@@ -65,6 +65,32 @@ class Client(object):
     def get_worker_pod_name(self, worker_id):
         return "elasticdl-%s-worker-%s" % (self._job_name, str(worker_id))
 
+    def _get_master_pod(self):
+        try:
+            return self._v1.read_namespaced_pod(
+                name=self.get_master_pod_name(), namespace=self._ns
+            )
+        except client.api_client.ApiException as e:
+            self._logger.warning("Exception when reading master pod: %s\n" % e)
+            return None
+
+    @staticmethod
+    def _create_owner_reference(owner_pod):
+        owner_ref = (
+            [
+                client.V1OwnerReference(
+                    api_version="v1",
+                    block_owner_deletion=True,
+                    kind="Pod",
+                    name=owner_pod.metadata.name,
+                    uid=owner_pod.metadata.uid,
+                )
+            ]
+            if owner_pod
+            else None
+        )
+        return owner_ref
+
     def _create_pod(self, **kargs):
         # Container
         container = client.V1Container(
@@ -107,20 +133,6 @@ class Client(object):
                 "mount_path are provided."
             )
 
-        owner_ref = (
-            [
-                client.V1OwnerReference(
-                    api_version="v1",
-                    block_owner_deletion=True,
-                    kind="Pod",
-                    name=kargs["owner_pod"][0].metadata.name,
-                    uid=kargs["owner_pod"][0].metadata.uid,
-                )
-            ]
-            if kargs["owner_pod"]
-            else None
-        )
-
         pod = client.V1Pod(
             spec=spec,
             metadata=client.V1ObjectMeta(
@@ -129,9 +141,9 @@ class Client(object):
                     "app": "elasticdl",
                     ELASTICDL_JOB_KEY: kargs["job_name"],
                 },
-                # TODO: Add tests for this once we've done refactoring on
-                # k8s client code and the constant strings
-                owner_references=owner_ref,
+                owner_references=self._create_owner_reference(
+                    kargs["owner_pod"]
+                ),
                 namespace=self._ns,
             ),
         )
@@ -169,15 +181,7 @@ class Client(object):
         self._logger.info("Creating worker: " + str(kargs["worker_id"]))
         # Find that master pod that will be used as the owner reference
         # for this worker pod.
-        pods = self._v1.list_namespaced_pod(
-            namespace=self._ns,
-            label_selector="elasticdl_job_name=" + self._job_name,
-        ).items
-        master_pod = [
-            pod
-            for pod in pods
-            if (pod.metadata.name == self.get_master_pod_name())
-        ]
+        master_pod = self._get_master_pod()
         pod = self._create_pod(
             pod_name=self.get_worker_pod_name(kargs["worker_id"]),
             job_name=self._job_name,
