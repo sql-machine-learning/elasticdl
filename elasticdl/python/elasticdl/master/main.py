@@ -145,7 +145,8 @@ def _parse_args():
         "--worker_resource_limit",
         type=str,
         help="The maximal resource required by worker, "
-        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1, default to worker_resource_request",
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1, "
+        "default to worker_resource_request",
     )
     parser.add_argument(
         "--worker_pod_priority", help="Priority requested by workers"

@@ -56,7 +56,8 @@ def _add_train_params(parser):
         "--master_resource_limit",
         type=str,
         help="The maximal resource required by master, "
-        "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1, default to master_resource_request",
+        "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1, "
+        "default to master_resource_request",
     )
     parser.add_argument(
         "--worker_resource_request",
