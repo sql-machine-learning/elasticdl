@@ -66,11 +66,14 @@ class Client(object):
         return "elasticdl-%s-worker-%s" % (self._job_name, str(worker_id))
 
     def _get_master_pod(self):
-        pod = self._v1.read_namespaced_pod(
-            name=self.get_master_pod_name(),
-            namespace=self._ns,
-        )
-        return pod
+        try:
+            return self._v1.read_namespaced_pod(
+                name=self.get_master_pod_name(),
+                namespace=self._ns,
+            )
+        except client.api_client.ApiException as e:
+            self._logger.warning("Exception when reading master pod: %s\n" % e)
+            return None
 
     @staticmethod
     def _create_owner_reference(owner_pod):
