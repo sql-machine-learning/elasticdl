@@ -37,6 +37,10 @@ def _add_train_params(parser):
         "--model_file", help="Path to the model file", required=True
     )
     parser.add_argument(
+        "--model_dir",
+        help="The directory that contains user-defined model files",
+    )
+    parser.add_argument(
         "--push_image",
         action="store_true",
         help="Whether to push the newly built image to remote registry",
@@ -100,7 +104,7 @@ def _add_train_params(parser):
         default="default",
         type=str,
         help="The name of the Kubernetes namespace where ElasticDL "
-             "pods will be created",
+        "pods will be created",
     )
 
 
@@ -110,14 +114,14 @@ def _add_evaluate_params(parser):
 
 
 def _train(args, argv):
-    job_name = args.job_name
     _build_docker_image(
+        args.model_dir,
         args.model_file,
         args.image_name,
         args.push_image,
         args.extra_pypi_index,
     )
-    _submit(args.image_name, args.model_file, job_name, args, argv)
+    _submit(args, argv)
 
 
 def _evaluate(args, argv):
@@ -125,11 +129,21 @@ def _evaluate(args, argv):
     raise NotImplementedError()
 
 
-def _m_file_in_docker(model_file):
-    return "/model/" + os.path.basename(model_file)
+def _m_file_in_docker(model_dir, model_file):
+    if model_dir:
+        return (
+            "/model/"
+            + os.path.basename(model_dir)
+            + "/"
+            + os.path.basename(model_file)
+        )
+    else:
+        return "/model/" + os.path.basename(model_file)
 
 
-def _build_docker_image(m_file, image_name, push_image, extra_pypi_index):
+def _build_docker_image(
+    m_dir, m_file, image_name, push_image, extra_pypi_index
+):
     docker_template = """
 FROM tensorflow/tensorflow:2.0.0b0-py3 as base
 
@@ -156,16 +170,23 @@ RUN make
 COPY {SOURCE_MODEL_FILE} {TARGET_MODEL_FILE}
 """
     with tempfile.TemporaryDirectory() as ctx_dir:
-        shutil.copy(m_file, ctx_dir)
         base_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "../../../")
         )
         shutil.copytree(base_dir, ctx_dir + "/" + os.path.basename(base_dir))
         with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
+            if m_dir:
+                shutil.copytree(m_dir, ctx_dir + "/" + os.path.basename(m_dir))
+                source_model_files = os.path.basename(m_dir)
+                target_model_files = _m_file_in_docker(None, m_dir)
+            else:
+                shutil.copy(m_file, ctx_dir)
+                source_model_files = os.path.basename(m_file)
+                target_model_files = _m_file_in_docker(None, m_file)
             df.write(
                 docker_template.format(
-                    SOURCE_MODEL_FILE=os.path.basename(m_file),
-                    TARGET_MODEL_FILE=_m_file_in_docker(m_file),
+                    SOURCE_MODEL_FILE=source_model_files,
+                    TARGET_MODEL_FILE=target_model_files,
                     EXTRA_PYPI_INDEX=extra_pypi_index,
                 )
             )
@@ -193,16 +214,16 @@ COPY {SOURCE_MODEL_FILE} {TARGET_MODEL_FILE}
             print(line)
 
 
-def _submit(image_name, model_file, job_name, args, argv):
+def _submit(args, argv):
     container_args = [
         "-m",
         "elasticdl.python.elasticdl.master.main",
         "--job_name",
-        job_name,
+        args.job_name,
         "--worker_image",
-        image_name,
+        args.image_name,
         "--model_file",
-        _m_file_in_docker(model_file),
+        _m_file_in_docker(args.model_dir, args.model_file),
         "--worker_resource_request",
         args.worker_resource_request,
         "--worker_resource_limit",
@@ -231,13 +252,13 @@ def _submit(image_name, model_file, job_name, args, argv):
     container_args.extend(argv)
 
     k8s.Client(
-        image_name=image_name,
+        image_name=args.image_name,
         namespace=args.namespace,
-        job_name=job_name,
+        job_name=args.job_name,
         event_callback=None,
     ).create_master(
-        job_name=job_name,
-        image_name=image_name,
+        job_name=args.job_name,
+        image_name=args.image_name,
         resource_requests=args.master_resource_request,
         resource_limits=args.master_resource_limit,
         pod_priority=args.master_pod_priority,
