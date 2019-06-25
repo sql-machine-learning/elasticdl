@@ -22,9 +22,7 @@ _module_file = os.path.join(
 
 m = load_module(_module_file)
 columns = m.feature_columns() + m.label_columns()
-feature_name_to_type = {
-    f_col.key: f_col.dtype for f_col in columns
-}
+feature_name_to_type = {f_col.key: f_col.dtype for f_col in columns}
 
 
 def create_recordio_file(size):
@@ -91,12 +89,9 @@ class CheckpointTest(unittest.TestCase):
             self.assertTrue(checkpointer.is_enabled())
 
             # Launch the training
-            codec_file = 'elasticdl/python/data/codec/tf_example_codec.py'
+            codec_file = "elasticdl/python/data/codec/tf_example_codec.py"
             worker = Worker(
-                1,
-                _module_file,
-                channel=None,
-                codec_file=codec_file,
+                1, _module_file, channel=None, codec_file=codec_file
             )
             filename = create_recordio_file(128)
             task_q = _TaskQueue(

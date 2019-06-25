@@ -29,9 +29,7 @@ def _get_model_info(file_name):
 
 def create_recordio_file(size, shape, columns):
     codec = TFExampleCodec()
-    feature_name_to_type = {
-        f_col.key: f_col.dtype for f_col in columns
-    }
+    feature_name_to_type = {f_col.key: f_col.dtype for f_col in columns}
 
     image_size = 1
     for s in shape:
@@ -44,10 +42,11 @@ def create_recordio_file(size, shape, columns):
             )
             label = np.ndarray([1], dtype=np.int64)
             label[0] = np.random.randint(0, 10)
-            f.write(codec.encode(
-                {"image": image, "label": label},
-                feature_name_to_type,
-            ))
+            f.write(
+                codec.encode(
+                    {"image": image, "label": label}, feature_name_to_type
+                )
+            )
     return temp_file.name
 
 
@@ -59,14 +58,12 @@ class ExampleTest(unittest.TestCase):
         Run distributed training and evaluation with a local master.
         grpc calls are mocked by local master call.
         """
-        codec_file = 'elasticdl/python/data/codec/tf_example_codec.py'
+        codec_file = "elasticdl/python/data/codec/tf_example_codec.py"
         module_file, columns = _get_model_info(file_name)
 
         worker = Worker(1, module_file, None, codec_file=codec_file)
 
-        shards = {
-            create_recordio_file(128, image_shape, columns): 128
-        }
+        shards = {create_recordio_file(128, image_shape, columns): 128}
         if training:
             training_shards = shards
             evaluation_shards = {}

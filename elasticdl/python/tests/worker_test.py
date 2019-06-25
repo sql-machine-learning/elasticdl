@@ -20,15 +20,13 @@ _module_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "test_module.py"
 )
 m = load_module(_module_file)
-_codec_file = 'elasticdl/python/data/codec/tf_example_codec.py'
+_codec_file = "elasticdl/python/data/codec/tf_example_codec.py"
 columns = m.feature_columns() + m.label_columns()
 
 
 def create_recordio_file(size):
     codec = TFExampleCodec()
-    feature_name_to_type = {
-        f_col.key: f_col.dtype for f_col in columns
-    }
+    feature_name_to_type = {f_col.key: f_col.dtype for f_col in columns}
 
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     with closing(recordio.Writer(temp_file.name)) as f:

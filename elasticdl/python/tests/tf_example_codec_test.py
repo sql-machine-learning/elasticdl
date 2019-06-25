@@ -23,7 +23,7 @@ class TestTFExampleCodec(unittest.TestCase):
         }
 
         example_spec = tf.feature_column.make_parse_example_spec(
-            feature_columns,
+            feature_columns
         )
 
         example_1 = {"f0": np.array(100.1), "label": np.array(1)}

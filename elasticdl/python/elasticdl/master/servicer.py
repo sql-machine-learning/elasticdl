@@ -83,9 +83,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         elif init_var:
             self._init_model_from_var_list(init_var)
         else:
-            self._logger.info("Model is not intialized. It will be "
-                              "initialized by the first update from "
-                              "the worker.")
+            self._logger.info(
+                "Model is not intialized. It will be "
+                "initialized by the first update from "
+                "the worker."
+            )
 
     @staticmethod
     def var_name_encode(name):

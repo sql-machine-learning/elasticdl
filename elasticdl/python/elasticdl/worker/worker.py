@@ -51,7 +51,7 @@ class Worker(object):
         self._eval_metrics_fn = model_module.eval_metrics_fn
         all_columns = self._feature_columns + model_module.label_columns()
         self._example_spec = tf.feature_column.make_parse_example_spec(
-            all_columns,
+            all_columns
         )
 
         # Initilize codec

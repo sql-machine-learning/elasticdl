@@ -143,10 +143,9 @@ def _parse_args():
     )
     parser.add_argument(
         "--worker_resource_limit",
-        default="cpu=1,memory=4096Mi",
         type=str,
         help="The maximal resource required by worker, "
-        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1, default to worker_resource_request",
     )
     parser.add_argument(
         "--worker_pod_priority", help="Priority requested by workers"
@@ -256,10 +255,7 @@ def main():
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=64),
         options=[
-            (
-                "grpc.max_send_message_length",
-                GRPC.MAX_SEND_MESSAGE_LENGTH,
-            ),
+            ("grpc.max_send_message_length", GRPC.MAX_SEND_MESSAGE_LENGTH),
             (
                 "grpc.max_receive_message_length",
                 GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
@@ -298,6 +294,12 @@ def main():
             "--log_level",
             args.log_level,
         ]
+
+        args.worker_resource_limit = (
+            args.worker_resource_limit
+            if args.worker_resource_limit
+            else args.worker_resource_request
+        )
 
         worker_manager = WorkerManager(
             task_q,

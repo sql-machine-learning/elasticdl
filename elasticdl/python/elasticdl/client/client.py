@@ -54,10 +54,9 @@ def _add_train_params(parser):
     )
     parser.add_argument(
         "--master_resource_limit",
-        default="cpu=0.1,memory=1024Mi",
         type=str,
         help="The maximal resource required by master, "
-        "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1, default to master_resource_request",
     )
     parser.add_argument(
         "--worker_resource_request",
@@ -100,7 +99,7 @@ def _add_train_params(parser):
         default="default",
         type=str,
         help="The name of the Kubernetes namespace where ElasticDL "
-             "pods will be created",
+        "pods will be created",
     )
 
 
@@ -229,6 +228,12 @@ def _submit(image_name, model_file, job_name, args, argv):
         )
 
     container_args.extend(argv)
+
+    args.master_resource_limit = (
+        args.master_resource_limit
+        if args.master_resource_limit
+        else args.master_resource_request
+    )
 
     k8s.Client(
         image_name=image_name,
