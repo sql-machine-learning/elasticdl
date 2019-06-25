@@ -50,10 +50,12 @@ class Worker(object):
         self._loss = model_module.loss
         self._eval_metrics_fn = model_module.eval_metrics_fn
         all_columns = self._feature_columns + model_module.label_columns()
+        self._example_spec = tf.feature_column.make_parse_example_spec(
+            all_columns,
+        )
 
         # Initilize codec
         codec_module = load_module(codec_file)
-        codec_module.codec.init(all_columns)
         self._codec = codec_module.codec
 
         if channel is None:
@@ -131,14 +133,13 @@ class Worker(object):
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
 
-    @staticmethod
-    def _get_batch(reader, batch_size, decode):
+    def _get_batch(self, reader, batch_size, decode):
         res = []
         for i in range(batch_size):
             record = reader.record()
             if record is None:
                 break
-            res.append(decode(record))
+            res.append(decode(record, self._example_spec))
         return res
 
     def _get_features_and_labels(self, record_buf):

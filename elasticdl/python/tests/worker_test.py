@@ -26,14 +26,16 @@ columns = m.feature_columns() + m.label_columns()
 
 def create_recordio_file(size):
     codec = TFExampleCodec()
-    codec.init(columns)
+    feature_name_to_type = {
+        f_col.key: f_col.dtype for f_col in columns
+    }
 
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     with closing(recordio.Writer(temp_file.name)) as f:
         for _ in range(size):
             x = np.random.rand((1)).astype(np.float32)
             y = 2 * x + 1
-            f.write(codec.encode({"x": x, "y": y}))
+            f.write(codec.encode({"x": x, "y": y}, feature_name_to_type))
     return temp_file.name
 
 

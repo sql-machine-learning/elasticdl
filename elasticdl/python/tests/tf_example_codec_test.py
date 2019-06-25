@@ -18,6 +18,14 @@ class TestTFExampleCodec(unittest.TestCase):
             ),
         ]
 
+        feature_name_to_type = {
+            f_col.key: f_col.dtype for f_col in feature_columns
+        }
+
+        example_spec = tf.feature_column.make_parse_example_spec(
+            feature_columns,
+        )
+
         example_1 = {"f0": np.array(100.1), "label": np.array(1)}
         example_2 = {"f0": np.array(200.1), "label": np.array(2)}
         example_3 = {"f0": np.array(300.1), "label": np.array(3)}
@@ -25,14 +33,13 @@ class TestTFExampleCodec(unittest.TestCase):
 
         # Create the codec for tf.train.Exampel data.
         codec = TFExampleCodec()
-        codec.init(feature_columns)
 
         # Encode
-        encoded = [codec.encode(e) for e in examples]
+        encoded = [codec.encode(e, feature_name_to_type) for e in examples]
 
         # Verify decoded content.
         for idx, e in enumerate(encoded):
-            exp = codec.decode(e)
+            exp = codec.decode(e, example_spec)
             expected_exp = examples[idx]
             f_0 = exp["f0"].numpy()
             label = exp["label"].numpy()
