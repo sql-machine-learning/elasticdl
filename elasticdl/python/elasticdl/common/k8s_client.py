@@ -178,7 +178,6 @@ class Client(object):
         self._logger.info("Master launched. status='%s'" % str(resp.status))
 
     def create_worker(self, **kargs):
-        self._logger.info("Creating worker: " + str(kargs["worker_id"]))
         # Find that master pod that will be used as the owner reference
         # for this worker pod.
         master_pod = self._get_master_pod()
@@ -201,7 +200,6 @@ class Client(object):
         return self._v1.create_namespaced_pod(self._ns, pod)
 
     def delete_worker(self, worker_id):
-        self._logger.info("Deleting worker: " + str(worker_id))
         self._v1.delete_namespaced_pod(
             self.get_worker_pod_name(worker_id),
             self._ns,

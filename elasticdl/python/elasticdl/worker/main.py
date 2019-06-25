@@ -26,7 +26,7 @@ def _parse_args():
         "--log_level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         type=str.upper,
-        default="WARNING",
+        default="INFO",
         help="Set the logging level",
     )
 
@@ -52,7 +52,9 @@ def main():
         "[%(filename)s:%(lineno)d] %(message)s"
     )
     logging.getLogger().setLevel(args.log_level)
+    logger = logging.getLogger(__name__)
 
+    logger.info("Starting worker %d", args.worker_id)
     worker = Worker(
         args.worker_id,
         args.model_file,
