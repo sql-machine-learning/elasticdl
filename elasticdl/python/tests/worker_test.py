@@ -28,6 +28,7 @@ feature_name_to_type = {
      d["name"]: d["dtype"] for d in data_schema
 }
 
+
 def create_recordio_file(size):
     codec = TFExampleCodec()
     feature_name_to_type = {
