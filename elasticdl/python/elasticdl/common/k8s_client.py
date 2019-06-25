@@ -66,11 +66,16 @@ class Client(object):
         return "elasticdl-%s-worker-%s" % (self._job_name, str(worker_id))
 
     def _get_master_pod(self):
-        pod = self._v1.read_namespaced_pod(
-            name=self.get_master_pod_name(),
+        pods = self._v1.list_namespaced_pod(
             namespace=self._ns,
-        )
-        return pod
+            label_selector="elasticdl_job_name=" + self._job_name,
+        ).items
+        master_pod = [
+            pod
+            for pod in pods
+            if (pod.metadata.name == self.get_master_pod_name())
+        ]
+        return master_pod
 
     @staticmethod
     def _create_owner_reference(owner_pod):
@@ -80,8 +85,8 @@ class Client(object):
                     api_version="v1",
                     block_owner_deletion=True,
                     kind="Pod",
-                    name=owner_pod.metadata.name,
-                    uid=owner_pod.metadata.uid,
+                    name=owner_pod[0].metadata.name,
+                    uid=owner_pod[0].metadata.uid,
                 )
             ]
             if owner_pod
