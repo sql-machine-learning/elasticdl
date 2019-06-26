@@ -11,7 +11,7 @@ from kubernetes.client import (
     V1EnvVarSource,
     V1ObjectFieldSelector,
 )
-from elasticdl.python.common.k8s_utils import parse_resource
+from elasticdl.python.common.k8s_resource import parse_resource
 
 ELASTICDL_JOB_KEY = "elasticdl_job_name"
 ELASTICDL_APP_NAME = "elasticdl"

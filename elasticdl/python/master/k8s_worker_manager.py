@@ -4,7 +4,7 @@ import threading
 
 from collections import Counter
 from elasticdl.python.common import k8s_client as k8s
-from elasticdl.python.common.k8s_utils import parse_resource
+from elasticdl.python.common.k8s_resource import parse_resource
 
 
 class WorkerManager(object):

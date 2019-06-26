@@ -1,6 +1,6 @@
 import unittest
 
-from elasticdl.python.common.k8s_utils import parse_resource
+from elasticdl.python.common.k8s_resource import parse_resource
 
 
 class K8SUtilsTest(unittest.TestCase):
