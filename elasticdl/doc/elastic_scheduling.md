@@ -104,7 +104,7 @@ One of the important features of ElasticDL is fault tolerance which ensures job 
 Same as the first example, submit a job on GKE using the command below:
 
 ```
-python -m elasticdl.python.client.client.py train \
+python -m elasticdl.python.client.client train \
     --job_name=fault-tolerance \
     --image_name=gcr.io/${PROJECT_ID}/mnist:dev \
     --model_file=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_functional_api.py \
