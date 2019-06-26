@@ -10,11 +10,11 @@ import recordio
 from contextlib import closing
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.elasticdl.common.ndarray import (
+from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
-from elasticdl.python.elasticdl.common.model_helper import load_module
+from elasticdl.python.common.model_helper import load_module
 
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.

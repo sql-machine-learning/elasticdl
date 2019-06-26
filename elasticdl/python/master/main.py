@@ -9,20 +9,14 @@ import grpc
 from contextlib import closing
 from concurrent import futures
 from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.python.elasticdl.master.checkpoint_service import (
-    CheckpointService,
-)
-from elasticdl.python.elasticdl.master.evaluation_service import (
-    EvaluationService,
-)
-from elasticdl.python.elasticdl.master.tensorboard_service import (
-    TensorboardService,
-)
-from elasticdl.python.elasticdl.master.servicer import MasterServicer
-from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
-from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
-from elasticdl.python.elasticdl.common.model_helper import load_module
-from elasticdl.python.elasticdl.common.constants import GRPC
+from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.master.evaluation_service import EvaluationService
+from elasticdl.python.master.tensorboard_service import TensorboardService
+from elasticdl.python.master.servicer import MasterServicer
+from elasticdl.python.master.task_queue import _TaskQueue
+from elasticdl.python.master.k8s_worker_manager import WorkerManager
+from elasticdl.python.common.model_helper import load_module
+from elasticdl.python.common.constants import GRPC
 
 
 def _make_task_queue(
@@ -302,7 +296,7 @@ def main():
         worker_command = ["python"]
         worker_args = [
             "-m",
-            "elasticdl.python.elasticdl.worker.main",
+            "elasticdl.python.worker.main",
             "--model_file",
             args.model_file,
             "--master_addr",

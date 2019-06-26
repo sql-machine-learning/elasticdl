@@ -5,13 +5,11 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.python.elasticdl.common.ndarray import (
+from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
-from elasticdl.python.elasticdl.common.model_helper import (
-    load_from_checkpoint_file,
-)
+from elasticdl.python.common.model_helper import load_from_checkpoint_file
 
 
 import numpy as np

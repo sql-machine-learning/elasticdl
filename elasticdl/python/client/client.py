@@ -4,7 +4,7 @@ import tempfile
 import sys
 
 import docker
-from elasticdl.python.elasticdl.common import k8s_client as k8s
+from elasticdl.python.common import k8s_client as k8s
 import shutil
 
 
@@ -202,7 +202,7 @@ COPY {SOURCE_MODEL_FILE} {TARGET_MODEL_FILE}
 def _submit(image_name, model_file, job_name, args, argv):
     container_args = [
         "-m",
-        "elasticdl.python.elasticdl.master.main",
+        "elasticdl.python.master.main",
         "--job_name",
         job_name,
         "--worker_image",

@@ -1,6 +1,6 @@
 import os
 
-from elasticdl.python.elasticdl.common.model_helper import (
+from elasticdl.python.common.model_helper import (
     load_from_checkpoint_file,
     save_checkpoint_to_file,
 )

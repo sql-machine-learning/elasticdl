@@ -4,8 +4,8 @@ import random
 import time
 
 
-from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
-from elasticdl.python.elasticdl.master.k8s_worker_manager import WorkerManager
+from elasticdl.python.master.task_queue import _TaskQueue
+from elasticdl.python.master.k8s_worker_manager import WorkerManager
 from unittest.mock import MagicMock, call
 
 

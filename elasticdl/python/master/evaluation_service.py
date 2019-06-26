@@ -6,7 +6,7 @@ import numpy as np
 from collections import defaultdict
 from threading import Thread
 
-from elasticdl.python.elasticdl.common.ndarray import tensor_to_ndarray
+from elasticdl.python.common.ndarray import tensor_to_ndarray
 
 
 class _EvaluationJob(object):
