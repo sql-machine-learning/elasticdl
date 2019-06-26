@@ -83,6 +83,14 @@ class WorkerManager(object):
         for i in range(self._num_workers):
             self._start_worker(self._next_worker_id())
 
+    def start_tensorboard_service(self):
+        self._k8s_client.create_tensorboard_service()
+        tb_external_ip = self._k8s_client.get_tensorboard_external_ip()
+        self._logger.info(
+            "TensorBoard service is available at external IP: %s"
+            % tb_external_ip
+        )
+
     def _remove_worker(self, worker_id):
         self._logger.info("Removing worker: %d", worker_id)
         with self._lock:

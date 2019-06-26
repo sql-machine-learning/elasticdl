@@ -2,6 +2,7 @@ import logging
 import os
 import threading
 import traceback
+import time
 
 from kubernetes import client, config, watch
 from kubernetes.client import (
@@ -13,6 +14,7 @@ from kubernetes.client import (
 from elasticdl.python.elasticdl.common.k8s_utils import parse_resource
 
 ELASTICDL_JOB_KEY = "elasticdl_job_name"
+ELASTICDL_APP_NAME = "elasticdl"
 
 
 class Client(object):
@@ -138,7 +140,7 @@ class Client(object):
             metadata=client.V1ObjectMeta(
                 name=kargs["pod_name"],
                 labels={
-                    "app": "elasticdl",
+                    "app": ELASTICDL_APP_NAME,
                     ELASTICDL_JOB_KEY: kargs["job_name"],
                 },
                 owner_references=self._create_owner_reference(
@@ -205,3 +207,59 @@ class Client(object):
             self._ns,
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )
+
+    # TODO: Move TensorBoard related code to a separate file
+    def _get_tensorboard_service_name(self):
+        return "tensorboard-" + self._job_name
+
+    def create_tensorboard_service(
+        self, port=80, target_port=6006, service_type="LoadBalancer"
+    ):
+        self._v1.create_namespaced_service(
+            self._ns,
+            client.V1Service(
+                api_version="v1",
+                kind="Service",
+                metadata=client.V1ObjectMeta(
+                    name=self._get_tensorboard_service_name(),
+                    labels={
+                        "app": ELASTICDL_APP_NAME,
+                        ELASTICDL_JOB_KEY: self._job_name,
+                    },
+                    owner_references=self._create_owner_reference(
+                        self._get_master_pod()
+                    ),
+                    namespace=self._ns,
+                ),
+                spec=client.V1ServiceSpec(
+                    ports=[
+                        client.V1ServicePort(
+                            port=port, target_port=target_port
+                        )
+                    ],
+                    selector={ELASTICDL_JOB_KEY: self._job_name},
+                    type=service_type,
+                ),
+            ),
+        )
+
+    def _get_tensorboard_service(self):
+        return self._v1.read_namespaced_service(
+            name=self._get_tensorboard_service_name(), namespace=self._ns
+        ).to_dict()
+
+    def get_tensorboard_external_ip(self, check_interval=5, wait_timeout=120):
+        self._logger.info(
+            "Waiting for pending external IP of TensorBoard service..."
+        )
+        start_time = time.time()
+        while True:
+            if time.time() - start_time > wait_timeout:
+                raise Exception(
+                    "Unable to get an external IP for TensorBoard service"
+                )
+            service = self._get_tensorboard_service()
+            if service["status"]["load_balancer"]["ingress"] is None:
+                time.sleep(check_interval)
+            else:
+                return service["status"]["load_balancer"]["ingress"][0]["ip"]
