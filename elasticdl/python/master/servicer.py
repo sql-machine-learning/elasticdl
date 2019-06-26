@@ -9,9 +9,7 @@ from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
-from elasticdl.python.common.model_helper import (
-    load_from_checkpoint_file,
-)
+from elasticdl.python.common.model_helper import load_from_checkpoint_file
 
 
 import numpy as np

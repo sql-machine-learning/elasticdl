@@ -12,9 +12,7 @@ from elasticdl.python.master.task_queue import _TaskQueue
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.worker.worker import Worker
 from elasticdl.python.tests.in_process_master import InProcessMaster
-from elasticdl.python.master.checkpoint_service import (
-    CheckpointService,
-)
+from elasticdl.python.master.checkpoint_service import CheckpointService
 
 _module_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "test_module.py"

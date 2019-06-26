@@ -7,9 +7,7 @@ import tensorflow as tf
 
 from contextlib import closing
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.checkpoint_service import (
-    CheckpointService,
-)
+from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.worker.worker import Worker
 from elasticdl.python.common.model_helper import load_module
 from elasticdl.python.master.task_queue import _TaskQueue

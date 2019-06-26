@@ -11,9 +11,7 @@ from elasticdl.python.master.task_queue import _TaskQueue
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.worker.worker import Worker
 from elasticdl.python.tests.in_process_master import InProcessMaster
-from elasticdl.python.master.checkpoint_service import (
-    CheckpointService,
-)
+from elasticdl.python.master.checkpoint_service import CheckpointService
 
 
 def _get_model_info(file_name):
