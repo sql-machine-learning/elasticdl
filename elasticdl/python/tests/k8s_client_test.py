@@ -71,16 +71,13 @@ class K8sClientTest(unittest.TestCase):
             % (int(time.time()), random.randint(1, 101)),
             event_callback=None,
         )
-        c.create_tensorboard_service(
-            port=80, target_port=6006, service_type="LoadBalancer"
-        )
+        c.create_tensorboard_service(port=80, service_type="LoadBalancer")
         time.sleep(1)
         service = c._v1.read_namespaced_service(
             name=c._get_tensorboard_service_name(), namespace=c._ns
         ).to_dict()
         self.assertTrue("load_balancer" in service["status"])
         self.assertEqual(service["spec"]["ports"][0]["port"], 80)
-        self.assertEqual(service["spec"]["ports"][0]["targetPort"], 6006)
 
 
 if __name__ == "__main__":
