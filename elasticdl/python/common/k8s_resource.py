@@ -36,7 +36,7 @@ def _valid_mem_spec(mem_str):
     return mem_str
 
 
-def parse_resource(resource_str):
+def parse(resource_str):
     """Parse combined k8s resource string into a dict.
 
     Args:
