@@ -132,9 +132,6 @@ class Worker(object):
             res.append(record)
         return res
 
-    def _get_features_and_labels(self, record_buf):
-        return self._input_fn(record_buf)
-
     def _create_variable_and_report(self, features):
         # Use model.call to create variables, then report to ps
         _ = self._model.call(features)
@@ -174,7 +171,7 @@ class Worker(object):
                 )
 
     def _process_minibatch(self, task, record_buf, min_model_version):
-        features, labels = self._get_features_and_labels(record_buf)
+        features, labels = self._input_fn(record_buf)
         if not self._var_created:
             self._create_variable_and_report(features)
         for _ in range(self._max_minibatch_retry_num):
