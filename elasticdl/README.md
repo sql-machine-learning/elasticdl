@@ -94,7 +94,7 @@ In a terminal, start master to distribute mnist training tasks.
 ```
 docker run --net=host --rm -it elasticdl:dev \
     bash -c "python -m elasticdl.python.elasticdl.master.main \
-          --model_file=elasticdl/python/examples/mnist_functional_api.py \
+          --model_file=elasticdl/python/examples/mnist_functional_api/model.py \
           --job_name=test \
           --training_data_dir=/data/mnist/train \
           --evaluation_data_dir=/data/mnist/test \
@@ -112,12 +112,12 @@ In another terminal, start a worker
 docker run --net=host --rm -it elasticdl:dev \
     bash -c "python -m elasticdl.python.elasticdl.worker.main \
           --worker_id=1 \
-          --model_file=elasticdl/python/examples/mnist_functional_api.py \
+          --model_file=elasticdl/python/examples/mnist_functional_api/model.py \
           --master_addr=localhost:50001 \
           --log_level=INFO"
 ```
 
-This will train MNIST data with a model defined in [python/examples/mnist_functional_api.py](python/examples/mnist_functional_api.py) for 2 epoches.
+This will train MNIST data with a model defined in [python/examples/mnist_functional_api/model.py](python/examples/mnist_functional_api/model.py) for 2 epoches.
 
 ### Test with Kubernetes
 
