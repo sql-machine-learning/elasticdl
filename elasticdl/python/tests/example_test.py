@@ -3,14 +3,13 @@ import os
 import unittest
 import numpy as np
 import recordio
+import tensorflow as tf
 
 from contextlib import closing
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.elasticdl.common.model_helper import load_module
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.worker.worker import Worker
-from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.elasticdl.master.checkpoint_service import (
     CheckpointService,
@@ -21,32 +20,31 @@ def _get_model_info(file_name):
     module_file = os.path.join(
         os.path.dirname(os.path.realpath(__file__)), "../examples", file_name
     )
-    m = load_module(module_file)
-    columns = m.feature_columns() + m.label_columns()
-
-    return module_file, columns
+    return module_file
 
 
-def create_recordio_file(size, shape, columns):
-    codec = TFExampleCodec()
-    feature_name_to_type = {f_col.key: f_col.dtype for f_col in columns}
-
+def create_recordio_file(size, shape):
     image_size = 1
     for s in shape:
         image_size *= s
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     with closing(recordio.Writer(temp_file.name)) as f:
         for _ in range(size):
-            image = (
-                np.random.rand(image_size).astype(np.float32).reshape(shape)
-            )
+            image = np.random.rand(image_size).astype(np.float32)
             label = np.ndarray([1], dtype=np.int64)
             label[0] = np.random.randint(0, 10)
-            f.write(
-                codec.encode(
-                    {"image": image, "label": label}, feature_name_to_type
-                )
+            example_dict = {
+                "image": tf.train.Feature(
+                    float_list=tf.train.FloatList(value=image)
+                ),
+                "label": tf.train.Feature(
+                    int64_list=tf.train.Int64List(value=[label])
+                ),
+            }
+            example = tf.train.Example(
+                features=tf.train.Features(feature=example_dict)
             )
+            f.write(example.SerializeToString())
     return temp_file.name
 
 
@@ -58,12 +56,11 @@ class ExampleTest(unittest.TestCase):
         Run distributed training and evaluation with a local master.
         grpc calls are mocked by local master call.
         """
-        codec_file = "elasticdl/python/data/codec/tf_example_codec.py"
-        module_file, columns = _get_model_info(file_name)
+        module_file = _get_model_info(file_name)
 
-        worker = Worker(1, module_file, None, codec_file=codec_file)
+        worker = Worker(1, module_file, None)
 
-        shards = {create_recordio_file(128, image_shape, columns): 128}
+        shards = {create_recordio_file(128, image_shape): 128}
         if training:
             training_shards = shards
             evaluation_shards = {}

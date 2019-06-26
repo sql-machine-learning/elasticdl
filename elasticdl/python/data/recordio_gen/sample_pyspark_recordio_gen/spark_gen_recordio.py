@@ -5,42 +5,23 @@ import tarfile
 from pyspark import SparkContext
 from pyspark import TaskContext
 
-import numpy as np
 from elasticdl.python.elasticdl.common.model_helper import load_module
 from contextlib import closing
 import recordio
 
 
-def write_to_recordio(
-    filename,
-    feature,
-    label,
-    encode_fn,
-    feature_label_columns,
-    feature_name_to_type,
-):
+def write_to_recordio(filename, data_list):
     print("Writing to file:", filename)
-    it = zip(feature, label)
     with closing(recordio.Writer(filename)) as f:
-        for _ in range(len(feature)):
-            row = next(it)
-            example = {
-                f_col.key: row[i]
-                .astype(f_col.dtype.as_numpy_dtype)
-                .reshape(f_col.shape)
-                for i, f_col in enumerate(feature_label_columns)
-            }
-            rec = encode_fn(example, feature_name_to_type)
-            f.write(rec)
+        for d in data_list:
+            f.write(d)
 
 
 def process_data(
-    feature_label_columns,
     single_file_preparation_func,
     training_data_tar_file,
     output_dir,
     records_per_file,
-    codec_file,
 ):
     def _process_data(filename_list):
         filename_set = set()
@@ -58,45 +39,24 @@ def process_data(
 
         partition = TaskContext().partitionId()
         counter = 0
-        feature_name_to_type = {
-            f_col.key: f_col.dtype for f_col in feature_label_columns
-        }
-        encode_fn = load_module(codec_file).codec.encode
-        feature_list = []
-        label_list = []
+        data_list = []
         for filename in glob.glob(output_dir + "/data-%s*" % partition):
             os.remove(filename)
         for filename in filename_set:
-            feature, label = single_file_preparation_func(
+            data = single_file_preparation_func(
                 filename_to_object[filename], filename
             )
-            feature_list.append(feature)
-            label_list.append(label)
-            if len(feature_list) == records_per_file:
+            data_list.append(data)
+            if len(data_list) == records_per_file:
                 filename = output_dir + "/data-%s-%04d" % (partition, counter)
                 counter += 1
 
-                write_to_recordio(
-                    filename,
-                    np.array(feature_list),
-                    np.array(label_list),
-                    encode_fn,
-                    feature_label_columns,
-                    feature_name_to_type,
-                )
-                feature_list.clear()
-                label_list.clear()
+                write_to_recordio(filename, data_list)
+                data_list.clear()
 
-        if feature_list:
+        if data_list:
             filename = output_dir + "/data-%s-%04d" % (partition, counter)
-            write_to_recordio(
-                filename,
-                np.array(feature_list),
-                np.array(label_list),
-                encode_fn,
-                feature_label_columns,
-                feature_name_to_type,
-            )
+            write_to_recordio(filename, data_list)
         return filename_list
 
     return _process_data
@@ -121,11 +81,6 @@ def main():
     )
     parser.add_argument(
         "--records_per_file", default=1024, type=int, help="Record per file"
-    )
-    parser.add_argument(
-        "--codec_file",
-        default="elasticdl/python/data/codec/tf_example_codec.py",
-        help="Codec file name",
     )
     parser.add_argument(
         "--num_workers",
@@ -156,12 +111,10 @@ def main():
     rdd = sc.parallelize(filename_list, args.num_workers)
     rdd.mapPartitions(
         process_data(
-            model_module.feature_columns() + model_module.label_columns(),
             model_module.prepare_data_for_a_single_file,
             args.training_data_tar_file,
             args.output_dir,
             args.records_per_file,
-            args.codec_file,
         )
     ).collect()
 

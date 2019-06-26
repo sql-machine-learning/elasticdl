@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tensorflow.python.framework.ops import EagerTensor
 import numpy as np
 
 
@@ -69,22 +68,6 @@ outputs = tf.keras.layers.Dense(10, name="output")(flatten)
 model = tf.keras.Model(inputs=inputs, outputs=outputs, name="cifar10_model")
 
 
-def feature_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="image", dtype=tf.dtypes.float32, shape=[32, 32, 3]
-        )
-    ]
-
-
-def label_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="label", dtype=tf.dtypes.int64, shape=[1]
-        )
-    ]
-
-
 def loss(output, labels):
     return tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -98,17 +81,18 @@ def optimizer(lr=0.1):
 
 
 def input_fn(records):
+    feature_description = {
+        "image": tf.io.FixedLenFeature([32, 32, 3], tf.float32),
+        "label": tf.io.FixedLenFeature([1], tf.int64),
+    }
     image_list = []
     label_list = []
-    # deserialize
     for r in records:
-        get_np_val = (
-            lambda data: data.numpy()
-            if isinstance(data, EagerTensor)
-            else data
-        )
-        label = get_np_val(r["label"])
-        image = get_np_val(r["image"])
+        # deserialization
+        r = tf.io.parse_single_example(r, feature_description)
+        label = r["label"].numpy()
+        image = r["image"].numpy()
+        # processing data
         image = image.astype(np.float32)
         image /= 255
         label = label.astype(np.int32)
