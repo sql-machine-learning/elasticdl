@@ -7,7 +7,7 @@ import docker
 from elasticdl.python.elasticdl.common import k8s_client as k8s
 import shutil
 
-MODEL_ROOT_PATH = "/model/"
+MODEL_ROOT_PATH = "/model"
 DEFAULT_MODEL_FILE = "model.py"
 
 
@@ -129,14 +129,11 @@ def _evaluate(args, argv):
 
 def _m_file_in_docker(model_def):
     if os.path.isdir(model_def):
-        return (
-            MODEL_ROOT_PATH
-            + os.path.basename(model_def)
-            + "/"
-            + DEFAULT_MODEL_FILE
+        return os.path.join(
+            MODEL_ROOT_PATH, os.path.basename(model_def), DEFAULT_MODEL_FILE
         )
     else:
-        return MODEL_ROOT_PATH + os.path.basename(model_def)
+        return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_def))
 
 
 def _build_docker_image(m_def, image_name, push_image, extra_pypi_index):
@@ -172,9 +169,13 @@ COPY {SOURCE_MODEL_DEF} {TARGET_MODEL_DEF}
         shutil.copytree(base_dir, ctx_dir + "/" + os.path.basename(base_dir))
         with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
             if os.path.isdir(m_def):
-                shutil.copytree(m_def, ctx_dir + "/" + os.path.basename(m_def))
+                shutil.copytree(
+                    m_def, os.path.join(ctx_dir, os.path.basename(m_def))
+                )
                 source_model_dir = os.path.basename(m_def)
-                target_model_dir = MODEL_ROOT_PATH + os.path.basename(m_def)
+                target_model_dir = os.path.join(
+                    MODEL_ROOT_PATH, os.path.basename(m_def)
+                )
                 docker_template = (
                     docker_template
                     + """
