@@ -8,7 +8,7 @@ from elasticdl.python.elasticdl.common import k8s_client as k8s
 import shutil
 
 MODEL_ROOT_PATH = "/model/"
-MODEL_FILE = "model.py"
+DEFAULT_MODEL_FILE = "model.py"
 
 
 def main():
@@ -37,8 +37,9 @@ evaluate      Submit a ElasticDL distributed evaluation job.
 
 def _add_train_params(parser):
     parser.add_argument(
-        "--model_dir",
-        help="The directory that contains user-defined model files",
+        "--model_def",
+        help="The directory that contains user-defined model files "
+        "or a specific model file",
         required=True,
     )
     parser.add_argument(
@@ -116,7 +117,7 @@ def _add_evaluate_params(parser):
 
 def _train(args, argv):
     _build_docker_image(
-        args.model_dir, args.image_name, args.push_image, args.extra_pypi_index
+        args.model_def, args.image_name, args.push_image, args.extra_pypi_index
     )
     _submit(args, argv)
 
@@ -126,11 +127,19 @@ def _evaluate(args, argv):
     raise NotImplementedError()
 
 
-def _m_file_in_docker(model_dir):
-    return MODEL_ROOT_PATH + os.path.basename(model_dir) + "/" + MODEL_FILE
+def _m_file_in_docker(model_def):
+    if os.path.isdir(model_def):
+        return (
+            MODEL_ROOT_PATH
+            + os.path.basename(model_def)
+            + "/"
+            + DEFAULT_MODEL_FILE
+        )
+    else:
+        return MODEL_ROOT_PATH + os.path.basename(model_def)
 
 
-def _build_docker_image(m_dir, image_name, push_image, extra_pypi_index):
+def _build_docker_image(m_def, image_name, push_image, extra_pypi_index):
     docker_template = """
 FROM tensorflow/tensorflow:2.0.0b0-py3 as base
 
@@ -154,12 +163,7 @@ WORKDIR /
 COPY elasticdl /elasticdl
 COPY elasticdl/Makefile /Makefile
 RUN make
-COPY {SOURCE_MODEL_DIR} {TARGET_MODEL_DIR}
-RUN if [ -f {TARGET_MODEL_DIR}/requirements.txt ] ;\
-    then pip install -r {TARGET_MODEL_DIR}/requirements.txt ;\
-    else echo no {TARGET_MODEL_DIR}/requirements.txt found ;\
-    fi
-
+COPY {SOURCE_MODEL_DEF} {TARGET_MODEL_DEF}
 """
     with tempfile.TemporaryDirectory() as ctx_dir:
         base_dir = os.path.abspath(
@@ -167,13 +171,29 @@ RUN if [ -f {TARGET_MODEL_DIR}/requirements.txt ] ;\
         )
         shutil.copytree(base_dir, ctx_dir + "/" + os.path.basename(base_dir))
         with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
-            shutil.copytree(m_dir, ctx_dir + "/" + os.path.basename(m_dir))
-            source_model_dir = os.path.basename(m_dir)
-            target_model_dir = MODEL_ROOT_PATH + os.path.basename(m_dir)
+            if os.path.isdir(m_def):
+                shutil.copytree(m_def, ctx_dir + "/" + os.path.basename(m_def))
+                source_model_dir = os.path.basename(m_def)
+                target_model_dir = MODEL_ROOT_PATH + os.path.basename(m_def)
+                docker_template = (
+                    docker_template
+                    + """
+RUN if [ -f {TARGET_MODEL_DEF}/requirements.txt ] ;\
+    then pip install -r {TARGET_MODEL_DEF}/requirements.txt ;\
+    else echo no {TARGET_MODEL_DEF}/requirements.txt found ;\
+    fi
+"""
+                )
+            elif os.path.isfile(m_def):
+                shutil.copy(m_def, ctx_dir)
+                source_model_dir = os.path.basename(m_def)
+                target_model_dir = _m_file_in_docker(m_def)
+            else:
+                raise ValueError("Invalid model def: " + m_def)
             df.write(
                 docker_template.format(
-                    SOURCE_MODEL_DIR=source_model_dir,
-                    TARGET_MODEL_DIR=target_model_dir,
+                    SOURCE_MODEL_DEF=source_model_dir,
+                    TARGET_MODEL_DEF=target_model_dir,
                     EXTRA_PYPI_INDEX=extra_pypi_index,
                     MODEL_ROOT_PATH=MODEL_ROOT_PATH,
                 )
@@ -211,7 +231,7 @@ def _submit(args, argv):
         "--worker_image",
         args.image_name,
         "--model_file",
-        _m_file_in_docker(args.model_dir),
+        _m_file_in_docker(args.model_def),
         "--worker_resource_request",
         args.worker_resource_request,
         "--worker_resource_limit",
