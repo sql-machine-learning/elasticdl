@@ -208,6 +208,7 @@ class Client(object):
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )
 
+    # TODO: Move TensorBoard related code to a separate file
     def _get_tensorboard_service_name(self):
         return "tensorboard-" + self._job_name
 
@@ -251,10 +252,10 @@ class Client(object):
         )
         current_wait_secs = 0
         while service["status"]["load_balancer"]["ingress"] is None:
+            time.sleep(check_interval)
             service = self._v1.read_namespaced_service(
                 name=self._get_tensorboard_service_name(), namespace=self._ns
             ).to_dict()
-            time.sleep(check_interval)
             current_wait_secs += check_interval
             if current_wait_secs > wait_timeout:
                 raise Exception(
