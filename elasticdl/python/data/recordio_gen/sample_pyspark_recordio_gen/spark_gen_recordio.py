@@ -5,7 +5,6 @@ import tarfile
 from pyspark import SparkContext
 from pyspark import TaskContext
 
-import numpy as np
 from elasticdl.python.elasticdl.common.model_helper import load_module
 from contextlib import closing
 import recordio
