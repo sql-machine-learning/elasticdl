@@ -63,7 +63,7 @@ docker push gcr.io/${PROJECT_ID}/elasticdl:dev
 Use the command below to submit your first ElasticDL job on GKE:
 
 ```
-python elasticdl.python/client/client.py train \
+python -m elasticdl.python.client.client train \
     --job_name=hello-world \
     --image_name=gcr.io/${PROJECT_ID}/mnist:dev \
     --model_file=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_functional_api.py \
@@ -104,7 +104,7 @@ One of the important features of ElasticDL is fault tolerance which ensures job 
 Same as the first example, submit a job on GKE using the command below:
 
 ```
-python elasticdl.python/client/client.py train \
+python -m elasticdl.python.client.client.py train \
     --job_name=fault-tolerance \
     --image_name=gcr.io/${PROJECT_ID}/mnist:dev \
     --model_file=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_functional_api.py \
@@ -166,7 +166,7 @@ For more about PriorityClass, please check out [Pod Priority and Preemption](htt
 
 ### Submit the first job with `low-priority`
 ```
-python elasticdl.python/client/client.py train \
+python -m elasticdl.python.client.client train \
     --job_name=low-prio-job \
     --image_name=gcr.io/${PROJECT_ID}/mnist:dev \
     --model_file=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_functional_api.py \
@@ -199,7 +199,7 @@ kubectl get pods -l elasticdl_job_name=low-prio-job
 
 ### Submit the second job with `high-priority`
 ```
-python elasticdl.python/client/client.py train \
+python -m elasticdl.python.client.client train \
     --job_name=high-prio-job \
     --image_name=gcr.io/${PROJECT_ID}/mnist:dev \
     --model_file=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_functional_api.py \
@@ -234,4 +234,3 @@ Because the second job has higher priority than the first one, so soon the first
 Because of elastic scheduling, the two ElasticDL jobs continue running.
 
 When the job with high-priority finished, the low-priority job would restore to two pods due to released resources and finish finally.
-
