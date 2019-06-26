@@ -19,7 +19,6 @@ def write_to_recordio(filename, data_list):
 
 
 def process_data(
-    data_schema,
     single_file_preparation_func,
     training_data_tar_file,
     output_dir,
@@ -113,7 +112,6 @@ def main():
     rdd = sc.parallelize(filename_list, args.num_workers)
     rdd.mapPartitions(
         process_data(
-            model_module.data_schema(),
             model_module.prepare_data_for_a_single_file,
             args.training_data_tar_file,
             args.output_dir,
