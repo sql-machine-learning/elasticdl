@@ -31,21 +31,19 @@ def create_recordio_file(size, shape):
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     with closing(recordio.Writer(temp_file.name)) as f:
         for _ in range(size):
-            image = (
-                np.random.rand(image_size).astype(np.float32)
-            )
+            image = np.random.rand(image_size).astype(np.float32)
             label = np.ndarray([1], dtype=np.int64)
             label[0] = np.random.randint(0, 10)
             example_dict = {
-                'image': tf.train.Feature(
+                "image": tf.train.Feature(
                     float_list=tf.train.FloatList(value=image)
                 ),
-                'label': tf.train.Feature(
+                "label": tf.train.Feature(
                     int64_list=tf.train.Int64List(value=[label])
                 ),
             }
             example = tf.train.Example(
-                features=tf.train.Features(feature=example_dict),
+                features=tf.train.Features(feature=example_dict)
             )
             f.write(example.SerializeToString())
     return temp_file.name
@@ -63,9 +61,7 @@ class ExampleTest(unittest.TestCase):
 
         worker = Worker(1, module_file, None)
 
-        shards = {
-            create_recordio_file(128, image_shape): 128
-        }
+        shards = {create_recordio_file(128, image_shape): 128}
         if training:
             training_shards = shards
             evaluation_shards = {}

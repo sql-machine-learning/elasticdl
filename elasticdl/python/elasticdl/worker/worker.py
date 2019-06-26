@@ -166,9 +166,7 @@ class Worker(object):
             )
         ) as reader:
             while True:
-                record_buf = self._get_batch(
-                    reader, task.minibatch_size
-                )
+                record_buf = self._get_batch(reader, task.minibatch_size)
                 if not record_buf:
                     break
                 min_model_version = self._process_minibatch(

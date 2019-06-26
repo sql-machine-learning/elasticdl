@@ -50,11 +50,7 @@ def main():
     logger = logging.getLogger(__name__)
 
     logger.info("Starting worker %d", args.worker_id)
-    worker = Worker(
-        args.worker_id,
-        args.model_file,
-        channel=channel,
-    )
+    worker = Worker(args.worker_id, args.model_file, channel=channel)
     worker.run()
 
 
