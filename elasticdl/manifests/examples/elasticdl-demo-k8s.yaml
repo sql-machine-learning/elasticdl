@@ -8,7 +8,7 @@ metadata:
 spec:
   containers:
   - name: mnist-demo-container
-    image: gcr.io/elasticdl/elasticdl:tb-dev
+    image: elasticdl:ci
     command: ["/bin/bash"]
     args:
     - -c
@@ -18,13 +18,12 @@ spec:
       --training_data_dir=/data/mnist/train
       --evaluation_data_dir=/data/mnist/test
       --records_per_task=100
-      --num_epochs=10
+      --num_epochs=2
       --grads_to_wait=10
       --minibatch_size=64
-      --num_workers=2
+      --num_workers=4
       --checkpoint_steps=10
-      --worker_image=gcr.io/elasticdl/elasticdl:tb-dev
-      --tensorboard_log_dir=/tensorboard-log/
+      --worker_image=elasticdl:ci
       --job_name=test-mnist
       --log_level=INFO
       --image_pull_policy=Always
