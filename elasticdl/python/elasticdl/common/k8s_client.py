@@ -262,5 +262,4 @@ class Client(object):
             if service["status"]["load_balancer"]["ingress"] is None:
                 time.sleep(check_interval)
             else:
-                break
-        return service["status"]["load_balancer"]["ingress"][0]["ip"]
+                return service["status"]["load_balancer"]["ingress"][0]["ip"]
