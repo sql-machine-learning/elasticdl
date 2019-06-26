@@ -7,7 +7,6 @@ import tensorflow as tf
 
 from contextlib import closing
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.elasticdl.common.model_helper import load_module
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.worker.worker import Worker
