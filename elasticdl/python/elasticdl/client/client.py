@@ -102,6 +102,12 @@ def _add_train_params(parser):
         help="The name of the Kubernetes namespace where ElasticDL "
         "pods will be created",
     )
+    parser.add_argument(
+        "--tensorboard_log_dir",
+        default="",
+        type=str,
+        help="The log directory for TensorBoard",
+    )
 
 
 def _add_evaluate_params(parser):
@@ -209,6 +215,8 @@ def _submit(image_name, model_file, job_name, args, argv):
         args.worker_resource_request,
         "--namespace",
         args.namespace,
+        "--tensorboard_log_dir",
+        args.tensorboard_log_dir,
     ]
     container_args.extend(["--image_pull_policy", args.image_pull_policy])
     container_args.extend(["--restart_policy", args.restart_policy])
