@@ -73,9 +73,7 @@ class K8sClientTest(unittest.TestCase):
         )
         c.create_tensorboard_service(port=80, service_type="LoadBalancer")
         time.sleep(1)
-        service = c._v1.read_namespaced_service(
-            name=c._get_tensorboard_service_name(), namespace=c._ns
-        ).to_dict()
+        service = c._get_tensorboard_service()
         self.assertTrue("load_balancer" in service["status"])
         self.assertEqual(service["spec"]["ports"][0]["port"], 80)
 

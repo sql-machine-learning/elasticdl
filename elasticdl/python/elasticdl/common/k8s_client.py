@@ -243,22 +243,24 @@ class Client(object):
             ),
         )
 
-    def get_tensorboard_external_ip(self, check_interval=5, wait_timeout=120):
-        service = self._v1.read_namespaced_service(
+    def _get_tensorboard_service(self):
+        return self._v1.read_namespaced_service(
             name=self._get_tensorboard_service_name(), namespace=self._ns
         ).to_dict()
+
+    def get_tensorboard_external_ip(self, check_interval=5, wait_timeout=120):
         self._logger.info(
             "Waiting for pending external IP of TensorBoard service..."
         )
-        current_wait_secs = 0
-        while service["status"]["load_balancer"]["ingress"] is None:
-            time.sleep(check_interval)
-            service = self._v1.read_namespaced_service(
-                name=self._get_tensorboard_service_name(), namespace=self._ns
-            ).to_dict()
-            current_wait_secs += check_interval
-            if current_wait_secs > wait_timeout:
+        start_time = time.time()
+        while True:
+            if time.time() - start_time > wait_timeout:
                 raise Exception(
                     "Unable to get an external IP for TensorBoard service"
                 )
+            service = self._get_tensorboard_service()
+            if service["status"]["load_balancer"]["ingress"] is None:
+                time.sleep(check_interval)
+            else:
+                break
         return service["status"]["load_balancer"]["ingress"][0]["ip"]
