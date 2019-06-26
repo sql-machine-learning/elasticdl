@@ -94,7 +94,7 @@ In a terminal, start master to distribute mnist training tasks.
 
 ```
 docker run --net=host --rm -it elasticdl:dev \
-    bash -c "python -m elasticdl.python.elasticdl.master.main \
+    bash -c "python -m elasticdl.python.master.main \
           --model_file=elasticdl/python/examples/mnist_functional_api.py \
           --job_name=test \
           --training_data_dir=/data/mnist/train \
@@ -111,7 +111,7 @@ In another terminal, start a worker
 
 ```
 docker run --net=host --rm -it elasticdl:dev \
-    bash -c "python -m elasticdl.python.elasticdl.worker.main \
+    bash -c "python -m elasticdl.python.worker.main \
           --worker_id=1 \
           --model_file=elasticdl/python/examples/mnist_functional_api.py \
           --master_addr=localhost:50001 \

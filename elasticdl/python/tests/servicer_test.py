@@ -8,13 +8,13 @@ from collections import defaultdict
 
 import tensorflow as tf
 
-from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
-from elasticdl.python.elasticdl.master.servicer import MasterServicer
-from elasticdl.python.elasticdl.master.checkpoint_service import (
+from elasticdl.python.master.task_queue import _TaskQueue
+from elasticdl.python.master.servicer import MasterServicer
+from elasticdl.python.master.checkpoint_service import (
     CheckpointService,
 )
-from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor
-from elasticdl.python.elasticdl.common.ndarray import tensor_to_ndarray
+from elasticdl.python.common.ndarray import ndarray_to_tensor
+from elasticdl.python.common.ndarray import tensor_to_ndarray
 from elasticdl.proto import elasticdl_pb2
 
 
