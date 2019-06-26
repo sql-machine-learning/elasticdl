@@ -87,7 +87,8 @@ class WorkerManager(object):
         self._k8s_client.create_tensorboard_service()
         tb_external_ip = self._k8s_client.get_tensorboard_external_ip()
         self._logger.info(
-            "TensorBoard service is available at external IP: %s" % tb_external_ip
+            "TensorBoard service is available at external IP: %s"
+            % tb_external_ip
         )
 
     def _remove_worker(self, worker_id):

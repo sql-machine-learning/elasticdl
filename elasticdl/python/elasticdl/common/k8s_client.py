@@ -220,7 +220,7 @@ class Client(object):
                     name=self._get_tensorboard_service_name(),
                     labels={
                         "app": "elasticdl",
-                        ELASTICDL_JOB_KEY: self._job_name
+                        ELASTICDL_JOB_KEY: self._job_name,
                     },
                     owner_references=self._create_owner_reference(
                         self._get_master_pod()
@@ -230,13 +230,10 @@ class Client(object):
                 spec=client.V1ServiceSpec(
                     ports=[
                         client.V1ServicePort(
-                            port=port,
-                            target_port=target_port
+                            port=port, target_port=target_port
                         )
                     ],
-                    selector={
-                        ELASTICDL_JOB_KEY: self._job_name
-                    },
+                    selector={ELASTICDL_JOB_KEY: self._job_name},
                     type="LoadBalancer",
                 ),
             ),
@@ -247,16 +244,14 @@ class Client(object):
         check_interval = 5
         max_wait_secs = 120
         service = self._v1.read_namespaced_service(
-            name=self._get_tensorboard_service_name(),
-            namespace=self._ns
+            name=self._get_tensorboard_service_name(), namespace=self._ns
         ).to_dict()
         self._logger.info(
             "Waiting for pending external IP of TensorBoard service..."
         )
         while service["status"]["load_balancer"]["ingress"] is None:
             service = self._v1.read_namespaced_service(
-                name=self._get_tensorboard_service_name(),
-                namespace=self._ns
+                name=self._get_tensorboard_service_name(), namespace=self._ns
             ).to_dict()
             time.sleep(check_interval)
             current_wait_secs += check_interval
