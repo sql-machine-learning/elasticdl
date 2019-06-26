@@ -27,8 +27,7 @@ Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and subm
 
 ```bash
 python elasticdl/python/elasticdl/client/client.py train \
-    --model_dir=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist \
-    --model_file=mnist_subclass.py \
+    --model_dir=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass \
     --training_data_dir=/data/mnist/train \
     --evaluation_data_dir=/data/mnist/test \
     --num_epochs=1 \
@@ -52,8 +51,7 @@ python elasticdl/python/elasticdl/client/client.py train \
 python elasticdl/python/elasticdl/client/client.py train \
     --job_name=test \
     --image_name=gcr.io/elasticdl/mnist:dev \
-    --model_dir=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist \
-    --model_file=mnist_subclass.py \
+    --model_dir=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass \
     --training_data_dir=/data/mnist_nfs/mnist/train \
     --evaluation_data_dir=/data/mnist_nfs/mnist/test \
     --num_epochs=1 \
@@ -94,8 +92,7 @@ pip install dist/ElasticDL-0.0.1-py3-none-any.whl
 
 ```bash
 elasticdl train \
-    --model_dir=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist \
-    --model_file=mnist_subclass.py \
+    --model_dir=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass \
     --training_data_dir=/data/mnist/train \
     --evaluation_data_dir=/data/mnist/test \
     --num_epochs=1 \
@@ -119,8 +116,7 @@ elasticdl train \
 elasticdl train \
     --job_name=test \
     --image_name=gcr.io/elasticdl/mnist:dev \
-    --model_dir=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist \
-    --model_file=mnist_subclass.py \
+    --model_dir=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass \
     --training_data_dir=/data/mnist_nfs/mnist/train \
     --evaluation_data_dir=/data/mnist_nfs/mnist/test \
     --num_epochs=1 \
