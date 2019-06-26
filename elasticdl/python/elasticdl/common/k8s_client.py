@@ -14,6 +14,7 @@ from kubernetes.client import (
 from elasticdl.python.elasticdl.common.k8s_utils import parse_resource
 
 ELASTICDL_JOB_KEY = "elasticdl_job_name"
+ELASTICDL_APP_NAME = "elasticdl"
 
 
 class Client(object):
@@ -139,7 +140,7 @@ class Client(object):
             metadata=client.V1ObjectMeta(
                 name=kargs["pod_name"],
                 labels={
-                    "app": "elasticdl",
+                    "app": ELASTICDL_APP_NAME,
                     ELASTICDL_JOB_KEY: kargs["job_name"],
                 },
                 owner_references=self._create_owner_reference(
@@ -210,7 +211,9 @@ class Client(object):
     def _get_tensorboard_service_name(self):
         return "tensorboard-" + self._job_name
 
-    def create_tensorboard_service(self, port=80, target_port=6006):
+    def create_tensorboard_service(
+        self, port=80, target_port=6006, service_type="LoadBalancer"
+    ):
         self._v1.create_namespaced_service(
             self._ns,
             client.V1Service(
@@ -219,7 +222,7 @@ class Client(object):
                 metadata=client.V1ObjectMeta(
                     name=self._get_tensorboard_service_name(),
                     labels={
-                        "app": "elasticdl",
+                        "app": ELASTICDL_APP_NAME,
                         ELASTICDL_JOB_KEY: self._job_name,
                     },
                     owner_references=self._create_owner_reference(
@@ -234,28 +237,26 @@ class Client(object):
                         )
                     ],
                     selector={ELASTICDL_JOB_KEY: self._job_name},
-                    type="LoadBalancer",
+                    type=service_type,
                 ),
             ),
         )
 
-    def get_tensorboard_external_ip(self):
-        current_wait_secs = 0
-        check_interval = 5
-        max_wait_secs = 120
+    def get_tensorboard_external_ip(self, check_interval=5, wait_timeout=120):
         service = self._v1.read_namespaced_service(
             name=self._get_tensorboard_service_name(), namespace=self._ns
         ).to_dict()
         self._logger.info(
             "Waiting for pending external IP of TensorBoard service..."
         )
+        current_wait_secs = 0
         while service["status"]["load_balancer"]["ingress"] is None:
             service = self._v1.read_namespaced_service(
                 name=self._get_tensorboard_service_name(), namespace=self._ns
             ).to_dict()
             time.sleep(check_interval)
             current_wait_secs += check_interval
-            if current_wait_secs > max_wait_secs:
+            if current_wait_secs > wait_timeout:
                 raise Exception(
                     "Unable to get an external IP for TensorBoard service"
                 )
