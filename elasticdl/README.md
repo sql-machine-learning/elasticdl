@@ -63,7 +63,7 @@ docker run --rm -it -v $EDL_REPO:/v -w /v \
     "pre-commit run --files $(find elasticdl/python -name '*.py' -print0 | tr '\0' ' ')"
 ```
 
-### Unittests
+### Unit Tests
 
 In dev Docker container's `elasticdl` repo's root directory, do the following:
 
@@ -71,7 +71,7 @@ In dev Docker container's `elasticdl` repo's root directory, do the following:
 make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests
 ```
 
-Could also start Docker container and run unittests in a single command:
+Could also start Docker container and run unit tests in a single command:
 
 ```bash
 docker run --rm -u $(id -u):$(id -g) -it \
@@ -81,7 +81,8 @@ docker run --rm -u $(id -u):$(id -g) -it \
     bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests"
 ```
 
-Note that, some unittests may require a running Kubernetes cluster available. To include those unittests, use:
+Note that, some unit tests may require a running Kubernetes cluster available. To include those unit tests, run
+the following:
 
 ```bash
 make -f elasticdl/Makefile && pytest elasticdl/python/tests
