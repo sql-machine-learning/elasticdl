@@ -3,6 +3,7 @@ import os
 import unittest
 import numpy as np
 import recordio
+import tensorflow as tf
 
 from contextlib import closing
 from elasticdl.proto import elasticdl_pb2
@@ -10,7 +11,6 @@ from elasticdl.python.elasticdl.common.model_helper import load_module
 from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
 from elasticdl.python.elasticdl.master.servicer import MasterServicer
 from elasticdl.python.elasticdl.worker.worker import Worker
-from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.elasticdl.master.checkpoint_service import (
     CheckpointService,
@@ -20,27 +20,22 @@ _module_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "test_module.py"
 )
 m = load_module(_module_file)
-_codec_file = 'elasticdl/python/data/codec/tf_example_codec.py'
-data_schema = m.data_schema()
-
-data_schema = m.data_schema()
-feature_name_to_type = {
-     d["name"]: d["dtype"] for d in data_schema
-}
 
 
 def create_recordio_file(size):
-    codec = TFExampleCodec()
-    feature_name_to_type = {
-        d["name"]: d["dtype"] for d in data_schema
-    }
-
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     with closing(recordio.Writer(temp_file.name)) as f:
         for _ in range(size):
-            x = np.random.rand((1)).astype(np.float32)
+            x = np.random.rand(1).astype(np.float32)
             y = 2 * x + 1
-            f.write(codec.encode({"x": x, "y": y}, feature_name_to_type))
+            example_dict = {
+                "x": tf.train.Feature(float_list=tf.train.FloatList(value=x)),
+                "y": tf.train.Feature(float_list=tf.train.FloatList(value=y)),
+            }
+            example = tf.train.Example(
+                features=tf.train.Features(feature=example_dict)
+            )
+            f.write(example.SerializeToString())
     return temp_file.name
 
 
@@ -66,7 +61,7 @@ class WorkerTest(unittest.TestCase):
                     self._m._version += 1
                 return self._m.ReportEvaluationMetrics(req, None)
 
-        worker = Worker(1, _module_file, None, codec_file=_codec_file)
+        worker = Worker(1, _module_file, None)
 
         shards = {create_recordio_file(128): 128}
         if training:

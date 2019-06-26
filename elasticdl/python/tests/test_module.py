@@ -13,18 +13,15 @@ def loss(predictions, labels):
     return tf.reduce_mean(tf.square(predictions - labels))
 
 
-def data_schema():
-    return [
-        {"name": "x", "shape": [1], "dtype": tf.dtypes.float32},
-        {"name": "y", "shape": [1], "dtype": tf.dtypes.float32},
-    ]
-
-
 def input_fn(records):
+    feature_description = {
+        "x": tf.io.FixedLenFeature([1], tf.float32),
+        "y": tf.io.FixedLenFeature([1], tf.float32),
+    }
     x_list = []
     y_list = []
-    # deserialize
     for r in records:
+        r = tf.io.parse_single_example(r, feature_description)
         x_list.append([r["x"]])
         y_list.append([r["y"]])
     # batching

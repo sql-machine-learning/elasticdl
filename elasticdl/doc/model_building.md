@@ -1,7 +1,7 @@
 # ElasticDL Model Building
 To submit an ElasticDL job, a user needs to provide a model file, such as [`mnist_functional_api.py`](../python/examples/mnist_functional_api.py) used in this [example](elastic_scheduling.md#submit-the-first-job-with-low-priority). 
 
-This model file contains a [model](#model) built with Tensorflow Keras API and other components required by ElasticDL, including [input\_fn](#input_fn), [data\_schema](#data_schema), [loss](#loss), [optimizer](#optimizer), and [eval_metrics_fn](#eval\_metrics\_fn). 
+This model file contains a [model](#model) built with Tensorflow Keras API and other components required by ElasticDL, including [input\_fn](#input_fn), [loss](#loss), [optimizer](#optimizer), and [eval_metrics_fn](#eval\_metrics\_fn). 
 
 ## Model File Components
 ### model
@@ -74,11 +74,19 @@ Example:
 
 ```
 def input_fn(records):
+    feature_description = {
+        "image": tf.io.FixedLenFeature([28, 28], tf.float32),
+        "label": tf.io.FixedLenFeature([1], tf.int64),
+    }
     image_list = []
     label_list = []
-    # data processing
     for r in records:
-        label = r['label']
+        # deserialization
+        r = tf.io.parse_single_example(r, feature_description)
+        label = r["label"].numpy()
+        image = r["image"].numpy()
+        # processing data
+        image = image.astype(np.float32)
         image /= 255
         label = label.astype(np.int32)
         image_list.append(image)
@@ -91,25 +99,6 @@ def input_fn(records):
     images = tf.convert_to_tensor(value=images)
     labels = np.array(label_list)
     return ({'image': images}, labels)
-```
-
-### data_schema
-```
-data_schema()
-```
-
-`data_schema` returns a list of dictionaries, each dictionary includes the `name`, `shape`, `dtype` of the corresponding data item.
-
-`data_schema ` is used for encoding and decoding the training data in RecordIO file. 
-
-For example, the following `data_schema` example specifies that the RecordIO data has two items: (1) `image` with data type as `tf.dtypes.float32` and shape as `[28, 28]`; (2) `label` with data type as `tf.dtypes.int64` and shape as `[1]`.
-
-```
-def data_schema():
-    return [
-        {"name": "image", "shape": [28, 28], "dtype": tf.dtypes.float32},
-        {"name": "label", "shape": [1], "dtype": tf.dtypes.int64},
-    ]
 ```
 
 ### loss
@@ -176,7 +165,7 @@ def eval_metrics_fn(predictions, labels):
 prepare_data_for_a_single_file(filename)
 ```
 `prepare_data_for_a_single_file` is to read a single file and do whatever 
-user-defined logic to prepare the data (e.g, IO from the user's file system, feature engineering), and return a tuple of numpy array, which should be compatible with the [data\_schema](#data_schema) above.
+user-defined logic to prepare the data (e.g, IO from the user's file system, feature engineering), and return the serialized data.
 
 Example:
 
@@ -188,7 +177,18 @@ def prepare_data_for_a_single_file(filename):
     label = int(filename.split('/')[-2])
     image = PIL.Image.open(filename)
     numpy_image = np.array(image)
-    return numpy_image, label
+        example_dict = {
+        "image": tf.train.Feature(
+            float_list=tf.train.FloatList(value=numpy_image.flatten())
+        ),
+        "label": tf.train.Feature(
+            int64_list=tf.train.Int64List(value=[label])
+        ),
+    }
+    example = tf.train.Example(
+        features=tf.train.Features(feature=example_dict)
+    )
+    return example.SerializeToString()
 ```
 
 

@@ -38,16 +38,6 @@ class MnistModel(tf.keras.Model):
 model = MnistModel()
 
 
-def data_schema():
-    """
-    list of dicts which include name, shape, dtype.
-    """
-    return [
-        {"name": "image", "shape": [28, 28], "dtype": tf.dtypes.float32},
-        {"name": "label", "shape": [1], "dtype": tf.dtypes.int64},
-    ]
-
-
 def loss(output, labels):
     return tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -61,17 +51,18 @@ def optimizer(lr=0.01):
 
 
 def input_fn(records):
+    feature_description = {
+        "image": tf.io.FixedLenFeature([28, 28], tf.float32),
+        "label": tf.io.FixedLenFeature([1], tf.int64),
+    }
     image_list = []
     label_list = []
-    # deserialize
     for r in records:
-        get_np_val = (
-            lambda data: data.numpy()
-            if isinstance(data, EagerTensor)
-            else data
-        )
-        label = get_np_val(r["label"])
-        image = get_np_val(r["image"])
+        # deserialization
+        r = tf.io.parse_single_example(r, feature_description)
+        label = r["label"].numpy()
+        image = r["image"].numpy()
+        # processing data
         image = image.astype(np.float32)
         image /= 255
         label = label.astype(np.int32)

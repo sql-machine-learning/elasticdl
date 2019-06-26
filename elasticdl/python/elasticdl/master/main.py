@@ -155,11 +155,6 @@ def _parse_args():
         "--worker_image", help="Docker image for workers", default=None
     )
     parser.add_argument("--job_name", help="Job name", required=True)
-    parser.add_argument(
-        "--codec_file",
-        default="elasticdl/python/data/codec/tf_example_codec.py",
-        help="Codec file name",
-    )
     # TODO: better logic for handling volume configs
     parser.add_argument(
         "--volume_name", help="Volume name of Network File System"
@@ -312,8 +307,6 @@ def main():
             args.model_file,
             "--master_addr",
             master_addr,
-            "--codec_file",
-            args.codec_file,
             "--log_level",
             args.log_level,
         ]

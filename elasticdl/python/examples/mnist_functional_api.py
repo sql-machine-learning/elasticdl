@@ -25,17 +25,18 @@ def prepare_data_for_a_single_file(file_object, filename):
     label = int(filename.split("/")[-2])
     image = PIL.Image.open(file_object)
     numpy_image = np.array(image)
-    return numpy_image, label
-
-
-def data_schema():
-    """
-    list of dicts which include name, shape, dtype.
-    """
-    return [
-        {"name": "image", "shape": [28, 28], "dtype": tf.dtypes.float32},
-        {"name": "label", "shape": [1], "dtype": tf.dtypes.int64},
-    ]
+    example_dict = {
+        "image": tf.train.Feature(
+            float_list=tf.train.FloatList(value=numpy_image.flatten())
+        ),
+        "label": tf.train.Feature(
+            int64_list=tf.train.Int64List(value=[label])
+        ),
+    }
+    example = tf.train.Example(
+        features=tf.train.Features(feature=example_dict)
+    )
+    return example.SerializeToString()
 
 
 def loss(output, labels):
@@ -51,17 +52,18 @@ def optimizer(lr=0.1):
 
 
 def input_fn(records):
+    feature_description = {
+        "image": tf.io.FixedLenFeature([28, 28], tf.float32),
+        "label": tf.io.FixedLenFeature([1], tf.int64),
+    }
     image_list = []
     label_list = []
-    # deserialize
     for r in records:
-        get_np_val = (
-            lambda data: data.numpy()
-            if isinstance(data, EagerTensor)
-            else data
-        )
-        label = get_np_val(r["label"])
-        image = get_np_val(r["image"])
+        # deserialization
+        r = tf.io.parse_single_example(r, feature_description)
+        label = r["label"].numpy()
+        image = r["image"].numpy()
+        # processing data
         image = image.astype(np.float32)
         image /= 255
         label = label.astype(np.int32)

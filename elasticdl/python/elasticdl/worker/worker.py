@@ -30,7 +30,6 @@ class Worker(object):
         model_file,
         channel=None,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
-        codec_file=None,
     ):
         """
         Arguments:
@@ -48,18 +47,6 @@ class Worker(object):
         self._opt_fn = model_module.optimizer
         self._loss = model_module.loss
         self._eval_metrics_fn = model_module.eval_metrics_fn
-        self._data_schema = model_module.data_schema()
-        all_columns = [tf.feature_column.numeric_column(
-            key=d["name"], shape=d["shape"], dtype=d["dtype"]
-            )
-            for d in self._data_schema]
-        self._example_spec = tf.feature_column.make_parse_example_spec(
-            all_columns
-        )
-
-        # Initialize codec
-        codec_module = load_module(codec_file)
-        self._codec = codec_module.codec
 
         if channel is None:
             self._stub = None
@@ -136,13 +123,13 @@ class Worker(object):
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
 
-    def _get_batch(self, reader, batch_size, decode):
+    def _get_batch(self, reader, batch_size):
         res = []
         for i in range(batch_size):
             record = reader.record()
             if record is None:
                 break
-            res.append(decode(record, self._example_spec))
+            res.append(record)
         return res
 
     def _get_features_and_labels(self, record_buf):
@@ -180,7 +167,7 @@ class Worker(object):
         ) as reader:
             while True:
                 record_buf = self._get_batch(
-                    reader, task.minibatch_size, self._codec.decode
+                    reader, task.minibatch_size
                 )
                 if not record_buf:
                     break

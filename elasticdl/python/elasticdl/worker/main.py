@@ -18,11 +18,6 @@ def _parse_args():
         required=True,
     )
     parser.add_argument(
-        "--codec_file",
-        default="elasticdl/python/data/codec/tf_example_codec.py",
-        help="Codec file name",
-    )
-    parser.add_argument(
         "--log_level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         type=str.upper,
@@ -59,7 +54,6 @@ def main():
         args.worker_id,
         args.model_file,
         channel=channel,
-        codec_file=args.codec_file,
     )
     worker.run()
 
