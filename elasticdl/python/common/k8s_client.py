@@ -11,7 +11,7 @@ from kubernetes.client import (
     V1EnvVarSource,
     V1ObjectFieldSelector,
 )
-from elasticdl.python.common.k8s_utils import parse_resource
+from elasticdl.python.common.k8s_resource import parse
 
 ELASTICDL_JOB_KEY = "elasticdl_job_name"
 ELASTICDL_APP_NAME = "elasticdl"
@@ -165,8 +165,8 @@ class Client(object):
             job_name=kargs["job_name"],
             image_name=kargs["image_name"],
             command=["python"],
-            resource_requests=parse_resource(kargs["resource_requests"]),
-            resource_limits=parse_resource(kargs["resource_limits"]),
+            resource_requests=parse(kargs["resource_requests"]),
+            resource_limits=parse(kargs["resource_limits"]),
             container_args=kargs["args"],
             pod_priority=kargs["pod_priority"],
             image_pull_policy=kargs["image_pull_policy"],
