@@ -241,8 +241,6 @@ def _submit(image_name, model_file, job_name, args, argv):
         job_name=job_name,
         event_callback=None,
     ).create_master(
-        job_name=job_name,
-        image_name=image_name,
         resource_requests=args.master_resource_request,
         resource_limits=args.master_resource_limit,
         pod_priority=args.master_pod_priority,
