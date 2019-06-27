@@ -145,27 +145,12 @@ def _build_docker_image(m_file, image_name, push_image, extra_pypi_index):
     docker_template = """
 FROM tensorflow/tensorflow:2.0.0b0-py3 as base
 
-# Install gRPC tools in Python
-RUN pip install grpcio-tools --extra-index-url={EXTRA_PYPI_INDEX}
-
-# Install the Kubernetes Python client
-RUN pip install kubernetes --extra-index-url={EXTRA_PYPI_INDEX}
-
-# Install Docker python SDK
-RUN pip install docker --extra-index-url={EXTRA_PYPI_INDEX}
-
-# Install RecordIO
-RUN pip install 'pyrecordio>=0.0.6' --extra-index-url={EXTRA_PYPI_INDEX}
-
-# Install Pillow for sample data processing Spark job
-RUN pip install Pillow --extra-index-url=${EXTRA_PYPI_INDEX}
-
-ENV PYTHONPATH=/
-WORKDIR /
 COPY elasticdl /elasticdl
-COPY elasticdl/Makefile /Makefile
-RUN make
+RUN pip install -r elasticdl/requirements.txt
+RUN make -C elasticdl -f elasticdl/Makefile
 COPY {SOURCE_MODEL_FILE} {TARGET_MODEL_FILE}
+
+ENV PYTHONPATH=/elasticdl
 """
     with tempfile.TemporaryDirectory() as ctx_dir:
         shutil.copy(m_file, ctx_dir)
