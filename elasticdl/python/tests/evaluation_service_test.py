@@ -4,16 +4,16 @@ import unittest
 
 import numpy as np
 
-from elasticdl.python.elasticdl.common.ndarray import ndarray_to_tensor
-from elasticdl.python.elasticdl.master.checkpoint_service import (
+from elasticdl.python.common.ndarray import ndarray_to_tensor
+from elasticdl.python.master.checkpoint_service import (
     Checkpoint,
     CheckpointService,
 )
-from elasticdl.python.elasticdl.master.evaluation_service import (
+from elasticdl.python.master.evaluation_service import (
     _EvaluationJob,
     EvaluationService,
 )
-from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
+from elasticdl.python.master.task_queue import _TaskQueue
 
 
 class EvaluationServiceTest(unittest.TestCase):

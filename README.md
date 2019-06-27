@@ -14,7 +14,7 @@ Elastic scheduling could significantly improve the overall utilization of a clus
 
 The feature of elastic scheduling of ElasticDL comes from its Kubernetes-native design -- it doesn't rely on Kubernetes extensions like Kubeflow to run TensorFlow programs; instead, the master process of an ElasticDL job calls Kubernetes API to start workers and parameter servers; it also watches events like process/pod killing and reacts to such events to realize fault-tolerance.
 
-In short, ElasticDL enhances TensorFlow with fault-tolerance and elastic scheduling in the case that you have a Kubernetes cluster. We provide a tutorial showing how to set up a Kuberntes cluster on Google Cloud and run ElasticDL jobs there.  We respect TensorFlow's native distributed computing feature, which doesn't require specific computing platforms like Kubernetes and allows TensorFlow running on any platform.
+In short, ElasticDL enhances TensorFlow with fault-tolerance and elastic scheduling in the case that you have a Kubernetes cluster. We provide a tutorial showing how to set up a Kubernetes cluster on Google Cloud and run ElasticDL jobs there.  We respect TensorFlow's native distributed computing feature, which doesn't require specific computing platforms like Kubernetes and allows TensorFlow running on any platform.
 
 For development guide, please refer to [document](elasticdl/README.md).
 

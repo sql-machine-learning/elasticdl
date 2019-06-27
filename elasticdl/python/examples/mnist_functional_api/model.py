@@ -1,10 +1,9 @@
 import tensorflow as tf
-from tensorflow.python.framework.ops import EagerTensor
 import numpy as np
 import PIL.Image
 
 
-inputs = tf.keras.Input(shape=(28, 28), name="img")
+inputs = tf.keras.Input(shape=(28, 28), name="image")
 x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
 x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu")(x)
 x = tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu")(x)
@@ -25,23 +24,18 @@ def prepare_data_for_a_single_file(file_object, filename):
     label = int(filename.split("/")[-2])
     image = PIL.Image.open(file_object)
     numpy_image = np.array(image)
-    return numpy_image, label
-
-
-def feature_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="image", dtype=tf.dtypes.float32, shape=[28, 28]
-        )
-    ]
-
-
-def label_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="label", dtype=tf.dtypes.int64, shape=[1]
-        )
-    ]
+    example_dict = {
+        "image": tf.train.Feature(
+            float_list=tf.train.FloatList(value=numpy_image.flatten())
+        ),
+        "label": tf.train.Feature(
+            int64_list=tf.train.Int64List(value=[label])
+        ),
+    }
+    example = tf.train.Example(
+        features=tf.train.Features(feature=example_dict)
+    )
+    return example.SerializeToString()
 
 
 def loss(output, labels):
@@ -57,17 +51,18 @@ def optimizer(lr=0.1):
 
 
 def input_fn(records):
+    feature_description = {
+        "image": tf.io.FixedLenFeature([28, 28], tf.float32),
+        "label": tf.io.FixedLenFeature([1], tf.int64),
+    }
     image_list = []
     label_list = []
-    # deserialize
     for r in records:
-        get_np_val = (
-            lambda data: data.numpy()
-            if isinstance(data, EagerTensor)
-            else data
-        )
-        label = get_np_val(r["label"])
-        image = get_np_val(r["image"])
+        # deserialization
+        r = tf.io.parse_single_example(r, feature_description)
+        label = r["label"].numpy()
+        image = r["image"].numpy()
+        # processing data
         image = image.astype(np.float32)
         image /= 255
         label = label.astype(np.int32)

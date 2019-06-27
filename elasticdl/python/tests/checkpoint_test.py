@@ -3,17 +3,15 @@ import tempfile
 import unittest
 import numpy as np
 import recordio
+import tensorflow as tf
 
 from contextlib import closing
-from elasticdl.python.elasticdl.master.servicer import MasterServicer
-from elasticdl.python.elasticdl.master.checkpoint_service import (
-    CheckpointService,
-)
-from elasticdl.python.elasticdl.worker.worker import Worker
-from elasticdl.python.elasticdl.common.model_helper import load_module
-from elasticdl.python.elasticdl.master.task_queue import _TaskQueue
+from elasticdl.python.master.servicer import MasterServicer
+from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.worker.worker import Worker
+from elasticdl.python.common.model_helper import load_module
+from elasticdl.python.master.task_queue import _TaskQueue
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.data.codec import TFExampleCodec
 from elasticdl.python.tests.in_process_master import InProcessMaster
 
 _module_file = os.path.join(
@@ -21,21 +19,22 @@ _module_file = os.path.join(
 )
 
 m = load_module(_module_file)
-columns = m.feature_columns() + m.label_columns()
-feature_name_to_type = {
-    f_col.key: f_col.dtype for f_col in columns
-}
 
 
 def create_recordio_file(size):
-    codec = TFExampleCodec()
-
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     with closing(recordio.Writer(temp_file.name)) as f:
         for _ in range(size):
             x = np.random.rand(1).astype(np.float32)
             y = 2 * x + 1
-            f.write(codec.encode({"x": x, "y": y}, feature_name_to_type))
+            example_dict = {
+                "x": tf.train.Feature(float_list=tf.train.FloatList(value=x)),
+                "y": tf.train.Feature(float_list=tf.train.FloatList(value=y)),
+            }
+            example = tf.train.Example(
+                features=tf.train.Features(feature=example_dict)
+            )
+            f.write(example.SerializeToString())
     return temp_file.name
 
 
@@ -91,13 +90,7 @@ class CheckpointTest(unittest.TestCase):
             self.assertTrue(checkpointer.is_enabled())
 
             # Launch the training
-            codec_file = 'elasticdl/python/data/codec/tf_example_codec.py'
-            worker = Worker(
-                1,
-                _module_file,
-                channel=None,
-                codec_file=codec_file,
-            )
+            worker = Worker(1, _module_file, channel=None)
             filename = create_recordio_file(128)
             task_q = _TaskQueue(
                 {filename: 128}, {}, records_per_task=64, num_epochs=1

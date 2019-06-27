@@ -4,7 +4,7 @@ import os
 import random
 import time
 
-from elasticdl.python.elasticdl.common import k8s_client as k8s
+from elasticdl.python.common import k8s_client as k8s
 
 
 class WorkerTracker(object):
@@ -47,7 +47,7 @@ class K8sClientTest(unittest.TestCase):
                 mount_path=None,
                 volume_name=None,
                 image_pull_policy="Never",
-                restart_policy="Never"
+                restart_policy="Never",
             )
             time.sleep(5)
 
@@ -62,6 +62,20 @@ class K8sClientTest(unittest.TestCase):
         # wait for workers to be deleted
         while tracker._count > 0:
             time.sleep(1)
+
+    def test_create_tensorboard_service(self):
+        c = k8s.Client(
+            image_name="gcr.io/google-samples/hello-app:1.0",
+            namespace="default",
+            job_name="test-job-%d-%d"
+            % (int(time.time()), random.randint(1, 101)),
+            event_callback=None,
+        )
+        c.create_tensorboard_service(port=80, service_type="LoadBalancer")
+        time.sleep(1)
+        service = c._get_tensorboard_service()
+        self.assertTrue("load_balancer" in service["status"])
+        self.assertEqual(service["spec"]["ports"][0]["port"], 80)
 
 
 if __name__ == "__main__":

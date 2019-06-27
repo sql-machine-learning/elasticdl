@@ -4,7 +4,7 @@ import tempfile
 import sys
 
 import docker
-from elasticdl.python.elasticdl.common import k8s_client as k8s
+from elasticdl.python.common import k8s_client as k8s
 import shutil
 
 MODEL_ROOT_PATH = "/model"
@@ -60,10 +60,10 @@ def _add_train_params(parser):
     )
     parser.add_argument(
         "--master_resource_limit",
-        default="cpu=0.1,memory=1024Mi",
         type=str,
         help="The maximal resource required by master, "
-        "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1, "
+        "default to master_resource_request",
     )
     parser.add_argument(
         "--worker_resource_request",
@@ -107,6 +107,12 @@ def _add_train_params(parser):
         type=str,
         help="The name of the Kubernetes namespace where ElasticDL "
         "pods will be created",
+    )
+    parser.add_argument(
+        "--tensorboard_log_dir",
+        default="",
+        type=str,
+        help="The log directory for TensorBoard",
     )
 
 
@@ -226,7 +232,7 @@ RUN if [ -f {TARGET_MODEL_DEF}/requirements.txt ] ;\
 def _submit(args, argv):
     container_args = [
         "-m",
-        "elasticdl.python.elasticdl.master.main",
+        "elasticdl.python.master.main",
         "--job_name",
         args.job_name,
         "--worker_image",
@@ -239,6 +245,8 @@ def _submit(args, argv):
         args.worker_resource_request,
         "--namespace",
         args.namespace,
+        "--tensorboard_log_dir",
+        args.tensorboard_log_dir,
     ]
     container_args.extend(["--image_pull_policy", args.image_pull_policy])
     container_args.extend(["--restart_policy", args.restart_policy])
@@ -259,6 +267,12 @@ def _submit(args, argv):
         )
 
     container_args.extend(argv)
+
+    args.master_resource_limit = (
+        args.master_resource_limit
+        if args.master_resource_limit
+        else args.master_resource_request
+    )
 
     k8s.Client(
         image_name=args.image_name,

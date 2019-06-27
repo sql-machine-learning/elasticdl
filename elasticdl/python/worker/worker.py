@@ -10,11 +10,11 @@ import recordio
 from contextlib import closing
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.elasticdl.common.ndarray import (
+from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
-from elasticdl.python.elasticdl.common.model_helper import load_module
+from elasticdl.python.common.model_helper import load_module
 
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.
@@ -30,7 +30,6 @@ class Worker(object):
         model_file,
         channel=None,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
-        codec_file=None,
     ):
         """
         Arguments:
@@ -43,20 +42,11 @@ class Worker(object):
         self._worker_id = worker_id
         model_module = load_module(model_file)
         self._model = model_module.model
-        self._feature_columns = model_module.feature_columns()
         self._var_created = self._model.built
         self._input_fn = model_module.input_fn
         self._opt_fn = model_module.optimizer
         self._loss = model_module.loss
         self._eval_metrics_fn = model_module.eval_metrics_fn
-        all_columns = self._feature_columns + model_module.label_columns()
-        self._example_spec = tf.feature_column.make_parse_example_spec(
-            all_columns,
-        )
-
-        # Initilize codec
-        codec_module = load_module(codec_file)
-        self._codec = codec_module.codec
 
         if channel is None:
             self._stub = None
@@ -133,23 +123,14 @@ class Worker(object):
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
 
-    def _get_batch(self, reader, batch_size, decode):
+    def _get_batch(self, reader, batch_size):
         res = []
         for i in range(batch_size):
             record = reader.record()
             if record is None:
                 break
-            res.append(decode(record, self._example_spec))
+            res.append(record)
         return res
-
-    def _get_features_and_labels(self, record_buf):
-        batch_input_data, batch_labels = self._input_fn(record_buf)
-        features = [
-            batch_input_data[f_col.key] for f_col in self._feature_columns
-        ]
-        if len(features) == 1:
-            features = features[0]
-        return features, batch_labels
 
     def _create_variable_and_report(self, features):
         # Use model.call to create variables, then report to ps
@@ -182,9 +163,7 @@ class Worker(object):
             )
         ) as reader:
             while True:
-                record_buf = self._get_batch(
-                    reader, task.minibatch_size, self._codec.decode
-                )
+                record_buf = self._get_batch(reader, task.minibatch_size)
                 if not record_buf:
                     break
                 min_model_version = self._process_minibatch(
@@ -192,7 +171,7 @@ class Worker(object):
                 )
 
     def _process_minibatch(self, task, record_buf, min_model_version):
-        features, labels = self._get_features_and_labels(record_buf)
+        features, labels = self._input_fn(record_buf)
         if not self._var_created:
             self._create_variable_and_report(features)
         for _ in range(self._max_minibatch_retry_num):
@@ -229,8 +208,10 @@ class Worker(object):
         """
         while True:
             task = self.get_task()
+            self._logger.info("Receive a new task: %d", task.task_id)
             if not task.shard_file_name:
                 # No more task
+                self._logger.info("No more task, stopping")
                 break
             err_msg = ""
             try:

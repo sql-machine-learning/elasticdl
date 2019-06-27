@@ -4,7 +4,7 @@ import numpy as np
 from tensorflow.keras.layers import Input, Dense
 from tensorflow.keras import Model
 
-inputs = Input(shape=(1, 1))
+inputs = Input(shape=(1, 1), name="x")
 outputs = Dense(1)(inputs)
 model = Model(inputs, outputs)
 
@@ -13,27 +13,15 @@ def loss(predictions, labels):
     return tf.reduce_mean(tf.square(predictions - labels))
 
 
-def feature_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="x", dtype=tf.dtypes.float32, shape=[1]
-        )
-    ]
-
-
-def label_columns():
-    return [
-        tf.feature_column.numeric_column(
-            key="y", dtype=tf.dtypes.float32, shape=[1]
-        )
-    ]
-
-
 def input_fn(records):
+    feature_description = {
+        "x": tf.io.FixedLenFeature([1], tf.float32),
+        "y": tf.io.FixedLenFeature([1], tf.float32),
+    }
     x_list = []
     y_list = []
-    # deserialize
     for r in records:
+        r = tf.io.parse_single_example(r, feature_description)
         x_list.append([r["x"]])
         y_list.append([r["y"]])
     # batching

@@ -5,13 +5,11 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.python.elasticdl.common.ndarray import (
+from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
-from elasticdl.python.elasticdl.common.model_helper import (
-    load_from_checkpoint_file,
-)
+from elasticdl.python.common.model_helper import load_from_checkpoint_file
 
 
 import numpy as np
@@ -83,9 +81,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         elif init_var:
             self._init_model_from_var_list(init_var)
         else:
-            self._logger.info("Model is not intialized. It will be "
-                              "initialized by the first update from "
-                              "the worker.")
+            self._logger.info(
+                "Model is not intialized. It will be "
+                "initialized by the first update from "
+                "the worker."
+            )
 
     @staticmethod
     def var_name_encode(name):

@@ -2,8 +2,8 @@ import argparse
 import grpc
 import logging
 
-from elasticdl.python.elasticdl.worker.worker import Worker  # noqa
-from elasticdl.python.elasticdl.common.constants import GRPC
+from elasticdl.python.worker.worker import Worker  # noqa
+from elasticdl.python.common.constants import GRPC
 
 
 def _parse_args():
@@ -18,15 +18,10 @@ def _parse_args():
         required=True,
     )
     parser.add_argument(
-        "--codec_file",
-        default="elasticdl/python/data/codec/tf_example_codec.py",
-        help="Codec file name",
-    )
-    parser.add_argument(
         "--log_level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         type=str.upper,
-        default="WARNING",
+        default="INFO",
         help="Set the logging level",
     )
 
@@ -38,10 +33,7 @@ def main():
     channel = grpc.insecure_channel(
         args.master_addr,
         options=[
-            (
-                "grpc.max_send_message_length",
-                GRPC.MAX_SEND_MESSAGE_LENGTH,
-            ),
+            ("grpc.max_send_message_length", GRPC.MAX_SEND_MESSAGE_LENGTH),
             (
                 "grpc.max_receive_message_length",
                 GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
@@ -55,13 +47,10 @@ def main():
         "[%(filename)s:%(lineno)d] %(message)s"
     )
     logging.getLogger().setLevel(args.log_level)
+    logger = logging.getLogger(__name__)
 
-    worker = Worker(
-        args.worker_id,
-        args.model_file,
-        channel=channel,
-        codec_file=args.codec_file,
-    )
+    logger.info("Starting worker %d", args.worker_id)
+    worker = Worker(args.worker_id, args.model_file, channel=channel)
     worker.run()
 
 
