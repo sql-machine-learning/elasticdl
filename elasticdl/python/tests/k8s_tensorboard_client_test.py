@@ -12,7 +12,7 @@ from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
     os.environ.get("K8S_TESTS", "True") == "False",
     "No Kubernetes cluster available",
 )
-class K8sClientTest(unittest.TestCase):
+class K8sTensorBoardClientTest(unittest.TestCase):
     def test_create_tensorboard_service(self):
         client = k8s.Client(
             image_name=None,
