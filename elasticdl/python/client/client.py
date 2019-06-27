@@ -20,7 +20,9 @@ evaluate      Submit a ElasticDL distributed evaluation job.
 """
     )
     subparsers = parser.add_subparsers()
-    train_parser = subparsers.add_parser("train", help="client.py train -h")
+    train_parser = subparsers.add_parser(
+        "train", help="client.py train -h"
+    )
     train_parser.set_defaults(func=_train)
     _add_train_params(train_parser)
 
@@ -47,9 +49,12 @@ def _add_train_params(parser):
         help="Whether to push the newly built image to remote registry",
     )
     parser.add_argument(
-        "--image_name", help="The docker image name built by ElasticDL client"
+        "--image_name",
+        help="The docker image name built by ElasticDL client",
     )
-    parser.add_argument("--job_name", help="ElasticDL job name", required=True)
+    parser.add_argument(
+        "--job_name", help="ElasticDL job name", required=True
+    )
     parser.add_argument(
         "--master_resource_request",
         default="cpu=0.1,memory=1024Mi",
@@ -79,7 +84,8 @@ def _add_train_params(parser):
         "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
-        "--master_pod_priority", help="The requested priority of master pod"
+        "--master_pod_priority",
+        help="The requested priority of master pod",
     )
     parser.add_argument(
         "--volume_name", help="The volume name of network file system"
@@ -98,7 +104,8 @@ def _add_train_params(parser):
         help="The pod restart policy when pod crashed",
     )
     parser.add_argument(
-        "--extra_pypi_index", help="The extra python package repository"
+        "--extra_pypi_index",
+        help="The extra python package repository",
     )
     parser.add_argument(
         "--namespace",
@@ -122,7 +129,10 @@ def _add_evaluate_params(parser):
 
 def _train(args, argv):
     _build_docker_image(
-        args.model_def, args.image_name, args.push_image, args.extra_pypi_index
+        args.model_def,
+        args.image_name,
+        args.push_image,
+        args.extra_pypi_index,
     )
     _submit(args, argv)
 
@@ -134,11 +144,15 @@ def _evaluate(args, argv):
 
 def _m_file_in_docker(model_def):
     return os.path.join(
-        MODEL_ROOT_PATH, os.path.basename(model_def), os.path.basename(model_def) + ".py" 
+        MODEL_ROOT_PATH,
+        os.path.basename(model_def),
+        os.path.basename(model_def) + ".py",
     )
 
 
-def _build_docker_image(m_def, image_name, push_image, extra_pypi_index):
+def _build_docker_image(
+    m_def, image_name, push_image, extra_pypi_index
+):
     docker_template = """
 FROM tensorflow/tensorflow:2.0.0b0-py3 as base
 
@@ -168,11 +182,16 @@ COPY {SOURCE_MODEL_DEF} {TARGET_MODEL_DEF}
         base_dir = os.path.abspath(
             os.path.join(os.path.dirname(__file__), "../../")
         )
-        shutil.copytree(base_dir, ctx_dir + "/" + os.path.basename(base_dir))
-        with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
+        shutil.copytree(
+            base_dir, ctx_dir + "/" + os.path.basename(base_dir)
+        )
+        with tempfile.NamedTemporaryFile(
+            mode="w+", delete=False
+        ) as df:
             if os.path.isdir(m_def):
                 shutil.copytree(
-                    m_def, os.path.join(ctx_dir, os.path.basename(m_def))
+                    m_def,
+                    os.path.join(ctx_dir, os.path.basename(m_def)),
                 )
                 source_model_dir = os.path.basename(m_def)
                 target_model_dir = os.path.join(
@@ -197,7 +216,9 @@ RUN if [ -f {TARGET_MODEL_DEF}/requirements.txt ] ;\
                     MODEL_ROOT_PATH=MODEL_ROOT_PATH,
                 )
             )
-        client = docker.APIClient(base_url="unix://var/run/docker.sock")
+        client = docker.APIClient(
+            base_url="unix://var/run/docker.sock"
+        )
         print("===== Building Docker Image =====")
         for line in client.build(
             dockerfile=df.name,
@@ -240,7 +261,9 @@ def _submit(args, argv):
         "--tensorboard_log_dir",
         args.tensorboard_log_dir,
     ]
-    container_args.extend(["--image_pull_policy", args.image_pull_policy])
+    container_args.extend(
+        ["--image_pull_policy", args.image_pull_policy]
+    )
     container_args.extend(["--restart_policy", args.restart_policy])
 
     if all([args.volume_name, args.mount_path]):
