@@ -12,6 +12,7 @@ from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.worker.worker import Worker
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.common.model_helper import get_model_file
 
 
 def _get_model_info(file_name):
@@ -48,13 +49,13 @@ def create_recordio_file(size, shape):
 
 class ExampleTest(unittest.TestCase):
     def distributed_train_and_evaluate(
-        self, file_name, image_shape, training=True
+        self, model_def, image_shape, training=True
     ):
         """
         Run distributed training and evaluation with a local master.
         grpc calls are mocked by local master call.
         """
-        module_file = _get_model_info(file_name)
+        module_file = _get_model_info(get_model_file(model_def))
 
         worker = Worker(1, module_file, None)
 

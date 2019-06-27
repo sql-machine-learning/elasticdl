@@ -7,11 +7,17 @@ Currently for Mac docker-for-desktop only.
 Make sure the Kubernetes docker-for-desktop (not minikube) is installed on your Mac.
 
 
-## Write a Keras Model
+## Prepare Model Definition
 
-**(TODO: Describe programming API)**
+A model definition directory is needed to be created, the files in the directory are as follows:
 
-There are several Keras examples provided in `elasticdl/examples` directory.
+* (mandatory) A Python source file which defines the keras model and use the directory base name as the filename.
+* (mandatory) The file `__init__.py` is necessary.
+* (optional) Source files of other Python modules.
+* (optional) A requirements.txt file that lists dependencies required by the above source files.
+
+
+There are several Keras examples provided in `elasticdl/python/examples` directory.
 
 ## Submit ElasticDL Job In Development Mode
 
