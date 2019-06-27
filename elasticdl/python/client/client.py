@@ -8,7 +8,6 @@ from elasticdl.python.common import k8s_client as k8s
 import shutil
 
 MODEL_ROOT_PATH = "/model"
-DEFAULT_MODEL_FILE = "model.py"
 
 
 def main():
@@ -134,12 +133,9 @@ def _evaluate(args, argv):
 
 
 def _m_file_in_docker(model_def):
-    if os.path.isdir(model_def):
-        return os.path.join(
-            MODEL_ROOT_PATH, os.path.basename(model_def), DEFAULT_MODEL_FILE
-        )
-    else:
-        return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_def))
+    return os.path.join(
+        MODEL_ROOT_PATH, os.path.basename(model_def), os.path.basename(model_def) + ".py" 
+    )
 
 
 def _build_docker_image(m_def, image_name, push_image, extra_pypi_index):
@@ -170,7 +166,7 @@ COPY {SOURCE_MODEL_DEF} {TARGET_MODEL_DEF}
 """
     with tempfile.TemporaryDirectory() as ctx_dir:
         base_dir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../../../")
+            os.path.join(os.path.dirname(__file__), "../../")
         )
         shutil.copytree(base_dir, ctx_dir + "/" + os.path.basename(base_dir))
         with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
@@ -191,10 +187,6 @@ RUN if [ -f {TARGET_MODEL_DEF}/requirements.txt ] ;\
     fi
 """
                 )
-            elif os.path.isfile(m_def):
-                shutil.copy(m_def, ctx_dir)
-                source_model_dir = os.path.basename(m_def)
-                target_model_dir = _m_file_in_docker(m_def)
             else:
                 raise ValueError("Invalid model def: " + m_def)
             df.write(
