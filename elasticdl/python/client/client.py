@@ -132,12 +132,8 @@ def _evaluate(args, argv):
     raise NotImplementedError()
 
 
-def _m_file_in_docker(model_def):
-    return os.path.join(
-        MODEL_ROOT_PATH,
-        os.path.basename(model_def),
-        os.path.basename(model_def) + ".py",
-    )
+def _model_def_in_docker(model_def):
+    return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_def))
 
 
 def _build_docker_image(m_def, image_name, push_image, extra_pypi_index):
@@ -231,8 +227,8 @@ def _submit(args, argv):
         args.job_name,
         "--worker_image",
         args.image_name,
-        "--model_file",
-        _m_file_in_docker(args.model_def),
+        "--model_def",
+        _model_def_in_docker(args.model_def),
         "--worker_resource_request",
         args.worker_resource_request,
         "--worker_resource_limit",

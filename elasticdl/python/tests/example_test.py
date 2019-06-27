@@ -96,50 +96,42 @@ class ExampleTest(unittest.TestCase):
 
     def test_mnist_functional_bytes_train(self):
         self.distributed_train_and_evaluate(
-            "mnist_functional_api/mnist_functional_api.py",
-            [28, 28],
-            training=True,
+            "mnist_functional_api", [28, 28], training=True
         )
 
     def test_mnist_functional_bytes_evaluate(self):
         self.distributed_train_and_evaluate(
-            "mnist_functional_api/mnist_functional_api.py",
-            [28, 28],
-            training=False,
+            "mnist_functional_api", [28, 28], training=False
         )
 
     def test_mnist_subclass_bytes_train(self):
         self.distributed_train_and_evaluate(
-            "mnist_subclass/mnist_subclass.py", [28, 28], training=True
+            "mnist_subclass", [28, 28], training=True
         )
 
     def test_mnist_subclass_bytes_evaluate(self):
         self.distributed_train_and_evaluate(
-            "mnist_subclass/mnist_subclass.py", [28, 28], training=False
+            "mnist_subclass", [28, 28], training=False
         )
 
     def test_cifar10_functional_bytes_train(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api/cifar10_functional_api.py",
-            [32, 32, 3],
-            training=True,
+            "cifar10_functional_api", [32, 32, 3], training=True
         )
 
     def test_cifar10_functional_bytes_evaluate(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api/cifar10_functional_api.py",
-            [32, 32, 3],
-            training=False,
+            "cifar10_functional_api", [32, 32, 3], training=False
         )
 
     def test_cifar10_subclass_bytes_train(self):
         self.distributed_train_and_evaluate(
-            "cifar10_subclass/cifar10_subclass.py", [32, 32, 3], training=True
+            "cifar10_subclass", [32, 32, 3], training=True
         )
 
     def test_cifar10_subclass_bytes_evaluate(self):
         self.distributed_train_and_evaluate(
-            "cifar10_subclass/cifar10_subclass.py", [32, 32, 3], training=False
+            "cifar10_subclass", [32, 32, 3], training=False
         )
 
 

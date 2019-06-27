@@ -15,7 +15,7 @@ from elasticdl.python.master.tensorboard_service import TensorboardService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_queue import _TaskQueue
 from elasticdl.python.master.k8s_worker_manager import WorkerManager
-from elasticdl.python.common.model_helper import load_module
+from elasticdl.python.common.model_helper import load_module, get_model_file
 from elasticdl.python.common.constants import GRPC
 
 
@@ -60,8 +60,9 @@ def _non_neg_int(arg):
 def _parse_args():
     parser = argparse.ArgumentParser(description="ElasticDL Master")
     parser.add_argument(
-        "--model_file",
-        help="Full file path of user defined neural model",
+        "--model_def",
+        help="The directory that contains user-defined model files "
+        "or a specific model file",
         required=True,
     )
     parser.add_argument(
@@ -226,7 +227,10 @@ def main():
         args.records_per_task,
         args.num_epochs,
     )
-    model_module = load_module(args.model_file)
+    logger.info(args.model_def)
+    logger.info(get_model_file)
+    logger.info(get_model_file(args.model_def))
+    model_module = load_module(get_model_file(args.model_def))
     model_inst = model_module.model
     optimizer = model_module.optimizer()
 
@@ -297,8 +301,8 @@ def main():
         worker_args = [
             "-m",
             "elasticdl.python.worker.main",
-            "--model_file",
-            args.model_file,
+            "--model_def",
+            args.model_def,
             "--master_addr",
             master_addr,
             "--log_level",

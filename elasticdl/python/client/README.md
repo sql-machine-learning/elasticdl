@@ -27,7 +27,7 @@ Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and subm
 
 ```bash
 python -m elasticdl.python.client.client train \
-    --model_def=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass.py \
+    --model_def=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass \
     --training_data_dir=/data/mnist/train \
     --evaluation_data_dir=/data/mnist/test \
     --num_epochs=1 \
