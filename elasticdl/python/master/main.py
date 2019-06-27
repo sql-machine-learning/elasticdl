@@ -183,7 +183,13 @@ def _parse_args():
         "--tensorboard_log_dir",
         default="",
         type=str,
-        help="The log directory for TensorBoard",
+        help="Directory where TensorBoard will look to find "
+        "TensorFlow event files that it can display. "
+        "TensorBoard will recursively walk the directory "
+        "structure rooted at log dir, looking for .*tfevents.* "
+        "files. You may also pass a comma separated list of log "
+        "directories, and TensorBoard will watch each "
+        "directory.",
     )
     return parser.parse_args()
 
