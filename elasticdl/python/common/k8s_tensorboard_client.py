@@ -54,10 +54,16 @@ class TensorBoardClient(object):
         )
 
     def _get_tensorboard_service(self):
-        return self._k8s_client.client.read_namespaced_service(
-            name=self._get_tensorboard_service_name(),
-            namespace=self._k8s_client.namespace,
-        ).to_dict()
+        try:
+            return self._k8s_client.client.read_namespaced_service(
+                name=self._get_tensorboard_service_name(),
+                namespace=self._k8s_client.namespace,
+            ).to_dict()
+        except client.api_client.ApiException as e:
+            self._logger.warning(
+                "Exception when reading TensorBoard service: %s\n" % e
+            )
+            return None
 
     def get_tensorboard_external_ip(self, check_interval=5, wait_timeout=120):
         self._logger.info(
@@ -70,7 +76,10 @@ class TensorBoardClient(object):
                     "Unable to get an external IP for TensorBoard service"
                 )
             service = self._get_tensorboard_service()
-            if service["status"]["load_balancer"]["ingress"] is None:
+            if (
+                service is None
+                or service["status"]["load_balancer"]["ingress"] is None
+            ):
                 time.sleep(check_interval)
             else:
                 return service["status"]["load_balancer"]["ingress"][0]["ip"]
