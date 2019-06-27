@@ -5,6 +5,7 @@ import threading
 from collections import Counter
 from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.common.k8s_resource import parse
+from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 
 
 class WorkerManager(object):
@@ -84,8 +85,9 @@ class WorkerManager(object):
             self._start_worker(self._next_worker_id())
 
     def start_tensorboard_service(self):
-        self._k8s_client.create_tensorboard_service()
-        tb_external_ip = self._k8s_client.get_tensorboard_external_ip()
+        tb_client = TensorBoardClient(self._k8s_client)
+        tb_client.create_tensorboard_service()
+        tb_external_ip = tb_client.get_tensorboard_external_ip()
         self._logger.info(
             "TensorBoard service is available at external IP: %s"
             % tb_external_ip
