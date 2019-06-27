@@ -21,7 +21,7 @@ git clone https://github.com/wangkuiyi/elasticdl.git
 cd elasticdl
 ```
 
-Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and submit a model, e.g. `/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass/model.py` to it.
+Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and submit a model, e.g. `/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass/mnist_subclass.py` to it.
 
 ### Submit to local Kubernetes on Your Machine
 

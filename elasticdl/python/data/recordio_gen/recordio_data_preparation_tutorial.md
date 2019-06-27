@@ -31,7 +31,7 @@ tar -cvf $TRAINING_DATA_DIR/$TAR_FILE $TRAINING_DATA_DIR/mnist_sampled_training_
 2. Run PySpark job in Docker Container:
     ```bash
     OUTPUT_DIR=~/Desktop/sample_recordio_output
-    MODEL_FILE=/elasticdl/python/examples/mnist_functional_api/model.py
+    MODEL_FILE=/elasticdl/python/examples/mnist_functional_api/mnist_functional_api.py
     MOUNTED_TRAINING_DATA_DIR=/data/training
     MOUNTED_OUTPUT_DIR=/data/output
 
@@ -107,7 +107,7 @@ zip -r elasticdl.zip elasticdl
 gcloud dataproc jobs submit pyspark \
     elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/spark_gen_recordio.py \
     --cluster=$CLUSTER_NAME --region=global --py-files=elasticdl.zip \
-    --files=elasticdl/python/examples/mnist_functional_api/model.py \
+    --files=elasticdl/python/examples/mnist_functional_api/mnist_functional_api.py \
     -- --training_data_dir=/filestore_mnt/$TRAINING_DATA_DIR \
     --output_dir=/filestore_mnt --model_file=$MODEL_FILE --records_per_file=200
 ```
