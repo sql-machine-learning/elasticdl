@@ -2,7 +2,6 @@ import logging
 import os
 import threading
 import traceback
-import time
 
 from kubernetes import client, config, watch
 from kubernetes.client import (
@@ -38,11 +37,11 @@ class Client(object):
             # Use user's kube config
             config.load_kube_config()
 
-        self._v1 = client.CoreV1Api()
+        self.client = client.CoreV1Api()
+        self.namespace = namespace
+        self.job_name = job_name
         self._logger = logging.getLogger(__name__)
         self._image = image_name
-        self._ns = namespace
-        self._job_name = job_name
         self._event_cb = event_callback
         if self._event_cb:
             threading.Thread(
@@ -51,9 +50,9 @@ class Client(object):
 
     def _watch(self):
         stream = watch.Watch().stream(
-            self._v1.list_namespaced_pod,
-            self._ns,
-            label_selector=ELASTICDL_JOB_KEY + "=" + self._job_name,
+            self.client.list_namespaced_pod,
+            self.namespace,
+            label_selector=ELASTICDL_JOB_KEY + "=" + self.job_name,
         )
         for event in stream:
             try:
@@ -62,22 +61,22 @@ class Client(object):
                 traceback.print_exc()
 
     def get_master_pod_name(self):
-        return "elasticdl-%s-master" % self._job_name
+        return "elasticdl-%s-master" % self.job_name
 
     def get_worker_pod_name(self, worker_id):
-        return "elasticdl-%s-worker-%s" % (self._job_name, str(worker_id))
+        return "elasticdl-%s-worker-%s" % (self.job_name, str(worker_id))
 
-    def _get_master_pod(self):
+    def get_master_pod(self):
         try:
-            return self._v1.read_namespaced_pod(
-                name=self.get_master_pod_name(), namespace=self._ns
+            return self.client.read_namespaced_pod(
+                name=self.get_master_pod_name(), namespace=self.namespace
             )
         except client.api_client.ApiException as e:
             self._logger.warning("Exception when reading master pod: %s\n" % e)
             return None
 
     @staticmethod
-    def _create_owner_reference(owner_pod):
+    def create_owner_reference(owner_pod):
         owner_ref = (
             [
                 client.V1OwnerReference(
@@ -143,10 +142,10 @@ class Client(object):
                     "app": ELASTICDL_APP_NAME,
                     ELASTICDL_JOB_KEY: kargs["job_name"],
                 },
-                owner_references=self._create_owner_reference(
+                owner_references=self.create_owner_reference(
                     kargs["owner_pod"]
                 ),
-                namespace=self._ns,
+                namespace=self.namespace,
             ),
         )
         return pod
@@ -176,16 +175,16 @@ class Client(object):
             owner_pod=None,
             env=env,
         )
-        resp = self._v1.create_namespaced_pod(self._ns, pod)
+        resp = self.client.create_namespaced_pod(self.namespace, pod)
         self._logger.info("Master launched. status='%s'" % str(resp.status))
 
     def create_worker(self, **kargs):
         # Find that master pod that will be used as the owner reference
         # for this worker pod.
-        master_pod = self._get_master_pod()
+        master_pod = self.get_master_pod()
         pod = self._create_pod(
             pod_name=self.get_worker_pod_name(kargs["worker_id"]),
-            job_name=self._job_name,
+            job_name=self.job_name,
             image_name=self._image,
             command=kargs["command"],
             resource_requests=kargs["resource_requests"],
@@ -199,67 +198,11 @@ class Client(object):
             owner_pod=master_pod,
             env=None,
         )
-        return self._v1.create_namespaced_pod(self._ns, pod)
+        return self.client.create_namespaced_pod(self.namespace, pod)
 
     def delete_worker(self, worker_id):
-        self._v1.delete_namespaced_pod(
+        self.client.delete_namespaced_pod(
             self.get_worker_pod_name(worker_id),
-            self._ns,
+            self.namespace,
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )
-
-    # TODO: Move TensorBoard related code to a separate file
-    def _get_tensorboard_service_name(self):
-        return "tensorboard-" + self._job_name
-
-    def create_tensorboard_service(
-        self, port=80, target_port=6006, service_type="LoadBalancer"
-    ):
-        self._v1.create_namespaced_service(
-            self._ns,
-            client.V1Service(
-                api_version="v1",
-                kind="Service",
-                metadata=client.V1ObjectMeta(
-                    name=self._get_tensorboard_service_name(),
-                    labels={
-                        "app": ELASTICDL_APP_NAME,
-                        ELASTICDL_JOB_KEY: self._job_name,
-                    },
-                    owner_references=self._create_owner_reference(
-                        self._get_master_pod()
-                    ),
-                    namespace=self._ns,
-                ),
-                spec=client.V1ServiceSpec(
-                    ports=[
-                        client.V1ServicePort(
-                            port=port, target_port=target_port
-                        )
-                    ],
-                    selector={ELASTICDL_JOB_KEY: self._job_name},
-                    type=service_type,
-                ),
-            ),
-        )
-
-    def _get_tensorboard_service(self):
-        return self._v1.read_namespaced_service(
-            name=self._get_tensorboard_service_name(), namespace=self._ns
-        ).to_dict()
-
-    def get_tensorboard_external_ip(self, check_interval=5, wait_timeout=120):
-        self._logger.info(
-            "Waiting for pending external IP of TensorBoard service..."
-        )
-        start_time = time.time()
-        while True:
-            if time.time() - start_time > wait_timeout:
-                raise Exception(
-                    "Unable to get an external IP for TensorBoard service"
-                )
-            service = self._get_tensorboard_service()
-            if service["status"]["load_balancer"]["ingress"] is None:
-                time.sleep(check_interval)
-            else:
-                return service["status"]["load_balancer"]["ingress"][0]["ip"]
