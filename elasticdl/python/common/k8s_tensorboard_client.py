@@ -7,7 +7,7 @@ from elasticdl.python.common import k8s_client as k8s
 
 
 class TensorBoardClient(object):
-    def __init__(self, k8s_client: k8s.Client):
+    def __init__(self, k8s_client):
         """
         ElasticDL k8s TensorBoard client.
 
