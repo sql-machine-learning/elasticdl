@@ -4,7 +4,7 @@ import threading
 
 from collections import Counter
 from elasticdl.python.common import k8s_client as k8s
-import elasticdl.python.common.k8s_resource as k8s_resource
+from elasticdl.python.common.k8s_resource import parse
 
 
 class WorkerManager(object):
@@ -28,8 +28,8 @@ class WorkerManager(object):
         self._args = args
         self._num_workers = num_workers
 
-        self._resource_requests = k8s_resource.parse(worker_resource_request)
-        self._resource_limits = k8s_resource.parse(worker_resource_limit)
+        self._resource_requests = parse(worker_resource_request)
+        self._resource_limits = parse(worker_resource_limit)
         self._restart_policy = restart_policy
         self._pod_priority = pod_priority
         self._mount_path = mount_path
