@@ -47,7 +47,8 @@ python -m elasticdl.python.client.client train \
     --checkpoint_steps=2 \
     --grads_to_wait=2 \
     --job_name=test \
-    --image_base=elasticdl:dev \
+    --image_name=elasticdl:dev \
+    --image_pull_policy=Never \
     --log_level=INFO
 ```
 
