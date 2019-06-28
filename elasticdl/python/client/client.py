@@ -47,8 +47,11 @@ def _add_train_params(parser):
         help="Whether to push the newly built image to remote registry",
     )
     parser.add_argument(
-        "--image_name", help="The docker image name built by ElasticDL client"
+        "--image_name",
+        help="The Docker image name built by ElasticDL client",
+        required=True,
     )
+    parser.add_argument("--image_base", help="Base Docker image.")
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
         "--master_resource_request",
@@ -85,7 +88,7 @@ def _add_train_params(parser):
         "--volume_name", help="The volume name of network file system"
     )
     parser.add_argument(
-        "--mount_path", help="The mount path in the docker container"
+        "--mount_path", help="The mount path in the Docker container"
     )
     parser.add_argument(
         "--image_pull_policy",
@@ -128,7 +131,11 @@ def _add_evaluate_params(parser):
 
 def _train(args, argv):
     _build_docker_image(
-        args.model_def, args.image_name, args.push_image, args.extra_pypi_index
+        args.model_def,
+        args.image_name,
+        args.push_image,
+        args.extra_pypi_index,
+        args.image_base,
     )
     _submit(args, argv)
 
@@ -142,16 +149,29 @@ def _model_def_in_docker(model_def):
     return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_def))
 
 
-def _build_docker_image(m_def, image_name, push_image, extra_pypi_index):
-    docker_template = """
+def _build_docker_image(
+    m_def, image_name, push_image, extra_pypi_index, image_base
+):
+    if image_base:
+        docker_template = """
+FROM {IMAGE_BASE} as base
+COPY {SOURCE_MODEL_DEF} {TARGET_MODEL_DEF}
+ENV PYTHONPATH=/elasticdl:${MODEL_ROOT_PATH}
+"""
+    else:
+        docker_template = """
 FROM tensorflow/tensorflow:2.0.0b0-py3 as base
 
 COPY elasticdl /elasticdl
 RUN pip install -r elasticdl/requirements.txt
 RUN make -f elasticdl/Makefile
 COPY {SOURCE_MODEL_DEF} {TARGET_MODEL_DEF}
-
 ENV PYTHONPATH=/elasticdl:${MODEL_ROOT_PATH}
+
+RUN if [ -f {TARGET_MODEL_DEF}/requirements.txt ] ;\
+    then pip install -r {TARGET_MODEL_DEF}/requirements.txt ;\
+    else echo no {TARGET_MODEL_DEF}/requirements.txt found ;\
+    fi
 """
     with tempfile.TemporaryDirectory() as ctx_dir:
         base_dir = os.path.abspath(
@@ -167,23 +187,14 @@ ENV PYTHONPATH=/elasticdl:${MODEL_ROOT_PATH}
                 target_model_dir = os.path.join(
                     MODEL_ROOT_PATH, os.path.basename(m_def)
                 )
-                docker_template = (
-                    docker_template
-                    + """
-RUN if [ -f {TARGET_MODEL_DEF}/requirements.txt ] ;\
-    then pip install -r {TARGET_MODEL_DEF}/requirements.txt ;\
-    else echo no {TARGET_MODEL_DEF}/requirements.txt found ;\
-    fi
-"""
-                )
             else:
                 raise ValueError("Invalid model def: " + m_def)
             df.write(
                 docker_template.format(
                     SOURCE_MODEL_DEF=source_model_dir,
                     TARGET_MODEL_DEF=target_model_dir,
-                    EXTRA_PYPI_INDEX=extra_pypi_index,
                     MODEL_ROOT_PATH=MODEL_ROOT_PATH,
+                    IMAGE_BASE=image_base,
                 )
             )
         client = docker.APIClient(base_url="unix://var/run/docker.sock")
