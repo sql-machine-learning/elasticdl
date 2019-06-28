@@ -23,6 +23,8 @@ spec:
       --minibatch_size=64
       --num_workers=2
       --checkpoint_steps=10
+      --evaluation_start_delay_secs=10
+      --evaluation_throttle_secs=25
       --worker_image=elasticdl:ci
       --worker_resource_request="cpu=400m,memory=2048Mi"
       --worker_resource_limit="cpu=1,memory=3072Mi"
