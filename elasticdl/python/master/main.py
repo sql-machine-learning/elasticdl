@@ -236,24 +236,23 @@ def main():
     model_inst = model_module.model
     optimizer = model_module.optimizer()
 
+    include_evaluation = args.evaluation_data_dir is not ""
+
     # Initialize checkpoint service
-    if args.checkpoint_steps:
+    if args.checkpoint_steps or include_evaluation:
         logger.info("Starting checkpoint service")
         checkpoint_service = CheckpointService(
             args.checkpoint_dir,
             args.checkpoint_steps,
             args.keep_checkpoint_max,
+            include_evaluation,
         )
     else:
         checkpoint_service = None
 
     # Initialize evaluation service
     evaluation_service = None
-    if args.evaluation_data_dir:
-        if args.checkpoint_steps <= 0:
-            raise ValueError(
-                "Checkpoint should also be enabled when evaluation is enabled"
-            )
+    if include_evaluation:
         logger.info(
             "Starting evaluation service with throttle seconds %d",
             args.evaluation_throttle_secs,

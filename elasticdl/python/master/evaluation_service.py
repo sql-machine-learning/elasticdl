@@ -19,6 +19,10 @@ class _EvaluationJob(object):
         self._completed_tasks = 0
         self._completed_minibatches = 0
         self._evaluation_metrics = defaultdict()
+        self._master_servicer = None
+
+    def set_master_servicer(self, master_servicer):
+        self._master_servicer = master_servicer
 
     def complete_task(self):
         self._completed_tasks += 1
@@ -158,3 +162,5 @@ class EvaluationService(object):
             self._logger.info(
                 "Evaluation metrics: %s" % str(evaluation_metrics)
             )
+            # TODO: 1. delete checkpoint file
+            #       2. create new round if possible

@@ -40,7 +40,7 @@ def create_recordio_file(size):
 
 class CheckpointTest(unittest.TestCase):
     def testNeedToCheckpoint(self):
-        checkpointer = CheckpointService("", 0, 5)
+        checkpointer = CheckpointService("", 0, 5, False)
         self.assertFalse(checkpointer.is_enabled())
         checkpointer._steps = 3
         self.assertTrue(checkpointer.is_enabled())
@@ -57,7 +57,7 @@ class CheckpointTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testSaveLoadCheckpoint")
             os.makedirs(chkp_dir)
-            checkpointer = CheckpointService(chkp_dir, 3, 5)
+            checkpointer = CheckpointService(chkp_dir, 3, 5, False)
             self.assertTrue(checkpointer.is_enabled())
 
             master = MasterServicer(
@@ -75,7 +75,7 @@ class CheckpointTest(unittest.TestCase):
             req.method = elasticdl_pb2.MINIMUM
             req.version = 0
             model = master.GetModel(req, None)
-            checkpointer.save(0, model)
+            checkpointer.save(0, model, False)
             loaded_model = checkpointer.get_checkpoint_model(0)
             self.assertEqual(model.version, loaded_model.version)
             for k in model.param:
@@ -86,7 +86,7 @@ class CheckpointTest(unittest.TestCase):
             chkp_dir = os.path.join(tempdir, "testMaxCheckpointVersions")
             os.makedirs(chkp_dir)
             # Save checkpoints every 2 steps, and keep 5 checkpoints at most
-            checkpointer = CheckpointService(chkp_dir, 2, 5)
+            checkpointer = CheckpointService(chkp_dir, 2, 5, False)
             self.assertTrue(checkpointer.is_enabled())
 
             # Launch the training
@@ -147,14 +147,14 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 init_var=init_var,
                 checkpoint_filename_for_init="",
-                checkpoint_service=CheckpointService(chkp_dir, 2, 3),
+                checkpoint_service=CheckpointService(chkp_dir, 2, 3, False),
                 evaluation_service=None,
             )
             req = elasticdl_pb2.GetModelRequest()
             req.method = elasticdl_pb2.MINIMUM
             req.version = 0
             model = master.GetModel(req, None)
-            master._checkpoint_service.save(master._version, model)
+            master._checkpoint_service.save(master._version, model, False)
 
             chkp_file = master._checkpoint_service.get_checkpoint_path(
                 master._version
@@ -167,7 +167,7 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 init_var=init_var,
                 checkpoint_filename_for_init=chkp_file,
-                checkpoint_service=CheckpointService("", 0, 0),
+                checkpoint_service=CheckpointService("", 0, 0, False),
                 evaluation_service=None,
             )
             model2 = master2.GetModel(req, None)
@@ -180,7 +180,7 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 init_var=[],
                 checkpoint_filename_for_init=chkp_file,
-                checkpoint_service=CheckpointService("", 0, 0),
+                checkpoint_service=CheckpointService("", 0, 0, False),
                 evaluation_service=None,
             )
             model3 = master3.GetModel(req, None)
