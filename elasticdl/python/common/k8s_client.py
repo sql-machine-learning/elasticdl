@@ -41,7 +41,7 @@ class Client(object):
         self.namespace = namespace
         self.job_name = job_name
         self._logger = logging.getLogger(__name__)
-        self._image = image_name
+        self._image_name = image_name
         self._event_cb = event_callback
         if self._event_cb:
             threading.Thread(
@@ -160,9 +160,9 @@ class Client(object):
             )
         ]
         pod = self._create_pod(
-            pod_name="elasticdl-" + kargs["job_name"] + "-master",
-            job_name=kargs["job_name"],
-            image_name=kargs["image_name"],
+            pod_name=self.get_master_pod_name(),
+            job_name=self.job_name,
+            image_name=self._image_name,
             command=["python"],
             resource_requests=parse(kargs["resource_requests"]),
             resource_limits=parse(kargs["resource_limits"]),
@@ -185,7 +185,7 @@ class Client(object):
         pod = self._create_pod(
             pod_name=self.get_worker_pod_name(kargs["worker_id"]),
             job_name=self.job_name,
-            image_name=self._image,
+            image_name=self._image_name,
             command=kargs["command"],
             resource_requests=kargs["resource_requests"],
             resource_limits=kargs["resource_limits"],
