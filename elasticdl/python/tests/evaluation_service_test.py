@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 
 from elasticdl.python.common.ndarray import ndarray_to_tensor
+from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.checkpoint_service import (
     Checkpoint,
     CheckpointService,
@@ -99,12 +100,24 @@ class EvaluationServiceTest(unittest.TestCase):
             )
 
             # No checkpoint available
-            self.assertFalse(evaluation_service.try_to_create_new_round())
+            self.assertFalse(evaluation_service.try_to_create_new_job())
 
-            # Add a checkpoint and we can start evaluation
-            checkpoint_service._checkpoint_list.append(Checkpoint(1, "file1"))
+            master = MasterServicer(
+                2,
+                2,
+                None,
+                task_q,
+                init_var=[],
+                checkpoint_filename_for_init="",
+                checkpoint_service=checkpoint_service,
+                evaluation_service=evaluation_service,
+            )
+            master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
+
+            # Add an evaluation task and we can start evaluation
+            evaluation_service.add_evaluation_task()
             self.assertEqual(0, len(task_q._todo))
-            self.assertTrue(evaluation_service.try_to_create_new_round())
+            self.assertTrue(evaluation_service.try_to_create_new_job())
             self.assertEqual(8, len(task_q._todo))
             self.assertFalse(evaluation_service._eval_job.finished())
 
@@ -112,3 +125,4 @@ class EvaluationServiceTest(unittest.TestCase):
                 self.assertFalse(evaluation_service._eval_job.finished())
                 evaluation_service.complete_task()
             self.assertTrue(evaluation_service._eval_job.finished())
+            self.assertFalse(evaluation_service.try_to_create_new_job())
