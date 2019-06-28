@@ -1,6 +1,7 @@
+set -x
 python -m elasticdl.python.client.client train \
   --image_base=elasticdl:ci \
-  --model_file=/Users/l.zou/git/elasticdl/elasticdl/python/examples/mnist_subclass.py \
+  --model_file=$(pwd)/elasticdl/python/examples/mnist_subclass.py \
   --training_data_dir=/data/mnist/train \
   --evaluation_data_dir=/data/mnist/test \
   --num_epochs=1 \
@@ -17,4 +18,3 @@ python -m elasticdl.python.client.client train \
   --image_name=elasticdl:dev \
   --log_level=INFO \
   --image_pull_policy=Never
-
