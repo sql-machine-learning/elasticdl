@@ -43,7 +43,7 @@ def _add_train_params(parser):
     )
     parser.add_argument(
         "--image_name",
-        help="The docker image name built by ElasticDL client",
+        help="The Docker image name built by ElasticDL client",
         required=True,
     )
     parser.add_argument(
@@ -87,7 +87,7 @@ def _add_train_params(parser):
         "--volume_name", help="The volume name of network file system"
     )
     parser.add_argument(
-        "--mount_path", help="The mount path in the docker container"
+        "--mount_path", help="The mount path in the Docker container"
     )
     parser.add_argument(
         "--image_pull_policy",
