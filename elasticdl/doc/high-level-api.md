@@ -124,3 +124,19 @@ elasticdl.predict(
     trained_model='/filestore/yiwang/mykerasmodelparams',
     output='/tmp/sqlflow-output/job-xxyyzz.recordio')
 ```
+
+## Model Zoo
+
+When the ElasticDL client or the SQLFlow server call `elasticdl.train`, this function calls Docker API to build a Docker image then submits the job.  The building process should add a *model zoo* into the Docker image.  The function `elasticdl.train` has a parameter, which could be the following cases:
+
+1. A local directory, for example,
+
+   ```python
+   elasticdl.train(mode_zoo="a_local_directory", ...)
+   ```
+   
+1. A URL pointing to a Git repo
+
+   ```python
+   elasticdl.train(model_zoo="https://username:password@git.somecompany.com/sql-machine-learning/models", ...)
+   ```
