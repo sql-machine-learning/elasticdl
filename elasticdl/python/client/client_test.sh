@@ -14,7 +14,7 @@ python -m elasticdl.python.client.client train \
   --num_workers=1 \
   --checkpoint_steps=2 \
   --grads_to_wait=2 \
-  --job_name=test \
+  --job_name=test-mnist \
   --image_name=elasticdl:dev \
   --log_level=INFO \
   --image_pull_policy=Never
