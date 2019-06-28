@@ -30,7 +30,9 @@ class _EvaluationJob(object):
     def ok_to_new_job(self, latest_chkp_version):
         return self.finished() and latest_chkp_version > self.model_version
 
-    def report_evaluation_metrics(self, evaluation_version, evaluation_metrics):
+    def report_evaluation_metrics(
+        self, evaluation_version, evaluation_metrics
+    ):
         if evaluation_version != self.model_version:
             self._logger.error(
                 "Drop a wrong version evaluation: request %d, receive %d"
@@ -85,7 +87,7 @@ class _EvaluationTrigger(Thread):
                 self._eval_service.add_evaluation_task()
 
                 # trying to start a new evaluation job
-                new_round = self._eval_service.try_to_create_new_job()
+                self._eval_service.try_to_create_new_job()
                 previous_round_start_secs = time_now
             time.sleep(5)
 
@@ -107,7 +109,9 @@ class EvaluationService(object):
         self._task_q = task_q
         self._lock = threading.Lock()
         self._eval_job = None
-        self.trigger = _EvaluationTrigger(self, start_delay_secs, throttle_secs)
+        self.trigger = _EvaluationTrigger(
+            self, start_delay_secs, throttle_secs
+        )
         self._eval_checkpoint_versions = []
 
     def start(self):
@@ -130,12 +134,16 @@ class EvaluationService(object):
         with self._lock:
             if self._eval_job is None and self._eval_checkpoint_versions:
                 checkpoint_version = self._eval_checkpoint_versions.pop(0)
-                tasks = self._task_q.create_evaluation_tasks(checkpoint_version)
+                tasks = self._task_q.create_evaluation_tasks(
+                    checkpoint_version
+                )
                 self._eval_job = _EvaluationJob(checkpoint_version, len(tasks))
                 return True
         return False
 
-    def report_evaluation_metrics(self, evaluation_version, evaluation_metrics):
+    def report_evaluation_metrics(
+        self, evaluation_version, evaluation_metrics
+    ):
         if self._eval_job is None:
             return False
         return self._eval_job.report_evaluation_metrics(
@@ -150,8 +158,12 @@ class EvaluationService(object):
                 self._tensorboard_service.write_dict_to_summary(
                     evaluation_metrics, version=self._eval_job.model_version
                 )
-            self._logger.info("Evaluation metrics: %s" % str(evaluation_metrics))
+            self._logger.info(
+                "Evaluation metrics: %s" % str(evaluation_metrics)
+            )
             # delete checkpoint file
-            self._checkpoint_service.remove_eval_checkpoint(self._eval_job.model_version)
+            self._checkpoint_service.remove_eval_checkpoint(
+                self._eval_job.model_version
+            )
             # create new eval job if possible
             self.try_to_create_new_job()

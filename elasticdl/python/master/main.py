@@ -236,7 +236,7 @@ def main():
     model_inst = model_module.model
     optimizer = model_module.optimizer()
 
-    include_evaluation = args.evaluation_data_dir is not ""
+    include_evaluation = args.evaluation_data_dir != ""
 
     # Initialize checkpoint service
     if args.checkpoint_steps or include_evaluation:

@@ -135,7 +135,9 @@ class ServicerTest(unittest.TestCase):
             req.version = master._version
             req.method = elasticdl_pb2.MINIMUM
             model = master.GetModel(req, None)
-            master._checkpoint_service = CheckpointService(chk_dir, 2, 5, False)
+            master._checkpoint_service = CheckpointService(
+                chk_dir, 2, 5, False
+            )
             master._checkpoint_service.save(master._version, model, False)
             master._version = 2
             master.set_model_var("z", np.array([2.0, 2.0], dtype=np.float32))
