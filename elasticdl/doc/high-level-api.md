@@ -132,7 +132,7 @@ When the ElasticDL client or the SQLFlow server call `elasticdl.train`, this fun
 1. A local directory, for example,
 
    ```python
-   elasticdl.train(mode_zoo="a_local_directory", ...)
+   elasticdl.train(model_zoo="a_local_directory", ...)
    ```
    
 1. A URL pointing to a Git repo
