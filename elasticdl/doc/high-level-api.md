@@ -140,3 +140,9 @@ When the ElasticDL client or the SQLFlow server call `elasticdl.train`, this fun
    ```python
    elasticdl.train(model_zoo="https://username:password@git.somecompany.com/sql-machine-learning/models", ...)
    ```
+
+A model zoo is a plain Python source directory that's added to `/model_zoo` in the Docker image.
+
+In the root directory there requires a `requirements.txt` file, so the image building process can call `pip install -r /model_zoo/requirements.txt` to install the dependencies.
+
+Suppose that a Keras model class is referred to as `regressor.DNN` in `elasticdl.train(model_class="regressor.DNN",`, the corresponding Python file should be `/model_zoo/regressor.py`.  A class `regressor.wide_and_deep.MagicalWAD` is in a Python file `/model_zoo/regressor/wide_and_deep.py`.
