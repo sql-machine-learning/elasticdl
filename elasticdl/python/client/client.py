@@ -42,7 +42,14 @@ def _add_train_params(parser):
         help="Whether to push the newly built image to remote registry",
     )
     parser.add_argument(
-        "--image_name", help="The docker image name built by ElasticDL client"
+        "--image_name",
+        help="The docker image name built by ElasticDL client",
+        required=True,
+    )
+    parser.add_argument(
+        "--image_base",
+        help="Base Docker image.",
+        default="tensorflow/tensorflow:2.0.0b0-py3",
     )
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
@@ -128,6 +135,7 @@ def _train(args, argv):
         args.image_name,
         args.push_image,
         args.extra_pypi_index,
+        args.image_base,
     )
     _submit(args.image_name, args.model_file, job_name, args, argv)
 
@@ -141,16 +149,13 @@ def _m_file_in_docker(model_file):
     return "/model/" + os.path.basename(model_file)
 
 
-def _build_docker_image(m_file, image_name, push_image, extra_pypi_index):
+def _build_docker_image(
+    m_file, image_name, push_image, extra_pypi_index, image_base
+):
     docker_template = """
-FROM tensorflow/tensorflow:2.0.0b0-py3 as base
+FROM {IMAGE_BASE} as base
 
-COPY elasticdl /elasticdl
-RUN pip install -r elasticdl/requirements.txt
-RUN make -C elasticdl -f elasticdl/Makefile
 COPY {SOURCE_MODEL_FILE} {TARGET_MODEL_FILE}
-
-ENV PYTHONPATH=/elasticdl
 """
     with tempfile.TemporaryDirectory() as ctx_dir:
         shutil.copy(m_file, ctx_dir)
@@ -164,6 +169,7 @@ ENV PYTHONPATH=/elasticdl
                     SOURCE_MODEL_FILE=os.path.basename(m_file),
                     TARGET_MODEL_FILE=_m_file_in_docker(m_file),
                     EXTRA_PYPI_INDEX=extra_pypi_index,
+                    IMAGE_BASE=image_base,
                 )
             )
         client = docker.APIClient(base_url="unix://var/run/docker.sock")

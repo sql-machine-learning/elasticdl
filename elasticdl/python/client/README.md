@@ -25,9 +25,20 @@ Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and subm
 
 ### Submit to local Kubernetes on Your Machine
 
+For demonstration purposes, we use the data stored on `elasticdl:ci` Docker image.
+
+First we build all development Docker images, which include `elasticdl:ci` image:
+
+```bash
+elasticdl/docker/build_all.sh
+```
+
+Submit training job:
+
 ```bash
 python -m elasticdl.python.client.client train \
-    --model_file=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass.py \
+    --image_base=elasticdl:ci \
+    --model_file=$(pwd)/elasticdl/python/examples/mnist_subclass.py \
     --training_data_dir=/data/mnist/train \
     --evaluation_data_dir=/data/mnist/test \
     --num_epochs=1 \
@@ -52,7 +63,7 @@ python -m elasticdl.python.client.client train \
 python -m elasticdl.python.client.client train \
     --job_name=test \
     --image_name=gcr.io/elasticdl/mnist:dev \
-    --model_file=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass.py \
+    --model_file=$(pwd)/elasticdl/python/examples/mnist_subclass.py \
     --training_data_dir=/data/mnist_nfs/mnist/train \
     --evaluation_data_dir=/data/mnist_nfs/mnist/test \
     --num_epochs=1 \
@@ -89,55 +100,10 @@ python3 setup.py bdist_wheel
 pip install dist/ElasticDL-0.0.1-py3-none-any.whl
 ```
 
-### Submit to local Kubernetes on Your Machine
+### Submit Jobs
 
-```bash
-elasticdl train \
-    --model_file=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass.py \
-    --training_data_dir=/data/mnist/train \
-    --evaluation_data_dir=/data/mnist/test \
-    --num_epochs=1 \
-    --master_resource_request="cpu=1,memory=512Mi" \
-    --master_resource_limit="cpu=1,memory=512Mi" \
-    --worker_resource_request="cpu=1,memory=1024Mi" \
-    --worker_resource_limit="cpu=1,memory=1024Mi" \
-    --minibatch_size=10 \
-    --records_per_task=100 \
-    --num_workers=1 \
-    --checkpoint_steps=2 \
-    --grads_to_wait=2 \
-    --job_name=test \
-    --image_base=elasticdl:dev \
-    --log_level=INFO
-```
+Same as in the development mode, just replace `python -m elasticdl.python.client.client` part with `elasticdl`.
 
-### Submit to a GKE cluster
-
-```bash
-elasticdl train \
-    --job_name=test \
-    --image_name=gcr.io/elasticdl/mnist:dev \
-    --model_file=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass.py \
-    --training_data_dir=/data/mnist_nfs/mnist/train \
-    --evaluation_data_dir=/data/mnist_nfs/mnist/test \
-    --num_epochs=1 \
-    --minibatch_size=10 \
-    --records_per_task=100 \
-    --num_workers=1 \
-    --checkpoint_steps=2 \
-    --master_pod_priority=high-priority \
-    --worker_pod_priority=high-priority \
-    --master_resource_request="cpu=1,memory=2048Mi" \
-    --master_resource_limit="cpu=1,memory=2048Mi" \
-    --worker_resource_request="cpu=2,memory=4096Mi" \
-    --worker_resource_limit="cpu=2,memory=4096Mi" \
-    --grads_to_wait=2 \
-    --mount_path=/data \
-    --volume_name=data-volume \
-    --image_pull_policy=Always \
-    --log_level=INFO \
-    --push_image
-```
 
 ## Check the pod status
 
