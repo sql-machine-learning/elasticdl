@@ -166,9 +166,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 self._logger.info(
                     "Saving checkpoint for model version %d" % self._version
                 )
-                self._save_checkpoint(
-                    locking=False, is_eval_checkpoint=False
-                )
+                self._save_checkpoint(locking=False, is_eval_checkpoint=False)
             except Exception:
                 self._logger.error(
                     "Failed to save checkpoint file for model version %d"
