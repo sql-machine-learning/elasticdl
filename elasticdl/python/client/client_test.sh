@@ -5,14 +5,14 @@ python -m elasticdl.python.client.client train \
   --training_data_dir=/data/mnist/train \
   --evaluation_data_dir=/data/mnist/test \
   --num_epochs=1 \
-  --master_resource_request="cpu=1,memory=512Mi" \
-  --master_resource_limit="cpu=1,memory=512Mi" \
-  --worker_resource_request="cpu=1,memory=1024Mi" \
-  --worker_resource_limit="cpu=1,memory=1024Mi" \
+  --master_resource_request="cpu=400m,memory=1024Mi" \
+  --master_resource_limit="cpu=1,memory=2048Mi" \
+  --worker_resource_request="cpu=400m,memory=2048Mi" \
+  --worker_resource_limit="cpu=1,memory=3072Mi" \
   --minibatch_size=10 \
   --records_per_task=100 \
-  --num_workers=1 \
-  --checkpoint_steps=2 \
+  --num_workers=2 \
+  --checkpoint_steps=20 \
   --grads_to_wait=2 \
   --job_name=test-mnist \
   --image_name=elasticdl:dev \
