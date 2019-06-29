@@ -16,7 +16,6 @@ from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_queue import _TaskQueue
 from elasticdl.python.master.k8s_worker_manager import WorkerManager
 from elasticdl.python.common.model_helper import load_module
-from elasticdl.python.common.constants import GRPC
 
 
 def _make_task_queue(
@@ -59,6 +58,9 @@ def _non_neg_int(arg):
 
 def _parse_args():
     parser = argparse.ArgumentParser(description="ElasticDL Master")
+    parser.add_argument(
+        "--port", type=_pos_int, help="Listening port of master", default=50001
+    )
     parser.add_argument(
         "--model_file",
         help="Full file path of user defined neural model",
@@ -254,11 +256,43 @@ def _start_evaluation_service(
     return evaluation_service
 
 
+def _start_master_server(
+    args, logger, task_q, checkpoint_service, evaluation_service
+):
+    logger.info("Starting master service")
+
+    MAX_MESSAGE_SIZE = 256 * 1024 * 1024
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=64),
+        options=[
+            ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+            ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+        ],
+    )
+
+    model_module = load_module(args.model_file)
+    model_inst = model_module.model
+    optimizer = model_module.optimizer()
+
+    master_servicer = MasterServicer(
+        args.grads_to_wait,
+        args.minibatch_size,
+        optimizer,
+        task_q,
+        init_var=model_inst.trainable_variables if model_inst.built else [],
+        checkpoint_filename_for_init=args.checkpoint_filename_for_init,
+        checkpoint_service=checkpoint_service,
+        evaluation_service=evaluation_service,
+    )
+    elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
+    server.add_insecure_port("[::]:{}".format(args.port))
+    server.start()
+    logger.info("Server started at port: %d", args.port)
+    return server
+
+
 def main():
     args = _parse_args()
-
-    # TODO: pass port via flags.
-    PORT = 50001
 
     # Initialize logger and set level for ROOT logger
     logging.basicConfig(
@@ -272,44 +306,23 @@ def main():
 
     task_q = _start_task_queue(args, logger)
 
-    model_module = load_module(args.model_file)
-    model_inst = model_module.model
-    optimizer = model_module.optimizer()
-
     checkpoint_service = _start_checkpoint_service(args, logger)
 
     evaluation_service = _start_evaluation_service(
         args, logger, checkpoint_service, tensorboard_service, task_q
     )
 
-    # The master service
-    logger.info("Starting master service")
-    server = grpc.server(
-        futures.ThreadPoolExecutor(max_workers=64),
-        options=[
-            ("grpc.max_send_message_length", GRPC.MAX_MESSAGE_SIZE),
-            ("grpc.max_receive_message_length", GRPC.MAX_MESSAGE_SIZE),
-        ],
+    master_server = _start_master_server(
+        args, logger, task_q, checkpoint_service, evaluation_service
     )
-    master_servicer = MasterServicer(
-        args.grads_to_wait,
-        args.minibatch_size,
-        optimizer,
-        task_q,
-        init_var=model_inst.trainable_variables if model_inst.built else [],
-        checkpoint_filename_for_init=args.checkpoint_filename_for_init,
-        checkpoint_service=checkpoint_service,
-        evaluation_service=evaluation_service,
-    )
-    elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
-    server.add_insecure_port("[::]:{}".format(PORT))
-    server.start()
-    logger.info("Server started at port: %d", PORT)
 
     if args.num_workers:
         assert args.worker_image, "Worker image cannot be empty"
 
-        master_addr = "%s:%d" % (os.getenv("MY_POD_IP", "localhost"), PORT)
+        master_addr = "%s:%d" % (
+            os.getenv("MY_POD_IP", "localhost"),
+            args.port,
+        )
         worker_command = ["python"]
         worker_args = [
             "-m",
@@ -363,7 +376,7 @@ def main():
         evaluation_service.stop()
 
     logger.info("Stopping RPC server")
-    server.stop(0)
+    master_server.stop(0)
 
     # Keep TensorBoard running when all the tasks are finished
     if tensorboard_service:
