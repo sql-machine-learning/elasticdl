@@ -94,10 +94,6 @@ def main():
     # Initialize evaluation service
     evaluation_service = None
     if args.evaluation_data_dir:
-        if args.checkpoint_steps <= 0:
-            raise ValueError(
-                "Checkpoint should also be enabled when evaluation is enabled"
-            )
         logger.info(
             "Starting evaluation service with throttle seconds %d",
             args.evaluation_throttle_secs,
