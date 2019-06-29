@@ -233,6 +233,27 @@ def _start_checkpoint_service(args, logger):
     return checkpoint_service
 
 
+def _start_evaluation_service(
+    args, logger, checkpoint_service, tb_service, task_q
+):
+    evaluation_service = None
+    if args.evaluation_data_dir:
+        logger.info(
+            "Starting evaluation service with throttle seconds %d",
+            args.evaluation_throttle_secs,
+        )
+        evaluation_service = EvaluationService(
+            checkpoint_service,
+            tb_service,
+            task_q,
+            args.evaluation_start_delay_secs,
+            args.evaluation_throttle_secs,
+        )
+        evaluation_service.start()
+        task_q.set_evaluation_service(evaluation_service)
+    return evaluation_service
+
+
 def main():
     args = _parse_args()
 
@@ -257,26 +278,9 @@ def main():
 
     checkpoint_service = _start_checkpoint_service(args, logger)
 
-    # Initialize evaluation service
-    evaluation_service = None
-    if args.evaluation_data_dir:
-        if args.checkpoint_steps <= 0:
-            raise ValueError(
-                "Checkpoint should also be enabled when evaluation is enabled"
-            )
-        logger.info(
-            "Starting evaluation service with throttle seconds %d",
-            args.evaluation_throttle_secs,
-        )
-        evaluation_service = EvaluationService(
-            checkpoint_service,
-            tb_service,
-            task_q,
-            args.evaluation_start_delay_secs,
-            args.evaluation_throttle_secs,
-        )
-        evaluation_service.start()
-        task_q.set_evaluation_service(evaluation_service)
+    evaluation_service = _start_evaluation_service(
+        args, logger, checkpoint_service, tb_service, task_q
+    )
 
     # The master service
     logger.info("Starting master service")
