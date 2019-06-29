@@ -195,15 +195,15 @@ def _parse_args():
 
 
 def _start_tensorboard_service(args, logger):
-    tb_service = None
+    tensorboard_service = None
     if args.tensorboard_log_dir:
         logger.info(
             "Starting tensorboard service with log directory %s",
             args.tensorboard_log_dir,
         )
-        tb_service = TensorboardService(args.tensorboard_log_dir)
-        tb_service.start()
-    return tb_service
+        tensorboard_service = TensorboardService(args.tensorboard_log_dir)
+        tensorboard_service.start()
+    return tensorboard_service
 
 
 def _start_task_queue(args, logger):
@@ -234,7 +234,7 @@ def _start_checkpoint_service(args, logger):
 
 
 def _start_evaluation_service(
-    args, logger, checkpoint_service, tb_service, task_q
+    args, logger, checkpoint_service, tensorboard_service, task_q
 ):
     evaluation_service = None
     if args.evaluation_data_dir:
@@ -244,7 +244,7 @@ def _start_evaluation_service(
         )
         evaluation_service = EvaluationService(
             checkpoint_service,
-            tb_service,
+            tensorboard_service,
             task_q,
             args.evaluation_start_delay_secs,
             args.evaluation_throttle_secs,
@@ -268,7 +268,7 @@ def main():
     logging.getLogger().setLevel(args.log_level)
     logger = logging.getLogger(__name__)
 
-    tb_service = _start_tensorboard_service(args, logger)
+    tensorboard_service = _start_tensorboard_service(args, logger)
 
     task_q = _start_task_queue(args, logger)
 
@@ -276,10 +276,10 @@ def main():
     model_inst = model_module.model
     optimizer = model_module.optimizer()
 
-    chkpt_service = _start_checkpoint_service(args, logger)
+    checkpoint_service = _start_checkpoint_service(args, logger)
 
     evaluation_service = _start_evaluation_service(
-        args, logger, chkpt_service, tb_service, task_q
+        args, logger, checkpoint_service, tensorboard_service, task_q
     )
 
     # The master service
@@ -298,7 +298,7 @@ def main():
         task_q,
         init_var=model_inst.trainable_variables if model_inst.built else [],
         checkpoint_filename_for_init=args.checkpoint_filename_for_init,
-        checkpoint_service=chkpt_service,
+        checkpoint_service=checkpoint_service,
         evaluation_service=evaluation_service,
     )
     elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
@@ -347,7 +347,7 @@ def main():
         logger.info("Launching %d workers", args.num_workers)
         worker_manager.start_workers()
 
-        if tb_service:
+        if tensorboard_service:
             worker_manager.start_tensorboard_service()
 
     try:
@@ -366,11 +366,11 @@ def main():
     server.stop(0)
 
     # Keep TensorBoard running when all the tasks are finished
-    if tb_service:
+    if tensorboard_service:
         logger.info(
             "All tasks finished. Keeping TensorBoard service running..."
         )
-        tb_service.keep_running()
+        tensorboard_service.keep_running()
     logger.info("Master stopped")
 
 
