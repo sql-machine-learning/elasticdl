@@ -291,6 +291,51 @@ def _start_master_server(
     return server
 
 
+def _start_workers(args, logger, task_q, tensorboard_service):
+    assert args.worker_image, "Worker image cannot be empty"
+
+    master_addr = "%s:%d" % (os.getenv("MY_POD_IP", "localhost"), args.port)
+    worker_command = ["python"]
+    worker_args = [
+        "-m",
+        "elasticdl.python.worker.main",
+        "--model_file",
+        args.model_file,
+        "--master_addr",
+        master_addr,
+        "--log_level",
+        args.log_level,
+    ]
+
+    args.worker_resource_limit = (
+        args.worker_resource_limit
+        if args.worker_resource_limit
+        else args.worker_resource_request
+    )
+
+    worker_manager = WorkerManager(
+        task_q,
+        job_name=args.job_name,
+        image_name=args.worker_image,
+        command=worker_command,
+        args=worker_args,
+        namespace=args.namespace,
+        num_workers=args.num_workers,
+        worker_resource_request=args.worker_resource_request,
+        worker_resource_limit=args.worker_resource_limit,
+        pod_priority=args.worker_pod_priority,
+        mount_path=args.mount_path,
+        volume_name=args.volume_name,
+        image_pull_policy=args.image_pull_policy,
+        restart_policy=args.restart_policy,
+    )
+    logger.info("Launching %d workers", args.num_workers)
+    worker_manager.start_workers()
+
+    if tensorboard_service:
+        worker_manager.start_tensorboard_service()
+
+
 def main():
     args = _parse_args()
 
@@ -316,52 +361,7 @@ def main():
         args, logger, task_q, checkpoint_service, evaluation_service
     )
 
-    if args.num_workers:
-        assert args.worker_image, "Worker image cannot be empty"
-
-        master_addr = "%s:%d" % (
-            os.getenv("MY_POD_IP", "localhost"),
-            args.port,
-        )
-        worker_command = ["python"]
-        worker_args = [
-            "-m",
-            "elasticdl.python.worker.main",
-            "--model_file",
-            args.model_file,
-            "--master_addr",
-            master_addr,
-            "--log_level",
-            args.log_level,
-        ]
-
-        args.worker_resource_limit = (
-            args.worker_resource_limit
-            if args.worker_resource_limit
-            else args.worker_resource_request
-        )
-
-        worker_manager = WorkerManager(
-            task_q,
-            job_name=args.job_name,
-            image_name=args.worker_image,
-            command=worker_command,
-            args=worker_args,
-            namespace=args.namespace,
-            num_workers=args.num_workers,
-            worker_resource_request=args.worker_resource_request,
-            worker_resource_limit=args.worker_resource_limit,
-            pod_priority=args.worker_pod_priority,
-            mount_path=args.mount_path,
-            volume_name=args.volume_name,
-            image_pull_policy=args.image_pull_policy,
-            restart_policy=args.restart_policy,
-        )
-        logger.info("Launching %d workers", args.num_workers)
-        worker_manager.start_workers()
-
-        if tensorboard_service:
-            worker_manager.start_tensorboard_service()
+    _start_workers(args, logger, task_q, tensorboard_service)
 
     try:
         while True:
