@@ -1,4 +1,4 @@
-## Audience Targets
+## Targeted Users
 
 ElasticDL targets two categories of users
 
@@ -18,11 +18,11 @@ Suppose that one is working on a model in the local directory `$HOME/work/fintec
 ```bash
 elasticdl train \
     --model_zoo=$HOME/work \
-    --model=fintech.MyKerasModel \
-    --input_fn=fintech.image_label_input \
-    --params='hidden_units=[10, 100, 20, 5], learning_rate=0.01' \
-    --data='/filestore/yiwang/imagenet/train/*.recordio' \
-    --output='/filestore/yiwang/mykerasmodelparams'
+    --model_class=fintech.MyKerasModel \
+    --input_fn=fintech.credit_data_processor \
+    --params="hidden_units=[10, 100, 20, 5], learning_rate=0.01" \
+    --data="gs://bucket-name/tony/imagenet/train/*.recordio" \
+    --output="gs://bucket-name/tony/my_trained_model"
 ```
 
 The above command-line 
@@ -37,13 +37,15 @@ Please be aware that in the class `fintech.MyKerasModel`, in addition to overrid
 - `default_optimizer` that returns an optimizer operator,
 - `default_input` that takes a record (string) as its input and returns something that can be batched and consumed by `MyKerasModel.call`.  In the above example, the user chooses an input function other than `MyKerasModel.default_input`.
 
+Because the above example command line specifies `--input_fn` explicitly, the training job is not going to use `MyKerasModel.default_input`, but uses `fintech.credit_data_processor`.  Similarly, command line options `loss` and `optimizer` overwrites `MyKerasModel.default_loss` and `MyKerasModel.default_optimizer`.
+
 Another important command-line is to support prediction.
 
 ```bash
 elasticdl predict \
-    --data='/filestore/yiwang/imagenet/test/*.recordio' \
-    --trained_model='/filestore/yiwang/mykerasmodelparams' \
-    --output='/filestore/yiwang/imagenet-eval.recordio'
+    --data="gs://bucket-name/tony/imagenet/test/*.recordio" \
+    --trained_model="gs://bucket-name/tony/my_trained_model" \
+    --output="gs://bucket-name/tony/imagenet-eval/"
 ```
 
 ### SQLFlow Users
@@ -52,25 +54,25 @@ SQLFlow users provide the information required by training or prediction by writ
 
 ```sql
 SELECT name, role, salary FROM employee 
-TRAIN DNNClassifier 
+TRAIN regressor.DNN
 WITH hidden_units=[10, 100, 20, 5], learning_rate=0.01
-INTO mymodel;
+INTO my_trained_model;
 ```
 
-Please be aware that to minimize the syntax extension, SQLFlow doesn't allow users to specify a directory of models; instead, users can only use pre-released models, for example, `DNNClassifier` in the above example.
+Please be aware that to minimize the syntax extension, SQLFlow doesn't allow users to specify a directory of models; instead, users can only use pre-built models -- `regressor.DNN` in the above example.
 
-SQLFlow is a gRPC server that takes the above SQL statement and translates it into a Python program known as a *submitter*.  It is the responsibility of the submitter to call `kubectl` and launch an ElasticDL job on a Kubernetes cluster.
+SQLFlow is a gRPC server that takes the above SQL statement and translates it into a Python program known as a *submitter*.  It is the responsibility of the submitter to call `kubectl` to launch an ElasticDL job on a Kubernetes cluster.
 
-SQLFlow often runs in Docker containers, and it is usually intractable to build a Docker image from within a Docker container, so the submitter requires a pre-built Docker image containing (1) `/model_zoo`, (2) ElasticDL, (3) dependencies of ElasticDL.  The class `DNNClassifier` is a class defined in some Python source files in `/model_zoo`.
+SQLFlow often runs in Docker containers, and it is usually intractable to build a Docker image from within a Docker container, so the submitter requires a pre-built Docker image containing (1) `/model_zoo`, (2) ElasticDL, (3) dependencies of ElasticDL.  The class `regressor.DNN` is a class defined in some Python source files in `/model_zoo`.
 
 The submitter might file the statement `SELECT name, role, salary FROM employee` to the SQL engine, pull the result, convert the result into one or more RecordIO files whose each record is a serialization of the `tf.Example` protobuf message. So, the input function used by ElasticDL to parse the strings for `DNNClassifer.class` could be standardized one, say, `sqlflow.elasticdl_input_function`.
 
-To predict using a pre-trained model and writes the results into a column of some table, we can do
+To predict using a pre-trained model and to write the results into a column of a table, we can do
 
 ```sql
 SELECT name, role FROM testdata
 PREDICT testdata.predicted_salary
-USING mymodel;
+USING my_trained_model;
 ```
 
 ### Unified API
@@ -89,10 +91,10 @@ We propose a function `elastic.train` that can be called like the following:
 elasticdl.train(
     model_zoo="$HOME/work",
     model_class="fintech.MyKerasModel", 
-    input_fn="fintech.image_label_input",
+    input_fn="fintech.credit_data_processor",
     params="hidden_units=[10, 100, 20, 5], learning_rate=0.01",
-    data="/filestore/yiwang/imagenet/train/*.recordio",
-    output="/filestore/yiwang/mykerasmodelparams")
+    data="gs://bucket-name/tony/imagenet/train/*.recordio",
+    output="gs://bucket-name/tony/my_trained_model")
 ```
 
 or
@@ -103,26 +105,30 @@ elasticdl.train(
     model_class="regressor.DNN", 
     input_fn="sqlflow.elasticdl_input_function',
     params="hidden_units=[10, 100, 20, 5], learning_rate=0.01",
-    data="/tmp/sqlflow-pulled-from-sql/job-xxyyzz/*.recordio",
-    output="/sqlflow-configured-place/job-xxyyzz/mymodel")
+    data="gs://sqlflow/job-xxyyzz/train/*.recordio",
+    output="gs://sqlflow/job-xxyyzz/my_trained_model")
 ```
 
 Please be aware that most parameters of `elasticdl.train` are of string-type because the command line options and SQL statements are all strings.
 
 ### For Prediction
 
-```python
-elasticdl.predict(
-    data='/filestore/yiwang/imagenet/test/*.recordio',
-    trained_model='/filestore/yiwang/mykerasmodelparams',
-    output='/filestore/yiwang/imagenet-eval.recordio')
-```
+We propose a function `elasticdl.predict` that can be called like the following:
 
 ```python
 elasticdl.predict(
-    data="/tmp/sqlflow-pulled-from-sql/job-xxyyzz/*.recordio",
-    trained_model='/filestore/yiwang/mykerasmodelparams',
-    output='/tmp/sqlflow-output/job-xxyyzz.recordio')
+    data='gs://bucket-name/tony/imagenet/test/*.recordio',
+    trained_model='gs://bucket-name/tony/my_trained_model',
+    output='gs://bucket-name/tony/imagenet-eval.recordio')
+```
+
+or
+
+```python
+elasticdl.predict(
+    data="gs://sqlflow/job-xxyyzz/predict/*.recordio",
+    trained_model='gs://sqlflow/job-xxyyzz/my_trained_model,
+    output="gs://sqlflow/job-xxyyzz/predicted/")
 ```
 
 ## Model Zoo
@@ -138,11 +144,13 @@ When the ElasticDL client or the SQLFlow server call `elasticdl.train`, this fun
 1. A URL pointing to a Git repo
 
    ```python
-   elasticdl.train(model_zoo="https://username:password@git.somecompany.com/sql-machine-learning/models", ...)
+   elasticdl.train(model_zoo="https://git.company.com/sql-machine-learning/models", ...)
    ```
 
-A model zoo is a plain Python source directory that's added to `/model_zoo` in the Docker image.
+A model zoo is a plain Python source directory that's added to `/model_zoo` in the Docker image.  In the root directory there requires a `requirements.txt` file, so the image building process can install dependencies via
 
-In the root directory there requires a `requirements.txt` file, so the image building process can call `pip install -r /model_zoo/requirements.txt` to install the dependencies.
+```dockerfile
+RUN pip install -r /model_zoo/requirements.txt
+```
 
-Suppose that a Keras model class is referred to as `regressor.DNN` in `elasticdl.train(model_class="regressor.DNN",`, the corresponding Python file should be `/model_zoo/regressor.py`.  A class `regressor.wide_and_deep.MagicalWAD` is in a Python file `/model_zoo/regressor/wide_and_deep.py`.
+Suppose that a Keras model class is referred to as `regressor.DNN` in `elasticdl.train(model_class="regressor.DNN",`, the corresponding Python file should be `/model_zoo/regressor.py`.  Similarly, a class `regressor.wide_and_deep.MagicalWAD` is in a Python file `/model_zoo/regressor/wide_and_deep.py`.
