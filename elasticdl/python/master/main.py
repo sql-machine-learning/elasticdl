@@ -276,10 +276,10 @@ def main():
     model_inst = model_module.model
     optimizer = model_module.optimizer()
 
-    checkpoint_service = _start_checkpoint_service(args, logger)
+    chkpt_service = _start_checkpoint_service(args, logger)
 
     evaluation_service = _start_evaluation_service(
-        args, logger, checkpoint_service, tb_service, task_q
+        args, logger, chkpt_service, tb_service, task_q
     )
 
     # The master service
@@ -298,7 +298,7 @@ def main():
         task_q,
         init_var=model_inst.trainable_variables if model_inst.built else [],
         checkpoint_filename_for_init=args.checkpoint_filename_for_init,
-        checkpoint_service=checkpoint_service,
+        checkpoint_service=chkpt_service,
         evaluation_service=evaluation_service,
     )
     elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
