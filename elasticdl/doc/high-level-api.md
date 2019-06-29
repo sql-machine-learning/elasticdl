@@ -171,7 +171,7 @@ A key question is what information must be in the directory `/filestore/tony/my_
 
    We need this ID to refer to the Docker image built during the call of `elasticdl.train`.  In this image, we have the model zoo used to train the model.  Then, `elasticdl.predict` could build the Docker image for the distributed prediction job from this commit ID.
 
-   This image ID must be a pullable ID so that ElasticDL command line tool can `docker pull` it as the base image. An example pullable ID is `imageID: docker-pullable://reg.docker.alibaba-inc.com/asdi/aswf-py3@sha256:e8ca09705eed07cdfd060b6b9d27a802`.
+   This image ID must be a pullable ID so that ElasticDL command line tool can `docker pull` it as the base image. An example pullable ID is `docker-pullable://reg.docker.alibaba-inc.com/asdi/aswf-py3@sha256:e8ca09705eed07cdfd060b6b9d27a802`.
 
 1. Model class constructor parameters, like `hidden_units=[10, 100, 20]`.
 
