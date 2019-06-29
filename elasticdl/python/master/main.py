@@ -221,6 +221,18 @@ def _start_task_queue(args, logger):
     )
 
 
+def _start_checkpoint_service(args, logger):
+    checkpoint_service = None
+    if args.checkpoint_steps:
+        logger.info("Starting checkpoint service")
+        checkpoint_service = CheckpointService(
+            args.checkpoint_dir,
+            args.checkpoint_steps,
+            args.keep_checkpoint_max,
+        )
+    return checkpoint_service
+
+
 def main():
     args = _parse_args()
 
@@ -238,20 +250,12 @@ def main():
     tb_service = _start_tensorboard_service(args, logger)
 
     task_q = _start_task_queue(args, logger)
+
     model_module = load_module(args.model_file)
     model_inst = model_module.model
     optimizer = model_module.optimizer()
 
-    # Initialize checkpoint service
-    if args.checkpoint_steps:
-        logger.info("Starting checkpoint service")
-        checkpoint_service = CheckpointService(
-            args.checkpoint_dir,
-            args.checkpoint_steps,
-            args.keep_checkpoint_max,
-        )
-    else:
-        checkpoint_service = None
+    checkpoint_service = _start_checkpoint_service(args, logger)
 
     # Initialize evaluation service
     evaluation_service = None
