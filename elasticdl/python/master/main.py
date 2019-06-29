@@ -273,11 +273,8 @@ def main():
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=64),
         options=[
-            ("grpc.max_send_message_length", GRPC.MAX_SEND_MESSAGE_LENGTH),
-            (
-                "grpc.max_receive_message_length",
-                GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
-            ),
+            ("grpc.max_send_message_length", GRPC.MAX_MESSAGE_SIZE),
+            ("grpc.max_receive_message_length", GRPC.MAX_MESSAGE_SIZE),
         ],
     )
     master_servicer = MasterServicer(
