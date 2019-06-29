@@ -25,9 +25,10 @@ def _make_task_queue(
     def _collect_file_records_from_dir(data_dir):
         f_records = {}
         for f in os.listdir(data_dir):
-            p = os.path.join(data_dir, f)
-            with closing(recordio.Index(p)) as rio:
-                f_records[p] = rio.num_records()
+            if f.endswiths(".recordio"):
+                p = os.path.join(data_dir, f)
+                with closing(recordio.Index(p)) as rio:
+                    f_records[p] = rio.num_records()
         return f_records
 
     training_f_records = _collect_file_records_from_dir(training_data_dir)
