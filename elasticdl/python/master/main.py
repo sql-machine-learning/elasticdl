@@ -206,6 +206,21 @@ def _start_tensorboard_service(args, logger):
     return tb_service
 
 
+def _start_task_queue(args, logger):
+    logger.info(
+        "Starting task queue with training data directory %s "
+        "and evaluation data directory %s",
+        args.training_data_dir,
+        args.evaluation_data_dir,
+    )
+    return _make_task_queue(
+        args.training_data_dir,
+        args.evaluation_data_dir,
+        args.records_per_task,
+        args.num_epochs,
+    )
+
+
 def main():
     args = _parse_args()
 
@@ -222,19 +237,7 @@ def main():
 
     tb_service = _start_tensorboard_service(args, logger)
 
-    # Start task queue
-    logger.info(
-        "Starting task queue with training data directory %s "
-        "and evaluation data directory %s",
-        args.training_data_dir,
-        args.evaluation_data_dir,
-    )
-    task_q = _make_task_queue(
-        args.training_data_dir,
-        args.evaluation_data_dir,
-        args.records_per_task,
-        args.num_epochs,
-    )
+    task_q = _start_task_queue(args, logger)
     model_module = load_module(args.model_file)
     model_inst = model_module.model
     optimizer = model_module.optimizer()
