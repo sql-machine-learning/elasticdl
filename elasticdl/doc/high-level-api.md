@@ -16,7 +16,8 @@ Modelers usually craft their Keras models on their personal computers, test the 
 Suppose that one is working on a model in the local directory `$HOME/work/fintech/*.py`, where each `.py` file might contain one ore more Keras model classes. We would love to allow the user to submit an ElasticDL training job from the command-line like the following to train a model defined as a class `MyKerasModel`.
 
 ```bash
-elasticdl train $HOME/work \
+elasticdl train \
+    --model_zoo=$HOME/work \
     --model=fintech.MyKerasModel \
     --input_fn=fintech.image_label_input \
     --params='hidden_units=[10, 100, 20, 5], learning_rate=0.01' \
@@ -86,7 +87,7 @@ We propose a function `elastic.train` that can be called like the following:
 
 ```python
 elasticdl.train(
-    additional_python_paths=["/model_zoo/custom", "/model_zoo"],
+    model_zoo="$HOME/work",
     model_class="fintech.MyKerasModel", 
     input_fn="fintech.image_label_input",
     params="hidden_units=[10, 100, 20, 5], learning_rate=0.01",
@@ -98,7 +99,8 @@ or
 
 ```python
 elasticdl.train(
-    model_class="DNNClassifier", 
+    model_zoo="https://github.com/sql-machine-learning/models",
+    model_class="regressor.DNN", 
     input_fn="sqlflow.elasticdl_input_function',
     params="hidden_units=[10, 100, 20, 5], learning_rate=0.01",
     data="/tmp/sqlflow-pulled-from-sql/job-xxyyzz/*.recordio",
@@ -122,3 +124,25 @@ elasticdl.predict(
     trained_model='/filestore/yiwang/mykerasmodelparams',
     output='/tmp/sqlflow-output/job-xxyyzz.recordio')
 ```
+
+## Model Zoo
+
+When the ElasticDL client or the SQLFlow server call `elasticdl.train`, this function calls Docker API to build a Docker image then submits the job.  The building process should add a *model zoo* into the Docker image.  The function `elasticdl.train` has a parameter, which could be the following cases:
+
+1. A local directory, for example,
+
+   ```python
+   elasticdl.train(model_zoo="a_local_directory", ...)
+   ```
+   
+1. A URL pointing to a Git repo
+
+   ```python
+   elasticdl.train(model_zoo="https://username:password@git.somecompany.com/sql-machine-learning/models", ...)
+   ```
+
+A model zoo is a plain Python source directory that's added to `/model_zoo` in the Docker image.
+
+In the root directory there requires a `requirements.txt` file, so the image building process can call `pip install -r /model_zoo/requirements.txt` to install the dependencies.
+
+Suppose that a Keras model class is referred to as `regressor.DNN` in `elasticdl.train(model_class="regressor.DNN",`, the corresponding Python file should be `/model_zoo/regressor.py`.  A class `regressor.wide_and_deep.MagicalWAD` is in a Python file `/model_zoo/regressor/wide_and_deep.py`.
