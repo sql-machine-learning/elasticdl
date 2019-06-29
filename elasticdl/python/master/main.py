@@ -194,6 +194,18 @@ def _parse_args():
     return parser.parse_args()
 
 
+def _start_tensorboard_service(args, logger):
+    tb_service = None
+    if args.tensorboard_log_dir:
+        logger.info(
+            "Starting tensorboard service with log directory %s",
+            args.tensorboard_log_dir,
+        )
+        tb_service = TensorboardService(args.tensorboard_log_dir)
+        tb_service.start()
+    return tb_service
+
+
 def main():
     args = _parse_args()
 
@@ -208,16 +220,7 @@ def main():
     logging.getLogger().setLevel(args.log_level)
     logger = logging.getLogger(__name__)
 
-    # Start tensorboard service if required
-    if args.tensorboard_log_dir:
-        logger.info(
-            "Starting tensorboard service with log directory %s",
-            args.tensorboard_log_dir,
-        )
-        tb_service = TensorboardService(args.tensorboard_log_dir)
-        tb_service.start()
-    else:
-        tb_service = None
+    tb_service = _start_tensorboard_service(args, logger)
 
     # Start task queue
     logger.info(
