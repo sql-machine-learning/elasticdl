@@ -8,7 +8,7 @@ import sys
 
 
 def build_and_push_docker_image(
-    model_zoo, base_image, docker_image_prefix, extra_pypi
+    model_zoo, docker_image_prefix, base_image="", extra_pypi=""
 ):
     """Build and push a Docker image containing ElasticDL and the model
 zoo.  The parameter model_zoo could be a local directory or an URL.
