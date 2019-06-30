@@ -48,6 +48,13 @@ after _build_docker_image.
     return image_name
 
 
+def _find_git_repo_root():
+    cur = os.path.abspath(os.path.dirname(__file__))
+    while not (cur == "/" or ".git" in os.listdir(cur)):
+        cur = os.path.dirname(cur)
+    return cur
+
+
 def _create_dockerfile(model_zoo, base_image="", extra_pypi_index=""):
     LOCAL_ZOO = """
 FROM {BASE_IMAGE} as base
