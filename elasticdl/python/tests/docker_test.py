@@ -1,6 +1,6 @@
 import unittest
 
-from elasticdl.python.elasticdl.docker import (
+from elasticdl.python.common.docker import (
     _generate_unique_image_name,
     _create_dockerfile,
 )
