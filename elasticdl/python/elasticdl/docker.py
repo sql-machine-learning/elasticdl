@@ -1,0 +1,115 @@
+from urllib.parse import urlparse
+import tempfile
+import uuid
+import docker
+import os
+import shutil
+import sys
+
+
+def train(model_zoo, model_class, model_class_params):
+    _build_and_push_docker_image(model_zoo)
+    # _launch_training_job(model_class, model_class_params)
+
+
+def _build_and_push_docker_image(model_zoo, gpu, docker_image_prefix):
+    """Build and push a Docker image containing ElasticDL and the model
+zoo.  The parameter model_zoo could be a local directory or an URL.
+In the later case, we do git clone.
+
+    The base image is tensorflow/tensorflow:2.0.0b0-py3 if gpu is
+    True; or tensorflow/tensorflow:2.0.0b0-gpu-py3 otherwise.
+
+    The basename of the Docker image is auto-generated and is globally
+unique.  The full name is docker_image_prefix + "/" + basename.  Valid
+docker_image_prefix could be None or "", which means no docker push
+after the build, "project-name", which means to push the Docker image
+"project-name/basename" to DockerHub.com, or "hostname/project-name",
+which means to push the Docker image to the specified Docker registry.
+
+    Returns the full Docker image name.  So the caller can docker rmi
+    fullname later.
+
+    """
+    with tempfile.TemporaryDirectory() as ctx_dir:
+        # Copy ElasticDL Python source tree into the context directory.
+        elasticdl = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "../../../")
+        )
+        shutil.copytree(
+            elasticdl, os.path.join(ctx_dir, os.path.basename(elasticdl))
+        )
+
+        # Create the Dockerfile.
+        with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
+            df.write(_create_dockerfile(model_zoo, gpu))
+
+        image_name = _generate_uniq_image_name(docker_image_prefix)
+        client = docker.APIClient(base_url="unix://var/run/docker.sock")
+        _build_docker_image(client, ctx_dir, df.name, image_name)
+
+        if docker_image_prefix:
+            _push_docker_image(client, image_name)
+
+    return image_name
+
+
+def _create_dockerfile(model_zoo, gpu=False, extra_pypi_index=""):
+    LOCAL_ZOO = """
+FROM {BASE_IMAGE} as base
+COPY {MODEL_ZOO} /model_zoo
+"""
+    REMOTE_ZOO = """
+FROM {BASE_IMAGE} as base
+RUN apt-get update && apt-get install -y git
+RUN git clone --recursive {MODEL_ZOO} /model_zoo
+ARG REQS=/model_zoo/requirements.txt
+RUN if [[ -f $REQS ]]; then \
+      pip install -r $REQS --extra-index-url="${EXTRA_PYPI_INDEX}"; \
+    fi
+"""
+    pr = urlparse(model_zoo)
+    if pr.scheme == "file" or pr.scheme == "":
+        tmpl = LOCAL_ZOO
+        model_zoo = pr.path  # Remove the "file://" prefix if any.
+    else:
+        tmpl = REMOTE_ZOO
+
+    return tmpl.format(
+        BASE_IMAGE="tensorflow/tensorflow:2.0.0b0-gpu-py3"
+        if gpu
+        else "tensorflow/tensorflow:2.0.0b0-py3",
+        MODEL_ZOO=model_zoo,
+        EXTRA_PYPI_INDEX=extra_pypi_index,
+    )
+
+
+def _generate_uniq_image_name(prefix):
+    return os.path.join(
+        prefix if prefix else "", "elasticdl:" + uuid.uuid4().hex
+    )
+
+
+def _build_docker_image(client, ctx_dir, dockerfile, image_name):
+    print("===== Building Docker Image =====")
+    for line in client.build(
+        dockerfile=dockerfile,
+        path=ctx_dir,
+        rm=True,
+        tag=image_name,
+        decode=True,
+    ):
+        if "error" in line:
+            raise RuntimeError(
+                "Docker image build failure: %s" % line["error"]
+            )
+        text = line.get("stream", None)
+        if text:
+            sys.stdout.write(text)
+            sys.stdout.flush()
+
+
+def _push_docker_image(client, image_name):
+    print("===== Pushing Docker Image =====")
+    for line in client.push(image_name, stream=True, decode=True):
+        print(line)
