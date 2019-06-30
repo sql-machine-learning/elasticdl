@@ -27,9 +27,7 @@ after _build_docker_image.
     """
     with tempfile.TemporaryDirectory() as ctx_dir:
         # Copy ElasticDL Python source tree into the context directory.
-        elasticdl = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../../../")
-        )
+        elasticdl = _find_git_repo_root()
         shutil.copytree(
             elasticdl, os.path.join(ctx_dir, os.path.basename(elasticdl))
         )
