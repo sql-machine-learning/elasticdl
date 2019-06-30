@@ -7,12 +7,7 @@ import shutil
 import sys
 
 
-def train(model_zoo, model_class, model_class_params):
-    _build_and_push_docker_image(model_zoo)
-    # _launch_training_job(model_class, model_class_params)
-
-
-def _build_and_push_docker_image(
+def build_and_push_docker_image(
     model_zoo, gpu, docker_image_prefix, extra_pypi
 ):
     """Build and push a Docker image containing ElasticDL and the model
@@ -84,9 +79,9 @@ RUN if [[ -f $REQS ]]; then \
         tmpl = REMOTE_ZOO
 
     return tmpl.format(
-        BASE_IMAGE="tensorflow/tensorflow:2.0.0b0-gpu-py3"
+        BASE_IMAGE="tensorflow/tensorflow:2.0.0b1-gpu-py3"
         if gpu
-        else "tensorflow/tensorflow:2.0.0b0-py3",
+        else "tensorflow/tensorflow:2.0.0b1-py3",
         MODEL_ZOO=model_zoo,
         EXTRA_PYPI_INDEX=extra_pypi_index,
     )
@@ -99,7 +94,6 @@ def _generate_unique_image_name(prefix):
 
 
 def _build_docker_image(client, ctx_dir, dockerfile, image_name):
-
     print("===== Building Docker Image =====")
     for line in client.build(
         dockerfile=dockerfile,
@@ -108,10 +102,9 @@ def _build_docker_image(client, ctx_dir, dockerfile, image_name):
         tag=image_name,
         decode=True,
     ):
-        if "error" in line:
-            raise RuntimeError(
-                "Docker image build failure: %s" % line["error"]
-            )
+        error = line.get("error", None)
+        if error:
+            raise RuntimeError("Docker image build: " + error)
         text = line.get("stream", None)
         if text:
             print(text)
