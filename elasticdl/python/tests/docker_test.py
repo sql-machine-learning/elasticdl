@@ -29,5 +29,7 @@ class DockerTest(unittest.TestCase):
         self.assertTrue(
             "git clone" in _create_dockerfile("https://github.com/me/models")
         )
-        self.assertRaises(RuntimeError, lambda: _create_dockerfile(""))
-        self.assertRaises(RuntimeError, lambda: _create_dockerfile(None))
+        with self.assertRaises(RuntimeError):
+            _create_dockerfile("")
+        with self.assertRaises(RuntimeError):
+            _create_dockerfile(None)
