@@ -44,7 +44,7 @@ which means to push the Docker image to the specified Docker registry.
         with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
             df.write(_create_dockerfile(model_zoo, gpu))
 
-        image_name = _generate_uniq_image_name(docker_image_prefix)
+        image_name = _generate_unique_image_name(docker_image_prefix)
         client = docker.APIClient(base_url="unix://var/run/docker.sock")
         _build_docker_image(client, ctx_dir, df.name, image_name)
 
@@ -69,6 +69,8 @@ RUN if [[ -f $REQS ]]; then \
     fi
 """
     pr = urlparse(model_zoo)
+    if not pr.path:
+        raise RuntimeError("model_zoo {} has no path".format(model_zoo))
     if pr.scheme == "file" or pr.scheme == "":
         tmpl = LOCAL_ZOO
         model_zoo = pr.path  # Remove the "file://" prefix if any.
@@ -84,7 +86,7 @@ RUN if [[ -f $REQS ]]; then \
     )
 
 
-def _generate_uniq_image_name(prefix):
+def _generate_unique_image_name(prefix):
     return os.path.join(
         prefix if prefix else "", "elasticdl:" + uuid.uuid4().hex
     )
