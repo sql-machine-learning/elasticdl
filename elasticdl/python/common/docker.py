@@ -8,14 +8,11 @@ import sys
 
 
 def build_and_push_docker_image(
-    model_zoo, gpu, docker_image_prefix, extra_pypi
+    model_zoo, base_image, docker_image_prefix, extra_pypi
 ):
     """Build and push a Docker image containing ElasticDL and the model
 zoo.  The parameter model_zoo could be a local directory or an URL.
 In the later case, we do git clone.
-
-    The base image is tensorflow/tensorflow:2.0.0b0-py3 if gpu is
-    True; or tensorflow/tensorflow:2.0.0b0-gpu-py3 otherwise.
 
     The basename of the Docker image is auto-generated and is globally
 unique.  The full name is docker_image_prefix + "/" + basename.
@@ -39,7 +36,7 @@ after _build_docker_image.
 
         # Create the Dockerfile.
         with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
-            df.write(_create_dockerfile(model_zoo, gpu, extra_pypi))
+            df.write(_create_dockerfile(model_zoo, base_image, extra_pypi))
 
         image_name = _generate_unique_image_name(docker_image_prefix)
         client = docker.APIClient(base_url="unix://var/run/docker.sock")
@@ -51,7 +48,7 @@ after _build_docker_image.
     return image_name
 
 
-def _create_dockerfile(model_zoo, gpu=False, extra_pypi_index=""):
+def _create_dockerfile(model_zoo, base_image="", extra_pypi_index=""):
     LOCAL_ZOO = """
 FROM {BASE_IMAGE} as base
 COPY {MODEL_ZOO} /model_zoo
@@ -79,8 +76,8 @@ RUN if [[ -f $REQS ]]; then \
         tmpl = REMOTE_ZOO
 
     return tmpl.format(
-        BASE_IMAGE="tensorflow/tensorflow:2.0.0b1-gpu-py3"
-        if gpu
+        BASE_IMAGE=base_image
+        if base_image
         else "tensorflow/tensorflow:2.0.0b1-py3",
         MODEL_ZOO=model_zoo,
         EXTRA_PYPI_INDEX=extra_pypi_index,
