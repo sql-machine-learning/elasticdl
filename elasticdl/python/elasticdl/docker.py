@@ -12,7 +12,9 @@ def train(model_zoo, model_class, model_class_params):
     # _launch_training_job(model_class, model_class_params)
 
 
-def _build_and_push_docker_image(model_zoo, gpu, docker_image_prefix):
+def _build_and_push_docker_image(
+    model_zoo, gpu, docker_image_prefix, extra_pypi
+):
     """Build and push a Docker image containing ElasticDL and the model
 zoo.  The parameter model_zoo could be a local directory or an URL.
 In the later case, we do git clone.
@@ -21,11 +23,11 @@ In the later case, we do git clone.
     True; or tensorflow/tensorflow:2.0.0b0-gpu-py3 otherwise.
 
     The basename of the Docker image is auto-generated and is globally
-unique.  The full name is docker_image_prefix + "/" + basename.  Valid
-docker_image_prefix could be None or "", which means no docker push
-after the build, "project-name", which means to push the Docker image
-"project-name/basename" to DockerHub.com, or "hostname/project-name",
-which means to push the Docker image to the specified Docker registry.
+unique.  The full name is docker_image_prefix + "/" + basename.
+
+    The fullname of the Docker image is docker_image_prefix + "/" +
+basename.  Unless prefix is None or "", _push_docker_image is called
+after _build_docker_image.
 
     Returns the full Docker image name.  So the caller can docker rmi
     fullname later.
@@ -42,7 +44,7 @@ which means to push the Docker image to the specified Docker registry.
 
         # Create the Dockerfile.
         with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
-            df.write(_create_dockerfile(model_zoo, gpu))
+            df.write(_create_dockerfile(model_zoo, gpu, extra_pypi))
 
         image_name = _generate_unique_image_name(docker_image_prefix)
         client = docker.APIClient(base_url="unix://var/run/docker.sock")
@@ -58,6 +60,10 @@ def _create_dockerfile(model_zoo, gpu=False, extra_pypi_index=""):
     LOCAL_ZOO = """
 FROM {BASE_IMAGE} as base
 COPY {MODEL_ZOO} /model_zoo
+ARG REQS=/model_zoo/requirements.txt
+RUN if [[ -f $REQS ]]; then \
+      pip install -r $REQS --extra-index-url="${EXTRA_PYPI_INDEX}"; \
+    fi
 """
     REMOTE_ZOO = """
 FROM {BASE_IMAGE} as base
@@ -93,6 +99,7 @@ def _generate_unique_image_name(prefix):
 
 
 def _build_docker_image(client, ctx_dir, dockerfile, image_name):
+
     print("===== Building Docker Image =====")
     for line in client.build(
         dockerfile=dockerfile,
@@ -107,11 +114,10 @@ def _build_docker_image(client, ctx_dir, dockerfile, image_name):
             )
         text = line.get("stream", None)
         if text:
-            sys.stdout.write(text)
-            sys.stdout.flush()
+            print(text)
 
 
-def _push_docker_image(client, image_name):
+def _push_docker_image(client, image_name, output=sys.stdout):
     print("===== Pushing Docker Image =====")
     for line in client.push(image_name, stream=True, decode=True):
         print(line)
