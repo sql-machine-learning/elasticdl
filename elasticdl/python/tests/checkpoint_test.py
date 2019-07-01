@@ -93,7 +93,7 @@ class CheckpointTest(unittest.TestCase):
             worker = Worker(1, _module_file, channel=None)
             filename = create_recordio_file(128)
             task_q = _TaskQueue(
-                {filename: 128}, {}, records_per_task=64, num_epochs=1
+                {filename: 128}, {}, {}, records_per_task=64, num_epochs=1
             )
             master = MasterServicer(
                 2,

@@ -123,6 +123,14 @@ class Worker(object):
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
 
+    def report_prediction_outputs(self, predictions):
+        self._logger.info("Predicted: %f" % predictions.numpy())
+        # TODO: Decide whether we need to send results to master first
+        # or write results to destination directly from workers.
+        # Also, need to think about how users configure where to
+        # write results.
+        return True
+
     def _get_batch(self, reader, batch_size):
         res = []
         for i in range(batch_size):
@@ -155,6 +163,10 @@ class Worker(object):
         evaluation_metrics = self._eval_metrics_fn(outputs, labels)
         return self.report_evaluation_metrics(evaluation_metrics)
 
+    def _run_prediction_task(self, features):
+        predictions = self._model.call(features, training=False)
+        return self.report_prediction_outputs(predictions)
+
     def _handle_task(self, task):
         min_model_version = task.model_version
         with closing(
@@ -171,6 +183,7 @@ class Worker(object):
                 )
 
     def _process_minibatch(self, task, record_buf, min_model_version):
+        # TODO: Discuss how we separate input_fn for different tasks
         features, labels = self._input_fn(record_buf)
         if not self._var_created:
             self._create_variable_and_report(features)
@@ -193,6 +206,12 @@ class Worker(object):
                 )
                 if accepted:
                     self._logger.info("Loss is %f" % loss.numpy())
+                    break
+            elif task.type == elasticdl_pb2.PREDICTION:
+                if self._model_version != min_model_version:
+                    self.get_model(min_model_version, elasticdl_pb2.FIXED)
+                accepted = self._run_prediction_task(features)
+                if accepted:
                     break
             else:
                 raise RuntimeError("Unrecognized task type, %s" % task.type)
