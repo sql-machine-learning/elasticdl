@@ -1,6 +1,5 @@
 import logging
 import traceback
-
 from contextlib import closing
 
 import recordio
