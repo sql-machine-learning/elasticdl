@@ -83,7 +83,7 @@ class EvaluationServiceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testEvaluationService")
             checkpoint_service = CheckpointService(chkp_dir, 5, 5, True)
-            task_q = _TaskQueue({}, {"f1": 10, "f2": 10}, 3, 1)
+            task_q = _TaskQueue({}, {"f1": 10, "f2": 10}, {}, 3, 1)
 
             # Evaluation metrics will not be accepted if no evaluation ongoing
             evaluation_service = EvaluationService(

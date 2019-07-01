@@ -68,6 +68,7 @@ class ExampleTest(unittest.TestCase):
         task_q = _TaskQueue(
             training_shards,
             evaluation_shards,
+            {},
             records_per_task=64,
             num_epochs=1,
         )

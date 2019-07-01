@@ -20,9 +20,15 @@ from elasticdl.python.common.constants import GRPC
 
 
 def _make_task_queue(
-    training_data_dir, evaluation_data_dir, records_per_task, num_epochs
+    training_data_dir,
+    evaluation_data_dir,
+    prediction_data_dir,
+    records_per_task,
+    num_epochs,
 ):
     def _collect_file_records_from_dir(data_dir):
+        if data_dir:
+            return {}
         f_records = {}
         for f in os.listdir(data_dir):
             p = os.path.join(data_dir, f)
@@ -31,13 +37,16 @@ def _make_task_queue(
         return f_records
 
     training_f_records = _collect_file_records_from_dir(training_data_dir)
-    evaluation_f_records = (
-        {}
-        if evaluation_data_dir == ""
-        else _collect_file_records_from_dir(evaluation_data_dir)
-    )
+    evaluation_f_records = _collect_file_records_from_dir(evaluation_data_dir)
+    prediction_f_records = _collect_file_records_from_dir(prediction_data_dir)
+
     return _TaskQueue(
-        training_f_records, evaluation_f_records, records_per_task, num_epochs
+        training_f_records,
+        evaluation_f_records,
+        prediction_f_records,
+        records_per_task,
+        # Only generate prediction tasks for 1 epoch
+        1 if prediction_f_records else num_epochs,
     )
 
 
@@ -67,11 +76,16 @@ def _parse_args():
     parser.add_argument(
         "--training_data_dir",
         help="Training data directory. Files should be in RecordIO format",
-        required=True,
+        default="",
     )
     parser.add_argument(
         "--evaluation_data_dir",
         help="Evaluation data directory. Files should be in RecordIO format",
+        default="",
+    )
+    parser.add_argument(
+        "---prediction_data_dir",
+        help="Prediction data directory. Files should be in RecordIO format",
         default="",
     )
     parser.add_argument(
@@ -191,7 +205,22 @@ def _parse_args():
         "directories, and TensorBoard will watch each "
         "directory.",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    if args.prediction_data_dir and (
+        args.training_data_dir or args.evaluation_data_dir
+    ):
+        raise ValueError(
+            "Running prediction together with training or evaluation "
+            "is not supported"
+        )
+    if args.prediction_data_dir and not args.checkpoint_filename_for_init:
+        raise ValueError(
+            "checkpoint_filename_for_init is required for running "
+            "prediction job"
+        )
+
+    return args
 
 
 def main():
@@ -229,6 +258,7 @@ def main():
     task_q = _make_task_queue(
         args.training_data_dir,
         args.evaluation_data_dir,
+        args.prediction_data_dir,
         args.records_per_task,
         args.num_epochs,
     )

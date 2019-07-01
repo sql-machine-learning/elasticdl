@@ -45,7 +45,7 @@ class ServicerTest(unittest.TestCase):
             2,
             3,
             None,
-            _TaskQueue({}, {}, records_per_task=3, num_epochs=2),
+            _TaskQueue({}, {}, {}, records_per_task=3, num_epochs=2),
             init_var=[],
             checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0, False),
@@ -248,7 +248,11 @@ class ServicerTest(unittest.TestCase):
 
     def testReportTaskResult(self):
         task_q = _TaskQueue(
-            {"shard_1": 10, "shard_2": 9}, {}, records_per_task=3, num_epochs=2
+            {"shard_1": 10, "shard_2": 9},
+            {},
+            {},
+            records_per_task=3,
+            num_epochs=2,
         )
         master = MasterServicer(
             3,
