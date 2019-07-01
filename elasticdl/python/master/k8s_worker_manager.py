@@ -29,8 +29,8 @@ class WorkerManager(object):
         self._args = args
         self._num_workers = num_workers
 
-        self._resource_requests = parse(worker_resource_request)
-        self._resource_limits = parse(worker_resource_limit)
+        self._resource_requests = worker_resource_request
+        self._resource_limits = worker_resource_limit
         self._restart_policy = restart_policy
         self._pod_priority = pod_priority
         self._mount_path = mount_path
