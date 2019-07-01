@@ -68,7 +68,7 @@ class WorkerManager(object):
                 worker_id=worker_id,
                 resource_requests=self._resource_requests,
                 resource_limits=self._resource_limits,
-                priority=self._pod_priority,
+                pod_priority=self._pod_priority,
                 mount_path=self._mount_path,
                 volume_name=self._volume_name,
                 image_pull_policy=self._image_pull_policy,

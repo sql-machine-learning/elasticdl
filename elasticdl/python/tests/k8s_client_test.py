@@ -42,7 +42,7 @@ class K8sClientTest(unittest.TestCase):
                 resource_requests=resource,
                 resource_limits=resource,
                 command=["echo"],
-                priority=None,
+                pod_priority=None,
                 args=None,
                 mount_path=None,
                 volume_name=None,
