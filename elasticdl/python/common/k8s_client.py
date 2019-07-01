@@ -190,7 +190,7 @@ class Client(object):
             resource_requests=kargs["resource_requests"],
             resource_limits=kargs["resource_limits"],
             container_args=kargs["args"],
-            pod_priority=kargs["priority"],
+            pod_priority=kargs["pod_priority"],
             image_pull_policy=kargs["image_pull_policy"],
             restart_policy=kargs["restart_policy"],
             volume_name=kargs["volume_name"],
