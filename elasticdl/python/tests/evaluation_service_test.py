@@ -15,6 +15,10 @@ from elasticdl.python.master.task_queue import _TaskQueue
 
 
 class EvaluationServiceTest(unittest.TestCase):
+    @staticmethod
+    def ok_to_new_job(job, latest_chkp_version):
+        return job.finished() and latest_chkp_version > job.model_version
+
     def testEvaluationJob(self):
         model_version = 1
         total_tasks = 5
@@ -22,26 +26,26 @@ class EvaluationServiceTest(unittest.TestCase):
         job = _EvaluationJob(model_version, total_tasks)
         self.assertEqual(0, job._completed_tasks)
         self.assertFalse(job.finished())
-        self.assertFalse(job.ok_to_new_job(latest_chkp_version))
+        self.assertFalse(self.ok_to_new_job(job, latest_chkp_version))
 
         # Now make 4 tasks finished
         for i in range(4):
             job.complete_task()
         self.assertEqual(4, job._completed_tasks)
         self.assertFalse(job.finished())
-        self.assertFalse(job.ok_to_new_job(latest_chkp_version))
+        self.assertFalse(self.ok_to_new_job(job, latest_chkp_version))
 
         # One more task finishes
         job.complete_task()
         self.assertEqual(5, job._completed_tasks)
         self.assertTrue(job.finished())
-        self.assertTrue(job.ok_to_new_job(latest_chkp_version))
+        self.assertTrue(self.ok_to_new_job(job, latest_chkp_version))
 
         # No new model checkpoint
         latest_chkp_version = job.model_version
-        self.assertFalse(job.ok_to_new_job(latest_chkp_version))
+        self.assertFalse(self.ok_to_new_job(job, latest_chkp_version))
         latest_chkp_version = job.model_version + 1
-        self.assertTrue(job.ok_to_new_job(latest_chkp_version))
+        self.assertTrue(self.ok_to_new_job(job, latest_chkp_version))
 
         # At the beginning, no metrics
         self.assertFalse(job._evaluation_metrics)
@@ -121,5 +125,5 @@ class EvaluationServiceTest(unittest.TestCase):
             for i in range(8):
                 self.assertFalse(evaluation_service._eval_job.finished())
                 evaluation_service.complete_task()
-            self.assertTrue(evaluation_service._eval_job.finished())
+            self.assertTrue(evaluation_service._eval_job is None)
             self.assertFalse(evaluation_service.try_to_create_new_job())
