@@ -4,9 +4,11 @@ import threading
 import traceback
 
 from kubernetes import client, config, watch
-from kubernetes.client import V1EnvVar, V1EnvVarSource, V1ObjectFieldSelector
 from kubernetes.client import (
-    V1PersistentVolumeClaimVolumeSource as pvcVolumeSource,
+    V1EnvVar,
+    V1EnvVarSource,
+    V1ObjectFieldSelector,
+    V1PersistentVolumeClaimVolumeSource,
 )
 
 from elasticdl.python.common.k8s_resource import parse
@@ -117,7 +119,7 @@ class Client(object):
         if all([kargs["volume_name"], kargs["mount_path"]]):
             volume = client.V1Volume(
                 name=kargs["volume_name"],
-                persistent_volume_claim=pvcVolumeSource(
+                persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
                     claim_name="fileserver-claim", read_only=False
                 ),
             )
