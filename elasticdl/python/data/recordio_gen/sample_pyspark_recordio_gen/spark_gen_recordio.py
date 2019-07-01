@@ -1,13 +1,13 @@
 import argparse
-import os
 import glob
+import os
 import tarfile
-from pyspark import SparkContext
-from pyspark import TaskContext
+from contextlib import closing
+
+import recordio
+from pyspark import SparkContext, TaskContext
 
 from elasticdl.python.common.model_helper import load_module
-from contextlib import closing
-import recordio
 
 
 def write_to_recordio(filename, data_list):

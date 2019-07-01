@@ -1,12 +1,11 @@
 import os
-import unittest
 import random
 import time
-
-
-from elasticdl.python.master.task_queue import _TaskQueue
-from elasticdl.python.master.k8s_worker_manager import WorkerManager
+import unittest
 from unittest.mock import MagicMock, call
+
+from elasticdl.python.master.k8s_worker_manager import WorkerManager
+from elasticdl.python.master.task_queue import _TaskQueue
 
 
 class WorkerManagerTest(unittest.TestCase):

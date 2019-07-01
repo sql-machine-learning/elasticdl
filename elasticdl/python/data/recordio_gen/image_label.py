@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 import argparse
-import tensorflow as tf
 import os
-import recordio
 import sys
+
+import recordio
+import tensorflow as tf
 
 
 def convert(x, y, args, subdir):

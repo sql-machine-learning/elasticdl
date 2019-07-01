@@ -1,7 +1,7 @@
 import unittest
 
-from elasticdl.python.master.task_queue import _TaskQueue
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.master.task_queue import _TaskQueue
 
 
 class TaskQueueTest(unittest.TestCase):

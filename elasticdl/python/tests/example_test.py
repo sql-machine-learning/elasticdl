@@ -1,17 +1,18 @@
-import tempfile
 import os
+import tempfile
 import unittest
+from contextlib import closing
+
 import numpy as np
 import recordio
 import tensorflow as tf
 
-from contextlib import closing
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.master.task_queue import _TaskQueue
-from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.worker.worker import Worker
-from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.master.servicer import MasterServicer
+from elasticdl.python.master.task_queue import _TaskQueue
+from elasticdl.python.tests.in_process_master import InProcessMaster
+from elasticdl.python.worker.worker import Worker
 
 
 def _get_model_info(file_name):

@@ -1,8 +1,8 @@
 import itertools
 import logging
 import threading
-
 from collections import Counter
+
 from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 
