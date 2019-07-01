@@ -12,9 +12,6 @@ from elasticdl.python.common.ndarray import (
     tensor_to_ndarray,
 )
 
-assert tf.executing_eagerly()  # noqa
-
-
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.
 DEFAULT_MAX_MINIBATCH_RETRY_NUM = 64
