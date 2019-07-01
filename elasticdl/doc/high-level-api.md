@@ -153,4 +153,55 @@ A model zoo is a plain Python source directory that's added to `/model_zoo` in t
 RUN pip install -r /model_zoo/requirements.txt
 ```
 
-Suppose that a Keras model class is referred to as `regressor.DNN` in `elasticdl.train(model_class="regressor.DNN",`, the corresponding Python file should be `/model_zoo/regressor.py`.  Similarly, a class `regressor.wide_and_deep.MagicalWAD` is in a Python file `/model_zoo/regressor/wide_and_deep.py`.
+Suppose that a Keras model class is referred to as `regressor.DNN` in `elasticdl.train(model_class="regressor.DNN",`, the corresponding Python file should be `/model_zoo/regressor.py`.  A class `regressor.wide_and_deep.MagicalWAD` is in a Python file `/model_zoo/regressor/wide_and_deep.py`.
+
+## Trained Model
+
+A call to `elasticdl.predict` looks like the following:
+
+```python
+elasticdl.predict(
+    data='/filestore/yiwang/imagenet/test/*.recordio',
+    trained_model='/filestore/tony/my_keras_model',
+    output='/filestore/yiwang/imagenet-eval.recordio')
+```
+
+It needs to
+
+1. build and push a Docker image, and
+1. launch a distributed ElasticDL job of the type "predict".
+
+The Docker image must contain the model zoo used to train the model `trained_model='/filestore/tony/my_keras_model'`.
+
+A key question is what information must be in the directory `/filestore/tony/my_keras_model`.
+
+1. A Docker image ID.
+
+   We need this ID to refer to the Docker image built during the call of `elasticdl.train`.  In this image, we have the model zoo used to train the model.  Then, `elasticdl.predict` could build the Docker image for the distributed prediction job from this commit ID.
+
+   This image ID must be a pullable ID so that ElasticDL command line tool can `docker pull` it as the base image. An example pullable ID is `docker-pullable://reg.docker.alibaba-inc.com/asdi/aswf-py3@sha256:e8ca09705eed07cdfd060b6b9d27a802`.
+
+1. Model class constructor parameters, like `hidden_units=[10, 100, 20]`.
+
+1. Other parameters passed to `elasticdl.train`, including 
+   - `model_class`
+   - `input_function`
+   - `loss`
+   - `optimizer`
+
+1. Model parameters as a map from parameter name to parameter value tensors, defined in [`elasticdl.proto`](https://github.com/wangkuiyi/elasticdl/blob/e06618af50cc9507e0b59473f4b97c066fa04870/elasticdl/proto/elasticdl.proto#L51-L54).
+
+ 
+We define a new wrapper message:
+
+```protobuf
+message TrainedModel {
+    string docker_commit_id = 1;
+    string model_class = 2;
+    string model_class_params = 3;
+    string params_filename = 4;
+    string input_function = 5;
+    string loss = 6;
+    string optimizer = 7;
+}
+```
