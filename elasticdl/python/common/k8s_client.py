@@ -4,12 +4,10 @@ import threading
 import traceback
 
 from kubernetes import client, config, watch
-from kubernetes.client import (
-    V1PersistentVolumeClaimVolumeSource as pvcVolumeSource,
-    V1EnvVar,
-    V1EnvVarSource,
-    V1ObjectFieldSelector,
-)
+from kubernetes.client import V1EnvVar, V1EnvVarSource, V1ObjectFieldSelector
+from kubernetes.client import \
+    V1PersistentVolumeClaimVolumeSource as pvcVolumeSource
+
 from elasticdl.python.common.k8s_resource import parse
 
 ELASTICDL_JOB_KEY = "elasticdl_job_name"

@@ -1,10 +1,11 @@
-from urllib.parse import urlparse
-import tempfile
-import uuid
-import docker
 import os
 import shutil
 import sys
+import tempfile
+import uuid
+from urllib.parse import urlparse
+
+import docker
 
 
 def build_and_push_docker_image(

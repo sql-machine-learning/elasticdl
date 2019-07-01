@@ -5,12 +5,12 @@ import unittest
 import numpy as np
 
 from elasticdl.python.common.ndarray import ndarray_to_tensor
-from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import (
-    _EvaluationJob,
     EvaluationService,
+    _EvaluationJob,
 )
+from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_queue import _TaskQueue
 
 

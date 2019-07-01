@@ -1,18 +1,20 @@
 import logging
 import traceback
 
-import tensorflow as tf
+from contextlib import closing
 
 import recordio
+import tensorflow as tf
 
-from contextlib import closing
-from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.proto import elasticdl_pb2
+from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.model_helper import load_module
 from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
-from elasticdl.python.common.model_helper import load_module
+
+assert tf.executing_eagerly()  # noqa
+
 
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.

@@ -1,10 +1,10 @@
 import logging
 import threading
 import time
-import numpy as np
-
 from collections import defaultdict
 from threading import Thread
+
+import numpy as np
 
 from elasticdl.python.common.ndarray import tensor_to_ndarray
 

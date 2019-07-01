@@ -1,6 +1,5 @@
 import re
 
-
 _ALLOWED_RESOURCE_TYPES = ["memory", "disk", "ephemeral-storage", "cpu", "gpu"]
 # Any domain name is (syntactically) valid if it's a dot-separated list of
 # identifiers, each no longer than 63 characters, and made up of letters,

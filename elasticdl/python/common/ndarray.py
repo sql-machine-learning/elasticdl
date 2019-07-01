@@ -1,4 +1,5 @@
 import numpy as np
+
 from elasticdl.proto import elasticdl_pb2
 
 

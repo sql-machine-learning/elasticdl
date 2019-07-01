@@ -1,22 +1,22 @@
-import logging
-import time
 import argparse
+import logging
 import os
-import recordio
+import time
+from concurrent import futures
+from contextlib import closing
 
 import grpc
+import recordio
 
-from contextlib import closing
-from concurrent import futures
 from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.python.common.constants import GRPC
+from elasticdl.python.common.model_helper import load_module
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
-from elasticdl.python.master.tensorboard_service import TensorboardService
+from elasticdl.python.master.k8s_worker_manager import WorkerManager
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_queue import _TaskQueue
-from elasticdl.python.master.k8s_worker_manager import WorkerManager
-from elasticdl.python.common.model_helper import load_module
-from elasticdl.python.common.constants import GRPC
+from elasticdl.python.master.tensorboard_service import TensorboardService
 
 
 def _make_task_queue(
