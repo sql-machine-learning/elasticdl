@@ -5,8 +5,9 @@ import traceback
 
 from kubernetes import client, config, watch
 from kubernetes.client import V1EnvVar, V1EnvVarSource, V1ObjectFieldSelector
-from kubernetes.client import \
-    V1PersistentVolumeClaimVolumeSource as pvcVolumeSource
+from kubernetes.client import (
+    V1PersistentVolumeClaimVolumeSource as pvcVolumeSource,
+)
 
 from elasticdl.python.common.k8s_resource import parse
 
