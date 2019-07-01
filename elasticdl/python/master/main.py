@@ -27,7 +27,7 @@ def _make_task_queue(
     num_epochs,
 ):
     def _collect_file_records_from_dir(data_dir):
-        if data_dir:
+        if not data_dir:
             return {}
         f_records = {}
         for f in os.listdir(data_dir):
