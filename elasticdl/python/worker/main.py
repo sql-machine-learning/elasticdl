@@ -2,7 +2,7 @@ import argparse
 import grpc
 import logging
 
-from elasticdl.python.worker.worker import Worker  # noqa
+from elasticdl.python.worker.worker import Worker
 from elasticdl.python.common.constants import GRPC
 
 

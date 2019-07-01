@@ -3,8 +3,6 @@ import traceback
 
 import tensorflow as tf
 
-assert tf.executing_eagerly()  # noqa
-
 import recordio
 
 from contextlib import closing
