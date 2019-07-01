@@ -74,7 +74,7 @@ RUN if [[ -f $REQS ]]; then \
     pr = urlparse(model_zoo)
     if not pr.path:
         raise RuntimeError("model_zoo {} has no path".format(model_zoo))
-    if pr.scheme == "file" or pr.scheme == "":
+    if pr.scheme in ["file", ""]:
         tmpl = LOCAL_ZOO
         model_zoo = pr.path  # Remove the "file://" prefix if any.
     else:
