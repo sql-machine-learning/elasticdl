@@ -148,6 +148,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._gradient_sum.clear()
         self._grad_n = 0
 
+    def get_model_version(self):
+        return self._version
+
     def _save_checkpoint(self, locking, is_eval_checkpoint):
         if locking:
             self._lock.acquire()

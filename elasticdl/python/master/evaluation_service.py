@@ -27,9 +27,6 @@ class _EvaluationJob(object):
     def finished(self):
         return self._completed_tasks >= self._total_tasks
 
-    def ok_to_new_job(self, latest_chkp_version):
-        return self.finished() and latest_chkp_version > self.model_version
-
     def report_evaluation_metrics(
         self, evaluation_version, evaluation_metrics
     ):
@@ -124,6 +121,13 @@ class EvaluationService(object):
         self._master_servicer = master_servicer
 
     def add_evaluation_task(self):
+        latest_model_version = self._master_servicer.get_model_version()
+        if (
+            self._eval_checkpoint_versions
+            and self._eval_checkpoint_versions[-1] == latest_model_version
+        ):
+            return
+
         checkpoint_version = self._master_servicer._save_checkpoint(
             locking=True, is_eval_checkpoint=True
         )
@@ -159,11 +163,13 @@ class EvaluationService(object):
                     evaluation_metrics, version=self._eval_job.model_version
                 )
             self._logger.info(
-                "Evaluation metrics: %s" % str(evaluation_metrics)
+                "Evaluation metrics[v=%d]: %s"
+                % (self._eval_job.model_version, str(evaluation_metrics))
             )
             # delete checkpoint file
             self._checkpoint_service.remove_eval_checkpoint(
                 self._eval_job.model_version
             )
+            self._eval_job = None
             # create new eval job if possible
             self.try_to_create_new_job()
