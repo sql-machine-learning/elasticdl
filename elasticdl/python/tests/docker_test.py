@@ -2,15 +2,15 @@ import os
 import unittest
 
 from elasticdl.python.client.docker import (
-    _find_git_repo_root,
+    _find_elasticdl_root,
     _generate_unique_image_name,
     _create_dockerfile,
 )
 
 
 class DockerTest(unittest.TestCase):
-    def test_find_git_repo_root(self):
-        rdm = os.path.join(_find_git_repo_root(), "README.md")
+    def test_find_elasticdl_root(self):
+        rdm = os.path.join(_find_elasticdl_root(), "README.md")
         self.assertTrue(os.path.exists(rdm))
         with open(rdm, "r") as f:
             self.assertTrue(f.read().startswith("# ElasticDL:"))

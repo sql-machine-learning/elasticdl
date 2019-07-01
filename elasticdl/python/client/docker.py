@@ -27,7 +27,7 @@ after _build_docker_image.
     """
     with tempfile.TemporaryDirectory() as ctx_dir:
         # Copy ElasticDL Python source tree into the context directory.
-        elasticdl = _find_git_repo_root()
+        elasticdl = _find_elasticdl_root()
         shutil.copytree(
             elasticdl, os.path.join(ctx_dir, os.path.basename(elasticdl))
         )
@@ -46,11 +46,10 @@ after _build_docker_image.
     return image_name
 
 
-def _find_git_repo_root():
-    cur = os.path.abspath(os.path.dirname(__file__))
-    while not (cur == "/" or ".git" in os.listdir(cur)):
-        cur = os.path.dirname(cur)
-    return cur
+def _find_elasticdl_root():
+    return os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "../../../")
+    )
 
 
 def _create_dockerfile(model_zoo, base_image="", extra_pypi_index=""):
