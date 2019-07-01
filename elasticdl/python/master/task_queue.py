@@ -120,6 +120,7 @@ class _TaskQueue(object):
     def report(self, task_id, success):
         """Report if the task is successful or not"""
 
+        evaluation_task_completed = False
         with self._lock:
             _, task = self._doing.pop(task_id, (-1, None))
             if not task:
@@ -131,7 +132,9 @@ class _TaskQueue(object):
                 task.type == elasticdl_pb2.EVALUATION
                 and self._evaluation_service is not None
             ):
-                self._evaluation_service.complete_task()
+                evaluation_task_completed = True
+        if evaluation_task_completed:
+            self._evaluation_service.complete_task()
 
     def finished(self):
         """Return if all tasks are done"""

@@ -53,6 +53,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
         self._checkpoint_service = checkpoint_service
         self._evaluation_service = evaluation_service
+        if evaluation_service:
+            evaluation_service.set_master_servicer(self)
 
     # TODO: This is currently being used by multiple tests to initilize
     # self._model, where the initialization should be done via constructor.
@@ -146,14 +148,28 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._gradient_sum.clear()
         self._grad_n = 0
 
+    def get_model_version(self):
+        return self._version
+
+    def _save_checkpoint(self, locking, is_eval_checkpoint):
+        if locking:
+            self._lock.acquire()
+        pb_model = self._get_model_no_lock()
+        self._checkpoint_service.save(
+            self._version, pb_model, is_eval_checkpoint
+        )
+        checkpoint_version = self._version
+        if locking:
+            self._lock.release()
+        return checkpoint_version
+
     def _update_checkpoint(self):
         if self._checkpoint_service.need_to_checkpoint(self._version):
             try:
                 self._logger.info(
                     "Saving checkpoint for model version %d" % self._version
                 )
-                pb_model = self._get_model_no_lock()
-                self._checkpoint_service.save(self._version, pb_model)
+                self._save_checkpoint(locking=False, is_eval_checkpoint=False)
             except Exception:
                 self._logger.error(
                     "Failed to save checkpoint file for model version %d"

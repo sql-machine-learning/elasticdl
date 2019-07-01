@@ -5,10 +5,8 @@ import unittest
 import numpy as np
 
 from elasticdl.python.common.ndarray import ndarray_to_tensor
-from elasticdl.python.master.checkpoint_service import (
-    Checkpoint,
-    CheckpointService,
-)
+from elasticdl.python.master.servicer import MasterServicer
+from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import (
     _EvaluationJob,
     EvaluationService,
@@ -17,6 +15,10 @@ from elasticdl.python.master.task_queue import _TaskQueue
 
 
 class EvaluationServiceTest(unittest.TestCase):
+    @staticmethod
+    def ok_to_new_job(job, latest_chkp_version):
+        return job.finished() and latest_chkp_version > job.model_version
+
     def testEvaluationJob(self):
         model_version = 1
         total_tasks = 5
@@ -24,26 +26,26 @@ class EvaluationServiceTest(unittest.TestCase):
         job = _EvaluationJob(model_version, total_tasks)
         self.assertEqual(0, job._completed_tasks)
         self.assertFalse(job.finished())
-        self.assertFalse(job.ok_to_new_job(latest_chkp_version))
+        self.assertFalse(self.ok_to_new_job(job, latest_chkp_version))
 
         # Now make 4 tasks finished
         for i in range(4):
             job.complete_task()
         self.assertEqual(4, job._completed_tasks)
         self.assertFalse(job.finished())
-        self.assertFalse(job.ok_to_new_job(latest_chkp_version))
+        self.assertFalse(self.ok_to_new_job(job, latest_chkp_version))
 
         # One more task finishes
         job.complete_task()
         self.assertEqual(5, job._completed_tasks)
         self.assertTrue(job.finished())
-        self.assertTrue(job.ok_to_new_job(latest_chkp_version))
+        self.assertTrue(self.ok_to_new_job(job, latest_chkp_version))
 
         # No new model checkpoint
         latest_chkp_version = job.model_version
-        self.assertFalse(job.ok_to_new_job(latest_chkp_version))
+        self.assertFalse(self.ok_to_new_job(job, latest_chkp_version))
         latest_chkp_version = job.model_version + 1
-        self.assertTrue(job.ok_to_new_job(latest_chkp_version))
+        self.assertTrue(self.ok_to_new_job(job, latest_chkp_version))
 
         # At the beginning, no metrics
         self.assertFalse(job._evaluation_metrics)
@@ -80,7 +82,7 @@ class EvaluationServiceTest(unittest.TestCase):
     def testEvaluationService(self):
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testEvaluationService")
-            checkpoint_service = CheckpointService(chkp_dir, 5, 5)
+            checkpoint_service = CheckpointService(chkp_dir, 5, 5, True)
             task_q = _TaskQueue({}, {"f1": 10, "f2": 10}, 3, 1)
 
             # Evaluation metrics will not be accepted if no evaluation ongoing
@@ -99,16 +101,29 @@ class EvaluationServiceTest(unittest.TestCase):
             )
 
             # No checkpoint available
-            self.assertFalse(evaluation_service.try_to_create_new_round())
+            self.assertFalse(evaluation_service.try_to_create_new_job())
 
-            # Add a checkpoint and we can start evaluation
-            checkpoint_service._checkpoint_list.append(Checkpoint(1, "file1"))
+            master = MasterServicer(
+                2,
+                2,
+                None,
+                task_q,
+                init_var=[],
+                checkpoint_filename_for_init="",
+                checkpoint_service=checkpoint_service,
+                evaluation_service=evaluation_service,
+            )
+            master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
+
+            # Add an evaluation task and we can start evaluation
+            evaluation_service.add_evaluation_task()
             self.assertEqual(0, len(task_q._todo))
-            self.assertTrue(evaluation_service.try_to_create_new_round())
+            self.assertTrue(evaluation_service.try_to_create_new_job())
             self.assertEqual(8, len(task_q._todo))
             self.assertFalse(evaluation_service._eval_job.finished())
 
             for i in range(8):
                 self.assertFalse(evaluation_service._eval_job.finished())
                 evaluation_service.complete_task()
-            self.assertTrue(evaluation_service._eval_job.finished())
+            self.assertTrue(evaluation_service._eval_job is None)
+            self.assertFalse(evaluation_service.try_to_create_new_job())

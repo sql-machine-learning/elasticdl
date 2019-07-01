@@ -48,7 +48,7 @@ class ServicerTest(unittest.TestCase):
             _TaskQueue({}, {}, records_per_task=3, num_epochs=2),
             init_var=[],
             checkpoint_filename_for_init="",
-            checkpoint_service=CheckpointService("", 0, 0),
+            checkpoint_service=CheckpointService("", 0, 0, False),
             evaluation_service=None,
         )
 
@@ -73,7 +73,7 @@ class ServicerTest(unittest.TestCase):
             None,
             init_var=[],
             checkpoint_filename_for_init="",
-            checkpoint_service=CheckpointService("", 0, 0),
+            checkpoint_service=CheckpointService("", 0, 0, False),
             evaluation_service=None,
         )
         master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
@@ -135,8 +135,10 @@ class ServicerTest(unittest.TestCase):
             req.version = master._version
             req.method = elasticdl_pb2.MINIMUM
             model = master.GetModel(req, None)
-            master._checkpoint_service = CheckpointService(chk_dir, 2, 5)
-            master._checkpoint_service.save(master._version, model)
+            master._checkpoint_service = CheckpointService(
+                chk_dir, 2, 5, False
+            )
+            master._checkpoint_service.save(master._version, model, False)
             master._version = 2
             master.set_model_var("z", np.array([2.0, 2.0], dtype=np.float32))
             req.version = 1
@@ -171,7 +173,7 @@ class ServicerTest(unittest.TestCase):
             None,
             init_var=[],
             checkpoint_filename_for_init="",
-            checkpoint_service=CheckpointService("", 0, 0),
+            checkpoint_service=CheckpointService("", 0, 0, False),
             evaluation_service=None,
         )
         master._version = 1
@@ -255,7 +257,7 @@ class ServicerTest(unittest.TestCase):
             task_q,
             init_var=[],
             checkpoint_filename_for_init="",
-            checkpoint_service=CheckpointService("", 0, 0),
+            checkpoint_service=CheckpointService("", 0, 0, False),
             evaluation_service=None,
         )
 
@@ -298,7 +300,7 @@ class ServicerTest(unittest.TestCase):
             None,
             init_var=[],
             checkpoint_filename_for_init="",
-            checkpoint_service=CheckpointService("", 0, 0),
+            checkpoint_service=CheckpointService("", 0, 0, False),
             evaluation_service=None,
         )
         req = elasticdl_pb2.GetModelRequest()

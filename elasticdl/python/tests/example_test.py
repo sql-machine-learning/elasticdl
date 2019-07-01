@@ -78,7 +78,7 @@ class ExampleTest(unittest.TestCase):
             task_q,
             init_var=[],
             checkpoint_filename_for_init="",
-            checkpoint_service=CheckpointService("", 0, 0),
+            checkpoint_service=CheckpointService("", 0, 0, True),
             evaluation_service=None,
         )
         worker._stub = InProcessMaster(master)
@@ -94,42 +94,42 @@ class ExampleTest(unittest.TestCase):
         # No more task.
         self.assertTrue(not task.shard_file_name)
 
-    def test_mnist_functional_bytes_train(self):
+    def test_mnist_functional_train(self):
         self.distributed_train_and_evaluate(
             "mnist_functional_api.py", [28, 28], training=True
         )
 
-    def test_mnist_functional_bytes_evaluate(self):
+    def test_mnist_functional_evaluate(self):
         self.distributed_train_and_evaluate(
             "mnist_functional_api.py", [28, 28], training=False
         )
 
-    def test_mnist_subclass_bytes_train(self):
+    def test_mnist_subclass_train(self):
         self.distributed_train_and_evaluate(
             "mnist_subclass.py", [28, 28], training=True
         )
 
-    def test_mnist_subclass_bytes_evaluate(self):
+    def test_mnist_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
             "mnist_subclass.py", [28, 28], training=False
         )
 
-    def test_cifar10_functional_bytes_train(self):
+    def test_cifar10_functional_train(self):
         self.distributed_train_and_evaluate(
             "cifar10_functional_api.py", [32, 32, 3], training=True
         )
 
-    def test_cifar10_functional_bytes_evaluate(self):
+    def test_cifar10_functional_evaluate(self):
         self.distributed_train_and_evaluate(
             "cifar10_functional_api.py", [32, 32, 3], training=False
         )
 
-    def test_cifar10_subclass_bytes_train(self):
+    def test_cifar10_subclass_train(self):
         self.distributed_train_and_evaluate(
             "cifar10_subclass.py", [32, 32, 3], training=True
         )
 
-    def test_cifar10_subclass_bytes_evaluate(self):
+    def test_cifar10_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
             "cifar10_subclass.py", [32, 32, 3], training=False
         )

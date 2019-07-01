@@ -81,7 +81,7 @@ class WorkerTest(unittest.TestCase):
             task_q,
             init_var=[],
             checkpoint_filename_for_init="",
-            checkpoint_service=CheckpointService("", 0, 0),
+            checkpoint_service=CheckpointService("", 0, 0, True),
             evaluation_service=None,
         )
         worker._stub = _Master(master)
