@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from elasticdl.python.common.docker import (
+from elasticdl.python.client.docker import (
     _find_git_repo_root,
     _generate_unique_image_name,
     _create_dockerfile,
