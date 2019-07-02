@@ -225,7 +225,6 @@ class Worker(object):
         """
         while True:
             task = self.get_task()
-            self._logger.info("Receive a new task: %d", task.task_id)
             if not task.shard_file_name:
                 if task.type == elasticdl_pb2.WAIT:
                     # Wait a few seconds then try to get_task again
@@ -235,6 +234,7 @@ class Worker(object):
                     # No more task
                     self._logger.info("No more task, stopping")
                     break
+            self._logger.info("Receive a new task: %d", task.task_id)
             err_msg = ""
             try:
                 self._handle_task(task)
