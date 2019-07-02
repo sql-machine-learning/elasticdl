@@ -12,8 +12,6 @@ from elasticdl.python.common.ndarray import (
     tensor_to_ndarray,
 )
 
-assert tf.executing_eagerly()
-
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     """Master service implementation"""
