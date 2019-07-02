@@ -8,6 +8,7 @@ enum TaskType {
     TRAINING = 0;
     EVALUATION = 1;
     PREDICTION = 2;
+    WAIT = 3;
 }
 
 enum MethodType {
