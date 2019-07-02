@@ -1,10 +1,5 @@
 import argparse
 import os
-import shutil
-import sys
-import tempfile
-
-import docker
 
 from elasticdl.python.client.image_builder import build_and_push_docker_image
 from elasticdl.python.common import k8s_client as k8s
@@ -144,7 +139,6 @@ def _evaluate(args, argv):
 
 def _model_def_in_docker(model_def):
     return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_def))
-
 
 
 def _submit(image_name, args, argv):

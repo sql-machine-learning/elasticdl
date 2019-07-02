@@ -65,12 +65,14 @@ def _find_elasticdl_root():
     )
 
 
-def _create_dockerfile(elasticdl, model_zoo, base_image="", extra_pypi_index=""):
+def _create_dockerfile(
+    elasticdl, model_zoo, base_image="", extra_pypi_index=""
+):
     LOCAL_ZOO = """
 FROM {BASE_IMAGE} as base
 COPY {ELASTIC_DL} /elasticdl
 # TODO: Need to restructure examples directory to make it conform to model_zoo
-# convention 
+# convention
 COPY {MODEL_ZOO} /model_zoo/{MODEL_ZOO}
 ARG REQS=/model_zoo/requirements.txt
 RUN if [ -f $REQS ]; then \
