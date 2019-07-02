@@ -83,4 +83,7 @@ source /.bashrc
 easy_install pip
 
 # Install the dependencies we need
-pip install pyrecordio>=0.0.6 Pillow tensorflow
+pip install pyrecordio>=0.0.6 Pillow
+
+# A hacky fix for tensorflow installation
+pip install tensorflow --ignore-installed
