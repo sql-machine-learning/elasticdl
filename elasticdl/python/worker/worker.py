@@ -228,7 +228,7 @@ class Worker(object):
             self._logger.info("Receive a new task: %d", task.task_id)
             if not task.shard_file_name:
                 if task.type == elasticdl_pb2.WAIT:
-                    # Wait 5 second to check again
+                    # Wait a few seconds then try to get_task again
                     time.sleep(5)
                     continue
                 else:
