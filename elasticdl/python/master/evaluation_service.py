@@ -110,6 +110,7 @@ class EvaluationService(object):
             self, start_delay_secs, throttle_secs
         )
         self._eval_checkpoint_versions = []
+        self._last_eval_checkpoint_version = -1
 
     def start(self):
         self.trigger.start()
@@ -122,11 +123,9 @@ class EvaluationService(object):
 
     def add_evaluation_task(self):
         latest_model_version = self._master_servicer.get_model_version()
-        if (
-            self._eval_checkpoint_versions
-            and self._eval_checkpoint_versions[-1] == latest_model_version
-        ):
+        if latest_model_version == self._last_eval_checkpoint_version:
             return
+        latest_model_version = self._last_eval_checkpoint_version
 
         checkpoint_version = self._master_servicer._save_checkpoint(
             locking=True, is_eval_checkpoint=True
