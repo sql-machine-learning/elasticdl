@@ -1,6 +1,6 @@
 # common helper methods for model manipulation.
-import os
 import importlib.util
+import os
 
 
 # TODO: This is not only used for model. Maybe we should put it into another

@@ -10,7 +10,7 @@ import recordio
 
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
-from elasticdl.python.common.model_helper import load_module, get_model_file
+from elasticdl.python.common.model_helper import get_model_file, load_module
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_worker_manager import WorkerManager

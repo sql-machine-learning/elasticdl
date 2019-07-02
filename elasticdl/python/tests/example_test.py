@@ -8,11 +8,11 @@ import recordio
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.model_helper import get_model_file
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_queue import _TaskQueue
 from elasticdl.python.tests.in_process_master import InProcessMaster
-from elasticdl.python.common.model_helper import get_model_file
 from elasticdl.python.worker.worker import Worker
 
 
