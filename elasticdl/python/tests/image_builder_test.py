@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from elasticdl.python.client.docker import (
+from elasticdl.python.client.image_builder import (
     _create_dockerfile,
     _find_elasticdl_root,
     _generate_unique_image_name,
