@@ -33,9 +33,21 @@ after _build_docker_image.
             elasticdl, os.path.join(ctx_dir, os.path.basename(elasticdl))
         )
 
+        # Copy model zoo source tree into the context directory.
+        shutil.copytree(
+            model_zoo, os.path.join(ctx_dir, os.path.basename(model_zoo))
+        )
+
         # Create the Dockerfile.
         with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
-            df.write(_create_dockerfile(model_zoo, base_image, extra_pypi))
+            df.write(
+                _create_dockerfile(
+                    os.path.basename(elasticdl),
+                    os.path.basename(model_zoo),
+                    base_image,
+                    extra_pypi,
+                )
+            )
 
         image_name = _generate_unique_image_name(docker_image_prefix)
         client = docker.APIClient(base_url="unix://var/run/docker.sock")
@@ -53,21 +65,25 @@ def _find_elasticdl_root():
     )
 
 
-def _create_dockerfile(model_zoo, base_image="", extra_pypi_index=""):
+def _create_dockerfile(elasticdl, model_zoo, base_image="", extra_pypi_index=""):
     LOCAL_ZOO = """
 FROM {BASE_IMAGE} as base
-COPY {MODEL_ZOO} /model_zoo
+COPY {ELASTIC_DL} /elasticdl
+# TODO: Need to restructure examples directory to make it conform to model_zoo
+# convention 
+COPY {MODEL_ZOO} /model_zoo/{MODEL_ZOO}
 ARG REQS=/model_zoo/requirements.txt
-RUN if [[ -f $REQS ]]; then \
+RUN if [ -f $REQS ]; then \
       pip install -r $REQS --extra-index-url="${EXTRA_PYPI_INDEX}"; \
     fi
 """
     REMOTE_ZOO = """
 FROM {BASE_IMAGE} as base
+COPY {ELASTIC_DL} /elasticdl
 RUN apt-get update && apt-get install -y git
 RUN git clone --recursive {MODEL_ZOO} /model_zoo
 ARG REQS=/model_zoo/requirements.txt
-RUN if [[ -f $REQS ]]; then \
+RUN if [ -f $REQS ]; then \
       pip install -r $REQS --extra-index-url="${EXTRA_PYPI_INDEX}"; \
     fi
 """
@@ -84,6 +100,7 @@ RUN if [[ -f $REQS ]]; then \
         BASE_IMAGE=base_image
         if base_image
         else "tensorflow/tensorflow:2.0.0b1-py3",
+        ELASTIC_DL=elasticdl,
         MODEL_ZOO=model_zoo,
         EXTRA_PYPI_INDEX=extra_pypi_index,
     )

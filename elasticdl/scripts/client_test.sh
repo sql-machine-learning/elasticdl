@@ -1,7 +1,7 @@
 set -x
 python -m elasticdl.python.client.client train \
   --image_base=elasticdl:ci \
-  --model_def=$(pwd)/elasticdl/python/examples/mnist_functional_api \
+  --model_def=elasticdl/python/examples/mnist_functional_api \
   --training_data_dir=/data/mnist/train \
   --evaluation_data_dir=/data/mnist/test \
   --num_epochs=2 \
@@ -15,6 +15,5 @@ python -m elasticdl.python.client.client train \
   --checkpoint_steps=10 \
   --grads_to_wait=2 \
   --job_name=test-mnist \
-  --image_name=elasticdl:dev \
   --log_level=INFO \
   --image_pull_policy=Never
