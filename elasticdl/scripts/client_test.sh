@@ -1,7 +1,7 @@
 set -x
 python -m elasticdl.python.client.client train \
   --image_base=elasticdl:ci \
-  --model_file=$(pwd)/elasticdl/python/examples/mnist_functional_api.py \
+  --model_def=$(pwd)/elasticdl/python/examples/mnist_functional_api \
   --training_data_dir=/data/mnist/train \
   --evaluation_data_dir=/data/mnist/test \
   --num_epochs=2 \
