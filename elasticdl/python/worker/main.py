@@ -1,10 +1,11 @@
 import argparse
-import grpc
 import logging
 
-from elasticdl.python.worker.worker import Worker  # noqa
+import grpc
+
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.common.model_helper import get_model_file
+from elasticdl.python.worker.worker import Worker
 
 
 def _parse_args():

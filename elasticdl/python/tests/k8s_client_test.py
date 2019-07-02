@@ -1,8 +1,7 @@
-import unittest
-
 import os
 import random
 import time
+import unittest
 
 from elasticdl.python.common import k8s_client as k8s
 
@@ -35,14 +34,14 @@ class K8sClientTest(unittest.TestCase):
         )
 
         # Start 3 workers
-        resource = {"cpu": "100m", "memory": "64M"}
+        resource = "cpu=100m,memory=64M"
         for i in range(3):
             _ = c.create_worker(
                 worker_id="worker-%d" % i,
                 resource_requests=resource,
                 resource_limits=resource,
                 command=["echo"],
-                priority=None,
+                pod_priority=None,
                 args=None,
                 mount_path=None,
                 volume_name=None,

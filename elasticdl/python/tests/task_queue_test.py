@@ -1,12 +1,12 @@
 import unittest
 
-from elasticdl.python.master.task_queue import _TaskQueue
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.master.task_queue import _TaskQueue
 
 
 class TaskQueueTest(unittest.TestCase):
     def test_create_get(self):
-        task_q = _TaskQueue({"f1": 10, "f2": 10}, {}, 3, 1)
+        task_q = _TaskQueue({"f1": 10, "f2": 10}, {}, {}, 3, 1)
 
         all_tasks = [
             ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
@@ -56,7 +56,7 @@ class TaskQueueTest(unittest.TestCase):
         self.assertTrue(task_q.finished())
 
     def test_epoch(self):
-        task_q = _TaskQueue({"f1": 10, "f2": 10}, {}, 3, 2)
+        task_q = _TaskQueue({"f1": 10, "f2": 10}, {}, {}, 3, 2)
 
         epoch_tasks = [
             ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),

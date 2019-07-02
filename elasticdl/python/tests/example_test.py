@@ -1,18 +1,19 @@
-import tempfile
 import os
+import tempfile
 import unittest
+from contextlib import closing
+
 import numpy as np
 import recordio
 import tensorflow as tf
 
-from contextlib import closing
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.master.task_queue import _TaskQueue
-from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.worker.worker import Worker
-from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.master.servicer import MasterServicer
+from elasticdl.python.master.task_queue import _TaskQueue
+from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.common.model_helper import get_model_file
+from elasticdl.python.worker.worker import Worker
 
 
 def _get_model_info(file_name):
@@ -69,6 +70,7 @@ class ExampleTest(unittest.TestCase):
         task_q = _TaskQueue(
             training_shards,
             evaluation_shards,
+            {},
             records_per_task=64,
             num_epochs=1,
         )
@@ -79,7 +81,7 @@ class ExampleTest(unittest.TestCase):
             task_q,
             init_var=[],
             checkpoint_filename_for_init="",
-            checkpoint_service=CheckpointService("", 0, 0),
+            checkpoint_service=CheckpointService("", 0, 0, True),
             evaluation_service=None,
         )
         worker._stub = InProcessMaster(master)
@@ -95,42 +97,42 @@ class ExampleTest(unittest.TestCase):
         # No more task.
         self.assertTrue(not task.shard_file_name)
 
-    def test_mnist_functional_bytes_train(self):
+    def test_mnist_functional_train(self):
         self.distributed_train_and_evaluate(
             "mnist_functional_api", [28, 28], training=True
         )
 
-    def test_mnist_functional_bytes_evaluate(self):
+    def test_mnist_functional_evaluate(self):
         self.distributed_train_and_evaluate(
             "mnist_functional_api", [28, 28], training=False
         )
 
-    def test_mnist_subclass_bytes_train(self):
+    def test_mnist_subclass_train(self):
         self.distributed_train_and_evaluate(
             "mnist_subclass", [28, 28], training=True
         )
 
-    def test_mnist_subclass_bytes_evaluate(self):
+    def test_mnist_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
             "mnist_subclass", [28, 28], training=False
         )
 
-    def test_cifar10_functional_bytes_train(self):
+    def test_cifar10_functional_train(self):
         self.distributed_train_and_evaluate(
             "cifar10_functional_api", [32, 32, 3], training=True
         )
 
-    def test_cifar10_functional_bytes_evaluate(self):
+    def test_cifar10_functional_evaluate(self):
         self.distributed_train_and_evaluate(
             "cifar10_functional_api", [32, 32, 3], training=False
         )
 
-    def test_cifar10_subclass_bytes_train(self):
+    def test_cifar10_subclass_train(self):
         self.distributed_train_and_evaluate(
             "cifar10_subclass", [32, 32, 3], training=True
         )
 
-    def test_cifar10_subclass_bytes_evaluate(self):
+    def test_cifar10_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
             "cifar10_subclass", [32, 32, 3], training=False
         )

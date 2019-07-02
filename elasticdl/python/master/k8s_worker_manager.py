@@ -1,10 +1,9 @@
 import itertools
 import logging
 import threading
-
 from collections import Counter
+
 from elasticdl.python.common import k8s_client as k8s
-from elasticdl.python.common.k8s_resource import parse
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 
 
@@ -29,8 +28,8 @@ class WorkerManager(object):
         self._args = args
         self._num_workers = num_workers
 
-        self._resource_requests = parse(worker_resource_request)
-        self._resource_limits = parse(worker_resource_limit)
+        self._resource_requests = worker_resource_request
+        self._resource_limits = worker_resource_limit
         self._restart_policy = restart_policy
         self._pod_priority = pod_priority
         self._mount_path = mount_path
@@ -68,7 +67,7 @@ class WorkerManager(object):
                 worker_id=worker_id,
                 resource_requests=self._resource_requests,
                 resource_limits=self._resource_limits,
-                priority=self._pod_priority,
+                pod_priority=self._pod_priority,
                 mount_path=self._mount_path,
                 volume_name=self._volume_name,
                 image_pull_policy=self._image_pull_policy,

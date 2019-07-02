@@ -1,7 +1,6 @@
-import tensorflow as tf
 import numpy as np
 import PIL.Image
-
+import tensorflow as tf
 
 inputs = tf.keras.Input(shape=(28, 28), name="image")
 x = tf.keras.layers.Reshape((28, 28, 1))(inputs)

@@ -1,11 +1,12 @@
 import argparse
 import os
-import tempfile
+import shutil
 import sys
+import tempfile
 
 import docker
+
 from elasticdl.python.common import k8s_client as k8s
-import shutil
 
 MODEL_ROOT_PATH = "/model"
 

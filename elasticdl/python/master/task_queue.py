@@ -31,7 +31,12 @@ class _TaskQueue(object):
     """Creates and dispatches Tasks. Keep track of a Task's lifecycle."""
 
     def __init__(
-        self, training_shards, evaluation_shards, records_per_task, num_epochs
+        self,
+        training_shards,
+        evaluation_shards,
+        prediction_shards,
+        records_per_task,
+        num_epochs,
     ):
         """
         shards: a dictionary from RecordIO file name to number of records
@@ -43,6 +48,7 @@ class _TaskQueue(object):
         self._epoch = 0
         self._training_shards = training_shards
         self._evaluation_shards = evaluation_shards
+        self._prediction_shards = prediction_shards
         self._records_per_task = records_per_task
 
         self._todo = []
@@ -79,6 +85,14 @@ class _TaskQueue(object):
             self._todo.extend(tasks)
         return tasks
 
+    def create_prediction_tasks(self):
+        self._logger.info("Creating a new set of prediction tasks")
+        tasks = self._create_tasks(
+            self._prediction_shards, elasticdl_pb2.PREDICTION
+        )
+        self._todo.extend(tasks)
+        return tasks
+
     def _create_tasks(self, shards, task_type, model_version=-1):
         tasks = []
         for name, num_records in shards.items():
@@ -103,8 +117,11 @@ class _TaskQueue(object):
             if not self._todo and self._epoch < self._num_epochs - 1:
                 # Start a new epoch
                 self._epoch += 1
-                self.create_training_tasks()
-                self._logger.info("Starting epoch %d", self._epoch)
+                if self._prediction_shards:
+                    self.create_prediction_tasks()
+                else:
+                    self.create_training_tasks()
+                    self._logger.info("Starting epoch %d", self._epoch)
 
             if not self._todo:
                 # No more tasks
@@ -120,6 +137,7 @@ class _TaskQueue(object):
     def report(self, task_id, success):
         """Report if the task is successful or not"""
 
+        evaluation_task_completed = False
         with self._lock:
             _, task = self._doing.pop(task_id, (-1, None))
             if not task:
@@ -131,7 +149,9 @@ class _TaskQueue(object):
                 task.type == elasticdl_pb2.EVALUATION
                 and self._evaluation_service is not None
             ):
-                self._evaluation_service.complete_task()
+                evaluation_task_completed = True
+        if evaluation_task_completed:
+            self._evaluation_service.complete_task()
 
     def finished(self):
         """Return if all tasks are done"""

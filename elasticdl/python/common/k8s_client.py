@@ -5,11 +5,12 @@ import traceback
 
 from kubernetes import client, config, watch
 from kubernetes.client import (
-    V1PersistentVolumeClaimVolumeSource as pvcVolumeSource,
     V1EnvVar,
     V1EnvVarSource,
     V1ObjectFieldSelector,
+    V1PersistentVolumeClaimVolumeSource,
 )
+
 from elasticdl.python.common.k8s_resource import parse
 
 ELASTICDL_JOB_KEY = "elasticdl_job_name"
@@ -99,8 +100,8 @@ class Client(object):
             image=kargs["image_name"],
             command=kargs["command"],
             resources=client.V1ResourceRequirements(
-                requests=kargs["resource_requests"],
-                limits=kargs["resource_limits"],
+                requests=parse(kargs["resource_requests"]),
+                limits=parse(kargs["resource_limits"]),
             ),
             args=kargs["container_args"],
             image_pull_policy=kargs["image_pull_policy"],
@@ -118,7 +119,7 @@ class Client(object):
         if all([kargs["volume_name"], kargs["mount_path"]]):
             volume = client.V1Volume(
                 name=kargs["volume_name"],
-                persistent_volume_claim=pvcVolumeSource(
+                persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
                     claim_name="fileserver-claim", read_only=False
                 ),
             )
@@ -164,8 +165,8 @@ class Client(object):
             job_name=self.job_name,
             image_name=self._image_name,
             command=["python"],
-            resource_requests=parse(kargs["resource_requests"]),
-            resource_limits=parse(kargs["resource_limits"]),
+            resource_requests=kargs["resource_requests"],
+            resource_limits=kargs["resource_limits"],
             container_args=kargs["args"],
             pod_priority=kargs["pod_priority"],
             image_pull_policy=kargs["image_pull_policy"],
@@ -190,7 +191,7 @@ class Client(object):
             resource_requests=kargs["resource_requests"],
             resource_limits=kargs["resource_limits"],
             container_args=kargs["args"],
-            pod_priority=kargs["priority"],
+            pod_priority=kargs["pod_priority"],
             image_pull_policy=kargs["image_pull_policy"],
             restart_policy=kargs["restart_policy"],
             volume_name=kargs["volume_name"],

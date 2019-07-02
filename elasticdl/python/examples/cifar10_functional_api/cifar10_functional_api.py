@@ -1,6 +1,5 @@
-import tensorflow as tf
 import numpy as np
-
+import tensorflow as tf
 
 inputs = tf.keras.layers.Input(shape=(32, 32, 3), name="image")
 use_bias = True

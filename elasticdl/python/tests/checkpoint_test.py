@@ -1,18 +1,19 @@
 import os
 import tempfile
 import unittest
+from contextlib import closing
+
 import numpy as np
 import recordio
 import tensorflow as tf
 
-from contextlib import closing
-from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.checkpoint_service import CheckpointService
-from elasticdl.python.worker.worker import Worker
-from elasticdl.python.common.model_helper import load_module
-from elasticdl.python.master.task_queue import _TaskQueue
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.model_helper import load_module
+from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.master.servicer import MasterServicer
+from elasticdl.python.master.task_queue import _TaskQueue
 from elasticdl.python.tests.in_process_master import InProcessMaster
+from elasticdl.python.worker.worker import Worker
 
 _module_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "test_module.py"
@@ -40,7 +41,7 @@ def create_recordio_file(size):
 
 class CheckpointTest(unittest.TestCase):
     def testNeedToCheckpoint(self):
-        checkpointer = CheckpointService("", 0, 5)
+        checkpointer = CheckpointService("", 0, 5, False)
         self.assertFalse(checkpointer.is_enabled())
         checkpointer._steps = 3
         self.assertTrue(checkpointer.is_enabled())
@@ -57,7 +58,7 @@ class CheckpointTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testSaveLoadCheckpoint")
             os.makedirs(chkp_dir)
-            checkpointer = CheckpointService(chkp_dir, 3, 5)
+            checkpointer = CheckpointService(chkp_dir, 3, 5, False)
             self.assertTrue(checkpointer.is_enabled())
 
             master = MasterServicer(
@@ -75,7 +76,7 @@ class CheckpointTest(unittest.TestCase):
             req.method = elasticdl_pb2.MINIMUM
             req.version = 0
             model = master.GetModel(req, None)
-            checkpointer.save(0, model)
+            checkpointer.save(0, model, False)
             loaded_model = checkpointer.get_checkpoint_model(0)
             self.assertEqual(model.version, loaded_model.version)
             for k in model.param:
@@ -86,14 +87,14 @@ class CheckpointTest(unittest.TestCase):
             chkp_dir = os.path.join(tempdir, "testMaxCheckpointVersions")
             os.makedirs(chkp_dir)
             # Save checkpoints every 2 steps, and keep 5 checkpoints at most
-            checkpointer = CheckpointService(chkp_dir, 2, 5)
+            checkpointer = CheckpointService(chkp_dir, 2, 5, False)
             self.assertTrue(checkpointer.is_enabled())
 
             # Launch the training
             worker = Worker(1, _module_file, channel=None)
             filename = create_recordio_file(128)
             task_q = _TaskQueue(
-                {filename: 128}, {}, records_per_task=64, num_epochs=1
+                {filename: 128}, {}, {}, records_per_task=64, num_epochs=1
             )
             master = MasterServicer(
                 2,
@@ -147,14 +148,14 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 init_var=init_var,
                 checkpoint_filename_for_init="",
-                checkpoint_service=CheckpointService(chkp_dir, 2, 3),
+                checkpoint_service=CheckpointService(chkp_dir, 2, 3, False),
                 evaluation_service=None,
             )
             req = elasticdl_pb2.GetModelRequest()
             req.method = elasticdl_pb2.MINIMUM
             req.version = 0
             model = master.GetModel(req, None)
-            master._checkpoint_service.save(master._version, model)
+            master._checkpoint_service.save(master._version, model, False)
 
             chkp_file = master._checkpoint_service.get_checkpoint_path(
                 master._version
@@ -167,7 +168,7 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 init_var=init_var,
                 checkpoint_filename_for_init=chkp_file,
-                checkpoint_service=CheckpointService("", 0, 0),
+                checkpoint_service=CheckpointService("", 0, 0, False),
                 evaluation_service=None,
             )
             model2 = master2.GetModel(req, None)
@@ -180,7 +181,7 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 init_var=[],
                 checkpoint_filename_for_init=chkp_file,
-                checkpoint_service=CheckpointService("", 0, 0),
+                checkpoint_service=CheckpointService("", 0, 0, False),
                 evaluation_service=None,
             )
             model3 = master3.GetModel(req, None)

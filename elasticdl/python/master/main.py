@@ -1,28 +1,34 @@
-import logging
-import time
 import argparse
+import logging
 import os
-import recordio
+import time
+from concurrent import futures
+from contextlib import closing
 
 import grpc
+import recordio
 
-from contextlib import closing
-from concurrent import futures
 from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.python.common.constants import GRPC
+from elasticdl.python.common.model_helper import load_module, get_model_file
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
-from elasticdl.python.master.tensorboard_service import TensorboardService
+from elasticdl.python.master.k8s_worker_manager import WorkerManager
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_queue import _TaskQueue
-from elasticdl.python.master.k8s_worker_manager import WorkerManager
-from elasticdl.python.common.model_helper import load_module, get_model_file
-from elasticdl.python.common.constants import GRPC
+from elasticdl.python.master.tensorboard_service import TensorboardService
 
 
 def _make_task_queue(
-    training_data_dir, evaluation_data_dir, records_per_task, num_epochs
+    training_data_dir,
+    evaluation_data_dir,
+    prediction_data_dir,
+    records_per_task,
+    num_epochs,
 ):
     def _collect_file_records_from_dir(data_dir):
+        if not data_dir:
+            return {}
         f_records = {}
         for f in os.listdir(data_dir):
             p = os.path.join(data_dir, f)
@@ -31,13 +37,16 @@ def _make_task_queue(
         return f_records
 
     training_f_records = _collect_file_records_from_dir(training_data_dir)
-    evaluation_f_records = (
-        {}
-        if evaluation_data_dir == ""
-        else _collect_file_records_from_dir(evaluation_data_dir)
-    )
+    evaluation_f_records = _collect_file_records_from_dir(evaluation_data_dir)
+    prediction_f_records = _collect_file_records_from_dir(prediction_data_dir)
+
     return _TaskQueue(
-        training_f_records, evaluation_f_records, records_per_task, num_epochs
+        training_f_records,
+        evaluation_f_records,
+        prediction_f_records,
+        records_per_task,
+        # Only generate prediction tasks for 1 epoch
+        1 if prediction_f_records else num_epochs,
     )
 
 
@@ -68,11 +77,16 @@ def _parse_args():
     parser.add_argument(
         "--training_data_dir",
         help="Training data directory. Files should be in RecordIO format",
-        required=True,
+        default="",
     )
     parser.add_argument(
         "--evaluation_data_dir",
         help="Evaluation data directory. Files should be in RecordIO format",
+        default="",
+    )
+    parser.add_argument(
+        "---prediction_data_dir",
+        help="Prediction data directory. Files should be in RecordIO format",
         default="",
     )
     parser.add_argument(
@@ -192,7 +206,22 @@ def _parse_args():
         "directories, and TensorBoard will watch each "
         "directory.",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    if args.prediction_data_dir and (
+        args.training_data_dir or args.evaluation_data_dir
+    ):
+        raise ValueError(
+            "Running prediction together with training or evaluation "
+            "is not supported"
+        )
+    if args.prediction_data_dir and not args.checkpoint_filename_for_init:
+        raise ValueError(
+            "checkpoint_filename_for_init is required for running "
+            "prediction job"
+        )
+
+    return args
 
 
 def main():
@@ -230,34 +259,31 @@ def main():
     task_q = _make_task_queue(
         args.training_data_dir,
         args.evaluation_data_dir,
+        args.prediction_data_dir,
         args.records_per_task,
         args.num_epochs,
     )
-    logger.info(args.model_def)
-    logger.info(get_model_file)
-    logger.info(get_model_file(args.model_def))
     model_module = load_module(get_model_file(args.model_def))
     model_inst = model_module.model
     optimizer = model_module.optimizer()
 
+    include_evaluation = args.evaluation_data_dir != ""
+
     # Initialize checkpoint service
-    if args.checkpoint_steps:
+    if args.checkpoint_steps or include_evaluation:
         logger.info("Starting checkpoint service")
         checkpoint_service = CheckpointService(
             args.checkpoint_dir,
             args.checkpoint_steps,
             args.keep_checkpoint_max,
+            include_evaluation,
         )
     else:
         checkpoint_service = None
 
     # Initialize evaluation service
     evaluation_service = None
-    if args.evaluation_data_dir:
-        if args.checkpoint_steps <= 0:
-            raise ValueError(
-                "Checkpoint should also be enabled when evaluation is enabled"
-            )
+    if include_evaluation:
         logger.info(
             "Starting evaluation service with throttle seconds %d",
             args.evaluation_throttle_secs,
