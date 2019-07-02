@@ -8,6 +8,8 @@ import docker
 
 from elasticdl.python.common import k8s_client as k8s
 
+MODEL_ROOT_PATH = "/model"
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -35,7 +37,10 @@ evaluate      Submit a ElasticDL distributed evaluation job.
 
 def _add_train_params(parser):
     parser.add_argument(
-        "--model_file", help="Path to the model file", required=True
+        "--model_def",
+        help="The directory that contains user-defined model files "
+        "or a specific model file",
+        required=True,
     )
     parser.add_argument(
         "--push_image",
@@ -47,11 +52,7 @@ def _add_train_params(parser):
         help="The Docker image name built by ElasticDL client",
         required=True,
     )
-    parser.add_argument(
-        "--image_base",
-        help="Base Docker image.",
-        default="tensorflow/tensorflow:2.0.0b0-py3",
-    )
+    parser.add_argument("--image_base", help="Base Docker image.")
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
         "--master_resource_request",
@@ -130,15 +131,14 @@ def _add_evaluate_params(parser):
 
 
 def _train(args, argv):
-    job_name = args.job_name
     _build_docker_image(
-        args.model_file,
+        args.model_def,
         args.image_name,
         args.push_image,
         args.extra_pypi_index,
         args.image_base,
     )
-    _submit(args.image_name, args.model_file, job_name, args, argv)
+    _submit(args, argv)
 
 
 def _evaluate(args, argv):
@@ -146,30 +146,55 @@ def _evaluate(args, argv):
     raise NotImplementedError()
 
 
-def _m_file_in_docker(model_file):
-    return "/model/" + os.path.basename(model_file)
+def _model_def_in_docker(model_def):
+    return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_def))
 
 
 def _build_docker_image(
-    m_file, image_name, push_image, extra_pypi_index, image_base
+    m_def, image_name, push_image, extra_pypi_index, image_base
 ):
-    docker_template = """
+    if image_base:
+        docker_template = """
 FROM {IMAGE_BASE} as base
+COPY {SOURCE_MODEL_DEF} {TARGET_MODEL_DEF}
+ENV PYTHONPATH=/elasticdl:${MODEL_ROOT_PATH}
+"""
+    else:
+        docker_template = """
+FROM tensorflow/tensorflow:2.0.0b0-py3 as base
 
-COPY {SOURCE_MODEL_FILE} {TARGET_MODEL_FILE}
+COPY elasticdl /elasticdl
+RUN pip install -r elasticdl/requirements.txt
+RUN make -f elasticdl/Makefile
+COPY {SOURCE_MODEL_DEF} {TARGET_MODEL_DEF}
+ENV PYTHONPATH=/elasticdl:${MODEL_ROOT_PATH}
+
+RUN if [ -f {TARGET_MODEL_DEF}/requirements.txt ] ;\
+    then pip install -r {TARGET_MODEL_DEF}/requirements.txt ;\
+    else echo no {TARGET_MODEL_DEF}/requirements.txt found ;\
+    fi
 """
     with tempfile.TemporaryDirectory() as ctx_dir:
-        shutil.copy(m_file, ctx_dir)
         base_dir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../../../")
+            os.path.join(os.path.dirname(__file__), "../../")
         )
         shutil.copytree(base_dir, ctx_dir + "/" + os.path.basename(base_dir))
         with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
+            if os.path.isdir(m_def):
+                shutil.copytree(
+                    m_def, os.path.join(ctx_dir, os.path.basename(m_def))
+                )
+                source_model_dir = os.path.basename(m_def)
+                target_model_dir = os.path.join(
+                    MODEL_ROOT_PATH, os.path.basename(m_def)
+                )
+            else:
+                raise ValueError("Invalid model def: " + m_def)
             df.write(
                 docker_template.format(
-                    SOURCE_MODEL_FILE=os.path.basename(m_file),
-                    TARGET_MODEL_FILE=_m_file_in_docker(m_file),
-                    EXTRA_PYPI_INDEX=extra_pypi_index,
+                    SOURCE_MODEL_DEF=source_model_dir,
+                    TARGET_MODEL_DEF=target_model_dir,
+                    MODEL_ROOT_PATH=MODEL_ROOT_PATH,
                     IMAGE_BASE=image_base,
                 )
             )
@@ -197,16 +222,16 @@ COPY {SOURCE_MODEL_FILE} {TARGET_MODEL_FILE}
             print(line)
 
 
-def _submit(image_name, model_file, job_name, args, argv):
+def _submit(args, argv):
     container_args = [
         "-m",
         "elasticdl.python.master.main",
         "--job_name",
-        job_name,
+        args.job_name,
         "--worker_image",
-        image_name,
-        "--model_file",
-        _m_file_in_docker(model_file),
+        args.image_name,
+        "--model_def",
+        _model_def_in_docker(args.model_def),
         "--worker_resource_request",
         args.worker_resource_request,
         "--worker_resource_limit",
@@ -243,11 +268,13 @@ def _submit(image_name, model_file, job_name, args, argv):
     )
 
     k8s.Client(
-        image_name=image_name,
+        image_name=args.image_name,
         namespace=args.namespace,
-        job_name=job_name,
+        job_name=args.job_name,
         event_callback=None,
     ).create_master(
+        job_name=args.job_name,
+        image_name=args.image_name,
         resource_requests=args.master_resource_request,
         resource_limits=args.master_resource_limit,
         pod_priority=args.master_pod_priority,

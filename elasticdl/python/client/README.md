@@ -7,11 +7,17 @@ Currently for Mac docker-for-desktop only.
 Make sure the Kubernetes docker-for-desktop (not minikube) is installed on your Mac.
 
 
-## Write a Keras Model
+## Prepare Model Definition
 
-**(TODO: Describe programming API)**
+A model definition directory is needed to be created, the files in the directory are as follows:
 
-There are several Keras examples provided in `elasticdl/examples` directory.
+* (mandatory) A Python source file which defines the keras model and use the directory base name as the filename.
+* (mandatory) The file `__init__.py` is necessary.
+* (optional) Source files of other Python modules.
+* (optional) A requirements.txt file that lists dependencies required by the above source files.
+
+
+There are several Keras examples provided in `elasticdl/python/examples` directory.
 
 ## Submit ElasticDL Job In Development Mode
 
@@ -21,7 +27,7 @@ git clone https://github.com/wangkuiyi/elasticdl.git
 cd elasticdl
 ```
 
-Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and submit a model, e.g. `/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass.py` to it.
+Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and submit a model, e.g. `/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass/mnist_subclass.py` to it.
 
 ### Submit to local Kubernetes on Your Machine
 
@@ -37,8 +43,8 @@ Submit training job:
 
 ```bash
 python -m elasticdl.python.client.client train \
+    --model_def=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass \
     --image_base=elasticdl:ci \
-    --model_file=$(pwd)/elasticdl/python/examples/mnist_subclass.py \
     --training_data_dir=/data/mnist/train \
     --evaluation_data_dir=/data/mnist/test \
     --num_epochs=1 \
@@ -63,7 +69,7 @@ python -m elasticdl.python.client.client train \
 python -m elasticdl.python.client.client train \
     --job_name=test \
     --image_name=gcr.io/elasticdl/mnist:dev \
-    --model_file=$(pwd)/elasticdl/python/examples/mnist_subclass.py \
+    --model_def=$(pwd)/elasticdl/python/examples/mnist_subclass \
     --training_data_dir=/data/mnist_nfs/mnist/train \
     --evaluation_data_dir=/data/mnist_nfs/mnist/test \
     --num_epochs=1 \
@@ -103,7 +109,6 @@ pip install dist/ElasticDL-0.0.1-py3-none-any.whl
 ### Submit Jobs
 
 Same as in the development mode, just replace `python -m elasticdl.python.client.client` part with `elasticdl`.
-
 
 ## Check the pod status
 

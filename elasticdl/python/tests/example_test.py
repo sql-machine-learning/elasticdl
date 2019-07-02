@@ -8,6 +8,7 @@ import recordio
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.model_helper import get_model_file
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_queue import _TaskQueue
@@ -49,13 +50,13 @@ def create_recordio_file(size, shape):
 
 class ExampleTest(unittest.TestCase):
     def distributed_train_and_evaluate(
-        self, file_name, image_shape, training=True
+        self, model_def, image_shape, training=True
     ):
         """
         Run distributed training and evaluation with a local master.
         grpc calls are mocked by local master call.
         """
-        module_file = _get_model_info(file_name)
+        module_file = _get_model_info(get_model_file(model_def))
 
         worker = Worker(1, module_file, None)
 
@@ -98,42 +99,42 @@ class ExampleTest(unittest.TestCase):
 
     def test_mnist_functional_train(self):
         self.distributed_train_and_evaluate(
-            "mnist_functional_api.py", [28, 28], training=True
+            "mnist_functional_api", [28, 28], training=True
         )
 
     def test_mnist_functional_evaluate(self):
         self.distributed_train_and_evaluate(
-            "mnist_functional_api.py", [28, 28], training=False
+            "mnist_functional_api", [28, 28], training=False
         )
 
     def test_mnist_subclass_train(self):
         self.distributed_train_and_evaluate(
-            "mnist_subclass.py", [28, 28], training=True
+            "mnist_subclass", [28, 28], training=True
         )
 
     def test_mnist_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
-            "mnist_subclass.py", [28, 28], training=False
+            "mnist_subclass", [28, 28], training=False
         )
 
     def test_cifar10_functional_train(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api.py", [32, 32, 3], training=True
+            "cifar10_functional_api", [32, 32, 3], training=True
         )
 
     def test_cifar10_functional_evaluate(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api.py", [32, 32, 3], training=False
+            "cifar10_functional_api", [32, 32, 3], training=False
         )
 
     def test_cifar10_subclass_train(self):
         self.distributed_train_and_evaluate(
-            "cifar10_subclass.py", [32, 32, 3], training=True
+            "cifar10_subclass", [32, 32, 3], training=True
         )
 
     def test_cifar10_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
-            "cifar10_subclass.py", [32, 32, 3], training=False
+            "cifar10_subclass", [32, 32, 3], training=False
         )
 
 

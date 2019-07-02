@@ -10,7 +10,7 @@ import recordio
 
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
-from elasticdl.python.common.model_helper import load_module
+from elasticdl.python.common.model_helper import get_model_file, load_module
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_worker_manager import WorkerManager
@@ -69,8 +69,9 @@ def _non_neg_int(arg):
 def _parse_args():
     parser = argparse.ArgumentParser(description="ElasticDL Master")
     parser.add_argument(
-        "--model_file",
-        help="Full file path of user defined neural model",
+        "--model_def",
+        help="The directory that contains user-defined model files "
+        "or a specific model file",
         required=True,
     )
     parser.add_argument(
@@ -262,7 +263,7 @@ def main():
         args.records_per_task,
         args.num_epochs,
     )
-    model_module = load_module(args.model_file)
+    model_module = load_module(get_model_file(args.model_def))
     model_inst = model_module.model
     optimizer = model_module.optimizer()
 
@@ -332,8 +333,8 @@ def main():
         worker_args = [
             "-m",
             "elasticdl.python.worker.main",
-            "--model_file",
-            args.model_file,
+            "--model_def",
+            args.model_def,
             "--master_addr",
             master_addr,
             "--log_level",

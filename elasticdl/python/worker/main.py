@@ -4,6 +4,7 @@ import logging
 import grpc
 
 from elasticdl.python.common.constants import GRPC
+from elasticdl.python.common.model_helper import get_model_file
 from elasticdl.python.worker.worker import Worker
 
 
@@ -14,8 +15,9 @@ def _parse_args():
     )
     parser.add_argument("--master_addr", help="Master ip:port", required=True)
     parser.add_argument(
-        "--model_file",
-        help="Full file path of user defined neural model",
+        "--model_def",
+        help="The directory that contains user-defined model files "
+        "or a specific model file",
         required=True,
     )
     parser.add_argument(
@@ -51,7 +53,9 @@ def main():
     logger = logging.getLogger(__name__)
 
     logger.info("Starting worker %d", args.worker_id)
-    worker = Worker(args.worker_id, args.model_file, channel=channel)
+    worker = Worker(
+        args.worker_id, get_model_file(args.model_def), channel=channel
+    )
     worker.run()
 
 

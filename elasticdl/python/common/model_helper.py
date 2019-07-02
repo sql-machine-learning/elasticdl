@@ -1,5 +1,6 @@
 # common helper methods for model manipulation.
 import importlib.util
+import os
 
 
 # TODO: This is not only used for model. Maybe we should put it into another
@@ -24,3 +25,7 @@ def load_from_checkpoint_file(file_name):
     with open(file_name, "rb") as f:
         pb_model.ParseFromString(f.read())
     return pb_model
+
+
+def get_model_file(model_def):
+    return os.path.join(model_def, os.path.basename(model_def) + ".py")
