@@ -5,7 +5,7 @@ with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
 setup(
-    name="ElasticDL",
+    name="elasticdl",
     version="0.0.1",
     description="A Kubernetes-naitve Elastic Deep Learning Framework",
     author="Ant Financial",
