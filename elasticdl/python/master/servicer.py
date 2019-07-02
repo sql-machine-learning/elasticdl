@@ -104,7 +104,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             if task.type == elasticdl_pb2.EVALUATION:
                 res.model_version = task.model_version
         elif not self._task_q.finished():
-            # Not all tasks are finished, wait in case of new tasks generated later.
+            # Not all tasks are finished, wait in case of new tasks later.
             res.type = elasticdl_pb2.WAIT
         return res
 
