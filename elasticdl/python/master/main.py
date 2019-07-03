@@ -15,11 +15,11 @@ from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_worker_manager import WorkerManager
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_queue import _TaskQueue
+from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.master.tensorboard_service import TensorboardService
 
 
-def _make_task_queue(
+def _make_task_dispatcher(
     training_data_dir,
     evaluation_data_dir,
     prediction_data_dir,
@@ -40,7 +40,7 @@ def _make_task_queue(
     evaluation_f_records = _collect_file_records_from_dir(evaluation_data_dir)
     prediction_f_records = _collect_file_records_from_dir(prediction_data_dir)
 
-    return _TaskQueue(
+    return _TaskDispatcher(
         training_f_records,
         evaluation_f_records,
         prediction_f_records,
@@ -256,7 +256,7 @@ def main():
         args.training_data_dir,
         args.evaluation_data_dir,
     )
-    task_q = _make_task_queue(
+    task_d = _make_task_dispatcher(
         args.training_data_dir,
         args.evaluation_data_dir,
         args.prediction_data_dir,
@@ -291,12 +291,12 @@ def main():
         evaluation_service = EvaluationService(
             checkpoint_service,
             tb_service,
-            task_q,
+            task_d,
             args.evaluation_start_delay_secs,
             args.evaluation_throttle_secs,
         )
         evaluation_service.start()
-        task_q.set_evaluation_service(evaluation_service)
+        task_d.set_evaluation_service(evaluation_service)
 
     # The master service
     logger.info("Starting master service")
@@ -314,7 +314,7 @@ def main():
         args.grads_to_wait,
         args.minibatch_size,
         optimizer,
-        task_q,
+        task_d,
         init_var=model_inst.trainable_variables if model_inst.built else [],
         checkpoint_filename_for_init=args.checkpoint_filename_for_init,
         checkpoint_service=checkpoint_service,
@@ -348,7 +348,7 @@ def main():
         )
 
         worker_manager = WorkerManager(
-            task_q,
+            task_d,
             job_name=args.job_name,
             image_name=args.worker_image,
             command=worker_command,
@@ -371,7 +371,7 @@ def main():
 
     try:
         while True:
-            if task_q.finished():
+            if task_d.finished():
                 break
             time.sleep(30)
     except KeyboardInterrupt:

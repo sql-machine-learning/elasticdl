@@ -11,7 +11,7 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.model_helper import get_model_file
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_queue import _TaskQueue
+from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
 
@@ -67,7 +67,7 @@ class ExampleTest(unittest.TestCase):
         else:
             training_shards = {}
             evaluation_shards = shards
-        task_q = _TaskQueue(
+        task_d = _TaskDispatcher(
             training_shards,
             evaluation_shards,
             {},
@@ -78,7 +78,7 @@ class ExampleTest(unittest.TestCase):
             2,
             16,
             worker._opt_fn(),
-            task_q,
+            task_d,
             init_var=[],
             checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0, True),

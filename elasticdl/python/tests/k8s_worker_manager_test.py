@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock, call
 
 from elasticdl.python.master.k8s_worker_manager import WorkerManager
-from elasticdl.python.master.task_queue import _TaskQueue
+from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 
 class WorkerManagerTest(unittest.TestCase):
@@ -14,10 +14,10 @@ class WorkerManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def testCreateDeleteWorkerPod(self):
-        task_q = _TaskQueue({"f": 10}, {}, {}, 1, 1)
-        task_q.recover_tasks = MagicMock()
+        task_d = _TaskDispatcher({"f": 10}, {}, {}, 1, 1)
+        task_d.recover_tasks = MagicMock()
         worker_manager = WorkerManager(
-            task_q,
+            task_d,
             job_name="test-create-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="gcr.io/google-samples/hello-app:1.0",
@@ -43,7 +43,7 @@ class WorkerManagerTest(unittest.TestCase):
             print(counters)
             if not counters:
                 break
-        task_q.recover_tasks.assert_has_calls(
+        task_d.recover_tasks.assert_has_calls(
             [call(0), call(1), call(2)], any_order=True
         )
 
@@ -56,10 +56,10 @@ class WorkerManagerTest(unittest.TestCase):
         Start a pod running a python program destined to fail with
         restart_policy="Never" to test failed_worker_count
         """
-        task_q = _TaskQueue({"f": 10}, {}, {}, 1, 1)
-        task_q.recover_tasks = MagicMock()
+        task_d = _TaskDispatcher({"f": 10}, {}, {}, 1, 1)
+        task_d.recover_tasks = MagicMock()
         worker_manager = WorkerManager(
-            task_q,
+            task_d,
             job_name="test-failed-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="gcr.io/google-samples/hello-app:1.0",
@@ -85,7 +85,7 @@ class WorkerManagerTest(unittest.TestCase):
             print(counters)
             if not counters:
                 break
-        task_q.recover_tasks.assert_has_calls(
+        task_d.recover_tasks.assert_has_calls(
             [call(0), call(1), call(2)], any_order=True
         )
 
@@ -94,9 +94,9 @@ class WorkerManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def testRelaunchWorkerPod(self):
-        task_q = _TaskQueue({"f": 10}, {}, {}, 1, 1)
+        task_d = _TaskDispatcher({"f": 10}, {}, {}, 1, 1)
         worker_manager = WorkerManager(
-            task_q,
+            task_d,
             job_name="test-relaunch-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="gcr.io/google-samples/hello-app:1.0",

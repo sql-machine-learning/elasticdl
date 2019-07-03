@@ -10,7 +10,7 @@ from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 class WorkerManager(object):
     def __init__(
         self,
-        task_q,
+        task_d,
         command,
         args,
         num_workers=1,
@@ -35,7 +35,7 @@ class WorkerManager(object):
         self._mount_path = mount_path
         self._volume_name = volume_name
         self._image_pull_policy = image_pull_policy
-        self._task_q = task_q
+        self._task_d = task_d
         self._next_worker_id = itertools.count().__next__
 
         # protects followed variables, which are accessed from event_cb.
@@ -139,7 +139,7 @@ class WorkerManager(object):
             if evt_type == "DELETED":
                 del self._pods_phase[worker_id]
                 del self._pod_name_to_id[pod_name]
-                self._task_q.recover_tasks(worker_id)
+                self._task_d.recover_tasks(worker_id)
 
                 # If a deleted pod was not "Succeeded", relaunch a worker.
                 relaunch = (

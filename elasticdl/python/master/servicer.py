@@ -21,7 +21,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         grads_to_wait,
         minibatch_size,
         optimizer,
-        task_q,
+        task_d,
         *,
         init_var,
         checkpoint_filename_for_init,
@@ -31,7 +31,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # TODO: group params together into a single object.
         self._logger = logging.getLogger(__name__)
         self._opt = optimizer
-        self._task_q = task_q
+        self._task_d = task_d
         self._lock = threading.Lock()
         self._gradient_sum = {}
         self._grad_to_wait = grads_to_wait
@@ -91,7 +91,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         res = elasticdl_pb2.Task()
         res.model_version = self._version
         res.minibatch_size = self._minibatch_size
-        task_id, task = self._task_q.get(request.worker_id)
+        task_id, task = self._task_d.get(request.worker_id)
         if task:
             res.task_id = task_id
             res.shard_file_name = task.file_name
@@ -247,9 +247,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._logger.warning(
                 "Worker reported error: " + request.err_message
             )
-            self._task_q.report(request.task_id, False)
+            self._task_d.report(request.task_id, False)
         else:
-            self._task_q.report(request.task_id, True)
+            self._task_d.report(request.task_id, True)
         return empty_pb2.Empty()
 
     def ReportEvaluationMetrics(self, request, _):

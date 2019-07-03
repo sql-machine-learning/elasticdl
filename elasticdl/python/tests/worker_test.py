@@ -11,7 +11,7 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.model_helper import load_module
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_queue import _TaskQueue
+from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
 
@@ -69,7 +69,7 @@ class WorkerTest(unittest.TestCase):
         else:
             training_shards = {}
             evaluation_shards = shards
-        task_q = _TaskQueue(
+        task_d = _TaskDispatcher(
             training_shards,
             evaluation_shards,
             {},
@@ -80,7 +80,7 @@ class WorkerTest(unittest.TestCase):
             2,
             16,
             worker._opt_fn(),
-            task_q,
+            task_d,
             init_var=[],
             checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0, True),
@@ -130,7 +130,7 @@ class WorkerTest(unittest.TestCase):
                 master._version
             )
             prediction_shards = {create_recordio_file(128): 128}
-            task_q = _TaskQueue(
+            task_d = _TaskDispatcher(
                 {}, {}, prediction_shards, records_per_task=64, num_epochs=1
             )
 
@@ -140,7 +140,7 @@ class WorkerTest(unittest.TestCase):
                 2,
                 3,
                 None,
-                task_q,
+                task_d,
                 init_var=init_var,
                 checkpoint_filename_for_init=chkp_file,
                 checkpoint_service=None,
