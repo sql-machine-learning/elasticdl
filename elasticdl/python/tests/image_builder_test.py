@@ -32,12 +32,17 @@ class DockerTest(unittest.TestCase):
         )
 
     def test_create_dockerfile(self):
-        self.assertTrue("COPY" in _create_dockerfile("/home/me/models"))
-        self.assertTrue("COPY" in _create_dockerfile("file:///home/me/models"))
         self.assertTrue(
-            "git clone" in _create_dockerfile("https://github.com/me/models")
+            "COPY" in _create_dockerfile("elasticdl", "/home/me/models")
+        )
+        self.assertTrue(
+            "COPY" in _create_dockerfile("elasticdl", "file:///home/me/models")
+        )
+        self.assertTrue(
+            "git clone"
+            in _create_dockerfile("elasticdl", "https://github.com/me/models")
         )
         with self.assertRaises(RuntimeError):
-            _create_dockerfile("")
+            _create_dockerfile("elasticdl", "")
         with self.assertRaises(RuntimeError):
-            _create_dockerfile(None)
+            _create_dockerfile("elasticdl", None)
