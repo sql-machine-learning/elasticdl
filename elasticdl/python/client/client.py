@@ -164,13 +164,13 @@ ENV PYTHONPATH=/elasticdl:${MODEL_ROOT_PATH}
 FROM tensorflow/tensorflow:2.0.0b0-py3 as base
 
 COPY elasticdl /elasticdl
-RUN pip install -r elasticdl/requirements.txt
+RUN pip install -r elasticdl/requirements.txt --extra-index-url={EXTRA_PYPI_INDEX}
 RUN make -f elasticdl/Makefile
 COPY {SOURCE_MODEL_DEF} {TARGET_MODEL_DEF}
 ENV PYTHONPATH=/elasticdl:${MODEL_ROOT_PATH}
 
 RUN if [ -f {TARGET_MODEL_DEF}/requirements.txt ] ;\
-    then pip install -r {TARGET_MODEL_DEF}/requirements.txt ;\
+    then pip install -r {TARGET_MODEL_DEF}/requirements.txt --extra-index-url={EXTRA_PYPI_INDEX};\
     else echo no {TARGET_MODEL_DEF}/requirements.txt found ;\
     fi
 """
@@ -196,6 +196,7 @@ RUN if [ -f {TARGET_MODEL_DEF}/requirements.txt ] ;\
                     TARGET_MODEL_DEF=target_model_dir,
                     MODEL_ROOT_PATH=MODEL_ROOT_PATH,
                     IMAGE_BASE=image_base,
+                    EXTRA_PYPI_INDEX=extra_pypi_index,
                 )
             )
         client = docker.APIClient(base_url="unix://var/run/docker.sock")
