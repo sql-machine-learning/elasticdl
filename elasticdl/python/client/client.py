@@ -69,10 +69,10 @@ def _add_train_params(parser):
     )
     parser.add_argument(
         "--worker_resource_limit",
-        default="cpu=1,memory=4096Mi",
         type=str,
         help="The maximal resource required by worker, "
-        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1,"
+        "default to worker_resource_request",
     )
     parser.add_argument(
         "--master_pod_priority", help="The requested priority of master pod"
@@ -154,7 +154,7 @@ def _submit(image_name, args, argv):
         "--worker_resource_request",
         args.worker_resource_request,
         "--worker_resource_limit",
-        args.worker_resource_request,
+        args.worker_resource_limit,
         "--namespace",
         args.namespace,
         "--tensorboard_log_dir",
@@ -179,12 +179,6 @@ def _submit(image_name, args, argv):
         )
 
     container_args.extend(argv)
-
-    args.master_resource_limit = (
-        args.master_resource_limit
-        if args.master_resource_limit
-        else args.master_resource_request
-    )
 
     k8s.Client(
         image_name=image_name,
