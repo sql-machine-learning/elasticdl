@@ -65,7 +65,6 @@ Use the command below to submit your first ElasticDL job on GKE:
 ```
 python -m elasticdl.python.client.client train \
     --job_name=hello-world \
-    --image_name=gcr.io/${PROJECT_ID}/mnist:dev \
     --model_def=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_subclass \
     --training_data_dir=${MNIST_DATA_DIR}/train \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
@@ -78,7 +77,7 @@ python -m elasticdl.python.client.client train \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUME_NAME} \
     --log_level=INFO \
-    --push_image
+    --docker_image_prefix=gcr.io/${PROJECT_ID}
 ```
 `MNIST_DATA_DIR` : The directory that contains MNIST training and evaluation data in recordio format(e.g. /data/mnist_nfs/mnist).
 
@@ -106,7 +105,6 @@ Same as the first example, submit a job on GKE using the command below:
 ```
 python -m elasticdl.python.client.client train \
     --job_name=fault-tolerance \
-    --image_name=gcr.io/${PROJECT_ID}/mnist:dev \
     --model_def=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_subclass \
     --training_data_dir=${MNIST_DATA_DIR}/train \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
@@ -119,7 +117,7 @@ python -m elasticdl.python.client.client train \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUME_ID} \
     --log_level=INFO \
-    --push_image
+    --docker_image_prefix=gcr.io/${PROJECT_ID}
 ```
 Check the job's pods statuses and wait until all the pods become `Running`:
 
@@ -168,7 +166,6 @@ For more about PriorityClass, please check out [Pod Priority and Preemption](htt
 ```
 python -m elasticdl.python.client.client train \
     --job_name=low-prio-job \
-    --image_name=gcr.io/${PROJECT_ID}/mnist:dev \
     --model_def=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_subclass \
     --training_data_dir=${MNIST_DATA_DIR}/train \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
@@ -187,7 +184,7 @@ python -m elasticdl.python.client.client train \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUMN_ID} \
     --log_level=INFO \
-    --push_image
+    --docker_image_prefix=gcr.io/${PROJECT_ID}
 ```
 Please note that the master pod is configured priority `high-priority` which means the master cannot be preempted even for low priority jobs.
 
@@ -201,7 +198,6 @@ kubectl get pods -l elasticdl_job_name=low-prio-job
 ```
 python -m elasticdl.python.client.client train \
     --job_name=high-prio-job \
-    --image_name=gcr.io/${PROJECT_ID}/mnist:dev \
     --model_def=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_subclass \
     --training_data_dir=${MNIST_DATA_DIR}/train \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
@@ -220,7 +216,7 @@ python -m elasticdl.python.client.client train \
     --mount_path=${MOUNT_PATH} \
     --volume_name=${VOLUMN_ID} \
     --log_level=INFO \
-    --push_image
+    --docker_image_prefix=gcr.io/${PROJECT_ID}
 ```
 Use the following command:
 

@@ -1,14 +1,10 @@
 import argparse
 import os
-import shutil
-import sys
-import tempfile
 
-import docker
-
+from elasticdl.python.client.image_builder import build_and_push_docker_image
 from elasticdl.python.common import k8s_client as k8s
 
-MODEL_ROOT_PATH = "/model"
+MODEL_ROOT_PATH = "/model_zoo"
 
 
 def main():
@@ -43,14 +39,10 @@ def _add_train_params(parser):
         required=True,
     )
     parser.add_argument(
-        "--push_image",
-        action="store_true",
-        help="Whether to push the newly built image to remote registry",
-    )
-    parser.add_argument(
-        "--image_name",
-        help="The Docker image name built by ElasticDL client",
-        required=True,
+        "--docker_image_prefix",
+        default="",
+        help="The prefix for generated Docker images, if set, the image is "
+        "also pushed to the registry",
     )
     parser.add_argument("--image_base", help="Base Docker image.")
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
@@ -131,14 +123,13 @@ def _add_evaluate_params(parser):
 
 
 def _train(args, argv):
-    _build_docker_image(
-        args.model_def,
-        args.image_name,
-        args.push_image,
-        args.extra_pypi_index,
-        args.image_base,
+    image_name = build_and_push_docker_image(
+        model_zoo=args.model_def,
+        base_image=args.image_base,
+        docker_image_prefix=args.docker_image_prefix,
+        extra_pypi=args.extra_pypi_index,
     )
-    _submit(args, argv)
+    _submit(image_name, args, argv)
 
 
 def _evaluate(args, argv):
@@ -150,97 +141,14 @@ def _model_def_in_docker(model_def):
     return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_def))
 
 
-def _build_docker_image(
-    m_def, image_name, push_image, extra_pypi_index, image_base
-):
-    if image_base:
-        docker_template = """
-FROM {IMAGE_BASE} as base
-COPY {SOURCE_MODEL_DEF} {TARGET_MODEL_DEF}
-ENV PYTHONPATH=/elasticdl:${MODEL_ROOT_PATH}
-"""
-    else:
-        docker_template = """
-FROM tensorflow/tensorflow:2.0.0b0-py3 as base
-
-COPY elasticdl /elasticdl
-RUN pip install -r elasticdl/requirements.txt
-RUN make -f elasticdl/Makefile
-COPY {SOURCE_MODEL_DEF} {TARGET_MODEL_DEF}
-ENV PYTHONPATH=/elasticdl:${MODEL_ROOT_PATH}
-
-RUN if [ -f {TARGET_MODEL_DEF}/requirements.txt ] ;\
-    then pip install -r {TARGET_MODEL_DEF}/requirements.txt ;\
-    else echo no {TARGET_MODEL_DEF}/requirements.txt found ;\
-    fi
-"""
-    with tempfile.TemporaryDirectory() as ctx_dir:
-        base_dir = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../../")
-        )
-        shutil.copytree(base_dir, ctx_dir + "/" + os.path.basename(base_dir))
-        with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
-            if os.path.isdir(m_def):
-                shutil.copytree(
-                    m_def, os.path.join(ctx_dir, os.path.basename(m_def))
-                )
-                source_model_dir = os.path.basename(m_def)
-                target_model_dir = os.path.join(
-                    MODEL_ROOT_PATH, os.path.basename(m_def)
-                )
-            else:
-                raise ValueError("Invalid model def: " + m_def)
-            df.write(
-                docker_template.format(
-                    SOURCE_MODEL_DEF=source_model_dir,
-                    TARGET_MODEL_DEF=target_model_dir,
-                    MODEL_ROOT_PATH=MODEL_ROOT_PATH,
-                    IMAGE_BASE=image_base,
-                )
-            )
-        client = docker.APIClient(base_url="unix://var/run/docker.sock")
-        print("===== Building Docker Image =====")
-        for line in client.build(
-            dockerfile=df.name,
-            path=ctx_dir,
-            rm=True,
-            tag=image_name,
-            decode=True,
-        ):
-            if "error" in line:
-                raise RuntimeError(
-                    "Docker image build failure: %s" % line["error"]
-                )
-            text = line.get("stream", None)
-            if text:
-                sys.stdout.write(text)
-                sys.stdout.flush()
-
-    if push_image:
-        print("===== Pushing Docker Image =====")
-        for line in client.push(image_name, stream=True, decode=True):
-            print(line)
-
-
-def _submit(args, argv):
-    args.master_resource_limit = (
-        args.master_resource_limit
-        if args.master_resource_limit
-        else args.master_resource_request
-    )
-    args.worker_resource_limit = (
-        args.worker_resource_limit
-        if args.worker_resource_limit
-        else args.worker_resource_request
-    )
-
+def _submit(image_name, args, argv):
     container_args = [
         "-m",
         "elasticdl.python.master.main",
         "--job_name",
         args.job_name,
         "--worker_image",
-        args.image_name,
+        image_name,
         "--model_def",
         _model_def_in_docker(args.model_def),
         "--worker_resource_request",
@@ -273,13 +181,13 @@ def _submit(args, argv):
     container_args.extend(argv)
 
     k8s.Client(
-        image_name=args.image_name,
+        image_name=image_name,
         namespace=args.namespace,
         job_name=args.job_name,
         event_callback=None,
     ).create_master(
         job_name=args.job_name,
-        image_name=args.image_name,
+        image_name=image_name,
         resource_requests=args.master_resource_request,
         resource_limits=args.master_resource_limit,
         pod_priority=args.master_pod_priority,

@@ -58,7 +58,6 @@ python -m elasticdl.python.client.client train \
     --checkpoint_steps=2 \
     --grads_to_wait=2 \
     --job_name=test \
-    --image_name=elasticdl:dev \
     --image_pull_policy=Never \
     --log_level=INFO
 ```
@@ -88,7 +87,7 @@ python -m elasticdl.python.client.client train \
     --volume_name=data-volume \
     --image_pull_policy=Always \
     --log_level=INFO \
-    --push_image
+    --docker_image_prefix=gcr.io/elasticdl
 ```
 The difference is that we need to push the built image to a remote image registry used by GKE.
 
