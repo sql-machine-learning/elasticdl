@@ -11,7 +11,7 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.model_helper import load_module
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_queue import _TaskQueue
+from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
 
@@ -93,14 +93,14 @@ class CheckpointTest(unittest.TestCase):
             # Launch the training
             worker = Worker(1, _module_file, channel=None)
             filename = create_recordio_file(128)
-            task_q = _TaskQueue(
+            task_d = _TaskDispatcher(
                 {filename: 128}, {}, {}, records_per_task=64, num_epochs=1
             )
             master = MasterServicer(
                 2,
                 2,
                 worker._opt_fn(),
-                task_q,
+                task_d,
                 init_var=worker._model.trainable_variables,
                 checkpoint_filename_for_init="",
                 checkpoint_service=checkpointer,

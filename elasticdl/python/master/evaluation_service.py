@@ -96,14 +96,14 @@ class EvaluationService(object):
         self,
         checkpoint_service,
         tensorboard_service,
-        task_q,
+        task_d,
         start_delay_secs,
         throttle_secs,
     ):
         self._logger = logging.getLogger(__name__)
         self._checkpoint_service = checkpoint_service
         self._tensorboard_service = tensorboard_service
-        self._task_q = task_q
+        self._task_d = task_d
         self._lock = threading.Lock()
         self._eval_job = None
         self.trigger = _EvaluationTrigger(
@@ -137,7 +137,7 @@ class EvaluationService(object):
         with self._lock:
             if self._eval_job is None and self._eval_checkpoint_versions:
                 checkpoint_version = self._eval_checkpoint_versions.pop(0)
-                tasks = self._task_q.create_evaluation_tasks(
+                tasks = self._task_d.create_evaluation_tasks(
                     checkpoint_version
                 )
                 self._eval_job = _EvaluationJob(checkpoint_version, len(tasks))

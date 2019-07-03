@@ -27,7 +27,7 @@ class _Task(object):
         )
 
 
-class _TaskQueue(object):
+class _TaskDispatcher(object):
     """Creates and dispatches Tasks. Keep track of a Task's lifecycle."""
 
     def __init__(

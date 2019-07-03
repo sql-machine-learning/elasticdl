@@ -11,7 +11,7 @@ from elasticdl.python.master.evaluation_service import (
     _EvaluationJob,
 )
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_queue import _TaskQueue
+from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 
 class EvaluationServiceTest(unittest.TestCase):
@@ -83,11 +83,11 @@ class EvaluationServiceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testEvaluationService")
             checkpoint_service = CheckpointService(chkp_dir, 5, 5, True)
-            task_q = _TaskQueue({}, {"f1": 10, "f2": 10}, {}, 3, 1)
+            task_d = _TaskDispatcher({}, {"f1": 10, "f2": 10}, {}, 3, 1)
 
             # Evaluation metrics will not be accepted if no evaluation ongoing
             evaluation_service = EvaluationService(
-                checkpoint_service, None, task_q, 10, 20
+                checkpoint_service, None, task_d, 10, 20
             )
             evaluation_metrics = {
                 "mse": ndarray_to_tensor(
@@ -107,7 +107,7 @@ class EvaluationServiceTest(unittest.TestCase):
                 2,
                 2,
                 None,
-                task_q,
+                task_d,
                 init_var=[],
                 checkpoint_filename_for_init="",
                 checkpoint_service=checkpoint_service,
@@ -117,9 +117,9 @@ class EvaluationServiceTest(unittest.TestCase):
 
             # Add an evaluation task and we can start evaluation
             evaluation_service.add_evaluation_task()
-            self.assertEqual(0, len(task_q._todo))
+            self.assertEqual(0, len(task_d._todo))
             self.assertTrue(evaluation_service.try_to_create_new_job())
-            self.assertEqual(8, len(task_q._todo))
+            self.assertEqual(8, len(task_d._todo))
             self.assertFalse(evaluation_service._eval_job.finished())
 
             for i in range(8):

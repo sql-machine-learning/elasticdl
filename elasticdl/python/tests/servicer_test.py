@@ -14,7 +14,7 @@ from elasticdl.python.common.ndarray import (
 )
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_queue import _TaskQueue
+from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 
 class SimpleModel(tf.keras.Model):
@@ -46,7 +46,7 @@ class ServicerTest(unittest.TestCase):
             2,
             3,
             None,
-            _TaskQueue({}, {}, {}, records_per_task=3, num_epochs=2),
+            _TaskDispatcher({}, {}, {}, records_per_task=3, num_epochs=2),
             init_var=[],
             checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0, False),
@@ -248,7 +248,7 @@ class ServicerTest(unittest.TestCase):
         )
 
     def testReportTaskResult(self):
-        task_q = _TaskQueue(
+        task_d = _TaskDispatcher(
             {"shard_1": 10, "shard_2": 9},
             {},
             {},
@@ -259,7 +259,7 @@ class ServicerTest(unittest.TestCase):
             3,
             3,
             None,
-            task_q,
+            task_d,
             init_var=[],
             checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0, False),
@@ -274,7 +274,7 @@ class ServicerTest(unittest.TestCase):
             task = master.GetTask(req, None)
             if not task.shard_file_name:
                 break
-            self.assertEqual(task_q._doing[task.task_id][0], req.worker_id)
+            self.assertEqual(task_d._doing[task.task_id][0], req.worker_id)
             task_key = (task.shard_file_name, task.start, task.end)
             tasks[task_key] += 1
             report = elasticdl_pb2.ReportTaskResultRequest()
