@@ -86,4 +86,7 @@ easy_install pip
 pip install pyrecordio>=0.0.6 Pillow
 
 # A hacky fix for tensorflow installation
-pip install tensorflow --ignore-installed
+rm -rf /opt/conda/default/lib/python3.6/site-packages/wrapt*
+
+# Install tensorflow
+pip install tensorflow

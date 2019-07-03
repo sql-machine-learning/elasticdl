@@ -108,7 +108,7 @@ gcloud dataproc jobs submit pyspark \
     elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/spark_gen_recordio.py \
     --cluster=$CLUSTER_NAME --region=global --py-files=elasticdl.zip \
     --files=elasticdl/python/examples/mnist_functional_api/mnist_functional_api.py \
-    -- --training_data_dir=/filestore_mnt/$TRAINING_DATA_DIR \
+    -- --training_data_tar_file=/filestore_mnt/$TAR_FILE \
     --output_dir=/filestore_mnt --model_file=$MODEL_FILE --records_per_file=200
 ```
 
