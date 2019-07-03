@@ -81,7 +81,6 @@ class Client(object):
 
     def get_master_pod(self):
         try:
-
             return self.client.read_namespaced_pod(
                 name=self.get_master_pod_name(), namespace=self.namespace
             )
