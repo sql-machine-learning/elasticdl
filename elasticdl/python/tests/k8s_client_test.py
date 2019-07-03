@@ -62,6 +62,59 @@ class K8sClientTest(unittest.TestCase):
         while tracker._count > 0:
             time.sleep(1)
 
+    def test_patch_labels_to_pod(self):
+        tracker = WorkerTracker()
+
+        c = k8s.Client(
+            image_name="gcr.io/google-samples/hello-app:1.0",
+            namespace="default",
+            job_name="test-job-%d-%d"
+            % (int(time.time()), random.randint(1, 101)),
+            event_callback=tracker.event_cb,
+        )
+
+        # Start 1 worker
+        resource = "cpu=100m,memory=64M"
+        worker_name = "worker-1"
+        worker_pod = c.create_worker(
+            worker_id=worker_name,
+            resource_requests=resource,
+            resource_limits=resource,
+            command=["echo"],
+            pod_priority=None,
+            args=None,
+            mount_path=None,
+            volume_name=None,
+            image_pull_policy="Never",
+            restart_policy="Never",
+        )
+
+        label_k = "status"
+        label_v = "finished"
+        modified_pod = c.patch_labels_to_pod(
+            pod_name=worker_pod.metadata.name, labels_dict={label_k: label_v}
+        )
+
+        # Wait for the worker to be added
+        while tracker._count != 1:
+            time.sleep(1)
+
+        # Patching labels to an existing pod should work correctly
+        self.assertEqual(modified_pod.metadata.labels[label_k], label_v)
+
+        # Delete the worker
+        c.delete_worker(worker_name)
+
+        # Wait for the worker to be deleted
+        while tracker._count == 1:
+            time.sleep(1)
+
+        # Patching a non-existent pod should return None
+        modified_pod = c.patch_labels_to_pod(
+            pod_name=worker_pod.metadata.name, labels_dict={label_k: label_v}
+        )
+        self.assertEqual(modified_pod, None)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -67,8 +67,21 @@ class Client(object):
     def get_worker_pod_name(self, worker_id):
         return "elasticdl-%s-worker-%s" % (self.job_name, str(worker_id))
 
+    def patch_labels_to_pod(self, pod_name, labels_dict):
+        body = {"metadata": {"labels": labels_dict}}
+        try:
+            return self.client.patch_namespaced_pod(
+                name=pod_name, namespace=self.namespace, body=body
+            )
+        except client.api_client.ApiException as e:
+            self._logger.warning(
+                "Exception when patching labels to pod: %s\n" % e
+            )
+            return None
+
     def get_master_pod(self):
         try:
+
             return self.client.read_namespaced_pod(
                 name=self.get_master_pod_name(), namespace=self.namespace
             )
