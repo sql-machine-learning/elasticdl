@@ -7,7 +7,7 @@ with open('requirements.txt') as f:
 setup(
     name="elasticdl",
     version="0.0.1",
-    description="A Kubernetes-naitve Elastic Deep Learning Framework",
+    description="A Kubernetes-native Elastic Deep Learning Framework",
     author="Ant Financial",
     url="https://github.com/wangkuiyi/elasticdl",
     install_requires=requirements,
