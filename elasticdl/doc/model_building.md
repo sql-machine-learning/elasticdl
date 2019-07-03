@@ -165,7 +165,7 @@ def eval_metrics_fn(predictions, labels):
 prepare_data_for_a_single_file(filename)
 ```
 `prepare_data_for_a_single_file` is to read a single file and do whatever 
-user-defined logic to prepare the data (e.g, IO from the user's file system, feature engineering), and return the serialized data. The function can be used to process data for training, evaluation and prediction. The only difference between prediction data with training/evaluation data is that the 'label' in prediction data should be empty. Users should be able to tell if the data file is for prediction or training/evaluation inside the function `prepare_data_for_a_single_file`(e.g, via different format of `filename`), and implement the logic here to handle all of them.
+user-defined logic to prepare the data (e.g, IO from the user's file system, feature engineering), and return the serialized data. The function can be used to process data for training, evaluation and prediction. The only difference between prediction data with training/evaluation data is that the 'label' in prediction data should be empty. Users should be able to determine if the data file contains label (e.g, via the different formats of filename) and implement the logic to prepare the data accordingly.
 
 Example:
 
