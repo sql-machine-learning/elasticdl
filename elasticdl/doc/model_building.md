@@ -165,7 +165,7 @@ def eval_metrics_fn(predictions, labels):
 prepare_data_for_a_single_file(filename)
 ```
 `prepare_data_for_a_single_file` is to read a single file and do whatever 
-user-defined logic to prepare the data (e.g, IO from the user's file system, feature engineering), and return the serialized data.
+user-defined logic to prepare the data (e.g, IO from the user's file system, feature engineering), and return the serialized data. The function can be used to process data for training, evaluation and prediction. The only difference between prediction data with training/evaluation data is that the 'label' in prediction data should be empty. Users should be able to determine if the data file contains label (e.g, via the different formats of filename) and implement the logic to prepare the data accordingly.
 
 Example:
 
@@ -177,7 +177,7 @@ def prepare_data_for_a_single_file(filename):
     label = int(filename.split('/')[-2])
     image = PIL.Image.open(filename)
     numpy_image = np.array(image)
-        example_dict = {
+    example_dict = {
         "image": tf.train.Feature(
             float_list=tf.train.FloatList(value=numpy_image.flatten())
         ),
