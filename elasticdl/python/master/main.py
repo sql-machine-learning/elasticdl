@@ -1,4 +1,3 @@
-import argparse
 import logging
 import os
 import time
@@ -11,6 +10,7 @@ import recordio
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.common.model_helper import get_model_file, load_module
+from elasticdl.python.master.args import parse_args
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_worker_manager import WorkerManager
@@ -50,185 +50,8 @@ def _make_task_dispatcher(
     )
 
 
-def _pos_int(arg):
-    res = int(arg)
-    if res <= 0:
-        raise ValueError("Positive integer argument required. Got %s" % res)
-    return res
-
-
-def _non_neg_int(arg):
-    res = int(arg)
-    if res < 0:
-        raise ValueError(
-            "Non-negative integer argument required. Get %s" % res
-        )
-    return res
-
-
-def _parse_args():
-    parser = argparse.ArgumentParser(description="ElasticDL Master")
-    parser.add_argument(
-        "--model_def",
-        help="The directory that contains user-defined model files "
-        "or a specific model file",
-        required=True,
-    )
-    parser.add_argument(
-        "--training_data_dir",
-        help="Training data directory. Files should be in RecordIO format",
-        default="",
-    )
-    parser.add_argument(
-        "--evaluation_data_dir",
-        help="Evaluation data directory. Files should be in RecordIO format",
-        default="",
-    )
-    parser.add_argument(
-        "---prediction_data_dir",
-        help="Prediction data directory. Files should be in RecordIO format",
-        default="",
-    )
-    parser.add_argument(
-        "--evaluation_start_delay_secs",
-        type=_pos_int,
-        help="Start evaluation only after waiting for this many seconds",
-        default=100,
-    )
-    parser.add_argument(
-        "--evaluation_throttle_secs",
-        type=_pos_int,
-        help="Do not re-evaluate unless the last evaluation was started "
-        "at least this many seconds ago",
-        default=100,
-    )
-    parser.add_argument("--records_per_task", type=_pos_int, required=True)
-    parser.add_argument("--num_epochs", type=_pos_int, required=True)
-    parser.add_argument(
-        "--grads_to_wait",
-        type=_pos_int,
-        help="Number of gradients to wait before updating model",
-        required=True,
-    )
-    parser.add_argument(
-        "--minibatch_size",
-        type=_pos_int,
-        help="Minibatch size used by workers to compute gradients",
-        required=True,
-    )
-    parser.add_argument(
-        "--num_workers", type=_pos_int, help="Number of workers", default=0
-    )
-    parser.add_argument(
-        "--checkpoint_filename_for_init",
-        help="The checkpoint file to initialize the training model",
-        default="",
-    )
-    parser.add_argument(
-        "--checkpoint_dir",
-        help="The directory to store the checkpoint files",
-        default="",
-    )
-    parser.add_argument(
-        "--checkpoint_steps",
-        type=_non_neg_int,
-        help="Save checkpoint every this many steps."
-        "If 0, no checkpoints to save.",
-        default=0,
-    )
-    parser.add_argument(
-        "--keep_checkpoint_max",
-        type=_non_neg_int,
-        help="The maximum number of recent checkpoint files to keep."
-        "If 0, keep all.",
-        default=0,
-    )
-    parser.add_argument(
-        "--worker_resource_request",
-        default="cpu=1,memory=4096Mi",
-        type=str,
-        help="The minimal resource required by worker, "
-        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
-    )
-    parser.add_argument(
-        "--worker_resource_limit",
-        type=str,
-        help="The maximal resource required by worker, "
-        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1, "
-        "default to worker_resource_request",
-    )
-    parser.add_argument(
-        "--worker_pod_priority", help="Priority requested by workers"
-    )
-    parser.add_argument(
-        "--worker_image", help="Docker image for workers", default=None
-    )
-    parser.add_argument("--job_name", help="Job name", required=True)
-    # TODO: better logic for handling volume configs
-    parser.add_argument(
-        "--volume_name", help="Volume name of Network File System"
-    )
-    parser.add_argument(
-        "--mount_path", help="Mount path in the docker container"
-    )
-    parser.add_argument(
-        "--log_level",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        type=str.upper,
-        default="INFO",
-        help="The logging level. Default to WARNING",
-    )
-    parser.add_argument(
-        "--image_pull_policy",
-        default="Always",
-        help="Image pull policy of master and workers",
-    )
-    parser.add_argument(
-        "--restart_policy",
-        default="Never",
-        help="The pod restart policy when pod crashed",
-    )
-    parser.add_argument(
-        "--namespace",
-        default="default",
-        type=str,
-        help="The Kubernetes namespace where ElasticDL jobs run",
-    )
-    parser.add_argument(
-        "--tensorboard_log_dir",
-        default="",
-        type=str,
-        help="Directory where TensorBoard will look to find "
-        "TensorFlow event files that it can display. "
-        "TensorBoard will recursively walk the directory "
-        "structure rooted at log dir, looking for .*tfevents.* "
-        "files. You may also pass a comma separated list of log "
-        "directories, and TensorBoard will watch each "
-        "directory.",
-    )
-    args = parser.parse_args()
-
-    if args.prediction_data_dir and (
-        args.training_data_dir or args.evaluation_data_dir
-    ):
-        raise ValueError(
-            "Running prediction together with training or evaluation "
-            "is not supported"
-        )
-    if args.prediction_data_dir and not args.checkpoint_filename_for_init:
-        raise ValueError(
-            "checkpoint_filename_for_init is required for running "
-            "prediction job"
-        )
-
-    return args
-
-
 def main():
-    args = _parse_args()
-
-    # TODO: pass port via flags.
-    PORT = 50001
+    args = parse_args()
 
     # Initialize logger and set level for ROOT logger
     logging.basicConfig(
@@ -321,14 +144,17 @@ def main():
         evaluation_service=evaluation_service,
     )
     elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
-    server.add_insecure_port("[::]:{}".format(PORT))
+    server.add_insecure_port("[::]:{}".format(args.port))
     server.start()
-    logger.info("Server started at port: %d", PORT)
+    logger.info("Server started at port: %d", args.port)
 
     if args.num_workers:
         assert args.worker_image, "Worker image cannot be empty"
 
-        master_addr = "%s:%d" % (os.getenv("MY_POD_IP", "localhost"), PORT)
+        master_addr = "%s:%d" % (
+            os.getenv("MY_POD_IP", "localhost"),
+            args.port,
+        )
         worker_command = ["python"]
         worker_args = [
             "-m",
