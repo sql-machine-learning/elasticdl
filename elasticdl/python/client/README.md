@@ -103,7 +103,7 @@ cd elasticdl
 ### Build And Install Wheel Package From Source Code
 ```bash
 python3 setup.py bdist_wheel
-pip install dist/ElasticDL-0.0.1-py3-none-any.whl
+pip install dist/elasticdl-0.0.1-py3-none-any.whl
 ```
 
 ### Submit Jobs
