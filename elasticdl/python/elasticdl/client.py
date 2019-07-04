@@ -1,6 +1,6 @@
 import argparse
 
-from elasticdl.python.elasticdl.api import train, evaluate
+from elasticdl.python.elasticdl.api import evaluate, train
 
 
 def main():

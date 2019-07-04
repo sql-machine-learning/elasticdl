@@ -1,9 +1,9 @@
 import os
 
+from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
 )
-from elasticdl.python.common import k8s_client as k8s
 
 MODEL_ROOT_PATH = "/model_zoo"
 
