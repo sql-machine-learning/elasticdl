@@ -91,9 +91,11 @@ def main():
     optimizer = model_module.optimizer()
 
     evaluation_while_training = all(
-        args.training_data_dir,
-        args.evaluation_data_dir,
-        args.evaluation_throttle_secs or args.evaluation_steps,
+        (
+            args.training_data_dir,
+            args.evaluation_data_dir,
+            args.evaluation_throttle_secs or args.evaluation_steps,
+        )
     )
 
     # Initialize checkpoint service
