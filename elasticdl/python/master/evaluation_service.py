@@ -81,9 +81,7 @@ class _EvaluationTrigger(Thread):
             time_now = time.time()
             if self._wait_enough_time(time_now, previous_round_start_secs):
                 # Time is up, add an evaluation task
-                self._eval_service.add_evaluation_task(
-                    self._master_servicer.get_model_version()
-                )
+                self._eval_service.add_evaluation_task()
                 previous_round_start_secs = time_now
             time.sleep(5)
 
@@ -108,21 +106,28 @@ class EvaluationService(object):
         self.trigger = _EvaluationTrigger(
             self, start_delay_secs, throttle_secs
         )
+        self._time_based_eval = throttle_secs > 0
         self._eval_checkpoint_versions = []
         self._last_eval_checkpoint_version = -1
 
     def start(self):
-        if self._throttle_secs:
+        if self._time_based_eval:
             self.trigger.start()
 
     def stop(self):
-        if self._throttle_secs:
+        if self._time_based_eval:
             self.trigger.stop()
 
     def set_master_servicer(self, master_servicer):
         self._master_servicer = master_servicer
 
-    def add_evaluation_task(self, model_version):
+    def add_evaluation_task(self, model_version=-1):
+        """
+        Add evaluation task with model_version.
+        If model_version<0, use current model version.
+        """
+        if model_version < 0:
+            model_version = self._master_servicer.get_model_version()
         if model_version == self._last_eval_checkpoint_version:
             return
 
