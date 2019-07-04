@@ -137,6 +137,11 @@ class ExampleTest(unittest.TestCase):
             "cifar10_subclass", [32, 32, 3], training=False
         )
 
+    def test_resnet50_subclass_evaluate(self):
+        self.distributed_train_and_evaluate(
+            "resnet50", [224, 224, 3], training=False
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
