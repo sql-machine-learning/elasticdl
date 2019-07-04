@@ -1,6 +1,5 @@
 import os
 import shutil
-import sys
 import tempfile
 import uuid
 from urllib.parse import urlparse
@@ -131,7 +130,7 @@ def _build_docker_image(client, ctx_dir, dockerfile, image_name):
             print(text)
 
 
-def _push_docker_image(client, image_name, output=sys.stdout):
+def _push_docker_image(client, image_name):
     print("===== Pushing Docker Image =====")
     for line in client.push(image_name, stream=True, decode=True):
         print(line)
