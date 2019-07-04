@@ -84,15 +84,12 @@ def train(
             "mount_path are provided."
         )
 
-    print(container_args)
     k8s.Client(
         image_name=image_name,
         namespace=namespace,
         job_name=job_name,
         event_callback=None,
     ).create_master(
-        # job_name=job_name,
-        # image_name=image_name,
         resource_requests=master_resource_request,
         resource_limits=master_resource_limit,
         args=container_args,
