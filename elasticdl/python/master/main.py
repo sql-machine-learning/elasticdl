@@ -90,23 +90,29 @@ def main():
     model_inst = model_module.model
     optimizer = model_module.optimizer()
 
-    include_evaluation = args.evaluation_data_dir != ""
+    evaluation_while_training = all(
+        (
+            args.training_data_dir,
+            args.evaluation_data_dir,
+            args.evaluation_throttle_secs or args.evaluation_steps,
+        )
+    )
 
     # Initialize checkpoint service
-    if args.checkpoint_steps or include_evaluation:
+    if args.checkpoint_steps or evaluation_while_training:
         logger.info("Starting checkpoint service")
         checkpoint_service = CheckpointService(
             args.checkpoint_dir,
             args.checkpoint_steps,
             args.keep_checkpoint_max,
-            include_evaluation,
+            evaluation_while_training,
         )
     else:
         checkpoint_service = None
 
     # Initialize evaluation service
     evaluation_service = None
-    if include_evaluation:
+    if evaluation_while_training:
         logger.info(
             "Starting evaluation service with throttle seconds %d",
             args.evaluation_throttle_secs,

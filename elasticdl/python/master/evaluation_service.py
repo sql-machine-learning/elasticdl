@@ -81,10 +81,9 @@ class _EvaluationTrigger(Thread):
             time_now = time.time()
             if self._wait_enough_time(time_now, previous_round_start_secs):
                 # Time is up, add an evaluation task
-                self._eval_service.add_evaluation_task()
-
-                # trying to start a new evaluation job
-                self._eval_service.try_to_create_new_job()
+                self._eval_service.add_evaluation_task(
+                    self._master_servicer.get_model_version()
+                )
                 previous_round_start_secs = time_now
             time.sleep(5)
 
@@ -113,25 +112,27 @@ class EvaluationService(object):
         self._last_eval_checkpoint_version = -1
 
     def start(self):
-        self.trigger.start()
+        if self._throttle_secs:
+            self.trigger.start()
 
     def stop(self):
-        self.trigger.stop()
+        if self._throttle_secs:
+            self.trigger.stop()
 
     def set_master_servicer(self, master_servicer):
         self._master_servicer = master_servicer
 
-    def add_evaluation_task(self):
-        latest_model_version = self._master_servicer.get_model_version()
-        if latest_model_version == self._last_eval_checkpoint_version:
+    def add_evaluation_task(self, model_version):
+        if model_version == self._last_eval_checkpoint_version:
             return
-        latest_model_version = self._last_eval_checkpoint_version
 
         checkpoint_version = self._master_servicer._save_checkpoint(
             locking=True, is_eval_checkpoint=True
         )
         with self._lock:
             self._eval_checkpoint_versions.append(checkpoint_version)
+        self._last_eval_checkpoint_version = checkpoint_version
+        self.try_to_create_new_job()
 
     def try_to_create_new_job(self):
         with self._lock:
