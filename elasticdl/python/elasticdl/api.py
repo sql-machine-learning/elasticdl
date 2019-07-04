@@ -30,6 +30,8 @@ def train(
     num_epochs,
     grads_to_wait,
     minibatch_size,
+    training_data_dir,
+    evaluation_data_dir,
 ):
     image_name = build_and_push_docker_image(
         model_zoo=model_def,
@@ -64,6 +66,10 @@ def train(
         str(grads_to_wait),
         "--minibatch_size",
         str(minibatch_size),
+        "--training_data_dir",
+        training_data_dir,
+        "--evaluation_data_dir",
+        evaluation_data_dir,
     ]
     container_args.extend(["--image_pull_policy", image_pull_policy])
     container_args.extend(["--restart_policy", restart_policy])

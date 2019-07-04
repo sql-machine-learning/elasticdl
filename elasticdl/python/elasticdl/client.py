@@ -46,6 +46,8 @@ evaluate      Submit a ElasticDL distributed evaluation job.
         args.num_epochs,
         args.grads_to_wait,
         args.minibatch_size,
+        args.training_data_dir,
+        args.evaluation_data_dir,
     )
 
 
@@ -149,6 +151,16 @@ def _add_train_params(parser):
         type=int,
         help="Minibatch size used by workers to compute gradients",
         required=True,
+    )
+    parser.add_argument(
+        "--training_data_dir",
+        help="Training data directory. Files should be in RecordIO format",
+        default="",
+    )
+    parser.add_argument(
+        "--evaluation_data_dir",
+        help="Evaluation data directory. Files should be in RecordIO format",
+        default="",
     )
 
 

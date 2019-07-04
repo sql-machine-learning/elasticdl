@@ -1,6 +1,6 @@
 set -x
 python -m elasticdl.python.elasticdl.client train \
-  --image_base=gcr.io/elasticdl/elasticdl:ci-wy \
+  --image_base=elasticdl:ci \
   --docker_image_prefix=gcr.io/elasticdl/ \
   --model_def=elasticdl/python/examples/mnist_functional_api \
   --training_data_dir=/data/mnist/train \
