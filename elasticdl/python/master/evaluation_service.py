@@ -125,8 +125,7 @@ class EvaluationService(object):
 
     def add_evaluation_task(self, is_time_based_eval, master_locking=True):
         """
-        Add evaluation task with model_version.
-        If model_version<0, use current model version.
+        Add evaluation task with current model_version.
         """
         # Do not create time-based eval after all tasks are done
         if is_time_based_eval and self._task_d.finished():
