@@ -1,6 +1,7 @@
 set -x
-python -m elasticdl.python.client.client train \
-  --image_base=elasticdl:ci \
+python -m elasticdl.python.elasticdl.client train \
+  --image_base=gcr.io/elasticdl/elasticdl:ci-wy \
+  --docker_image_prefix=gcr.io/elasticdl/ \
   --model_def=elasticdl/python/examples/mnist_functional_api \
   --training_data_dir=/data/mnist/train \
   --evaluation_data_dir=/data/mnist/test \
@@ -17,4 +18,4 @@ python -m elasticdl.python.client.client train \
   --grads_to_wait=2 \
   --job_name=test-mnist \
   --log_level=INFO \
-  --image_pull_policy=Never
+  --image_pull_policy=Always

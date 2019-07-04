@@ -14,6 +14,6 @@ setup(
     packages=find_packages(exclude=["*test*"]),
     package_data={"": ["proto/elasticdl.proto", "docker/*", "Makefile"]},
     entry_points={
-        "console_scripts": ["elasticdl=elasticdl.python.client.client:main"]
+        "console_scripts": ["elasticdl=elasticdl.python.elasticdl.client:main"]
     },
 )
