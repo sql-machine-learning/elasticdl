@@ -1,6 +1,5 @@
 import os
 import shutil
-import sys
 import tempfile
 import uuid
 from urllib.parse import urlparse
