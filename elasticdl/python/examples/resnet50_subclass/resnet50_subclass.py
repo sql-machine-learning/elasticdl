@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow as tf
-from resnet50.model import ResNet50 
+from resnet50.model import ResNet50
 
 
-model = ResNet50(num_classes=10, dtype='float32') 
+model = ResNet50(num_classes=10, dtype="float32")
 
 
 def loss(output, labels):
