@@ -47,17 +47,26 @@ def parse_args():
         default="",
     )
     parser.add_argument(
+        "--evaluation_steps",
+        type=_non_neg_int,
+        help="Evaluate the model every this  many steps."
+        "If 0, step-based evaluation is disabled",
+        default=0,
+    )
+    parser.add_argument(
         "--evaluation_start_delay_secs",
-        type=_pos_int,
-        help="Start evaluation only after waiting for this many seconds",
+        type=_non_neg_int,
+        help="Start time-based evaluation only after waiting for "
+        "this many seconds",
         default=100,
     )
     parser.add_argument(
         "--evaluation_throttle_secs",
-        type=_pos_int,
+        type=_non_neg_int,
         help="Do not re-evaluate unless the last evaluation was started "
-        "at least this many seconds ago",
-        default=100,
+        "at least this many seconds ago."
+        "If 0, time-based evaluation is disabled",
+        default=0,
     )
     parser.add_argument("--records_per_task", type=_pos_int, required=True)
     parser.add_argument("--num_epochs", type=_pos_int, required=True)

@@ -116,9 +116,7 @@ class EvaluationServiceTest(unittest.TestCase):
             master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
 
             # Add an evaluation task and we can start evaluation
-            evaluation_service.add_evaluation_task()
-            self.assertEqual(0, len(task_d._todo))
-            self.assertTrue(evaluation_service.try_to_create_new_job())
+            evaluation_service.add_evaluation_task(0)
             self.assertEqual(8, len(task_d._todo))
             self.assertFalse(evaluation_service._eval_job.finished())
 
