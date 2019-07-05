@@ -73,8 +73,8 @@ def parse_args():
     parser.add_argument(
         "--grads_to_wait",
         type=_pos_int,
+        default=2,
         help="Number of gradients to wait before updating model",
-        required=True,
     )
     parser.add_argument(
         "--minibatch_size",
