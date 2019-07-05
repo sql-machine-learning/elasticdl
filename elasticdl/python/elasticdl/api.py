@@ -52,7 +52,12 @@ def train(args):
 
     if all([args.olume_name, args.mount_path]):
         container_args.extend(
-            ["--mount_path", args.mount_path, "--volume_name", args.volume_name]
+            [
+                "--mount_path",
+                args.mount_path,
+                "--volume_name",
+                args.volume_name,
+            ]
         )
     elif any([args.volume_name, args.mount_path]):
         raise ValueError(
@@ -126,7 +131,12 @@ def evaluate(args):
 
     if all([args.volume_name, args.mount_path]):
         container_args.extend(
-            ["--mount_path", args.mount_path, "--volume_name", args.volume_name]
+            [
+                "--mount_path",
+                args.mount_path,
+                "--volume_name",
+                args.volume_name,
+            ]
         )
     elif any([args.volume_name, args.mount_path]):
         raise ValueError(
