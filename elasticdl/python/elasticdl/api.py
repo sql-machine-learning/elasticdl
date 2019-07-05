@@ -66,7 +66,7 @@ def train(args):
         )
 
     k8s.Client(
-        image_name=args.image_name,
+        image_name=image_name,
         namespace=args.namespace,
         job_name=args.job_name,
         event_callback=None,
