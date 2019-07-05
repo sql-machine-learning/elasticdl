@@ -3,7 +3,7 @@ import unittest
 from elasticdl.python.common.k8s_resource import parse
 
 
-class K8SUtilsTest(unittest.TestCase):
+class K8SResourceTest(unittest.TestCase):
     def test_k8s_resource_parse(self):
         # parse works as expected on the allowed list of resources
         self.assertEqual(
