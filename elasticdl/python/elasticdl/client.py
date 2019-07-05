@@ -13,7 +13,10 @@ evaluate      Submit a ElasticDL distributed evaluation job.
 """
     )
     subparsers = parser.add_subparsers()
-    train_parser = subparsers.add_parser("train", help="elasticdl.py train -h")
+
+    train_parser = subparsers.add_parser(
+        "train", help="elasticdl.py train -h"
+    )
     train_parser.set_defaults(func=train)
     _add_train_params(train_parser)
 
@@ -23,32 +26,8 @@ evaluate      Submit a ElasticDL distributed evaluation job.
     evaluate_parser.set_defaults(func=evaluate)
     _add_evaluate_params(evaluate_parser)
 
-    args, argv = train_parser.parse_known_args()
-    args.func(
-        args.job_name,
-        args.namespace,
-        args.model_def,
-        args.master_resource_request,
-        args.master_resource_limit,
-        args.num_workers,
-        args.worker_resource_request,
-        args.worker_resource_limit,
-        args.master_pod_priority,
-        args.image_base,
-        args.docker_image_prefix,
-        args.extra_pypi_index,
-        args.tensorboard_log_dir,
-        args.image_pull_policy,
-        args.restart_policy,
-        args.volume_name,
-        args.mount_path,
-        args.records_per_task,
-        args.num_epochs,
-        args.grads_to_wait,
-        args.minibatch_size,
-        args.training_data_dir,
-        args.evaluation_data_dir,
-    )
+    args, argv = parser.parse_known_args()
+    args.func(args)
 
 
 def _add_train_params(parser):
@@ -256,7 +235,7 @@ def _add_evaluate_params(parser):
     parser.add_argument(
         "--minibatch_size",
         type=int,
-        help="Minibatch size used by workers to compute gradients",
+        help="Minibatch size used by workers",
         required=True,
     )
     parser.add_argument(
@@ -267,7 +246,7 @@ def _add_evaluate_params(parser):
     parser.add_argument(
         "--evaluation_steps",
         type=int,
-        help="Evaluate the model every this  many steps."
+        help="Evaluate the model every this many steps."
              "If 0, step-based evaluation is disabled",
         default=0,
     )
@@ -289,7 +268,7 @@ def _add_evaluate_params(parser):
     parser.add_argument(
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",
-        default="",
+        required=True,
     )
 
 
