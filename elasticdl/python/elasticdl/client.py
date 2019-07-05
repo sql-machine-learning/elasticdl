@@ -1,10 +1,6 @@
 import argparse
-import os
 
-from elasticdl.python.client.image_builder import build_and_push_docker_image
-from elasticdl.python.common import k8s_client as k8s
-
-MODEL_ROOT_PATH = "/model_zoo"
+from elasticdl.python.elasticdl.api import evaluate, train
 
 
 def main():
@@ -17,18 +13,42 @@ evaluate      Submit a ElasticDL distributed evaluation job.
 """
     )
     subparsers = parser.add_subparsers()
-    train_parser = subparsers.add_parser("train", help="client.py train -h")
-    train_parser.set_defaults(func=_train)
+    train_parser = subparsers.add_parser("train", help="elasticdl.py train -h")
+    train_parser.set_defaults(func=train)
     _add_train_params(train_parser)
 
     evaluate_parser = subparsers.add_parser(
         "evaluate", help="client.py evaluate -h"
     )
-    evaluate_parser.set_defaults(func=_evaluate)
+    evaluate_parser.set_defaults(func=evaluate)
     _add_evaluate_params(evaluate_parser)
 
-    args, argv = parser.parse_known_args()
-    args.func(args, argv)
+    args, argv = train_parser.parse_known_args()
+    args.func(
+        args.job_name,
+        args.namespace,
+        args.model_def,
+        args.master_resource_request,
+        args.master_resource_limit,
+        args.num_workers,
+        args.worker_resource_request,
+        args.worker_resource_limit,
+        args.master_pod_priority,
+        args.image_base,
+        args.docker_image_prefix,
+        args.extra_pypi_index,
+        args.tensorboard_log_dir,
+        args.image_pull_policy,
+        args.restart_policy,
+        args.volume_name,
+        args.mount_path,
+        args.records_per_task,
+        args.num_epochs,
+        args.grads_to_wait,
+        args.minibatch_size,
+        args.training_data_dir,
+        args.evaluation_data_dir,
+    )
 
 
 def _add_train_params(parser):
@@ -59,6 +79,9 @@ def _add_train_params(parser):
         help="The maximal resource required by master, "
         "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1, "
         "default to master_resource_request",
+    )
+    parser.add_argument(
+        "--num_workers", type=int, help="Number of workers", default=0
     )
     parser.add_argument(
         "--worker_resource_request",
@@ -115,88 +138,35 @@ def _add_train_params(parser):
         "directories, and TensorBoard will watch each "
         "directory.",
     )
+    parser.add_argument("--records_per_task", type=int, required=True)
+    parser.add_argument("--num_epochs", type=int, required=True)
+    parser.add_argument(
+        "--grads_to_wait",
+        type=int,
+        help="Number of gradients to wait before updating model",
+        required=True,
+    )
+    parser.add_argument(
+        "--minibatch_size",
+        type=int,
+        help="Minibatch size used by workers to compute gradients",
+        required=True,
+    )
+    parser.add_argument(
+        "--training_data_dir",
+        help="Training data directory. Files should be in RecordIO format",
+        default="",
+    )
+    parser.add_argument(
+        "--evaluation_data_dir",
+        help="Evaluation data directory. Files should be in RecordIO format",
+        default="",
+    )
 
 
 def _add_evaluate_params(parser):
     # TODO add parameters for evaluation parser..
     pass
-
-
-def _train(args, argv):
-    image_name = build_and_push_docker_image(
-        model_zoo=args.model_def,
-        base_image=args.image_base,
-        docker_image_prefix=args.docker_image_prefix,
-        extra_pypi=args.extra_pypi_index,
-    )
-    _submit(image_name, args, argv)
-
-
-def _evaluate(args, argv):
-    # TODO implement distributed evaluation.
-    raise NotImplementedError()
-
-
-def _model_def_in_docker(model_def):
-    return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_def))
-
-
-def _submit(image_name, args, argv):
-    container_args = [
-        "-m",
-        "elasticdl.python.master.main",
-        "--job_name",
-        args.job_name,
-        "--worker_image",
-        image_name,
-        "--model_def",
-        _model_def_in_docker(args.model_def),
-        "--worker_resource_request",
-        args.worker_resource_request,
-        "--worker_resource_limit",
-        args.worker_resource_limit,
-        "--namespace",
-        args.namespace,
-        "--tensorboard_log_dir",
-        args.tensorboard_log_dir,
-    ]
-    container_args.extend(["--image_pull_policy", args.image_pull_policy])
-    container_args.extend(["--restart_policy", args.restart_policy])
-
-    if all([args.volume_name, args.mount_path]):
-        container_args.extend(
-            [
-                "--mount_path",
-                args.mount_path,
-                "--volume_name",
-                args.volume_name,
-            ]
-        )
-    elif any([args.volume_name, args.mount_path]):
-        raise ValueError(
-            "Not both of the parameters volume_name and "
-            "mount_path are provided."
-        )
-
-    container_args.extend(argv)
-
-    k8s.Client(
-        image_name=image_name,
-        namespace=args.namespace,
-        job_name=args.job_name,
-        event_callback=None,
-    ).create_master(
-        job_name=args.job_name,
-        image_name=image_name,
-        resource_requests=args.master_resource_request,
-        resource_limits=args.master_resource_limit,
-        pod_priority=args.master_pod_priority,
-        image_pull_policy=args.image_pull_policy,
-        volume_name=args.volume_name,
-        mount_path=args.mount_path,
-        restart_policy=args.restart_policy,
-        args=container_args,
-    )
 
 
 if __name__ == "__main__":

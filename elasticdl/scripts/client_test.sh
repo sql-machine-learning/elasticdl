@@ -1,5 +1,5 @@
 set -x
-python -m elasticdl.python.client.client train \
+python -m elasticdl.python.elasticdl.client train \
   --image_base=elasticdl:ci \
   --model_def=elasticdl/python/examples/mnist_functional_api \
   --training_data_dir=/data/mnist/train \
