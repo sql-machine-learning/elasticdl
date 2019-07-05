@@ -8,77 +8,58 @@ from elasticdl.python.elasticdl.image_builder import (
 MODEL_ROOT_PATH = "/model_zoo"
 
 
-def train(
-    job_name,
-    namespace,
-    model_def,
-    master_resource_request,
-    master_resource_limit,
-    num_workers,
-    worker_resource_request,
-    worker_resource_limit,
-    master_pod_priority,
-    image_base,
-    docker_image_prefix,
-    extra_pypi_index,
-    tensorboard_log_dir,
-    image_pull_policy,
-    restart_policy,
-    volume_name,
-    mount_path,
-    records_per_task,
-    num_epochs,
-    grads_to_wait,
-    minibatch_size,
-    training_data_dir,
-    evaluation_data_dir,
-):
+def train(args):
     image_name = build_and_push_docker_image(
-        model_zoo=model_def,
-        base_image=image_base,
-        docker_image_prefix=docker_image_prefix,
-        extra_pypi=extra_pypi_index,
+        model_zoo=args.model_def,
+        base_image=args.image_base,
+        docker_image_prefix=args.docker_image_prefix,
+        extra_pypi=args.extra_pypi_index,
     )
     container_args = [
         "-m",
         "elasticdl.python.master.main",
         "--job_name",
-        job_name,
+        args.job_name,
         "--worker_image",
         image_name,
         "--model_def",
-        _model_def_in_docker(model_def),
+        _model_def_in_docker(args.model_def),
         "--num_workers",
-        str(num_workers),
+        str(args.num_workers),
         "--worker_resource_request",
-        worker_resource_request,
+        args.worker_resource_request,
         "--worker_resource_limit",
-        worker_resource_limit,
+        args.worker_resource_limit,
         "--namespace",
-        namespace,
+        args.namespace,
         "--tensorboard_log_dir",
-        tensorboard_log_dir,
+        args.tensorboard_log_dir,
         "--records_per_task",
-        str(records_per_task),
+        str(args.records_per_task),
         "--num_epochs",
-        str(num_epochs),
+        str(args.num_epochs),
         "--grads_to_wait",
-        str(grads_to_wait),
+        str(args.grads_to_wait),
         "--minibatch_size",
-        str(minibatch_size),
+        str(args.minibatch_size),
         "--training_data_dir",
-        training_data_dir,
+        args.training_data_dir,
         "--evaluation_data_dir",
-        evaluation_data_dir,
+        args.evaluation_data_dir,
     ]
-    container_args.extend(["--image_pull_policy", image_pull_policy])
-    container_args.extend(["--restart_policy", restart_policy])
+    container_args.extend(["--image_pull_policy", args.image_pull_policy])
+    container_args.extend(["--restart_policy", args.restart_policy])
 
-    if all([volume_name, mount_path]):
+    if all([args.volume_name, args.mount_path]):
         container_args.extend(
-            ["--mount_path", mount_path, "--volume_name", volume_name]
+            [
+                "--mount_path",
+                args.mount_path,
+                "--volume_name",
+                args.volume_name,
+            ]
         )
-    elif any([volume_name, mount_path]):
+    elif any([args.volume_name, args.mount_path]):
         raise ValueError(
             "Not both of the parameters volume_name and "
             "mount_path are provided."
@@ -86,25 +67,98 @@ def train(
 
     k8s.Client(
         image_name=image_name,
-        namespace=namespace,
-        job_name=job_name,
+        namespace=args.namespace,
+        job_name=args.job_name,
         event_callback=None,
     ).create_master(
-        resource_requests=master_resource_request,
-        resource_limits=master_resource_limit,
+        resource_requests=args.master_resource_request,
+        resource_limits=args.master_resource_limit,
         args=container_args,
-        pod_priority=master_pod_priority,
-        image_pull_policy=image_pull_policy,
-        restart_policy=restart_policy,
-        volume_name=volume_name,
-        mount_path=mount_path,
+        pod_priority=args.master_pod_priority,
+        image_pull_policy=args.image_pull_policy,
+        restart_policy=args.restart_policy,
+        volume_name=args.volume_name,
+        mount_path=args.mount_path,
     )
     # TODO: print dashboard url after launching the master pod
 
 
-def evaluate(args, argv):
-    # TODO implement distributed evaluation.
-    raise NotImplementedError()
+def evaluate(args):
+    image_name = build_and_push_docker_image(
+        model_zoo=args.model_def,
+        base_image=args.image_base,
+        docker_image_prefix=args.docker_image_prefix,
+        extra_pypi=args.extra_pypi_index,
+    )
+    container_args = [
+        "-m",
+        "elasticdl.python.master.main",
+        "--job_name",
+        args.job_name,
+        "--worker_image",
+        image_name,
+        "--model_def",
+        _model_def_in_docker(args.model_def),
+        "--num_workers",
+        str(args.num_workers),
+        "--worker_resource_request",
+        args.worker_resource_request,
+        "--worker_resource_limit",
+        args.worker_resource_limit,
+        "--namespace",
+        args.namespace,
+        "--tensorboard_log_dir",
+        args.tensorboard_log_dir,
+        "--records_per_task",
+        str(args.records_per_task),
+        "--num_epochs",
+        str(args.num_epochs),
+        "--minibatch_size",
+        str(args.minibatch_size),
+        "--evaluation_data_dir",
+        args.evaluation_data_dir,
+        "--evaluation_steps",
+        args.evaluation_steps,
+        "--evaluation_start_delay_secs",
+        args.evaluation_start_delay_secs,
+        "--evaluation_throttle_secs",
+        args.evaluation_throttle_secs,
+        "--checkpoint_filename_for_init",
+        args.checkpoint_filename_for_init,
+    ]
+    container_args.extend(["--image_pull_policy", args.image_pull_policy])
+    container_args.extend(["--restart_policy", args.restart_policy])
+
+    if all([args.volume_name, args.mount_path]):
+        container_args.extend(
+            [
+                "--mount_path",
+                args.mount_path,
+                "--volume_name",
+                args.volume_name,
+            ]
+        )
+    elif any([args.volume_name, args.mount_path]):
+        raise ValueError(
+            "Not both of the parameters volume_name and "
+            "mount_path are provided."
+        )
+
+    k8s.Client(
+        image_name=image_name,
+        namespace=args.namespace,
+        job_name=args.job_name,
+        event_callback=None,
+    ).create_master(
+        resource_requests=args.master_resource_request,
+        resource_limits=args.master_resource_limit,
+        args=container_args,
+        pod_priority=args.master_pod_priority,
+        image_pull_policy=args.image_pull_policy,
+        restart_policy=args.restart_policy,
+        volume_name=args.volume_name,
+        mount_path=args.mount_path,
+    )
 
 
 def _model_def_in_docker(model_def):
