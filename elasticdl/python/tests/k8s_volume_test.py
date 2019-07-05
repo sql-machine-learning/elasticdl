@@ -7,14 +7,8 @@ class K8SVolumeTest(unittest.TestCase):
     def test_k8s_volume_parse(self):
         # parse works as expected on the allowed list of volume keys
         self.assertEqual(
-            {
-                "claim_name": "c1",
-                "volume_name": "v1",
-                "mount_path": "/path1",
-            },
-            parse(
-                "claim_name=c1,volume_name=v1,mount_path=/path1"
-            ),
+            {"claim_name": "c1", "volume_name": "v1", "mount_path": "/path1"},
+            parse("claim_name=c1,volume_name=v1,mount_path=/path1"),
         )
         # When volume key is unknown, raise an error
         self.assertRaisesRegex(

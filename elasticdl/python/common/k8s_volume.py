@@ -6,7 +6,7 @@ def parse(volume_str):
 
     Args:
         volume_str: The string representation for k8s volume,
-            e.g. "claim_name=fileserver-claim,volume_name=fileserver,mount_path=/data".
+            e.g. "claim_name=c1,volume_name=v1,mount_path=/path1".
 
     Return:
         A Python dictionary parsed from the given volume string.
