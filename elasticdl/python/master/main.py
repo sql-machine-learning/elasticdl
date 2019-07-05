@@ -114,8 +114,10 @@ def main():
     evaluation_service = None
     if evaluation_while_training:
         logger.info(
-            "Starting evaluation service with throttle seconds %d",
+            "Starting evaluation service with throttle seconds %d ",
+            " and evaluation steps %d",
             args.evaluation_throttle_secs,
+            args.evaluation_steps,
         )
         evaluation_service = EvaluationService(
             checkpoint_service,
@@ -123,6 +125,7 @@ def main():
             task_d,
             args.evaluation_start_delay_secs,
             args.evaluation_throttle_secs,
+            args.evaluation_steps,
         )
         evaluation_service.start()
         task_d.set_evaluation_service(evaluation_service)

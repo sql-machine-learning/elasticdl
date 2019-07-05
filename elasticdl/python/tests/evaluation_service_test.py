@@ -87,7 +87,7 @@ class EvaluationServiceTest(unittest.TestCase):
 
             # Evaluation metrics will not be accepted if no evaluation ongoing
             evaluation_service = EvaluationService(
-                checkpoint_service, None, task_d, 10, 20
+                checkpoint_service, None, task_d, 10, 20, 0
             )
             evaluation_metrics = {
                 "mse": ndarray_to_tensor(

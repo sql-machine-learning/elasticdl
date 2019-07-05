@@ -81,7 +81,7 @@ class _EvaluationTrigger(Thread):
             time_now = time.time()
             if self._wait_enough_time(time_now, previous_round_start_secs):
                 # Time is up, add an evaluation task
-                self._eval_service.add_evaluation_task()
+                self._eval_service.add_evaluation_task(is_time_based_eval=True)
                 previous_round_start_secs = time_now
             time.sleep(5)
 
@@ -96,6 +96,7 @@ class EvaluationService(object):
         task_d,
         start_delay_secs,
         throttle_secs,
+        eval_steps,
     ):
         self._logger = logging.getLogger(__name__)
         self._checkpoint_service = checkpoint_service
@@ -107,6 +108,7 @@ class EvaluationService(object):
             self, start_delay_secs, throttle_secs
         )
         self._time_based_eval = throttle_secs > 0
+        self._eval_steps = eval_steps
         self._eval_checkpoint_versions = []
         self._last_eval_checkpoint_version = -1
 
@@ -121,18 +123,19 @@ class EvaluationService(object):
     def set_master_servicer(self, master_servicer):
         self._master_servicer = master_servicer
 
-    def add_evaluation_task(self, model_version=-1):
+    def add_evaluation_task(self, is_time_based_eval, master_locking=True):
         """
-        Add evaluation task with model_version.
-        If model_version<0, use current model version.
+        Add evaluation task with current model_version.
         """
-        if model_version < 0:
-            model_version = self._master_servicer.get_model_version()
+        # Do not create time-based eval after all tasks are done
+        if is_time_based_eval and self._task_d.finished():
+            return
+        model_version = self._master_servicer.get_model_version()
         if model_version == self._last_eval_checkpoint_version:
             return
 
         checkpoint_version = self._master_servicer._save_checkpoint(
-            locking=True, is_eval_checkpoint=True
+            locking=master_locking, is_eval_checkpoint=True
         )
         with self._lock:
             self._eval_checkpoint_versions.append(checkpoint_version)
@@ -149,6 +152,13 @@ class EvaluationService(object):
                 self._eval_job = _EvaluationJob(checkpoint_version, len(tasks))
                 return True
         return False
+
+    def add_evaluation_task_if_needed(self, master_locking):
+        model_version = self._master_servicer.get_model_version()
+        if self._eval_steps and model_version % self._eval_steps == 0:
+            self.add_evaluation_task(
+                is_time_based_eval=False, master_locking=master_locking
+            )
 
     def report_evaluation_metrics(
         self, evaluation_version, evaluation_metrics

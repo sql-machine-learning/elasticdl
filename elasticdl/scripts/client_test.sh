@@ -13,6 +13,7 @@ python -m elasticdl.python.client.client train \
   --records_per_task=100 \
   --num_workers=2 \
   --checkpoint_steps=10 \
+  --evaluation_steps=15 \
   --grads_to_wait=2 \
   --job_name=test-mnist \
   --log_level=INFO \

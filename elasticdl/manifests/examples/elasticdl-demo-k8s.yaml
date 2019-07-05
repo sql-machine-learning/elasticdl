@@ -23,6 +23,7 @@ spec:
       --minibatch_size=64
       --num_workers=4
       --checkpoint_steps=10
+      --evaluation_steps=15
       --worker_image=elasticdl:ci
       --job_name=test-mnist
       --log_level=INFO

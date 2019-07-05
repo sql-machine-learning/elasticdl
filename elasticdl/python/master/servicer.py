@@ -160,8 +160,17 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._lock.release()
         return checkpoint_version
 
+    def _update_evaluation(self):
+        if self._evaluation_service:
+            self._evaluation_service.add_evaluation_task_if_needed(
+                master_locking=False
+            )
+
     def _update_checkpoint(self):
-        if self._checkpoint_service.need_to_checkpoint(self._version):
+        if (
+            self._checkpoint_service
+            and self._checkpoint_service.need_to_checkpoint(self._version)
+        ):
             try:
                 self._logger.info(
                     "Saving checkpoint for model version %d" % self._version
@@ -236,6 +245,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._grad_n += 1
             if self._grad_n >= self._grad_to_wait:
                 self._update_model()
+                self._update_evaluation()
                 self._update_checkpoint()
 
         res.accepted = True
