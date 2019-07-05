@@ -50,7 +50,7 @@ def train(args):
     container_args.extend(["--image_pull_policy", args.image_pull_policy])
     container_args.extend(["--restart_policy", args.restart_policy])
 
-    if all([args.colume_name, args.mount_path]):
+    if all([args.volume_name, args.mount_path]):
         container_args.extend(
             [
                 "--mount_path",
