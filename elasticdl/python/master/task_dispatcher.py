@@ -46,8 +46,7 @@ class _TaskDispatcher(object):
                 the number of evaluation records.
             prediction_shards: A dictionary from RecordIO file name to
                 the number of prediction records.
-            records_per_task: The total number of records each task is
-                executing on.
+            records_per_task: The number of records per task.
             num_epochs: The total number of epochs for the tasks where
                 an epoch is a complete iteration over the shards.
         """
