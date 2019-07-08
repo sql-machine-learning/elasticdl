@@ -161,10 +161,9 @@ def _add_train_params(parser):
         "If 0, time-based evaluation is disabled",
         default=0,
     )
-    )
     parser.add_argument(
         "--checkpoint_steps",
-        type=_non_neg_int,
+        type=int,
         help="Save checkpoint every this many steps."
         "If 0, no checkpoints to save.",
         default=0,
