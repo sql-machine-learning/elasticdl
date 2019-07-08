@@ -47,11 +47,11 @@ def train(args):
         "--evaluation_data_dir",
         args.evaluation_data_dir,
         "--evaluation_steps",
-        args.evaluation_steps,
+        str(args.evaluation_steps),
         "--evaluation_start_delay_secs",
-        args.evaluation_start_delay_secs,
+        str(args.evaluation_start_delay_secs),
         "--evaluation_throttle_secs",
-        args.evaluation_throttle_secs,
+        str(args.evaluation_throttle_secs),
     ]
     container_args.extend(["--image_pull_policy", args.image_pull_policy])
     container_args.extend(["--restart_policy", args.restart_policy])
