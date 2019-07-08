@@ -1,8 +1,8 @@
 import numpy as np
+from resnet50_subclass.model import ResNet50
 import tensorflow as tf
 from tensorflow.python.keras import backend
 
-from resnet50_subclass.model import ResNet50
 
 model = ResNet50(num_classes=10, dtype="float32")
 
