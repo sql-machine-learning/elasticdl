@@ -37,7 +37,7 @@ jobs:
       name: "Unit Tests"
       script:
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
-        - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests"
+        - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests --cov=elasticdl/python"
     - stage: integrationtest
       name: "Integration Tests"
       script:
