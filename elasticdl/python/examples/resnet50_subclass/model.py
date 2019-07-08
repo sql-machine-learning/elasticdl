@@ -1,7 +1,5 @@
 import tensorflow as tf
-from tensorflow.python.keras import backend
-from tensorflow.python.keras import layers
-from tensorflow.python.keras import regularizers
+from tensorflow.python.keras import backend, layers, regularizers
 
 L2_WEIGHT_DECAY = 1e-4
 BATCH_NORM_DECAY = 0.9
@@ -18,12 +16,14 @@ class ResNet50(tf.keras.Model):
                 name="transpose",
             )
             bn_axis = 1
-            data_format = "channels_first" 
+            data_format = "channels_first"
         else:
             bn_axis = 3
-            data_format = "channels_last" 
+            data_format = "channels_last"
 
-        self._padding = layers.ZeroPadding2D(padding=(3, 3), data_format=data_format, name="zero_pad")
+        self._padding = layers.ZeroPadding2D(
+            padding=(3, 3), data_format=data_format, name="zero_pad"
+        )
         self._conv2d_1 = layers.Conv2D(
             64,
             (7, 7),

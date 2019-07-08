@@ -1,9 +1,9 @@
+import cv2
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras import backend
-import cv2
-from resnet50_subclass.model import ResNet50
 
+from resnet50_subclass.model import ResNet50
 
 model = ResNet50(num_classes=10, dtype="float32")
 
