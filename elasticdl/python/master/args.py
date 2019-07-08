@@ -69,7 +69,7 @@ def parse_args():
         default=0,
     )
     parser.add_argument("--records_per_task", type=_pos_int, required=True)
-    parser.add_argument("--num_epochs", type=_pos_int, required=True)
+    parser.add_argument("--num_epochs", type=_pos_int, default=1)
     parser.add_argument(
         "--grads_to_wait",
         type=_pos_int,

@@ -132,11 +132,50 @@ def _add_train_params(parser):
     parser.add_argument(
         "--training_data_dir",
         help="Training data directory. Files should be in RecordIO format",
-        default="",
+        required=True,
     )
     parser.add_argument(
         "--evaluation_data_dir",
         help="Evaluation data directory. Files should be in RecordIO format",
+        default="",
+    )
+    parser.add_argument(
+        "--evaluation_steps",
+        type=int,
+        help="Evaluate the model every this many steps."
+        "If 0, step-based evaluation is disabled",
+        default=0,
+    )
+    parser.add_argument(
+        "--evaluation_start_delay_secs",
+        type=int,
+        help="Start time-based evaluation only after waiting for "
+        "this many seconds",
+        default=100,
+    )
+    parser.add_argument(
+        "--evaluation_throttle_secs",
+        type=int,
+        help="Do not re-evaluate unless the last evaluation was started "
+        "at least this many seconds ago."
+        "If 0, time-based evaluation is disabled",
+        default=0,
+    )
+    parser.add_argument(
+        "--checkpoint_steps",
+        type=int,
+        help="Save checkpoint every this many steps."
+        "If 0, no checkpoints to save.",
+        default=0,
+    )
+    parser.add_argument(
+        "--checkpoint_dir",
+        help="The directory to store the checkpoint files",
+        default="",
+    )
+    parser.add_argument(
+        "--checkpoint_filename_for_init",
+        help="The checkpoint file to initialize the training model",
         default="",
     )
 
@@ -216,20 +255,7 @@ def _add_evaluate_params(parser):
         help="The name of the Kubernetes namespace where ElasticDL "
         "pods will be created",
     )
-    parser.add_argument(
-        "--tensorboard_log_dir",
-        default="",
-        type=str,
-        help="Directory where TensorBoard will look to find "
-        "TensorFlow event files that it can display. "
-        "TensorBoard will recursively walk the directory "
-        "structure rooted at log dir, looking for .*tfevents.* "
-        "files. You may also pass a comma separated list of log "
-        "directories, and TensorBoard will watch each "
-        "directory.",
-    )
     parser.add_argument("--records_per_task", type=int, required=True)
-    parser.add_argument("--num_epochs", type=int, required=True)
     parser.add_argument(
         "--minibatch_size",
         type=int,
@@ -239,29 +265,7 @@ def _add_evaluate_params(parser):
     parser.add_argument(
         "--evaluation_data_dir",
         help="Evaluation data directory. Files should be in RecordIO format",
-        default="",
-    )
-    parser.add_argument(
-        "--evaluation_steps",
-        type=int,
-        help="Evaluate the model every this many steps."
-        "If 0, step-based evaluation is disabled",
-        default=0,
-    )
-    parser.add_argument(
-        "--evaluation_start_delay_secs",
-        type=int,
-        help="Start time-based evaluation only after waiting for "
-        "this many seconds",
-        default=100,
-    )
-    parser.add_argument(
-        "--evaluation_throttle_secs",
-        type=int,
-        help="Do not re-evaluate unless the last evaluation was started "
-        "at least this many seconds ago."
-        "If 0, time-based evaluation is disabled",
-        default=0,
+        required=True,
     )
     parser.add_argument(
         "--checkpoint_filename_for_init",
