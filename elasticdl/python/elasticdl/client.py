@@ -164,7 +164,7 @@ def _add_train_params(parser):
     parser.add_argument(
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",
-        required=True,
+        default="",
     )
 
 
