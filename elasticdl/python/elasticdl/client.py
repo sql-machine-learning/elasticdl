@@ -161,6 +161,19 @@ def _add_train_params(parser):
         "If 0, time-based evaluation is disabled",
         default=0,
     )
+    )
+    parser.add_argument(
+        "--checkpoint_steps",
+        type=_non_neg_int,
+        help="Save checkpoint every this many steps."
+        "If 0, no checkpoints to save.",
+        default=0,
+    )
+    parser.add_argument(
+        "--checkpoint_dir",
+        help="The directory to store the checkpoint files",
+        default="",
+    )
     parser.add_argument(
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",
