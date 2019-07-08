@@ -3,8 +3,6 @@ import tensorflow as tf
 
 import resnet50_subclass
 
-model = resnet50_subclass.model.ResNet50(num_classes=10, dtype="float32")
-
 
 def loss(output, labels):
     return tf.reduce_mean(
@@ -12,6 +10,9 @@ def loss(output, labels):
             labels.flatten(), output
         )
     )
+
+
+model = resnet50_subclass.model.ResNet50(num_classes=10, dtype="float32")
 
 
 def optimizer(lr=0.1):
