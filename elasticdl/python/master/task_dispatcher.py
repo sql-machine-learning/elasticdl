@@ -39,7 +39,17 @@ class _TaskDispatcher(object):
         num_epochs,
     ):
         """
-        shards: a dictionary from RecordIO file name to number of records
+        Arguments:
+            training_shards: A dictionary from RecordIO file name to the
+                number of training records.
+            evaluation_shards: A dictionary from RecordIO file name to
+                the number of evaluation records.
+            prediction_shards: A dictionary from RecordIO file name to
+                the number of prediction records.
+            records_per_task: The total number of records each task is
+                executing on.
+            num_epochs: The total number of epochs for the tasks where
+                an epoch is a complete iteration over the shards.
         """
         self._logger = logging.getLogger(__name__)
         self._lock = threading.Lock()
