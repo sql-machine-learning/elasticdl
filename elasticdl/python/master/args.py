@@ -130,12 +130,10 @@ def parse_args():
         "--worker_image", help="Docker image for workers", default=None
     )
     parser.add_argument("--job_name", help="Job name", required=True)
-    # TODO: better logic for handling volume configs
     parser.add_argument(
-        "--volume_name", help="Volume name of Network File System"
-    )
-    parser.add_argument(
-        "--mount_path", help="Mount path in the docker container"
+        "--volume",
+        help="The Kubernetes volume information, "
+        'e.g. "claim_name=c1,volume_name=v1,mount_path=/path1".',
     )
     parser.add_argument(
         "--log_level",
