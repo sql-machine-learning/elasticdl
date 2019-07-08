@@ -49,7 +49,7 @@ def parse_args():
     parser.add_argument(
         "--evaluation_steps",
         type=_non_neg_int,
-        help="Evaluate the model every this  many steps."
+        help="Evaluate the model every this many steps."
         "If 0, step-based evaluation is disabled",
         default=0,
     )
@@ -79,7 +79,7 @@ def parse_args():
     parser.add_argument(
         "--minibatch_size",
         type=_pos_int,
-        help="Minibatch size used by workers to compute gradients",
+        help="Minibatch size used by workers",
         required=True,
     )
     parser.add_argument(
