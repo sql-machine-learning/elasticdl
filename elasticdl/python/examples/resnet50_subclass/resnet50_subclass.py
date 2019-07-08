@@ -1,6 +1,8 @@
 import numpy as np
 import tensorflow as tf
-from resnet50.model import ResNet50
+from tensorflow.python.keras import backend
+import cv2
+from resnet50_subclass.model import ResNet50
 
 
 model = ResNet50(num_classes=10, dtype="float32")
@@ -9,7 +11,7 @@ model = ResNet50(num_classes=10, dtype="float32")
 def loss(output, labels):
     return tf.reduce_mean(
         input_tensor=tf.keras.losses.sparse_categorical_crossentropy(
-            logits=output, labels=labels.flatten()
+            labels.flatten(), output
         )
     )
 
@@ -30,6 +32,7 @@ def input_fn(records):
         r = tf.io.parse_single_example(r, feature_description)
         label = r["label"].numpy()
         image = r["image"].numpy()
+        # image = cv2.resize(image, (224, 224))
         # processing data
         image = image.astype(np.float32)
         image /= 255
@@ -40,7 +43,10 @@ def input_fn(records):
     # batching
     batch_size = len(image_list)
     images = np.concatenate(image_list, axis=0)
-    images = np.reshape(images, (batch_size, 224, 224, 3))
+    if backend.image_data_format() == "channels_first":
+        images = np.reshape(images, (batch_size, 3, 224, 224))
+    else:
+        images = np.reshape(images, (batch_size, 224, 224, 3))
     images = tf.convert_to_tensor(value=images)
     labels = np.array(label_list)
     return ({"image": images}, labels)

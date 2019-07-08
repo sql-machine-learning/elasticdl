@@ -18,10 +18,12 @@ class ResNet50(tf.keras.Model):
                 name="transpose",
             )
             bn_axis = 1
+            data_format = "channels_first" 
         else:
             bn_axis = 3
+            data_format = "channels_last" 
 
-        self._padding = layers.ZeroPadding2D(padding=(3, 3), name="conv1_pad")
+        self._padding = layers.ZeroPadding2D(padding=(3, 3), data_format=data_format, name="zero_pad")
         self._conv2d_1 = layers.Conv2D(
             64,
             (7, 7),
@@ -106,10 +108,12 @@ class ResNet50(tf.keras.Model):
         self._activation_2 = layers.Activation("softmax")
 
     def call(self, inputs, training=False):
+
+        images = inputs["image"]
         if backend.image_data_format() == "channels_first":
-            x = self._lambda(inputs)
+            x = self._lambda(images)
         else:
-            x = inputs
+            x = images
         x = self._padding(x)
         x = self._conv2d_1(x)
         x = self._bn_1(x)
@@ -222,7 +226,7 @@ class ConvBlock(tf.keras.Model):
         conv_name_base = "res" + str(stage) + block + "_branch"
         bn_name_base = "bn" + str(stage) + block + "_branch"
 
-        self._con2d_1 = layers.Conv2D(
+        self._conv2d_1 = layers.Conv2D(
             filters1,
             (1, 1),
             use_bias=False,
@@ -290,13 +294,12 @@ class ConvBlock(tf.keras.Model):
         self._activation_4 = layers.Activation("relu")
 
     def call(self, inputs, training=False):
-        x = self._con2d_1(inputs)
+        x = self._conv2d_1(inputs)
         x = self._bn_1(x)
         x = self._activation_1(x)
         x = self._conv2d_2(x)
         x = self._bn_2(x)
         x = self._activation_2(x)
-        x = self._conv2d_3(x)
         x = self._conv2d_3(x)
         x = self._bn_3(x)
         shortcut = self._shortcut(inputs)

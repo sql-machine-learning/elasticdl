@@ -139,7 +139,7 @@ class ExampleTest(unittest.TestCase):
 
     def test_resnet50_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
-            "resnet50", [224, 224, 3], training=False
+            "resnet50_subclass", [224, 224, 3], training=False
         )
 
 
