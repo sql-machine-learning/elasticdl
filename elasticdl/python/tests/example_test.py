@@ -10,6 +10,7 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.model_helper import get_model_file
 from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.tests.in_process_master import InProcessMaster
@@ -63,7 +64,7 @@ class ExampleTest(unittest.TestCase):
         shards = {create_recordio_file(128, image_shape): 128}
         if training:
             training_shards = shards
-            evaluation_shards = {}
+            evaluation_shards = shards
         else:
             training_shards = {}
             evaluation_shards = shards
@@ -74,6 +75,15 @@ class ExampleTest(unittest.TestCase):
             records_per_task=64,
             num_epochs=1,
         )
+        # Initialize checkpoint service
+        checkpoint_service = CheckpointService("", 0, 0, True)
+        evaluation_service = None
+        if training:
+            evaluation_service = EvaluationService(
+                checkpoint_service, None, task_d, 0, 0, 2
+            )
+        task_d.set_evaluation_service(evaluation_service)
+        # The master service
         master = MasterServicer(
             2,
             16,
@@ -81,8 +91,8 @@ class ExampleTest(unittest.TestCase):
             task_d,
             init_var=[],
             checkpoint_filename_for_init="",
-            checkpoint_service=CheckpointService("", 0, 0, True),
-            evaluation_service=None,
+            checkpoint_service=checkpoint_service,
+            evaluation_service=evaluation_service,
         )
         worker._stub = InProcessMaster(master)
 
