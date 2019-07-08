@@ -71,7 +71,8 @@ def _create_dockerfile(
 FROM {BASE_IMAGE} as base
 ENV PYTHONPATH=/:/model_zoo
 COPY {ELASTIC_DL}/elasticdl /elasticdl
-RUN pip install -r elasticdl/requirements.txt --extra-index-url="${EXTRA_PYPI_INDEX}"
+RUN pip install -r elasticdl/requirements.txt \ 
+  --extra-index-url="${EXTRA_PYPI_INDEX}"
 RUN make -f elasticdl/Makefile
 # TODO: Need to restructure examples directory to make it conform to model_zoo
 # convention
@@ -85,7 +86,8 @@ RUN if [ -f $REQS ]; then \
 FROM {BASE_IMAGE} as base
 ENV PYTHONPATH=/:/model_zoo
 COPY {ELASTIC_DL}/elasticdl /elasticdl
-RUN pip install -r elasticdl/requirements.txt --extra-index-url="${EXTRA_PYPI_INDEX}"
+RUN pip install -r elasticdl/requirements.txt \ 
+  --extra-index-url="${EXTRA_PYPI_INDEX}"
 RUN make -f elasticdl/Makefile
 RUN apt-get update && apt-get install -y git
 RUN git clone --recursive {MODEL_ZOO} /model_zoo
