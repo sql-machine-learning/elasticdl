@@ -17,8 +17,7 @@ class WorkerManager(object):
         worker_resource_request="cpu=1,memory=4096Mi",
         worker_resource_limit="cpu=1,memory=4096Mi",
         pod_priority=None,
-        mount_path=None,
-        volume_name=None,
+        volume=None,
         image_pull_policy=None,
         restart_policy="Never",
         **kwargs
@@ -32,8 +31,7 @@ class WorkerManager(object):
         self._resource_limits = worker_resource_limit
         self._restart_policy = restart_policy
         self._pod_priority = pod_priority
-        self._mount_path = mount_path
-        self._volume_name = volume_name
+        self._volume = volume
         self._image_pull_policy = image_pull_policy
         self._task_d = task_d
         self._next_worker_id = itertools.count().__next__
@@ -68,8 +66,7 @@ class WorkerManager(object):
                 resource_requests=self._resource_requests,
                 resource_limits=self._resource_limits,
                 pod_priority=self._pod_priority,
-                mount_path=self._mount_path,
-                volume_name=self._volume_name,
+                volume=self._volume,
                 image_pull_policy=self._image_pull_policy,
                 command=self._command,
                 args=self._args + ["--worker_id", str(worker_id)],

@@ -78,10 +78,9 @@ def _add_train_params(parser):
         "--master_pod_priority", help="The requested priority of master pod"
     )
     parser.add_argument(
-        "--volume_name", help="The volume name of network file system"
-    )
-    parser.add_argument(
-        "--mount_path", help="The mount path in the Docker container"
+        "--volume",
+        help="The Kubernetes volume information, "
+        'e.g. "claim_name=c1,volume_name=v1,mount_path=/path1".',
     )
     parser.add_argument(
         "--image_pull_policy",
@@ -230,10 +229,9 @@ def _add_evaluate_params(parser):
         "--master_pod_priority", help="The requested priority of master pod"
     )
     parser.add_argument(
-        "--volume_name", help="The volume name of network file system"
-    )
-    parser.add_argument(
-        "--mount_path", help="The mount path in the Docker container"
+        "--volume",
+        help="The Kubernetes volume information, "
+        'e.g. "claim_name=c1,volume_name=v1,mount_path=/path1".',
     )
     parser.add_argument(
         "--image_pull_policy",

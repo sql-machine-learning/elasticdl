@@ -193,8 +193,7 @@ def main():
             worker_resource_request=args.worker_resource_request,
             worker_resource_limit=args.worker_resource_limit,
             pod_priority=args.worker_pod_priority,
-            mount_path=args.mount_path,
-            volume_name=args.volume_name,
+            volume=args.volume,
             image_pull_policy=args.image_pull_policy,
             restart_policy=args.restart_policy,
         )
