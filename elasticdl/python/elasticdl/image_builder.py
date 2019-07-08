@@ -69,21 +69,29 @@ def _create_dockerfile(
 ):
     LOCAL_ZOO = """
 FROM {BASE_IMAGE} as base
-COPY {ELASTIC_DL} /elasticdl
+ENV PYTHONPATH=/:/model_zoo
+COPY {ELASTIC_DL}/elasticdl /elasticdl
+RUN pip install -r elasticdl/requirements.txt \
+  --extra-index-url="${EXTRA_PYPI_INDEX}"
+RUN make -f elasticdl/Makefile
 # TODO: Need to restructure examples directory to make it conform to model_zoo
 # convention
 COPY {MODEL_ZOO} /model_zoo/{MODEL_ZOO}
-ARG REQS=/model_zoo/requirements.txt
+ARG REQS=/model_zoo/{MODEL_ZOO}/requirements.txt
 RUN if [ -f $REQS ]; then \
       pip install -r $REQS --extra-index-url="${EXTRA_PYPI_INDEX}"; \
     fi
 """
     REMOTE_ZOO = """
 FROM {BASE_IMAGE} as base
-COPY {ELASTIC_DL} /elasticdl
+ENV PYTHONPATH=/:/model_zoo
+COPY {ELASTIC_DL}/elasticdl /elasticdl
+RUN pip install -r elasticdl/requirements.txt \
+  --extra-index-url="${EXTRA_PYPI_INDEX}"
+RUN make -f elasticdl/Makefile
 RUN apt-get update && apt-get install -y git
 RUN git clone --recursive {MODEL_ZOO} /model_zoo
-ARG REQS=/model_zoo/requirements.txt
+ARG REQS=/model_zoo/{MODEL_ZOO}/requirements.txt
 RUN if [ -f $REQS ]; then \
       pip install -r $REQS --extra-index-url="${EXTRA_PYPI_INDEX}"; \
     fi
