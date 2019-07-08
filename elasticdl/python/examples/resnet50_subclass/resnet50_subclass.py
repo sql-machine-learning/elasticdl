@@ -1,8 +1,7 @@
 import numpy as np
-from resnet50_subclass.model import ResNet50
 import tensorflow as tf
-from tensorflow.python.keras import backend
 
+from resnet50_subclass.model import ResNet50
 
 model = ResNet50(num_classes=10, dtype="float32")
 
@@ -42,7 +41,7 @@ def input_fn(records):
     # batching
     batch_size = len(image_list)
     images = np.concatenate(image_list, axis=0)
-    if backend.image_data_format() == "channels_first":
+    if tf.python.keras.backend.image_data_format() == "channels_first":
         images = np.reshape(images, (batch_size, 3, 224, 224))
     else:
         images = np.reshape(images, (batch_size, 224, 224, 3))
