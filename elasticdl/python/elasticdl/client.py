@@ -206,7 +206,8 @@ def _add_train_params(parser):
         "--eval_metrics_fn",
         type=str,
         default="eval_metrics_fn",
-        help="The name of the evaluation metrics function defined in the model file",
+        help="The name of the evaluation metrics function defined "
+        "in the model file",
     )
     parser.add_argument(
         "--model_class",
@@ -317,7 +318,8 @@ def _add_evaluate_params(parser):
         "--eval_metrics_fn",
         type=str,
         default="eval_metrics_fn",
-        help="The name of the evaluation metrics function defined in the model file",
+        help="The name of the evaluation metrics function defined "
+        "in the model file",
     )
     parser.add_argument(
         "--model_class",
