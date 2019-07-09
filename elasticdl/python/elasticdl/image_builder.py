@@ -8,7 +8,11 @@ import docker
 
 
 def build_and_push_docker_image(
-    model_zoo, docker_image_prefix, base_image="", extra_pypi="", cluster_spec=""
+    model_zoo,
+    docker_image_prefix,
+    base_image="",
+    extra_pypi="",
+    cluster_spec="",
 ):
     """Build and push a Docker image containing ElasticDL and the model
 zoo.  The parameter model_zoo could be a local directory or an URL.
@@ -39,7 +43,10 @@ after _build_docker_image.
 
         # Copy cluster specification file into the context directory.
         if cluster_spec:
-            shutil.copy(cluster_spec, os.path.join(ctx_dir, os.path.basename(cluster_spec)))
+            shutil.copy(
+                cluster_spec,
+                os.path.join(ctx_dir, os.path.basename(cluster_spec)),
+            )
 
         # Create the Dockerfile.
         with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:

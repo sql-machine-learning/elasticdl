@@ -90,6 +90,43 @@ python -m elasticdl.python.elasticdl.client train \
 ```
 The difference is that we need to push the built image to a remote image registry used by GKE.
 
+### Submit to an on-premise Kubernetes cluster
+
+On-premise Kubernetes cluster may add somes additional configurations for pods to be launched, 
+ElasticDL provides an easy way for users to specify their pods requirements.
+
+```bash
+python -m elasticdl.python.elasticdl.client train \
+    --job_name=test \
+    --image_name=gcr.io/elasticdl/mnist:dev \
+    --model_def=elasticdl/python/examples/mnist_subclass \
+    --cluster_spec=elasticdl/python/common/k8s_cluster_spec.py \
+    --training_data_dir=/data/mnist_nfs/mnist/train \
+    --evaluation_data_dir=/data/mnist_nfs/mnist/test \
+    --num_epochs=1 \
+    --minibatch_size=10 \
+    --records_per_task=100 \
+    --num_workers=1 \
+    --checkpoint_steps=2 \
+    --master_pod_priority=high-priority \
+    --worker_pod_priority=high-priority \
+    --master_resource_request="cpu=1,memory=2048Mi" \
+    --master_resource_limit="cpu=1,memory=2048Mi" \
+    --worker_resource_request="cpu=2,memory=4096Mi" \
+    --worker_resource_limit="cpu=2,memory=4096Mi" \
+    --grads_to_wait=2 \
+    --volume="volume_name=data-volume,mount_path=/data,claim_name=fileserver-claim" \
+    --image_pull_policy=Always \
+    --log_level=INFO \
+    --docker_image_prefix=gcr.io/elasticdl
+```
+
+The difference is that we add a new argument `cluster_spec` which points to a cluster specification file.
+The cluster specification module includes a `cluster` component, and ElasticDL will invoke function
+`cluster.with_cluster(pod)` to add extra specifications to the 
+[pod](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1Pod.md). For example 
+[k8s_cluster_spec.py](common/k8s_cluster_spec.py), we just return the `pod` directly with no additional specifications.
+
 ## Submit ElasticDL Job In Command Line Mode
 
 ### Download ElasticDL Source Code And Build Wheel Package
