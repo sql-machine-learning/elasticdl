@@ -186,7 +186,7 @@ class Worker(object):
             self._create_variable_and_report(features)
         for _ in range(self._max_minibatch_retry_num):
             if task.type == elasticdl_pb2.EVALUATION:
-                if min_model_version == -1:
+                if min_model_version == -1 and self._model_version < 0:
                     self.get_model(min_model_version, elasticdl_pb2.MINIMUM)
                 elif self._model_version != min_model_version:
                     self.get_model(min_model_version, elasticdl_pb2.FIXED)
