@@ -58,6 +58,16 @@ def train(args):
         str(args.evaluation_start_delay_secs),
         "--evaluation_throttle_secs",
         str(args.evaluation_throttle_secs),
+        "--input_fn",
+        args.input_fn,
+        "--loss",
+        args.loss,
+        "--optimizer",
+        args.optimizer,
+        "--eval_metrics_fn",
+        args.eval_metrics_fn,
+        "--model_class",
+        args.model_class,
     ]
     container_args.extend(["--image_pull_policy", args.image_pull_policy])
     container_args.extend(["--restart_policy", args.restart_policy])
@@ -112,6 +122,12 @@ def evaluate(args):
         args.evaluation_data_dir,
         "--checkpoint_filename_for_init",
         args.checkpoint_filename_for_init,
+        "--input_fn",
+        args.input_fn,
+        "--eval_metrics_fn",
+        args.eval_metrics_fn,
+        "--model_class",
+        args.model_class,
     ]
     container_args.extend(["--image_pull_policy", args.image_pull_policy])
     container_args.extend(["--restart_policy", args.restart_policy])

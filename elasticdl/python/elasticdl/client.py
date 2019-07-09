@@ -184,6 +184,36 @@ def _add_train_params(parser):
         help="The checkpoint file to initialize the training model",
         default="",
     )
+    parser.add_argument(
+        "--input_fn",
+        type=str,
+        default="input_fn",
+        help="The name of the input function defined in the model file",
+    )
+    parser.add_argument(
+        "--loss",
+        type=str,
+        default="loss",
+        help="The name of the loss function defined in the model file",
+    )
+    parser.add_argument(
+        "--optimizer",
+        type=str,
+        default="optimizer",
+        help="The name of the optimizer defined in the model file",
+    )
+    parser.add_argument(
+        "--eval_metrics_fn",
+        type=str,
+        default="eval_metrics_fn",
+        help="The name of the evaluation metrics function defined in the model file",
+    )
+    parser.add_argument(
+        "--model_class",
+        type=str,
+        default="model",
+        help="The name of the model class defined in the model file",
+    )
 
 
 def _add_evaluate_params(parser):
@@ -276,6 +306,24 @@ def _add_evaluate_params(parser):
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",
         required=True,
+    )
+    parser.add_argument(
+        "--input_fn",
+        type=str,
+        default="input_fn",
+        help="The name of the input function defined in the model file",
+    )
+    parser.add_argument(
+        "--eval_metrics_fn",
+        type=str,
+        default="eval_metrics_fn",
+        help="The name of the evaluation metrics function defined in the model file",
+    )
+    parser.add_argument(
+        "--model_class",
+        type=str,
+        default="model",
+        help="The name of the model class defined in the model file",
     )
 
 
