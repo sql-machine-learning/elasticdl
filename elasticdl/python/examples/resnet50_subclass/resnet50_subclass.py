@@ -1,7 +1,6 @@
 import numpy as np
-import tensorflow as tf
-
 import resnet50_subclass
+import tensorflow as tf
 
 
 def loss(output, labels):
