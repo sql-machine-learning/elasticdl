@@ -66,10 +66,11 @@ def train(args):
     container_args.extend(["--restart_policy", args.restart_policy])
     container_args.extend(["--volume", args.volume])
 
-    if args.master_resource_limit is None:
-        args.master_resource_limit = args.master_resource_request
-    if args.worker_resource_limit is None:
-        args.worker_resource_limit = args.worker_resource_request
+    args.master_resource_limit = (
+        args.master_resource_limit
+        if args.master_resource_limit
+        else args.master_resource_request
+    )
 
     k8s.Client(
         image_name=image_name,
@@ -129,10 +130,11 @@ def evaluate(args):
     container_args.extend(["--restart_policy", args.restart_policy])
     container_args.extend(["--volume", args.volume])
 
-    if args.master_resource_limit is None:
-        args.master_resource_limit = args.master_resource_request
-    if args.worker_resource_limit is None:
-        args.worker_resource_limit = args.worker_resource_request
+    args.master_resource_limit = (
+        args.master_resource_limit
+        if args.master_resource_limit
+        else args.master_resource_request
+    )
 
     k8s.Client(
         image_name=image_name,
