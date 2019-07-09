@@ -63,7 +63,7 @@ docker push gcr.io/${PROJECT_ID}/elasticdl:dev
 Use the command below to submit your first ElasticDL job on GKE:
 
 ```
-python -m elasticdl.python.client.client train \
+python -m elasticdl.python.elasticdl.client train \
     --job_name=hello-world \
     --model_def=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_subclass \
     --training_data_dir=${MNIST_DATA_DIR}/train \
@@ -103,7 +103,7 @@ One of the important features of ElasticDL is fault tolerance which ensures job 
 Same as the first example, submit a job on GKE using the command below:
 
 ```
-python -m elasticdl.python.client.client train \
+python -m elasticdl.python.elasticdl.client train \
     --job_name=fault-tolerance \
     --model_def=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_subclass \
     --training_data_dir=${MNIST_DATA_DIR}/train \
@@ -164,7 +164,7 @@ For more about PriorityClass, please check out [Pod Priority and Preemption](htt
 
 ### Submit the first job with `low-priority`
 ```
-python -m elasticdl.python.client.client train \
+python -m elasticdl.python.elasticdl.client train \
     --job_name=low-prio-job \
     --model_def=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_subclass \
     --training_data_dir=${MNIST_DATA_DIR}/train \
@@ -196,7 +196,7 @@ kubectl get pods -l elasticdl_job_name=low-prio-job
 
 ### Submit the second job with `high-priority`
 ```
-python -m elasticdl.python.client.client train \
+python -m elasticdl.python.elasticdl.client train \
     --job_name=high-prio-job \
     --model_def=${ABSOLUTE_PATH}/elasticdl/elasticdl/python/examples/mnist_subclass \
     --training_data_dir=${MNIST_DATA_DIR}/train \
