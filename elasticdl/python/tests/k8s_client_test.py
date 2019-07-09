@@ -43,8 +43,7 @@ class K8sClientTest(unittest.TestCase):
                 command=["echo"],
                 pod_priority=None,
                 args=None,
-                mount_path=None,
-                volume_name=None,
+                volume=None,
                 image_pull_policy="Never",
                 restart_policy="Never",
             )
@@ -83,8 +82,7 @@ class K8sClientTest(unittest.TestCase):
             command=["echo"],
             pod_priority=None,
             args=None,
-            mount_path=None,
-            volume_name=None,
+            volume=None,
             image_pull_policy="Never",
             restart_policy="Never",
         )

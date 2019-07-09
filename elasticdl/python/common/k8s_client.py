@@ -11,7 +11,8 @@ from kubernetes.client import (
     V1PersistentVolumeClaimVolumeSource,
 )
 
-from elasticdl.python.common.k8s_resource import parse
+from elasticdl.python.common.k8s_resource import parse as parse_resource
+from elasticdl.python.common.k8s_volume import parse as parse_volume
 from elasticdl.python.common.model_helper import load_module
 
 ELASTICDL_JOB_KEY = "elasticdl_job_name"
@@ -116,8 +117,8 @@ class Client(object):
             image=kargs["image_name"],
             command=kargs["command"],
             resources=client.V1ResourceRequirements(
-                requests=parse(kargs["resource_requests"]),
-                limits=parse(kargs["resource_limits"]),
+                requests=parse_resource(kargs["resource_requests"]),
+                limits=parse_resource(kargs["resource_limits"]),
             ),
             args=kargs["container_args"],
             image_pull_policy=kargs["image_pull_policy"],
@@ -132,24 +133,21 @@ class Client(object):
         )
 
         # Mount data path
-        if all([kargs["volume_name"], kargs["mount_path"]]):
+        if kargs["volume"]:
+            volume_dict = parse_volume(kargs["volume"])
             volume = client.V1Volume(
-                name=kargs["volume_name"],
+                name=volume_dict["volume_name"],
                 persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
-                    claim_name="fileserver-claim", read_only=False
+                    claim_name=volume_dict["claim_name"], read_only=False
                 ),
             )
             spec.volumes = [volume]
             container.volume_mounts = [
                 client.V1VolumeMount(
-                    name=kargs["volume_name"], mount_path=kargs["mount_path"]
+                    name=volume_dict["volume_name"],
+                    mount_path=volume_dict["mount_path"],
                 )
             ]
-        elif any([kargs["volume_name"], kargs["mount_path"]]):
-            raise ValueError(
-                "Not both of the parameters volume_name and "
-                "mount_path are provided."
-            )
 
         pod = client.V1Pod(
             spec=spec,
@@ -190,8 +188,7 @@ class Client(object):
             pod_priority=kargs["pod_priority"],
             image_pull_policy=kargs["image_pull_policy"],
             restart_policy=kargs["restart_policy"],
-            volume_name=kargs["volume_name"],
-            mount_path=kargs["mount_path"],
+            volume=kargs["volume"],
             owner_pod=None,
             env=env,
         )
@@ -213,8 +210,7 @@ class Client(object):
             pod_priority=kargs["pod_priority"],
             image_pull_policy=kargs["image_pull_policy"],
             restart_policy=kargs["restart_policy"],
-            volume_name=kargs["volume_name"],
-            mount_path=kargs["mount_path"],
+            volume=kargs["volume"],
             owner_pod=master_pod,
             env=None,
         )

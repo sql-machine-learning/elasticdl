@@ -97,6 +97,7 @@ def main():
             args.evaluation_throttle_secs or args.evaluation_steps,
         )
     )
+    evaluation_only = args.evaluation_data_dir and not args.training_data_dir
 
     # Initialize checkpoint service
     if args.checkpoint_steps or evaluation_while_training:
@@ -112,7 +113,7 @@ def main():
 
     # Initialize evaluation service
     evaluation_service = None
-    if evaluation_while_training:
+    if evaluation_while_training or evaluation_only:
         logger.info(
             "Starting evaluation service with throttle seconds %d ",
             " and evaluation steps %d",
@@ -126,6 +127,7 @@ def main():
             args.evaluation_start_delay_secs,
             args.evaluation_throttle_secs,
             args.evaluation_steps,
+            evaluation_only,
         )
         evaluation_service.start()
         task_d.set_evaluation_service(evaluation_service)
@@ -193,8 +195,7 @@ def main():
             worker_resource_request=args.worker_resource_request,
             worker_resource_limit=args.worker_resource_limit,
             pod_priority=args.worker_pod_priority,
-            mount_path=args.mount_path,
-            volume_name=args.volume_name,
+            volume=args.volume,
             image_pull_policy=args.image_pull_policy,
             restart_policy=args.restart_policy,
             cluster_spec=args.cluster_spec,

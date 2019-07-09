@@ -39,7 +39,16 @@ class _TaskDispatcher(object):
         num_epochs,
     ):
         """
-        shards: a dictionary from RecordIO file name to number of records
+        Arguments:
+            training_shards: A dictionary from RecordIO file name to the
+                number of training records.
+            evaluation_shards: A dictionary from RecordIO file name to
+                the number of evaluation records.
+            prediction_shards: A dictionary from RecordIO file name to
+                the number of prediction records.
+            records_per_task: The number of records per task.
+            num_epochs: The total number of epochs for the tasks where
+                an epoch is a complete iteration over the shards.
         """
         self._logger = logging.getLogger(__name__)
         self._lock = threading.Lock()
@@ -57,8 +66,11 @@ class _TaskDispatcher(object):
         self._task_id = 0
         self._evaluation_service = None
 
-        self._logger.info("Starting epoch %d", self._epoch)
-        self.create_training_tasks()
+        if self._training_shards:
+            self._logger.info("Starting epoch %d", self._epoch)
+            self.create_training_tasks()
+        elif self._evaluation_shards:
+            self.create_evaluation_tasks(-1)
 
     def create_training_tasks(self):
         self._logger.info(
@@ -171,3 +183,5 @@ class _TaskDispatcher(object):
     def set_evaluation_service(self, evaluation_service):
         with self._lock:
             self._evaluation_service = evaluation_service
+            if self._evaluation_shards and not self._training_shards:
+                evaluation_service.init_eval_only_job(len(self._todo))

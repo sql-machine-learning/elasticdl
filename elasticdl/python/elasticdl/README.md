@@ -27,7 +27,7 @@ git clone https://github.com/wangkuiyi/elasticdl.git
 cd elasticdl
 ```
 
-Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and submit a model, e.g. `/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass/mnist_subclass.py` to it.
+Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and submit a model, e.g. `elasticdl/python/examples/mnist_subclass/mnist_subclass.py` to it.
 
 ### Submit to local Kubernetes on Your Machine
 
@@ -42,8 +42,8 @@ elasticdl/docker/build_all.sh
 Submit training job:
 
 ```bash
-python -m elasticdl.python.client.client train \
-    --model_def=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass \
+python -m elasticdl.python.elasticdl.client train \
+    --model_def=elasticdl/python/examples/mnist_subclass \
     --image_base=elasticdl:ci \
     --training_data_dir=/data/mnist/train \
     --evaluation_data_dir=/data/mnist/test \
@@ -65,10 +65,10 @@ python -m elasticdl.python.client.client train \
 ### Submit to a GKE cluster
 
 ```bash
-python -m elasticdl.python.client.client train \
+python -m elasticdl.python.elasticdl.client train \
     --job_name=test \
     --image_name=gcr.io/elasticdl/mnist:dev \
-    --model_def=$(pwd)/elasticdl/python/examples/mnist_subclass \
+    --model_def=elasticdl/python/examples/mnist_subclass \
     --training_data_dir=/data/mnist_nfs/mnist/train \
     --evaluation_data_dir=/data/mnist_nfs/mnist/test \
     --num_epochs=1 \
@@ -83,8 +83,7 @@ python -m elasticdl.python.client.client train \
     --worker_resource_request="cpu=2,memory=4096Mi" \
     --worker_resource_limit="cpu=2,memory=4096Mi" \
     --grads_to_wait=2 \
-    --mount_path=/data \
-    --volume_name=data-volume \
+    --volume="volume_name=data-volume,mount_path=/data,claim_name=fileserver-claim" \
     --image_pull_policy=Always \
     --log_level=INFO \
     --docker_image_prefix=gcr.io/elasticdl
@@ -107,11 +106,11 @@ pip install dist/elasticdl-0.0.1-py3-none-any.whl
 
 ### Submit Jobs
 
-Same as in the development mode, just replace `python -m elasticdl.python.client.client` part with `elasticdl`.
+Same as in the development mode, just replace `python -m elasticdl.python.elasticdl.client` part with `elasticdl`.
 
 ## Check the pod status
 
 ```bash
 kubectl get pods
-kubectl logs ${pod_name}
+kubectl logs $pod_name
 ```

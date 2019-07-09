@@ -83,11 +83,13 @@ class EvaluationServiceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testEvaluationService")
             checkpoint_service = CheckpointService(chkp_dir, 5, 5, True)
-            task_d = _TaskDispatcher({}, {"f1": 10, "f2": 10}, {}, 3, 1)
+            task_d = _TaskDispatcher(
+                {"f1": 10, "f2": 10}, {"f1": 10, "f2": 10}, {}, 3, 1
+            )
 
             # Evaluation metrics will not be accepted if no evaluation ongoing
             evaluation_service = EvaluationService(
-                checkpoint_service, None, task_d, 10, 20, 0
+                checkpoint_service, None, task_d, 10, 20, 0, False
             )
             evaluation_metrics = {
                 "mse": ndarray_to_tensor(
@@ -116,8 +118,9 @@ class EvaluationServiceTest(unittest.TestCase):
             master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
 
             # Add an evaluation task and we can start evaluation
-            evaluation_service.add_evaluation_task(0)
             self.assertEqual(8, len(task_d._todo))
+            evaluation_service.add_evaluation_task(0)
+            self.assertEqual(16, len(task_d._todo))
             self.assertFalse(evaluation_service._eval_job.finished())
 
             for i in range(8):
@@ -125,3 +128,29 @@ class EvaluationServiceTest(unittest.TestCase):
                 evaluation_service.complete_task()
             self.assertTrue(evaluation_service._eval_job is None)
             self.assertFalse(evaluation_service.try_to_create_new_job())
+
+    def testEvaluationOnly(self):
+        task_d = _TaskDispatcher({}, {"f1": 10, "f2": 10}, {}, 3, 1)
+
+        evaluation_service = EvaluationService(
+            None, None, task_d, 0, 0, 0, True
+        )
+        task_d.set_evaluation_service(evaluation_service)
+
+        master = MasterServicer(
+            2,
+            2,
+            None,
+            task_d,
+            init_var=[],
+            checkpoint_filename_for_init="",
+            checkpoint_service=None,
+            evaluation_service=evaluation_service,
+        )
+        master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
+
+        self.assertEqual(8, len(task_d._todo))
+        for i in range(8):
+            self.assertFalse(evaluation_service._eval_job.finished())
+            evaluation_service.complete_task()
+        self.assertTrue(evaluation_service._eval_job.finished())

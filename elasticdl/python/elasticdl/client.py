@@ -5,7 +5,7 @@ from elasticdl.python.elasticdl.api import evaluate, train
 
 def main():
     parser = argparse.ArgumentParser(
-        usage="""client.py <command> [<args>]
+        usage="""elasticdl <command> [<args>]
 
 There are all the supported commands:
 train         Submit a ElasticDL distributed training job.
@@ -14,12 +14,12 @@ evaluate      Submit a ElasticDL distributed evaluation job.
     )
     subparsers = parser.add_subparsers()
 
-    train_parser = subparsers.add_parser("train", help="elasticdl.py train -h")
+    train_parser = subparsers.add_parser("train", help="elasticdl train -h")
     train_parser.set_defaults(func=train)
     _add_train_params(train_parser)
 
     evaluate_parser = subparsers.add_parser(
-        "evaluate", help="client.py evaluate -h"
+        "evaluate", help="elasticdl evaluate -h"
     )
     evaluate_parser.set_defaults(func=evaluate)
     _add_evaluate_params(evaluate_parser)
@@ -78,10 +78,9 @@ def _add_train_params(parser):
         "--master_pod_priority", help="The requested priority of master pod"
     )
     parser.add_argument(
-        "--volume_name", help="The volume name of network file system"
-    )
-    parser.add_argument(
-        "--mount_path", help="The mount path in the Docker container"
+        "--volume",
+        help="The Kubernetes volume information, "
+        'e.g. "claim_name=c1,volume_name=v1,mount_path=/path1".',
     )
     parser.add_argument(
         "--image_pull_policy",
@@ -174,6 +173,13 @@ def _add_train_params(parser):
         default="",
     )
     parser.add_argument(
+        "--keep_checkpoint_max",
+        type=int,
+        help="The maximum number of recent checkpoint files to keep."
+        "If 0, keep all.",
+        default=0,
+    )
+    parser.add_argument(
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",
         default="",
@@ -235,10 +241,9 @@ def _add_evaluate_params(parser):
         "--master_pod_priority", help="The requested priority of master pod"
     )
     parser.add_argument(
-        "--volume_name", help="The volume name of network file system"
-    )
-    parser.add_argument(
-        "--mount_path", help="The mount path in the Docker container"
+        "--volume",
+        help="The Kubernetes volume information, "
+        'e.g. "claim_name=c1,volume_name=v1,mount_path=/path1".',
     )
     parser.add_argument(
         "--image_pull_policy",

@@ -53,6 +53,8 @@ def train(args):
         str(args.checkpoint_steps),
         "--checkpoint_dir",
         args.checkpoint_dir,
+        "--keep_checkpoint_max",
+        str(args.keep_checkpoint_max),
         "--evaluation_steps",
         str(args.evaluation_steps),
         "--evaluation_start_delay_secs",
@@ -62,21 +64,7 @@ def train(args):
     ]
     container_args.extend(["--image_pull_policy", args.image_pull_policy])
     container_args.extend(["--restart_policy", args.restart_policy])
-
-    if all([args.volume_name, args.mount_path]):
-        container_args.extend(
-            [
-                "--mount_path",
-                args.mount_path,
-                "--volume_name",
-                args.volume_name,
-            ]
-        )
-    elif any([args.volume_name, args.mount_path]):
-        raise ValueError(
-            "Not both of the parameters volume_name and "
-            "mount_path are provided."
-        )
+    container_args.extend(["--volume", args.volume])
 
     if args.master_resource_limit is None:
         args.master_resource_limit = args.master_resource_request
@@ -96,8 +84,7 @@ def train(args):
         pod_priority=args.master_pod_priority,
         image_pull_policy=args.image_pull_policy,
         restart_policy=args.restart_policy,
-        volume_name=args.volume_name,
-        mount_path=args.mount_path,
+        volume=args.volume,
     )
     # TODO: print dashboard url after launching the master pod
 
@@ -140,21 +127,7 @@ def evaluate(args):
     ]
     container_args.extend(["--image_pull_policy", args.image_pull_policy])
     container_args.extend(["--restart_policy", args.restart_policy])
-
-    if all([args.volume_name, args.mount_path]):
-        container_args.extend(
-            [
-                "--mount_path",
-                args.mount_path,
-                "--volume_name",
-                args.volume_name,
-            ]
-        )
-    elif any([args.volume_name, args.mount_path]):
-        raise ValueError(
-            "Not both of the parameters volume_name and "
-            "mount_path are provided."
-        )
+    container_args.extend(["--volume", args.volume])
 
     if args.master_resource_limit is None:
         args.master_resource_limit = args.master_resource_request
@@ -174,8 +147,7 @@ def evaluate(args):
         pod_priority=args.master_pod_priority,
         image_pull_policy=args.image_pull_policy,
         restart_policy=args.restart_policy,
-        volume_name=args.volume_name,
-        mount_path=args.mount_path,
+        volume=args.volume,
     )
 
 

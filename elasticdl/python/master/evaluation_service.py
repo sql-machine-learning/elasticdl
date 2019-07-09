@@ -19,7 +19,6 @@ class _EvaluationJob(object):
         self._completed_tasks = 0
         self._completed_minibatches = 0
         self._evaluation_metrics = defaultdict()
-        self._master_servicer = None
 
     def complete_task(self):
         self._completed_tasks += 1
@@ -30,7 +29,10 @@ class _EvaluationJob(object):
     def report_evaluation_metrics(
         self, evaluation_version, evaluation_metrics
     ):
-        if evaluation_version != self.model_version:
+        if (
+            self.model_version >= 0
+            and evaluation_version != self.model_version
+        ):
             self._logger.error(
                 "Drop a wrong version evaluation: request %d, receive %d"
                 % (self.model_version, evaluation_version)
@@ -97,6 +99,7 @@ class EvaluationService(object):
         start_delay_secs,
         throttle_secs,
         eval_steps,
+        eval_only,
     ):
         self._logger = logging.getLogger(__name__)
         self._checkpoint_service = checkpoint_service
@@ -111,17 +114,21 @@ class EvaluationService(object):
         self._eval_steps = eval_steps
         self._eval_checkpoint_versions = []
         self._last_eval_checkpoint_version = -1
+        self._eval_only = eval_only
 
     def start(self):
-        if self._time_based_eval:
+        if self._time_based_eval and not self._eval_only:
             self.trigger.start()
 
     def stop(self):
-        if self._time_based_eval:
+        if self._time_based_eval and not self._eval_only:
             self.trigger.stop()
 
     def set_master_servicer(self, master_servicer):
         self._master_servicer = master_servicer
+
+    def init_eval_only_job(self, num_task):
+        self._eval_job = _EvaluationJob(-1, num_task)
 
     def add_evaluation_task(self, is_time_based_eval, master_locking=True):
         """
@@ -143,6 +150,10 @@ class EvaluationService(object):
         self.try_to_create_new_job()
 
     def try_to_create_new_job(self):
+        """
+        Add eval task into task dispatcher if current eval_job is done
+        and there are pending eval tasks
+        """
         with self._lock:
             if self._eval_job is None and self._eval_checkpoint_versions:
                 checkpoint_version = self._eval_checkpoint_versions.pop(0)
@@ -154,6 +165,9 @@ class EvaluationService(object):
         return False
 
     def add_evaluation_task_if_needed(self, master_locking):
+        """
+        Add step-based evaluation task
+        """
         model_version = self._master_servicer.get_model_version()
         if self._eval_steps and model_version % self._eval_steps == 0:
             self.add_evaluation_task(
@@ -179,12 +193,18 @@ class EvaluationService(object):
                 )
             self._logger.info(
                 "Evaluation metrics[v=%d]: %s"
-                % (self._eval_job.model_version, str(evaluation_metrics))
+                % (
+                    self._eval_job.model_version
+                    if self._eval_job.model_version >= 0
+                    else self._master_servicer.get_model_version(),
+                    str(evaluation_metrics),
+                )
             )
-            # delete checkpoint file
-            self._checkpoint_service.remove_eval_checkpoint(
-                self._eval_job.model_version
-            )
-            self._eval_job = None
-            # create new eval job if possible
-            self.try_to_create_new_job()
+            if not self._eval_only:
+                # delete checkpoint file
+                self._checkpoint_service.remove_eval_checkpoint(
+                    self._eval_job.model_version
+                )
+                self._eval_job = None
+                # create new eval job if possible
+                self.try_to_create_new_job()
