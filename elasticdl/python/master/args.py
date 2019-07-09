@@ -172,6 +172,11 @@ def parse_args():
         "directories, and TensorBoard will watch each "
         "directory.",
     )
+    parser.add_argument(
+        "--cluster_spec",
+        help="The file that contains user-defined cluster specification",
+        default="",
+    )
     args = parser.parse_args()
 
     if args.prediction_data_dir and (
