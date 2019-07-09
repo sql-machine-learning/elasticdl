@@ -27,7 +27,7 @@ git clone https://github.com/wangkuiyi/elasticdl.git
 cd elasticdl
 ```
 
-Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and submit a model, e.g. `/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass/mnist_subclass.py` to it.
+Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and submit a model, e.g. `elasticdl/python/examples/mnist_subclass/mnist_subclass.py` to it.
 
 ### Submit to local Kubernetes on Your Machine
 
@@ -43,7 +43,7 @@ Submit training job:
 
 ```bash
 python -m elasticdl.python.elasticdl.client train \
-    --model_def=/Users/${USER_NAME}/elasticdl/elasticdl/examples/mnist_subclass \
+    --model_def=elasticdl/python/examples/mnist_subclass \
     --image_base=elasticdl:ci \
     --training_data_dir=/data/mnist/train \
     --evaluation_data_dir=/data/mnist/test \
@@ -68,7 +68,7 @@ python -m elasticdl.python.elasticdl.client train \
 python -m elasticdl.python.elasticdl.client train \
     --job_name=test \
     --image_name=gcr.io/elasticdl/mnist:dev \
-    --model_def=$(pwd)/elasticdl/python/examples/mnist_subclass \
+    --model_def=elasticdl/python/examples/mnist_subclass \
     --training_data_dir=/data/mnist_nfs/mnist/train \
     --evaluation_data_dir=/data/mnist_nfs/mnist/test \
     --num_epochs=1 \
@@ -112,5 +112,5 @@ Same as in the development mode, just replace `python -m elasticdl.python.elasti
 
 ```bash
 kubectl get pods
-kubectl logs ${pod_name}
+kubectl logs $pod_name
 ```
