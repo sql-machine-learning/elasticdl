@@ -1,6 +1,10 @@
 import numpy as np
-import resnet50_subclass
 import tensorflow as tf
+
+try:
+    from resnet50_subclass import model
+except ImportError:
+    from elasticdl.python.examples.resnet50_subclass import model
 
 
 def loss(output, labels):
@@ -11,7 +15,7 @@ def loss(output, labels):
     )
 
 
-model = resnet50_subclass.model.ResNet50(num_classes=10, dtype="float32")
+model = model.ResNet50(num_classes=10, dtype="float32")
 
 
 def optimizer(lr=0.1):
