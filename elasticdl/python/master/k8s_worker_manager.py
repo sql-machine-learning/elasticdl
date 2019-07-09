@@ -76,6 +76,12 @@ class WorkerManager(object):
             self._pod_name_to_id[name] = worker_id
             self._pods_phase[worker_id] = (name, None)
 
+    def update_status(self, status):
+        master_name = self._k8s_client.get_master_pod_name()
+        self._k8s_client.patch_labels_to_pod(
+            master_name, labels_dict={"status": status}
+        )
+
     def start_workers(self):
         for i in range(self._num_workers):
             self._start_worker(self._next_worker_id())
