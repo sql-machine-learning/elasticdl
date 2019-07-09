@@ -5,7 +5,7 @@ from elasticdl.python.elasticdl.api import evaluate, train
 
 def main():
     parser = argparse.ArgumentParser(
-        usage="""client.py <command> [<args>]
+        usage="""elasticdl <command> [<args>]
 
 There are all the supported commands:
 train         Submit a ElasticDL distributed training job.
@@ -14,12 +14,12 @@ evaluate      Submit a ElasticDL distributed evaluation job.
     )
     subparsers = parser.add_subparsers()
 
-    train_parser = subparsers.add_parser("train", help="elasticdl.py train -h")
+    train_parser = subparsers.add_parser("train", help="elasticdl train -h")
     train_parser.set_defaults(func=train)
     _add_train_params(train_parser)
 
     evaluate_parser = subparsers.add_parser(
-        "evaluate", help="client.py evaluate -h"
+        "evaluate", help="elasticdl evaluate -h"
     )
     evaluate_parser.set_defaults(func=evaluate)
     _add_evaluate_params(evaluate_parser)
