@@ -2,9 +2,9 @@ import numpy as np
 import tensorflow as tf
 
 try:
-    from resnet50_subclass import model
+    from resnet50_subclass import resnet50_model
 except ImportError:
-    from elasticdl.python.examples.resnet50_subclass import model
+    from elasticdl.python.examples.resnet50_subclass import resnet50_model
 
 
 def loss(output, labels):
@@ -15,7 +15,7 @@ def loss(output, labels):
     )
 
 
-model = model.ResNet50(num_classes=10, dtype="float32")
+model = resnet50_model.ResNet50(num_classes=10, dtype="float32")
 
 
 def optimizer(lr=0.1):
