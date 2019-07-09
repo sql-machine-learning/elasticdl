@@ -173,6 +173,13 @@ def _add_train_params(parser):
         default="",
     )
     parser.add_argument(
+        "--keep_checkpoint_max",
+        type=int,
+        help="The maximum number of recent checkpoint files to keep."
+        "If 0, keep all.",
+        default=0,
+    )
+    parser.add_argument(
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",
         default="",

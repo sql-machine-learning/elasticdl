@@ -50,6 +50,8 @@ def train(args):
         str(args.checkpoint_steps),
         "--checkpoint_dir",
         args.checkpoint_dir,
+        "--keep_checkpoint_max",
+        str(args.keep_checkpoint_max),
         "--evaluation_steps",
         str(args.evaluation_steps),
         "--evaluation_start_delay_secs",
