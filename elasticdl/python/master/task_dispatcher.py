@@ -66,8 +66,11 @@ class _TaskDispatcher(object):
         self._task_id = 0
         self._evaluation_service = None
 
-        self._logger.info("Starting epoch %d", self._epoch)
-        self.create_training_tasks()
+        if self._training_shards:
+            self._logger.info("Starting epoch %d", self._epoch)
+            self.create_training_tasks()
+        elif self._evaluation_shards:
+            self.create_evaluation_tasks(-1)
 
     def create_training_tasks(self):
         self._logger.info(
@@ -180,3 +183,5 @@ class _TaskDispatcher(object):
     def set_evaluation_service(self, evaluation_service):
         with self._lock:
             self._evaluation_service = evaluation_service
+            if self._evaluation_shards and not self._training_shards:
+                evaluation_service.init_eval_only_job(len(self._todo))

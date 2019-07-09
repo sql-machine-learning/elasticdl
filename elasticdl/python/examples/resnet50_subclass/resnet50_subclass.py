@@ -45,7 +45,7 @@ def input_fn(records):
     # batching
     batch_size = len(image_list)
     images = np.concatenate(image_list, axis=0)
-    if tf.python.keras.backend.image_data_format() == "channels_first":
+    if tf.keras.backend.image_data_format() == "channels_first":
         images = np.reshape(images, (batch_size, 3, 224, 224))
     else:
         images = np.reshape(images, (batch_size, 224, 224, 3))

@@ -10,6 +10,7 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.model_helper import load_module
 from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.tests.in_process_master import InProcessMaster
@@ -76,6 +77,13 @@ class WorkerTest(unittest.TestCase):
             records_per_task=64,
             num_epochs=1,
         )
+        if not training:
+            evaluation_service = EvaluationService(
+                None, None, task_d, 0, 0, 0, True
+            )
+            task_d.set_evaluation_service(evaluation_service)
+        else:
+            evaluation_service = None
         master = MasterServicer(
             2,
             16,
@@ -83,8 +91,8 @@ class WorkerTest(unittest.TestCase):
             task_d,
             init_var=[],
             checkpoint_filename_for_init="",
-            checkpoint_service=CheckpointService("", 0, 0, True),
-            evaluation_service=None,
+            checkpoint_service=None,
+            evaluation_service=evaluation_service,
         )
         worker._stub = _Master(master)
 

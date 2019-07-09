@@ -77,10 +77,13 @@ class ExampleTest(unittest.TestCase):
         )
         # Initialize checkpoint service
         checkpoint_service = CheckpointService("", 0, 0, True)
-        evaluation_service = None
         if training:
             evaluation_service = EvaluationService(
-                checkpoint_service, None, task_d, 0, 0, 2
+                checkpoint_service, None, task_d, 0, 0, 2, False
+            )
+        else:
+            evaluation_service = EvaluationService(
+                checkpoint_service, None, task_d, 0, 0, 0, True
             )
         task_d.set_evaluation_service(evaluation_service)
         # The master service
