@@ -21,7 +21,13 @@ ELASTICDL_APP_NAME = "elasticdl"
 
 class Client(object):
     def __init__(
-        self, *, image_name, namespace, job_name, event_callback, cluster_spec
+        self,
+        *,
+        image_name,
+        namespace,
+        job_name,
+        event_callback,
+        cluster_spec=""
     ):
         """
         ElasticDL k8s client.
