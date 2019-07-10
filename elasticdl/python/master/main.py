@@ -8,7 +8,7 @@ import grpc
 import recordio
 
 from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.python.common.constants import GRPC
+from elasticdl.python.common.constants import GRPC, WorkerManagerStatus
 from elasticdl.python.common.model_helper import get_model_file, load_module
 from elasticdl.python.master.args import parse_args
 from elasticdl.python.master.checkpoint_service import CheckpointService
@@ -159,6 +159,7 @@ def main():
     server.start()
     logger.info("Server started at port: %d", args.port)
 
+    worker_manager = None
     if args.num_workers:
         assert args.worker_image, "Worker image cannot be empty"
 
@@ -210,8 +211,10 @@ def main():
             restart_policy=args.restart_policy,
             cluster_spec=args.cluster_spec,
         )
+        worker_manager.update_status(WorkerManagerStatus.PENDING)
         logger.info("Launching %d workers", args.num_workers)
         worker_manager.start_workers()
+        worker_manager.update_status(WorkerManagerStatus.RUNNING)
 
         if tb_service:
             worker_manager.start_tensorboard_service()
@@ -219,6 +222,8 @@ def main():
     try:
         while True:
             if task_d.finished():
+                if worker_manager:
+                    worker_manager.update_status(WorkerManagerStatus.FINISHED)
                 break
             time.sleep(30)
     except KeyboardInterrupt:
