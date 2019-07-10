@@ -100,7 +100,7 @@ python -m elasticdl.python.elasticdl.client train \
     --job_name=test \
     --image_name=gcr.io/elasticdl/mnist:dev \
     --model_def=elasticdl/python/examples/mnist_subclass \
-    --cluster_spec=elasticdl/python/common/k8s_cluster_spec.py \
+    --cluster_spec=<path_to_cluster_specification_file> \
     --training_data_dir=/data/mnist_nfs/mnist/train \
     --evaluation_data_dir=/data/mnist_nfs/mnist/test \
     --num_epochs=1 \
@@ -124,8 +124,19 @@ python -m elasticdl.python.elasticdl.client train \
 The difference is that we add a new argument `cluster_spec` which points to a cluster specification file.
 The cluster specification module includes a `cluster` component, and ElasticDL will invoke function
 `cluster.with_cluster(pod)` to add extra specifications to the 
-[pod](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1Pod.md). For example 
-[k8s_cluster_spec.py](common/k8s_cluster_spec.py), we just return the `pod` directly with no additional specifications.
+[pod](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1Pod.md). Here is an example
+which return the `pod` directly with no additional specifications. Users can implement more customized configurations
+inside the `with_clsuter` function.
+
+```python
+class KubernetesCluster:
+    def with_cluster(self, pod):
+        # By default, don't need to add specific config for pod
+        return pod
+
+# TODO: need to change this after we make same change to model definition
+cluster = KubernetesCluster()
+```
 
 ## Submit ElasticDL Job In Command Line Mode
 
