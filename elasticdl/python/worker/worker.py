@@ -25,6 +25,11 @@ class Worker(object):
         self,
         worker_id,
         model_file,
+        input_fn="input_fn",
+        loss="loss",
+        optimizer="optimizer",
+        eval_metrics_fn="eval_metrics_fn",
+        model_class="model",
         channel=None,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
     ):
@@ -37,13 +42,13 @@ class Worker(object):
         """
         self._logger = logging.getLogger(__name__)
         self._worker_id = worker_id
-        model_module = load_module(model_file)
-        self._model = model_module.model
+        model_module = load_module(model_file).__dict__
+        self._model = model_module[model_class]
         self._var_created = self._model.built
-        self._input_fn = model_module.input_fn
-        self._opt_fn = model_module.optimizer
-        self._loss = model_module.loss
-        self._eval_metrics_fn = model_module.eval_metrics_fn
+        self._input_fn = model_module[input_fn]
+        self._opt_fn = model_module[optimizer]
+        self._loss = model_module[loss]
+        self._eval_metrics_fn = model_module[eval_metrics_fn]
 
         if channel is None:
             self._stub = None

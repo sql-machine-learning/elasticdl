@@ -61,7 +61,7 @@ class WorkerTest(unittest.TestCase):
                     self._m._version += 1
                 return self._m.ReportEvaluationMetrics(req, None)
 
-        worker = Worker(1, _module_file, None)
+        worker = Worker(1, _module_file, channel=None)
 
         shards = {create_recordio_file(128): 128}
         if training:
@@ -154,7 +154,7 @@ class WorkerTest(unittest.TestCase):
                 checkpoint_service=None,
                 evaluation_service=None,
             )
-            worker = Worker(1, _module_file, None)
+            worker = Worker(1, _module_file, channel=None)
             worker._stub = InProcessMaster(master2)
             worker.run()
 

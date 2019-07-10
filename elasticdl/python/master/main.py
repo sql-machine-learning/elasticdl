@@ -176,6 +176,16 @@ def main():
             master_addr,
             "--log_level",
             args.log_level,
+            "--input_fn",
+            args.input_fn,
+            "--loss",
+            args.loss,
+            "--optimizer",
+            args.optimizer,
+            "--eval_metrics_fn",
+            args.eval_metrics_fn,
+            "--model_class",
+            args.model_class,
         ]
 
         args.worker_resource_limit = (

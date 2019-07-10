@@ -59,7 +59,7 @@ class ExampleTest(unittest.TestCase):
         """
         module_file = _get_model_info(get_model_file(model_def))
 
-        worker = Worker(1, module_file, None)
+        worker = Worker(1, module_file, channel=None)
 
         shards = {create_recordio_file(128, image_shape): 128}
         if training:

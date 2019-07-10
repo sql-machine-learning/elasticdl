@@ -27,6 +27,37 @@ def _parse_args():
         default="INFO",
         help="Set the logging level",
     )
+    parser.add_argument(
+        "--input_fn",
+        type=str,
+        default="input_fn",
+        help="The name of the input function defined in the model file",
+    )
+    parser.add_argument(
+        "--loss",
+        type=str,
+        default="loss",
+        help="The name of the loss function defined in the model file",
+    )
+    parser.add_argument(
+        "--optimizer",
+        type=str,
+        default="optimizer",
+        help="The name of the optimizer defined in the model file",
+    )
+    parser.add_argument(
+        "--eval_metrics_fn",
+        type=str,
+        default="eval_metrics_fn",
+        help="The name of the evaluation metrics function defined "
+        "in the model file",
+    )
+    parser.add_argument(
+        "--model_class",
+        type=str,
+        default="model",
+        help="The name of the model class defined in the model file",
+    )
 
     return parser.parse_args()
 
@@ -54,7 +85,14 @@ def main():
 
     logger.info("Starting worker %d", args.worker_id)
     worker = Worker(
-        args.worker_id, get_model_file(args.model_def), channel=channel
+        args.worker_id,
+        get_model_file(args.model_def),
+        channel=channel,
+        input_fn=args.input_fn,
+        loss=args.loss,
+        optimizer=args.optimizer,
+        eval_metrics_fn=args.eval_metrics_fn,
+        model_class=args.model_class,
     )
     worker.run()
 
