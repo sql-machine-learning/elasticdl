@@ -8,7 +8,10 @@ import tensorflow as tf
 from tensorflow.python.ops import math_ops
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.model_helper import load_module
+from elasticdl.python.common.model_helper import (
+    load_model_from_module,
+    load_module,
+)
 from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
@@ -17,10 +20,6 @@ from elasticdl.python.common.ndarray import (
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.
 DEFAULT_MAX_MINIBATCH_RETRY_NUM = 64
-
-# The default custom model name in model definition file
-DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME = "custom_model"
-DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME = "CustomModel"
 
 
 class Worker(object):
@@ -48,7 +47,7 @@ class Worker(object):
         self._logger = logging.getLogger(__name__)
         self._worker_id = worker_id
         model_module = load_module(model_file).__dict__
-        self._load_model_from_module(model_class, model_module)
+        self._model = load_model_from_module(model_class, model_module)
         self._var_created = self._model.built
         self._input_fn = model_module[input_fn]
         self._opt_fn = model_module[optimizer]
@@ -61,19 +60,6 @@ class Worker(object):
             self._stub = elasticdl_pb2_grpc.MasterStub(channel)
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._model_version = -1
-
-    def _load_model_from_module(self, model_class, model_module):
-        if model_class in model_module:
-            custom_model_name = model_class
-        elif DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME in model_module:
-            custom_model_name = DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME
-        elif DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME in model_module:
-            custom_model_name = DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME
-        else:
-            raise ValueError(
-                "Cannot find the custom model function/class in model definition files"
-            )
-        self._model = model_module[custom_model_name]()
 
     def get_task(self):
         """
