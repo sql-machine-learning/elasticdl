@@ -90,9 +90,9 @@ def main():
         args.records_per_task,
         args.num_epochs,
     )
-    model_module = load_module(get_model_file(args.model_def))
+    model_module = load_module(get_model_file(args.model_def)).__dict__
     model_inst = load_model_from_module(args.model_class, model_module)
-    optimizer = model_module.optimizer()
+    optimizer = model_module[args.optimizer]
 
     evaluation_while_training = all(
         (
