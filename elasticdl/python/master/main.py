@@ -9,7 +9,11 @@ import recordio
 
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC, WorkerManagerStatus
-from elasticdl.python.common.model_helper import get_model_file, load_module
+from elasticdl.python.common.model_helper import (
+    get_model_file,
+    load_model_from_module,
+    load_module,
+)
 from elasticdl.python.master.args import parse_args
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
@@ -87,7 +91,7 @@ def main():
         args.num_epochs,
     )
     model_module = load_module(get_model_file(args.model_def))
-    model_inst = model_module.model
+    model_inst = load_model_from_module(args.model_class, model_module)
     optimizer = model_module.optimizer()
 
     evaluation_while_training = all(
