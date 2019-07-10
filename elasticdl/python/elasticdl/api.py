@@ -6,6 +6,7 @@ from elasticdl.python.elasticdl.image_builder import (
 )
 
 MODEL_ROOT_PATH = "/model_zoo"
+CLUSTER_SPEC_ROOT_PATH = "/cluster_spec"
 
 
 def train(args):
@@ -26,7 +27,7 @@ def train(args):
         "--model_def",
         _model_def_in_docker(args.model_def),
         "--cluster_spec",
-        args.cluster_spec,
+        _cluster_spec_def_in_docker(args.cluster_spec),
         "--num_workers",
         str(args.num_workers),
         "--worker_resource_request",
@@ -118,7 +119,7 @@ def evaluate(args):
         "--model_def",
         _model_def_in_docker(args.model_def),
         "--cluster_spec",
-        args.cluster_spec,
+        _cluster_spec_def_in_docker(args.cluster_spec),
         "--num_workers",
         str(args.num_workers),
         "--worker_resource_request",
@@ -171,3 +172,7 @@ def evaluate(args):
 
 def _model_def_in_docker(model_def):
     return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_def))
+
+
+def _cluster_spec_def_in_docker(cluster_spec):
+    return os.path.join(CLUSTER_SPEC_ROOT_PATH, os.path.basename(cluster_spec))
