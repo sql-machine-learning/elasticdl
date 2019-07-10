@@ -208,6 +208,7 @@ def main():
             volume=args.volume,
             image_pull_policy=args.image_pull_policy,
             restart_policy=args.restart_policy,
+            cluster_spec=args.cluster_spec,
         )
         logger.info("Launching %d workers", args.num_workers)
         worker_manager.start_workers()
