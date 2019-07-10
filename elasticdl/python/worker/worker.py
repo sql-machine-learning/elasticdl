@@ -9,6 +9,7 @@ from tensorflow.python.ops import math_ops
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.model_helper import (
+    DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
     load_model_from_module,
     load_module,
 )
@@ -33,8 +34,8 @@ class Worker(object):
         loss="loss",
         optimizer="optimizer",
         eval_metrics_fn="eval_metrics_fn",
-        model_class="custom_model",
         channel=None,
+        model_class=DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
     ):
         """
