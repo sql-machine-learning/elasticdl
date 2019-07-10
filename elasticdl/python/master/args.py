@@ -200,6 +200,7 @@ def parse_args():
         type=str,
         default="model",
         help="The name of the model class defined in the model file",
+    )
     parser.add_argument(
         "--cluster_spec",
         help="The file that contains user-defined cluster specification",
