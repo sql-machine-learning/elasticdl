@@ -64,35 +64,11 @@ python -m elasticdl.python.elasticdl.client train \
 
 ### Submit to a GKE cluster
 
-```bash
-python -m elasticdl.python.elasticdl.client train \
-    --job_name=test \
-    --image_name=gcr.io/elasticdl/mnist:dev \
-    --model_def=elasticdl/python/examples/mnist_subclass \
-    --training_data_dir=/data/mnist_nfs/mnist/train \
-    --evaluation_data_dir=/data/mnist_nfs/mnist/test \
-    --num_epochs=1 \
-    --minibatch_size=10 \
-    --records_per_task=100 \
-    --num_workers=1 \
-    --checkpoint_steps=2 \
-    --master_pod_priority=high-priority \
-    --worker_pod_priority=high-priority \
-    --master_resource_request="cpu=1,memory=2048Mi" \
-    --master_resource_limit="cpu=1,memory=2048Mi" \
-    --worker_resource_request="cpu=2,memory=4096Mi" \
-    --worker_resource_limit="cpu=2,memory=4096Mi" \
-    --grads_to_wait=2 \
-    --volume="volume_name=data-volume,mount_path=/data,claim_name=fileserver-claim" \
-    --image_pull_policy=Always \
-    --log_level=INFO \
-    --docker_image_prefix=gcr.io/elasticdl
-```
-The difference is that we need to push the built image to a remote image registry used by GKE.
+Please checkout [this tutorial](../doc/elastic_scheduling.md) for instructions on submitting jobs to a GKE cluster.
 
 ### Submit to an on-premise Kubernetes cluster
 
-On-premise Kubernetes cluster may add somes additional configurations for pods to be launched, 
+On-premise Kubernetes cluster may add some additional configurations for pods to be launched,
 ElasticDL provides an easy way for users to specify their pods requirements.
 
 ```bash
@@ -126,7 +102,7 @@ The cluster specification module includes a `cluster` component, and ElasticDL w
 `cluster.with_cluster(pod)` to add extra specifications to the 
 [pod](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1Pod.md). Here is an example
 which return the `pod` directly with no additional specifications. Users can implement more customized configurations
-inside the `with_clsuter` function.
+inside the `with_cluster` function.
 
 ```python
 class KubernetesCluster:
