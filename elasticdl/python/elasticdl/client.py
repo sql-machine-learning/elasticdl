@@ -214,6 +214,7 @@ def _add_train_params(parser):
         type=str,
         default="model",
         help="The name of the model class defined in the model file",
+    )
     parser.add_argument(
         "--cluster_spec",
         help="The file that contains user-defined cluster specification",
@@ -330,6 +331,7 @@ def _add_evaluate_params(parser):
         type=str,
         default="model",
         help="The name of the model class defined in the model file",
+    )
     parser.add_argument(
         "--cluster_spec",
         help="The file that contains user-defined cluster specification",
