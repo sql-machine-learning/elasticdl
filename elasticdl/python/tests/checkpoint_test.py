@@ -54,7 +54,7 @@ class CheckpointTest(unittest.TestCase):
         self.assertTrue(checkpointer.need_to_checkpoint(6))
 
     def testSaveLoadCheckpoint(self):
-        init_var = m.model.trainable_variables
+        init_var = m.custom_model().trainable_variables
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testSaveLoadCheckpoint")
             os.makedirs(chkp_dir)
@@ -137,7 +137,7 @@ class CheckpointTest(unittest.TestCase):
             )
 
     def testInitFromCheckpoint(self):
-        init_var = m.model.trainable_variables
+        init_var = m.custom_model().trainable_variables
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testInitFromCheckpoint")
             os.makedirs(chkp_dir)

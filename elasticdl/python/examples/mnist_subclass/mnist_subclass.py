@@ -2,9 +2,9 @@ import numpy as np
 import tensorflow as tf
 
 
-class MnistModel(tf.keras.Model):
+class CustomModel(tf.keras.Model):
     def __init__(self, channel_last=True):
-        super(MnistModel, self).__init__(name="mnist_model")
+        super(CustomModel, self).__init__(name="mnist_model")
         if channel_last:
             self._reshape = tf.keras.layers.Reshape((28, 28, 1))
         else:
@@ -32,9 +32,6 @@ class MnistModel(tf.keras.Model):
         x = self._flatten(x)
         x = self._dense(x)
         return x
-
-
-model = MnistModel()
 
 
 def loss(output, labels):

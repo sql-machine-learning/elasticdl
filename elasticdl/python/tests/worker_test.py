@@ -114,7 +114,7 @@ class WorkerTest(unittest.TestCase):
         self.distributed_train_and_evaluate(training=False)
 
     def test_distributed_predict(self):
-        init_var = m.model.trainable_variables
+        init_var = m.custom_model().trainable_variables
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testInitFromCheckpoint")
             os.makedirs(chkp_dir)

@@ -51,7 +51,7 @@ def create_recordio_file(size, shape):
 
 class ExampleTest(unittest.TestCase):
     def distributed_train_and_evaluate(
-        self, model_def, image_shape, training=True
+        self, model_def, image_shape, model_class, training=True
     ):
         """
         Run distributed training and evaluation with a local master.
@@ -59,7 +59,7 @@ class ExampleTest(unittest.TestCase):
         """
         module_file = _get_model_info(get_model_file(model_def))
 
-        worker = Worker(1, module_file, channel=None)
+        worker = Worker(1, module_file, model_class=model_class, channel=None)
 
         shards = {create_recordio_file(128, image_shape): 128}
         if training:
@@ -112,47 +112,53 @@ class ExampleTest(unittest.TestCase):
 
     def test_mnist_functional_train(self):
         self.distributed_train_and_evaluate(
-            "mnist_functional_api", [28, 28], training=True
+            "mnist_functional_api", [28, 28], "custom_model", training=True
         )
 
     def test_mnist_functional_evaluate(self):
         self.distributed_train_and_evaluate(
-            "mnist_functional_api", [28, 28], training=False
+            "mnist_functional_api", [28, 28], "custom_model", training=False
         )
 
     def test_mnist_subclass_train(self):
         self.distributed_train_and_evaluate(
-            "mnist_subclass", [28, 28], training=True
+            "mnist_subclass", [28, 28], "CustomModel", training=True
         )
 
     def test_mnist_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
-            "mnist_subclass", [28, 28], training=False
+            "mnist_subclass", [28, 28], "CustomModel", training=False
         )
 
     def test_cifar10_functional_train(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api", [32, 32, 3], training=True
+            "cifar10_functional_api",
+            [32, 32, 3],
+            "custom_model",
+            training=True,
         )
 
     def test_cifar10_functional_evaluate(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api", [32, 32, 3], training=False
+            "cifar10_functional_api",
+            [32, 32, 3],
+            "custom_model",
+            training=False,
         )
 
     def test_cifar10_subclass_train(self):
         self.distributed_train_and_evaluate(
-            "cifar10_subclass", [32, 32, 3], training=True
+            "cifar10_subclass", [32, 32, 3], "CustomModel", training=True
         )
 
     def test_cifar10_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
-            "cifar10_subclass", [32, 32, 3], training=False
+            "cifar10_subclass", [32, 32, 3], "CustomModel", training=False
         )
 
     def test_resnet50_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
-            "resnet50_subclass", [224, 224, 3], training=False
+            "resnet50_subclass", [224, 224, 3], "CustomModel", training=False
         )
 
 

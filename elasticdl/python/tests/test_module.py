@@ -3,9 +3,11 @@ import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, Input
 
-inputs = Input(shape=(1, 1), name="x")
-outputs = Dense(1)(inputs)
-model = Model(inputs, outputs)
+
+def custom_model():
+    inputs = Input(shape=(1, 1), name="x")
+    outputs = Dense(1)(inputs)
+    return Model(inputs, outputs)
 
 
 def loss(predictions, labels):

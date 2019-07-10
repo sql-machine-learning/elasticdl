@@ -2,9 +2,9 @@ import numpy as np
 import tensorflow as tf
 
 
-class Cifar10Model(tf.keras.Model):
+class CustomModel(tf.keras.Model):
     def __init__(self, channel_last=True):
-        super(Cifar10Model, self).__init__(name="cifar10_model")
+        super(CustomModel, self).__init__(name="cifar10_model")
 
         use_bias = True
         self._conv_1 = tf.keras.layers.Conv2D(
@@ -118,9 +118,6 @@ class Cifar10Model(tf.keras.Model):
         x = self._dropout_3(x)
         x = self._flatten_1(x)
         return self._dense_1(x)
-
-
-model = Cifar10Model()
 
 
 def loss(output, labels):
