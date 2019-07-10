@@ -14,6 +14,7 @@ def train(args):
         base_image=args.image_base,
         docker_image_prefix=args.docker_image_prefix,
         extra_pypi=args.extra_pypi_index,
+        cluster_spec=args.cluster_spec,
     )
     container_args = [
         "-m",
@@ -24,6 +25,8 @@ def train(args):
         image_name,
         "--model_def",
         _model_def_in_docker(args.model_def),
+        "--cluster_spec",
+        args.cluster_spec,
         "--num_workers",
         str(args.num_workers),
         "--worker_resource_request",
@@ -74,6 +77,7 @@ def train(args):
         namespace=args.namespace,
         job_name=args.job_name,
         event_callback=None,
+        cluster_spec=args.cluster_spec,
     ).create_master(
         resource_requests=args.master_resource_request,
         resource_limits=args.master_resource_limit,
@@ -92,6 +96,7 @@ def evaluate(args):
         base_image=args.image_base,
         docker_image_prefix=args.docker_image_prefix,
         extra_pypi=args.extra_pypi_index,
+        cluster_spec=args.cluster_spec,
     )
     container_args = [
         "-m",
@@ -102,6 +107,8 @@ def evaluate(args):
         image_name,
         "--model_def",
         _model_def_in_docker(args.model_def),
+        "--cluster_spec",
+        args.cluster_spec,
         "--num_workers",
         str(args.num_workers),
         "--worker_resource_request",
@@ -134,6 +141,7 @@ def evaluate(args):
         namespace=args.namespace,
         job_name=args.job_name,
         event_callback=None,
+        cluster_spec=args.cluster_spec,
     ).create_master(
         resource_requests=args.master_resource_request,
         resource_limits=args.master_resource_limit,

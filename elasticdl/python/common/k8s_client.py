@@ -13,13 +13,22 @@ from kubernetes.client import (
 
 from elasticdl.python.common.k8s_resource import parse as parse_resource
 from elasticdl.python.common.k8s_volume import parse as parse_volume
+from elasticdl.python.common.model_helper import load_module
 
 ELASTICDL_JOB_KEY = "elasticdl_job_name"
 ELASTICDL_APP_NAME = "elasticdl"
 
 
 class Client(object):
-    def __init__(self, *, image_name, namespace, job_name, event_callback):
+    def __init__(
+        self,
+        *,
+        image_name,
+        namespace,
+        job_name,
+        event_callback,
+        cluster_spec=""
+    ):
         """
         ElasticDL k8s client.
 
@@ -49,6 +58,10 @@ class Client(object):
             threading.Thread(
                 target=self._watch, name="event_watcher", daemon=True
             ).start()
+        self.cluster = None
+        if cluster_spec:
+            cluster_spec_module = load_module(cluster_spec)
+            self.cluster = cluster_spec_module.cluster
 
     def _watch(self):
         stream = watch.Watch().stream(
@@ -159,6 +172,9 @@ class Client(object):
                 namespace=self.namespace,
             ),
         )
+        if self.cluster:
+            pod = self.cluster.with_cluster(pod)
+
         return pod
 
     def create_master(self, **kargs):

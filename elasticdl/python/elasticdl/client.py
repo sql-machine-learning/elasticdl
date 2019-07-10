@@ -184,6 +184,11 @@ def _add_train_params(parser):
         help="The checkpoint file to initialize the training model",
         default="",
     )
+    parser.add_argument(
+        "--cluster_spec",
+        help="The file that contains user-defined cluster specification",
+        default="",
+    )
 
 
 def _add_evaluate_params(parser):
@@ -276,6 +281,11 @@ def _add_evaluate_params(parser):
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",
         required=True,
+    )
+    parser.add_argument(
+        "--cluster_spec",
+        help="The file that contains user-defined cluster specification",
+        default="",
     )
 
 
