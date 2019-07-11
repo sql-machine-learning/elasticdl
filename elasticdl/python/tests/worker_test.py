@@ -8,7 +8,10 @@ import recordio
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.model_helper import load_module
+from elasticdl.python.common.model_helper import (
+    DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
+    load_module,
+)
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
@@ -19,7 +22,7 @@ from elasticdl.python.worker.worker import Worker
 _module_file = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "test_module.py"
 )
-m = load_module(_module_file)
+m = load_module(_module_file).__dict__
 
 
 def create_recordio_file(size):
@@ -114,7 +117,9 @@ class WorkerTest(unittest.TestCase):
         self.distributed_train_and_evaluate(training=False)
 
     def test_distributed_predict(self):
-        init_var = m.model.trainable_variables
+        init_var = m[
+            DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME
+        ]().trainable_variables
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testInitFromCheckpoint")
             os.makedirs(chkp_dir)

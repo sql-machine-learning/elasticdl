@@ -8,7 +8,11 @@ import tensorflow as tf
 from tensorflow.python.ops import math_ops
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.model_helper import load_module
+from elasticdl.python.common.model_helper import (
+    DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
+    load_model_from_module,
+    load_module,
+)
 from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
@@ -30,8 +34,8 @@ class Worker(object):
         loss="loss",
         optimizer="optimizer",
         eval_metrics_fn="eval_metrics_fn",
-        model_class="model",
         channel=None,
+        model_class=DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
     ):
         """
@@ -44,7 +48,7 @@ class Worker(object):
         self._logger = logging.getLogger(__name__)
         self._worker_id = worker_id
         model_module = load_module(model_file).__dict__
-        self._model = model_module[model_class]
+        self._model = load_model_from_module(model_class, model_module)
         self._var_created = self._model.built
         self._input_fn = model_module[input_fn]
         self._opt_fn = model_module[optimizer]

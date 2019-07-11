@@ -1,15 +1,31 @@
-# common helper methods for model manipulation.
 import importlib.util
 import os
 
+# The default custom model name in model definition file
+DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME = "custom_model"
+DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME = "CustomModel"
 
-# TODO: This is not only used for model. Maybe we should put it into another
-# file
+
 def load_module(module_file):
     spec = importlib.util.spec_from_file_location(module_file, module_file)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def load_model_from_module(model_class, model_module):
+    if model_class in model_module:
+        custom_model_name = model_class
+    elif DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME in model_module:
+        custom_model_name = DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME
+    elif DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME in model_module:
+        custom_model_name = DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME
+    else:
+        raise ValueError(
+            "Cannot find the custom model function/class "
+            "in model definition files"
+        )
+    return model_module[custom_model_name]()
 
 
 def save_checkpoint_to_file(pb_model, file_name):
