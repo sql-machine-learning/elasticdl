@@ -1,4 +1,4 @@
-_ALLOWED_VOLUME_KEYS = ["claim_name", "volume_name", "mount_path"]
+_ALLOWED_VOLUME_KEYS = ["claim_name", "mount_path"]
 
 
 def parse(volume_str):
@@ -6,7 +6,7 @@ def parse(volume_str):
 
     Args:
         volume_str: The string representation for k8s volume,
-            e.g. "claim_name=c1,volume_name=v1,mount_path=/path1".
+            e.g. "claim_name=c1,mount_path=/path1".
 
     Return:
         A Python dictionary parsed from the given volume string.

@@ -91,7 +91,7 @@ python -m elasticdl.python.elasticdl.client train \
     --worker_resource_request="cpu=2,memory=4096Mi" \
     --worker_resource_limit="cpu=2,memory=4096Mi" \
     --grads_to_wait=2 \
-    --volume="volume_name=data-volume,mount_path=/data,claim_name=fileserver-claim" \
+    --volume="mount_path=/data,claim_name=fileserver-claim" \
     --image_pull_policy=Always \
     --log_level=INFO \
     --docker_image_prefix=gcr.io/elasticdl

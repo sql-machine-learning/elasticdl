@@ -74,7 +74,7 @@ python -m elasticdl.python.elasticdl.client train \
     --num_workers=2 \
     --checkpoint_steps=2 \
     --grads_to_wait=2 \
-    --volume="volume_name=data-volume,mount_path=/data,claim_name=fileserver-claim" \
+    --volume="mount_path=/data,claim_name=fileserver-claim" \
     --log_level=INFO \
     --docker_image_prefix=gcr.io/${PROJECT_ID}
 ```
@@ -112,7 +112,7 @@ python -m elasticdl.python.elasticdl.client train \
     --num_workers=2 \
     --checkpoint_steps=2 \
     --grads_to_wait=2 \
-    --volume="volume_name=data-volume,mount_path=/data,claim_name=fileserver-claim" \
+    --volume="mount_path=/data,claim_name=fileserver-claim" \
     --log_level=INFO \
     --docker_image_prefix=gcr.io/${PROJECT_ID}
 ```
@@ -178,7 +178,7 @@ python -m elasticdl.python.elasticdl.client train \
     --worker_resource_request="cpu=3,memory=4096Mi" \
     --worker_resource_limit="cpu=3,memory=4096Mi" \
     --grads_to_wait=2 \
-    --volume="volume_name=data-volume,mount_path=/data,claim_name=fileserver-claim" \
+    --volume="mount_path=/data,claim_name=fileserver-claim" \
     --log_level=INFO \
     --docker_image_prefix=gcr.io/${PROJECT_ID}
 ```
@@ -209,7 +209,7 @@ python -m elasticdl.python.elasticdl.client train \
     --worker_resource_request="cpu=3,memory=4096Mi" \
     --worker_resource_limit="cpu=3,memory=4096Mi" \
     --grads_to_wait=2 \
-    --volume="volume_name=data-volume,mount_path=/data,claim_name=fileserver-claim" \
+    --volume="mount_path=/data,claim_name=fileserver-claim" \
     --log_level=INFO \
     --docker_image_prefix=gcr.io/${PROJECT_ID}
 ```
