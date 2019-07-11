@@ -175,4 +175,8 @@ def _model_def_in_docker(model_def):
 
 
 def _cluster_spec_def_in_docker(cluster_spec):
-    return os.path.join(CLUSTER_SPEC_ROOT_PATH, os.path.basename(cluster_spec))
+    return (
+        os.path.join(CLUSTER_SPEC_ROOT_PATH, os.path.basename(cluster_spec))
+        if cluster_spec
+        else ""
+    )
