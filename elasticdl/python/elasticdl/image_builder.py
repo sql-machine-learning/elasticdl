@@ -54,6 +54,7 @@ after _build_docker_image.
                 _create_dockerfile(
                     os.path.basename(elasticdl),
                     os.path.basename(model_zoo),
+                    os.path.basename(cluster_spec),
                     base_image,
                     extra_pypi,
                 )
@@ -76,7 +77,7 @@ def _find_elasticdl_root():
 
 
 def _create_dockerfile(
-    elasticdl, model_zoo, base_image="", extra_pypi_index=""
+    elasticdl, model_zoo, cluster_spec="", base_image="", extra_pypi_index=""
 ):
     LOCAL_ZOO = """
 FROM {BASE_IMAGE} as base
@@ -115,6 +116,16 @@ RUN if [ -f $REQS ]; then \
         model_zoo = pr.path  # Remove the "file://" prefix if any.
     else:
         tmpl = REMOTE_ZOO
+
+    if cluster_spec:
+        tmpl = """
+%s
+COPY %s /cluster_spec/%s
+""" % (
+            tmpl,
+            cluster_spec,
+            cluster_spec,
+        )
 
     return tmpl.format(
         BASE_IMAGE=base_image
