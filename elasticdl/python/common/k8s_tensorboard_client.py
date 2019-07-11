@@ -66,15 +66,10 @@ class TensorBoardClient(object):
             return None
 
     def get_tensorboard_external_ip(self, check_interval=5, wait_timeout=120):
-        self._logger.info(
-            "Waiting for pending external IP of TensorBoard service..."
-        )
         start_time = time.time()
         while True:
             if time.time() - start_time > wait_timeout:
-                raise Exception(
-                    "Unable to get an external IP for TensorBoard service"
-                )
+                return None
             service = self._get_tensorboard_service()
             if (
                 service is None
