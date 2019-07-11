@@ -89,18 +89,15 @@ class WorkerManager(object):
     def start_tensorboard_service(self):
         tb_client = TensorBoardClient(self._k8s_client)
         tb_client.create_tensorboard_service()
-        self._logger.info(
-            "Waiting for pending external IP of TensorBoard service..."
-        )
-        tb_external_ip = tb_client.get_tensorboard_external_ip()
+        self._logger.info("Waiting for pending URL of TensorBoard service...")
+        tb_external_ip = tb_client.get_tensorboard_url()
         if tb_external_ip:
             self._logger.info(
-                "TensorBoard service is available at external IP: %s"
-                % tb_external_ip
+                "TensorBoard service is available at: %s" % tb_external_ip
             )
         else:
             self._logger.warning(
-                "Unable to get an external IP for TensorBoard service"
+                "Unable to get the URL for TensorBoard service"
             )
 
     def _remove_worker(self, worker_id):

@@ -65,7 +65,7 @@ class TensorBoardClient(object):
             )
             return None
 
-    def get_tensorboard_external_ip(self, check_interval=5, wait_timeout=120):
+    def get_tensorboard_url(self, check_interval=5, wait_timeout=120):
         start_time = time.time()
         while True:
             if time.time() - start_time > wait_timeout:
