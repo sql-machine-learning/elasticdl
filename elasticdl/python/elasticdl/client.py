@@ -7,7 +7,7 @@ def main():
     parser = argparse.ArgumentParser(
         usage="""elasticdl <command> [<args>]
 
-There are all the supported commands:
+Below is the list of supported commands:
 train         Submit a ElasticDL distributed training job.
 evaluate      Submit a ElasticDL distributed evaluation job.
 """
