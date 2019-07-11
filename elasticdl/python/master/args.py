@@ -133,7 +133,7 @@ def parse_args():
     parser.add_argument(
         "--volume",
         help="The Kubernetes volume information, "
-        'e.g. "claim_name=c1,volume_name=v1,mount_path=/path1".',
+        'e.g. "claim_name=c1,mount_path=/path1".',
     )
     parser.add_argument(
         "--log_level",

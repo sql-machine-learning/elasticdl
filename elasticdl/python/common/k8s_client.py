@@ -142,10 +142,11 @@ class Client(object):
         )
 
         # Mount data path
+        volume_name = "random-volume-name"
         if kargs["volume"]:
             volume_dict = parse_volume(kargs["volume"])
             volume = client.V1Volume(
-                name=volume_dict["volume_name"],
+                name=volume_name,
                 persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
                     claim_name=volume_dict["claim_name"], read_only=False
                 ),
@@ -153,7 +154,7 @@ class Client(object):
             spec.volumes = [volume]
             container.volume_mounts = [
                 client.V1VolumeMount(
-                    name=volume_dict["volume_name"],
+                    name=volume_name,
                     mount_path=volume_dict["mount_path"],
                 )
             ]
