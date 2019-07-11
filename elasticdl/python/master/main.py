@@ -115,7 +115,7 @@ def main():
     evaluation_service = None
     if evaluation_while_training or evaluation_only:
         logger.info(
-            "Starting evaluation service with throttle seconds %d ",
+            "Starting evaluation service with throttle seconds %d "
             " and evaluation steps %d",
             args.evaluation_throttle_secs,
             args.evaluation_steps,
