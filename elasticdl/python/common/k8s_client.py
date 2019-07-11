@@ -142,9 +142,9 @@ class Client(object):
         )
 
         # Mount data path
-        volume_name = "random-volume-name"
         if kargs["volume"]:
             volume_dict = parse_volume(kargs["volume"])
+            volume_name = kargs["pod_name"] + "-volume"
             volume = client.V1Volume(
                 name=volume_name,
                 persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
@@ -154,8 +154,7 @@ class Client(object):
             spec.volumes = [volume]
             container.volume_mounts = [
                 client.V1VolumeMount(
-                    name=volume_name,
-                    mount_path=volume_dict["mount_path"],
+                    name=volume_name, mount_path=volume_dict["mount_path"]
                 )
             ]
 
