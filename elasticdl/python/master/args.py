@@ -28,6 +28,11 @@ def parse_args():
         help="The listening port of master",
     )
     parser.add_argument(
+	"--worker_image",
+        help="Docker image for workers",
+        default=None,
+    )
+    parser.add_argument(
         "---prediction_data_dir",
         help="Prediction data directory. Files should be in RecordIO format",
         default="",
