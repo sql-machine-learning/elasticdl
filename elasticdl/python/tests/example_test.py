@@ -55,7 +55,12 @@ def create_recordio_file(size, shape):
 
 class ExampleTest(unittest.TestCase):
     def distributed_train_and_evaluate(
-        self, model_def, image_shape, model_class, model_params="", training=True
+        self,
+        model_def,
+        image_shape,
+        model_class,
+        model_params="",
+        training=True,
     ):
         """
         Run distributed training and evaluation with a local master.
@@ -63,7 +68,13 @@ class ExampleTest(unittest.TestCase):
         """
         module_file = _get_model_info(get_model_file(model_def))
 
-        worker = Worker(1, module_file, model_class=model_class, model_params=model_params, channel=None)
+        worker = Worker(
+            1,
+            module_file,
+            model_class=model_class,
+            model_params=model_params,
+            channel=None,
+        )
 
         shards = {create_recordio_file(128, image_shape): 128}
         if training:

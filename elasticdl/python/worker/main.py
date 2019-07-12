@@ -62,7 +62,8 @@ def _parse_args():
         "--model_params",
         type=str,
         default="",
-        help="The dictionary of model parameters in a string that will be used to instantiate the model",
+        help="The dictionary of model parameters in a string that will be "
+        'used to instantiate the model, e.g. "param1=1,param2=2"',
     )
 
     return parser.parse_args()

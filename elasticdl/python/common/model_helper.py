@@ -30,7 +30,7 @@ def load_model_from_module(model_class, model_module, model_params):
         model_params_dict = {}
         for kv in kvs:
             k, v = kv.split("=")
-            model_params_dict[k] = v
+            model_params_dict[k] = eval(v)
         return model_module[custom_model_name](**model_params_dict)
     else:
         return model_module[custom_model_name]()
