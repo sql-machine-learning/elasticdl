@@ -216,6 +216,13 @@ def _add_train_params(parser):
         help="The name of the model class defined in the model file",
     )
     parser.add_argument(
+        "--model_params",
+        type=str,
+        default="",
+        help="The dictionary of model parameters in a string that will be "
+        'used to instantiate the model, e.g. "param1=1,param2=2"',
+    )
+    parser.add_argument(
         "--cluster_spec",
         help="The file that contains user-defined cluster specification",
         default="",
@@ -331,6 +338,13 @@ def _add_evaluate_params(parser):
         type=str,
         default="model",
         help="The name of the model class defined in the model file",
+    )
+    parser.add_argument(
+        "--model_params",
+        type=str,
+        default="",
+        help="The dictionary of model parameters in a string that will be "
+        'used to instantiate the model, e.g. "param1=1,param2=2"',
     )
     parser.add_argument(
         "--cluster_spec",

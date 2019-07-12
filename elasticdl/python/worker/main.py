@@ -58,6 +58,13 @@ def _parse_args():
         default="model",
         help="The name of the model class defined in the model file",
     )
+    parser.add_argument(
+        "--model_params",
+        type=str,
+        default="",
+        help="The dictionary of model parameters in a string that will be "
+        'used to instantiate the model, e.g. "param1=1,param2=2"',
+    )
 
     return parser.parse_args()
 
@@ -93,6 +100,7 @@ def main():
         optimizer=args.optimizer,
         eval_metrics_fn=args.eval_metrics_fn,
         model_class=args.model_class,
+        model_params=args.model_params,
     )
     worker.run()
 

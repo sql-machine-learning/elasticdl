@@ -72,6 +72,8 @@ def train(args):
         args.eval_metrics_fn,
         "--model_class",
         args.model_class,
+        "--model_params",
+        args.model_params,
     ]
     container_args.extend(["--image_pull_policy", args.image_pull_policy])
     container_args.extend(["--restart_policy", args.restart_policy])
@@ -142,6 +144,8 @@ def evaluate(args):
         args.eval_metrics_fn,
         "--model_class",
         args.model_class,
+        "--model_params",
+        args.model_params,
     ]
     container_args.extend(["--image_pull_policy", args.image_pull_policy])
     container_args.extend(["--restart_policy", args.restart_policy])
