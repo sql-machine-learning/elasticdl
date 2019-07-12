@@ -162,6 +162,12 @@ class _TaskDispatcher(object):
                 and self._evaluation_service is not None
             ):
                 evaluation_task_completed = True
+            else:
+                self._logger.info(
+                    "Task:%d completed, %d remaining tasks",
+                    task_id,
+                    len(self._todo) + len(self._doing),
+                )
         if evaluation_task_completed:
             self._evaluation_service.complete_task()
 
