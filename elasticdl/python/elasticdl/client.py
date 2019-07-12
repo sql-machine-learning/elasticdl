@@ -1,11 +1,11 @@
 import argparse
 
-from elasticdl.python.elasticdl.api import evaluate, train
 from elasticdl.python.common.args import (
     add_common_params,
-    add_train_params,
     add_evaluate_params,
+    add_train_params,
 )
+from elasticdl.python.elasticdl.api import evaluate, train
 
 
 def main():

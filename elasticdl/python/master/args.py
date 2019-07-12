@@ -1,9 +1,6 @@
 import argparse
 
-from elasticdl.python.common.args import (
-    add_common_params,
-    add_train_params,
-)
+from elasticdl.python.common.args import add_common_params, add_train_params
 
 
 def _pos_int(arg):

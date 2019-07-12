@@ -2,14 +2,14 @@ def add_common_params(parser):
     parser.add_argument(
         "--model_def",
         help="The directory that contains user-defined model files "
-             "or a specific model file",
+        "or a specific model file",
         required=True,
     )
     parser.add_argument(
         "--docker_image_prefix",
         default="",
         help="The prefix for generated Docker images, if set, the image is "
-             "also pushed to the registry",
+        "also pushed to the registry",
     )
     parser.add_argument("--image_base", help="Base Docker image.")
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
@@ -18,14 +18,14 @@ def add_common_params(parser):
         default="cpu=0.1,memory=1024Mi",
         type=str,
         help="The minimal resource required by master, "
-             "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--master_resource_limit",
         type=str,
         help="The maximal resource required by master, "
-             "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1, "
-             "default to master_resource_request",
+        "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1, "
+        "default to master_resource_request",
     )
     parser.add_argument(
         "--num_workers", type=int, help="Number of workers", default=0
@@ -35,14 +35,14 @@ def add_common_params(parser):
         default="cpu=1,memory=4096Mi",
         type=str,
         help="The minimal resource required by worker, "
-             "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
     )
     parser.add_argument(
         "--worker_resource_limit",
         type=str,
         help="The maximal resource required by worker, "
-             "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1,"
-             "default to worker_resource_request",
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1,"
+        "default to worker_resource_request",
     )
     parser.add_argument(
         "--master_pod_priority", help="The requested priority of master pod"
@@ -50,7 +50,7 @@ def add_common_params(parser):
     parser.add_argument(
         "--volume",
         help="The Kubernetes volume information, "
-             'e.g. "claim_name=c1,mount_path=/path1".',
+        'e.g. "claim_name=c1,mount_path=/path1".',
     )
     parser.add_argument(
         "--image_pull_policy",
@@ -70,7 +70,7 @@ def add_common_params(parser):
         default="default",
         type=str,
         help="The name of the Kubernetes namespace where ElasticDL "
-             "pods will be created",
+        "pods will be created",
     )
     parser.add_argument("--records_per_task", type=int, required=True)
     parser.add_argument(
@@ -90,7 +90,7 @@ def add_common_params(parser):
         type=str,
         default="eval_metrics_fn",
         help="The name of the evaluation metrics function defined "
-             "in the model file",
+        "in the model file",
     )
     parser.add_argument(
         "--model_class",
@@ -103,7 +103,7 @@ def add_common_params(parser):
         type=str,
         default="",
         help="The dictionary of model parameters in a string that will be "
-             'used to instantiate the model, e.g. "param1=1,param2=2"',
+        'used to instantiate the model, e.g. "param1=1,param2=2"',
     )
     parser.add_argument(
         "--cluster_spec",
