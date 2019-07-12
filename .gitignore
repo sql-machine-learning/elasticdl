@@ -1,7 +1,3 @@
-# IDE settings
-.vscode/
-.idea/
-
 # Proto files
 *_pb2.py
 *_pb2_grpc.py
@@ -73,9 +69,6 @@ ipython_config.py
 # pyenv
 .python-version
 
-# celery beat schedule file
-celerybeat-schedule
-
 # Environments
 .env
 .venv
@@ -91,6 +84,12 @@ venv.bak/
 
 # Rope project settings
 .ropeproject
+
+# VSCode settings
+.vscode/
+
+# PyCharm settings
+.idea/
 
 # mypy
 .mypy_cache/
