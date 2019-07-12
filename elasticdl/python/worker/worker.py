@@ -36,6 +36,7 @@ class Worker(object):
         eval_metrics_fn="eval_metrics_fn",
         channel=None,
         model_class=DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
+        model_params="",
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
     ):
         """
@@ -48,7 +49,7 @@ class Worker(object):
         self._logger = logging.getLogger(__name__)
         self._worker_id = worker_id
         model_module = load_module(model_file).__dict__
-        self._model = load_model_from_module(model_class, model_module)
+        self._model = load_model_from_module(model_class, model_module, model_params)
         self._var_created = self._model.built
         self._input_fn = model_module[input_fn]
         self._opt_fn = model_module[optimizer]

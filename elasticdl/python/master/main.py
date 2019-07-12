@@ -91,7 +91,7 @@ def main():
         args.num_epochs,
     )
     model_module = load_module(get_model_file(args.model_def)).__dict__
-    model_inst = load_model_from_module(args.model_class, model_module)
+    model_inst = load_model_from_module(args.model_class, model_module, args.model_params)
     optimizer = model_module[args.optimizer]()
 
     evaluation_while_training = all(
