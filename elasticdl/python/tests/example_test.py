@@ -96,7 +96,13 @@ class ExampleTest(unittest.TestCase):
         """
         module_file = _get_model_info(get_model_file(model_def))
 
-        worker = Worker(1, module_file, model_class=model_class, channel=None)
+        worker = Worker(
+            1,
+            module_file,
+            model_class=model_class,
+            model_params=model_params,
+            channel=None,
+        )
 
         if dataset == "imagenet":
             shards = {create_imagenet_recordio_file(128, image_shape): 128}
@@ -229,6 +235,7 @@ class ExampleTest(unittest.TestCase):
             "resnet50_subclass",
             [224, 224, 3],
             DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME,
+            model_params='num_classes=10,dtype="float32"',
             training=False,
             dataset="imagenet",
         )

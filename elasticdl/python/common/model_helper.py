@@ -13,7 +13,7 @@ def load_module(module_file):
     return module
 
 
-def load_model_from_module(model_class, model_module):
+def load_model_from_module(model_class, model_module, model_params):
     if model_class in model_module:
         custom_model_name = model_class
     elif DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME in model_module:
@@ -25,7 +25,15 @@ def load_model_from_module(model_class, model_module):
             "Cannot find the custom model function/class "
             "in model definition files"
         )
-    return model_module[custom_model_name]()
+    if model_params:
+        kvs = model_params.split(",")
+        model_params_dict = {}
+        for kv in kvs:
+            k, v = kv.split("=")
+            model_params_dict[k] = eval(v)
+        return model_module[custom_model_name](**model_params_dict)
+    else:
+        return model_module[custom_model_name]()
 
 
 def save_checkpoint_to_file(pb_model, file_name):
