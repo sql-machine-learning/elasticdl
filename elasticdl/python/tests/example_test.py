@@ -83,7 +83,12 @@ def create_imagenet_recordio_file(size, shape):
 
 class ExampleTest(unittest.TestCase):
     def distributed_train_and_evaluate(
-        self, model_def, image_shape, model_class, training=True, dataset=""
+        self,
+        model_def,
+        image_shape,
+        model_class,
+        training=True,
+        dataset="",
     ):
         """
         Run distributed training and evaluation with a local master.
