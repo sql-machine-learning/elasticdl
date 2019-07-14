@@ -53,9 +53,37 @@ def create_recordio_file(size, shape):
     return temp_file.name
 
 
+def create_imagenet_recordio_file(size, shape):
+    image_size = 1
+    for s in shape:
+        image_size *= s
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    with closing(recordio.Writer(temp_file.name)) as f:
+        for _ in range(size):
+            # image: float -> uint8 -> tensor -> bytes
+            image = np.random.rand(image_size).reshape(shape).astype(np.uint8)
+            image = tf.image.encode_jpeg(tf.convert_to_tensor(value=image))
+            image = image.numpy()
+            label = np.ndarray([1], dtype=np.int64)
+            label[0] = np.random.randint(1, 11)
+            example_dict = {
+                "image": tf.train.Feature(
+                    bytes_list=tf.train.BytesList(value=[image])
+                ),
+                "label": tf.train.Feature(
+                    int64_list=tf.train.Int64List(value=[label])
+                ),
+            }
+            example = tf.train.Example(
+                features=tf.train.Features(feature=example_dict)
+            )
+            f.write(example.SerializeToString())
+    return temp_file.name
+
+
 class ExampleTest(unittest.TestCase):
     def distributed_train_and_evaluate(
-        self, model_def, image_shape, model_class, training=True
+        self, model_def, image_shape, model_class, training=True, dataset=""
     ):
         """
         Run distributed training and evaluation with a local master.
@@ -65,7 +93,11 @@ class ExampleTest(unittest.TestCase):
 
         worker = Worker(1, module_file, model_class=model_class, channel=None)
 
-        shards = {create_recordio_file(128, image_shape): 128}
+        if dataset == "imagenet":
+            shards = {create_imagenet_recordio_file(128, image_shape): 128}
+        else:
+            shards = {create_recordio_file(128, image_shape): 128}
+
         if training:
             training_shards = shards
             evaluation_shards = shards
@@ -178,14 +210,23 @@ class ExampleTest(unittest.TestCase):
             training=False,
         )
 
-    # ImageNet50 have different type of test data
-    # def test_resnet50_subclass_evaluate(self):
-    #     self.distributed_train_and_evaluate(
-    #         "resnet50_subclass",
-    #         [224, 224, 3],
-    #         DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME,
-    #         training=False,
-    #     )
+    def test_resnet50_subclass_train(self):
+        self.distributed_train_and_evaluate(
+            "resnet50_subclass",
+            [224, 224, 3],
+            DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME,
+            training=True,
+            dataset="imagenet",
+        )
+
+    def test_resnet50_subclass_evaluate(self):
+        self.distributed_train_and_evaluate(
+            "resnet50_subclass",
+            [224, 224, 3],
+            DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME,
+            training=False,
+            dataset="imagenet",
+        )
 
 
 if __name__ == "__main__":
