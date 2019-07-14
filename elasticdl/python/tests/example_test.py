@@ -87,6 +87,7 @@ class ExampleTest(unittest.TestCase):
         model_def,
         image_shape,
         model_class,
+        model_params="",
         training=True,
         dataset="",
     ):
