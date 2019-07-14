@@ -89,7 +89,6 @@ class ExampleTest(unittest.TestCase):
         model_class,
         model_params="",
         training=True,
-        dataset="",
     ):
         """
         Run distributed training and evaluation with a local master.
