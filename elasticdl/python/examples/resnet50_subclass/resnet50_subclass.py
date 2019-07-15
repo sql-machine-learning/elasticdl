@@ -189,7 +189,7 @@ def input_fn(records):
         image = image.astype(np.float32)
         image /= 255
         label = label.astype(np.int32)
-        # label should start from 0，now we get start from 1 
+        # label should start from 0，now we get start from 1
         label = label - 1
 
         # images with only 1 channel
