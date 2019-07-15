@@ -143,6 +143,15 @@ def _generate_unique_image_name(prefix):
     )
 
 
+def _print_docker_progress(line):
+    error = line.get("error", None)
+    if error:
+        raise RuntimeError("Docker image build: " + error)
+    text = line.get("stream", None)
+    if text:
+        print(text)
+
+
 def _build_docker_image(client, ctx_dir, dockerfile, image_name):
     print("===== Building Docker Image =====")
     for line in client.build(
@@ -152,15 +161,10 @@ def _build_docker_image(client, ctx_dir, dockerfile, image_name):
         tag=image_name,
         decode=True,
     ):
-        error = line.get("error", None)
-        if error:
-            raise RuntimeError("Docker image build: " + error)
-        text = line.get("stream", None)
-        if text:
-            print(text)
+        _print_docker_progress(line)
 
 
 def _push_docker_image(client, image_name):
     print("===== Pushing Docker Image =====")
     for line in client.push(image_name, stream=True, decode=True):
-        print(line)
+        _print_docker_progress(line)
