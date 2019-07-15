@@ -173,7 +173,7 @@ class Client(object):
             ),
         )
         if self.cluster:
-            pod = self.cluster.with_cluster(pod)
+            pod = self.cluster.with_pod(pod)
 
         return pod
 

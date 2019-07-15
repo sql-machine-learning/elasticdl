@@ -100,15 +100,20 @@ python -m elasticdl.python.elasticdl.client train \
 The difference is that we add a new argument `cluster_spec` which points to a cluster specification file.
 The cluster specification module includes a `cluster` component, and ElasticDL will invoke function
 `cluster.with_cluster(pod)` to add extra specifications to the 
-[pod](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1Pod.md). Here is an example
-which return the `pod` directly with no additional specifications. Users can implement more customized configurations
-inside the `with_cluster` function.
+[pod](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1Pod.md) and invoke function
+`cluster.with_service(service)` to add extra specifications to the [service](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1Service.md).
+Here is an example that assigns labels `"app": "elasticdl"` to the `pod` and `service`. Users can implement more customized configurations
+inside these two functions.
 
 ```python
 class KubernetesCluster:
-    def with_cluster(self, pod):
-        # By default, don't need to add specific config for pod
+    def with_pod(self, pod):
+        pod.metadata.labels["app"] = "elasticdl"
         return pod
+
+    def with_service(self, service):
+        service.metadata.labels["app"] = "elasticdl"
+        return service
 
 # TODO: need to change this after we make same change to model definition
 cluster = KubernetesCluster()

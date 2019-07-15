@@ -23,34 +23,37 @@ class TensorBoardClient(object):
     def create_tensorboard_service(
         self, port=80, target_port=6006, service_type="LoadBalancer"
     ):
-        self._k8s_client.client.create_namespaced_service(
-            self._k8s_client.namespace,
-            client.V1Service(
-                api_version="v1",
-                kind="Service",
-                metadata=client.V1ObjectMeta(
-                    name=self._get_tensorboard_service_name(),
-                    labels={
-                        "app": k8s.ELASTICDL_APP_NAME,
-                        k8s.ELASTICDL_JOB_KEY: self._k8s_client.job_name,
-                    },
-                    owner_references=k8s.Client.create_owner_reference(
-                        self._k8s_client.get_master_pod()
-                    ),
-                    namespace=self._k8s_client.namespace,
+        service = client.V1Service(
+            api_version="v1",
+            kind="Service",
+            metadata=client.V1ObjectMeta(
+                name=self._get_tensorboard_service_name(),
+                labels={
+                    "app": k8s.ELASTICDL_APP_NAME,
+                    k8s.ELASTICDL_JOB_KEY: self._k8s_client.job_name,
+                },
+                owner_references=k8s.Client.create_owner_reference(
+                    self._k8s_client.get_master_pod()
                 ),
-                spec=client.V1ServiceSpec(
-                    ports=[
-                        client.V1ServicePort(
-                            port=port, target_port=target_port
-                        )
-                    ],
-                    selector={
-                        k8s.ELASTICDL_JOB_KEY: self._k8s_client.job_name
-                    },
-                    type=service_type,
-                ),
+                namespace=self._k8s_client.namespace,
             ),
+            spec=client.V1ServiceSpec(
+                ports=[
+                    client.V1ServicePort(port=port, target_port=target_port)
+                ],
+                selector={k8s.ELASTICDL_JOB_KEY: self._k8s_client.job_name},
+                type=service_type,
+            ),
+        )
+        if self._k8s_client.cluster:
+            with_service_fn = getattr(
+                self._k8s_client.cluster, "with_service", None
+            )
+            if with_service_fn:
+                service = with_service_fn(service)
+
+        self._k8s_client.client.create_namespaced_service(
+            self._k8s_client.namespace, service
         )
 
     def _get_tensorboard_service(self):
