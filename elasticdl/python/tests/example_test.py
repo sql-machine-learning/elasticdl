@@ -106,7 +106,7 @@ class ExampleTest(unittest.TestCase):
         )
 
         if dataset == "imagenet":
-            shards = {create_imagenet_recordio_file(128, image_shape): 128}
+            shards = {create_imagenet_recordio_file(32, image_shape): 32}
         else:
             shards = {create_recordio_file(128, image_shape): 128}
 
@@ -127,7 +127,7 @@ class ExampleTest(unittest.TestCase):
         checkpoint_service = CheckpointService("", 0, 0, True)
         if training:
             evaluation_service = EvaluationService(
-                checkpoint_service, None, task_d, 0, 0, 2, False
+                checkpoint_service, None, task_d, 0, 0, 1, False
             )
         else:
             evaluation_service = EvaluationService(

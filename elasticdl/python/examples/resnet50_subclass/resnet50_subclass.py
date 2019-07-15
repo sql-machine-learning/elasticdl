@@ -181,7 +181,7 @@ def input_fn(records):
         image = tf.image.resize(
             tf.image.decode_jpeg(r["image"]),
             [224, 224],
-            method=tf.image.ResizeMethod.NEAREST_NEIGHBOR,
+            method=tf.image.ResizeMethod.BILINEAR,
         )
         image = image.numpy()
 
@@ -189,7 +189,7 @@ def input_fn(records):
         image = image.astype(np.float32)
         image /= 255
         label = label.astype(np.int32)
-        # label shoule be [0,9], now we get [1,10]
+        # label should start from 0，now we get start from 1 
         label = label - 1
 
         # images with only 1 channel
