@@ -32,6 +32,10 @@ class TensorBoardClient(object):
                     "app": k8s.ELASTICDL_APP_NAME,
                     k8s.ELASTICDL_JOB_KEY: self._k8s_client.job_name,
                 },
+                # Note: We have to add at least one annotation here.
+                # Otherwise annotation is `None` and cannot be modified
+                # using `with_service()` for cluster specific information.
+                annotations={k8s.ELASTICDL_JOB_KEY: self._k8s_client.job_name},
                 owner_references=k8s.Client.create_owner_reference(
                     self._k8s_client.get_master_pod()
                 ),
