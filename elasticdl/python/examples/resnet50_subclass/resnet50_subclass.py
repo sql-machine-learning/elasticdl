@@ -169,8 +169,8 @@ def optimizer(lr=0.1):
 
 def input_fn(records):
     feature_description = {
-        "image": tf.io.FixedLenFeature([224, 224, 3], tf.float32),
-        "label": tf.io.FixedLenFeature([1], tf.int64),
+        "image": tf.io.FixedLenFeature([], tf.string),
+        "label": tf.io.FixedLenFeature([], tf.int64),
     }
     image_list = []
     label_list = []
@@ -178,13 +178,27 @@ def input_fn(records):
         # deserialization
         r = tf.io.parse_single_example(r, feature_description)
         label = r["label"].numpy()
-        image = r["image"].numpy()
-        # image = cv2.resize(image, (224, 224))
+        image = tf.image.resize(
+            tf.image.decode_jpeg(r["image"]),
+            [224, 224],
+            method=tf.image.ResizeMethod.BILINEAR,
+        )
+        image = image.numpy()
+
         # processing data
         image = image.astype(np.float32)
         image /= 255
         label = label.astype(np.int32)
-        image_list.append(image)
+        # label should start from 0，now we get start from 1
+        label = label - 1
+
+        # images with only 1 channel
+        if image.shape[-1] == 1:
+            image_list.append(np.repeat(image, 3, axis=-1))
+
+        elif image.shape[-1] == 3:
+            image_list.append(image)
+
         label_list.append(label)
 
     # batching
