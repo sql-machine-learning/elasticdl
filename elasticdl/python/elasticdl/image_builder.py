@@ -163,4 +163,6 @@ def _build_docker_image(client, ctx_dir, dockerfile, image_name):
 def _push_docker_image(client, image_name):
     print("===== Pushing Docker Image =====")
     for line in client.push(image_name, stream=True, decode=True):
+        if "error" in line:
+            raise RuntimeError("Failed to push docker image: " + image_name)
         print(line)
