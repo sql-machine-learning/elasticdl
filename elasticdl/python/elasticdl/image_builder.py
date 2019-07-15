@@ -147,9 +147,11 @@ def _print_docker_progress(line):
     error = line.get("error", None)
     if error:
         raise RuntimeError("Docker image build: " + error)
-    text = line.get("stream", None)
-    if text:
-        print(text)
+    stream = line.get("stream", None)
+    if stream:
+        print(stream)
+    else:
+        print(line)
 
 
 def _build_docker_image(client, ctx_dir, dockerfile, image_name):
