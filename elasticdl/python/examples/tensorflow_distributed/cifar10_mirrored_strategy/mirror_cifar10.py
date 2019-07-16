@@ -1,7 +1,7 @@
 import argparse
 
 import tensorflow as tf
-from cidar10_dataset import get_cifar10_test_dataset, get_cifar10_train_dataset
+from cifar10_dataset import get_cifar10_test_dataset, get_cifar10_train_dataset
 
 
 def get_model():
