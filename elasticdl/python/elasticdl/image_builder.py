@@ -71,24 +71,31 @@ after _build_docker_image.
 
 
 def _find_elasticdl_root():
-    root_path = os.path.abspath(
+    return os.path.abspath(
         os.path.join(os.path.dirname(__file__), "../../../")
     )
-    if not root_path:
-        root_path = "."
-    return root_path
 
 
 def _create_dockerfile(
     elasticdl, model_zoo, cluster_spec="", base_image="", extra_pypi_index=""
 ):
-    LOCAL_ZOO = """
+    HEAD = """
 FROM {BASE_IMAGE} as base
 ENV PYTHONPATH=/:/model_zoo
-# COPY {ELASTIC_DL}/elasticdl /elasticdl
-RUN pip install -r elasticdl/requirements.txt \
+"""
+    if elasticdl:
+        HEAD = """
+%s
+COPY %s/elasticdl /elasticdl
+""" % (
+            HEAD,
+            elasticdl,
+        )
+
+    LOCAL_ZOO = """
+RUN pip install -r /elasticdl/requirements.txt \
   --extra-index-url="${EXTRA_PYPI_INDEX}"
-RUN make -f elasticdl/Makefile
+RUN make -f /elasticdl/Makefile
 # TODO: Need to restructure examples directory to make it conform to model_zoo
 # convention
 COPY {MODEL_ZOO} /model_zoo/{MODEL_ZOO}
@@ -98,12 +105,9 @@ RUN if [ -f $REQS ]; then \
     fi
 """
     REMOTE_ZOO = """
-FROM {BASE_IMAGE} as base
-ENV PYTHONPATH=/:/model_zoo
-# COPY {ELASTIC_DL}/elasticdl /elasticdl
-RUN pip install -r elasticdl/requirements.txt \
+RUN pip install -r /elasticdl/requirements.txt \
   --extra-index-url="${EXTRA_PYPI_INDEX}"
-RUN make -f elasticdl/Makefile
+RUN make -f /elasticdl/Makefile
 RUN apt-get update && apt-get install -y git
 RUN git clone --recursive {MODEL_ZOO} /model_zoo
 ARG REQS=/model_zoo/{MODEL_ZOO}/requirements.txt
@@ -115,10 +119,10 @@ RUN if [ -f $REQS ]; then \
     if not pr.path:
         raise RuntimeError("model_zoo {} has no path".format(model_zoo))
     if pr.scheme in ["file", ""]:
-        tmpl = LOCAL_ZOO
+        tmpl = HEAD + LOCAL_ZOO
         model_zoo = pr.path  # Remove the "file://" prefix if any.
     else:
-        tmpl = REMOTE_ZOO
+        tmpl = HEAD + REMOTE_ZOO
 
     if cluster_spec:
         tmpl = """

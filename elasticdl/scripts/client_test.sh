@@ -1,9 +1,5 @@
 set -x
 
-# Since this is used by ElasticDL developers, we just simply call the client script
-# here to check whether this other way of invoking the client also works
-python -m elasticdl.python.elasticdl.client --help
-
 elasticdl train \
   --image_base=elasticdl:ci \
   --model_def=elasticdl/python/examples/mnist_functional_api \
