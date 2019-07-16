@@ -85,7 +85,7 @@ def _create_dockerfile(
     LOCAL_ZOO = """
 FROM {BASE_IMAGE} as base
 ENV PYTHONPATH=/:/model_zoo
-COPY {ELASTIC_DL}/elasticdl /elasticdl
+# COPY {ELASTIC_DL}/elasticdl /elasticdl
 RUN pip install -r elasticdl/requirements.txt \
   --extra-index-url="${EXTRA_PYPI_INDEX}"
 RUN make -f elasticdl/Makefile
@@ -100,7 +100,7 @@ RUN if [ -f $REQS ]; then \
     REMOTE_ZOO = """
 FROM {BASE_IMAGE} as base
 ENV PYTHONPATH=/:/model_zoo
-COPY {ELASTIC_DL}/elasticdl /elasticdl
+# COPY {ELASTIC_DL}/elasticdl /elasticdl
 RUN pip install -r elasticdl/requirements.txt \
   --extra-index-url="${EXTRA_PYPI_INDEX}"
 RUN make -f elasticdl/Makefile
