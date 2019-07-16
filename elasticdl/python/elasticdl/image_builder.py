@@ -71,9 +71,12 @@ after _build_docker_image.
 
 
 def _find_elasticdl_root():
-    return os.path.abspath(
+    root_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "../../../")
     )
+    if not root_path:
+        root_path = "."
+    return root_path
 
 
 def _create_dockerfile(
