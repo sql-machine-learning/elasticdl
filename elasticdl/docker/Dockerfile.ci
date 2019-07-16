@@ -4,3 +4,4 @@ WORKDIR /
 ENV PYTHONPATH=/
 COPY elasticdl /elasticdl
 RUN make -f elasticdl/Makefile
+RUN cd elasticdl; python setup.py install; cd ..
