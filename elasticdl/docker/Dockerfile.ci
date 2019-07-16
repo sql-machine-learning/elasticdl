@@ -3,7 +3,6 @@ FROM elasticdl:dev
 WORKDIR /
 ENV PYTHONPATH=/
 COPY elasticdl /elasticdl
-COPY elasticdl/requirements.txt requirements.txt
 COPY setup.py setup.py
 RUN make -f elasticdl/Makefile
 RUN python setup.py install
