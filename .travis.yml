@@ -55,7 +55,7 @@ jobs:
         - docker run --rm -it --net=host -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=True pytest elasticdl/python/tests/k8s*.py"
         # Run integration tests
         - kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
-        - docker run --rm -it --net=host -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:dev bash -c "elasticdl/scripts/client_test.sh"
+        - docker run --rm -it --net=host -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ elasticdl:ci bash -c "elasticdl/scripts/client_test.sh"
         # Validate pod statuses
         - |
           MASTER_POD_NAME=elasticdl-test-mnist-master
