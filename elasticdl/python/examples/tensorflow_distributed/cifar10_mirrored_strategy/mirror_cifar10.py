@@ -1,7 +1,6 @@
 import argparse
 
 import tensorflow as tf
-
 from cidar10_dataset import get_cifar10_test_dataset, get_cifar10_train_dataset
 
 
@@ -112,11 +111,7 @@ def train_mirrored(worker_batch_size, epoch, data_path=None):
         train_dataset = get_cifar10_train_dataset(
             global_batch, epoch, data_path
         )
-        test_dataset = get_cifar10_test_dataset(
-            global_batch,
-            epoch,
-            data_path,
-        )
+        test_dataset = get_cifar10_test_dataset(global_batch, epoch, data_path)
         print("num of replica: %d" % mirrored_strategy.num_replicas_in_sync)
         print(
             "worker batch size = %d and global batch size = %d"
