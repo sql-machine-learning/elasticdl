@@ -33,9 +33,8 @@ after _build_docker_image.
         # Copy ElasticDL Python source tree into the context directory.
         elasticdl = _find_elasticdl_root()
         dest = os.path.join(ctx_dir, os.path.basename(elasticdl))
-        # Remove the destination directory if it already exists
-        shutil.rmtree(dest, ignore_errors=True)
-        shutil.copytree(elasticdl, dest)
+        if not os.path.exists(dest):
+            shutil.copytree(elasticdl, dest)
 
         # Copy model zoo source tree into the context directory.
         shutil.copytree(
