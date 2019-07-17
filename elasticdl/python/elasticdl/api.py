@@ -85,21 +85,7 @@ def train(args):
         else args.master_resource_request
     )
 
-    k8s.Client(
-        image_name=image_name,
-        namespace=args.namespace,
-        job_name=args.job_name,
-        event_callback=None,
-        cluster_spec=args.cluster_spec,
-    ).create_master(
-        resource_requests=args.master_resource_request,
-        resource_limits=args.master_resource_limit,
-        args=container_args,
-        pod_priority=args.master_pod_priority,
-        image_pull_policy=args.image_pull_policy,
-        restart_policy=args.restart_policy,
-        volume=args.volume,
-    )
+    _submit_job(image_name, args, container_args)
     # TODO: print dashboard url after launching the master pod
 
 
@@ -157,20 +143,30 @@ def evaluate(args):
         else args.master_resource_request
     )
 
-    k8s.Client(
+    _submit_job(image_name, args, container_args)
+
+
+def _submit_job(image_name, client_args, container_args):
+    client = k8s.Client(
         image_name=image_name,
-        namespace=args.namespace,
-        job_name=args.job_name,
+        namespace=client_args.namespace,
+        job_name=client_args.job_name,
         event_callback=None,
-        cluster_spec=args.cluster_spec,
-    ).create_master(
-        resource_requests=args.master_resource_request,
-        resource_limits=args.master_resource_limit,
+        cluster_spec=client_args.cluster_spec,
+    )
+
+    client.create_master(
+        resource_requests=client_args.master_resource_request,
+        resource_limits=client_args.master_resource_limit,
         args=container_args,
-        pod_priority=args.master_pod_priority,
-        image_pull_policy=args.image_pull_policy,
-        restart_policy=args.restart_policy,
-        volume=args.volume,
+        pod_priority=client_args.master_pod_priority,
+        image_pull_policy=client_args.image_pull_policy,
+        restart_policy=client_args.restart_policy,
+        volume=client_args.volume,
+    )
+    print(
+        "ElasticDL job %s was successfully submitted. The master pod is: %s."
+        % (client_args.job_name, client.get_master_pod_name())
     )
 
 
