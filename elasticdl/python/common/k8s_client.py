@@ -121,13 +121,20 @@ class Client(object):
 
     def _create_pod(self, **kargs):
         # Container
+        pod_resource_requests = kargs["resource_requests"]
+        pod_resource_limits = kargs["resource_limits"]
+        pod_resource_limits = (
+            pod_resource_limits
+            if pod_resource_limits
+            else pod_resource_requests
+        )
         container = client.V1Container(
             name=kargs["pod_name"],
             image=kargs["image_name"],
             command=kargs["command"],
             resources=client.V1ResourceRequirements(
-                requests=parse_resource(kargs["resource_requests"]),
-                limits=parse_resource(kargs["resource_limits"]),
+                requests=parse_resource(pod_resource_requests),
+                limits=parse_resource(pod_resource_limits),
             ),
             args=kargs["container_args"],
             image_pull_policy=kargs["image_pull_policy"],
