@@ -195,12 +195,6 @@ def main():
             args.model_class,
         ]
 
-        args.worker_resource_limit = (
-            args.worker_resource_limit
-            if args.worker_resource_limit
-            else args.worker_resource_request
-        )
-
         worker_manager = WorkerManager(
             task_d,
             job_name=args.job_name,

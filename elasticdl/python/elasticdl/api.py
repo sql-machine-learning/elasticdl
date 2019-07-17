@@ -79,12 +79,6 @@ def train(args):
     container_args.extend(["--restart_policy", args.restart_policy])
     container_args.extend(["--volume", args.volume])
 
-    args.master_resource_limit = (
-        args.master_resource_limit
-        if args.master_resource_limit
-        else args.master_resource_request
-    )
-
     _submit_job(image_name, args, container_args)
     # TODO: print dashboard url after launching the master pod
 
@@ -136,12 +130,6 @@ def evaluate(args):
     container_args.extend(["--image_pull_policy", args.image_pull_policy])
     container_args.extend(["--restart_policy", args.restart_policy])
     container_args.extend(["--volume", args.volume])
-
-    args.master_resource_limit = (
-        args.master_resource_limit
-        if args.master_resource_limit
-        else args.master_resource_request
-    )
 
     _submit_job(image_name, args, container_args)
 
