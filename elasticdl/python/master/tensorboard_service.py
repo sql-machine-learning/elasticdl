@@ -32,6 +32,9 @@ class TensorboardService(object):
                 tf.summary.scalar(k, v, step=version)
 
     def start(self):
+        # TODO: Find a good way to catch the exception if any.
+        # `tb_process.poll()` is unreliable as TensorBoard won't
+        # exit immediately in some cases, e.g. when host is missing.
         self.tb_process = subprocess.Popen(
             [
                 "tensorboard --logdir %s --host %s"
@@ -39,7 +42,6 @@ class TensorboardService(object):
             ],
             shell=True,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
         )
 
     def is_active(self):
