@@ -8,6 +8,7 @@ import tensorflow as tf
 from tensorflow.python.ops import math_ops
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.dataset import recordio_dataset
 from elasticdl.python.common.model_helper import (
     DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
     load_model_from_module,
@@ -57,6 +58,11 @@ class Worker(object):
         self._opt_fn = model_module[optimizer]
         self._loss = model_module[loss]
         self._eval_metrics_fn = model_module[eval_metrics_fn]
+        # TODO: add dataset_fn arg
+        if "dataset_fn" in model_module:
+            self._dataset_fn = model_module["dataset_fn"]
+        else:
+            self._dataset_fn = None
 
         if channel is None:
             self._stub = None
@@ -176,6 +182,18 @@ class Worker(object):
         predictions = self._model.call(features, training=False)
         return self.report_prediction_outputs(predictions)
 
+    def _handle_task_using_dataset(self, task):
+        min_model_version = task.model_version
+        dataset = recordio_dataset(
+            [(task.shard_file_name, task.start, task.end)]
+        )
+        dataset = self._dataset_fn(dataset)
+        dataset = dataset.batch(task.minibatch_size).prefetch(1)
+        for d in dataset:
+            min_model_version = self._process_minibatch(
+                task, d[0], d[1], min_model_version
+            )
+
     def _handle_task(self, task):
         min_model_version = task.model_version
         with closing(
@@ -187,13 +205,13 @@ class Worker(object):
                 record_buf = self._get_batch(reader, task.minibatch_size)
                 if not record_buf:
                     break
+                features, labels = self._input_fn(record_buf)
                 min_model_version = self._process_minibatch(
-                    task, record_buf, min_model_version
+                    task, features, labels, min_model_version
                 )
 
-    def _process_minibatch(self, task, record_buf, min_model_version):
+    def _process_minibatch(self, task, features, labels, min_model_version):
         # TODO: Discuss how we separate input_fn for different tasks
-        features, labels = self._input_fn(record_buf)
         if not self._var_created:
             self._create_variable_and_report(features)
         for _ in range(self._max_minibatch_retry_num):
@@ -238,6 +256,7 @@ class Worker(object):
         """
         Fetches task from master and performs training or evaluation.
         """
+        start_time = time.time()
         while True:
             task = self.get_task()
             if not task.shard_file_name:
@@ -252,7 +271,10 @@ class Worker(object):
             self._logger.info("Receive a new task: %d", task.task_id)
             err_msg = ""
             try:
-                self._handle_task(task)
+                if self._dataset_fn:
+                    self._handle_task_using_dataset(task)
+                else:
+                    self._handle_task(task)
             except RuntimeError as err:
                 err_msg = str(err)
                 traceback.print_exc()
@@ -261,3 +283,5 @@ class Worker(object):
                 traceback.print_exc()
                 raise ex
             self.report_task_result(task.task_id, err_msg)
+        end_time = time.time()
+        print("total time : ", end_time - start_time)
