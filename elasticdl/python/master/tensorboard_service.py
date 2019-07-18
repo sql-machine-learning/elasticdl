@@ -43,6 +43,5 @@ class TensorboardService(object):
             stderr=subprocess.STDOUT,
         )
 
-    def keep_running(self):
-        while self.tb_process.poll() is None:
-            time.sleep(10)
+    def is_active(self):
+        return self.tb_process.poll() is None
