@@ -5,9 +5,6 @@ from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
 )
 
-MODEL_ROOT_PATH = "/model_zoo"
-CLUSTER_SPEC_ROOT_PATH = "/cluster_spec"
-
 
 def train(args):
     image_name = build_and_push_docker_image(
@@ -159,10 +156,12 @@ def _submit_job(image_name, client_args, container_args):
 
 
 def _model_def_in_docker(model_def):
+    MODEL_ROOT_PATH = "/model_zoo"
     return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_def))
 
 
 def _cluster_spec_def_in_docker(cluster_spec):
+    CLUSTER_SPEC_ROOT_PATH = "/cluster_spec"
     return (
         os.path.join(CLUSTER_SPEC_ROOT_PATH, os.path.basename(cluster_spec))
         if cluster_spec
