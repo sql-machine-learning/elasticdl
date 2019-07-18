@@ -15,7 +15,7 @@ def _parse_args():
     )
     parser.add_argument("--master_addr", help="Master ip:port", required=True)
     parser.add_argument(
-        "--model_def",
+        "--model_zoo",
         help="The directory that contains user-defined model files "
         "or a specific model file",
         required=True,
@@ -93,7 +93,7 @@ def main():
     logger.info("Starting worker %d", args.worker_id)
     worker = Worker(
         args.worker_id,
-        get_model_file(args.model_def),
+        get_model_file(args.model_zoo),
         channel=channel,
         input_fn=args.input_fn,
         loss=args.loss,

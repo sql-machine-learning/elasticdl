@@ -84,7 +84,7 @@ def create_imagenet_recordio_file(size, shape):
 class ExampleTest(unittest.TestCase):
     def distributed_train_and_evaluate(
         self,
-        model_def,
+        model_zoo,
         image_shape,
         model_class,
         model_params="",
@@ -95,7 +95,7 @@ class ExampleTest(unittest.TestCase):
         Run distributed training and evaluation with a local master.
         grpc calls are mocked by local master call.
         """
-        module_file = _get_model_info(get_model_file(model_def))
+        module_file = _get_model_info(get_model_file(model_zoo))
 
         worker = Worker(
             1,
