@@ -43,7 +43,7 @@ Submit training job:
 
 ```bash
 python -m elasticdl.python.elasticdl.client train \
-    --model_def=elasticdl/python/examples/mnist_subclass \
+    --model_zoo=elasticdl/python/examples/mnist_subclass \
     --image_base=elasticdl:ci \
     --training_data_dir=/data/mnist/train \
     --evaluation_data_dir=/data/mnist/test \
@@ -75,7 +75,7 @@ ElasticDL provides an easy way for users to specify their pods requirements.
 python -m elasticdl.python.elasticdl.client train \
     --job_name=test \
     --image_name=gcr.io/elasticdl/mnist:dev \
-    --model_def=elasticdl/python/examples/mnist_subclass \
+    --model_zoo=elasticdl/python/examples/mnist_subclass \
     --cluster_spec=<path_to_cluster_specification_file> \
     --training_data_dir=/data/mnist_nfs/mnist/train \
     --evaluation_data_dir=/data/mnist_nfs/mnist/test \

@@ -94,7 +94,7 @@ def main():
         args.records_per_task,
         args.num_epochs,
     )
-    model_module = load_module(get_model_file(args.model_def)).__dict__
+    model_module = load_module(get_model_file(args.model_zoo)).__dict__
     model_inst = load_model_from_module(
         args.model_class, model_module, args.model_params
     )
@@ -177,8 +177,8 @@ def main():
         worker_args = [
             "-m",
             "elasticdl.python.worker.main",
-            "--model_def",
-            args.model_def,
+            "--model_zoo",
+            args.model_zoo,
             "--master_addr",
             master_addr,
             "--log_level",

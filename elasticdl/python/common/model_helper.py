@@ -51,5 +51,5 @@ def load_from_checkpoint_file(file_name):
     return pb_model
 
 
-def get_model_file(model_def):
-    return os.path.join(model_def, os.path.basename(model_def) + ".py")
+def get_model_file(model_zoo):
+    return os.path.join(model_zoo, os.path.basename(model_zoo) + ".py")

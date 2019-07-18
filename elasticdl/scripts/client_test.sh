@@ -2,7 +2,7 @@ set -x
 
 elasticdl train \
   --image_base=elasticdl:ci \
-  --model_def=elasticdl/python/examples/mnist_functional_api \
+  --model_zoo=elasticdl/python/examples/mnist_functional_api \
   --training_data_dir=/data/mnist/train \
   --evaluation_data_dir=/data/mnist/test \
   --num_epochs=2 \

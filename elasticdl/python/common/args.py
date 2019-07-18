@@ -1,6 +1,6 @@
 def add_common_params(parser):
     parser.add_argument(
-        "--model_def",
+        "--model_zoo",
         help="The directory that contains user-defined model files "
         "or a specific model file",
         required=True,
