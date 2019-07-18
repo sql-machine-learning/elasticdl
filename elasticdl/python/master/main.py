@@ -65,13 +65,17 @@ def main():
     logging.getLogger().setLevel(args.log_level)
     logger = logging.getLogger(__name__)
 
+    # Master addr
+    master_ip = os.getenv("MY_POD_IP", "localhost")
+    master_addr = "%s:%d" % (master_ip, args.port)
+
     # Start tensorboard service if required
     if args.tensorboard_log_dir:
         logger.info(
             "Starting tensorboard service with log directory %s",
             args.tensorboard_log_dir,
         )
-        tb_service = TensorboardService(args.tensorboard_log_dir)
+        tb_service = TensorboardService(args.tensorboard_log_dir, master_ip)
         tb_service.start()
     else:
         tb_service = None
@@ -169,10 +173,6 @@ def main():
     if args.num_workers:
         assert args.worker_image, "Worker image cannot be empty"
 
-        master_addr = "%s:%d" % (
-            os.getenv("MY_POD_IP", "localhost"),
-            args.port,
-        )
         worker_command = ["python"]
         worker_args = [
             "-m",
