@@ -1,6 +1,5 @@
 import datetime
 import subprocess
-import time
 
 import numpy as np
 import tensorflow as tf

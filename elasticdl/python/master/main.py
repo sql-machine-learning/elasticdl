@@ -241,12 +241,14 @@ def main():
         while True:
             if tb_service.is_active():
                 logger.info(
-                    "All tasks finished. Keeping TensorBoard service running..."
+                    "All tasks finished. "
+                    "Keeping TensorBoard service running..."
                 )
                 time.sleep(10)
             else:
                 logger.warning(
-                    "Unable to keep TensorBoard running since it has already terminated"
+                    "Unable to keep TensorBoard running. "
+                    "It has already terminated"
                 )
                 break
     logger.info("Master stopped")
