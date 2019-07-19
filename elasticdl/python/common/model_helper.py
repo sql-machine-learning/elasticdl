@@ -9,6 +9,7 @@ def load_module(module_file):
     return module
 
 
+# TODO: More validation around the following two functions
 def _get_model_def_name(model_def):
     return model_def.split(".")[-1]
 
@@ -17,6 +18,9 @@ def _get_model_def_file_path(model_def):
     return "/".join(model_def.split(".")[:-1]) + ".py"
 
 
+# TODO: Discuss whether we need to support default model
+# function/class names such as `custom_model()`
+# or `CustomModel()`
 def load_model_from_module(model_def, model_module, model_params):
     model_def_name = _get_model_def_name(model_def)
     if model_def_name in model_module:
