@@ -67,8 +67,8 @@ def train(args):
         args.optimizer,
         "--eval_metrics_fn",
         args.eval_metrics_fn,
-        "--model_class",
-        args.model_class,
+        "--model_def",
+        args.model_def,
         "--model_params",
         args.model_params,
     ]
@@ -119,8 +119,8 @@ def evaluate(args):
         args.input_fn,
         "--eval_metrics_fn",
         args.eval_metrics_fn,
-        "--model_class",
-        args.model_class,
+        "--model_def",
+        args.model_def,
         "--model_params",
         args.model_params,
     ]

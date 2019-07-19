@@ -93,9 +93,9 @@ def add_common_params(parser):
         "in the model file",
     )
     parser.add_argument(
-        "--model_class",
+        "--model_def",
         type=str,
-        default="model",
+        required=True,
         help="The name of the model class defined in the model file",
     )
     parser.add_argument(

@@ -94,9 +94,9 @@ def main():
         args.records_per_task,
         args.num_epochs,
     )
-    model_module = load_module(get_model_file(args.model_zoo)).__dict__
+    model_module = load_module(get_model_file(args.model_zoo, args.model_def)).__dict__
     model_inst = load_model_from_module(
-        args.model_class, model_module, args.model_params
+        args.model_def, model_module, args.model_params
     )
     optimizer = model_module[args.optimizer]()
 
@@ -191,8 +191,8 @@ def main():
             args.optimizer,
             "--eval_metrics_fn",
             args.eval_metrics_fn,
-            "--model_class",
-            args.model_class,
+            "--model_def",
+            args.model_def,
         ]
 
         worker_manager = WorkerManager(
