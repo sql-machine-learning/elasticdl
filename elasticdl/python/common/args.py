@@ -93,10 +93,11 @@ def add_common_params(parser):
         "in the model file",
     )
     parser.add_argument(
-        "--model_class",
+        "--model_def",
         type=str,
-        default="model",
-        help="The name of the model class defined in the model file",
+        required=True,
+        help="The import path to the model definition function/class in the "
+        'model zoo, e.g. "cifar10_subclass.cifar10_subclass.CustomModel"',
     )
     parser.add_argument(
         "--model_params",

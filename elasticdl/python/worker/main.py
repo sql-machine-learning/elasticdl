@@ -53,10 +53,11 @@ def _parse_args():
         "in the model file",
     )
     parser.add_argument(
-        "--model_class",
+        "--model_def",
         type=str,
-        default="model",
-        help="The name of the model class defined in the model file",
+        required=True,
+        help="The import path to the model definition function/class in the "
+        'model zoo, e.g. "cifar10_subclass.cifar10_subclass.CustomModel"',
     )
     parser.add_argument(
         "--model_params",
@@ -93,13 +94,13 @@ def main():
     logger.info("Starting worker %d", args.worker_id)
     worker = Worker(
         args.worker_id,
-        get_model_file(args.model_zoo),
+        get_model_file(args.model_zoo, args.model_def),
         channel=channel,
         input_fn=args.input_fn,
         loss=args.loss,
         optimizer=args.optimizer,
         eval_metrics_fn=args.eval_metrics_fn,
-        model_class=args.model_class,
+        model_def=args.model_def,
         model_params=args.model_params,
     )
     worker.run()

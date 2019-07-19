@@ -32,20 +32,19 @@ after _build_docker_image.
     with tempfile.TemporaryDirectory() as ctx_dir:
         # Copy ElasticDL Python source tree into the context directory.
         elasticdl = _find_elasticdl_root()
-        dest = os.path.join(ctx_dir, os.path.basename(elasticdl))
-        if not os.path.exists(dest):
-            shutil.copytree(elasticdl, dest)
+        edl_dest = os.path.join(ctx_dir, os.path.basename(elasticdl))
+        _copy_if_not_exists(elasticdl, edl_dest, is_dir=True)
 
         # Copy model zoo source tree into the context directory.
-        shutil.copytree(
-            model_zoo, os.path.join(ctx_dir, os.path.basename(model_zoo))
-        )
+        model_zoo_dest = os.path.join(ctx_dir, os.path.basename(model_zoo))
+        _copy_if_not_exists(model_zoo, model_zoo_dest, is_dir=True)
 
         # Copy cluster specification file into the context directory.
         if cluster_spec:
-            shutil.copy(
+            _copy_if_not_exists(
                 cluster_spec,
                 os.path.join(ctx_dir, os.path.basename(cluster_spec)),
+                is_dir=False,
             )
 
         # Create the Dockerfile.
@@ -53,7 +52,7 @@ after _build_docker_image.
             df.write(
                 _create_dockerfile(
                     os.path.basename(elasticdl),
-                    os.path.basename(model_zoo),
+                    model_zoo_dest,
                     os.path.basename(cluster_spec),
                     base_image,
                     extra_pypi,
@@ -68,6 +67,19 @@ after _build_docker_image.
             _push_docker_image(client, image_name)
 
     return image_name
+
+
+def _copy_if_not_exists(src, dst, is_dir):
+    if os.path.exists(dst):
+        print(
+            "Skip copying from %s to %s since the destination already exists"
+            % (src, dst)
+        )
+    else:
+        if is_dir:
+            shutil.copytree(src, dst)
+        else:
+            shutil.copy(src, dst)
 
 
 def _find_elasticdl_root():
@@ -96,9 +108,8 @@ COPY %s/elasticdl /elasticdl
 RUN pip install -r /elasticdl/requirements.txt \
   --extra-index-url="${EXTRA_PYPI_INDEX}"
 RUN make -f /elasticdl/Makefile
-# TODO: Need to restructure examples directory to make it conform to model_zoo
-# convention
-COPY {MODEL_ZOO} /model_zoo/{MODEL_ZOO}
+# TODO: The COPY operation below does not work yet. Need to investigate.
+# COPY {MODEL_ZOO} /model_zoo/{MODEL_ZOO}
 ARG REQS=/model_zoo/{MODEL_ZOO}/requirements.txt
 RUN if [ -f $REQS ]; then \
       pip install -r $REQS --extra-index-url="${EXTRA_PYPI_INDEX}"; \
@@ -117,7 +128,9 @@ RUN if [ -f $REQS ]; then \
 """
     pr = urlparse(model_zoo)
     if not pr.path:
-        raise RuntimeError("model_zoo {} has no path".format(model_zoo))
+        raise RuntimeError(
+            "urlparse(model_zoo) {} has no path field".format(model_zoo)
+        )
     if pr.scheme in ["file", ""]:
         tmpl = HEAD + LOCAL_ZOO
         model_zoo = pr.path  # Remove the "file://" prefix if any.

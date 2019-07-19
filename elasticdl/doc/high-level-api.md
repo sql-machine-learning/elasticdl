@@ -18,7 +18,7 @@ Suppose that one is working on a model in the local directory `$HOME/work/fintec
 ```bash
 elasticdl train \
     --model_zoo=$HOME/work \
-    --model_class=fintech.MyKerasModel \
+    --model_def=fintech.MyKerasModel \
     --input_fn=fintech.credit_data_processor \
     --params="hidden_units=[10, 100, 20, 5], learning_rate=0.01" \
     --data="gs://bucket-name/tony/imagenet/train/*.recordio" \
@@ -90,7 +90,7 @@ We propose a function `elastic.train` that can be called like the following:
 ```python
 elasticdl.train(
     model_zoo="$HOME/work",
-    model_class="fintech.MyKerasModel", 
+    model_def="fintech.MyKerasModel", 
     input_fn="fintech.credit_data_processor",
     params="hidden_units=[10, 100, 20, 5], learning_rate=0.01",
     data="gs://bucket-name/tony/imagenet/train/*.recordio",
@@ -102,7 +102,7 @@ or
 ```python
 elasticdl.train(
     model_zoo="https://github.com/sql-machine-learning/models",
-    model_class="regressor.DNN", 
+    model_def="regressor.DNN", 
     input_fn="sqlflow.elasticdl_input_function',
     params="hidden_units=[10, 100, 20, 5], learning_rate=0.01",
     data="gs://sqlflow/job-xxyyzz/train/*.recordio",
@@ -153,7 +153,7 @@ A model zoo is a plain Python source directory that's added to `/model_zoo` in t
 RUN pip install -r /model_zoo/requirements.txt
 ```
 
-Suppose that a Keras model class is referred to as `regressor.DNN` in `elasticdl.train(model_class="regressor.DNN",`, the corresponding Python file should be `/model_zoo/regressor.py`.  A class `regressor.wide_and_deep.MagicalWAD` is in a Python file `/model_zoo/regressor/wide_and_deep.py`.
+Suppose that a Keras model class is referred to as `regressor.DNN` in `elasticdl.train(model_def="regressor.DNN",`, the corresponding Python file should be `/model_zoo/regressor.py`.  A class `regressor.wide_and_deep.MagicalWAD` is in a Python file `/model_zoo/regressor/wide_and_deep.py`.
 
 ## Trained Model
 
@@ -184,7 +184,7 @@ A key question is what information must be in the directory `/filestore/tony/my_
 1. Model class constructor parameters, like `hidden_units=[10, 100, 20]`.
 
 1. Other parameters passed to `elasticdl.train`, including 
-   - `model_class`
+   - `model_def`
    - `input_function`
    - `loss`
    - `optimizer`
@@ -197,8 +197,8 @@ We define a new wrapper message:
 ```protobuf
 message TrainedModel {
     string docker_commit_id = 1;
-    string model_class = 2;
-    string model_class_params = 3;
+    string model_def = 2;
+    string model_def_params = 3;
     string params_filename = 4;
     string input_function = 5;
     string loss = 6;

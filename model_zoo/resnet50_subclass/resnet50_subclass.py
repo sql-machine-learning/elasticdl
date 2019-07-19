@@ -11,7 +11,7 @@ try:
         ConvBlock,
     )
 except ImportError:
-    from elasticdl.python.examples.resnet50_subclass.resnet50_model import (
+    from model_zoo.resnet50_subclass.resnet50_model import (
         L2_WEIGHT_DECAY,
         BATCH_NORM_DECAY,
         BATCH_NORM_EPSILON,

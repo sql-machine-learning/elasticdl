@@ -9,7 +9,6 @@ from tensorflow.python.ops import math_ops
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.model_helper import (
-    DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
     load_model_from_module,
     load_module,
 )
@@ -35,7 +34,7 @@ class Worker(object):
         optimizer="optimizer",
         eval_metrics_fn="eval_metrics_fn",
         channel=None,
-        model_class=DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
+        model_def=None,
         model_params="",
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
     ):
@@ -50,7 +49,7 @@ class Worker(object):
         self._worker_id = worker_id
         model_module = load_module(model_file).__dict__
         self._model = load_model_from_module(
-            model_class, model_module, model_params
+            model_def, model_module, model_params
         )
         self._var_created = self._model.built
         self._input_fn = model_module[input_fn]
