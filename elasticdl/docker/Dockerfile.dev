@@ -20,3 +20,6 @@ COPY elasticdl/python/data/recordio_gen/image_label.py /var/image_label.py
 RUN python /var/image_label.py --dataset mnist --fraction 0.25 \
 	--records_per_shard 4096 /data && \
     rm -rf /root/.keras/datasets
+
+# Copy the model zoo
+COPY model_zoo /model_zoo
