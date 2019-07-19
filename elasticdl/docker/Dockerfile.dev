@@ -22,4 +22,7 @@ RUN python /var/image_label.py --dataset mnist --fraction 0.25 \
     rm -rf /root/.keras/datasets
 
 # Copy the model zoo
-COPY model_zoo /model_zoo
+# TODO: Revisit this and _model_zoo_in_docker() in api.py
+# This needs to be fixed together with the COPY operation
+# in image_builder.py
+COPY model_zoo /model_zoo/model_zoo
