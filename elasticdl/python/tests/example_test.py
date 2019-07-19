@@ -23,7 +23,7 @@ from elasticdl.python.worker.worker import Worker
 
 def _get_model_info(file_name):
     module_file = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), "../examples", file_name
+        os.path.dirname(os.path.realpath(__file__)), "../../../model_zoo", file_name
     )
     return module_file
 
