@@ -8,10 +8,7 @@ import recordio
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.model_helper import (
-    get_model_file,
-    load_module,
-)
+from elasticdl.python.common.model_helper import get_model_file, load_module
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
@@ -19,8 +16,9 @@ from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
 
-
-_model_file = get_model_file(os.path.dirname(os.path.realpath(__file__)), "test_module.custom_model")
+_model_file = get_model_file(
+    os.path.dirname(os.path.realpath(__file__)), "test_module.custom_model"
+)
 m = load_module(_model_file).__dict__
 
 
@@ -63,7 +61,9 @@ class WorkerTest(unittest.TestCase):
                     self._m._version += 1
                 return self._m.ReportEvaluationMetrics(req, None)
 
-        worker = Worker(1, _model_file, model_def="test_module.custom_model", channel=None)
+        worker = Worker(
+            1, _model_file, model_def="test_module.custom_model", channel=None
+        )
 
         shards = {create_recordio_file(128): 128}
         if training:
@@ -116,9 +116,7 @@ class WorkerTest(unittest.TestCase):
         self.distributed_train_and_evaluate(training=False)
 
     def test_distributed_predict(self):
-        init_var = m[
-            "custom_model"
-        ]().trainable_variables
+        init_var = m["custom_model"]().trainable_variables
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testInitFromCheckpoint")
             os.makedirs(chkp_dir)
@@ -158,7 +156,12 @@ class WorkerTest(unittest.TestCase):
                 checkpoint_service=None,
                 evaluation_service=None,
             )
-            worker = Worker(1, _model_file, model_def="test_module.custom_model", channel=None)
+            worker = Worker(
+                1,
+                _model_file,
+                model_def="test_module.custom_model",
+                channel=None,
+            )
             worker._stub = InProcessMaster(master2)
             worker.run()
 

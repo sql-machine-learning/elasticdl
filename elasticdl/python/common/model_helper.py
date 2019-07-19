@@ -9,12 +9,10 @@ def load_module(module_file):
     return module
 
 
-# "mnist_functional_api.mnist_functional_api.custom_model" -> "custom_model"
 def _get_model_def_name(model_def):
     return model_def.split(".")[-1]
 
 
-# "mnist_functional_api.mnist_functional_api.custom_model" -> "mnist_functional_api/mnist_functional_api.py"
 def _get_model_def_file_path(model_def):
     return "/".join(model_def.split(".")[:-1]) + ".py"
 
@@ -39,6 +37,10 @@ def load_model_from_module(model_def, model_module, model_params):
         return model_module[custom_model_name]()
 
 
+def get_model_file(model_zoo, model_def):
+    return os.path.join(model_zoo, _get_model_def_file_path(model_def))
+
+
 def save_checkpoint_to_file(pb_model, file_name):
     encoded_model = pb_model.SerializeToString()
     with open(file_name, "wb") as f:
@@ -52,7 +54,3 @@ def load_from_checkpoint_file(file_name):
     with open(file_name, "rb") as f:
         pb_model.ParseFromString(f.read())
     return pb_model
-
-
-def get_model_file(model_zoo, model_def):
-    return os.path.join(model_zoo, _get_model_def_file_path(model_def))
