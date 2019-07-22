@@ -2,7 +2,7 @@ set -x
 
 elasticdl train \
   --image_base=elasticdl:ci \
-  --model_zoo=/model_zoo \
+  --model_zoo=model_zoo \
   --model_def=model_zoo.mnist_functional_api.mnist_functional_api.custom_model \
   --training_data_dir=/data/mnist/train \
   --evaluation_data_dir=/data/mnist/test \
