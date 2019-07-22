@@ -31,7 +31,8 @@ after _build_docker_image.
     """
     # Note that we are using the current working directory as the
     # context directory intentionally since `docker.APIClient.build()`
-    # has some issues with tempfile module.
+    # has some issues with tempfile module. We may need to investigate
+    # this further later.
     ctx_dir = os.getcwd()
 
     # Copy ElasticDL Python source tree into the context directory.

@@ -22,22 +22,22 @@ install:
   - docker version
 
 stages:
-#  - precommit
-#  - unittest
+  - precommit
+  - unittest
   - integrationtest
 
 jobs:
   include:
-#    - stage: precommit
-#      name: "Pre-commit Check"
-#      script:
-#        - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
-#        - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python -name '*.py' -print0 | tr '\0' ' ')"
-#    - stage: unittest
-#      name: "Unit Tests"
-#      script:
-#        - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
-#        - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests --cov=elasticdl/python"
+    - stage: precommit
+      name: "Pre-commit Check"
+      script:
+        - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
+        - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python -name '*.py' -print0 | tr '\0' ' ')"
+    - stage: unittest
+      name: "Unit Tests"
+      script:
+        - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
+        - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests --cov=elasticdl/python"
     - stage: integrationtest
       name: "Integration Tests"
       script:
@@ -52,7 +52,7 @@ jobs:
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
         - docker build -t elasticdl:ci -f elasticdl/docker/Dockerfile.ci .
         # Run unit tests related to k8s
-#        - docker run --rm -it --net=host -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=True pytest elasticdl/python/tests/k8s*.py"
+        - docker run --rm -it --net=host -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=True pytest elasticdl/python/tests/k8s*.py"
         # Run integration tests
         - kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
         - docker run --rm -it --net=host -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:ci bash -c "elasticdl/scripts/client_test.sh"
@@ -83,4 +83,3 @@ jobs:
 branches:
   only:
   - develop
-  - model-zoo-path-fixes
