@@ -56,6 +56,8 @@ after _build_docker_image.
         df.write(
             _create_dockerfile(
                 os.path.basename(elasticdl),
+                # Note that we need `abspath` here since `urlparse`
+                # does not handle directory names correctly sometimes
                 os.path.basename(os.path.abspath(model_zoo)),
                 os.path.basename(cluster_spec),
                 base_image,
@@ -179,7 +181,6 @@ def _print_docker_progress(line):
 
 def _build_docker_image(client, ctx_dir, dockerfile, image_name):
     print("===== Building Docker Image =====")
-    print(dockerfile)
     for line in client.build(
         dockerfile=dockerfile,
         path=ctx_dir,
