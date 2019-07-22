@@ -113,10 +113,12 @@ def train_mirrored(
         mirrored_strategy = tf.distribute.MirroredStrategy()
     else:
         """
+        Use MultiWorkerMirroredStrategy
         Need to set up env variable TF_CONFIG, such as:
-            os.environ['TF_CONFIG'] = 
-                json.dumps({ 'cluster': { 'worker': ["localhost:12345", "localhost:23456"] },
-                'task': {'type': 'worker', 'index': 0} })
+            export TF_CONFIG="{ 'cluster': { \
+                'worker': ["localhost:12345", "localhost:23456"] },\
+                'task': {'type': 'worker', 'index': 0} }"
+        Note that MultiWorkerMirroredStrategy may not work in tf 2.0beta yet.
         """
         mirrored_strategy = (
             tf.distribute.experimental.MultiWorkerMirroredStrategy()
