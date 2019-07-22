@@ -1,7 +1,12 @@
 import argparse
 
 import tensorflow as tf
-from cifar10_dataset import get_cifar10_test_dataset, get_cifar10_train_dataset
+
+from cifar10_dataset import (
+    get_cifar10_recordio_dataset_from_dir,
+    get_cifar10_test_dataset,
+    get_cifar10_train_dataset,
+)
 
 
 def get_model():
@@ -100,18 +105,41 @@ def optimizer(lr=0.05):
     return tf.keras.optimizers.SGD(lr)
 
 
-def train_mirrored(worker_batch_size, epoch, data_path=None):
+def train_mirrored(
+    worker_batch_size, epoch, strategy_type, use_recordio_data, data_path=None
+):
 
-    mirrored_strategy = tf.distribute.MirroredStrategy()
+    if strategy_type == "MirroredStrategy":
+        mirrored_strategy = tf.distribute.MirroredStrategy()
+    else:
+        """
+        Need to set up env variable TF_CONFIG, such as:
+            os.environ['TF_CONFIG'] = 
+                json.dumps({ 'cluster': { 'worker': ["localhost:12345", "localhost:23456"] },
+                'task': {'type': 'worker', 'index': 0} })
+        """
+        mirrored_strategy = (
+            tf.distribute.experimental.MultiWorkerMirroredStrategy()
+        )
 
     with mirrored_strategy.scope():
         global_batch = (
             worker_batch_size * mirrored_strategy.num_replicas_in_sync
         )
-        train_dataset = get_cifar10_train_dataset(
-            global_batch, epoch, data_path
-        )
-        test_dataset = get_cifar10_test_dataset(global_batch, epoch, data_path)
+        if use_recordio_data == "True":
+            train_dataset = get_cifar10_recordio_dataset_from_dir(
+                global_batch, epoch, data_path + "/train", training=True
+            )
+            test_dataset = get_cifar10_recordio_dataset_from_dir(
+                global_batch, epoch, data_path + "/test", training=False
+            )
+        else:
+            train_dataset = get_cifar10_train_dataset(
+                global_batch, epoch, data_path
+            )
+            test_dataset = get_cifar10_test_dataset(
+                global_batch, epoch, data_path
+            )
         print("num of replica: %d" % mirrored_strategy.num_replicas_in_sync)
         print(
             "worker batch size = %d and global batch size = %d"
@@ -141,15 +169,36 @@ def parse_args():
         type=int,
         help="The batch size of of a worker",
     )
-    parser.add_argument("--epoch", default=1, type=int, help="The epoch size")
+    parser.add_argument("--epoch", default=2, type=int, help="The epoch size")
     parser.add_argument("--data_path", help="cifar10 data path", default="")
+    parser.add_argument(
+        "--use_recordio_data",
+        help="if use recordio data",
+        type=str,
+        choices=["True", "False"],
+        default="True",
+    )
+    parser.add_argument(
+        "--strategy_type",
+        help="use MultiWorkerMirroredStrategy or MirroredStrategy",
+        type=str,
+        choices=["MultiWorkerMirroredStrategy", "MirroredStrategy"],
+        default="MirroredStrategy",
+    )
     args = parser.parse_args()
+    print(args)
     return args
 
 
 def main():
     args = parse_args()
-    train_mirrored(args.worker_batch_size, args.epoch, args.data_path)
+    train_mirrored(
+        args.worker_batch_size,
+        args.epoch,
+        args.strategy_type,
+        args.use_recordio_data,
+        args.data_path,
+    )
 
 
 if __name__ == "__main__":
