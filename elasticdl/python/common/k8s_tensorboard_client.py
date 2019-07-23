@@ -21,7 +21,7 @@ class TensorBoardClient(object):
         return "tensorboard-" + self._k8s_client.job_name
 
     def create_tensorboard_service(
-        self, port=80, target_port=6006, service_type="LoadBalancer"
+        self, port=6006, target_port=80, service_type="ClusterIP"
     ):
         service = client.V1Service(
             api_version="v1",
@@ -45,7 +45,10 @@ class TensorBoardClient(object):
                 ports=[
                     client.V1ServicePort(port=port, target_port=target_port)
                 ],
-                selector={k8s.ELASTICDL_JOB_KEY: self._k8s_client.job_name},
+                selector={
+                    "app": self._k8s_client.job_name,
+                    k8s.ELASTICDL_JOB_KEY: self._k8s_client.job_name,
+                },
                 type=service_type,
             ),
         )
