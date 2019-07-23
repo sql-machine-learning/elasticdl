@@ -201,6 +201,12 @@ def add_train_params(parser):
         default="optimizer",
         help="The name of the optimizer defined in the model file",
     )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="",
+        help="The path to save the final trained model",
+    )
 
 
 def add_evaluate_params(parser):

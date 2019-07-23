@@ -1,10 +1,11 @@
 import os
-import shutil
 import tempfile
 import uuid
 from urllib.parse import urlparse
 
 import docker
+
+from elasticdl.python.common.file_helper import copy_if_not_exists
 
 
 def build_and_push_docker_image(
@@ -38,15 +39,15 @@ after _build_docker_image.
     # Copy ElasticDL Python source tree into the context directory.
     elasticdl = _find_elasticdl_root()
     edl_dest = os.path.join(ctx_dir, os.path.basename(elasticdl))
-    _copy_if_not_exists(elasticdl, edl_dest, is_dir=True)
+    copy_if_not_exists(elasticdl, edl_dest, is_dir=True)
 
     # Copy model zoo source tree into the context directory.
     model_zoo_dest = os.path.join(ctx_dir, os.path.basename(model_zoo))
-    _copy_if_not_exists(model_zoo, model_zoo_dest, is_dir=True)
+    copy_if_not_exists(model_zoo, model_zoo_dest, is_dir=True)
 
     # Copy cluster specification file into the context directory.
     if cluster_spec:
-        _copy_if_not_exists(
+        copy_if_not_exists(
             cluster_spec,
             os.path.join(ctx_dir, os.path.basename(cluster_spec)),
             is_dir=False,
@@ -74,19 +75,6 @@ after _build_docker_image.
         _push_docker_image(client, image_name)
 
     return image_name
-
-
-def _copy_if_not_exists(src, dst, is_dir):
-    if os.path.exists(dst):
-        print(
-            "Skip copying from %s to %s since the destination already exists"
-            % (src, dst)
-        )
-    else:
-        if is_dir:
-            shutil.copytree(src, dst)
-        else:
-            shutil.copy(src, dst)
 
 
 def _find_elasticdl_root():
