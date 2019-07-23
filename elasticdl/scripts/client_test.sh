@@ -19,4 +19,5 @@ elasticdl train \
   --grads_to_wait=2 \
   --job_name=test-mnist \
   --log_level=INFO \
-  --image_pull_policy=Never
+  --image_pull_policy=Never \
+  --output=model_output
