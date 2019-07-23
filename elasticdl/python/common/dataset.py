@@ -15,7 +15,7 @@ def recordio_dataset(recordio_shards):
 
         def gen(self):
             for s in self._shards:
-                with closing(recordio.Scanner(s[0], s[1], s[2])) as reader:
+                with closing(recordio.Scanner(s[0], s[1], s[2] - s[1])) as reader:
                     while True:
                         r = reader.record()
                         if r:
