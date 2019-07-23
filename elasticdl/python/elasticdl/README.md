@@ -1,12 +1,5 @@
 # ElasticDL Client: Submit ElasticDL Job to Kubernetes 
 
-Currently for Mac docker-for-desktop only.
-
-## Check Environment
-
-Make sure the Kubernetes docker-for-desktop (not minikube) is installed on your Mac.
-
-
 ## Prepare Model Definition
 
 A model definition directory is needed to be created, the files in the directory are as follows:
@@ -39,7 +32,12 @@ First we build all development Docker images, which include `elasticdl:ci` image
 elasticdl/docker/build_all.sh
 ```
 
-Submit training job:
+Add `-gpu` if you want to build images with GPU support:
+```bash
+elasticdl/docker/build_all.sh -gpu
+```
+
+Submit training job (make sure you have packages `kubernetes` and `docker` installed in your running environment):
 
 ```bash
 python -m elasticdl.python.elasticdl.client train \
