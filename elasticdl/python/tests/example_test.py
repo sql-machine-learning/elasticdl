@@ -8,11 +8,7 @@ import recordio
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.model_helper import (
-    DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
-    DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME,
-    get_model_file,
-)
+from elasticdl.python.common.model_helper import get_model_file
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
@@ -21,11 +17,10 @@ from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
 
 
-def _get_model_info(file_name):
-    module_file = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), "../examples", file_name
+def _get_model_zoo_path():
+    return os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), "../../../model_zoo"
     )
-    return module_file
 
 
 def create_recordio_file(size, shape):
@@ -84,9 +79,8 @@ def create_imagenet_recordio_file(size, shape):
 class ExampleTest(unittest.TestCase):
     def distributed_train_and_evaluate(
         self,
-        model_def,
         image_shape,
-        model_class,
+        model_def,
         model_params="",
         training=True,
         dataset="",
@@ -95,12 +89,12 @@ class ExampleTest(unittest.TestCase):
         Run distributed training and evaluation with a local master.
         grpc calls are mocked by local master call.
         """
-        module_file = _get_model_info(get_model_file(model_def))
+        module_file = get_model_file(_get_model_zoo_path(), model_def)
 
         worker = Worker(
             1,
             module_file,
-            model_class=model_class,
+            model_def=model_def,
             model_params=model_params,
             channel=None,
         )
@@ -160,82 +154,72 @@ class ExampleTest(unittest.TestCase):
 
     def test_mnist_functional_train(self):
         self.distributed_train_and_evaluate(
-            "mnist_functional_api",
             [28, 28],
-            DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
+            "mnist_functional_api.mnist_functional_api.custom_model",
             training=True,
         )
 
     def test_mnist_functional_evaluate(self):
         self.distributed_train_and_evaluate(
-            "mnist_functional_api",
             [28, 28],
-            DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
+            "mnist_functional_api.mnist_functional_api.custom_model",
             training=False,
         )
 
     def test_mnist_subclass_train(self):
         self.distributed_train_and_evaluate(
-            "mnist_subclass",
             [28, 28],
-            DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME,
+            "mnist_subclass.mnist_subclass.CustomModel",
             training=True,
         )
 
     def test_mnist_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
-            "mnist_subclass",
             [28, 28],
-            DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME,
+            "mnist_subclass.mnist_subclass.CustomModel",
             training=False,
         )
 
     def test_cifar10_functional_train(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api",
             [32, 32, 3],
-            DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
+            "cifar10_functional_api.cifar10_functional_api.custom_model",
             training=True,
         )
 
     def test_cifar10_functional_evaluate(self):
         self.distributed_train_and_evaluate(
-            "cifar10_functional_api",
             [32, 32, 3],
-            DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME,
+            "cifar10_functional_api.cifar10_functional_api.custom_model",
             training=False,
         )
 
     def test_cifar10_subclass_train(self):
         self.distributed_train_and_evaluate(
-            "cifar10_subclass",
             [32, 32, 3],
-            DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME,
+            "cifar10_subclass.cifar10_subclass.CustomModel",
             training=True,
         )
 
     def test_cifar10_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
-            "cifar10_subclass",
             [32, 32, 3],
-            DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME,
+            "cifar10_subclass.cifar10_subclass.CustomModel",
             training=False,
         )
 
     def test_resnet50_subclass_train(self):
         self.distributed_train_and_evaluate(
-            "resnet50_subclass",
             [224, 224, 3],
-            DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME,
+            "resnet50_subclass.resnet50_subclass.CustomModel",
             training=True,
             dataset="imagenet",
         )
 
     def test_resnet50_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
-            "resnet50_subclass",
             [224, 224, 3],
-            DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME,
+            "resnet50_subclass.resnet50_subclass.CustomModel",
             model_params='num_classes=10,dtype="float32"',
             training=False,
             dataset="imagenet",

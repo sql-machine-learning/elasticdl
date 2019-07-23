@@ -1,6 +1,6 @@
 def add_common_params(parser):
     parser.add_argument(
-        "--model_def",
+        "--model_zoo",
         help="The directory that contains user-defined model files "
         "or a specific model file",
         required=True,
@@ -93,10 +93,11 @@ def add_common_params(parser):
         "in the model file",
     )
     parser.add_argument(
-        "--model_class",
+        "--model_def",
         type=str,
-        default="model",
-        help="The name of the model class defined in the model file",
+        required=True,
+        help="The import path to the model definition function/class in the "
+        'model zoo, e.g. "cifar10_subclass.cifar10_subclass.CustomModel"',
     )
     parser.add_argument(
         "--model_params",
@@ -199,6 +200,12 @@ def add_train_params(parser):
         type=str,
         default="optimizer",
         help="The name of the optimizer defined in the model file",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="",
+        help="The path to save the final trained model",
     )
 
 

@@ -65,13 +65,17 @@ def main():
     logging.getLogger().setLevel(args.log_level)
     logger = logging.getLogger(__name__)
 
+    # Master addr
+    master_ip = os.getenv("MY_POD_IP", "localhost")
+    master_addr = "%s:%d" % (master_ip, args.port)
+
     # Start tensorboard service if required
     if args.tensorboard_log_dir:
         logger.info(
             "Starting tensorboard service with log directory %s",
             args.tensorboard_log_dir,
         )
-        tb_service = TensorboardService(args.tensorboard_log_dir)
+        tb_service = TensorboardService(args.tensorboard_log_dir, master_ip)
         tb_service.start()
     else:
         tb_service = None
@@ -90,9 +94,11 @@ def main():
         args.records_per_task,
         args.num_epochs,
     )
-    model_module = load_module(get_model_file(args.model_def)).__dict__
+    model_module = load_module(
+        get_model_file(args.model_zoo, args.model_def)
+    ).__dict__
     model_inst = load_model_from_module(
-        args.model_class, model_module, args.model_params
+        args.model_def, model_module, args.model_params
     )
     optimizer = model_module[args.optimizer]()
 
@@ -169,16 +175,12 @@ def main():
     if args.num_workers:
         assert args.worker_image, "Worker image cannot be empty"
 
-        master_addr = "%s:%d" % (
-            os.getenv("MY_POD_IP", "localhost"),
-            args.port,
-        )
         worker_command = ["python"]
         worker_args = [
             "-m",
             "elasticdl.python.worker.main",
-            "--model_def",
-            args.model_def,
+            "--model_zoo",
+            args.model_zoo,
             "--master_addr",
             master_addr,
             "--log_level",
@@ -191,8 +193,8 @@ def main():
             args.optimizer,
             "--eval_metrics_fn",
             args.eval_metrics_fn,
-            "--model_class",
-            args.model_class,
+            "--model_def",
+            args.model_def,
         ]
 
         worker_manager = WorkerManager(
@@ -224,6 +226,8 @@ def main():
             if task_d.finished():
                 if worker_manager:
                     worker_manager.update_status(WorkerManagerStatus.FINISHED)
+                if args.output and checkpoint_service:
+                    checkpoint_service.save_latest_checkpoint(args.output)
                 break
             time.sleep(30)
     except KeyboardInterrupt:
@@ -241,7 +245,15 @@ def main():
         logger.info(
             "All tasks finished. Keeping TensorBoard service running..."
         )
-        tb_service.keep_running()
+        while True:
+            if tb_service.is_active():
+                time.sleep(10)
+            else:
+                logger.warning(
+                    "Unable to keep TensorBoard running. "
+                    "It has already terminated"
+                )
+                break
     logger.info("Master stopped")
 
 

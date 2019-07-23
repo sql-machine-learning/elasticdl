@@ -5,13 +5,10 @@ from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
 )
 
-MODEL_ROOT_PATH = "/model_zoo"
-CLUSTER_SPEC_ROOT_PATH = "/cluster_spec"
-
 
 def train(args):
     image_name = build_and_push_docker_image(
-        model_zoo=args.model_def,
+        model_zoo=args.model_zoo,
         base_image=args.image_base,
         docker_image_prefix=args.docker_image_prefix,
         extra_pypi=args.extra_pypi_index,
@@ -24,8 +21,8 @@ def train(args):
         args.job_name,
         "--worker_image",
         image_name,
-        "--model_def",
-        _model_def_in_docker(args.model_def),
+        "--model_zoo",
+        _model_zoo_in_docker(args.model_zoo),
         "--cluster_spec",
         _cluster_spec_def_in_docker(args.cluster_spec),
         "--num_workers",
@@ -70,8 +67,8 @@ def train(args):
         args.optimizer,
         "--eval_metrics_fn",
         args.eval_metrics_fn,
-        "--model_class",
-        args.model_class,
+        "--model_def",
+        args.model_def,
         "--model_params",
         args.model_params,
     ]
@@ -85,7 +82,7 @@ def train(args):
 
 def evaluate(args):
     image_name = build_and_push_docker_image(
-        model_zoo=args.model_def,
+        model_zoo=args.model_zoo,
         base_image=args.image_base,
         docker_image_prefix=args.docker_image_prefix,
         extra_pypi=args.extra_pypi_index,
@@ -98,8 +95,8 @@ def evaluate(args):
         args.job_name,
         "--worker_image",
         image_name,
-        "--model_def",
-        _model_def_in_docker(args.model_def),
+        "--model_zoo",
+        _model_zoo_in_docker(args.model_zoo),
         "--cluster_spec",
         _cluster_spec_def_in_docker(args.cluster_spec),
         "--num_workers",
@@ -122,8 +119,8 @@ def evaluate(args):
         args.input_fn,
         "--eval_metrics_fn",
         args.eval_metrics_fn,
-        "--model_class",
-        args.model_class,
+        "--model_def",
+        args.model_def,
         "--model_params",
         args.model_params,
     ]
@@ -158,11 +155,13 @@ def _submit_job(image_name, client_args, container_args):
     )
 
 
-def _model_def_in_docker(model_def):
-    return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_def))
+def _model_zoo_in_docker(model_zoo):
+    MODEL_ROOT_PATH = "/model_zoo"
+    return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_zoo))
 
 
 def _cluster_spec_def_in_docker(cluster_spec):
+    CLUSTER_SPEC_ROOT_PATH = "/cluster_spec"
     return (
         os.path.join(CLUSTER_SPEC_ROOT_PATH, os.path.basename(cluster_spec))
         if cluster_spec

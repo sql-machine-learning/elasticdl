@@ -1,2 +1,0 @@
-# Some random package for testing imports
-matplotlib

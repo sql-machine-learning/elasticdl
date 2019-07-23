@@ -2,7 +2,8 @@ set -x
 
 elasticdl train \
   --image_base=elasticdl:ci \
-  --model_def=elasticdl/python/examples/mnist_functional_api \
+  --model_zoo=model_zoo \
+  --model_def=mnist_functional_api.mnist_functional_api.custom_model \
   --training_data_dir=/data/mnist/train \
   --evaluation_data_dir=/data/mnist/test \
   --num_epochs=2 \
@@ -18,4 +19,5 @@ elasticdl train \
   --grads_to_wait=2 \
   --job_name=test-mnist \
   --log_level=INFO \
-  --image_pull_policy=Never
+  --image_pull_policy=Never \
+  --output=model_output

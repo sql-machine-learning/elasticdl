@@ -1,6 +1,5 @@
 import datetime
 import subprocess
-import time
 
 import numpy as np
 import tensorflow as tf
@@ -9,7 +8,7 @@ import tensorflow as tf
 class TensorboardService(object):
     """Tensorboard Service implementation"""
 
-    def __init__(self, tensorboard_log_dir):
+    def __init__(self, tensorboard_log_dir, master_ip):
         """
         Arguments:
             tensorboard_log_dir: The log directory for Tensorboard.
@@ -17,6 +16,7 @@ class TensorboardService(object):
         _current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         self._tensorboard_log_dir = tensorboard_log_dir + _current_time
         self._initialize_summary_writer()
+        self._master_ip = master_ip
         self.tb_process = None
 
     def _initialize_summary_writer(self):
@@ -32,13 +32,17 @@ class TensorboardService(object):
                 tf.summary.scalar(k, v, step=version)
 
     def start(self):
+        # TODO: Find a good way to catch the exception if any.
+        # `tb_process.poll()` is unreliable as TensorBoard won't
+        # exit immediately in some cases, e.g. when host is missing.
         self.tb_process = subprocess.Popen(
-            ["tensorboard --logdir " + self._tensorboard_log_dir],
+            [
+                "tensorboard --logdir %s --host %s"
+                % (self._tensorboard_log_dir, self._master_ip)
+            ],
             shell=True,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
         )
 
-    def keep_running(self):
-        while self.tb_process.poll() is None:
-            time.sleep(10)
+    def is_active(self):
+        return self.tb_process.poll() is None

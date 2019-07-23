@@ -1,12 +1,5 @@
 # ElasticDL Client: Submit ElasticDL Job to Kubernetes 
 
-Currently for Mac docker-for-desktop only.
-
-## Check Environment
-
-Make sure the Kubernetes docker-for-desktop (not minikube) is installed on your Mac.
-
-
 ## Prepare Model Definition
 
 A model definition directory is needed to be created, the files in the directory are as follows:
@@ -17,7 +10,7 @@ A model definition directory is needed to be created, the files in the directory
 * (optional) A requirements.txt file that lists dependencies required by the above source files.
 
 
-There are several Keras examples provided in `elasticdl/python/examples` directory.
+There are several Keras examples provided in `model_zoo` directory.
 
 ## Submit ElasticDL Job In Development Mode
 
@@ -27,7 +20,7 @@ git clone https://github.com/wangkuiyi/elasticdl.git
 cd elasticdl
 ```
 
-Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and submit a model, e.g. `elasticdl/python/examples/mnist_subclass/mnist_subclass.py` to it.
+Use ElasticDL client to launch ElasticDL system on a Kubernetes cluster and submit a model, e.g. `model_zoo/mnist_subclass/mnist_subclass.py` to it.
 
 ### Submit to local Kubernetes on Your Machine
 
@@ -39,11 +32,17 @@ First we build all development Docker images, which include `elasticdl:ci` image
 elasticdl/docker/build_all.sh
 ```
 
-Submit training job:
+Add `-gpu` if you want to build images with GPU support:
+```bash
+elasticdl/docker/build_all.sh -gpu
+```
+
+Submit training job (make sure you have packages `kubernetes` and `docker` installed in your running environment):
 
 ```bash
 python -m elasticdl.python.elasticdl.client train \
-    --model_def=elasticdl/python/examples/mnist_subclass \
+    --model_zoo=model_zoo \
+    --model_def=mnist_subclass.mnist_subclass.CustomModel \
     --image_base=elasticdl:ci \
     --training_data_dir=/data/mnist/train \
     --evaluation_data_dir=/data/mnist/test \
@@ -75,7 +74,8 @@ ElasticDL provides an easy way for users to specify their pods requirements.
 python -m elasticdl.python.elasticdl.client train \
     --job_name=test \
     --image_name=gcr.io/elasticdl/mnist:dev \
-    --model_def=elasticdl/python/examples/mnist_subclass \
+    --model_zoo=model_zoo \
+    --model_def=mnist_subclass.mnist_subclass.CustomModel \
     --cluster_spec=<path_to_cluster_specification_file> \
     --training_data_dir=/data/mnist_nfs/mnist/train \
     --evaluation_data_dir=/data/mnist_nfs/mnist/test \

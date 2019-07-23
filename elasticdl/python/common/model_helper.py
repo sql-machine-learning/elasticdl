@@ -1,10 +1,6 @@
 import importlib.util
 import os
 
-# The default custom model name in model definition file
-DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME = "custom_model"
-DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME = "CustomModel"
-
 
 def load_module(module_file):
     spec = importlib.util.spec_from_file_location(module_file, module_file)
@@ -13,13 +9,22 @@ def load_module(module_file):
     return module
 
 
-def load_model_from_module(model_class, model_module, model_params):
-    if model_class in model_module:
-        custom_model_name = model_class
-    elif DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME in model_module:
-        custom_model_name = DEFAULT_FUNCTIONAL_CUSTOM_MODEL_NAME
-    elif DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME in model_module:
-        custom_model_name = DEFAULT_SUBCLASS_CUSTOM_MODEL_NAME
+# TODO: More validation around the following two functions
+def _get_model_def_name(model_def):
+    return model_def.split(".")[-1]
+
+
+def _get_model_def_file_path(model_def):
+    return "/".join(model_def.split(".")[:-1]) + ".py"
+
+
+# TODO: Discuss whether we need to support default model
+# function/class names such as `custom_model()`
+# or `CustomModel()`
+def load_model_from_module(model_def, model_module, model_params):
+    model_def_name = _get_model_def_name(model_def)
+    if model_def_name in model_module:
+        custom_model_name = model_def_name
     else:
         raise ValueError(
             "Cannot find the custom model function/class "
@@ -36,6 +41,10 @@ def load_model_from_module(model_class, model_module, model_params):
         return model_module[custom_model_name]()
 
 
+def get_model_file(model_zoo, model_def):
+    return os.path.join(model_zoo, _get_model_def_file_path(model_def))
+
+
 def save_checkpoint_to_file(pb_model, file_name):
     encoded_model = pb_model.SerializeToString()
     with open(file_name, "wb") as f:
@@ -49,7 +58,3 @@ def load_from_checkpoint_file(file_name):
     with open(file_name, "rb") as f:
         pb_model.ParseFromString(f.read())
     return pb_model
-
-
-def get_model_file(model_def):
-    return os.path.join(model_def, os.path.basename(model_def) + ".py")
