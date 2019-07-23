@@ -14,7 +14,8 @@ spec:
     - -c
     - >
       python -m elasticdl.python.master.main
-      --model_zoo=/elasticdl/python/examples/mnist_functional_api
+      --model_zoo=model_zoo
+      --model_def=mnist_functional_api.mnist_functional_api.custom_model
       --training_data_dir=/data/mnist/train
       --evaluation_data_dir=/data/mnist/test
       --records_per_task=100
