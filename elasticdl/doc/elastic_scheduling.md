@@ -88,12 +88,12 @@ where `MNIST_DATA_DIR` is the directory that contains MNIST training and evaluat
 Use the following command to check the job's pods statuses:
 
 ```bash
-kubectl get pods -l elasticdl_job_name=hello-world
+kubectl get pods -l elasticdl-job-name=hello-world
 ```
 You could delete all the pods of the submitted job using the command below:
 
 ```
-kubectl delete pod -l elasticdl_job_name=hello-world
+kubectl delete pod -l elasticdl-job-name=hello-world
 ```
 
 ## Example of Job Fault Tolerance
@@ -121,7 +121,7 @@ python -m elasticdl.python.elasticdl.client train \
 Check the job's pods statuses and wait until all the pods become `Running`:
 
 ```
-kubectl get pods -l elasticdl_job_name=fault-tolerance
+kubectl get pods -l elasticdl-job-name=fault-tolerance
 ```
 And then delete one of the two worker's pods:
 
@@ -190,7 +190,7 @@ Please note that the master pod is configured priority `high-priority` which mea
 The first job will launch one master pod and two worker pods. Use the following command to check pods statues, and wait until all pods become `Running`.
 
 ```bash
-kubectl get pods -l elasticdl_job_name=low-prio-job
+kubectl get pods -l elasticdl-job-name=low-prio-job
 ```
 
 ### Submit the second job with `high-priority`
@@ -220,7 +220,7 @@ python -m elasticdl.python.elasticdl.client train \
 Use the following command:
 
 ```bash
-kubectl get pods -l elasticdl_job_name=high-prio-job
+kubectl get pods -l elasticdl-job-name=high-prio-job
 ```
 You will find the master is Running and a worker is Pending due to insufficient resources.
 
