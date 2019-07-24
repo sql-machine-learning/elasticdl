@@ -100,7 +100,7 @@ class ExampleTest(unittest.TestCase):
         )
 
         if dataset == "imagenet":
-            shards = {create_imagenet_recordio_file(32, image_shape): 32}
+            shards = {create_imagenet_recordio_file(16, image_shape): 16}
         else:
             shards = {create_recordio_file(128, image_shape): 128}
 
