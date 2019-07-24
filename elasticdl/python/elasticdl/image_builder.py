@@ -30,49 +30,45 @@ after _build_docker_image.
     fullname later.
 
     """
-    # Note that we are using the current working directory as the
-    # context directory intentionally since `docker.APIClient.build()`
-    # has some issues with tempfile module. We may need to investigate
-    # this further later.
-    ctx_dir = os.getcwd()
+    with tempfile.TemporaryDirectory() as ctx_dir:
 
-    # Copy ElasticDL Python source tree into the context directory.
-    elasticdl = _find_elasticdl_root()
-    edl_dest = os.path.join(ctx_dir, os.path.basename(elasticdl))
-    copy_if_not_exists(elasticdl, edl_dest, is_dir=True)
+        # Copy ElasticDL Python source tree into the context directory.
+        elasticdl = _find_elasticdl_root()
+        edl_dest = os.path.join(ctx_dir, os.path.basename(elasticdl))
+        copy_if_not_exists(elasticdl, edl_dest, is_dir=True)
 
-    # Copy model zoo source tree into the context directory.
-    model_zoo_dest = os.path.join(ctx_dir, os.path.basename(model_zoo))
-    copy_if_not_exists(model_zoo, model_zoo_dest, is_dir=True)
+        # Copy model zoo source tree into the context directory.
+        model_zoo_dest = os.path.join(ctx_dir, os.path.basename(model_zoo))
+        copy_if_not_exists(model_zoo, model_zoo_dest, is_dir=True)
 
-    # Copy cluster specification file into the context directory.
-    if cluster_spec:
-        copy_if_not_exists(
-            cluster_spec,
-            os.path.join(ctx_dir, os.path.basename(cluster_spec)),
-            is_dir=False,
-        )
-
-    # Create the Dockerfile.
-    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
-        df.write(
-            _create_dockerfile(
-                os.path.basename(elasticdl),
-                # Note that we need `abspath` here since `urlparse`
-                # does not handle directory names correctly sometimes
-                os.path.basename(os.path.abspath(model_zoo)),
-                os.path.basename(cluster_spec),
-                base_image,
-                extra_pypi,
+        # Copy cluster specification file into the context directory.
+        if cluster_spec:
+            copy_if_not_exists(
+                cluster_spec,
+                os.path.join(ctx_dir, os.path.basename(cluster_spec)),
+                is_dir=False,
             )
-        )
 
-    image_name = _generate_unique_image_name(docker_image_prefix)
-    client = docker.APIClient(base_url="unix://var/run/docker.sock")
-    _build_docker_image(client, ctx_dir, df.name, image_name)
+        # Create the Dockerfile.
+        with tempfile.NamedTemporaryFile(mode="w+", delete=False) as df:
+            df.write(
+                _create_dockerfile(
+                    os.path.basename(elasticdl),
+                    # Note that we need `abspath` here since `urlparse`
+                    # does not handle directory names correctly sometimes
+                    os.path.basename(os.path.abspath(model_zoo)),
+                    os.path.basename(cluster_spec),
+                    base_image,
+                    extra_pypi,
+                )
+            )
 
-    if docker_image_prefix:
-        _push_docker_image(client, image_name)
+        image_name = _generate_unique_image_name(docker_image_prefix)
+        client = docker.APIClient(base_url="unix://var/run/docker.sock")
+        _build_docker_image(client, ctx_dir, df.name, image_name)
+
+        if docker_image_prefix:
+            _push_docker_image(client, image_name)
 
     return image_name
 
