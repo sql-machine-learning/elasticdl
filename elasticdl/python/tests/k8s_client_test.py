@@ -33,11 +33,36 @@ class K8sClientTest(unittest.TestCase):
             event_callback=tracker.event_cb,
         )
 
-        # Start 3 workers
+        # Start master
         resource = "cpu=100m,memory=64M"
+        c.create_master(
+            resource_requests=resource,
+            resource_limits=resource,
+            pod_priority=None,
+            args=None,
+            volume=None,
+            image_pull_policy="Never",
+            restart_policy="Never",
+        )
+        while tracker._count < 1:
+            time.sleep(1)
+
+        # Check master pod labels
+        master = c.get_master_pod()
+        self.assertEqual(
+            master.metadata.labels[k8s.ELASTICDL_JOB_KEY], c.job_name
+        )
+        self.assertEqual(
+            master.metadata.labels[k8s.ELASTICDL_REPLICA_TYPE_KEY], "master"
+        )
+        self.assertEqual(
+            master.metadata.labels[k8s.ELASTICDL_REPLICA_INDEX_KEY], "0"
+        )
+
+        # Start 3 workers
         for i in range(3):
             _ = c.create_worker(
-                worker_id="worker-%d" % i,
+                worker_id=str(i),
                 resource_requests=resource,
                 resource_limits=resource,
                 command=["echo"],
@@ -49,13 +74,26 @@ class K8sClientTest(unittest.TestCase):
             )
             time.sleep(5)
 
-        # wait for workers to be added
-        while tracker._count < 3:
+        # Wait for workers to be added
+        while tracker._count < 4:
             time.sleep(1)
 
-        # delete all workers
-        for i in range(tracker._count):
-            c.delete_worker("worker-%d" % i)
+        # Check worker pods labels
+        for i in range(3):
+            worker = c.get_worker_pod(i)
+            self.assertEqual(
+                worker.metadata.labels[k8s.ELASTICDL_JOB_KEY], c.job_name
+            )
+            self.assertEqual(
+                worker.metadata.labels[k8s.ELASTICDL_REPLICA_TYPE_KEY],
+                "worker",
+            )
+            self.assertEqual(
+                worker.metadata.labels[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
+            )
+
+        # Delete master and all workers should also be deleted
+        c.delete_master()
 
         # wait for workers to be deleted
         while tracker._count > 0:
