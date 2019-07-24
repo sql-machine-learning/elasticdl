@@ -35,9 +35,10 @@ class CustomModel(tf.keras.Model):
 
 
 def loss(output, labels):
+    labels = tf.reshape(labels, [-1])
     return tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=output, labels=labels.flatten()
+            logits=output, labels=labels
         )
     )
 
