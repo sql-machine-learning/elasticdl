@@ -6,7 +6,7 @@ from elasticdl.python.common.odps_reader import ODPSReader
 
 
 @unittest.skipIf(
-    os.environ.get("ODPS_TESTS", "True") == "False",
+    os.environ.get("ODPS_TESTS", "False") == "False",
     "ODPS environment is not configured",
 )
 class ODPSReaderTest(unittest.TestCase):
