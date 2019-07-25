@@ -9,3 +9,10 @@ class WorkerManagerStatus(object):
     PENDING = "Pending"
     RUNNING = "Running"
     FINISHED = "Finished"
+
+
+class ODPSConfig(object):
+    PROJECT_NAME = "ODPS_PROJECT_NAME"
+    ACCESS_ID = "ODPS_ACCESS_ID"
+    ACCESS_KEY = "ODPS_ACCESS_KEY"
+    ENDPOINT = "ODPS_ENDPOINT"

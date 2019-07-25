@@ -15,8 +15,10 @@ from elasticdl.python.common.k8s_resource import parse as parse_resource
 from elasticdl.python.common.k8s_volume import parse as parse_volume
 from elasticdl.python.common.model_helper import load_module
 
-ELASTICDL_JOB_KEY = "elasticdl_job_name"
 ELASTICDL_APP_NAME = "elasticdl"
+ELASTICDL_JOB_KEY = "elasticdl-job-name"
+ELASTICDL_REPLICA_TYPE_KEY = "elasticdl-replica-type"
+ELASTICDL_REPLICA_INDEX_KEY = "elasticdl-replica-index"
 
 
 class Client(object):
@@ -100,6 +102,16 @@ class Client(object):
             )
         except client.api_client.ApiException as e:
             self._logger.warning("Exception when reading master pod: %s\n" % e)
+            return None
+
+    def get_worker_pod(self, worker_id):
+        try:
+            return self.client.read_namespaced_pod(
+                name=self.get_worker_pod_name(worker_id),
+                namespace=self.namespace,
+            )
+        except client.api_client.ApiException as e:
+            self._logger.warning("Exception when reading worker pod: %s\n" % e)
             return None
 
     @staticmethod
@@ -208,6 +220,9 @@ class Client(object):
             owner_pod=None,
             env=env,
         )
+        # Add replica type and index
+        pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "master"
+        pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = "0"
         resp = self.client.create_namespaced_pod(self.namespace, pod)
         self._logger.info("Master launched. status='%s'" % str(resp.status))
 
@@ -230,7 +245,20 @@ class Client(object):
             owner_pod=master_pod,
             env=None,
         )
+        # Add replica type and index
+        pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "worker"
+        pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = str(
+            kargs["worker_id"]
+        )
         return self.client.create_namespaced_pod(self.namespace, pod)
+
+    def delete_master(self):
+        print("pod name is %s" % self.get_master_pod_name())
+        self.client.delete_namespaced_pod(
+            self.get_master_pod_name(),
+            self.namespace,
+            body=client.V1DeleteOptions(grace_period_seconds=0),
+        )
 
     def delete_worker(self, worker_id):
         self.client.delete_namespaced_pod(

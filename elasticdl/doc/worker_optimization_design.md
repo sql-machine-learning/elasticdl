@@ -73,6 +73,7 @@ A better way is to use a shared dataset, which will call `get_task` to get new t
 
 The user needs to provide `dataset_fn` instead of `input_fn`. `dataset_fn` would take a RecordIO dataset as input, decode and preprocessing the data as needed.
 
+
 For example, instead of:
 
 ```
@@ -132,6 +133,7 @@ def dataset_fn(dataset):
 
 For training-only, we can use a shared dataset as below:
 
+
 ```       
 def data_generator(self):
     task = get_task()
@@ -170,7 +172,7 @@ To support the full functionalities of the worker (training-only, training-with-
 1. Add prerequisite: 
     * The master knows the type of the job from user provided arguments. Add an extra argument for the job type in worker initialization. 
     * Add `dataset_fn` in model_zoo examples.
-2. Support training-only with a shared dataset. 
+2. Support training-only with a shared dataset.
     * If the job type is not training-only, keep use the legacy code.
 3. Add evaluation-only, predict-only support.
 4. Support training-with-evaluation.

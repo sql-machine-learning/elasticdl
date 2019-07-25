@@ -4,7 +4,9 @@ metadata:
   name: elasticdl-test-mnist-master
   labels:
     app: elasticdl
-    elasticdl_job_name: test-mnist
+    elasticdl-job-name: test-mnist
+    elasticdl-replica-type: master
+    elasticdl-replica-index: "0"
 spec:
   containers:
   - name: mnist-demo-container
