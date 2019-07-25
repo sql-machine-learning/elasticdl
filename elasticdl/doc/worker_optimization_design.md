@@ -69,9 +69,9 @@ We can use TensorFlow Dataset for its asynchronization and C++ level multithread
 
 One way is to generate a dataset for each task after `get_task`. But the dataset will get stuck whenever `get_task` is needed, and there is overhead in creating a new dataset.
 
-A better way is to use a unified dataset, which will call `get_task` to get new training data when it runs out the data.
+A better way is to use a shared dataset, which will call `get_task` to get new training data when it runs out the data.
+The user needs to provide `dataset_fn` instead of `input_fn`. `dataset_fn` would take a RecordIO dataset as input, decode and preprocessing the data as needed.
 
-The user need to provide `dataset_fn` instead of `input_fn`. `dataset_fn` would take a RecordIO dataset as input, decode and preprocessing the data as needed.
 
 For example, instead of:
 
@@ -130,7 +130,7 @@ def dataset_fn(dataset):
 
 ### Implementation
 
-For training-only, we can use a unified dataset as below:
+For training-only, we can use a shared dataset as below:
 
 ```       
 def data_generator(self):
@@ -170,7 +170,7 @@ To support the full functionalities of the worker (training-only, training-with-
 1. Add prerequisite: 
     * The master knows the type of the job from user provided arguments. Add an extra argument for the job type in worker initialization. 
     * Add `dataset_fn` in model_zoo examples.
-2. Support training-only with unified dataset. 
+2. Support training-only with a shared dataset.
     * If the job type is not training-only, keep use the legacy code.
 3. Add evaluation-only, predict-only support.
 4. Support training-with-evaluation.
