@@ -57,27 +57,7 @@ jobs:
         - kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
         - docker run --rm -it --net=host -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:ci bash -c "elasticdl/scripts/client_test.sh"
         # Validate pod statuses
-        - |
-          MASTER_POD_NAME=elasticdl-test-mnist-master
-          CHECK_INTERVAL_SECS=10
-          for i in {1..200}; do
-            POD_STATUS=$(kubectl get pod $MASTER_POD_NAME -o jsonpath='{.status.phase}')
-            if [ "$POD_STATUS" == "Succeeded" ]; then
-              echo "Pod succeeded."
-              exit 0
-            elif [ "$POD_STATUS" == "Failed" ]; then
-              echo "Pod failed."
-              kubectl describe pod $MASTER_POD_NAME
-              kubectl logs $MASTER_POD_NAME | tail
-              exit 1
-            else
-              echo "Pod status: $POD_STATUS. Continue checking..."
-              sleep $CHECK_INTERVAL_SECS;
-            fi
-            top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}'
-          done
-          echo "ElasticDL job timed out."
-          exit 1
+        - bash elasticdl/scripts/validate_job_status.sh
 
 # Only build on this list of branches
 branches:
