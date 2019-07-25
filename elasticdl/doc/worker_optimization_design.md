@@ -70,7 +70,6 @@ We can use TensorFlow Dataset for its asynchronization and C++ level multithread
 One way is to generate a dataset for each task after `get_task`. But the dataset will get stuck whenever `get_task` is needed, and there is overhead in creating a new dataset.
 
 A better way is to use a shared dataset, which will call `get_task` to get new training data when it runs out the data.
-
 The user needs to provide `dataset_fn` instead of `input_fn`. `dataset_fn` would take a RecordIO dataset as input, decode and preprocessing the data as needed.
 
 
@@ -132,7 +131,6 @@ def dataset_fn(dataset):
 ### Implementation
 
 For training-only, we can use a shared dataset as below:
-
 
 ```       
 def data_generator(self):
