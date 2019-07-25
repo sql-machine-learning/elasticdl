@@ -215,11 +215,13 @@ def input_fn(records):
 
 
 def eval_metrics_fn(predictions, labels):
+    labels = tf.reshape(labels, [-1])
     return {
         "accuracy": tf.reduce_mean(
             input_tensor=tf.cast(
                 tf.equal(
-                    tf.argmax(input=predictions, axis=1), labels.flatten()
+                    tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
+                    labels,
                 ),
                 tf.float32,
             )
