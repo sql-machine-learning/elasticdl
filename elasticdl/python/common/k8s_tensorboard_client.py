@@ -47,10 +47,10 @@ class TensorBoardClient(object):
                 ],
                 selector={
                     "app": k8s.ELASTICDL_APP_NAME,
+                    k8s.ELASTICDL_JOB_KEY: self._k8s_client.job_name,
                     k8s.ELASTICDL_REPLICA_TYPE_KEY: "master",
                 },
                 type=service_type,
-                cluster_ip=None,
             ),
         )
         if self._k8s_client.cluster:
