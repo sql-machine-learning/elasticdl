@@ -19,6 +19,8 @@ docker build \
     --build-arg BASE_IMAGE=tensorflow/tensorflow:2.0.0b1-gpu-py3 .
 ```
 
+Note that since ElasticDL depends on TensorFlow, the base image must have TensorFlow installed.
+
 When having difficulties downloading from the main PyPI site, you could pass an extra PyPI index url to `docker build`, such as:
 
 ```bash

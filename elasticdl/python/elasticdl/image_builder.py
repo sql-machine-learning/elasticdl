@@ -100,10 +100,6 @@ RUN pip install -r /elasticdl/requirements.txt \
   --extra-index-url="${EXTRA_PYPI_INDEX}"
 RUN make -f /elasticdl/Makefile
 COPY {MODEL_ZOO} /model_zoo/{MODEL_ZOO}
-ARG REQS=/model_zoo/{MODEL_ZOO}/requirements.txt
-RUN if [ -f $REQS ]; then \
-      pip install -r $REQS --extra-index-url="${EXTRA_PYPI_INDEX}"; \
-    fi
 """
     REMOTE_ZOO = """
 RUN pip install -r /elasticdl/requirements.txt \
@@ -111,10 +107,6 @@ RUN pip install -r /elasticdl/requirements.txt \
 RUN make -f /elasticdl/Makefile
 RUN apt-get update && apt-get install -y git
 RUN git clone --recursive {MODEL_ZOO} /model_zoo
-ARG REQS=/model_zoo/{MODEL_ZOO}/requirements.txt
-RUN if [ -f $REQS ]; then \
-      pip install -r $REQS --extra-index-url="${EXTRA_PYPI_INDEX}"; \
-    fi
 """
     pr = urlparse(model_zoo)
     if not pr.path:
@@ -136,6 +128,24 @@ COPY %s /cluster_spec/%s
             cluster_spec,
             cluster_spec,
         )
+
+    tmpl = (
+        """
+%s
+ARG REQS=/model_zoo/{MODEL_ZOO}/requirements.txt
+RUN if [ -f $REQS ]; then \
+      pip install -r $REQS --extra-index-url="${EXTRA_PYPI_INDEX}"; \
+    fi
+# Check whether TensorFlow has been installed in the base image
+# so we can fail earlier if the specified base image is problematic
+RUN python -c 'import sys, pkgutil; exit_code = 0 if \
+    pkgutil.find_loader("tensorflow") else 1; \
+    print("TensorFlow is installed") if exit_code == 0 \
+    else print("TensorFlow must be installed in the base image"); \
+    sys.exit(exit_code)'
+"""
+        % tmpl
+    )
 
     return tmpl.format(
         BASE_IMAGE=base_image
