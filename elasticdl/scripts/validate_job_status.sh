@@ -28,7 +28,7 @@ for i in {1..200}; do
       kubectl logs $MASTER_POD_NAME | tail
       exit 1
     else
-      echo "Master pod status: ${MASTER_POD_STATUS}. Continue checking..."
+      echo "Master: ${MASTER_POD_STATUS}, Worker0: ${WORKER_0_POD_STATUS}, Worker1: ${WORKER_1_POD_STATUS}. Continue checking..."
       sleep ${CHECK_INTERVAL_SECS}
     fi
     top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}'
