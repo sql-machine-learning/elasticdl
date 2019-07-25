@@ -155,7 +155,8 @@ class Worker(object):
         self.report_variable()
         self._var_created = True
 
-    def _run_training_task(self, features, labels):
+    @tf.function
+    def training_process(self, features, labels):
         with tf.GradientTape() as tape:
             outputs = self._model.call(features, training=True)
             loss = self._loss(outputs, labels)
@@ -163,16 +164,30 @@ class Worker(object):
             if self._model.losses:
                 loss += math_ops.add_n(self._model.losses)
         grads = tape.gradient(loss, self._model.trainable_variables)
+        return loss, grads
+
+    @tf.function
+    def evaluation_process(self, features, labels):
+        outputs = self._model.call(features, training=False)
+        evaluation_metrics = self._eval_metrics_fn(outputs, labels)
+        return evaluation_metrics
+
+    @tf.function
+    def predict_process(self, features):
+        outputs = self._model.call(features, training=False)
+        return outputs
+
+    def _run_training_task(self, features, labels):
+        loss, grads = self.training_process(features, labels)
         accepted, min_model_version = self.report_gradient(grads)
         return accepted, min_model_version, loss
 
     def _run_evaluation_task(self, features, labels):
-        outputs = self._model.call(features, training=False)
-        evaluation_metrics = self._eval_metrics_fn(outputs, labels)
+        evaluation_metrics = self.evaluation_process(features, labels)
         return self.report_evaluation_metrics(evaluation_metrics)
 
     def _run_prediction_task(self, features):
-        predictions = self._model.call(features, training=False)
+        predictions = self.predict_process(features)
         return self.report_prediction_outputs(predictions)
 
     def _handle_task(self, task):
