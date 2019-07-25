@@ -15,7 +15,7 @@ class ODPSReaderTest(unittest.TestCase):
         self._access_id = os.environ[ODPSConfig.ACCESS_ID]
         self._access_key = os.environ[ODPSConfig.ACCESS_KEY]
         self._endpoint = os.environ[ODPSConfig.ENDPOINT]
-        self._table = "test_elasticdl_table"
+        self._table = "chicago_taxi_train_data"
 
     def test_to_iterator(self):
         reader = ODPSReader(
