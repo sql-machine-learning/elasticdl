@@ -220,7 +220,7 @@ def eval_metrics_fn(predictions, labels):
         "accuracy": tf.reduce_mean(
             input_tensor=tf.cast(
                 tf.equal(
-                    tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
+                    tf.argmax(predictions, 1, output_type=tf.dtypes.int64),
                     labels,
                 ),
                 tf.float32,
