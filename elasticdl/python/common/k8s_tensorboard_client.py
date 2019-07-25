@@ -45,7 +45,11 @@ class TensorBoardClient(object):
                 ports=[
                     client.V1ServicePort(port=port, target_port=target_port)
                 ],
-                selector={k8s.ELASTICDL_JOB_KEY: self._k8s_client.job_name},
+                selector={
+                    "app": k8s.ELASTICDL_APP_NAME,
+                    k8s.ELASTICDL_JOB_KEY: self._k8s_client.job_name,
+                    k8s.ELASTICDL_REPLICA_TYPE_KEY: "master",
+                },
                 type=service_type,
             ),
         )
