@@ -8,7 +8,6 @@ import tensorflow as tf
 from tensorflow.python.ops import math_ops
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.model_helper import (
     load_model_from_module,
     load_module,

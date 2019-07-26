@@ -106,30 +106,38 @@ def main():
     )
     optimizer = model_module[args.optimizer]()
 
-    evaluation_while_training = all(
+    # TODO: add PREDICTION_ONLY
+    if all(
         (
             args.training_data_dir,
             args.evaluation_data_dir,
             args.evaluation_throttle_secs or args.evaluation_steps,
         )
-    )
-    evaluation_only = args.evaluation_data_dir and not args.training_data_dir
+    ):
+        job_type = JobType.TRAINING_WITH_EVALUATION
+    elif args.evaluation_data_dir and not args.training_data_dir:
+        job_type = JobType.EVALUATION_ONLY
+    else:
+        job_type = JobType.TRAINING_ONLY
 
     # Initialize checkpoint service
-    if args.checkpoint_steps or evaluation_while_training:
+    if args.checkpoint_steps or job_type == JobType.TRAINING_WITH_EVALUATION:
         logger.info("Starting checkpoint service")
         checkpoint_service = CheckpointService(
             args.checkpoint_dir,
             args.checkpoint_steps,
             args.keep_checkpoint_max,
-            evaluation_while_training,
+            job_type == JobType.TRAINING_WITH_EVALUATION,
         )
     else:
         checkpoint_service = None
 
     # Initialize evaluation service
     evaluation_service = None
-    if evaluation_while_training or evaluation_only:
+    if (
+        job_type == JobType.TRAINING_WITH_EVALUATION
+        or job_type == JobType.EVALUATION_ONLY
+    ):
         logger.info(
             "Starting evaluation service with throttle seconds %d "
             " and evaluation steps %d",
@@ -143,18 +151,10 @@ def main():
             args.evaluation_start_delay_secs,
             args.evaluation_throttle_secs,
             args.evaluation_steps,
-            evaluation_only,
+            job_type == JobType.EVALUATION_ONLY,
         )
         evaluation_service.start()
         task_d.set_evaluation_service(evaluation_service)
-
-    # TODO: add PREDICT_ONLY
-    if evaluation_only:
-        job_type = JobType.EVALUATION_ONLY
-    elif evaluation_while_training:
-        job_type = JobType.TRAINING_WITH_EVALUATION
-    else:
-        job_type = JobType.TRAINING_ONLY
 
     # The master service
     logger.info("Starting master service")

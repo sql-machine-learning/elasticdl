@@ -21,5 +21,5 @@ class ODPSConfig(object):
 class JobType(object):
     TRAINING_ONLY = "training_only"
     EVALUATION_ONLY = "evaluation_only"
-    PREDICT_ONLY = "predict_only"
+    PREDICTION_ONLY = "prediction_only"
     TRAINING_WITH_EVALUATION = "training_with_evaluation"

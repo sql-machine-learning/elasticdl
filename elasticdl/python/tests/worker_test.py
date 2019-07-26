@@ -169,7 +169,7 @@ class WorkerTest(unittest.TestCase):
             )
             worker = Worker(
                 1,
-                JobType.PREDICT_ONLY,
+                JobType.PREDICTION_ONLY,
                 batch_size,
                 _model_file,
                 model_def="test_module.custom_model",

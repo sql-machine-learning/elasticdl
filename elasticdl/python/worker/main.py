@@ -13,10 +13,10 @@ def _parse_args():
     parser.add_argument(
         "--worker_id", help="Id unique to the worker", type=int, required=True
     )
-    parser.add_argument("--job_type", help="training job type", required=True)
+    parser.add_argument("--job_type", help="Job type", required=True)
     parser.add_argument(
         "--minibatch_size",
-        help="minibatch size for worker",
+        help="Minibatch size for worker",
         type=int,
         required=True,
     )
