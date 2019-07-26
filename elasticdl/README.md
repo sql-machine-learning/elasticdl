@@ -88,7 +88,7 @@ the following:
 make -f elasticdl/Makefile && pytest elasticdl/python/tests
 ```
 
-ODPS related tests require additional environment variables. To run those tests, execute the following:
+[ODPS](https://www.alibabacloud.com/product/maxcompute)-related tests require additional environment variables. To run those tests, execute the following:
 
 ```bash
 docker run --rm -it -v $PWD:/work -w /work \
