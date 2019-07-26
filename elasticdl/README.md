@@ -90,6 +90,17 @@ the following:
 make -f elasticdl/Makefile && pytest elasticdl/python/tests
 ```
 
+[ODPS](https://www.alibabacloud.com/product/maxcompute)-related tests require additional environment variables. To run those tests, execute the following:
+
+```bash
+docker run --rm -it -v $PWD:/work -w /work \
+    -e ODPS_PROJECT_NAME=xxx \
+    -e ODPS_ACCESS_ID=xxx \
+    -e ODPS_ACCESS_KEY=xxx \
+    -e ODPS_ENDPOINT=xxx \
+    elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_*_test.py"
+```
+
 ### Test in Docker
 
 In a terminal, start master to distribute mnist training tasks.
