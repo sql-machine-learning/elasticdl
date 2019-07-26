@@ -8,6 +8,7 @@ import recordio
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.model_helper import get_model_file
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
@@ -91,8 +92,14 @@ class ExampleTest(unittest.TestCase):
         """
         module_file = get_model_file(_get_model_zoo_path(), model_def)
 
+        job_type = (
+            JobType.TRAINING_ONLY if training else JobType.EVALUATION_ONLY
+        )
+        batch_size = 16
         worker = Worker(
             1,
+            job_type,
+            batch_size,
             module_file,
             model_def=model_def,
             model_params=model_params,
@@ -131,7 +138,7 @@ class ExampleTest(unittest.TestCase):
         # The master service
         master = MasterServicer(
             2,
-            16,
+            batch_size,
             worker._opt_fn(),
             task_d,
             init_var=[],

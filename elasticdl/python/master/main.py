@@ -8,7 +8,11 @@ import grpc
 import recordio
 
 from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.python.common.constants import GRPC, WorkerManagerStatus
+from elasticdl.python.common.constants import (
+    GRPC,
+    JobType,
+    WorkerManagerStatus,
+)
 from elasticdl.python.common.model_helper import (
     get_model_file,
     load_model_from_module,
@@ -102,30 +106,38 @@ def main():
     )
     optimizer = model_module[args.optimizer]()
 
-    evaluation_while_training = all(
+    # TODO: add PREDICTION_ONLY
+    if all(
         (
             args.training_data_dir,
             args.evaluation_data_dir,
             args.evaluation_throttle_secs or args.evaluation_steps,
         )
-    )
-    evaluation_only = args.evaluation_data_dir and not args.training_data_dir
+    ):
+        job_type = JobType.TRAINING_WITH_EVALUATION
+    elif args.evaluation_data_dir and not args.training_data_dir:
+        job_type = JobType.EVALUATION_ONLY
+    else:
+        job_type = JobType.TRAINING_ONLY
 
     # Initialize checkpoint service
-    if args.checkpoint_steps or evaluation_while_training:
+    if args.checkpoint_steps or job_type == JobType.TRAINING_WITH_EVALUATION:
         logger.info("Starting checkpoint service")
         checkpoint_service = CheckpointService(
             args.checkpoint_dir,
             args.checkpoint_steps,
             args.keep_checkpoint_max,
-            evaluation_while_training,
+            job_type == JobType.TRAINING_WITH_EVALUATION,
         )
     else:
         checkpoint_service = None
 
     # Initialize evaluation service
     evaluation_service = None
-    if evaluation_while_training or evaluation_only:
+    if (
+        job_type == JobType.TRAINING_WITH_EVALUATION
+        or job_type == JobType.EVALUATION_ONLY
+    ):
         logger.info(
             "Starting evaluation service with throttle seconds %d "
             " and evaluation steps %d",
@@ -139,7 +151,7 @@ def main():
             args.evaluation_start_delay_secs,
             args.evaluation_throttle_secs,
             args.evaluation_steps,
-            evaluation_only,
+            job_type == JobType.EVALUATION_ONLY,
         )
         evaluation_service.start()
         task_d.set_evaluation_service(evaluation_service)
@@ -185,6 +197,10 @@ def main():
             master_addr,
             "--log_level",
             args.log_level,
+            # TODO add dataset_fn arg and remove input_fn in fix:
+            # https://github.com/wangkuiyi/elasticdl/issues/957
+            "--dataset_fn",
+            "dataset_fn",
             "--input_fn",
             args.input_fn,
             "--loss",
@@ -195,6 +211,10 @@ def main():
             args.eval_metrics_fn,
             "--model_def",
             args.model_def,
+            "--job_type",
+            job_type,
+            "--minibatch_size",
+            str(args.minibatch_size),
         ]
 
         worker_manager = WorkerManager(

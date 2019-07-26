@@ -106,6 +106,27 @@ def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
 
+def dataset_fn(dataset):
+    def _parse_data(record):
+        feature_description = {
+            "image": tf.io.FixedLenFeature([32, 32, 3], tf.float32),
+            "label": tf.io.FixedLenFeature([1], tf.int64),
+        }
+        r = tf.io.parse_single_example(record, feature_description)
+        label = r["label"]
+        image = r["image"]
+        return image, label
+
+    dataset = dataset.map(_parse_data)
+    dataset = dataset.map(
+        lambda x, y: (
+            {"image": tf.math.divide(tf.cast(x, tf.float32), 255.0)},
+            tf.cast(y, tf.float32),
+        )
+    )
+    return dataset
+
+
 def input_fn(records):
     feature_description = {
         "image": tf.io.FixedLenFeature([32, 32, 3], tf.float32),

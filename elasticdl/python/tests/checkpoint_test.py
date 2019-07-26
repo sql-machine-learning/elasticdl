@@ -8,6 +8,7 @@ import recordio
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.model_helper import get_model_file, load_module
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
@@ -89,9 +90,12 @@ class CheckpointTest(unittest.TestCase):
             checkpointer = CheckpointService(chkp_dir, 2, 5, False)
             self.assertTrue(checkpointer.is_enabled())
 
+            batch_size = 2
             # Launch the training
             worker = Worker(
                 1,
+                JobType.TRAINING_ONLY,
+                batch_size,
                 _model_file,
                 model_def="test_module.custom_model",
                 channel=None,
@@ -102,7 +106,7 @@ class CheckpointTest(unittest.TestCase):
             )
             master = MasterServicer(
                 2,
-                2,
+                batch_size,
                 worker._opt_fn(),
                 task_d,
                 init_var=worker._model.trainable_variables,
