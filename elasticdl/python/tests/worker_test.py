@@ -8,6 +8,7 @@ import recordio
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.model_helper import get_model_file, load_module
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
@@ -61,8 +62,17 @@ class WorkerTest(unittest.TestCase):
                     self._m._version += 1
                 return self._m.ReportEvaluationMetrics(req, None)
 
+        job_type = (
+            JobType.TRAINING_ONLY if training else JobType.EVALUATION_ONLY
+        )
+        batch_size = 16
         worker = Worker(
-            1, _model_file, model_def="test_module.custom_model", channel=None
+            1,
+            job_type,
+            batch_size,
+            _model_file,
+            model_def="test_module.custom_model",
+            channel=None,
         )
 
         shards = {create_recordio_file(128): 128}
@@ -88,7 +98,7 @@ class WorkerTest(unittest.TestCase):
             evaluation_service = None
         master = MasterServicer(
             2,
-            16,
+            batch_size,
             worker._opt_fn(),
             task_d,
             init_var=[],
@@ -146,9 +156,10 @@ class WorkerTest(unittest.TestCase):
 
             # Create a MasterServicer whose model is initialized from a
             # checkpoint file for prediction tasks
+            batch_size = 3
             master2 = MasterServicer(
                 2,
-                3,
+                batch_size,
                 None,
                 task_d,
                 init_var=init_var,
@@ -158,6 +169,8 @@ class WorkerTest(unittest.TestCase):
             )
             worker = Worker(
                 1,
+                JobType.PREDICT_ONLY,
+                batch_size,
                 _model_file,
                 model_def="test_module.custom_model",
                 channel=None,

@@ -159,13 +159,44 @@ def loss(output, labels):
     labels = tf.reshape(labels, [-1])
     return tf.reduce_mean(
         input_tensor=tf.keras.losses.sparse_categorical_crossentropy(
-            labels, output
+            labels, output, from_logits=True
         )
     )
 
 
-def optimizer(lr=0.1):
-    return tf.optimizers.SGD(lr)
+def optimizer(lr=0.02):
+    return tf.keras.optimizers.SGD(lr)
+
+
+def dataset_fn(dataset):
+    def _parse_data(record):
+        feature_description = {
+            "image": tf.io.FixedLenFeature([], tf.string),
+            "label": tf.io.FixedLenFeature([], tf.int64),
+        }
+        r = tf.io.parse_single_example(record, feature_description)
+        label = r["label"] - 1
+        image = tf.image.resize(
+            tf.image.decode_jpeg(r["image"]),
+            [224, 224],
+            method=tf.image.ResizeMethod.BILINEAR,
+        )
+        image = tf.cond(
+            tf.math.greater(tf.size(image), 244 * 244),
+            lambda: image,
+            lambda: tf.image.grayscale_to_rgb(image),
+        )
+
+        return image, label
+
+    dataset = dataset.map(_parse_data)
+    dataset = dataset.map(
+        lambda x, y: (
+            {"image": tf.math.divide(tf.cast(x, tf.float32), 255.0)},
+            tf.cast(y, tf.float32),
+        )
+    )
+    return dataset
 
 
 def input_fn(records):
@@ -189,7 +220,7 @@ def input_fn(records):
         # processing data
         image = image.astype(np.float32)
         image /= 255
-        
+
         # label should start from 0，now we get start from 1
         label = label - 1
         label = label.astype(np.int32)

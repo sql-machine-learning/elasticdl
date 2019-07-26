@@ -13,6 +13,13 @@ def _parse_args():
     parser.add_argument(
         "--worker_id", help="Id unique to the worker", type=int, required=True
     )
+    parser.add_argument("--job_type", help="training job type", required=True)
+    parser.add_argument(
+        "--minibatch_size",
+        help="minibatch size for worker",
+        type=int,
+        required=True,
+    )
     parser.add_argument("--master_addr", help="Master ip:port", required=True)
     parser.add_argument(
         "--model_zoo",
@@ -26,6 +33,12 @@ def _parse_args():
         type=str.upper,
         default="INFO",
         help="Set the logging level",
+    )
+    parser.add_argument(
+        "--dataset_fn",
+        type=str,
+        default="dataset_fn",
+        help="The name of the dataset function defined in the model file",
     )
     parser.add_argument(
         "--input_fn",
@@ -94,8 +107,11 @@ def main():
     logger.info("Starting worker %d", args.worker_id)
     worker = Worker(
         args.worker_id,
+        args.job_type,
+        args.minibatch_size,
         get_model_file(args.model_zoo, args.model_def),
         channel=channel,
+        dataset_fn=args.dataset_fn,
         input_fn=args.input_fn,
         loss=args.loss,
         optimizer=args.optimizer,

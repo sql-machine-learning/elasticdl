@@ -8,7 +8,11 @@ import grpc
 import recordio
 
 from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.python.common.constants import GRPC, WorkerManagerStatus
+from elasticdl.python.common.constants import (
+    GRPC,
+    JobType,
+    WorkerManagerStatus,
+)
 from elasticdl.python.common.model_helper import (
     get_model_file,
     load_model_from_module,
@@ -144,6 +148,14 @@ def main():
         evaluation_service.start()
         task_d.set_evaluation_service(evaluation_service)
 
+    # TODO: add PREDICT_ONLY
+    if evaluation_only:
+        job_type = JobType.EVALUATION_ONLY
+    elif evaluation_while_training:
+        job_type = JobType.TRAINING_WITH_EVALUATION
+    else:
+        job_type = JobType.TRAINING_ONLY
+
     # The master service
     logger.info("Starting master service")
     server = grpc.server(
@@ -185,6 +197,10 @@ def main():
             master_addr,
             "--log_level",
             args.log_level,
+            # TODO add dataset_fn arg and remove input_fn in fix:
+            # https://github.com/wangkuiyi/elasticdl/issues/957
+            "--dataset_fn",
+            "dataset_fn",
             "--input_fn",
             args.input_fn,
             "--loss",
@@ -195,6 +211,10 @@ def main():
             args.eval_metrics_fn,
             "--model_def",
             args.model_def,
+            "--job_type",
+            job_type,
+            "--minibatch_size",
+            str(args.minibatch_size),
         ]
 
         worker_manager = WorkerManager(

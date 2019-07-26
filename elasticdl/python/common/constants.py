@@ -16,3 +16,10 @@ class ODPSConfig(object):
     ACCESS_ID = "ODPS_ACCESS_ID"
     ACCESS_KEY = "ODPS_ACCESS_KEY"
     ENDPOINT = "ODPS_ENDPOINT"
+
+
+class JobType(object):
+    TRAINING_ONLY = "training_only"
+    EVALUATION_ONLY = "evaluation_only"
+    PREDICT_ONLY = "predict_only"
+    TRAINING_WITH_EVALUATION = "training_with_evaluation"

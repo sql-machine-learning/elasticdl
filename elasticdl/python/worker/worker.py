@@ -8,6 +8,7 @@ import tensorflow as tf
 from tensorflow.python.ops import math_ops
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.model_helper import (
     load_model_from_module,
     load_module,
@@ -28,7 +29,10 @@ class Worker(object):
     def __init__(
         self,
         worker_id,
+        job_type,
+        minibatch_size,
         model_file,
+        dataset_fn="dataset_fn",
         input_fn="input_fn",
         loss="loss",
         optimizer="optimizer",
@@ -47,11 +51,14 @@ class Worker(object):
         """
         self._logger = logging.getLogger(__name__)
         self._worker_id = worker_id
+        self._job_type = job_type
+        self._minibatch_size = minibatch_size
         model_module = load_module(model_file).__dict__
         self._model = load_model_from_module(
             model_def, model_module, model_params
         )
         self._var_created = self._model.built
+        self._dataset_fn = model_module[dataset_fn]
         self._input_fn = model_module[input_fn]
         self._opt_fn = model_module[optimizer]
         self._loss = model_module[loss]
