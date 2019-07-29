@@ -136,7 +136,7 @@ def add_train_params(parser):
     parser.add_argument(
         "--training_data_dir",
         help="Training data directory. Files should be in RecordIO format",
-        required=True,
+        default="",
     )
     parser.add_argument(
         "--evaluation_data_dir",

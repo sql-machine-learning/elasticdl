@@ -50,6 +50,18 @@ def parse_args():
 
     args = parser.parse_args()
 
+    if all(
+        v is "" or v is None
+        for v in [
+            args.training_data_dir,
+            args.evaluation_data_dir,
+            args.prediction_data_dir,
+        ]
+    ):
+        raise ValueError(
+            "At least one of the data directories needs to be provided"
+        )
+
     if args.prediction_data_dir and (
         args.training_data_dir or args.evaluation_data_dir
     ):
