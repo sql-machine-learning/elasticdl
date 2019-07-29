@@ -6,6 +6,7 @@ import tensorflow as tf
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.file_helper import copy_if_not_exists
 from elasticdl.python.common.model_helper import load_from_checkpoint_file
 from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
@@ -149,16 +150,33 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return self._version
 
     def _save_checkpoint(self, locking, is_eval_checkpoint):
-        if locking:
-            self._lock.acquire()
-        pb_model = self._get_model_no_lock()
-        self._checkpoint_service.save(
-            self._version, pb_model, is_eval_checkpoint
-        )
-        checkpoint_version = self._version
-        if locking:
-            self._lock.release()
-        return checkpoint_version
+        try:
+            self._logger.info(
+                "Saving checkpoint for model version %d" % self._version
+            )
+            if locking:
+                self._lock.acquire()
+            pb_model = self._get_model_no_lock()
+            self._checkpoint_service.save(
+                self._version, pb_model, is_eval_checkpoint
+            )
+            checkpoint_version = self._version
+            if locking:
+                self._lock.release()
+            return checkpoint_version
+        except Exception:
+            self._logger.error(
+                "Failed to save checkpoint file for model version %d"
+                % self._version
+            )
+
+    def save_latest_checkpoint(self, output_path):
+        if self._checkpoint_service:
+            self._save_checkpoint(locking=False, is_eval_checkpoint=False)
+            checkpoint_path = self._checkpoint_service.get_checkpoint_path(
+                self._checkpoint_service.get_latest_checkpoint_version()
+            )
+            copy_if_not_exists(checkpoint_path, output_path, is_dir=False)
 
     def _update_evaluation(self):
         if self._evaluation_service:
@@ -171,16 +189,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._checkpoint_service
             and self._checkpoint_service.need_to_checkpoint(self._version)
         ):
-            try:
-                self._logger.info(
-                    "Saving checkpoint for model version %d" % self._version
-                )
-                self._save_checkpoint(locking=False, is_eval_checkpoint=False)
-            except Exception:
-                self._logger.error(
-                    "Failed to save checkpoint file for model version %d"
-                    % self._version
-                )
+            self._save_checkpoint(locking=False, is_eval_checkpoint=False)
 
     def _get_model_no_lock(self):
         pb_model = elasticdl_pb2.Model()

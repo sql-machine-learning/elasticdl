@@ -1,7 +1,6 @@
 import os
 import tempfile
 
-from elasticdl.python.common.file_helper import copy_if_not_exists
 from elasticdl.python.common.model_helper import (
     load_from_checkpoint_file,
     save_checkpoint_to_file,
@@ -107,9 +106,3 @@ class CheckpointService(object):
         if not self._checkpoint_list:
             raise RuntimeError("No model checkpoint available")
         return self._checkpoint_list[-1].version
-
-    def save_latest_checkpoint(self, output_path):
-        checkpoint_path = self.get_checkpoint_path(
-            self.get_latest_checkpoint_version()
-        )
-        copy_if_not_exists(checkpoint_path, output_path, is_dir=False)

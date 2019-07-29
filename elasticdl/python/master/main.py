@@ -246,8 +246,8 @@ def main():
             if task_d.finished():
                 if worker_manager:
                     worker_manager.update_status(WorkerManagerStatus.FINISHED)
-                if args.output and checkpoint_service:
-                    checkpoint_service.save_latest_checkpoint(args.output)
+                if args.output:
+                    master_servicer.save_latest_checkpoint(args.output)
                 break
             time.sleep(30)
     except KeyboardInterrupt:
