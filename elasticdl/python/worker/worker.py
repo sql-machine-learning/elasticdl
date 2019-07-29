@@ -5,7 +5,6 @@ from contextlib import closing
 
 import recordio
 import tensorflow as tf
-from tensorflow.python.ops import math_ops
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType
@@ -171,7 +170,7 @@ class Worker(object):
             loss = self._loss(outputs, labels)
             # Add regularization loss if any
             if self._model.losses:
-                loss += math_ops.add_n(self._model.losses)
+                loss += tf.math.add_n(self._model.losses)
         grads = tape.gradient(loss, self._model.trainable_variables)
         return loss, grads
 
