@@ -69,13 +69,13 @@ class IdentityBlock(tf.keras.Model):
 
     def call(self, inputs, training=False):
         x = self._conv2d_1(inputs)
-        x = self._bn_1(x)
+        x = self._bn_1(x, training=training)
         x = self.activation_1(x)
         x = self._conv2d_2(x)
-        x = self._bn_2(x)
+        x = self._bn_2(x, training=training)
         x = self._activation_2(x)
         x = self._conv2d_3(x)
-        x = self._bn_3(x)
+        x = self._bn_3(x, training=training)
         x = layers.add([x, inputs])
         return self._activation_e3(x)
 
@@ -160,14 +160,14 @@ class ConvBlock(tf.keras.Model):
 
     def call(self, inputs, training=False):
         x = self._conv2d_1(inputs)
-        x = self._bn_1(x)
+        x = self._bn_1(x, training=training)
         x = self._activation_1(x)
         x = self._conv2d_2(x)
-        x = self._bn_2(x)
+        x = self._bn_2(x, training=training)
         x = self._activation_2(x)
         x = self._conv2d_3(x)
-        x = self._bn_3(x)
+        x = self._bn_3(x, training=training)
         shortcut = self._shortcut(inputs)
-        shortcut = self._bn_4(shortcut)
+        shortcut = self._bn_4(shortcut, training=training)
         x = layers.add([x, shortcut])
         return self._activation_4(x)
