@@ -51,7 +51,7 @@ def parse_args():
     args = parser.parse_args()
 
     if all(
-        v is "" or v is None
+        v == "" or v is None
         for v in [
             args.training_data_dir,
             args.evaluation_data_dir,
