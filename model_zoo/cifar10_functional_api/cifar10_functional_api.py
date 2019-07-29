@@ -121,7 +121,7 @@ def dataset_fn(dataset):
     dataset = dataset.map(
         lambda x, y: (
             {"image": tf.math.divide(tf.cast(x, tf.float32), 255.0)},
-            tf.cast(y, tf.float32),
+            tf.cast(y, tf.int32),
         )
     )
     return dataset

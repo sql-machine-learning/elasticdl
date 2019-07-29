@@ -175,7 +175,7 @@ def dataset_fn(dataset):
             "label": tf.io.FixedLenFeature([], tf.int64),
         }
         r = tf.io.parse_single_example(record, feature_description)
-        label = r["label"] - 1
+        label = tf.cast(r["label"] - 1, tf.int32)
         image = tf.image.resize(
             tf.image.decode_jpeg(r["image"]),
             [224, 224],
@@ -193,7 +193,7 @@ def dataset_fn(dataset):
     dataset = dataset.map(
         lambda x, y: (
             {"image": tf.math.divide(tf.cast(x, tf.float32), 255.0)},
-            tf.cast(y, tf.float32),
+            y,
         )
     )
     return dataset
