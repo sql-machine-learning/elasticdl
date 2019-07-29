@@ -7,45 +7,27 @@ from datetime import datetime as _datetime
 from odps.types import Tinyint, Smallint, Int, Bigint, Float, Double, String, Datetime, Boolean, Binary
 
 
-tinyint = Tinyint()
-smallint = Smallint()
-int_ = Int()
-bigint = Bigint()
-float_ = Float()
-double = Double()
-string = String()
-datetime = Datetime()
-boolean = Boolean()
-binary = Binary()
+def _infer_primitive_data_type(value):
+    integer_builtins = (int, np.integer)
+    float_builtins = (float, np.float)
 
-_odps_primitive_data_types = dict(
-    [(t.name, t) for t in (
-        tinyint, smallint, int_, bigint, float_, double, string, datetime,
-        boolean, binary
-    )]
-)
-
-integer_builtins = (int, np.integer)
-float_builtins = (float, np.float)
-
-_odps_primitive_to_builtin_types = OrderedDict((
-    (bigint, integer_builtins),
-    (tinyint, integer_builtins),
-    (smallint, integer_builtins),
-    (int_, integer_builtins),
-    (double, float_builtins),
-    (float_, float_builtins),
-    (string, (str, bytes)),
-    (binary, bytes),
-    (datetime, _datetime),
-    (boolean, bool),
-))
-
-
-def infer_primitive_data_type(value):
-    for data_type, builtin_types in _odps_primitive_to_builtin_types.items():
+    odps_primitive_to_builtin_types = OrderedDict((
+        (Bigint(), integer_builtins),
+        (Tinyint(), integer_builtins),
+        (Smallint(), integer_builtins),
+        (Int(), integer_builtins),
+        (Double(), float_builtins),
+        (Float(), float_builtins),
+        (String(), (str, bytes)),
+        (Binary(), bytes),
+        (Datetime(), _datetime),
+        (Boolean(), bool),
+    ))
+    for data_type, builtin_types in odps_primitive_to_builtin_types.items():
         if isinstance(value, builtin_types):
-            return data_type
+            return builtin_types
+        else:
+            return None
 
 
 def _find_features_indices(
