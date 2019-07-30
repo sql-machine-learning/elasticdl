@@ -1,12 +1,22 @@
-from collections import namedtuple, OrderedDict
 import os
+from collections import OrderedDict, namedtuple
+from datetime import datetime as _datetime
 
 import numpy as np
-import tensorflow as tf
 import recordio
-
-from datetime import datetime as _datetime
-from odps.types import Tinyint, Smallint, Int, Bigint, Float, Double, String, Datetime, Boolean, Binary
+import tensorflow as tf
+from odps.types import (
+    Bigint,
+    Binary,
+    Boolean,
+    Datetime,
+    Double,
+    Float,
+    Int,
+    Smallint,
+    String,
+    Tinyint,
+)
 
 
 def _infer_primitive_data_type(value):
@@ -14,18 +24,20 @@ def _infer_primitive_data_type(value):
     integer_builtins = (int, np.integer)
     float_builtins = (float, np.float)
 
-    odps_primitive_to_builtin_types = OrderedDict((
-        (Bigint(), integer_builtins),
-        (Tinyint(), integer_builtins),
-        (Smallint(), integer_builtins),
-        (Int(), integer_builtins),
-        (Double(), float_builtins),
-        (Float(), float_builtins),
-        (String(), (str, bytes)),
-        (Binary(), bytes),
-        (Datetime(), _datetime),
-        (Boolean(), bool),
-    ))
+    odps_primitive_to_builtin_types = OrderedDict(
+        (
+            (Bigint(), integer_builtins),
+            (Tinyint(), integer_builtins),
+            (Smallint(), integer_builtins),
+            (Int(), integer_builtins),
+            (Double(), float_builtins),
+            (Float(), float_builtins),
+            (String(), (str, bytes)),
+            (Binary(), bytes),
+            (Datetime(), _datetime),
+            (Boolean(), bool),
+        )
+    )
     for data_type, builtin_types in odps_primitive_to_builtin_types.items():
         if isinstance(value, builtin_types):
             return builtin_types
@@ -109,15 +121,24 @@ def _find_feature_indices_from_record(record):
     )
 
 
-def write_recordio_shards_from_iterator(records_iter, features_list, output_dir, records_per_shard):
+def write_recordio_shards_from_iterator(
+    records_iter, features_list, output_dir, records_per_shard
+):
     """Writes RecordIO files from Python iterator of numpy arrays."""
     # Take the first record batch to check whether it contains multiple items
     first_record_batch = next(records_iter)
     is_first_record_batch_consumed = False
-    is_multi_items_per_batch = any(isinstance(i, list) for i in first_record_batch)
+    is_multi_items_per_batch = any(
+        isinstance(i, list) for i in first_record_batch
+    )
 
-    # Find the features of different types that will be used in `_parse_row_to_example`
-    record = first_record_batch[0] if is_multi_items_per_batch else first_record_batch
+    # Find the features of different types that will be used
+    # in `_parse_row_to_example()` later
+    record = (
+        first_record_batch[0]
+        if is_multi_items_per_batch
+        else first_record_batch
+    )
     feature_indices = _find_feature_indices_from_record(record)
 
     writer = None
@@ -125,14 +146,6 @@ def write_recordio_shards_from_iterator(records_iter, features_list, output_dir,
     shards_written = 0
     while True:
         try:
-            # Initialize the writer for the new shard
-            if rows_written % records_per_shard == 0:
-                if writer is not None:
-                    writer.close()
-                shard_file_path = os.path.join(output_dir, "data-%05d" % shards_written)
-                writer = recordio.Writer(shard_file_path)
-                shards_written += 1
-
             # Make sure to consume the first record batch
             if is_first_record_batch_consumed:
                 record_batch = next(records_iter)
@@ -142,13 +155,23 @@ def write_recordio_shards_from_iterator(records_iter, features_list, output_dir,
             if not is_multi_items_per_batch:
                 record_batch = [record_batch]
 
+            # Initialize the writer for the new shard
+            if rows_written % records_per_shard == 0:
+                if writer is not None:
+                    writer.close()
+                shard_file_path = os.path.join(
+                    output_dir, "data-%05d" % shards_written
+                )
+                writer = recordio.Writer(shard_file_path)
+                shards_written += 1
+
             # Write each record in the batch to a RecordIO shard
             for record in record_batch:
                 writer.write(
                     _parse_row_to_example(
-                        record,
-                        features_list,
-                        feature_indices).SerializeToString())
+                        record, features_list, feature_indices
+                    ).SerializeToString()
+                )
                 rows_written += 1
         except StopIteration:
             break

@@ -1,11 +1,11 @@
 import inspect
-import unittest
-import tempfile
 import os
+import tempfile
+import unittest
 
 import numpy as np
 
-from elasticdl.python.common.odps_recordio_converter import (
+from elasticdl.python.common.odps_recordio_conversion_utils import (
     _find_features_indices,
     _maybe_encode_unicode_string,
     _parse_row_to_example,
@@ -13,7 +13,7 @@ from elasticdl.python.common.odps_recordio_converter import (
 )
 
 
-class TestODPSRecordIOConverter(unittest.TestCase):
+class TestODPSRecordIOConversionUtils(unittest.TestCase):
 
     row1 = [61, 5.65, "Cash"]
     row2 = [50, 1.2, "Credit Card"]
@@ -85,20 +85,18 @@ class TestODPSRecordIOConverter(unittest.TestCase):
 
     def test_write_recordio_shards_from_iterator(self):
         records_iter = iter(
-            [
-                [8.0, 10.65, 'Cash', 6],
-                [7.5, 17.8, 'Credit Card', 3]
-            ]
+            [[8.0, 10.65, "Cash", 6], [7.5, 17.8, "Credit Card", 3]]
         )
         with tempfile.TemporaryDirectory() as output_dir:
             write_recordio_shards_from_iterator(
                 records_iter,
-                ['Float1', 'Float2', 'Str1', 'Int1'],
+                ["Float1", "Float2", "Str1", "Int1"],
                 output_dir,
                 records_per_shard=1,
             )
-            self.assertTrue(os.path.exists(os.path.join(output_dir, "data-00000")))
-            self.assertTrue(os.path.exists(os.path.join(output_dir, "data-00001")))
+            self.assertEqual(
+                os.listdir(output_dir), ["data-00000", "data-00001"]
+            )
 
 
 if __name__ == "__main__":
