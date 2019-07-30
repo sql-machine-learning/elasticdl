@@ -14,7 +14,7 @@ class TaskDataService(object):
         self._worker = worker
         self._record_count = 0
         self._reported_record_count = 0
-        self._pending_tasks = []
+        self._pending_tasks_with_data_counts = []
         self._lock = threading.Lock()
         self._current_task = None
         self._pending_dataset = True
@@ -23,23 +23,37 @@ class TaskDataService(object):
         return self._current_task
 
     def report_record_done(self, count, err_msg=""):
+        """
+        Report the number of records in the latest processed batch,
+        so TaskDataService knows if some pending tasks are finished
+        and report_task_result to the master.
+        self._pending_tasks_with_data_counts[0][0] is the first pending task,
+        self._pending_tasks_with_data_counts[0][1] is the number of records
+        in this task.
+        """
         self._reported_record_count += count
         if (
-            len(self._pending_tasks)
-            and self._reported_record_count >= self._pending_tasks[0][1]
+            len(self._pending_tasks_with_data_counts)
+            and self._reported_record_count
+            >= self._pending_tasks_with_data_counts[0][1]
         ):
             with self._lock:
                 while (
-                    len(self._pending_tasks)
+                    len(self._pending_tasks_with_data_counts)
                     and self._reported_record_count
-                    >= self._pending_tasks[0][1]
+                    >= self._pending_tasks_with_data_counts[0][1]
                 ):
-                    task, _ = self._pending_tasks.pop(0)
+                    task, _ = self._pending_tasks_with_data_counts.pop(0)
                     self._worker.report_task_result(task.task_id, err_msg)
-                if len(self._pending_tasks):
-                    self._current_task = self._pending_tasks[0][0]
+                if len(self._pending_tasks_with_data_counts):
+                    self._current_task = self._pending_tasks_with_data_counts[
+                        0
+                    ][0]
 
     def get_dataset(self):
+        """
+        Return a RecordIO dataset, or None if no more data.
+        """
         if self._pending_dataset:
             ds = tf.data.Dataset.from_generator(
                 self.gen, (tf.string), (tf.TensorShape([]))
@@ -50,6 +64,10 @@ class TaskDataService(object):
             return None
 
     def gen(self):
+        """
+        A generator supports the iter() protocol (e.g. a generator function),
+        which is used to create a dataset for RecordIO.
+        """
         while True:
             task = self._worker.get_task()
             if not task.shard_file_name:
@@ -63,8 +81,10 @@ class TaskDataService(object):
                 break
             with self._lock:
                 self._record_count += task.end - task.start
-                self._pending_tasks.append((task, self._record_count))
-                if len(self._pending_tasks) == 1:
+                self._pending_tasks_with_data_counts.append(
+                    (task, self._record_count)
+                )
+                if len(self._pending_tasks_with_data_counts) == 1:
                     self._current_task = task
             with closing(
                 recordio.Scanner(
@@ -72,8 +92,8 @@ class TaskDataService(object):
                 )
             ) as reader:
                 while True:
-                    r = reader.record()
-                    if r:
-                        yield r
+                    record = reader.record()
+                    if record:
+                        yield record
                     else:
                         break
