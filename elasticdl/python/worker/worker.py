@@ -5,9 +5,9 @@ from contextlib import closing
 
 import recordio
 import tensorflow as tf
-from tensorflow.python.ops import math_ops
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.model_helper import (
     load_model_from_module,
     load_module,
@@ -16,6 +16,7 @@ from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
+from elasticdl.python.worker.task_data_service import TaskDataService
 
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.
@@ -69,6 +70,7 @@ class Worker(object):
             self._stub = elasticdl_pb2_grpc.MasterStub(channel)
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._model_version = -1
+        self._task_data_service = TaskDataService(self)
 
     def get_task(self):
         """
@@ -168,7 +170,7 @@ class Worker(object):
             loss = self._loss(outputs, labels)
             # Add regularization loss if any
             if self._model.losses:
-                loss += math_ops.add_n(self._model.losses)
+                loss += tf.math.add_n(self._model.losses)
         grads = tape.gradient(loss, self._model.trainable_variables)
         return loss, grads
 
@@ -207,13 +209,13 @@ class Worker(object):
                 record_buf = self._get_batch(reader, task.minibatch_size)
                 if not record_buf:
                     break
+                # TODO: Discuss how we separate input_fn for different tasks
+                features, labels = self._input_fn(record_buf)
                 min_model_version = self._process_minibatch(
-                    task, record_buf, min_model_version
+                    task, features, labels, min_model_version
                 )
 
-    def _process_minibatch(self, task, record_buf, min_model_version):
-        # TODO: Discuss how we separate input_fn for different tasks
-        features, labels = self._input_fn(record_buf)
+    def _process_minibatch(self, task, features, labels, min_model_version):
         if not self._var_created:
             self._create_variable_and_report(features)
         for _ in range(self._max_minibatch_retry_num):
@@ -254,10 +256,37 @@ class Worker(object):
             raise RuntimeError("Worker got stuck")
         return min_model_version
 
+    def run_with_dataset(self):
+        while True:
+            dataset = self._task_data_service.get_dataset()
+            if not dataset:
+                break
+            dataset = self._dataset_fn(dataset)
+            dataset = dataset.batch(self._minibatch_size).prefetch(1)
+            for d in dataset:
+                task = self._task_data_service.get_current_task()
+                err_msg = ""
+                try:
+                    self._process_minibatch(
+                        task, d[0], d[1], task.model_version
+                    )
+                except RuntimeError as err:
+                    err_msg = str(err)
+                    traceback.print_exc()
+                except Exception as ex:
+                    err_msg = str(ex)
+                    traceback.print_exc()
+                    raise ex
+                self._task_data_service.report_record_done(
+                    self._minibatch_size, err_msg
+                )
+
     def run(self):
         """
         Fetches task from master and performs training or evaluation.
         """
+        if self._job_type == JobType.TRAINING_ONLY:
+            return self.run_with_dataset()
         while True:
             task = self.get_task()
             if not task.shard_file_name:
