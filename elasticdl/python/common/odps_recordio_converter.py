@@ -94,45 +94,48 @@ def _maybe_encode_unicode_string(record):
     return record
 
 
-def write_recordio_from_iterator(records_iter, features_list, output_dir, records_per_shard):
-    """Writes RecordIO files from Python iterator of numpy arrays."""
-    # Take the first record batch to check whether it contains multiple items
-    first_record_batch = records_iter.next()
-    is_first_record_batch_consumed = False
-    is_multi_items_per_batch = any(isinstance(i, list) for i in first_record_batch)
-
-    # Find the features of different types that will be used in `_parse_row_to_example`
-    record = first_record_batch[0] if is_multi_items_per_batch else first_record_batch
+def _find_feature_indices_from_record(record):
+    """Find the indices of different feature types."""
     feature_types = [type(value) for value in record]
     FeatureIndices = namedtuple(
         "FeatureIndices",
         ["int_features", "float_features", "bytes_features"],
         verbose=False,
     )
-    feature_indices = FeatureIndices(
+    return FeatureIndices(
         [i for i, x in enumerate(feature_types) if x == int],
         [i for i, x in enumerate(feature_types) if x == float],
         [i for i, x in enumerate(feature_types) if x == str],
     )
 
-    shard = 0
+
+def write_recordio_shards_from_iterator(records_iter, features_list, output_dir, records_per_shard):
+    """Writes RecordIO files from Python iterator of numpy arrays."""
+    # Take the first record batch to check whether it contains multiple items
+    first_record_batch = next(records_iter)
+    is_first_record_batch_consumed = False
+    is_multi_items_per_batch = any(isinstance(i, list) for i in first_record_batch)
+
+    # Find the features of different types that will be used in `_parse_row_to_example`
+    record = first_record_batch[0] if is_multi_items_per_batch else first_record_batch
+    feature_indices = _find_feature_indices_from_record(record)
+
     writer = None
     rows_written = 0
+    shards_written = 0
     while True:
         try:
             # Initialize the writer for the new shard
             if rows_written % records_per_shard == 0:
                 if writer is not None:
                     writer.close()
-                shard_file_path = os.path.join(output_dir, "data-%05d" % shard)
-                if not os.path.exists(shard_file_path):
-                    os.makedirs(os.path.dirname(shard_file_path))
+                shard_file_path = os.path.join(output_dir, "data-%05d" % shards_written)
                 writer = recordio.Writer(shard_file_path)
-                shard += 1
+                shards_written += 1
 
             # Make sure to consume the first record batch
             if is_first_record_batch_consumed:
-                record_batch = records_iter.next()
+                record_batch = next(records_iter)
             else:
                 record_batch = first_record_batch
                 is_first_record_batch_consumed = True

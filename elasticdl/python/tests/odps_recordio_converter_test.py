@@ -1,5 +1,7 @@
 import inspect
 import unittest
+import tempfile
+import os
 
 import numpy as np
 
@@ -7,6 +9,7 @@ from elasticdl.python.common.odps_recordio_converter import (
     _find_features_indices,
     _maybe_encode_unicode_string,
     _parse_row_to_example,
+    write_recordio_shards_from_iterator,
 )
 
 
@@ -79,6 +82,23 @@ class TestODPSRecordIOConverter(unittest.TestCase):
             self.features_list,
             self.feature_indices,
         )
+
+    def test_write_recordio_shards_from_iterator(self):
+        records_iter = iter(
+            [
+                [8.0, 10.65, 'Cash', 6],
+                [7.5, 17.8, 'Credit Card', 3]
+            ]
+        )
+        with tempfile.TemporaryDirectory() as output_dir:
+            write_recordio_shards_from_iterator(
+                records_iter,
+                ['Float1', 'Float2', 'Str1', 'Int1'],
+                output_dir,
+                records_per_shard=1,
+            )
+            self.assertTrue(os.path.exists(os.path.join(output_dir, "data-00000")))
+            self.assertTrue(os.path.exists(os.path.join(output_dir, "data-00001")))
 
 
 if __name__ == "__main__":
