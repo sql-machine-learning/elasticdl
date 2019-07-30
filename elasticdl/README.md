@@ -137,15 +137,9 @@ This will train MNIST data with a model defined in [model_zoo/mnist_functional_a
 
 ### Test with Kubernetes
 
-We can also test ElasticDL job in a Kubernetes environment using the previously built [image](#the-development-docker-image).
+We can also test ElasticDL job in a Kubernetes cluster using the previously built [image](#the-development-docker-image).
 
-For Minikube, run the following command to launch the job.
-```bash
-kubectl apply -f manifests/examples/elasticdl-demo-minikube.yaml
-```
-Note that in order for Minikube to use local image instead of remote registries, you need to run `eval $(minikube docker-env)` first, and then build the image following [instructions](#the-development-docker-image).
-
-For other Kubernetes clusters, first make sure the built image has been pushed to some registries, and then run the following command to launch the job. 
+First make sure the built image has been pushed to a docker registry, and then run the following command to launch the job. 
 ```bash
 kubectl apply -f manifests/examples/elasticdl-demo-k8s.yaml
 ```
