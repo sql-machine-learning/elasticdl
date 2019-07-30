@@ -12,6 +12,7 @@ from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
+from elasticdl.python.master.checkpoint_service import CheckpointService
 
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
@@ -171,12 +172,18 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             )
 
     def save_latest_checkpoint(self, output_path):
-        if self._checkpoint_service:
-            self._save_checkpoint(locking=False, is_eval_checkpoint=False)
-            checkpoint_path = self._checkpoint_service.get_checkpoint_path(
-                self._checkpoint_service.get_latest_checkpoint_version()
+        if self._checkpoint_service is None:
+            self._checkpoint_service = CheckpointService(
+                checkpoint_dir="",
+                checkpoint_steps=1,
+                keep_checkpoint_max=1,
+                include_evaluation=False,
             )
-            copy_if_not_exists(checkpoint_path, output_path, is_dir=False)
+        self._save_checkpoint(locking=False, is_eval_checkpoint=False)
+        checkpoint_path = self._checkpoint_service.get_checkpoint_path(
+            self._checkpoint_service.get_latest_checkpoint_version()
+        )
+        copy_if_not_exists(checkpoint_path, output_path, is_dir=False)
 
     def _update_evaluation(self):
         if self._evaluation_service:
