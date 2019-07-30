@@ -159,7 +159,7 @@ def loss(output, labels):
     labels = tf.reshape(labels, [-1])
     return tf.reduce_mean(
         input_tensor=tf.keras.losses.sparse_categorical_crossentropy(
-            labels, output, from_logits=True
+            labels, output
         )
     )
 
