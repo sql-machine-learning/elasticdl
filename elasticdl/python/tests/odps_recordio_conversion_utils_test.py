@@ -86,7 +86,6 @@ class TestODPSRecordIOConversionUtils(unittest.TestCase):
     def test_write_recordio_shards_from_iterator(self):
         features_list = ["Float1", "Float2", "Str1", "Int1"]
         # Each batch contains single item
-        # records_per_shard = 1
         records_iter = iter(
             [[8.0, 10.65, "Cash", 6], [7.5, 17.8, "Credit Card", 3]]
         )
@@ -99,7 +98,6 @@ class TestODPSRecordIOConversionUtils(unittest.TestCase):
             )
 
         # Each batch contains multiple items
-        # records_per_shard = 1
         records_iter = iter(
             [
                 [[1.0, 10.65, "Cash", 6], [2.5, 17.8, "Credit Card", 3]],
@@ -113,7 +111,6 @@ class TestODPSRecordIOConversionUtils(unittest.TestCase):
             self.assertEqual(len(os.listdir(output_dir)), 4)
 
         # Each batch contains multiple items with fixed length
-        # records_per_shard = 2
         records_iter = iter(
             [
                 [[1.0, 10.65, "Cash", 6], [2.5, 17.8, "Credit Card", 3]],
@@ -127,7 +124,6 @@ class TestODPSRecordIOConversionUtils(unittest.TestCase):
             self.assertEqual(len(os.listdir(output_dir)), 2)
 
         # Each batch contains multiple items with variable length
-        # records_per_shard = 2
         records_iter = iter(
             [
                 [[1.0, 10.65, "Cash", 6], [2.5, 17.8, "Credit Card", 3]],
