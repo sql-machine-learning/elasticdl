@@ -97,6 +97,19 @@ class TestODPSRecordIOConversionUtils(unittest.TestCase):
             self.assertEqual(
                 os.listdir(output_dir), ["data-00000", "data-00001"]
             )
+        records_iter = iter(
+            [[[8.0, 10.65, "Cash", 6], [7.5, 17.8, "Credit Card", 3]], [[8.0, 10.65, "Cash", 6], [7.5, 17.8, "Credit Card", 3]]]
+        )
+        with tempfile.TemporaryDirectory() as output_dir:
+            write_recordio_shards_from_iterator(
+                records_iter,
+                ["Float1", "Float2", "Str1", "Int1"],
+                output_dir,
+                records_per_shard=1,
+            )
+            self.assertEqual(
+                len(os.listdir(output_dir)), 4
+            )
 
 
 if __name__ == "__main__":
