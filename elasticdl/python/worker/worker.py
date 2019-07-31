@@ -70,7 +70,9 @@ class Worker(object):
             self._stub = elasticdl_pb2_grpc.MasterStub(channel)
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._model_version = -1
-        self._task_data_service = TaskDataService(self)
+        self._task_data_service = TaskDataService(
+            self, self._job_type == JobType.TRAINING_WITH_EVALUATION
+        )
 
     def get_task(self):
         """
@@ -212,14 +214,16 @@ class Worker(object):
                 # TODO: Discuss how we separate input_fn for different tasks
                 features, labels = self._input_fn(record_buf)
                 min_model_version = self._process_minibatch(
-                    task, features, labels, min_model_version
+                    task.type, features, labels, min_model_version
                 )
 
-    def _process_minibatch(self, task, features, labels, min_model_version):
+    def _process_minibatch(
+        self, task_type, features, labels, min_model_version
+    ):
         if not self._var_created:
             self._create_variable_and_report(features)
         for _ in range(self._max_minibatch_retry_num):
-            if task.type == elasticdl_pb2.EVALUATION:
+            if task_type == elasticdl_pb2.EVALUATION:
                 if min_model_version == -1:
                     if self._model_version < 0:
                         self.get_model(0, elasticdl_pb2.MINIMUM)
@@ -228,7 +232,7 @@ class Worker(object):
                 accepted, _ = self._run_evaluation_task(features, labels)
                 if accepted:
                     break
-            elif task.type == elasticdl_pb2.TRAINING:
+            elif task_type == elasticdl_pb2.TRAINING:
                 # TODO: optimize the logic to avoid unnecessary
                 #       get_model call.
                 self.get_model(
@@ -241,20 +245,58 @@ class Worker(object):
                 if accepted:
                     self._logger.info("Loss is %f" % loss.numpy())
                     break
-            elif task.type == elasticdl_pb2.PREDICTION:
+            elif task_type == elasticdl_pb2.PREDICTION:
                 if self._model_version != min_model_version:
                     self.get_model(min_model_version, elasticdl_pb2.FIXED)
                 accepted = self._run_prediction_task(features)
                 if accepted:
                     break
             else:
-                raise RuntimeError("Unrecognized task type, %s" % task.type)
+                raise RuntimeError("Unrecognized task type, %s" % task_type)
         else:
             # Worker got stuck, fail the task.
             # TODO: stop the worker if it fails to make any
             #       progress for some time.
             raise RuntimeError("Worker got stuck")
         return min_model_version
+
+    def _process_eval_task_if_needed(self):
+        """
+        Check if there are evaluation tasks and process the tasks if any.
+        """
+        eval_info = self._task_data_service.get_evaluation_dataset()
+        if not eval_info:
+            return
+        eval_dataset = eval_info[0]
+        model_version = eval_info[1]
+        task_id = eval_info[2]
+        eval_dataset = self._dataset_fn(eval_dataset)
+        eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
+        err_msg = ""
+        for data in eval_dataset:
+            data_err_msg = self._process_minibatch_and_report(
+                data[0], data[1], elasticdl_pb2.EVALUATION, model_version
+            )
+            if data_err_msg:
+                err_msg = data_err_msg
+                break
+        del eval_dataset
+        self.report_task_result(task_id, err_msg)
+
+    def _process_minibatch_and_report(
+        self, features, labels, task_type, model_version
+    ):
+        err_msg = ""
+        try:
+            self._process_minibatch(task_type, features, labels, model_version)
+        except RuntimeError as err:
+            err_msg = str(err)
+            traceback.print_exc()
+        except Exception as ex:
+            err_msg = str(ex)
+            traceback.print_exc()
+            raise ex
+        return err_msg
 
     def run_with_dataset(self):
         while True:
@@ -264,28 +306,25 @@ class Worker(object):
             dataset = self._dataset_fn(dataset)
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
             for d in dataset:
+                if self._job_type == JobType.TRAINING_WITH_EVALUATION:
+                    self._process_eval_task_if_needed()
                 task = self._task_data_service.get_current_task()
-                err_msg = ""
-                try:
-                    self._process_minibatch(
-                        task, d[0], d[1], task.model_version
-                    )
-                except RuntimeError as err:
-                    err_msg = str(err)
-                    traceback.print_exc()
-                except Exception as ex:
-                    err_msg = str(ex)
-                    traceback.print_exc()
-                    raise ex
+                err_msg = self._process_minibatch_and_report(
+                    d[0], d[1], task.type, task.model_version
+                )
                 self._task_data_service.report_record_done(
                     self._minibatch_size, err_msg
                 )
+            del dataset
 
     def run(self):
         """
         Fetches task from master and performs training or evaluation.
         """
-        if self._job_type == JobType.TRAINING_ONLY:
+        if (
+            self._job_type == JobType.TRAINING_ONLY
+            or self._job_type == JobType.TRAINING_WITH_EVALUATION
+        ):
             return self.run_with_dataset()
         while True:
             task = self.get_task()
