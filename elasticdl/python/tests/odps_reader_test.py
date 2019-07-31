@@ -1,8 +1,12 @@
 import os
+import tempfile
 import unittest
 
 from elasticdl.python.common.constants import ODPSConfig
 from elasticdl.python.common.odps_reader import ODPSReader
+from elasticdl.python.common.odps_recordio_conversion_utils import (
+    write_recordio_shards_from_iterator,
+)
 
 
 @unittest.skipIf(
@@ -16,9 +20,7 @@ class ODPSReaderTest(unittest.TestCase):
         self._access_key = os.environ[ODPSConfig.ACCESS_KEY]
         self._endpoint = os.environ[ODPSConfig.ENDPOINT]
         self._table = "chicago_taxi_train_data"
-
-    def test_to_iterator(self):
-        reader = ODPSReader(
+        self.reader = ODPSReader(
             self._project,
             self._access_id,
             self._access_key,
@@ -29,11 +31,23 @@ class ODPSReaderTest(unittest.TestCase):
             None,
         )
 
-        iterator = reader.to_iterator(1, 0, 200, 2, False, None)
-        for batch in iterator:
+    def test_to_iterator(self):
+        records_iter = self.reader.to_iterator(1, 0, 200, 2, False, None)
+        for batch in records_iter:
             self.assertEqual(
                 len(batch), 200, "incompatible size: %d" % len(batch)
             )
+
+    def test_write_odps_to_recordio_shards_from_iterator(self):
+        records_iter = self.reader.to_iterator(1, 0, 200, 2, False, None)
+        with tempfile.TemporaryDirectory() as output_dir:
+            write_recordio_shards_from_iterator(
+                records_iter,
+                ["f" + str(i) for i in range(18)],
+                output_dir,
+                records_per_shard=200,
+            )
+            self.assertEqual(len(os.listdir(output_dir)), 100)
 
 
 if __name__ == "__main__":

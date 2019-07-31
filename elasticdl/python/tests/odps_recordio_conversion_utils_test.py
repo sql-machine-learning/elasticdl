@@ -84,19 +84,58 @@ class TestODPSRecordIOConversionUtils(unittest.TestCase):
         )
 
     def test_write_recordio_shards_from_iterator(self):
+        features_list = ["Float1", "Float2", "Str1", "Int1"]
+        # Each batch contains single item
         records_iter = iter(
             [[8.0, 10.65, "Cash", 6], [7.5, 17.8, "Credit Card", 3]]
         )
         with tempfile.TemporaryDirectory() as output_dir:
             write_recordio_shards_from_iterator(
-                records_iter,
-                ["Float1", "Float2", "Str1", "Int1"],
-                output_dir,
-                records_per_shard=1,
+                records_iter, features_list, output_dir, records_per_shard=1
             )
             self.assertEqual(
                 os.listdir(output_dir), ["data-00000", "data-00001"]
             )
+
+        # Each batch contains multiple items
+        records_iter = iter(
+            [
+                [[1.0, 10.65, "Cash", 6], [2.5, 17.8, "Credit Card", 3]],
+                [[3.0, 10.65, "Cash", 6], [4.5, 17.8, "Credit Card", 3]],
+            ]
+        )
+        with tempfile.TemporaryDirectory() as output_dir:
+            write_recordio_shards_from_iterator(
+                records_iter, features_list, output_dir, records_per_shard=1
+            )
+            self.assertEqual(len(os.listdir(output_dir)), 4)
+
+        # Each batch contains multiple items with fixed length
+        records_iter = iter(
+            [
+                [[1.0, 10.65, "Cash", 6], [2.5, 17.8, "Credit Card", 3]],
+                [[3.0, 10.65, "Cash", 6], [4.5, 17.8, "Credit Card", 3]],
+            ]
+        )
+        with tempfile.TemporaryDirectory() as output_dir:
+            write_recordio_shards_from_iterator(
+                records_iter, features_list, output_dir, records_per_shard=2
+            )
+            self.assertEqual(len(os.listdir(output_dir)), 2)
+
+        # Each batch contains multiple items with variable length
+        records_iter = iter(
+            [
+                [[1.0, 10.65, "Cash", 6], [2.5, 17.8, "Credit Card", 3]],
+                [[3.0, 10.65, "Cash", 6], [4.5, 17.8, "Credit Card", 3]],
+                [[3.0, 10.65, "Cash", 6]],
+            ]
+        )
+        with tempfile.TemporaryDirectory() as output_dir:
+            write_recordio_shards_from_iterator(
+                records_iter, features_list, output_dir, records_per_shard=2
+            )
+            self.assertEqual(len(os.listdir(output_dir)), 3)
 
 
 if __name__ == "__main__":
