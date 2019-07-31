@@ -1,6 +1,6 @@
 import os
-import unittest
 import tempfile
+import unittest
 
 from elasticdl.python.common.constants import ODPSConfig
 from elasticdl.python.common.odps_reader import ODPSReader
@@ -43,13 +43,11 @@ class ODPSReaderTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as output_dir:
             write_recordio_shards_from_iterator(
                 records_iter,
-                ['f' + str(i) for i in range(18)],
+                ["f" + str(i) for i in range(18)],
                 output_dir,
                 records_per_shard=200,
             )
-            self.assertEqual(
-                len(os.listdir(output_dir)), 100
-            )
+            self.assertEqual(len(os.listdir(output_dir)), 100)
 
 
 if __name__ == "__main__":
