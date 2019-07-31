@@ -316,6 +316,9 @@ class Worker(object):
                     self._minibatch_size, err_msg
                 )
             del dataset
+            # There may be still some evaluation tasks left
+            if self._job_type == JobType.TRAINING_WITH_EVALUATION:
+                self._process_eval_task_if_needed()
 
     def run(self):
         """
