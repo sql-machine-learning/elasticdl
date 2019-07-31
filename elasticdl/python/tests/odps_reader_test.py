@@ -38,7 +38,7 @@ class ODPSReaderTest(unittest.TestCase):
                 len(batch), 200, "incompatible size: %d" % len(batch)
             )
 
-    def test_write_odpsrecordio_shards_from_iterator(self):
+    def test_write_odps_to_recordio_shards_from_iterator(self):
         records_iter = self.reader.to_iterator(1, 0, 200, 2, False, None)
         with tempfile.TemporaryDirectory() as output_dir:
             write_recordio_shards_from_iterator(
