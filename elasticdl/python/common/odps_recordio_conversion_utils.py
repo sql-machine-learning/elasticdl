@@ -155,18 +155,18 @@ def write_recordio_shards_from_iterator(
             if not is_multi_items_per_batch:
                 record_batch = [record_batch]
 
-            # Initialize the writer for the new shard
-            if rows_written % records_per_shard == 0:
-                if writer is not None:
-                    writer.close()
-                shard_file_path = os.path.join(
-                    output_dir, "data-%05d" % shards_written
-                )
-                writer = recordio.Writer(shard_file_path)
-                shards_written += 1
-
             # Write each record in the batch to a RecordIO shard
             for record in record_batch:
+                # Initialize the writer for the new shard
+                if rows_written % records_per_shard == 0:
+                    if writer is not None:
+                        writer.close()
+                    shard_file_path = os.path.join(
+                        output_dir, "data-%05d" % shards_written
+                    )
+                    writer = recordio.Writer(shard_file_path)
+                    shards_written += 1
+
                 writer.write(
                     _parse_row_to_example(
                         record, features_list, feature_indices

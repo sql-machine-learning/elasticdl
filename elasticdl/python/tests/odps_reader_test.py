@@ -45,7 +45,7 @@ class ODPSReaderTest(unittest.TestCase):
                 records_iter,
                 ['f' + str(i) for i in range(18)],
                 output_dir,
-                records_per_shard=100,
+                records_per_shard=200,
             )
             self.assertEqual(
                 len(os.listdir(output_dir)), 100
