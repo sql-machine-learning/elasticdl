@@ -47,10 +47,6 @@ def optimizer(lr=0.01):
     return tf.optimizers.SGD(lr)
 
 
-# training argument (boolean): which you can use to
-# specify a different behavior in training
-# if training:
-#     do something
 def dataset_fn(dataset, training=True):
     def _parse_data(record):
         feature_description = {
