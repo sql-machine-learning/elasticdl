@@ -316,7 +316,9 @@ class Worker(object):
                     self._minibatch_size, err_msg
                 )
             del dataset
-            # There may be still some evaluation tasks left
+            # New evaluation tasks may be created after this worker's
+            # training tasks are done, as other workers' may still
+            # have pending training tasks.
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                 self._process_eval_task_if_needed()
 

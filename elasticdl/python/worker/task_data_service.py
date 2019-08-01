@@ -70,10 +70,8 @@ class TaskDataService(object):
             if self._pending_eval_tasks:
                 task = self._pending_eval_tasks.pop(0)
                 shards.append((task.shard_file_name, task.start, task.end))
-                model_version = task.model_version
-                task_id = task.task_id
         if shards:
-            return recordio_dataset(shards), model_version, task_id
+            return recordio_dataset(shards), task.model_version, task.task_id
         else:
             return None
 
