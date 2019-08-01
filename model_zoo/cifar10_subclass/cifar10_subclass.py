@@ -154,34 +154,6 @@ def dataset_fn(dataset):
     return dataset
 
 
-def input_fn(records):
-    feature_description = {
-        "image": tf.io.FixedLenFeature([32, 32, 3], tf.float32),
-        "label": tf.io.FixedLenFeature([1], tf.int64),
-    }
-    image_list = []
-    label_list = []
-    for r in records:
-        # deserialization
-        r = tf.io.parse_single_example(r, feature_description)
-        label = r["label"].numpy()
-        image = r["image"].numpy()
-        # processing data
-        image = image.astype(np.float32)
-        image /= 255
-        label = label.astype(np.int32)
-        image_list.append(image)
-        label_list.append(label)
-
-    # batching
-    batch_size = len(image_list)
-    images = np.concatenate(image_list, axis=0)
-    images = np.reshape(images, (batch_size, 32, 32, 3))
-    images = tf.convert_to_tensor(value=images)
-    labels = np.array(label_list)
-    return ({"image": images}, labels)
-
-
 def eval_metrics_fn(predictions, labels):
     labels = tf.reshape(labels, [-1])
     return {

@@ -199,53 +199,6 @@ def dataset_fn(dataset):
     return dataset
 
 
-def input_fn(records):
-    feature_description = {
-        "image": tf.io.FixedLenFeature([], tf.string),
-        "label": tf.io.FixedLenFeature([], tf.int64),
-    }
-    image_list = []
-    label_list = []
-    for r in records:
-        # deserialization
-        r = tf.io.parse_single_example(r, feature_description)
-        label = r["label"].numpy()
-        image = tf.image.resize(
-            tf.image.decode_jpeg(r["image"]),
-            [224, 224],
-            method=tf.image.ResizeMethod.BILINEAR,
-        )
-        image = image.numpy()
-
-        # processing data
-        image = image.astype(np.float32)
-        image /= 255
-
-        # label should start from 0，now we get start from 1
-        label = label - 1
-        label = label.astype(np.int32)
-
-        # images with only 1 channel
-        if image.shape[-1] == 1:
-            image_list.append(np.repeat(image, 3, axis=-1))
-
-        elif image.shape[-1] == 3:
-            image_list.append(image)
-
-        label_list.append(label)
-
-    # batching
-    batch_size = len(image_list)
-    images = np.concatenate(image_list, axis=0)
-    if tf.keras.backend.image_data_format() == "channels_first":
-        images = np.reshape(images, (batch_size, 3, 224, 224))
-    else:
-        images = np.reshape(images, (batch_size, 224, 224, 3))
-    images = tf.convert_to_tensor(value=images)
-    labels = np.array(label_list)
-    return ({"image": images}, labels)
-
-
 def eval_metrics_fn(predictions, labels):
     labels = tf.reshape(labels, [-1])
     return {

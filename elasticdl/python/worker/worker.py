@@ -1,9 +1,6 @@
 import logging
-import time
 import traceback
-from contextlib import closing
 
-import recordio
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
@@ -33,7 +30,6 @@ class Worker(object):
         minibatch_size,
         model_file,
         dataset_fn="dataset_fn",
-        input_fn="input_fn",
         loss="loss",
         optimizer="optimizer",
         eval_metrics_fn="eval_metrics_fn",
@@ -59,7 +55,6 @@ class Worker(object):
         )
         self._var_created = self._model.built
         self._dataset_fn = model_module[dataset_fn]
-        self._input_fn = model_module[input_fn]
         self._opt_fn = model_module[optimizer]
         self._loss = model_module[loss]
         self._eval_metrics_fn = model_module[eval_metrics_fn]
@@ -200,23 +195,6 @@ class Worker(object):
         predictions = self.predict_process(features)
         return self.report_prediction_outputs(predictions)
 
-    def _handle_task(self, task):
-        min_model_version = task.model_version
-        with closing(
-            recordio.Scanner(
-                task.shard_file_name, task.start, task.end - task.start
-            )
-        ) as reader:
-            while True:
-                record_buf = self._get_batch(reader, task.minibatch_size)
-                if not record_buf:
-                    break
-                # TODO: Discuss how we separate input_fn for different tasks
-                features, labels = self._input_fn(record_buf)
-                min_model_version = self._process_minibatch(
-                    task.type, features, labels, min_model_version
-                )
-
     def _process_minibatch(
         self, task_type, features, labels, min_model_version
     ):
@@ -298,7 +276,10 @@ class Worker(object):
             raise ex
         return err_msg
 
-    def run_with_dataset(self):
+    def run(self):
+        """
+        Fetches task from master with and performs training or evaluation.
+        """
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
@@ -321,36 +302,3 @@ class Worker(object):
             # have pending training tasks.
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                 self._process_eval_task_if_needed()
-
-    def run(self):
-        """
-        Fetches task from master and performs training or evaluation.
-        """
-        if (
-            self._job_type == JobType.TRAINING_ONLY
-            or self._job_type == JobType.TRAINING_WITH_EVALUATION
-        ):
-            return self.run_with_dataset()
-        while True:
-            task = self.get_task()
-            if not task.shard_file_name:
-                if task.type == elasticdl_pb2.WAIT:
-                    # Wait a few seconds then try to get_task again
-                    time.sleep(5)
-                    continue
-                else:
-                    # No more task
-                    self._logger.info("No more task, stopping")
-                    break
-            self._logger.info("Receive a new task: %d", task.task_id)
-            err_msg = ""
-            try:
-                self._handle_task(task)
-            except RuntimeError as err:
-                err_msg = str(err)
-                traceback.print_exc()
-            except Exception as ex:
-                err_msg = str(ex)
-                traceback.print_exc()
-                raise ex
-            self.report_task_result(task.task_id, err_msg)

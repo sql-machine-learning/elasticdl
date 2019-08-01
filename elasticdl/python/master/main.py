@@ -197,12 +197,8 @@ def main():
             master_addr,
             "--log_level",
             args.log_level,
-            # TODO add dataset_fn arg and remove input_fn in fix:
-            # https://github.com/wangkuiyi/elasticdl/issues/957
             "--dataset_fn",
-            "dataset_fn",
-            "--input_fn",
-            args.input_fn,
+            args.dataset_fn,
             "--loss",
             args.loss,
             "--optimizer",
