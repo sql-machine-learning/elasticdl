@@ -80,10 +80,10 @@ def add_common_params(parser):
         required=True,
     )
     parser.add_argument(
-        "--input_fn",
+        "--dataset_fn",
         type=str,
-        default="input_fn",
-        help="The name of the input function defined in the model file",
+        default="dataset_fn",
+        help="The name of the dataset function defined in the model file",
     )
     parser.add_argument(
         "--eval_metrics_fn",
