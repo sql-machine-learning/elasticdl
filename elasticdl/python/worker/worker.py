@@ -248,7 +248,7 @@ class Worker(object):
         eval_dataset = eval_info[0]
         model_version = eval_info[1]
         task_id = eval_info[2]
-        eval_dataset = self._dataset_fn(eval_dataset)
+        eval_dataset = self._dataset_fn(eval_dataset, training=False)
         eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
         err_msg = ""
         for data in eval_dataset:
@@ -280,11 +280,15 @@ class Worker(object):
         """
         Fetches task from master with and performs training or evaluation.
         """
+        job_is_training = (
+            self._job_type == JobType.TRAINING_ONLY
+            or self._job_type == JobType.TRAINING_WITH_EVALUATION
+        )
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
                 break
-            dataset = self._dataset_fn(dataset)
+            dataset = self._dataset_fn(dataset, training=job_is_training)
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
             for d in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:

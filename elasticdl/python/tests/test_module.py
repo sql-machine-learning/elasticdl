@@ -13,7 +13,7 @@ def loss(predictions, labels):
     return tf.reduce_mean(tf.square(predictions - labels))
 
 
-def dataset_fn(dataset):
+def dataset_fn(dataset, training=True):
     def _parse_data(record):
         feature_description = {
             "x": tf.io.FixedLenFeature([1], tf.float32),
