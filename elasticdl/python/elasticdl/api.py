@@ -1,3 +1,4 @@
+import logging
 import os
 
 from elasticdl.python.common import k8s_client as k8s
@@ -149,7 +150,7 @@ def _submit_job(image_name, client_args, container_args):
         restart_policy=client_args.restart_policy,
         volume=client_args.volume,
     )
-    print(
+    logging.info(
         "ElasticDL job %s was successfully submitted. The master pod is: %s."
         % (client_args.job_name, client.get_master_pod_name())
     )

@@ -1,3 +1,4 @@
+import logging
 import random
 from concurrent.futures import ThreadPoolExecutor as Executor
 from queue import Queue
@@ -78,7 +79,7 @@ def _read_odps_one_shot(
 
             if retry_count >= max_retries:
                 raise
-            print(
+            logging.warning(
                 "ODPS read exception {} for {} in {}. retrying {} time".format(
                     e, columns, table, retry_count
                 )

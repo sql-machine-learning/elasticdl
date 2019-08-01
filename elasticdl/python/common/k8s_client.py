@@ -253,7 +253,7 @@ class Client(object):
         return self.client.create_namespaced_pod(self.namespace, pod)
 
     def delete_master(self):
-        print("pod name is %s" % self.get_master_pod_name())
+        self._logger.info("pod name is %s" % self.get_master_pod_name())
         self.client.delete_namespaced_pod(
             self.get_master_pod_name(),
             self.namespace,
