@@ -6,14 +6,17 @@ import recordio
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.dataset import recordio_dataset
 
 
 class TaskDataService(object):
-    def __init__(self, worker):
+    def __init__(self, worker, training_with_evaluation):
         self._logger = logging.getLogger(__name__)
         self._worker = worker
+        self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
         self._pending_dataset = True
+        self._pending_eval_tasks = []
         self._reset()
 
     def _reset(self):
@@ -54,6 +57,24 @@ class TaskDataService(object):
                 if len(self._pending_tasks_with_counts):
                     self._current_task = self._pending_tasks_with_counts[0][0]
 
+    def get_evaluation_dataset(self):
+        """
+        If there are _pending_eval_tasks, return a RecordIO dataset for
+        an evaluation task and its corresponding model version, task_id.
+        Return None if no _pending_eval_tasks.
+        """
+        if not self._pending_eval_tasks:
+            return None
+        shards = []
+        with self._lock:
+            if self._pending_eval_tasks:
+                task = self._pending_eval_tasks.pop(0)
+                shards.append((task.shard_file_name, task.start, task.end))
+        if shards:
+            return recordio_dataset(shards), task.model_version, task.task_id
+        else:
+            return None
+
     def get_dataset(self):
         """
         Return a RecordIO dataset, or None if no more data.
@@ -90,6 +111,12 @@ class TaskDataService(object):
                     self._logger.info("No more task, stopping")
                 break
             with self._lock:
+                if (
+                    self._training_with_evaluation
+                    and task.type == elasticdl_pb2.EVALUATION
+                ):
+                    self._pending_eval_tasks.append(task)
+                    continue
                 self._record_count += task.end - task.start
                 self._pending_tasks_with_counts.append(
                     (task, self._record_count)
