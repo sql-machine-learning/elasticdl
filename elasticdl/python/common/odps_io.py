@@ -6,6 +6,7 @@ from queue import Queue
 import numpy as np
 import odps
 from odps import ODPS
+from odps.models import Schema
 
 
 def _nested_list_size(l):
@@ -88,6 +89,22 @@ def _read_odps_one_shot(
             retry_count += 1
 
 
+def _configure_odps_options(endpoint, options=None):
+    odps.options.retry_times = options.get("odps.options.retry_times", 5)
+    odps.options.read_timeout = options.get("odps.options.read_timeout", 200)
+    odps.options.connect_timeout = options.get(
+        "odps.options.connect_timeout", 200
+    )
+    odps.options.tunnel.endpoint = options.get(
+        "odps.options.tunnel.endpoint", None
+    )
+    if (
+        odps.options.tunnel.endpoint is None
+        and "service.odps.aliyun-inc.com/api" in endpoint
+    ):
+        odps.options.tunnel.endpoint = "http://dt.odps.aliyun-inc.com"
+
+
 class ODPSReader(object):
     def __init__(
         self,
@@ -127,23 +144,7 @@ class ODPSReader(object):
         self._table = table
         self._partition = partition
         self._num_processes = num_processes
-        self._options = options
-
-        odps.options.retry_times = options.get("odps.options.retry_times", 5)
-        odps.options.read_timeout = options.get(
-            "odps.options.read_timeout", 200
-        )
-        odps.options.connect_timeout = options.get(
-            "odps.options.connect_timeout", 200
-        )
-        odps.options.tunnel.endpoint = options.get(
-            "odps.options.tunnel.endpoint", None
-        )
-        if (
-            odps.options.tunnel.endpoint is None
-            and "service.odps.aliyun-inc.com/api" in self._endpoint
-        ):
-            odps.options.tunnel.endpoint = "http://dt.odps.aliyun-inc.com"
+        _configure_odps_options(self._endpoint, options)
 
     def to_iterator(
         self,
@@ -312,3 +313,77 @@ class ODPSReader(object):
         cache_batch_count_estimate = max(int(upper_bound / size_per_batch), 1)
 
         return min(cache_batch_count_estimate, max_cache_batch_count)
+
+
+class ODPSWriter(object):
+    def __init__(
+        self,
+        project,
+        access_id,
+        access_key,
+        endpoint,
+        table,
+        columns=None,
+        column_types=None,
+        options=None,
+    ):
+        """
+        Constructs a `ODPSWriter` instance.
+
+        Args:
+            project: Name of the ODPS project.
+            access_id: ODPS user access ID.
+            access_key: ODPS user access key.
+            endpoint: ODPS cluster endpoint.
+            table: ODPS table name.
+            columns: The list of column names in the table,
+                which will be inferred if the table exits.
+            column_types" The list of column types in the table,
+                which will be inferred if the table exits.
+            options: Other options passed to ODPS context.
+        """
+        super(ODPSWriter, self).__init__()
+
+        if table.find(".") > 0:
+            project, table = table.split(".")
+        if options is None:
+            options = {}
+        self._project = project
+        self._access_id = access_id
+        self._access_key = access_key
+        self._endpoint = endpoint
+        self._table = table
+        self._columns = columns
+        self._column_types = column_types
+        self._odps_table = None
+        _configure_odps_options(self._endpoint, options)
+        self._odps_client = ODPS(
+            self._access_id, self._access_key, self._project, self._endpoint
+        )
+
+    def _initialize_table(self):
+        if self._odps_client.exist_table(self._table, self._project):
+            self._odps_table = self._odps_client.get_table(
+                self._table, self._project
+            )
+        else:
+            if self._columns is None or self._column_types is None:
+                raise ValueError(
+                    "columns and column_types need to be "
+                    "specified for non-existing table."
+                )
+            schema = Schema.from_lists(
+                self._columns, self._column_types, ["worker"], ["string"]
+            )
+            self._odps_table = self._odps_client.create_table(
+                self._table, schema
+            )
+
+    def from_iterator(self, records_iter, worker_index):
+        if self._odps_table is None:
+            self._initialize_table()
+        with self._odps_table.open_writer(
+            partition="worker=" + str(worker_index), create_partition=True
+        ) as writer:
+            for records in records_iter:
+                writer.write(records)
