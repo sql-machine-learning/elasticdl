@@ -52,7 +52,7 @@ def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
 
-def dataset_fn(dataset):
+def dataset_fn(dataset, training=True):
     def _parse_data(record):
         feature_description = {
             "image": tf.io.FixedLenFeature([28, 28], tf.float32),
@@ -70,6 +70,8 @@ def dataset_fn(dataset):
             tf.cast(y, tf.int32),
         )
     )
+    if training:
+        dataset = dataset.shuffle(buffer_size=1024)
     return dataset
 
 

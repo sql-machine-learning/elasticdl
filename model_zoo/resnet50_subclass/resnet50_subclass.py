@@ -168,7 +168,7 @@ def optimizer(lr=0.02):
     return tf.keras.optimizers.SGD(lr)
 
 
-def dataset_fn(dataset):
+def dataset_fn(dataset, training=True):
     def _parse_data(record):
         feature_description = {
             "image": tf.io.FixedLenFeature([], tf.string),
@@ -196,6 +196,8 @@ def dataset_fn(dataset):
             y,
         )
     )
+    if training:
+        dataset = dataset.shuffle(buffer_size=1024)
     return dataset
 
 
