@@ -1,5 +1,6 @@
 import argparse
 import glob
+import logging
 import os
 import tarfile
 from contextlib import closing
@@ -11,7 +12,7 @@ from elasticdl.python.common.model_helper import load_module
 
 
 def write_to_recordio(filename, data_list):
-    print("Writing to file:", filename)
+    logging.info("Writing to file:", filename)
     with closing(recordio.Writer(filename)) as f:
         for d in data_list:
             f.write(d)

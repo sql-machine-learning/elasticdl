@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 import uuid
@@ -169,13 +170,13 @@ def _print_docker_progress(line):
         raise RuntimeError("Docker image build: " + error)
     stream = line.get("stream", None)
     if stream:
-        print(stream)
+        logging.info(stream)
     else:
-        print(line)
+        logging.info(line)
 
 
 def _build_docker_image(client, ctx_dir, dockerfile, image_name):
-    print("===== Building Docker Image =====")
+    logging.info("===== Building Docker Image =====")
     for line in client.build(
         dockerfile=dockerfile,
         path=ctx_dir,
@@ -187,6 +188,6 @@ def _build_docker_image(client, ctx_dir, dockerfile, image_name):
 
 
 def _push_docker_image(client, image_name):
-    print("===== Pushing Docker Image =====")
+    logging.info("===== Pushing Docker Image =====")
     for line in client.push(image_name, stream=True, decode=True):
         _print_docker_progress(line)
