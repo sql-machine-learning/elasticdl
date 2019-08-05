@@ -220,3 +220,16 @@ def add_evaluate_params(parser):
         help="The checkpoint file to initialize the training model",
         required=True,
     )
+
+
+def add_predict_params(parser):
+    parser.add_argument(
+        "--prediction_data_dir",
+        help="Prediction data directory. Files should be in RecordIO format",
+        required=True,
+    )
+    parser.add_argument(
+        "--checkpoint_filename_for_init",
+        help="The checkpoint file to initialize the training model",
+        required=True,
+    )

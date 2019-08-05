@@ -34,7 +34,7 @@ def parse_args():
         "--worker_pod_priority", help="Priority requested by workers"
     )
     parser.add_argument(
-        "---prediction_data_dir",
+        "--prediction_data_dir",
         help="Prediction data directory. Files should be in RecordIO format",
         default="",
     )

@@ -86,10 +86,12 @@ def main():
 
     # Start task queue
     logger.info(
-        "Starting task queue with training data directory %s "
-        "and evaluation data directory %s",
+        "Starting task queue with training data directory %s , "
+        "evaluation data directory %s, ",
+        "and prediction data directory %s",
         args.training_data_dir,
         args.evaluation_data_dir,
+        args.prediction_data_dir,
     )
     task_d = _make_task_dispatcher(
         args.training_data_dir,
@@ -106,7 +108,6 @@ def main():
     )
     optimizer = model_module[args.optimizer]()
 
-    # TODO: add PREDICTION_ONLY
     if all(
         (
             args.training_data_dir,
@@ -115,8 +116,22 @@ def main():
         )
     ):
         job_type = JobType.TRAINING_WITH_EVALUATION
-    elif args.evaluation_data_dir and not args.training_data_dir:
+    elif all(
+        (
+            args.evaluation_data_dir,
+            not args.training_data_dir,
+            not args.prediction_data_dir,
+        )
+    ):
         job_type = JobType.EVALUATION_ONLY
+    elif all(
+        (
+            args.prediction_data_dir,
+            not args.evaluation_data_dir,
+            not args.training_data_dir,
+        )
+    ):
+        job_type = JobType.PREDICTION_ONLY
     else:
         job_type = JobType.TRAINING_ONLY
 
