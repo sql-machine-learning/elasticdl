@@ -7,6 +7,13 @@ from elasticdl.python.elasticdl.image_builder import (
 )
 
 
+logging.basicConfig(
+    format="%(asctime)s %(name)s %(levelname)-8s "
+    "[%(filename)s:%(lineno)d] %(message)s"
+)
+logging.getLogger().setLevel("INFO")
+
+
 def train(args):
     image_name = build_and_push_docker_image(
         model_zoo=args.model_zoo,
