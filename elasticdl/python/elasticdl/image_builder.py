@@ -8,7 +8,6 @@ import docker
 
 from elasticdl.python.common.file_helper import copy_if_not_exists
 
-
 logging.basicConfig(
     format="%(asctime)s %(name)s %(levelname)-8s "
     "[%(filename)s:%(lineno)d] %(message)s"

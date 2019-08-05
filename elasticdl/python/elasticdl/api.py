@@ -6,7 +6,6 @@ from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
 )
 
-
 logging.basicConfig(
     format="%(asctime)s %(name)s %(levelname)-8s "
     "[%(filename)s:%(lineno)d] %(message)s"
