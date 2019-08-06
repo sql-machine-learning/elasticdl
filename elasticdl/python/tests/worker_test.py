@@ -125,65 +125,6 @@ class WorkerTest(unittest.TestCase):
     def test_distributed_evaluate_tf_example(self):
         self.distributed_train_and_evaluate(training=False)
 
-    def test_distributed_predict(self):
-        init_var = m["custom_model"]().trainable_variables
-        with tempfile.TemporaryDirectory() as tempdir:
-            chkp_dir = os.path.join(tempdir, "testInitFromCheckpoint")
-            os.makedirs(chkp_dir)
-            master = MasterServicer(
-                2,
-                3,
-                None,
-                None,
-                init_var=init_var,
-                checkpoint_filename_for_init="",
-                checkpoint_service=CheckpointService(chkp_dir, 2, 3, False),
-                evaluation_service=None,
-            )
-            req = elasticdl_pb2.GetModelRequest()
-            req.method = elasticdl_pb2.MINIMUM
-            req.version = 0
-            model = master.GetModel(req, None)
-            master._checkpoint_service.save(master._version, model, False)
-
-            chkp_file = master._checkpoint_service.get_checkpoint_path(
-                master._version
-            )
-            prediction_shards = {create_recordio_file(128): 128}
-            task_d = _TaskDispatcher(
-                {}, {}, prediction_shards, records_per_task=64, num_epochs=1
-            )
-
-            # Create a MasterServicer whose model is initialized from a
-            # checkpoint file for prediction tasks
-            batch_size = 3
-            master2 = MasterServicer(
-                2,
-                batch_size,
-                None,
-                task_d,
-                init_var=init_var,
-                checkpoint_filename_for_init=chkp_file,
-                checkpoint_service=None,
-                evaluation_service=None,
-            )
-            worker = Worker(
-                1,
-                JobType.PREDICTION_ONLY,
-                batch_size,
-                _model_file,
-                model_def="test_module.custom_model",
-                channel=None,
-            )
-            worker._stub = InProcessMaster(master2)
-            worker.run()
-
-            req = elasticdl_pb2.GetTaskRequest()
-            req.worker_id = 1
-            task = master2.GetTask(req, None)
-            # No more task.
-            self.assertTrue(not task.shard_file_name)
-
 
 if __name__ == "__main__":
     unittest.main()
