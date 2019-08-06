@@ -1,4 +1,3 @@
-import logging
 import os
 import time
 from concurrent import futures
@@ -13,6 +12,7 @@ from elasticdl.python.common.constants import (
     JobType,
     WorkerManagerStatus,
 )
+from elasticdl.python.common.log_util import get_logger
 from elasticdl.python.common.model_helper import (
     get_model_file,
     load_model_from_module,
@@ -60,14 +60,7 @@ def _make_task_dispatcher(
 
 def main():
     args = parse_args()
-
-    # Initialize logger and set level for ROOT logger
-    logging.basicConfig(
-        format="%(asctime)s %(name)s %(levelname)-8s "
-        "[%(filename)s:%(lineno)d] %(message)s"
-    )
-    logging.getLogger().setLevel(args.log_level)
-    logger = logging.getLogger(__name__)
+    logger = get_logger("master", level=args.log_level.upper())
 
     # Master addr
     master_ip = os.getenv("MY_POD_IP", "localhost")

@@ -1,4 +1,3 @@
-import logging
 import threading
 
 import numpy as np
@@ -7,6 +6,7 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.file_helper import copy_if_not_exists
+from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.model_helper import load_from_checkpoint_file
 from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
@@ -31,7 +31,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         evaluation_service,
     ):
         # TODO: group params together into a single object.
-        self._logger = logging.getLogger(__name__)
+        self._logger = logger
         self._opt = optimizer
         self._task_d = task_d
         self._lock = threading.Lock()

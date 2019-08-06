@@ -1,4 +1,3 @@
-import logging
 import os
 import threading
 import traceback
@@ -13,6 +12,7 @@ from kubernetes.client import (
 
 from elasticdl.python.common.k8s_resource import parse as parse_resource
 from elasticdl.python.common.k8s_volume import parse as parse_volume
+from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.model_helper import load_module
 
 ELASTICDL_APP_NAME = "elasticdl"
@@ -53,7 +53,7 @@ class Client(object):
         self.client = client.CoreV1Api()
         self.namespace = namespace
         self.job_name = job_name
-        self._logger = logging.getLogger(__name__)
+        self._logger = logger
         self._image_name = image_name
         self._event_cb = event_callback
         if self._event_cb:

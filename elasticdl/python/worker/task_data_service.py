@@ -1,4 +1,3 @@
-import logging
 import threading
 from contextlib import closing
 
@@ -7,11 +6,12 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.dataset import recordio_dataset
+from elasticdl.python.common.log_util import default_logger as logger
 
 
 class TaskDataService(object):
     def __init__(self, worker, training_with_evaluation):
-        self._logger = logging.getLogger(__name__)
+        self._logger = logger
         self._worker = worker
         self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()

@@ -1,4 +1,3 @@
-import logging
 import threading
 import time
 from collections import defaultdict
@@ -6,6 +5,7 @@ from threading import Thread
 
 import numpy as np
 
+from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.ndarray import tensor_to_ndarray
 
 
@@ -13,7 +13,7 @@ class _EvaluationJob(object):
     """Representation of an evaluation job"""
 
     def __init__(self, model_version, total_tasks=-1):
-        self._logger = logging.getLogger(__name__)
+        self._logger = logger
         self.model_version = model_version
         self._total_tasks = total_tasks
         self._completed_tasks = 0
@@ -101,7 +101,7 @@ class EvaluationService(object):
         eval_steps,
         eval_only,
     ):
-        self._logger = logging.getLogger(__name__)
+        self._logger = logger
         self._checkpoint_service = checkpoint_service
         self._tensorboard_service = tensorboard_service
         self._task_d = task_d

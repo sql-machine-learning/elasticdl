@@ -1,10 +1,10 @@
 """TaskQueue Implementation"""
 
-import logging
 import random
 import threading
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.log_util import default_logger as logger
 
 
 class _Task(object):
@@ -50,7 +50,7 @@ class _TaskDispatcher(object):
             num_epochs: The total number of epochs for the tasks where
                 an epoch is a complete iteration over the shards.
         """
-        self._logger = logging.getLogger(__name__)
+        self._logger = logger
         self._lock = threading.Lock()
 
         self._num_epochs = num_epochs

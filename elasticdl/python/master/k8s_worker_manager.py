@@ -1,10 +1,10 @@
 import itertools
-import logging
 import threading
 from collections import Counter
 
 from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
+from elasticdl.python.common.log_util import default_logger as logger
 
 
 class WorkerManager(object):
@@ -22,7 +22,7 @@ class WorkerManager(object):
         restart_policy="Never",
         **kwargs
     ):
-        self._logger = logging.getLogger(__name__)
+        self._logger = logger
         self._command = command
         self._args = args
         self._num_workers = num_workers

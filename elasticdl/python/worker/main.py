@@ -1,8 +1,8 @@
 import argparse
-import logging
 
 import grpc
 
+from elasticdl.python.common import log_util
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.common.model_helper import get_model_file
 from elasticdl.python.worker.worker import Worker
@@ -90,13 +90,7 @@ def main():
         ],
     )
 
-    # Initialize logger
-    logging.basicConfig(
-        format="%(asctime)s %(name)s %(levelname)-8s "
-        "[%(filename)s:%(lineno)d] %(message)s"
-    )
-    logging.getLogger().setLevel(args.log_level)
-    logger = logging.getLogger(__name__)
+    logger = log_util.get_logger(__name__)
 
     logger.info("Starting worker %d", args.worker_id)
     worker = Worker(

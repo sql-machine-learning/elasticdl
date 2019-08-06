@@ -13,6 +13,12 @@ def convert(x, y, args, subdir):
     """Convert pairs of image and label in NumPy arrays into a set of
     RecordIO files.
     """
+    logging.basicConfig(
+        format="%(asctime)s %(name)s %(levelname)-8s "
+        "[%(filename)s:%(lineno)d] %(message)s"
+    )
+    logger = logging.getLogger("image_label::convert")
+    logger.setLevel("INFO")
     row = 0
     shard = 0
     w = None
@@ -24,7 +30,7 @@ def convert(x, y, args, subdir):
             fn = os.path.join(dn, "data-%05d" % (shard))
             if not os.path.exists(dn):
                 os.makedirs(os.path.dirname(fn))
-            logging.info("Writing {} ...".format(fn))
+            logger.info("Writing {} ...".format(fn))
             w = recordio.Writer(fn)
             shard = shard + 1
 
@@ -48,7 +54,7 @@ def convert(x, y, args, subdir):
         )
         row = row + 1
     w.close()
-    logging.info(
+    logger.info(
         "Wrote {} of total {} records into {} files".format(
             row, x.shape[0], shard
         )
