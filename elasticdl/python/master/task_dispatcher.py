@@ -71,6 +71,8 @@ class _TaskDispatcher(object):
             self.create_training_tasks()
         elif self._evaluation_shards:
             self.create_evaluation_tasks(-1)
+        elif self._prediction_shards:
+            self.create_prediction_tasks(-1)
 
     def create_training_tasks(self):
         self._logger.info(
@@ -97,12 +99,18 @@ class _TaskDispatcher(object):
             self._todo.extend(tasks)
         return tasks
 
-    def create_prediction_tasks(self):
-        self._logger.info("Creating a new set of prediction tasks")
-        tasks = self._create_tasks(
-            self._prediction_shards, elasticdl_pb2.PREDICTION
+    def create_prediction_tasks(self, predict_model_version):
+        self._logger.info(
+            "Creating a new set of prediction tasks for model version %d",
+            predict_model_version,
         )
-        self._todo.extend(tasks)
+        tasks = self._create_tasks(
+            self._prediction_shards,
+            elasticdl_pb2.PREDICTION,
+            predict_model_version,
+        )
+        with self._lock:
+            self._todo.extend(tasks)
         return tasks
 
     def _create_tasks(self, shards, task_type, model_version=-1):
@@ -129,11 +137,8 @@ class _TaskDispatcher(object):
             if not self._todo and self._epoch < self._num_epochs - 1:
                 # Start a new epoch
                 self._epoch += 1
-                if self._prediction_shards:
-                    self.create_prediction_tasks()
-                else:
-                    self.create_training_tasks()
-                    self._logger.info("Starting epoch %d", self._epoch)
+                self.create_training_tasks()
+                self._logger.info("Starting epoch %d", self._epoch)
 
             if not self._todo:
                 # No more tasks

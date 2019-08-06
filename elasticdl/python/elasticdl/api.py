@@ -138,6 +138,55 @@ def evaluate(args):
     _submit_job(image_name, args, container_args)
 
 
+def predict(args):
+    image_name = build_and_push_docker_image(
+        model_zoo=args.model_zoo,
+        base_image=args.image_base,
+        docker_image_prefix=args.docker_image_prefix,
+        extra_pypi=args.extra_pypi_index,
+        cluster_spec=args.cluster_spec,
+    )
+    container_args = [
+        "-m",
+        "elasticdl.python.master.main",
+        "--job_name",
+        args.job_name,
+        "--worker_image",
+        image_name,
+        "--model_zoo",
+        _model_zoo_in_docker(args.model_zoo),
+        "--cluster_spec",
+        _cluster_spec_def_in_docker(args.cluster_spec),
+        "--num_workers",
+        str(args.num_workers),
+        "--worker_resource_request",
+        args.worker_resource_request,
+        "--worker_resource_limit",
+        args.worker_resource_limit,
+        "--namespace",
+        args.namespace,
+        "--records_per_task",
+        str(args.records_per_task),
+        "--minibatch_size",
+        str(args.minibatch_size),
+        "--prediction_data_dir",
+        args.prediction_data_dir,
+        "--checkpoint_filename_for_init",
+        args.checkpoint_filename_for_init,
+        "--dataset_fn",
+        args.dataset_fn,
+        "--model_def",
+        args.model_def,
+        "--model_params",
+        args.model_params,
+    ]
+    container_args.extend(["--image_pull_policy", args.image_pull_policy])
+    container_args.extend(["--restart_policy", args.restart_policy])
+    container_args.extend(["--volume", args.volume])
+
+    _submit_job(image_name, args, container_args)
+
+
 def _submit_job(image_name, client_args, container_args):
     client = k8s.Client(
         image_name=image_name,

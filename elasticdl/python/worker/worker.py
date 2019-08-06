@@ -138,11 +138,7 @@ class Worker(object):
         return res.accepted, res.model_version
 
     def report_prediction_outputs(self, predictions):
-        self._logger.info("Predicted: %f" % predictions.numpy())
-        # TODO: Decide whether we need to send results to master first
-        # or write results to destination directly from workers.
-        # Also, need to think about how users configure where to
-        # write results.
+        # TODO: Define the interface to write prediction results
         return True
 
     def _create_variable_and_report(self, features):
