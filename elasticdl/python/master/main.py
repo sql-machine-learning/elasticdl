@@ -85,9 +85,9 @@ def main():
         tb_service = None
 
     # Start task queue
-    logger.info(
-        "Starting task queue with training data directory %s , "
-        "evaluation data directory %s, ",
+    logger.debug(
+        "Starting task queue with training data directory %s, "
+        "evaluation data directory %s, "
         "and prediction data directory %s",
         args.training_data_dir,
         args.evaluation_data_dir,
