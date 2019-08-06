@@ -145,15 +145,6 @@ class Worker(object):
         # write results.
         return True
 
-    def _get_batch(self, reader, batch_size):
-        res = []
-        for i in range(batch_size):
-            record = reader.record()
-            if record is None:
-                break
-            res.append(record)
-        return res
-
     def _create_variable_and_report(self, features):
         # Use model.call to create variables, then report to ps
         _ = self._model.call(features)
