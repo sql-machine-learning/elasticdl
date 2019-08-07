@@ -62,7 +62,7 @@ def load_from_checkpoint_file(file_name):
 
 def find_layer(model, layer_class):
     """
-    Find all layers in model which are instances of layer_class
+    Find all layers in model that are instances of layer_class
     """
     layers = []
     for layer in model.layers:
