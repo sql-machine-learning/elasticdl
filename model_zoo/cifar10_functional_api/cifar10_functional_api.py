@@ -156,10 +156,10 @@ class PredictionOutputsProcessor(BasePredictionOutputsProcessor):
         if all(
             k in os.environ
             for k in (
-                os.environ[ODPSConfig.PROJECT_NAME],
-                os.environ[ODPSConfig.ACCESS_ID],
-                os.environ[ODPSConfig.ACCESS_KEY],
-                os.environ[ODPSConfig.ENDPOINT],
+                ODPSConfig.PROJECT_NAME,
+                ODPSConfig.ACCESS_ID,
+                ODPSConfig.ACCESS_KEY,
+                ODPSConfig.ENDPOINT,
             )
         ):
             self.odps_writer = ODPSWriter(
