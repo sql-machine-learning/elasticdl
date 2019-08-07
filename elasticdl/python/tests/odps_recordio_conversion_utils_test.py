@@ -94,7 +94,7 @@ class TestODPSRecordIOConversionUtils(unittest.TestCase):
                 records_iter, features_list, output_dir, records_per_shard=1
             )
             self.assertEqual(
-                os.listdir(output_dir), ["data-00000", "data-00001"]
+                sorted(os.listdir(output_dir)), ["data-00000", "data-00001"]
             )
 
         # Each batch contains multiple items
