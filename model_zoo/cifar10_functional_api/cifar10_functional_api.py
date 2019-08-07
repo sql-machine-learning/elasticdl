@@ -153,19 +153,33 @@ def eval_metrics_fn(predictions, labels):
 
 class PredictionOutputsProcessor(BasePredictionOutputsProcessor):
     def __init__(self):
-        self.odps_writer = ODPSWriter(
-            os.environ[ODPSConfig.PROJECT_NAME],
-            os.environ[ODPSConfig.ACCESS_ID],
-            os.environ[ODPSConfig.ACCESS_KEY],
-            os.environ[ODPSConfig.ENDPOINT],
-            "cifar10_prediction_outputs",
-            # TODO: Print out helpful error message if the columns and
-            # column_types do not match with the prediction outputs
-            columns=["f" + str(i) for i in range(10)],
-            column_types=["double" for _ in range(10)],
-        )
+        if all(
+            k in os.environ
+            for k in (
+                os.environ[ODPSConfig.PROJECT_NAME],
+                os.environ[ODPSConfig.ACCESS_ID],
+                os.environ[ODPSConfig.ACCESS_KEY],
+                os.environ[ODPSConfig.ENDPOINT],
+            )
+        ):
+            self.odps_writer = ODPSWriter(
+                os.environ[ODPSConfig.PROJECT_NAME],
+                os.environ[ODPSConfig.ACCESS_ID],
+                os.environ[ODPSConfig.ACCESS_KEY],
+                os.environ[ODPSConfig.ENDPOINT],
+                "cifar10_prediction_outputs",
+                # TODO: Print out helpful error message if the columns and
+                # column_types do not match with the prediction outputs
+                columns=["f" + str(i) for i in range(10)],
+                column_types=["double" for _ in range(10)],
+            )
+        else:
+            self.odps_writer = None
 
     def process(self, predictions, worker_id):
-        self.odps_writer.from_iterator(
-            iter(predictions.numpy().tolist()), worker_id
-        )
+        if self.odps_writer:
+            self.odps_writer.from_iterator(
+                iter(predictions.numpy().tolist()), worker_id
+            )
+        else:
+            print(predictions.numpy())
