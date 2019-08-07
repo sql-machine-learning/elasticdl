@@ -58,3 +58,17 @@ def load_from_checkpoint_file(file_name):
     with open(file_name, "rb") as f:
         pb_model.ParseFromString(f.read())
     return pb_model
+
+
+def find_layer(model, layer_class):
+    """
+    Find all layers in model which are instances of layer_class
+    """
+    layers = []
+    for layer in model.layers:
+        if isinstance(layer, layer_class):
+            layers.append(layer)
+        elif hasattr(layer, "layers"):
+            # search in nested layers
+            layers += find_layer(layer, layer_class)
+    return layers
