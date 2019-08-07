@@ -163,7 +163,9 @@ class Worker(object):
                 "defined in the model definition. Prediction outputs "
                 "are not processed."
             )
-        self._prediction_outputs_processor(predictions, self._worker_id)
+        self._prediction_outputs_processor.process(
+            predictions, self._worker_id
+        )
         return True
 
     def _create_variable_and_report(self, features):
