@@ -1,10 +1,10 @@
-import logging
 import traceback
 
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType
+from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.model_helper import (
     load_model_from_module,
     load_module,
@@ -45,7 +45,6 @@ class Worker(object):
             max_minibatch_retry_num: The maximum number of a minibatch retry
                 as its results (e.g. gradients) are not accepted by master.
         """
-        self._logger = logging.getLogger(__name__)
         self._worker_id = worker_id
         self._job_type = job_type
         self._minibatch_size = minibatch_size
@@ -208,7 +207,7 @@ class Worker(object):
                     features, labels
                 )
                 if accepted:
-                    self._logger.info("Loss is %f" % loss.numpy())
+                    logger.info("Loss is %f" % loss.numpy())
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
                 if self._model_version != min_model_version:

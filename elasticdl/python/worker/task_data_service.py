@@ -1,4 +1,3 @@
-import logging
 import threading
 from contextlib import closing
 
@@ -7,11 +6,11 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.dataset import recordio_dataset
+from elasticdl.python.common.log_util import default_logger as logger
 
 
 class TaskDataService(object):
     def __init__(self, worker, training_with_evaluation):
-        self._logger = logging.getLogger(__name__)
         self._worker = worker
         self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
@@ -81,7 +80,7 @@ class TaskDataService(object):
         """
         if self._pending_dataset:
             if self._pending_tasks_with_counts:
-                self._logger.error(
+                logger.error(
                     "Cannot get new dataset when there are pending tasks"
                 )
                 return None
@@ -104,11 +103,11 @@ class TaskDataService(object):
             if not task.shard_file_name:
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True
-                    self._logger.info(
+                    logger.info(
                         "Finish current dataset, maybe more data later"
                     )
                 else:
-                    self._logger.info("No more task, stopping")
+                    logger.info("No more task, stopping")
                 break
             with self._lock:
                 if (

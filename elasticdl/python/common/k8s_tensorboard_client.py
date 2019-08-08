@@ -1,9 +1,9 @@
-import logging
 import time
 
 from kubernetes import client
 
 from elasticdl.python.common import k8s_client as k8s
+from elasticdl.python.common.log_util import default_logger as logger
 
 
 class TensorBoardClient(object):
@@ -15,7 +15,6 @@ class TensorBoardClient(object):
             k8s_client: A Client object from elasticdl.python.common.k8s_client
         """
         self._k8s_client = k8s_client
-        self._logger = logging.getLogger(__name__)
 
     def _get_tensorboard_service_name(self):
         return "tensorboard-" + self._k8s_client.job_name
@@ -71,7 +70,7 @@ class TensorBoardClient(object):
                 namespace=self._k8s_client.namespace,
             ).to_dict()
         except client.api_client.ApiException as e:
-            self._logger.warning(
+            logger.warning(
                 "Exception when reading TensorBoard service: %s\n" % e
             )
             return None

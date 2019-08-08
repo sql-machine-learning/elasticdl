@@ -1,4 +1,3 @@
-import logging
 import os
 import tempfile
 import uuid
@@ -7,12 +6,7 @@ from urllib.parse import urlparse
 import docker
 
 from elasticdl.python.common.file_helper import copy_if_not_exists
-
-logging.basicConfig(
-    format="%(asctime)s %(name)s %(levelname)-8s "
-    "[%(filename)s:%(lineno)d] %(message)s"
-)
-logging.getLogger().setLevel("INFO")
+from elasticdl.python.common.log_util import default_logger as logger
 
 
 def build_and_push_docker_image(
@@ -176,13 +170,13 @@ def _print_docker_progress(line):
         raise RuntimeError("Docker image build: " + error)
     stream = line.get("stream", None)
     if stream:
-        logging.info(stream)
+        logger.info(stream)
     else:
-        logging.info(line)
+        logger.info(line)
 
 
 def _build_docker_image(client, ctx_dir, dockerfile, image_name):
-    logging.info("===== Building Docker Image =====")
+    logger.info("===== Building Docker Image =====")
     for line in client.build(
         dockerfile=dockerfile,
         path=ctx_dir,
@@ -194,6 +188,6 @@ def _build_docker_image(client, ctx_dir, dockerfile, image_name):
 
 
 def _push_docker_image(client, image_name):
-    logging.info("===== Pushing Docker Image =====")
+    logger.info("===== Pushing Docker Image =====")
     for line in client.push(image_name, stream=True, decode=True):
         _print_docker_progress(line)

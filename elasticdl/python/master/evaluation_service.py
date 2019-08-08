@@ -1,4 +1,3 @@
-import logging
 import threading
 import time
 from collections import defaultdict
@@ -6,6 +5,7 @@ from threading import Thread
 
 import numpy as np
 
+from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.ndarray import tensor_to_ndarray
 
 
@@ -13,7 +13,6 @@ class _EvaluationJob(object):
     """Representation of an evaluation job"""
 
     def __init__(self, model_version, total_tasks=-1):
-        self._logger = logging.getLogger(__name__)
         self.model_version = model_version
         self._total_tasks = total_tasks
         self._completed_tasks = 0
@@ -33,7 +32,7 @@ class _EvaluationJob(object):
             self.model_version >= 0
             and evaluation_version != self.model_version
         ):
-            self._logger.error(
+            logger.error(
                 "Drop a wrong version evaluation: request %d, receive %d"
                 % (self.model_version, evaluation_version)
             )
@@ -101,7 +100,6 @@ class EvaluationService(object):
         eval_steps,
         eval_only,
     ):
-        self._logger = logging.getLogger(__name__)
         self._checkpoint_service = checkpoint_service
         self._tensorboard_service = tensorboard_service
         self._task_d = task_d
@@ -191,7 +189,7 @@ class EvaluationService(object):
                 self._tensorboard_service.write_dict_to_summary(
                     evaluation_metrics, version=self._eval_job.model_version
                 )
-            self._logger.info(
+            logger.info(
                 "Evaluation metrics[v=%d]: %s"
                 % (
                     self._eval_job.model_version

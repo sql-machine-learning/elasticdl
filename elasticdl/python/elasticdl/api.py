@@ -1,16 +1,10 @@
-import logging
 import os
 
 from elasticdl.python.common import k8s_client as k8s
+from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
 )
-
-logging.basicConfig(
-    format="%(asctime)s %(name)s %(levelname)-8s "
-    "[%(filename)s:%(lineno)d] %(message)s"
-)
-logging.getLogger().setLevel("INFO")
 
 
 def train(args):
@@ -205,7 +199,7 @@ def _submit_job(image_name, client_args, container_args):
         restart_policy=client_args.restart_policy,
         volume=client_args.volume,
     )
-    logging.info(
+    logger.info(
         "ElasticDL job %s was successfully submitted. The master pod is: %s."
         % (client_args.job_name, client.get_master_pod_name())
     )
