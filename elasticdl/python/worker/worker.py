@@ -13,6 +13,9 @@ from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
+from elasticdl.python.worker.prediction_outputs_processor import (
+    BasePredictionOutputsProcessor,
+)
 from elasticdl.python.worker.task_data_service import TaskDataService
 
 # The default maximum number of a minibatch retry as its results
@@ -36,6 +39,7 @@ class Worker(object):
         channel=None,
         model_def=None,
         model_params="",
+        prediction_outputs_processor="PredictionOutputsProcessor",
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
     ):
         """
@@ -67,6 +71,21 @@ class Worker(object):
         self._task_data_service = TaskDataService(
             self, self._job_type == JobType.TRAINING_WITH_EVALUATION
         )
+        if prediction_outputs_processor in model_module:
+            self._prediction_outputs_processor = model_module[
+                prediction_outputs_processor
+            ]()
+            if not isinstance(
+                self._prediction_outputs_processor,
+                BasePredictionOutputsProcessor,
+            ):
+                self._logger.warning(
+                    "prediction_outputs_processor is not "
+                    "inherited from BasePredictionOutputsProcessor. "
+                    "Prediction outputs may not be processed correctly."
+                )
+        else:
+            self._prediction_outputs_processor = None
 
     def get_task(self):
         """
@@ -137,7 +156,16 @@ class Worker(object):
         return res.accepted, res.model_version
 
     def report_prediction_outputs(self, predictions):
-        # TODO: Define the interface to write prediction results
+        if self._prediction_outputs_processor:
+            self._prediction_outputs_processor.process(
+                predictions, self._worker_id
+            )
+        else:
+            self._logger.warning(
+                "prediction_outputs_processor is not "
+                "defined in the model definition. Prediction outputs "
+                "are not processed."
+            )
         return True
 
     def _create_variable_and_report(self, features):
