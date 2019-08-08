@@ -3,6 +3,7 @@ import os
 import tensorflow as tf
 
 from elasticdl.python.common.constants import ODPSConfig
+from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.odps_io import ODPSWriter
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
@@ -182,4 +183,4 @@ class PredictionOutputsProcessor(BasePredictionOutputsProcessor):
                 iter(predictions.numpy().tolist()), worker_id
             )
         else:
-            print(predictions.numpy())
+            logger.info(predictions.numpy())
