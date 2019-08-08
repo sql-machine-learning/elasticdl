@@ -271,9 +271,14 @@ class Worker(object):
         eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
         err_msg = ""
         for data in eval_dataset:
-            data_err_msg = self._process_minibatch_and_report(
-                data[0], data[1], elasticdl_pb2.EVALUATION, model_version
-            )
+            if self._job_type == JobType.PREDICTION_ONLY:
+                data_err_msg = self._process_minibatch_and_report(
+                    data, None, elasticdl_pb2.EVALUATION, model_version
+                )
+            else:
+                data_err_msg = self._process_minibatch_and_report(
+                    data[0], data[1], elasticdl_pb2.EVALUATION, model_version
+                )
             if data_err_msg:
                 err_msg = data_err_msg
                 break
@@ -313,9 +318,14 @@ class Worker(object):
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                     self._process_eval_task_if_needed()
                 task = self._task_data_service.get_current_task()
-                err_msg = self._process_minibatch_and_report(
-                    d[0], d[1], task.type, task.model_version
-                )
+                if self._job_type == JobType.PREDICTION_ONLY:
+                    err_msg = self._process_minibatch_and_report(
+                        d, None, task.type, task.model_version
+                    )
+                else:
+                    err_msg = self._process_minibatch_and_report(
+                        d[0], d[1], task.type, task.model_version
+                    )
                 self._task_data_service.report_record_done(
                     self._minibatch_size, err_msg
                 )

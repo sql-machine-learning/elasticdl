@@ -118,19 +118,15 @@ def dataset_fn(dataset, training=True):
     def _parse_data(record):
         feature_description = {
             "image": tf.io.FixedLenFeature([32, 32, 3], tf.float32),
-            "label": tf.io.FixedLenFeature([1], tf.int64),
         }
         r = tf.io.parse_single_example(record, feature_description)
-        label = r["label"]
         image = r["image"]
-        return image, label
+        return image
 
     dataset = dataset.map(_parse_data)
     dataset = dataset.map(
-        lambda x, y: (
+        lambda x:
             {"image": tf.math.divide(tf.cast(x, tf.float32), 255.0)},
-            tf.cast(y, tf.int32),
-        )
     )
     if training:
         dataset = dataset.shuffle(buffer_size=1024)
