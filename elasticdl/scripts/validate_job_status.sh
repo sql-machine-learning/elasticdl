@@ -25,7 +25,12 @@ for i in {1..200}; do
        [ "$WORKER_1_POD_STATUS" == "Failed" ]; then
       echo "ElasticDL job failed."
       kubectl describe pod $MASTER_POD_NAME
+      echo "\nMaster log:\n"
       kubectl logs $MASTER_POD_NAME | tail
+      echo "\nWorker0 log:\n"
+      kubectl logs $WORKER_0_POD_NAME | tail
+      echo "\nWorker1 log:\n"
+      kubectl logs $WORKER_1_POD_NAME | tail
       exit 1
     else
       echo "Master: ${MASTER_POD_STATUS}, Worker0: ${WORKER_0_POD_STATUS}, Worker1: ${WORKER_1_POD_STATUS}. Continue checking..."
