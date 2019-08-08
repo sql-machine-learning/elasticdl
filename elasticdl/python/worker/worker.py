@@ -157,14 +157,15 @@ class Worker(object):
         return res.accepted, res.model_version
 
     def report_prediction_outputs(self, predictions):
-        if not self._prediction_outputs_processor:
+        if self._prediction_outputs_processor:
+            self._prediction_outputs_processor.process(
+                predictions, self._worker_id
+            )
+        else:
             self._logger.warning(
                 "prediction_outputs_processor is not "
                 "defined in the model definition. Prediction outputs "
                 "are not processed."
-            )
-            self._prediction_outputs_processor.process(
-                predictions, self._worker_id
             )
         return True
 
