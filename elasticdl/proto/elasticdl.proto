@@ -48,6 +48,8 @@ message Tensor {
 
     // ndarray's buffer dump. Each element must be a 32 bit float value.
     bytes content = 2;
+
+    repeated int32 indices = 3;
 }
 
 message Model {

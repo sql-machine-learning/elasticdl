@@ -36,6 +36,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._task_d = task_d
         self._lock = threading.Lock()
         self._gradient_sum = {}
+        self._gradient_sum_indexed = {}
         self._grad_to_wait = grads_to_wait
         self._grad_n = 0
         self._minibatch_size = minibatch_size
@@ -142,9 +143,23 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         for k in self._gradient_sum:
             self._gradient_sum[k] = self._gradient_sum[k] / self._grad_to_wait
             grad_var.append((self._gradient_sum[k], self._model[k]))
+
+        for k in self._gradient_sum_indexed:
+            indexed_grads = []
+            indexed_indices = []
+            for index, g in self._gradient_sum_indexed[k].items():
+                indexed_grads.append(tf.reshape(g, shape=(1, -1)))
+                indexed_indices.append(index)
+
+            values = tf.concat(indexed_grads, axis=0)
+            indices = tf.convert_to_tensor(indexed_indices, tf.int64)
+            indexed_slices = tf.IndexedSlices(values, indices)
+            grad_var.append((indexed_slices, self._model[k]))
+
         self._opt.apply_gradients(grad_var)
         self._update_model_version()
         self._gradient_sum.clear()
+        self._gradient_sum_indexed.clear()
         self._grad_n = 0
 
     def get_model_version(self):
@@ -239,6 +254,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # TODO: Update task queue with task_id
         with self._lock:
             tmp = {}
+            indexed_grads = {}
             # Do sanity check before accumulating gradients.
             for k, v in request.gradient.items():
                 if k not in self._model:
@@ -246,11 +262,36 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                         "Gradient key: %s is not part of model", k
                     )
                 arr = tensor_to_ndarray(v)
-                if arr.shape != self._model[k].numpy().shape:
-                    raise ValueError(
-                        "Gradient key: %s has incompatible dimension", k
-                    )
-                tmp[k] = arr
+                if isinstance(arr, tf.IndexedSlices):
+                    if arr.values.shape[1] != self._model[k].numpy().shape[1]:
+                        raise ValueError(
+                            "Gradient key: %s has incompatible dimension", k
+                        )
+                    if (
+                        tf.math.reduce_max(arr.indices).numpy()
+                        >= self._model[k].numpy().shape[0]
+                    ):
+                        raise ValueError(
+                            "Gradient key: %s has wrong indices", k
+                        )
+                    indexed_grads[k] = arr
+                else:
+                    if arr.shape != self._model[k].numpy().shape:
+                        raise ValueError(
+                            "Gradient key: %s has incompatible dimension", k
+                        )
+                    tmp[k] = arr
+
+            for k, v in indexed_grads.items():
+                if k not in self._gradient_sum_indexed:
+                    self._gradient_sum_indexed[k] = {}
+                grad_sum = self._gradient_sum_indexed[k]
+                for grad, index in zip(v.values, v.indices):
+                    i = index.numpy()
+                    if i in grad_sum:
+                        grad_sum[i] = grad_sum[i] + grad
+                    else:
+                        grad_sum[i] = grad
 
             for k, v in tmp.items():
                 if k in self._gradient_sum:

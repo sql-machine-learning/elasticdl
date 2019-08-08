@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 
@@ -23,15 +24,22 @@ def tensor_to_ndarray(tensor_pb):
             tensor_pb.dim,
             len(tensor_pb.content),
         )
-    arr = np.ndarray(
-        shape=tensor_pb.dim, dtype=np.float32, buffer=tensor_pb.content
-    )
+    if not tensor_pb.indices:
+        arr = np.ndarray(
+            shape=tensor_pb.dim, dtype=np.float32, buffer=tensor_pb.content
+        )
+    else:
+        values = np.ndarray(
+            shape=tensor_pb.dim, dtype=np.float32, buffer=tensor_pb.content
+        )
+        indices = tf.convert_to_tensor(tensor_pb.indices)
+        arr = tf.IndexedSlices(values, indices)
     tensor_pb.Clear()
 
     return arr
 
 
-def ndarray_to_tensor(arr):
+def ndarray_to_tensor(arr, indices=None):
     """Convert ndarray to Tensor PB"""
 
     if arr.dtype != np.float32:
@@ -41,5 +49,7 @@ def ndarray_to_tensor(arr):
     tensor = elasticdl_pb2.Tensor()
     tensor.dim.extend(arr.shape)
     tensor.content = arr.tobytes()
+    if indices is not None:
+        tensor.indices.extend(indices)
 
     return tensor
