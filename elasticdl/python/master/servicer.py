@@ -31,7 +31,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         evaluation_service,
     ):
         # TODO: group params together into a single object.
-        self._logger = logger
         self._opt = optimizer
         self._task_d = task_d
         self._lock = threading.Lock()
@@ -79,7 +78,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         elif init_var:
             self._init_model_from_var_list(init_var)
         else:
-            self._logger.info(
+            logger.info(
                 "Model is not intialized. It will be "
                 "initialized by the first update from "
                 "the worker."
@@ -126,7 +125,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 request.version
             )
         except Exception:
-            self._logger.error(
+            logger.error(
                 "Failed to fetch checkpoint model for "
                 "model version {}".format(request.version)
             )
@@ -152,7 +151,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def _save_checkpoint(self, locking, is_eval_checkpoint):
         try:
-            self._logger.info(
+            logger.info(
                 "Saving checkpoint for model version %d" % self._version
             )
             if locking:
@@ -166,7 +165,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 self._lock.release()
             return checkpoint_version
         except Exception:
-            self._logger.error(
+            logger.error(
                 "Failed to save checkpoint file for model version %d"
                 % self._version
             )
@@ -211,7 +210,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 "Model version %d not available yet, "
                 "current version: %d" % (request_model_version, self._version)
             )
-            self._logger.warning(err_msg)
+            logger.warning(err_msg)
             raise ValueError(err_msg)
         return request_model_version == self._version
 
@@ -228,7 +227,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
         res = elasticdl_pb2.ReportGradientResponse()
         if not model_version_valid:
-            self._logger.warning(
+            logger.warning(
                 "Task result for outdated version %d dropped",
                 request.model_version,
             )
@@ -270,9 +269,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def ReportTaskResult(self, request, _):
         if request.err_message:
-            self._logger.warning(
-                "Worker reported error: " + request.err_message
-            )
+            logger.warning("Worker reported error: " + request.err_message)
             self._task_d.report(request.task_id, False)
         else:
             self._task_d.report(request.task_id, True)

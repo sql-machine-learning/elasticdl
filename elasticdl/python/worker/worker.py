@@ -45,7 +45,6 @@ class Worker(object):
             max_minibatch_retry_num: The maximum number of a minibatch retry
                 as its results (e.g. gradients) are not accepted by master.
         """
-        self._logger = logger
         self._worker_id = worker_id
         self._job_type = job_type
         self._minibatch_size = minibatch_size
@@ -208,7 +207,7 @@ class Worker(object):
                     features, labels
                 )
                 if accepted:
-                    self._logger.info("Loss is %f" % loss.numpy())
+                    logger.info("Loss is %f" % loss.numpy())
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
                 if self._model_version != min_model_version:

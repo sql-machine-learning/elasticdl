@@ -15,7 +15,6 @@ class TensorBoardClient(object):
             k8s_client: A Client object from elasticdl.python.common.k8s_client
         """
         self._k8s_client = k8s_client
-        self._logger = logger
 
     def _get_tensorboard_service_name(self):
         return "tensorboard-" + self._k8s_client.job_name
@@ -71,7 +70,7 @@ class TensorBoardClient(object):
                 namespace=self._k8s_client.namespace,
             ).to_dict()
         except client.api_client.ApiException as e:
-            self._logger.warning(
+            logger.warning(
                 "Exception when reading TensorBoard service: %s\n" % e
             )
             return None

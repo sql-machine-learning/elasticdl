@@ -13,10 +13,6 @@ def convert(x, y, args, subdir):
     """Convert pairs of image and label in NumPy arrays into a set of
     RecordIO files.
     """
-    logging.basicConfig(
-        format="%(asctime)s %(name)s %(levelname)-8s "
-        "[%(filename)s:%(lineno)d] %(message)s"
-    )
     logger = logging.getLogger("image_label::convert")
     logger.setLevel("INFO")
     row = 0

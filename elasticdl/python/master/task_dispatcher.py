@@ -50,7 +50,6 @@ class _TaskDispatcher(object):
             num_epochs: The total number of epochs for the tasks where
                 an epoch is a complete iteration over the shards.
         """
-        self._logger = logger
         self._lock = threading.Lock()
 
         self._num_epochs = num_epochs
@@ -67,7 +66,7 @@ class _TaskDispatcher(object):
         self._evaluation_service = None
 
         if self._training_shards:
-            self._logger.info("Starting epoch %d", self._epoch)
+            logger.info("Starting epoch %d", self._epoch)
             self.create_training_tasks()
         elif self._evaluation_shards:
             self.create_evaluation_tasks(-1)
@@ -75,7 +74,7 @@ class _TaskDispatcher(object):
             self.create_prediction_tasks(-1)
 
     def create_training_tasks(self):
-        self._logger.info(
+        logger.info(
             "Creating a new set of training tasks with epoch=%d", self._epoch
         )
         tasks = self._create_tasks(
@@ -86,7 +85,7 @@ class _TaskDispatcher(object):
         return tasks
 
     def create_evaluation_tasks(self, eval_model_version):
-        self._logger.info(
+        logger.info(
             "Creating a new set of evaluation tasks for model version %d",
             eval_model_version,
         )
@@ -100,7 +99,7 @@ class _TaskDispatcher(object):
         return tasks
 
     def create_prediction_tasks(self, predict_model_version):
-        self._logger.info(
+        logger.info(
             "Creating a new set of prediction tasks for model version %d",
             predict_model_version,
         )
@@ -138,7 +137,7 @@ class _TaskDispatcher(object):
                 # Start a new epoch
                 self._epoch += 1
                 self.create_training_tasks()
-                self._logger.info("Starting epoch %d", self._epoch)
+                logger.info("Starting epoch %d", self._epoch)
 
             if not self._todo:
                 # No more tasks
@@ -158,7 +157,7 @@ class _TaskDispatcher(object):
         with self._lock:
             _, task = self._doing.pop(task_id, (-1, None))
             if not task:
-                self._logger.warning("Unknown task_id: %d" % task_id)
+                logger.warning("Unknown task_id: %d" % task_id)
             elif not success:
                 # TODO: keep count of retries.
                 self._todo.append(task)
@@ -168,7 +167,7 @@ class _TaskDispatcher(object):
             ):
                 evaluation_task_completed = True
             else:
-                self._logger.info(
+                logger.info(
                     "Task:%d completed, %d remaining tasks",
                     task_id,
                     len(self._todo) + len(self._doing),

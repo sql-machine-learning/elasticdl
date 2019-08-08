@@ -53,7 +53,6 @@ class Client(object):
         self.client = client.CoreV1Api()
         self.namespace = namespace
         self.job_name = job_name
-        self._logger = logger
         self._image_name = image_name
         self._event_cb = event_callback
         if self._event_cb:
@@ -90,9 +89,7 @@ class Client(object):
                 name=pod_name, namespace=self.namespace, body=body
             )
         except client.api_client.ApiException as e:
-            self._logger.warning(
-                "Exception when patching labels to pod: %s\n" % e
-            )
+            logger.warning("Exception when patching labels to pod: %s\n" % e)
             return None
 
     def get_master_pod(self):
@@ -101,7 +98,7 @@ class Client(object):
                 name=self.get_master_pod_name(), namespace=self.namespace
             )
         except client.api_client.ApiException as e:
-            self._logger.warning("Exception when reading master pod: %s\n" % e)
+            logger.warning("Exception when reading master pod: %s\n" % e)
             return None
 
     def get_worker_pod(self, worker_id):
@@ -111,7 +108,7 @@ class Client(object):
                 namespace=self.namespace,
             )
         except client.api_client.ApiException as e:
-            self._logger.warning("Exception when reading worker pod: %s\n" % e)
+            logger.warning("Exception when reading worker pod: %s\n" % e)
             return None
 
     @staticmethod
@@ -224,7 +221,7 @@ class Client(object):
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "master"
         pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = "0"
         resp = self.client.create_namespaced_pod(self.namespace, pod)
-        self._logger.info("Master launched. status='%s'" % str(resp.status))
+        logger.info("Master launched. status='%s'" % str(resp.status))
 
     def create_worker(self, **kargs):
         # Find that master pod that will be used as the owner reference
@@ -253,7 +250,7 @@ class Client(object):
         return self.client.create_namespaced_pod(self.namespace, pod)
 
     def delete_master(self):
-        self._logger.info("pod name is %s" % self.get_master_pod_name())
+        logger.info("pod name is %s" % self.get_master_pod_name())
         self.client.delete_namespaced_pod(
             self.get_master_pod_name(),
             self.namespace,
