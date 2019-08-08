@@ -259,9 +259,7 @@ class Worker(object):
         eval_info = self._task_data_service.get_evaluation_dataset()
         if not eval_info:
             return
-        eval_dataset = eval_info[0]
-        model_version = eval_info[1]
-        task_id = eval_info[2]
+        (eval_dataset, model_version, task_id) = eval_info
         eval_dataset = self._dataset_fn(eval_dataset, training=False)
         eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
         err_msg = ""
