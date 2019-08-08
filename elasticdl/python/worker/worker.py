@@ -79,7 +79,7 @@ class Worker(object):
                 self._prediction_outputs_processor,
                 BasePredictionOutputsProcessor,
             ):
-                self._logger.warning(
+                logger.warning(
                     "prediction_outputs_processor is not "
                     "inherited from BasePredictionOutputsProcessor. "
                     "Prediction outputs may not be processed correctly."
@@ -161,7 +161,7 @@ class Worker(object):
                 predictions, self._worker_id
             )
         else:
-            self._logger.warning(
+            logger.warning(
                 "prediction_outputs_processor is not "
                 "defined in the model definition. Prediction outputs "
                 "are not processed."
