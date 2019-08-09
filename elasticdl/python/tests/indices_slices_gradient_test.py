@@ -32,7 +32,7 @@ def custom_model():
 
 
 class IndexedSlicesTest(unittest.TestCase):
-    def test_indices_slices(self):
+    def _create_master_and_worker(self):
         model_inst = custom_model()
         master = MasterServicer(
             2,
@@ -54,6 +54,11 @@ class IndexedSlicesTest(unittest.TestCase):
         )
         worker._model = model_inst
         worker._stub = InProcessMaster(master)
+
+        return master, worker
+
+    def test_indices_slices_correctness(self):
+        master, worker = self._create_master_and_worker()
 
         values1 = tf.convert_to_tensor(
             np.array([[1, 2, 3], [10, 11, 12]], dtype=np.float32)
@@ -80,10 +85,6 @@ class IndexedSlicesTest(unittest.TestCase):
             ),
         ]
 
-        worker._model_version = 0
-        worker.report_gradient(grads1)
-        worker.report_gradient(grads2)
-
         expected_weights = []
         expected_weights.append(
             np.array(
@@ -101,8 +102,37 @@ class IndexedSlicesTest(unittest.TestCase):
             )
         )
 
+        worker._model_version = 0
+        worker.report_gradient(grads1)
+        worker.report_gradient(grads2)
+
         for i, j in zip(master._model.values(), expected_weights):
             self.assertTrue(np.all(i.numpy() - j < 0.0001))
+
+    def test_wrong_indices(self):
+        master, worker = self._create_master_and_worker()
+
+        values = tf.zeros((2, 3))
+        indices = tf.convert_to_tensor([0, 4], dtype=tf.int64)
+        grads = [tf.IndexedSlices(values, indices), tf.zeros((6, 1))]
+        err_msg = ".*wrong indices %d, out of range \[0, %d\)" % (4, 4)
+        worker._model_version = 0
+        with self.assertRaisesRegex(ValueError, err_msg):
+            worker.report_gradient(grads)
+
+    def test_wrong_shape(self):
+        master, worker = self._create_master_and_worker()
+
+        values = tf.zeros((2, 4))
+        indices = tf.convert_to_tensor([0, 3], dtype=tf.int64)
+        grads = [tf.IndexedSlices(values, indices), tf.zeros((6, 1))]
+        err_msg = ".*incompatible indexed slice dimension %d, expected %d" % (
+            4,
+            3,
+        )
+        worker._model_version = 0
+        with self.assertRaisesRegex(ValueError, err_msg):
+            worker.report_gradient(grads)
 
 
 if __name__ == "__main__":
