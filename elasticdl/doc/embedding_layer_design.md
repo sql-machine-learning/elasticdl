@@ -43,14 +43,14 @@ This embedding layer is similar to [tf.keras.layers.Embedding](https://www.tenso
 ### Embedding layer with sparse lookup
 If the numbers of ids in the input are not fixed, sparse lookup with a combiner can be used to reduce the varying number of embedding vectors into a tensor, similar to [tf.nn.embedding\_lookup\_sparse](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup_sparse)
 
-In this design document, we will describe how to implement `EdlEmbedding` with a fixed input size. It can be extended to support the sparse lookup and we will implement that in the future work.
+In this design document, we will describe how to implement `EdlEmbedding` with a fixed input size. It can be extended to support the sparse lookup and we will implement that in the future.
 
 
 ## Implementation
 
 ### Step 1: [master] Embedding table initialization
 
-The master searchs for `EdlEmbedding` layers in `model`. If found, layer attributes `(name, embedding_size, embedding_dim, embedding_initializer)` are used to initialize the embedding tables by creating a Redis cluster or memory blocks in the master. We implement the Redis cluster first as it support for arbitrary sizes of embedding tables.
+The master searchs for `EdlEmbedding` layers in `model`. If found, layer attributes `(name, embedding_size, embedding_dim, embedding_initializer)` are used to initialize the embedding tables by creating a Redis cluster or memory blocks in the master. We implement the Redis cluster first as it supports arbitrary sizes of embedding tables.
 
 ```
 embedding_layers = find_layer(model, EdlEmbedding)
