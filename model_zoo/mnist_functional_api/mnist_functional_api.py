@@ -1,6 +1,7 @@
 import numpy as np
 import PIL.Image
 import tensorflow as tf
+
 from elasticdl.python.common.constants import Mode
 
 

@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.python.keras import backend, layers, regularizers
+
 from elasticdl.python.common.constants import Mode
 
 try:

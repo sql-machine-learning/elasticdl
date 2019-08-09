@@ -1,4 +1,5 @@
 import tensorflow as tf
+
 from elasticdl.python.common.constants import Mode
 
 
