@@ -203,7 +203,7 @@ def dataset_fn(dataset, mode):
             y,
         )
     )
-    if mode != Mode.TRAINING:
+    if mode != Mode.PREDICTION:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
 

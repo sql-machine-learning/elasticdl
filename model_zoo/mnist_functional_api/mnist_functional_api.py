@@ -78,7 +78,7 @@ def dataset_fn(dataset, mode):
             tf.cast(y, tf.int32),
         )
     )
-    if mode != Mode.TRAINING:
+    if mode != Mode.PREDICTION:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
 
