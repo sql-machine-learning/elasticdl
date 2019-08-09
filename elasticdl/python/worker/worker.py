@@ -3,7 +3,7 @@ import traceback
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.constants import JobType
+from elasticdl.python.common.constants import JobType, Mode
 from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.model_helper import (
     load_model_from_module,
@@ -267,7 +267,7 @@ class Worker(object):
         if not eval_info:
             return
         (eval_dataset, model_version, task_id) = eval_info
-        eval_dataset = self._dataset_fn(eval_dataset, training=False)
+        eval_dataset = self._dataset_fn(eval_dataset, Mode.EVALUATION)
         eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
         err_msg = ""
         for data in eval_dataset:
@@ -304,15 +304,17 @@ class Worker(object):
         """
         Fetches task from master with and performs training or evaluation.
         """
-        job_is_training = (
-            self._job_type == JobType.TRAINING_ONLY
-            or self._job_type == JobType.TRAINING_WITH_EVALUATION
-        )
+        if self._job_type == JobType.PREDICTION_ONLY:
+            mode = Mode.PREDICTION
+        elif self._job_type == JobType.EVALUATION_ONLY:
+            mode = Mode.EVALUATION
+        else:
+            mode = Mode.TRAINING
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
                 break
-            dataset = self._dataset_fn(dataset, training=job_is_training)
+            dataset = self._dataset_fn(dataset, mode)
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
             for d in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:

@@ -1,4 +1,5 @@
 import tensorflow as tf
+from elasticdl.python.common.constants import Mode
 
 
 class CustomModel(tf.keras.Model):
@@ -46,7 +47,12 @@ def optimizer(lr=0.01):
     return tf.optimizers.SGD(lr)
 
 
-def dataset_fn(dataset, training=True):
+def dataset_fn(dataset, mode):
+    if mode == Mode.PREDICTION:
+        raise Exception(
+            "dataset_fn in prediction mode is not implemented for this model yet."
+        )
+
     def _parse_data(record):
         feature_description = {
             "image": tf.io.FixedLenFeature([28, 28], tf.float32),
@@ -64,7 +70,7 @@ def dataset_fn(dataset, training=True):
             tf.cast(y, tf.int32),
         )
     )
-    if training:
+    if mode != Mode.TRAINING:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
 
