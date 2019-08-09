@@ -145,16 +145,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             grad_var.append((self._gradient_sum[k], self._model[k]))
 
         for k in self._gradient_sum_indexed:
-            indexed_grads = []
-            indexed_indices = []
-            for index, g in self._gradient_sum_indexed[k].items():
-                indexed_grads.append(tf.reshape(g, shape=(1, -1)))
-                indexed_indices.append(index)
-
-            values = tf.concat(indexed_grads, axis=0)
-            indices = tf.convert_to_tensor(indexed_indices, tf.int64)
-            indexed_slices = tf.IndexedSlices(values, indices)
-            grad_var.append((indexed_slices, self._model[k]))
+            grad_var.append((self._gradient_sum_indexed[k], self._model[k]))
 
         self._opt.apply_gradients(grad_var)
         self._update_model_version()
@@ -278,8 +269,12 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                     if max_index >= self._model[k].numpy().shape[0]:
                         raise ValueError(
                             "Gradient key: %s has wrong indices %d, "
-                            "out of range [0, %d)"
-                            % (k, max_index, self._model[k].numpy().shape[0])
+                            "out of range %d"
+                            % (
+                                k,
+                                max_index,
+                                self._model[k].numpy().shape[0] - 1,
+                            )
                         )
                     indexed_grads[k] = arr
                 else:
@@ -291,14 +286,13 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
             for k, v in indexed_grads.items():
                 if k not in self._gradient_sum_indexed:
-                    self._gradient_sum_indexed[k] = {}
-                grad_sum = self._gradient_sum_indexed[k]
-                for grad, index in zip(v.values, v.indices):
-                    i = index.numpy()
-                    if i in grad_sum:
-                        grad_sum[i] = grad_sum[i] + grad
-                    else:
-                        grad_sum[i] = grad
+                    self._gradient_sum_indexed[k] = v
+                else:
+                    grads_s = self._gradient_sum_indexed[k]
+                    self._gradient_sum_indexed[k] = tf.IndexedSlices(
+                        tf.concat([grads_s.values, v.values], axis=0),
+                        tf.concat([grads_s.indices, v.indices], axis=0),
+                    )
 
             for k, v in tmp.items():
                 if k in self._gradient_sum:

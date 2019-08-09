@@ -115,7 +115,7 @@ class IndexedSlicesTest(unittest.TestCase):
         values = tf.zeros((2, 3))
         indices = tf.convert_to_tensor([0, 4], dtype=tf.int64)
         grads = [tf.IndexedSlices(values, indices), tf.zeros((6, 1))]
-        err_msg = ".*wrong indices %d, out of range \[0, %d\)" % (4, 4)
+        err_msg = ".*wrong indices %d, out of range %d" % (4, 3)
         worker._model_version = 0
         with self.assertRaisesRegex(ValueError, err_msg):
             worker.report_gradient(grads)
