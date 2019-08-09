@@ -265,14 +265,21 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 if isinstance(arr, tf.IndexedSlices):
                     if arr.values.shape[1] != self._model[k].numpy().shape[1]:
                         raise ValueError(
-                            "Gradient key: %s has incompatible dimension", k
+                            "Gradient key: %s has incompatible "
+                            "indexed slice dimension %d, expected %d"
+                            % (
+                                k,
+                                arr.values.shape[1],
+                                self._model[k].numpy().shape[1],
+                            )
                         )
-                    if (
-                        tf.math.reduce_max(arr.indices).numpy()
-                        >= self._model[k].numpy().shape[0]
-                    ):
+
+                    max_index = tf.math.reduce_max(arr.indices).numpy()
+                    if max_index >= self._model[k].numpy().shape[0]:
                         raise ValueError(
-                            "Gradient key: %s has wrong indices", k
+                            "Gradient key: %s has wrong indices %d, "
+                            "out of range [0, %d)"
+                            % (k, max_index, self._model[k].numpy().shape[0])
                         )
                     indexed_grads[k] = arr
                 else:

@@ -49,7 +49,7 @@ def ndarray_to_tensor(arr, indices=None):
     tensor = elasticdl_pb2.Tensor()
     tensor.dim.extend(arr.shape)
     tensor.content = arr.tobytes()
-    if indices is not None:
+    if indices:
         tensor.indices.extend(indices)
 
     return tensor
