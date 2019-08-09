@@ -270,15 +270,10 @@ class Worker(object):
         eval_dataset = self._dataset_fn(eval_dataset, Mode.EVALUATION)
         eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
         err_msg = ""
-        for data in eval_dataset:
-            if self._job_type == JobType.PREDICTION_ONLY:
-                data_err_msg = self._process_minibatch_and_report(
-                    data, None, elasticdl_pb2.EVALUATION, model_version
-                )
-            else:
-                data_err_msg = self._process_minibatch_and_report(
-                    data[0], data[1], elasticdl_pb2.EVALUATION, model_version
-                )
+        for dataset_batch in eval_dataset:
+            data_err_msg = self._process_minibatch_and_report(
+                dataset_batch, elasticdl_pb2.EVALUATION, model_version
+            )
             if data_err_msg:
                 err_msg = data_err_msg
                 break
@@ -286,10 +281,16 @@ class Worker(object):
         self.report_task_result(task_id, err_msg)
 
     def _process_minibatch_and_report(
-        self, features, labels, task_type, model_version
+        self, dataset_batch, task_type, model_version
     ):
         err_msg = ""
         try:
+            if self._job_type == JobType.PREDICTION_ONLY:
+                features = dataset_batch
+                labels = None
+            else:
+                features = dataset_batch[0]
+                labels = dataset_batch[1]
             self._process_minibatch(task_type, features, labels, model_version)
         except RuntimeError as err:
             err_msg = str(err)
@@ -316,18 +317,13 @@ class Worker(object):
                 break
             dataset = self._dataset_fn(dataset, mode)
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
-            for d in dataset:
+            for dataset_batch in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                     self._process_eval_task_if_needed()
                 task = self._task_data_service.get_current_task()
-                if self._job_type == JobType.PREDICTION_ONLY:
-                    err_msg = self._process_minibatch_and_report(
-                        d, None, task.type, task.model_version
-                    )
-                else:
-                    err_msg = self._process_minibatch_and_report(
-                        d[0], d[1], task.type, task.model_version
-                    )
+                err_msg = self._process_minibatch_and_report(
+                    dataset_batch, task.type, task.model_version
+                )
                 self._task_data_service.report_record_done(
                     self._minibatch_size, err_msg
                 )
