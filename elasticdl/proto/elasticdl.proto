@@ -48,6 +48,10 @@ message Tensor {
 
     // ndarray's buffer dump. Each element must be a 32 bit float value.
     bytes content = 2;
+
+    // Indices will be tf.IndexedSlices.indices if the tensor is in the form
+    // of tf.IndexedSlices. Ohterwise indices will be None.
+    repeated int32 indices = 3;
 }
 
 message Model {

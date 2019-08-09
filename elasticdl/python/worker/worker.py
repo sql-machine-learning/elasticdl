@@ -134,7 +134,14 @@ class Worker(object):
         """
         req = elasticdl_pb2.ReportGradientRequest()
         for g, v in zip(grads, self._model.trainable_variables):
-            req.gradient[v.name].CopyFrom(ndarray_to_tensor(g.numpy()))
+            if isinstance(g, tf.IndexedSlices):
+                req.gradient[v.name].CopyFrom(
+                    ndarray_to_tensor(
+                        g.values.numpy(), tuple(g.indices.numpy())
+                    )
+                )
+            else:
+                req.gradient[v.name].CopyFrom(ndarray_to_tensor(g.numpy()))
         req.model_version = self._model_version
         res = self._stub.ReportGradient(req)
         return res.accepted, res.model_version
