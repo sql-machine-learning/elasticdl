@@ -172,7 +172,8 @@ def optimizer(lr=0.02):
 def dataset_fn(dataset, mode):
     if mode == Mode.PREDICTION:
         raise Exception(
-            "dataset_fn in prediction mode is not implemented for this model yet."
+            "dataset_fn in prediction mode is not "
+            "implemented for this model yet."
         )
 
     def _parse_data(record):
