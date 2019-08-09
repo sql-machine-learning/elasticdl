@@ -1,5 +1,3 @@
-set -x
-
 elasticdl train \
   --image_base=elasticdl:ci \
   --model_zoo=model_zoo \
