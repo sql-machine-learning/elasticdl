@@ -1,6 +1,8 @@
 import tensorflow as tf
 from tensorflow.python.keras import backend, layers, regularizers
 
+from elasticdl.python.common.constants import Mode
+
 try:
     from resnet50_subclass.resnet50_model import (
         L2_WEIGHT_DECAY,
@@ -167,7 +169,13 @@ def optimizer(lr=0.02):
     return tf.keras.optimizers.SGD(lr)
 
 
-def dataset_fn(dataset, training=True):
+def dataset_fn(dataset, mode):
+    if mode == Mode.PREDICTION:
+        raise Exception(
+            "dataset_fn in prediction mode is not "
+            "implemented for this model yet."
+        )
+
     def _parse_data(record):
         feature_description = {
             "image": tf.io.FixedLenFeature([], tf.string),
@@ -195,7 +203,7 @@ def dataset_fn(dataset, training=True):
             y,
         )
     )
-    if training:
+    if mode != Mode.PREDICTION:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
 

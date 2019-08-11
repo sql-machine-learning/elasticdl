@@ -23,3 +23,9 @@ class JobType(object):
     EVALUATION_ONLY = "evaluation_only"
     PREDICTION_ONLY = "prediction_only"
     TRAINING_WITH_EVALUATION = "training_with_evaluation"
+
+
+class Mode(object):
+    TRAINING = "training"
+    EVALUATION = "evaluation"
+    PREDICTION = "prediction"
