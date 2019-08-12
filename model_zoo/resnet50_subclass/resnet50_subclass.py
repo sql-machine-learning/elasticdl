@@ -170,39 +170,38 @@ def optimizer(lr=0.02):
 
 
 def dataset_fn(dataset, mode):
-    if mode == Mode.PREDICTION:
-        raise Exception(
-            "dataset_fn in prediction mode is not "
-            "implemented for this model yet."
-        )
-
     def _parse_data(record):
-        feature_description = {
-            "image": tf.io.FixedLenFeature([], tf.string),
-            "label": tf.io.FixedLenFeature([], tf.int64),
-        }
+        if mode == Mode.PREDICTION:
+            feature_description = {
+                "image": tf.io.FixedLenFeature([], tf.string)
+            }
+        else:
+            feature_description = {
+                "image": tf.io.FixedLenFeature([], tf.string),
+                "label": tf.io.FixedLenFeature([], tf.int64),
+            }
         r = tf.io.parse_single_example(record, feature_description)
-        label = tf.cast(r["label"] - 1, tf.int32)
-        image = tf.image.resize(
+        features = tf.image.resize(
             tf.image.decode_jpeg(r["image"]),
             [224, 224],
             method=tf.image.ResizeMethod.BILINEAR,
         )
-        image = tf.cond(
-            tf.math.greater(tf.size(image), 244 * 244),
-            lambda: image,
-            lambda: tf.image.grayscale_to_rgb(image),
+        features = tf.cond(
+            tf.math.greater(tf.size(features), 244 * 244),
+            lambda: features,
+            lambda: tf.image.grayscale_to_rgb(features),
         )
-
-        return image, label
+        features = {
+            "image": tf.math.divide(tf.cast(features, tf.float32), 255.0)
+        }
+        label = tf.cast(r["label"] - 1, tf.int32)
+        if mode == Mode.PREDICTION:
+            return features
+        else:
+            return features, label
 
     dataset = dataset.map(_parse_data)
-    dataset = dataset.map(
-        lambda x, y: (
-            {"image": tf.math.divide(tf.cast(x, tf.float32), 255.0)},
-            y,
-        )
-    )
+
     if mode != Mode.PREDICTION:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset

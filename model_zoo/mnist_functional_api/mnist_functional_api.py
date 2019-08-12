@@ -55,29 +55,27 @@ def optimizer(lr=0.1):
 
 
 def dataset_fn(dataset, mode):
-    if mode == Mode.PREDICTION:
-        raise Exception(
-            "dataset_fn in prediction mode is not "
-            "implemented for this model yet."
-        )
-
     def _parse_data(record):
-        feature_description = {
-            "image": tf.io.FixedLenFeature([28, 28], tf.float32),
-            "label": tf.io.FixedLenFeature([1], tf.int64),
-        }
+        if mode == Mode.PREDICTION:
+            feature_description = {
+                "image": tf.io.FixedLenFeature([28, 28], tf.float32)
+            }
+        else:
+            feature_description = {
+                "image": tf.io.FixedLenFeature([28, 28], tf.float32),
+                "label": tf.io.FixedLenFeature([1], tf.int64),
+            }
         r = tf.io.parse_single_example(record, feature_description)
-        label = r["label"]
-        image = r["image"]
-        return image, label
+        features = {
+            "image": tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
+        }
+        if mode == Mode.PREDICTION:
+            return features
+        else:
+            return features, tf.cast(r["label"], tf.int32)
 
     dataset = dataset.map(_parse_data)
-    dataset = dataset.map(
-        lambda x, y: (
-            {"image": tf.math.divide(tf.cast(x, tf.float32), 255.0)},
-            tf.cast(y, tf.int32),
-        )
-    )
+
     if mode != Mode.PREDICTION:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
