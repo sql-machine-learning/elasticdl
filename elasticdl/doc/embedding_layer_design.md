@@ -65,7 +65,7 @@ In order to `get_worker()` in the keras layer `EdlEmbedding`, worker need to set
 class EdlEmbedding:
     def __init__(self, **kwargs):
         self.worker = self.get_worker()
-        self.worker.start_embedding_service()
+        self.worker.init_embedding_service()
 				
         // standard keras layer init 
         super(EdlEmbedding, self).__init__(**kwargs)
@@ -79,8 +79,8 @@ class Worker:
         from elasticdl.python.common.worker_help import current_worker
         current_worker = self
 		
-    def start_embedding_service(self):
-        response = self.start_embedding_service_rpc()
+    def init_embedding_service(self):
+        response = self.init_embedding_service_rpc()
         self.ip, self.port = response.ip, response.port
 
 // RPC
@@ -100,11 +100,11 @@ def MasterServicer.StartEmbeddingServiceRPC(self, request):
 
 In this method, the two things mentioned above will be done seperately. 
 
-1. First, master creates Redis service before starting worker. Master searchs for  `EdlEmbedding` layers. If found,  master starts a Redis service. 
+1. Master creates Redis service before starting worker. Master searchs for  `EdlEmbedding` layers. If found,  master starts a Redis service. 
 
-2. Second, master start workers.
+2. Master start workers.
 
-3. Third, workers search for `EdlEmbedding` layers. If found, workers pass itself to `EdlEmbedding`.
+3. Workers search for `EdlEmbedding` layers. If found, workers pass itself to `EdlEmbedding`.
 
 ```
 def EdlEmbedding.set_worker(self, worker):
@@ -130,18 +130,18 @@ class MasterServicer.__init__(self, *args, **kwargs):
 
 #### Step 1.2 Initialize embedding vectors
 
-After model initialization, Redis is empty. Master will create and initialize embedding vectors lazily. During the forward pass of model, `EdlEmbedding` will send `ids` to  worker, and worker should return every `id`'s embedding to `EdlEmbedding`.  Some ids are already in Redis and worker will get their embedding vectors from Redis. Master will create and initialize embedding vectors for other ids. When create and initialize embedding vectors, worker should pass `initializer` parameter to master.
+After model initialization, Redis is empty. Master will create and initialize embedding vectors lazily. During the forward pass of model, `EdlEmbedding` will send `ids` to  worker, and worker should return every `id`'s embedding vector to `EdlEmbedding`.  Some ids are already in Redis and worker will get their embedding vectors from Redis. Master will create and initialize embedding vectors for other ids. When create and initialize embedding vectors, worker should pass `initializer` parameter to master.
 
 `initilizer` is a `string` and it is used for get initializer. For example, `initilizer='random_normal'` indicates initializer `keras.initializers.RandomNormal()`.
 
 ```
-def MasterServicer.report_unknown_ids_rpc(self, ids, initializer):
+def MasterServicer.report_unknown_ids_rpc(self, ids, initializer='uniform'):
     with self._embedding_service_lock:
         init_func = tensorflow.python.keras.initializers.get(initializer)
         embeddings = [init_func(i) for i in ids]
-        self.report_embedding_rpc(ids, embeddings)
+        self.embedding_service_set(ids, embeddings)
 				
-def Worker.embedding_lookup(self, ids, initializer):
+def Worker.embedding_lookup(self, ids, initializer='uniform'):
     id_to_embedding, unknown_ids = self.embedding_lookup_rpc(ids)
     if unknown_ids:
         self.report_unknown_ids_rpc(unknown_ids, initializer)
@@ -182,7 +182,8 @@ Below is the pseudocode for `EdlEmbedding.call`:
 ```
 def EdlEmbedding.call(self, inputs, training):
     unique_ids = get_unique_ids(inputs)
-    BET = self.worker.embedding_lookup(unique_ids, self.name, self.embedding_initializer)
+    BET = self.worker.embedding_lookup(
+    	unique_ids, self.name, self.embedding_initializer)
     if training:
         # tape is the current tf.GradientTape for 
         # automatic-differentiation.
