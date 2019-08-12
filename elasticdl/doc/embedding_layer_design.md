@@ -63,35 +63,35 @@ In order to `get_worker()` in the keras layer `EdlEmbedding`, worker need to set
 
 ```
 class EdlEmbedding:
-		def __init__(self, **kwargs):
-				self.worker = self.get_worker()
-				self.worker.start_embedding_service()
+    def __init__(self, **kwargs):
+        self.worker = self.get_worker()
+        self.worker.start_embedding_service()
 				
-				// standard keras layer init 
-				super(EdlEmbedding, self).__init__(**kwargs)
+        // standard keras layer init 
+        super(EdlEmbedding, self).__init__(**kwargs)
 				
-		def get_worker(self):
-				from elasticdl.python.common.worker_help import current_worker
-				return current_worker
+    def get_worker(self):
+        from elasticdl.python.common.worker_help import current_worker
+        return current_worker
 				
 class Worker:
-		def set_worker(self):
-				from elasticdl.python.common.worker_help import current_worker
-				current_worker = self
+    def set_worker(self):
+        from elasticdl.python.common.worker_help import current_worker
+        current_worker = self
 		
-		def start_embedding_service(self):
-				response = self.start_embedding_service_rpc()
-				self.ip, self.port = response.ip, response.port
+    def start_embedding_service(self):
+        response = self.start_embedding_service_rpc()
+        self.ip, self.port = response.ip, response.port
 
 // RPC
 def MasterServicer.StartEmbeddingServiceRPC(self, request):
-		with self._embedding_service_lock:
-				if not self._is_embedding_service_started:
-						ip, port = self._start_embedding_service()
-						self._is_embedding_service_started = True
-		res = StartEmbeddingServiceResponse()
-		res.ip, res.port = ip, port
-		return res
+    with self._embedding_service_lock:
+        if not self._is_embedding_service_started:
+            ip, port = self._start_embedding_service()
+            self._is_embedding_service_started = True
+    res = StartEmbeddingServiceResponse()
+    res.ip, res.port = ip, port
+    return res
 ```
 
 
@@ -108,21 +108,21 @@ In this method, the two things mentioned above will be done seperately.
 
 ```
 def EdlEmbedding.set_worker(self, worker):
-		self.worker = worker
+    self.worker = worker
 
 def Worker.__init__(self):
-		embedding_layers = find_layers(model, EdlEmbedding)
-		if embedding_layers:
-				for layer in embedding_layers:
-						layer.set_worker(self)
+    embedding_layers = find_layers(model, EdlEmbedding)
+    if embedding_layers:
+        for layer in embedding_layers:
+            layer.set_worker(self)
 				
 class MasterServicer.__init__(self, *args, **kwargs):
-				...
-				// masterservicer init done
+    ...
+    // masterservicer init done
 				
-				embedding_layers = find_layers(model, EdlEmbedding)
-				if embedding_layers:
-						ip, port = self._start_embedding_service()
+    embedding_layers = find_layers(model, EdlEmbedding)
+    if embedding_layers:
+        ip, port = self._start_embedding_service()
 
 ```
 
@@ -136,14 +136,14 @@ After model initialization, Redis is empty. Master will create and initialize em
 
 ```
 def MasterServicer.report_unknown_ids_rpc(self, ids, initializer):
-		with self._embedding_service_lock:
-				init_func = tensorflow.python.keras.initializers.get(initializer)
-				embeddings = [init_func(i) for i in ids]
-				self.report_embedding_rpc(ids, embeddings)
+    with self._embedding_service_lock:
+        init_func = tensorflow.python.keras.initializers.get(initializer)
+        embeddings = [init_func(i) for i in ids]
+        self.report_embedding_rpc(ids, embeddings)
 				
 def Worker.embedding_lookup(self, ids, initializer):
-		id_to_embedding, unknown_ids = self.embedding_lookup_rpc(ids)
-		if unknown_ids:
+    id_to_embedding, unknown_ids = self.embedding_lookup_rpc(ids)
+    if unknown_ids:
         self.report_unknown_ids_rpc(unknown_ids, initializer)
     id_to_embedding_new, unknown_ids_new = self.embedding_lookup_rpc(unknown_ids)
     if unknown_ids_new:
