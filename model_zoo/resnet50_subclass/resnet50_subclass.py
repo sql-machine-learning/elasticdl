@@ -194,11 +194,10 @@ def dataset_fn(dataset, mode):
         features = {
             "image": tf.math.divide(tf.cast(features, tf.float32), 255.0)
         }
-        label = tf.cast(r["label"] - 1, tf.int32)
         if mode == Mode.PREDICTION:
             return features
         else:
-            return features, label
+            return features, tf.cast(r["label"] - 1, tf.int32)
 
     dataset = dataset.map(_parse_data)
 
