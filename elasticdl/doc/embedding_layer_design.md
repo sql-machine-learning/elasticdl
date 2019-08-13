@@ -23,7 +23,6 @@ An embedding layer defines an embedding table *E*. For an input containing a lis
 class EdlEmbedding(tf.keras.layers.Layer):
     def __init__(self,
                  embedding_dim,
-                 name,
                  embedding_initializer="uniform",
                  )
 ```
