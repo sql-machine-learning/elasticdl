@@ -23,7 +23,6 @@ An embedding layer defines an embedding table *E*. For an input containing a lis
 class EdlEmbedding(tf.keras.layers.Layer):
     def __init__(self,
                  embedding_dim,
-                 name,
                  embedding_initializer="uniform",
                  )
 ```
@@ -130,26 +129,26 @@ class MasterServicer.__init__(self, *args, **kwargs):
 
 #### Step 1.2 Initialize embedding vectors
 
-After model initialization, Redis is empty. Master will create and initialize embedding vectors lazily. During the forward pass of model, `EdlEmbedding` will send `ids` to  worker, and worker should return every `id`'s embedding vector to `EdlEmbedding`.  Some ids are already in Redis and worker will get their embedding vectors from Redis. Master will create and initialize embedding vectors for other ids. When create and initialize embedding vectors, worker should pass `initializer` parameter to master.
+After model initialization, Redis is empty. Worker will create and initialize embedding vectors lazily. During the forward pass of model, `EdlEmbedding` will send `ids` to  worker, and worker should return every `id`'s embedding vector to `EdlEmbedding`.  Some ids are already in Redis and worker will get their embedding vectors from Redis. Worker will create and initialize embedding vectors for other ids. In order to avoid conflict between workers, worker will use interface `embedding_service_sets_if_not_exists` to report new embedding vectors.
 
-`initilizer` is a `string` and it is used for get initializer. For example, `initilizer='random_normal'` indicates initializer `keras.initializers.RandomNormal()`.
+`initilizer` is a `string` and it is used for get initializer. For example, in *keras* interface, `initilizer='random_normal'` indicates initializer `keras.initializers.RandomNormal()`.
 
-```
-def MasterServicer.report_unknown_ids_rpc(self, ids, initializer='uniform'):
-    with self._embedding_service_lock:
-        init_func = tensorflow.python.keras.initializers.get(initializer)
-        embeddings = [init_func(i) for i in ids]
-        self.embedding_service_set(ids, embeddings)
-				
+```				
 def Worker.embedding_lookup(self, ids, initializer='uniform'):
-    id_to_embedding, unknown_ids = self.embedding_lookup_rpc(ids)
+    id_to_embedding, unknown_ids = self.embedding_service_gets(ids)
     if unknown_ids:
-        self.report_unknown_ids_rpc(unknown_ids, initializer)
-    id_to_embedding_new, unknown_ids_new = self.embedding_lookup_rpc(unknown_ids)
-    if unknown_ids_new:
-        raise Error
-    for k,v in id_to_embedding_new:
-        id_to_embedding[k] = v
+        embedding_vector_list = []
+        for id in unknown_ids:
+            embedding_vector_list.append((id, initialize_embedding(id, initializer))
+        
+        self.embedding_service_sets_if_not_exists(
+            embedding_vector_list
+        )
+        id_to_embedding_new, unknown_ids_new = self.embedding_service_gets(unknown_ids)
+        if unknown_ids_new:
+            raise Error
+        for k, v in id_to_embedding_new:
+            id_to_embedding[k] = v
     return [id_to_embedding[i] for i in ids]
 ```
 
@@ -232,13 +231,20 @@ Send *G_E* and all other graidients of *model*'s variables to the master in `Rep
 
 ### Step 4: [master] Update embedding table with embedding gradients
 
-The master accumulates the embedding gradients `G_E` as `G_EM`. When there are enough gradients to update the model, the master updates embedding table `E` with the accumulated `G_EM`.
+The master accumulates the embedding gradients `G_E` as `G_EM`. When there are enough gradients to update the model, the master updates embedding table `E` with the accumulated `G_EM`. In order to call `optimizer.apply_gradient` only once, we should concatenate the gradients of native tensorflow variable `G_origin` and gradients `G_EM` together. 
 
 ```
+G_EM_grads_value_pair = []
 for i, index in enumerated(G_EM.indices):
     embedding = embedding_lookup(index, embedding_name)
-    embedding = optimizer.apply_gradient((G_EM.values[i], embedding))
-    write_back_to_embedding_table(embedding, index)
+    G_EM_grads_value_pair.append((G_EM.values[i], embedding))
+
+origin_grads_value_pair = list(zip(G_origin, model.trainable_variables))
+updated_variables = optimizer.apply_gradient(
+    origin_grads_value_pair + G_EM_grads_value_pair
+)
+updated_embeddings = updated_variables[len(G_origin):]
+write_back_to_embedding_table(G_EM.indices, updated_embeddings)
 ```
 
 #### Support slots in Optimizer
