@@ -45,8 +45,14 @@ It has following cons:
 
 Encapsulate into a single model class.
 
+
 ```python
-class DemoModel(tf.keras.Model):
+from abc import ABC
+from abc import abstractmethod
+
+import tensorflow as tf
+
+class ElasticDLKerasModelBase(ABC, tf.keras.Model):
 
     def __init__(self, context):
         """
@@ -56,35 +62,34 @@ class DemoModel(tf.keras.Model):
         """
         self._context = context
 
-    def __call__(self, mode):
+    @abstractmethod
+    def call(self, inputs, training=False):
         """
         Args:
             inputs:
-            mode: mode of current operations, e.g. Mode.TRAINING
+            training: training phase indication
         """
         # define outputs
-        return outputs
 
-    @property
-    def loss(self):
-        # defined in __call__
-        return self._loss
-
-    @property
-    def optimizer(self):
-        # defined in __call__
-        return self._optimizer
-
-    @property
-    def metrics(self, mode="TRAIN"):
+    @abstractmethod
+    def loss(self, outputs=None, labels=None):
         """
-        defined in __call__
-        user can return different kind of metrics according to mode
-        Returns:
-            dict of metric
+        Return loss tensor
         """
 
-        return self._metrics
+    @abstractmethod
+    def metrics(self,
+                mode=Mode.TRAINING,
+                outputs=None,
+                predictions=None,
+                labels=None,):
+        """
+        Return dict of metrics tensor according to mode
+        """
+
+    @abstractmethod
+    def optimizer(self, lr=0.1):
+        """Define optimizer"""
 
     def train_op(self):
         """optimizing operations
@@ -98,6 +103,9 @@ This interface is almost the same as model and function names but everything is 
 
 - default\_optimizer -> optimizer
 - default\_loss -> loss
+- eval\_metrics\_fn -> metrics
+
+User's model should inherit from `ElasticDLKerasModelBase`.
 
 ### Notes
 
