@@ -236,7 +236,7 @@ class CustomModel(ElasticDLKerasModelBase):
         x = self._flatten_1(x)
         return self._dense_1(x)
 
-    def loss(output, labels):
+    def loss(self, output, labels):
         labels = tf.reshape(labels, [-1])
         return tf.reduce_mean(
             input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -244,7 +244,7 @@ class CustomModel(ElasticDLKerasModelBase):
             )
         )
 
-    def optimizer(lr=0.1):
+    def optimizer(self, lr=0.1):
         return tf.optimizers.SGD(lr)
 
     def metrics(self,
