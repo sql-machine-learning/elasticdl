@@ -1,6 +1,6 @@
-# Model Design Engllish
+### Introduction
 
-High level API is the bridge between framework and user defined code. User implements the interfaces required by framework and framework does its job accordingly.
+High-level API is the bridge between framework and user defined code. User implements the interfaces required by framework and framework does its job accordingly.
 
 ### Current Design
 
@@ -51,16 +51,16 @@ class DemoModel(tf.keras.Model):
     def __init__(self, context):
         """
         Args:
-			context: framework provided for model building phase, such as worker_id,
-					paths like train_data_dir, evaluation_dir
+            context: framework provided for model building phase, such as worker_id,
+                    paths like train_data_dir, evaluation_dir
         """
-		self._context = context
+        self._context = context
 
-    def __call__(self, inputs, mode):
-		"""
+    def __call__(self, mode):
+        """
         Args:
-			inputs:
-            mode: mode of current operations, e.g. TRAIN
+            inputs:
+            mode: mode of current operations, e.g. Mode.TRAINING
         """
         # define outputs
         return outputs
@@ -72,16 +72,16 @@ class DemoModel(tf.keras.Model):
 
     @property
     def optimizer(self):
-        # defined in __cal__
+        # defined in __call__
         return self._optimizer
 
     @property
-    def metircs(self, mode="TRAIN"):
+    def metrics(self, mode="TRAIN"):
         """
         defined in __call__
         user can return different kind of metrics according to mode
         Returns:
-			dict of metric
+            dict of metric
         """
 
         return self._metrics
@@ -90,7 +90,7 @@ class DemoModel(tf.keras.Model):
         """optimizing operations
         by default: we wil use model.optimizer and model.loss to get it.
         """
-		return None
+        return None
 
 ```
 
@@ -98,6 +98,11 @@ This interface is almost the same as model and function names but everything is 
 
 - default\_optimizer -> optimizer
 - default\_loss -> loss
+
+### Notes
+
++ `dataset_fn` is removed. User can get specific paths from context and build dataset.
++ `PredictionOutputsProcessor` will be changed to hook or callback. Currently stay unchanged.
 
 ### Changes
 
