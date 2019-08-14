@@ -6,7 +6,6 @@ from contextlib import closing
 import numpy as np
 import recordio
 import tensorflow as tf
-
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.model_helper import get_model_file
@@ -184,19 +183,25 @@ class ExampleTest(unittest.TestCase):
         self.assertTrue(not task.shard_file_name)
 
     def test_deepfm_functional_train(self):
+        model_params = (
+            "input_dim=5383,embedding_dim=4,input_length=10,fc_unit=4"
+        )
         self.distributed_train_and_evaluate(
             10,
             "deepfm_functional_api.deepfm_functional_api.custom_model",
-            model_params="input_dim=5383,embedding_dim=4,input_length=10,fc_unit=4",
+            model_params=model_params,
             training=True,
             dataset="frappe",
         )
 
     def test_deepfm_functional_evaluate(self):
+        model_params = (
+            "input_dim=5383,embedding_dim=4,input_length=10,fc_unit=4"
+        )
         self.distributed_train_and_evaluate(
             10,
             "deepfm_functional_api.deepfm_functional_api.custom_model",
-            model_params="input_dim=5383,embedding_dim=4,input_length=10,fc_unit=4",
+            model_params=model_params,
             training=False,
             dataset="frappe",
         )

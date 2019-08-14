@@ -5,15 +5,20 @@ import logging
 import os
 import sys
 
-import recordio
-import tensorflow as tf
-import numpy as np
 import LoadData
+import recordio
+import requests
+import tensorflow as tf
+
+urls_template = (
+    "https://raw.githubusercontent.com/hexiangnan/neural_factorization"
+    "_machine/master/data/frappe/frappe.%s.libfm"
+)
 
 urls = {
-    "train": "https://raw.githubusercontent.com/hexiangnan/neural_factorization_machine/master/data/frappe/frappe.train.libfm",
-    "validation": "https://raw.githubusercontent.com/hexiangnan/neural_factorization_machine/master/data/frappe/frappe.validation.libfm",
-    "test": "https://raw.githubusercontent.com/hexiangnan/neural_factorization_machine/master/data/frappe/frappe.test.libfm"
+    "train": urls_template % "train",
+    "validation": urls_template % "validation",
+    "test": urls_template % "test",
 }
 
 
@@ -56,12 +61,23 @@ def convert(x, y, args, subdir):
         )
         row = row + 1
     w.close()
-    print('done')
+    print("done")
     logging.info(
         "Wrote {} of total {} records into {} files".format(
             row, x.shape[0], shard
         )
     )
+
+
+def download(url, dest_path):
+
+    req = requests.get(url, stream=True)
+    req.raise_for_status()
+
+    with open(dest_path, "wb") as fd:
+        for chunk in req.iter_content(chunk_size=2 ** 20):
+            fd.write(chunk)
+
 
 def load_raw_data(args):
     for phase in ["train", "validation", "test"]:
@@ -70,14 +86,15 @@ def load_raw_data(args):
             download(urls[phase], filepath)
     data = LoadData.LoadData(args.data)
     return (
-        data.train[0], 
-        data.train[1], 
+        data.train[0],
+        data.train[1],
         data.validation[0],
         data.validation[1],
         data.test[0],
-        data.test[1]
+        data.test[1],
     )
-        
+
+
 def main(args):
     x_train, y_train, x_val, y_val, x_test, y_test = load_raw_data(args)
 
@@ -88,7 +105,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description=("Convert TensorFlow feature datasets into RecordIO format.")
+        description=(
+            "Convert TensorFlow feature datasets into RecordIO format."
+        )
     )
     parser.add_argument("--data", help="Data file path")
     parser.add_argument(
@@ -97,10 +116,7 @@ if __name__ == "__main__":
         type=int,
         help="Maximum number of records per shard file.",
     )
-    parser.add_argument(
-        "--output_dir",
-        help="Output directory",
-    )
+    parser.add_argument("--output_dir", help="Output directory")
     parser.add_argument(
         "--fraction",
         default=1.0,

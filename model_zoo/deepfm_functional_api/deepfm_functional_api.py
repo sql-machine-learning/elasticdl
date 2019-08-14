@@ -1,12 +1,17 @@
-import numpy as np
-import PIL.Image
 import tensorflow as tf
-import logging
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import Layer, Multiply, Embedding, Subtract, Flatten, Dense
 from elasticdl.python.common.constants import Mode
+from tensorflow.keras.layers import (
+    Dense,
+    Embedding,
+    Flatten,
+    Layer,
+    Multiply,
+    Subtract,
+)
 
 AUC_metric = None
+
 
 class ApplyMask(Layer):
     def __init__(self, **kwargs):
@@ -15,28 +20,31 @@ class ApplyMask(Layer):
 
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
-        super(ApplyMask, self).build(input_shape)  # Be sure to call this somewhere!
+        super(ApplyMask, self).build(
+            input_shape
+        )  # Be sure to call this somewhere!
 
     def compute_mask(self, input, input_mask=None):
         # do not pass the mask to the next layers
         return None
 
     def call(self, x, mask=None):
-        return Multiply()(
-            [
-                x, tf.cast(
-                    K.expand_dims(mask, -1), tf.float32
-                )
-            ]
-        )
+        return Multiply()([x, tf.cast(K.expand_dims(mask, -1), tf.float32)])
 
     def compute_output_shape(self, input_shape):
         return input_shape
 
 
-def custom_model(input_dim=5383, embedding_dim=64, input_length=10, fc_unit=64):
+def custom_model(
+    input_dim=5383, embedding_dim=64, input_length=10, fc_unit=64
+):
     inputs = tf.keras.Input(shape=(input_length,))
-    embed_layer = Embedding(input_dim=input_dim, output_dim=embedding_dim, mask_zero=True, input_length=input_length)
+    embed_layer = Embedding(
+        input_dim=input_dim,
+        output_dim=embedding_dim,
+        mask_zero=True,
+        input_length=input_length,
+    )
     embeddings = embed_layer(inputs)
     embeddings = ApplyMask()(embeddings)
 
@@ -44,11 +52,15 @@ def custom_model(input_dim=5383, embedding_dim=64, input_length=10, fc_unit=64):
     emb_sum_square = K.square(emb_sum)
     emb_square = K.square(embeddings)
     emb_square_sum = K.sum(emb_square, axis=1)
-    second_order = K.sum(0.5 * Subtract()([emb_sum_square, emb_square_sum]), axis=1)
+    second_order = K.sum(
+        0.5 * Subtract()([emb_sum_square, emb_square_sum]), axis=1
+    )
 
-    id_bias = Embedding(input_dim=input_dim, output_dim=1, mask_zero=True)(inputs)
+    id_bias = Embedding(input_dim=input_dim, output_dim=1, mask_zero=True)(
+        inputs
+    )
     id_bias = ApplyMask()(id_bias)
-    first_order = K.sum(id_bias, axis=(1,2))
+    first_order = K.sum(id_bias, axis=(1, 2))
     fm_output = tf.keras.layers.Add()([first_order, second_order])
 
     nn_input = Flatten()(embeddings)
@@ -83,7 +95,7 @@ def dataset_fn(dataset, mode):
     def _parse_data(record):
         if mode == Mode.PREDICTION:
             feature_description = {
-                "feature": tf.io.FixedLenFeature([10], tf.int64),
+                "feature": tf.io.FixedLenFeature([10], tf.int64)
             }
         else:
             feature_description = {
@@ -91,9 +103,7 @@ def dataset_fn(dataset, mode):
                 "label": tf.io.FixedLenFeature([1], tf.int64),
             }
         r = tf.io.parse_single_example(record, feature_description)
-        features = {
-            "feature": tf.cast(r["feature"], tf.float32)
-        }
+        features = {"feature": tf.cast(r["feature"], tf.float32)}
         if mode == Mode.PREDICTION:
             return features
         return features, tf.cast(r["label"], tf.int32)
@@ -112,16 +122,9 @@ def eval_metrics_fn(predictions, labels):
     return {
         "accuracy": tf.reduce_mean(
             input_tensor=tf.cast(
-                tf.equal(
-                    tf.cast(predictions > 0.0, tf.dtypes.int32),
-                    labels,
-                ),
+                tf.equal(tf.cast(predictions > 0.0, tf.dtypes.int32), labels),
                 tf.float32,
             )
-        ), 
-        "auc": AUC_metric(
-            labels,
-            tf.sigmoid(predictions)
-        )
+        ),
+        "auc": AUC_metric(labels, tf.sigmoid(predictions)),
     }
-
