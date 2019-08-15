@@ -269,11 +269,11 @@ class Client(object):
 
     def create_worker(self, **kargs):
         pod_name = self.get_worker_pod_name(kargs["worker_id"])
-        return self._create_worker_pod(pod_name, "worker")
+        return self._create_worker_pod(pod_name, "worker", **kargs)
 
     def create_embedding_service(self, **kargs):
         pod_name = self.get_embedding_service_pod_name(kargs["worker_id"])
-        return self._create_worker_pod(pod_name, "embedding_service")
+        return self._create_worker_pod(pod_name, "embedding_service", **kargs)
 
     def delete_master(self):
         logger.info("pod name is %s" % self.get_master_pod_name())
