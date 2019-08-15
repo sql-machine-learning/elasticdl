@@ -120,9 +120,7 @@ class Client(object):
     def get_embedding_service_pod(self, embedding_service_id):
         try:
             return self.client.read_namespaced_pod(
-                name=self.get_embedding_service_pod_name(
-                    embedding_service_id
-                ),
+                name=self.get_embedding_service_pod_name(embedding_service_id),
                 namespace=self.namespace,
             )
         except client.api_client.ApiException as e:
@@ -291,9 +289,7 @@ class Client(object):
             env=None,
         )
         # Add replica type and index
-        pod.metadata.labels[
-            ELASTICDL_REPLICA_TYPE_KEY
-        ] = "embedding_service"
+        pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "embedding_service"
         pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = str(
             kargs["embedding_service_id"]
         )

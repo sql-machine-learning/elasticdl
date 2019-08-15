@@ -115,14 +115,20 @@ class K8sClientTest(unittest.TestCase):
         for i in range(3):
             embedding_service = c.get_embedding_service_pod(i)
             self.assertEqual(
-                embedding_service.metadata.labels[k8s.ELASTICDL_JOB_KEY], c.job_name
+                embedding_service.metadata.labels[k8s.ELASTICDL_JOB_KEY],
+                c.job_name,
             )
             self.assertEqual(
-                embedding_service.metadata.labels[k8s.ELASTICDL_REPLICA_TYPE_KEY],
+                embedding_service.metadata.labels[
+                    k8s.ELASTICDL_REPLICA_TYPE_KEY
+                ],
                 "embedding_service",
             )
             self.assertEqual(
-                embedding_service.metadata.labels[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
+                embedding_service.metadata.labels[
+                    k8s.ELASTICDL_REPLICA_INDEX_KEY
+                ],
+                str(i),
             )
 
         # Delete master and all workers should also be deleted
