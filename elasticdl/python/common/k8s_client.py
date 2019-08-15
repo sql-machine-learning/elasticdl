@@ -82,6 +82,12 @@ class Client(object):
     def get_worker_pod_name(self, worker_id):
         return "elasticdl-%s-worker-%s" % (self.job_name, str(worker_id))
 
+    def get_embedding_table_server_pod_name(self, embedding_service_id):
+        return "elasticdl-%s-embedding-service-%s" % (
+            self.job_name,
+            str(embedding_service_id),
+        )
+
     def patch_labels_to_pod(self, pod_name, labels_dict):
         body = {"metadata": {"labels": labels_dict}}
         try:
@@ -109,6 +115,20 @@ class Client(object):
             )
         except client.api_client.ApiException as e:
             logger.warning("Exception when reading worker pod: %s\n" % e)
+            return None
+
+    def get_embedding_table_server_pod(self, embedding_service_id):
+        try:
+            return self.client.read_namespaced_pod(
+                name=self.get_embedding_table_server_pod_name(
+                    embedding_service_id
+                ),
+                namespace=self.namespace,
+            )
+        except client.api_client.ApiException as e:
+            logger.warning(
+                "Exception when reading embedding table server pod: %s\n" % e
+            )
             return None
 
     @staticmethod
@@ -249,6 +269,36 @@ class Client(object):
         )
         return self.client.create_namespaced_pod(self.namespace, pod)
 
+    def create_embedding_service(self, **kargs):
+        # Find that master pod that will be used as the owner reference
+        # for this worker pod.
+        master_pod = self.get_master_pod()
+        pod = self._create_pod(
+            pod_name=self.get_embedding_table_server_pod_name(
+                kargs["embedding_service_id"]
+            ),
+            job_name=self.job_name,
+            image_name=self._image_name,
+            command=kargs["command"],
+            resource_requests=kargs["resource_requests"],
+            resource_limits=kargs["resource_limits"],
+            container_args=kargs["args"],
+            pod_priority=kargs["pod_priority"],
+            image_pull_policy=kargs["image_pull_policy"],
+            restart_policy=kargs["restart_policy"],
+            volume=kargs["volume"],
+            owner_pod=master_pod,
+            env=None,
+        )
+        # Add replica type and index
+        pod.metadata.labels[
+            ELASTICDL_REPLICA_TYPE_KEY
+        ] = "embedding_table_server"
+        pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = str(
+            kargs["embedding_service_id"]
+        )
+        return self.client.create_namespaced_pod(self.namespace, pod)
+
     def delete_master(self):
         logger.info("pod name is %s" % self.get_master_pod_name())
         self.client.delete_namespaced_pod(
@@ -260,6 +310,13 @@ class Client(object):
     def delete_worker(self, worker_id):
         self.client.delete_namespaced_pod(
             self.get_worker_pod_name(worker_id),
+            self.namespace,
+            body=client.V1DeleteOptions(grace_period_seconds=0),
+        )
+
+    def delete_embedding_table_server(self, embedding_service_id):
+        self.client.delete_namespaced_pod(
+            self.get_embedding_table_server_pod_name(embedding_service_id),
             self.namespace,
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )

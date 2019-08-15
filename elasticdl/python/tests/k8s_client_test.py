@@ -92,6 +92,39 @@ class K8sClientTest(unittest.TestCase):
                 worker.metadata.labels[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
             )
 
+        # Start 3 embedding services
+        for i in range(3):
+            _ = c.create_embedding_service(
+                embedding_service_id=str(i),
+                resource_requests=resource,
+                resource_limits=resource,
+                command=["echo"],
+                pod_priority=None,
+                args=None,
+                volume=None,
+                image_pull_policy="Never",
+                restart_policy="Never",
+            )
+            time.sleep(5)
+
+        # Wait for embedding services to be added
+        while tracker._count < 7:
+            time.sleep(1)
+
+        # Check embedding services pods labels
+        for i in range(3):
+            worker = c.get_worker_pod(i)
+            self.assertEqual(
+                worker.metadata.labels[k8s.ELASTICDL_JOB_KEY], c.job_name
+            )
+            self.assertEqual(
+                worker.metadata.labels[k8s.ELASTICDL_REPLICA_TYPE_KEY],
+                "embedding_table_server",
+            )
+            self.assertEqual(
+                worker.metadata.labels[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
+            )
+
         # Delete master and all workers should also be deleted
         c.delete_master()
 
