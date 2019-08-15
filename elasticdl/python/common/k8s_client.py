@@ -82,7 +82,7 @@ class Client(object):
     def get_worker_pod_name(self, worker_id):
         return "elasticdl-%s-worker-%s" % (self.job_name, str(worker_id))
 
-    def get_embedding_table_server_pod_name(self, embedding_service_id):
+    def get_embedding_service_pod_name(self, embedding_service_id):
         return "elasticdl-%s-embedding-service-%s" % (
             self.job_name,
             str(embedding_service_id),
@@ -117,17 +117,17 @@ class Client(object):
             logger.warning("Exception when reading worker pod: %s\n" % e)
             return None
 
-    def get_embedding_table_server_pod(self, embedding_service_id):
+    def get_embedding_service_pod(self, embedding_service_id):
         try:
             return self.client.read_namespaced_pod(
-                name=self.get_embedding_table_server_pod_name(
+                name=self.get_embedding_service_pod_name(
                     embedding_service_id
                 ),
                 namespace=self.namespace,
             )
         except client.api_client.ApiException as e:
             logger.warning(
-                "Exception when reading embedding table server pod: %s\n" % e
+                "Exception when reading embedding service pod: %s\n" % e
             )
             return None
 
@@ -274,7 +274,7 @@ class Client(object):
         # for this worker pod.
         master_pod = self.get_master_pod()
         pod = self._create_pod(
-            pod_name=self.get_embedding_table_server_pod_name(
+            pod_name=self.get_embedding_service_pod_name(
                 kargs["embedding_service_id"]
             ),
             job_name=self.job_name,
@@ -293,7 +293,7 @@ class Client(object):
         # Add replica type and index
         pod.metadata.labels[
             ELASTICDL_REPLICA_TYPE_KEY
-        ] = "embedding_table_server"
+        ] = "embedding_service"
         pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = str(
             kargs["embedding_service_id"]
         )
@@ -314,9 +314,9 @@ class Client(object):
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )
 
-    def delete_embedding_table_server(self, embedding_service_id):
+    def delete_embedding_service(self, embedding_service_id):
         self.client.delete_namespaced_pod(
-            self.get_embedding_table_server_pod_name(embedding_service_id),
+            self.get_embedding_service_pod_name(embedding_service_id),
             self.namespace,
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )

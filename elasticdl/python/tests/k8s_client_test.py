@@ -113,16 +113,16 @@ class K8sClientTest(unittest.TestCase):
 
         # Check embedding services pods labels
         for i in range(3):
-            worker = c.get_worker_pod(i)
+            embedding_service = c.get_embedding_service_pod(i)
             self.assertEqual(
-                worker.metadata.labels[k8s.ELASTICDL_JOB_KEY], c.job_name
+                embedding_service.metadata.labels[k8s.ELASTICDL_JOB_KEY], c.job_name
             )
             self.assertEqual(
-                worker.metadata.labels[k8s.ELASTICDL_REPLICA_TYPE_KEY],
-                "embedding_table_server",
+                embedding_service.metadata.labels[k8s.ELASTICDL_REPLICA_TYPE_KEY],
+                "embedding_service",
             )
             self.assertEqual(
-                worker.metadata.labels[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
+                embedding_service.metadata.labels[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
             )
 
         # Delete master and all workers should also be deleted
