@@ -1,6 +1,5 @@
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from elasticdl.python.common.constants import Mode
 from tensorflow.keras.layers import (
     Dense,
     Embedding,
@@ -9,6 +8,8 @@ from tensorflow.keras.layers import (
     Multiply,
     Subtract,
 )
+
+from elasticdl.python.common.constants import Mode
 
 AUC_metric = None
 
