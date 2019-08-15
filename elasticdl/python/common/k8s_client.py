@@ -241,12 +241,12 @@ class Client(object):
         resp = self.client.create_namespaced_pod(self.namespace, pod)
         logger.info("Master launched. status='%s'" % str(resp.status))
 
-    def create_worker(self, **kargs):
+    def _create_worker_pod(self, pod_name, type_key, **kargs):
         # Find that master pod that will be used as the owner reference
         # for this worker pod.
         master_pod = self.get_master_pod()
         pod = self._create_pod(
-            pod_name=self.get_worker_pod_name(kargs["worker_id"]),
+            pod_name=pod_name,
             job_name=self.job_name,
             image_name=self._image_name,
             command=kargs["command"],
@@ -261,39 +261,19 @@ class Client(object):
             env=None,
         )
         # Add replica type and index
-        pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "worker"
+        pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = type_key
         pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = str(
             kargs["worker_id"]
         )
         return self.client.create_namespaced_pod(self.namespace, pod)
 
+    def create_worker(self, **kargs):
+        pod_name = self.get_worker_pod_name(kargs["worker_id"])
+        return self._create_worker_pod(pod_name, "worker")
+
     def create_embedding_service(self, **kargs):
-        # Find that master pod that will be used as the owner reference
-        # for this worker pod.
-        master_pod = self.get_master_pod()
-        pod = self._create_pod(
-            pod_name=self.get_embedding_service_pod_name(
-                kargs["embedding_service_id"]
-            ),
-            job_name=self.job_name,
-            image_name=self._image_name,
-            command=kargs["command"],
-            resource_requests=kargs["resource_requests"],
-            resource_limits=kargs["resource_limits"],
-            container_args=kargs["args"],
-            pod_priority=kargs["pod_priority"],
-            image_pull_policy=kargs["image_pull_policy"],
-            restart_policy=kargs["restart_policy"],
-            volume=kargs["volume"],
-            owner_pod=master_pod,
-            env=None,
-        )
-        # Add replica type and index
-        pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "embedding_service"
-        pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = str(
-            kargs["embedding_service_id"]
-        )
-        return self.client.create_namespaced_pod(self.namespace, pod)
+        pod_name = self.get_embedding_service_pod_name(kargs["worker_id"])
+        return self._create_worker_pod(pod_name, "embedding_service")
 
     def delete_master(self):
         logger.info("pod name is %s" % self.get_master_pod_name())

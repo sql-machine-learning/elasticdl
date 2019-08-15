@@ -95,7 +95,7 @@ class K8sClientTest(unittest.TestCase):
         # Start 3 embedding services
         for i in range(3):
             _ = c.create_embedding_service(
-                embedding_service_id=str(i),
+                worker_id=str(i),
                 resource_requests=resource,
                 resource_limits=resource,
                 command=["echo"],
