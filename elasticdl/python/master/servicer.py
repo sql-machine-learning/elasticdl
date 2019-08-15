@@ -12,6 +12,7 @@ from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
+from elasticdl.python.common.tensor_helper import merge_indexed_slices
 from elasticdl.python.master.checkpoint_service import CheckpointService
 
 
@@ -35,6 +36,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._task_d = task_d
         self._lock = threading.Lock()
         self._gradient_sum = {}
+        self._edl_embedding_gradients = {}
         self._gradient_sum_indexed = {}
         self._grad_to_wait = grads_to_wait
         self._grad_n = 0
@@ -150,6 +152,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._update_model_version()
         self._gradient_sum.clear()
         self._gradient_sum_indexed.clear()
+        self._edl_embedding_gradients.clear()
         self._grad_n = 0
 
     def get_model_version(self):
@@ -248,9 +251,29 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # Do sanity check before accumulating gradients.
             for k, v in request.gradient.items():
                 if k not in self._model:
-                    raise ValueError(
-                        "Gradient key: %s is not part of model", k
-                    )
+                    if v.indices:
+                        # IndexedSlices are gradients of Embeddings Table
+                        # of EdlEmbedding layer
+                        # TODO: Updating Embedding Table of EdlEmbedding
+                        # layer will be implemented
+                        arr = tensor_to_ndarray(v)
+                        if k in self._edl_embedding_gradients:
+                            self._edl_embedding_gradients[
+                                k
+                            ] = merge_indexed_slices(
+                                self._edl_embedding_gradients[k], arr
+                            )
+                        else:
+                            self._edl_embedding_gradients[k] = arr
+                        logger.warning(
+                            "Update Embedding Table of EdlEmbedding layer "
+                            "is not implemented."
+                        )
+                        continue
+                    else:
+                        raise ValueError(
+                            "Gradient key: %s is not part of model", k
+                        )
                 arr = tensor_to_ndarray(v)
                 if isinstance(arr, tf.IndexedSlices):
                     if arr.values.shape[1] != self._model[k].numpy().shape[1]:
