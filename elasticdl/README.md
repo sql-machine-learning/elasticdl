@@ -62,7 +62,7 @@ We have set up pre-commit checks in the Github repo for pull requests, which can
 docker run --rm -it -v $EDL_REPO:/v -w /v \
     elasticdl:dev \
     bash -c \
-    "pre-commit run --files $(find elasticdl/python -name '*.py' -print0 | tr '\0' ' ')"
+    "pre-commit run --files $(find elasticdl/python model_zoo -name '*.py' -print0 | tr '\0' ' ')"
 ```
 
 ### Unit Tests
