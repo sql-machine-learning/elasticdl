@@ -182,7 +182,7 @@ class ReportBETGradientTest(unittest.TestCase):
             (tf.Variable([1, 2, 3], name="test_bet"), [1, 2, 3])
         ]
         worker._embedding_layers = [layer]
-        train_vars = worker.get_trainable_variables()
+        train_vars = worker.get_trainable_items()
         print(train_vars)
         self.assertTrue("embedding" in train_vars[0].name)
         self.assertTrue("dense" in train_vars[1].name)

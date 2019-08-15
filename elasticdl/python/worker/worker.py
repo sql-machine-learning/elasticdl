@@ -137,7 +137,7 @@ class Worker(object):
         req = elasticdl_pb2.ReportGradientRequest()
         origin_vars = self._model.trainable_variables
         origin_var_n = len(origin_vars)
-        # should keep the same order as self.get_trainable_variables()
+        # should keep the same order as self.get_trainable_items()
         for g, v in zip(grads[:origin_var_n], origin_vars):
             if isinstance(g, tf.IndexedSlices):
                 req.gradient[v.name].CopyFrom(
@@ -148,24 +148,25 @@ class Worker(object):
             else:
                 req.gradient[v.name].CopyFrom(ndarray_to_tensor(g.numpy()))
 
-        # should keep the same order as self.get_trainable_variables()
+        # should keep the same order as self.get_trainable_items()
         if self._embedding_layers:
             grads_edlembedding = grads[origin_var_n:]
 
-            BET_number = 0
+            bet_number = 0
             for layer in self._embedding_layers:
-                BET_number += len(layer.bet_ids_pair)
-            if len(grads_edlembedding) != BET_number:
+                bet_number += len(layer.bet_ids_pair)
+            if len(grads_edlembedding) != bet_number:
                 raise ValueError(
                     "EdlEmbedding related gradient number %d does not match"
                     "the number of EdlEmbedding output tensor %d."
-                    % (len(grads_edlembedding), BET_number)
+                    % (len(grads_edlembedding), bet_number)
                 )
 
             it = 0
             for layer in self._embedding_layers:
                 g_values = None
                 g_indices = None
+                # TODO: translate ids in gradients of bet
                 for bet, ids in layer.bet_ids_pair:
                     if g_values is not None:
                         g_values = tf.concat(
@@ -228,7 +229,7 @@ class Worker(object):
     def get_gradiet_tape(self):
         return self._tape
 
-    def get_trainable_variables(self):
+    def get_trainable_items(self):
         """
         return all trainable variables list, including batch embedding
         tensor (BET) if exists. take care to keep the same order as in
@@ -249,7 +250,7 @@ class Worker(object):
             # Add regularization loss if any
             if self._model.losses:
                 loss += tf.math.add_n(self._model.losses)
-        grads = tape.gradient(loss, self.get_trainable_variables())
+        grads = tape.gradient(loss, self.get_trainable_items())
         return loss, grads
 
     @tf.function
