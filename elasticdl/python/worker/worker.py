@@ -56,6 +56,8 @@ class Worker(object):
         self._model = load_model_from_module(
             model_def, model_module, model_params
         )
+        # TODO: call find_layer and get EdlEmbedding layers
+        self._embedding_layers = []
         self._var_created = self._model.built
         self._dataset_fn = model_module[dataset_fn]
         self._opt_fn = model_module[optimizer]
@@ -133,7 +135,10 @@ class Worker(object):
         report gradient to ps, return (accepted, model_version) from rpc call.
         """
         req = elasticdl_pb2.ReportGradientRequest()
-        for g, v in zip(grads, self._model.trainable_variables):
+        origin_vars = self._model.trainable_variables
+        origin_var_n = len(origin_vars)
+        # should keep the same order as self.get_trainable_items()
+        for g, v in zip(grads[:origin_var_n], origin_vars):
             if isinstance(g, tf.IndexedSlices):
                 req.gradient[v.name].CopyFrom(
                     ndarray_to_tensor(
@@ -142,6 +147,43 @@ class Worker(object):
                 )
             else:
                 req.gradient[v.name].CopyFrom(ndarray_to_tensor(g.numpy()))
+
+        # should keep the same order as self.get_trainable_items()
+        if self._embedding_layers:
+            grads_edlembedding = grads[origin_var_n:]
+
+            bet_number = 0
+            for layer in self._embedding_layers:
+                bet_number += len(layer.bet_ids_pair)
+            if len(grads_edlembedding) != bet_number:
+                raise ValueError(
+                    "EdlEmbedding related gradient number %d does not match"
+                    "the number of EdlEmbedding output tensor %d."
+                    % (len(grads_edlembedding), bet_number)
+                )
+
+            it = 0
+            for layer in self._embedding_layers:
+                g_values = None
+                g_indices = None
+                # TODO: translate ids in gradients of bet
+                for bet, ids in layer.bet_ids_pair:
+                    if g_values is not None:
+                        g_values = tf.concat(
+                            [g_values, grads_edlembedding[it]], axis=0
+                        )
+                        g_indices = tf.concat([g_indices, ids], axis=0)
+                    else:
+                        g_values = grads_edlembedding[it]
+                        g_indices = ids
+                    it += 1
+
+                req.gradient[layer.name].CopyFrom(
+                    ndarray_to_tensor(
+                        g_values.numpy(), tuple(g_indices.numpy())
+                    )
+                )
+
         req.model_version = self._model_version
         res = self._stub.ReportGradient(req)
         return res.accepted, res.model_version
@@ -181,6 +223,18 @@ class Worker(object):
         self.report_variable()
         self._var_created = True
 
+    def get_trainable_items(self):
+        """
+        return all trainable variables list, including batch embedding
+        tensor (BET) if exists. take care to keep the same order as in
+        self.report_gradient()
+        """
+        bets = []
+        if self._embedding_layers:
+            for layer in self._embedding_layers:
+                bets.extend([i for (i, _) in layer.bet_ids_pair])
+        return self._model.trainable_variables + bets
+
     @tf.function
     def training_process(self, features, labels):
         with tf.GradientTape() as tape:
@@ -189,7 +243,7 @@ class Worker(object):
             # Add regularization loss if any
             if self._model.losses:
                 loss += tf.math.add_n(self._model.losses)
-        grads = tape.gradient(loss, self._model.trainable_variables)
+        grads = tape.gradient(loss, self.get_trainable_items())
         return loss, grads
 
     @tf.function
