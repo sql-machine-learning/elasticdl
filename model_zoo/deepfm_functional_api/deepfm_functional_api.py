@@ -19,12 +19,6 @@ class ApplyMask(Layer):
         self.supports_masking = True
         super(ApplyMask, self).__init__(**kwargs)
 
-    def build(self, input_shape):
-        # Create a trainable weight variable for this layer.
-        super(ApplyMask, self).build(
-            input_shape
-        )  # Be sure to call this somewhere!
-
     def compute_mask(self, input, input_mask=None):
         # do not pass the mask to the next layers
         return None
