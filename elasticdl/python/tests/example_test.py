@@ -77,10 +77,32 @@ def create_imagenet_recordio_file(size, shape):
     return temp_file.name
 
 
+def create_frappe_recordio_file(size, shape, input_dim):
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    with closing(recordio.Writer(temp_file.name)) as f:
+        for _ in range(size):
+            # image: float -> uint8 -> tensor -> bytes
+            feature = np.random.randint(input_dim, size=(shape,))
+            label = np.random.randint(2, size=(1,))
+            example_dict = {
+                "feature": tf.train.Feature(
+                    int64_list=tf.train.Int64List(value=feature)
+                ),
+                "label": tf.train.Feature(
+                    int64_list=tf.train.Int64List(value=[label])
+                ),
+            }
+            example = tf.train.Example(
+                features=tf.train.Features(feature=example_dict)
+            )
+            f.write(example.SerializeToString())
+    return temp_file.name
+
+
 class ExampleTest(unittest.TestCase):
     def distributed_train_and_evaluate(
         self,
-        image_shape,
+        feature_shape,
         model_def,
         model_params="",
         training=True,
@@ -107,9 +129,11 @@ class ExampleTest(unittest.TestCase):
         )
 
         if dataset == "imagenet":
-            shards = {create_imagenet_recordio_file(16, image_shape): 16}
+            shards = {create_imagenet_recordio_file(16, feature_shape): 16}
+        elif dataset == "frappe":
+            shards = {create_frappe_recordio_file(16, feature_shape, 5383): 16}
         else:
-            shards = {create_recordio_file(128, image_shape): 128}
+            shards = {create_recordio_file(128, feature_shape): 128}
 
         if training:
             training_shards = shards
@@ -158,6 +182,30 @@ class ExampleTest(unittest.TestCase):
         task = master.GetTask(req, None)
         # No more task.
         self.assertTrue(not task.shard_file_name)
+
+    def test_deepfm_functional_train(self):
+        model_params = (
+            "input_dim=5383,embedding_dim=4,input_length=10,fc_unit=4"
+        )
+        self.distributed_train_and_evaluate(
+            10,
+            "deepfm_functional_api.deepfm_functional_api.custom_model",
+            model_params=model_params,
+            training=True,
+            dataset="frappe",
+        )
+
+    def test_deepfm_functional_evaluate(self):
+        model_params = (
+            "input_dim=5383,embedding_dim=4,input_length=10,fc_unit=4"
+        )
+        self.distributed_train_and_evaluate(
+            10,
+            "deepfm_functional_api.deepfm_functional_api.custom_model",
+            model_params=model_params,
+            training=False,
+            dataset="frappe",
+        )
 
     def test_mnist_functional_train(self):
         self.distributed_train_and_evaluate(
