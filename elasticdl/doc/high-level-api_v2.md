@@ -92,12 +92,6 @@ class ElasticDLKerasModelBase(tf.keras.Model, ABC):
     def optimizer(self, lr=0.1):
         """Define optimizer"""
 
-    def train_op(self):
-        """optimizing operations
-        by default: we wil use model.optimizer and model.loss to get it.
-        """
-        return None
-
 ```
 
 This interface is almost the same as model and function names but everything is in the model instance.
@@ -236,7 +230,7 @@ class CustomModel(ElasticDLKerasModelBase):
         x = self._flatten_1(x)
         return self._dense_1(x)
 
-    def loss(self, output, labels):
+    def loss(self, outputs=None, labels=None):
         labels = tf.reshape(labels, [-1])
         return tf.reduce_mean(
             input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -303,7 +297,7 @@ def dataset_fn(dataset, mode):
 
 ### Notes
 
-+ `dataset_fn` is removed. User can get specific paths from context and build dataset.
++ `dataset_fn` stay unchanged.
 + `PredictionOutputsProcessor` will be changed to hook or callback. Currently stay unchanged.
 
 ### Changes
