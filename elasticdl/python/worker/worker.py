@@ -223,12 +223,6 @@ class Worker(object):
         self.report_variable()
         self._var_created = True
 
-    def _set_gradient_tape(self, tape):
-        self._tape = tape
-
-    def get_gradiet_tape(self):
-        return self._tape
-
     def get_trainable_items(self):
         """
         return all trainable variables list, including batch embedding
@@ -244,7 +238,6 @@ class Worker(object):
     @tf.function
     def training_process(self, features, labels):
         with tf.GradientTape() as tape:
-            self._set_gradient_tape(tape)
             outputs = self._model.call(features, training=True)
             loss = self._loss(outputs, labels)
             # Add regularization loss if any
