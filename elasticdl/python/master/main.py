@@ -200,7 +200,7 @@ def main():
         embedding_command = ["python"]
         embedding_args = ["-m", "elasticdl.python.common.embedding_service"]
         embedding_service = EmbeddingService()
-        redis_address_map = embedding_service.start_embedding_pod_and_redis(
+        redis_address_map = embedding_service.start_embedding_service(
             job_name=args.job_name,
             image_name=args.worker_image,
             command=embedding_command,
@@ -214,7 +214,6 @@ def main():
             restart_policy=args.restart_policy,
             cluster_spec=args.cluster_spec,
         )
-        embedding_service.start_embedding_service()
         logger.info(
             "embedding service start Succeeded: %s" % str(redis_address_map)
         )

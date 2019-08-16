@@ -24,7 +24,7 @@ class EmbeddingServiceTest(unittest.TestCase):
         redis_address_map = {"127.0.0.1": [31006 + i for i in range(6)]}
         # start
         embedding_service = EmbeddingService(redis_address_map)
-        self.assertTrue(embedding_service.start_embedding_service())
+        self.assertFalse(embedding_service.start_embedding_service() is None)
         # connection
         redis_cluster = embedding_service._get_embedding_cluster()
         self.assertFalse(redis_cluster is None)

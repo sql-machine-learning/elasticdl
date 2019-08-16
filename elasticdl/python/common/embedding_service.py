@@ -2,9 +2,10 @@ import argparse
 import subprocess
 import time
 
+from rediscluster import StrictRedisCluster
+
 from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.common.log_util import default_logger as logger
-from rediscluster import StrictRedisCluster
 
 
 class EmbeddingService(object):
@@ -26,29 +27,50 @@ class EmbeddingService(object):
           |                 |                |
           1 --------------> 2  ----------->  |
           |                 |                3
-          | <-------------- 4  <----------   |
-          5                 |                |
-          | --------------> 6                |
+          5 <-------------- 4  <----------   |
 
-        1: Main need embedding service, so it asks EmbeddingService
-           to start pods firstly (function: start_embedding_pod_and_redis).
-        2: EmbeddingService accepts request,and ask k8s_client create
-           pods for Redis.(function: k8s_client.create_embedding_service).
-        3: k8s_client creates pod,then pod calls EmbeddingService.
-           start_redis_service() to start local redis instances.
-        4: After pods start running, EmbeddingService gets and saves their
-           addresses(ip/dns and port), returns these addresses to main
-           at the same time.
-        5: Main save addresses, and ask EmbeddingService create a Redis Cluster
-           based on these addressesself.
-        6: EmbeddingService create a Redis Cluster on running pods.(function:
-           start_embedding_service)
+
+        1:Main need embedding service, asks EmbeddingService to start
+          embedding service (function: start_embedding_service ).
+        2:EmbeddingService accepts request,and ask k8s_client create
+          pods for Redis.(function: start_embedding_pod_and_redis).
+        3:k8s_client creates pods(function:k8s_client.create_embedding_service)
+          then pods call EmbeddingService.start_redis_service() to start local
+          redis instances.
+        4:After pods start running, EmbeddingService gets and saves
+          addresses(ip/dns and port) of pods, create a Redis Cluster base on
+          these addresses (function:start_embedding_service)
+        5:Main save addresses for master/worker accessing the database.
 
         """
         self._redis_address_map = redis_address_map
         self._replicas = replicas
 
-    def start_embedding_service(self):
+    def start_embedding_service(
+        self,
+        command,
+        args,
+        embedding_service_id=0,
+        resource_request="cpu=1,memory=4096Mi",
+        resource_limit="cpu=1,memory=4096Mi",
+        pod_priority=None,
+        volume=None,
+        image_pull_policy=None,
+        restart_policy="Never",
+        **kargs,
+    ):
+        self.start_embedding_pod_and_redis(
+            command=command,
+            args=args,
+            embedding_service_id=embedding_service_id,
+            resource_request=resource_request,
+            resource_limit=resource_limit,
+            pod_priority=pod_priority,
+            volume=volume,
+            image_pull_policy=image_pull_policy,
+            restart_policy=restart_policy,
+            **kargs,
+        )
         redis_cluster_command = " ".join(
             [
                 "%s:%d" % (ip, port)
@@ -68,9 +90,9 @@ class EmbeddingService(object):
             redis_process.wait()
         except Exception as e:
             logger.error(e)
-            return False
+            return None
         else:
-            return True
+            return self._redis_address_map
 
     def stop_embedding_service(self, save="nosave"):
         for redis_node in [
@@ -199,7 +221,6 @@ class EmbeddingService(object):
             )
             address_ip = pod.status.pod_ip
         self._redis_address_map = {address_ip: [30001 + i for i in range(6)]}
-        return self._redis_address_map
 
     @staticmethod
     def lookup_embedding(**kwargs):
