@@ -47,7 +47,7 @@ class Embedding(tf.keras.layers.Layer):
             self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
         )
         if self.tape:
-            # tape.watch should be called in eager mode
+            # tape.watch works with eager mode only
             if not tf.executing_eagerly():
                 raise RuntimeError("tape.watch only works with eager mode")
             self.tape.watch(batch_embedding_tensor)
