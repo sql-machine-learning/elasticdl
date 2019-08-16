@@ -26,13 +26,13 @@ class EmbeddingServiceTest(unittest.TestCase):
         embedding_service = EmbeddingService(redis_address_map)
         self.assertTrue(embedding_service.start_embedding_service())
         # connection
-        rc = embedding_service._get_embedding_cluster()
-        self.assertFalse(rc is None)
+        redis_cluster = embedding_service._get_embedding_cluster()
+        self.assertFalse(redis_cluster is None)
         # set value to a key
-        self.assertTrue(rc.set("test_key", "OK", nx=True))
+        self.assertTrue(redis_cluster.set("test_key", "OK", nx=True))
         # set value to a key existed
-        self.assertTrue(rc.set("test_key", "OK", nx=True) is None)
-        self.assertEqual(b"OK", rc.get("test_key"))
+        self.assertTrue(redis_cluster.set("test_key", "OK", nx=True) is None)
+        self.assertEqual(b"OK", redis_cluster.get("test_key"))
         # close
         self.assertTrue(embedding_service.stop_embedding_service())
 
