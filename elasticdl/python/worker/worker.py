@@ -157,8 +157,8 @@ class Worker(object):
                 bet_number += len(layer.bet_ids_pair)
             if len(grads_edlembedding) != bet_number:
                 raise ValueError(
-                    "Embedding related gradient number %d does not match"
-                    "the number of Embedding output tensor %d."
+                    "elasticdl.layers.embedding related gradient number %d "
+                    "does not match the number of its output tensor %d."
                     % (len(grads_edlembedding), bet_number)
                 )
 

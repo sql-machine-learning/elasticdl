@@ -265,7 +265,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                         else:
                             self._edl_embedding_gradients[k] = arr
                         logger.warning(
-                            "Update embedding table of"
+                            "Update embedding table of "
                             "elasticdl.layers.embedding is not implemented."
                         )
                         continue
