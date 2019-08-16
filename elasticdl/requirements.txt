@@ -6,3 +6,4 @@ pytest-cov
 pyrecordio>=0.0.6
 Pillow
 odps
+mock
