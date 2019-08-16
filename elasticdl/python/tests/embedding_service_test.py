@@ -21,10 +21,16 @@ class EmbeddingServiceTest(unittest.TestCase):
                 stdout=subprocess.DEVNULL,
             )
             embedding_process.wait()
+        embedding_command = ["python"]
+        embedding_args = ["-m", "elasticdl.python.common.embedding_service"]
+
         redis_address_map = {"127.0.0.1": [31006 + i for i in range(6)]}
         # start
-        embedding_service = EmbeddingService(redis_address_map)
-        self.assertFalse(embedding_service.start_embedding_service() is None)
+        embedding_service = EmbeddingService()
+        redis_address_map = embedding_service.start_embedding_service(
+            command=embedding_command, args=embedding_args
+        )
+        self.assertFalse(redis_address_map is None)
         # connection
         redis_cluster = embedding_service._get_embedding_cluster()
         self.assertFalse(redis_cluster is None)
