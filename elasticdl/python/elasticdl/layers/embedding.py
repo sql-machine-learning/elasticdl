@@ -30,8 +30,8 @@ class Embedding(tf.keras.layers.Layer):
         return self._name
 
     @staticmethod
-    def get_name_seperator():
-        return "-"
+    def get_key(name_list):
+        return "-".join(map(str, name_list))
 
     def call(self, input):
         ids = tf.convert_to_tensor(input, name="embedding_ids")
