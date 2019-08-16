@@ -91,6 +91,9 @@ class Worker(object):
             self._prediction_outputs_processor = None
 
     def _init_embedding_layer(self):
+        """
+        Init elasticdl.layers.embedding layer list and assign worker to them
+        """
         self._embedding_layers = find_layer(self._model, Embedding)
         for layer in self._embedding_layers:
             layer.set_worker(self)
