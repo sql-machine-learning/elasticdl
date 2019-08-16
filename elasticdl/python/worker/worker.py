@@ -255,8 +255,21 @@ class Worker(object):
                 bets.extend([i for (i, _) in layer.bet_ids_pair])
         return self._model.trainable_variables + bets
 
-    @tf.function
     def training_process(self, features, labels):
+        """
+        training for models with elasticdl.layers.embedding does not 
+        support tf.function decorator
+        """
+        if self._embedding_layers:
+            return self.training_process_eagerly(features, labels)
+        else:
+            return self.training_process_with_acceleration(features, labels)
+
+    @tf.function
+    def training_process_with_acceleration(self, features, labels):
+        return self.training_process_eagerly(features, labels)
+
+    def training_process_eagerly(self, features, labels):
         with tf.GradientTape() as tape:
             self._set_tape_for_embedding(tape)
             outputs = self._model.call(features, training=True)
