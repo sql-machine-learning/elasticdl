@@ -257,7 +257,7 @@ class Worker(object):
 
     def training_process(self, features, labels):
         """
-        training for models with elasticdl.layers.embedding does not 
+        training for models with elasticdl.layers.embedding does not
         support tf.function decorator
         """
         if self._embedding_layers:
