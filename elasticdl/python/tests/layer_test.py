@@ -10,7 +10,7 @@ from elasticdl.python.common.model_helper import (
     load_model_from_module,
     load_module,
 )
-from elasticdl.python.layers.embedding import EdlEmbedding
+from elasticdl.python.elasticdl.layers.embedding import Embedding
 
 
 def _get_model_zoo_path():
@@ -71,7 +71,7 @@ class mock_worker:
 
 
 def create_embedding_layer(embedding_size, embedding_dim):
-    layer = EdlEmbedding(embedding_dim)
+    layer = Embedding(embedding_dim)
     worker = mock_worker(embedding_size, embedding_dim)
     layer.set_worker(worker)
     return layer

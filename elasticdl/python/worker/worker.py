@@ -56,7 +56,7 @@ class Worker(object):
         self._model = load_model_from_module(
             model_def, model_module, model_params
         )
-        # TODO: call find_layer and get EdlEmbedding layers
+        # TODO: call find_layer and get Embedding layers
         self._embedding_layers = []
         self._var_created = self._model.built
         self._dataset_fn = model_module[dataset_fn]
@@ -157,8 +157,8 @@ class Worker(object):
                 bet_number += len(layer.bet_ids_pair)
             if len(grads_edlembedding) != bet_number:
                 raise ValueError(
-                    "EdlEmbedding related gradient number %d does not match"
-                    "the number of EdlEmbedding output tensor %d."
+                    "Embedding related gradient number %d does not match"
+                    "the number of Embedding output tensor %d."
                     % (len(grads_edlembedding), bet_number)
                 )
 
