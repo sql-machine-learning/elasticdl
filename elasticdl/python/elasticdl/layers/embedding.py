@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.python.keras.utils import tf_utils
 
 
-class EdlEmbedding(tf.keras.layers.Layer):
+class Embedding(tf.keras.layers.Layer):
     """
     Input: indexes for the embedding entries
            shape is (batch_size, input_length)
@@ -14,7 +14,7 @@ class EdlEmbedding(tf.keras.layers.Layer):
     """
 
     def __init__(self, embedding_dim, embedding_initializer="uniform"):
-        super(EdlEmbedding, self).__init__()
+        super(Embedding, self).__init__()
         self.embedding_dim = embedding_dim
         self.embedding_initializer = embedding_initializer
         self.tape = None

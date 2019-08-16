@@ -252,10 +252,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             for k, v in request.gradient.items():
                 if k not in self._model:
                     if v.indices:
-                        # IndexedSlices are gradients of Embeddings Table
-                        # of EdlEmbedding layer
-                        # TODO: Updating Embedding Table of EdlEmbedding
-                        # layer will be implemented
+                        # IndexedSlices Gradients of elasticdl.layers.embedding
+                        # TODO: Use the gradients to update embedding
+                        # table of elasticdl.layers.embedding
                         arr = tensor_to_ndarray(v)
                         if k in self._edl_embedding_gradients:
                             self._edl_embedding_gradients[
@@ -266,8 +265,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                         else:
                             self._edl_embedding_gradients[k] = arr
                         logger.warning(
-                            "Update Embedding Table of EdlEmbedding layer "
-                            "is not implemented."
+                            "Update embedding table of "
+                            "elasticdl.layers.embedding is not implemented."
                         )
                         continue
                     else:
