@@ -7,8 +7,14 @@ class EmbeddingService(object):
         """
         pass
 
+    def start_embedding_service(self):
+        pass
+
+    def stop_embedding_service(self):
+        pass
+
     @staticmethod
-    def embedding_lookup(**kwargs):
+    def lookup_embedding(**kwargs):
         pass
 
     @staticmethod
