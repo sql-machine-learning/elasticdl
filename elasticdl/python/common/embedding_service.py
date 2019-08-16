@@ -30,17 +30,20 @@ class EmbeddingService(object):
           5 <-------------- 4  <----------   |
 
 
-        1:Main need embedding service, asks EmbeddingService to start
-          embedding service (function: start_embedding_service ).
-        2:EmbeddingService accepts request,and ask k8s_client create
-          pods for Redis.(function: start_embedding_pod_and_redis).
-        3:k8s_client creates pods(function:k8s_client.create_embedding_service)
-          then pods call EmbeddingService.start_redis_service() to start local
+        1:master.main calls EmbeddingService.start_embedding_service 
+		  when the embedding service is required by the model.
+        2:EmbeddingService.start_embedding_service calls 
+		  EmbeddingService.start_embedding_pod_and_redis to ask 
+		  k8s_client create pods for Redis.
+        3:k8s_client creates pods, then pods call 
+		  EmbeddingService.start_redis_service() to start their  local
           redis instances.
-        4:After pods start running, EmbeddingService gets and saves
-          addresses(ip/dns and port) of pods, create a Redis Cluster base on
-          these addresses (function:start_embedding_service)
-        5:Main save addresses for master/worker accessing the database.
+        4:After pods running,EmbeddingService.start_embedding_service
+		  gets and saves addresses(ip/dns and port) of pods, create a 
+		  Redis Cluster base on these addresses.
+        5:EmbeddingService.start_embedding_service return addresses to
+		  master.main,master.main saves addresses for master/worker 
+		  accessing the Redis.
 
         """
         self._redis_address_map = redis_address_map
