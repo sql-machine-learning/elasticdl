@@ -19,6 +19,10 @@ from elasticdl.python.worker.worker import Worker
 _model_file = get_model_file(
     os.path.dirname(os.path.realpath(__file__)), "test_module.custom_model"
 )
+_embedding_model_file = get_model_file(
+    os.path.dirname(os.path.realpath(__file__)),
+    "embedding_test_module.CustomModel",
+)
 m = load_module(_model_file).__dict__
 
 
@@ -123,6 +127,17 @@ class WorkerTest(unittest.TestCase):
 
     def test_distributed_evaluate_tf_example(self):
         self.distributed_train_and_evaluate(training=False)
+
+    def test_embedding_layer(self):
+        worker = Worker(
+            1,
+            JobType.TRAINING_ONLY,
+            32,
+            _embedding_model_file,
+            model_def="embedding_test_module.CustomModel",
+            channel=None,
+        )
+        self.assertTrue(len(worker._embedding_layers) == 2)
 
 
 if __name__ == "__main__":

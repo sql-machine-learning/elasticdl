@@ -6,6 +6,7 @@ from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType, Mode
 from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.model_helper import (
+    find_layer,
     load_model_from_module,
     load_module,
 )
@@ -13,6 +14,7 @@ from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
+from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
 )
@@ -56,8 +58,7 @@ class Worker(object):
         self._model = load_model_from_module(
             model_def, model_module, model_params
         )
-        # TODO: call find_layer and get Embedding layers
-        self._embedding_layers = []
+        self._init_embedding_layer()
         self._var_created = self._model.built
         self._dataset_fn = model_module[dataset_fn]
         self._opt_fn = model_module[optimizer]
@@ -88,6 +89,25 @@ class Worker(object):
                 )
         else:
             self._prediction_outputs_processor = None
+
+    def _init_embedding_layer(self):
+        """
+        Init elasticdl.layers.embedding layer list and assign worker to them
+        """
+        self._embedding_layers = find_layer(self._model, Embedding)
+        for layer in self._embedding_layers:
+            layer.set_worker(self)
+        if self._embedding_layers:
+            # TODO check that Redis IP/PORT is set
+            pass
+
+    def _set_tape_for_embedding(self, tape):
+        for layer in self._embedding_layers:
+            layer.set_tape(tape)
+
+    def _reset_embedding(self):
+        for layer in self._embedding_layers:
+            layer.reset()
 
     def get_task(self):
         """
@@ -238,6 +258,7 @@ class Worker(object):
     @tf.function
     def training_process(self, features, labels):
         with tf.GradientTape() as tape:
+            self._set_tape_for_embedding(tape)
             outputs = self._model.call(features, training=True)
             loss = self._loss(outputs, labels)
             # Add regularization loss if any
@@ -260,6 +281,7 @@ class Worker(object):
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process(features, labels)
         accepted, min_model_version = self.report_gradient(grads)
+        self._reset_embedding()
         return accepted, min_model_version, loss
 
     def _run_evaluation_task(self, features, labels):
