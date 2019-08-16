@@ -29,6 +29,10 @@ class Embedding(tf.keras.layers.Layer):
     def name(self):
         return self._name
 
+    @staticmethod
+    def get_name_seperator():
+        return "-"
+
     def call(self, input):
         ids = tf.convert_to_tensor(input, name="embedding_ids")
         flat_ids = tf.reshape(ids, [-1])
