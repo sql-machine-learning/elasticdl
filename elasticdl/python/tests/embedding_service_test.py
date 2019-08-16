@@ -4,6 +4,10 @@ import unittest
 from elasticdl.python.common.embedding_service import EmbeddingService
 
 
+@unittest.skipIf(
+    os.environ.get("K8S_TESTS", "True") == "False",
+    "No Kubernetes cluster available",
+)
 class EmbeddingServiceTest(unittest.TestCase):
     def test_embedding_service(self):
         for i in range(6):
@@ -28,7 +32,11 @@ class EmbeddingServiceTest(unittest.TestCase):
         # start
         embedding_service = EmbeddingService()
         redis_address_map = embedding_service.start_embedding_service(
-            command=embedding_command, args=embedding_args
+            command=embedding_command,
+            args=embedding_args,
+            image_name="redis:5.0.5",
+            namespace="default",
+            job_name="test-job-0-0",
         )
         self.assertFalse(redis_address_map is None)
         # connection
