@@ -1,6 +1,10 @@
 # Design Doc: Distributed Embedding Layer
 ## Motivation
-In the application scenarios involving sparse features such as NLP, advertising, recommendation and search, huge embedding tables are very common. When performing distributed training on these models, the propagation speed of the embedding table and its gradients tends to be the performance bottleneck. Note that in these scenarios, each forward and backward pass of the model involves only a small portion of the embedding table. Therefore, each operation only needs to transfer the parameters and gradients of the embedding vectors involved in this minibatch. Tensorflow implemented this optimization in its runtime. This optimization greatly improved training efficiency. However, ElasticDL focuses on distributed training without modifying tensorflow's runtime. Therefore we need to design and implement ElasticDL's own distributed embedding layer.
+Embedding layers are commonly used in deep learning to represent discrete variables, e.g., words, as continuous vectors, e.g., word embedding vectors. The parameter of an embedding layer, known as an *embedding table*, is a VxN-tensor, where V is the vocabulary size, and N is the output dimension or the dimension of the word embedding vectors. With a large V, the embedding table might out-size the memory, and we'd need model parallelism with distributed training.
+
+TensorFlow 1.x has a native solution for distributed training. It starts multiple processes, each running the TensorFlow runtime and communicating with each other to form a distributed runtime. TensorFlow 1.x represents deep learning computations as a data structure known as *graphs*. The native distributed training strategies partition a graph into smaller ones, and each process executes a sub-graph. With low-level APIs like `tf.create_partitioned_variable`, the distributed runtime can split a large embedding table and save the pieces on various computers.
+
+TensorFlow 2.x, known for the new eager-execution mode, does no longer rely on graphs. The API is more flexible than the graph-based API and allows us to implement distributed training out of the runtime. ElasticDL explores an alternative approach to model parallelism -- saving large tensors in an external distributed storage service, for example, Redis and memcached.
 
 ## Terminology
 
