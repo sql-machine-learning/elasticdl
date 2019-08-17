@@ -77,6 +77,11 @@ def create_embedding_layer(embedding_size, embedding_dim):
     return layer
 
 
+@tf.function
+def layer_call(layer, inputs):
+    return layer.call(inputs)
+
+
 class EmbeddingLayerTest(unittest.TestCase):
     def test_embedding_layer(self):
         embedding_dim = 8
@@ -93,6 +98,11 @@ class EmbeddingLayerTest(unittest.TestCase):
         for index, idx in enumerate(ids):
             correct_value = np.array([idx] * embedding_dim, dtype=np.float32)
             self.assertTrue((values[index] == correct_value).all())
+
+        results = layer_call(layer, ids)
+        results = results.numpy()
+        for index, idx in enumerate(ids):
+            self.assertTrue((values[index] == results[index]).all())
 
         model = tf.keras.models.Sequential([layer])
         outputs = model.call(np.array([ids, ids]))
@@ -128,6 +138,11 @@ class EmbeddingLayerTest(unittest.TestCase):
             grads = tape.gradient(output, bet)
             layer.reset()
             self.assertTrue((grads.values.numpy() == multiply_values).all())
+
+        for inputs in inputs_list:
+            with tf.GradientTape() as tape:
+                layer.set_tape(tape)
+                self.assertRaises(RuntimeError, layer_call, layer, inputs)
 
 
 if __name__ == "__main__":
