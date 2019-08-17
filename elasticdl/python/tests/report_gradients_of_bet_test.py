@@ -12,38 +12,41 @@ from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
 
-global mock_embedding_table
 
+class MockEmbeddingService:
+    def __init__(self):
+        self.mock_embedding_table = None
 
-def mock_lookup_embedding(**kwargs):
-    keys = kwargs["keys"]
-    global mock_embedding_table
-    embeddings = None
-    for k in keys:
-        layer_name, idx = k.split("-")
-        idx = int(idx)
+    def mock_lookup_embedding(self, **kwargs):
+        keys = kwargs["keys"]
+        embeddings = None
+        for k in keys:
+            layer_name, idx = k.split("-")
+            idx = int(idx)
+            if embeddings is None:
+                embeddings = self.mock_embedding_table[layer_name][
+                    idx
+                ].reshape((1, -1))
+            else:
+                embeddings = np.concatenate(
+                    [
+                        embeddings,
+                        self.mock_embedding_table[layer_name][idx].reshape(
+                            (1, -1)
+                        ),
+                    ],
+                    axis=0,
+                )
+        return embeddings
+
+    def mock_update_embedding(self, **kwargs):
+        keys, embeddings = kwargs["keys"], kwargs["embeddings"]
         if embeddings is None:
-            embeddings = mock_embedding_table[layer_name][idx].reshape((1, -1))
-        else:
-            embeddings = np.concatenate(
-                [
-                    embeddings,
-                    mock_embedding_table[layer_name][idx].reshape((1, -1)),
-                ],
-                axis=0,
-            )
-    return embeddings
-
-
-def mock_update_embedding(**kwargs):
-    keys, embeddings = kwargs["keys"], kwargs["embeddings"]
-    if embeddings is None:
-        return
-    global mock_embedding_table
-    for k, emb in zip(keys, embeddings):
-        layer_name, idx = k.split("-")
-        idx = int(idx)
-        mock_embedding_table[layer_name][idx] = emb
+            return
+        for k, emb in zip(keys, embeddings):
+            layer_name, idx = k.split("-")
+            idx = int(idx)
+            self.mock_embedding_table[layer_name][idx] = emb
 
 
 _model_file = get_model_file(
@@ -109,8 +112,8 @@ class ReportBETGradientTest(unittest.TestCase):
     def test_report_bet_gradients_worker_to_master(self):
         master, worker = self._create_master_and_worker()
 
-        global mock_embedding_table
-        mock_embedding_table = {
+        mock_embedding_service = MockEmbeddingService()
+        mock_embedding_service.mock_embedding_table = {
             "test_edlembedding_1": np.zeros((5, 3), dtype=np.float32),
             "test_edlembedding_2": np.zeros((5, 3), dtype=np.float32),
         }
@@ -222,15 +225,19 @@ class ReportBETGradientTest(unittest.TestCase):
 
         layer_names = ["test_layer_1", "test_layer_2"]
 
-        global mock_embedding_table
-        mock_embedding_table = {
+        mock_embedding_service = MockEmbeddingService()
+        mock_embedding_service.mock_embedding_table = {
             layer_names[0]: np.zeros((2, 4), dtype=np.float32),
             layer_names[1]: np.zeros((4, 4), dtype=np.float32),
         }
         for i in range(2):
-            mock_embedding_table[layer_names[0]][i].fill(i)
+            mock_embedding_service.mock_embedding_table[layer_names[0]][
+                i
+            ].fill(i)
         for i in range(4):
-            mock_embedding_table[layer_names[1]][i].fill(i)
+            mock_embedding_service.mock_embedding_table[layer_names[1]][
+                i
+            ].fill(i)
 
         grads = tf.reshape(tf.range(28, dtype=tf.float32), (7, 4))
         indices = tf.convert_to_tensor([0, 1, 0, 2, 0, 2, 3])
@@ -241,9 +248,13 @@ class ReportBETGradientTest(unittest.TestCase):
         }
 
         with mock.patch.object(
-            EmbeddingService, "lookup_embedding", mock_lookup_embedding
+            EmbeddingService,
+            "lookup_embedding",
+            mock_embedding_service.mock_lookup_embedding,
         ), mock.patch.object(
-            EmbeddingService, "update_embedding", mock_update_embedding
+            EmbeddingService,
+            "update_embedding",
+            mock_embedding_service.mock_update_embedding,
         ):
             with master._lock:
                 assert master._lock.locked()
@@ -267,7 +278,7 @@ class ReportBETGradientTest(unittest.TestCase):
             self.assertTrue(
                 (
                     expected_embedding_table[layer]
-                    - mock_embedding_table[layer]
+                    - mock_embedding_service.mock_embedding_table[layer]
                     < 0.0001
                 ).all()
             )

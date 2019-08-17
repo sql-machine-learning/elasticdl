@@ -14,6 +14,7 @@ from elasticdl.python.common.ndarray import (
     tensor_to_ndarray,
 )
 from elasticdl.python.common.tensor_helper import merge_indexed_slices
+from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
 
 
@@ -147,13 +148,19 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         for layer_name, unique_ids, embedding_var in name_var_list:
             if keys:
                 keys.extend(
-                    [layer_name + "-" + str(i) for i in unique_ids.numpy()]
+                    [
+                        Embedding.get_key([layer_name, i])
+                        for i in unique_ids.numpy()
+                    ]
                 )
                 embeddings = np.concatenate(
                     (embeddings, embedding_var.numpy()), axis=0
                 )
             else:
-                keys = [layer_name + "-" + str(i) for i in unique_ids.numpy()]
+                keys = [
+                    Embedding.get_key([layer_name, i])
+                    for i in unique_ids.numpy()
+                ]
                 embeddings = embedding_var.numpy()
         if embeddings is not None:
             EmbeddingService.update_embedding(
@@ -182,7 +189,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 embeddings = EmbeddingService.lookup_embedding(
                     embedding_service_address=self.embedding_service_address,
                     keys=[
-                        layer_name + "-" + str(i) for i in unique_ids.numpy()
+                        Embedding.get_key([layer_name, i])
+                        for i in unique_ids.numpy()
                     ],
                 )
                 if embeddings is None:
