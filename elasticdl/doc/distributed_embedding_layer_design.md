@@ -4,7 +4,7 @@ Embedding layers are commonly used in deep learning to represent discrete variab
 
 TensorFlow 1.x has a native solution for distributed training. It starts multiple processes, each running the TensorFlow runtime and communicating with each other to form a distributed runtime. TensorFlow 1.x represents deep learning computations as a data structure known as *graphs*. The native distributed training strategies partition a graph into smaller ones, and each process executes a sub-graph. With low-level APIs like `tf.create_partitioned_variable`, the distributed runtime can split a large embedding table and save the pieces on various computers.
 
-TensorFlow 2.x, known for the new eager-execution mode, does no longer rely on graphs. The API is more flexible than the graph-based API and allows us to implement distributed training out of the runtime. ElasticDL explores an alternative approach to model parallelism -- saving large tensors in an external distributed storage service, for example, Redis and memcached.
+TensorFlow 2.x, known for the new eager-execution mode, does no longer rely on graphs. The API is more flexible than the graph-based API and allows us to implement distributed training out of the runtime. ElasticDL explores an alternative approach to model parallelism -- saving large tensors in an external distributed storage service, for example, Redis and Memcached.
 
 ## Terminology
 
