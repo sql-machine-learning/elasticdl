@@ -1,5 +1,6 @@
-# ElasticDL Embedding Layer Design
-This document describes the design of ElasticDL embedding layer.
+# Design Doc: Distributed Embedding Layer
+## Motivation
+In the application scenarios involving sparse features such as NLP, advertising, recommendation and search, huge embedding tables are very common. When performing distributed training on these models, the propagation speed of the embedding table and its gradients tends to be the performance bottleneck. Note that in these scenarios, each forward and backward pass of the model involves only a small portion of the embedding table. Therefore, each operation only needs to transfer the parameters and gradients of the embedding vectors involved in this minibatch. Tensorflow implemented this optimization in its runtime. This optimization greatly improved training efficiency. However, ElasticDL focuses on distributed training without modifying tensorflow's runtime. Therefore we need to design and implement ElasticDL's own distributed embedding layer.
 
 ## Terminology
 
