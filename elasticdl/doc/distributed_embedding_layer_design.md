@@ -26,12 +26,26 @@ In the synchronous configuration, all workers must use the same model in each it
 
 Another case of calling `set` is model update. With either synchronous and asynchronous case, we can restrict that only worker 0 or the parameter server can update the embedding table. Thus it poses no requirement of thread-safe `set`.
 
-## Embedding Layers
-In TensorFlow, there are one Keras layer [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en) and two ops [tf.nn.embedding_lookup](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup) and [tf.nn.embedding\_lookup\_sparse](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup_sparse) related to embedding.
+## Related Work
 
-### tf.keras.layers.Embedding and tf.nn.embedding_lookup
+Before introducing our distributed embedding layer, let us review that of TensorFlow as an inspiration.
 
-[tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en) uses the arguments below:
+### Embedding Layers in TensorFlow
+
+TensorFlow assumes that an embedding table is a dense tensor, which implies that users must make sure that the discrete input i is a zero-based integer.  TensorFlow provides the [feature column API](https://www.tensorflow.org/guide/feature_columns#feature_columns_2) to convert strings and other features into zero-based integers. 
+
+By calling `tf.create_partitioned_variable` to create the embedding table, users can create distributed embedding layers. TensorFlow provides two operators to lookup a distributed embedding table:
+
+1. [tf.nn.embedding_lookup](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup), and
+1. [tf.nn.embedding\_lookup\_sparse](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup_sparse).
+
+The main difference is that `tf.nn.embedding_lookup` requires that all instances in a minibatch contains the same number of discrete values, whereas `tf.nn.embedding_lookup_sparse` doesn't require that.  Suppose that a minibatch contains M instances, and each instance contains I discrete IDs, the input to `tf.nn.embedding_lookup` is a dense tensor of M x I zero-based integers. On the contrary, the input to `tf.nn.embedding_lookup_sparse` cannot be a dense tensor, but has to be a sparse tensor, because the value I varies with data instances; hence the suffix `_sparse`.
+
+The Keras layer [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en) is a simple wrap-up of `tf.nn.embedding_lookup`.
+
+### `tf.nn.embedding_lookup` and `tf.keras.layers.Embedding`
+
+To get familiar with some terms, let us start from the constructor of [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en):
 
 ```
 __init__(
@@ -47,7 +61,7 @@ __init__(
 )
 ```
 
-It defines an embedding table with a fixed size `input_dim x output_dim`. 
+It defines an embedding table with a fixed size `input_dim x output_dim`.
 
 [tf.keras.layers.Embedding.call](https://github.com/tensorflow/tensorflow/blob/1f61f13f8715dc26dabe46a2686216674026d812/tensorflow/python/keras/layers/embeddings.py#L179) uses tf op [tf.nn.embedding_lookup](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup).
 
@@ -100,7 +114,7 @@ In order to output with a fixed shape, `combiner` is used to combine the embeddi
 
 Thus, the output shape for [tf.nn.embedding\_lookup\_sparse](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup_sparse) is `N * params.shape[1]`, where `params.shape[1]` is the dimension of the embedding, similar to `output_dim` in [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en) .
 
-### elasticdl.layers.Embedding
+## elasticdl.layers.Embedding
 
 We plan to support both the fixed number of input ids as [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en) and [tf.nn.embedding_lookup](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup),  and inputs with varying number of ids as [tf.nn.embedding\_lookup\_sparse](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup_sparse).
 
