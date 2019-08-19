@@ -172,23 +172,24 @@ class CustomModel(ElasticDLKerasModelBase):
     def optimizer(self, lr=0.02):
         return tf.keras.optimizers.SGD(lr)
 
-    def metrics(self,
-                mode=Mode.TRAINING,
-                outputs=None,
-                predictions=None,
-                labels=None,):
+    def metrics(
+        self, mode=Mode.TRAINING, outputs=None, predictions=None, labels=None
+    ):
         if mode == Mode.EVALUATION:
             labels = tf.reshape(labels, [-1])
-            return {"accuracy": tf.reduce_mean(
-                input_tensor=tf.cast(
-                    tf.equal(
-                        tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
-                        labels,
+            return {
+                "accuracy": tf.reduce_mean(
+                    input_tensor=tf.cast(
+                        tf.equal(
+                            tf.argmax(
+                                predictions, 1, output_type=tf.dtypes.int32
+                            ),
+                            labels,
                         ),
-                    tf.float32,
+                        tf.float32,
                     )
                 )
-                }
+            }
 
 
 def dataset_fn(dataset, mode):

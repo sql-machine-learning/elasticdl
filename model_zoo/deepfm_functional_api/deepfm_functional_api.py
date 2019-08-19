@@ -32,7 +32,6 @@ class ApplyMask(Layer):
 
 
 class CustomModel(ElasticDLKerasModelBase):
-
     def __init__(self, context=None, **kwargs):
         super(CustomModel, self).__init__(context=context)
         self._model = self.custom_model()
@@ -96,11 +95,9 @@ class CustomModel(ElasticDLKerasModelBase):
     def optimizer(self, lr=0.1):
         return tf.optimizers.SGD(lr)
 
-    def metrics(self,
-                mode=Mode.TRAINING,
-                outputs=None,
-                predictions=None,
-                labels=None,):
+    def metrics(
+        self, mode=Mode.TRAINING, outputs=None, predictions=None, labels=None
+    ):
         if mode == Mode.EVALUATION:
             labels = tf.reshape(labels, [-1])
             predictions = tf.reshape(predictions, [-1])
@@ -109,8 +106,8 @@ class CustomModel(ElasticDLKerasModelBase):
                 "accuracy": tf.reduce_mean(
                     input_tensor=tf.cast(
                         tf.equal(
-                            tf.cast(
-                                predictions > 0.0, tf.dtypes.int32), labels),
+                            tf.cast(predictions > 0.0, tf.dtypes.int32), labels
+                        ),
                         tf.float32,
                     )
                 ),

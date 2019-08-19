@@ -7,7 +7,6 @@ from elasticdl.python.model import ElasticDLKerasModelBase
 
 
 class CustomModel(ElasticDLKerasModelBase):
-
     def __init__(self, context=None):
         super(CustomModel, self).__init__(context=context)
         self._model = self.custom_model()
@@ -15,10 +14,12 @@ class CustomModel(ElasticDLKerasModelBase):
     def custom_model(self):
         inputs = tf.keras.Input(shape=(28, 28), name="image")
         x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
-        x = tf.keras.layers.Conv2D(
-                32, kernel_size=(3, 3), activation="relu")(x)
-        x = tf.keras.layers.Conv2D(
-                64, kernel_size=(3, 3), activation="relu")(x)
+        x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu")(
+            x
+        )
+        x = tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu")(
+            x
+        )
         x = tf.keras.layers.BatchNormalization()(x)
         x = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(x)
         x = tf.keras.layers.Dropout(0.25)(x)
@@ -26,7 +27,8 @@ class CustomModel(ElasticDLKerasModelBase):
         outputs = tf.keras.layers.Dense(10)(x)
 
         return tf.keras.Model(
-                inputs=inputs, outputs=outputs, name="mnist_model")
+            inputs=inputs, outputs=outputs, name="mnist_model"
+        )
 
     def loss(self, outputs, labels):
         labels = tf.reshape(labels, [-1])
@@ -45,23 +47,24 @@ class CustomModel(ElasticDLKerasModelBase):
     def get_model(self):
         return self._model
 
-    def metrics(self,
-                mode=Mode.TRAINING,
-                outputs=None,
-                predictions=None,
-                labels=None,):
+    def metrics(
+        self, mode=Mode.TRAINING, outputs=None, predictions=None, labels=None
+    ):
         if mode == Mode.EVALUATION:
             labels = tf.reshape(labels, [-1])
-            return {"accuracy": tf.reduce_mean(
-                input_tensor=tf.cast(
-                    tf.equal(
-                        tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
-                        labels,
+            return {
+                "accuracy": tf.reduce_mean(
+                    input_tensor=tf.cast(
+                        tf.equal(
+                            tf.argmax(
+                                predictions, 1, output_type=tf.dtypes.int32
+                            ),
+                            labels,
                         ),
-                    tf.float32,
+                        tf.float32,
                     )
                 )
-                }
+            }
 
 
 def prepare_data_for_a_single_file(file_object, filename):

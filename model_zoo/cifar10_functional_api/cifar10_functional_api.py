@@ -12,7 +12,6 @@ from elasticdl.python.worker.prediction_outputs_processor import (
 
 
 class CustomModel(ElasticDLKerasModelBase):
-
     def __init__(self, context=None):
         super(CustomModel, self).__init__(context=context)
         self._model = self.custom_model()
@@ -106,8 +105,8 @@ class CustomModel(ElasticDLKerasModelBase):
         outputs = tf.keras.layers.Dense(10, name="output")(flatten)
 
         return tf.keras.Model(
-                inputs=inputs, outputs=outputs, name="cifar10_model"
-                )
+            inputs=inputs, outputs=outputs, name="cifar10_model"
+        )
 
     def call(self, inputs, training=False):
         return self._model.call(inputs, training=training)
@@ -126,23 +125,24 @@ class CustomModel(ElasticDLKerasModelBase):
     def optimizer(self, lr=0.1):
         return tf.optimizers.SGD(lr)
 
-    def metrics(self,
-                mode=Mode.TRAINING,
-                outputs=None,
-                predictions=None,
-                labels=None,):
+    def metrics(
+        self, mode=Mode.TRAINING, outputs=None, predictions=None, labels=None
+    ):
         if mode == Mode.EVALUATION:
             labels = tf.reshape(labels, [-1])
-            return {"accuracy": tf.reduce_mean(
-                input_tensor=tf.cast(
-                    tf.equal(
-                        tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
-                        labels,
+            return {
+                "accuracy": tf.reduce_mean(
+                    input_tensor=tf.cast(
+                        tf.equal(
+                            tf.argmax(
+                                predictions, 1, output_type=tf.dtypes.int32
+                            ),
+                            labels,
                         ),
-                    tf.float32,
+                        tf.float32,
                     )
                 )
-                }
+            }
 
 
 def dataset_fn(dataset, mode):

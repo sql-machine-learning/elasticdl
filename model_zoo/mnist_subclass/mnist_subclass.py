@@ -38,10 +38,10 @@ class CustomModel(ElasticDLKerasModelBase):
     def loss(self, outputs=None, labels=None):
         labels = tf.reshape(labels, [-1])
         return tf.reduce_mean(
-                input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-                    logits=outputs, labels=labels
-                    )
-                )
+            input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits=outputs, labels=labels
+            )
+        )
 
     def get_model(self):
         return self
@@ -49,23 +49,24 @@ class CustomModel(ElasticDLKerasModelBase):
     def optimizer(self, lr=0.1):
         return tf.optimizers.SGD(lr)
 
-    def metrics(self,
-                mode=Mode.TRAINING,
-                outputs=None,
-                predictions=None,
-                labels=None,):
+    def metrics(
+        self, mode=Mode.TRAINING, outputs=None, predictions=None, labels=None
+    ):
         if mode == Mode.EVALUATION:
             labels = tf.reshape(labels, [-1])
-            return {"accuracy": tf.reduce_mean(
-                input_tensor=tf.cast(
-                    tf.equal(
-                        tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
-                        labels,
+            return {
+                "accuracy": tf.reduce_mean(
+                    input_tensor=tf.cast(
+                        tf.equal(
+                            tf.argmax(
+                                predictions, 1, output_type=tf.dtypes.int32
+                            ),
+                            labels,
                         ),
-                    tf.float32,
+                        tf.float32,
                     )
                 )
-                }
+            }
 
 
 def dataset_fn(dataset, mode):
