@@ -6,6 +6,26 @@ TensorFlow 1.x has a native solution for distributed training. It starts multipl
 
 TensorFlow 2.x, known for the new eager-execution mode, does no longer rely on graphs. The API is more flexible than the graph-based API and allows us to implement distributed training out of the runtime. ElasticDL explores an alternative approach to model parallelism -- saving large tensors in an external distributed storage service, for example, Redis and Memcached.
 
+## Distributed Storage
+
+An embedding table is a data structure that maps a discrete value, i, to a vector, r.  Please be aware that the discrete value i might not be an integer.  For example, it could be a string representing the kind of a fruit.  And even if it is an integer, i might not be zero-based, consider an integer of year.  This property inspires us to save large embedding tables in distributed caching/storage services like Redis or Memcached that supports `get(i)` and `set(i, r)`.
+
+We can run a global service to serve all deep learning jobs on a cluster, or one service for each job.
+
+## Read, Init, and Update
+
+In the forward-pass of each iteration, workers read the embedding table. Suppose that we implement the distributed embedding layer as a Keras layer class, the forward-pass computation is in the overloaded method `call`, which takes a minibatch of inputs and returns the corresponding outputs.
+
+Suppose that a minibatch of training instances contains M unique discrete values, {iⱼ}, where j∈[0, M), we prefer the reading operation return M embedding vectors {rⱼ}.  
+
+If an rⱼ doesn't exist, the `call` method must randomly initialize it by calling `set`. The on-the-fly initialization strategy doesn't create embedding vectors for unseen discrete IDs and works with batch and online learning.
+
+In the configuration of asynchronous distributed SGD, each worker process maintains its local copy of the model, and the parameter server process has the global model.  As long as each process runs the training code in a thread, this configuration doesn't require thread-safe `get` and `set`.
+
+In the synchronous configuration, all workers must use the same model in each iteration. More than one workers might initialize the same embedding vector simultaneously, thus requires a new atomic operation: `get_or_initialize` or `set_if_not_exists`.  Redis API provides `set_if_not_exists`.
+
+Another case of calling `set` is model update. With either synchronous and asynchronous case, we can restrict that only worker 0 or the parameter server can update the embedding table. Thus it poses no requirement of thread-safe `set`.
+
 ## Terminology
 
 *model*: the Keras model provided by the user for training
