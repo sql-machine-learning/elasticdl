@@ -1,3 +1,19 @@
+def pos_int(arg):
+    res = int(arg)
+    if res <= 0:
+        raise ValueError("Positive integer argument required. Got %s" % res)
+    return res
+
+
+def non_neg_int(arg):
+    res = int(arg)
+    if res < 0:
+        raise ValueError(
+            "Non-negative integer argument required. Get %s" % res
+        )
+    return res
+
+
 def add_common_params(parser):
     parser.add_argument(
         "--model_zoo",
