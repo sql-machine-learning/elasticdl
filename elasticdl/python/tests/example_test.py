@@ -189,7 +189,7 @@ class ExampleTest(unittest.TestCase):
         )
         self.distributed_train_and_evaluate(
             10,
-            ("deepfm_functional_api.deepfm_functional_api." "CustomModel"),
+            "deepfm_functional_api.deepfm_functional_api.CustomModel",
             model_params=model_params,
             training=True,
             dataset="frappe",
@@ -201,7 +201,7 @@ class ExampleTest(unittest.TestCase):
         )
         self.distributed_train_and_evaluate(
             10,
-            ("deepfm_functional_api.deepfm_functional_api." "CustomModel"),
+            "deepfm_functional_api.deepfm_functional_api.CustomModel",
             model_params=model_params,
             training=False,
             dataset="frappe",
@@ -238,14 +238,14 @@ class ExampleTest(unittest.TestCase):
     def test_cifar10_functional_train(self):
         self.distributed_train_and_evaluate(
             [32, 32, 3],
-            ("cifar10_functional_api.cifar10_functional_api." "CustomModel"),
+            "cifar10_functional_api.cifar10_functional_api.CustomModel",
             training=True,
         )
 
     def test_cifar10_functional_evaluate(self):
         self.distributed_train_and_evaluate(
             [32, 32, 3],
-            ("cifar10_functional_api.cifar10_functional_api." "CustomModel"),
+            "cifar10_functional_api.cifar10_functional_api.CustomModel",
             training=False,
         )
 
