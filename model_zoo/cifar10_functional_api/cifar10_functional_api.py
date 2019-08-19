@@ -5,113 +5,144 @@ import tensorflow as tf
 from elasticdl.python.common.constants import Mode, ODPSConfig
 from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.odps_io import ODPSWriter
+from elasticdl.python.model import ElasticDLKerasModelBase
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
 )
 
 
-def custom_model():
-    inputs = tf.keras.layers.Input(shape=(32, 32, 3), name="image")
-    use_bias = True
+class CustomModel(ElasticDLKerasModelBase):
 
-    conv = tf.keras.layers.Conv2D(
-        32,
-        kernel_size=(3, 3),
-        padding="same",
-        use_bias=use_bias,
-        activation=None,
-    )(inputs)
-    bn = tf.keras.layers.BatchNormalization(
-        epsilon=1e-06, axis=-1, momentum=0.9
-    )(conv)
-    activation = tf.keras.layers.Activation(tf.nn.relu)(bn)
+    def __init__(self, context=None):
+        super(CustomModel, self).__init__(context=context)
+        self._model = self.custom_model()
 
-    conv = tf.keras.layers.Conv2D(
-        32,
-        kernel_size=(3, 3),
-        padding="same",
-        use_bias=use_bias,
-        activation=None,
-    )(activation)
-    bn = tf.keras.layers.BatchNormalization(
-        epsilon=1e-06, axis=-1, momentum=0.9
-    )(conv)
-    activation = tf.keras.layers.Activation(tf.nn.relu)(bn)
+    def custom_model(self):
+        inputs = tf.keras.layers.Input(shape=(32, 32, 3), name="image")
+        use_bias = True
 
-    max_pool = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(activation)
-    dropout = tf.keras.layers.Dropout(0.2)(max_pool)
+        conv = tf.keras.layers.Conv2D(
+            32,
+            kernel_size=(3, 3),
+            padding="same",
+            use_bias=use_bias,
+            activation=None,
+        )(inputs)
+        bn = tf.keras.layers.BatchNormalization(
+            epsilon=1e-06, axis=-1, momentum=0.9
+        )(conv)
+        activation = tf.keras.layers.Activation(tf.nn.relu)(bn)
 
-    conv = tf.keras.layers.Conv2D(
-        64,
-        kernel_size=(3, 3),
-        padding="same",
-        use_bias=use_bias,
-        activation=None,
-    )(dropout)
-    bn = tf.keras.layers.BatchNormalization(
-        epsilon=1e-06, axis=-1, momentum=0.9
-    )(conv)
-    activation = tf.keras.layers.Activation(tf.nn.relu)(bn)
+        conv = tf.keras.layers.Conv2D(
+            32,
+            kernel_size=(3, 3),
+            padding="same",
+            use_bias=use_bias,
+            activation=None,
+        )(activation)
+        bn = tf.keras.layers.BatchNormalization(
+            epsilon=1e-06, axis=-1, momentum=0.9
+        )(conv)
+        activation = tf.keras.layers.Activation(tf.nn.relu)(bn)
 
-    conv = tf.keras.layers.Conv2D(
-        64,
-        kernel_size=(3, 3),
-        padding="same",
-        use_bias=use_bias,
-        activation=None,
-    )(activation)
-    bn = tf.keras.layers.BatchNormalization(
-        epsilon=1e-06, axis=-1, momentum=0.9
-    )(conv)
-    activation = tf.keras.layers.Activation(tf.nn.relu)(bn)
+        max_pool = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(activation)
+        dropout = tf.keras.layers.Dropout(0.2)(max_pool)
 
-    max_pool = tf.keras.layers.MaxPooling2D()(activation)
-    dropout = tf.keras.layers.Dropout(0.3)(max_pool)
+        conv = tf.keras.layers.Conv2D(
+            64,
+            kernel_size=(3, 3),
+            padding="same",
+            use_bias=use_bias,
+            activation=None,
+        )(dropout)
+        bn = tf.keras.layers.BatchNormalization(
+            epsilon=1e-06, axis=-1, momentum=0.9
+        )(conv)
+        activation = tf.keras.layers.Activation(tf.nn.relu)(bn)
 
-    conv = tf.keras.layers.Conv2D(
-        128,
-        kernel_size=(3, 3),
-        padding="same",
-        use_bias=use_bias,
-        activation=None,
-    )(dropout)
-    bn = tf.keras.layers.BatchNormalization(
-        epsilon=1e-06, axis=-1, momentum=0.9
-    )(conv)
-    activation = tf.keras.layers.Activation(tf.nn.relu)(bn)
+        conv = tf.keras.layers.Conv2D(
+            64,
+            kernel_size=(3, 3),
+            padding="same",
+            use_bias=use_bias,
+            activation=None,
+        )(activation)
+        bn = tf.keras.layers.BatchNormalization(
+            epsilon=1e-06, axis=-1, momentum=0.9
+        )(conv)
+        activation = tf.keras.layers.Activation(tf.nn.relu)(bn)
 
-    conv = tf.keras.layers.Conv2D(
-        128,
-        kernel_size=(3, 3),
-        padding="same",
-        use_bias=use_bias,
-        activation=None,
-    )(activation)
-    bn = tf.keras.layers.BatchNormalization(
-        epsilon=1e-06, axis=-1, momentum=0.9
-    )(conv)
-    activation = tf.keras.layers.Activation(tf.nn.relu)(bn)
+        max_pool = tf.keras.layers.MaxPooling2D()(activation)
+        dropout = tf.keras.layers.Dropout(0.3)(max_pool)
 
-    max_pool = tf.keras.layers.MaxPooling2D()(activation)
-    dropout = tf.keras.layers.Dropout(0.4)(max_pool)
+        conv = tf.keras.layers.Conv2D(
+            128,
+            kernel_size=(3, 3),
+            padding="same",
+            use_bias=use_bias,
+            activation=None,
+        )(dropout)
+        bn = tf.keras.layers.BatchNormalization(
+            epsilon=1e-06, axis=-1, momentum=0.9
+        )(conv)
+        activation = tf.keras.layers.Activation(tf.nn.relu)(bn)
 
-    flatten = tf.keras.layers.Flatten()(dropout)
-    outputs = tf.keras.layers.Dense(10, name="output")(flatten)
+        conv = tf.keras.layers.Conv2D(
+            128,
+            kernel_size=(3, 3),
+            padding="same",
+            use_bias=use_bias,
+            activation=None,
+        )(activation)
+        bn = tf.keras.layers.BatchNormalization(
+            epsilon=1e-06, axis=-1, momentum=0.9
+        )(conv)
+        activation = tf.keras.layers.Activation(tf.nn.relu)(bn)
 
-    return tf.keras.Model(inputs=inputs, outputs=outputs, name="cifar10_model")
+        max_pool = tf.keras.layers.MaxPooling2D()(activation)
+        dropout = tf.keras.layers.Dropout(0.4)(max_pool)
 
+        flatten = tf.keras.layers.Flatten()(dropout)
+        outputs = tf.keras.layers.Dense(10, name="output")(flatten)
 
-def loss(output, labels):
-    labels = tf.reshape(labels, [-1])
-    return tf.reduce_mean(
-        input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=output, labels=labels
+        return tf.keras.Model(
+                inputs=inputs, outputs=outputs, name="cifar10_model"
+                )
+
+    def call(self, inputs, training=False):
+        return self._model.call(inputs, training=training)
+
+    def loss(self, outputs, labels):
+        labels = tf.reshape(labels, [-1])
+        return tf.reduce_mean(
+            input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits=outputs, labels=labels
+            )
         )
-    )
 
+    def get_model(self):
+        return self._model
 
-def optimizer(lr=0.1):
-    return tf.optimizers.SGD(lr)
+    def optimizer(self, lr=0.1):
+        return tf.optimizers.SGD(lr)
+
+    def metrics(self,
+                mode=Mode.TRAINING,
+                outputs=None,
+                predictions=None,
+                labels=None,):
+        if mode == Mode.EVALUATION:
+            labels = tf.reshape(labels, [-1])
+            return {"accuracy": tf.reduce_mean(
+                input_tensor=tf.cast(
+                    tf.equal(
+                        tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
+                        labels,
+                        ),
+                    tf.float32,
+                    )
+                )
+                }
 
 
 def dataset_fn(dataset, mode):
@@ -139,21 +170,6 @@ def dataset_fn(dataset, mode):
     if mode != Mode.PREDICTION:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
-
-
-def eval_metrics_fn(predictions, labels):
-    labels = tf.reshape(labels, [-1])
-    return {
-        "accuracy": tf.reduce_mean(
-            input_tensor=tf.cast(
-                tf.equal(
-                    tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
-                    labels,
-                ),
-                tf.float32,
-            )
-        )
-    }
 
 
 class PredictionOutputsProcessor(BasePredictionOutputsProcessor):

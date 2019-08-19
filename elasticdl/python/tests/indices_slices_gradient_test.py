@@ -49,7 +49,7 @@ class IndexedSlicesTest(unittest.TestCase):
             JobType.TRAINING_ONLY,
             2,
             _model_file,
-            model_def="test_module.custom_model",
+            model_def="test_module.custom_model.CustomModel",
             channel=None,
         )
         worker._model = model_inst

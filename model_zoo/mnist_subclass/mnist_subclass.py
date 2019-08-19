@@ -1,10 +1,11 @@
 import tensorflow as tf
 
 from elasticdl.python.common.constants import Mode
+from elasticdl.python.model import ElasticDLKerasModelBase
 
 
-class CustomModel(tf.keras.Model):
-    def __init__(self, channel_last=True):
+class CustomModel(ElasticDLKerasModelBase):
+    def __init__(self, channel_last=True, context=None):
         super(CustomModel, self).__init__(name="mnist_model")
         if channel_last:
             self._reshape = tf.keras.layers.Reshape((28, 28, 1))
@@ -34,18 +35,37 @@ class CustomModel(tf.keras.Model):
         x = self._dense(x)
         return x
 
+    def loss(self, outputs=None, labels=None):
+        labels = tf.reshape(labels, [-1])
+        return tf.reduce_mean(
+                input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
+                    logits=outputs, labels=labels
+                    )
+                )
 
-def loss(output, labels):
-    labels = tf.reshape(labels, [-1])
-    return tf.reduce_mean(
-        input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=output, labels=labels
-        )
-    )
+    def get_model(self):
+        return self
 
+    def optimizer(self, lr=0.1):
+        return tf.optimizers.SGD(lr)
 
-def optimizer(lr=0.01):
-    return tf.optimizers.SGD(lr)
+    def metrics(self,
+                mode=Mode.TRAINING,
+                outputs=None,
+                predictions=None,
+                labels=None,):
+        if mode == Mode.EVALUATION:
+            labels = tf.reshape(labels, [-1])
+            return {"accuracy": tf.reduce_mean(
+                input_tensor=tf.cast(
+                    tf.equal(
+                        tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
+                        labels,
+                        ),
+                    tf.float32,
+                    )
+                )
+                }
 
 
 def dataset_fn(dataset, mode):
@@ -73,18 +93,3 @@ def dataset_fn(dataset, mode):
     if mode != Mode.PREDICTION:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
-
-
-def eval_metrics_fn(predictions, labels):
-    labels = tf.reshape(labels, [-1])
-    return {
-        "accuracy": tf.reduce_mean(
-            input_tensor=tf.cast(
-                tf.equal(
-                    tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
-                    labels,
-                ),
-                tf.float32,
-            )
-        )
-    }

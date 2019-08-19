@@ -41,25 +41,6 @@ def _parse_args():
         help="The name of the dataset function defined in the model file",
     )
     parser.add_argument(
-        "--loss",
-        type=str,
-        default="loss",
-        help="The name of the loss function defined in the model file",
-    )
-    parser.add_argument(
-        "--optimizer",
-        type=str,
-        default="optimizer",
-        help="The name of the optimizer defined in the model file",
-    )
-    parser.add_argument(
-        "--eval_metrics_fn",
-        type=str,
-        default="eval_metrics_fn",
-        help="The name of the evaluation metrics function defined "
-        "in the model file",
-    )
-    parser.add_argument(
         "--model_def",
         type=str,
         required=True,
@@ -100,9 +81,6 @@ def main():
         get_model_file(args.model_zoo, args.model_def),
         channel=channel,
         dataset_fn=args.dataset_fn,
-        loss=args.loss,
-        optimizer=args.optimizer,
-        eval_metrics_fn=args.eval_metrics_fn,
         model_def=args.model_def,
         model_params=args.model_params,
     )

@@ -27,8 +27,11 @@ def _create_model_instance(model_def):
 
 class FindLayerTest(unittest.TestCase):
     def test_find_layer(self):
-        model_def = "mnist_functional_api.mnist_functional_api.custom_model"
-        model = _create_model_instance(model_def)
+        model_def = (
+            "mnist_functional_api.mnist_functional_api."
+            "CustomModel"
+        )
+        model = _create_model_instance(model_def).get_model()
 
         layer_num = {
             tf.keras.layers.Conv2D: 2,

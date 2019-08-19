@@ -74,7 +74,7 @@ class WorkerTest(unittest.TestCase):
             job_type,
             batch_size,
             _model_file,
-            model_def="test_module.custom_model",
+            model_def="test_module.custom_model.CustomModel",
             channel=None,
         )
 

@@ -50,7 +50,7 @@ class MockEmbeddingService:
 
 
 _model_file = get_model_file(
-    os.path.dirname(os.path.realpath(__file__)), "test_module.custom_model"
+    os.path.dirname(os.path.realpath(__file__)), "test_module.CustomModel"
 )
 m = load_module(_model_file).__dict__
 
@@ -101,7 +101,7 @@ class ReportBETGradientTest(unittest.TestCase):
             JobType.TRAINING_ONLY,
             2,
             _model_file,
-            model_def="test_module.custom_model",
+            model_def="test_module.CustomModel",
             channel=None,
         )
         worker._model = model_inst

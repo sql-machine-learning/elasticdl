@@ -102,13 +102,6 @@ def add_common_params(parser):
         help="The name of the dataset function defined in the model file",
     )
     parser.add_argument(
-        "--eval_metrics_fn",
-        type=str,
-        default="eval_metrics_fn",
-        help="The name of the evaluation metrics function defined "
-        "in the model file",
-    )
-    parser.add_argument(
         "--model_def",
         type=str,
         required=True,
@@ -204,18 +197,6 @@ def add_train_params(parser):
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",
         default="",
-    )
-    parser.add_argument(
-        "--loss",
-        type=str,
-        default="loss",
-        help="The name of the loss function defined in the model file",
-    )
-    parser.add_argument(
-        "--optimizer",
-        type=str,
-        default="optimizer",
-        help="The name of the optimizer defined in the model file",
     )
     parser.add_argument(
         "--output",

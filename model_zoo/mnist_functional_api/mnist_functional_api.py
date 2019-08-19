@@ -3,20 +3,65 @@ import PIL.Image
 import tensorflow as tf
 
 from elasticdl.python.common.constants import Mode
+from elasticdl.python.model import ElasticDLKerasModelBase
 
 
-def custom_model():
-    inputs = tf.keras.Input(shape=(28, 28), name="image")
-    x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
-    x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu")(x)
-    x = tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu")(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(x)
-    x = tf.keras.layers.Dropout(0.25)(x)
-    x = tf.keras.layers.Flatten()(x)
-    outputs = tf.keras.layers.Dense(10)(x)
+class CustomModel(ElasticDLKerasModelBase):
 
-    return tf.keras.Model(inputs=inputs, outputs=outputs, name="mnist_model")
+    def __init__(self, context=None):
+        super(CustomModel, self).__init__(context=context)
+        self._model = self.custom_model()
+
+    def custom_model(self):
+        inputs = tf.keras.Input(shape=(28, 28), name="image")
+        x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
+        x = tf.keras.layers.Conv2D(
+                32, kernel_size=(3, 3), activation="relu")(x)
+        x = tf.keras.layers.Conv2D(
+                64, kernel_size=(3, 3), activation="relu")(x)
+        x = tf.keras.layers.BatchNormalization()(x)
+        x = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(x)
+        x = tf.keras.layers.Dropout(0.25)(x)
+        x = tf.keras.layers.Flatten()(x)
+        outputs = tf.keras.layers.Dense(10)(x)
+
+        return tf.keras.Model(
+                inputs=inputs, outputs=outputs, name="mnist_model")
+
+    def loss(self, outputs, labels):
+        labels = tf.reshape(labels, [-1])
+        return tf.reduce_mean(
+            input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits=outputs, labels=labels
+            )
+        )
+
+    def call(self, inputs, training=False):
+        return self._model.call(inputs, training=training)
+
+    def optimizer(self, lr=0.1):
+        return tf.optimizers.SGD(lr)
+
+    def get_model(self):
+        return self._model
+
+    def metrics(self,
+                mode=Mode.TRAINING,
+                outputs=None,
+                predictions=None,
+                labels=None,):
+        if mode == Mode.EVALUATION:
+            labels = tf.reshape(labels, [-1])
+            return {"accuracy": tf.reduce_mean(
+                input_tensor=tf.cast(
+                    tf.equal(
+                        tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
+                        labels,
+                        ),
+                    tf.float32,
+                    )
+                )
+                }
 
 
 def prepare_data_for_a_single_file(file_object, filename):
@@ -39,19 +84,6 @@ def prepare_data_for_a_single_file(file_object, filename):
         features=tf.train.Features(feature=example_dict)
     )
     return example.SerializeToString()
-
-
-def loss(output, labels):
-    labels = tf.reshape(labels, [-1])
-    return tf.reduce_mean(
-        input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=output, labels=labels
-        )
-    )
-
-
-def optimizer(lr=0.1):
-    return tf.optimizers.SGD(lr)
 
 
 def dataset_fn(dataset, mode):
@@ -79,18 +111,3 @@ def dataset_fn(dataset, mode):
     if mode != Mode.PREDICTION:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
-
-
-def eval_metrics_fn(predictions, labels):
-    labels = tf.reshape(labels, [-1])
-    return {
-        "accuracy": tf.reduce_mean(
-            input_tensor=tf.cast(
-                tf.equal(
-                    tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
-                    labels,
-                ),
-                tf.float32,
-            )
-        )
-    }

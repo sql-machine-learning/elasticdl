@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.python.keras import backend, layers, regularizers
 
 from elasticdl.python.common.constants import Mode
+from elasticdl.python.model import ElasticDLKerasModelBase
 
 try:
     from resnet50_subclass.resnet50_model import (
@@ -21,8 +22,10 @@ except ImportError:
     )
 
 
-class CustomModel(tf.keras.Model):
-    def __init__(self, num_classes=10, dtype="float32", batch_size=None):
+class CustomModel(ElasticDLKerasModelBase):
+    def __init__(
+        self, num_classes=10, dtype="float32", batch_size=None, context=None
+    ):
         super(CustomModel, self).__init__(name="resnet50")
 
         if backend.image_data_format() == "channels_first":
@@ -155,18 +158,37 @@ class CustomModel(tf.keras.Model):
         x = backend.cast(x, "float32")
         return self._activation_2(x)
 
-
-def loss(output, labels):
-    labels = tf.reshape(labels, [-1])
-    return tf.reduce_mean(
-        input_tensor=tf.keras.losses.sparse_categorical_crossentropy(
-            labels, output
+    def loss(self, outputs=None, labels=None):
+        labels = tf.reshape(labels, [-1])
+        return tf.reduce_mean(
+            input_tensor=tf.keras.losses.sparse_categorical_crossentropy(
+                labels, outputs
+            )
         )
-    )
 
+    def get_model(self):
+        return self
 
-def optimizer(lr=0.02):
-    return tf.keras.optimizers.SGD(lr)
+    def optimizer(self, lr=0.02):
+        return tf.keras.optimizers.SGD(lr)
+
+    def metrics(self,
+                mode=Mode.TRAINING,
+                outputs=None,
+                predictions=None,
+                labels=None,):
+        if mode == Mode.EVALUATION:
+            labels = tf.reshape(labels, [-1])
+            return {"accuracy": tf.reduce_mean(
+                input_tensor=tf.cast(
+                    tf.equal(
+                        tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
+                        labels,
+                        ),
+                    tf.float32,
+                    )
+                )
+                }
 
 
 def dataset_fn(dataset, mode):
@@ -204,18 +226,3 @@ def dataset_fn(dataset, mode):
     if mode != Mode.PREDICTION:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
-
-
-def eval_metrics_fn(predictions, labels):
-    labels = tf.reshape(labels, [-1])
-    return {
-        "accuracy": tf.reduce_mean(
-            input_tensor=tf.cast(
-                tf.equal(
-                    tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
-                    labels,
-                ),
-                tf.float32,
-            )
-        )
-    }

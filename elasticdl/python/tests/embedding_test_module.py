@@ -1,12 +1,16 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Dense, Flatten
 
+from elasticdl.python.common.constants import Mode
 from elasticdl.python.elasticdl.layers.embedding import Embedding
+from elasticdl.python.model import ElasticDLKerasModelBase
 
 
-class CustomModel(tf.keras.Model):
-    def __init__(self, output_dim=16):
-        super(CustomModel, self).__init__(name="embedding_test_model")
+class CustomModel(ElasticDLKerasModelBase):
+    def __init__(self, context=None, output_dim=16):
+        super(CustomModel, self).__init__(
+            context=context, name="embedding_test_model"
+        )
         self.output_dim = output_dim
         self.embedding_1 = Embedding(output_dim)
         self.embedding_2 = Embedding(output_dim)
@@ -22,9 +26,17 @@ class CustomModel(tf.keras.Model):
         x = self.dense(x)
         return self.flatten(x)
 
+    def loss(self, predictions, labels):
+        return tf.reduce_mean(tf.square(predictions - labels))
 
-def loss(predictions, labels):
-    return tf.reduce_mean(tf.square(predictions - labels))
+    def optimizer(self, lr=0.1):
+        return tf.optimizers.SGD(lr)
+
+    def metrics(
+        self, mode=Mode.TRAINING, output=None, predictions=None, labels=None
+    ):
+        if mode == Mode.EVALUATION:
+            return {"mse": tf.reduce_mean(tf.square(predictions - labels))}
 
 
 def dataset_fn(dataset, training=True):

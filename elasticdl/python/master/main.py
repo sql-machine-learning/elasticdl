@@ -102,7 +102,7 @@ def main():
     model_inst = load_model_from_module(
         args.model_def, model_module, args.model_params
     )
-    optimizer = model_module[args.optimizer]()
+    optimizer = model_inst.optimizer()
 
     if all(
         (
@@ -179,12 +179,13 @@ def main():
             ),
         ],
     )
+    model = model_inst.get_model()
     master_servicer = MasterServicer(
         args.grads_to_wait,
         args.minibatch_size,
         optimizer,
         task_d,
-        init_var=model_inst.trainable_variables if model_inst.built else [],
+        init_var=model.trainable_variables if model.built else [],
         checkpoint_filename_for_init=args.checkpoint_filename_for_init,
         checkpoint_service=checkpoint_service,
         evaluation_service=evaluation_service,
@@ -231,12 +232,6 @@ def main():
             args.log_level,
             "--dataset_fn",
             args.dataset_fn,
-            "--loss",
-            args.loss,
-            "--optimizer",
-            args.optimizer,
-            "--eval_metrics_fn",
-            args.eval_metrics_fn,
             "--model_def",
             args.model_def,
             "--job_type",

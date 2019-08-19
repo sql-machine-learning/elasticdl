@@ -21,7 +21,9 @@ def _get_model_def_file_path(model_def):
 # TODO: Discuss whether we need to support default model
 # function/class names such as `custom_model()`
 # or `CustomModel()`
-def load_model_from_module(model_def, model_module, model_params):
+def load_model_from_module(
+    model_def, model_module, model_params, context=None
+):
     model_def_name = _get_model_def_name(model_def)
     if model_def_name in model_module:
         custom_model_name = model_def_name
@@ -30,15 +32,17 @@ def load_model_from_module(model_def, model_module, model_params):
             "Cannot find the custom model function/class "
             "in model definition files"
         )
+    model_params_dict = {}
+    if context:
+        model_params_dict.update({"context": context})
     if model_params:
         kvs = model_params.split(",")
-        model_params_dict = {}
         for kv in kvs:
             k, v = kv.split("=")
             model_params_dict[k] = eval(v)
         return model_module[custom_model_name](**model_params_dict)
     else:
-        return model_module[custom_model_name]()
+        return model_module[custom_model_name](**model_params_dict)
 
 
 def get_model_file(model_zoo, model_def):

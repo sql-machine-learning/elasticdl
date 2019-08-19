@@ -9,17 +9,19 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import JobType
-from elasticdl.python.common.model_helper import get_model_file, load_module
+from elasticdl.python.common.model_helper import (
+        get_model_file, load_module, load_model_from_module)
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
 
+model_def = "test_module.CustomModel"
 _model_file = get_model_file(
-    os.path.dirname(os.path.realpath(__file__)), "test_module.custom_model"
-)
+    os.path.dirname(os.path.realpath(__file__)), model_def)
 m = load_module(_model_file).__dict__
+model_inst = load_model_from_module(model_def, m, {})
 
 
 def create_recordio_file(size):
@@ -54,7 +56,7 @@ class CheckpointTest(unittest.TestCase):
         self.assertTrue(checkpointer.need_to_checkpoint(6))
 
     def testSaveLoadCheckpoint(self):
-        init_var = m["custom_model"]().trainable_variables
+        init_var = model_inst.get_model().trainable_variables
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testSaveLoadCheckpoint")
             os.makedirs(chkp_dir)
@@ -97,7 +99,7 @@ class CheckpointTest(unittest.TestCase):
                 JobType.TRAINING_ONLY,
                 batch_size,
                 _model_file,
-                model_def="test_module.custom_model",
+                model_def="test_module.custom_model.CustomModel",
                 channel=None,
             )
             filename = create_recordio_file(128)
@@ -145,7 +147,7 @@ class CheckpointTest(unittest.TestCase):
             )
 
     def testInitFromCheckpoint(self):
-        init_var = m["custom_model"]().trainable_variables
+        init_var = model_inst.get_model().trainable_variables
         with tempfile.TemporaryDirectory() as tempdir:
             chkp_dir = os.path.join(tempdir, "testInitFromCheckpoint")
             os.makedirs(chkp_dir)

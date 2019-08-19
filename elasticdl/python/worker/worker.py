@@ -35,9 +35,6 @@ class Worker(object):
         minibatch_size,
         model_file,
         dataset_fn="dataset_fn",
-        loss="loss",
-        optimizer="optimizer",
-        eval_metrics_fn="eval_metrics_fn",
         channel=None,
         model_def=None,
         model_params="",
@@ -55,15 +52,16 @@ class Worker(object):
         self._job_type = job_type
         self._minibatch_size = minibatch_size
         model_module = load_module(model_file).__dict__
-        self._model = load_model_from_module(
+        model_inst = load_model_from_module(
             model_def, model_module, model_params
         )
+        self._model = model_inst.get_model()
         self._init_embedding_layer()
         self._var_created = self._model.built
         self._dataset_fn = model_module[dataset_fn]
-        self._opt_fn = model_module[optimizer]
-        self._loss = model_module[loss]
-        self._eval_metrics_fn = model_module[eval_metrics_fn]
+        self._opt_fn = model_inst.optimizer
+        self._loss = model_inst.loss
+        self._eval_metrics_fn = model_inst.metrics
 
         if channel is None:
             self._stub = None
@@ -273,7 +271,7 @@ class Worker(object):
         with tf.GradientTape() as tape:
             self._set_tape_for_embedding(tape)
             outputs = self._model.call(features, training=True)
-            loss = self._loss(outputs, labels)
+            loss = self._loss(outputs=outputs, labels=labels)
             # Add regularization loss if any
             if self._model.losses:
                 loss += tf.math.add_n(self._model.losses)
@@ -282,8 +280,10 @@ class Worker(object):
 
     @tf.function
     def evaluation_process(self, features, labels):
-        outputs = self._model.call(features, training=False)
-        evaluation_metrics = self._eval_metrics_fn(outputs, labels)
+        predictions = self._model.call(features, training=False)
+        evaluation_metrics = self._eval_metrics_fn(
+            mode=Mode.EVALUATION, predictions=predictions, labels=labels
+        )
         return evaluation_metrics
 
     @tf.function
