@@ -198,6 +198,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 embedding_var = tf.Variable(embeddings)
                 grad_var.append((grads_idx_transformed, embedding_var))
 
+        # TODO: support optimizer with slots such as Adam, FTRL
         self._opt.apply_gradients(grad_var)
         self._update_edl_embedding_table(
             zip(
