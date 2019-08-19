@@ -21,6 +21,7 @@ class EmbeddingService(object):
                 address1:[port list],
                 ...
             }
+            replicas: Number of slaves per redis master
 
         Logic of starting embedding service :
         main       EmbeddingService      k8s_client
@@ -30,20 +31,20 @@ class EmbeddingService(object):
           5 <-------------- 4  <----------   |
 
 
-        1:master.main calls EmbeddingService.start_embedding_service 
-		  when the embedding service is required by the model.
-        2:EmbeddingService.start_embedding_service calls 
-		  EmbeddingService.start_embedding_pod_and_redis to ask 
-		  k8s_client create pods for Redis.
-        3:k8s_client creates pods, then pods call 
-		  EmbeddingService.start_redis_service() to start their  local
-          redis instances.
-        4:After pods running,EmbeddingService.start_embedding_service
-		  gets and saves addresses(ip/dns and port) of pods, create a 
-		  Redis Cluster base on these addresses.
-        5:EmbeddingService.start_embedding_service return addresses to
-		  master.main,master.main saves addresses for master/worker 
-		  accessing the Redis.
+        1. master.main calls EmbeddingService.start_embedding_service
+           when the embedding service is required by the model.
+        2. EmbeddingService.start_embedding_service calls
+           EmbeddingService.start_embedding_pod_and_redis to ask
+           k8s_client create pods for Redis.
+        3. k8s_client creates pods, then pods call
+           EmbeddingService.start_redis_service() to start their  local
+           redis instances.
+        4. After pods running,EmbeddingService.start_embedding_service
+           gets and saves addresses(ip/dns and port) of pods, create a
+           Redis Cluster base on these addresses.
+        5. EmbeddingService.start_embedding_service return addresses to
+           master.main,master.main saves addresses for master/worker
+           accessing the Redis.
 
         """
         self._redis_address_map = redis_address_map
@@ -148,7 +149,7 @@ class EmbeddingService(object):
             help="The first listening port of embedding service",
         )
         parser.add_argument(
-            "--num_of_redis",
+            "--num_of_redis_instances",
             default=6,
             type=self._pos_int,
             help="The number of redis instances",
@@ -165,11 +166,10 @@ class EmbeddingService(object):
         return args
 
     def start_redis_service(self):
-        # pod call
         logger.info("Starting redis server ...")
         args = self._parse_embedding_service_args()
 
-        for i in range(args.num_of_redis):
+        for i in range(args.num_of_redis_instances):
             port = args.first_port + i
             command = (
                 "redis-server --port %d --cluster-enabled yes "
@@ -200,7 +200,6 @@ class EmbeddingService(object):
         restart_policy="Never",
         **kargs,
     ):
-        """Start redis """
         logger.info("Starting pod for embedding service ...")
         self._k8s_client = k8s.Client(event_callback=None, **kargs)
         pod = self._k8s_client.create_embedding_service(
@@ -216,7 +215,7 @@ class EmbeddingService(object):
         )
 
         # TODO: assign address with pod's domain name instead of pod's ip.
-        # and should'd fix port
+        # and should not fix ports
         address_ip = pod.status.pod_ip
         while not address_ip:
             pod = self._k8s_client.get_embedding_service_pod(
