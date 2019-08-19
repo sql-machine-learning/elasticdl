@@ -196,15 +196,11 @@ def main():
 
     layers = find_layer(model_inst, Embedding)
     if layers:
-        # Init embedding table server
-        embedding_command = ["python"]
-        embedding_args = ["-m", "elasticdl.python.common.embedding_service"]
+        # Init embedding service
         embedding_service = EmbeddingService()
         redis_address_map = embedding_service.start_embedding_service(
             job_name=args.job_name,
             image_name=args.worker_image,
-            command=embedding_command,
-            args=embedding_args,
             namespace=args.namespace,
             resource_request=args.master_resource_request,
             resource_limit=args.master_resource_limit,

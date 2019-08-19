@@ -6,17 +6,12 @@ FROM ${BASE_IMAGE}
 COPY elasticdl/docker/bashrc /etc/bash.bashrc
 RUN chmod a+rwx /etc/bash.bashrc
 
-RUN apt-get update && apt-get install -y unzip curl git wget
+RUN apt-get update && apt-get install -y unzip curl git software-properties-common
 
 # install redis 5.0.5
-RUN wget http://download.redis.io/releases/redis-5.0.5.tar.gz \
-    && tar xzf redis-5.0.5.tar.gz \
-    && cd redis-5.0.5 \
-    && make >/dev/null \
-    && export PATH=$path:$(pwd)/src/
-
-# config redis environment
-ENV PATH="/redis-5.0.5/src:${PATH}"
+RUN add-apt-repository ppa:chris-lea/redis-server -y \
+    && apt-get update \
+    && apt-get install -y redis-server
 
 COPY elasticdl/requirements.txt /requirements.txt
 ARG EXTRA_PYPI_INDEX

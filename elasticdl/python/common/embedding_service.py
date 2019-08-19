@@ -37,13 +37,13 @@ class EmbeddingService(object):
            EmbeddingService.start_embedding_pod_and_redis to ask
            k8s_client create pods for Redis.
         3. k8s_client creates pods, then pods call
-           EmbeddingService.start_redis_service() to start their  local
+           EmbeddingService.start_redis_service() to start their local
            redis instances.
-        4. After pods running,EmbeddingService.start_embedding_service
-           gets and saves addresses(ip/dns and port) of pods, create a
+        4. After pods running, EmbeddingService.start_embedding_service
+           gets and saves addresses(ip/dns and port) of pods, and creates a
            Redis Cluster base on these addresses.
-        5. EmbeddingService.start_embedding_service return addresses to
-           master.main,master.main saves addresses for master/worker
+        5. EmbeddingService.start_embedding_service returns addresses to
+           master.main, master.main saves addresses for master/worker
            accessing the Redis.
 
         """
@@ -52,8 +52,6 @@ class EmbeddingService(object):
 
     def start_embedding_service(
         self,
-        command,
-        args,
         embedding_service_id=0,
         resource_request="cpu=1,memory=4096Mi",
         resource_limit="cpu=1,memory=4096Mi",
@@ -64,8 +62,8 @@ class EmbeddingService(object):
         **kargs,
     ):
         self.start_embedding_pod_and_redis(
-            command=command,
-            args=args,
+            command=["python"],
+            args=["-m", "elasticdl.python.common.embedding_service"],
             embedding_service_id=embedding_service_id,
             resource_request=resource_request,
             resource_limit=resource_limit,
@@ -75,6 +73,9 @@ class EmbeddingService(object):
             restart_policy=restart_policy,
             **kargs,
         )
+        return self._create_redis_cluster()
+
+    def _create_redis_cluster(self):
         redis_cluster_command = " ".join(
             [
                 "%s:%d" % (ip, port)
