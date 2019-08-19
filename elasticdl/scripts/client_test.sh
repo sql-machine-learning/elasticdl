@@ -1,7 +1,7 @@
 elasticdl train \
   --image_base=elasticdl:ci \
   --model_zoo=model_zoo \
-  --model_def=mnist_functional_api.mnist_functional_api.custom_model \
+  --model_def=mnist_functional_api.mnist_functional_api.CustomModel \
   --training_data_dir=/data/mnist/train \
   --evaluation_data_dir=/data/mnist/test \
   --num_epochs=2 \
