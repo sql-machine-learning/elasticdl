@@ -10,7 +10,10 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.model_helper import (
-        get_model_file, load_module, load_model_from_module)
+    get_model_file,
+    load_model_from_module,
+    load_module,
+)
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
@@ -19,7 +22,8 @@ from elasticdl.python.worker.worker import Worker
 
 model_def = "test_module.CustomModel"
 _model_file = get_model_file(
-    os.path.dirname(os.path.realpath(__file__)), model_def)
+    os.path.dirname(os.path.realpath(__file__)), model_def
+)
 m = load_module(_model_file).__dict__
 model_inst = load_model_from_module(model_def, m, {})
 
