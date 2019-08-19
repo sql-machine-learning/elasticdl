@@ -26,146 +26,267 @@ In the synchronous configuration, all workers must use the same model in each it
 
 Another case of calling `set` is model update. With either synchronous and asynchronous case, we can restrict that only worker 0 or the parameter server can update the embedding table. Thus it poses no requirement of thread-safe `set`.
 
-## Terminology
-
-*model*: the Keras model provided by the user for training
-
-*minibatch_size*: the batch size used by each worker
-
-*E*: an embedding table supports query with a key. The query result is an embedding vector which has *embedding_dim* values.
-
-*BET*: Batch Embedding Tensor, a dense tensor containing all embedding vectors used by an embedding layer for processing one batch.
-
-*optimizer*: an optimizer provided by the user for updating *model* using gradients.
-
 ## Embedding Layers
+In TensorFlow, there are one Keras layer [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en) and two ops [tf.nn.embedding_lookup](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup) and [tf.nn.embedding\_lookup\_sparse](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup_sparse) related to embedding.
 
-### Embedding layer with fixed input size
-An embedding layer defines an embedding table *E*. For an input containing a list of *n* ids `[id_i for i from 0 to n-1]`, the layer looks up the embedding vectors *E[id_i]*  and outputs a dense matrix *Output\[n\]\[embedding_dim\]* and `Output[i] = E[id_i]`.
+### tf.keras.layers.Embedding and tf.nn.embedding_lookup
 
-
-```
-class EdlEmbedding(tf.keras.layers.Layer):
-    def __init__(self,
-                 embedding_dim,
-                 embedding_initializer="uniform",
-                 )
-```
-
-Input shape:
-2D integer tensor with shape *(minibatch_size, n)*
-
-Output shape:
-3D tensor with shape *(minibatch_size, n, embedding_dim)*.
-
-The number of ids in each data of a same batch is fixed to *n*.
-
-This embedding layer is similar to [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en) and [tf.nn.embedding_lookup](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup).
-
-
-
-
-### Embedding layer with sparse lookup
-If the numbers of ids in the batch inputs are not fixed, sparse lookup with a combiner can be used to reduce the varying number of embedding vectors into a tensor, similar to [tf.nn.embedding\_lookup\_sparse](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup_sparse)
-
-In this design document, we will describe how to implement `EdlEmbedding` with a fixed input size. It can be extended to support the sparse lookup and we will implement that in the future.
-
-
-## Implementation
-
-### Step 1: Embedding table initialization
-
-#### Step 1.1 Start Redis Service
-
-There are two methods to start Redis service. We need to discuss them.
-
-##### Method 1 `get_worker()`
-
-In this method, all things will be done during the `init` process of `EdlEmbedding`. In the `init` process of `EdlEmbedding`, `EdlEmbedding` will first get worker handle through function `get_worker`, and worker will ask master to start the Redis service. Master will check the existence of Redis service. If not, master will start the Redis service. Then, master will return the access point of Redis service to worker.
-
-In order to `get_worker()` in the keras layer `EdlEmbedding`, worker need to set itself to a global variable.
+[tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en) uses the arguments below:
 
 ```
-class EdlEmbedding:
-    def __init__(self, **kwargs):
-        self.worker = self.get_worker()
-        self.worker.init_embedding_service()
-				
-        // standard keras layer init 
-        super(EdlEmbedding, self).__init__(**kwargs)
-				
-    def get_worker(self):
-        from elasticdl.python.common.worker_help import current_worker
-        return current_worker
-				
-class Worker:
-    def set_worker(self):
-        from elasticdl.python.common.worker_help import current_worker
-        current_worker = self
-		
-    def init_embedding_service(self):
-        response = self.init_embedding_service_rpc()
-        self.ip, self.port = response.ip, response.port
-
-// RPC
-def MasterServicer.StartEmbeddingServiceRPC(self, request):
-    with self._embedding_service_lock:
-        if not self._is_embedding_service_started:
-            ip, port = self._start_embedding_service()
-            self._is_embedding_service_started = True
-    res = StartEmbeddingServiceResponse()
-    res.ip, res.port = ip, port
-    return res
+__init__(
+    input_dim,
+    output_dim,
+    embeddings_initializer='uniform',
+    embeddings_regularizer=None,
+    activity_regularizer=None,
+    embeddings_constraint=None,
+    mask_zero=False,
+    input_length=None,
+    **kwargs
+)
 ```
 
+It defines an embedding table with a fixed size `input_dim x output_dim`. 
 
-
-##### Method 2 `find_layer()` and `set_worker()` 
-
-In this method, the two things mentioned above will be done seperately. 
-
-1. Master creates Redis service before starting worker. Master searchs for  `EdlEmbedding` layers. If found,  master starts a Redis service. 
-
-2. Master start workers.
-
-3. Workers search for `EdlEmbedding` layers. If found, workers pass itself to `EdlEmbedding`.
+[tf.keras.layers.Embedding.call](https://github.com/tensorflow/tensorflow/blob/1f61f13f8715dc26dabe46a2686216674026d812/tensorflow/python/keras/layers/embeddings.py#L179) uses tf op [tf.nn.embedding_lookup](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup).
 
 ```
-def EdlEmbedding.set_worker(self, worker):
-    self.worker = worker
+  def call(self, inputs):
+    dtype = K.dtype(inputs)
+    if dtype != 'int32' and dtype != 'int64':
+      inputs = math_ops.cast(inputs, 'int32')
+    out = embedding_ops.embedding_lookup(self.embeddings, inputs)
+    return out
+```
 
-def Worker.__init__(self):
-    embedding_layers = find_layers(model, EdlEmbedding)
-    if embedding_layers:
-        for layer in embedding_layers:
-            layer.set_worker(self)
-				
-class MasterServicer.__init__(self, *args, **kwargs):
+[tf.nn.embedding_lookup](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup) is defined as:
+```
+tf.nn.embedding_lookup(
+    params,
+    ids,
+    max_norm=None,
+    name=None
+)
+```
+
+Here `ids` is the input containing a batch of id lists corresponding to the input of [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en), whose shape is `(batch_size, input_length)`.
+
+The output is the corresponding embeddings with a shape of `(batch_size, input_length, output_dim)`.
+
+For [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en)  and [tf.nn.embedding_lookup](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup) , each input id list in the same batch contains a fixed number of ids to lookup in the embedding table.
+
+### tf.nn.embedding\_lookup\_sparse
+
+[tf.nn.embedding\_lookup\_sparse](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup_sparse) deals with the situation when each input id list in the same batch contains a different  number of ids.
+
+```
+tf.nn.embedding_lookup_sparse(
+    params,
+    sp_ids,
+    sp_weights,
+    combiner=None,
+    max_norm=None,
+    name=None
+)
+```
+
+`sp_ids` is a N x M SparseTensor of int64 ids where N is typically batch size and M is arbitrary. 
+This op assumes that there is at least one id for each row in the dense tensor represented by `sp_ids` (i.e. there are no rows with empty features). 
+Thus each row of `sp_ids` contains a different number of ids to lookup in the embedding table `params`.
+
+In order to output with a fixed shape, `combiner` is used to combine the embeddings.
+`combiner`: A string specifying the reduction op. Currently "mean", "sqrtn" and "sum" are supported. "sum" computes the weighted sum of the embedding results for each row. "mean" is the weighted sum divided by the total weight. "sqrtn" is the weighted sum divided by the square root of the sum of the squares of the weights.
+
+Thus, the output shape for [tf.nn.embedding\_lookup\_sparse](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup_sparse) is `N * params.shape[1]`, where `params.shape[1]` is the dimension of the embedding, similar to `output_dim` in [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en) .
+
+### elasticdl.layers.Embedding
+
+We plan to support both the fixed number of input ids as [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en) and [tf.nn.embedding_lookup](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup),  and inputs with varying number of ids as [tf.nn.embedding\_lookup\_sparse](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup_sparse).
+
+```
+__init__(
+    output_dim,
+    embeddings_initializer='uniform',
+    mask_zero=False,
+    input_length=None,
+    combiner=None,
+)
+```
+
+Because the embedding table size is not fixed in advance, `input_dim` argument in [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en) is not used by `elasticdl.layers.embedding`.
+
+We also need to investigate if elasticdl.layers.embedding can support`embeddings_regularizer`, `activity_regularizer` and `embeddings_constraint`.
+
+
+In `elasticdl.layers.embedding.call(inputs)`:
+
+* if `inputs` is a N x M SparseTensor, `combiner` cannot be None. The output shape is `N x output_dim`.
+* If `inputs` is a N x M dense tensor, `combiner` can be None or any of the supported reduction op.
+    * If it is None, the output shape is `N x M x output_dim`.
+    * If it is not None, the output shape is `N x output_dim`. 
+
+In this way, elasticdl.layers.embedding supports ops as:
+
+1. [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en)
+2. [tf.nn.embedding\_lookup\_sparse](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/nn/embedding_lookup_sparse)
+3. [tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/layers/Embedding?hl=en) + reduction op `combiner`.
+
+In this design document, we will describe how to implement `elasticdl.layers.Embedding` with a dense tensor `inputs` and `combiner` as None. It can be extended to support SparseTensor `inputs` and/or `combiner` as a reduction op.
+
+In the remaining of this document, we abbreviate `elasticdl.layers.Embedding` as `Embedding`.
+
+## Distributed storage service for embedding table
+
+### Master start distributed storage service when needed
+Before starting workers, master should decide whether to start the distributed storage service. A Keras model, whether defined by functional API or by subclass, uses some pre-defined layers as its model building blocks. Master searches `Embedding` in the model layers. If found, master starts the distributed storage service, and passes the access point to the workers through WorkerManager.
+
+```
+// master.main
+embedding_layers = find_layers(model, Embedding)
+access_point = None
+if embedding_layers:
+    access_point = Embedding_service.start_embedding_service()
+worker_manager = WorkerManager(
     ...
-    // masterservicer init done
-				
-    embedding_layers = find_layers(model, EdlEmbedding)
-    if embedding_layers:
-        ip, port = self._start_embedding_service()
+    embedding_access_point = access_point,
+    ...
+)
+worker_manager.start_workers()
 
 ```
 
+Distributed storage will be empty at first. We adopts lazy initialization for embedding vectors, i.e. embedding vectors will be created when they are needed.
+
+### Workers supports `lookup_embedding` using access_point
+
+Worker defines a [`lookup_embedding`](#pseudocode-for-lookup_embedding) function and the `Embedding` layer will use it in [`Embedding.call`](#pseudocode-for-Embeddingcall). `lookup_embedding` will use the access point to access the distributed storage.
 
 
-#### Step 1.2 Initialize embedding vectors
+## Design Proposal
 
-After model initialization, Redis is empty. Worker will create and initialize embedding vectors lazily. During the forward pass of model, `EdlEmbedding` will send `ids` to  worker, and worker should return every `id`'s embedding vector to `EdlEmbedding`.  Some ids are already in Redis and worker will get their embedding vectors from Redis. Worker will create and initialize embedding vectors for other ids. In order to avoid conflict between workers, worker will use interface `embedding_service_sets_if_not_exists` to report new embedding vectors.
+### Forward-Pass
+In the forward-pass of each iteration, embedding layer takes a minibatch of discrete ids and returns the corresponding embedding vectors. Here is a simple example:
 
-`initilizer` is a `string` and it is used for get initializer. For example, in *keras* interface, `initilizer='random_normal'` indicates initializer `keras.initializers.RandomNormal()`.
+```
+Embedding Table with 3 (discrete id, embedding vector) pairs:
+{
+	0: [0, 1, 2, 3],
+	1: [4, 5, 6, 7],
+	2: [8, 9, 10, 11],
+}
 
-```				
-def Worker.embedding_lookup(self, ids, initializer='uniform'):
+Embedding Layer Input:
+a minibatch input with 3 instances, each with 2 discrete id
+[
+	[0, 2],
+	[2, 2],
+	[0, 1],
+]
+
+Embedding Layer Output:
+a minibatch output with 3 instances, each with 2 embedding vectors
+[
+	[[0, 1, 2, 3], [8, 9, 10, 11]],
+	[[8, 9, 10, 11], [8, 9, 10, 11]],
+	[[0, 1, 2, 3], [4, 5, 6, 7]],
+]
+```
+Below, we will illustrate the forward-pass of model with `Embedding` in detail.
+
+In *ElasticDL*, the core function of model calculation is `worker.training_process_eagerly()`. It takes a minibatch of features and labels, performs forward calculation and backward calculation, and returns loss and gradients. Here is its code in [worker.py](../python/worker/worker.py):
+
+```
+[1]    def training_process_eagerly(self, features, labels):
+[2]        # GradientTape is used for recording gradients
+[3]        with tf.GradientTape() as tape:
+[4]            outputs = self._model.call(features, training=True)
+[5]            loss = self._loss(outputs, labels)
+[6]            # Add regularization loss if any
+[7]            if self._model.losses:
+[8]                loss += tf.math.add_n(self._model.losses)
+[9]       grads = tape.gradient(loss, self._model.trainable_variables)
+[10]      return loss, grads
+```
+
+When a worker calls `model.call(features, training=True)` on line 4 in training with a minibatch, each *layer* in *model* will call `layer.call(inputs)` when it is its turn. 
+For `Embedding.call(inputs)`, it will generate a list of unique ids from `inputs`, lookup corresponding embedding vectors to create a dense tensor *BET* (Batch Embedding Tensor) and assign the values of BET to `Embedding`'s output. Here is a simple example:
+
+```
+embedding table is E
+minibatch inputs is [[2, 6], [9, 6]]
+
+1. unique_ids is [2, 6, 9]
+
+2. BET is a 2D tensor with 3 embedding vectors:
+BET = [
+	E[2], 
+	E[6], 
+	E[9]
+]
+
+3. output is a 3D tensor with 2 instances, each instance with 2 embedding vectors:
+outputs[0][0] = BET[0] = E[2]
+outputs[0][1] = BET[1] = E[6]
+outputs[1][0] = BET[2] = E[9]
+outputs[1][1] = BET[1] = E[6]
+```
+
+##### pseudocode for `Embedding.call`
+
+```
+def Embedding.call(self, inputs):
+    unique_ids = get_unique_ids(inputs)
+    
+    # name is used for generating keys in external distributed storage
+    # initializer is used for lazy initialization
+    BET = self.worker.lookup_embedding(
+    	unique_ids, self.name, self.embedding_initializer)
+    	
+    if self._tape:
+        # In order to get the gradient of BET from automatic-differentiation,
+        # worker should set Embedding._tape as the current
+        # tf.GradientTape before Embedding.call() in training.
+        self._tape.watch(BET)
+        
+        self._bet_list.append(BET)
+        self._unique_ids_list.append(unique_ids)
+        
+    # assign BET values to outputs based on the ids:
+    # outputs[i][j] = BET[index of inputs[i][j] value in unique_ids]
+    outputs = assign_output(BET, unique_ids, inputs)
+    return outputs
+```
+There are two things that require more explanation. 
+
+First, model may call some embedding layers more than once during one forward-pass. Thus we use `list` to record `BET` and `unique_ids`. 
+
+Second, worker should set `Embedding._tape` before `Embedding.call`. This piece of pseudocode will be put between line 3 and line 4 of `training_process_eagerly` code above:
+
+```
+for all embedding layers in worker:
+	embedding.set_tape(tape)
+```
+
+#### Initialization of Embedding Vectors
+As mentioned in above section, *ElasticDL* adopts lazy initialization for embedding vectors. We will create and initialize an embedding vector when a new id appears. Thus, when `Embedding.call()` calls `Worker.lookup_embedding()`, worker will do following things:
+
+* get embedding vectors for known ids from external distributed storage 
+* generate initial values for new ids, use `set_if_not_exists` to create them in the external distributed storage
+* return all embedding vectors
+
+##### pseudocode for `lookup_embedding`
+
+```
+def Worker.lookup_embedding(self, ids, initializer='uniform'):
     id_to_embedding, unknown_ids = self.embedding_service_gets(ids)
     if unknown_ids:
         embedding_vector_list = []
         for id in unknown_ids:
             embedding_vector_list.append((id, initialize_embedding(id, initializer))
         
+        # atomic operation sets_if_not_exists guarantees correctness 
+        # without multithread lock
         self.embedding_service_sets_if_not_exists(
             embedding_vector_list
         )
@@ -177,86 +298,31 @@ def Worker.embedding_lookup(self, ids, initializer='uniform'):
     return [id_to_embedding[i] for i in ids]
 ```
 
+`initilizer` is a `string` and it is used for get initializer. For example, in *Keras* interface, `initilizer='random_normal'` indicates initializer `keras.initializers.RandomNormal()`.
 
-### Step 2: [worker] `EdlEmbedding.call(inputs)`
-The training process in [worker.py](../python/worker/worker.py):
-
-```
-[1]   @tf.function
-[2]   def training_process(self, features, labels):
-[3]        with tf.GradientTape() as tape:
-[4]            outputs = self._model.call(features, training=True)
-[5]            loss = self._loss(outputs, labels)
-[6]           # Add regularization loss if any
-[7]            if self._model.losses:
-[8]                loss += tf.math.add_n(self._model.losses)
-[9]        grads = tape.gradient(loss, self._model.trainable_variables)
-[10]       return loss, grads
-```
-
-When a worker calls `model.call(features, training=True)` on line 3 in training with a batch, each *layer* in *model* will call `layer.call(inputs)` when it is its turn. 
-For `EdlEmbedding.call(inputs)`, it will generate a set of ids from its inputs, lookups the corresponding embedding vectors to create a dense tensor *BET* (Batch Embedding Tensor)  and assigns the value of BET to EdlEmbedding layer's output. Also, in order to get the gradient for *BET*, we add *BET* tensor to the watchlist of the current gradient tape. The gradient tape is updated in every batch training by add a function call between line 3 and 4 above:
+### Backward-Pass
+We get *BET_list* from all `Embedding` layers. Worker computes *BET_list*'s gradient *G_BET_list*, and reports *G_BET_list* to master. Then master updates the embedding vectors and writes back to the distributed storage.
+#### Worker computes embedding vectors' gradient
+Worker computes the gradients of the embedding vectors in the same way as the trainable variables' gradients. So we put them together by changing line 9 of `training_process_eagerly` to:
 
 ```
-    self.set_gradient_tape(tape)
+    grads = tape.gradient(loss, self._model.trainable_variables + BET_list)
+    G_BET_list = grads[len(self._model.trainable_variables):]
 ```
 
-Below is the pseudocode for `EdlEmbedding.call`:
+#### Worker reports embedding vectors' gradient to master  
+
+In the forward-pass, worker reads a set of embedding vectors corresponding to the input ids. In the backward-pass,
+we only update these embedding vectors. Worker reports the embedding vectors' ids and gradients to master. Master can locate embedding vectors in embedding table with embedding vector ids and update corresponding embedding vectors. 
+We put *G_BET* and *unique_ids* (get from Embedding layer instance) together to create a set of tensor slices ([tf.IndexedSlices](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/IndexedSlices)) as the embedding vector's gradient `G_E`:
 
 ```
-def EdlEmbedding.call(self, inputs, training):
-    unique_ids = get_unique_ids(inputs)
-    BET = self.worker.embedding_lookup(
-    	unique_ids, self.name, self.embedding_initializer)
-    if training:
-        # tape is the current tf.GradientTape for 
-        # automatic-differentiation.
-        tape = self.worker.get_gradient_tape()
-        self.tape.watch(BET)
-    # assign BET values to outputs based on the ids:
-    # outputs[i][j] = BET[index of inputs[i][j] value in unique_ids]
-    outputs = assign_output(BET, unique_ids, inputs)
-    return outputs
+G_E.values = G_BET_list
+G_E.indices = unique_ids_list
 ```
+#### Master update embedding table with embedding vectors' gradients
 
-For example:
-
-```
-embedding table is E
-embedding_dim = 16
-minibatch_size = 2
-inputs = [[2, 6], [9, 6]]
-unique_ids = [2, 6, 9]
-BET shape is [3, 16], and BET[0] = E[2], BET[1] = E[6], BET[2] = E[9]
-outputs shape is [2, 2, 16]:
-outputs[0][0] = BET[0]
-outputs[0][1] = BET[1]
-outputs[1][0] = BET[2]
-outputs[1][1] = BET[1]
-```
-
-
-### Step 3: [worker] Report embedding gradient(G_E) to master
-
-We can compute *BET*'s gardient *G_BET* with other variables of *model* together by changing line 9 of `training_process` to:
-
-```
-    grads = tape.gradient(loss, self._model.trainable_variables + [BET])
-    G_BET = grads[len(self._model.trainable_variables)]
-```
-
-Then put *G_BET* and *unique_ids* (computed in `EdlEmbedding.call`) together to create a set of tensor slices ([tf.IndexedSlices](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/IndexedSlices)) as the embedding's gradient `G_E`:
-
-```
-G_E.values = G_BET
-G_E.indices = unique_ids
-```
-
-Send *G_E* and all other graidients of *model*'s variables to the master in `ReportGradient` grpc call.
-
-### Step 4: [master] Update embedding table with embedding gradients
-
-The master accumulates the embedding gradients `G_E` as `G_EM`. When there are enough gradients to update the model, the master updates embedding table `E` with the accumulated `G_EM`. In order to call `optimizer.apply_gradient` only once, we should concatenate the gradients of native tensorflow variable `G_origin` and gradients `G_EM` together. 
+The master accumulates the embedding vectors' gradients `G_E` as `G_EM`. When there are enough gradients to update the model, the master updates embedding table `E` with the accumulated `G_EM`. In order to call `optimizer.apply_gradient` only once, we should concatenate the gradients of trainable variables `G_variable` and gradients `G_EM` together.
 
 ```
 G_EM_grads_value_pair = []
@@ -264,21 +330,21 @@ for i, index in enumerated(G_EM.indices):
     embedding = embedding_lookup(index, embedding_name)
     G_EM_grads_value_pair.append((G_EM.values[i], embedding))
 
-origin_grads_value_pair = list(zip(G_origin, model.trainable_variables))
+variable_grads_value_pair = list(zip(G_variable, model.trainable_variables))
 updated_variables = optimizer.apply_gradient(
-    origin_grads_value_pair + G_EM_grads_value_pair
+    variable_grads_value_pair + G_EM_grads_value_pair
 )
-updated_embeddings = updated_variables[len(G_origin):]
+updated_embeddings = updated_variables[len(G_variable):]
 write_back_to_embedding_table(G_EM.indices, updated_embeddings)
 ```
-
 #### Support slots in Optimizer
 
 For [SGD](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/SGD?hl=en), we can use `optimizer.apply_gradient` directly to update the embedding table as shown above.
 
-Many other optimizers allocate and manage additional varaiables associated with the variables to train, which are called slots in TensorFlow. For example, [tf.keras.optimizers.Ftrl](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Ftrl?hl=en) has two slots (*accumulator* and *linear*). [tf.keras.optimizers.Adam](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Adam?hl=en) also has two slots (*m* and *v*). 
+Many other optimizers allocate and manage additional varaiables associated with the variables to train, which are called slots in TensorFlow. For example, [tf.keras.optimizers.Ftrl](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Ftrl?hl=en) has two slots (*accumulator* and *linear*). [tf.keras.optimizers.Adam](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Adam?hl=en) also has two slots (*m* and *v*).
 
-For the optimizers with slots, when the master adds an emdedding to Redis, it needs to add the corresponding slots. Also, we need to write a corresponding *embedding_optimizer*.  In  `embedding_optimizer.apply_gardient((G_EM.values[i], embedding))`, we need to get the corresponding slots for *G_EM*, and update the slots as well.
+For the optimizers with slots, we should also store these slots in the distributed storage together with their corresponding embedding tables. Also, we need to write a corresponding *embedding_optimizer* to use the slots stored in the distributed storage.  In  `embedding_optimizer.apply_gardient((G_EM.values[i], embedding))`, we need to get the corresponding slots for *G_EM*, and update them as well.
+
 
 ## Issues to solve
 
