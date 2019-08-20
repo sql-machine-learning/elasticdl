@@ -5,13 +5,13 @@ from elasticdl.python.elasticdl.layers.embedding import Embedding
 
 
 class CustomModel(tf.keras.Model):
-    def __init__(self, embedding_dim=16):
+    def __init__(self, output_dim=16):
         super(CustomModel, self).__init__(name="embedding_test_model")
-        self.embedding_dim = embedding_dim
-        self.embedding_1 = Embedding(embedding_dim)
-        self.embedding_2 = Embedding(embedding_dim)
+        self.output_dim = output_dim
+        self.embedding_1 = Embedding(output_dim)
+        self.embedding_2 = Embedding(output_dim)
         self.concat = Concatenate()
-        self.dense = Dense(1, input_shape=(embedding_dim * 3,))
+        self.dense = Dense(1, input_shape=(output_dim * 3,))
         self.flatten = Flatten()
 
     def call(self, inputs, training=False):
