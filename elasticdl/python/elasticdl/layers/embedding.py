@@ -19,6 +19,8 @@ class Embedding(tf.keras.layers.Layer):
         This argument is required if you are going to connect
         `Flatten` then `Dense` layers upstream
         (without it, the shape of the dense outputs cannot be computed).
+      combiner: A string specifying the reduction op or None if not used.
+        "mean", "sqrtn" and "sum" are supported for the reduction op.
     TODO: support mask_zero
     TODO: support combiner
     TODO: support sparse input
@@ -33,9 +35,8 @@ class Embedding(tf.keras.layers.Layer):
         combiner=None,
         **kwargs
     ):
-        if "input_shape" not in kwargs:
-            if input_length:
-                kwargs["input_shape"] = (input_length,)
+        if "input_shape" not in kwargs and input_length:
+            kwargs["input_shape"] = (input_length,)
         super(Embedding, self).__init__(**kwargs)
 
         self.output_dim = output_dim
