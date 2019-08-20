@@ -143,6 +143,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version += 1
 
     def _update_edl_embedding_table(self, name_var_list):
+        """
+            Put updated embedding vectors' ids and values together 
+            and use EmbeddingService.update_embedding() to update
+            embedding table in the distributed storage
+        """
         keys = []
         embeddings = None
         for layer_name, unique_ids, embedding_var in name_var_list:
@@ -162,6 +167,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                     for i in unique_ids.numpy()
                 ]
                 embeddings = embedding_var.numpy()
+
         if embeddings is not None:
             EmbeddingService.update_embedding(
                 keys=keys,
@@ -172,13 +178,17 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def _update_model(self):
         assert self._lock.locked()
         grad_var = []
+
+        # (grad, var) pair of native tensorflow trainable variables
         for k in self._gradient_sum:
             self._gradient_sum[k] = self._gradient_sum[k] / self._grad_to_wait
             grad_var.append((self._gradient_sum[k], self._model[k]))
 
+        # (grad, var) pair of Keras Embedding layer
         for k in self._gradient_sum_indexed:
             grad_var.append((self._gradient_sum_indexed[k], self._model[k]))
 
+        # (grad, var) pair of ElasticDL Embedding layer
         edl_embedding_offset = len(grad_var)
         unique_ids_list = []
         if self._edl_embedding_gradients:
@@ -199,7 +209,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 grad_var.append((grads_idx_transformed, embedding_var))
 
         # TODO: support optimizer with slots such as Adam, FTRL
+        # grad_var contains (grad, var) pair of native trainable variables,
+        # Keras Embedding layer and ElasticDL Embedding layer
         self._opt.apply_gradients(grad_var)
+        
+        # report updated embedding table to EmbeddingService
         self._update_edl_embedding_table(
             zip(
                 self._edl_embedding_gradients.keys(),
@@ -311,7 +325,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             for k, v in request.gradient.items():
                 if k not in self._model:
                     if v.indices:
-                        # IndexedSlices Gradients of elasticdl.layers.embedding
+                        # grads of ElasticDL Embedding layer
                         # TODO: check arr.shape[1] = embedding_dim of this
                         # EdlEmbedding layer
                         arr = tensor_to_ndarray(v)
@@ -354,6 +368,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                         )
                     tmp[k] = arr
 
+            # grads of ElasticDL Embedding layer
             for k, v in edl_embedding_gradients.items():
                 if k in self._edl_embedding_gradients:
                     self._edl_embedding_gradients[k] = merge_indexed_slices(
@@ -362,6 +377,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 else:
                     self._edl_embedding_gradients[k] = v
 
+            # grads of Keras Embedding layer
             for k, v in indexed_grads.items():
                 if k not in self._gradient_sum_indexed:
                     self._gradient_sum_indexed[k] = v
@@ -371,6 +387,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                         grads_s, v
                     )
 
+            # grads of native tensorflow trainable variables
             for k, v in tmp.items():
                 if k in self._gradient_sum:
                     self._gradient_sum[k] = self._gradient_sum[k] + v
