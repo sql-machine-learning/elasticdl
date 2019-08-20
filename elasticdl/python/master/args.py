@@ -1,22 +1,10 @@
 import argparse
 
-from elasticdl.python.common.args import add_common_params, add_train_params
-
-
-def _pos_int(arg):
-    res = int(arg)
-    if res <= 0:
-        raise ValueError("Positive integer argument required. Got %s" % res)
-    return res
-
-
-def _non_neg_int(arg):
-    res = int(arg)
-    if res < 0:
-        raise ValueError(
-            "Non-negative integer argument required. Get %s" % res
-        )
-    return res
+from elasticdl.python.common.args import (
+    add_common_params,
+    add_train_params,
+    pos_int,
+)
 
 
 def parse_args():
@@ -24,7 +12,7 @@ def parse_args():
     parser.add_argument(
         "--port",
         default=50001,
-        type=_pos_int,
+        type=pos_int,
         help="The listening port of master",
     )
     parser.add_argument(

@@ -33,15 +33,23 @@ class Embedding(tf.keras.layers.Layer):
     def get_key(name_list):
         return "-".join(map(str, name_list))
 
+    def lookup_embedding(self, unique_ids):
+        batch_embedding = self.worker.embedding_lookup(
+            unique_ids, self._name, self.embedding_initializer
+        )
+        return batch_embedding
+
     def call(self, input):
         ids = tf.convert_to_tensor(input, name="embedding_ids")
         flat_ids = tf.reshape(ids, [-1])
         unique_ids, idx = tf.unique(flat_ids)
-        batch_embedding = self.worker.embedding_lookup(
-            unique_ids.numpy(), self._name, self.embedding_initializer
+        batch_embedding_tensor = tf.py_function(
+            self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
         )
-        batch_embedding_tensor = tf.convert_to_tensor(batch_embedding)
         if self.tape:
+            # tape.watch works with eager mode only
+            if not tf.executing_eagerly():
+                raise RuntimeError("tape.watch only works with eager mode")
             self.tape.watch(batch_embedding_tensor)
             self.bet_ids_pair.append((batch_embedding_tensor, unique_ids))
         outputs = tf.gather(batch_embedding_tensor, idx)
