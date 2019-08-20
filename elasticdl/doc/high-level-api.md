@@ -102,7 +102,10 @@ class UserDefinedKerasModel(ElasticDLKerasBaseModel):
     def optimizer(self, lr=0.1):
         pass
 
-    def loss(self, outputs, labels):
+    def call(self, inputs, training=False):
+        pass
+
+    def loss(self, outputs=None, labels=None):
         pass
 
      def get_model(self):
