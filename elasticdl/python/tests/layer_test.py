@@ -56,11 +56,11 @@ class FindLayerTest(unittest.TestCase):
 
 
 class mock_worker:
-    def __init__(self, embedding_size, embedding_dim):
+    def __init__(self, embedding_size, output_dim):
         self.embedding_size = embedding_size
-        self.embedding_dim = embedding_dim
+        self.output_dim = output_dim
         self.embedding = np.ndarray(
-            shape=(embedding_size, embedding_dim), dtype=np.float32
+            shape=(embedding_size, output_dim), dtype=np.float32
         )
         for i in range(embedding_size):
             self.embedding[i].fill(i)
@@ -70,9 +70,9 @@ class mock_worker:
         return values
 
 
-def create_embedding_layer(embedding_size, embedding_dim):
-    layer = Embedding(embedding_dim)
-    worker = mock_worker(embedding_size, embedding_dim)
+def create_embedding_layer(embedding_size, output_dim, input_length=None):
+    layer = Embedding(output_dim, input_length=input_length)
+    worker = mock_worker(embedding_size, output_dim)
     layer.set_worker(worker)
     return layer
 
@@ -84,19 +84,19 @@ def layer_call(layer, inputs):
 
 class EmbeddingLayerTest(unittest.TestCase):
     def test_embedding_layer(self):
-        embedding_dim = 8
+        output_dim = 8
         embedding_size = 16
-        layer = create_embedding_layer(embedding_size, embedding_dim)
+        layer = create_embedding_layer(embedding_size, output_dim)
 
         input_shape = (2, 6)
         output_shape = layer.compute_output_shape(input_shape)
-        self.assertEqual(output_shape, input_shape + (embedding_dim,))
+        self.assertEqual(output_shape, input_shape + (output_dim,))
 
         ids = [0, 1, 3, 8, 3, 2, 3]
         values = layer.call(ids)
         values = values.numpy()
         for index, idx in enumerate(ids):
-            correct_value = np.array([idx] * embedding_dim, dtype=np.float32)
+            correct_value = np.array([idx] * output_dim, dtype=np.float32)
             self.assertTrue((values[index] == correct_value).all())
 
         results = layer_call(layer, ids)
@@ -108,22 +108,35 @@ class EmbeddingLayerTest(unittest.TestCase):
         outputs = model.call(np.array([ids, ids]))
         values = outputs.numpy()[1]
         for index, idx in enumerate(ids):
-            correct_value = np.array([idx] * embedding_dim, dtype=np.float32)
+            correct_value = np.array([idx] * output_dim, dtype=np.float32)
+            self.assertTrue((values[index] == correct_value).all())
+
+    def test_embedding_layer_with_input_length(self):
+        output_dim = 8
+        embedding_size = 16
+        input_length = 4
+        layer = create_embedding_layer(
+            embedding_size, output_dim, input_length=input_length
+        )
+        ids = [[0, 1, 3, 8], [5, 3, 2, 3]]
+        flatten_ids = ids[0] + ids[1]
+        values = layer.call(ids)
+        values = values.numpy().reshape(-1, output_dim)
+        for index, idx in enumerate(flatten_ids):
+            correct_value = np.array([idx] * output_dim, dtype=np.float32)
             self.assertTrue((values[index] == correct_value).all())
 
     def test_embedding_layer_gradient(self):
-        embedding_dim = 8
+        output_dim = 8
         embedding_size = 16
-        layer = create_embedding_layer(embedding_size, embedding_dim)
+        layer = create_embedding_layer(embedding_size, output_dim)
         inputs_list = [
             tf.keras.backend.constant([[0, 1, 3], [1, 2, 0]], dtype=tf.int64),
             tf.keras.backend.constant(
                 [[0, 10, 3], [11, 2, 1]], dtype=tf.int64
             ),
         ]
-        multiply_values = np.ndarray(
-            shape=(6, embedding_dim), dtype=np.float32
-        )
+        multiply_values = np.ndarray(shape=(6, output_dim), dtype=np.float32)
         for i in range(6):
             multiply_values[i].fill(i)
         multiply_tensor = tf.convert_to_tensor(multiply_values)
