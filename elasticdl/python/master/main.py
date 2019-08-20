@@ -12,12 +12,15 @@ from elasticdl.python.common.constants import (
     JobType,
     WorkerManagerStatus,
 )
+from elasticdl.python.common.embedding_service import EmbeddingService
 from elasticdl.python.common.log_util import get_logger
 from elasticdl.python.common.model_helper import (
+    find_layer,
     get_model_file,
     load_model_from_module,
     load_module,
 )
+from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.args import parse_args
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
@@ -190,6 +193,26 @@ def main():
     server.add_insecure_port("[::]:{}".format(args.port))
     server.start()
     logger.info("Server started at port: %d", args.port)
+
+    # Search model for Embedding layer, if found, init embedding service
+    layers = find_layer(model_inst, Embedding)
+    if layers:
+        embedding_service = EmbeddingService()
+        redis_address_map = embedding_service.start_embedding_service(
+            job_name=args.job_name,
+            image_name=args.worker_image,
+            namespace=args.namespace,
+            resource_request=args.master_resource_request,
+            resource_limit=args.master_resource_limit,
+            pod_priority=args.worker_pod_priority,
+            volume=args.volume,
+            image_pull_policy=args.image_pull_policy,
+            restart_policy=args.restart_policy,
+            cluster_spec=args.cluster_spec,
+        )
+        logger.info(
+            "embedding service start Succeeded: %s" % str(redis_address_map)
+        )
 
     worker_manager = None
     if args.num_workers:
