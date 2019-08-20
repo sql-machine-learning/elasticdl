@@ -2,7 +2,7 @@ import argparse
 import subprocess
 import time
 
-from rediscluster import StrictRedisCluster
+from rediscluster import RedisCluster
 
 from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.common.log_util import default_logger as logger
@@ -124,7 +124,7 @@ class EmbeddingService(object):
             for port in self._embedding_endpoint[ip]
         ]
         try:
-            redis_cluster = StrictRedisCluster(
+            redis_cluster = RedisCluster(
                 startup_nodes=startup_nodes, decode_responses=False
             )
         except Exception as e:
