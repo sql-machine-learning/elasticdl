@@ -7,7 +7,7 @@ class Embedding(tf.keras.layers.Layer):
     Input: indexes for the embedding entries
            shape is (batch_size, input_length)
     Output:
-      corresponding embeddings with a shape of
+      corresponding (combined) embeddings with a shape of
       (batch_size, input_length, output_dim) if combiner is None
       (batch_size, output_dim) if combiner is not None
     Arguments:
@@ -49,7 +49,7 @@ class Embedding(tf.keras.layers.Layer):
 
     @tf_utils.shape_type_conversion
     def compute_output_shape(self, input_shape):
-        # this function is the taken from
+        # this function is taken from
         # tf.keras.layers.Embedding.compute_output_shape
         if self.input_length is None:
             return input_shape + (self.output_dim,)
