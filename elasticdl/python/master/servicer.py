@@ -144,7 +144,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def _update_edl_embedding_table(self, name_var_list):
         """
-            Put updated embedding vectors' ids and values together 
+            Put updated embedding vectors' ids and values together
             and use EmbeddingService.update_embedding() to update
             embedding table in the distributed storage
         """
@@ -212,7 +212,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # grad_var contains (grad, var) pair of native trainable variables,
         # Keras Embedding layer and ElasticDL Embedding layer
         self._opt.apply_gradients(grad_var)
-        
+
         # report updated embedding table to EmbeddingService
         self._update_edl_embedding_table(
             zip(
