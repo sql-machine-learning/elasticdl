@@ -31,11 +31,6 @@ The above command-line
 1. submits an ElasticDL job to the Kubernetes cluster as described in `$HOME/.kube/config`,
 1. prints an URL to the dashboard so users could inspect the progress/status of the job in the user's Web browser.
 
-Please be aware that in the class `fintech.MyKerasModel`, in addition to overriding the method `call`, we also need to provide methods like
-
-- `default_loss` that returns a loss operator,
-- `default_optimizer` that returns an optimizer operator,
-- `default_input` that takes a record (string) as its input and returns something that can be batched and consumed by `MyKerasModel.call`.  In the above example, the user chooses an input function other than `MyKerasModel.default_input`.
 
 Because the above example command line specifies `--input_fn` explicitly, the training job is not going to use `MyKerasModel.default_input`, but uses `fintech.credit_data_processor`.  Similarly, command line options `loss` and `optimizer` overwrites `MyKerasModel.default_loss` and `MyKerasModel.default_optimizer`.
 
@@ -82,6 +77,52 @@ Both the command line tool `elasticdl` provided for modelers and the submitter p
 ## API
 
 We hope the ElasticDL API supports not only batch learning, but also online learning, adversarial learning, reinforcement learning, and federated learning.  However, at the right moment, let us start with batch learning.
+
+
+### Model building phase
+
+For model compatible with elasticdl, user's keras model should inherit from
+`elastic.python.model.ElasticDLKerasBaseModel` and implement following interface.
+
+```python
+
+from elasticdl.python.common.constants import Mode
+from elasticdl.python.model import ElasticDLKerasBaseModel
+
+
+class UserDefinedKerasModel(ElasticDLKerasBaseModel):
+
+    def __init__(self, *args, context=None, **kwargs):
+        super(UserDefinedKerasModel, self).__init__(
+                context=context,
+                **kwargs,
+        )
+
+    @abstractmethod
+    def optimizer(self, lr=0.1):
+        pass
+
+    def loss(self, outputs, labels):
+        pass
+
+     def get_model(self):
+         pass
+
+    def metrics(self,
+                mode=Mode.TRAINING,
+                outputs=None,
+                predictions=None,
+                labels=None):
+        pass
+```
+
++ constructor will receive a keyword parameter `context`, which will contain environment information.
++ `**kwargs` are the parameters from `model_params` argument.
++ if user does not use keras functional API to create model, user does not have to implement
+`get_model`, the default implementation just return `self`. If functional API is used, `get_model` should return the model instance created (return value of `tf.keras.Model`)[Reference](https://www.tensorflow.org/api_docs/python/tf/keras/Model)
++ `metrics` function should return specified metrics according to mode.
+
+User can refer to [model\_zoo](/elasticdl/model_zoo) for more examples.
 
 ### For Training
 
@@ -180,14 +221,6 @@ A key question is what information must be in the directory `/filestore/tony/my_
    We need this ID to refer to the Docker image built during the call of `elasticdl.train`.  In this image, we have the model zoo used to train the model.  Then, `elasticdl.predict` could build the Docker image for the distributed prediction job from this commit ID.
 
    This image ID must be a pullable ID so that ElasticDL command line tool can `docker pull` it as the base image. An example pullable ID is `docker-pullable://reg.docker.alibaba-inc.com/asdi/aswf-py3@sha256:e8ca09705eed07cdfd060b6b9d27a802`.
-
-1. Model class constructor parameters, like `hidden_units=[10, 100, 20]`.
-
-1. Other parameters passed to `elasticdl.train`, including 
-   - `model_def`
-   - `input_function`
-   - `loss`
-   - `optimizer`
 
 1. Model parameters as a map from parameter name to parameter value tensors, defined in [`elasticdl.proto`](https://github.com/wangkuiyi/elasticdl/blob/e06618af50cc9507e0b59473f4b97c066fa04870/elasticdl/proto/elasticdl.proto#L51-L54).
 
