@@ -1,3 +1,3 @@
-from elasticdl.python.model.abstract_model import ElasticDLKerasModelBase
+from elasticdl.python.model.abstract_model import ElasticDLKerasBaseModel
 
-__all__ = ["ElasticDLKerasModelBase"]
+__all__ = ["ElasticDLKerasBaseModel"]

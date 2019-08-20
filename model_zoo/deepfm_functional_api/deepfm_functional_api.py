@@ -10,9 +10,7 @@ from tensorflow.keras.layers import (
 )
 
 from elasticdl.python.common.constants import Mode
-from elasticdl.python.model import ElasticDLKerasModelBase
-
-AUC_metric = None
+from elasticdl.python.model import ElasticDLKerasBaseModel
 
 
 class ApplyMask(Layer):
@@ -31,9 +29,10 @@ class ApplyMask(Layer):
         return input_shape
 
 
-class CustomModel(ElasticDLKerasModelBase):
+class CustomModel(ElasticDLKerasBaseModel):
     def __init__(self, context=None, **kwargs):
         super(CustomModel, self).__init__(context=context)
+        self._auc_metric = None
         self._model = self.custom_model()
 
     def custom_model(
@@ -72,8 +71,7 @@ class CustomModel(ElasticDLKerasModelBase):
 
         m = tf.keras.Model(inputs=inputs, outputs=outputs)
 
-        global AUC_metric
-        AUC_metric = tf.keras.metrics.AUC()
+        self._auc_metric = tf.keras.metrics.AUC()
 
         return m
 
@@ -101,7 +99,6 @@ class CustomModel(ElasticDLKerasModelBase):
         if mode == Mode.EVALUATION:
             labels = tf.reshape(labels, [-1])
             predictions = tf.reshape(predictions, [-1])
-            global AUC_metric
             return {
                 "accuracy": tf.reduce_mean(
                     input_tensor=tf.cast(
@@ -111,7 +108,7 @@ class CustomModel(ElasticDLKerasModelBase):
                         tf.float32,
                     )
                 ),
-                "auc": AUC_metric(labels, tf.sigmoid(predictions)),
+                "auc": self._auc_metric(labels, tf.sigmoid(predictions)),
             }
 
 

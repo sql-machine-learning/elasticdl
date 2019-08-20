@@ -1,10 +1,10 @@
 import tensorflow as tf
 
 from elasticdl.python.common.constants import Mode
-from elasticdl.python.model import ElasticDLKerasModelBase
+from elasticdl.python.model import ElasticDLKerasBaseModel
 
 
-class CustomModel(ElasticDLKerasModelBase):
+class CustomModel(ElasticDLKerasBaseModel):
     def __init__(self, channel_last=True, context=None):
         super(CustomModel, self).__init__(name="mnist_model")
         if channel_last:
@@ -42,9 +42,6 @@ class CustomModel(ElasticDLKerasModelBase):
                 logits=outputs, labels=labels
             )
         )
-
-    def get_model(self):
-        return self
 
     def optimizer(self, lr=0.1):
         return tf.optimizers.SGD(lr)

@@ -5,13 +5,13 @@ import tensorflow as tf
 from elasticdl.python.common.constants import Mode, ODPSConfig
 from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.odps_io import ODPSWriter
-from elasticdl.python.model import ElasticDLKerasModelBase
+from elasticdl.python.model import ElasticDLKerasBaseModel
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
 )
 
 
-class CustomModel(ElasticDLKerasModelBase):
+class CustomModel(ElasticDLKerasBaseModel):
     def __init__(self, context=None):
         super(CustomModel, self).__init__(context=context)
         self._model = self.custom_model()

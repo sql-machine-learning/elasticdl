@@ -3,10 +3,10 @@ from tensorflow.keras.layers import Concatenate, Dense, Flatten
 
 from elasticdl.python.common.constants import Mode
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.model import ElasticDLKerasModelBase
+from elasticdl.python.model import ElasticDLKerasBaseModel
 
 
-class CustomModel(ElasticDLKerasModelBase):
+class CustomModel(ElasticDLKerasBaseModel):
     def __init__(self, context=None, output_dim=16):
         super(CustomModel, self).__init__(
             context=context, name="embedding_test_model"

@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.python.keras import backend, layers, regularizers
 
 from elasticdl.python.common.constants import Mode
-from elasticdl.python.model import ElasticDLKerasModelBase
+from elasticdl.python.model import ElasticDLKerasBaseModel
 
 try:
     from resnet50_subclass.resnet50_model import (
@@ -22,7 +22,7 @@ except ImportError:
     )
 
 
-class CustomModel(ElasticDLKerasModelBase):
+class CustomModel(ElasticDLKerasBaseModel):
     def __init__(
         self, num_classes=10, dtype="float32", batch_size=None, context=None
     ):
@@ -165,9 +165,6 @@ class CustomModel(ElasticDLKerasModelBase):
                 labels, outputs
             )
         )
-
-    def get_model(self):
-        return self
 
     def optimizer(self, lr=0.02):
         return tf.keras.optimizers.SGD(lr)

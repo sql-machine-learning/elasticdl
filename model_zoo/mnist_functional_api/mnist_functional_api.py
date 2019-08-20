@@ -3,10 +3,10 @@ import PIL.Image
 import tensorflow as tf
 
 from elasticdl.python.common.constants import Mode
-from elasticdl.python.model import ElasticDLKerasModelBase
+from elasticdl.python.model import ElasticDLKerasBaseModel
 
 
-class CustomModel(ElasticDLKerasModelBase):
+class CustomModel(ElasticDLKerasBaseModel):
     def __init__(self, context=None):
         super(CustomModel, self).__init__(context=context)
         self._model = self.custom_model()

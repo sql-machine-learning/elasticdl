@@ -5,12 +5,12 @@ import tensorflow as tf
 from elasticdl.python.common.constants import Mode
 
 
-class ElasticDLKerasModelBase(tf.keras.Model, ABC):
+class ElasticDLKerasBaseModel(tf.keras.Model, ABC):
     """Base class for Keras Model used in elasticdl
     User should inherit from this class in order to work with elasticdl
 
     ```python
-    class AwesomeModel(ElasticDLKerasModelBase):
+    class AwesomeModel(ElasticDLKerasBaseModel):
         def __init__(self, context=None):
             super(AwesomeModel, self).__init__(context)
     ```
@@ -19,7 +19,7 @@ class ElasticDLKerasModelBase(tf.keras.Model, ABC):
     keyword arguments, those will be passed to tf.keras.Model's constructor
 
     ```python
-    class AwesomeModel(ElasticDLKerasModelBase):
+    class AwesomeModel(ElasticDLKerasBaseModel):
         def __init__(self, context=None, name="X", params="xx"):
             super(AwesomeModel, self).__init__(context=context,
                                                name=name,
@@ -32,14 +32,14 @@ class ElasticDLKerasModelBase(tf.keras.Model, ABC):
         Args:
             context: dict, from args and model_params
         """
-        super(ElasticDLKerasModelBase, self).__init__(*args, **kwargs)
+        super(ElasticDLKerasBaseModel, self).__init__(*args, **kwargs)
         self._context = context or {}
 
     def get_model(self):
         """
         Used to unify model description of functional API and subclass
-        For subclass, just return self
-        For functional API, return model instance created
+        For subclass, just return self, default implementation
+        For functional API, YOU MUST return model instance created
         """
         return self
 
@@ -48,12 +48,14 @@ class ElasticDLKerasModelBase(tf.keras.Model, ABC):
         """
         Return optimizer instance
         """
+        pass
 
     @abstractmethod
     def loss(self, outputs=None, labels=None):
         """
         Return loss tensor
         """
+        pass
 
     @abstractmethod
     def metrics(
@@ -62,11 +64,13 @@ class ElasticDLKerasModelBase(tf.keras.Model, ABC):
         """
         Return dict of metrics tensor according to mode
         """
+        pass
 
     @abstractmethod
     def call(self, inputs, training=False):
         """
         Args:
-            mode: e.g. Mode.TRAINING,
-            defined in elastic/python/common/constants.py
+            inputs:
+            training:
         """
+        pass

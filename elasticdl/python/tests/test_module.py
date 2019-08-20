@@ -3,10 +3,10 @@ from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, Input
 
 from elasticdl.python.common.constants import Mode
-from elasticdl.python.model import ElasticDLKerasModelBase
+from elasticdl.python.model import ElasticDLKerasBaseModel
 
 
-class CustomModel(ElasticDLKerasModelBase):
+class CustomModel(ElasticDLKerasBaseModel):
     def __init__(self, context=None, **kwargs):
         super(CustomModel, self).__init__(context=context)
         self._model = self.custom_model()
@@ -18,6 +18,9 @@ class CustomModel(ElasticDLKerasModelBase):
 
     def call(self, inputs, training=False):
         return self._model.call(inputs, training=training)
+
+    def get_model(self):
+        return self._model
 
     def loss(self, outputs, labels):
         return tf.reduce_mean(tf.square(outputs - labels))

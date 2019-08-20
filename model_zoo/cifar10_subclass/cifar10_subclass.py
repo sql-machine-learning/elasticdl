@@ -1,10 +1,10 @@
 import tensorflow as tf
 
 from elasticdl.python.common.constants import Mode
-from elasticdl.python.model import ElasticDLKerasModelBase
+from elasticdl.python.model import ElasticDLKerasBaseModel
 
 
-class CustomModel(ElasticDLKerasModelBase):
+class CustomModel(ElasticDLKerasBaseModel):
     def __init__(self, channel_last=True, context=None):
         super(CustomModel, self).__init__(name="cifar10_model")
 
@@ -120,9 +120,6 @@ class CustomModel(ElasticDLKerasModelBase):
         x = self._dropout_3(x)
         x = self._flatten_1(x)
         return self._dense_1(x)
-
-    def get_model(self):
-        return self
 
     def loss(self, outputs=None, labels=None):
         labels = tf.reshape(labels, [-1])
