@@ -194,7 +194,8 @@ def main():
     server.start()
     logger.info("Server started at port: %d", args.port)
 
-    # Search model for Embedding layer, if found, init embedding service
+    # Search for embedding layers in the model,
+    # if found, initialize embedding service
     layers = find_layer(model_inst, Embedding)
     if layers:
         embedding_service = EmbeddingService()
@@ -211,7 +212,7 @@ def main():
             cluster_spec=args.cluster_spec,
         )
         logger.info(
-            "embedding service start Succeeded: %s" % str(redis_address_map)
+            "Embedding service start succeeded: %s" % str(redis_address_map)
         )
 
     worker_manager = None
