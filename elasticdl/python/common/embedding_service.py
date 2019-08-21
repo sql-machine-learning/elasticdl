@@ -5,6 +5,7 @@ import time
 from rediscluster import RedisCluster
 
 from elasticdl.python.common import k8s_client as k8s
+from elasticdl.python.common.args import pos_int
 from elasticdl.python.common.log_util import default_logger as logger
 
 
@@ -133,33 +134,26 @@ class EmbeddingService(object):
         else:
             return redis_cluster
 
-    def _pos_int(arg):
-        res = int(arg)
-        if res <= 0:
-            raise ValueError(
-                "Positive integer argument required. Got %s" % res
-            )
-        return res
-
     def _parse_embedding_service_args(self):
         parser = argparse.ArgumentParser(description="Embedding Service")
         parser.add_argument(
             "--first_port",
             default=30001,
-            type=self._pos_int,
+            type=pos_int,
             help="The first listening port of embedding service",
         )
         parser.add_argument(
             "--num_of_redis_instances",
             default=6,
-            type=self._pos_int,
+            type=pos_int,
             help="The number of redis instances",
         )
         parser.add_argument(
             "--cluster_node_timeout",
             default=2000,
-            type=self._pos_int,
-            help="The number of redis instances",
+            type=pos_int,
+            help="The maximum amount of time a Redis Cluster node "
+            "can be unavailable",
         )
 
         args = parser.parse_args()
@@ -167,9 +161,16 @@ class EmbeddingService(object):
         return args
 
     def start_redis_service(self):
-        logger.info("Starting redis server ...")
         args = self._parse_embedding_service_args()
-
+        logger.info(
+            "Starting redis server on ports: %d - %d, "
+            "--cluster_node_timeout %d"
+            % (
+                args.first_port,
+                args.first_port + args.num_of_redis_instances - 1,
+                args.cluster_node_timeout,
+            )
+        )
         for i in range(args.num_of_redis_instances):
             port = args.first_port + i
             command = (
