@@ -52,6 +52,7 @@ class Embedding(tf.keras.layers.Layer):
     def compute_output_shape(self, input_shape):
         # this function is taken from
         # tf.keras.layers.Embedding.compute_output_shape
+        # https://github.com/tensorflow/tensorflow/blob/3f3c728bf80e0fd6653744318cbbfe1454c6ddca/tensorflow/python/keras/layers/embeddings.py#L156
         if self.input_length is None:
             return input_shape + (self.output_dim,)
         else:
