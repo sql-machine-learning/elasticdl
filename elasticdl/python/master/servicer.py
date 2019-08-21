@@ -179,7 +179,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         assert self._lock.locked()
         grad_var = []
 
-        # (grad, var) pair of native tensorflow trainable variables
+        # (grad, var) pairs excluding keras Embedding layer and
+        # ElasticDL Embedding layer
         for k in self._gradient_sum:
             self._gradient_sum[k] = self._gradient_sum[k] / self._grad_to_wait
             grad_var.append((self._gradient_sum[k], self._model[k]))
@@ -209,8 +210,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 grad_var.append((grads_idx_transformed, embedding_var))
 
         # TODO: support optimizer with slots such as Adam, FTRL
-        # grad_var contains (grad, var) pair of native trainable variables,
-        # Keras Embedding layer and ElasticDL Embedding layer
         self._opt.apply_gradients(grad_var)
 
         # report updated embedding table to EmbeddingService
@@ -387,7 +386,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                         grads_s, v
                     )
 
-            # grads of native tensorflow trainable variables
+            # other grads
             for k, v in tmp.items():
                 if k in self._gradient_sum:
                     self._gradient_sum[k] = self._gradient_sum[k] + v
