@@ -111,7 +111,7 @@ class UserDefinedKerasModel(ElasticDLKerasBaseModel):
     def loss(self, outputs=None, labels=None):
         pass
 
-     def get_model(self):
+    def get_model(self):
          pass
 
     def metrics(self,
