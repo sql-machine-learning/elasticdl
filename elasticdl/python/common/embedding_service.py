@@ -229,16 +229,16 @@ class EmbeddingService(object):
 
     @staticmethod
     def lookup_embedding(
-        keys=None, embedding_endpoint=None, parse_type=np.float64
+        keys=None, embedding_service_endpoint=None, parse_type=np.float64
     ):
-        if not embedding_endpoint:
+        if not embedding_service_endpoint:
             raise Exception("Can't found embedding service!")
         if not keys:
             return None
         startup_nodes = [
             {"host": ip, "port": "%d" % (port)}
-            for ip in embedding_endpoint
-            for port in embedding_endpoint[ip]
+            for ip in embedding_service_endpoint
+            for port in embedding_service_endpoint[ip]
         ]
         embedding_vector = []
         embedding_service = RedisCluster(
@@ -259,10 +259,10 @@ class EmbeddingService(object):
     def update_embedding(
         keys=None,
         embedding_vectors=None,
-        embedding_endpoint=None,
+        embedding_service_endpoint=None,
         nx_flag=False,
     ):
-        if not embedding_endpoint:
+        if not embedding_service_endpoint:
             raise Exception("Can't find embedding service!")
         if (
             keys is None
@@ -270,14 +270,14 @@ class EmbeddingService(object):
             or len(keys) != embedding_vectors.shape[0]
         ):
             raise Exception(
-                "keys and embedding_vectors can not be None. "
+                "keys and embedding_vectors can not be 'None'. "
                 "And the length of keys must equal to the first dimension "
                 "of embedding_vectors's shape."
             )
         startup_nodes = [
             {"host": ip, "port": "%d" % (port)}
-            for ip in embedding_endpoint
-            for port in embedding_endpoint[ip]
+            for ip in embedding_service_endpoint
+            for port in embedding_service_endpoint[ip]
         ]
         embedding_service = RedisCluster(
             startup_nodes=startup_nodes, decode_responses=False

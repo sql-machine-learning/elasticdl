@@ -154,7 +154,16 @@ class ReportBETGradientTest(unittest.TestCase):
         grads1.extend(edlembed_grads)
 
         worker._model_version = 0
-        worker.report_gradient(grads1)
+        with mock.patch.object(
+            EmbeddingService,
+            "lookup_embedding",
+            mock_embedding_service.mock_lookup_embedding,
+        ), mock.patch.object(
+            EmbeddingService,
+            "update_embedding",
+            mock_embedding_service.mock_update_embedding,
+        ):
+            worker.report_gradient(grads1)
 
         expected_edlembedding_grads = {
             layer1.name: tf.IndexedSlices(
@@ -198,7 +207,16 @@ class ReportBETGradientTest(unittest.TestCase):
             ),
         ]
         grads2.extend(edlembed_grads)
-        worker.report_gradient(grads2)
+        with mock.patch.object(
+            EmbeddingService,
+            "lookup_embedding",
+            mock_embedding_service.mock_lookup_embedding,
+        ), mock.patch.object(
+            EmbeddingService,
+            "update_embedding",
+            mock_embedding_service.mock_update_embedding,
+        ):
+            worker.report_gradient(grads2)
 
         expected_weights = []
         expected_weights.append(
