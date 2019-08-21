@@ -5,6 +5,7 @@ import tensorflow as tf
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.embedding_service import EmbeddingService
 from elasticdl.python.common.file_helper import copy_if_not_exists
 from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.model_helper import load_from_checkpoint_file
@@ -13,6 +14,7 @@ from elasticdl.python.common.ndarray import (
     tensor_to_ndarray,
 )
 from elasticdl.python.common.tensor_helper import merge_indexed_slices
+from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
 
 
@@ -30,6 +32,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         checkpoint_filename_for_init,
         checkpoint_service,
         evaluation_service,
+        embedding_service_address=None
     ):
         # TODO: group params together into a single object.
         self._opt = optimizer
@@ -47,6 +50,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # optimizer's apply_gradients() function.
         self._model = {}
         self._version = 0
+        self.embedding_service_address = embedding_service_address
         self._init_model(checkpoint_filename_for_init, init_var)
 
         self._checkpoint_service = checkpoint_service
@@ -138,17 +142,84 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         assert self._lock.locked()
         self._version += 1
 
+    def _update_edl_embedding_table(self, name_var_list):
+        """
+            Put updated embedding vectors' ids and values together
+            and use EmbeddingService.update_embedding() to update
+            embedding table in the distributed storage
+        """
+        keys = []
+        embeddings = None
+        for layer_name, unique_ids, embedding_var in name_var_list:
+            if keys:
+                keys.extend(
+                    [
+                        Embedding.get_key([layer_name, i])
+                        for i in unique_ids.numpy()
+                    ]
+                )
+                embeddings = np.concatenate(
+                    (embeddings, embedding_var.numpy()), axis=0
+                )
+            else:
+                keys = [
+                    Embedding.get_key([layer_name, i])
+                    for i in unique_ids.numpy()
+                ]
+                embeddings = embedding_var.numpy()
+
+        if embeddings is not None:
+            EmbeddingService.update_embedding(
+                keys=keys,
+                embeddings=embeddings,
+                embedding_service_address=self.embedding_service_address,
+            )
+
     def _update_model(self):
         assert self._lock.locked()
         grad_var = []
+
+        # (grad, var) pairs excluding keras Embedding layer and
+        # ElasticDL Embedding layer
         for k in self._gradient_sum:
             self._gradient_sum[k] = self._gradient_sum[k] / self._grad_to_wait
             grad_var.append((self._gradient_sum[k], self._model[k]))
 
+        # (grad, var) pair of Keras Embedding layer
         for k in self._gradient_sum_indexed:
             grad_var.append((self._gradient_sum_indexed[k], self._model[k]))
 
+        # (grad, var) pair of ElasticDL Embedding layer
+        edl_embedding_offset = len(grad_var)
+        unique_ids_list = []
+        if self._edl_embedding_gradients:
+            for layer_name, grads in self._edl_embedding_gradients.items():
+                unique_ids, idx = tf.unique(grads.indices)
+                unique_ids_list.append(unique_ids)
+                grads_idx_transformed = tf.IndexedSlices(grads.values, idx)
+                embeddings = EmbeddingService.lookup_embedding(
+                    embedding_service_address=self.embedding_service_address,
+                    keys=[
+                        Embedding.get_key([layer_name, i])
+                        for i in unique_ids.numpy()
+                    ],
+                )
+                if embeddings is None:
+                    continue
+                embedding_var = tf.Variable(embeddings)
+                grad_var.append((grads_idx_transformed, embedding_var))
+
+        # TODO: support optimizer with slots such as Adam, FTRL
         self._opt.apply_gradients(grad_var)
+
+        # report updated embedding table to EmbeddingService
+        self._update_edl_embedding_table(
+            zip(
+                self._edl_embedding_gradients.keys(),
+                unique_ids_list,
+                [v for g, v in grad_var[edl_embedding_offset:]],
+            )
+        )
         self._update_model_version()
         self._gradient_sum.clear()
         self._gradient_sum_indexed.clear()
@@ -248,31 +319,22 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         with self._lock:
             tmp = {}
             indexed_grads = {}
+            edl_embedding_gradients = {}
             # Do sanity check before accumulating gradients.
             for k, v in request.gradient.items():
                 if k not in self._model:
                     if v.indices:
-                        # IndexedSlices Gradients of elasticdl.layers.embedding
-                        # TODO: Use the gradients to update embedding
-                        # table of elasticdl.layers.embedding
+                        # grads of ElasticDL Embedding layer
+                        # TODO: check arr.shape[1] = embedding_dim of this
+                        # EdlEmbedding layer
                         arr = tensor_to_ndarray(v)
-                        if k in self._edl_embedding_gradients:
-                            self._edl_embedding_gradients[
-                                k
-                            ] = merge_indexed_slices(
-                                self._edl_embedding_gradients[k], arr
-                            )
-                        else:
-                            self._edl_embedding_gradients[k] = arr
-                        logger.warning(
-                            "Update embedding table of "
-                            "elasticdl.layers.embedding is not implemented."
-                        )
+                        edl_embedding_gradients[k] = arr
                         continue
                     else:
                         raise ValueError(
                             "Gradient key: %s is not part of model", k
                         )
+
                 arr = tensor_to_ndarray(v)
                 if isinstance(arr, tf.IndexedSlices):
                     if arr.values.shape[1] != self._model[k].numpy().shape[1]:
@@ -305,16 +367,26 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                         )
                     tmp[k] = arr
 
+            # grads of ElasticDL Embedding layer
+            for k, v in edl_embedding_gradients.items():
+                if k in self._edl_embedding_gradients:
+                    self._edl_embedding_gradients[k] = merge_indexed_slices(
+                        self._edl_embedding_gradients[k], v
+                    )
+                else:
+                    self._edl_embedding_gradients[k] = v
+
+            # grads of Keras Embedding layer
             for k, v in indexed_grads.items():
                 if k not in self._gradient_sum_indexed:
                     self._gradient_sum_indexed[k] = v
                 else:
                     grads_s = self._gradient_sum_indexed[k]
-                    self._gradient_sum_indexed[k] = tf.IndexedSlices(
-                        tf.concat([grads_s.values, v.values], axis=0),
-                        tf.concat([grads_s.indices, v.indices], axis=0),
+                    self._gradient_sum_indexed[k] = merge_indexed_slices(
+                        grads_s, v
                     )
 
+            # other grads
             for k, v in tmp.items():
                 if k in self._gradient_sum:
                     self._gradient_sum[k] = self._gradient_sum[k] + v
