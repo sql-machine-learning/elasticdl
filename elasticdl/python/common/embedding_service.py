@@ -229,10 +229,10 @@ class EmbeddingService(object):
 
     @staticmethod
     def lookup_embedding(
-        keys=None, embedding_service_endpoint=None, parse_type=np.float64
+        keys=None, embedding_service_endpoint=None, parse_type=np.float32
     ):
         if not embedding_service_endpoint:
-            raise Exception("Can't found embedding service!")
+            raise Exception("Can't find embedding service!")
         if not keys:
             return None
         startup_nodes = [
@@ -240,20 +240,23 @@ class EmbeddingService(object):
             for ip in embedding_service_endpoint
             for port in embedding_service_endpoint[ip]
         ]
-        embedding_vector = []
+        embedding_vectors = []
         embedding_service = RedisCluster(
             startup_nodes=startup_nodes, decode_responses=False
         ).pipeline()
         for key in keys:
             embedding_service.get(key)
-        output_dim = len(keys)
-        embedding_vector = [
-            np.frombuffer(vector, parse_type)
-            for vector in embedding_service.execute()
+        embedding_vectors = embedding_service.execute()
+        unknown_keys_index = [
+            index
+            for index, vector in enumerate(embedding_vectors)
+            if not vector
         ]
-        embedding_vector = np.concatenate(embedding_vector, axis=0)
-        embedding_vector = embedding_vector.reshape((output_dim, -1))
-        return embedding_vector
+        embedding_vectors = [
+            np.frombuffer(vector, parse_type) if vector else vector
+            for vector in embedding_vectors
+        ]
+        return embedding_vectors, unknown_keys_index
 
     @staticmethod
     def update_embedding(
