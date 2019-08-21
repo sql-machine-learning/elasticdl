@@ -2,6 +2,7 @@ import argparse
 import subprocess
 import time
 
+import numpy as np
 from rediscluster import RedisCluster
 
 from elasticdl.python.common import k8s_client as k8s
@@ -227,12 +228,65 @@ class EmbeddingService(object):
         self._embedding_endpoint = {address_ip: [30001 + i for i in range(6)]}
 
     @staticmethod
-    def lookup_embedding(**kwargs):
-        pass
+    def lookup_embedding(
+        keys=None, embedding_endpoint=None, parse_type=np.float64
+    ):
+        if not embedding_endpoint:
+            raise Exception("Can't found embedding service!")
+        if not keys:
+            return None
+        startup_nodes = [
+            {"host": ip, "port": "%d" % (port)}
+            for ip in embedding_endpoint
+            for port in embedding_endpoint[ip]
+        ]
+        embedding_vector = []
+        embedding_service = RedisCluster(
+            startup_nodes=startup_nodes, decode_responses=False
+        ).pipeline()
+        for key in keys:
+            embedding_service.get(key)
+        output_dim = len(keys)
+        embedding_vector = [
+            np.frombuffer(vector, parse_type)
+            for vector in embedding_service.execute()
+        ]
+        embedding_vector = np.concatenate(embedding_vector, axis=0)
+        embedding_vector = embedding_vector.reshape((output_dim, -1))
+        return embedding_vector
 
     @staticmethod
-    def update_embedding(**kwargs):
-        pass
+    def update_embedding(
+        keys=None,
+        embedding_vectors=None,
+        embedding_endpoint=None,
+        nx_flag=False,
+    ):
+        if not embedding_endpoint:
+            raise Exception("Can't find embedding service!")
+        if (
+            keys is None
+            or embedding_vectors is None
+            or len(keys) != embedding_vectors.shape[0]
+        ):
+            raise Exception(
+                "keys and embedding_vectors can not be None. "
+                "And the length of keys must equal to the first dimension "
+                "of embedding_vectors's shape."
+            )
+        startup_nodes = [
+            {"host": ip, "port": "%d" % (port)}
+            for ip in embedding_endpoint
+            for port in embedding_endpoint[ip]
+        ]
+        embedding_service = RedisCluster(
+            startup_nodes=startup_nodes, decode_responses=False
+        ).pipeline()
+        for index, key in enumerate(keys):
+            embedding_service.set(
+                key, embedding_vectors[index].tobytes(), nx=nx_flag
+            )
+        embedding_service.execute()
 
 
 if __name__ == "__main__":
