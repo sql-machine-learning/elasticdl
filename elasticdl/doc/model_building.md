@@ -162,8 +162,9 @@ def metrics(self,
             predictions=None,
             labels=None)
 ```
-`metrics` is a function that returns a dictionary where the key is name of the evaluation metric and the value
-is the evaluation metric result from the `predictions` and `labels` using TensorFlow API.
+`metrics` is a function that returns a dictionary where the key is name of the metric and the value
+is the metric result from the `predictions` and `labels` , or `labels` using TensorFlow API. For example,
+if mode equals `Mode.EVALUATION`, the returned metric dict is used to evaluate the model.
 
 Example:
 
@@ -199,15 +200,15 @@ def call(self, inputs, training=False)
 Arguments:
 
 - inputs: inputs from dataset
-- training: whether it is training or evaluating
+- training: whether it is training or evaluation
 
 ### get_model
 
 `get_model` returns the model instance created.
-+ If user uses [subclass]((https://www.tensorflow.org/guide/keras#model_subclassing), default
++ If users use [subclass]((https://www.tensorflow.org/guide/keras#model_subclassing), default
 implementation can be used which returns `self`.
-+ If user uses [functional API](https://www.tensorflow.org/guide/keras#functional_api), the model
-instance created should be created.
++ If users use [functional API](https://www.tensorflow.org/guide/keras#functional_api), the model
+instance created should be returned.
 
 ### prepare_data_for_a_single_file
 ```

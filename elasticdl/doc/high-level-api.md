@@ -85,7 +85,7 @@ ElasticDL supports Keras models built using either TensorFlow Keras [functional 
 or [model subclassing](https://www.tensorflow.org/guide/keras#model_subclassing). 
 Users should build Keras models with `elastic.python.model.ElasticDLKerasBaseModel` as a base class and implement optimizer, loss, get\_model and metrics functions.
 
-please refer to [model\_building](./model_building.md) for detailed explaination of each function.
+Please refer to [model\_building](./model_building.md) for detailed explaination of each function.
 
 ```python
 
@@ -105,9 +105,11 @@ class UserDefinedKerasModel(ElasticDLKerasBaseModel):
     def optimizer(self, lr=0.1):
         pass
 
+    @abstractmethod
     def call(self, inputs, training=False):
         pass
 
+    @abstractmethod
     def loss(self, outputs=None, labels=None):
         pass
 
@@ -123,14 +125,15 @@ class UserDefinedKerasModel(ElasticDLKerasBaseModel):
 ```
 
 + Constructor will receive a keyword parameter `context`, which will contain environment information.
+  + Currently it is None.
 + `**kwargs` are the parameters from `model_params` argument.
-+ If user uses keras [functional API]((https://www.tensorflow.org/guide/keras#functional_api)) to build model, user should implement
++ If users use Keras [functional API]((https://www.tensorflow.org/guide/keras#functional_api)) to build model, they should implement
 `get_model` which returns the model instance created. [Model building using subclass](https://www.tensorflow.org/guide/keras#model_subclassing) can
-use the defalut implementation which returns `self`.
+use the default implementation which returns `self`.
 + `metrics` function should return specified metrics according to mode. By default, it returns an
 empty dict.
 
-User can refer to [model\_zoo](/elasticdl/model_zoo) for more examples.
+Users can refer to [model\_zoo](/elasticdl/model_zoo) for more examples.
 
 ### For Training
 
