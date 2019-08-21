@@ -81,8 +81,11 @@ We hope the ElasticDL API supports not only batch learning, but also online lear
 
 ### Model building phase
 
-For model compatible with elasticdl, user's keras model should inherit from
-`elastic.python.model.ElasticDLKerasBaseModel` and implement following interface.
+ElasticDL supports Keras models built using either TensorFlow Keras [functional API](https://www.tensorflow.org/guide/keras#functional_api)
+or [model subclassing](https://www.tensorflow.org/guide/keras#model_subclassing). 
+Users should build Keras models with `elastic.python.model.ElasticDLKerasBaseModel` as a base class and implement optimizer, loss, get\_model and metrics functions.
+
+please refer to [model\_building](./model_building.md) for detailed explaination of each function.
 
 ```python
 
@@ -119,11 +122,13 @@ class UserDefinedKerasModel(ElasticDLKerasBaseModel):
         pass
 ```
 
-+ constructor will receive a keyword parameter `context`, which will contain environment information.
++ Constructor will receive a keyword parameter `context`, which will contain environment information.
 + `**kwargs` are the parameters from `model_params` argument.
-+ if user does not use keras functional API to create model, user does not have to implement
-`get_model`, the default implementation just return `self`. If functional API is used, `get_model` should return the model instance created (return value of `tf.keras.Model`)[Reference](https://www.tensorflow.org/api_docs/python/tf/keras/Model)
-+ `metrics` function should return specified metrics according to mode.
++ If user uses keras [functional API]((https://www.tensorflow.org/guide/keras#functional_api)) to build model, user should implement
+`get_model` which returns the model instance created. [Model building using subclass](https://www.tensorflow.org/guide/keras#model_subclassing) can
+use the defalut implementation which returns `self`.
++ `metrics` function should return specified metrics according to mode. By default, it returns an
+empty dict.
 
 User can refer to [model\_zoo](/elasticdl/model_zoo) for more examples.
 

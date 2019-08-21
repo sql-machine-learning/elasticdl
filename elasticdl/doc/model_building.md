@@ -1,7 +1,7 @@
 # ElasticDL Model Building
 To submit an ElasticDL job, a user needs to provide a model file, such as [`mnist_functional_api.py`](../../model_zoo/mnist_functional_api/mnist_functional_api.py) used in this [example](elastic_scheduling.md#submit-the-first-job-with-low-priority).
 
-This model file contains a [model](#model) built with TensorFlow Keras API and other components required by ElasticDL, including [dataset\_fn](#dataset_fn), [loss](#loss), [optimizer](#optimizer), and [eval_metrics_fn](#eval\_metrics\_fn). 
+This model file contains a [model](#model) built with TensorFlow Keras API and other components required by ElasticDL, including [dataset\_fn](#dataset_fn), [loss](#loss), [optimizer](#optimizer), and [metrics](#metrics), [call](#call), [get\_model](#get_model). Please refer to [interface](../model/abstract_model.py) for details.
 
 ## Model File Components
 ### model
@@ -10,23 +10,38 @@ This model file contains a [model](#model) built with TensorFlow Keras API and o
 The following example shows a `model` using functional API, which has one input with shape (28, 28), and one putput with shape (10,):
 
 ```
-inputs = tf.keras.Input(shape=(28, 28), name='image')
-x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
-x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation='relu')(x)
-x = tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation='relu')(x)
-x = tf.keras.layers.BatchNormalization()(x)
-x = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(x)
-x = tf.keras.layers.Dropout(0.25)(x)
-x = tf.keras.layers.Flatten()(x)
-outputs = tf.keras.layers.Dense(10)(x)
+from elastic.python.model import ElasticDLKerasBaseModel
 
-model = tf.keras.Model(inputs=inputs, outputs=outputs, name='mnist_model')
+class Model(ElasticDLKerasBaseModel):
+
+    def __init__(self, context=None):
+        super(Model, self).__init__(context=context)
+        self._model = None
+
+    def build_model(self):
+        inputs = tf.keras.Input(shape=(28, 28), name='image')
+        x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
+        x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation='relu')(x)
+        x = tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation='relu')(x)
+        x = tf.keras.layers.BatchNormalization()(x)
+        x = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(x)
+        x = tf.keras.layers.Dropout(0.25)(x)
+        x = tf.keras.layers.Flatten()(x)
+        outputs = tf.keras.layers.Dense(10)(x)
+        self._model = tf.keras.Model(inputs=inputs, outputs=outputs, name='mnist_model')
+
+    def get_model(self):
+        return self._model
+model_inst = Model()
+model = model_inst.get_model()
 ```
 
 Another example using model subclassing:
 
 ```
-class MnistModel(tf.keras.Model):
+from elastic.python.model import ElasticDLKerasBaseModel
+
+class MnistModel(ElasticDLKerasBaseModel):
     def __init__(self):
         super(MnistModel, self).__init__(name='mnist_model')
         self._reshape = tf.keras.layers.Reshape((28, 28, 1))
@@ -53,7 +68,8 @@ class MnistModel(tf.keras.Model):
         x = self._dense(x)
         return x
 
-model = MnistModel()
+model_inst = MnistModel()
+model = model_inst.get_model()
 ```
 ### dataset_fn
 
@@ -104,62 +120,94 @@ def dataset_fn(dataset, mode):
 
 ### loss
 ```
-loss(output, labels)
+loss(self, outputs, labels)
 ```
 `loss` is the loss function used in ElasticDL training.
 
 Arguments:
 
-- output:  [model](#model)'s output.
+- outputs:  [model](#model)'s output.
 
 - labels: `labels` from [`dataset_fn`](#dataset_fn).
 
 Example:
 
 ```
-def loss(output, labels):
+def loss(self, outputs, labels):
     return tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=output, labels=labels.flatten()
+            logits=outputs, labels=labels.flatten()
         )
     )
 ```
 
 ### optimizer
 ```
-optimizer()
+optimizer(self, lr=0.1)
 ```
 `optimizer` is a function returns a [`tf.train.Optimizer`](https://www.tensorflow.org/api_docs/python/tf/train/Optimizer).
 
 Example:
 
 ```
-def optimizer(lr=0.1):
+def optimizer(self, lr=0.1):
     return tf.optimizers.SGD(lr)
 ```
 
-### eval_metrics_fn
+### metrics
 ```
-eval_metrics_fn()
+def metrics(self,
+            mode=Mode.TRAINING,
+            outputs=None,
+            predictions=None,
+            labels=None)
 ```
-`eval_metrics_fn` is a function that returns a dictionary where the key is name of the evaluation metric and the value
+`metrics` is a function that returns a dictionary where the key is name of the evaluation metric and the value
 is the evaluation metric result from the `predictions` and `labels` using TensorFlow API.
 
 Example:
 
 ```
-def eval_metrics_fn(predictions, labels):
-    return {
-        "accuracy": tf.reduce_mean(
+def metrics(self,
+            mode=Mode.TRAINING,
+            outputs=None,
+            predictions=None,
+            labels=None):
+    if mode == Mode.EVALUATION:
+        return {
+            "accuracy": tf.reduce_mean(
             input_tensor=tf.cast(
                 tf.equal(
                     tf.argmax(input=predictions, axis=1), labels.flatten()
                 ),
                 tf.float32,
             )
-        )
-    }
+         )
+        }
 ```
+
+By default, it returns an empty dict.
+
+### call
+
+```
+def call(self, inputs, training=False)
+```
+
+`call` returns the outputs of forward pass.
+
+Arguments:
+
+- inputs: inputs from dataset
+- training: whether it is training or evaluating
+
+### get_model
+
+`get_model` returns the model instance created.
++ If user uses [subclass]((https://www.tensorflow.org/guide/keras#model_subclassing), default
+implementation can be used which returns `self`.
++ If user uses [functional API](https://www.tensorflow.org/guide/keras#functional_api), the model
+instance created should be created.
 
 ### prepare_data_for_a_single_file
 ```
