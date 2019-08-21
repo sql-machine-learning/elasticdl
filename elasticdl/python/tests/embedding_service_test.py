@@ -77,10 +77,13 @@ class EmbeddingServiceTest(unittest.TestCase):
             keys, origin_data, embedding_endpoint
         )
 
-        lookup_data = EmbeddingService.lookup_embedding(
+        lookup_data, unknown_keys_index = EmbeddingService.lookup_embedding(
             keys, embedding_endpoint, parse_type=np.float32
         )
-
+        self.assertTrue(len(unknown_keys_index) == 0)
+        output_length = len(keys)
+        lookup_data = np.concatenate(lookup_data, axis=0)
+        lookup_data = lookup_data.reshape((output_length, -1))
         self.assertTrue(np.equal(origin_data, lookup_data).all())
         clean_test_file()
 
