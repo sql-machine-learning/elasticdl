@@ -238,7 +238,8 @@ class EmbeddingService(object):
             service
             parse_type: The type of saved data.
         Returns:
-            embedding_vectors: Embedding vector found by keys
+            embedding_vectors: A list of lookup's result, ndarray of
+            embedding vector for found, `None` for embedding vector not found
             unknown_keys_index: If key does not have a corresponding embedding
             vector, it will return the index of this key.
         """
