@@ -73,6 +73,13 @@ def _parse_args():
         help="The dictionary of model parameters in a string that will be "
         'used to instantiate the model, e.g. "param1=1,param2=2"',
     )
+    parser.add_argument(
+        "--embedding_service_endpoint",
+        type=str,
+        default="{}",
+        help="The dictionary of model parameters in a string that will be "
+        'used to instantiate the model, e.g. "param1=1,param2=2"',
+    )
 
     return parser.parse_args()
 
@@ -99,6 +106,7 @@ def main():
         args.minibatch_size,
         get_model_file(args.model_zoo, args.model_def),
         channel=channel,
+        embedding_service_endpoint=eval(args.embedding_service_endpoint),
         dataset_fn=args.dataset_fn,
         loss=args.loss,
         optimizer=args.optimizer,
