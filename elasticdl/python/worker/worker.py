@@ -140,12 +140,11 @@ class Worker(object):
         self, ids, layer_name, initializer="uniform", embedding_table_dim=128
     ):
         keys = [Embedding.get_key([layer_name, id]) for id in ids]
-        _lookup_embedding = EmbeddingService.lookup_embedding
-        embedding_vectors, unknown_keys_index = _lookup_embedding(
+        ES_lookup_embedding = EmbeddingService.lookup_embedding
+        embedding_vectors, unknown_keys_index = ES_lookup_embedding(
             keys=keys,
             embedding_service_endpoint=self._embedding_service_endpoint,
         )
-        print(embedding_vectors)
         if unknown_keys_index:
             # Initialize unknown_keys' embedding vectors and write into Redis.
             unknown_keys = [keys[index] for index in unknown_keys_index]
@@ -164,18 +163,15 @@ class Worker(object):
                 set_if_not_exist=True,
             )
             # Lookup unknown_keys' embedding vectors
-            embedding_vectors_new, unknown_keys_index_new = _lookup_embedding(
+            embedding_vectors_new, unknown_keys_idx_new = ES_lookup_embedding(
                 keys=unknown_keys,
                 embedding_service_endpoint=self._embedding_service_endpoint,
             )
-            if unknown_keys_index_new:
+            if unknown_keys_idx_new:
                 raise Exception(
                     "Update embedding vector: %s failed."
                     % str(
-                        [
-                            unknown_keys[index]
-                            for index in unknown_keys_index_new
-                        ]
+                        [unknown_keys[index] for index in unknown_keys_idx_new]
                     )
                 )
             for index, key_index in enumerate(unknown_keys_index):
