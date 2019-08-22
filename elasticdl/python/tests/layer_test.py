@@ -91,13 +91,13 @@ def get_correct_values_for_sparse_test(indices, values, dense_shape, combiner):
         for n, idx in enumerate(indices):
             if idx[0] == i:
                 embedding_values.append(values[n])
-        if combiner is "sum":
+        if combiner == "sum":
             combined_value = np.sum(embedding_values, dtype=np.float32)
-        elif combiner is "mean":
+        elif combiner == "mean":
             combined_value = np.sum(embedding_values, dtype=np.float32) / len(
                 embedding_values
             )
-        elif combiner is "sqrtn":
+        elif combiner == "sqrtn":
             combined_value = np.sum(
                 embedding_values, dtype=np.float32
             ) / np.sqrt(len(embedding_values), dtype=np.float32)
@@ -169,7 +169,7 @@ class EmbeddingLayerTest(unittest.TestCase):
             correct_values = get_correct_values_for_sparse_test(
                 indices, values, dense_shape, combiner
             )
-            place = 8 if combiner is "sum" else 5
+            place = 8 if combiner == "sum" else 5
             for n, v in enumerate(correct_values):
                 self.assertAlmostEqual(outputs[n][0], v, place)
 
@@ -248,7 +248,7 @@ class EmbeddingLayerTest(unittest.TestCase):
             grads = tape.gradient(output, bet)
             grads = grads.numpy()
             layer.reset()
-            place = 8 if combiner is "sum" else 5
+            place = 8 if combiner == "sum" else 5
             for n, v in enumerate(correct_grads[combiner]):
                 self.assertAlmostEqual(grads[n][0], v, place)
 
