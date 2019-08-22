@@ -77,8 +77,7 @@ def _parse_args():
         "--embedding_service_endpoint",
         type=str,
         default="{}",
-        help="The dictionary of model parameters in a string that will be "
-        'used to instantiate the model, e.g. "param1=1,param2=2"',
+        help="The endpoint of embedding service.",
     )
 
     return parser.parse_args()
