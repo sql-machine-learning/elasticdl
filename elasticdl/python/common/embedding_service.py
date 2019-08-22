@@ -231,6 +231,17 @@ class EmbeddingService(object):
     def lookup_embedding(
         keys=None, embedding_service_endpoint=None, parse_type=np.float32
     ):
+        """
+        Arguments:
+            keys: The list of key, which be used to locate embedding vector
+            embedding_service_endpoint: The access endpoint of embedding
+            service
+            parse_type: The type of saved data.
+        Returns:
+            embedding_vectors: Embedding vector found by keys
+            unknown_keys_index: If key does not have a corresponding embedding
+            vector, it will return the index of this key.
+        """
         if not embedding_service_endpoint:
             raise Exception("Can't find embedding service!")
         if not keys:
@@ -265,6 +276,16 @@ class EmbeddingService(object):
         embedding_service_endpoint=None,
         set_if_not_exist=False,
     ):
+        """
+        Arguments:
+            keys: The list of key, which be used to locate embedding vector
+            embedding_service_endpoint: The access endpoint of embedding
+            service parse_type: The type of saved data
+            set_if_not_exist: If this argument is `True`, it will set embedding
+            vector only when this embedding vector doesn't exist.
+        Returns:
+            None
+        """
         if not embedding_service_endpoint:
             raise Exception("Can't find embedding service!")
         if (
