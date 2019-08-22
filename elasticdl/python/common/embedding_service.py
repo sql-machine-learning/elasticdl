@@ -237,11 +237,13 @@ class EmbeddingService(object):
             embedding_service_endpoint: The access endpoint of embedding
             service
             parse_type: The type of saved data.
+
         Returns:
+            A tuple contains embedding_vectors and unknown_keys_index.
             embedding_vectors: A list of lookup's result, ndarray of
             embedding vector for found, `None` for embedding vector not found
-            unknown_keys_index: If key does not have a corresponding embedding
-            vector, it will return the index of this key.
+            unknown_keys_index: If some keys do not have a corresponding
+            embedding vector, it returns the index of these keys.
         """
         if not embedding_service_endpoint:
             raise Exception("Can't find embedding service!")
