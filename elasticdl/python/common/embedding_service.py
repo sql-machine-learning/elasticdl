@@ -287,7 +287,7 @@ class EmbeddingService(object):
         ).pipeline()
         for index, key in enumerate(keys):
             embedding_service.set(
-                key, embedding_vectors[index].tobytes(), nx=nx_flag
+                key, embedding_vectors[index].tobytes(), nx=set_if_not_exist
             )
         embedding_service.execute()
 
