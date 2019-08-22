@@ -121,7 +121,7 @@ class EmbeddingService(object):
 
     def _get_embedding_cluster(self):
         startup_nodes = [
-            {"host": ip, "port": "%d" % (port)}
+            {"host": ip, "port": "%d" % port}
             for ip in self._embedding_endpoint
             for port in self._embedding_endpoint[ip]
         ]
@@ -236,7 +236,7 @@ class EmbeddingService(object):
         if not keys:
             return None
         startup_nodes = [
-            {"host": ip, "port": "%d" % (port)}
+            {"host": ip, "port": "%d" % port}
             for ip in embedding_service_endpoint
             for port in embedding_service_endpoint[ip]
         ]
@@ -278,7 +278,7 @@ class EmbeddingService(object):
                 "of embedding_vectors's shape."
             )
         startup_nodes = [
-            {"host": ip, "port": "%d" % (port)}
+            {"host": ip, "port": "%d" % port}
             for ip in embedding_service_endpoint
             for port in embedding_service_endpoint[ip]
         ]

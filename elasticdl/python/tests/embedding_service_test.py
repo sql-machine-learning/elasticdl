@@ -1,3 +1,5 @@
+import glob
+import os
 import subprocess
 import time
 import unittest
@@ -29,17 +31,10 @@ def start_redis_instances(first_port):
 
 
 def clean_test_file():
-    command_list = [
-        "rm appendonly*.aof",
-        "rm nodes*.conf",
-        "rm *.log",
-        "rm dump*.rdb",
-    ]
-    for command in command_list:
-        clean_process = subprocess.Popen(
-            [command], shell=True, stdout=subprocess.DEVNULL
-        )
-        clean_process.wait()
+    filetype_list = ["appendonly*.aof", "nodes*.conf", "*.log", "dump*.rdb"]
+    for filetype in filetype_list:
+        for file in glob.glob(os.path.join(".", filetype)):
+            os.remove(file)
 
 
 class EmbeddingServiceTest(unittest.TestCase):
@@ -61,9 +56,10 @@ class EmbeddingServiceTest(unittest.TestCase):
         self.assertEqual(b"OK", redis_cluster.get("test_key"))
         # close
         self.assertTrue(embedding_service.stop_embedding_service())
+        clean_test_file()
 
     def test_lookup_and_update_embedding(self):
-        embedding_endpoint = start_redis_instances(31001)
+        embedding_endpoint = start_redis_instances(30001)
         # start
         embedding_service = EmbeddingService(embedding_endpoint)
         embedding_endpoint = embedding_service._create_redis_cluster()
@@ -71,7 +67,7 @@ class EmbeddingServiceTest(unittest.TestCase):
         time.sleep(1)
         origin_data = np.random.rand(100, 10).astype(np.float32)
 
-        keys = ["test_%d" % (i) for i in range(origin_data.shape[0])]
+        keys = ["test_%d" % i for i in range(origin_data.shape[0])]
 
         EmbeddingService.update_embedding(
             keys, origin_data, embedding_endpoint
