@@ -263,7 +263,7 @@ class EmbeddingService(object):
         keys=None,
         embedding_vectors=None,
         embedding_service_endpoint=None,
-        nx_flag=False,
+        set_if_not_exist=False,
     ):
         if not embedding_service_endpoint:
             raise Exception("Can't find embedding service!")
