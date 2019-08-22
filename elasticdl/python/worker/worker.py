@@ -1,9 +1,11 @@
 import traceback
 
+import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType, Mode
+from elasticdl.python.common.embedding_service import EmbeddingService
 from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.model_helper import (
     find_layer,
@@ -39,6 +41,7 @@ class Worker(object):
         optimizer="optimizer",
         eval_metrics_fn="eval_metrics_fn",
         channel=None,
+        embedding_service_endpoint=None,
         model_def=None,
         model_params="",
         prediction_outputs_processor="PredictionOutputsProcessor",
@@ -69,6 +72,7 @@ class Worker(object):
             self._stub = None
         else:
             self._stub = elasticdl_pb2_grpc.MasterStub(channel)
+        self._embedding_service_endpoint = embedding_service_endpoint
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._model_version = -1
         self._task_data_service = TaskDataService(
@@ -131,6 +135,51 @@ class Worker(object):
             # Assumes all trainable variables exist in model.param.
             var.assign(tensor_to_ndarray(model.param[var.name]))
         self._model_version = model.version
+
+    def lookup_embedding(
+        self, ids, layer_name, initializer="uniform", embedding_table_dim=128
+    ):
+        keys = [Embedding.get_key([layer_name, id]) for id in ids]
+        ES_lookup_embedding = EmbeddingService.lookup_embedding
+        embedding_vectors, unknown_keys_index = ES_lookup_embedding(
+            keys=keys,
+            embedding_service_endpoint=self._embedding_service_endpoint,
+        )
+        if unknown_keys_index:
+            # Initialize unknown_keys' embedding vectors and write into Redis.
+            unknown_keys = [keys[index] for index in unknown_keys_index]
+            initializer = tf.keras.initializers.get(initializer)
+            embedding_vector_init = [
+                initializer(shape=[1, embedding_table_dim]).numpy()
+                for _ in unknown_keys
+            ]
+            embedding_vector_init = np.concatenate(
+                embedding_vector_init, axis=0
+            )
+            EmbeddingService.update_embedding(
+                keys=unknown_keys,
+                embedding_vectors=embedding_vector_init,
+                embedding_service_endpoint=self._embedding_service_endpoint,
+                set_if_not_exist=True,
+            )
+            # Lookup unknown_keys' embedding vectors
+            embedding_vectors_new, unknown_keys_idx_new = ES_lookup_embedding(
+                keys=unknown_keys,
+                embedding_service_endpoint=self._embedding_service_endpoint,
+            )
+            if unknown_keys_idx_new:
+                raise Exception(
+                    "Update embedding vector: %s failed."
+                    % str(
+                        [unknown_keys[index] for index in unknown_keys_idx_new]
+                    )
+                )
+            for key_index, vector in zip(
+                unknown_keys_index, embedding_vectors_new
+            ):
+                embedding_vectors[key_index] = vector
+        embedding_vectors = np.concatenate(embedding_vectors, axis=0)
+        return embedding_vectors.reshape((len(keys), embedding_table_dim))
 
     def report_task_result(self, task_id, err_msg):
         """
