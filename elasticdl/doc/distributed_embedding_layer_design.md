@@ -350,11 +350,11 @@ write_back_to_embedding_table(G_EM.indices, updated_embeddings)
 
 For [SGD](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/SGD?hl=en), we can use `optimizer.apply_gradients` directly to update the embedding table as shown above.
 
-Many other optimizers allocate and manage additional varaiables associated with the variables to train, which are called *slots* in TensorFlow. For example, [tf.keras.optimizers.Ftrl](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Ftrl?hl=en) has two slots (*accumulator* and *linear*). [tf.keras.optimizers.Adam](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Adam?hl=en) also has two slots (*m* and *v*).
+Many other optimizers allocate and manage additional varaiables associated with the variables to train. These additional variables are called *slots* in TensorFlow. For example, [tf.keras.optimizers.Ftrl](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Ftrl?hl=en) has two slots (*accumulator* and *linear*), and [tf.keras.optimizers.Adam](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Adam?hl=en) also has two slots (*m* and *v*).
 
-For variables that are stored in parameter server, optimizer will save slots as variables in optimizer itself. However, slots are typically tensors shaped same as trainable variables. Thus, for variables that are needed to store in the distributed external storage, we also need to store their slots in the distributed external storage. Please be aware that optimizer in ElasticDL is responsible for updating both embedding table and other trainable variables in model. Thus we need to store slots of embedding table in the external storage and optimizer will manage slots of trainable variables.
+For variables stored in parameter server, optimizers will save slots as properties in themselves. However, slots are typically tensors shaped same as corresponding trainable variables. Thus, for variables which require distributed storage, we also need to store their slots in the distributed storage. Please be aware that in ElasticDL training process optimizers are responsible for updating both embedding table and other trainable variables in model. Thus we need to store slots of embedding table in the distributed storage and optimizers will manage slots of trainable variables.
 
-[`Optimizer`](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Optimizer) is the base class for optimizers in tensorflow. The core function in `Optimizer` is `apply_gradients(grads_and_vars)`, which takes `(gradients, variables)` pairs and update model parameters. Every time `Optimizer.apply_gradients` is called, `Optimizer` will check the existance of slots that are related to the variables to be updated. `Optimizer` will create and initialize those slots if not exist.
+The [`Optimizer`](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Optimizer) is the base class for optimizers in TensorFlow. The core function in `Optimizer` is `apply_gradients(grads_and_vars)`, which takes `(gradients, variables)` pairs and update `variables`. Every time `Optimizer.apply_gradients` is called, the optimizer will check the existance of slots that are related to the variables to be updated. The optimizer will create and initialize those slots if not exist.
 
 Take Adam optimizer as an example, the pseudocode is as following:
 
@@ -370,6 +370,8 @@ class Optimizer:
 		 
 	def add_slot(var, slot_name, initializer='zero'):
 		# create slot if not exist 
+		if slot_name not in self._slots[var]:
+			create_and_initialize(self._slots[var][slot_name])
 		
 class Adam(Optimizer):
 	...
@@ -383,17 +385,15 @@ class Adam(Optimizer):
 	
 ```
 
-In the pseudocode above, `_create_slots` is a function inherited from `Optimizer` and will be `add_slot` to add a slot if not exists. `add_slot` will do nothing if it already exists.
+In the pseudocode above, `_create_slots` is a function inherited from `Optimizer` and will call `add_slot` to add a slot. `add_slot` check the existence of the slot before adding. `add_slot` will do nothing if it already exists.
 
-This section focuses on designing an optimizer to manage slots of embedding table in external storage while keeping other slots in optimizer. In each iteration, we should do three things in the following order:
+This section focuses on designing an optimizer to manage slots of embedding table in the external storage while keeping other slots in the optimizer. In each iteration, we should do three things in the following order:
 
-1. get slot values from external storage and set them to slots in `Optimizer`.
-2. call `Optimizer.apply_gradients`.
-3. get values, store them in external storage and delete those slots from `Optimizer`.
+1. get slot values from the external storage and set them to slots in the optimizer.
+2. call `apply_gradients` function of the optimizer.
+3. get values, store them in the external storage and delete those slots from the optimizer.
 
-In step 1, we use `add_slot` to create a slot in `Optimizer` and its argument `initializer` can be a tensor which will be assigned to slot after created. We will create slots for embedding vectors to be updated and delete them after calling `apply_gradients`. 
-
-We don't choose to keep them in optimizer and assign value to them every iteration. This is because that the shape of the slots is LxN, where L is the number of updated embedding vectors in each iteration and N is the output dimension of the embedding layer. L may differ between different iterations. 
+In step 1, we use `add_slot` to create a slot in the optimizer and its argument `initializer` can be a tensor which will be assigned to the slot after created. We will create slots for embedding vectors to be updated and delete them after calling `apply_gradients`. We don't choose to keep them in optimizer and assign value to them every iteration. This is because that the shapes of the slots are LxN, where L is the number of updated embedding vectors in each iteration and N is the output dimension of the embedding layer. L may differ between different iterations and TensorFlow does not allow user to change the shape of a variable.
 
 We design ElasticDL's Adam optimizer as following pseudocode:
 
@@ -417,7 +417,7 @@ class Adam(tf.keras.optimizers.Adam):
 		slots = []
 		for var in var_list:
 			slots.append(self._slots[var])
-			# we should delete those slots from optimizer
+			# we should delete those slots from the optimizer
 			delete self._slots[var]
 		return slots		
 		
@@ -432,10 +432,10 @@ for x, y in dataset:
 	
 	opt.set_slot_value(slot_value)
 	opt.apply_gradients(zip(gradient, model.trainable_variables))
-	slot_value = opt.get_slot_value(
-		get_embedding_table_variable(model.trainable_variables)
+	embedding_vector_variables = get_embedding_vector_variables(
+		model.trainable_variables
 	)
-	
+	slot_value = opt.get_slot_value(embedding_vector_variables)
 ```
 
 ## Issues to solve
