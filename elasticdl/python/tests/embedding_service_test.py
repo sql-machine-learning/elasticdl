@@ -56,10 +56,9 @@ class EmbeddingServiceTest(unittest.TestCase):
         self.assertEqual(b"OK", redis_cluster.get("test_key"))
         # close
         self.assertTrue(embedding_service.stop_embedding_service())
-        clean_test_file()
 
     def test_lookup_and_update_embedding(self):
-        embedding_endpoint = start_redis_instances(30001)
+        embedding_endpoint = start_redis_instances(31001)
         # start
         embedding_service = EmbeddingService(embedding_endpoint)
         embedding_endpoint = embedding_service._create_redis_cluster()
