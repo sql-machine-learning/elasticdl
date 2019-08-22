@@ -234,7 +234,7 @@ class EmbeddingService(object):
         if not embedding_service_endpoint:
             raise Exception("Can't find embedding service!")
         if not keys:
-            return None
+            return [], []
         startup_nodes = [
             {"host": ip, "port": "%d" % port}
             for ip in embedding_service_endpoint
