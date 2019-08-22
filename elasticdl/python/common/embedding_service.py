@@ -13,17 +13,17 @@ from elasticdl.python.common.log_util import default_logger as logger
 class EmbeddingService(object):
     """Redis implementation of EmbeddingService"""
 
-    def __init__(self, embedding_endpoint=None, replicas=1):
+    def __init__(self, embedding_service_endpoint=None, replicas=1):
         """
         Arguments:
-            embedding_endpoint: The address(ip/url) and service's port map for
-            Redis cluster.
+            embedding_service_endpoint: The address(ip/url) and service's
+            port map for Redis cluster.
             {
                 address0: [port list],
                 address1: [port list],
                 ...
             }
-            replicas: Number of slaves per redis master
+            replicas: Number of slaves per redis master.
 
         Logic of starting embedding service :
         master.main   EmbeddingService    k8s_client
@@ -49,7 +49,7 @@ class EmbeddingService(object):
            accessing the Redis.
 
         """
-        self._embedding_endpoint = embedding_endpoint
+        self._embedding_service_endpoint = embedding_service_endpoint
         self._replicas = replicas
 
     def start_embedding_service(
@@ -81,8 +81,8 @@ class EmbeddingService(object):
         redis_cluster_command = " ".join(
             [
                 "%s:%d" % (ip, port)
-                for ip in self._embedding_endpoint
-                for port in self._embedding_endpoint[ip]
+                for ip, port_list in self._embedding_service_endpoint.items()
+                for port in port_list
             ]
         )
         try:
@@ -99,13 +99,13 @@ class EmbeddingService(object):
             logger.error(e)
             return None
         else:
-            return self._embedding_endpoint
+            return self._embedding_service_endpoint
 
     def stop_embedding_service(self, save="nosave"):
         for redis_node in [
             "-h %s -p %d" % (ip, port)
-            for ip in self._embedding_endpoint
-            for port in self._embedding_endpoint[ip]
+            for ip, port_list in self._embedding_service_endpoint.items()
+            for port in port_list
         ]:
             try:
                 command = "redis-cli %s shutdown %s" % (redis_node, save)
@@ -122,8 +122,8 @@ class EmbeddingService(object):
     def _get_embedding_cluster(self):
         startup_nodes = [
             {"host": ip, "port": "%d" % port}
-            for ip in self._embedding_endpoint
-            for port in self._embedding_endpoint[ip]
+            for ip, port_list in self._embedding_service_endpoint.items()
+            for port in port_list
         ]
         try:
             redis_cluster = RedisCluster(
@@ -225,7 +225,9 @@ class EmbeddingService(object):
                 embedding_service_id
             )
             address_ip = pod.status.pod_ip
-        self._embedding_endpoint = {address_ip: [30001 + i for i in range(6)]}
+        self._embedding_service_endpoint = {
+            address_ip: [30001 + i for i in range(6)]
+        }
 
     @staticmethod
     def lookup_embedding(
@@ -251,8 +253,8 @@ class EmbeddingService(object):
             return [], []
         startup_nodes = [
             {"host": ip, "port": "%d" % port}
-            for ip in embedding_service_endpoint
-            for port in embedding_service_endpoint[ip]
+            for ip, port_list in embedding_service_endpoint.items()
+            for port in port_list
         ]
         embedding_vectors = []
         embedding_service = RedisCluster(
@@ -303,8 +305,8 @@ class EmbeddingService(object):
             )
         startup_nodes = [
             {"host": ip, "port": "%d" % port}
-            for ip in embedding_service_endpoint
-            for port in embedding_service_endpoint[ip]
+            for ip, port_list in embedding_service_endpoint.items()
+            for port in port_list
         ]
         embedding_service = RedisCluster(
             startup_nodes=startup_nodes, decode_responses=False
