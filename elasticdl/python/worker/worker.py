@@ -174,8 +174,10 @@ class Worker(object):
                         [unknown_keys[index] for index in unknown_keys_idx_new]
                     )
                 )
-            for index, key_index in enumerate(unknown_keys_index):
-                embedding_vectors[key_index] = embedding_vectors_new[index]
+            for key_index, vector in zip(
+                unknown_keys_index, embedding_vectors_new
+            ):
+                embedding_vectors[key_index] = vector
         embedding_vectors = np.concatenate(embedding_vectors, axis=0)
         return embedding_vectors.reshape((len(keys), embedding_table_dim))
 
