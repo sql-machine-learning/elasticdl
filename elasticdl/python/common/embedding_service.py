@@ -241,10 +241,10 @@ class EmbeddingService(object):
             parse_type: The type of saved data.
 
         Returns:
-            A tuple contains embedding_vectors and unknown_keys_index.
+            A tuple contains embedding_vectors and unknown_keys_idx.
             embedding_vectors: A list of lookup's result, ndarray of
             embedding vector for found, `None` for embedding vector not found
-            unknown_keys_index: If some keys do not have a corresponding
+            unknown_keys_idx: If some keys do not have a corresponding
             embedding vector, it returns the index of these keys.
         """
         if not embedding_service_endpoint:
@@ -263,16 +263,17 @@ class EmbeddingService(object):
         for key in keys:
             embedding_service.get(key)
         embedding_vectors = embedding_service.execute()
-        unknown_keys_index = [
-            index
-            for index, vector in enumerate(embedding_vectors)
-            if not vector
-        ]
-        embedding_vectors = [
-            np.frombuffer(vector, parse_type) if vector else vector
-            for vector in embedding_vectors
-        ]
-        return embedding_vectors, unknown_keys_index
+        unknown_keys_idx = []
+        embedding_vectors_ndarray = []
+        for index, vector in enumerate(embedding_vectors):
+            if vector:
+                embedding_vectors_ndarray.append(
+                    np.frombuffer(vector, parse_type)
+                )
+            else:
+                embedding_vectors_ndarray.append(vector)
+                unknown_keys_idx.append(index)
+        return embedding_vectors_ndarray, unknown_keys_idx
 
     @staticmethod
     def update_embedding(
