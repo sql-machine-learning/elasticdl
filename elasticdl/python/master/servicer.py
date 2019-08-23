@@ -32,7 +32,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         checkpoint_filename_for_init,
         checkpoint_service,
         evaluation_service,
-        embedding_service_address=None
+        embedding_service_endpoint=None
     ):
         # TODO: group params together into a single object.
         self._opt = optimizer
@@ -50,7 +50,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # optimizer's apply_gradients() function.
         self._model = {}
         self._version = 0
-        self.embedding_service_address = embedding_service_address
+        self._embedding_service_endpoint = embedding_service_endpoint
         self._init_model(checkpoint_filename_for_init, init_var)
 
         self._checkpoint_service = checkpoint_service
@@ -172,7 +172,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             EmbeddingService.update_embedding(
                 keys=keys,
                 embeddings=embeddings,
-                embedding_service_address=self.embedding_service_address,
+                embedding_service_endpoint=self._embedding_service_endpoint,
             )
 
     def _update_model(self):
@@ -198,7 +198,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 unique_ids_list.append(unique_ids)
                 grads_idx_transformed = tf.IndexedSlices(grads.values, idx)
                 embeddings = EmbeddingService.lookup_embedding(
-                    embedding_service_address=self.embedding_service_address,
+                    embedding_service_endpoint=(
+                        self._embedding_service_endpoint
+                    ),
                     keys=[
                         Embedding.get_key([layer_name, i])
                         for i in unique_ids.numpy()

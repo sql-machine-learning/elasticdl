@@ -77,7 +77,8 @@ def _parse_args():
         "--embedding_service_endpoint",
         type=str,
         default="{}",
-        help="The endpoint of embedding service.",
+        help="The endpoint of embedding service, "
+        "e.g. \"{'ip_0': [port_0,port_1]}\"",
     )
 
     return parser.parse_args()

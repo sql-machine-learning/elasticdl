@@ -186,7 +186,7 @@ def main():
             cluster_spec=args.cluster_spec,
         )
         logger.info(
-            "Embedding service start succeeded: %s"
+            "Embedding service start succeeded. The endpoint is %s."
             % str(embedding_service_endpoint)
         )
 
