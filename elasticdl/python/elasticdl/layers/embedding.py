@@ -41,6 +41,7 @@ class Embedding(tf.keras.layers.Layer):
 
         self.output_dim = output_dim
         self.embedding_initializer = embedding_initializer
+        # TODO: support mask_zero
         self.supports_masking = mask_zero
         self.input_length = input_length
         self.combiner = combiner
@@ -91,11 +92,6 @@ class Embedding(tf.keras.layers.Layer):
             unique_ids, self._name, self.embedding_initializer
         )
         return batch_embedding
-
-    def compute_mask(self, inputs, mask=None):
-        if not self.supports_masking:
-            return None
-        return tf.math.not_equal(inputs, 0)
 
     def call(self, input):
         if isinstance(input, tf.SparseTensor):
