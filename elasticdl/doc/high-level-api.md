@@ -143,7 +143,6 @@ class MnistTrainSpec(TrainSpec):
     def create_optimizer(self, lr=0.1):
         return tf.train.GradientDescentOptimizer(learning_rate=lr)
 
-    @abstractmethod
     def create_loss(self, outputs=None, labels=None):
         labels = tf.reshape(labels, [-1])
         return tf.reduce_mean(
