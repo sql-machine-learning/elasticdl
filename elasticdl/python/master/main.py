@@ -167,6 +167,29 @@ def main():
         evaluation_service.start()
         task_d.set_evaluation_service(evaluation_service)
 
+    embedding_service_endpoint = None
+    # Search for embedding layers in the model,
+    # if found, initialize embedding service
+    layers = find_layer(model_inst, Embedding)
+    if layers:
+        embedding_service = EmbeddingService()
+        embedding_service_endpoint = embedding_service.start_embedding_service(
+            job_name=args.job_name,
+            image_name=args.worker_image,
+            namespace=args.namespace,
+            resource_request=args.master_resource_request,
+            resource_limit=args.master_resource_limit,
+            pod_priority=args.worker_pod_priority,
+            volume=args.volume,
+            image_pull_policy=args.image_pull_policy,
+            restart_policy=args.restart_policy,
+            cluster_spec=args.cluster_spec,
+        )
+        logger.info(
+            "Embedding service start succeeded. The endpoint is %s."
+            % str(embedding_service_endpoint)
+        )
+
     # The master service
     logger.info("Starting master service")
     server = grpc.server(
@@ -188,32 +211,12 @@ def main():
         checkpoint_filename_for_init=args.checkpoint_filename_for_init,
         checkpoint_service=checkpoint_service,
         evaluation_service=evaluation_service,
+        embedding_service_endpoint=embedding_service_endpoint,
     )
     elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
     server.add_insecure_port("[::]:{}".format(args.port))
     server.start()
     logger.info("Server started at port: %d", args.port)
-
-    # Search for embedding layers in the model,
-    # if found, initialize embedding service
-    layers = find_layer(model_inst, Embedding)
-    if layers:
-        embedding_service = EmbeddingService()
-        redis_address_map = embedding_service.start_embedding_service(
-            job_name=args.job_name,
-            image_name=args.worker_image,
-            namespace=args.namespace,
-            resource_request=args.master_resource_request,
-            resource_limit=args.master_resource_limit,
-            pod_priority=args.worker_pod_priority,
-            volume=args.volume,
-            image_pull_policy=args.image_pull_policy,
-            restart_policy=args.restart_policy,
-            cluster_spec=args.cluster_spec,
-        )
-        logger.info(
-            "Embedding service start succeeded: %s" % str(redis_address_map)
-        )
 
     worker_manager = None
     if args.num_workers:
@@ -243,6 +246,8 @@ def main():
             job_type,
             "--minibatch_size",
             str(args.minibatch_size),
+            "--embedding_service_endpoint",
+            str(embedding_service_endpoint),
         ]
 
         worker_manager = WorkerManager(
