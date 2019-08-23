@@ -82,56 +82,114 @@ We hope the ElasticDL API supports not only batch learning, but also online lear
 ### Model building phase
 
 ElasticDL supports Keras models built using either TensorFlow Keras [functional API](https://www.tensorflow.org/guide/keras#functional_api)
-or [model subclassing](https://www.tensorflow.org/guide/keras#model_subclassing). 
-Users should build Keras models with `elastic.python.model.ElasticDLKerasBaseModel` as a base class and implement optimizer, loss, get\_model and metrics functions.
+or [model subclassing](https://www.tensorflow.org/guide/keras#model_subclassing). In order to train models, ElasticDL requires users to provide
+a `TrainSpec`. The `TrainSpec` tells ElasticDL how to create model, optimizer, loss, dataset and metrics.
 
 Please refer to [model\_building](./model_building.md) for detailed explaination of each function.
 
 ```python
-
 from elasticdl.python.common.constants import Mode
-from elasticdl.python.model import ElasticDLKerasBaseModel
 
-
-class UserDefinedKerasModel(ElasticDLKerasBaseModel):
-
-    def __init__(self, *args, context=None, **kwargs):
-        super(UserDefinedKerasModel, self).__init__(
-                context=context,
-                **kwargs,
-        )
+class TrainSpec(object):
+    def __init__(self, context=None):
+        """
+        Args: context: a dict of contextual information from ElasticDL,
+                             such as worker_id, master ip.
+        """
+        self._context = context
 
     @abstractmethod
-    def optimizer(self, lr=0.1):
-        pass
-
-    @abstractmethod
-    def call(self, inputs, training=False):
-        pass
-
-    @abstractmethod
-    def loss(self, outputs=None, labels=None):
-        pass
-
-    def get_model(self):
+    def create_optimizer(self, lr=0.1):
+        """returns a tensorflow optimizer such as `tf.train.GradientDescentOptimizer`"""
          pass
 
-    def metrics(self,
+    @abstractmethod
+    def create_loss(self, outputs=None, labels=None):
+        """returns a tensor represents loss using outputs and labels"""
+        pass
+
+    @abstractmethod
+    def create_metrics(self,
+                       mode=Mode.TRAINING,
+                       outputs=None,
+                       labels=None,
+                       predictions=None,):
+        """returns a dict of metrics"""
+        pass
+
+    @abstractmethod
+    def create_model(self):
+        """returns the model created
+        Users can use functional API or subclass to create customized Keras model.
+        """
+        pass
+
+    @abstractmethod
+    def create_dataset(self, dataset, training):
+        """returns a `tf.data.Dataset`"""
+        pass
+```
+
+For example, we want to train a model on mnist dataset. We need to provide a similar
+`TrainSpec` to ElasticDL. Let's call it `MnistTrainSpec`.
+
+```python
+
+class MnistTrainSpec(TrainSpec):
+
+    def __init__(self, context=None, **kwargs):
+        super(MnistTrainSpec, self).__init__(context=context)
+
+    def create_optimizer(self, lr=0.1):
+        return tf.train.GradientDescentOptimizer(learning_rate=lr)
+
+    @abstractmethod
+    def create_loss(self, outputs=None, labels=None):
+        labels = tf.reshape(labels, [-1])
+        return tf.reduce_mean(
+            input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits=output, labels=labels
+            )
+        )
+
+    def create_model(self):
+        """returns the model instance
+        We can use either functional API or Keras model subclass to create the model
+        """
+        inputs = tf.keras.Input(shape=(28, 28), name="image")
+        x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
+        x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu")(x)
+        x = tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu")(x)
+        x = tf.keras.layers.BatchNormalization()(x)
+        x = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(x)
+        x = tf.keras.layers.Dropout(0.25)(x)
+        x = tf.keras.layers.Flatten()(x)
+        outputs = tf.keras.layers.Dense(10)(x)
+        return tf.keras.Model(inputs=inputs, outputs=outputs, name="mnist_model")
+
+    def create_metrics(self,
                 mode=Mode.TRAINING,
                 outputs=None,
-                predictions=None,
                 labels=None):
-        pass
+
+        if mode == Mode.EVALUATION:
+            labels = tf.reshape(labels, [-1])
+            return {
+            "accuracy": tf.reduce_mean(
+                    input_tensor=tf.cast(
+                    tf.equal(
+                        tf.argmax(outputs, 1, output_type=tf.dtypes.int32),
+                        labels,),
+                    tf.float32,)
+                    )
+            }
+        return {}
 ```
 
 + Constructor will receive a keyword parameter `context`, which will contain environment information.
   + Currently it is None.
 + `**kwargs` are the parameters from `model_params` argument.
-+ If users use Keras [functional API]((https://www.tensorflow.org/guide/keras#functional_api)) to build model, they should implement
-`get_model` which returns the model instance created. [Model building using subclass](https://www.tensorflow.org/guide/keras#model_subclassing) can
-use the default implementation which returns `self`.
-+ `metrics` function should return specified metrics according to mode. By default, it returns an
-empty dict.
++ `create_metrics` function should return specified metrics according to mode. By default, it returns an empty dict.
 
 Users can refer to [model\_zoo](/elasticdl/model_zoo) for more examples.
 

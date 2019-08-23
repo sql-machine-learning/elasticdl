@@ -1,24 +1,24 @@
 # ElasticDL Model Building
 To submit an ElasticDL job, a user needs to provide a model file, such as [`mnist_functional_api.py`](../../model_zoo/mnist_functional_api/mnist_functional_api.py) used in this [example](elastic_scheduling.md#submit-the-first-job-with-low-priority).
 
-This model file contains a [model](#model) built with TensorFlow Keras API and other components required by ElasticDL, including [dataset\_fn](#dataset_fn), [loss](#loss), [optimizer](#optimizer), and [metrics](#metrics), [call](#call), [get\_model](#get_model). Please refer to [interface](../model/abstract_model.py) for details.
+This model file contains a [`TrainSpec`](#TrainSpec). It describes functions that ElasticDL needs in order to train models. The `TrainSpec` contains [create\_dataset](#create_dataset), [create\_loss](#create_loss), [create\_optimizer](#create_optimizer), and [create\_metrics](#create_metrics).
 
 ## Model File Components
-### model
+
+### TrainSpec
 `model` is a Keras model built using either TensorFlow Keras [functional API](https://www.tensorflow.org/guide/keras#functional_api) or [model subclassing](https://www.tensorflow.org/guide/keras#model_subclassing).
 
 The following example shows a `model` using functional API, which has one input with shape (28, 28), and one putput with shape (10,):
 
 ```
-from elastic.python.model import ElasticDLKerasBaseModel
+from elastic.python.training import TrainSpec
 
-class Model(ElasticDLKerasBaseModel):
+class ModelUsingFunctionalAPITrainSpec(TrainSpec):
 
     def __init__(self, context=None):
-        super(Model, self).__init__(context=context)
-        self._model = None
+        super(ModelUsingFunctionalAPITrainSpec, self).__init__(context=context)
 
-    def build_model(self):
+    def create_model(self):
         inputs = tf.keras.Input(shape=(28, 28), name='image')
         x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
         x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation='relu')(x)
@@ -28,22 +28,22 @@ class Model(ElasticDLKerasBaseModel):
         x = tf.keras.layers.Dropout(0.25)(x)
         x = tf.keras.layers.Flatten()(x)
         outputs = tf.keras.layers.Dense(10)(x)
-        self._model = tf.keras.Model(inputs=inputs, outputs=outputs, name='mnist_model')
+        return tf.keras.Model(inputs=inputs, outputs=outputs, name='mnist_model')
 
-    def get_model(self):
-        return self._model
-model_inst = Model()
-model = model_inst.get_model()
+     # implement other abstract methods
+
+model = ModelUsingFunctionalAPITrainSpec.create_model()
 ```
 
 Another example using model subclassing:
 
 ```
-from elastic.python.model import ElasticDLKerasBaseModel
+from elastic.python.training import TrainSpec
 
-class MnistModel(ElasticDLKerasBaseModel):
+class MnistModel(tf.keras.Model):
+
     def __init__(self):
-        super(MnistModel, self).__init__(name='mnist_model')
+        super(MnistModel, self).__init__(name="mnist_model")
         self._reshape = tf.keras.layers.Reshape((28, 28, 1))
         self._conv1 = tf.keras.layers.Conv2D(
             32, kernel_size=(3, 3), activation='relu')
@@ -68,13 +68,22 @@ class MnistModel(ElasticDLKerasBaseModel):
         x = self._dense(x)
         return x
 
-model_inst = MnistModel()
-model = model_inst.get_model()
+
+class ModelUsingSubclassTrainSpec(TrainSpec):
+    def __init__(self, context=None):
+        super(ModelUsingSubclassTrainSpec, self).__init__(context=context)
+
+    def create_model(self):
+        return MnistModel()
+
+    # implement other abstract methods
+
+model = ModelUsingSubclassTrainSpec.create_model()
 ```
-### dataset_fn
+### create_dataset
 
 ```
-dataset_fn(dataset, training)
+create_dataset(self, dataset, mode)
 ```
 `dataset_fn` is a function that takes a RecordIO `dataset` as input, preprocesses the data as needed, and returns the a dataset containing `model_inputs` and `labels` as a pair.
 
@@ -91,7 +100,7 @@ Output: a dataset, each data is a tuple (`model_inputs`, `labels`)
 Example:
 
 ```
-def dataset_fn(dataset, mode):
+def create_dataset(self, dataset, mode):
     def _parse_data(record):
         if mode == Mode.PREDICTION:
             feature_description = {
@@ -118,22 +127,22 @@ def dataset_fn(dataset, mode):
     return dataset
 ```
 
-### loss
+### create_loss
 ```
-loss(self, outputs, labels)
+create_loss(self, outputs=None, labels=None)
 ```
-`loss` is the loss function used in ElasticDL training.
+`create_loss` is the loss function used in ElasticDL training. It returns the loss tensor.
 
 Arguments:
 
-- outputs:  [model](#model)'s output.
+- outputs:  [model](#create_model)'s output.
 
-- labels: `labels` from [`dataset_fn`](#dataset_fn).
+- labels: `labels` from [`create_dataset`](#create_dataset).
 
 Example:
 
 ```
-def loss(self, outputs, labels):
+def create_loss(self, outputs=None, labels=None):
     return tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=outputs, labels=labels.flatten()
@@ -141,74 +150,53 @@ def loss(self, outputs, labels):
     )
 ```
 
-### optimizer
+### create_optimizer
 ```
-optimizer(self, lr=0.1)
+create_optimizer(self, lr=0.1)
 ```
-`optimizer` is a function returns a [`tf.train.Optimizer`](https://www.tensorflow.org/api_docs/python/tf/train/Optimizer).
+`create_optimizer` is a function returns a [`tf.train.Optimizer`](https://www.tensorflow.org/api_docs/python/tf/train/Optimizer).
 
 Example:
 
 ```
-def optimizer(self, lr=0.1):
+def create_optimizer(self, lr=0.1):
     return tf.optimizers.SGD(lr)
 ```
 
-### metrics
+### create_metrics
 ```
-def metrics(self,
+def create_metrics(self,
             mode=Mode.TRAINING,
             outputs=None,
-            predictions=None,
             labels=None)
 ```
 `metrics` is a function that returns a dictionary where the key is name of the metric and the value
-is the metric result from the `predictions` and `labels` , or `labels` using TensorFlow API. For example,
+is the metric result from the `outputs` and `labels` , or `labels` using TensorFlow API. For example,
 if mode equals `Mode.EVALUATION`, the returned metric dict is used to evaluate the model.
 
 Example:
 
 ```
-def metrics(self,
+def create_metrics(self,
             mode=Mode.TRAINING,
             outputs=None,
-            predictions=None,
             labels=None):
     if mode == Mode.EVALUATION:
         return {
             "accuracy": tf.reduce_mean(
             input_tensor=tf.cast(
                 tf.equal(
-                    tf.argmax(input=predictions, axis=1), labels.flatten()
+                    tf.argmax(input=outputs, axis=1), labels.flatten()
                 ),
                 tf.float32,
             )
          )
         }
+    else:
+        return {}
 ```
 
 By default, it returns an empty dict.
-
-### call
-
-```
-def call(self, inputs, training=False)
-```
-
-`call` returns the outputs of forward pass.
-
-Arguments:
-
-- inputs: inputs from dataset
-- training: whether it is training or evaluation
-
-### get_model
-
-`get_model` returns the model instance created.
-+ If users use [subclass]((https://www.tensorflow.org/guide/keras#model_subclassing), default
-implementation can be used which returns `self`.
-+ If users use [functional API](https://www.tensorflow.org/guide/keras#functional_api), the model
-instance created should be returned.
 
 ### prepare_data_for_a_single_file
 ```
