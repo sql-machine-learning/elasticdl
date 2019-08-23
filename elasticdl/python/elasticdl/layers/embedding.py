@@ -24,8 +24,6 @@ class Embedding(tf.keras.layers.Layer):
       combiner: A string specifying the reduction op or None if not used.
         "mean", "sqrtn" and "sum" are supported for the reduction op.
         If input is SparseTensor, combiner must set as a reduction op.
-    TODO: support mask_zero
-    TODO: support combiner for dense input
     """
 
     def __init__(
@@ -43,7 +41,7 @@ class Embedding(tf.keras.layers.Layer):
 
         self.output_dim = output_dim
         self.embedding_initializer = embedding_initializer
-        self.mask_zero = mask_zero
+        self.supports_masking = mask_zero
         self.input_length = input_length
         self.combiner = combiner
         self.tape = None
@@ -94,6 +92,11 @@ class Embedding(tf.keras.layers.Layer):
         )
         return batch_embedding
 
+    def compute_mask(self, inputs, mask=None):
+        if not self.supports_masking:
+            return None
+        return tf.math.not_equal(inputs, 0)
+
     def call(self, input):
         if isinstance(input, tf.SparseTensor):
             return self.sparse_input_call(input)
@@ -117,6 +120,7 @@ class Embedding(tf.keras.layers.Layer):
         outputs = tf.reshape(
             outputs, ids.get_shape().concatenate(self.output_dim)
         )
+        # TODO: support combiner for dense input
         return outputs
 
     def sparse_input_call(self, sparse_input):
