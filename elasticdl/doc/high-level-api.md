@@ -125,7 +125,7 @@ class TrainSpec(object):
         pass
 
     @abstractmethod
-    def create_dataset(self, dataset, training):
+    def create_dataset(self, dataset, mode):
         """returns a `tf.data.Dataset`"""
         pass
 ```
@@ -184,6 +184,33 @@ class MnistTrainSpec(TrainSpec):
                     )
             }
         return {}
+
+    def create_dataset(self, dataset, mode):
+        def _parse_data(record):
+            if mode == Mode.PREDICTION:
+                feature_description = {
+                "image": tf.io.FixedLenFeature([28, 28], tf.float32)
+            }
+            else:
+                feature_description = {
+                    "image": tf.io.FixedLenFeature([28, 28], tf.float32),
+                    "label": tf.io.FixedLenFeature([1], tf.int64),
+                }
+            r = tf.io.parse_single_example(record, feature_description)
+            features = {
+                "image": tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
+            }
+            if mode == Mode.PREDICTION:
+                return features
+            else:
+                return features, tf.cast(r["label"], tf.int32)
+
+        dataset = dataset.map(_parse_data)
+
+        if mode != Mode.PREDICTION:
+            dataset = dataset.shuffle(buffer_size=1024)
+        return dataset
+
 ```
 
 + Constructor will receive a keyword parameter `context`, which will contain environment information.
