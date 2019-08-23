@@ -170,7 +170,7 @@ def create_metrics(self,
             outputs=None,
             labels=None)
 ```
-`metrics` is a function that returns a dictionary where the key is name of the metric and the value
+`create_metrics` is a function that returns a dictionary where the key is name of the metric and the value
 is the metric result from the `outputs` and `labels` , or `labels` using TensorFlow API. For example,
 if mode equals `Mode.EVALUATION`, the returned metric dict is used to evaluate the model.
 
