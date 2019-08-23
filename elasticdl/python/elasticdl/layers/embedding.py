@@ -4,9 +4,9 @@ from tensorflow.python.keras.utils import tf_utils
 
 class Embedding(tf.keras.layers.Layer):
     """
-    Input: indexes for the embedding entries
-           shape is (batch_size, input_length)
-           input can be SparseTensor
+    Input: indexes for the embedding entries with a shape of
+      (batch_size, input_length). Input can be either dense tensor
+      or SparseTensor.
     Output:
       corresponding (combined) embeddings with a shape of
       (batch_size, input_length, output_dim) if combiner is None
@@ -105,8 +105,10 @@ class Embedding(tf.keras.layers.Layer):
             self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
         )
         if self.tape:
-            # tape.watch works with eager mode only
-            # gradient for embeddings is SparseTensor here due to tf.gather op
+            # tape.watch works with eager mode only.
+            # Gradient for embeddings is SparseTensor here due to tf.gather op.
+            # tf.gather accesses tensor slices, resulting in sparse tensor
+            # gradient.
             if not tf.executing_eagerly():
                 raise RuntimeError("tape.watch only works with eager mode")
             self.tape.watch(batch_embedding_tensor)
