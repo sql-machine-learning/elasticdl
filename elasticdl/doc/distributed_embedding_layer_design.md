@@ -172,9 +172,7 @@ Distributed storage will be empty at first. We adopts lazy initialization for em
 Worker defines a [`lookup_embedding`](#pseudocode-for-lookup_embedding) function and the `Embedding` layer will use it in [`Embedding.call`](#pseudocode-for-Embeddingcall). `lookup_embedding` will use the access point to access the distributed storage.
 
 
-## Design Proposal
-
-### Forward-Pass
+## Forward-Pass
 In the forward-pass of each iteration, embedding layer takes a minibatch of discrete ids and returns the corresponding embedding vectors. Here is a simple example:
 
 ```
@@ -277,7 +275,8 @@ for all embedding layers in worker:
 	embedding.set_tape(tape)
 ```
 
-#### Initialization of Embedding Vectors
+### Initialization of Embedding Vectors
+
 As mentioned in above section, *ElasticDL* adopts lazy initialization for embedding vectors. We will create and initialize an embedding vector when a new id appears. Thus, when `Embedding.call()` calls `Worker.lookup_embedding()`, worker will do following things:
 
 * get embedding vectors for known ids from external distributed storage 
@@ -309,9 +308,11 @@ def Worker.lookup_embedding(self, ids, initializer='uniform'):
 
 `initilizer` is a `string` and it is used for get initializer. For example, in *Keras* interface, `initilizer='random_normal'` indicates initializer `keras.initializers.RandomNormal()`.
 
-### Backward-Pass
-We get *BET_list* from all `Embedding` layers. Worker computes *BET_list*'s gradient *G_BET_list*, and reports *G_BET_list* to master. Then master updates the embedding vectors and writes back to the distributed storage.
-#### Worker computes embedding vectors' gradient
+## Backward-Pass
+We get *BET_list* from all `Embedding` layers. Worker computes *BET_list*'s gradients *G_BET_list*, and reports *G_BET_list* to master. Then master updates the embedding vectors and writes back to the distributed storage.
+
+### Worker computes embedding vectors' gradients
+
 Worker computes the gradients of the embedding vectors in the same way as the trainable variables' gradients. So we put them together by changing line 9 of `training_process_eagerly` to:
 
 ```
@@ -319,17 +320,18 @@ Worker computes the gradients of the embedding vectors in the same way as the tr
     G_BET_list = grads[len(self._model.trainable_variables):]
 ```
 
-#### Worker reports embedding vectors' gradient to master  
+### Worker reports embedding vectors' gradients to master
 
 In the forward-pass, worker reads a set of embedding vectors corresponding to the input ids. In the backward-pass,
-we only update these embedding vectors. Worker reports the embedding vectors' ids and gradients to master. Master can locate embedding vectors in embedding table with embedding vector ids and update corresponding embedding vectors. 
-We put *G_BET* and *unique_ids* (get from Embedding layer instance) together to create a set of tensor slices ([tf.IndexedSlices](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/IndexedSlices)) as the embedding vector's gradient `G_E`:
+we only update these embedding vectors. Worker reports the embedding vectors' ids and gradients to master. Master locates embedding vectors in embedding table with embedding vector ids and updates corresponding embedding vectors. 
+We put *G_BET* and *unique_ids* (get from Embedding layer instance) together to create a set of tensor slices ([tf.IndexedSlices](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/IndexedSlices)) as the embedding vector's gradients `G_E`:
 
 ```
 G_E.values = G_BET_list
 G_E.indices = unique_ids_list
 ```
-#### Master update embedding table with embedding vectors' gradients
+
+### Master updates embedding table with embedding vectors' gradients
 
 The master accumulates the embedding vectors' gradients `G_E` as `G_EM`. When there are enough gradients to update the model, the master updates embedding table `E` with the accumulated `G_EM`. In order to call `optimizer.apply_gradient` only once, we should concatenate the gradients of trainable variables `G_variable` and gradients `G_EM` together.
 
@@ -346,14 +348,95 @@ updated_variables = optimizer.apply_gradient(
 updated_embeddings = updated_variables[len(G_variable):]
 write_back_to_embedding_table(G_EM.indices, updated_embeddings)
 ```
-#### Support slots in Optimizer
 
-For [SGD](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/SGD?hl=en), we can use `optimizer.apply_gradient` directly to update the embedding table as shown above.
+## Support slots in Optimizer
 
-Many other optimizers allocate and manage additional varaiables associated with the variables to train, which are called slots in TensorFlow. For example, [tf.keras.optimizers.Ftrl](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Ftrl?hl=en) has two slots (*accumulator* and *linear*). [tf.keras.optimizers.Adam](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Adam?hl=en) also has two slots (*m* and *v*).
+According to [official doc for TensorFlow Optimizer](https://www.tensorflow.org/api_docs/python/tf/train/Optimizer), some optimizer subclasses, such as MomentumOptimizer and AdagradOptimizer allocate and manage additional variables associated with the variables to train. These are called *slots*.
 
-For the optimizers with slots, we should also store these slots in the distributed storage together with their corresponding embedding tables. Also, we need to write a corresponding *embedding_optimizer* to use the slots stored in the distributed storage.  In  `embedding_optimizer.apply_gardient((G_EM.values[i], embedding))`, we need to get the corresponding slots for *G_EM*, and update them as well.
+Slots are tensors of the same size as that of the corresponding parameters.. For huge embedding tables, optimizers would have to save the corresponding slots in the distributed storage. 
 
+TensorFlow optimizers don't access distributed storage and cannot gradient-descend embedding tables. Therefore, if a model uses `elasticdl.layers.Embedding`, we need to call extended optimizers derived from some TensorFlow optimizers.
+
+To extend an optimizer, we need to override method `apply_gradients(grads_and_vars)`, which takes `(gradients, variables)` pairs and updates `variables` and slots. The extended optimizer does five things in `apply_gradients`:
+
+1. gets slot values from the distributed storage
+2. creates slots and initializes them using the values gotten from the distributed storage 
+3. calls the `apply_gradients` function of the base optimizer class
+4. gets modified values, push them to the distributed storage
+5. deletes those slots from the optimizer
+
+Instead of using the same slots and modifying their value, we create slots every time `apply_gradients` is called. This is because that the shapes of the slots are LxN, where L is the number of updated embedding vectors in each iteration and N is the output dimension of the embedding layer. L may differ between different iterations and TensorFlow does not allow users to change the shape of a variable.
+
+Here is the pseudocode and we will illustrate some implementation details below the pseudocode.
+
+```
+# elasticdl.optimizers.Adam class:
+class Adam(tf.keras.optimizers.Adam):
+    def __init__(self, keras_optimizer):
+        # Adam algorithm needs two slots *m* and *v*
+        self._allowed_slots_name = ['m', 'v']
+        # Adam algorithm initialize slots with all zeros
+        self._slots_initializers = 'zeros'
+        ...
+	
+		
+    def apply_gradients(grads_and_vars):
+        """Overriden to update parameters."""
+        grads_and_vars = self._lookup_embedding_vectors_and_slots(grads_and_vars)
+        super(Adam, self).apply_gradients(grads_and_vars)
+        self._push_slots_to_kv_store(grads_and_vars)
+        self._delete_slots(grads_and_vars)
+		
+    def _lookup_embedding_vectors_and_slots(grads_and_vars):
+        """
+            Lookup embedding vectors and slots from embedding service.
+            This function saves slots in self._slot_init_value, and
+            fills embedding vectors into `grads_and_vars`.
+        """
+        embedding_var_list = [
+            var for grad, var in grads_and_vars 
+            if var is from ElasticDL embedding layer
+        ]
+		
+        # lookup embedding vectors and slot values from distributed storage
+        embedding_vectors, slot_values, unknown_slots = \
+            self._lookup(embedding_var_list)
+        slot_values = self._initialize_slots(slot_values, unknown_slots)
+		
+        # this will be used when initialize slots
+        self._slot_init_value = slot_values
+		
+        # fill embedding vectors into `grads_and_vars`
+        grads_and_vars_filled = []
+        for grad, var in grads_and_vars:
+            if var is from ElasticDL embedding layer:
+                grads_and_vars_filled.append((grad, embedding_vectors[var]))
+            else:
+                grads_and_vars_filled.append((grad, var))
+        return grads_and_vars_filled
+		
+    def _initialize_slots(self, slot_values, unknown_slots):
+        """Initialize slots according to self.slots_initializer."""
+	
+    def _push_slots_to_kv_store(grads_and_vars):
+        """Extract slots and push them to the kv store."""
+		
+    def _delete_slots(grads_and_vars):
+        """Delete slots."""
+
+    def _create_slots(self, var_list):
+        """Overriden to create and initialize slots if not exists."""
+        for var in var_list:
+            self.add_slot(var, 'm', self._slot_init_value[var]['m'])
+        for var in var_list:
+            self.add_slot(var, 'v', self._slot_init_value[var]['v'])
+```
+
+First, we override the function `_create_slots` provided by the base class `Optimizer`, which is responsible for the creation and initialization of slots. We don't need to call `_create_slots` explicitly because `Optimizer.apply_gradient` calls it.
+
+Second, according to the above section [Backward-Pass](#Backward-Pass), parameter server needs to lookup embedding vectors from the distributed storage and passes these embedding vectors to optimizer when calls `apply_gradients`. In order to access the distributed storage only once, the optimizer lookups embedding vectors and slots together.
+
+Please be aware that users of ElasticDL can still use Keras optimizers. ElasticDL checks that if there is an ElasticDL embedding layer in user's model, ElasticDL will replace the Keras optimizer by ElastcDL's optimizer.
 
 ## Issues to solve
 
