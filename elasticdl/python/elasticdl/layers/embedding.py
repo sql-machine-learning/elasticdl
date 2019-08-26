@@ -95,7 +95,7 @@ class Embedding(tf.keras.layers.Layer):
 
     def call(self, input):
         if isinstance(input, tf.SparseTensor):
-            return self.sparse_input_call(input)
+            return self._sparse_input_call(input)
 
         ids = tf.convert_to_tensor(input, name="embedding_ids")
         flat_ids = tf.reshape(ids, [-1])
@@ -119,7 +119,7 @@ class Embedding(tf.keras.layers.Layer):
         # TODO: support combiner for dense input
         return outputs
 
-    def sparse_input_call(self, sparse_input):
+    def _sparse_input_call(self, sparse_input):
         if self.combiner not in ["sum", "mean", "sqrtn"]:
             raise ValueError(
                 "combiner must set sum, mean or sqrtn for sparse input"
