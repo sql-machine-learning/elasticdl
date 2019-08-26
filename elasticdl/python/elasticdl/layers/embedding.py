@@ -88,7 +88,10 @@ class Embedding(tf.keras.layers.Layer):
 
     def lookup_embedding(self, unique_ids):
         batch_embedding = self.worker.lookup_embedding(
-            unique_ids, self._name, self.embedding_initializer, self.output_dim
+            unique_ids.numpy(),
+            self._name,
+            self.embedding_initializer,
+            self.output_dim,
         )
         return batch_embedding
 
@@ -110,7 +113,7 @@ class Embedding(tf.keras.layers.Layer):
             if not tf.executing_eagerly():
                 raise RuntimeError("tape.watch only works with eager mode")
             self.tape.watch(batch_embedding_tensor)
-            self.bet_ids_pair.append((batch_embedding_tensor, unique_ids))
+            self.bet_ids_pair.append((batch_embedding_tensor, flat_ids))
         outputs = tf.gather(batch_embedding_tensor, idx)
         # tf.reshape does not support shape with None. Replace None with -1.
         if ids.get_shape().rank == 2:

@@ -217,6 +217,7 @@ class Worker(object):
             else:
                 req.gradient[v.name].CopyFrom(ndarray_to_tensor(g.numpy()))
 
+        # deal with gradients of ElasticDL embedding layer
         # should keep the same order as self.get_trainable_items()
         if self._embedding_layers:
             grads_edlembedding = grads[origin_var_n:]
@@ -235,17 +236,18 @@ class Worker(object):
             for layer in self._embedding_layers:
                 g_values = None
                 g_indices = None
-                # TODO: translate ids in gradients of bet
                 for bet, ids in layer.bet_ids_pair:
+                    grad = grads_edlembedding[it]
+                    it += 1
+                    # ElasticDL embedding layer with Sparse Gradients
+                    if isinstance(grad, tf.IndexedSlices):
+                        grad = grad.values
                     if g_values is not None:
-                        g_values = tf.concat(
-                            [g_values, grads_edlembedding[it]], axis=0
-                        )
+                        g_values = tf.concat([g_values, grad], axis=0)
                         g_indices = tf.concat([g_indices, ids], axis=0)
                     else:
-                        g_values = grads_edlembedding[it]
+                        g_values = grad
                         g_indices = ids
-                    it += 1
 
                 req.gradient[layer.name].CopyFrom(
                     ndarray_to_tensor(
