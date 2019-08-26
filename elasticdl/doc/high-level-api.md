@@ -83,14 +83,14 @@ We hope the ElasticDL API supports not only batch learning, but also online lear
 
 ElasticDL supports Keras models built using either TensorFlow Keras [functional API](https://www.tensorflow.org/guide/keras#functional_api)
 or [model subclassing](https://www.tensorflow.org/guide/keras#model_subclassing). In order to train models, ElasticDL requires users to provide
-a `TrainSpec`. The `TrainSpec` tells ElasticDL how to create model, optimizer, loss, dataset and metrics.
+a `ElasticDLSpec`. The `ElasticDLSpec` tells ElasticDL how to create model, optimizer, loss, dataset and metrics.
 
 Please refer to [model\_building](./model_building.md) for detailed explaination of each function.
 
 ```python
 from elasticdl.python.common.constants import Mode
 
-class TrainSpec(object):
+class ElasticDLSpec(object):
     def __init__(self, context=None):
         """
         Args: context: a dict of contextual information from ElasticDL,
@@ -131,14 +131,14 @@ class TrainSpec(object):
 ```
 
 For example, we want to train a model on mnist dataset. We need to provide a similar
-`TrainSpec` to ElasticDL. Let's call it `MnistTrainSpec`.
+`ElasticDLSpec` to ElasticDL. Let's call it `MnistElasticDLSpec`.
 
 ```python
 
-class MnistTrainSpec(TrainSpec):
+class MnistElasticDLSpec(ElasticDLSpec):
 
     def __init__(self, context=None, **kwargs):
-        super(MnistTrainSpec, self).__init__(context=context)
+        super(MnistElasticDLSpec, self).__init__(context=context)
 
     def create_optimizer(self, lr=0.1):
         return tf.train.GradientDescentOptimizer(learning_rate=lr)

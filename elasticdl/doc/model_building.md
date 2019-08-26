@@ -1,22 +1,22 @@
 # ElasticDL Model Building
 To submit an ElasticDL job, a user needs to provide a model file, such as [`mnist_functional_api.py`](../../model_zoo/mnist_functional_api/mnist_functional_api.py) used in this [example](elastic_scheduling.md#submit-the-first-job-with-low-priority).
 
-This model file contains a [`TrainSpec`](#TrainSpec). It describes functions that ElasticDL needs in order to train models. The `TrainSpec` contains [create\_dataset](#create_dataset), [create\_loss](#create_loss), [create\_optimizer](#create_optimizer), and [create\_metrics](#create_metrics).
+This model file contains a [`ElasticDLSpec`](#ElasticDLSpec). It describes functions that ElasticDL needs in order to train models. The `ElasticDLSpec` contains [create\_dataset](#create_dataset), [create\_loss](#create_loss), [create\_optimizer](#create_optimizer), and [create\_metrics](#create_metrics).
 
 ## Model File Components
 
-### TrainSpec
+### ElasticDLSpec
 `model` is a Keras model built using either TensorFlow Keras [functional API](https://www.tensorflow.org/guide/keras#functional_api) or [model subclassing](https://www.tensorflow.org/guide/keras#model_subclassing).
 
 The following example shows a `model` using functional API, which has one input with shape (28, 28), and one putput with shape (10,):
 
 ```
-from elastic.python.training import TrainSpec
+from elastic.python.training import ElasticDLSpec
 
-class ModelUsingFunctionalAPITrainSpec(TrainSpec):
+class ModelUsingFunctionalAPIElasticDLSpec(ElasticDLSpec):
 
     def __init__(self, context=None):
-        super(ModelUsingFunctionalAPITrainSpec, self).__init__(context=context)
+        super(ModelUsingFunctionalAPIElasticDLSpec, self).__init__(context=context)
 
     def create_model(self):
         inputs = tf.keras.Input(shape=(28, 28), name='image')
@@ -32,13 +32,13 @@ class ModelUsingFunctionalAPITrainSpec(TrainSpec):
 
      # implement other abstract methods
 
-model = ModelUsingFunctionalAPITrainSpec.create_model()
+model = ModelUsingFunctionalAPIElasticDLSpec.create_model()
 ```
 
 Another example using model subclassing:
 
 ```
-from elastic.python.training import TrainSpec
+from elastic.python.training import ElasticDLSpec
 
 class MnistModel(tf.keras.Model):
 
@@ -69,16 +69,16 @@ class MnistModel(tf.keras.Model):
         return x
 
 
-class ModelUsingSubclassTrainSpec(TrainSpec):
+class ModelUsingSubclassElasticDLSpec(ElasticDLSpec):
     def __init__(self, context=None):
-        super(ModelUsingSubclassTrainSpec, self).__init__(context=context)
+        super(ModelUsingSubclassElasticDLSpec, self).__init__(context=context)
 
     def create_model(self):
         return MnistModel()
 
     # implement other abstract methods
 
-model = ModelUsingSubclassTrainSpec.create_model()
+model = ModelUsingSubclassElasticDLSpec.create_model()
 ```
 ### create_dataset
 
