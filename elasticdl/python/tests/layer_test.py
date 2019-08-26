@@ -65,7 +65,7 @@ class mock_worker:
         for i in range(embedding_size):
             self.embedding[i].fill(i)
 
-    def embedding_lookup(self, ids, name, embedding_initializer):
+    def lookup_embedding(self, ids, name, embedding_initializer, output_dim):
         values = np.take(self.embedding, ids, axis=0)
         return values
 
