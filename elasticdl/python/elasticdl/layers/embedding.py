@@ -111,7 +111,7 @@ class Embedding(tf.keras.layers.Layer):
             if not tf.executing_eagerly():
                 raise RuntimeError("tape.watch only works with eager mode")
             self.tape.watch(batch_embedding_tensor)
-            self.bet_ids_pair.append((batch_embedding_tensor, unique_ids))
+            self.bet_ids_pair.append((batch_embedding_tensor, flat_ids))
         outputs = tf.gather(batch_embedding_tensor, idx)
         outputs = tf.reshape(
             outputs, ids.get_shape().concatenate(self.output_dim)

@@ -196,8 +196,14 @@ class EmbeddingLayerTest(unittest.TestCase):
                 output = output * multiply_tensor
             bet = layer.bet_ids_pair[0][0]
             grads = tape.gradient(output, bet)
-            layer.reset()
             self.assertTrue((grads.values.numpy() == multiply_values).all())
+            self.assertTrue(
+                (
+                    layer.bet_ids_pair[0][1].numpy()
+                    == inputs.numpy().reshape(-1)
+                ).all()
+            )
+            layer.reset()
 
         for inputs in inputs_list:
             with tf.GradientTape() as tape:
@@ -247,10 +253,17 @@ class EmbeddingLayerTest(unittest.TestCase):
             bet = layer.bet_ids_pair[0][0]
             grads = tape.gradient(output, bet)
             grads = grads.numpy()
-            layer.reset()
             place = 8 if combiner == "sum" else 5
             for n, v in enumerate(correct_grads[combiner]):
                 self.assertAlmostEqual(grads[n][0], v, place)
+            self.assertTrue(
+                (
+                    layer.bet_ids_pair[0][1].numpy()
+                    - np.array([1, 3, 2, 0, 6])
+                    < 0.00001
+                ).all()
+            )
+            layer.reset()
 
 
 if __name__ == "__main__":
