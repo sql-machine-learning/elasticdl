@@ -41,7 +41,6 @@ class Embedding(tf.keras.layers.Layer):
 
         self.output_dim = output_dim
         self.embedding_initializer = embedding_initializer
-        # TODO: support mask_zero
         self.supports_masking = mask_zero
         self.input_length = input_length
         self.combiner = combiner
@@ -88,8 +87,8 @@ class Embedding(tf.keras.layers.Layer):
         return "-".join(map(str, name_list))
 
     def lookup_embedding(self, unique_ids):
-        batch_embedding = self.worker.embedding_lookup(
-            unique_ids.numpy(), self._name, self.embedding_initializer
+        batch_embedding = self.worker.lookup_embedding(
+            unique_ids.numpy(), self._name, self.embedding_initializer, self.output_dim
         )
         return batch_embedding
 
@@ -113,9 +112,12 @@ class Embedding(tf.keras.layers.Layer):
             self.tape.watch(batch_embedding_tensor)
             self.bet_ids_pair.append((batch_embedding_tensor, flat_ids))
         outputs = tf.gather(batch_embedding_tensor, idx)
-        outputs = tf.reshape(
-            outputs, ids.get_shape().concatenate(self.output_dim)
-        )
+        # tf.reshape does not support shape with None. Replace None with -1.
+        if ids.get_shape().rank == 2:
+            output_shape = (-1, ids.get_shape()[1], self.output_dim)
+        else:
+            output_shape = ids.get_shape().concatenate(self.output_dim)
+        outputs = tf.reshape(outputs, output_shape)
         # TODO: support combiner for dense input
         return outputs
 
@@ -146,6 +148,13 @@ class Embedding(tf.keras.layers.Layer):
         elif self.combiner == "sqrtn":
             embeddings = tf.sparse.segment_sqrt_n(embeddings, idx, segment_ids)
         return embeddings
+
+    def compute_mask(self, inputs, mask=None):
+        if isinstance(input, tf.SparseTensor):
+            raise ValueError("SparseTensor inputs do not support mask_zero")
+        if not self.supports_masking:
+            return None
+        return tf.math.not_equal(inputs, 0)
 
     def reset(self):
         self.bet_ids_pair = []

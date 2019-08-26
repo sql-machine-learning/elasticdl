@@ -65,15 +65,24 @@ class mock_worker:
         for i in range(embedding_size):
             self.embedding[i].fill(i)
 
-    def embedding_lookup(self, ids, name, embedding_initializer):
+    def lookup_embedding(self, ids, name, embedding_initializer, output_dim):
         values = np.take(self.embedding, ids, axis=0)
         return values
 
 
 def create_embedding_layer(
-    embedding_size, output_dim, input_length=None, combiner=None
+    embedding_size,
+    output_dim,
+    input_length=None,
+    combiner=None,
+    mask_zero=False,
 ):
-    layer = Embedding(output_dim, input_length=input_length, combiner=combiner)
+    layer = Embedding(
+        output_dim,
+        input_length=input_length,
+        combiner=combiner,
+        mask_zero=mask_zero,
+    )
     worker = mock_worker(embedding_size, output_dim)
     layer.set_worker(worker)
     return layer
@@ -127,12 +136,20 @@ class EmbeddingLayerTest(unittest.TestCase):
         for index, idx in enumerate(ids):
             self.assertTrue((values[index] == results[index]).all())
 
-        model = tf.keras.models.Sequential([layer])
-        outputs = model.call(np.array([ids, ids]))
-        values = outputs.numpy()[1]
-        for index, idx in enumerate(ids):
-            correct_value = np.array([idx] * output_dim, dtype=np.float32)
-            self.assertTrue((values[index] == correct_value).all())
+        # Keras model without/with input_layer
+        model_without_input_layer = tf.keras.models.Sequential([layer])
+        inputs = tf.keras.Input(shape=(7,))
+        embeddings = layer(inputs)
+        model_with_input_layer = tf.keras.Model(
+            inputs=inputs, outputs=embeddings
+        )
+        models = [model_without_input_layer, model_with_input_layer]
+        for model in models:
+            outputs = model.call(tf.constant([ids, ids]))
+            values = outputs.numpy()[1]
+            for index, idx in enumerate(ids):
+                correct_value = np.array([idx] * output_dim, dtype=np.float32)
+                self.assertTrue((values[index] == correct_value).all())
 
     def test_embedding_layer_with_input_length(self):
         output_dim = 8
@@ -172,6 +189,30 @@ class EmbeddingLayerTest(unittest.TestCase):
             place = 8 if combiner == "sum" else 5
             for n, v in enumerate(correct_values):
                 self.assertAlmostEqual(outputs[n][0], v, place)
+
+    def test_embedding_layer_with_mask_zero(self):
+        output_dim = 8
+        embedding_size = 16
+        mask_zero = True
+        layer = create_embedding_layer(
+            embedding_size, output_dim, mask_zero=mask_zero
+        )
+        ids = [[0, 1, 3, 8], [5, 0, 2, 3]]
+        correct_masks = np.ones((2, 4), dtype=np.bool)
+        correct_masks[0][0] = False
+        correct_masks[1][1] = False
+
+        masks = layer.compute_mask(ids)
+        self.assertTrue((masks.numpy() == correct_masks).all())
+
+        # SparseTensor inputs will raise error
+        indices = [[0, 0], [1, 1], [1, 2], [2, 1], [3, 1], [3, 3], [3, 5]]
+        values = [1, 1, 3, 2, 0, 2, 6]
+        dense_shape = [4, 6]
+        inputs = tf.SparseTensor(
+            indices=indices, values=values, dense_shape=dense_shape
+        )
+        self.assertRaises(ValueError, layer.compute_mask, inputs)
 
     def test_embedding_layer_gradient(self):
         output_dim = 8
