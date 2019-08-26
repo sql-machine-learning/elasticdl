@@ -4,8 +4,9 @@ from tensorflow.python.keras.utils import tf_utils
 
 class Embedding(tf.keras.layers.Layer):
     """
-    Input: indexes for the embedding entries
-           shape is (batch_size, input_length)
+    Input: indexes for the embedding entries with a shape of
+      (batch_size, input_length). Input can be either dense tensor
+      or SparseTensor.
     Output:
       corresponding (combined) embeddings with a shape of
       (batch_size, input_length, output_dim) if combiner is None
@@ -15,15 +16,14 @@ class Embedding(tf.keras.layers.Layer):
       embedding_initializer: Initializer for embedding table
       mask_zero: Whether or not the input value 0 is a special "padding"
         value that should be masked out.
+        If input is SparseTensor, mask_zero must be False.
       input_length: Length of input sequences, when it is constant.
         This argument is required if you are going to connect
         `Flatten` then `Dense` layers upstream
         (without it, the shape of the dense outputs cannot be computed).
       combiner: A string specifying the reduction op or None if not used.
         "mean", "sqrtn" and "sum" are supported for the reduction op.
-    TODO: support mask_zero
-    TODO: support combiner
-    TODO: support sparse input
+        If input is SparseTensor, combiner must set as a reduction op.
     """
 
     def __init__(
@@ -41,7 +41,8 @@ class Embedding(tf.keras.layers.Layer):
 
         self.output_dim = output_dim
         self.embedding_initializer = embedding_initializer
-        self.mask_zero = mask_zero
+        # TODO: support mask_zero
+        self.supports_masking = mask_zero
         self.input_length = input_length
         self.combiner = combiner
         self.tape = None
@@ -93,6 +94,9 @@ class Embedding(tf.keras.layers.Layer):
         return batch_embedding
 
     def call(self, input):
+        if isinstance(input, tf.SparseTensor):
+            return self._sparse_input_call(input)
+
         ids = tf.convert_to_tensor(input, name="embedding_ids")
         flat_ids = tf.reshape(ids, [-1])
         unique_ids, idx = tf.unique(flat_ids)
@@ -100,7 +104,10 @@ class Embedding(tf.keras.layers.Layer):
             self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
         )
         if self.tape:
-            # tape.watch works with eager mode only
+            # tape.watch works with eager mode only.
+            # Gradient for embeddings is SparseTensor here due to tf.gather op.
+            # tf.gather accesses tensor slices, resulting in sparse tensor
+            # gradient.
             if not tf.executing_eagerly():
                 raise RuntimeError("tape.watch only works with eager mode")
             self.tape.watch(batch_embedding_tensor)
@@ -109,7 +116,36 @@ class Embedding(tf.keras.layers.Layer):
         outputs = tf.reshape(
             outputs, ids.get_shape().concatenate(self.output_dim)
         )
+        # TODO: support combiner for dense input
         return outputs
+
+    def _sparse_input_call(self, sparse_input):
+        if self.combiner not in ["sum", "mean", "sqrtn"]:
+            raise ValueError(
+                "combiner must set sum, mean or sqrtn for sparse input"
+            )
+        unique_ids, idx = tf.unique(sparse_input.values)
+        embeddings = tf.py_function(
+            self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
+        )
+        if self.tape:
+            # tape.watch works with eager mode only
+            # gradient for embeddings is dense tensor for sparse_input_call
+            if not tf.executing_eagerly():
+                raise RuntimeError("tape.watch only works with eager mode")
+            self.tape.watch(embeddings)
+            self.bet_ids_pair.append((embeddings, unique_ids))
+        segment_ids = sparse_input.indices[:, 0]
+        if segment_ids.dtype != tf.int32:
+            segment_ids = tf.cast(segment_ids, tf.int32)
+
+        if self.combiner == "sum":
+            embeddings = tf.sparse.segment_sum(embeddings, idx, segment_ids)
+        elif self.combiner == "mean":
+            embeddings = tf.sparse.segment_mean(embeddings, idx, segment_ids)
+        elif self.combiner == "sqrtn":
+            embeddings = tf.sparse.segment_sqrt_n(embeddings, idx, segment_ids)
+        return embeddings
 
     def reset(self):
         self.bet_ids_pair = []

@@ -70,8 +70,10 @@ class mock_worker:
         return values
 
 
-def create_embedding_layer(embedding_size, output_dim, input_length=None):
-    layer = Embedding(output_dim, input_length=input_length)
+def create_embedding_layer(
+    embedding_size, output_dim, input_length=None, combiner=None
+):
+    layer = Embedding(output_dim, input_length=input_length, combiner=combiner)
     worker = mock_worker(embedding_size, output_dim)
     layer.set_worker(worker)
     return layer
@@ -80,6 +82,27 @@ def create_embedding_layer(embedding_size, output_dim, input_length=None):
 @tf.function
 def layer_call(layer, inputs):
     return layer.call(inputs)
+
+
+def get_correct_values_for_sparse_test(indices, values, dense_shape, combiner):
+    results = []
+    for i in range(dense_shape[0]):
+        embedding_values = []
+        for n, idx in enumerate(indices):
+            if idx[0] == i:
+                embedding_values.append(values[n])
+        if combiner == "sum":
+            combined_value = np.sum(embedding_values, dtype=np.float32)
+        elif combiner == "mean":
+            combined_value = np.sum(embedding_values, dtype=np.float32) / len(
+                embedding_values
+            )
+        elif combiner == "sqrtn":
+            combined_value = np.sum(
+                embedding_values, dtype=np.float32
+            ) / np.sqrt(len(embedding_values), dtype=np.float32)
+        results.append(combined_value)
+    return results
 
 
 class EmbeddingLayerTest(unittest.TestCase):
@@ -126,6 +149,30 @@ class EmbeddingLayerTest(unittest.TestCase):
             correct_value = np.array([idx] * output_dim, dtype=np.float32)
             self.assertTrue((values[index] == correct_value).all())
 
+    def test_embedding_layer_with_sparse_input(self):
+        output_dim = 8
+        embedding_size = 16
+        combiners = ["sum", "mean", "sqrtn"]
+        indices = [[0, 0], [1, 1], [1, 2], [2, 1], [3, 1], [3, 3], [3, 5]]
+        values = [1, 1, 3, 2, 0, 2, 6]
+        dense_shape = [4, 6]
+
+        for combiner in combiners:
+            layer = create_embedding_layer(
+                embedding_size, output_dim, combiner=combiner
+            )
+            inputs = tf.SparseTensor(
+                indices=indices, values=values, dense_shape=dense_shape
+            )
+            outputs = layer.call(inputs)
+            outputs = outputs.numpy()
+            correct_values = get_correct_values_for_sparse_test(
+                indices, values, dense_shape, combiner
+            )
+            place = 8 if combiner == "sum" else 5
+            for n, v in enumerate(correct_values):
+                self.assertAlmostEqual(outputs[n][0], v, place)
+
     def test_embedding_layer_gradient(self):
         output_dim = 8
         embedding_size = 16
@@ -156,6 +203,54 @@ class EmbeddingLayerTest(unittest.TestCase):
             with tf.GradientTape() as tape:
                 layer.set_tape(tape)
                 self.assertRaises(RuntimeError, layer_call, layer, inputs)
+
+    def test_embedding_layer_gradient_with_sparse_inputs(self):
+        output_dim = 8
+        embedding_size = 16
+        combiners = ["sum", "mean", "sqrtn"]
+        indices = [[0, 0], [1, 1], [1, 2], [2, 1], [3, 1], [3, 3], [3, 5]]
+        values = [1, 1, 3, 2, 0, 2, 6]
+        dense_shape = [4, 6]
+
+        multiply_values = np.ndarray(shape=(4, output_dim), dtype=np.float32)
+        for i in range(4):
+            multiply_values[i].fill(i)
+        multiply_tensor = tf.convert_to_tensor(multiply_values)
+
+        # grads for unique ids (1, 3, 2, 0, 6)
+        sum_correct_grads = [0 + 1, 1, 2 + 3, 3, 3]
+        mean_correct_grads = [1 / 2.0, 1 / 2.0, 2 + 3 / 3.0, 3 / 3.0, 3 / 3.0]
+        sqrtn_correct_grads = [
+            1 / np.sqrt(2.0),
+            1 / np.sqrt(2.0),
+            2 + 3 / np.sqrt(3.0),
+            3 / np.sqrt(3.0),
+            3 / np.sqrt(3.0),
+        ]
+        correct_grads = {
+            "sum": sum_correct_grads,
+            "mean": mean_correct_grads,
+            "sqrtn": sqrtn_correct_grads,
+        }
+
+        for combiner in combiners:
+            layer = create_embedding_layer(
+                embedding_size, output_dim, combiner=combiner
+            )
+            inputs = tf.SparseTensor(
+                indices=indices, values=values, dense_shape=dense_shape
+            )
+            with tf.GradientTape() as tape:
+                layer.set_tape(tape)
+                output = layer.call(inputs)
+                output = output * multiply_tensor
+            bet = layer.bet_ids_pair[0][0]
+            grads = tape.gradient(output, bet)
+            grads = grads.numpy()
+            layer.reset()
+            place = 8 if combiner == "sum" else 5
+            for n, v in enumerate(correct_grads[combiner]):
+                self.assertAlmostEqual(grads[n][0], v, place)
 
 
 if __name__ == "__main__":
