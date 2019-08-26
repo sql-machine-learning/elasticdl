@@ -256,7 +256,6 @@ class EmbeddingService(object):
             for ip, port_list in embedding_service_endpoint.items()
             for port in port_list
         ]
-        embedding_vectors = []
         embedding_service = RedisCluster(
             startup_nodes=startup_nodes, decode_responses=False
         ).pipeline()
