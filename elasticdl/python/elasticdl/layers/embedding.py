@@ -112,9 +112,12 @@ class Embedding(tf.keras.layers.Layer):
             self.tape.watch(batch_embedding_tensor)
             self.bet_ids_pair.append((batch_embedding_tensor, unique_ids))
         outputs = tf.gather(batch_embedding_tensor, idx)
-        outputs = tf.reshape(
-            outputs, ids.get_shape().concatenate(self.output_dim)
-        )
+        # tf.reshape does not support shape contains None. Replace None with -1.
+        if ids.get_shape().rank == 2:
+            output_shape = (-1, ids.get_shape()[1], self.output_dim)
+        else:
+            output_shape = ids.get_shape().concatenate(self.output_dim)
+        outputs = tf.reshape(outputs, output_shape)
         # TODO: support combiner for dense input
         return outputs
 

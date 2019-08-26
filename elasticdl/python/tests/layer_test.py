@@ -136,12 +136,20 @@ class EmbeddingLayerTest(unittest.TestCase):
         for index, idx in enumerate(ids):
             self.assertTrue((values[index] == results[index]).all())
 
-        model = tf.keras.models.Sequential([layer])
-        outputs = model.call(np.array([ids, ids]))
-        values = outputs.numpy()[1]
-        for index, idx in enumerate(ids):
-            correct_value = np.array([idx] * output_dim, dtype=np.float32)
-            self.assertTrue((values[index] == correct_value).all())
+        # Keras model without/with input_layer
+        model_without_input_layer = tf.keras.models.Sequential([layer])
+        inputs = tf.keras.Input(shape=(7,))
+        embeddings = layer(inputs)
+        model_with_input_layer = tf.keras.Model(
+            inputs=inputs, outputs=embeddings
+        )
+        models = [model_without_input_layer, model_with_input_layer]
+        for model in models:
+            outputs = model.call(tf.constant([ids, ids]))
+            values = outputs.numpy()[1]
+            for index, idx in enumerate(ids):
+                correct_value = np.array([idx] * output_dim, dtype=np.float32)
+                self.assertTrue((values[index] == correct_value).all())
 
     def test_embedding_layer_with_input_length(self):
         output_dim = 8
