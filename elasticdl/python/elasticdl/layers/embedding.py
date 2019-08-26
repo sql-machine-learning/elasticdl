@@ -41,7 +41,6 @@ class Embedding(tf.keras.layers.Layer):
 
         self.output_dim = output_dim
         self.embedding_initializer = embedding_initializer
-        # TODO: support mask_zero
         self.supports_masking = mask_zero
         self.input_length = input_length
         self.combiner = combiner
@@ -146,6 +145,13 @@ class Embedding(tf.keras.layers.Layer):
         elif self.combiner == "sqrtn":
             embeddings = tf.sparse.segment_sqrt_n(embeddings, idx, segment_ids)
         return embeddings
+
+    def compute_mask(self, inputs, mask=None):
+        if isinstance(input, tf.SparseTensor):
+            raise ValueError("SparseTensor inputs do not support mask_zero")
+        if not self.supports_masking:
+            return None
+        return tf.math.not_equal(inputs, 0)
 
     def reset(self):
         self.bet_ids_pair = []
