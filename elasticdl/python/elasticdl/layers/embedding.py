@@ -89,7 +89,7 @@ class Embedding(tf.keras.layers.Layer):
 
     def lookup_embedding(self, unique_ids):
         batch_embedding = self.worker.embedding_lookup(
-            unique_ids, self._name, self.embedding_initializer
+            unique_ids.numpy(), self._name, self.embedding_initializer
         )
         return batch_embedding
 
