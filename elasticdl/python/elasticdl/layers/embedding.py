@@ -112,7 +112,7 @@ class Embedding(tf.keras.layers.Layer):
             self.tape.watch(batch_embedding_tensor)
             self.bet_ids_pair.append((batch_embedding_tensor, unique_ids))
         outputs = tf.gather(batch_embedding_tensor, idx)
-        # tf.reshape does not support shape contains None. Replace None with -1.
+        # tf.reshape does not support shape with None. Replace None with -1.
         if ids.get_shape().rank == 2:
             output_shape = (-1, ids.get_shape()[1], self.output_dim)
         else:
