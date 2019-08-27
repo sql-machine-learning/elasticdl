@@ -220,6 +220,13 @@ class Client(object):
                 ),
             )
         ]
+        # if kargs["envs"]:
+        for key in kargs["envs"]:
+            env.append(V1EnvVar(
+                name=key,
+                value=kargs["envs"][key],
+            ))
+
         pod = self._create_pod(
             pod_name=self.get_master_pod_name(),
             job_name=self.job_name,
@@ -258,7 +265,7 @@ class Client(object):
             restart_policy=kargs["restart_policy"],
             volume=kargs["volume"],
             owner_pod=master_pod,
-            env=None,
+            env=kargs["envs"],
         )
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = type_key

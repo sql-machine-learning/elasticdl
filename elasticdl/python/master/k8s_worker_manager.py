@@ -20,6 +20,7 @@ class WorkerManager(object):
         volume=None,
         image_pull_policy=None,
         restart_policy="Never",
+        envs=None,
         **kwargs
     ):
         self._command = command
@@ -32,6 +33,7 @@ class WorkerManager(object):
         self._pod_priority = pod_priority
         self._volume = volume
         self._image_pull_policy = image_pull_policy
+        self._envs = envs
         self._task_d = task_d
         self._next_worker_id = itertools.count().__next__
 
@@ -70,6 +72,7 @@ class WorkerManager(object):
                 command=self._command,
                 args=self._args + ["--worker_id", str(worker_id)],
                 restart_policy=self._restart_policy,
+                envs=self._envs,
             )
             name = pod.metadata.name
             self._pod_name_to_id[name] = worker_id

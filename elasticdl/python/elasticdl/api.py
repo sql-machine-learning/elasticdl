@@ -1,6 +1,7 @@
 import os
 
 from elasticdl.python.common import k8s_client as k8s
+from elasticdl.python.common.args import parse_envs
 from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
@@ -15,6 +16,7 @@ def train(args):
         extra_pypi=args.extra_pypi_index,
         cluster_spec=args.cluster_spec,
     )
+
     container_args = [
         "-m",
         "elasticdl.python.master.main",
@@ -202,6 +204,7 @@ def _submit_job(image_name, client_args, container_args):
         image_pull_policy=client_args.image_pull_policy,
         restart_policy=client_args.restart_policy,
         volume=client_args.volume,
+        envs=parse_envs(client_args.envs),
     )
     logger.info(
         "ElasticDL job %s was successfully submitted. The master pod is: %s."

@@ -6,7 +6,10 @@ from contextlib import closing
 import grpc
 import recordio
 
+from kubernetes.client import V1EnvVar
+
 from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.python.common.args import parse_envs
 from elasticdl.python.common.constants import (
     GRPC,
     JobType,
@@ -250,6 +253,15 @@ def main():
             str(embedding_service_endpoint),
         ]
 
+        envs = parse_envs(args.envs)
+        env = []
+        for key in envs:
+            env.append(V1EnvVar(
+                name=key,
+                value=envs[key],
+            ))
+
+
         worker_manager = WorkerManager(
             task_d,
             job_name=args.job_name,
@@ -265,6 +277,7 @@ def main():
             image_pull_policy=args.image_pull_policy,
             restart_policy=args.restart_policy,
             cluster_spec=args.cluster_spec,
+            envs=env,
         )
         worker_manager.update_status(WorkerManagerStatus.PENDING)
         logger.info("Launching %d workers", args.num_workers)
