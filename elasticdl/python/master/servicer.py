@@ -149,29 +149,20 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             embedding table in the distributed storage
         """
         keys = []
-        embeddings = None
+        embeddings = []
         for layer_name, unique_ids, embedding_var in name_var_list:
-            if keys:
-                keys.extend(
-                    [
-                        Embedding.get_key([layer_name, i])
-                        for i in unique_ids.numpy()
-                    ]
-                )
-                embeddings = np.concatenate(
-                    (embeddings, embedding_var.numpy()), axis=0
-                )
-            else:
-                keys = [
+            keys.extend(
+                [
                     Embedding.get_key([layer_name, i])
                     for i in unique_ids.numpy()
                 ]
-                embeddings = embedding_var.numpy()
+            )
+            embeddings.extend([i for i in embedding_var.numpy()])
 
-        if embeddings is not None:
+        if embeddings:
             EmbeddingService.update_embedding(
                 keys=keys,
-                embeddings=embeddings,
+                embedding_vectors=embeddings,
                 embedding_service_endpoint=self._embedding_service_endpoint,
             )
 
@@ -197,17 +188,26 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 unique_ids, idx = tf.unique(grads.indices)
                 unique_ids_list.append(unique_ids)
                 grads_idx_transformed = tf.IndexedSlices(grads.values, idx)
-                embeddings = EmbeddingService.lookup_embedding(
+                keys = [
+                    Embedding.get_key([layer_name, i])
+                    for i in unique_ids.numpy()
+                ]
+                embeddings, unknown_keys = EmbeddingService.lookup_embedding(
                     embedding_service_endpoint=(
                         self._embedding_service_endpoint
                     ),
-                    keys=[
-                        Embedding.get_key([layer_name, i])
-                        for i in unique_ids.numpy()
-                    ],
+                    keys=keys,
                 )
-                if embeddings is None:
+                if unknown_keys:
+                    raise RuntimeError(
+                        "Master reviced %d unknown embedding keys: %s ..."
+                        % (len(unknown_keys), str(unknown_keys[0]))
+                    )
+                if not embeddings:
                     continue
+                embeddings = np.concatenate(embeddings, axis=0).reshape(
+                    len(keys), -1
+                )
                 embedding_var = tf.Variable(embeddings)
                 grad_var.append((grads_idx_transformed, embedding_var))
 

@@ -296,7 +296,7 @@ class EmbeddingService(object):
         if (
             keys is None
             or embedding_vectors is None
-            or len(keys) != embedding_vectors.shape[0]
+            or len(keys) != len(embedding_vectors)
         ):
             raise Exception(
                 "keys and embedding_vectors can not be 'None'. "
