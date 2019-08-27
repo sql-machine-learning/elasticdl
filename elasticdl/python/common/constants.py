@@ -32,4 +32,4 @@ class Mode(object):
 
 
 class Redis(object):
-    COMMAND_WAIT_TIME = 10
+    RETRY_COMMAND_TIMES = 10

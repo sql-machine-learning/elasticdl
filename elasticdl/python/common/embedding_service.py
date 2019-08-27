@@ -91,21 +91,9 @@ class EmbeddingService(object):
             "echo yes | redis-cli --cluster create %s "
             "--cluster-replicas %d" % (redis_cluster_command, self._replicas)
         )
-        start_time = time.time()
-        while time.time() - start_time < Redis.COMMAND_WAIT_TIME:
-            redis_process = subprocess.Popen(
-                [command],
-                shell=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            redis_process.wait()
-            if not redis_process.returncode:
-                return self._embedding_service_endpoint
-            redis_process.kill()
-            # Wait for retry
-            time.sleep(0.5)
-
+        returncode = self._run_shell_command(command)
+        if not returncode:
+            return self._embedding_service_endpoint
         raise Exception(
             "Create Redis cluster failed with command: %s" % command
         )
@@ -118,22 +106,8 @@ class EmbeddingService(object):
             for port in port_list
         ]:
             command = "redis-cli %s shutdown %s" % (redis_node, save)
-            start_time = time.time()
-            while time.time() - start_time < Redis.COMMAND_WAIT_TIME:
-                redis_process = subprocess.Popen(
-                    [command],
-                    shell=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                redis_process.wait()
-                if not redis_process.returncode:
-                    break
-                redis_process.kill()
-                # Wait for retry
-                time.sleep(0.5)
-
-            if redis_process.returncode:
+            returncode = self._run_shell_command(command)
+            if returncode:
                 failed_redis_nodes.append(redis_node)
 
         if failed_redis_nodes:
@@ -215,22 +189,8 @@ class EmbeddingService(object):
                 "--protected-mode no"
                 % (port, port, args.cluster_node_timeout, port, port, port)
             )
-            start_time = time.time()
-            while time.time() - start_time < Redis.COMMAND_WAIT_TIME:
-                redis_process = subprocess.Popen(
-                    [command],
-                    shell=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                redis_process.wait()
-                if not redis_process.returncode:
-                    break
-                redis_process.kill()
-                # Wait for retry
-                time.sleep(0.5)
-
-            if redis_process.returncode:
+            returncode = self._run_shell_command(command)
+            if returncode:
                 failed_port.append(port)
         if failed_port:
             local_ip = os.getenv("MY_POD_IP", "localhost")
@@ -238,6 +198,24 @@ class EmbeddingService(object):
                 "%s starts these redis instances failed: %s"
                 % (local_ip, ";".join(map(str, failed_port)))
             )
+
+    def _run_shell_command(self, command):
+        retry_times = 0
+        while retry_times < Redis.RETRY_COMMAND_TIMES:
+            redis_process = subprocess.Popen(
+                [command],
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            redis_process.wait()
+            if not redis_process.returncode:
+                break
+            redis_process.kill()
+            # Wait for retry
+            time.sleep(1)
+            retry_times += 1
+        return redis_process.returncode
 
     # TODO: Now, we use single pod to start redis cluster service, we
     # should support a redis cluster service running on multi-pods in
