@@ -29,3 +29,7 @@ class Mode(object):
     TRAINING = "training"
     EVALUATION = "evaluation"
     PREDICTION = "prediction"
+
+
+class Redis(object):
+    COMMAND_WAIT_TIME = 10
