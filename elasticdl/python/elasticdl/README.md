@@ -58,7 +58,8 @@ python -m elasticdl.python.elasticdl.client train \
     --grads_to_wait=2 \
     --job_name=test \
     --image_pull_policy=Never \
-    --log_level=INFO
+    --log_level=INFO \
+    --envs=e1=v1,e2=v2
 ```
 
 ### Submit to a GKE cluster
@@ -94,7 +95,8 @@ python -m elasticdl.python.elasticdl.client train \
     --volume="mount_path=/data,claim_name=fileserver-claim" \
     --image_pull_policy=Always \
     --log_level=INFO \
-    --docker_image_prefix=gcr.io/elasticdl
+    --docker_image_prefix=gcr.io/elasticdl \
+    --envs=e1=v1,e2=v2
 ```
 
 The difference is that we add a new argument `cluster_spec` which points to a cluster specification file.

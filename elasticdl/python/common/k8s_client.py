@@ -220,7 +220,6 @@ class Client(object):
                 ),
             )
         ]
-        # if kargs["envs"]:
         for key in kargs["envs"]:
             env.append(V1EnvVar(
                 name=key,

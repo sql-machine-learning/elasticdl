@@ -253,14 +253,14 @@ def main():
             str(embedding_service_endpoint),
         ]
 
-        envs = parse_envs(args.envs)
+        logger.info(">>> master pod envs argument is %s" % args.envs)
+        env_dict = parse_envs(args.envs)
         env = []
-        for key in envs:
+        for key in env_dict:
             env.append(V1EnvVar(
                 name=key,
-                value=envs[key],
+                value=env_dict[key],
             ))
-
 
         worker_manager = WorkerManager(
             task_d,
