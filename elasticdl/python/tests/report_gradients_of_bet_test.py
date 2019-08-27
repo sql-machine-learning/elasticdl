@@ -19,28 +19,15 @@ class MockEmbeddingService:
 
     def mock_lookup_embedding(self, **kwargs):
         keys = kwargs["keys"]
-        embeddings = None
+        embeddings = []
         for k in keys:
             layer_name, idx = k.split("-")
             idx = int(idx)
-            if embeddings is None:
-                embeddings = self.mock_embedding_table[layer_name][
-                    idx
-                ].reshape((1, -1))
-            else:
-                embeddings = np.concatenate(
-                    [
-                        embeddings,
-                        self.mock_embedding_table[layer_name][idx].reshape(
-                            (1, -1)
-                        ),
-                    ],
-                    axis=0,
-                )
-        return embeddings
+            embeddings.append(self.mock_embedding_table[layer_name][idx])
+        return embeddings, []
 
     def mock_update_embedding(self, **kwargs):
-        keys, embeddings = kwargs["keys"], kwargs["embeddings"]
+        keys, embeddings = kwargs["keys"], kwargs["embedding_vectors"]
         if embeddings is None:
             return
         for k, emb in zip(keys, embeddings):
