@@ -423,6 +423,11 @@ class OptimizerWrapper(object):
         self._report_to_kv_store()
 ```
 
+Please note that, according to [official doc](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Adam), some TensorFlow optimizers modifies embedding vectors even if they were not used in the forward pass. Take Adam optimizer as an example, because the update rule of Adam is comprised of slots and gradients, embedding vectors may change even if the gradients equal to zero. 
+
+In TensorFlow 1.x, there is an optimizer in `tf.contrib` called `LazyAdamOptimizer`, which adopts lazy updating rule, i.e. only updating paramters and slots that appeared in this batch. Pytorch also implements `SparseAdam` which does the same thing. For the performance reason, we choose to implement only the lazy version of optimizers.
+
+
 ## Issues to solve
 
 * How to checkpoint with EdlEmbedding layer?
