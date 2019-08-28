@@ -91,19 +91,22 @@ def _read_odps_one_shot(
 
 
 def _configure_odps_options(endpoint, options=None):
-    odps.options.retry_times = options.get("odps.options.retry_times", 5)
-    odps.options.read_timeout = options.get("odps.options.read_timeout", 200)
-    odps.options.connect_timeout = options.get(
-        "odps.options.connect_timeout", 200
-    )
-    odps.options.tunnel.endpoint = options.get(
-        "odps.options.tunnel.endpoint", None
-    )
-    if (
-        odps.options.tunnel.endpoint is None
-        and "service.odps.aliyun-inc.com/api" in endpoint
-    ):
-        odps.options.tunnel.endpoint = "http://dt.odps.aliyun-inc.com"
+    if endpoint is not None:
+        odps.options.retry_times = options.get("odps.options.retry_times", 5)
+        odps.options.read_timeout = options.get(
+            "odps.options.read_timeout", 200
+        )
+        odps.options.connect_timeout = options.get(
+            "odps.options.connect_timeout", 200
+        )
+        odps.options.tunnel.endpoint = options.get(
+            "odps.options.tunnel.endpoint", None
+        )
+        if (
+            odps.options.tunnel.endpoint is None
+            and "service.odps.aliyun-inc.com/api" in endpoint
+        ):
+            odps.options.tunnel.endpoint = "http://dt.odps.aliyun-inc.com"
 
 
 class ODPSReader(object):
