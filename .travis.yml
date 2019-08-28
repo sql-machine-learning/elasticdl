@@ -47,7 +47,7 @@ jobs:
         - touch $KUBECONFIG
         # Start minikube
         - sudo minikube start --vm-driver=none --kubernetes-version=v$K8S_VERSION --cpus 2 --memory 6144
-        - "sudo chown -R travis: /home/travis/.minikube/"
+        - sudo chown -R travis: $HOME/.minikube/
         - kubectl cluster-info
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
         - docker build -t elasticdl:ci -f elasticdl/docker/Dockerfile.ci .
