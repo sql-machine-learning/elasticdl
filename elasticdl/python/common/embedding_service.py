@@ -201,7 +201,12 @@ class EmbeddingService(object):
 
     def _run_shell_command(self, command):
         retry_times = 0
-        while retry_times < Redis.RETRY_COMMAND_TIMES:
+        while retry_times <= Redis.MAX_COMMAND_RETRY_TIMES:
+            if retry_times:
+                logger.warning(
+                    'Command: "%s" failed to run, retry times: %d .'
+                    % (command, retry_times)
+                )
             redis_process = subprocess.Popen(
                 [command],
                 shell=True,
