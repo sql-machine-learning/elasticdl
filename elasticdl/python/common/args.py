@@ -14,6 +14,34 @@ def non_neg_int(arg):
     return res
 
 
+def parse_envs(arg):
+    """Parse environment configs as a dict.
+
+    Support format 'k1=v1,k2=v2,k3=v3..'. Note that comma is supported
+    in value field.
+    """
+    envs = {}
+    if not arg:
+        return envs
+
+    i = 0
+    fields = arg.split("=")
+    if len(fields) < 2:
+        return envs
+    pre_key = ""
+    while i < len(fields):
+        if i == 0:
+            pre_key = fields[i]
+        elif i == len(fields) - 1:
+            envs[pre_key] = fields[i]
+        else:
+            r = fields[i].rfind(",")
+            envs[pre_key] = fields[i][:r]
+            pre_key = fields[i][r + 1 :]  # noqa: E203
+        i += 1
+    return envs
+
+
 def add_common_params(parser):
     parser.add_argument(
         "--model_zoo",
@@ -77,6 +105,12 @@ def add_common_params(parser):
         "--restart_policy",
         default="Never",
         help="The pod restart policy when pod crashed",
+    )
+    parser.add_argument(
+        "--envs",
+        type=str,
+        help="Runtime environment variables. (key1=value1,key2=value2), "
+        "comma is supported in value field",
     )
     parser.add_argument(
         "--extra_pypi_index", help="The extra python package repository"

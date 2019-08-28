@@ -39,7 +39,7 @@ evaluate      Submit a ElasticDL distributed evaluation job.
     add_common_params(predict_parser)
     add_predict_params(predict_parser)
 
-    args, argv = parser.parse_known_args()
+    args, _ = parser.parse_known_args()
     args.func(args)
 
 

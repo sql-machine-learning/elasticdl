@@ -35,4 +35,3 @@ WORKDIR /
 COPY elasticdl /elasticdl
 COPY model_zoo /model_zoo
 ENTRYPOINT ["spark-submit"]
-
