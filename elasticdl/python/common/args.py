@@ -25,19 +25,19 @@ def parse_envs(arg):
         return envs
 
     i = 0
-    fields = arg.split('=')
+    fields = arg.split("=")
     if len(fields) < 2:
         return envs
-    pre_key = ''
+    pre_key = ""
     while i < len(fields):
         if i == 0:
             pre_key = fields[i]
-        elif i == len(fields)-1:
+        elif i == len(fields) - 1:
             envs[pre_key] = fields[i]
         else:
-            r = fields[i].rfind(',')
+            r = fields[i].rfind(",")
             envs[pre_key] = fields[i][:r]
-            pre_key = fields[i][r+1:]
+            pre_key = fields[i][r + 1 :]
         i += 1
     return envs
 
@@ -110,7 +110,7 @@ def add_common_params(parser):
         "--envs",
         type=str,
         help="Runtime environment variables. (key1=value1,key2=value2), "
-        "comma is supported in value field"
+        "comma is supported in value field",
     )
     parser.add_argument(
         "--extra_pypi_index", help="The extra python package repository"

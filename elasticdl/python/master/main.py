@@ -5,7 +5,6 @@ from contextlib import closing
 
 import grpc
 import recordio
-
 from kubernetes.client import V1EnvVar
 
 from elasticdl.proto import elasticdl_pb2_grpc
@@ -257,10 +256,7 @@ def main():
         env_dict = parse_envs(args.envs)
         env = []
         for key in env_dict:
-            env.append(V1EnvVar(
-                name=key,
-                value=env_dict[key],
-            ))
+            env.append(V1EnvVar(name=key, value=env_dict[key]))
 
         worker_manager = WorkerManager(
             task_d,

@@ -221,10 +221,7 @@ class Client(object):
             )
         ]
         for key in kargs["envs"]:
-            env.append(V1EnvVar(
-                name=key,
-                value=kargs["envs"][key],
-            ))
+            env.append(V1EnvVar(name=key, value=kargs["envs"][key]))
 
         pod = self._create_pod(
             pod_name=self.get_master_pod_name(),
