@@ -220,8 +220,9 @@ class Client(object):
                 ),
             )
         ]
-        for key in kargs["envs"]:
-            env.append(V1EnvVar(name=key, value=kargs["envs"][key]))
+        if "envs" in kargs:
+            for key in kargs["envs"]:
+                env.append(V1EnvVar(name=key, value=kargs["envs"][key]))
 
         pod = self._create_pod(
             pod_name=self.get_master_pod_name(),
@@ -248,6 +249,7 @@ class Client(object):
         # Find that master pod that will be used as the owner reference
         # for this worker pod.
         master_pod = self.get_master_pod()
+        env = kargs["envs"] if "envs" in kargs else None
         pod = self._create_pod(
             pod_name=pod_name,
             job_name=self.job_name,
@@ -261,7 +263,7 @@ class Client(object):
             restart_policy=kargs["restart_policy"],
             volume=kargs["volume"],
             owner_pod=master_pod,
-            env=kargs["envs"],
+            env=env,
         )
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = type_key
