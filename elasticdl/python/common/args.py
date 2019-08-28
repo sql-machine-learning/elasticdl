@@ -37,7 +37,7 @@ def parse_envs(arg):
         else:
             r = fields[i].rfind(",")
             envs[pre_key] = fields[i][:r]
-            pre_key = fields[i][r + 1 :]
+            pre_key = fields[i][r + 1 :]  # noqa: E203
         i += 1
     return envs
 
