@@ -39,6 +39,24 @@ class OptimizerWrapperTest(unittest.TestCase):
             tf.keras.optimizers.Adam(), 4, np.zeros
         )
 
+    def test_initialize_in_lookup(self):
+        opt = tf.keras.optimizers.Adam()
+        opt_wrapper = OptimizerWrapper(opt, None, {"test-1": 4})
+        grads_and_vars = [(tf.IndexedSlices(None, tf.constant([0])), "test-1")]
+        mock_kv_store = MockKvStore({})
+        mock_kv_store.update(
+            keys=[Embedding.get_key(["test-1", 0])],
+            values=[np.random.rand(4).astype(np.float32)],
+        )
+        with mock.patch.object(
+            EmbeddingService, "lookup_embedding", mock_kv_store.lookup
+        ):
+            embeddings, slot_values = opt_wrapper._lookup_embeddings_and_slots(
+                grads_and_vars
+            )
+        self.assertTrue((slot_values["test-1"]["m"] < 0.0001).all())
+        self.assertTrue((slot_values["test-1"]["v"] < 0.0001).all())
+
     def test_lookup(self):
         opt = tf.keras.optimizers.Adam()
         opt_wrapper = OptimizerWrapper(opt, None, {})

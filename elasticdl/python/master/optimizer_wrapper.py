@@ -3,6 +3,7 @@
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras.optimizers import SGD, Adam
 
 from elasticdl.python.common.embedding_service import EmbeddingService
 from elasticdl.python.elasticdl.layers.embedding import Embedding
@@ -33,11 +34,11 @@ class OptimizerWrapper(object):
         self._embedding_dims = embedding_dims
 
         # TODO: support more TensorFlow optimizers
-        if isinstance(opt, tf.keras.optimizers.SGD):
+        if isinstance(opt, SGD):
             self._allowed_slot_names = []
             if opt._momentum:
                 self._allowed_slot_names.append("momentum")
-        elif isinstance(opt, tf.keras.optimizers.Adam):
+        elif isinstance(opt, Adam):
             self._allowed_slot_names = ["m", "v"]
             if self._opt.amsgrad:
                 self._allowed_slot_names.append("vhat")
@@ -45,6 +46,8 @@ class OptimizerWrapper(object):
             raise NotImplementedError(
                 "Optimizer %s is not supported in ElasticDL." % type(opt)
             )
+
+        self._unique_ids_all_layers = {}
 
     def apply_gradients(self, grads_and_vars):
         """Update variable values.
@@ -64,7 +67,9 @@ class OptimizerWrapper(object):
         grads_and_vars_local = []
         grads_and_vars_kv_store = []
         for grad, var in grads_and_vars:
-            layer_name = self._get_embedding_layer_name(grad, var)
+            layer_name = self._get_embedding_layer_name_from_grad_var(
+                grad, var
+            )
             if layer_name:
                 grads_and_vars_kv_store.append((grad, layer_name))
             else:
@@ -162,6 +167,7 @@ class OptimizerWrapper(object):
 
         # initialize unknown slots
         for idx in unknown_keys:
+            layer_name = self._get_embedding_layer_name_from_key(keys[idx])
             values[idx] = self._initialize_unknown_slot(layer_name)
 
         # parse embedding vectors
@@ -192,20 +198,22 @@ class OptimizerWrapper(object):
         self._unique_ids_all_layers = unique_ids_all_layers
         return embedding_values, slot_values
 
-    def _get_embedding_layer_name(self, grad, var):
-        """Return layer name for ElasticDL embedding layer."""
+    def _get_embedding_layer_name_from_grad_var(self, grad, var):
+        """Get name for ElasticDL embedding layer from `(grad, var)` pair."""
         # Assumes that for ElasticDL embedding layer, variable will be a
         # string representing its layer name
         if isinstance(var, str):
             return var
         return None
 
+    def _get_embedding_layer_name_from_key(self, key):
+        """Get name for ElasticDL embedding layer from kv store key."""
+        return "-".join(key.split("-")[:-2])
+
     def _initialize_unknown_slot(self, layer_name):
         """Initialize unknown slot."""
         slot_dim = self._embedding_dims[layer_name]
-        if isinstance(self._opt, tf.keras.optimizers.Adam) or isinstance(
-            self._opt, tf.keras.optimizers.SGD
-        ):
+        if isinstance(self._opt, (Adam, SGD)):
             return np.zeros(slot_dim, np.float32)
         else:
             raise NotImplementedError(
