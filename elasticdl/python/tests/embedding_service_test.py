@@ -1,3 +1,4 @@
+import socket
 import subprocess
 import tempfile
 import time
@@ -8,9 +9,28 @@ import numpy as np
 from elasticdl.python.common.embedding_service import EmbeddingService
 
 
-def start_redis_instances(first_port, temp_dir):
-    for i in range(6):
-        port = first_port + i
+def get_free_port():
+    start_time = time.time()
+    # Try to get a reasonable port continuously in 5 seconds
+    while time.time() - start_time < 5:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("", 0))
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            port = s.getsockname()[1]
+            # Ports with numbers 0-1023: system or well-known ports
+            # Ports with numbers 1024-49151: user or registered ports
+            # Ports with numbers 49152-65535: dynamic and/or private ports
+            # Redis instances can only be allocated registered ports
+            if port < 49152 and port > 1023:
+                return port
+    raise Exception("Can't find free registered ports!")
+
+
+def start_redis_instances(temp_dir):
+    port_list = []
+    # TODO: Use one Redis instance instead of 6 Redis instances, if we can.
+    while len(port_list) < 6:
+        port = get_free_port()
         embedding_process = subprocess.Popen(
             [
                 "redis-server --port %d --dir %s --cluster-enabled yes "
@@ -24,15 +44,19 @@ def start_redis_instances(first_port, temp_dir):
             stdout=subprocess.DEVNULL,
         )
         embedding_process.wait()
+        if not embedding_process.returncode:
+            port_list.append(port)
+        else:
+            embedding_process.kill()
 
-    embedding_endpoint = {"127.0.0.1": [first_port + i for i in range(6)]}
+    embedding_endpoint = {"127.0.0.1": port_list}
     return embedding_endpoint
 
 
 class EmbeddingServiceTest(unittest.TestCase):
     def test_embedding_service(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            embedding_endpoint = start_redis_instances(30001, temp_dir)
+            embedding_endpoint = start_redis_instances(temp_dir)
             # start
             embedding_service = EmbeddingService(embedding_endpoint)
             embedding_endpoint = embedding_service._create_redis_cluster()
@@ -54,7 +78,7 @@ class EmbeddingServiceTest(unittest.TestCase):
 
     def test_lookup_and_update_embedding(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            embedding_endpoint = start_redis_instances(31001, temp_dir)
+            embedding_endpoint = start_redis_instances(temp_dir)
             # start
             embedding_service = EmbeddingService(embedding_endpoint)
             embedding_endpoint = embedding_service._create_redis_cluster()
