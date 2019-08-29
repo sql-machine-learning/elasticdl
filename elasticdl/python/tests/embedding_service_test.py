@@ -10,7 +10,8 @@ from elasticdl.python.common.embedding_service import EmbeddingService
 
 
 def get_free_port():
-    while True:
+    start_time = time.time()
+    while time.time() - start_time < 2:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(("", 0))
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -20,10 +21,12 @@ def get_free_port():
             # Ports with numbers 49152-65535: dynamic and/or private ports
             if port < 49152 and port > 1023:
                 return port
+    raise Exception("Can't find free registered ports!")
 
 
 def start_redis_instances(temp_dir):
     port_list = []
+    # TODO: Use one Redis instance instead of 6 instances, if we can.
     while len(port_list) < 6:
         port = get_free_port()
         embedding_process = subprocess.Popen(
@@ -45,7 +48,6 @@ def start_redis_instances(temp_dir):
             embedding_process.kill()
 
     embedding_endpoint = {"127.0.0.1": port_list}
-    print(port_list)
     return embedding_endpoint
 
 
