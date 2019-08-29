@@ -11,7 +11,8 @@ from elasticdl.python.common.embedding_service import EmbeddingService
 
 def get_free_port():
     start_time = time.time()
-    while time.time() - start_time < 2:
+    # Try to get a reasonable port continuously in 5 seconds
+    while time.time() - start_time < 5:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(("", 0))
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -19,6 +20,7 @@ def get_free_port():
             # Ports with numbers 0-1023: system or well-known ports
             # Ports with numbers 1024-49151: user or registered ports
             # Ports with numbers 49152-65535: dynamic and/or private ports
+            # Redis instances can only be allocated registered ports
             if port < 49152 and port > 1023:
                 return port
     raise Exception("Can't find free registered ports!")
