@@ -26,7 +26,7 @@ def get_free_port():
 
 def start_redis_instances(temp_dir):
     port_list = []
-    # TODO: Use one Redis instance instead of 6 instances, if we can.
+    # TODO: Use one Redis instance instead of 6 Redis instances, if we can.
     while len(port_list) < 6:
         port = get_free_port()
         embedding_process = subprocess.Popen(
