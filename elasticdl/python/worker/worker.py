@@ -61,6 +61,12 @@ class Worker(object):
         self._model = load_model_from_module(
             model_def, model_module, model_params
         )
+        self._tape = None
+        if (
+            self._job_type == JobType.TRAINING_WITH_EVALUATION
+            or self._job_type == JobType.TRAINING_ONLY
+        ):
+            self._tape = tf.GradientTape(persistent=True)
         self._init_embedding_layer()
         self._var_created = self._model.built
         self._dataset_fn = model_module[dataset_fn]
@@ -100,7 +106,8 @@ class Worker(object):
         """
         self._embedding_layers = find_layer(self._model, Embedding)
         for layer in self._embedding_layers:
-            layer.set_worker(self)
+            layer.set_lookup_func(self.lookup_embedding)
+        self._set_tape_for_embedding(self._tape)
         if self._embedding_layers:
             # TODO check that Redis IP/PORT is set
             pass
@@ -321,14 +328,13 @@ class Worker(object):
         return self.training_process_eagerly(features, labels)
 
     def training_process_eagerly(self, features, labels):
-        with tf.GradientTape() as tape:
-            self._set_tape_for_embedding(tape)
+        with self._tape:
             outputs = self._model.call(features, training=True)
             loss = self._loss(outputs, labels)
             # Add regularization loss if any
             if self._model.losses:
                 loss += tf.math.add_n(self._model.losses)
-        grads = tape.gradient(loss, self.get_trainable_items())
+        grads = self._tape.gradient(loss, self.get_trainable_items())
         return loss, grads
 
     @tf.function
@@ -349,8 +355,15 @@ class Worker(object):
         return accepted, min_model_version, loss
 
     def _run_evaluation_task(self, features, labels):
+        # reset tape to None for evaluation
+        if self._tape:
+            self._set_tape_for_embedding(None)
         evaluation_metrics = self.evaluation_process(features, labels)
-        return self.report_evaluation_metrics(evaluation_metrics)
+        accepted, _ = self.report_evaluation_metrics(evaluation_metrics)
+        # set tape back for training
+        if self._tape:
+            self._set_tape_for_embedding(self._tape)
+        return accepted
 
     def _run_prediction_task(self, features):
         predictions = self.predict_process(features)
@@ -368,7 +381,7 @@ class Worker(object):
                         self.get_model(0, elasticdl_pb2.MINIMUM)
                 elif self._model_version != min_model_version:
                     self.get_model(min_model_version, elasticdl_pb2.FIXED)
-                accepted, _ = self._run_evaluation_task(features, labels)
+                accepted = self._run_evaluation_task(features, labels)
                 if accepted:
                     break
             elif task_type == elasticdl_pb2.TRAINING:

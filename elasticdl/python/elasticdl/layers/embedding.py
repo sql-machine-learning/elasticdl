@@ -45,7 +45,7 @@ class Embedding(tf.keras.layers.Layer):
         self.input_length = input_length
         self.combiner = combiner
         self.tape = None
-        self.worker = None
+        self.lookup_func = None
         self.bet_ids_pair = []
 
     @tf_utils.shape_type_conversion
@@ -87,7 +87,7 @@ class Embedding(tf.keras.layers.Layer):
         return "-".join(map(str, name_list))
 
     def lookup_embedding(self, unique_ids):
-        batch_embedding = self.worker.lookup_embedding(
+        batch_embedding = self.lookup_func(
             unique_ids.numpy(),
             self._name,
             self.embedding_initializer,
@@ -161,10 +161,19 @@ class Embedding(tf.keras.layers.Layer):
 
     def reset(self):
         self.bet_ids_pair = []
-        self.tape = None
 
     def set_tape(self, tape):
         self.tape = tape
 
-    def set_worker(self, worker):
-        self.worker = worker
+    def set_lookup_func(self, lookup_func):
+        """
+        lookup_func args
+          ids: id list to lookup
+          layer_name: layer name
+          initializer: intializer method name for unkown embeddings
+          output_dim: the embedding vector dimension
+        return:
+          embeddings corresponding to the ids, in numpy ndarray type
+          with a shape of (len(ids), output_dim)
+        """
+        self.lookup_func = lookup_func
