@@ -70,7 +70,7 @@ class OptimizerWrapper(object):
             else:
                 grads_and_vars_local.append((grad, var))
 
-        # `_lookup_embeddings_and_slots` will raise Error if appears
+        # `_lookup_embeddings_and_slots` will raise Error if there are
         # unknown embedding keys
         embedding_values, slot_values = self._lookup_embeddings_and_slots(
             grads_and_vars_kv_store
