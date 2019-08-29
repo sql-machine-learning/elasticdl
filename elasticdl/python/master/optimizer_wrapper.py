@@ -38,7 +38,6 @@ class OptimizerWrapper(object):
             self._allowed_slot_names = ["m", "v"]
             if self._opt.amsgrad:
                 self._allowed_slot_names.append("vhat")
-            self._opt = opt
         else:
             raise NotImplementedError(
                 "Optimizer %s is not supported in ElasticDL." % type(opt)
@@ -48,7 +47,7 @@ class OptimizerWrapper(object):
         """Update variable values.
 
         Arguments:
-            grads_and_vars: A List of (gradient, variable) pairs.
+            grads_and_vars: A list of (gradient, variable) pairs.
 
         Returns:
             None.
@@ -74,7 +73,10 @@ class OptimizerWrapper(object):
             grads_and_vars_kv_store
         )
 
-        # TODO: implement the following logic to do model updating
+        # TODO: implement the following logic to do model updating:
+        # 1. set embedding values and slot values to TensorFlow Variables
+        # 2. call self._opt.apply_gradients
+        # 3. report updated values to Redis
 
     def _lookup_embeddings_and_slots(self, grads_and_vars):
         """Lookup embedding vectors and slot values form kv store.
