@@ -11,8 +11,7 @@ from elasticdl.python.elasticdl.layers.embedding import Embedding
 
 
 # This function is taken from `tensorflow.keras.optimizers.Optimizer._var_key`.
-# https://github.com/tensorflow/tensorflow/blob/71d73e56a2e66e4a6805d967cfa48ea
-# 594f8c54e/tensorflow/python/keras/optimizer_v2/optimizer_v2.py#L1033
+# https://github.com/tensorflow/tensorflow/blob/71d73e56a2e66e4a6805d967cfa48ea594f8c54e/tensorflow/python/keras/optimizer_v2/optimizer_v2.py#L1033
 def _var_key(var):
     """Key for representing a primary variable, for looking up slots.
 
@@ -34,6 +33,58 @@ def _var_key(var):
     if var._in_graph_mode:
         return var._shared_name
     return var._unique_id
+
+
+def _parse_lookup_values(values, key_index):
+    """Parse looked up values recursively.
+
+    This function parses looked up values from Redis recursively.
+    For example, if `key_index` = `{
+        layer_1: {slot_1: (0, 3), slot_2: (3, 6)},
+        layer_2: {slot_1: (6, 12), slot_2: (12, 18)},
+    }`,
+    this function returns a python dictionary `{
+        layer_1: {slot_1: values[0:3], slot_2: values[3:6]},
+        layer_2: {slot_1: (6, 12), slot_2: (12, 18)},
+    }`
+
+    Arguments:
+        values: A list of 1D `numpy.ndarray`.
+        key_index: A dictionary of key index.
+
+    Returns:
+        A python dictionary of parsed values.
+
+    """
+    parsed_values = {}
+    for k, v in key_index.items():
+        if isinstance(v, dict):
+            parsed_values[k] = _parse_lookup_values(values, v)
+        else:
+            start, end = v
+            parsed_values[k] = np.concatenate(values[start:end]).reshape(
+                end - start, -1
+            )
+    return parsed_values
+
+
+def _get_embedding_layer_name_from_var(var):
+    """Get name for ElasticDL embedding layer from variable."""
+    # Assumes that for ElasticDL embedding layer, variable will be a
+    # string representing its layer name
+    if isinstance(var, str):
+        return var
+    return None
+
+
+def _get_embedding_layer_name_from_key(key):
+    """Get name for ElasticDL embedding layer from kv store key."""
+    return "-".join(key.split("-")[:-2])
+
+
+def _get_slot_name_from_key(key):
+    """Get slot name from kv store key."""
+    return key.split("-")[-2]
 
 
 class OptimizerWrapper(object):
@@ -100,7 +151,7 @@ class OptimizerWrapper(object):
         grads_and_vars_local = []
         grads_and_vars_kv_store = []
         for grad, var in grads_and_vars:
-            layer_name = self._get_embedding_layer_name_from_var(grad, var)
+            layer_name = _get_embedding_layer_name_from_var(grad, var)
             if layer_name:
                 grads_and_vars_kv_store.append((grad, layer_name))
             else:
@@ -161,16 +212,16 @@ class OptimizerWrapper(object):
             # initialize unknown slots
             for idx in unknown_keys:
                 key = keys[idx]
-                layer_name = self._get_embedding_layer_name_from_key(key)
-                slot_name = self._get_slot_name_from_key(key)
+                layer_name = _get_embedding_layer_name_from_key(key)
+                slot_name = _get_slot_name_from_key(key)
                 values[idx] = self._initialize_unknown_slot(
                     layer_name, slot_name
                 )
 
-        embed_values = self._parse_lookup_values(
+        embed_values = _parse_lookup_values(
             values[:embed_keys_num], embed_key_index
         )
-        slot_values = self._parse_lookup_values(
+        slot_values = _parse_lookup_values(
             values[embed_keys_num:], slot_key_index
         )
         return embed_values, slot_values
@@ -235,38 +286,6 @@ class OptimizerWrapper(object):
                 )
         return embed_keys, slot_keys, embed_key_index, slot_key_index
 
-    def _parse_lookup_values(self, values, key_index):
-        """Parse looked up values recursively.
-
-        This function parses looked up values from Redis recursively.
-        For example, if `key_index` = `{
-            layer_1: {slot_1: (0, 3), slot_2: (3, 6)},
-            layer_2: {slot_1: (6, 12), slot_2: (12, 18)},
-        }`,
-        this function returns a python dictionary `{
-            layer_1: {slot_1: values[0:3], slot_2: values[3:6]},
-            layer_2: {slot_1: (6, 12), slot_2: (12, 18)},
-        }`
-
-        Arguments:
-            values: A list of 1D `numpy.ndarray`.
-            key_index: A dictionary of key index.
-
-        Returns:
-            A python dictionary of parsed values.
-
-        """
-        parsed_values = {}
-        for k, v in key_index.items():
-            if isinstance(v, dict):
-                parsed_values[k] = self._parse_lookup_values(values, v)
-            else:
-                start, end = v
-                parsed_values[k] = np.concatenate(values[start:end]).reshape(
-                    end - start, -1
-                )
-        return parsed_values
-
     def _set_embedding_values_to_variables(self, grads_and_vars, values):
         """Set embedding values to embedding variables."""
         for i, (grad, layer_name) in enumerate(grads_and_vars):
@@ -291,22 +310,6 @@ class OptimizerWrapper(object):
                     )
                 else:
                     variable.assign(slot_value)
-
-    def _get_embedding_layer_name_from_var(self, var):
-        """Get name for ElasticDL embedding layer from variable."""
-        # Assumes that for ElasticDL embedding layer, variable will be a
-        # string representing its layer name
-        if isinstance(var, str):
-            return var
-        return None
-
-    def _get_embedding_layer_name_from_key(self, key):
-        """Get name for ElasticDL embedding layer from kv store key."""
-        return "-".join(key.split("-")[:-2])
-
-    def _get_slot_name_from_key(self, key):
-        """Get slot name from kv store key."""
-        return key.split("-")[-2]
 
     def _initialize_unknown_slot(self, layer_name, slot_name):
         """Initialize unknown slot."""
@@ -369,9 +372,7 @@ class OptimizerWrapper(object):
         return slot_var
 
     # This is a function modified from TensorFlow optimizers.
-    # https://github.com/tensorflow/tensorflow/blob/
-    # 69b1feac62276edcc509ac88af229c6236e645fe/tensorflow/python
-    # /keras/optimizer_v2/optimizer_v2.py#L567
+    # https://github.com/tensorflow/tensorflow/blob/69b1feac62276edcc509ac88af229c6236e645fe/tensorflow/python/keras/optimizer_v2/optimizer_v2.py#L567
     def _create_slot_variable_in_optimizer(
         self, embedding_var, slot_name, shape, initial_value
     ):
