@@ -31,6 +31,11 @@ The above command-line
 1. submits an ElasticDL job to the Kubernetes cluster as described in `$HOME/.kube/config`,
 1. prints an URL to the dashboard so users could inspect the progress/status of the job in the user's Web browser.
 
+Please be aware that in the class `fintech.MyKerasModel`, in addition to overriding the method `call`, we also need to provide methods like
+
+- `default_loss` that returns a loss operator,
+- `default_optimizer` that returns an optimizer operator,
+- `default_input` that takes a record (string) as its input and returns something that can be batched and consumed by `MyKerasModel.call`.  In the above example, the user chooses an input function other than `MyKerasModel.default_input`.
 
 Because the above example command line specifies `--input_fn` explicitly, the training job is not going to use `MyKerasModel.default_input`, but uses `fintech.credit_data_processor`.  Similarly, command line options `loss` and `optimizer` overwrites `MyKerasModel.default_loss` and `MyKerasModel.default_optimizer`.
 
@@ -77,147 +82,6 @@ Both the command line tool `elasticdl` provided for modelers and the submitter p
 ## API
 
 We hope the ElasticDL API supports not only batch learning, but also online learning, adversarial learning, reinforcement learning, and federated learning.  However, at the right moment, let us start with batch learning.
-
-
-### Model building phase
-
-ElasticDL supports Keras models built using either TensorFlow Keras [functional API](https://www.tensorflow.org/guide/keras#functional_api)
-or [model subclassing](https://www.tensorflow.org/guide/keras#model_subclassing). In order to train models, ElasticDL requires users to provide
-a `ElasticDLSpec`. The `ElasticDLSpec` tells ElasticDL how to create model, optimizer, loss, dataset and metrics.
-
-Please refer to [model\_building](./model_building.md) for detailed explaination of each function.
-
-```python
-from elasticdl.python.common.constants import Mode
-
-class ElasticDLSpec(object):
-    def __init__(self, context=None):
-        """
-        Args: context: a dict of contextual information from ElasticDL,
-                             such as worker_id, master ip.
-        """
-        self._context = context
-
-    @abstractmethod
-    def create_optimizer(self, lr=0.1):
-        """returns a tensorflow optimizer such as `tf.train.GradientDescentOptimizer`"""
-         pass
-
-    @abstractmethod
-    def create_loss(self, outputs=None, labels=None):
-        """returns a tensor represents loss using outputs and labels"""
-        pass
-
-    @abstractmethod
-    def create_metrics(self,
-                       mode=Mode.TRAINING,
-                       outputs=None,
-                       labels=None,
-                       predictions=None,):
-        """returns a dict of metrics"""
-        pass
-
-    @abstractmethod
-    def create_model(self):
-        """returns the model created
-        Users can use functional API or subclass to create customized Keras model.
-        """
-        pass
-
-    @abstractmethod
-    def create_dataset(self, dataset, mode):
-        """returns a `tf.data.Dataset`"""
-        pass
-```
-
-For example, we want to train a model on mnist dataset. We need to provide a similar
-`ElasticDLSpec` to ElasticDL. Let's call it `MnistElasticDLSpec`.
-
-```python
-
-class MnistElasticDLSpec(ElasticDLSpec):
-
-    def __init__(self, context=None, **kwargs):
-        super(MnistElasticDLSpec, self).__init__(context=context)
-
-    def create_optimizer(self, lr=0.1):
-        return tf.train.GradientDescentOptimizer(learning_rate=lr)
-
-    def create_loss(self, outputs=None, labels=None):
-        labels = tf.reshape(labels, [-1])
-        return tf.reduce_mean(
-            input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-                logits=output, labels=labels
-            )
-        )
-
-    def create_model(self):
-        """returns the model instance
-        We can use either functional API or Keras model subclass to create the model
-        """
-        inputs = tf.keras.Input(shape=(28, 28), name="image")
-        x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
-        x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu")(x)
-        x = tf.keras.layers.Conv2D(64, kernel_size=(3, 3), activation="relu")(x)
-        x = tf.keras.layers.BatchNormalization()(x)
-        x = tf.keras.layers.MaxPooling2D(pool_size=(2, 2))(x)
-        x = tf.keras.layers.Dropout(0.25)(x)
-        x = tf.keras.layers.Flatten()(x)
-        outputs = tf.keras.layers.Dense(10)(x)
-        return tf.keras.Model(inputs=inputs, outputs=outputs, name="mnist_model")
-
-    def create_metrics(self,
-                mode=Mode.TRAINING,
-                outputs=None,
-                labels=None):
-
-        if mode == Mode.EVALUATION:
-            labels = tf.reshape(labels, [-1])
-            return {
-            "accuracy": tf.reduce_mean(
-                    input_tensor=tf.cast(
-                    tf.equal(
-                        tf.argmax(outputs, 1, output_type=tf.dtypes.int32),
-                        labels,),
-                    tf.float32,)
-                    )
-            }
-        return {}
-
-    def create_dataset(self, dataset, mode):
-        def _parse_data(record):
-            if mode == Mode.PREDICTION:
-                feature_description = {
-                "image": tf.io.FixedLenFeature([28, 28], tf.float32)
-            }
-            else:
-                feature_description = {
-                    "image": tf.io.FixedLenFeature([28, 28], tf.float32),
-                    "label": tf.io.FixedLenFeature([1], tf.int64),
-                }
-            r = tf.io.parse_single_example(record, feature_description)
-            features = {
-                "image": tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
-            }
-            if mode == Mode.PREDICTION:
-                return features
-            else:
-                return features, tf.cast(r["label"], tf.int32)
-
-        dataset = dataset.map(_parse_data)
-
-        if mode != Mode.PREDICTION:
-            dataset = dataset.shuffle(buffer_size=1024)
-        return dataset
-
-```
-
-+ Constructor will receive a keyword parameter `context`, which will contain environment information.
-  + Currently it is None.
-+ `**kwargs` are the parameters from `model_params` argument.
-+ `create_metrics` function should return specified metrics according to mode. By default, it returns an empty dict.
-
-Users can refer to [model\_zoo](/elasticdl/model_zoo) for more examples.
 
 ### For Training
 
@@ -316,6 +180,14 @@ A key question is what information must be in the directory `/filestore/tony/my_
    We need this ID to refer to the Docker image built during the call of `elasticdl.train`.  In this image, we have the model zoo used to train the model.  Then, `elasticdl.predict` could build the Docker image for the distributed prediction job from this commit ID.
 
    This image ID must be a pullable ID so that ElasticDL command line tool can `docker pull` it as the base image. An example pullable ID is `docker-pullable://reg.docker.alibaba-inc.com/asdi/aswf-py3@sha256:e8ca09705eed07cdfd060b6b9d27a802`.
+
+1. Model class constructor parameters, like `hidden_units=[10, 100, 20]`.
+
+1. Other parameters passed to `elasticdl.train`, including 
+   - `model_def`
+   - `input_function`
+   - `loss`
+   - `optimizer`
 
 1. Model parameters as a map from parameter name to parameter value tensors, defined in [`elasticdl.proto`](https://github.com/wangkuiyi/elasticdl/blob/e06618af50cc9507e0b59473f4b97c066fa04870/elasticdl/proto/elasticdl.proto#L51-L54).
 
