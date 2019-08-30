@@ -8,6 +8,7 @@ eager execution mode 的分布式深度学习系统 ElasticDL。项目负责人�
 
 基于 TensorFlow 的分布式训练系统大致可以分为以下四类。
 
+```
 |---------------|----------------|----------------|
 |               | TensorFlow 1.x | TensorFlow 2.x |
 |               |  graph mode    | eager mode     |
@@ -21,7 +22,7 @@ eager execution mode 的分布式深度学习系统 ElasticDL。项目负责人�
 | Python API    |                | ElasticDL      |
 |               |                | (early stage)  |
 |---------------|----------------|----------------|
-
+```
 
 其中，ElasticDL 位于田字格的右下角。之所以选择这条技术思路，是为了利用
 Kubernetes 实现容错和弹性调度。
