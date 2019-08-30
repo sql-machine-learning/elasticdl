@@ -7,7 +7,10 @@ from tensorflow.keras.optimizers import SGD, Adam
 
 from elasticdl.python.common.embedding_service import EmbeddingService
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.master.optimizer_wrapper import OptimizerWrapper
+from elasticdl.python.master.optimizer_wrapper import (
+    OptimizerWrapper,
+    _parse_lookup_values,
+)
 from elasticdl.python.tests.mock_kv_store import MockKvStore
 
 
@@ -100,9 +103,7 @@ class OptimizerWrapperTest(unittest.TestCase):
             "test_0": {"m": (3, 10), "v": (11, 20)},
             "test_1": {"m": (0, 3), "v": (10, 11)},
         }
-        opt = Adam(amsgrad=True)
-        opt_wrapper = OptimizerWrapper(opt, None, {})
-        values = opt_wrapper._parse_lookup_values(embed_table, key_index)
+        values = _parse_lookup_values(embed_table, key_index)
         expected_values = {
             "test_0": {
                 "m": np.concatenate(embed_table[3:10]).reshape(7, dim),
