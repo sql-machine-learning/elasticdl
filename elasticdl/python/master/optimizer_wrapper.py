@@ -386,19 +386,17 @@ class OptimizerWrapper(object):
         slot_dict = self._opt._slots.setdefault(var_key, {})
         slot_var = slot_dict.get(slot_name, None)
         if slot_var is None:
-            slot_var_name = "%s/%s/%s" % (
-                self._opt._name,
+            slot_var_name = "%s/%s" % (
                 embedding_var._shared_name,
                 slot_name,
             )
-            slot_var = tf.Variable(
+            slot_var = self._opt.add_weight(
                 name=slot_var_name,
-                dtype=embedding_var.dtype,
-                trainable=False,
                 shape=shape,
-                initial_value=initial_value,
+                dtype=embedding_var.dtype,
+                initializer=initial_value,
+                trainable=False,
             )
-            backend.track_variable(slot_var)
             slot_dict[slot_name] = slot_var
             self._opt._weights.append(slot_var)
             return slot_var

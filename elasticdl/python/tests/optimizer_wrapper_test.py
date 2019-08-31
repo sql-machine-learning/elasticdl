@@ -201,7 +201,7 @@ class OptimizerWrapperTest(unittest.TestCase):
         slots = ["m", "v"]
         id_num = 3
         embedding_dims = {layer: 4 for layer in layers}
-        all_values = np.arange(48).reshape(12, 4)
+        all_values = np.arange(48).reshape(12, 4).astype(np.float32)
 
         slot_values = {}
         offset = 0
