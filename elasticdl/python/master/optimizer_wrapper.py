@@ -4,7 +4,6 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.optimizers import SGD, Adam
-from tensorflow.python.keras import backend
 
 from elasticdl.python.common.embedding_service import EmbeddingService
 from elasticdl.python.elasticdl.layers.embedding import Embedding
@@ -110,9 +109,9 @@ class OptimizerWrapper(object):
         """
         self._opt = opt
         self._kv_store_endpoint = kv_store_endpoint
-        self._embedding_dims = embedding_dims
+        self._embed_dims = embedding_dims
         self._slot_initial_value = {}
-        self._embedding_variables = {}
+        self._embed_variables = {}
         self._slot_variables = {}
 
         # TODO: support more TensorFlow optimizers
@@ -152,7 +151,7 @@ class OptimizerWrapper(object):
         grads_and_vars_local = []
         grads_and_vars_kv_store = []
         for grad, var in grads_and_vars:
-            layer_name = _get_embedding_layer_name_from_var(grad, var)
+            layer_name = _get_embedding_layer_name_from_var(var)
             if layer_name:
                 grads_and_vars_kv_store.append((grad, layer_name))
             else:
@@ -165,7 +164,7 @@ class OptimizerWrapper(object):
         )
 
         self._set_embedding_values_to_variables(
-            grads_and_vars_kv_store, embedding_values
+            grads_and_vars_kv_store, embed_values
         )
         self._set_slot_values_to_variables(slot_values)
 
@@ -289,7 +288,7 @@ class OptimizerWrapper(object):
 
     def _initialize_unknown_slot(self, layer_name, slot_name):
         """Initialize unknown slot."""
-        slot_dim = self._embedding_dims[layer_name]
+        slot_dim = self._embed_dims[layer_name]
         initial_value = self._slot_initial_value[slot_name]
         return np.full((slot_dim,), initial_value, np.float32)
 
@@ -324,34 +323,34 @@ class OptimizerWrapper(object):
 
     def _get_embedding_variable(self, layer_name):
         """Get the variable for the specified ElasticDL embedding layer."""
-        return self._embedding_variables.get(layer_name, None)
+        return self._embed_variables.get(layer_name, None)
 
     def _create_embedding_variable(self, layer_name, initial_value=None):
         """Create a variable for an ElasticDL embedding layer."""
-        dim = self._embedding_dims[layer_name]
+        dim = self._embed_dims[layer_name]
         shape = tf.TensorShape((None, dim))
         if initial_value is None:
             initial_value = tf.zeros((1, dim))
 
-        if self._embedding_variables.get(layer_name, None) is not None:
+        if self._embed_variables.get(layer_name, None) is not None:
             raise RuntimeError(
                 "Embedding variable with layer name=%s has already be "
                 "created." % (layer_name)
             )
 
-        embedding_var = tf.Variable(
+        embed_var = tf.Variable(
             initial_value,
             name=layer_name,
             shape=shape,
             dtype=tf.float32,
             trainable=False,
         )
-        self._embedding_variables[layer_name] = embedding_var
-        return embedding_var
+        self._embed_variables[layer_name] = embed_var
+        return embed_var
 
     def _create_slot_variable(self, layer_name, slot_name, initial_value=None):
         """Create a variable for the specified slot."""
-        dim = self._embedding_dims[layer_name]
+        dim = self._embed_dims[layer_name]
         shape = tf.TensorShape((None, dim))
         if initial_value is None:
             initial_value = tf.zeros((1, dim))
@@ -363,11 +362,11 @@ class OptimizerWrapper(object):
                 "already be created." % (layer_name, slot_name)
             )
 
-        embedding_var = self._get_embedding_variable(layer_name)
-        if embedding_var is None:
-            embedding_var = self._create_embedding_variable(layer_name)
+        embed_var = self._get_embedding_variable(layer_name)
+        if embed_var is None:
+            embed_var = self._create_embedding_variable(layer_name)
         slot_var = self._create_slot_variable_in_optimizer(
-            embedding_var, slot_name, shape, initial_value
+            embed_var, slot_name, shape, initial_value
         )
         slot_variables_dict[slot_name] = slot_var
         return slot_var
@@ -377,23 +376,20 @@ class OptimizerWrapper(object):
     # 69b1feac62276edcc509ac88af229c6236e645fe/tensorflow/python
     # /keras/optimizer_v2/optimizer_v2.py#L567
     def _create_slot_variable_in_optimizer(
-        self, embedding_var, slot_name, shape, initial_value
+        self, embed_var, slot_name, shape, initial_value
     ):
         """Create variable for a slot and save it in TensorFlow optimizer."""
         if slot_name not in self._opt._slot_names:
             self._opt._slot_names.append(slot_name)
-        var_key = _var_key(embedding_var)
+        var_key = _var_key(embed_var)
         slot_dict = self._opt._slots.setdefault(var_key, {})
         slot_var = slot_dict.get(slot_name, None)
         if slot_var is None:
-            slot_var_name = "%s/%s" % (
-                embedding_var._shared_name,
-                slot_name,
-            )
+            slot_var_name = "%s/%s" % (embed_var._shared_name, slot_name)
             slot_var = self._opt.add_weight(
                 name=slot_var_name,
                 shape=shape,
-                dtype=embedding_var.dtype,
+                dtype=embed_var.dtype,
                 initializer=initial_value,
                 trainable=False,
             )
