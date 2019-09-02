@@ -168,7 +168,7 @@ class OptimizerWrapper(object):
         )
         self._set_slot_values_to_variables(slot_values)
 
-        # TODO: implement the following logic to do model updating:
+        # TODO: implement the following logic:
         # * call self._opt.apply_gradients
         # * report updated values to Redis
 
