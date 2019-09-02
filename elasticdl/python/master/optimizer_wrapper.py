@@ -328,6 +328,9 @@ class OptimizerWrapper(object):
     def _create_embedding_variable(self, layer_name, initial_value):
         """Create a variable for an ElasticDL embedding layer."""
         dim = self._embed_dims[layer_name]
+        # Use shape `(None, dim)` for embedding variable because `shape[0]`
+        # equals to the number of unqiue ids in the minibatch data, and
+        # this number may differ between different iterations
         shape = tf.TensorShape((None, dim))
 
         if self._embed_variables.get(layer_name, None) is not None:
@@ -349,6 +352,9 @@ class OptimizerWrapper(object):
     def _create_slot_variable(self, layer_name, slot_name, initial_value):
         """Create a variable for the specified slot."""
         dim = self._embed_dims[layer_name]
+        # Use shape `(None, dim)` for slot variable because `shape[0]`
+        # equals to the number of unqiue ids in the minibatch data, and
+        # this number may differ between different iterations
         shape = tf.TensorShape((None, dim))
 
         slot_variables_dict = self._slot_variables.setdefault(layer_name, {})
