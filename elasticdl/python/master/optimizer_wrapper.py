@@ -307,7 +307,7 @@ class OptimizerWrapper(object):
         """Set slot values to slot variables in TensorFlow optimizers."""
         for layer_name, slots in values.items():
             for slot_name, slot_value in slots.items():
-                # `variable` points point to the variable object saved in
+                # `variable` points to the variable object saved in
                 # TensorFlow optimizer, i.e. self._opt
                 variable = self._get_slot_variable(layer_name, slot_name)
                 if variable is None:
@@ -325,12 +325,10 @@ class OptimizerWrapper(object):
         """Get the variable for the specified ElasticDL embedding layer."""
         return self._embed_variables.get(layer_name, None)
 
-    def _create_embedding_variable(self, layer_name, initial_value=None):
+    def _create_embedding_variable(self, layer_name, initial_value):
         """Create a variable for an ElasticDL embedding layer."""
         dim = self._embed_dims[layer_name]
         shape = tf.TensorShape((None, dim))
-        if initial_value is None:
-            initial_value = tf.zeros((1, dim))
 
         if self._embed_variables.get(layer_name, None) is not None:
             raise RuntimeError(
@@ -348,12 +346,10 @@ class OptimizerWrapper(object):
         self._embed_variables[layer_name] = embed_var
         return embed_var
 
-    def _create_slot_variable(self, layer_name, slot_name, initial_value=None):
+    def _create_slot_variable(self, layer_name, slot_name, initial_value):
         """Create a variable for the specified slot."""
         dim = self._embed_dims[layer_name]
         shape = tf.TensorShape((None, dim))
-        if initial_value is None:
-            initial_value = tf.zeros((1, dim))
 
         slot_variables_dict = self._slot_variables.setdefault(layer_name, {})
         if slot_variables_dict.get(slot_name, None) is not None:
@@ -364,7 +360,10 @@ class OptimizerWrapper(object):
 
         embed_var = self._get_embedding_variable(layer_name)
         if embed_var is None:
-            embed_var = self._create_embedding_variable(layer_name)
+            raise RuntimeError(
+                "Embedding variable for layer %s should be already created."
+                % (layer_name)
+            )
         slot_var = self._create_slot_variable_in_optimizer(
             embed_var, slot_name, shape, initial_value
         )

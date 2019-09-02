@@ -198,6 +198,8 @@ class OptimizerWrapperTest(unittest.TestCase):
 
         opt = Adam()
         opt_wrapper = OptimizerWrapper(opt, None, embedding_dims)
+        for layer in layers:
+            opt_wrapper._create_embedding_variable(layer, tf.zeros((1, 4)))
         opt_wrapper._set_slot_values_to_variables(slot_values)
         self.assertTrue(len(opt.weights) == 4)
         for layer in layers:
