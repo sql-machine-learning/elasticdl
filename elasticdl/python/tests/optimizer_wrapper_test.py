@@ -178,6 +178,111 @@ class OptimizerWrapperTest(unittest.TestCase):
                     (slot_values[layer][slot] - values < 0.0001).all()
                 )
 
+    def test_set_slot_values_to_variables(self):
+        layers = ["test-1", "test-2"]
+        slots = ["m", "v"]
+        id_num = 3
+        embedding_dims = {layer: 4 for layer in layers}
+        all_values = np.arange(48).reshape(12, 4).astype(np.float32)
+
+        slot_values = {}
+        offset = 0
+        for layer in layers:
+            for slot in slots:
+                start = offset
+                end = offset + id_num
+                slot_values.setdefault(layer, {}).setdefault(
+                    slot, all_values[start:end]
+                )
+                offset = end
+
+        opt = Adam()
+        opt_wrapper = OptimizerWrapper(opt, None, embedding_dims)
+        for layer in layers:
+            opt_wrapper._create_embedding_variable(layer, tf.zeros((1, 4)))
+        opt_wrapper._set_slot_values_to_variables(slot_values)
+        self.assertTrue(len(opt.weights) == 4)
+        for layer in layers:
+            slots_dict = None
+            for k, v in opt._slots.items():
+                if k.startswith(layer):
+                    slots_dict = v
+                    break
+
+            for slot in slots:
+                self.assertTrue(
+                    (
+                        slots_dict[slot].numpy() == slot_values[layer][slot]
+                    ).all()
+                )
+                self.assertTrue(
+                    slots_dict[slot]
+                    == opt_wrapper._slot_variables[layer][slot]
+                )
+
+                slots_dict[slot].assign(tf.ones((10, 4)))
+                self.assertTrue(
+                    (
+                        opt_wrapper._slot_variables[layer][slot].numpy() - 1.0
+                        < 0.0001
+                    ).all()
+                )
+                opt_wrapper._slot_variables[layer][slot].assign(
+                    -tf.ones((10, 4))
+                )
+                self.assertTrue(
+                    (slots_dict[slot].numpy() + 1.0 < 0.0001).all()
+                )
+
+        slot_values_new = {"test-1": {"m": np.zeros((3, 4), np.float32)}}
+        opt_wrapper._set_slot_values_to_variables(slot_values_new)
+        self.assertTrue(
+            (opt_wrapper._slot_variables["test-1"]["m"].numpy() < 0.0001).all()
+        )
+
+    def test_set_embedding_values_to_variables(self):
+        layers = ["test-1", "test-2"]
+        id_num = 3
+        embedding_dims = {layer: 4 for layer in layers}
+        all_values = np.arange(16).reshape(4, 4)
+
+        embedding_values = {}
+        offset = 0
+        for layer in layers:
+            start = offset
+            end = offset + id_num
+            embedding_values.setdefault(layer, all_values[start:end])
+            offset = end
+
+        opt = SGD()
+        opt_wrapper = OptimizerWrapper(opt, None, embedding_dims)
+        grads_and_vars = [
+            ("test-1-grads", "test-1"),
+            ("test-2-grads", "test-2"),
+        ]
+        opt_wrapper._set_embedding_values_to_variables(
+            grads_and_vars, embedding_values
+        )
+        for i, layer in enumerate(layers):
+            self.assertTrue(
+                (
+                    opt_wrapper._embed_variables[layer].numpy()
+                    == embedding_values[layer]
+                ).all()
+            )
+            self.assertTrue(
+                grads_and_vars[i][1] == opt_wrapper._embed_variables[layer]
+            )
+
+        embedding_values_new = {"test-1": np.zeros((3, 4), np.float32)}
+        grads_and_vars = [("test-1-grads", "test-1")]
+        opt_wrapper._set_embedding_values_to_variables(
+            grads_and_vars, embedding_values_new
+        )
+        self.assertTrue(
+            (opt_wrapper._embed_variables["test-1"].numpy() < 0.0001).all()
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
