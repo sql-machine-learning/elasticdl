@@ -417,7 +417,6 @@ class OptimizerWrapper(object):
         keys = []
         values = []
         for layer, ids in self._unique_ids_all_layers.items():
-            print(layer)
             value = self._get_embedding_variable(layer).numpy()
             for id, v in zip(ids, value):
                 keys.append(Embedding.get_key([layer, id]))
