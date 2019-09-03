@@ -10,30 +10,25 @@ from elasticdl.python.elasticdl.api import evaluate, predict, train
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        usage="""elasticdl <command> [<args>]
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(required=True, dest='cmd')
 
-Below is the list of supported commands:
-train         Submit a ElasticDL distributed training job.
-evaluate      Submit a ElasticDL distributed evaluation job.
-"""
+    train_parser = subparsers.add_parser(
+        "train", help="Submit a ElasticDL distributed training job"
     )
-    subparsers = parser.add_subparsers()
-
-    train_parser = subparsers.add_parser("train", help="elasticdl train -h")
     train_parser.set_defaults(func=train)
     add_common_params(train_parser)
     add_train_params(train_parser)
 
     evaluate_parser = subparsers.add_parser(
-        "evaluate", help="elasticdl evaluate -h"
+        "evaluate", help="Submit a ElasticDL distributed evaluation job"
     )
     evaluate_parser.set_defaults(func=evaluate)
     add_common_params(evaluate_parser)
     add_evaluate_params(evaluate_parser)
 
     predict_parser = subparsers.add_parser(
-        "predict", help="elasticdl predict -h"
+        "predict", help="Submit a ElasticDL distributed prediction job"
     )
     predict_parser.set_defaults(func=predict)
     add_common_params(predict_parser)
