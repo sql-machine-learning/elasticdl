@@ -52,7 +52,6 @@ def _find_features_indices(
     FeatureIndices = namedtuple(
         "FeatureIndices",
         ["int_features", "float_features", "bytes_features"],
-        verbose=False,
     )
     int_features_indices = [features_list.index(key) for key in int_features]
     float_features_indices = [
@@ -112,7 +111,6 @@ def _find_feature_indices_from_record(record):
     FeatureIndices = namedtuple(
         "FeatureIndices",
         ["int_features", "float_features", "bytes_features"],
-        verbose=False,
     )
     return FeatureIndices(
         [i for i, x in enumerate(feature_types) if x == int],
