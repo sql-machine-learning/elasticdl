@@ -1,7 +1,6 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
-
-with open('elasticdl/requirements.txt') as f:
+with open("elasticdl/requirements.txt") as f:
     requirements = f.read().splitlines()
 
 setup(

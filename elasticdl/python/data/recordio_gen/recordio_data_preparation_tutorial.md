@@ -9,7 +9,7 @@ This tutorial provides three approaches to process the data: [local Python scrip
 
 
 ## Python Script
-If your data amount is small and it locates in your local disk, the following section is the approach you want to use. [Here](https://github.com/wangkuiyi/elasticdl/blob/develop/elasticdl/python/data/recordio_gen/mnist/gen_data.py) is a sample program to convert the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset into RecordIO format. It should be straightforward to write your own script by mimicking the sample program.
+If your data amount is small and it locates in your local disk, the following section is the approach you want to use. [Here](https://github.com/wangkuiyi/elasticdl/blob/develop/elasticdl/python/data/recordio_gen/image_label.py) is a sample program to convert the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset into RecordIO format. It should be straightforward to write your own script by mimicking the sample program.
 
 
 ## Local PySpark Job
