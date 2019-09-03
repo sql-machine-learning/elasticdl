@@ -9,16 +9,18 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import JobType
-from elasticdl.python.common.model_helper import get_model_file, load_module
+from elasticdl.python.common.model_helper import (
+    get_module_file_path,
+    load_module,
+)
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
 
-_model_file = get_model_file(
-    os.path.dirname(os.path.realpath(__file__)), "test_module.custom_model"
-)
+_model_zoo_path = os.path.dirname(os.path.realpath(__file__))
+_model_file = get_module_file_path(_model_zoo_path, "test_module.custom_model")
 m = load_module(_model_file).__dict__
 
 
@@ -96,7 +98,7 @@ class CheckpointTest(unittest.TestCase):
                 1,
                 JobType.TRAINING_ONLY,
                 batch_size,
-                _model_file,
+                _model_zoo_path,
                 model_def="test_module.custom_model",
                 channel=None,
             )

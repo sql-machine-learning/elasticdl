@@ -7,10 +7,11 @@ import tensorflow as tf
 
 from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.embedding_service import EmbeddingService
-from elasticdl.python.common.model_helper import get_model_file, load_module
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
+
+_model_zoo_path = os.path.dirname(os.path.realpath(__file__))
 
 
 class MockEmbeddingService:
@@ -34,12 +35,6 @@ class MockEmbeddingService:
             layer_name, idx = k.split("-")
             idx = int(idx)
             self.mock_embedding_table[layer_name][idx] = emb
-
-
-_model_file = get_model_file(
-    os.path.dirname(os.path.realpath(__file__)), "test_module.custom_model"
-)
-m = load_module(_model_file).__dict__
 
 
 def custom_model():
@@ -87,7 +82,7 @@ class ReportBETGradientTest(unittest.TestCase):
             1,
             JobType.TRAINING_ONLY,
             2,
-            _model_file,
+            _model_zoo_path,
             model_def="test_module.custom_model",
             channel=None,
         )
