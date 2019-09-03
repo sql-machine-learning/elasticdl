@@ -4,7 +4,6 @@ import grpc
 
 from elasticdl.python.common import log_util
 from elasticdl.python.common.constants import GRPC
-from elasticdl.python.common.model_helper import get_model_file
 from elasticdl.python.worker.worker import Worker
 
 
@@ -104,7 +103,7 @@ def main():
         args.worker_id,
         args.job_type,
         args.minibatch_size,
-        get_model_file(args.model_zoo, args.model_def),
+        args.model_zoo,
         channel=channel,
         embedding_service_endpoint=eval(args.embedding_service_endpoint),
         dataset_fn=args.dataset_fn,

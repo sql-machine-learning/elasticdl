@@ -7,19 +7,12 @@ from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType, Mode
 from elasticdl.python.common.embedding_service import EmbeddingService
 from elasticdl.python.common.log_util import default_logger as logger
-from elasticdl.python.common.model_helper import (
-    find_layer,
-    load_model_from_module,
-    load_module,
-)
+from elasticdl.python.common.model_helper import find_layer, get_model_spec
 from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.worker.prediction_outputs_processor import (
-    BasePredictionOutputsProcessor,
-)
 from elasticdl.python.worker.task_data_service import TaskDataService
 
 # The default maximum number of a minibatch retry as its results
@@ -35,7 +28,7 @@ class Worker(object):
         worker_id,
         job_type,
         minibatch_size,
-        model_file,
+        model_zoo,
         dataset_fn="dataset_fn",
         loss="loss",
         optimizer="optimizer",
@@ -57,22 +50,32 @@ class Worker(object):
         self._worker_id = worker_id
         self._job_type = job_type
         self._minibatch_size = minibatch_size
-        model_module = load_module(model_file).__dict__
-        self._model = load_model_from_module(
-            model_def, model_module, model_params
-        )
         self._tape = None
         if (
             self._job_type == JobType.TRAINING_WITH_EVALUATION
             or self._job_type == JobType.TRAINING_ONLY
         ):
             self._tape = tf.GradientTape(persistent=True)
+
+        (
+            self._model,
+            self._dataset_fn,
+            self._loss,
+            self._opt_fn,
+            self._eval_metrics_fn,
+            self._prediction_outputs_processor,
+        ) = get_model_spec(
+            model_zoo=model_zoo,
+            model_def=model_def,
+            dataset_fn=dataset_fn,
+            loss=loss,
+            optimizer=optimizer,
+            eval_metrics_fn=eval_metrics_fn,
+            model_params=model_params,
+            prediction_outputs_processor=prediction_outputs_processor,
+        )
         self._init_embedding_layer()
         self._var_created = self._model.built
-        self._dataset_fn = model_module[dataset_fn]
-        self._opt_fn = model_module[optimizer]
-        self._loss = model_module[loss]
-        self._eval_metrics_fn = model_module[eval_metrics_fn]
 
         if channel is None:
             self._stub = None
@@ -84,21 +87,6 @@ class Worker(object):
         self._task_data_service = TaskDataService(
             self, self._job_type == JobType.TRAINING_WITH_EVALUATION
         )
-        if prediction_outputs_processor in model_module:
-            self._prediction_outputs_processor = model_module[
-                prediction_outputs_processor
-            ]()
-            if not isinstance(
-                self._prediction_outputs_processor,
-                BasePredictionOutputsProcessor,
-            ):
-                logger.warning(
-                    "prediction_outputs_processor is not "
-                    "inherited from BasePredictionOutputsProcessor. "
-                    "Prediction outputs may not be processed correctly."
-                )
-        else:
-            self._prediction_outputs_processor = None
 
     def _init_embedding_layer(self):
         """

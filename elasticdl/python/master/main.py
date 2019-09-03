@@ -18,7 +18,7 @@ from elasticdl.python.common.embedding_service import EmbeddingService
 from elasticdl.python.common.log_util import get_logger
 from elasticdl.python.common.model_helper import (
     find_layer,
-    get_model_file,
+    get_module_file_path,
     load_model_from_module,
     load_module,
 )
@@ -99,7 +99,7 @@ def main():
         args.num_epochs,
     )
     model_module = load_module(
-        get_model_file(args.model_zoo, args.model_def)
+        get_module_file_path(args.model_zoo, args.model_def)
     ).__dict__
     model_inst = load_model_from_module(
         args.model_def, model_module, args.model_params

@@ -2,6 +2,10 @@ import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, Input
 
+from elasticdl.python.worker.prediction_outputs_processor import (
+    BasePredictionOutputsProcessor,
+)
+
 
 def custom_model():
     inputs = Input(shape=(1, 1), name="x")
@@ -32,3 +36,11 @@ def optimizer(lr=0.1):
 
 def eval_metrics_fn(predictions, labels):
     return {"mse": tf.reduce_mean(tf.square(predictions - labels))}
+
+
+class PredictionOutputsProcessor(BasePredictionOutputsProcessor):
+    def __init__(self):
+        pass
+
+    def process(self, predictions, worker_id):
+        pass

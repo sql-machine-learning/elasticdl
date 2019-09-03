@@ -11,12 +11,13 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.embedding_service import EmbeddingService
-from elasticdl.python.common.model_helper import get_model_file, load_module
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
+
+_model_zoo_path = os.path.dirname(os.path.realpath(__file__))
 
 
 class MockEmbeddingService:
@@ -43,16 +44,6 @@ class MockEmbeddingService:
             return
         for k, emb in zip(keys, embeddings):
             self.mock_embedding_table[k] = emb
-
-
-_model_file = get_model_file(
-    os.path.dirname(os.path.realpath(__file__)), "test_module.custom_model"
-)
-_embedding_model_file = get_model_file(
-    os.path.dirname(os.path.realpath(__file__)),
-    "embedding_test_module.CustomModel",
-)
-m = load_module(_model_file).__dict__
 
 
 def create_recordio_file(size):
@@ -102,7 +93,7 @@ class WorkerTest(unittest.TestCase):
             1,
             job_type,
             batch_size,
-            _model_file,
+            _model_zoo_path,
             model_def="test_module.custom_model",
             channel=None,
         )
@@ -162,7 +153,7 @@ class WorkerTest(unittest.TestCase):
             1,
             JobType.TRAINING_ONLY,
             32,
-            _embedding_model_file,
+            _model_zoo_path,
             model_def="embedding_test_module.CustomModel",
             channel=None,
         )
@@ -189,7 +180,7 @@ class WorkerTest(unittest.TestCase):
             1,
             JobType.TRAINING_ONLY,
             32,
-            _embedding_model_file,
+            _model_zoo_path,
             model_def="embedding_test_module.CustomModel",
             channel=None,
         )
