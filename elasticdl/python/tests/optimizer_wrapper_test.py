@@ -283,6 +283,51 @@ class OptimizerWrapperTest(unittest.TestCase):
             (opt_wrapper._embed_variables["test-1"].numpy() < 0.0001).all()
         )
 
+    def test_report_to_kv_store(self):
+        opt = SGD(momentum=0.1)
+        opt_wrapper = OptimizerWrapper(opt, None, {})
+
+        ids_list = [[1, 5], [10]]
+        opt_wrapper._unique_ids_all_layers = {
+            "test_1": np.array(ids_list[0]),
+            "test_2": np.array(ids_list[1]),
+        }
+        t = np.array([1.0, 1.0, 1.0])
+        opt_wrapper._embed_variables = {
+            "test_1": tf.Variable([t, t * 5]),
+            "test_2": tf.Variable([t * 10]),
+        }
+        opt_wrapper._slot_variables = {
+            "test_1": {"momentum": tf.Variable([t / 10.0, t / 2.0])},
+            "test_2": {"momentum": tf.Variable([t])},
+        }
+
+        mock_kv_store = MockKvStore({})
+        with mock.patch.object(
+            EmbeddingService, "update_embedding", mock_kv_store.update
+        ):
+            opt_wrapper._report_to_kv_store()
+
+        expected_mock_kv_store = MockKvStore({})
+        expected_mock_kv_store.update(
+            keys=["test_1-1", "test_1-5", "test_2-10"],
+            values=[t, t * 5.0, t * 10.0],
+        )
+        expected_mock_kv_store.update(
+            keys=[
+                "test_1-momentum-1",
+                "test_1-momentum-5",
+                "test_2-momentum-10",
+            ],
+            values=[t / 10.0, t / 2.0, t],
+        )
+        for k, ids in zip(["test_1", "test_2"], ids_list):
+            for id in ids:
+                key = Embedding.get_key([k, id])
+                v, _ = mock_kv_store.lookup([key])
+                expected_v, _ = expected_mock_kv_store.lookup([key])
+                self.assertTrue((v[0] == expected_v[0]).all())
+
 
 if __name__ == "__main__":
     unittest.main()
