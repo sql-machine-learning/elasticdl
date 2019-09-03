@@ -16,6 +16,7 @@ def main():
 Below is the list of supported commands:
 train         Submit a ElasticDL distributed training job.
 evaluate      Submit a ElasticDL distributed evaluation job.
+predict       Submit a ElasticDL distributed prediction job.
 """
     )
     subparsers = parser.add_subparsers()
