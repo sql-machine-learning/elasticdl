@@ -1,12 +1,14 @@
-# ElasticDL: Kubernetes-native 的弹性分布式深度学习系统
+# ElasticDL: Kubernetes-native 弹性分布式深度学习系统
 
-今天，蚂蚁金服在 Google Developer Day 上宣布开源了基于 TensorFlow 2.0
-eager execution mode 的分布式深度学习系统 ElasticDL。项目负责人王益和
-我们分享了 ElasticDL 项目的设计意图和现状。
+今天，蚂蚁金服在 Google Developer Day Shanghai 2019 上宣布开源了基于
+TensorFlow 2.0 eager execution 的分布式深度学习系统 ElasticDL。基于
+TensorFlow 的支持弹性调度的深度学习系统，据我们所知，ElasticDL 是第一
+个。项目负责人王益和我们分享了 ElasticDL 项目的设计意图和现状，尤其是
+ElasticDL 与 TensorFlow 2.0 以及 Kubernetes 的技术关联。
 
 ## 分布式深度学习的技术思路
 
-基于 TensorFlow 的分布式训练系统大致可以分为以下四类。
+基于 TensorFlow 的分布式训练系统大致可以分为以下四类：
 
 ```
 |---------------|----------------|----------------|
@@ -14,12 +16,12 @@ eager execution mode 的分布式深度学习系统 ElasticDL。项目负责人�
 |               |  graph mode    | eager mode     |
 |---------------|----------------|----------------|
 | in TensorFlow | TensorFlow's   | TensorFlow     |
-| C++ runtime   | ps-based       | distribution   |
+|   runtime     | PS-based       | distribution   |
 |               | distribution   | strategies     |
 |               |                | (early stage)  |
 |---------------|----------------|----------------|
 | on TensorFlow | Uber Horovod   | Ant Financial  |
-| Python API    |                | ElasticDL      |
+|  API          |                | ElasticDL      |
 |               |                | (early stage)  |
 |---------------|----------------|----------------|
 ```
@@ -29,51 +31,51 @@ Kubernetes 实现容错和弹性调度。
 
 ## 高性能计算和云计算
 
-在深度学习技术研发的早期，涉及的人员相对少，公用一个计算机群的人相对少，
+在深度学习技术研发的早期，涉及的人员相对少，共用一个计算集群的人相对少，
 计算作业之间的协调可以通过口头交流实现。大家更关心缩短运行时间，也就是
 从作业启动到结束的这段时间。高性能计算技术（HPC）是解决这个问题的有效
 途径，比如 NVIDIA 的 cuBLAS 和 cuDNN 优化高性能数学计算、NCCL 优化 GPU
 之间的通信效率。
 
-随着深度学习技术的大规模使用，很多工程师和研究员公用一个机群，通过商量
-来协调调度显然不可行了，大家开始使用机群管理系统调度分布式作业。这其中，
+随着深度学习技术的大规模使用，很多工程师和研究员共用一个集群，通过商量
+来协调调度显然不可行了，大家开始使用集群管理系统调度分布式作业。这其中，
 Kubernetes 近年来一枝独秀，已经在各大公有云中广泛使用。
 
 ## 云计算和弹性调度
 
-在 Kubernetes 上启动分布式 TenosrFlow 作业的常用方式是使用 Google
+在 Kubernetes 上启动分布式 TensorFlow 作业的常用方式是使用 Google
 Cloud 开源的 Kubeflow。Kubeflow 是 Kubernetes 的一个”插件“，它询问
-Kubernetes 计划分配那几台机器来运行一个分布式作业中的各个进程，随后告
+Kubernetes 计划分配哪几台机器来运行一个分布式作业中的各个进程，随后告
 知每个进程，所有其他进程的 IP 地址和 port。从而保证一个作业里各个进程
 之间互相知道对方。
 
 为什么需要让所有进程互相知道对方呢？这是 TensorFlow ps-based
-distribution 方式（上述表格中的左上）要求的。TenosrFlow 1.x 原生的分布
+distribution 方式（上述表格中的左上）要求的。TensorFlow 1.x 原生的分布
 式训练功能让一个作业中所有进程都执行 TensorFlow 1.x runtime 程序。这些
 进程互相通信，互相协调成为一个“分布式 runtime“，来解释执行表示深度学习
 计算过程的*计算图*（graph）。在开始分布式训练之初，graph 被 TensorFlow
 runtime 拆解成若干子图；每个进程负责执行一个子图 —— 任何一个进程失败
 （可能是被更高优先级作业抢占），则整个大图的执行就失败了。所以
 TensorFlow 原生的分布式训练能力不是*容错*的（fault-tolerant）。不过，
-它是可以从错误恢复（fault-recoverable）—— TensorFlow Python API 提供
+它是可以从错误恢复（fault-recoverable）—— TensorFlow API 提供
 checkpoint 的能力；如果一个作业失败了，可以重启作业，从最近的
 checkpoint 开始继续执行。
 
-Kubeflow 可以在 Kubernetes 上跑 TensorFlow 原生的分布式计算能力。但是
+Kubeflow 可以在 Kubernetes 上启动基于 TensorFlow 原生的分布式计算能力的作业。但是
 因为后者并不能容错，所以 Kubeflow 并不能无中生有。不能容错，也意味着不
 能弹性调度。
 
 ## 对弹性调度的诉求
 
-在很多人公用计算机群的情况下，支持弹性调度意味着极大提升团队效率和集群
+在很多人共用计算集群的情况下，支持弹性调度意味着极大提升团队效率和集群
 的总体利用率。前者支持快速迭代以保持技术领先；后者决定企业成本和云计算
 业务的盈利能力。
 
-一个展示弹性调度效果的例子如下。假设一个机群里有 N 个 GPU，一个作业包
+一个展示弹性调度效果的例子如下。假设一个集群里有 N 个 GPU，一个作业包
 括一个进程，占用了 N/2 个 GPU。第二个作业需要 N/2+1 个 GPU；但是此时机
 群里空闲 GPU 只有 N/2 个。如果没有弹性调度能力，那么第二个作业被迫等待，
 直到第一个作业结束释放资源。这个等待时间很可能和第二个作业的运行时间同
-量级。此时，集群的利用率很低，是 1/2。如果有弹性调度，那么第二个作业可
+量级。此时，集群的利用率很低，是 50%。如果有弹性调度，那么第二个作业可
 以马上启动，用 N/2 个 GPU 做计算。日后如果有更多空闲资源了，调度系统可
 以增加其进程数量，充分利用资源。
 
@@ -81,7 +83,7 @@ Kubeflow 可以在 Kubernetes 上跑 TensorFlow 原生的分布式计算能力�
 需要资源，所以调度系统杀掉了（preempt）了第一个作业的几个进程来腾出资
 源启动第二个作业。如果没有弹性调度和容错，那么第一个作业会失败，所有进
 程都结束。直到有足够资源重启它，并且沿着最近的 checkpoint 继续。如果有
-弹性调度，则第一个作业的剩下的进程可以继续执行，只是因为可用的 进程
+弹性调度，则第一个作业的剩下的进程可以继续执行，只是因为可用的进程
 （GPU）少了，所以速度慢一些而已。
 
 以上两个例子都展示了弹性调度对集群利用率的提升，以及对团队工作效率的保
@@ -91,7 +93,7 @@ Kubeflow 可以在 Kubernetes 上跑 TensorFlow 原生的分布式计算能力�
 此，弹性调度依赖 **分布式编程框架和调度系统配合**。
 
 今天，很多分布式编程框架都可以和 Kubernetes 配合实现容错和弹性调度。比
-如 用于离线数据处理的 Hadoop MapReduce、用于在线数据处理的 Storm、在线
+如 用于离线数据处理的 Spark、用于在线数据处理的 Storm、在线
 流数据引擎 Flink、分布式存储系统 Redis 和 HBase。其中适合深度学习的框
 架有 Paddle EDL。基于 TensorFlow 的支持弹性调度的深度学习系统，据我们
 所知，ElasticDL 是第一个。
@@ -128,7 +130,7 @@ ElasticDL 只能运行在 Kubernetes 上。
 
 TensorFlow 原生的分布式计算能力不是 Kubernetes-native 的。所以
 TensorFlow 不是绑定在 Kubernetes 这个平台上的。这是大家如果要用现有技
-术在 Kubernetes 运行 TenorFlow 作业的话，需要依赖 Kubernetes 的扩展
+术在 Kubernetes 运行 TensorFlow 作业的话，需要依赖 Kubernetes 的扩展
 Kubeflow 的原因。
 
 理论上，不调用 Kubernetes API 也是可以实现一定程度的容错的。即使没有
@@ -144,24 +146,24 @@ Kubernetes 的通知，master 可以通过检查其他继承的心跳（heartbea
 
 如上文解释，为了保证 TensorFlow 最核心的 runtime 是平台无关的，我们没
 法通过修改 runtime 实现完备的主动的容错和弹性调度。所以如文首的田字格
-所示，ElasticDL 和 Uber Horovod 都是在 TensorFlow 的 Python API 上包一
+所示，ElasticDL 和 Uber Horovod 都是在 TensorFlow 的 API 上包一
 层。
 
-Horovod 基于 TenosrFlow 1.x。 一个 Horovod 作业的每个进程调用单机版
+Horovod 基于 TensorFlow 1.x。 一个 Horovod 作业的每个进程调用单机版
 TensorFlow 做本地计算，然后收集 gradients，并且通过 AllReduce 调用汇聚
 gradients 并且更新模型。Horovod 也是平台无关的，所以它提供的 AllReduce
 操作不支持容错和弹性调度。这一点和 ElasticDL 不一样。
 
-和 ElasticDL 一样的是，Horovod 需要从 TensorFlow “偷偷截获 gradients”，
+和 ElasticDL 一样的是，Horovod 需要从 TensorFlow 偷偷“截获” gradients，
 在 TensorFlow 1.x 中，深度学习计算是表示成一个计算图（graph），并且由
-TensorFlow runtime 解释执行，所以 Horovd 为了获得每个进程算的
+TensorFlow runtime 解释执行，所以 Horovod 为了获得每个进程算的
 gradients 并且 AllReduce 它们，就得 hack 进入图执行的过程。为此，
 Horovod 要求使用者使用特定的 optimizer 代替 TensorFlow 提供的
 optimizer，从而可以在优化模型阶段透露出 gradients。
 
 一个调用 Horovod 的用户程序的结构如下。其中标记为 `(*)` 和 `(**)` 的部
 分是 Horovod 要求用户写的，帮助 Horovod 截获 TensorFlow 计算得到的
-graidents 的代码。如果用户不慎忘记写了，那么程序执行结果就不对了。
+gradients 的代码。如果用户不慎忘记写了，那么程序执行结果就不对了。
 
 ```python
 hvd.init()
@@ -189,7 +191,7 @@ tape 提供一个操作让用户可以获取每个参数的 gradient。
 ElasticDL 通过调用 TensorFlow 2.0 API 可以很直接地获取 gradients：
 
 ```python
-with tf.GradientTape(persistent=True) as tape:
+with tf.GradientTape() as tape:
     outputs = self._model.call(features, training=True)
     loss = self._loss(outputs, labels)
     # Add regularization loss if any
@@ -211,7 +213,7 @@ loss = ...  # Build model...
 优化算法（optimizer）。用户总是希望能以尽量精简的方式指定这些信息，以
 尽量少的代码描述训练作业。
 
-ElasticDL 和 TensorFlow 其他的 high-level API，例如 Keras 和 TenorFlow
+ElasticDL 和 TensorFlow 其他的 high-level API，例如 Keras 和 TensorFlow
 Estimator 一样， 几乎调用一个 API 函数就可以执行一个分布式训练作业。下
 面这个程序使用 Keras。Keras 使用 TensorFlow 原生分布式训练能力，不支持容
 错和弹性调度。
@@ -259,8 +261,8 @@ ElasticDL 项目希望通过这样的分而治之的策略，提供高性能并�
 
 ## ElasticDL 和 SQLFlow 的关系
 
-今年早些时候，王益团队 开源了 SQLFlow。用户可以用扩展后的 SQL 语法，非
-常精炼地描述整个数据流和 AI 流程。
+今年早些时候，王益团队 开源了 [SQLFlow](https://sqlflow.org)。用户可以
+用扩展后的 SQL 语法，非常精炼地描述整个数据流和 AI 流程。
 
 比如，如果我们要为一个电子商务网站构造一个推荐系统，需要开发日志收集、
 在线数据清洗、特征工程、模型训练，验证和预测等模块。每个模块可能需要投
@@ -282,25 +284,25 @@ SQL 程序翻译成一个 Python 程序，把两部分链接起来。
 ```sql
 SELECT age, address, department, income FROM employee
 TRAIN DNNRegressor
-COLUMN age, vocabularize(department), bucketize(address, 1000),
-TARGET income,
+COLUMN age, vocabularize(department), bucketize(address, 1000)
+LABEL income
 WITH hidden_layers=[100, 150, 50],
      dist_strategy=mirrored, gpus=8
 INTO my_first_model
 ```
 
 其中，`TRAIN` 从句指定要训练的模型；`COLUMN` 从句指定如何把数据映射成
-特征；`TARGET` 指定要预测的值；`WITH` 指定训练过程中的各种参数，其中
+特征；`LABEL` 指定要预测的值；`WITH` 指定训练过程中的各种参数，其中
 `dist_strategy` 是调用 Keras/TensorFlow 做训练是需要指定的分布式策略，
 `gpus` 指定需要的资源。而这些，在 SQLFlow 调用 ElasticDL 的时候都是不
 需要的，因为 ElasticDL 自动选择分布式策略和算法。
 
 从这个例子可以看出，如果要让用户能提供尽量少的参数，人工智能引擎还需要
-更加智能，提供包括 AutoML 和 auto feature engineering 的功能。
+更加智能，提供包括 AutoML 和 自动特征工程 的功能。
 ElasticDL 项目任重道远。我们期待把上述 SQL 程序简化为如下形式：
 
 ```sql
-SELECT * FROM employee TARGET income INTO my_first_model
+SELECT * FROM employee LABEL income INTO my_first_model
 ```
 
 ## ElasticDL 项目的现状
@@ -313,7 +315,7 @@ asynchronous SGD + delayed model update 能力、以及 Kubernetes-native
 AllReduce。希望在下一个版本中可以提供给大家使用。
 
 目前 ElasticDL 实现的基于 parameter server 的分布式SGD 训练方法验证了
-容错和弹性调度。并且在 Google Cloud 上的 Kubernetes 1.12 集群和阿里云
+容错和弹性调度。并且在 Google Cloud 上的 Kubernetes 1.12 集群和阿里
 Sigma 3.1（一个 Kubernetes 的高性能实现）上都可以运行。并且，ElasticDL
 团队开发了 SQLFlow 生成 ElasticDL 程序的 code generator。
 
