@@ -11,7 +11,7 @@ from elasticdl.python.elasticdl.api import evaluate, predict, train
 
 def main():
     parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(required=True, dest='cmd')
+    subparsers = parser.add_subparsers(required=True, dest="cmd")
 
     train_parser = subparsers.add_parser(
         "train", help="Submit a ElasticDL distributed training job"
