@@ -242,8 +242,8 @@ class Client(object):
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "master"
         pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = "0"
-        resp = self.client.create_namespaced_pod(self.namespace, pod)
-        logger.info("Master launched. status='%s'" % str(resp.status))
+        self.client.create_namespaced_pod(self.namespace, pod)
+        logger.info("Master launched.")
 
     def _create_worker_pod(self, pod_name, type_key, **kargs):
         # Find that master pod that will be used as the owner reference
