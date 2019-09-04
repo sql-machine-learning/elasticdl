@@ -5,8 +5,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.optimizers import SGD, Adam
 
-from elasticdl.python.common.embedding_service import EmbeddingService
 from elasticdl.python.elasticdl.layers.embedding import Embedding
+from elasticdl.python.master.embedding_service import EmbeddingService
 
 
 def _parse_lookup_values(values, key_index):

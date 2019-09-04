@@ -91,8 +91,8 @@ class EmbeddingService(object):
             "echo yes | redis-cli --cluster create %s "
             "--cluster-replicas %d" % (redis_cluster_command, self._replicas)
         )
-        returncode = self._run_shell_command(command)
-        if not returncode:
+        return_code = self._run_shell_command(command)
+        if not return_code:
             return self._embedding_service_endpoint
         raise Exception(
             "Create Redis cluster failed with command: %s" % command
@@ -106,8 +106,8 @@ class EmbeddingService(object):
             for port in port_list
         ]:
             command = "redis-cli %s shutdown %s" % (redis_node, save)
-            returncode = self._run_shell_command(command)
-            if returncode:
+            return_code = self._run_shell_command(command)
+            if return_code:
                 failed_redis_nodes.append(redis_node)
 
         if failed_redis_nodes:
@@ -141,7 +141,8 @@ class EmbeddingService(object):
         else:
             return redis_cluster
 
-    def _parse_embedding_service_args(self):
+    @staticmethod
+    def _parse_embedding_service_args():
         parser = argparse.ArgumentParser(description="Embedding Service")
         parser.add_argument(
             "--first_port",
@@ -189,8 +190,8 @@ class EmbeddingService(object):
                 "--protected-mode no"
                 % (port, port, args.cluster_node_timeout, port, port, port)
             )
-            returncode = self._run_shell_command(command)
-            if returncode:
+            return_code = self._run_shell_command(command)
+            if return_code:
                 failed_port.append(port)
         if failed_port:
             local_ip = os.getenv("MY_POD_IP", "localhost")
@@ -199,8 +200,10 @@ class EmbeddingService(object):
                 % (local_ip, ";".join(map(str, failed_port)))
             )
 
-    def _run_shell_command(self, command):
+    @staticmethod
+    def _run_shell_command(command):
         retry_times = 0
+        redis_process = None
         while retry_times <= Redis.MAX_COMMAND_RETRY_TIMES:
             if retry_times:
                 logger.warning(
@@ -318,11 +321,12 @@ class EmbeddingService(object):
     ):
         """
         Arguments:
-            keys: The list of key, which be used to locate embedding vector
+            keys: The list of key, which be used to locate embedding vector.
+            embedding_vectors: The embedding vectors.
             embedding_service_endpoint: The access endpoint of embedding
-            service parse_type: The type of saved data
+            service parse_type: The type of saved data.
             set_if_not_exist: If this argument is `True`, it will set embedding
-            vector only when this embedding vector doesn't exist.
+                vector only when this embedding vector doesn't exist.
         Returns:
             None
         """
