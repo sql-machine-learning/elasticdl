@@ -3,7 +3,6 @@ import threading
 from collections import Counter
 
 from elasticdl.python.common import k8s_client as k8s
-from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_util import default_logger as logger
 
 
@@ -87,16 +86,6 @@ class WorkerManager(object):
     def start_workers(self):
         for i in range(self._num_workers):
             self._start_worker(self._next_worker_id())
-
-    def start_tensorboard_service(self):
-        tb_client = TensorBoardClient(self._k8s_client)
-        tb_client.create_tensorboard_service()
-        logger.info("Waiting for the URL for TensorBoard service...")
-        tb_url = tb_client.get_tensorboard_url()
-        if tb_url:
-            logger.info("TensorBoard service is available at: %s" % tb_url)
-        else:
-            logger.warning("Unable to get the URL for TensorBoard service")
 
     def _remove_worker(self, worker_id):
         logger.info("Removing worker: %d", worker_id)
