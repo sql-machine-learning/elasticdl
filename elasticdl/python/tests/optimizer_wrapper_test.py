@@ -276,7 +276,7 @@ class OptimizerWrapperTest(unittest.TestCase):
                 (
                     grads_and_vars[i][1].numpy()
                     == opt_wrapper._embed_variables[layer].numpy()
-                ).any()
+                ).all()
             )
 
         embedding_values_new = {"test-1": np.zeros((3, 4), np.float32)}
