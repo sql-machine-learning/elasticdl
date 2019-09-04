@@ -266,7 +266,6 @@ class OptimizerWrapperTest(unittest.TestCase):
             grads_and_vars, embedding_values
         )
         for i, layer in enumerate(layers):
-            print(opt_wrapper._embed_variables[layer])
             self.assertTrue(
                 (
                     opt_wrapper._embed_variables[layer].numpy()
