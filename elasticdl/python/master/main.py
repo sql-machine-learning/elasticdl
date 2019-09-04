@@ -15,6 +15,7 @@ from elasticdl.python.common.constants import (
     WorkerManagerStatus,
 )
 from elasticdl.python.common.embedding_service import EmbeddingService
+from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_util import get_logger
 from elasticdl.python.common.model_helper import (
     find_layer,
@@ -71,14 +72,21 @@ def main():
     master_ip = os.getenv("MY_POD_IP", "localhost")
     master_addr = "%s:%d" % (master_ip, args.port)
 
-    # Start tensorboard service if required
+    # Start TensorBoard service if requested
     if args.tensorboard_log_dir:
         logger.info(
-            "Starting tensorboard service with log directory %s",
+            "Starting TensorBoard service with log directory %s",
             args.tensorboard_log_dir,
         )
+        # Start TensorBoard CLI
         tb_service = TensorboardService(args.tensorboard_log_dir, master_ip)
         tb_service.start()
+        # Start TensorBoard k8s Service
+        TensorBoardClient(
+            job_name=args.job_name,
+            image_name=args.worker_image,
+            namespace=args.namespace,
+        ).start_tensorboard_service()
     else:
         tb_service = None
 
@@ -279,9 +287,6 @@ def main():
         logger.info("Launching %d workers", args.num_workers)
         worker_manager.start_workers()
         worker_manager.update_status(WorkerManagerStatus.RUNNING)
-
-        if tb_service:
-            worker_manager.start_tensorboard_service()
 
     try:
         while True:

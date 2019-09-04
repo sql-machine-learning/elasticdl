@@ -3,7 +3,6 @@ import random
 import time
 import unittest
 
-from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 
 
@@ -13,15 +12,14 @@ from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 )
 class K8sTensorBoardClientTest(unittest.TestCase):
     def test_create_tensorboard_service(self):
-        client = k8s.Client(
+        tb_client = TensorBoardClient(
             image_name=None,
             namespace="default",
             job_name="test-job-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             event_callback=None,
         )
-        tb_client = TensorBoardClient(client)
-        tb_client.create_tensorboard_service(
+        tb_client._create_tensorboard_service(
             port=80, service_type="LoadBalancer"
         )
         time.sleep(1)

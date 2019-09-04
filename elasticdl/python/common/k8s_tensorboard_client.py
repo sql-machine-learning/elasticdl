@@ -7,19 +7,20 @@ from elasticdl.python.common.log_util import default_logger as logger
 
 
 class TensorBoardClient(object):
-    def __init__(self, k8s_client):
+    def __init__(self, **kwargs):
         """
         ElasticDL k8s TensorBoard client.
 
         Args:
-            k8s_client: A Client object from elasticdl.python.common.k8s_client
+            **kwargs: Additional keyword arguments passed to the
+                `elasticdl.python.common.k8s_client.Client` object.
         """
-        self._k8s_client = k8s_client
+        self._k8s_client = k8s.Client(**kwargs)
 
     def _get_tensorboard_service_name(self):
         return "tensorboard-" + self._k8s_client.job_name
 
-    def create_tensorboard_service(
+    def _create_tensorboard_service(
         self, port=80, target_port=6006, service_type="LoadBalancer"
     ):
         service = client.V1Service(
@@ -63,6 +64,15 @@ class TensorBoardClient(object):
             self._k8s_client.namespace, service
         )
 
+    def start_tensorboard_service(self):
+        self._create_tensorboard_service()
+        logger.info("Waiting for the URL for TensorBoard service...")
+        tb_url = self._get_tensorboard_url()
+        if tb_url:
+            logger.info("TensorBoard service is available at: %s" % tb_url)
+        else:
+            logger.warning("Unable to get the URL for TensorBoard service")
+
     def _get_tensorboard_service(self):
         try:
             return self._k8s_client.client.read_namespaced_service(
@@ -75,7 +85,7 @@ class TensorBoardClient(object):
             )
             return None
 
-    def get_tensorboard_url(self, check_interval=5, wait_timeout=120):
+    def _get_tensorboard_url(self, check_interval=5, wait_timeout=120):
         start_time = time.time()
         while True:
             if time.time() - start_time > wait_timeout:
