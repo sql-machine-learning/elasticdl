@@ -1,7 +1,7 @@
 # ElasticDL: A Kubernetes-native Deep Learning Framework
 
 [![Travis-CI Build Status](https://travis-ci.com/wangkuiyi/elasticdl.svg?token=hdxEdHNTb4ZXZHY7x8gv&branch=develop)](https://travis-ci.com/wangkuiyi/elasticdl)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ElasticDL is a Kubernetes-native deep learning framework built on top of TensorFlow 2.0 that supports fault-tolerance and elastic scheduling.  
 
