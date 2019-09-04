@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl.python.common.constants import JobType
-from elasticdl.python.common.embedding_service import EmbeddingService
+from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker

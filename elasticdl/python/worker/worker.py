@@ -5,7 +5,6 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType, Mode
-from elasticdl.python.common.embedding_service import EmbeddingService
 from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.model_helper import find_layer, get_model_spec
 from elasticdl.python.common.ndarray import (
@@ -13,6 +12,7 @@ from elasticdl.python.common.ndarray import (
     tensor_to_ndarray,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
+from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.worker.task_data_service import TaskDataService
 
 # The default maximum number of a minibatch retry as its results

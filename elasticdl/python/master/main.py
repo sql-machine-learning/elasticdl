@@ -14,7 +14,6 @@ from elasticdl.python.common.constants import (
     JobType,
     WorkerManagerStatus,
 )
-from elasticdl.python.common.embedding_service import EmbeddingService
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_util import get_logger
 from elasticdl.python.common.model_helper import (
@@ -26,6 +25,7 @@ from elasticdl.python.common.model_helper import (
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.args import parse_args
 from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_worker_manager import WorkerManager
 from elasticdl.python.master.servicer import MasterServicer

@@ -5,7 +5,6 @@ import tensorflow as tf
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.embedding_service import EmbeddingService
 from elasticdl.python.common.file_helper import copy_if_not_exists
 from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.model_helper import load_from_checkpoint_file
@@ -16,6 +15,7 @@ from elasticdl.python.common.ndarray import (
 from elasticdl.python.common.tensor_helper import merge_indexed_slices
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.master.embedding_service import EmbeddingService
 
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):

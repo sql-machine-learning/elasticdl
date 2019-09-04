@@ -10,7 +10,7 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import JobType
-from elasticdl.python.common.embedding_service import EmbeddingService
+from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher

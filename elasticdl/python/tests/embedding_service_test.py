@@ -6,7 +6,7 @@ import unittest
 
 import numpy as np
 
-from elasticdl.python.common.embedding_service import EmbeddingService
+from elasticdl.python.master.embedding_service import EmbeddingService
 
 
 def get_free_port():
