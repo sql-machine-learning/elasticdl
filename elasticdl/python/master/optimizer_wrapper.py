@@ -168,9 +168,11 @@ class OptimizerWrapper(object):
         )
         self._set_slot_values_to_variables(slot_values)
 
-        # TODO: implement the following logic:
-        # * call self._opt.apply_gradients
-        # * report updated values to Redis
+        self._opt.apply_gradients(
+            grads_and_vars_local + grads_and_vars_kv_store
+        )
+
+        self._report_to_kv_store()
 
     def _lookup_embeddings_and_slots(self, grads_and_vars):
         """Look up embedding vectors and slot values form kv store.
@@ -253,6 +255,7 @@ class OptimizerWrapper(object):
         embed_key_index = {}
         slot_keys = []
         slot_key_index = {}
+        self._unique_ids_all_layers = {}
 
         # generate keys
         for it, (grad, layer_name) in enumerate(grads_and_vars):
@@ -325,6 +328,8 @@ class OptimizerWrapper(object):
         """Get the variable for the specified ElasticDL embedding layer."""
         return self._embed_variables.get(layer_name, None)
 
+    # TODO: refactor _create_slot_variable and _create_embedding_variable
+    # into one function
     def _create_embedding_variable(self, layer_name, initial_value):
         """Create a variable for an ElasticDL embedding layer."""
         dim = self._embed_dims[layer_name]
@@ -406,6 +411,26 @@ class OptimizerWrapper(object):
                 "Variable with var_key %s and slot_name %s is not expected to "
                 "be in self._opt." % (var_key, slot_name)
             )
+
+    def _report_to_kv_store(self):
+        """Report updated embedding vectors and slots to kv store."""
+        keys = []
+        values = []
+        for layer, ids in self._unique_ids_all_layers.items():
+            value = self._get_embedding_variable(layer).numpy()
+            for id, v in zip(ids, value):
+                keys.append(Embedding.get_key([layer, id]))
+                values.append(v)
+
+            for slot in self._allowed_slot_names:
+                value = self._get_slot_variable(layer, slot).numpy()
+                for id, v in zip(ids, value):
+                    keys.append(Embedding.get_key([layer, slot, id]))
+                    values.append(v)
+
+        EmbeddingService.update_embedding(
+            keys, values, self._kv_store_endpoint
+        )
 
     @property
     def allowed_slot_names(self):
