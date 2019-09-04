@@ -81,12 +81,6 @@ def main():
         # Start TensorBoard CLI
         tb_service = TensorboardService(args.tensorboard_log_dir, master_ip)
         tb_service.start()
-        # Start TensorBoard k8s Service
-        TensorBoardClient(
-            job_name=args.job_name,
-            image_name=args.worker_image,
-            namespace=args.namespace,
-        ).start_tensorboard_service()
     else:
         tb_service = None
 
@@ -260,7 +254,6 @@ def main():
             str(embedding_service_endpoint),
         ]
 
-        logger.info(">>> master pod envs argument is %s" % args.envs)
         env_dict = parse_envs(args.envs)
         env = []
         for key in env_dict:
@@ -287,6 +280,14 @@ def main():
         logger.info("Launching %d workers", args.num_workers)
         worker_manager.start_workers()
         worker_manager.update_status(WorkerManagerStatus.RUNNING)
+
+    # Start TensorBoard k8s Service if requested
+    if tb_service:
+        TensorBoardClient(
+            job_name=args.job_name,
+            image_name=args.worker_image,
+            namespace=args.namespace,
+        ).start_tensorboard_service()
 
     try:
         while True:
