@@ -38,7 +38,7 @@ kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
 Clone ElasticDL source code:
 
 ```bash
-git clone https://github.com/wangkuiyi/elasticdl.git
+git clone https://github.com/sql-machine-learning/elasticdl.git
 ```
 
 Build docker image:

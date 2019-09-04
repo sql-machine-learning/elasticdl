@@ -6,9 +6,9 @@ with open("elasticdl/requirements.txt") as f:
 setup(
     name="elasticdl",
     version="0.0.1",
-    description="A Kubernetes-native Elastic Deep Learning Framework",
+    description="A Kubernetes-native Deep Learning Framework",
     author="Ant Financial",
-    url="https://github.com/wangkuiyi/elasticdl",
+    url="https://github.com/sql-machine-learning/elasticdl",
     install_requires=requirements,
     packages=find_packages(exclude=["*test*"]),
     package_data={"": ["proto/elasticdl.proto", "docker/*", "Makefile"]},

@@ -16,7 +16,7 @@ There are several Keras examples provided in `model_zoo` directory.
 
 ### Download ElasticDL Source Code
 ```bash
-git clone https://github.com/wangkuiyi/elasticdl.git
+git clone https://github.com/sql-machine-learning/elasticdl.git
 cd elasticdl
 ```
 
@@ -125,7 +125,7 @@ cluster = KubernetesCluster()
 
 ### Download ElasticDL Source Code And Build Wheel Package
 ```bash
-git clone https://github.com/wangkuiyi/elasticdl.git
+git clone https://github.com/sql-machine-learning/elasticdl.git
 cd elasticdl
 ```
 
