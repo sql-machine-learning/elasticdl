@@ -9,7 +9,7 @@ This tutorial provides three approaches to process the data: [local Python scrip
 
 
 ## Python Script
-If your data amount is small and it locates in your local disk, the following section is the approach you want to use. [Here](https://github.com/wangkuiyi/elasticdl/blob/develop/elasticdl/python/data/recordio_gen/image_label.py) is a sample program to convert the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset into RecordIO format. It should be straightforward to write your own script by mimicking the sample program.
+If your data amount is small and it locates in your local disk, the following section is the approach you want to use. [Here](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/python/data/recordio_gen/image_label.py) is a sample program to convert the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset into RecordIO format. It should be straightforward to write your own script by mimicking the sample program.
 
 
 ## Local PySpark Job
@@ -48,12 +48,12 @@ tar -cvf $TRAINING_DATA_DIR/$TAR_FILE $TRAINING_DATA_DIR/mnist_sampled_training_
     
     Notes:
     1. If your PySpark job needs other dependencies in the image, you can create your own image derived from the sample Dockerfile.
-    2. You need to provide your own [model file](https://github.com/wangkuiyi/elasticdl/blob/0b7d75fd5073802f33e192244283b86ccf2684e0/elasticdl/doc/model_building.md), from which we need the [feature](https://github.com/wangkuiyi/elasticdl/blob/develop/elasticdl/doc/model_building.md#feature_columns) and [label](https://github.com/wangkuiyi/elasticdl/blob/develop/elasticdl/doc/model_building.md#label_columns) columns, as well as the [user-defined data processing logic](prepare_data_for_a_single_file).
-    3. There are some other arguments you can pass to our backbone PySpark file as you can see in the main() function of [spark_gen_recordio.py](https://github.com/wangkuiyi/elasticdl/blob/develop/elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/spark_gen_recordio.py).
+    2. You need to provide your own [model file](https://github.com/sql-machine-learning/elasticdl/blob/0b7d75fd5073802f33e192244283b86ccf2684e0/elasticdl/doc/model_building.md), from which we need the [feature](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/doc/model_building.md#feature_columns) and [label](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/doc/model_building.md#label_columns) columns, as well as the [user-defined data processing logic](prepare_data_for_a_single_file).
+    3. There are some other arguments you can pass to our backbone PySpark file as you can see in the main() function of [spark_gen_recordio.py](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/spark_gen_recordio.py).
 
 
 ## PySpark Job on Google Cloud
-If your amount of data is so huge that it can't fit into your local disk, the following section is the approach you want to use. In this tutorial we use [Google Filestore](https://cloud.google.com/filestore/) as our training data storage. We also tried [Google Cloud Storage](https://cloud.google.com/storage/), which is not a good fit for our use case(see [here](https://github.com/wangkuiyi/elasticdl/issues/381#issuecomment-500686228)). Here are the steps to run our PySpark job on Google Cloud:
+If your amount of data is so huge that it can't fit into your local disk, the following section is the approach you want to use. In this tutorial we use [Google Filestore](https://cloud.google.com/filestore/) as our training data storage. We also tried [Google Cloud Storage](https://cloud.google.com/storage/), which is not a good fit for our use case(see [here](https://github.com/sql-machine-learning/elasticdl/issues/381#issuecomment-500686228)). Here are the steps to run our PySpark job on Google Cloud:
 1. Set up the Google Cloud SDK and project following [here](https://cloud.google.com/sdk/docs/quickstarts) based on your OS.
 
 2. [Create a Google Cloud Storage bucket](https://cloud.google.com/storage/docs/quickstart-gsutil#create), and upload the [initialization script](./sample_pyspark_recordio_gen/go-pip-install.sh), which will install all dependencies we need to Spark cluster, to bucket:

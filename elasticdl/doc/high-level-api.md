@@ -189,7 +189,7 @@ A key question is what information must be in the directory `/filestore/tony/my_
    - `loss`
    - `optimizer`
 
-1. Model parameters as a map from parameter name to parameter value tensors, defined in [`elasticdl.proto`](https://github.com/wangkuiyi/elasticdl/blob/e06618af50cc9507e0b59473f4b97c066fa04870/elasticdl/proto/elasticdl.proto#L51-L54).
+1. Model parameters as a map from parameter name to parameter value tensors, defined in [`elasticdl.proto`](https://github.com/sql-machine-learning/elasticdl/blob/e06618af50cc9507e0b59473f4b97c066fa04870/elasticdl/proto/elasticdl.proto#L51-L54).
 
  
 We define a new wrapper message:
