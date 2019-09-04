@@ -216,8 +216,10 @@ class OptimizerWrapperTest(unittest.TestCase):
                     ).all()
                 )
                 self.assertTrue(
-                    slots_dict[slot]
-                    == opt_wrapper._slot_variables[layer][slot]
+                    (
+                        slots_dict[slot].numpy()
+                        == opt_wrapper._slot_variables[layer][slot].numpy()
+                    ).all()
                 )
 
                 slots_dict[slot].assign(tf.ones((10, 4)))
@@ -271,7 +273,10 @@ class OptimizerWrapperTest(unittest.TestCase):
                 ).all()
             )
             self.assertTrue(
-                grads_and_vars[i][1] == opt_wrapper._embed_variables[layer]
+                (
+                    grads_and_vars[i][1].numpy()
+                    == opt_wrapper._embed_variables[layer].numpy()
+                ).all()
             )
 
         embedding_values_new = {"test-1": np.zeros((3, 4), np.float32)}
