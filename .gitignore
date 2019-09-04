@@ -95,3 +95,9 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# node and vuepress
+/node_modules/
+/dist/
+/yarn.lock
+
