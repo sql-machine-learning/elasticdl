@@ -1,73 +1,115 @@
-# Design Doc: Asynchronous SGD (Stochastic Gradient Descent)
+# Design Doc: Asynchronous SGD
 
 ## Motivation
+Parameter server (PS) based distributed training uses data parallelism to speed up training. 
 
-In the paper [Large scale distributed deep networks][Dean], the authors describle two kinds of distributed training:
+We have implemented synchronous SGD in ElasticDL. When PS accumulates `grads_to_wait` gradients from workers, PS averages these gradients and updates the model with the averaged gradients. PS also maintains `model_version` which equals to the number of model updates. Each worker has a local copy of the model. Before a minibatch training step, if there is a new `model_version` on PS, the worker will get the new model from PS to replace the local model. After computing the gradients with a minibatch, the worker reports the gradients to PS together with the local model version. When PS receives gradients from a worker, it only accepts the gradients with a model version same as the current PS `model_version`.
 
-+ Model parallelism:
-  + A Large model is splited and placed on multiple workers. Each worker is responbile for its own part of model weights. They train the model
-  with the same data.
-+ Data parallelism
-  + Each worker has a complete model replica and they share the same parameter servers. They train the model with different data shards.
 
-In ElasticDL, we implement data parallelism. Multiple workers get data tasks from master. After processing the task, workers report
-their gradients and a local model version to parameter servers. Parameter servers collect `grad_to_wait`
-gradients from workers before updating the model (averaging the gradients and applying the averaged gradient).
-It tracks the model updates with a variable `_model_version`. Whenever parameter servers update the model, they also update `_model_version`.
-For consistency, both of previous updating operations are guarded with a `threading.Lock` object.
 
-The training process in ElasticDL is synchronous:
+This Synchronous SGD ensures model consistency in the price of wasted and blocked computation. 
 
-+ Whenever any worker reports gradients to parameter servers, together it reports its local model version. If this version is not equal to parameter servers'
-model vesion, the gradients will be rejected. The rejected worker will retry by getting new model, calculating gradients and reporting them.
-+ Whenever parameter servers receive gradients, they have to acquire the lock before gathering or updating the model.
-+ Whenever a worker sends `GetModel` request, parameter servers have to acquire the lock.
+* Wasted computation: when a worker reports gradients with an outdated model version to PS, PS will reject these gradients. The worker have to get the current model from PS, reuse the minibatch data to train the model again.
+* Blocked computation: PS has to use a lock for model update with gradients and model read by workers to ensure model consistency.
 
-The synchronization comes at the cost of wasted compuation of workers and blocked computation of parameter servers. The cost will hurt the traning speed. As data volume increases dramatically nowdays, a higher training speed is essential for the application of a model. Asynchronous SGD will mitigate those defects by allowing
-for asynchronously updating the model without any lock.
+Asynchronous SGD can avoid the wasted and blocked computation mentioned above with a relaxed model consistency.
 
-### Design
+* PS will accept all gradients from workers.
+* PS does not locks and supports concurrent model reads and updates.
 
-In asynchronous SGD, workers report gradients and pull new model without waiting for parameter servers' acknowledgement. Parameter servers apply gradients
-update immediately instead of gathering `grads_to_wait` gradients and averaging them with the lock object.
 
-Asynchronous SGD will introduce staleness in parameters. The staleness means:
 
-+ Workers may get parameters from different step.
-+ Parameter servers may apply gradients update that are not based on current parameters stored.
 
-Due to the staleness of parameters, asynchronous SGD takes a longer time to converge and the model quality is not as good as synchronous SGD sometimes.
-In order to reach a balance between synchronous SGD and asynchronous SGD, we adopt the strategy of SSP (Stale synchronous parallel) from the paper
-[More effective distributed ML via a stale synchronous parallel parameter server][EricXing]. It controls the maximum step difference of the fastest and slowest worker.
+## Asynchronous SGD
+Let us recall how workers train the model in synchronous SGD. Below is the pseudocode:
 
-We introduce two classes to help implement SSP strategy.
+```
+for minibatch in training_data:
+    accepted = False
+    while not accepted:
+        local_model，model_version = get_model_from_ps()
+        gradients = compute_gradient(local_model, minibatch)
+        accepted = report_gradient_to_ps(gradients, model_version)  
+```
 
-+ `StalenessStrategy`
-+ `GradientUpdatingStrategy`
+In asynchronous SGD, each worker is training the model in nearly the same way as synchronous SGD. The only difference is that the worker does not need to retrain any minibatch data as PS accepts all gradients. 
 
-#### `StalenessStrategy`
+```
+for minibatch in training_data:
+    local_model, model_version = get_model_from_ps()
+    gradients = compute_gradient(local_model, minibatch)
+    report_gradient_to_ps(gradients, model_version)  
+```
 
-`StalenessStrategy` decides whether a worker needs to pull new model parameters before processing next data batch. It makes its decision according to:
-+ Worker's local model version
-+ Parameter servers' model version
-+ Current fastest worker's model version
-+ Current slowest worker's model version
+PS does not need locks in `GetModel` and `ReportGradient` GRPC services for asynchronous SGD. 
 
-#### `GradientUpdatingStrategy`
+```
+def GetModel():
+    pb_model = Model()
+    for variable in pb_model:
+        assign_value(variable, current_variable_value_in_PS)
+    return pb_model, PS_model_version
+    
+def ReportGradient(gradients, version):
+    grad_var = zip(gradients, model_variables)
+    optimizer.apply_gradient(grad_var)
+    PS_model_version.atomic_add(1)
+```
 
-`GradientUpdatingStrategy` controls how parameter servers apply graidents update.
+### Relaxed Model Consistency
+PS can processes multiple GRPC calls `GetModel` and `ReportGradients` concurrently. Thus, there are two kinds of relaxed model consistency.
 
-+ `DirectUpdatingStrategy`: directly updates the model.
-+ `AverageUpdatingStrategy`: gathers `grads_to_wait` graidents, averages them and apply the averaged gradient update.
+1. In `GetModel`, during the variable assign loop, there may be `ReportGradient` GRPC service running and updating the variables. Thus, variables in `local_model` in workers may contain values from model versions. `model_version` from `get_model_from_ps` is just a proximate model version.
+2. There may be multiple `ReportGradient` running concurrently. Different model variables may apply these gradients in different orders. 
 
-By combining `StalenessStrategy` and `GradientUpdatingStrategy`, we can also achieve synchronous SGD.
+Also, the concurrent updates to variables in `ReportGradient` may cause some gradients are not applied, as the updates can overwritten by other concurrent running updates. TensorFlow optimizers have an argument [`use_locking`](https://github.com/tensorflow/tensorflow/blob/ff441191277b7e758deb48e45249fee9e880f2c8/tensorflow/python/training/optimizer.py#L319). If [`use_locking`](https://github.com/tensorflow/tensorflow/blob/ff441191277b7e758deb48e45249fee9e880f2c8/tensorflow/python/training/optimizer.py#L319) is `True`, TensorFlow will use a [lock](https://github.com/tensorflow/tensorflow/blob/11e22c01eb801ff24200afcdce8a03a7cdd2ed3f/tensorflow/core/kernels/training_ops.cc#L528) to prevent concurrent updates to variables.
 
-## Reference
+### Staleness in Asynchronous SGD
+In `ReportGradient`, the argument `version` may be smaller `PS_model_version`. 
+Staleness value is the difference between `PS_model_version` and `version`:
 
-+ [Revisiting distributed synchronous SGD][JianminChen]
-+ [Large scale distributed deep networks][Dean]
-+ [More effective distributed ML via a stale synchronous parallel parameter server][EricXing]
+```
+staleness = PS_model_version - version
+```
 
-[Dean]: http://papers.nips.cc/paper/4687-large-scale-distributed-deep-networks.pdf
-[EricXing]: http://www.cs.cmu.edu/~seunghak/SSPTable_NIPS2013.pdf
-[JianminChen]: https://arxiv.org/abs/1604.00981
+According to some [researches](https://arxiv.org/abs/1810.03264), this staleness affects the training convergence, and large staleness may result in poor training accuracy. The deeper the model, the more impact of the staleness. Some optimizers such as [SGD](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/SGD) and [Adagrad](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Adagrad) are more robust to staleness, some optimizers such as other with momentum are very bad with staleness.
+
+[Staleness-aware asychronous SGD](https://arxiv.org/abs/1511.05950) proposes a method to modulate learning rate by the staleness. If the staleness if not 0, this method modulates the learning rate used in the optimizer as:
+
+```
+if staleness > 0:
+    learning_rate_used = learning_rate / staleness
+else:
+    learning_rate_used = learning_rate
+```
+
+### Stale Synchronous Parallel (SSP)
+In the pesudocode for the asynchronous SGD worker, the worker pulls model from PS in every minibatch step. [Stale synchronous parallel (SSP) method](https://dl.acm.org/citation.cfm?id=2999748) uses the strategy that the fastest worker can exceed the slowest one within a predefined staleness threshold. SSP can reduce the number of `get_model_from_ps` calls. The worker training process is:
+
+```
+staleness_threshold = predefined_staleness_threshold
+local_model, model_version = get_model_from_ps()
+local_update_count = 0
+for minibatch in training_data:
+    gradients = compute_gradient(local_model, minibatch)
+    apply_gradient(local_model, gradients)
+    report_gradient_to_ps(gradients, model_version)
+    local_update_count += 1
+    if local_update_count >= staleness_threshold:
+        local_model, model_version = get_model_from_ps()
+        local_update_count = 0
+
+```
+Althrough the original SSP method uses this strategy in synchronized SGD, we can also adopt SSP strategy in asynchronized SGD to reduce `get_model_from_ps` calls.
+
+## Support Asynchronous SGD in ElasticDL
+
+### Change in PS
+1. No need to use locks in `GetModel` and `_update_model` in [server.py](../python/master/servicer.py).
+2. No need to accumulate gradients in `ReportGradient` in [server.py](../python/master/servicer.py). `ReportGradient` calls `_update_model` directly.
+3. Users decide if disabling concurrent variable update by set `use_locking` argument in the optimizer.
+4. To support [Staleness-aware asychronous SGD](https://arxiv.org/abs/1511.05950), PS need to modulate the learning rate in the optimizer with the staleness value.
+
+### Change in Worker
+1. No need to retrain with the minibatch data.
+2. To support SSP strategy, the worker pulls the model from PS in every `staleness_threshold` minibatch steps. Also, the worker needs to update the local model with the computed gradients.
