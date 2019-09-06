@@ -3,7 +3,7 @@ import argparse
 import grpc
 
 from elasticdl.python.common import log_util
-from elasticdl.python.common.args import ALL_ARGS_GROUP, print_args
+from elasticdl.python.common.args import ALL_ARGS_GROUPS, print_args
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.worker.worker import Worker
 
@@ -86,7 +86,7 @@ def _parse_args():
 
 def main():
     args = _parse_args()
-    print_args(args, groups=ALL_ARGS_GROUP)
+    print_args(args, groups=ALL_ARGS_GROUPS)
     channel = grpc.insecure_channel(
         args.master_addr,
         options=[
