@@ -3,7 +3,7 @@
 ## Motivation
 Parameter server (PS) based distributed training uses data parallelism to speed up training. 
 
-We have implemented synchronous SGD in ElasticDL. When PS accumulates `grads_to_wait` gradients from workers, PS averages these gradients and updates the model with the averaged gradients. PS also maintains `model_version` which equals to the number of model updates. Each worker has a local copy of the model. Before a minibatch training step, if there is a new `model_version` on PS, the worker will get the new model from PS to replace the local model. After computing the gradients with a minibatch, the worker reports the gradients to PS together with the local model version. When PS receives gradients from a worker, it only accepts the gradients with a model version same as the current PS `model_version`.
+We have implemented synchronous SGD in ElasticDL. When PS accumulates `grads_to_wait` gradients from workers, PS averages these gradients and updates the model with the averaged gradients. PS also maintains `model_version` which equals to the number of model updates. Each worker has a local copy of the model. Before a minibatch training step starts, if there is a new `model_version` on PS, the worker will get the new model from PS to replace the local model. After computing the gradients with a minibatch, the worker reports the gradients to PS together with the local model version. When PS receives gradients from a worker, it only accepts the gradients with a model version same as the current PS `model_version`.
 
 
 
@@ -15,9 +15,7 @@ This Synchronous SGD ensures model consistency in the price of wasted and blocke
 Asynchronous SGD can avoid the wasted and blocked computation mentioned above with a relaxed model consistency.
 
 * PS will accept all gradients from workers.
-* PS does not locks and supports concurrent model reads and updates.
-
-
+* PS does not use locks and supports concurrent model reads and updates.
 
 
 ## Asynchronous SGD
@@ -59,13 +57,13 @@ def ReportGradient(gradients, version):
 ### Relaxed Model Consistency
 PS can processes multiple GRPC calls `GetModel` and `ReportGradients` concurrently. Thus, there are two kinds of relaxed model consistency.
 
-1. In `GetModel`, during the variable assign loop, there may be `ReportGradient` GRPC service running and updating the variables. Thus, variables in `local_model` in workers may contain values from model versions. `model_version` from `get_model_from_ps` is just a proximate model version.
+1. In `GetModel`, during the variable assign loop, there may be `ReportGradient` GRPC service running and updating the variables. Thus, variables in `local_model` in workers may contain values from different model versions. `model_version` from `get_model_from_ps` is just a proximate model version.
 2. There may be multiple `ReportGradient` running concurrently. Different model variables may apply these gradients in different orders. 
 
-Also, the concurrent updates to variables in `ReportGradient` may cause some gradients are not applied, as the updates can overwritten by other concurrent running updates. TensorFlow optimizers have an argument [`use_locking`](https://github.com/tensorflow/tensorflow/blob/ff441191277b7e758deb48e45249fee9e880f2c8/tensorflow/python/training/optimizer.py#L319). If [`use_locking`](https://github.com/tensorflow/tensorflow/blob/ff441191277b7e758deb48e45249fee9e880f2c8/tensorflow/python/training/optimizer.py#L319) is `True`, TensorFlow will use a [lock](https://github.com/tensorflow/tensorflow/blob/11e22c01eb801ff24200afcdce8a03a7cdd2ed3f/tensorflow/core/kernels/training_ops.cc#L528) to prevent concurrent updates to variables.
+Also, the concurrent updates to variables in `ReportGradient` may cause some gradients are not applied, as the updates can be overwritten by other concurrent running updates. TensorFlow optimizers have an argument [`use_locking`](https://github.com/tensorflow/tensorflow/blob/ff441191277b7e758deb48e45249fee9e880f2c8/tensorflow/python/training/optimizer.py#L319). If [`use_locking`](https://github.com/tensorflow/tensorflow/blob/ff441191277b7e758deb48e45249fee9e880f2c8/tensorflow/python/training/optimizer.py#L319) is `True`, TensorFlow will use a [lock](https://github.com/tensorflow/tensorflow/blob/11e22c01eb801ff24200afcdce8a03a7cdd2ed3f/tensorflow/core/kernels/training_ops.cc#L528) to prevent concurrent updates to variables.
 
 ### Staleness in Asynchronous SGD
-In `ReportGradient`, the argument `version` may be smaller `PS_model_version`. 
+In `ReportGradient`, the argument `version` may be smaller than `PS_model_version`. 
 Staleness value is the difference between `PS_model_version` and `version`:
 
 ```
@@ -113,3 +111,8 @@ Althrough the original SSP method uses this strategy in synchronized SGD, we can
 ### Change in Worker
 1. No need to retrain with the minibatch data.
 2. To support SSP strategy, the worker pulls the model from PS in every `staleness_threshold` minibatch steps. Also, the worker needs to update the local model with the computed gradients.
+
+### Add Arguments for `elasticdl.train`
+1. `--asynch, default=False, help="True for asynchronous SGD, False for synchronous SGD"`
+2. `--lr_staleness_modulation, default=False, help="If True, master will modulate learning rate with staleness in asynchronous SGD"`
+3. `--ssp_threshhold, default=1, help="worker will get_model from PS every this steps."`
