@@ -115,4 +115,4 @@ Althrough the original SSP method uses this strategy in synchronized SGD, we can
 ### Add Arguments for `elasticdl.train`
 1. `--asynch, default=False, help="True for asynchronous SGD, False for synchronous SGD"`
 2. `--lr_staleness_modulation, default=False, help="If True, master will modulate learning rate with staleness in asynchronous SGD"`
-3. `--ssp_threshhold, default=1, help="worker will get_model from PS every this steps."`
+3. `--ssp_threshold, default=1, help="worker will get_model from PS every this steps."`
