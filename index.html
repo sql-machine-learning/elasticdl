@@ -903,6 +903,8 @@
                 <li class="hide-for-small"><a href="doc_index/sqlflow">Documents</a></li>
 
                 <li class="hide-for-small"><a href="https://github.com/sql-machine-learning/elasticdl">GitHub</a></li>
+
+                <li class="off-canvas-nav-item" id="menu-btn"><a class="right-off-canvas-toggle menu-icon">Menu<span></span></a></li>
               </ul>
             </div>
           </div>
@@ -985,6 +987,16 @@ SELECT * FROM employee LABEL income INTO my_first_model
     </div>
   </div>
 </main>
+
+<script>
+  document.getElementById('menu-btn').addEventListener('click', function() {
+    var tgt = document.getElementsByClassName('off-canvas-wrap')[0];
+
+    tgt.classList.contains('move-left') ?
+      tgt.classList.remove('move-left') :
+      tgt.classList.add('move-left')
+  })
+</script>
 
 <script src="./highlight/highlight.pack.js"></script>
 <script>hljs.initHighlightingOnLoad();</script>
