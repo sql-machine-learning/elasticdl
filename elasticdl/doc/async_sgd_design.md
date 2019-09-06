@@ -90,13 +90,13 @@ local_model, model_version = get_model_from_ps()
 local_update_count = 0
 for minibatch in training_data:
     gradients = compute_gradient(local_model, minibatch)
-    apply_gradient(local_model, gradients)
     report_gradient_to_ps(gradients, model_version)
     local_update_count += 1
     if local_update_count >= staleness_threshold:
         local_model, model_version = get_model_from_ps()
         local_update_count = 0
-
+    else:
+        apply_gradient(local_model, gradients)
 ```
 Althrough the original SSP method uses this strategy in synchronized SGD, we can also adopt SSP strategy in asynchronized SGD to reduce `get_model_from_ps` calls.
 
