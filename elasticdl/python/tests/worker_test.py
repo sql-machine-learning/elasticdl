@@ -154,7 +154,7 @@ class WorkerTest(unittest.TestCase):
             JobType.TRAINING_ONLY,
             32,
             _model_zoo_path,
-            model_def="embedding_test_module.CustomModel",
+            model_def="embedding_test_module.EdlEmbeddingModel",
             channel=None,
         )
         self.assertTrue(len(worker._embedding_layers) == 2)
@@ -181,7 +181,7 @@ class WorkerTest(unittest.TestCase):
             JobType.TRAINING_ONLY,
             32,
             _model_zoo_path,
-            model_def="embedding_test_module.CustomModel",
+            model_def="embedding_test_module.EdlEmbeddingModel",
             channel=None,
         )
         with mock.patch.object(

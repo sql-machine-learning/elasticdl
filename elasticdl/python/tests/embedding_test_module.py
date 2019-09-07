@@ -4,14 +4,23 @@ from tensorflow.keras.layers import Concatenate, Dense, Flatten
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 
 
-class CustomModel(tf.keras.Model):
-    def __init__(self, output_dim=16):
-        super(CustomModel, self).__init__(name="embedding_test_model")
+class EdlEmbeddingModel(tf.keras.Model):
+    def __init__(self, output_dim=16, weights=None):
+        super(EdlEmbeddingModel, self).__init__(
+            name="test_model_with_edl_embedding"
+        )
         self.output_dim = output_dim
+        if weights:
+            if len(weights) != 2:
+                raise ValueError(
+                    "test_model_with_edl_embedding constructor receives "
+                    "weights with length %d, expected %d" % (len(weights), 2)
+                )
+
         self.embedding_1 = Embedding(output_dim)
         self.embedding_2 = Embedding(output_dim)
         self.concat = Concatenate()
-        self.dense = Dense(1, input_shape=(output_dim * 3,))
+        self.dense = Dense(1, weights=weights)
         self.flatten = Flatten()
 
     def call(self, inputs, training=False):
@@ -19,8 +28,41 @@ class CustomModel(tf.keras.Model):
         f2 = self.embedding_1(inputs["f2"])
         f3 = self.embedding_2(inputs["f3"])
         x = self.concat([f1, f2, f3])
+        x = self.flatten(x)
         x = self.dense(x)
-        return self.flatten(x)
+        return x
+
+
+class KeraEmbeddingModel(tf.keras.Model):
+    def __init__(self, input_dim, output_dim=16, weights=None):
+        super(KeraEmbeddingModel, self).__init__(
+            name="test_model_with_keras_embedding"
+        )
+        self.output_dim = output_dim
+        if weights:
+            weight_1 = [weights[0]]
+            weight_2 = [weights[1]]
+            linear_weights = weights[2:]
+        else:
+            weight_1, weight_2, linear_weights = None, None, None
+        self.embedding_1 = tf.keras.layers.Embedding(
+            input_dim, output_dim, weights=weight_1
+        )
+        self.embedding_2 = tf.keras.layers.Embedding(
+            input_dim, output_dim, weights=weight_2
+        )
+        self.concat = Concatenate()
+        self.dense = Dense(1, weights=linear_weights)
+        self.flatten = Flatten()
+
+    def call(self, inputs, training=False):
+        f1 = self.embedding_1(inputs["f1"])
+        f2 = self.embedding_1(inputs["f2"])
+        f3 = self.embedding_2(inputs["f3"])
+        x = self.concat([f1, f2, f3])
+        x = self.flatten(x)
+        x = self.dense(x)
+        return x
 
 
 def loss(predictions, labels):

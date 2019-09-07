@@ -262,6 +262,7 @@ class OptimizerWrapper(object):
             # de-duplicate gradient's indices
             unique_ids, indices = tf.unique(grad.indices)
             unique_ids = unique_ids.numpy()
+            # TODO: support grads_and_vars with duplicated layer name
             self._unique_ids_all_layers[layer_name] = unique_ids
             grad_new = tf.IndexedSlices(grad.values, indices)
             grads_and_vars[it] = (grad_new, layer_name)
@@ -334,7 +335,7 @@ class OptimizerWrapper(object):
         """Create a variable for an ElasticDL embedding layer."""
         dim = self._embed_dims[layer_name]
         # Use shape `(None, dim)` for embedding variable because `shape[0]`
-        # equals to the number of unqiue ids in the minibatch data, and
+        # equals to the number of unique ids in the minibatch data, and
         # this number may differ between different iterations
         shape = tf.TensorShape((None, dim))
 
@@ -358,7 +359,7 @@ class OptimizerWrapper(object):
         """Create a variable for the specified slot."""
         dim = self._embed_dims[layer_name]
         # Use shape `(None, dim)` for slot variable because `shape[0]`
-        # equals to the number of unqiue ids in the minibatch data, and
+        # equals to the number of unique ids in the minibatch data, and
         # this number may differ between different iterations
         shape = tf.TensorShape((None, dim))
 
