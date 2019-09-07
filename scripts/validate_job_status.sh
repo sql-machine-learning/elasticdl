@@ -1,4 +1,4 @@
-set -x
+#!/usr/bin/env bash
 
 JOB_TYPE=$1
 MASTER_POD_NAME=elasticdl-test-mnist-${JOB_TYPE}-master

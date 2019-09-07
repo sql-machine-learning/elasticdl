@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 JOB_TYPE=$1
 
 if [[ "$JOB_TYPE" == "train" ]]; then
