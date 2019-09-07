@@ -40,10 +40,9 @@ jobs:
         # Run integration tests
         - kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
         - docker run --rm -it --net=host -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:ci bash -c "scripts/client_test.sh"
-        # Validate pod statuses
-        - bash scripts/validate_job_status.sh
 
 # Only build on this list of branches
 branches:
   only:
   - develop
+  - ci-predict-eval
