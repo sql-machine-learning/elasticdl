@@ -276,14 +276,14 @@ def add_train_params(parser):
     parser.add_argument(
         "--lr_staleness_modulation",
         default=False,
-        help="If True, master will the modulate learning rate with staleness "
+        help="If True, master will modulate the learning rate with staleness "
         "in asynchronous SGD",
     )
     parser.add_argument(
         "--get_model_frequency",
         type=int,
         default=1,
-        help="worker will get_model from PS every this steps.",
+        help="worker will get_model from PS every these steps.",
     )
 
 

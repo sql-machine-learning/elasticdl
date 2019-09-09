@@ -88,6 +88,7 @@ class Worker(object):
         self._task_data_service = TaskDataService(
             self, self._job_type == JobType.TRAINING_WITH_EVALUATION
         )
+        self._get_model_frequency = get_model_frequency
 
     def _init_embedding_layer(self):
         """
