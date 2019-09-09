@@ -107,13 +107,13 @@ Note that in ElasticDL, local models only have non-embedding variables. So in `a
 1. No need to use locks in `GetModel` and `_update_model` in [server.py](../python/master/servicer.py).
 2. No need to accumulate gradients in `ReportGradient` in [server.py](../python/master/servicer.py). `ReportGradient` calls `_update_model` directly.
 3. Users decide if disabling concurrent variable update by set `use_locking` argument in the optimizer.
-4. To support [Staleness-aware asychronous SGD](https://arxiv.org/abs/1511.05950), PS need to modulate the learning rate in the optimizer with the staleness value. PS may have multiple threads running concurrently for model updates with a same optimizer instance. Thus, we cannot modify the learning rate in the optimizer instance. We may modify the learning rate as a callable method, and use a thread local storage `threading.local()` to store the staleness. The callable method uses the stalenss value to modulate the learning rate. The optimizer will call this callable method [when it reads the learning rate hyperparameter](https://github.com/tensorflow/tensorflow/blob/e4262fb2fbf1cb33aaea79ff81754d1e92e99af1/tensorflow/python/keras/optimizer_v2/optimizer_v2.py#L530).
+4. To support [Staleness-aware asychronous SGD](https://arxiv.org/abs/1511.05950), PS need to modulate the learning rate in the optimizer with the staleness value. PS may have multiple threads running concurrently for model updates with a same optimizer instance. Thus, we cannot modify the learning rate in the optimizer instance. We may modify the learning rate as a callable method, and use a thread local storage `threading.local()` to store the staleness. The callable method uses the staleness value to modulate the learning rate. The optimizer will call this callable method [when it reads the learning rate hyperparameter](https://github.com/tensorflow/tensorflow/blob/e4262fb2fbf1cb33aaea79ff81754d1e92e99af1/tensorflow/python/keras/optimizer_v2/optimizer_v2.py#L530).
 
 ### Change in Worker
 1. No need to retrain with the minibatch data.
-2. To support SSP strategy, the worker pulls the model from PS in every `staleness_threshold` minibatch steps. Also, the worker needs to update the local model with the computed gradients. model pull/updates do not include embedding variables, as we directly access the embedding vectors in the embedding service.
+2. To support SSP strategy, the worker pulls the model from PS in every `staleness_threshold` minibatch step. Also, the worker needs to update the local model with the computed gradients. model pull/updates do not include embedding variables, as we directly access the embedding vectors in the embedding service.
 
 ### Add Arguments for `elasticdl.train`
-1. `--asynch, default=False, help="True for asynchronous SGD, False for synchronous SGD"`
+1. `--use_async, default=False, help="True for asynchronous SGD, False for synchronous SGD"`
 2. `--lr_staleness_modulation, default=False, help="If True, master will modulate learning rate with staleness in asynchronous SGD"`
 3. `--get_model_frequency, default=1, help="worker will get_model from PS every this steps."`
