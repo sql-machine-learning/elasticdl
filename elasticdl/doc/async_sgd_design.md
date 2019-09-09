@@ -117,4 +117,4 @@ Also, worker can run `report_gradient_to_ps` concurrently with `apply_gradient(l
 ### Add Arguments for `elasticdl.train`
 1. `--use_async, default=False, help="True for asynchronous SGD, False for synchronous SGD"`
 2. `--lr_staleness_modulation, default=False, help="If True, master will modulate learning rate with staleness in asynchronous SGD"`
-3. `--get_model_frequency, default=1, help="worker will get_model from PS every this steps."`
+3. `--get_model_frequency, default=1, help="worker will get_model from PS every these steps."`
