@@ -85,14 +85,14 @@ else:
 In the pesudocode for the asynchronous SGD worker, the worker pulls model from PS in every minibatch step. [Stale synchronous parallel (SSP) method](https://dl.acm.org/citation.cfm?id=2999748) uses the strategy that the fastest worker can exceed the slowest one within a predefined staleness threshold. SSP can reduce the number of `get_model_from_ps` calls. The worker training process is:
 
 ```
-staleness_threshold = predefined_staleness_threshold
+get_model_frequency = predefined_staleness_threshold
 local_model, model_version = get_model_from_ps()
 local_update_count = 0
 for minibatch in training_data:
     gradients = compute_gradient(local_model, minibatch)
     report_gradient_to_ps(gradients, model_version)
     local_update_count += 1
-    if local_update_count >= staleness_threshold:
+    if local_update_count >= get_model_frequency:
         local_model, model_version = get_model_from_ps()
         local_update_count = 0
     else:
@@ -111,7 +111,7 @@ Note that in ElasticDL, local models only have non-embedding variables. So in `a
 
 ### Change in Worker
 1. No need to retrain with the minibatch data.
-2. To support SSP strategy, the worker pulls the model from PS in every `staleness_threshold` minibatch step. Also, the worker needs to update the local model with the computed gradients. model pull/updates do not include embedding variables, as we directly access the embedding vectors in the embedding service.
+2. To support SSP strategy, the worker pulls the model from PS in every `get_model_frequency` minibatch step. Also, the worker needs to update the local model with the computed gradients. model pull/updates do not include embedding variables, as we directly access the embedding vectors in the embedding service.
 
 ### Add Arguments for `elasticdl.train`
 1. `--use_async, default=False, help="True for asynchronous SGD, False for synchronous SGD"`
