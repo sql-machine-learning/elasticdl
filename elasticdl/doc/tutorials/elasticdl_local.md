@@ -95,6 +95,18 @@ elasticdl train \
   --output=model_output
 ```
 
+After summit the job to minikubes, you can run following command to check the status of each pod:
 
+```bash
+kubectl get pods
+```
 
+You will get messages like this:
 
+```
+$kubectl get pods
+NAME                            READY   STATUS    RESTARTS   AGE
+elasticdl-test-mnist-master     1/1     Running   0          14s
+elasticdl-test-mnist-worker-0   1/1     Running   0          11s
+elasticdl-test-mnist-worker-1   1/1     Running   0          11s
+```
