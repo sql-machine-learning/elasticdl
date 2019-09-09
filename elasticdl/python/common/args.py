@@ -268,6 +268,23 @@ def add_train_params(parser):
         default="",
         help="The path to save the final trained model",
     )
+    parser.add_argument(
+        "--use_async",
+        default=False,
+        help="True for asynchronous SGD, False for synchronous SGD",
+    )
+    parser.add_argument(
+        "--lr_staleness_modulation",
+        default=False,
+        help="If True, master will the modulate learning rate with staleness "
+        "in asynchronous SGD",
+    )
+    parser.add_argument(
+        "--get_model_frequency",
+        type=int,
+        default=1,
+        help="worker will get_model from PS every this steps.",
+    )
 
 
 def add_evaluate_params(parser):

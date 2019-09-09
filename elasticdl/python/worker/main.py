@@ -80,6 +80,15 @@ def _parse_args():
         "e.g. \"{'ip_0': [port_0,port_1]}\"",
     )
 
+    # TODO (chengfu.wcy) Refact arguments of master and worker
+    # to avoid duplicate decalaration.
+    parser.add_argument(
+        "--get_model_frequency",
+        type=int,
+        default=1,
+        help="worker will get_model from PS every this steps.",
+    )
+
     return parser.parse_args()
 
 
@@ -112,6 +121,7 @@ def main():
         eval_metrics_fn=args.eval_metrics_fn,
         model_def=args.model_def,
         model_params=args.model_params,
+        get_model_frequency=args.get_model_frequency,
     )
     worker.run()
 

@@ -32,7 +32,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         checkpoint_filename_for_init,
         checkpoint_service,
         evaluation_service,
-        embedding_service_endpoint=None
+        embedding_service_endpoint=None,
+        lr_staleness_modulation=False,
     ):
         # TODO: group params together into a single object.
         self._opt = optimizer

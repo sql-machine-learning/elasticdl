@@ -216,6 +216,7 @@ def main():
         checkpoint_service=checkpoint_service,
         evaluation_service=evaluation_service,
         embedding_service_endpoint=embedding_service_endpoint,
+        lr_staleness_modulation=args.lr_staleness_modulation,
     )
     elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
     server.add_insecure_port("[::]:{}".format(args.port))
@@ -252,6 +253,10 @@ def main():
             str(args.minibatch_size),
             "--embedding_service_endpoint",
             str(embedding_service_endpoint),
+            "--use_async",
+            str(args.use_async),
+            "--get_model_frequency",
+            str(args.get_model_frequency),
         ]
 
         env_dict = parse_envs(args.envs)

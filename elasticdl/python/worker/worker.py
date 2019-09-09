@@ -39,6 +39,7 @@ class Worker(object):
         model_params="",
         prediction_outputs_processor="PredictionOutputsProcessor",
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
+        get_model_frequency=1,
     ):
         """
         Arguments:
