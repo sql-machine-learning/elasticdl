@@ -161,6 +161,17 @@ def add_common_params(parser):
         help="The file that contains user-defined cluster specification",
         default="",
     )
+    parser.add_argument(
+        "--docker_base_url",
+        help="The docker host url",
+        default="unix://var/run/docker.sock",
+    )
+    parser.add_argument(
+        "--docker_tlscert", help="The tlscert of docker client", default=""
+    )
+    parser.add_argument(
+        "--docker_tlskey", help="The tlskey of docker client", default=""
+    )
 
 
 def add_train_params(parser):
