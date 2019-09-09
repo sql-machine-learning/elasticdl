@@ -15,6 +15,9 @@ def build_and_push_docker_image(
     base_image="",
     extra_pypi="",
     cluster_spec="",
+    docker_base_url="unix://var/run/docker.sock",
+    docker_tlscert="",
+    docker_tlskey="",
 ):
     """Build and push a Docker image containing ElasticDL and the model
 zoo.  The parameter model_zoo could be a local directory or an URL.
@@ -65,7 +68,13 @@ after _build_docker_image.
             )
 
         image_name = _generate_unique_image_name(docker_image_prefix)
-        client = docker.APIClient(base_url="unix://var/run/docker.sock")
+        if docker_tlscert and docker_tlskey:
+            tls_config = docker.tls.TLSConfig(
+                client_cert=(docker_tlscert, docker_tlskey)
+            )
+            client = docker.APIClient(base_url=docker_base_url, tls=tls_config)
+        else:
+            client = docker.APIClient(base_url=docker_base_url)
         _build_docker_image(client, ctx_dir, df.name, image_name)
 
         if docker_image_prefix:
