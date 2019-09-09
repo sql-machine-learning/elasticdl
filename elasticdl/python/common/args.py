@@ -163,14 +163,14 @@ def add_common_params(parser):
     )
     parser.add_argument(
         "--docker_base_url",
-        help="The docker host url",
+        help="URL to the Docker server",
         default="unix://var/run/docker.sock",
     )
     parser.add_argument(
-        "--docker_tlscert", help="The tlscert of docker client", default=""
+        "--docker_tlscert", help="Path to Docker client cert", default=""
     )
     parser.add_argument(
-        "--docker_tlskey", help="The tlskey of docker client", default=""
+        "--docker_tlskey", help="path to Docker client key", default=""
     )
 
 
