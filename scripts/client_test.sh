@@ -62,4 +62,5 @@ elif [[ "$JOB_TYPE" == "predict" ]]; then
       --image_pull_policy=Never
 else
     echo "Unsupported job type specified: $JOB_TYPE"
+    exit 1
 fi
