@@ -36,7 +36,7 @@ def _prepare_random_data(
     random.seed(random_seed)
     X, Y = [], []
     if not is_sparse:
-        assert input_length > input_dim, "`input_length` should be large "
+        assert input_length > input_dim, "`input_length` should be larger "
         "than `input_dim` when dense data required."
 
     def _gen_single_data(choices, input_length, is_sparse):
@@ -72,6 +72,7 @@ def _prepare_random_data(
 
 
 def _train(model, optimizer, X, Y, loss_fn, random_seed):
+    """Train model with TensorFlow optimizer."""
     tf.random.set_seed(random_seed)
     for i, (features, labels) in enumerate(zip(X, Y)):
         with tf.GradientTape() as tape:
@@ -84,9 +85,11 @@ def _train(model, optimizer, X, Y, loss_fn, random_seed):
 def _train_edl_embedding_with_optimizer_wrapper(
     model, opt_keras, X, Y, loss_fn, embed_dims, random_seed
 ):
+    """Train model with optimizer wrapper."""
     tf.random.set_seed(random_seed)
     optimizer = OptimizerWrapper(opt_keras, None, embed_dims)
 
+    # initialization process related to embedding layer and optimizer wrapper
     embed_layers = []
     for layer in model.layers:
         if isinstance(layer, Embedding):
@@ -103,6 +106,7 @@ def _train_edl_embedding_with_optimizer_wrapper(
         layer.set_tape(tape)
         layer.set_lookup_func(lookup_func)
 
+    # training process
     for i, (features, labels) in enumerate(zip(X, Y)):
         with tape:
             outputs = model.call(features)
@@ -477,25 +481,27 @@ class OptimizerWrapperTest(unittest.TestCase):
         np.random.seed(random_seed)
         return [np.random.rand(*shape).astype(np.float32) for shape in shapes]
 
-    def _test_correctness(self, optimizer_class, *args, **kwargs):
+    def _test_correctness(self, optimizer_class, **kwargs):
+        """Test the correctness of specific TensorFlow optimizer."""
         _model_file = get_module_file_path(
             os.path.dirname(os.path.realpath(__file__)),
             "embedding_test_module.KerasEmbeddingModel",
         )
         model_module = load_module(_model_file).__dict__
 
+        # train model with TensorFlow optimizer
         seed = 1
         X, Y = _prepare_random_data(4, 4, 6, 4, True, random_seed=seed)
         weights = self._random_init_model_weight(
             [(4, 4), (4, 4), (72, 1), (1,)], seed
         )
         loss_fn = model_module["loss"]
-        model1 = model_module["KeraEmbeddingModel"](4, 4, weights)
-        opt1 = optimizer_class(*args, **kwargs)
+        model1 = model_module["KerasEmbeddingModel"](4, 4, weights)
+        opt1 = optimizer_class(**kwargs)
         _train(model1, opt1, X, Y, loss_fn, random_seed=seed)
 
         model2 = model_module["EdlEmbeddingModel"](4, weights[2:])
-        opt2 = optimizer_class(*args, **kwargs)
+        opt2 = optimizer_class(**kwargs)
 
         layers = []
         for layer in model2.layers:
@@ -510,6 +516,7 @@ class OptimizerWrapperTest(unittest.TestCase):
             for i, embed_vector in enumerate(embed_table):
                 mock_kv_store.update(["%s-%d" % (layer, i)], [embed_vector])
 
+        # train model with optimizer wrapper
         with mock.patch.object(
             EmbeddingService, "lookup_embedding", mock_kv_store.lookup
         ), mock.patch.object(
@@ -519,6 +526,7 @@ class OptimizerWrapperTest(unittest.TestCase):
                 model2, opt2, X, Y, loss_fn, embed_dims, random_seed=seed
             )
 
+        # compare trained parameters
         for layer1, layer2 in zip(model1.layers, model2.layers):
             if "embedding" in layer2.name:
                 w1 = layer1.weights[0].numpy()
@@ -532,7 +540,7 @@ class OptimizerWrapperTest(unittest.TestCase):
                     self.assertTrue((w1 - w2 < 0.0001).numpy().all())
 
     def test_correctness(self):
-        self._test_correctness(SGD, 0.1, 0.5)
+        self._test_correctness(SGD, learning_rate=0.1, momentum=0.5)
 
 
 if __name__ == "__main__":

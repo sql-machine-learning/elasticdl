@@ -6,6 +6,13 @@ from elasticdl.python.elasticdl.layers.embedding import Embedding
 
 class EdlEmbeddingModel(tf.keras.Model):
     def __init__(self, output_dim=16, weights=None):
+        """
+        Arguments:
+            output_dim: An Integer. It is the output dimension of embedding
+                layers in `EdlEmbeddingModel`.
+            weights: A numpy ndarray list. Unless `weights` is None, dense
+                layer initializes its weights using `weights`.
+        """
         super(EdlEmbeddingModel, self).__init__(
             name="test_model_with_edl_embedding"
         )
@@ -33,9 +40,20 @@ class EdlEmbeddingModel(tf.keras.Model):
         return x
 
 
-class KeraEmbeddingModel(tf.keras.Model):
+# The model structure of KerasEmbeddingModel should keep same with
+# EdlEmbeddingModel.
+class KerasEmbeddingModel(tf.keras.Model):
     def __init__(self, input_dim, output_dim=16, weights=None):
-        super(KeraEmbeddingModel, self).__init__(
+        """
+        Arguments:
+            input_dim: An Integer. It is the input dimension of embedding
+                layers in `KerasEmbeddingModel`.
+            output_dim: An Integer. It is the output dimension of embedding
+                layers in `KerasEmbeddingModel`.
+            weights: A numpy ndarray list. Unless `weights` is None, embedding
+                layer and dense layer initialize their weights using `weights`.
+        """
+        super(KerasEmbeddingModel, self).__init__(
             name="test_model_with_keras_embedding"
         )
         self.output_dim = output_dim
