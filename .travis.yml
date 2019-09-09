@@ -46,4 +46,3 @@ jobs:
 branches:
   only:
   - develop
-  - ci-predict-eval
