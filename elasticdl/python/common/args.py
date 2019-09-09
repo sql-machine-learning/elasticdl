@@ -170,7 +170,7 @@ def add_common_params(parser):
         "--docker_tlscert", help="Path to Docker client cert", default=""
     )
     parser.add_argument(
-        "--docker_tlskey", help="path to Docker client key", default=""
+        "--docker_tlskey", help="Path to Docker client key", default=""
     )
 
 
