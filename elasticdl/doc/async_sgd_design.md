@@ -100,6 +100,7 @@ for minibatch in training_data:
 ```
 Althrough the original SSP method uses this strategy in synchronized SGD, we can also adopt SSP strategy in asynchronized SGD to reduce `get_model_from_ps` calls.
 Note that in ElasticDL, local models only have non-embedding variables. So in `apply_gradient(local_model, gradients)`, ElasticDL workers only update non-embedding variables.
+Also, worker can run `report_gradient_to_ps` concurrently with `apply_gradient(local_model, gradients)` when it does not need to `get_model_from_ps`.
 
 ## Support Asynchronous SGD in ElasticDL
 
