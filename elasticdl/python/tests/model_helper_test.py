@@ -58,6 +58,16 @@ class ModelHelperTest(unittest.TestCase):
             _get_spec_value("test_module.unknown_model", _model_zoo_path, {})
             is None
         )
+        self.assertRaisesRegex(
+            Exception,
+            "Missing required spec key unknown_model "
+            "in the module: test_module.unknown_model",
+            _get_spec_value,
+            "test_module.unknown_model",
+            _model_zoo_path,
+            {},
+            True,
+        )
 
 
 if __name__ == "__main__":

@@ -14,9 +14,6 @@ def load_module(module_file):
     return module
 
 
-# TODO: Discuss whether we need to support default model
-# function/class names such as `custom_model()`
-# or `CustomModel()`
 def load_model_from_module(model_def, model_module, model_params):
     model_def_name = model_def.split(".")[-1]
     if model_def_name in model_module:
@@ -47,7 +44,7 @@ def get_module_file_path(model_zoo, spec_key):
     return os.path.join(model_zoo, "/".join(spec_key.split(".")[:-1]) + ".py")
 
 
-def _get_spec_value(spec_key, model_zoo, default_module):
+def _get_spec_value(spec_key, model_zoo, default_module, required=False):
     """Get the value to the given spec key.
 
     Notes:
@@ -66,11 +63,17 @@ def _get_spec_value(spec_key, model_zoo, default_module):
         spec_key_module = load_module(
             get_module_file_path(model_zoo, spec_key)
         ).__dict__
-    return (
+    spec_value = (
         spec_key_module[spec_key_base]
         if spec_key_base in spec_key_module
         else None
     )
+    if required and spec_value is None:
+        raise Exception(
+            "Missing required spec key %s in the module: %s"
+            % (spec_key_base, spec_key)
+        )
+    return spec_value
 
 
 def get_model_spec(
@@ -112,10 +115,12 @@ def get_model_spec(
         )
     return (
         model,
-        _get_spec_value(dataset_fn, model_zoo, default_module),
-        _get_spec_value(loss, model_zoo, default_module),
-        _get_spec_value(optimizer, model_zoo, default_module),
-        _get_spec_value(eval_metrics_fn, model_zoo, default_module),
+        _get_spec_value(dataset_fn, model_zoo, default_module, required=True),
+        _get_spec_value(loss, model_zoo, default_module, required=True),
+        _get_spec_value(optimizer, model_zoo, default_module, required=True),
+        _get_spec_value(
+            eval_metrics_fn, model_zoo, default_module, required=True
+        ),
         prediction_outputs_processor,
     )
 

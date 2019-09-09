@@ -15,6 +15,9 @@ def train(args):
         docker_image_prefix=args.docker_image_prefix,
         extra_pypi=args.extra_pypi_index,
         cluster_spec=args.cluster_spec,
+        docker_base_url=args.docker_base_url,
+        docker_tlscert=args.docker_tlscert,
+        docker_tlskey=args.docker_tlskey,
     )
 
     container_args = [
@@ -96,6 +99,9 @@ def evaluate(args):
         docker_image_prefix=args.docker_image_prefix,
         extra_pypi=args.extra_pypi_index,
         cluster_spec=args.cluster_spec,
+        docker_base_url=args.docker_base_url,
+        docker_tlscert=args.docker_tlscert,
+        docker_tlskey=args.docker_tlskey,
     )
     container_args = [
         "-m",
@@ -149,6 +155,9 @@ def predict(args):
         docker_image_prefix=args.docker_image_prefix,
         extra_pypi=args.extra_pypi_index,
         cluster_spec=args.cluster_spec,
+        docker_base_url=args.docker_base_url,
+        docker_tlscert=args.docker_tlscert,
+        docker_tlskey=args.docker_tlskey,
     )
     container_args = [
         "-m",

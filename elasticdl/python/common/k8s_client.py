@@ -28,7 +28,7 @@ class Client(object):
         image_name,
         namespace,
         job_name,
-        event_callback,
+        event_callback=None,
         cluster_spec=""
     ):
         """
