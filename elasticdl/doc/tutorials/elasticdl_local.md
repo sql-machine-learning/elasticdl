@@ -45,9 +45,10 @@ cd elasticdl
 python setup.py install
 ```
 
-### Launch minikube and build images
+### Setup kubernetes related environment
 
 ```bash
+kubectl apply -f manifests/examples/elasticdl-rbac.yaml
 minikube start --vm-driver=hyperkit --cpus 2 --memory 6144
 eval $(minikube docker-env)
 bash elasticdl/docker/build_all.sh
