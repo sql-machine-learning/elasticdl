@@ -253,8 +253,6 @@ def main():
             str(args.minibatch_size),
             "--embedding_service_endpoint",
             str(embedding_service_endpoint),
-            "--use_async",
-            str(args.use_async),
             "--get_model_frequency",
             str(args.get_model_frequency),
         ]
