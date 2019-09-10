@@ -954,7 +954,7 @@ elasticdl train --model_def=mnist_functional_api.custom_model --training_data_di
                   <p>ElasticDL will be integrated seamlessly with SQLFlow to connect SQL to distributed deep learning tasks with ElasticDL.</p>
                   <pre>
                     <code class="sql">
-SELECT * FROM employee LABEL income INTO my_elasticdl_model
+SELECT * FROM employee TRAIN DNNRegressor LABEL income INTO my_elasticdl_model
                     </code>
                   </pre>
                 </section>
