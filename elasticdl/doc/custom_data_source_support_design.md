@@ -27,9 +27,9 @@ class AbstractDataReader(object):
         pass
 
     @abstractmethod
-    def generate_records(self, task):
+    def read_records(self, task):
         """This method will be used in `TaskDataService` to read the records based on
-        the information provided for a given task.
+        the information provided for a given task into a Python generator/iterator.
         """
         pass
 
@@ -48,7 +48,7 @@ class CustomDataReader(AbstractDataReader):
     def __init__(self, *kwargs):
         self.reader = ...
 
-    def generate_records(self, task):
+    def read_records(self, task):
         while True:
             record = self.reader.read(source=task.shard_name, start=task.start, offset=task.end)
             if record:
