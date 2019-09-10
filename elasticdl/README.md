@@ -137,11 +137,16 @@ This will train MNIST data with a model defined in [model_zoo/mnist_functional_a
 
 ### Test with Kubernetes
 
-We can also test ElasticDL job in a Kubernetes cluster using the previously built [image](#the-development-docker-image).
+We can also test ElasticDL job in a Kubernetes cluster using the previously built [image](#development-docker-image).
 
 First make sure the built image has been pushed to a docker registry, and then run the following command to launch the job. 
 ```bash
 kubectl apply -f manifests/examples/elasticdl-demo-k8s.yaml
+```
+
+For running demo job in Minikube, please make sure run `eval $(minikube docker-env)` first, and then build images.
+```bash
+kubectl apply -f manifests/examples/elasticdl-demo-minikube.yaml
 ```
 
 If you find permission error in the main pod log, e.g., `"pods is forbidden: User \"system:serviceaccount:default:default\" cannot create resource \"pods\""`, you need to grant pod-related permissions for the default user.
