@@ -118,14 +118,18 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return res
 
     def GetModel(self, request, _):
-        self._validate_model_version(request.version)
+        if not self._use_async:
+            self._validate_model_version(request.version)
 
         if (
             request.method == elasticdl_pb2.MINIMUM
             or request.version == self._version
         ):
-            with self._lock:
+            if self._use_async:
                 res = self._get_model_no_lock()
+            else:
+                with self._lock:
+                    res = self._get_model_no_lock()
             return res
 
         # Read from checkpoint for the fixed version model
@@ -170,7 +174,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             )
 
     def _update_model(self):
-        assert self._lock.locked()
+        if (not self._use_async and
+                not self._lock.locked()):
+            raise RuntimeError("In sync mode, lock is not acquired")
         grad_var = []
 
         # (grad, var) pairs excluding keras Embedding layer and
