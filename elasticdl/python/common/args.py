@@ -280,10 +280,10 @@ def add_train_params(parser):
         "in asynchronous SGD",
     )
     parser.add_argument(
-        "--get_model_frequency",
+        "--get_model_steps",
         type=int,
         default=1,
-        help="worker will get_model from PS every these steps.",
+        help="Worker will get_model from PS every these steps.",
     )
 
 
