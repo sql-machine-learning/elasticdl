@@ -6,7 +6,17 @@ import unittest
 import mock
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.optimizers import SGD, Adam
+from tensorflow.keras.optimizers import (
+    SGD,
+    Adadelta,
+    Adagrad,
+    Adam,
+    Adamax,
+    Ftrl,
+    Nadam,
+    RMSprop,
+)
+from tensorflow.python.ops import init_ops
 
 from elasticdl.python.common.model_helper import (
     find_layer,
@@ -168,18 +178,44 @@ class OptimizerWrapperTest(unittest.TestCase):
         self._compare_slot_names(SGD(momentum=0.2), ["momentum"])
         self._compare_slot_names(Adam(), ["m", "v"])
         self._compare_slot_names(Adam(amsgrad=True), ["m", "v", "vhat"])
+        self._compare_slot_names(Adamax(), ["m", "v"])
+        self._compare_slot_names(Nadam(), ["m", "v"])
+        self._compare_slot_names(Adadelta(), ["accum_grad", "accum_var"])
+        self._compare_slot_names(Adagrad(), ["accumulator"])
+        self._compare_slot_names(Ftrl(), ["accumulator", "linear"])
+        self._compare_slot_names(RMSprop(), ["rms"])
+        self._compare_slot_names(RMSprop(momentum=0.2), ["rms", "momentum"])
+        self._compare_slot_names(RMSprop(centered=True), ["rms", "mg"])
+        self._compare_slot_names(
+            RMSprop(momentum=0.2, centered=True), ["rms", "momentum", "mg"]
+        )
 
     def _compare_initialize_values(self, opt, dim, slot, expected_init):
         tmp = OptimizerWrapper(opt, None, {"test": dim})
         self.assertTrue(
             (
-                tmp._initialize_unknown_slot("test", slot) - expected_init(dim)
+                tmp._initialize_unknown_slot("test", slot)
+                - expected_init(dim).numpy()
                 < 0.0001
             ).all()
         )
 
     def test_initialize(self):
-        self._compare_initialize_values(Adam(), 4, "m", np.zeros)
+        self._compare_initialize_values(
+            Adam(), 4, "m", init_ops.constant_initializer(0.0)
+        )
+        self._compare_initialize_values(
+            Ftrl(initial_accumulator_value=0.5),
+            4,
+            "accumulator",
+            init_ops.constant_initializer(0.5),
+        )
+        self._compare_initialize_values(
+            Adagrad(initial_accumulator_value=0.5),
+            4,
+            "accumulator",
+            init_ops.constant_initializer(0.5),
+        )
 
     def test_initialize_in_lookup(self):
         opt = Adam()
@@ -481,7 +517,7 @@ class OptimizerWrapperTest(unittest.TestCase):
         np.random.seed(random_seed)
         return [np.random.rand(*shape).astype(np.float32) for shape in shapes]
 
-    def _test_correctness(self, optimizer_class, **kwargs):
+    def _test_correctness(self, optimizer_class, X, Y, seed, **kwargs):
         """Test the correctness of specific TensorFlow optimizer."""
         _model_file = get_module_file_path(
             os.path.dirname(os.path.realpath(__file__)),
@@ -490,8 +526,6 @@ class OptimizerWrapperTest(unittest.TestCase):
         model_module = load_module(_model_file).__dict__
 
         # train model with TensorFlow optimizer
-        seed = 1
-        X, Y = _prepare_random_data(4, 4, 6, 4, True, random_seed=seed)
         weights = self._random_init_model_weight(
             [(4, 4), (4, 4), (72, 1), (1,)], seed
         )
@@ -535,8 +569,189 @@ class OptimizerWrapperTest(unittest.TestCase):
                 for w1, w2 in zip(layer1.weights, layer2.weights):
                     self.assertTrue((w1 - w2 < 0.0001).numpy().all())
 
-    def test_correctness(self):
-        self._test_correctness(SGD, learning_rate=0.1, momentum=0.5)
+    def test_sgd_correctness(self):
+        seed = 1
+        X, Y = _prepare_random_data(
+            iters_per_epoch=4,
+            batch_size=4,
+            input_length=6,
+            input_dim=4,
+            is_sparse=True,
+            random_seed=seed,
+        )
+        self._test_correctness(SGD, X, Y, seed, learning_rate=0.1)
+        self._test_correctness(
+            SGD, X, Y, seed, learning_rate=0.1, momentum=0.5
+        )
+
+    def test_adadelta_correctness(self):
+        seed = 1
+        X, Y = _prepare_random_data(
+            iters_per_epoch=4,
+            batch_size=4,
+            input_length=6,
+            input_dim=4,
+            is_sparse=True,
+            random_seed=seed,
+        )
+        self._test_correctness(Adadelta, X, Y, seed, learning_rate=0.1)
+
+    def test_adagrad_correctness(self):
+        seed = 1
+        X, Y = _prepare_random_data(
+            iters_per_epoch=4,
+            batch_size=4,
+            input_length=6,
+            input_dim=4,
+            is_sparse=True,
+            random_seed=seed,
+        )
+        self._test_correctness(Adagrad, X, Y, seed, learning_rate=0.1)
+
+    def test_adamax_correctness(self):
+        seed = 1
+        X, Y = _prepare_random_data(
+            iters_per_epoch=4,
+            batch_size=4,
+            input_length=6,
+            input_dim=4,
+            is_sparse=True,
+            random_seed=seed,
+        )
+        self._test_correctness(Adamax, X, Y, seed, learning_rate=0.1)
+
+    def test_ftrl_correctness(self):
+        seed = 1
+        X, Y = _prepare_random_data(
+            iters_per_epoch=4,
+            batch_size=4,
+            input_length=6,
+            input_dim=4,
+            is_sparse=True,
+            random_seed=seed,
+        )
+        self._test_correctness(Ftrl, X, Y, seed, learning_rate=0.1)
+
+    def test_adam_correctness(self):
+        seed = 1
+        X_dense, Y_dense = _prepare_random_data(
+            iters_per_epoch=4,
+            batch_size=4,
+            input_length=6,
+            input_dim=4,
+            is_sparse=False,
+            random_seed=seed,
+        )
+        self._test_correctness(Adam, X_dense, Y_dense, seed, learning_rate=0.1)
+        self._test_correctness(
+            Adam, X_dense, Y_dense, seed, learning_rate=0.1, amsgrad=True
+        )
+
+        # Test sparse data for only one minibatch bacause
+        # TensorFlow Adam optimizer adopts densely updating rule while
+        # optimizer wrapper only supports sparsely updating
+        X_sparse, Y_sparse = _prepare_random_data(
+            iters_per_epoch=1,
+            batch_size=4,
+            input_length=6,
+            input_dim=4,
+            is_sparse=True,
+            random_seed=seed,
+        )
+        self._test_correctness(
+            Adam, X_sparse, Y_sparse, seed, learning_rate=0.1
+        )
+        self._test_correctness(
+            Adam, X_sparse, Y_sparse, seed, learning_rate=0.1, amsgrad=True
+        )
+
+    def test_nadam_correctness(self):
+        seed = 1
+        X_dense, Y_dense = _prepare_random_data(
+            iters_per_epoch=4,
+            batch_size=4,
+            input_length=6,
+            input_dim=4,
+            is_sparse=False,
+            random_seed=seed,
+        )
+        self._test_correctness(
+            Nadam, X_dense, Y_dense, seed, learning_rate=0.1
+        )
+
+        # Test sparse data for only one minibatch bacause
+        # TensorFlow Nadam optimizer adopts densely updating rule while
+        # optimizer wrapper only supports sparsely updating
+        X_sparse, Y_sparse = _prepare_random_data(
+            iters_per_epoch=1,
+            batch_size=4,
+            input_length=6,
+            input_dim=4,
+            is_sparse=True,
+            random_seed=seed,
+        )
+        self._test_correctness(
+            Nadam, X_sparse, Y_sparse, seed, learning_rate=0.1
+        )
+
+    def test_rmsprop_correctness(self):
+        seed = 1
+        X_dense, Y_dense = _prepare_random_data(
+            iters_per_epoch=4,
+            batch_size=4,
+            input_length=6,
+            input_dim=4,
+            is_sparse=False,
+            random_seed=seed,
+        )
+        self._test_correctness(
+            RMSprop, X_dense, Y_dense, seed, learning_rate=0.1
+        )
+        self._test_correctness(
+            RMSprop, X_dense, Y_dense, seed, learning_rate=0.1, momentum=0.5
+        )
+        self._test_correctness(
+            RMSprop, X_dense, Y_dense, seed, learning_rate=0.1, centered=True
+        )
+        self._test_correctness(
+            RMSprop,
+            X_dense,
+            Y_dense,
+            seed,
+            learning_rate=0.1,
+            momentum=0.5,
+            centered=True,
+        )
+
+        # Test sparse data for only one minibatch bacause
+        # TensorFlow RMSprop optimizer adopts densely updating rule while
+        # optimizer wrapper only supports sparsely updating
+        X_sparse, Y_sparse = _prepare_random_data(
+            iters_per_epoch=1,
+            batch_size=4,
+            input_length=6,
+            input_dim=4,
+            is_sparse=True,
+            random_seed=seed,
+        )
+        self._test_correctness(
+            RMSprop, X_sparse, Y_sparse, seed, learning_rate=0.1
+        )
+        self._test_correctness(
+            RMSprop, X_sparse, Y_sparse, seed, learning_rate=0.1, momentum=0.5
+        )
+        self._test_correctness(
+            RMSprop, X_sparse, Y_sparse, seed, learning_rate=0.1, centered=True
+        )
+        self._test_correctness(
+            RMSprop,
+            X_sparse,
+            Y_sparse,
+            seed,
+            learning_rate=0.1,
+            momentum=0.5,
+            centered=True,
+        )
 
 
 if __name__ == "__main__":

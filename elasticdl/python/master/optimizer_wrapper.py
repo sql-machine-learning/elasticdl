@@ -3,7 +3,16 @@
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.optimizers import SGD, Adam
+from tensorflow.keras.optimizers import (
+    SGD,
+    Adadelta,
+    Adagrad,
+    Adam,
+    Adamax,
+    Ftrl,
+    Nadam,
+    RMSprop,
+)
 
 from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.elasticdl.layers.embedding import Embedding
@@ -121,19 +130,36 @@ class OptimizerWrapper(object):
             self._allowed_slot_names = []
             if opt._momentum:
                 self._allowed_slot_names.append("momentum")
-            for slot in self._allowed_slot_names:
-                self._slot_initial_value[slot] = 0.0
 
-        elif isinstance(opt, Adam):
+        elif isinstance(opt, (Adam, Adamax, Nadam)):
             self._allowed_slot_names = ["m", "v"]
-            if self._opt.amsgrad:
+            if isinstance(opt, Adam) and self._opt.amsgrad:
                 self._allowed_slot_names.append("vhat")
-            for slot in self._allowed_slot_names:
-                self._slot_initial_value[slot] = 0.0
+
+        elif isinstance(opt, Adadelta):
+            self._allowed_slot_names = ["accum_grad", "accum_var"]
+
+        elif isinstance(opt, (Adagrad, Ftrl)):
+            self._allowed_slot_names = ["accumulator"]
+            if isinstance(opt, Ftrl):
+                self._allowed_slot_names.append("linear")
+            accumu_init = opt._initial_accumulator_value
+            self._slot_initial_value["accumulator"] = accumu_init
+
+        elif isinstance(opt, RMSprop):
+            self._allowed_slot_names = ["rms"]
+            if self._opt._momentum:
+                self._allowed_slot_names.append("momentum")
+            if self._opt.centered:
+                self._allowed_slot_names.append("mg")
+
         else:
             raise NotImplementedError(
                 "Optimizer %s is not supported in ElasticDL." % type(opt)
             )
+
+        for slot in self._allowed_slot_names:
+            self._slot_initial_value.setdefault(slot, 0.0)
 
         # record unique ids of gradients
         self._unique_ids_all_layers = {}
