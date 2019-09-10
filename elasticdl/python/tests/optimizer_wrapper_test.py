@@ -99,14 +99,14 @@ def _train_edl_embedding_with_optimizer_wrapper(
         )
         return np.concatenate(values).reshape(len(ids), -1)
 
-    tape = tf.GradientTape(persistent=True)
     for layer in embed_layers:
-        layer.set_tape(tape)
         layer.set_lookup_func(lookup_func)
 
     # training process
     for features, labels in zip(X, Y):
-        with tape:
+        with tf.GradientTape() as tape:
+            for layer in embed_layers:
+                layer.set_tape(tape)
             outputs = model.call(features)
             loss = loss_fn(outputs, labels)
 
