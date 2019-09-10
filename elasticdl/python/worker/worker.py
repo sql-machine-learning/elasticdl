@@ -39,6 +39,7 @@ class Worker(object):
         model_params="",
         prediction_outputs_processor="PredictionOutputsProcessor",
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
+        get_model_steps=1,
     ):
         """
         Arguments:
@@ -80,6 +81,7 @@ class Worker(object):
         self._task_data_service = TaskDataService(
             self, self._job_type == JobType.TRAINING_WITH_EVALUATION
         )
+        self._get_model_steps = get_model_steps
 
     def _init_embedding_layer(self):
         """

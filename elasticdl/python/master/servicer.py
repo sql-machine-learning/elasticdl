@@ -32,7 +32,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         checkpoint_filename_for_init,
         checkpoint_service,
         evaluation_service,
-        embedding_service_endpoint=None
+        embedding_service_endpoint=None,
+        lr_staleness_modulation=False,
+        use_async=False,
     ):
         # TODO: group params together into a single object.
         self._opt = optimizer
@@ -44,6 +46,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._grad_to_wait = grads_to_wait
         self._grad_n = 0
         self._minibatch_size = minibatch_size
+        self._use_async = use_async
 
         # A <string, tf.ResourceVariable> map. We use tf.ResourceVariable
         # instead ndarray to avoid copying and conversion when calling
