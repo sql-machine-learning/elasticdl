@@ -174,8 +174,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             )
 
     def _update_model(self):
-        if (not self._use_async and
-                not self._lock.locked()):
+        if not self._use_async and not self._lock.locked():
             raise RuntimeError("In sync mode, lock is not acquired")
         grad_var = []
 
