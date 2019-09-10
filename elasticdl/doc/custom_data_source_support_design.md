@@ -89,23 +89,58 @@ In order to support custom data sources in ElasticDL, we propose to make the fol
 
 * Rename ``shard_file_name`` in `Task` to `shard_name` so a task is independent with file names and `shard_name` will
 serve as an identifier for the shard.
-* Implement a method to create and dispatch tasks based on the provided data reader implementation.
-* Implement an abstract custom data reader that accepts an custom data reader instance
-
-A custom data reader implementation would look like the following:
+* Implement an abstract interface named `AbstractDataReader` that users can implement in their model definition file.
+The interface would look like the following:
 
 ```python
-class CustomDataReader(object):
-    def __init__(self, table_):
-        self.reader = reader
+class AbstractDataReader(object):
+    def __init__(self, *kwargs):
+        pass
+
+    @abstractmethod
+    def generate_records(self, task):
+        """This method will be used in `TaskDataService` to read the records based on
+        the information provided in each task.
+        """
+        pass
+
+    @abstractmethod
+    def create_task_dispatcher(self):
+        """This method creates a `TaskDispatcher` instance that will be used to create
+        and dispatch training, evaluation, and prediction tasks.
+        """
+        pass
+```
+
+Users can then implement a custom data reader implementation similar to the following:
+
+```python
+class CustomDataReader(AbstractDataReader):
+    def __init__(self, *kwargs):
+        self.reader = ...
 
     def generate_records(self, task):
-        """This method will be used in `TaskDataService` to read the records for each task."""
         while True:
-            record = self.reader.read(source=task.source,start=task.start, offset=task.end)
+            record = self.reader.read(source=task.source, start=task.start, offset=task.end)
             if record:
                 yield record
             else:
                 break
+
+    def create_task_dispatcher(self):
+        # Dictionaries of `{shard_name: num_records}`
+        training_shards = ...
+        evaluation_shards = ...
+        prediction_shards = ...
+        return TaskDispatcher(
+            training_shards,
+            evaluation_shards,
+            prediction_shards,
+        )
 ```
-* Should this be combined with dataset_fn?
+* We will also provide a `RecordIODataReader` that can be used to read RecordIO files, serves as the default
+data reader for ElasticDL, and preserves the current ElasticDL functionality.
+* Keep the existing CLI arguments `--training_data_dir`, `--evaluation_data_dir`, and `--prediction_data_dir` that
+will be used for specifying paths to RecordIO files if no custom data reader is specified.
+* Add CLI argument `--custom_data_reader_params` to pass parameters to the constructor of user-defined `CustomDataReader`
+similar to the existing `--model_params` used for passing parameters to model constructor.
