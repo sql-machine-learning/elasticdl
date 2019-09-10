@@ -1,0 +1,1006 @@
+
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SQLFlow: Bridging Data and AI</title>
+  <link rel="stylesheet" href="./highlight/styles/default.css">
+  <style type="text/css">
+    h2 {
+      display: inline;
+    }
+
+    .typed-cursor {
+      opacity: 1;
+      animation: typedjsBlink 0.7s infinite;
+      -webkit-animation: typedjsBlink 0.7s infinite;
+      animation: typedjsBlink 0.7s infinite;
+    }
+
+    @keyframes typedjsBlink {
+      50% {
+        opacity: 0.0;
+      }
+    }
+
+    @-webkit-keyframes typedjsBlink {
+      0% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.0;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+
+    .typed-fade-out {
+      opacity: 0;
+      transition: opacity .25s;
+      -webkit-animation: 0;
+      animation: 0;
+    }
+
+    .box {
+      float: left;
+    }
+
+    body {
+      font-family: "Open Sans", sans-serif;
+      font-size: 62.5%;
+      background: #efefef;
+    }
+
+    #wrapper {
+      display: flex;
+      padding: 2em 0;
+      flex-direction: column;
+      align-items: center;
+      font-size: 1.6em;
+    }
+
+    #wrapper #section-header {
+      text-align: center;
+      font-weight: 300;
+      margin-bottom: 2em;
+    }
+
+    #wrapper #sh-console {
+      min-width: 300px;
+      width: 50%;
+    }
+
+    .sh-console {
+      font-family: "Monaco", "Consolas";
+      -webkit-font-smoothing: antialiased;
+      font-size: 0.85em;
+      overflow: hidden;
+      color: #ccc;
+      box-sizing: border-box;
+      /*border-top: 1.5em solid #ccc;*/
+      border-radius: 0.25em;
+    }
+
+    .sh-console.sh-shadow {
+      box-shadow: 5px 10px 50px #000;
+    }
+
+    .sh-console .sh-command {
+      margin: 1.5em 0 0.5em 1em;
+      color: #fff;
+      position: relative;
+    }
+
+    .sh-console .sh-command:before {
+      content: "#";
+      color: #3a92c8;
+      padding-right: 0.75em;
+      position: absolute;
+      left: -1.25em;
+    }
+
+    .sh-console .sh-return {
+      margin: 0.5em 0 1.5em 2.25em;
+      position: relative;
+    }
+
+    .sh-console .sh-return:before {
+      content: "$";
+      padding: 0 0.75em 0 1.25em;
+      position: absolute;
+      left: -2.5em;
+    }
+
+    .sh-console .sh-return ul.sh-array {
+      display: inline;
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .sh-console .sh-return ul.sh-array:before {
+      content: "[";
+    }
+
+    .sh-console .sh-return ul.sh-array:after {
+      content: "]";
+    }
+
+    .sh-console .sh-return ul.sh-array li {
+      display: inline;
+      list-style-type: none;
+      list-style-position: inside;
+      margin: 0;
+      padding: 0;
+    }
+
+    .sh-console .sh-return ul.sh-array li:before {
+      content: '"';
+    }
+
+    .sh-console .sh-return ul.sh-array li:after {
+      content: '"';
+    }
+
+    .sh-console .sh-return ul.sh-array li:not(:last-child):after {
+      content: '", ';
+    }
+
+    .sh-console .sh:first-child {
+      margin-top: 0;
+    }
+
+    .sh-console .sh:last-child {
+      margin-bottom: 0;
+    }
+
+    .sh-console a {
+      color: #3a92c8;
+      text-decoration: none;
+    }
+
+    .sh-console a:hover {
+      text-decoration: underline;
+    }
+  </style>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    main,
+    nav,
+    section {
+      display: block;
+    }
+
+    a {
+      background: transparent;
+    }
+
+    a:active,
+    a:hover {
+      outline: 0;
+    }
+
+    h1 {
+      font-size: 2em;
+      margin: .67em 0;
+    }
+
+    img {
+      border: 0;
+    }
+
+    body {
+      height: 100%;
+    }
+
+    *,
+    *:before,
+    *:after {
+      -moz-box-sizing: border-box;
+      -webkit-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-size: 100%;
+    }
+
+    body {
+      background: white;
+      color: black;
+      padding: 0;
+      margin: 0;
+      font-family: Avenir, "proxima-nova", Helvetica, Arial, sans-serif;
+      font-weight: normal;
+      font-style: normal;
+      line-height: 1;
+      position: relative;
+      cursor: default;
+    }
+
+    a:hover {
+      cursor: pointer;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    img {
+      -ms-interpolation-mode: bicubic;
+    }
+
+    .right {
+      float: right !important;
+    }
+
+    .text-center {
+      text-align: center !important;
+    }
+
+    img {
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .row {
+      width: 100%;
+      margin-left: auto;
+      margin-right: auto;
+      margin-top: 0;
+      margin-bottom: 0;
+      max-width: 68.75rem;
+      *zoom: 1;
+    }
+
+    .row:before,
+    .row:after {
+      content: " ";
+      display: table;
+    }
+
+    .row:after {
+      clear: both;
+    }
+
+    .inline-list {
+      margin: 0 auto 1.0625rem auto;
+      margin-left: -1.375rem;
+      margin-right: 0;
+      padding: 0;
+      list-style: none;
+      overflow: hidden;
+    }
+
+    .inline-list>li {
+      list-style: none;
+      float: left;
+      margin-left: 1.375rem;
+      display: block;
+    }
+
+    .inline-list>li>* {
+      display: block;
+    }
+
+    .text-center {
+      text-align: center !important;
+    }
+
+    .text-center {
+      text-align: center !important;
+    }
+
+    div,
+    ul,
+    li,
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+      padding: 0;
+    }
+
+    a {
+      color: #4d7ec6;
+      text-decoration: none;
+      line-height: inherit;
+    }
+
+    a:hover,
+    a:focus {
+      color: #396bb3;
+    }
+
+    p {
+      font-family: inherit;
+      font-weight: normal;
+      font-size: 1.125rem;
+      line-height: 1.6;
+      margin-bottom: 1.25rem;
+      text-rendering: optimizeLegibility;
+    }
+
+    h1,
+    h2,
+    h3 {
+      font-family: Avenir, "proxima-nova", Helvetica, Arial, sans-serif;
+      font-weight: normal;
+      font-style: normal;
+      color: black;
+      text-rendering: optimizeLegibility;
+      margin-top: .2rem;
+      margin-bottom: .5rem;
+      line-height: 1.4;
+    }
+
+    h1 {
+      font-size: 2.125rem;
+    }
+
+    h2 {
+      font-size: 1.6875rem;
+    }
+
+    h3 {
+      font-size: 1.375rem;
+    }
+
+    ul {
+      font-size: 1.125rem;
+      line-height: 1.6;
+      margin-bottom: 1.25rem;
+      list-style-position: outside;
+      font-family: inherit;
+    }
+
+    ul {
+      margin-left: 1.1rem;
+    }
+
+    @media only screen and (min-width: 40.063em) {
+      h1,
+      h2,
+      h3 {
+        line-height: 1.4;
+      }
+      h1 {
+        font-size: 2.75rem;
+      }
+      h2 {
+        font-size: 2.3125rem;
+      }
+      h3 {
+        font-size: 1.6875rem;
+      }
+    }
+
+    @media print {
+      * {
+        background: transparent !important;
+        color: #000 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+      }
+      a,
+      a:visited {
+        text-decoration: underline;
+      }
+      a[href]:after {
+        content: " (" attr(href) ")";
+      }
+      img {
+        page-break-inside: avoid;
+      }
+      img {
+        max-width: 100% !important;
+      }
+      p,
+      h2,
+      h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2,
+      h3 {
+        page-break-after: avoid;
+      }
+    }
+
+    .text-center {
+      text-align: center !important;
+    }
+
+    .off-canvas-wrap {
+      -webkit-backface-visibility: hidden;
+      position: relative;
+      width: 100%;
+      overflow-x: hidden;
+    }
+
+    .inner-wrap {
+      -webkit-backface-visibility: hidden;
+      position: relative;
+      width: 100%;
+      *zoom: 1;
+      -webkit-transition: -webkit-transform 500ms ease;
+      -moz-transition: -moz-transform 500ms ease;
+      -ms-transition: -ms-transform 500ms ease;
+      -o-transition: -o-transform 500ms ease;
+      transition: transform 500ms ease;
+    }
+
+    .inner-wrap:before,
+    .inner-wrap:after {
+      content: " ";
+      display: table;
+    }
+
+    .inner-wrap:after {
+      clear: both;
+    }
+
+    .tab-bar {
+      -webkit-backface-visibility: hidden;
+      background: white;
+      color: white;
+      height: 2.8125rem;
+      line-height: 2.8125rem;
+      position: relative;
+    }
+
+    .tab-bar-section {
+      padding: 0 .625rem;
+      position: absolute;
+      text-align: center;
+      height: 2.8125rem;
+      top: 0;
+    }
+
+    @media only screen and (min-width: 40.063em) {
+      .tab-bar-section {
+        text-align: left;
+      }
+    }
+
+    .tab-bar-section.middle {
+      left: 2.8125rem;
+      right: 2.8125rem;
+    }
+
+    @media only screen {
+      .hide-for-small {
+        display: none !important;
+      }
+    }
+
+    @media only screen and (min-width: 40.063em) {
+      .hide-for-small {
+        display: inherit !important;
+      }
+    }
+
+    @media only screen and (min-width: 64.063em) {
+      .hide-for-small {
+        display: inherit !important;
+      }
+    }
+
+    @media only screen and (min-width: 90.063em) {
+      .hide-for-small {
+        display: inherit !important;
+      }
+    }
+
+    @media only screen and (min-width: 120.063em) {
+      .hide-for-small {
+        display: inherit !important;
+      }
+    }
+
+    body {
+      color: black;
+    }
+
+    body .off-canvas-wrap {
+      font-family: Avenir, "proxima-nova", Helvetica, Arial, sans-serif;
+    }
+
+    main {
+      overflow: hidden;
+    }
+
+    nav.tab-bar {
+      margin: 12px 0 5px;
+    }
+
+    nav.tab-bar .middle.tab-bar-section {
+      right: 0;
+      max-width: 68.75rem;
+      margin: 0 auto;
+      left: 0;
+      padding-bottom: 70px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    nav.tab-bar .middle.tab-bar-section .main-nav ul {
+      margin-top: 16px;
+      width: 130px;
+    }
+
+    @media only screen and (min-width: 40.063em) {
+      nav.tab-bar .middle.tab-bar-section .main-nav ul {
+        width: 420px;
+      }
+      nav.tab-bar .off-canvas-nav-item {
+        display: none;
+      }
+    }
+
+    nav.tab-bar .middle.tab-bar-section .main-nav ul li {
+      margin-left: 35px;
+    }
+
+    nav.tab-bar .middle.tab-bar-section .main-nav ul li a {
+      color: #7d7d7d;
+      line-height: inherit;
+      font-weight: 500;
+      padding: 0 5px 5px 5px;
+      border-bottom: 2px solid #fff;
+      -webkit-transition: border-color .5s;
+    }
+
+    nav.tab-bar .middle.tab-bar-section .main-nav ul li a:hover {
+      color: #454545;
+      border-bottom: 2px solid #3a99d9;
+    }
+
+    .right-off-canvas-menu {
+      -webkit-backface-visibility: hidden;
+      width: 15.625rem;
+      top: 0;
+      bottom: 0;
+      position: absolute;
+      overflow-y: auto;
+      background-color: #333;
+      z-index: 1001;
+      box-sizing: content-box;
+      -webkit-overflow-scrolling: touch;
+      -webkit-transform: translate3d(100%, 0, 0);
+      -moz-transform: translate3d(100%, 0, 0);
+      -ms-transform: translate3d(100%, 0, 0);
+      -o-transform: translate3d(100%, 0, 0);
+      transform: translate3d(100%, 0, 0);
+      right: 0
+    }
+
+    .right-off-canvas-menu * {
+      -webkit-backface-visibility: hidden
+    }
+
+    ul.off-canvas-list {
+      list-style-type: none;
+      padding: 0;
+      margin: 0
+    }
+
+    ul.off-canvas-list li label {
+      padding: .3rem .9375rem;
+      color: #999;
+      text-transform: uppercase;
+      font-weight: bold;
+      background: #444;
+      border-top: 1px solid #5e5e5e;
+      border-bottom: 0;
+      margin: 0
+    }
+
+    ul.off-canvas-list li a {
+      display: block;
+      padding: .66667rem;
+      color: rgba(255, 255, 255, 0.7);
+      border-bottom: 1px solid #262626;
+      transition: background 300ms ease
+    }
+
+    ul.off-canvas-list li a:hover {
+      background: #b3b3b3
+    }
+
+    .move-right>.inner-wrap {
+      -webkit-transform: translate3d(15.625rem, 0, 0);
+      -moz-transform: translate3d(15.625rem, 0, 0);
+      -ms-transform: translate3d(15.625rem, 0, 0);
+      -o-transform: translate3d(15.625rem, 0, 0);
+      transform: translate3d(15.625rem, 0, 0)
+    }
+
+    .move-right .exit-off-canvas {
+      -webkit-backface-visibility: hidden;
+      transition: background 300ms ease;
+      cursor: pointer;
+      box-shadow: -4px 0 4px rgba(0, 0, 0, 0.5), 4px 0 4px rgba(0, 0, 0, 0.5);
+      display: block;
+      position: absolute;
+      background: rgba(255, 255, 255, 0.2);
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 1002;
+      -webkit-tap-highlight-color: rgba(0, 0, 0, 0)
+    }
+
+    @media only screen and (min-width: 40.063em) {
+      .move-right .exit-off-canvas:hover {
+        background: rgba(255, 255, 255, 0.05)
+      }
+    }
+
+    body {
+      height: 100%;
+    }
+
+    *,
+    *:before,
+    *:after {
+      -moz-box-sizing: border-box;
+      -webkit-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-size: 100%;
+    }
+
+    body {
+      background: white;
+      color: #222;
+      padding: 0;
+      margin: 0;
+      font-family: "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;
+      font-weight: normal;
+      font-style: normal;
+      line-height: 1;
+      position: relative;
+      cursor: default;
+    }
+
+    a:hover {
+      cursor: pointer;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    img {
+      -ms-interpolation-mode: bicubic;
+    }
+
+    .right {
+      float: right !important;
+    }
+
+    .text-center {
+      text-align: center !important;
+    }
+
+    img {
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    #home {
+      color: #454545;
+    }
+
+    #home .products {
+      margin: 30px 0;
+    }
+    /*! CSS Used from: Embedded */
+
+    .main-page {
+      max-width: 1014px;
+      margin: 0 auto;
+    }
+
+    p {
+      padding-left: 6px;
+      padding-right: 6px;
+      text-align: justify;
+      max-width: 912px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    h3 {
+      max-width: 912px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .require {
+      font-size: 0.9rem;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    #firstrequire {
+      margin-bottom: 2px;
+    }
+
+    .move-left>.inner-wrap {
+      -webkit-transform: translate3d(-15.625rem, 0, 0);
+      -moz-transform: translate3d(-15.625rem, 0, 0);
+      -ms-transform: translate3d(-15.625rem, 0, 0);
+      -o-transform: translate3d(-15.625rem, 0, 0);
+      transform: translate3d(-15.625rem, 0, 0)
+    }
+
+    .move-left .exit-off-canvas {
+      -webkit-backface-visibility: hidden;
+      transition: background 300ms ease;
+      cursor: pointer;
+      display: block;
+      position: absolute;
+      background: rgba(255, 255, 255, 0.2);
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 1002;
+      -webkit-tap-highlight-color: rgba(0, 0, 0, 0)
+    }
+
+    @media only screen and (min-width: 40.063em) {
+      .move-left .exit-off-canvas:hover {
+        background: rgba(255, 255, 255, 0.05)
+      }
+    }
+
+    .right-off-canvas-menu ul {
+      list-style-type: none
+    }
+
+    .right-off-canvas-menu ul li {
+      font-size: 1rem
+    }
+
+    .right-off-canvas-menu ul li a {
+      color: gray;
+      font-size: .875rem;
+      display: inline-block
+    }
+
+    .right-off-canvas-menu ul.main-pages {
+      color: gray;
+      padding: 20px 0;
+    }
+
+    .right-off-canvas-menu ul.main-pages li a {
+      font-size: 1rem;
+      margin: 0 0 15px 0
+    }
+
+    h1,
+    h2,
+    h3 {
+      color: #454545;
+    }
+
+    #home h1 {
+      font-size: 2rem;
+    }
+
+    #home h2 {
+      font-size: 1.2rem;
+    }
+
+    h3 {
+      padding: 20px 0 10px 0;
+      border-top: 1px dashed #aaa;
+    }
+
+    section.feature {
+      text-align: left;
+      padding-left: 6px;
+      padding-right: 6px;
+    }
+
+    section.feature img {
+      width: 550px;
+      margin: auto 20px;
+    }
+
+    section.feature:nth-of-type(2n) {
+      text-align: right;
+      padding-right: 6px;
+      padding-right: 6px;
+    }
+
+    section.feature:nth-of-type(2n) p {
+      text-align: right;
+    }
+
+    section.feature .gif-holder {
+      width: 550px;
+      height: 275px;
+    }
+
+    @media only screen and (min-width: 40.063em) {
+      #home h1 {
+        font-size: 2.7rem;
+      }
+      #home h2 {
+        font-size: 1.8rem;
+      }
+    }
+
+    .main-nav .logo {
+      width: 220px;
+      display: inline;
+      float: left;
+      padding: 5px 10px;
+    }
+
+    .main-nav .logo img {
+      height: 30px;
+    }
+
+    .main-page .intro {
+      margin-top: 50px;
+      margin-bottom: 100px;
+    }
+
+    .main-page .intro h1 {
+      margin: 50px auto;
+      color: #1BA2FF;
+    }
+
+    .main-page .intro p {
+      margin: 30px auto;
+    }
+
+    .main-page section {
+      margin-top: 50px;
+    }
+
+    pre {
+      margin: 0 50px;
+    }
+  </style>
+</head>
+
+<body>
+<main>
+  <div class="off-canvas-wrap">
+    <div class="inner-wrap">
+      <!-- main nav -->
+      <nav class="tab-bar">
+        <section class="middle tab-bar-section">
+          <div class="title">
+            <div class="main-nav">
+              <div class="logo">
+                <a href="https://sql-machine-learning.github.io">
+                  <img alt="logo" src="https://img.alicdn.com/tfs/TB1CuBHfhn1gK0jSZKPXXXvUXXa-655-99.jpg" />
+                </a>
+              </div>
+
+              <ul class="inline-list right">
+
+                <li class="hide-for-small"><a href="https://github.com/sql-machine-learning/elasticdl">Installation</a></li>
+
+                <li class="hide-for-small"><a href="https://github.com/sql-machine-learning/elasticdl">Documents</a></li>
+
+                <li class="hide-for-small"><a href="https://github.com/sql-machine-learning/elasticdl">GitHub</a></li>
+
+                <li class="off-canvas-nav-item" id="menu-btn"><a class="right-off-canvas-toggle menu-icon">Menu<span></span></a></li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </nav>
+      <!-- Main Content -->
+      <aside class="right-off-canvas-menu">
+        <ul class="main-pages">
+          <li><a href="/" class="menu-icon">Home</a></li>
+
+          <li><a href="https://github.com/sql-machine-learning/elasticdl">Installation</a></li>
+
+          <li><a href="https://github.com/sql-machine-learning/elasticdl">Documents</a></li>
+
+          <li><a href="https://github.com/sql-machine-learning/elasticdl">GitHub</a></li>
+
+        </ul>
+      </aside>
+
+      <section class="main-section">
+        <section id="home">
+          <section class="products text-center">
+            <div class="row">
+              <div class="main-page">
+                <div class="intro">
+<!--                  <h2>ElasticDL is a Kubernetes-native deep learning framework built on top of TensorFlow 2.0 that supports fault-tolerance and elastic scheduling.</h2>-->
+                  <p class="require" id="firstrequire">ElasticDL is a Kubernetes-native deep learning framework built on top of TensorFlow 2.0 that supports fault-tolerance and elastic scheduling.</p>
+                </div>
+
+                <div align=center class="sh-console sh-shadow" style="width: 800px;margin: 0 auto;">
+                  <img src="https://img.alicdn.com/tfs/TB1bgVgfX67gK0jSZPfXXahhFXa-817-325.png" />
+                </div>
+
+                <section class="feature">
+                  <h3>基于 Kubernetes-native 实现的弹性调度和容错</h3>
+                  <p>ElasticDL 通过实现一个 Kubernetes-native 的框架，调用 TensorFlow 2.0， 来实现弹性深度学习。</p>
+                </section>
+
+                <section class="feature">
+                  <h3>支持 TensorFlow 2.0</h3>
+                  <p>ElasticDL 通过调用 TensorFlow 2.0 API 可以很直接地获取 gradients。</p>
+                </section>
+
+                <section class="feature">
+                  <h3>极简的 API 和使用方式</h3>
+                  <p>ElasticDL 与 Keras API 相比，不但原生分布式训练能力，还支持Keras不具备的精简、容错和弹性调度。</p>
+                  <pre>
+                    <code class="python">
+elasticdl.train(
+    lambda: elasticdl.model_zoo.IncomePrediction()
+    lambda: elasticdl.dataset.MaxCompute(
+        "SELECT age, address FROM employee",
+        (numeric_column("age"),
+         categorical_column_with_hash_bucket("address")])
+    loss='mse', optimizer='sgd')
+                    </code>
+                  </pre>
+                </section>
+
+                <section class="feature">
+                  <h3>ElasticDL 和 SQLFlow 的关系</h3>
+                  <p>如果要让用户能提供尽量少的参数，人工智能引擎还需要 更加智能，提供包括 AutoML 和 自动特征工程 的功能。 ElasticDL 项目任重道远，其目标是将SQLFlow 程序简化为如下形式：</p>
+                  <pre>
+                    <code class="sql">
+SELECT * FROM employee LABEL income INTO my_first_model
+                    </code>
+                  </pre>
+                </section>
+
+                  <!--
+                  <img alt="gif" src="assets/select.gif"/>
+                  -->
+
+              </div>
+            </div>
+          </section>
+        </section>
+
+      </section>
+    </div>
+  </div>
+</main>
+
+<script>
+  document.getElementById('menu-btn').addEventListener('click', function() {
+    var tgt = document.getElementsByClassName('off-canvas-wrap')[0];
+
+    tgt.classList.contains('move-left') ?
+      tgt.classList.remove('move-left') :
+      tgt.classList.add('move-left')
+  })
+</script>
+
+<script src="./highlight/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+</body>
+
+</html>
