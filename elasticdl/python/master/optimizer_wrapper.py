@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.optimizers import SGD, Adam
 
+from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.embedding_service import EmbeddingService
 
@@ -262,6 +263,11 @@ class OptimizerWrapper(object):
             # de-duplicate gradient's indices
             unique_ids, indices = tf.unique(grad.indices)
             unique_ids = unique_ids.numpy()
+            if layer_name in self._unique_ids_all_layers:
+                # TODO: support grads_and_vars with duplicated layer name
+                logger.warning(
+                    "grads_and_vars has duplicated layer name %s." % layer_name
+                )
             self._unique_ids_all_layers[layer_name] = unique_ids
             grad_new = tf.IndexedSlices(grad.values, indices)
             grads_and_vars[it] = (grad_new, layer_name)
@@ -334,7 +340,7 @@ class OptimizerWrapper(object):
         """Create a variable for an ElasticDL embedding layer."""
         dim = self._embed_dims[layer_name]
         # Use shape `(None, dim)` for embedding variable because `shape[0]`
-        # equals to the number of unqiue ids in the minibatch data, and
+        # equals to the number of unique ids in the minibatch data, and
         # this number may differ between different iterations
         shape = tf.TensorShape((None, dim))
 
@@ -358,7 +364,7 @@ class OptimizerWrapper(object):
         """Create a variable for the specified slot."""
         dim = self._embed_dims[layer_name]
         # Use shape `(None, dim)` for slot variable because `shape[0]`
-        # equals to the number of unqiue ids in the minibatch data, and
+        # equals to the number of unique ids in the minibatch data, and
         # this number may differ between different iterations
         shape = tf.TensorShape((None, dim))
 
