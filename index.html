@@ -935,7 +935,7 @@
                 </div>
 
                 <div align=center class="sh-console sh-shadow" style="width: 800px;margin: 0 auto;">
-                  <img src="https://img.alicdn.com/tfs/TB1bgVgfX67gK0jSZPfXXahhFXa-817-325.png" />
+                  <img src="images/elasticdl.png" />
                 </div>
 
                 <section class="feature">
@@ -959,8 +959,6 @@ elasticdl train \
 --training_data_dir=/data/mnist/train \
 --evaluation_data_dir=/data/mnist/test \
 --num_epochs=2 \
---master_resource_request="cpu=400m,memory=1024Mi" \
---worker_resource_request="cpu=400m,memory=2048Mi" \
 --minibatch_size=64 \
 --records_per_task=100 \
 --num_workers=2 \
