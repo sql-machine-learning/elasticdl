@@ -10,18 +10,16 @@ class EdlEmbeddingModel(tf.keras.Model):
         Arguments:
             output_dim: An Integer. It is the output dimension of embedding
                 layers in `EdlEmbeddingModel`.
-            weights: A numpy ndarray list. Unless `weights` is None, dense
+            weights: A numpy ndarray list. If `weights` is not None, dense
                 layer initializes its weights using `weights`.
         """
-        super(EdlEmbeddingModel, self).__init__(
-            name="test_model_with_edl_embedding"
-        )
+        super(EdlEmbeddingModel, self).__init__(name="EdlEmbeddingModel")
         self.output_dim = output_dim
         if weights:
             if len(weights) != 2:
                 raise ValueError(
-                    "test_model_with_edl_embedding constructor receives "
-                    "weights with length %d, expected %d" % (len(weights), 2)
+                    "EdlEmbeddingModel constructor receives weights with "
+                    "length %d, expected %d" % (len(weights), 2)
                 )
 
         self.embedding_1 = Embedding(output_dim)
@@ -31,10 +29,13 @@ class EdlEmbeddingModel(tf.keras.Model):
         self.flatten = Flatten()
 
     def call(self, inputs, training=False):
-        f1 = self.embedding_1(inputs["f1"])
-        f2 = self.embedding_1(inputs["f2"])
-        f3 = self.embedding_2(inputs["f3"])
-        x = self.concat([f1, f2, f3])
+        x = self.concat(
+            [
+                self.embedding_1(inputs["f1"]),
+                self.embedding_1(inputs["f2"]),
+                self.embedding_2(inputs["f3"]),
+            ]
+        )
         x = self.flatten(x)
         x = self.dense(x)
         return x
@@ -53,9 +54,7 @@ class KerasEmbeddingModel(tf.keras.Model):
             weights: A numpy ndarray list. Unless `weights` is None, embedding
                 layer and dense layer initialize their weights using `weights`.
         """
-        super(KerasEmbeddingModel, self).__init__(
-            name="test_model_with_keras_embedding"
-        )
+        super(KerasEmbeddingModel, self).__init__(name="KerasEmbeddingModel")
         self.output_dim = output_dim
         if weights:
             weight_1 = [weights[0]]
@@ -74,10 +73,13 @@ class KerasEmbeddingModel(tf.keras.Model):
         self.flatten = Flatten()
 
     def call(self, inputs, training=False):
-        f1 = self.embedding_1(inputs["f1"])
-        f2 = self.embedding_1(inputs["f2"])
-        f3 = self.embedding_2(inputs["f3"])
-        x = self.concat([f1, f2, f3])
+        x = self.concat(
+            [
+                self.embedding_1(inputs["f1"]),
+                self.embedding_1(inputs["f2"]),
+                self.embedding_2(inputs["f3"]),
+            ]
+        )
         x = self.flatten(x)
         x = self.dense(x)
         return x

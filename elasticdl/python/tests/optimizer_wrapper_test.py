@@ -9,6 +9,7 @@ import tensorflow as tf
 from tensorflow.keras.optimizers import SGD, Adam
 
 from elasticdl.python.common.model_helper import (
+    find_layer,
     get_module_file_path,
     load_module,
 )
@@ -74,7 +75,7 @@ def _prepare_random_data(
 def _train(model, optimizer, X, Y, loss_fn, random_seed):
     """Train model with TensorFlow optimizer."""
     tf.random.set_seed(random_seed)
-    for i, (features, labels) in enumerate(zip(X, Y)):
+    for features, labels in zip(X, Y):
         with tf.GradientTape() as tape:
             outputs = model.call(features)
             loss = loss_fn(outputs, labels)
@@ -90,13 +91,10 @@ def _train_edl_embedding_with_optimizer_wrapper(
     optimizer = OptimizerWrapper(opt_keras, None, embed_dims)
 
     # initialization process related to embedding layer and optimizer wrapper
-    embed_layers = []
-    for layer in model.layers:
-        if isinstance(layer, Embedding):
-            embed_layers.append(layer)
+    embed_layers = find_layer(model, Embedding)
 
     def lookup_func(ids, layer_name, initializer, output_dim):
-        values, _ = EmbeddingService.lookup_embedding(
+        values, unknown = EmbeddingService.lookup_embedding(
             keys=[Embedding.get_key([layer_name, i]) for i in ids]
         )
         return np.concatenate(values).reshape(len(ids), -1)
@@ -107,11 +105,13 @@ def _train_edl_embedding_with_optimizer_wrapper(
         layer.set_lookup_func(lookup_func)
 
     # training process
-    for i, (features, labels) in enumerate(zip(X, Y)):
+    for features, labels in zip(X, Y):
         with tape:
             outputs = model.call(features)
             loss = loss_fn(outputs, labels)
 
+        # TODO: calculate train_vars_embed and train_vars_other can be a
+        # reusable function
         train_vars_embed = []
         train_vars_other = []
         for layer in model.layers:
@@ -503,16 +503,12 @@ class OptimizerWrapperTest(unittest.TestCase):
         model2 = model_module["EdlEmbeddingModel"](4, weights[2:])
         opt2 = optimizer_class(**kwargs)
 
-        layers = []
-        for layer in model2.layers:
-            if isinstance(layer, Embedding):
-                layers.append(layer.name)
-
-        embed_dims = dict([(layer_name, 4) for layer_name in layers])
+        layer_names = [layer.name for layer in find_layer(model2, Embedding)]
+        embed_dims = dict([(layer_name, 4) for layer_name in layer_names])
 
         # intialize embedding vectors in kv store
         mock_kv_store = MockKvStore({})
-        for layer, embed_table in zip(layers, weights[:2]):
+        for layer, embed_table in zip(layer_names, weights[:2]):
             for i, embed_vector in enumerate(embed_table):
                 mock_kv_store.update(["%s-%d" % (layer, i)], [embed_vector])
 
