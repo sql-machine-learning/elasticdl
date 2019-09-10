@@ -934,37 +934,26 @@
                   <p class="require" id="firstrequire">ElasticDL is a Kubernetes-native deep learning framework built on top of TensorFlow 2.0 that supports fault-tolerance and elastic scheduling.</p>
                 </div>
 
-                <div align=center class="sh-console sh-shadow" style="width: 800px;margin: 0 auto;">
+                <div align="center" class="sh-console sh-shadow" style="width: 800px;margin: 0 auto;">
                   <img src="images/elasticdl.png" />
                 </div>
 
                 <section class="feature">
-                  <h3>Elastic Scheduling and Fault-Tolerance on Kubernetes</h3>
+                  <h3>Elastic Scheduling and Fault-Tolerance</h3>
                   <p>Through Kubernetes-native design, ElasticDL enables fault-tolerance and works with the priority-based preemption of Kubernetes to achieve elastic scheduling for deep learning tasks.</p>
                 </section>
 
                 <section class="feature">
-                  <h3>Support for TensorFlow 2.0</h3>
-                  <p>ElasticDL is implemented on top of TensorFlow 2.0 API that focuses on simplicity and ease of use with support for eager execution and intuitive high-level model building APIs.</p>
+                  <h3>TensorFlow 2.0 Eager Execution</h3>
+                  <p>A distributed deep learning framework needs to know local gradients before the model update. Eager Execution allows ElasticDL to do it without hacking into the graph execution process.</p>
                 </section>
 
                 <section class="feature">
-                  <h3>Simple but Flexible High-level API</h3>
-                  <p>ElasticDL enables model building through Keras API and provides simple CLI to submit distributed deep learning tasks on Kubernetes with fault-tolerance and elastic scheduling.</p>
+                  <h3>Minimalism Interface</h3>
+                  <p>Given a model defined with Keras API, train the model with a command line.</p>
                   <pre>
                     <code class="bash">
-elasticdl train \
---model_zoo=model_zoo \
---model_def=mnist_functional_api.custom_model \
---training_data_dir=/data/mnist/train \
---evaluation_data_dir=/data/mnist/test \
---num_epochs=2 \
---minibatch_size=64 \
---records_per_task=100 \
---num_workers=2 \
---grads_to_wait=2 \
---job_name=test-mnist-train \
---output=elasticdl-saved-model
+elasticdl train --model_def=mnist_functional_api.custom_model --training_data_dir=/data/mnist/train --evaluation_data_dir=/data/mnist/test --output=the_model_dir
                     </code>
                   </pre>
                 </section>
@@ -978,10 +967,6 @@ SELECT * FROM employee LABEL income INTO my_elasticdl_model
                     </code>
                   </pre>
                 </section>
-
-                  <!--
-                  <img alt="gif" src="assets/select.gif"/>
-                  -->
 
               </div>
             </div>
