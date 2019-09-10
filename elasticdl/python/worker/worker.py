@@ -50,13 +50,6 @@ class Worker(object):
         self._worker_id = worker_id
         self._job_type = job_type
         self._minibatch_size = minibatch_size
-        self._tape = None
-        if (
-            self._job_type == JobType.TRAINING_WITH_EVALUATION
-            or self._job_type == JobType.TRAINING_ONLY
-        ):
-            self._tape = tf.GradientTape(persistent=True)
-
         (
             self._model,
             self._dataset_fn,
@@ -95,7 +88,6 @@ class Worker(object):
         self._embedding_layers = find_layer(self._model, Embedding)
         for layer in self._embedding_layers:
             layer.set_lookup_func(self.lookup_embedding)
-        self._set_tape_for_embedding(self._tape)
         if self._embedding_layers:
             # TODO check that Redis IP/PORT is set
             pass
@@ -316,13 +308,14 @@ class Worker(object):
         return self.training_process_eagerly(features, labels)
 
     def training_process_eagerly(self, features, labels):
-        with self._tape:
+        with tf.GradientTape() as tape:
+            self._set_tape_for_embedding(tape)
             outputs = self._model.call(features, training=True)
             loss = self._loss(outputs, labels)
             # Add regularization loss if any
             if self._model.losses:
                 loss += tf.math.add_n(self._model.losses)
-        grads = self._tape.gradient(loss, self.get_trainable_items())
+        grads = tape.gradient(loss, self.get_trainable_items())
         return loss, grads
 
     @tf.function
@@ -343,14 +336,8 @@ class Worker(object):
         return accepted, min_model_version, loss
 
     def _run_evaluation_task(self, features, labels):
-        # reset tape to None for evaluation
-        if self._tape:
-            self._set_tape_for_embedding(None)
         evaluation_metrics = self.evaluation_process(features, labels)
         accepted, _ = self.report_evaluation_metrics(evaluation_metrics)
-        # set tape back for training
-        if self._tape:
-            self._set_tape_for_embedding(self._tape)
         return accepted
 
     def _run_prediction_task(self, features):
