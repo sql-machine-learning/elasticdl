@@ -5,35 +5,13 @@ This document aims to give a simple example to show how to sumbmit deep learning
 
 ## Environment prepare
 
-Here, we use macbook as our expriment environment.
+Here we should install minikube first. Please refer to the official [installation guide](https://kubernetes.io/docs/tasks/tools/install-minikube/).
 
-
-1. Install docker
-
-```bash
-brew cask install docker
-```
-
-2. Install kunernetes
-
-```bash
-brew install kubectl
-brew cask install minikube
-brew install docker-machine-driver-hyperkit
-```
-
-
-And change permission of hyperkit:
-
-```bash
-sudo chown root:wheel /usr/local/opt/docker-machine-driver-hyperkit/bin/docker-machine-driver-hyperkit
-sudo chmod u+s /usr/local/opt/docker-machine-driver-hyperkit/bin/docker-machine-driver-hyperkit
-```
+In this tutorial, we use [hyperkit](https://github.com/moby/hyperkit) as the hypervisor of minikube.
 
 ## Write model file
 
-We use Tensorflow Keras API to build our models. For details, please refer to [ModelBuilding](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/doc/model_building.md) part.
-
+We use TensorFlow Keras API to build our models. Please refer to this [tutorials](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/doc/model_building.md) on model building for details.
 
 ## Summit Job to minikube
 
@@ -57,7 +35,7 @@ bash elasticdl/docker/build_all.sh
 ### Summit a training job
 
 
-You have to set right docker environment. Please run `minikube docker-env` to get docker host url and docker cert path.
+There are other docker settings that you might also want to configure prior to submitting the training job. Please run `minikube docker-env` to get docker host url and docker cert path.
 
 A possible example could be:
 
@@ -95,13 +73,13 @@ elasticdl train \
   --output=model_output
 ```
 
-After summit the job to minikubes, you can run following command to check the status of each pod:
+After summitting the job to minikube, you can run following command to check the status of each pod:
 
 ```bash
 kubectl get pods
 ```
 
-You will get messages like this:
+You should see information on each pod like the following:
 
 ```
 $kubectl get pods
