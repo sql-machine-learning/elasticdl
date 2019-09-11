@@ -2,6 +2,15 @@
 
 This document describes the design for supporting custom data source in ElasticDL.
 
+[RecordIO](https://github.com/wangkuiyi/recordio) is a file format that supports dynamic sharding for
+performing fault-tolerant distributed computing or elastic scheduling of distributed computing jobs. It is
+currently the only supported data format for ElasticDL. However, there may be a lot of I/O overhead to convert from
+existing data sources to RecordIO format and requires additional storage for the converted RecordIO files.
+Data sources like ODPS also [supports dynamic sharding](https://pyodps.readthedocs.io/zh_CN/latest/api-def.html#odps.ODPS.create_table)
+and a lot of time would be wasted if we need to first read the data from ODPS and then convert it to RecordIO format.
+Instead, we could expose necessary pieces in ElasticDL to users so that they can implement their own data reading logic to
+avoid having to write RecordIO files to disk. This way ElasticDL can perform tasks while reading data into memory asynchronously.
+
 ### Support Custom Data Source in ElasticDL
 
 There are a couple of places in the the current codebase (as of commit [77cc87a](https://github.com/sql-machine-learning/elasticdl/tree/77cc87a90eec54db565849f0ae07d271fd957190))
