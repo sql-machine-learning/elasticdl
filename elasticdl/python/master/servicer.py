@@ -175,7 +175,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def _update_model(self):
         if not self._use_async and not self._lock.locked():
-            raise RuntimeError("In sync mode, lock is not acquired")
+            raise RuntimeError(
+                "Lock must be acquired when updating " "the model in sync mode"
+            )
         grad_var = []
 
         # (grad, var) pairs excluding keras Embedding layer and
