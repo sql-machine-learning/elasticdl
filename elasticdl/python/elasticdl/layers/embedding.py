@@ -161,6 +161,7 @@ class Embedding(tf.keras.layers.Layer):
 
     def reset(self):
         self.bet_ids_pair = []
+        self.tape = None
 
     def set_tape(self, tape):
         self.tape = tape

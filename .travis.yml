@@ -8,7 +8,6 @@ addons:
       - docker-ce
 
 install:
-  - set -e
   - docker version
 
 stages:
@@ -22,7 +21,7 @@ jobs:
       name: "Pre-commit Check"
       script:
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
-        - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python model_zoo -name '*.py' -print0 | tr '\0' ' ')"
+        - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python model_zoo setup.py -name '*.py' -print0 | tr '\0' ' ')"
     - stage: unittest
       name: "Unit Tests"
       script:
@@ -39,9 +38,17 @@ jobs:
         - docker run --rm -it --net=host -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=True pytest elasticdl/python/tests/k8s*.py"
         # Run integration tests
         - kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
-        - docker run --rm -it --net=host -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:ci bash -c "scripts/client_test.sh"
-        # Validate pod statuses
-        - bash scripts/validate_job_status.sh
+        - |
+          JOB_TYPES=(
+              train
+              evaluate
+              predict
+          )
+          for JOB_TYPE in "${JOB_TYPES[@]}"; do
+              echo "Running test for elasticdl ${JOB_TYPE}"
+              docker run --rm -it --net=host -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:ci bash -c "scripts/client_test.sh ${JOB_TYPE}"
+              bash scripts/validate_job_status.sh ${JOB_TYPE}
+          done
 
 # Only build on this list of branches
 branches:

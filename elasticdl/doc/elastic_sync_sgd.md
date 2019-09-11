@@ -1,3 +1,5 @@
+# Design Doc: Synchronous SGD
+
 ```python
 # Basic design philosophy:
 #

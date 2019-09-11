@@ -4,5 +4,6 @@ WORKDIR /
 ENV PYTHONPATH=/
 COPY elasticdl /elasticdl
 COPY setup.py setup.py
+COPY model_zoo /model_zoo
 RUN make -f elasticdl/Makefile
 RUN python setup.py install
