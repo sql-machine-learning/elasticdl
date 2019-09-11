@@ -3,7 +3,7 @@
 This document aims to give a simple example to show how to sumbmit deep learning jobs to a local kubernetes cluster in a local computer. It helps to understand the working process of ElasticDL.
 
 
-## Environment prepare
+## Environment preparation
 
 Here we should install minikube first. Please refer to the official [installation guide](https://kubernetes.io/docs/tasks/tools/install-minikube/).
 
@@ -72,6 +72,9 @@ elasticdl train \
   --image_pull_policy=Never \
   --output=model_output
 ```
+
+
+### Check job status
 
 After summitting the job to minikube, you can run following command to check the status of each pod:
 
