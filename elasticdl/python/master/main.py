@@ -172,6 +172,7 @@ def main():
         task_d.set_evaluation_service(evaluation_service)
 
     embedding_service_endpoint = None
+    embedding_dims = {}
     # Search for embedding layers in the model,
     # if found, initialize embedding service
     layers = find_layer(model_inst, Embedding)
@@ -193,6 +194,9 @@ def main():
             "Embedding service start succeeded. The endpoint is %s."
             % str(embedding_service_endpoint)
         )
+        embedding_dims = dict(
+            [(layer.name, layer.output_dim) for layer in layers]
+        )
 
     # The master service
     logger.info("Starting master service")
@@ -212,6 +216,7 @@ def main():
         optimizer,
         task_d,
         init_var=model_inst.trainable_variables if model_inst.built else [],
+        embedding_dims=embedding_dims,
         checkpoint_filename_for_init=args.checkpoint_filename_for_init,
         checkpoint_service=checkpoint_service,
         evaluation_service=evaluation_service,

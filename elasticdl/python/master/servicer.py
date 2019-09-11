@@ -16,6 +16,7 @@ from elasticdl.python.common.tensor_helper import merge_indexed_slices
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.embedding_service import EmbeddingService
+from elasticdl.python.master.optimizer_wrapper import OptimizerWrapper
 
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
@@ -33,11 +34,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         checkpoint_service,
         evaluation_service,
         embedding_service_endpoint=None,
+        embedding_dims={},
         lr_staleness_modulation=False,
         use_async=False,
     ):
         # TODO: group params together into a single object.
-        self._opt = optimizer
         self._task_d = task_d
         self._lock = threading.Lock()
         self._gradient_sum = {}
@@ -55,6 +56,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version = 0
         self._embedding_service_endpoint = embedding_service_endpoint
         self._init_model(checkpoint_filename_for_init, init_var)
+        self._opt = self._init_optimizer(
+            optimizer, embedding_service_endpoint, embedding_dims, use_async
+        )
 
         self._checkpoint_service = checkpoint_service
         self._evaluation_service = evaluation_service
@@ -93,6 +97,21 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 "initialized by the first update from "
                 "the worker."
             )
+
+    def _init_optimizer(
+        self, opt, embedding_service_endpoint, embedding_dims, use_async
+    ):
+        # `embedding_service_endpoint` is not None means ElasticDL embedding
+        # layers are used
+        if embedding_service_endpoint:
+            need_create_var = True if use_async else False
+            return OptimizerWrapper(
+                opt,
+                embedding_service_endpoint,
+                embedding_dims,
+                need_create_var,
+            )
+        return opt
 
     @staticmethod
     def var_name_encode(name):
@@ -193,47 +212,12 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             grad_var.append((self._gradient_sum_indexed[k], self._model[k]))
 
         # (grad, var) pair of ElasticDL Embedding layer
-        edl_embedding_offset = len(grad_var)
-        unique_ids_list = []
         if self._edl_embedding_gradients:
             for layer_name, grads in self._edl_embedding_gradients.items():
-                unique_ids, idx = tf.unique(grads.indices)
-                unique_ids_list.append(unique_ids)
-                grads_idx_transformed = tf.IndexedSlices(grads.values, idx)
-                keys = [
-                    Embedding.get_key([layer_name, i])
-                    for i in unique_ids.numpy()
-                ]
-                embeddings, unknown_keys = EmbeddingService.lookup_embedding(
-                    embedding_service_endpoint=(
-                        self._embedding_service_endpoint
-                    ),
-                    keys=keys,
-                )
-                if unknown_keys:
-                    raise RuntimeError(
-                        "Master reviced %d unknown embedding keys: %s ..."
-                        % (len(unknown_keys), str(unknown_keys[0]))
-                    )
-                if not embeddings:
-                    continue
-                embeddings = np.concatenate(embeddings, axis=0).reshape(
-                    len(keys), -1
-                )
-                embedding_var = tf.Variable(embeddings)
-                grad_var.append((grads_idx_transformed, embedding_var))
+                grad_var.append((grads, layer_name))
 
-        # TODO: support optimizer with slots such as Adam, FTRL
         self._opt.apply_gradients(grad_var)
 
-        # report updated embedding table to EmbeddingService
-        self._update_edl_embedding_table(
-            zip(
-                self._edl_embedding_gradients.keys(),
-                unique_ids_list,
-                [v for g, v in grad_var[edl_embedding_offset:]],
-            )
-        )
         self._update_model_version()
         self._gradient_sum.clear()
         self._gradient_sum_indexed.clear()

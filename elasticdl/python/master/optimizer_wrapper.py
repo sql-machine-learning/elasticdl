@@ -100,14 +100,16 @@ def _var_key(var):
 class OptimizerWrapper(object):
     """ ElasticDL optimizer wrapper.
 
-    If model does not use ElasticDL embedding layer, `OptimizerWrapper`
+    If model does not use ElasticDL embedding layer, OptimizerWrapper
     does nothing but calls `apply_gradients` function of TensorFlow optimizer.
-    Otherwise, `OptimizerWrapper` looks up embedding vectors and slot values
+    Otherwise, OptimizerWrapper looks up embedding vectors and slot values
     from external kv store before updating variables, and updates embedding
     vectors and slot values in kv store after updating variables.
     """
 
-    def __init__(self, opt, kv_store_endpoint, embedding_dims):
+    def __init__(
+        self, opt, kv_store_endpoint, embedding_dims, need_create_var=False
+    ):
         """
         Arguments:
             opt: A TensorFlow optimizer instance.
@@ -116,10 +118,17 @@ class OptimizerWrapper(object):
                 {layer name: `embedding_dim`} where layer name is the
                 name of ElasticDL embedding layer and `embedding_dim`
                 is the output dimension of corresponding embedding layer.
+            need_create_var: A python bool. If `need_create_var` is True,
+                OptimizerWrapper creates temporary variables for embedding
+                vectors and slots every iteration. If `need_create_var` is
+                False, OptimizerWrapper create persistent variables before
+                training and use these variables during the whole training
+                process.
         """
         self._opt = opt
         self._kv_store_endpoint = kv_store_endpoint
         self._embed_dims = embedding_dims
+        self._need_create_var = need_create_var
         self._slot_initial_value = {}
         self._embed_variables = {}
         self._slot_variables = {}
@@ -171,6 +180,14 @@ class OptimizerWrapper(object):
             grads_and_vars: A list of (gradient, variable) pairs.
 
         """
+
+        # TODO (yunjian.lmh): support `_need_create_var=True`
+        if self._need_create_var:
+            raise NotImplementedError(
+                "`need_create_var=True` in Optimizer Wrapper is not "
+                "supported now."
+            )
+
         grads_and_vars = list(grads_and_vars)
 
         # split `grads_and_vars` according to whether it is from

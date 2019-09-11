@@ -14,12 +14,14 @@ from elasticdl.python.worker.worker import Worker
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
 
 
+# TODO (yunjian.lmh): Remove MockEmbeddingService, use MockKvStore instead
 class MockEmbeddingService:
     def __init__(self):
         self.mock_embedding_table = None
 
-    def mock_lookup_embedding(self, **kwargs):
-        keys = kwargs["keys"]
+    def mock_lookup_embedding(
+        self, keys=[], embedding_service_endpoint=None, parse_type=np.float32
+    ):
         embeddings = []
         for k in keys:
             layer_name, idx = k.split("-")
@@ -27,11 +29,16 @@ class MockEmbeddingService:
             embeddings.append(self.mock_embedding_table[layer_name][idx])
         return embeddings, []
 
-    def mock_update_embedding(self, **kwargs):
-        keys, embeddings = kwargs["keys"], kwargs["embedding_vectors"]
-        if embeddings is None:
+    def mock_update_embedding(
+        self,
+        keys=[],
+        embedding_vectors=[],
+        embedding_service_endpoint=None,
+        set_if_not_exist=False,
+    ):
+        if embedding_vectors is None:
             return
-        for k, emb in zip(keys, embeddings):
+        for k, emb in zip(keys, embedding_vectors):
             layer_name, idx = k.split("-")
             idx = int(idx)
             self.mock_embedding_table[layer_name][idx] = emb
@@ -66,7 +73,9 @@ class MockEdlEmbedding:
 
 
 class ReportBETGradientTest(unittest.TestCase):
-    def _create_master_and_worker(self):
+    def _create_master_and_worker(
+        self, service_endpoint=None, embedding_dims={}
+    ):
         model_inst = custom_model()
         master = MasterServicer(
             2,
@@ -74,6 +83,8 @@ class ReportBETGradientTest(unittest.TestCase):
             tf.optimizers.SGD(0.1),
             None,
             init_var=model_inst.trainable_variables,
+            embedding_service_endpoint=service_endpoint,
+            embedding_dims=embedding_dims,
             checkpoint_filename_for_init=None,
             checkpoint_service=None,
             evaluation_service=None,
@@ -92,21 +103,28 @@ class ReportBETGradientTest(unittest.TestCase):
         return master, worker
 
     def test_report_bet_gradients_worker_to_master(self):
-        master, worker = self._create_master_and_worker()
+        layer_names = ["test_edlembedding_1", "test_edlembedding__2"]
+        embedding_dims = dict([(layer, 3) for layer in layer_names])
+        mock_embedding_service_endpoint = {"host": "1.1.1.1", "port": "12123"}
+        master, worker = self._create_master_and_worker(
+            mock_embedding_service_endpoint, embedding_dims
+        )
 
         mock_embedding_service = MockEmbeddingService()
-        mock_embedding_service.mock_embedding_table = {
-            "test_edlembedding_1": np.zeros((5, 3), dtype=np.float32),
-            "test_edlembedding_2": np.zeros((5, 3), dtype=np.float32),
-        }
+        mock_embedding_service.mock_embedding_table = dict(
+            [
+                (layer, np.zeros((5, 3), dtype=np.float32))
+                for layer in layer_names
+            ]
+        )
 
-        layer1 = MockEdlEmbedding("test_edlembedding_1")
+        layer1 = MockEdlEmbedding(layer_names[0])
         layer1.bet_ids_pair = [
             (None, tf.constant([1, 2])),
             (None, tf.constant([2, 3])),
         ]
 
-        layer2 = MockEdlEmbedding("test_edlembedding_2")
+        layer2 = MockEdlEmbedding(layer_names[1])
         layer2.bet_ids_pair = [
             (None, tf.constant([3, 1])),
             (None, tf.constant([3, 4])),
@@ -221,9 +239,12 @@ class ReportBETGradientTest(unittest.TestCase):
             self.assertTrue(np.all(i.numpy() - j < 0.0001))
 
     def test_report_bet_gradients_master_to_service(self):
-        master, _ = self._create_master_and_worker()
-
         layer_names = ["test_layer_1", "test_layer_2"]
+        embedding_dims = dict([(layer, 3) for layer in layer_names])
+        mock_embedding_service_endpoint = {"host": "1.1.1.1", "port": "12123"}
+        master, _ = self._create_master_and_worker(
+            mock_embedding_service_endpoint, embedding_dims
+        )
 
         mock_embedding_service = MockEmbeddingService()
         mock_embedding_service.mock_embedding_table = {

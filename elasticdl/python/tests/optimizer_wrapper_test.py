@@ -105,7 +105,7 @@ def _train_edl_embedding_with_optimizer_wrapper(
 
     def lookup_func(ids, layer_name, initializer, output_dim):
         values, unknown = EmbeddingService.lookup_embedding(
-            keys=[Embedding.get_key([layer_name, i]) for i in ids]
+            [Embedding.get_key([layer_name, i]) for i in ids]
         )
         return np.concatenate(values).reshape(len(ids), -1)
 
@@ -225,8 +225,8 @@ class OptimizerWrapperTest(unittest.TestCase):
         grads_and_vars = [(tf.IndexedSlices(None, tf.constant([0])), "test_1")]
         mock_kv_store = MockKvStore({})
         mock_kv_store.update(
-            keys=[Embedding.get_key(["test_1", 0])],
-            values=[np.random.rand(4).astype(np.float32)],
+            [Embedding.get_key(["test_1", 0])],
+            [np.random.rand(4).astype(np.float32)],
         )
         with mock.patch.object(
             EmbeddingService, "lookup_embedding", mock_kv_store.lookup
@@ -317,15 +317,13 @@ class OptimizerWrapperTest(unittest.TestCase):
         for layer in layers:
             for id in range(3):
                 mock_kv_store.update(
-                    keys=[Embedding.get_key([layer, id])],
-                    values=[np.random.rand(embedding_dim).astype(np.float32)],
+                    [Embedding.get_key([layer, id])],
+                    [np.random.rand(embedding_dim).astype(np.float32)],
                 )
                 for i, slot in enumerate(["m", "v"]):
                     mock_kv_store.update(
-                        keys=[Embedding.get_key([layer, slot, id])],
-                        values=[
-                            np.random.rand(embedding_dim).astype(np.float32)
-                        ],
+                        [Embedding.get_key([layer, slot, id])],
+                        [np.random.rand(embedding_dim).astype(np.float32)],
                     )
 
         with mock.patch.object(
@@ -346,14 +344,14 @@ class OptimizerWrapperTest(unittest.TestCase):
             )
 
             values, _ = mock_kv_store.lookup(
-                keys=[Embedding.get_key([layer, id]) for id in ids]
+                [Embedding.get_key([layer, id]) for id in ids]
             )
             values = np.concatenate(values).reshape(-1, embedding_dim)
             self.assertTrue((embeddings[layer] - values < 0.0001).all())
 
             for slot in ["m", "v"]:
                 values, _ = mock_kv_store.lookup(
-                    keys=[Embedding.get_key([layer, slot, id]) for id in ids]
+                    [Embedding.get_key([layer, slot, id]) for id in ids]
                 )
                 values = np.concatenate(values).reshape(-1, embedding_dim)
                 self.assertTrue(
@@ -497,16 +495,11 @@ class OptimizerWrapperTest(unittest.TestCase):
 
         expected_mock_kv_store = MockKvStore({})
         expected_mock_kv_store.update(
-            keys=["test_1-1", "test_1-5", "test_2-10"],
-            values=[t, t * 5.0, t * 10.0],
+            ["test_1-1", "test_1-5", "test_2-10"], [t, t * 5.0, t * 10.0]
         )
         expected_mock_kv_store.update(
-            keys=[
-                "test_1-momentum-1",
-                "test_1-momentum-5",
-                "test_2-momentum-10",
-            ],
-            values=[t / 10.0, t / 2.0, t],
+            ["test_1-momentum-1", "test_1-momentum-5", "test_2-momentum-10"],
+            [t / 10.0, t / 2.0, t],
         )
         for k, ids in zip(["test_1", "test_2"], ids_list):
             for id in ids:
