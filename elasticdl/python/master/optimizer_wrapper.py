@@ -121,8 +121,8 @@ class OptimizerWrapper(object):
             need_create_var: A python bool. If `need_create_var` is True,
                 OptimizerWrapper creates temporary variables for embedding
                 vectors and slots every iteration. If `need_create_var` is
-                False, OptimizerWrapper create persistent variables before
-                training and use these variables during the whole training
+                False, OptimizerWrapper creates persistent variables before
+                training and uses these variables during the whole training
                 process.
         """
         self._opt = opt
