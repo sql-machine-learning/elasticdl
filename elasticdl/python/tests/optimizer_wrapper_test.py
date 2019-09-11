@@ -6,7 +6,17 @@ import unittest
 import mock
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.optimizers import SGD, Adam
+from tensorflow.keras.optimizers import (
+    SGD,
+    Adadelta,
+    Adagrad,
+    Adam,
+    Adamax,
+    Ftrl,
+    Nadam,
+    RMSprop,
+)
+from tensorflow.python.ops import init_ops
 
 from elasticdl.python.common.model_helper import (
     find_layer,
@@ -164,22 +174,50 @@ class OptimizerWrapperTest(unittest.TestCase):
         self.assertTrue(sorted(tmp.allowed_slot_names) == sorted(expected))
 
     def test_allowed_slot_names(self):
-        self._compare_slot_names(SGD(), [])
-        self._compare_slot_names(SGD(momentum=0.2), ["momentum"])
-        self._compare_slot_names(Adam(), ["m", "v"])
-        self._compare_slot_names(Adam(amsgrad=True), ["m", "v", "vhat"])
+        opt_and_slots_pairs = [
+            (SGD(), []),
+            (SGD(momentum=0.2), ["momentum"]),
+            (Adam(), ["m", "v"]),
+            (Adam(amsgrad=True), ["m", "v", "vhat"]),
+            (Adamax(), ["m", "v"]),
+            (Nadam(), ["m", "v"]),
+            (Adadelta(), ["accum_grad", "accum_var"]),
+            (Adagrad(), ["accumulator"]),
+            (Ftrl(), ["accumulator", "linear"]),
+            (RMSprop(), ["rms"]),
+            (RMSprop(momentum=0.2), ["rms", "momentum"]),
+            (RMSprop(centered=True), ["rms", "mg"]),
+            (RMSprop(momentum=0.2, centered=True), ["rms", "momentum", "mg"]),
+        ]
+        for opt, expected_slots in opt_and_slots_pairs:
+            self._compare_slot_names(opt, expected_slots)
 
     def _compare_initialize_values(self, opt, dim, slot, expected_init):
         tmp = OptimizerWrapper(opt, None, {"test": dim})
         self.assertTrue(
             (
-                tmp._initialize_unknown_slot("test", slot) - expected_init(dim)
+                tmp._initialize_unknown_slot("test", slot)
+                - expected_init(dim).numpy()
                 < 0.0001
             ).all()
         )
 
     def test_initialize(self):
-        self._compare_initialize_values(Adam(), 4, "m", np.zeros)
+        self._compare_initialize_values(
+            Adam(), 4, "m", init_ops.constant_initializer(0.0)
+        )
+        self._compare_initialize_values(
+            Ftrl(initial_accumulator_value=0.5),
+            4,
+            "accumulator",
+            init_ops.constant_initializer(0.5),
+        )
+        self._compare_initialize_values(
+            Adagrad(initial_accumulator_value=0.5),
+            4,
+            "accumulator",
+            init_ops.constant_initializer(0.5),
+        )
 
     def test_initialize_in_lookup(self):
         opt = Adam()
@@ -481,7 +519,7 @@ class OptimizerWrapperTest(unittest.TestCase):
         np.random.seed(random_seed)
         return [np.random.rand(*shape).astype(np.float32) for shape in shapes]
 
-    def _test_correctness(self, optimizer_class, **kwargs):
+    def _test_correctness(self, optimizer_class, X, Y, seed, **kwargs):
         """Test the correctness of specific TensorFlow optimizer."""
         _model_file = get_module_file_path(
             os.path.dirname(os.path.realpath(__file__)),
@@ -490,8 +528,6 @@ class OptimizerWrapperTest(unittest.TestCase):
         model_module = load_module(_model_file).__dict__
 
         # train model with TensorFlow optimizer
-        seed = 1
-        X, Y = _prepare_random_data(4, 4, 6, 4, True, random_seed=seed)
         weights = self._random_init_model_weight(
             [(4, 4), (4, 4), (72, 1), (1,)], seed
         )
@@ -523,6 +559,11 @@ class OptimizerWrapperTest(unittest.TestCase):
             )
 
         # compare trained parameters
+        wrong_msg = (
+            "The updated parameters of Optimizer Wrapper and TensorFlow "
+            "optimizer %s differ." % opt1.get_config()["name"]
+        )
+
         for layer1, layer2 in zip(model1.layers, model2.layers):
             if "embedding" in layer2.name:
                 w1 = layer1.weights[0].numpy()
@@ -530,13 +571,64 @@ class OptimizerWrapperTest(unittest.TestCase):
                 w2 = np.concatenate(mock_kv_store.lookup(keys)[0]).reshape(
                     4, -1
                 )
-                self.assertTrue((w1 - w2 < 0.0001).all())
+                self.assertTrue((w1 - w2 < 0.0001).all(), msg=wrong_msg)
             else:
                 for w1, w2 in zip(layer1.weights, layer2.weights):
-                    self.assertTrue((w1 - w2 < 0.0001).numpy().all())
+                    self.assertTrue(
+                        (w1 - w2 < 0.0001).numpy().all(), msg=wrong_msg
+                    )
 
     def test_correctness(self):
-        self._test_correctness(SGD, learning_rate=0.1, momentum=0.5)
+        """
+        Test the correctness of Optimizer Wrapper for all TensorFlow
+        optimizers.
+        """
+        optimizer_kargs = {
+            SGD: {"momentum": 0.5},
+            Adadelta: {},
+            Adagrad: {},
+            Adamax: {},
+            Ftrl: {},
+            Adam: {"amsgrad": True},
+            Nadam: {},
+            RMSprop: {"momentum": 0.5, "centered": True},
+        }
+        learning_rate = 0.1
+        for key in optimizer_kargs.keys():
+            optimizer_kargs[key]["learning_rate"] = learning_rate
+
+        # TensorFlow implements these optimizers in densely updating style,
+        # i.e. update all parameters even if some parameters do not used in
+        # forward pass. `OptimizerWrapper` only supports sparsely updating
+        # style. So we test these optimizers using dense data for many
+        # iterations and sparse data for one iteration.
+        tf_dense_optimizers = [Adam, Nadam, RMSprop]
+
+        seed = 1
+        _prepare_data_common_args = {
+            "batch_size": 4,
+            "input_length": 6,
+            "input_dim": 4,
+            "random_seed": seed,
+        }
+        X_sparse, Y_sparse = _prepare_random_data(
+            iters_per_epoch=4, is_sparse=True, **_prepare_data_common_args
+        )
+        X_sparse_one_iter, Y_sparse_one_iter = _prepare_random_data(
+            iters_per_epoch=1, is_sparse=True, **_prepare_data_common_args
+        )
+        X_dense, Y_dense = _prepare_random_data(
+            iters_per_epoch=4, is_sparse=False, **_prepare_data_common_args
+        )
+
+        for opt, kargs in optimizer_kargs.items():
+            if opt not in tf_dense_optimizers:
+                self._test_correctness(opt, X_sparse, Y_sparse, seed, **kargs)
+            else:
+                self._test_correctness(opt, X_dense, Y_dense, seed, **kargs)
+                self._test_correctness(
+                    opt, X_sparse_one_iter, Y_sparse_one_iter, seed, **kargs
+                )
 
 
 if __name__ == "__main__":
