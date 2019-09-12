@@ -16,6 +16,9 @@ from elasticdl.python.common.tensor_helper import merge_indexed_slices
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.embedding_service import EmbeddingService
+from elasticdl.python.master.lr_modulation import (
+    add_lr_modulation_to_optimizer,
+)
 
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
@@ -47,6 +50,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._grad_n = 0
         self._minibatch_size = minibatch_size
         self._use_async = use_async
+        self._lr_staleness_modulation = lr_staleness_modulation
 
         # A <string, tf.ResourceVariable> map. We use tf.ResourceVariable
         # instead ndarray to avoid copying and conversion when calling
@@ -55,6 +59,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version = 0
         self._embedding_service_endpoint = embedding_service_endpoint
         self._init_model(checkpoint_filename_for_init, init_var)
+        self._modulate_lr_if_needed()
 
         self._checkpoint_service = checkpoint_service
         self._evaluation_service = evaluation_service
@@ -70,6 +75,12 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._model[name] = tf.Variable(
             value, name=MasterServicer.var_name_encode(name)
         )
+
+    def _modulate_lr_if_needed(self):
+        if self._use_async and self._lr_staleness_modulation:
+            self._lr_modulation = add_lr_modulation_to_optimizer(self._opt)
+        else:
+            self._lr_modulation = None
 
     def _init_model_from_var_list(self, var_list):
         for var in var_list:
@@ -411,6 +422,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                     self._gradient_sum[k] = v
 
             self._grad_n += 1
+            # staleness-aware learning rate modulation
+            if self._lr_modulation:
+                staleness = max(1, self._version - request.model_version)
+                self._lr_modulation.set_multiplier(1.0 / staleness)
             if self._use_async or self._grad_n >= self._grad_to_wait:
                 self._update_model()
                 self._update_evaluation()
