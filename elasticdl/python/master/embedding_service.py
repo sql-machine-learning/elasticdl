@@ -242,8 +242,8 @@ class EmbeddingService(object):
         **kargs,
     ):
         logger.info("Starting pod for embedding service ...")
-        self._k8s_client = k8s.Client(event_callback=None, **kargs)
-        pod = self._k8s_client.create_embedding_service(
+        k8s_client = k8s.Client(**kargs)
+        pod = k8s_client.create_embedding_service(
             worker_id=embedding_service_id,
             resource_requests=resource_request,
             resource_limits=resource_limit,
@@ -259,9 +259,7 @@ class EmbeddingService(object):
         # and should not fix ports
         address_ip = pod.status.pod_ip
         while not address_ip:
-            pod = self._k8s_client.get_embedding_service_pod(
-                embedding_service_id
-            )
+            pod = k8s_client.get_embedding_service_pod(embedding_service_id)
             address_ip = pod.status.pod_ip
         self._embedding_service_endpoint = {
             address_ip: [30001 + i for i in range(6)]
