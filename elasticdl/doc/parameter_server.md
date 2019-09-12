@@ -1,8 +1,7 @@
 # Parameter Server Design
 
-## Overview and key concepts
+## Overview
 
-### Overview
 
 A typical parameter server architecture contains three roles:
 
@@ -14,6 +13,8 @@ A typical parameter server architecture contains three roles:
 Please refer to:
 
 ![parameter_server](./images/parameter_server.png)
+
+## Key concepts
 
 
 ### Parameter sharding
@@ -34,7 +35,7 @@ Parameter initialization of very big embedding table is lazy. For example, in on
 Other parameters could be initialized before training.
 
 
-## Detailed implementation
+## Workflow
 
 ### Assumption
 
@@ -72,6 +73,8 @@ Workflow:
 5. save model checkpoint to disk periodially
 
 
+**Note**
+
 We could implement the kv store by ourselves, or we could use some already solution, such as redis.
 
 ### Worker
@@ -86,3 +89,10 @@ Workflow:
 3. after backward layer finishing, generate <key, gradient>
 4. push <key, gradient> to pserver
 
+
+There is also another kind of worker who does an evalution job. It define its own evalution computation process and dataloader of validation data. It pulls <key, parameter> from pserver, but never push data to pserver.
+
+
+**Note**
+
+There could be some same item id in a minibatch data. So some gradient vector of embedding table will have the same item id. We need to sum these gradient before pushing to pserver.
