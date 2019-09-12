@@ -56,7 +56,7 @@ tar -cvf $TRAINING_DATA_DIR/$TAR_FILE $TRAINING_DATA_DIR/mnist_sampled_training_
 If your amount of data is so huge that it can't fit into your local disk, the following section is the approach you want to use. In this tutorial we use [Google Filestore](https://cloud.google.com/filestore/) as our training data storage. We also tried [Google Cloud Storage](https://cloud.google.com/storage/), which is not a good fit for our use case(see [here](https://github.com/sql-machine-learning/elasticdl/issues/381#issuecomment-500686228)). Here are the steps to run our PySpark job on Google Cloud:
 1. Set up the Google Cloud SDK and project following [here](https://cloud.google.com/sdk/docs/quickstarts) based on your OS.
 
-2. [Create a Google Cloud Storage bucket](https://cloud.google.com/storage/docs/quickstart-gsutil#create), and upload the [initialization script](./sample_pyspark_recordio_gen/go-pip-install.sh), which will install all dependencies we need to Spark cluster, to bucket:
+2. [Create a Google Cloud Storage bucket](https://cloud.google.com/storage/docs/quickstart-gsutil#create), and upload the [initialization script](../elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/go-pip-install.sh), which will install all dependencies we need to Spark cluster, to bucket:
 ```bash
 LOCAL_INIT_SCRIPT=elasticdl/python/data/recordio_gen/sample_pyspark_recordio_gen/go-pip-install.sh
 GS_BUCKET_NAME=test_data_proc
