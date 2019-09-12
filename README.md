@@ -19,6 +19,6 @@ In short, ElasticDL enhances TensorFlow with fault-tolerance and elastic schedul
 
 For development guide, please refer to [this document](elasticdl/README.md).
 
-For running ElasticDL jobs in Google Kubernetes Engine, please check out [this tutorial](elasticdl/doc/elastic_scheduling.md).
+For running ElasticDL jobs in Google Kubernetes Engine, please check out [this tutorial](doc/tutorials/elasticdl_cloud.md).
 
 **ElasticDL is still under active development, and we have not extensively tested in production environments. We open sourced this early-stage project with the hope of encouraging further work on fault-tolerance and elastic scheduling from the community.**

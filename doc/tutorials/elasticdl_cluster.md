@@ -2,7 +2,7 @@
 
 ## Environment preparation
 
-You should install ElasticDL first. Please refer to the installation part in [elastic_local](./elasticdl_local.md) doc.
+You should install ElasticDL first. Please refer to the installation part in [elastic_local](elasticdl_local.md) doc.
 
 Then, build needed images.
 

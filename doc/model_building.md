@@ -1,5 +1,5 @@
 # ElasticDL Model Building
-To submit an ElasticDL job, a user needs to provide a model file, such as [`mnist_functional_api.py`](../../model_zoo/mnist_functional_api/mnist_functional_api.py) used in this [example](elastic_scheduling.md#submit-the-first-job-with-low-priority).
+To submit an ElasticDL job, a user needs to provide a model file, such as [`mnist_functional_api.py`](../model_zoo/mnist_functional_api/mnist_functional_api.py) used in this [example](elastic_scheduling.md#submit-the-first-job-with-low-priority).
 
 This model file contains a [model](#model) built with TensorFlow Keras API and other components required by ElasticDL, including [dataset\_fn](#dataset_fn), [loss](#loss), [optimizer](#optimizer), and [eval_metrics_fn](#eval\_metrics\_fn). 
 
@@ -194,7 +194,7 @@ def prepare_data_for_a_single_file(filename):
 
 
 ## Model Building Examples
-### [MNIST model using Keras functional API](../../model_zoo/mnist_functional_api/mnist_functional_api.py)
-### [MNIST model using Keras model subclassing](../../model_zoo/mnist_subclass/mnist_subclass.py)
-### [CIFAR10 model using Keras functional API](../../model_zoo/cifar10_functional_api/cifar10_functional_api.py)
-### [CIFAR10 model using Keras model subclassing](../../model_zoo/cifar10_subclass/cifar10_subclass.py)
+### [MNIST model using Keras functional API](../model_zoo/mnist_functional_api/mnist_functional_api.py)
+### [MNIST model using Keras model subclassing](../model_zoo/mnist_subclass/mnist_subclass.py)
+### [CIFAR10 model using Keras functional API](../model_zoo/cifar10_functional_api/cifar10_functional_api.py)
+### [CIFAR10 model using Keras model subclassing](../model_zoo/cifar10_subclass/cifar10_subclass.py)
