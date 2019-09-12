@@ -104,12 +104,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # `embedding_service_endpoint` is not None means ElasticDL embedding
         # layers are used
         if embedding_service_endpoint:
-            need_create_var = True if use_async else False
             return OptimizerWrapper(
-                opt,
-                embedding_service_endpoint,
-                embedding_dims,
-                need_create_var,
+                opt, embedding_service_endpoint, embedding_dims, use_async
             )
         return opt
 

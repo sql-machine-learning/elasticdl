@@ -108,7 +108,7 @@ class OptimizerWrapper(object):
     """
 
     def __init__(
-        self, opt, kv_store_endpoint, embedding_dims, need_create_var=False
+        self, opt, kv_store_endpoint, embedding_dims, use_async=False
     ):
         """
         Arguments:
@@ -118,17 +118,12 @@ class OptimizerWrapper(object):
                 {layer name: `embedding_dim`} where layer name is the
                 name of ElasticDL embedding layer and `embedding_dim`
                 is the output dimension of corresponding embedding layer.
-            need_create_var: A python bool. If `need_create_var` is True,
-                `OptimizerWrapper` creates temporary variables for embedding
-                vectors and slots every iteration. If `need_create_var` is
-                False, `OptimizerWrapper` creates persistent variables before
-                training and uses these variables during the whole training
-                process.
+            use_async: A python bool. True if using asynchronous updates.
         """
         self._opt = opt
         self._kv_store_endpoint = kv_store_endpoint
         self._embed_dims = embedding_dims
-        self._need_create_var = need_create_var
+        self._use_async = use_async
         self._slot_initial_value = {}
         self._embed_variables = {}
         self._slot_variables = {}
@@ -181,10 +176,10 @@ class OptimizerWrapper(object):
 
         """
 
-        # TODO (yunjian.lmh): support `_need_create_var=True`
-        if self._need_create_var:
+        # TODO (yunjian.lmh): support `use_async=True`
+        if self._use_async:
             raise NotImplementedError(
-                "`need_create_var=True` in Optimizer Wrapper is not "
+                "`use_async=True` in Optimizer Wrapper is not "
                 "supported now."
             )
 
