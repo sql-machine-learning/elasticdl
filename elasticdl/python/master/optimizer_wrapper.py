@@ -100,9 +100,9 @@ def _var_key(var):
 class OptimizerWrapper(object):
     """ ElasticDL optimizer wrapper.
 
-    If model does not use ElasticDL embedding layer, OptimizerWrapper
+    If model does not use ElasticDL embedding layer, `OptimizerWrapper`
     does nothing but calls `apply_gradients` function of TensorFlow optimizer.
-    Otherwise, OptimizerWrapper looks up embedding vectors and slot values
+    Otherwise, `OptimizerWrapper` looks up embedding vectors and slot values
     from external kv store before updating variables, and updates embedding
     vectors and slot values in kv store after updating variables.
     """
@@ -119,9 +119,9 @@ class OptimizerWrapper(object):
                 name of ElasticDL embedding layer and `embedding_dim`
                 is the output dimension of corresponding embedding layer.
             need_create_var: A python bool. If `need_create_var` is True,
-                OptimizerWrapper creates temporary variables for embedding
+                `OptimizerWrapper` creates temporary variables for embedding
                 vectors and slots every iteration. If `need_create_var` is
-                False, OptimizerWrapper creates persistent variables before
+                False, `OptimizerWrapper` creates persistent variables before
                 training and uses these variables during the whole training
                 process.
         """

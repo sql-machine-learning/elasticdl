@@ -3,6 +3,8 @@ import numpy as np
 
 
 class MockKvStore(object):
+    """A Kv Store for unittest."""
+
     def __init__(self, store={}):
         if store:
             for k, v in store.items():
@@ -13,10 +15,13 @@ class MockKvStore(object):
                     )
         self._store = store
 
-    # keep same with EmbeddingService.lookup_embedding
     def lookup(
         self, keys=[], embedding_service_endpoint=None, parse_type=np.float32
     ):
+        """
+        Lookup values in Kv Store. Arguments should keep same with
+        EmbeddingService.lookup_embedding.
+        """
         values = []
         unknown_key = []
         for i, key in enumerate(keys):
@@ -27,7 +32,6 @@ class MockKvStore(object):
                 unknown_key.append(i)
         return values, unknown_key
 
-    # keep same with EmbeddingService.update_embedding
     def update(
         self,
         keys=[],
@@ -35,6 +39,10 @@ class MockKvStore(object):
         embedding_service_endpoint=None,
         set_if_not_exist=False,
     ):
+        """
+        Update values in Kv Store. Arguemnts should keep same with
+        EmbeddingService.update_embedding.
+        """
         for key, value in zip(keys, embedding_vectors):
             if set_if_not_exist:
                 self._store.setdefault(key, value)
