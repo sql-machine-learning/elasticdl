@@ -39,7 +39,7 @@ There are other docker settings that you might also want to configure prior to s
 
 A possible example could be:
 
-```
+```bash
 export DOCKER_BASE_URL=tcp://192.168.64.5:2376
 export DOCKER_TLSCERT=${HOME}/.minikube/certs/cert.pem
 export DOCKER_TLSKEY=${HOME}/.minikube/certs/key.pem

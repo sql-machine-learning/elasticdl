@@ -12,13 +12,18 @@ bash elasticdl/docker/build_all.sh
 
 ## Submit job to cluster
 
-The submit command is similar to local mode. Following is an exmaple:
+The submit command is similar to local mode. The local scripts will be built into a docker image, and pushed to `$DOCKER_HUB_REPO` remote docker hub.
+
+Following is an exmaple:
+
+```bash
+export DOCKER_HUB_REPO=reg.docker.com/user/
+```
 
 
 ```bash
-python -m elasticdl.python.elasticdl.client train \
+elasticdl train \
  --image_base=elasticdl:ci \
- --cluster_spec=$CLUSTER_SPEC \
  --model_zoo=./model_zoo \
  --docker_image_prefix=$DOCKER_HUB_REPO \
  --model_def=mnist_functional_api.mnist_functional_api.custom_model \
@@ -38,4 +43,4 @@ python -m elasticdl.python.elasticdl.client train \
  --namespace=kubemaker
 ```
 
-It will build an image locally and push to the remote docker hub, then the job will be launched on the cluster.
+Then the job will be launched on the cluster.
