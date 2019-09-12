@@ -70,6 +70,11 @@ class Worker(object):
         )
         self._init_embedding_layer()
         self._var_created = self._model.built
+        if self._var_created:
+            (
+                self._non_embed_vars,
+                self._embed_vars
+            ) = get_trainable_items(self._model, self._embedding_layers)
 
         if channel is None:
             self._stub = None
@@ -120,7 +125,7 @@ class Worker(object):
         req.method = method
         model = self._stub.GetModel(req)
 
-        for var in self._model.trainable_variables:
+        for var in self._non_embed_vars:
             # Assumes all trainable variables exist in model.param.
             var.assign(tensor_to_ndarray(model.param[var.name]))
         self._model_version = model.version
@@ -184,7 +189,7 @@ class Worker(object):
         report variable to ps.
         """
         req = elasticdl_pb2.ReportVariableRequest()
-        for v in self._model.trainable_variables:
+        for v in self._non_embed_vars:
             req.variable[v.name].CopyFrom(ndarray_to_tensor(v.numpy()))
         self._stub.ReportVariable(req)
 
@@ -193,10 +198,9 @@ class Worker(object):
         report gradient to ps, return (accepted, model_version) from rpc call.
         """
         req = elasticdl_pb2.ReportGradientRequest()
-        origin_vars = self._model.trainable_variables
-        origin_var_n = len(origin_vars)
+        non_embed_vars_n = len(self._non_embed_vars)
         # should keep the same order as self.get_trainable_items()
-        for g, v in zip(grads[:origin_var_n], origin_vars):
+        for g, v in zip(grads[:non_embed_vars_n], self._non_embed_vars):
             if isinstance(g, tf.IndexedSlices):
                 req.gradient[v.name].CopyFrom(
                     ndarray_to_tensor(
@@ -209,7 +213,7 @@ class Worker(object):
         # deal with gradients of ElasticDL embedding layer
         # should keep the same order as self.get_trainable_items()
         if self._embedding_layers:
-            grads_edlembedding = grads[origin_var_n:]
+            grads_edlembedding = grads[non_embed_vars_n:]
 
             bet_number = 0
             for layer in self._embedding_layers:
