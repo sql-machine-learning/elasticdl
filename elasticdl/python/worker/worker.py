@@ -43,8 +43,29 @@ class Worker(object):
     ):
         """
         Arguments:
-            model_file: A module to define the model
-            channel: grpc channel
+            worker_id: The worker ID.
+            job_type: The job type.
+            minibatch_size: The size of the minibatch used for each iteration.
+            model_zoo: The directory that contains user-defined model files
+                or a specific model file.
+            dataset_fn: The name of the dataset function defined in the
+                model file.
+            loss: The name of the loss function defined in the model file.
+            optimizer: The name of the optimizer defined in the model file.
+            eval_metrics_fn: The name of the evaluation metrics function
+                defined in the model file.
+            channel: The channel for the gRPC master service.
+            embedding_service_endpoint: The endpoint to the embedding service.
+            model_def: The import path to the model definition
+                function/class in the model zoo, e.g.
+                "cifar10_subclass.CustomModel".
+            model_params: The dictionary of model parameters in a string that
+                will be used to instantiate the model,
+                e.g. "param1=1,param2=2".
+            prediction_outputs_processor: The name of the prediction output
+                processor class defined in the model file.
+            get_model_steps: Worker will perform `get_model` from the
+                parameter server every this many steps.
             max_minibatch_retry_num: The maximum number of a minibatch retry
                 as its results (e.g. gradients) are not accepted by master.
         """
@@ -129,8 +150,10 @@ class Worker(object):
         self, ids, layer_name, initializer="uniform", embedding_table_dim=128
     ):
         keys = [Embedding.get_key([layer_name, id]) for id in ids]
-        ES_lookup_embedding = EmbeddingService.lookup_embedding
-        embedding_vectors, unknown_keys_index = ES_lookup_embedding(
+        (
+            embedding_vectors,
+            unknown_keys_index,
+        ) = EmbeddingService.lookup_embedding(
             keys=keys,
             embedding_service_endpoint=self._embedding_service_endpoint,
         )
@@ -152,7 +175,10 @@ class Worker(object):
                 set_if_not_exist=True,
             )
             # Lookup unknown_keys' embedding vectors
-            embedding_vectors_new, unknown_keys_idx_new = ES_lookup_embedding(
+            (
+                embedding_vectors_new,
+                unknown_keys_idx_new,
+            ) = EmbeddingService.lookup_embedding(
                 keys=unknown_keys,
                 embedding_service_endpoint=self._embedding_service_endpoint,
             )
@@ -206,28 +232,28 @@ class Worker(object):
             else:
                 req.gradient[v.name].CopyFrom(ndarray_to_tensor(g.numpy()))
 
-        # deal with gradients of ElasticDL embedding layer
+        # Accumulate gradients of ElasticDL embedding layer
         # should keep the same order as self.get_trainable_items()
         if self._embedding_layers:
-            grads_edlembedding = grads[origin_var_n:]
+            edl_embedding_grads = grads[origin_var_n:]
 
             bet_number = 0
             for layer in self._embedding_layers:
                 bet_number += len(layer.bet_ids_pair)
-            if len(grads_edlembedding) != bet_number:
+            if len(edl_embedding_grads) != bet_number:
                 raise ValueError(
                     "elasticdl.layers.embedding related gradient number %d "
                     "does not match the number of its output tensor %d."
-                    % (len(grads_edlembedding), bet_number)
+                    % (len(edl_embedding_grads), bet_number)
                 )
 
-            it = 0
+            grad_accum_iter = 0
             for layer in self._embedding_layers:
                 g_values = None
                 g_indices = None
-                for bet, ids in layer.bet_ids_pair:
-                    grad = grads_edlembedding[it]
-                    it += 1
+                for _, ids in layer.bet_ids_pair:
+                    grad = edl_embedding_grads[grad_accum_iter]
+                    grad_accum_iter += 1
                     # ElasticDL embedding layer with Sparse Gradients
                     if isinstance(grad, tf.IndexedSlices):
                         grad = grad.values
