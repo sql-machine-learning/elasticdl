@@ -4,7 +4,7 @@
 
 You should install ElasticDL first. Please refer to the installation part in [elastic_local](./elasticdl_local.md) doc.
 
-Then, please build needed images.
+Then, build needed images.
 
 ```bash
 bash elasticdl/docker/build_all.sh
@@ -38,4 +38,4 @@ python -m elasticdl.python.elasticdl.client train \
  --namespace=kubemaker
 ```
 
-It will build a image locally and push to the remote docker hub. And then the job will be launched on the cluster.
+It will build an image locally and push to the remote docker hub, then the job will be launched on the cluster.

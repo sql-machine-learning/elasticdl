@@ -32,7 +32,3 @@ Please refer to [elasticdl_cloud](./elasticdl_cloud.md) for more details.
 ## Reference
 
 - https://kubernetes.io/docs/setup/learning-environment/minikube/
-
-
-
-
