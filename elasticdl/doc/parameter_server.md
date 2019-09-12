@@ -6,15 +6,14 @@
 
 A typical parameter server architecture contains three roles:
 
-- master
-- pserver
-- worker
+- master, responsible for creating/deleting/scheduling pservers and workers
+- pserver, responsible for provide parameter pull/push/optimize/checkpoint service
+- worker, responsible for training minibatches of data
 
 
 Please refer to:
 
-![parameter_server](./images/parameter-server.png)
-
+![parameter_server](./images/parameter_server.png)
 
 
 ### Parameter sharding
@@ -35,7 +34,7 @@ Parameter initialization of very big embedding table is lazy. For example, in on
 Other parameters could be initialized before training.
 
 
-## Implementation
+## Detailed implementation
 
 ### Assumption
 
