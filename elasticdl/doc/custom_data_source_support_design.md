@@ -9,7 +9,9 @@ currently the only supported data format for ElasticDL.
 However, there may be a lot of I/O overhead to convert from existing data sources to RecordIO format and requires additional storage
 for the converted RecordIO files. In addition, saving the converted RecordIO files to disk will also lead to potential security problems
 since the file access must be controlled properly if the Kubernetes cluster is shared across different teams and business units.
-Some distributed file system implementations may not support access control yet.
+Some distributed file system implementations may not support access control yet. There may also be situations where
+not all the files saved to disk have been deleted successfully after tasks are finished when the server has been stuck,
+which leads to un-managed files taken up a huge portion of the disk space.
 
 For example, in order to fetch data from [ODPS](https://www.alibabacloud.com/product/maxcompute), we would first
 need to read the data from ODPS table and then convert it to RecordIO format, which could waste a lot of time.
