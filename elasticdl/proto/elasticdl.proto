@@ -25,9 +25,10 @@ message Task {
 
     int32 minibatch_size = 2;
 
-    // Filename for a RecordIO shard. An empty filename signifies that the
+    // Name for the shard. If RecordIO file format is used, this should be the
+    // filename for a RecordIO shard. An empty shard name signifies that the
     // master has no pending tasks to assign to the requesting worker.
-    string shard_file_name = 3;
+    string shard_name = 3;
 
     // Starting and ending (non-inclusive) record number.
     int64 start = 4;

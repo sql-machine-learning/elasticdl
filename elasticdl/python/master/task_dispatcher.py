@@ -10,8 +10,8 @@ from elasticdl.python.common.log_util import default_logger as logger
 class _Task(object):
     """Internal representation of a task"""
 
-    def __init__(self, *, file_name, start, end, type, model_version=-1):
-        self.file_name = file_name
+    def __init__(self, *, shard_name, start, end, type, model_version=-1):
+        self.shard_name = shard_name
         self.start = start
         self.end = end
         self.type = type
@@ -19,7 +19,7 @@ class _Task(object):
 
     def _info(self):
         return (
-            self.file_name,
+            self.shard_name,
             self.start,
             self.end,
             self.type,
@@ -118,7 +118,7 @@ class _TaskDispatcher(object):
             for start in range(0, num_records, self._records_per_task):
                 tasks.append(
                     _Task(
-                        file_name=name,
+                        shard_name=name,
                         start=start,
                         end=min(start + self._records_per_task, num_records),
                         type=task_type,
