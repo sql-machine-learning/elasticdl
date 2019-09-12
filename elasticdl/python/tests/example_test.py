@@ -176,7 +176,7 @@ class ExampleTest(unittest.TestCase):
         req.worker_id = 1
         task = master.GetTask(req, None)
         # No more task.
-        self.assertTrue(not task.shard_file_name)
+        self.assertTrue(not task.shard_name)
 
     def test_deepfm_functional_train(self):
         model_params = (

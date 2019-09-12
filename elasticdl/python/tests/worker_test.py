@@ -140,7 +140,7 @@ class WorkerTest(unittest.TestCase):
         req.worker_id = 1
         task = master.GetTask(req, None)
         # No more task.
-        self.assertTrue(not task.shard_file_name)
+        self.assertTrue(not task.shard_name)
 
     def test_distributed_train_tf_example(self):
         self.distributed_train_and_evaluate(training=True)

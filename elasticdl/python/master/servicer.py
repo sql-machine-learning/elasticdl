@@ -105,7 +105,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         task_id, task = self._task_d.get(request.worker_id)
         if task:
             res.task_id = task_id
-            res.shard_file_name = task.file_name
+            res.shard_name = task.shard_name
             res.start = task.start
             res.end = task.end
             res.type = task.type

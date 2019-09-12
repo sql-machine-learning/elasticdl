@@ -58,12 +58,12 @@ class ServicerTest(unittest.TestCase):
         # No task yet, make sure the returned versions are as expected.
         req.worker_id = 1
         task = master.GetTask(req, None)
-        self.assertEqual("", task.shard_file_name)
+        self.assertEqual("", task.shard_name)
         self.assertEqual(0, task.model_version)
 
         master._version = 1
         task = master.GetTask(req, None)
-        self.assertEqual("", task.shard_file_name)
+        self.assertEqual("", task.shard_name)
         self.assertEqual(1, task.model_version)
 
     def testGetModel(self):
@@ -272,10 +272,10 @@ class ServicerTest(unittest.TestCase):
             req = elasticdl_pb2.GetTaskRequest()
             req.worker_id = random.randint(1, 10)
             task = master.GetTask(req, None)
-            if not task.shard_file_name:
+            if not task.shard_name:
                 break
             self.assertEqual(task_d._doing[task.task_id][0], req.worker_id)
-            task_key = (task.shard_file_name, task.start, task.end)
+            task_key = (task.shard_name, task.start, task.end)
             tasks[task_key] += 1
             report = elasticdl_pb2.ReportTaskResultRequest()
             report.task_id = task.task_id

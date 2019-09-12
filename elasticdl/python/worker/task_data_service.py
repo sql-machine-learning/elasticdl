@@ -69,7 +69,7 @@ class TaskDataService(object):
         with self._lock:
             if self._pending_eval_tasks:
                 task = self._pending_eval_tasks.pop(0)
-                shards.append((task.shard_file_name, task.start, task.end))
+                shards.append((task.shard_name, task.start, task.end))
         if shards and task:
             return recordio_dataset(shards), task.model_version, task.task_id
         else:
@@ -101,7 +101,7 @@ class TaskDataService(object):
         """
         while True:
             task = self._worker.get_task()
-            if not task.shard_file_name:
+            if not task.shard_name:
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True
                     logger.info(
@@ -125,7 +125,7 @@ class TaskDataService(object):
                     self._current_task = task
             with closing(
                 recordio.Scanner(
-                    task.shard_file_name, task.start, task.end - task.start
+                    task.shard_name, task.start, task.end - task.start
                 )
             ) as reader:
                 while True:
