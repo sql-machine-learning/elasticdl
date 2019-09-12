@@ -2,7 +2,7 @@
 # Data Preparation Design Doc
 
 ## Background
-Currently, ElasticDL requires the input data in [RecordIO]( https://github.com/wangkuiyi/recordio) format. This project is to help users convert raw training data to the required RecordIO format.
+Currently, ElasticDL requires the input data in [RecordIO]( https://github.com/elasticdl/recordio) format. This project is to help users convert raw training data to the required RecordIO format.
 
 ## Design
 The system is to use Spark to prepare the data in parallel either in a container (`local` mode) or in a Spark cluster (`cluster` mode). We'll provide users with a docker image `data_preparation_image`. And the users can use it like this:

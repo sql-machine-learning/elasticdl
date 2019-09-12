@@ -3,7 +3,7 @@
 
 
 ## Background
-Currently, ElasticDL requires the input data in [RecordIO](https://github.com/wangkuiyi/recordio) format. This tutorial is to help users convert raw training data to the required RecordIO format. The RecordIO API is written in Golang and you can see how to use that [here](https://github.com/wangkuiyi/recordio/blob/develop/recordio_test.go). Because we process our data via PySpark job, what we use is the [python wrapper](https://github.com/wangkuiyi/recordio/tree/develop/python) outside its Golang implementation.
+Currently, ElasticDL requires the input data in [RecordIO](https://github.com/elasticdl/recordio) format. This tutorial is to help users convert raw training data to the required RecordIO format. The RecordIO API is written in Golang and you can see how to use that [here](https://github.com/elasticdl/recordio/blob/develop/recordio_test.go). Because we process our data via PySpark job, what we use is the [python wrapper](https://github.com/elasticdl/recordio/tree/develop/python) outside its Golang implementation.
 
 This tutorial provides three approaches to process the data: [local Python script](#python-script), [local PySpark job](#local-pyspark-job) and [PySpark job running on Google Cloud](#pyspark-job-on-google-cloud).
 

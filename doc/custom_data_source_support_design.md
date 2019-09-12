@@ -2,7 +2,7 @@
 
 This document describes the design for supporting custom data source in ElasticDL.
 
-[RecordIO](https://github.com/wangkuiyi/recordio) is a file format that supports dynamic sharding for
+[RecordIO](https://github.com/elasticdl/recordio) is a file format that supports dynamic sharding for
 performing fault-tolerant distributed computing or elastic scheduling of distributed computing jobs. It is
 currently the only supported data format for ElasticDL.
 
