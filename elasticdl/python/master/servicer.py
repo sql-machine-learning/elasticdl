@@ -185,7 +185,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # (grad, var) pairs excluding keras Embedding layer and
         # ElasticDL Embedding layer
         for k in self._gradient_sum:
-            self._gradient_sum[k] = self._gradient_sum[k] / self._grad_to_wait
+            if not self._use_async:
+                self._gradient_sum[k] = (
+                    self._gradient_sum[k] / self._grad_to_wait
+                )
             grad_var.append((self._gradient_sum[k], self._model[k]))
 
         # (grad, var) pair of Keras Embedding layer
@@ -402,13 +405,13 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
             # other grads
             for k, v in tmp.items():
-                if k in self._gradient_sum:
+                if not self._use_async and k in self._gradient_sum:
                     self._gradient_sum[k] = self._gradient_sum[k] + v
                 else:
                     self._gradient_sum[k] = v
 
             self._grad_n += 1
-            if self._grad_n >= self._grad_to_wait:
+            if self._use_async or self._grad_n >= self._grad_to_wait:
                 self._update_model()
                 self._update_evaluation()
                 self._update_checkpoint()
