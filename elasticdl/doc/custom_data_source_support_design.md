@@ -4,10 +4,15 @@ This document describes the design for supporting custom data source in ElasticD
 
 [RecordIO](https://github.com/wangkuiyi/recordio) is a file format that supports dynamic sharding for
 performing fault-tolerant distributed computing or elastic scheduling of distributed computing jobs. It is
-currently the only supported data format for ElasticDL. However, there may be a lot of I/O overhead to convert from
-existing data sources to RecordIO format and requires additional storage for the converted RecordIO files.
-Data sources like ODPS also [supports dynamic sharding](https://pyodps.readthedocs.io/zh_CN/latest/api-def.html#odps.ODPS.create_table)
-and a lot of time would be wasted if we need to first read the data from ODPS and then convert it to RecordIO format.
+currently the only supported data format for ElasticDL.
+
+However, there may be a lot of I/O overhead to convert from existing data sources to RecordIO format and requires additional storage
+for the converted RecordIO files. In addition, saving the converted RecordIO files to disk will also lead to potential security problems
+since the file access must be controlled properly if the Kubernetes cluster is shared across different teams and business units.
+Some distributed file system implementations may not support access control yet.
+
+For example, in order to fetch data from [ODPS](https://www.alibabacloud.com/product/maxcompute), we would first
+need to read the data from ODPS table and then convert it to RecordIO format, which could waste a lot of time.
 Instead, we could expose necessary pieces in ElasticDL to users so that they can implement their own data reading logic to
 avoid having to write RecordIO files to disk. This way ElasticDL can perform tasks while reading data into memory asynchronously.
 
@@ -39,13 +44,20 @@ class AbstractDataReader(object):
     def read_records(self, task):
         """This method will be used in `TaskDataService` to read the records based on
         the information provided for a given task into a Python generator/iterator.
+
+        Arguments:
+            task: The current `Task` object that provides information on where
+                to read the data for this task.
         """
         pass
 
     @abstractmethod
-    def create_task_dispatcher(self):
-        """This method creates a `TaskDispatcher` instance that will be used to create
-        and dispatch training, evaluation, and prediction tasks.
+    def create_shards(self, mode):
+        """This method creates the dictionary of shards where the keys are the
+        shard names and the values are the number of records.
+
+        Arguments:
+            mode: The mode that indicates where the created shards will be used.
         """
         pass
 ```
@@ -65,16 +77,13 @@ class CustomDataReader(AbstractDataReader):
             else:
                 break
 
-    def create_task_dispatcher(self):
-        # Dictionaries of `{shard_name: num_records}`
-        training_shards = ...
-        evaluation_shards = ...
-        prediction_shards = ...
-        return TaskDispatcher(
-            training_shards,
-            evaluation_shards,
-            prediction_shards,
-        )
+    def create_shards(self, mode):
+        if mode == Mode.TRAINING:
+            return training_shards
+        elif mode == Mode.EVALUATION:
+            return evaluation_shards
+        else:
+            return prediction_shards
 ```
 * Implement a `RecordIODataReader` that can be used to read RecordIO files, serves as the default
 data reader for ElasticDL, and preserves the current ElasticDL functionality.
