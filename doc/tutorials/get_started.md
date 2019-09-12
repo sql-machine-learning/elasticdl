@@ -19,14 +19,14 @@ Here we use minikube to run ElasticDL in a local laptop. Please refer to [elasti
 
 Here we will show how to run ElasticDL on a cluster.
 
-Please refer to [elasticdl_cluster](./elasticdl_cluster.md) for more details.
+Please refer to [elasticdl_cluster](elasticdl_cluster.md) for more details.
 
 
 ## ElasticDL on cloud
 
 Here we will show how to run ElasticDL on Google cloud.
 
-Please refer to [elasticdl_cloud](./elasticdl_cloud.md) for more details.
+Please refer to [elasticdl_cloud](elasticdl_cloud.md) for more details.
 
 
 ## Reference
