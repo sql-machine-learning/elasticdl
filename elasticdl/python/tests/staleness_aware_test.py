@@ -1,8 +1,8 @@
-import unittest
 import time
+import unittest
+from concurrent.futures import ThreadPoolExecutor
 
 import tensorflow as tf
-from concurrent.futures import ThreadPoolExecutor
 
 from elasticdl.python.master.lr_modulation import (
     add_lr_modulation_to_optimizer,
