@@ -8,7 +8,6 @@ from elasticdl.python.common.constants import Mode
 
 
 class AbstractDataReader(ABC):
-
     def __init__(self, **kwargs):
         pass
 
@@ -54,11 +53,12 @@ class RecordIODataReader(AbstractDataReader):
 
     def create_shards(self, mode):
         if mode == Mode.TRAINING:
-            return self._collect_file_records_from_dir(self._kwargs["training_data_dir"])
-        if mode == Mode.EVALUATION:
-            return self._collect_file_records_from_dir(self._kwargs["evaluation_data_dir"])
-        if mode == Mode.PREDICTION:
-            return self._collect_file_records_from_dir(self._kwargs["prediction_data_dir"])
+            data_dir = self._kwargs["training_data_dir"]
+        elif mode == Mode.EVALUATION:
+            data_dir = self._kwargs["evaluation_data_dir"]
+        else:
+            data_dir = self._kwargs["prediction_data_dir"]
+        return self._collect_file_records_from_dir(data_dir)
 
     @staticmethod
     def _collect_file_records_from_dir(data_dir):

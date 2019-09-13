@@ -1,12 +1,11 @@
 import threading
-from contextlib import closing
 
-import recordio
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.dataset import recordio_dataset
 from elasticdl.python.common.log_util import default_logger as logger
+from elasticdl.python.common.data_reader import RecordIODataReader
 
 
 class TaskDataService(object):
@@ -17,6 +16,7 @@ class TaskDataService(object):
         self._pending_dataset = True
         self._pending_eval_tasks = []
         self._reset()
+        self._recordio_data_reader = RecordIODataReader()
 
     def _reset(self):
         """
@@ -69,7 +69,7 @@ class TaskDataService(object):
         with self._lock:
             if self._pending_eval_tasks:
                 task = self._pending_eval_tasks.pop(0)
-                shards.append((task.shard_name, task.start, task.end))
+                shards.append(task)
         if shards and task:
             return recordio_dataset(shards), task.model_version, task.task_id
         else:
@@ -123,14 +123,4 @@ class TaskDataService(object):
                 )
                 if len(self._pending_tasks_with_counts) == 1:
                     self._current_task = task
-            with closing(
-                recordio.Scanner(
-                    task.shard_name, task.start, task.end - task.start
-                )
-            ) as reader:
-                while True:
-                    record = reader.record()
-                    if record:
-                        yield record
-                    else:
-                        break
+            return self._recordio_data_reader.read_records(task)
