@@ -40,6 +40,7 @@ def _make_task_dispatcher(
     records_per_task,
     num_epochs,
 ):
+    # TODO: Support any subclasses of `AbstractDataReader`
     data_reader = RecordIODataReader(
         training_data_dir=training_data_dir,
         evaluation_data_dir=evaluation_data_dir,
