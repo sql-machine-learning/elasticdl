@@ -20,6 +20,7 @@ from elasticdl.python.worker.worker import Worker
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
 
 
+# TODO (yunjian.lmh): Remove MockEmbeddingService, use MockKvStore instead
 class MockEmbeddingService:
     def __init__(self):
         self.mock_embedding_table = None
