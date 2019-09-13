@@ -16,7 +16,11 @@ def recordio_dataset(recordio_shards):
 
         def gen(self):
             for task in self._shards:
-                return self._recordio_data_reader.read_records(task)
+                for data in self._recordio_data_reader.read_records(task):
+                    if data:
+                        yield data
+                    else:
+                        break
 
     generator = _Generator(recordio_shards)
     dataset = tf.data.Dataset.from_generator(

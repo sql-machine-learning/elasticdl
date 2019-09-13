@@ -123,4 +123,8 @@ class TaskDataService(object):
                 )
                 if len(self._pending_tasks_with_counts) == 1:
                     self._current_task = task
-            return self._recordio_data_reader.read_records(task)
+            for data in self._recordio_data_reader.read_records(task):
+                if data:
+                    yield data
+                else:
+                    break
