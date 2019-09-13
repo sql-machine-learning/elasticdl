@@ -157,8 +157,7 @@ class EvaluationService(object):
             if self._eval_job is None and self._eval_checkpoint_versions:
                 checkpoint_version = self._eval_checkpoint_versions.pop(0)
                 tasks = self._task_d.create_tasks(
-                    elasticdl_pb2.EVALUATION,
-                    checkpoint_version,
+                    elasticdl_pb2.EVALUATION, checkpoint_version
                 )
                 self._eval_job = _EvaluationJob(checkpoint_version, len(tasks))
                 return True
