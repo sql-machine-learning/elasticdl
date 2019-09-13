@@ -10,7 +10,6 @@ from elasticdl.python.common.args import parse_envs
 from elasticdl.python.common.constants import (
     GRPC,
     JobType,
-    Mode,
     WorkerManagerStatus,
 )
 from elasticdl.python.common.data_reader import RecordIODataReader
@@ -41,16 +40,14 @@ def _make_task_dispatcher(
     num_epochs,
 ):
     # TODO: Support any subclasses of `AbstractDataReader`
-    data_reader = RecordIODataReader(
-        training_data_dir=training_data_dir,
-        evaluation_data_dir=evaluation_data_dir,
-        prediction_data_dir=prediction_data_dir,
-    )
-    prediction_f_records = data_reader.create_shards(Mode.PREDICTION)
+    # and support passing specified parameters to the constructor
+    prediction_f_records = RecordIODataReader(
+        data_dir=prediction_data_dir
+    ).create_shards()
 
     return _TaskDispatcher(
-        data_reader.create_shards(Mode.TRAINING),
-        data_reader.create_shards(Mode.EVALUATION),
+        RecordIODataReader(data_dir=training_data_dir).create_shards(),
+        RecordIODataReader(data_dir=evaluation_data_dir).create_shards(),
         prediction_f_records,
         records_per_task,
         # Only generate prediction tasks for 1 epoch

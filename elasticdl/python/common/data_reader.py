@@ -4,8 +4,6 @@ from contextlib import closing
 
 import recordio
 
-from elasticdl.python.common.constants import Mode
-
 
 class AbstractDataReader(ABC):
     def __init__(self, **kwargs):
@@ -24,13 +22,9 @@ class AbstractDataReader(ABC):
         pass
 
     @abstractmethod
-    def create_shards(self, mode):
+    def create_shards(self):
         """This method creates the dictionary of shards where the keys
         are the shard names and the values are the number of records.
-
-        Arguments:
-            mode: The mode that indicates where the created shards
-                will be used.
         """
         pass
 
@@ -53,17 +47,8 @@ class RecordIODataReader(AbstractDataReader):
                 else:
                     break
 
-    def create_shards(self, mode):
-        if mode == Mode.TRAINING:
-            data_dir = self._kwargs["training_data_dir"]
-        elif mode == Mode.EVALUATION:
-            data_dir = self._kwargs["evaluation_data_dir"]
-        else:
-            data_dir = self._kwargs["prediction_data_dir"]
-        return self._collect_file_records_from_dir(data_dir)
-
-    @staticmethod
-    def _collect_file_records_from_dir(data_dir):
+    def create_shards(self):
+        data_dir = self._kwargs["data_dir"]
         if not data_dir:
             return {}
         f_records = {}
