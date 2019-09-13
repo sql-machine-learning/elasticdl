@@ -101,6 +101,7 @@ class _TaskDispatcher(object):
             random.shuffle(tasks)
         with self._lock:
             self._todo.extend(tasks)
+        return tasks
 
     def get(self, worker_id):
         """Return next (task_id, Task) tuple"""
