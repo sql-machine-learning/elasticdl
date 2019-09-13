@@ -10,9 +10,10 @@ from elasticdl.python.common.args import parse_envs
 from elasticdl.python.common.constants import (
     GRPC,
     JobType,
-    WorkerManagerStatus,
     Mode,
+    WorkerManagerStatus,
 )
+from elasticdl.python.common.data_reader import RecordIODataReader
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_util import get_logger
 from elasticdl.python.common.model_helper import (
@@ -21,7 +22,6 @@ from elasticdl.python.common.model_helper import (
     load_model_from_module,
     load_module,
 )
-from elasticdl.python.common.data_reader import RecordIODataReader
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.args import parse_args
 from elasticdl.python.master.checkpoint_service import CheckpointService

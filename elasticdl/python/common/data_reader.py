@@ -1,6 +1,6 @@
+import os
 from abc import ABC, abstractmethod
 from contextlib import closing
-import os
 
 import recordio
 
@@ -13,8 +13,9 @@ class AbstractDataReader(ABC):
 
     @abstractmethod
     def read_records(self, task):
-        """This method will be used in `TaskDataService` to read the records based on
-        the information provided for a given task into a Python generator/iterator.
+        """This method will be used in `TaskDataService` to read the records
+        based on the information provided for a given task into a Python
+        generator/iterator.
 
         Arguments:
             task: The current `Task` object that provides information on where
@@ -24,11 +25,12 @@ class AbstractDataReader(ABC):
 
     @abstractmethod
     def create_shards(self, mode):
-        """This method creates the dictionary of shards where the keys are the
-        shard names and the values are the number of records.
+        """This method creates the dictionary of shards where the keys
+        are the shard names and the values are the number of records.
 
         Arguments:
-            mode: The mode that indicates where the created shards will be used.
+            mode: The mode that indicates where the created shards
+                will be used.
         """
         pass
 
@@ -40,9 +42,9 @@ class RecordIODataReader(AbstractDataReader):
 
     def read_records(self, task):
         with closing(
-                recordio.Scanner(
-                    task.shard_name, task.start, task.end - task.start
-                )
+            recordio.Scanner(
+                task.shard_name, task.start, task.end - task.start
+            )
         ) as reader:
             while True:
                 record = reader.record()
