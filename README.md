@@ -3,7 +3,9 @@
 [![Travis-CI Build Status](https://travis-ci.org/sql-machine-learning/elasticdl.svg?branch=develop)](https://travis-ci.org/sql-machine-learning/elasticdl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-ElasticDL is a Kubernetes-native deep learning framework built on top of TensorFlow 2.0 that supports fault-tolerance and elastic scheduling.  
+ElasticDL is a Kubernetes-native deep learning framework built on top of TensorFlow 2.0 that supports fault-tolerance and elastic scheduling.
+
+**ElasticDL is still under active development, and we have not extensively tested it in production environments. We open sourced this early-stage project with the hope of encouraging further work on fault-tolerance and elastic scheduling from the community.**
 
 ![](https://elasticdl.github.io/images/elasticdl.png)
 
@@ -22,5 +24,3 @@ In short, ElasticDL enhances TensorFlow with fault-tolerance and elastic schedul
 For development guide, please refer to [this document](elasticdl/README.md).
 
 For running ElasticDL jobs in Google Kubernetes Engine, please check out [this tutorial](doc/tutorials/elasticdl_cloud.md).
-
-**ElasticDL is still under active development, and we have not extensively tested in production environments. We open sourced this early-stage project with the hope of encouraging further work on fault-tolerance and elastic scheduling from the community.**
