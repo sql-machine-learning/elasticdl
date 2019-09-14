@@ -5,6 +5,8 @@
 
 ElasticDL is a Kubernetes-native deep learning framework built on top of TensorFlow 2.0 that supports fault-tolerance and elastic scheduling.  
 
+![](https://elasticdl.github.io/images/elasticdl.png)
+
 TensorFlow has its native distributed computing feature that is fault-recoverable. In the case that some processes fail, the distributed computing job would fail; however, we can restart the job and recover its status from the most recent checkpoint files.
 
 ElasticDL, as an enhancement of TensorFlow's distributed training feature, supports fault-tolerance. In the case that some processes fail, the job would go on running. Therefore, ElasticDL doesn't need to checkpoint nor recover from checkpoints.
