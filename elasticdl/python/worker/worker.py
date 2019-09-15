@@ -87,6 +87,7 @@ class Worker(object):
             model_params=model_params,
             prediction_outputs_processor=prediction_outputs_processor,
         )
+        self._embedding_service_endpoint = embedding_service_endpoint
         self._init_embedding_layer()
         self._var_created = self._model.built
 
@@ -94,7 +95,6 @@ class Worker(object):
             self._stub = None
         else:
             self._stub = elasticdl_pb2_grpc.MasterStub(channel)
-        self._embedding_service_endpoint = embedding_service_endpoint
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._model_version = -1
         self._task_data_service = TaskDataService(

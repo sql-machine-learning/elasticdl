@@ -65,7 +65,7 @@ class mock_worker:
         for i in range(embedding_size):
             self.embedding[i].fill(i)
 
-    def lookup_embedding(self, ids, name, embedding_initializer, output_dim):
+    def lookup_embedding(self, ids):
         values = np.take(self.embedding, ids, axis=0)
         return values
 
@@ -84,7 +84,7 @@ def create_embedding_layer(
         mask_zero=mask_zero,
     )
     worker = mock_worker(embedding_size, output_dim)
-    layer.set_lookup_func(worker.lookup_embedding)
+    layer.lookup_embedding = worker.lookup_embedding
     return layer
 
 

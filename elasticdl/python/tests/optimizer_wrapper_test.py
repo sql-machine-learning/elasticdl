@@ -103,15 +103,6 @@ def _train_edl_embedding_with_optimizer_wrapper(
     # initialization process related to embedding layer and optimizer wrapper
     embed_layers = find_layer(model, Embedding)
 
-    def lookup_func(ids, layer_name, initializer, output_dim):
-        values, unknown = EmbeddingService.lookup_embedding(
-            [Embedding.get_key([layer_name, i]) for i in ids]
-        )
-        return np.concatenate(values).reshape(len(ids), -1)
-
-    for layer in embed_layers:
-        layer.set_lookup_func(lookup_func)
-
     # training process
     for features, labels in zip(X, Y):
         with tf.GradientTape() as tape:
