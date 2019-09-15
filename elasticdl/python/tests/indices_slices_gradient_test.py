@@ -48,7 +48,7 @@ class IndexedSlicesTest(unittest.TestCase):
             model_def="test_module.custom_model",
             channel=None,
         )
-        worker._model = model_inst
+        worker.set_model(model_inst)
         worker._stub = InProcessMaster(master)
 
         return master, worker
