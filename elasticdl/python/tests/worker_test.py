@@ -20,6 +20,7 @@ from elasticdl.python.worker.worker import Worker
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
 
 
+# TODO (yunjian.lmh): Remove MockEmbeddingService, use MockKvStore instead
 class MockEmbeddingService:
     def __init__(self):
         self.mock_embedding_table = None
@@ -140,7 +141,7 @@ class WorkerTest(unittest.TestCase):
         req.worker_id = 1
         task = master.GetTask(req, None)
         # No more task.
-        self.assertTrue(not task.shard_file_name)
+        self.assertTrue(not task.shard_name)
 
     def test_distributed_train_tf_example(self):
         self.distributed_train_and_evaluate(training=True)

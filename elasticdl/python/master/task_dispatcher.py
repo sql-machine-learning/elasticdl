@@ -10,8 +10,8 @@ from elasticdl.python.common.log_util import default_logger as logger
 class _Task(object):
     """Internal representation of a task"""
 
-    def __init__(self, *, file_name, start, end, type, model_version=-1):
-        self.file_name = file_name
+    def __init__(self, *, shard_name, start, end, type, model_version=-1):
+        self.shard_name = shard_name
         self.start = start
         self.end = end
         self.type = type
@@ -19,7 +19,7 @@ class _Task(object):
 
     def _info(self):
         return (
-            self.file_name,
+            self.shard_name,
             self.start,
             self.end,
             self.type,
@@ -67,64 +67,42 @@ class _TaskDispatcher(object):
 
         if self._training_shards:
             logger.info("Starting epoch %d", self._epoch)
-            self.create_training_tasks()
+            self.create_tasks(elasticdl_pb2.TRAINING)
         elif self._evaluation_shards:
-            self.create_evaluation_tasks(-1)
+            self.create_tasks(elasticdl_pb2.EVALUATION)
         elif self._prediction_shards:
-            self.create_prediction_tasks(-1)
+            self.create_tasks(elasticdl_pb2.PREDICTION)
 
-    def create_training_tasks(self):
+    def create_tasks(self, task_type, model_version=-1):
         logger.info(
-            "Creating a new set of training tasks with epoch=%d", self._epoch
+            "Creating a new set of %s tasks for model version %d",
+            elasticdl_pb2._TASKTYPE.values_by_number[task_type].name.lower(),
+            model_version,
         )
-        tasks = self._create_tasks(
-            self._training_shards, elasticdl_pb2.TRAINING
-        )
-        random.shuffle(tasks)
-        self._todo.extend(tasks)
-        return tasks
-
-    def create_evaluation_tasks(self, eval_model_version):
-        logger.info(
-            "Creating a new set of evaluation tasks for model version %d",
-            eval_model_version,
-        )
-        tasks = self._create_tasks(
-            self._evaluation_shards,
-            elasticdl_pb2.EVALUATION,
-            eval_model_version,
-        )
-        with self._lock:
-            self._todo.extend(tasks)
-        return tasks
-
-    def create_prediction_tasks(self, predict_model_version):
-        logger.info(
-            "Creating a new set of prediction tasks for model version %d",
-            predict_model_version,
-        )
-        tasks = self._create_tasks(
-            self._prediction_shards,
-            elasticdl_pb2.PREDICTION,
-            predict_model_version,
-        )
-        with self._lock:
-            self._todo.extend(tasks)
-        return tasks
-
-    def _create_tasks(self, shards, task_type, model_version=-1):
+        if task_type == elasticdl_pb2.TRAINING:
+            shards = self._training_shards
+        elif task_type == elasticdl_pb2.EVALUATION:
+            shards = self._evaluation_shards
+        else:
+            shards = self._prediction_shards
         tasks = []
         for name, num_records in shards.items():
             for start in range(0, num_records, self._records_per_task):
                 tasks.append(
                     _Task(
-                        file_name=name,
+                        shard_name=name,
                         start=start,
                         end=min(start + self._records_per_task, num_records),
                         type=task_type,
                         model_version=model_version,
                     )
                 )
+        if task_type == elasticdl_pb2.TRAINING:
+            random.shuffle(tasks)
+            self._todo.extend(tasks)
+        else:
+            with self._lock:
+                self._todo.extend(tasks)
         return tasks
 
     def get(self, worker_id):
@@ -136,7 +114,7 @@ class _TaskDispatcher(object):
             if not self._todo and self._epoch < self._num_epochs - 1:
                 # Start a new epoch
                 self._epoch += 1
-                self.create_training_tasks()
+                self.create_tasks(elasticdl_pb2.TRAINING)
                 logger.info("Starting epoch %d", self._epoch)
 
             if not self._todo:
