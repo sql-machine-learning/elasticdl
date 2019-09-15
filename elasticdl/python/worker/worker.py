@@ -6,7 +6,11 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType, Mode
 from elasticdl.python.common.log_util import default_logger as logger
-from elasticdl.python.common.model_helper import find_layer, get_model_spec
+from elasticdl.python.common.model_helper import (
+    find_layer,
+    get_model_spec,
+    get_non_embedding_trainable_vars,
+)
 from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
@@ -73,7 +77,7 @@ class Worker(object):
         self._job_type = job_type
         self._minibatch_size = minibatch_size
         (
-            self._model,
+            model_inst,
             self._dataset_fn,
             self._loss,
             self._opt_fn,
@@ -89,8 +93,7 @@ class Worker(object):
             model_params=model_params,
             prediction_outputs_processor=prediction_outputs_processor,
         )
-        self._init_embedding_layer()
-        self._var_created = self._model.built
+        self.set_model(model_inst)
 
         if channel is None:
             self._stub = None
@@ -103,6 +106,19 @@ class Worker(object):
             self, self._job_type == JobType.TRAINING_WITH_EVALUATION
         )
         self._get_model_steps = get_model_steps
+
+    # TODO: Multiple tests are currently using this function to initialize
+    # self._model, where the initialization should be done via constructor.
+    def set_model(self, model_inst):
+        """Set model instance to worker."""
+        self._model = model_inst
+        self._init_embedding_layer()
+        self._var_created = self._model.built
+        self._non_embed_vars = []
+        if self._var_created:
+            self._non_embed_vars = get_non_embedding_trainable_vars(
+                self._model, self._embedding_layers
+            )
 
     def _init_embedding_layer(self):
         """
@@ -141,7 +157,7 @@ class Worker(object):
         req.method = method
         model = self._stub.GetModel(req)
 
-        for var in self._model.trainable_variables:
+        for var in self._non_embed_vars:
             # Assumes all trainable variables exist in model.param.
             var.assign(tensor_to_ndarray(model.param[var.name]))
         self._model_version = model.version
@@ -210,7 +226,7 @@ class Worker(object):
         report variable to ps.
         """
         req = elasticdl_pb2.ReportVariableRequest()
-        for v in self._model.trainable_variables:
+        for v in self._non_embed_vars:
             req.variable[v.name].CopyFrom(ndarray_to_tensor(v.numpy()))
         self._stub.ReportVariable(req)
 
@@ -219,10 +235,10 @@ class Worker(object):
         report gradient to ps, return (accepted, model_version) from rpc call.
         """
         req = elasticdl_pb2.ReportGradientRequest()
-        origin_vars = self._model.trainable_variables
-        origin_var_n = len(origin_vars)
-        # should keep the same order as self.get_trainable_items()
-        for g, v in zip(grads[:origin_var_n], origin_vars):
+        non_embed_vars_n = len(self._non_embed_vars)
+        # The first `non_embed_vars_n` items in `grads` are gradients for
+        # `self._non_embed_vars`
+        for g, v in zip(grads[:non_embed_vars_n], self._non_embed_vars):
             if isinstance(g, tf.IndexedSlices):
                 req.gradient[v.name].CopyFrom(
                     ndarray_to_tensor(
@@ -233,10 +249,14 @@ class Worker(object):
                 req.gradient[v.name].CopyFrom(ndarray_to_tensor(g.numpy()))
 
         # Accumulate gradients of ElasticDL embedding layer
-        # should keep the same order as self.get_trainable_items()
         if self._embedding_layers:
-            edl_embedding_grads = grads[origin_var_n:]
+            # The `edl_embedding_grads` are gradients for bets in
+            # `self._embedding_layers`
+            edl_embedding_grads = grads[non_embed_vars_n:]
 
+            # Check that the number of bet equal to the number of gradients.
+            # Please note that every embedding layer may have more than one
+            # `bet_id_pair`.
             bet_number = 0
             for layer in self._embedding_layers:
                 bet_number += len(layer.bet_ids_pair)
@@ -306,6 +326,9 @@ class Worker(object):
     def _create_variable_and_report(self, features):
         # Use model.call to create variables, then report to ps
         _ = self._model.call(features)
+        self._non_embed_vars = get_non_embedding_trainable_vars(
+            self._model, self._embedding_layers
+        )
         self.report_variable()
         self._var_created = True
 
@@ -319,7 +342,7 @@ class Worker(object):
         if self._embedding_layers:
             for layer in self._embedding_layers:
                 bets.extend([i for (i, _) in layer.bet_ids_pair])
-        return self._model.trainable_variables + bets
+        return self._non_embed_vars + bets
 
     def training_process(self, features, labels):
         """
