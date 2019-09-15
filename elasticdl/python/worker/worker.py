@@ -107,7 +107,7 @@ class Worker(object):
         )
         self._get_model_steps = get_model_steps
 
-    # TODO: Multiple tests are currently using this function to initialize 
+    # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
     def set_model(self, model_inst):
         """Set model instance to worker."""
