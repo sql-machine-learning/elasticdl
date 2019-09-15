@@ -107,6 +107,8 @@ class Worker(object):
         Init elasticdl.layers.embedding layer list and assign worker to them
         """
         self._embedding_layers = find_layer(self._model, Embedding)
+        for layer in self._embedding_layers:
+            layer.set_endpoint(self._embedding_service_endpoint)
 
     def _set_tape_for_embedding(self, tape):
         for layer in self._embedding_layers:

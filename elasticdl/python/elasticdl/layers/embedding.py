@@ -89,14 +89,15 @@ class Embedding(tf.keras.layers.Layer):
     def get_key(name_list):
         return "-".join(map(str, name_list))
 
-    def lookup_embedding(self, unique_ids, embedding_service_endpoint):
+    def lookup_embedding(self, unique_ids):
         ids = unique_ids.numpy()
         keys = [Embedding.get_key([self._name, id]) for id in ids]
         (
             embedding_vectors,
             unknown_keys_index,
         ) = EmbeddingService.lookup_embedding(
-            keys=keys, embedding_service_endpoint=embedding_service_endpoint
+            keys=keys,
+            embedding_service_endpoint=self.embedding_service_endpoint,
         )
 
         if unknown_keys_index:
@@ -113,7 +114,7 @@ class Embedding(tf.keras.layers.Layer):
             EmbeddingService.update_embedding(
                 keys=unknown_keys,
                 embedding_vectors=embedding_vector_init,
-                embedding_service_endpoint=embedding_service_endpoint,
+                embedding_service_endpoint=self.embedding_service_endpoint,
                 set_if_not_exist=True,
             )
             # Lookup unknown_keys' embedding vectors
@@ -122,7 +123,7 @@ class Embedding(tf.keras.layers.Layer):
                 unknown_keys_idx_new,
             ) = EmbeddingService.lookup_embedding(
                 keys=unknown_keys,
-                embedding_service_endpoint=self._embedding_service_endpoint,
+                embedding_service_endpoint=self.embedding_service_endpoint,
             )
             if unknown_keys_idx_new:
                 raise Exception(
@@ -208,3 +209,6 @@ class Embedding(tf.keras.layers.Layer):
 
     def set_tape(self, tape):
         self.tape = tape
+
+    def set_endpoint(self, endpoint):
+        self.embedding_service_endpoint = endpoint
