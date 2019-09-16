@@ -3,14 +3,12 @@ import tempfile
 import unittest
 from contextlib import closing
 
-import mock
 import numpy as np
 import recordio
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import JobType
-from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
@@ -18,33 +16,6 @@ from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
 
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
-
-
-# TODO (yunjian.lmh): Remove MockEmbeddingService, use MockKvStore instead
-class MockEmbeddingService:
-    def __init__(self):
-        self.mock_embedding_table = None
-
-    def mock_lookup_embedding(self, **kwargs):
-        keys = kwargs["keys"]
-        embeddings = []
-        unknown_index = []
-        for index, k in enumerate(keys):
-            if k in self.mock_embedding_table:
-                embeddings.append(
-                    self.mock_embedding_table[k].reshape((1, -1))
-                )
-            else:
-                unknown_index.append(index)
-                embeddings.append(None)
-        return embeddings, unknown_index
-
-    def mock_update_embedding(self, **kwargs):
-        keys, embeddings = kwargs["keys"], kwargs["embedding_vectors"]
-        if embeddings is None:
-            return
-        for k, emb in zip(keys, embeddings):
-            self.mock_embedding_table[k] = emb
 
 
 def create_recordio_file(size):
@@ -159,53 +130,6 @@ class WorkerTest(unittest.TestCase):
             channel=None,
         )
         self.assertTrue(len(worker._embedding_layers) == 2)
-
-    def test_lookup_embedding(self):
-        mock_embedding_service = MockEmbeddingService()
-
-        ids = [1, 2, 3, 4, 5, 6]
-        layer_name = "test_edlembedding"
-        embedding_table_dim = 10
-        mock_embedding_service.mock_embedding_table = {
-            "test_edlembedding-1": np.zeros(
-                (1, embedding_table_dim), dtype=np.float32
-            ),
-            "test_edlembedding-2": np.zeros(
-                (1, embedding_table_dim), dtype=np.float32
-            ),
-            "test_edlembedding-3": np.zeros(
-                (1, embedding_table_dim), dtype=np.float32
-            ),
-        }
-        worker = Worker(
-            1,
-            JobType.TRAINING_ONLY,
-            32,
-            _model_zoo_path,
-            model_def="embedding_test_module.EdlEmbeddingModel",
-            channel=None,
-        )
-        with mock.patch.object(
-            EmbeddingService,
-            "lookup_embedding",
-            mock_embedding_service.mock_lookup_embedding,
-        ), mock.patch.object(
-            EmbeddingService,
-            "update_embedding",
-            mock_embedding_service.mock_update_embedding,
-        ):
-            e_lookup, e_unknown = EmbeddingService.lookup_embedding(
-                keys=["-".join([layer_name, str(id)]) for id in ids]
-            )
-            lookup_result = worker.lookup_embedding(
-                ids=ids,
-                layer_name=layer_name,
-                embedding_table_dim=embedding_table_dim,
-            )
-            self.assertTrue(len(e_lookup) == 6)
-            self.assertTrue(len(e_unknown) == 3)
-            self.assertTrue(len(lookup_result) == 6)
-            self.assertFalse(None in lookup_result)
 
 
 if __name__ == "__main__":
