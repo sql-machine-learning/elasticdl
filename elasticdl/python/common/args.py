@@ -256,18 +256,6 @@ def add_train_params(parser):
         default="",
     )
     parser.add_argument(
-        "--loss",
-        type=str,
-        default="loss",
-        help="The name of the loss function defined in the model file",
-    )
-    parser.add_argument(
-        "--optimizer",
-        type=str,
-        default="optimizer",
-        help="The name of the optimizer defined in the model file",
-    )
-    parser.add_argument(
         "--output",
         type=str,
         default="",
