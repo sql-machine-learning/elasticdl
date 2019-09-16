@@ -194,7 +194,7 @@ class ODPSReader(object):
                 for i in range(0, len(records), batch_size):
                     yield records[i : i + batch_size]  # noqa: E203
 
-    def read_batch(self, start, end, columns, max_retries=3):
+    def read_batch(self, start, end, columns=None, max_retries=3):
         """
         Read ODPS table in chosen row range [ `start`, `end` ) with the
         specified columns `columns`.
@@ -209,6 +209,8 @@ class ODPSReader(object):
             Two-dimension python list with shape: (end - start, len(columns))
         """
         retry_count = 0
+        if columns is None:
+            columns = self._odps_table.schema.names
         while retry_count < max_retries:
             try:
                 batch_record = []
