@@ -468,7 +468,7 @@ def parse_worker_args(worker_args=None):
         "e.g. \"{'ip_0': [port_0,port_1]}\"",
     )
 
-    args, _ = parser.parse_args(args=worker_args)
+    args, _ = parser.parse_known_args(args=worker_args)
     print_args(args, groups=ALL_ARGS_GROUPS)
     logger.warning("Unknown arguments: %s", _)
     return args
