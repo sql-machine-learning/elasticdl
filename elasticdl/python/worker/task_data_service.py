@@ -17,7 +17,7 @@ class TaskDataService(object):
         self._pending_eval_tasks = []
         self._reset()
         # TODO: Support any subclasses of `AbstractDataReader`
-        self._data_reader = RecordIODataReader()
+        self._data_reader = RecordIODataReader(data_dir=None)
 
     def _reset(self):
         """
@@ -131,5 +131,3 @@ class TaskDataService(object):
             for data in self._data_reader.read_records(task):
                 if data:
                     yield data
-                else:
-                    break

@@ -12,15 +12,13 @@ def create_dataset_from_tasks(tasks):
         def __init__(self, tasks):
             self._tasks = tasks
             # TODO: Support any subclasses of `AbstractDataReader`
-            self._data_reader = RecordIODataReader()
+            self._data_reader = RecordIODataReader(data_dir=None)
 
         def gen(self):
             for task in self._tasks:
                 for data in self._data_reader.read_records(task):
                     if data:
                         yield data
-                    else:
-                        break
 
     generator = _Generator(tasks)
     dataset = tf.data.Dataset.from_generator(
