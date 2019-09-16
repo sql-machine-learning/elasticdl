@@ -22,8 +22,8 @@ class CustomModel(tf.keras.Model):
         self._flatten = tf.keras.layers.Flatten()
         self._dense = tf.keras.layers.Dense(10)
 
-    def call(self, inputs, training=False):
-        x = self._reshape(inputs["image"])
+    def call(self, input, training=False):
+        x = self._reshape(input)
         x = self._conv1(x)
         x = self._conv2(x)
         x = self._batch_norm(x, training=training)
@@ -65,9 +65,7 @@ def dataset_fn(dataset, mode):
                 "label": tf.io.FixedLenFeature([1], tf.int64),
             }
         r = tf.io.parse_single_example(record, feature_description)
-        features = {
-            "image": tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
-        }
+        features = tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
         if mode == Mode.PREDICTION:
             return features
         else:

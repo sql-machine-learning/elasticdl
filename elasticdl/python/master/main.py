@@ -112,8 +112,8 @@ def main():
             "get_input_shape", args.model_zoo, model_module, required=True
         )
         input_shape = get_input_shape()
-        input_shape = [None] + input_shape
-        model_inst.build(input_shape)
+        input_shape = tuple([None] + input_shape)
+        model_inst.build(input_shape=input_shape)
 
     optimizer = model_module[args.optimizer]()
 

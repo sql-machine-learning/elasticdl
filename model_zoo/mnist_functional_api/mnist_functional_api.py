@@ -66,9 +66,7 @@ def dataset_fn(dataset, mode):
                 "label": tf.io.FixedLenFeature([1], tf.int64),
             }
         r = tf.io.parse_single_example(record, feature_description)
-        features = {
-            "image": tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
-        }
+        features = tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
         if mode == Mode.PREDICTION:
             return features
         else:
