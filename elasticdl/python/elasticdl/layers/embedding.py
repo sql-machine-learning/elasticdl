@@ -48,7 +48,7 @@ class Embedding(tf.keras.layers.Layer):
         self.supports_masking = mask_zero
         self.input_length = input_length
         self.combiner = combiner
-        self.embedding_service_endpoint = (embedding_service_endpoint,)
+        self.embedding_service_endpoint = embedding_service_endpoint
         self.tape = None
         self.lookup_func = None
         self.bet_ids_pair = []
