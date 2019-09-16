@@ -1,21 +1,45 @@
+import copy
 import os
 import tempfile
 import unittest
 from contextlib import closing
 
+import mock
 import numpy as np
 import recordio
 import tensorflow as tf
+from tensorflow.keras.layers import Concatenate, Dense, Flatten
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import JobType
+from elasticdl.python.elasticdl.layers.embedding import Embedding
+from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.tests.in_process_master import InProcessMaster
+from elasticdl.python.tests.mock_kv_store import MockKvStore
 from elasticdl.python.worker.worker import Worker
 
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
+
+
+class CustomModel(tf.keras.Model):
+    def __init__(self, output_dim=16):
+        super(CustomModel, self).__init__(name="CustomModel")
+        self.output_dim = output_dim
+        self.embedding_1 = Embedding(output_dim)
+        self.embedding_2 = Embedding(output_dim)
+        self.concat = Concatenate()
+        self.dense = Dense(1)
+        self.flatten = Flatten()
+
+    def call(self, inputs, training=False):
+        f1 = self.embedding_1(inputs["f1"])
+        f2 = self.embedding_2(inputs["f2"])
+        x = self.concat([f1, f2])
+        x = self.dense(x)
+        return self.flatten(x)
 
 
 def create_recordio_file(size):
@@ -130,6 +154,105 @@ class WorkerTest(unittest.TestCase):
             channel=None,
         )
         self.assertTrue(len(worker._embedding_layers) == 2)
+
+    def test_train_acceleration_with_embedding(self):
+        kv_store = MockKvStore()
+        model_inst = CustomModel()
+        master = MasterServicer(
+            2,
+            2,
+            tf.optimizers.SGD(0.1),
+            None,
+            init_var=model_inst.trainable_variables,
+            checkpoint_filename_for_init=None,
+            checkpoint_service=None,
+            evaluation_service=None,
+        )
+        worker = Worker(
+            1,
+            JobType.TRAINING_ONLY,
+            32,
+            _model_zoo_path,
+            model_def="embedding_test_module.EdlEmbeddingModel",
+            channel=None,
+        )
+        worker._stub = InProcessMaster(master)
+
+        inputs_list = [
+            {
+                "f1": tf.constant([[0], [1], [2]], tf.int64),
+                "f2": tf.constant([[2], [1], [0]], tf.int64),
+            },
+            {
+                "f1": tf.constant([[3], [4], [3]], tf.int64),
+                "f2": tf.constant([[2], [1], [0]], tf.int64),
+            },
+        ]
+        labels_list = [[0, 1, 0], [1, 1, 0]]
+        input_dim = 5
+        embedding_dim = 16
+        worker.set_model(model_inst)
+
+        for layer in model_inst.layers:
+            if isinstance(layer, Embedding):
+                name = layer.name
+                keys = [Embedding.get_key([name, i]) for i in range(input_dim)]
+                values = [
+                    np.random.rand(embedding_dim).astype(np.float32)
+                    for i in range(input_dim)
+                ]
+                kv_store.update(keys, values)
+
+        with mock.patch.object(
+            EmbeddingService, "lookup_embedding", kv_store.lookup
+        ), mock.patch.object(
+            EmbeddingService, "update_embedding", kv_store.update
+        ):
+            worker._init_embedding_layer()
+            worker._run_model_call_before_training(inputs_list[0])
+
+            correct_grads = []
+            correct_ids_list = []
+            for features, labels in zip(inputs_list, labels_list):
+                loss, grads = worker.training_process_eagerly(features, labels)
+                correct_grads.append(grads)
+                ids = {}
+                for layer in worker._embedding_layers:
+                    ids[layer.name] = layer.bet_ids_pair[0][1]
+                correct_ids_list.append(ids)
+                worker._reset_embedding()
+
+            test_grads = []
+            test_ids_list = []
+            for features, labels in zip(inputs_list, labels_list):
+                self.assertFalse(worker._train_eagerly)
+                loss, grads = worker.training_process(features, labels)
+                test_grads.append(grads)
+                ids = {}
+                for layer in worker._embedding_layers:
+                    ids[layer.name] = copy.deepcopy(layer.bet_ids_pair[0][1])
+                test_ids_list.append(ids)
+                worker._reset_embedding()
+
+        for test_g, correct_g in zip(test_grads, correct_grads):
+            for g1, g2 in zip(test_g, correct_g):
+                if isinstance(g1, tf.IndexedSlices):
+                    self.assertTrue(
+                        (g1.values - g2.values < 0.0001).numpy().all()
+                    )
+                    self.assertTrue(
+                        tf.equal(g1.indices, g2.indices).numpy().all()
+                    )
+                else:
+                    self.assertTrue((g1 - g2 < 0.0001).numpy().all())
+
+        for test_ids, correct_ids in zip(correct_ids_list, test_ids_list):
+            for layer_name in correct_ids.keys():
+                self.assertTrue(
+                    tf.equal(test_ids[layer_name], correct_ids[layer_name])
+                    .numpy()
+                    .all()
+                )
 
 
 if __name__ == "__main__":
