@@ -1,18 +1,13 @@
 import grpc
 
 from elasticdl.python.common import log_util
-from elasticdl.python.common.args import (
-    ALL_ARGS_GROUPS,
-    parse_worker_args,
-    print_args,
-)
+from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.worker.worker import Worker
 
 
 def main():
     args = parse_worker_args()
-    print_args(args, groups=ALL_ARGS_GROUPS)
     channel = grpc.insecure_channel(
         args.master_addr,
         options=[

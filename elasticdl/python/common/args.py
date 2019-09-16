@@ -1,4 +1,5 @@
 import argparse
+
 from elasticdl.python.common.log_util import default_logger as logger
 
 MODEL_SPEC_GROUP = [
@@ -439,6 +440,7 @@ def parse_master_args(master_args=None):
     add_train_params(parser)
 
     args, _ = parser.parse_known_args(args=master_args)
+    print_args(args, groups=ALL_ARGS_GROUPS)
     logger.warning("Unknown arguments: %s", _)
 
     if all(
@@ -486,5 +488,6 @@ def parse_worker_args(worker_args=None):
     )
 
     args, _ = parser.parse_args(args=worker_args)
+    print_args(args, groups=ALL_ARGS_GROUPS)
     logger.warning("Unknown arguments: %s", _)
     return args
