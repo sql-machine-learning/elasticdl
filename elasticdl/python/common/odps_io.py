@@ -2,6 +2,7 @@ import random
 from concurrent.futures import ThreadPoolExecutor as Executor
 from queue import Queue
 import sys
+import time
 
 import numpy as np
 import odps
@@ -208,7 +209,6 @@ class ODPSReader(object):
             Two-dimension python list with shape: (end - start, len(columns))
         """
         retry_count = 0
-
         while retry_count < max_retries:
             try:
                 batch_record = []
@@ -222,12 +222,9 @@ class ODPSReader(object):
                             [record[column] for column in columns]
                         )
                 return batch_record
-
             except Exception as e:
-                import time
-
                 if retry_count >= max_retries:
-                    raise
+                    raise Exception("Exceeded maximum number of retries")
                 logger.warning(
                     "ODPS read exception {} for {} in {}."
                     "Retrying time: {}".format(
