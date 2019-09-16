@@ -84,7 +84,7 @@ class ODPSReader(object):
         self._partition = partition
         self._num_processes = num_processes
         _configure_odps_options(self._endpoint, options)
-        self.odps_table = ODPS(
+        self._odps_table = ODPS(
             self._access_id, self._access_key, self._project, self._endpoint
         ).get_table(self._table)
 
@@ -121,11 +121,11 @@ class ODPSReader(object):
         if not batch_size > 0:
             raise ValueError("batch_size should be positive")
 
-        table_size = self._count_table_size(self.odps_table)
+        table_size = self._count_table_size(self._odps_table)
         if 0 < limit < table_size:
             table_size = limit
         if columns is None:
-            columns = self.odps_table.schema.names
+            columns = self._odps_table.schema.names
 
         if cache_batch_count is None:
             cache_batch_count = self._estimate_cache_batch_count(
@@ -183,10 +183,7 @@ class ODPSReader(object):
                     range_start = worker_items_with_epoch[worker_items_index]
                     range_end = min(range_start + large_batch_size, table_size)
                     future = executor.submit(
-                        self.read_batch,
-                        range_start,
-                        range_end,
-                        columns,
+                        self.read_batch, range_start, range_end, columns
                     )
                     futures.put(future)
                     worker_items_index = worker_items_index + 1
@@ -215,7 +212,7 @@ class ODPSReader(object):
         while retry_count < max_retries:
             try:
                 batch_record = []
-                with self.odps_table.open_reader(
+                with self._odps_table.open_reader(
                     partition=self._partition, reopen=True
                 ) as reader:
                     for record in reader.read(
@@ -262,9 +259,7 @@ class ODPSReader(object):
         if table_size < sample_size:
             return 1
 
-        batch = self.read_batch(
-            start=0, end=sample_size, columns=columns
-        )
+        batch = self.read_batch(start=0, end=sample_size, columns=columns)
 
         size_sample = _nested_list_size(batch)
         size_per_batch = size_sample * batch_size / sample_size
