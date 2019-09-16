@@ -70,7 +70,7 @@ class WorkerTest(unittest.TestCase):
             channel=None,
         )
 
-        shards = {create_recordio_file(128): 128}
+        shards = {create_recordio_file(128): (0, 128)}
         if training:
             training_shards = shards
             evaluation_shards = {}

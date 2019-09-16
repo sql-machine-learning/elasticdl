@@ -86,11 +86,11 @@ class _TaskDispatcher(object):
         else:
             shards = self._prediction_shards
         tasks = []
-        for name, num_records in shards.items():
-            for start in range(0, num_records, self._records_per_task):
+        for shard_name, (start_ind, num_records) in shards.items():
+            for start in range(start_ind, num_records, self._records_per_task):
                 tasks.append(
                     _Task(
-                        shard_name=name,
+                        shard_name=shard_name,
                         start=start,
                         end=min(start + self._records_per_task, num_records),
                         type=task_type,

@@ -104,7 +104,7 @@ class CheckpointTest(unittest.TestCase):
             )
             filename = create_recordio_file(128)
             task_d = _TaskDispatcher(
-                {filename: 128}, {}, {}, records_per_task=64, num_epochs=1
+                {filename: (0, 128)}, {}, {}, records_per_task=64, num_epochs=1
             )
             master = MasterServicer(
                 2,
