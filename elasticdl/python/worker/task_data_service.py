@@ -1,11 +1,10 @@
 import threading
-from contextlib import closing
 
-import recordio
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.dataset import recordio_dataset
+from elasticdl.python.common.data_reader import RecordIODataReader
+from elasticdl.python.common.dataset_utils import create_dataset_from_tasks
 from elasticdl.python.common.log_util import default_logger as logger
 
 
@@ -17,6 +16,8 @@ class TaskDataService(object):
         self._pending_dataset = True
         self._pending_eval_tasks = []
         self._reset()
+        # TODO: Support any subclasses of `AbstractDataReader`
+        self._data_reader = RecordIODataReader(data_dir=None)
 
     def _reset(self):
         """
@@ -69,9 +70,13 @@ class TaskDataService(object):
         with self._lock:
             if self._pending_eval_tasks:
                 task = self._pending_eval_tasks.pop(0)
-                shards.append((task.shard_name, task.start, task.end))
+                shards.append(task)
         if shards and task:
-            return recordio_dataset(shards), task.model_version, task.task_id
+            return (
+                create_dataset_from_tasks(shards),
+                task.model_version,
+                task.task_id,
+            )
         else:
             return None
 
@@ -97,7 +102,7 @@ class TaskDataService(object):
     def _gen(self):
         """
         A generator supports the iter() protocol (e.g. a generator function),
-        which is used to create a dataset for RecordIO.
+        used to create a `tf.data.Dataset` from a list of tasks.
         """
         while True:
             task = self._worker.get_task()
@@ -123,14 +128,6 @@ class TaskDataService(object):
                 )
                 if len(self._pending_tasks_with_counts) == 1:
                     self._current_task = task
-            with closing(
-                recordio.Scanner(
-                    task.shard_name, task.start, task.end - task.start
-                )
-            ) as reader:
-                while True:
-                    record = reader.record()
-                    if record:
-                        yield record
-                    else:
-                        break
+            for data in self._data_reader.read_records(task):
+                if data:
+                    yield data
