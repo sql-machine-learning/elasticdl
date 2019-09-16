@@ -1,8 +1,8 @@
 import random
-from concurrent.futures import ThreadPoolExecutor as Executor
-from queue import Queue
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor as Executor
+from queue import Queue
 
 import numpy as np
 import odps
