@@ -113,12 +113,9 @@ class Worker(object):
         """Set model instance to worker."""
         self._model = model_inst
         self._init_embedding_layer()
-        self._var_created = self._model.built
-        self._non_embed_vars = []
-        if self._var_created:
-            self._non_embed_vars = get_non_embedding_trainable_vars(
-                self._model, self._embedding_layers
-            )
+        self._non_embed_vars = get_non_embedding_trainable_vars(
+            self._model, self._embedding_layers
+        )
 
     def _init_embedding_layer(self):
         """
@@ -221,15 +218,6 @@ class Worker(object):
         report.err_message = err_msg
         return self._stub.ReportTaskResult(report)
 
-    def report_variable(self):
-        """
-        report variable to ps.
-        """
-        req = elasticdl_pb2.ReportVariableRequest()
-        for v in self._non_embed_vars:
-            req.variable[v.name].CopyFrom(ndarray_to_tensor(v.numpy()))
-        self._stub.ReportVariable(req)
-
     def report_gradient(self, grads):
         """
         report gradient to ps, return (accepted, model_version) from rpc call.
@@ -323,15 +311,6 @@ class Worker(object):
             )
         return True
 
-    def _create_variable_and_report(self, features):
-        # Use model.call to create variables, then report to ps
-        _ = self._model.call(features)
-        self._non_embed_vars = get_non_embedding_trainable_vars(
-            self._model, self._embedding_layers
-        )
-        self.report_variable()
-        self._var_created = True
-
     def get_trainable_items(self):
         """
         return all trainable variables list, including batch embedding
@@ -398,8 +377,6 @@ class Worker(object):
     def _process_minibatch(
         self, task_type, features, labels, min_model_version
     ):
-        if not self._var_created:
-            self._create_variable_and_report(features)
         for _ in range(self._max_minibatch_retry_num):
             if task_type == elasticdl_pb2.EVALUATION:
                 if min_model_version == -1:

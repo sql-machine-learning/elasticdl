@@ -91,12 +91,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._init_model_from_tensor_dict(pb_model.param)
         elif init_var:
             self._init_model_from_var_list(init_var)
-        else:
-            logger.info(
-                "Model is not intialized. It will be "
-                "initialized by the first update from "
-                "the worker."
-            )
 
     def _init_optimizer(
         self, opt, embedding_service_endpoint, embedding_dims, use_async
