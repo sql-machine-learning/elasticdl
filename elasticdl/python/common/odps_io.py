@@ -1,6 +1,7 @@
 import random
 from concurrent.futures import ThreadPoolExecutor as Executor
 from queue import Queue
+import sys
 
 import numpy as np
 import odps
@@ -14,8 +15,6 @@ def _nested_list_size(l):
     """
     Obtains the memory size for the nested list.
     """
-    import sys
-
     total = sys.getsizeof(l)
     for i in l:
         if isinstance(i, list):
@@ -24,70 +23,6 @@ def _nested_list_size(l):
             total += sys.getsizeof(i)
 
     return total
-
-
-def _read_odps_one_shot(
-    project,
-    access_id,
-    access_key,
-    endpoint,
-    table,
-    partition,
-    start,
-    end,
-    columns,
-    max_retries=3,
-):
-    """
-    Read ODPS table in chosen row range [ `start`, `end` ) with the specified
-    columns `columns`.
-
-    Args:
-        project: The ODPS project.
-        access_id: The ODPS user access ID.
-        access_key: The ODPS user access key.
-        endpoint: The ODPS cluster endpoint.
-        table: The ODPS table name.
-        partition: The ODPS table's partition. Default is `None` if the
-            table is not partitioned.
-        start: The row index to start reading.
-        end: The row index to end reading.
-        columns: The list of column to read.
-        max_retries : The maximum number of retries in case of exceptions.
-
-    Returns: Two-dimension python list with shape: (end - start, len(columns))
-    """
-    odps_table = ODPS(access_id, access_key, project, endpoint).get_table(
-        table
-    )
-
-    retry_count = 0
-
-    while retry_count < max_retries:
-        try:
-            batch_record = []
-            with odps_table.open_reader(
-                partition=partition, reopen=True
-            ) as reader:
-                for record in reader.read(
-                    start=start, count=end - start, columns=columns
-                ):
-                    batch_record.append([record[column] for column in columns])
-
-            return batch_record
-
-        except Exception as e:
-            import time
-
-            if retry_count >= max_retries:
-                raise
-            logger.warning(
-                "ODPS read exception {} for {} in {}. retrying {} time".format(
-                    e, columns, table, retry_count
-                )
-            )
-            time.sleep(5)
-            retry_count += 1
 
 
 def _configure_odps_options(endpoint, options=None):
@@ -149,6 +84,9 @@ class ODPSReader(object):
         self._partition = partition
         self._num_processes = num_processes
         _configure_odps_options(self._endpoint, options)
+        self.odps_table = ODPS(
+            self._access_id, self._access_key, self._project, self._endpoint
+        ).get_table(self._table)
 
     def to_iterator(
         self,
@@ -182,14 +120,12 @@ class ODPSReader(object):
             )
         if not batch_size > 0:
             raise ValueError("batch_size should be positive")
-        odps_table = ODPS(
-            self._access_id, self._access_key, self._project, self._endpoint
-        ).get_table(self._table)
-        table_size = self._count_table_size(odps_table)
+
+        table_size = self._count_table_size(self.odps_table)
         if 0 < limit < table_size:
             table_size = limit
         if columns is None:
-            columns = odps_table.schema.names
+            columns = self.odps_table.schema.names
 
         if cache_batch_count is None:
             cache_batch_count = self._estimate_cache_batch_count(
@@ -236,16 +172,7 @@ class ODPSReader(object):
                 range_start = worker_items_with_epoch[i]
                 range_end = min(range_start + large_batch_size, table_size)
                 future = executor.submit(
-                    _read_odps_one_shot,
-                    self._project,
-                    self._access_id,
-                    self._access_key,
-                    self._endpoint,
-                    self._table,
-                    self._partition,
-                    range_start,
-                    range_end,
-                    columns,
+                    self.read_batch, range_start, range_end, columns
                 )
                 futures.put(future)
 
@@ -256,13 +183,7 @@ class ODPSReader(object):
                     range_start = worker_items_with_epoch[worker_items_index]
                     range_end = min(range_start + large_batch_size, table_size)
                     future = executor.submit(
-                        _read_odps_one_shot,
-                        self._project,
-                        self._access_id,
-                        self._access_key,
-                        self._endpoint,
-                        self._table,
-                        self._partition,
+                        self.read_batch,
                         range_start,
                         range_end,
                         columns,
@@ -274,6 +195,50 @@ class ODPSReader(object):
                 records = head_future.result()
                 for i in range(0, len(records), batch_size):
                     yield records[i : i + batch_size]  # noqa: E203
+
+    def read_batch(self, start, end, columns, max_retries=3):
+        """
+        Read ODPS table in chosen row range [ `start`, `end` ) with the
+        specified columns `columns`.
+
+        Args:
+            start: The row index to start reading.
+            end: The row index to end reading.
+            columns: The list of column to read.
+            max_retries : The maximum number of retries in case of exceptions.
+
+        Returns:
+            Two-dimension python list with shape: (end - start, len(columns))
+        """
+        retry_count = 0
+
+        while retry_count < max_retries:
+            try:
+                batch_record = []
+                with self.odps_table.open_reader(
+                    partition=self._partition, reopen=True
+                ) as reader:
+                    for record in reader.read(
+                        start=start, count=end - start, columns=columns
+                    ):
+                        batch_record.append(
+                            [record[column] for column in columns]
+                        )
+                return batch_record
+
+            except Exception as e:
+                import time
+
+                if retry_count >= max_retries:
+                    raise
+                logger.warning(
+                    "ODPS read exception {} for {} in {}."
+                    "Retrying time: {}".format(
+                        e, columns, self._table, retry_count
+                    )
+                )
+                time.sleep(5)
+                retry_count += 1
 
     def _count_table_size(self, odps_table):
         with odps_table.open_reader(partition=self._partition) as reader:
@@ -297,16 +262,8 @@ class ODPSReader(object):
         if table_size < sample_size:
             return 1
 
-        batch = _read_odps_one_shot(
-            project=self._project,
-            access_id=self._access_id,
-            access_key=self._access_key,
-            endpoint=self._endpoint,
-            table=self._table,
-            partition=self._partition,
-            start=0,
-            end=sample_size,
-            columns=columns,
+        batch = self.read_batch(
+            start=0, end=sample_size, columns=columns
         )
 
         size_sample = _nested_list_size(batch)
