@@ -48,15 +48,20 @@ def optimizer(lr=0.01):
     return tf.optimizers.SGD(lr)
 
 
+def get_input_shape():
+    input_shape = [28, 28]
+    return input_shape
+
+
 def dataset_fn(dataset, mode):
     def _parse_data(record):
         if mode == Mode.PREDICTION:
             feature_description = {
-                "image": tf.io.FixedLenFeature([28, 28], tf.float32)
+                "image": tf.io.FixedLenFeature(get_input_shape(), tf.float32)
             }
         else:
             feature_description = {
-                "image": tf.io.FixedLenFeature([28, 28], tf.float32),
+                "image": tf.io.FixedLenFeature(get_input_shape(), tf.float32),
                 "label": tf.io.FixedLenFeature([1], tf.int64),
             }
         r = tf.io.parse_single_example(record, feature_description)

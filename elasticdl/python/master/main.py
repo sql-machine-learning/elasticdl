@@ -17,6 +17,7 @@ from elasticdl.python.common.constants import (
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_util import get_logger
 from elasticdl.python.common.model_helper import (
+    _get_spec_value,
     find_layer,
     get_module_file_path,
     load_model_from_module,
@@ -106,6 +107,14 @@ def main():
     model_inst = load_model_from_module(
         args.model_def, model_module, args.model_params
     )
+    if not model_inst.trainable_variables:
+        get_input_shape = _get_spec_value(
+            "get_input_shape", args.model_zoo, model_module, required=True
+        )
+        input_shape = get_input_shape()
+        input_shape = [None] + input_shape
+        model_inst.build(input_shape)
+
     optimizer = model_module[args.optimizer]()
 
     if all(
