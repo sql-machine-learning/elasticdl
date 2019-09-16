@@ -65,7 +65,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         if evaluation_service:
             evaluation_service.set_master_servicer(self)
 
-    # TODO: This is currently being used by multiple tests to initilize
+    # TODO: This is currently being used by multiple tests to initialize
     # self._model, where the initialization should be done via constructor.
     def set_model_var(self, name, value):
         """Add or set model variable. Value should be a float32 ndarray"""
