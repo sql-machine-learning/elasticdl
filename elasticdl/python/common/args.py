@@ -417,13 +417,6 @@ def parse_master_args(master_args=None):
         help="Prediction data directory. Files should be in RecordIO format",
         default="",
     )
-    parser.add_argument(
-        "--log_level",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        type=str.upper,
-        default="INFO",
-        help="The logging level. Default to WARNING",
-    )
     add_common_params(parser)
     add_train_params(parser)
 
