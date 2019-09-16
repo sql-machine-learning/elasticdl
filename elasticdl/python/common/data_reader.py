@@ -33,6 +33,8 @@ class RecordIODataReader(AbstractDataReader):
     def __init__(self, **kwargs):
         AbstractDataReader.__init__(self, **kwargs)
         self._kwargs = kwargs
+        if "data_dir" not in self._kwargs:
+            raise ValueError("data_dir is required for RecordIODataReader()")
 
     def read_records(self, task):
         with closing(

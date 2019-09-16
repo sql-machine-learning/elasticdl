@@ -38,7 +38,10 @@ serve as an identifier for the shard.
 The interface would look like the following:
 
 ```python
-class AbstractDataReader(object):
+from abc import ABC, abstractmethod
+
+
+class AbstractDataReader(ABC):
     def __init__(self, **kwargs):
         pass
 
