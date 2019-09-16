@@ -128,7 +128,6 @@ class OptimizerWrapper(object):
         self._embed_variables = {}
         self._slot_variables = {}
 
-        # TODO: support more TensorFlow optimizers
         # "-" in slot name is not supported
         if isinstance(opt, SGD):
             self._allowed_slot_names = []
