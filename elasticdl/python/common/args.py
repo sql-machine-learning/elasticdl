@@ -1,3 +1,44 @@
+from elasticdl.python.common.log_util import default_logger as logger
+
+MODEL_SPEC_GROUP = [
+    "dataset_fn",
+    "eval_metrics_fn",
+    "model_def",
+    "model_params",
+    "optimizer",
+    "loss",
+    "output",
+    "minibatch_size",
+    "grads_to_wait",
+    "num_epochs",
+    "tensorboard_log_dir",
+    "training_data_dir",
+]
+
+EVALUATION_GROUP = [
+    "evaluation_steps",
+    "evaluation_data_dir",
+    "evaluation_start_delay_secs",
+    "evaluation_throttle_secs",
+]
+
+PREDICTION_GROUP = ["prediction_data_dir"]
+
+CHECKPOINT_GROUP = [
+    "checkpoint_filename_for_init",
+    "checkpoint_steps",
+    "keep_checkpoint_max",
+    "checkpoint_dir",
+]
+
+ALL_ARGS_GROUPS = [
+    MODEL_SPEC_GROUP,
+    EVALUATION_GROUP,
+    PREDICTION_GROUP,
+    CHECKPOINT_GROUP,
+]
+
+
 def pos_int(arg):
     res = int(arg)
     if res <= 0:
@@ -311,3 +352,34 @@ def add_predict_params(parser):
         help="The checkpoint file to initialize the training model",
         required=True,
     )
+
+
+def print_args(args, groups=None):
+    """
+    Args:
+        args: parsing results returned from `parser.parse_args`
+        groups: It is a list of a list. It controls which options should be
+        printed together. For example, we expect all model specifications such
+        as `optimizer`, `loss` are better printed together.
+        groups = [["optimizer", "loss"]]
+    """
+
+    def _get_attr(instance, attribute):
+        try:
+            return getattr(instance, attribute)
+        except AttributeError:
+            return None
+
+    dedup = set()
+    if groups:
+        for group in groups:
+            for element in group:
+                dedup.add(element)
+                logger.info("%s = %s", element, _get_attr(args, element))
+    other_options = [
+        (key, value)
+        for (key, value) in args.__dict__.items()
+        if key not in dedup
+    ]
+    for key, value in other_options:
+        logger.info("%s = %s", key, value)
