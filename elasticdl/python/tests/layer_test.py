@@ -115,7 +115,9 @@ def get_correct_values_for_sparse_test(indices, values, dense_shape, combiner):
 
 
 class EmbeddingLayerTest(unittest.TestCase):
-    def _run_forward_pass_and_compare(self, call_fns, correct_values, output_dim):
+    def _run_forward_pass_and_compare(
+        self, call_fns, correct_values, output_dim
+    ):
         for call_fn in call_fns:
             values = call_fn()
             values = values.numpy().reshape(-1, output_dim)
@@ -133,10 +135,12 @@ class EmbeddingLayerTest(unittest.TestCase):
 
         ids = [0, 1, 3, 8, 3, 2, 3]
         call_fns = [lambda: layer.call(ids), lambda: module_call(layer, ids)]
-        correct_values = np.array([
-            np.array([idx] * output_dim, dtype=np.float32) for idx in ids
-        ])
-        self._run_forward_pass_and_compare(call_fns, correct_values, output_dim)
+        correct_values = np.array(
+            [np.array([idx] * output_dim, dtype=np.float32) for idx in ids]
+        )
+        self._run_forward_pass_and_compare(
+            call_fns, correct_values, output_dim
+        )
 
         # Keras model without/with input_layer
         model_without_input_layer = tf.keras.models.Sequential([layer])
@@ -152,7 +156,9 @@ class EmbeddingLayerTest(unittest.TestCase):
                 lambda: model.call(inputs),
                 lambda: module_call(model, inputs),
             ]
-            self._run_forward_pass_and_compare(call_fns, correct_values, output_dim)
+            self._run_forward_pass_and_compare(
+                call_fns, correct_values, output_dim
+            )
 
     def test_embedding_layer_with_input_length(self):
         output_dim = 8
@@ -164,10 +170,15 @@ class EmbeddingLayerTest(unittest.TestCase):
         ids = [[0, 1, 3, 8], [5, 3, 2, 3]]
         flatten_ids = ids[0] + ids[1]
         call_fns = [lambda: layer.call(ids), lambda: module_call(layer, ids)]
-        correct_values = np.array([
-            np.array([idx] * output_dim, dtype=np.float32) for idx in flatten_ids
-        ])
-        self._run_forward_pass_and_compare(call_fns, correct_values, output_dim)
+        correct_values = np.array(
+            [
+                np.array([idx] * output_dim, dtype=np.float32)
+                for idx in flatten_ids
+            ]
+        )
+        self._run_forward_pass_and_compare(
+            call_fns, correct_values, output_dim
+        )
 
     def test_embedding_layer_with_sparse_input(self):
         output_dim = 8
@@ -191,9 +202,12 @@ class EmbeddingLayerTest(unittest.TestCase):
             correct_value_single_line = get_correct_values_for_sparse_test(
                 indices, values, dense_shape, combiner
             )
-            correct_values = np.array([
-                np.array([idx] * output_dim, dtype=np.float32) for idx in correct_value_single_line
-            ])
+            correct_values = np.array(
+                [
+                    np.array([idx] * output_dim, dtype=np.float32)
+                    for idx in correct_value_single_line
+                ]
+            )
             self._run_forward_pass_and_compare(
                 call_fns, correct_values, output_dim
             )
@@ -335,7 +349,8 @@ class EmbeddingLayerTest(unittest.TestCase):
                         np.absolute(
                             layer.embedding_and_ids[0].batch_ids.numpy()
                             - np.array([1, 3, 2, 0, 6])
-                        ) < 0.00001
+                        )
+                        < 0.00001
                     ).all()
                 )
                 layer.reset()
