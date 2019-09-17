@@ -67,7 +67,7 @@ class EmbeddingService(object):
     ):
         self.start_embedding_pod_and_redis(
             command=["python"],
-            args=["-m", "elasticdl.python.common.embedding_service"],
+            args=["-m", "elasticdl.python.master.embedding_service"],
             embedding_service_id=embedding_service_id,
             resource_request=resource_request,
             resource_limit=resource_limit,
