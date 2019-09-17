@@ -57,7 +57,6 @@ jobs:
 branches:
   only:
   - develop
-  - ci-odps-io-test
 
 # Secure tokens for ODPS-related environment variables
 env:
