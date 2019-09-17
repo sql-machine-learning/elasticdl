@@ -13,6 +13,7 @@ class LearningRateTest(unittest.TestCase):
     @staticmethod
     def get_lr(lr_modulation, opt, multiplier):
         lr_modulation.set_multiplier(multiplier)
+        # sleep 1s to wait that all threads are in this method call
         time.sleep(1)
         return opt.learning_rate
 
@@ -22,6 +23,7 @@ class LearningRateTest(unittest.TestCase):
     ):
         grads_and_vars = zip(grads, variables)
         lr_modulation.set_multiplier(multiplier)
+        # sleep 1s to wait that all threads are in this method call
         time.sleep(1)
         opt.apply_gradients(grads_and_vars)
         return [v.numpy() for v in variables]
@@ -63,23 +65,17 @@ class LearningRateTest(unittest.TestCase):
             for i in range(counts)
         ]
         results = [tasks[i].result() for i in range(counts)]
-        first_diff = [
-            results[0][i] - original_values[i]
-            for i in range(len(original_values))
-        ]
         place = 5
-        for i in range(1, counts):
+        for i in range(0, counts):
             i_diff = [
-                results[i][j] - original_values[j]
+                original_values[j] - results[i][j]
                 for j in range(len(original_values))
             ]
             for j in range(len(original_values)):
                 # variable value change ratio equals the learning rate ratio
                 # for SGD without momentum
                 self.assertAlmostEqual(
-                    i_diff[j] / first_diff[j],
-                    multipliers[i] / multipliers[0],
-                    place,
+                    i_diff[j], grad_values[j] * lr * multipliers[i], place
                 )
 
 
