@@ -89,8 +89,8 @@ def create_embedding_layer(
 
 
 @tf.function
-def layer_call(layer, inputs):
-    return layer.call(inputs)
+def module_call(module, inputs):
+    return module.call(inputs)
 
 
 def get_correct_values_for_sparse_test(indices, values, dense_shape, combiner):
@@ -115,6 +115,15 @@ def get_correct_values_for_sparse_test(indices, values, dense_shape, combiner):
 
 
 class EmbeddingLayerTest(unittest.TestCase):
+    def _run_forward_pass_and_compare(
+        self, call_fns, correct_values, output_dim
+    ):
+        for call_fn in call_fns:
+            values = call_fn()
+            values = values.numpy().reshape(-1, output_dim)
+            for v, correct_v in zip(values, correct_values):
+                self.assertTrue((np.absolute(v - correct_v) < 0.00001).all())
+
     def test_embedding_layer(self):
         output_dim = 8
         embedding_size = 16
@@ -125,16 +134,13 @@ class EmbeddingLayerTest(unittest.TestCase):
         self.assertEqual(output_shape, input_shape + (output_dim,))
 
         ids = [0, 1, 3, 8, 3, 2, 3]
-        values = layer.call(ids)
-        values = values.numpy()
-        for index, idx in enumerate(ids):
-            correct_value = np.array([idx] * output_dim, dtype=np.float32)
-            self.assertTrue((values[index] == correct_value).all())
-
-        results = layer_call(layer, ids)
-        results = results.numpy()
-        for index, idx in enumerate(ids):
-            self.assertTrue((values[index] == results[index]).all())
+        call_fns = [lambda: layer.call(ids), lambda: module_call(layer, ids)]
+        correct_values = np.array(
+            [np.array([idx] * output_dim, dtype=np.float32) for idx in ids]
+        )
+        self._run_forward_pass_and_compare(
+            call_fns, correct_values, output_dim
+        )
 
         # Keras model without/with input_layer
         model_without_input_layer = tf.keras.models.Sequential([layer])
@@ -145,11 +151,14 @@ class EmbeddingLayerTest(unittest.TestCase):
         )
         models = [model_without_input_layer, model_with_input_layer]
         for model in models:
-            outputs = model.call(tf.constant([ids, ids]))
-            values = outputs.numpy()[1]
-            for index, idx in enumerate(ids):
-                correct_value = np.array([idx] * output_dim, dtype=np.float32)
-                self.assertTrue((values[index] == correct_value).all())
+            inputs = tf.constant([ids])
+            call_fns = [
+                lambda: model.call(inputs),
+                lambda: module_call(model, inputs),
+            ]
+            self._run_forward_pass_and_compare(
+                call_fns, correct_values, output_dim
+            )
 
     def test_embedding_layer_with_input_length(self):
         output_dim = 8
@@ -160,11 +169,16 @@ class EmbeddingLayerTest(unittest.TestCase):
         )
         ids = [[0, 1, 3, 8], [5, 3, 2, 3]]
         flatten_ids = ids[0] + ids[1]
-        values = layer.call(ids)
-        values = values.numpy().reshape(-1, output_dim)
-        for index, idx in enumerate(flatten_ids):
-            correct_value = np.array([idx] * output_dim, dtype=np.float32)
-            self.assertTrue((values[index] == correct_value).all())
+        call_fns = [lambda: layer.call(ids), lambda: module_call(layer, ids)]
+        correct_values = np.array(
+            [
+                np.array([idx] * output_dim, dtype=np.float32)
+                for idx in flatten_ids
+            ]
+        )
+        self._run_forward_pass_and_compare(
+            call_fns, correct_values, output_dim
+        )
 
     def test_embedding_layer_with_sparse_input(self):
         output_dim = 8
@@ -181,14 +195,22 @@ class EmbeddingLayerTest(unittest.TestCase):
             inputs = tf.SparseTensor(
                 indices=indices, values=values, dense_shape=dense_shape
             )
-            outputs = layer.call(inputs)
-            outputs = outputs.numpy()
-            correct_values = get_correct_values_for_sparse_test(
+            call_fns = [
+                lambda: layer.call(inputs),
+                lambda: module_call(layer, inputs),
+            ]
+            correct_value_single_line = get_correct_values_for_sparse_test(
                 indices, values, dense_shape, combiner
             )
-            place = 8 if combiner == "sum" else 5
-            for n, v in enumerate(correct_values):
-                self.assertAlmostEqual(outputs[n][0], v, place)
+            correct_values = np.array(
+                [
+                    np.array([idx] * output_dim, dtype=np.float32)
+                    for idx in correct_value_single_line
+                ]
+            )
+            self._run_forward_pass_and_compare(
+                call_fns, correct_values, output_dim
+            )
 
     def test_embedding_layer_with_mask_zero(self):
         output_dim = 8
@@ -231,25 +253,44 @@ class EmbeddingLayerTest(unittest.TestCase):
         multiply_tensor = tf.reshape(multiply_tensor, [2, 3, 8])
 
         for inputs in inputs_list:
-            with tf.GradientTape() as tape:
-                layer.set_tape(tape)
-                output = layer.call(inputs)
-                output = output * multiply_tensor
-            bet = layer.bet_ids_pair[0][0]
-            grads = tape.gradient(output, bet)
-            self.assertTrue((grads.values.numpy() == multiply_values).all())
-            self.assertTrue(
-                (
-                    layer.bet_ids_pair[0][1].numpy()
-                    == inputs.numpy().reshape(-1)
-                ).all()
-            )
-            layer.reset()
+            call_fns = [
+                lambda: layer.call(inputs),
+                lambda: module_call(layer, inputs),
+            ]
+            for call_fn in call_fns:
+                with tf.GradientTape() as tape:
+                    layer.set_tape(tape)
+                    output = module_call(layer, inputs)
+                    output = output * multiply_tensor
+                batch_embedding = layer.embedding_and_ids[0].batch_embedding
+                grads = tape.gradient(output, batch_embedding)
+                self.assertTrue(
+                    (grads.values.numpy() == multiply_values).all()
+                )
+                self.assertTrue(
+                    (
+                        layer.embedding_and_ids[0].batch_ids.numpy()
+                        == inputs.numpy().reshape(-1)
+                    ).all()
+                )
+                layer.reset()
 
-        for inputs in inputs_list:
-            with tf.GradientTape() as tape:
-                layer.set_tape(tape)
-                self.assertRaises(RuntimeError, layer_call, layer, inputs)
+        # Test when an embedding layer is called more than once.
+        # When an embedding layer is called more than once, `tf.function` is
+        # not supported.
+        correct_ids_list = [[0, 1, 3, 1, 2, 0], [0, 10, 3, 11, 2, 1]]
+        with tf.GradientTape() as tape:
+            layer.set_tape(tape)
+            for inputs in inputs_list:
+                _ = layer.call(inputs)
+            self.assertTrue(len(layer.embedding_and_ids) == len(inputs_list))
+            for i, correct_ids in enumerate(correct_ids_list):
+                self.assertTrue(
+                    (
+                        layer.embedding_and_ids[i].batch_ids.numpy()
+                        == correct_ids
+                    ).all()
+                )
 
     def test_embedding_layer_gradient_with_sparse_inputs(self):
         output_dim = 8
@@ -258,6 +299,10 @@ class EmbeddingLayerTest(unittest.TestCase):
         indices = [[0, 0], [1, 1], [1, 2], [2, 1], [3, 1], [3, 3], [3, 5]]
         values = [1, 1, 3, 2, 0, 2, 6]
         dense_shape = [4, 6]
+        inputs = tf.SparseTensor(
+            indices=indices, values=values, dense_shape=dense_shape
+        )
+        inputs = tf.dtypes.cast(inputs, tf.int64)
 
         multiply_values = np.ndarray(shape=(4, output_dim), dtype=np.float32)
         for i in range(4):
@@ -284,27 +329,52 @@ class EmbeddingLayerTest(unittest.TestCase):
             layer = create_embedding_layer(
                 embedding_size, output_dim, combiner=combiner
             )
-            inputs = tf.SparseTensor(
-                indices=indices, values=values, dense_shape=dense_shape
+            call_fns = [
+                lambda: layer.call(inputs),
+                lambda: module_call(layer, inputs),
+            ]
+            for call_fn in call_fns:
+                with tf.GradientTape() as tape:
+                    layer.set_tape(tape)
+                    output = module_call(layer, inputs)
+                    output = output * multiply_tensor
+                batch_embedding = layer.embedding_and_ids[0].batch_embedding
+                grads = tape.gradient(output, batch_embedding)
+                grads = grads.numpy()
+                place = 8 if combiner == "sum" else 5
+                for n, v in enumerate(correct_grads[combiner]):
+                    self.assertAlmostEqual(grads[n][0], v, place)
+                self.assertTrue(
+                    (
+                        np.absolute(
+                            layer.embedding_and_ids[0].batch_ids.numpy()
+                            - np.array([1, 3, 2, 0, 6])
+                        )
+                        < 0.00001
+                    ).all()
+                )
+                layer.reset()
+
+        # Test when an embedding layer is called more than once.
+        # When an embedding layer is called more than once, `tf.function` is
+        # not supported.
+        correct_ids = [1, 3, 2, 0, 6]
+        for combiner in combiners:
+            layer = create_embedding_layer(
+                embedding_size, output_dim, combiner=combiner
             )
             with tf.GradientTape() as tape:
                 layer.set_tape(tape)
-                output = layer.call(inputs)
-                output = output * multiply_tensor
-            bet = layer.bet_ids_pair[0][0]
-            grads = tape.gradient(output, bet)
-            grads = grads.numpy()
-            place = 8 if combiner == "sum" else 5
-            for n, v in enumerate(correct_grads[combiner]):
-                self.assertAlmostEqual(grads[n][0], v, place)
-            self.assertTrue(
-                (
-                    layer.bet_ids_pair[0][1].numpy()
-                    - np.array([1, 3, 2, 0, 6])
-                    < 0.00001
-                ).all()
-            )
-            layer.reset()
+                _ = layer.call(inputs)
+                _ = layer.call(inputs)
+                self.assertTrue(len(layer.embedding_and_ids) == 2)
+                for i in range(2):
+                    self.assertTrue(
+                        (
+                            layer.embedding_and_ids[i].batch_ids.numpy()
+                            == correct_ids
+                        ).all()
+                    )
 
 
 if __name__ == "__main__":

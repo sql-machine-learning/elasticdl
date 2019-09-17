@@ -110,6 +110,7 @@ class Worker(object):
     def set_model(self, model_inst):
         """Set model instance to worker."""
         self._model = model_inst
+        self._train_eagerly = False
         self._init_embedding_layer()
         self._var_created = self._model.built
         self._non_embed_vars = []
@@ -125,6 +126,9 @@ class Worker(object):
         self._embedding_layers = find_layer(self._model, Embedding)
         for layer in self._embedding_layers:
             layer.set_endpoint(self._embedding_service_endpoint)
+        self._need_embedding_layer_check = (
+            True if self._embedding_layers else False
+        )
 
     def _set_tape_for_embedding(self, tape):
         for layer in self._embedding_layers:
@@ -204,7 +208,7 @@ class Worker(object):
             # `bet_id_pair`.
             bet_number = 0
             for layer in self._embedding_layers:
-                bet_number += len(layer.bet_ids_pair)
+                bet_number += len(layer.embedding_and_ids)
             if len(edl_embedding_grads) != bet_number:
                 raise ValueError(
                     "elasticdl.layers.embedding related gradient number %d "
@@ -216,7 +220,7 @@ class Worker(object):
             for layer in self._embedding_layers:
                 g_values = None
                 g_indices = None
-                for _, ids in layer.bet_ids_pair:
+                for _, ids in layer.embedding_and_ids:
                     grad = edl_embedding_grads[grad_accum_iter]
                     grad_accum_iter += 1
                     # ElasticDL embedding layer with Sparse Gradients
@@ -268,14 +272,39 @@ class Worker(object):
             )
         return True
 
-    def _create_variable_and_report(self, features):
-        # Use model.call to create variables, then report to ps
-        _ = self._model.call(features)
+    def _run_model_call_before_training(self, features):
+        """Call `self._model.call` before training for two things:
+            * Create variables and report to ps if not created.
+            * Check whether there is an embedding layer that is called
+              more than once during one forward-pass.
+        """
+        if self._embedding_layers:
+            with tf.GradientTape() as tape:
+                self._set_tape_for_embedding(tape)
+                _ = self._model.call(features)
+        else:
+            _ = self._model.call(features)
         self._non_embed_vars = get_non_embedding_trainable_vars(
             self._model, self._embedding_layers
         )
-        self.report_variable()
-        self._var_created = True
+
+        if not self._var_created:
+            self.report_variable()
+            self._var_created = True
+
+        if self._need_embedding_layer_check:
+            self._train_eagerly = False
+            for layer in self._embedding_layers:
+                if len(layer.embedding_and_ids) > 1:
+                    self._train_eagerly = True
+                    logger.warning(
+                        "ElasticDL embedding layer %s is called more than "
+                        "once, this will make the training process unable "
+                        "to accelerate with tf.function." % (layer.name)
+                    )
+            self._need_embedding_layer_check = False
+
+        self._reset_embedding()
 
     def get_trainable_items(self):
         """
@@ -286,7 +315,12 @@ class Worker(object):
         bets = []
         if self._embedding_layers:
             for layer in self._embedding_layers:
-                bets.extend([i for (i, _) in layer.bet_ids_pair])
+                bets.extend(
+                    [
+                        batch_embedding
+                        for (batch_embedding, _) in layer.embedding_and_ids
+                    ]
+                )
         return self._non_embed_vars + bets
 
     def training_process(self, features, labels):
@@ -294,7 +328,7 @@ class Worker(object):
         training for models with elasticdl.layers.embedding does not
         support tf.function decorator
         """
-        if self._embedding_layers:
+        if self._train_eagerly:
             return self.training_process_eagerly(features, labels)
         else:
             return self.training_process_with_acceleration(features, labels)
@@ -343,8 +377,8 @@ class Worker(object):
     def _process_minibatch(
         self, task_type, features, labels, min_model_version
     ):
-        if not self._var_created:
-            self._create_variable_and_report(features)
+        if self._need_embedding_layer_check or not self._var_created:
+            self._run_model_call_before_training(features)
         for _ in range(self._max_minibatch_retry_num):
             if task_type == elasticdl_pb2.EVALUATION:
                 if min_model_version == -1:
