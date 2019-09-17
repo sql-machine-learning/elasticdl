@@ -121,7 +121,10 @@ def _train_edl_embedding_with_optimizer_wrapper(
         embed_items = []
         for layer in embed_layers:
             embed_items.extend(
-                [(bet, layer.name, ids) for bet, ids in layer.bet_ids_pair]
+                [
+                    (bet, layer.name, ids)
+                    for bet, ids in layer.embedding_and_ids
+                ]
             )
 
         grads = tape.gradient(
