@@ -63,14 +63,11 @@ def custom_model():
 class MockEdlEmbedding:
     def __init__(self, name):
         self._name = name
-        self.bet_ids_pair = []
+        self.embedding_and_ids = []
 
     @property
     def name(self):
         return self._name
-
-    def add_bet_and_ids(self, bet, ids):
-        self.append(EmbeddingAndIds(bet, ids))
 
 
 class ReportBETGradientTest(unittest.TestCase):
@@ -120,13 +117,13 @@ class ReportBETGradientTest(unittest.TestCase):
         )
 
         layer1 = MockEdlEmbedding(layer_names[0])
-        layer1.bet_ids_pair = [
+        layer1.embedding_and_ids = [
             EmbeddingAndIds(None, tf.constant([1, 2])),
             EmbeddingAndIds(None, tf.constant([2, 3])),
         ]
 
         layer2 = MockEdlEmbedding(layer_names[1])
-        layer2.bet_ids_pair = [
+        layer2.embedding_and_ids = [
             EmbeddingAndIds(None, tf.constant([3, 1])),
             EmbeddingAndIds(None, tf.constant([3, 4])),
         ]
@@ -170,14 +167,14 @@ class ReportBETGradientTest(unittest.TestCase):
             layer1.name: tf.IndexedSlices(
                 tf.concat(edlembed_grads[:2], axis=0),
                 tf.concat(
-                    [layer1.bet_ids_pair[0].batch_ids, layer1.bet_ids_pair[1].batch_ids],
+                    [layer1.embedding_and_ids[0].batch_ids, layer1.embedding_and_ids[1].batch_ids],
                     axis=0,
                 ),
             ),
             layer2.name: tf.IndexedSlices(
                 tf.concat(edlembed_grads[2:], axis=0),
                 tf.concat(
-                    [layer2.bet_ids_pair[0].batch_ids, layer2.bet_ids_pair[1].batch_ids],
+                    [layer2.embedding_and_ids[0].batch_ids, layer2.embedding_and_ids[1].batch_ids],
                     axis=0,
                 ),
             ),
@@ -308,7 +305,7 @@ class ReportBETGradientTest(unittest.TestCase):
     def test_get_trainable_variable(self):
         master, worker = self._create_master_and_worker()
         layer = MockEdlEmbedding("test")
-        layer.bet_ids_pair = [
+        layer.embedding_and_ids = [
             EmbeddingAndIds(tf.Variable([1, 2, 3], name="test_bet"), [1, 2, 3])
         ]
         worker._embedding_layers = [layer]

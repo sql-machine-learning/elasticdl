@@ -252,14 +252,14 @@ class EmbeddingLayerTest(unittest.TestCase):
                     layer.set_tape(tape)
                     output = module_call(layer, inputs)
                     output = output * multiply_tensor
-                bet = layer.bet_ids_pair[0].batch_embedding
+                bet = layer.embedding_and_ids[0].batch_embedding
                 grads = tape.gradient(output, bet)
                 self.assertTrue(
                     (grads.values.numpy() == multiply_values).all()
                 )
                 self.assertTrue(
                     (
-                        layer.bet_ids_pair[0].batch_ids.numpy()
+                        layer.embedding_and_ids[0].batch_ids.numpy()
                         == inputs.numpy().reshape(-1)
                     ).all()
                 )
@@ -273,10 +273,10 @@ class EmbeddingLayerTest(unittest.TestCase):
             layer.set_tape(tape)
             for inputs in inputs_list:
                 _ = layer.call(inputs)
-            self.assertTrue(len(layer.bet_ids_pair) == len(inputs_list))
+            self.assertTrue(len(layer.embedding_and_ids) == len(inputs_list))
             for i, correct_ids in enumerate(correct_ids_list):
                 self.assertTrue(
-                    (layer.bet_ids_pair[i].batch_ids.numpy() == correct_ids).all()
+                    (layer.embedding_and_ids[i].batch_ids.numpy() == correct_ids).all()
                 )
 
     def test_embedding_layer_gradient_with_sparse_inputs(self):
@@ -325,7 +325,7 @@ class EmbeddingLayerTest(unittest.TestCase):
                     layer.set_tape(tape)
                     output = module_call(layer, inputs)
                     output = output * multiply_tensor
-                bet = layer.bet_ids_pair[0].batch_embedding
+                bet = layer.embedding_and_ids[0].batch_embedding
                 grads = tape.gradient(output, bet)
                 grads = grads.numpy()
                 place = 8 if combiner == "sum" else 5
@@ -333,7 +333,7 @@ class EmbeddingLayerTest(unittest.TestCase):
                     self.assertAlmostEqual(grads[n][0], v, place)
                 self.assertTrue(
                     (
-                        layer.bet_ids_pair[0].batch_ids.numpy()
+                        layer.embedding_and_ids[0].batch_ids.numpy()
                         - np.array([1, 3, 2, 0, 6])
                         < 0.00001
                     ).all()
@@ -352,10 +352,10 @@ class EmbeddingLayerTest(unittest.TestCase):
                 layer.set_tape(tape)
                 _ = layer.call(inputs)
                 _ = layer.call(inputs)
-                self.assertTrue(len(layer.bet_ids_pair) == 2)
+                self.assertTrue(len(layer.embedding_and_ids) == 2)
                 for i in range(2):
                     self.assertTrue(
-                        (layer.bet_ids_pair[i].batch_ids.numpy() == correct_ids).all()
+                        (layer.embedding_and_ids[i].batch_ids.numpy() == correct_ids).all()
                     )
 
 

@@ -56,13 +56,13 @@ class Embedding(tf.keras.layers.Layer):
         self.tape = None
         self.lookup_func = None
 
-        self._bet_ids_pair_eagerly = []
+        self._embedding_and_ids_eagerly = []
 
-        # BET's shape and ids' shape in `self._bet_ids_pair_graph` have `None`
+        # BET's shape and ids' shape in `self._embedding_and_ids_graph` have `None`
         # dimension. This is because they have different shapes in different
         # iterations.
         # `tf.Variable` requires initial value if shape has `None` dimension.
-        self._bet_ids_pair_graph = [
+        self._embedding_and_ids_graph = [
             EmbeddingAndIds(
                 batch_embedding = tf.Variable(
                     initial_value=tf.zeros((1, self.output_dim)),
@@ -167,17 +167,17 @@ class Embedding(tf.keras.layers.Layer):
         embedding_vectors = np.concatenate(embedding_vectors, axis=0)
         return embedding_vectors.reshape((len(keys), self.output_dim))
 
-    def _record_gradients_of_tensor(self, batch_embedding, ids):
+    def _record_gradients(self, batch_embedding, ids):
         if tf.executing_eagerly():
             self.tape.watch(batch_embedding)
-            self._bet_ids_pair_eagerly.append(
+            self._embedding_and_ids_eagerly.append(
                 EmbeddingAndIds(batch_embedding, ids)
             )
         else:
             # In graph mode, assigning tensors to trainable variables is
             # allowed and tape can record the gradients of trainable
             # variables automatically.
-            embedding_and_ids = self._bet_ids_pair_graph[0]
+            embedding_and_ids = self._embedding_and_ids_graph[0]
             embedding_and_ids.batch_embedding.assign(batch_embedding)
             embedding_and_ids.batch_ids.assign(ids)
             batch_embedding = embedding_and_ids.batch_embedding
@@ -199,7 +199,7 @@ class Embedding(tf.keras.layers.Layer):
         # TODO: use tf.cond rather than python if statement
         if self.tape:
             batch_embedding = (
-                self._record_gradients_of_tensor(batch_embedding, flat_ids)
+                self._record_gradients(batch_embedding, flat_ids)
             )
 
         outputs = tf.gather(batch_embedding, idx)
@@ -224,7 +224,7 @@ class Embedding(tf.keras.layers.Layer):
         )
         # TODO: use tf.cond rather than python if statement
         if self.tape:
-            batch_embedding = self._record_gradients_of_tensor(
+            batch_embedding = self._record_gradients(
                 batch_embedding, unique_ids
             )
 
@@ -254,7 +254,7 @@ class Embedding(tf.keras.layers.Layer):
         return tf.math.not_equal(inputs, 0)
 
     def reset(self):
-        self._bet_ids_pair_eagerly = []
+        self._embedding_and_ids_eagerly = []
         self.tape = None
 
     def set_tape(self, tape):
@@ -264,10 +264,10 @@ class Embedding(tf.keras.layers.Layer):
         self.embedding_service_endpoint = endpoint
 
     @property
-    def bet_ids_pair(self):
+    def embedding_and_ids(self):
         """
         Return bet and ids pairs.
         """
-        if self._bet_ids_pair_eagerly:
-            return self._bet_ids_pair_eagerly
-        return self._bet_ids_pair_graph
+        if self._embedding_and_ids_eagerly:
+            return self._embedding_and_ids_eagerly
+        return self._embedding_and_ids_graph

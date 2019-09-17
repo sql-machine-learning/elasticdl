@@ -208,7 +208,7 @@ class Worker(object):
             # `bet_id_pair`.
             bet_number = 0
             for layer in self._embedding_layers:
-                bet_number += len(layer.bet_ids_pair)
+                bet_number += len(layer.embedding_and_ids)
             if len(edl_embedding_grads) != bet_number:
                 raise ValueError(
                     "elasticdl.layers.embedding related gradient number %d "
@@ -220,7 +220,7 @@ class Worker(object):
             for layer in self._embedding_layers:
                 g_values = None
                 g_indices = None
-                for _, ids in layer.bet_ids_pair:
+                for _, ids in layer.embedding_and_ids:
                     grad = edl_embedding_grads[grad_accum_iter]
                     grad_accum_iter += 1
                     # ElasticDL embedding layer with Sparse Gradients
@@ -295,7 +295,7 @@ class Worker(object):
         if self._need_embedding_layer_check:
             self._train_eagerly = False
             for layer in self._embedding_layers:
-                if len(layer.bet_ids_pair) > 1:
+                if len(layer.embedding_and_ids) > 1:
                     self._train_eagerly = True
                     logger.warning(
                         "ElasticDL embedding layer %s is called more than "
@@ -315,7 +315,7 @@ class Worker(object):
         bets = []
         if self._embedding_layers:
             for layer in self._embedding_layers:
-                bets.extend([batch_embedding for (batch_embedding, _) in layer.bet_ids_pair])
+                bets.extend([batch_embedding for (batch_embedding, _) in layer.embedding_and_ids])
         return self._non_embed_vars + bets
 
     def training_process(self, features, labels):
