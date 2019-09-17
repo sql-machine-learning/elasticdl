@@ -115,6 +115,13 @@ def get_correct_values_for_sparse_test(indices, values, dense_shape, combiner):
 
 
 class EmbeddingLayerTest(unittest.TestCase):
+    def _run_forward_pass_and_compare(self, call_fns, correct_values, output_dim):
+        for call_fn in call_fns:
+            values = call_fn()
+            values = values.numpy().reshape(-1, output_dim)
+            for v, correct_v in zip(values, correct_values):
+                self.assertTrue((np.absolute(v - correct_v) < 0.00001).all())
+
     def test_embedding_layer(self):
         output_dim = 8
         embedding_size = 16
@@ -126,12 +133,10 @@ class EmbeddingLayerTest(unittest.TestCase):
 
         ids = [0, 1, 3, 8, 3, 2, 3]
         call_fns = [lambda: layer.call(ids), lambda: module_call(layer, ids)]
-        for call_fn in call_fns:
-            values = call_fn()
-            values = values.numpy()
-            for index, idx in enumerate(ids):
-                correct_value = np.array([idx] * output_dim, dtype=np.float32)
-                self.assertTrue((values[index] == correct_value).all())
+        correct_values = np.array([
+            np.array([idx] * output_dim, dtype=np.float32) for idx in ids
+        ])
+        self._run_forward_pass_and_compare(call_fns, correct_values, output_dim)
 
         # Keras model without/with input_layer
         model_without_input_layer = tf.keras.models.Sequential([layer])
@@ -142,19 +147,12 @@ class EmbeddingLayerTest(unittest.TestCase):
         )
         models = [model_without_input_layer, model_with_input_layer]
         for model in models:
-            inputs = tf.constant([ids, ids])
+            inputs = tf.constant([ids])
             call_fns = [
                 lambda: model.call(inputs),
                 lambda: module_call(model, inputs),
             ]
-            for call_fn in call_fns:
-                outputs = call_fn()
-                values = outputs.numpy()[1]
-                for index, idx in enumerate(ids):
-                    correct_value = np.array(
-                        [idx] * output_dim, dtype=np.float32
-                    )
-                    self.assertTrue((values[index] == correct_value).all())
+            self._run_forward_pass_and_compare(call_fns, correct_values, output_dim)
 
     def test_embedding_layer_with_input_length(self):
         output_dim = 8
@@ -166,12 +164,10 @@ class EmbeddingLayerTest(unittest.TestCase):
         ids = [[0, 1, 3, 8], [5, 3, 2, 3]]
         flatten_ids = ids[0] + ids[1]
         call_fns = [lambda: layer.call(ids), lambda: module_call(layer, ids)]
-        for call_fn in call_fns:
-            values = call_fn()
-            values = values.numpy().reshape(-1, output_dim)
-            for index, idx in enumerate(flatten_ids):
-                correct_value = np.array([idx] * output_dim, dtype=np.float32)
-                self.assertTrue((values[index] == correct_value).all())
+        correct_values = np.array([
+            np.array([idx] * output_dim, dtype=np.float32) for idx in flatten_ids
+        ])
+        self._run_forward_pass_and_compare(call_fns, correct_values, output_dim)
 
     def test_embedding_layer_with_sparse_input(self):
         output_dim = 8
@@ -192,15 +188,15 @@ class EmbeddingLayerTest(unittest.TestCase):
                 lambda: layer.call(inputs),
                 lambda: module_call(layer, inputs),
             ]
-            for call_fn in call_fns:
-                outputs = call_fn()
-                outputs = outputs.numpy()
-                correct_values = get_correct_values_for_sparse_test(
-                    indices, values, dense_shape, combiner
-                )
-                place = 8 if combiner == "sum" else 5
-                for n, v in enumerate(correct_values):
-                    self.assertAlmostEqual(outputs[n][0], v, place)
+            correct_value_single_line = get_correct_values_for_sparse_test(
+                indices, values, dense_shape, combiner
+            )
+            correct_values = np.array([
+                np.array([idx] * output_dim, dtype=np.float32) for idx in correct_value_single_line
+            ])
+            self._run_forward_pass_and_compare(
+                call_fns, correct_values, output_dim
+            )
 
     def test_embedding_layer_with_mask_zero(self):
         output_dim = 8
@@ -252,8 +248,8 @@ class EmbeddingLayerTest(unittest.TestCase):
                     layer.set_tape(tape)
                     output = module_call(layer, inputs)
                     output = output * multiply_tensor
-                bet = layer.embedding_and_ids[0].batch_embedding
-                grads = tape.gradient(output, bet)
+                batch_embedding = layer.embedding_and_ids[0].batch_embedding
+                grads = tape.gradient(output, batch_embedding)
                 self.assertTrue(
                     (grads.values.numpy() == multiply_values).all()
                 )
@@ -328,17 +324,18 @@ class EmbeddingLayerTest(unittest.TestCase):
                     layer.set_tape(tape)
                     output = module_call(layer, inputs)
                     output = output * multiply_tensor
-                bet = layer.embedding_and_ids[0].batch_embedding
-                grads = tape.gradient(output, bet)
+                batch_embedding = layer.embedding_and_ids[0].batch_embedding
+                grads = tape.gradient(output, batch_embedding)
                 grads = grads.numpy()
                 place = 8 if combiner == "sum" else 5
                 for n, v in enumerate(correct_grads[combiner]):
                     self.assertAlmostEqual(grads[n][0], v, place)
                 self.assertTrue(
                     (
-                        layer.embedding_and_ids[0].batch_ids.numpy()
-                        - np.array([1, 3, 2, 0, 6])
-                        < 0.00001
+                        np.absolute(
+                            layer.embedding_and_ids[0].batch_ids.numpy()
+                            - np.array([1, 3, 2, 0, 6])
+                        ) < 0.00001
                     ).all()
                 )
                 layer.reset()
