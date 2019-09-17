@@ -57,19 +57,17 @@ class Embedding(tf.keras.layers.Layer):
         # BET's shape and ids' shape in `self._bet_ids_pair_graph` have `None`
         # dimension. This is because they have different shapes in different
         # iterations.
-        # `tf.Variable` requires initial value if shape has `None` dimension
-        bet_initial_value = tf.zeros((1, self.output_dim))
-        ids_initial_value = tf.zeros((1, 1), dtype=tf.int64)
+        # `tf.Variable` requires initial value if shape has `None` dimension.
         self._bet_ids_pair_graph = [
             (
                 tf.Variable(
-                    bet_initial_value,
+                    initial_value=tf.zeros((1, self.output_dim)),
                     shape=tf.TensorShape((None, self.output_dim)),
                     dtype=tf.float32,
                     trainable=True,
                 ),
                 tf.Variable(
-                    ids_initial_value,
+                    initial_value=tf.zeros((1, 1), dtype=tf.int64),
                     shape=tf.TensorShape(None),
                     dtype=tf.int64,
                     trainable=False,
@@ -185,7 +183,7 @@ class Embedding(tf.keras.layers.Layer):
                 self._bet_ids_pair_eagerly.append((batch_embedding, flat_ids))
                 batch_embedding = self._bet_ids_pair_eagerly[-1][0]
             else:
-                # In graph mode, assigning tensor to trainable variables is
+                # In graph mode, assigning tensors to trainable variables is
                 # allowed and tape can record the gradients of trainable
                 # variables automatically.
                 self._bet_ids_pair_graph[0][0].assign(batch_embedding)
@@ -221,7 +219,7 @@ class Embedding(tf.keras.layers.Layer):
                 )
                 batch_embedding = self._bet_ids_pair_eagerly[-1][0]
             else:
-                # In graph mode, assigning tensor to trainable variables is
+                # In graph mode, assigning tensors to trainable variables is
                 # allowed and tape can record the gradients of trainable
                 # variables automatically.
                 self._bet_ids_pair_graph[0][0].assign(batch_embedding)

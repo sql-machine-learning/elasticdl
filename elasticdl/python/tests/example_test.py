@@ -124,6 +124,7 @@ class ExampleTest(unittest.TestCase):
         )
 
         if dataset == "imagenet":
+            batch_size = 8
             shards = {create_imagenet_recordio_file(8, feature_shape): 8}
         elif dataset == "frappe":
             shards = {create_frappe_recordio_file(16, feature_shape, 5383): 16}

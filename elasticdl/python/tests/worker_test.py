@@ -193,6 +193,7 @@ class WorkerTest(unittest.TestCase):
         embedding_dim = 16
         worker.set_model(model_inst)
 
+        # initialize kv store
         for layer in model_inst.layers:
             if isinstance(layer, Embedding):
                 name = layer.name
@@ -211,6 +212,7 @@ class WorkerTest(unittest.TestCase):
             worker._init_embedding_layer()
             worker._run_model_call_before_training(inputs_list[0])
 
+            # run training process without tf.function
             correct_grads = []
             correct_ids_list = []
             for features, labels in zip(inputs_list, labels_list):
@@ -222,6 +224,7 @@ class WorkerTest(unittest.TestCase):
                 correct_ids_list.append(ids)
                 worker._reset_embedding()
 
+            # run training process with tf.function
             test_grads = []
             test_ids_list = []
             for features, labels in zip(inputs_list, labels_list):
@@ -234,6 +237,7 @@ class WorkerTest(unittest.TestCase):
                 test_ids_list.append(ids)
                 worker._reset_embedding()
 
+        # compare the gradients
         for test_g, correct_g in zip(test_grads, correct_grads):
             for g1, g2 in zip(test_g, correct_g):
                 if isinstance(g1, tf.IndexedSlices):
