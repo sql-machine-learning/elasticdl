@@ -28,7 +28,7 @@ jobs:
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
         - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests --cov=elasticdl/python"
         # Run ODPS-related unit tests
-        - docker run --rm -it -e ODPS_PROJECT_NAME=gomaxcompute_driver_w7u -e ODPS_ACCESS_ID=$MAXCOMPUTE_AK -e ODPS_ACCESS_KEY=$MAXCOMPUTE_SK -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_* --cov=elasticdl/python"
+        - docker run --rm -it -e ODPS_PROJECT_NAME=gomaxcompute_driver_w7u -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_* --cov=elasticdl/python"
     - stage: integrationtest
       name: "Integration Tests"
       script:
@@ -60,4 +60,5 @@ branches:
 
 env:
   global:
-    secure: f03CHRo2Afl9PD6jLuKtY/6b/MgJkytcfeIhSrAYZFLzUCQTa4MI5yih4pG/VJtTpKVpoQD7NJikj/x0eO/6NOGxegJwaruY8EDg/4LVLeuVqRipmw0V9l3LcZ7AofxPAeJ6RZLpHALR9cYegXEEtvyfjNRw2BhQZsZBvTE8sbbvfzLJOY1UC9CeQnHxDGZYXG3WSMr7b+44ifg4OBweATmEsdIVPD7kgexunJvHw0vzQ25vsf+huYwLorVc7uRghoYY8SoaLMEcmP50Jsl2Mn7AUoFUyM3tl/kOub11BV4/yGrGJC1BysT7l48frSKYqSU1yeT+0xiJjgkOwpV8BcxOmXrgm2s6PDzWDmiXtBRhE6n79iG2IuuTuYLk4n/Rm7uwKYu6EdnooKSnhGV6DW7mLVJ5Rcb655xCB+AoXb79Ilp60YxsMFTqzdhMkf3QpQV/OsEHFrzNhab6+pWcrwOeCq/CXU0MDO0rQuX4YIBwdEyAlDrj2JDvJ868lpdTJTxUUgUovH2j8rFrtCf5Bx0gqg0Cj81s/7cMdhtoV+wbTtHoQ7TLTZkvqYyFAMCkl2d5g00UhZpq+HTjzcPOL5xKc0mZhsuYq03nTVMQWzIJiKkaWbDPoY3eZcLga0cO8VD2HgzsQ5lg300ZTF73AxonZheyzJVWtLQvrpT8dPI=
+  - secure: kr79IltMhuW+pmmdP0KBMY87+iePGBGiaOUYTZhxx3zW3a1t2xK5wJnxJvrOwgBipqxLvIQnYUu20Lwfo0I2bwPRVvZAExb1vFBDQgzCaXEj+DHanE0XR1nivMzUcI3iHiBNRo5GalAUuiCzc/8fTxwcd0az8uxbWgPsTGkE0b8Y4epmLfsBn87rfc/lq6zWV9Q/dogBtiSZSS+bWR+U1/KopoY2hQE9hDVlZwlh/5gqbtWDOKDWE+pOnHJfHzfLzjrTb1qKgcUdA0FWU4+TyXwU09qYG5YvXRDHb6tpryacQC99E2rLkVZSqhIaSxjGAxbIcpvi0osv0R2FfeRd1hpgtB1Ro+NkZioW7dfZfhMxJm8Q0yVCmNx3D4HyZzGX/rO4estNZbX2+Zq522wakX7YCQ7TYWjWaJJNOOuYJaFp8y80sa+kE4ecF/5ZPSFiL/pUqbmnLNLNgYIq//jVgsyvJyW5luYdmD5+oTXKYi67ofzGqtY6y2nAJYHzkR2iVTwJ7CqxamkQ+3tPgoorApEc/I3DdLEIWrjTbHIfzQC/RpvdJukF3hjIrrcF/CnHq//rumVjPkn05yX4LzO/H5q6Bdto/+o+RGfamdAfJD09nfQAw7lQZ4yzUdzhSILTvONSNkLygyvW1NUL353TXXCa36uQvFwguJiSwzS2eDM=
+  - secure: OHi/YUNWjG2NGRNPkTSULN7d7fJG4/uFGIpsSrh6MUl7zFIK39Qh1enCPeHmOKO5Fo6HxiiqzN0TbGwxnx5gkptEYwLV0DgWrT6pugwvWBehDU5koJmaEDuqJ5EGLHhJ0fm0wESHzv9hlK+Pb9vTD6by8X40LAwgU1PdcS9W5hpzXJuM2cRoRp8kiOKv7vJZXhbdYCcSU2zpizhJgh6B6zpv5gI0rdgTPL8EDYCxUQg1RrNw27+Dti3kCD59FphlRnxMzC7OoANJdFHMDBmruQIdq4/0UfPrFp7ZubwM3k+DFuZkRohyPeup8L0GYTwIt+PzuEC1+1rhIy7kxinwCn0jc/DK7hSEduxxr+CbPSBV60oqi+eZSahLFZYG26xsNUR5q7B2n36pYj0eK8d54ionHqsqP39ure10T+mRZS/SF9KPcpo+ZeEJaPTP41s3/5i3r5BlKfGr9GaA1yVtsbOwTx4McwJfW7Vd/HN+++swP+x1pPsC6iJ8KluZ6iSx6andHGnLyzvltaPqXxR8KNmfhDKXCcX8U/OPN1v22irdyAqWrZe7geNNVZJF1BRMEby1UYmAVZyZJ8xfhod/Acpv3Di+ZKSGGhbKvt20J1oYpVsV5lcNGAuCLgd175HHgkpFfjGuw97rRberBgCwzQdrRJjSvgsSp7VPjzOnrAE=
