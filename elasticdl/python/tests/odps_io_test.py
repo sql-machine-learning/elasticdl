@@ -56,7 +56,7 @@ class ODPSIOTest(unittest.TestCase):
         self.assertEqual(
             len(flattened_records),
             220,
-            "Unexpected number of total records: %d" % len(records),
+            "Unexpected number of total records: %d" % len(flattened_records),
         )
 
     def test_write_odps_to_recordio_shards_from_iterator(self):
