@@ -243,14 +243,10 @@ class WorkerTest(unittest.TestCase):
         for test_g, correct_g in zip(test_grads, correct_grads):
             for g1, g2 in zip(test_g, correct_g):
                 if isinstance(g1, tf.IndexedSlices):
-                    self.assertTrue(
-                        (g1.values - g2.values < 0.0001).numpy().all()
-                    )
-                    self.assertTrue(
-                        tf.equal(g1.indices, g2.indices).numpy().all()
-                    )
+                    self.assertTrue(np.isclose(g1.values, g2.values).all())
+                    self.assertTrue(np.isclose(g1.indices, g2.indices).all())
                 else:
-                    self.assertTrue((g1 - g2 < 0.0001).numpy().all())
+                    self.assertTrue(np.isclose(g1, g2).all())
 
         for test_ids, correct_ids in zip(correct_ids_list, test_ids_list):
             for layer_name in correct_ids.keys():
