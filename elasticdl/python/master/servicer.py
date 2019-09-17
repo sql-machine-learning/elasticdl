@@ -310,7 +310,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return empty_pb2.Empty()
 
     def ReportGradient(self, request, _):
-        model_version_valid = self._validate_model_version(
+        model_version_valid = self._use_async or self._validate_model_version(
             request.model_version
         )
 
