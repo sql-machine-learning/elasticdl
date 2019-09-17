@@ -21,6 +21,7 @@ from tensorflow.python.ops import init_ops
 from elasticdl.python.common.model_helper import (
     find_layer,
     get_module_file_path,
+    get_non_embedding_trainable_vars,
     load_module,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
@@ -103,64 +104,55 @@ def _train_edl_embedding_with_optimizer_wrapper(
     # initialization process related to embedding layer and optimizer wrapper
     embed_layers = find_layer(model, Embedding)
 
-    def lookup_func(ids, layer_name, initializer, output_dim):
-        values, unknown = EmbeddingService.lookup_embedding(
-            [Embedding.get_key([layer_name, i]) for i in ids]
-        )
-        return np.concatenate(values).reshape(len(ids), -1)
-
-    for layer in embed_layers:
-        layer.set_lookup_func(lookup_func)
-
     # training process
-    for features, labels in zip(X, Y):
+    for train_iter, (features, labels) in enumerate(zip(X, Y)):
         with tf.GradientTape() as tape:
             for layer in embed_layers:
                 layer.set_tape(tape)
             outputs = model.call(features)
             loss = loss_fn(outputs, labels)
 
-        # TODO: calculate train_vars_embed and train_vars_other can be a
-        # reusable function
-        train_vars_embed = []
-        train_vars_other = []
-        for layer in model.layers:
-            if isinstance(layer, Embedding):
-                for bet, ids in layer.bet_ids_pair:
-                    train_vars_embed.append((bet, layer.name, ids))
-            else:
-                vars = layer.trainable_variables
-                train_vars_other.extend(vars)
+        # Need to get non-embedding variables inside for loop because model
+        # creates variables after the first time `model.call` is called
+        if not train_iter:
+            non_embed_vars = get_non_embedding_trainable_vars(
+                model, embed_layers
+            )
+        embed_items = []
+        for layer in embed_layers:
+            embed_items.extend(
+                [(bet, layer.name, ids) for bet, ids in layer.bet_ids_pair]
+            )
 
         grads = tape.gradient(
-            loss, train_vars_other + [var for var, _, _ in train_vars_embed]
+            loss, non_embed_vars + [var for var, _, _ in embed_items]
         )
 
         # TODO: do not need to merge gradient from the same embedding layer
         # after `optimizer_wrapper` support grads_and_vars with duplicated
         # layer name
-        train_vars_other_len = len(train_vars_other)
-        grads_new = grads[:train_vars_other_len]
-        grads_embed_dict = {}
+        non_embed_vars_n = len(non_embed_vars)
+        non_embed_grads = grads[:non_embed_vars_n]
+        embed_grads_dict = {}
         for (_, layer_name, ids), grad in zip(
-            train_vars_embed, grads[train_vars_other_len:]
+            embed_items, grads[non_embed_vars_n:]
         ):
-            if layer_name in grads_embed_dict:
-                grads_merged = grads_embed_dict[layer_name]
-                grads_embed_dict[layer_name] = tf.IndexedSlices(
-                    tf.concat([grads_merged.values, grad.values], axis=0),
-                    tf.concat([grads_merged.indices, ids], axis=0),
+            if layer_name in embed_grads_dict:
+                merged_grads = embed_grads_dict[layer_name]
+                embed_grads_dict[layer_name] = tf.IndexedSlices(
+                    tf.concat([merged_grads.values, grad.values], axis=0),
+                    tf.concat([merged_grads.indices, ids], axis=0),
                 )
             else:
-                grads_embed_dict[layer_name] = tf.IndexedSlices(
+                embed_grads_dict[layer_name] = tf.IndexedSlices(
                     grad.values, ids
                 )
 
         optimizer.apply_gradients(
-            list(zip(grads_new, train_vars_other))
+            list(zip(non_embed_grads, non_embed_vars))
             + [
                 (grad, layer_name)
-                for layer_name, grad in grads_embed_dict.items()
+                for layer_name, grad in embed_grads_dict.items()
             ]
         )
 

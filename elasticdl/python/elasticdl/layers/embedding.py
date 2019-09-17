@@ -1,5 +1,8 @@
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.utils import tf_utils
+
+from elasticdl.python.master.embedding_service import EmbeddingService
 
 
 class Embedding(tf.keras.layers.Layer):
@@ -33,6 +36,7 @@ class Embedding(tf.keras.layers.Layer):
         mask_zero=False,
         input_length=None,
         combiner=None,
+        embedding_service_endpoint=None,
         **kwargs
     ):
         if "input_shape" not in kwargs and input_length:
@@ -44,6 +48,7 @@ class Embedding(tf.keras.layers.Layer):
         self.supports_masking = mask_zero
         self.input_length = input_length
         self.combiner = combiner
+        self.embedding_service_endpoint = embedding_service_endpoint
         self.tape = None
         self.lookup_func = None
         self.bet_ids_pair = []
@@ -87,13 +92,54 @@ class Embedding(tf.keras.layers.Layer):
         return "-".join(map(str, name_list))
 
     def lookup_embedding(self, unique_ids):
-        batch_embedding = self.lookup_func(
-            unique_ids.numpy(),
-            self._name,
-            self.embedding_initializer,
-            self.output_dim,
+        ids = unique_ids.numpy()
+        keys = [Embedding.get_key([self._name, id]) for id in ids]
+        (
+            embedding_vectors,
+            unknown_keys_index,
+        ) = EmbeddingService.lookup_embedding(
+            keys=keys,
+            embedding_service_endpoint=self.embedding_service_endpoint,
         )
-        return batch_embedding
+
+        if unknown_keys_index:
+            # Initialize unknown_keys' embedding vectors and write into Redis.
+            unknown_keys = [keys[index] for index in unknown_keys_index]
+            initializer = tf.keras.initializers.get(self.embedding_initializer)
+            embedding_vector_init = [
+                initializer(shape=[1, self.output_dim]).numpy()
+                for _ in unknown_keys
+            ]
+            embedding_vector_init = np.concatenate(
+                embedding_vector_init, axis=0
+            )
+            EmbeddingService.update_embedding(
+                keys=unknown_keys,
+                embedding_vectors=embedding_vector_init,
+                embedding_service_endpoint=self.embedding_service_endpoint,
+                set_if_not_exist=True,
+            )
+            # Lookup unknown_keys' embedding vectors
+            (
+                embedding_vectors_new,
+                unknown_keys_idx_new,
+            ) = EmbeddingService.lookup_embedding(
+                keys=unknown_keys,
+                embedding_service_endpoint=self.embedding_service_endpoint,
+            )
+            if unknown_keys_idx_new:
+                raise Exception(
+                    "Update embedding vector: %s failed."
+                    % str(
+                        [unknown_keys[index] for index in unknown_keys_idx_new]
+                    )
+                )
+            for key_index, vector in zip(
+                unknown_keys_index, embedding_vectors_new
+            ):
+                embedding_vectors[key_index] = vector
+        embedding_vectors = np.concatenate(embedding_vectors, axis=0)
+        return embedding_vectors.reshape((len(keys), self.output_dim))
 
     def call(self, input):
         if isinstance(input, tf.SparseTensor):
@@ -166,15 +212,5 @@ class Embedding(tf.keras.layers.Layer):
     def set_tape(self, tape):
         self.tape = tape
 
-    def set_lookup_func(self, lookup_func):
-        """
-        lookup_func args
-          ids: id list to lookup
-          layer_name: layer name
-          initializer: intializer method name for unkown embeddings
-          output_dim: the embedding vector dimension
-        return:
-          embeddings corresponding to the ids, in numpy ndarray type
-          with a shape of (len(ids), output_dim)
-        """
-        self.lookup_func = lookup_func
+    def set_endpoint(self, endpoint):
+        self.embedding_service_endpoint = endpoint

@@ -152,3 +152,15 @@ def find_layer(model, layer_class):
             # search in nested layers
             layers += find_layer(layer, layer_class)
     return layers
+
+
+def get_non_embedding_trainable_vars(model, embedding_layers):
+    """
+    Get trainable variables which are not from ElasticDL embedding layers.
+    """
+    embedding_items = []
+    for layer in embedding_layers:
+        embedding_items.extend([bet for bet, _ in layer.bet_ids_pair])
+    return [
+        var for var in model.trainable_variables if var not in embedding_items
+    ]

@@ -38,8 +38,11 @@ serve as an identifier for the shard.
 The interface would look like the following:
 
 ```python
-class AbstractDataReader(object):
-    def __init__(self, *kwargs):
+from abc import ABC, abstractmethod
+
+
+class AbstractDataReader(ABC):
+    def __init__(self, **kwargs):
         pass
 
     @abstractmethod
@@ -54,12 +57,9 @@ class AbstractDataReader(object):
         pass
 
     @abstractmethod
-    def create_shards(self, mode):
+    def create_shards(self):
         """This method creates the dictionary of shards where the keys are the
         shard names and the values are the number of records.
-
-        Arguments:
-            mode: The mode that indicates where the created shards will be used.
         """
         pass
 ```
@@ -68,8 +68,9 @@ Users can then implement a custom data reader implementation similar to the foll
 
 ```python
 class CustomDataReader(AbstractDataReader):
-    def __init__(self, *kwargs):
+    def __init__(self, **kwargs):
         self.reader = ...
+        self._kwargs = kwargs
 
     def read_records(self, task):
         while True:
@@ -79,13 +80,16 @@ class CustomDataReader(AbstractDataReader):
             else:
                 break
 
-    def create_shards(self, mode):
-        if mode == Mode.TRAINING:
-            return training_shards
-        elif mode == Mode.EVALUATION:
-            return evaluation_shards
-        else:
-            return prediction_shards
+    def create_shards(self):
+        data_dir = self._kwargs["data_dir"]
+        if not data_dir:
+            return {}
+        f_records = {}
+        for f in os.listdir(data_dir):
+            p = os.path.join(data_dir, f)
+            with closing(recordio.Index(p)) as rio:
+                f_records[p] = rio.num_records()
+        return f_records
 ```
 * Implement a `RecordIODataReader` that can be used to read RecordIO files, serves as the default
 data reader for ElasticDL, and preserves the current ElasticDL functionality.

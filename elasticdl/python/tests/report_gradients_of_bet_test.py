@@ -97,7 +97,7 @@ class ReportBETGradientTest(unittest.TestCase):
             model_def="test_module.custom_model",
             channel=None,
         )
-        worker._model = model_inst
+        worker.set_model(model_inst)
         worker._stub = InProcessMaster(master)
 
         return master, worker
@@ -240,7 +240,7 @@ class ReportBETGradientTest(unittest.TestCase):
 
     def test_report_bet_gradients_master_to_service(self):
         layer_names = ["test_layer_1", "test_layer_2"]
-        embedding_dims = dict([(layer, 3) for layer in layer_names])
+        embedding_dims = dict([(layer, 4) for layer in layer_names])
         mock_embedding_service_endpoint = {"host": "1.1.1.1", "port": "12123"}
         master, _ = self._create_master_and_worker(
             mock_embedding_service_endpoint, embedding_dims
