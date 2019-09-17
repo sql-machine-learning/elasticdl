@@ -2,11 +2,10 @@
 
 ## Overview
 
-
 A typical parameter server(pserver) architecture contains three roles:
 
-- master, creating/deleting/scheduling pservers and workers
-- pserver, providing parameter pull/push/optimize/checkpoint service
+- master, calling Kubernetes API to start workers and optionally parameter servers, and scheduling tasks to workers
+- pserver, maintaining the global model, and providing parameter pull/push/optimize/checkpoint service
 - worker, computing gradients of model parameters using local data and collaboratively updating the global model
 
 
@@ -53,8 +52,25 @@ Other parameters could be initialized before training.
 
 ### Assumption
 
+We apply different solutions to different scenarios.
+
+
+| scenario| hardware | update stragety | communication  stragety |
+| :----  |:----  |:---|:---|
+| Recommendation  | CPU|  Async |  Parameter server |
+| CV | GPU | BSP| Allreduce|
+| NLP | GPU | BSP| Allreduce |
+
+
+Following is the assumption under recommendation scenario:
+
 - only support asynchronous SGD
 - only support worker failover, do not support pserver failover
+
+
+**Note**
+
+Allreduce failover and pserver failover will be discussed on other design docs.
 
 ### Master
 
@@ -110,3 +126,19 @@ There is also another kind of worker who does an evalution job. It define its ow
 **Note**
 
 There could be some same item id in a minibatch data. So some gradient vector of embedding table will have the same item id. We need to sum these gradient before pushing to pserver.
+
+
+### Delayed model updating
+
+In order to reduce the communication overhead between workers and pservers, we propose a stragety called delayed model updating.
+
+A worker runs a round of forward/backward computation using its local model, and keep the gradients in its local. After several rounds finishing, it push gradients to pservers.
+
+**Note**
+
+Since local model is only a part of global model, in some circumstance, worker still has to pull embedding vector parameter from pservers if there exits unknow item ids in a minibatch data.
+
+In async mode, this will lead to relative newer embedding part parameters, but relative older other part parameters.
+
+
+
