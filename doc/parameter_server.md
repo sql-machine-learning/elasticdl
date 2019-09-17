@@ -6,7 +6,7 @@ A typical parameter server(pserver) architecture contains three roles:
 
 - master, calling Kubernetes API to start workers and optionally parameter servers, and scheduling tasks to workers
 - pserver, maintaining the global model, and providing parameter pull/push/optimize/checkpoint service
-- worker, computing gradients of model parameters using local data and collaboratively updating the global model
+- worker, computing gradients of model parameters using local data and pushing gradients to pservers
 
 
 Please refer to:
