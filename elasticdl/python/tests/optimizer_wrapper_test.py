@@ -190,10 +190,9 @@ class OptimizerWrapperTest(unittest.TestCase):
     def _compare_initialize_values(self, opt, dim, slot, expected_init):
         tmp = OptimizerWrapper(opt, None, {"test": dim})
         self.assertTrue(
-            (
-                tmp._initialize_unknown_slot("test", slot)
-                - expected_init(dim).numpy()
-                < 0.0001
+            np.isclose(
+                tmp._initialize_unknown_slot("test", slot),
+                expected_init(dim).numpy(),
             ).all()
         )
 
@@ -229,8 +228,8 @@ class OptimizerWrapperTest(unittest.TestCase):
             embeddings, slot_values = opt_wrapper._lookup_embeddings_and_slots(
                 grads_and_vars
             )
-        self.assertTrue((slot_values["test_1"]["m"] < 0.0001).all())
-        self.assertTrue((slot_values["test_1"]["v"] < 0.0001).all())
+        self.assertTrue(np.isclose(slot_values["test_1"]["m"], 0.0).all())
+        self.assertTrue(np.isclose(slot_values["test_1"]["v"], 0.0).all())
 
     def test_generate_lookup_keys(self):
         opt = Adam(amsgrad=True)
@@ -342,7 +341,7 @@ class OptimizerWrapperTest(unittest.TestCase):
                 [Embedding.get_key([layer, id]) for id in ids]
             )
             values = np.concatenate(values).reshape(-1, embedding_dim)
-            self.assertTrue((embeddings[layer] - values < 0.0001).all())
+            self.assertTrue(np.isclose(embeddings[layer], values).all())
 
             for slot in ["m", "v"]:
                 values, _ = mock_kv_store.lookup(
@@ -350,7 +349,7 @@ class OptimizerWrapperTest(unittest.TestCase):
                 )
                 values = np.concatenate(values).reshape(-1, embedding_dim)
                 self.assertTrue(
-                    (slot_values[layer][slot] - values < 0.0001).all()
+                    np.isclose(slot_values[layer][slot], values).all()
                 )
 
     def test_set_slot_values_to_variables(self):
@@ -399,22 +398,23 @@ class OptimizerWrapperTest(unittest.TestCase):
 
                 slots_dict[slot].assign(tf.ones((10, 4)))
                 self.assertTrue(
-                    (
-                        opt_wrapper._slot_variables[layer][slot].numpy() - 1.0
-                        < 0.0001
+                    np.isclose(
+                        opt_wrapper._slot_variables[layer][slot].numpy(), 1.0
                     ).all()
                 )
                 opt_wrapper._slot_variables[layer][slot].assign(
                     -tf.ones((10, 4))
                 )
                 self.assertTrue(
-                    (slots_dict[slot].numpy() + 1.0 < 0.0001).all()
+                    np.isclose(slots_dict[slot].numpy(), -1.0).all()
                 )
 
         slot_values_new = {"test-1": {"m": np.zeros((3, 4), np.float32)}}
         opt_wrapper._set_slot_values_to_variables(slot_values_new)
         self.assertTrue(
-            (opt_wrapper._slot_variables["test-1"]["m"].numpy() < 0.0001).all()
+            np.isclose(
+                opt_wrapper._slot_variables["test-1"]["m"].numpy(), 0.0
+            ).all()
         )
 
     def test_set_embedding_values_to_variables(self):
@@ -460,7 +460,9 @@ class OptimizerWrapperTest(unittest.TestCase):
             grads_and_vars, embedding_values_new
         )
         self.assertTrue(
-            (opt_wrapper._embed_variables["test-1"].numpy() < 0.0001).all()
+            np.isclose(
+                opt_wrapper._embed_variables["test-1"].numpy(), 0.0
+            ).all()
         )
 
     def test_report_to_kv_store(self):
@@ -559,11 +561,11 @@ class OptimizerWrapperTest(unittest.TestCase):
                 w2 = np.concatenate(mock_kv_store.lookup(keys)[0]).reshape(
                     4, -1
                 )
-                self.assertTrue((w1 - w2 < 0.0001).all(), msg=wrong_msg)
+                self.assertTrue(np.isclose(w1, w2).all(), msg=wrong_msg)
             else:
                 for w1, w2 in zip(layer1.weights, layer2.weights):
                     self.assertTrue(
-                        (w1 - w2 < 0.0001).numpy().all(), msg=wrong_msg
+                        np.isclose(w1.numpy(), w2.numpy()).all(), msg=wrong_msg
                     )
 
     def test_correctness(self):

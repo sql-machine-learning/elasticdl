@@ -103,7 +103,7 @@ class IndexedSlicesTest(unittest.TestCase):
         worker.report_gradient(grads2)
 
         for i, j in zip(master._model.values(), expected_weights):
-            self.assertTrue(np.all(i.numpy() - j < 0.0001))
+            self.assertTrue(np.isclose(i.numpy(), j).all())
 
     def test_wrong_indices(self):
         master, worker = self._create_master_and_worker()
