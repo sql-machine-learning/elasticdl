@@ -22,7 +22,7 @@ class ODPSIOTest(unittest.TestCase):
         self._project = os.environ[ODPSConfig.PROJECT_NAME]
         self._access_id = os.environ[ODPSConfig.ACCESS_ID]
         self._access_key = os.environ[ODPSConfig.ACCESS_KEY]
-        self._endpoint = os.environ[ODPSConfig.ENDPOINT]
+        self._endpoint = os.environ.get(ODPSConfig.ENDPOINT)
         self._test_read_table = "test_odps_reader_%d_%d" % (
             int(time.time()),
             random.randint(1, 101),

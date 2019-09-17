@@ -27,6 +27,8 @@ jobs:
       script:
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
         - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests --cov=elasticdl/python"
+        # Run ODPS-related unit tests
+        - docker run --rm -it -e ODPS_PROJECT_NAME=gomaxcompute_driver_w7u -e ODPS_ACCESS_ID=$MAXCOMPUTE_AK -e ODPS_ACCESS_KEY=$MAXCOMPUTE_SK -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_* --cov=elasticdl/python"
     - stage: integrationtest
       name: "Integration Tests"
       script:
@@ -54,3 +56,8 @@ jobs:
 branches:
   only:
   - develop
+  - ci-odps-io-test
+
+env:
+  global:
+    secure: f03CHRo2Afl9PD6jLuKtY/6b/MgJkytcfeIhSrAYZFLzUCQTa4MI5yih4pG/VJtTpKVpoQD7NJikj/x0eO/6NOGxegJwaruY8EDg/4LVLeuVqRipmw0V9l3LcZ7AofxPAeJ6RZLpHALR9cYegXEEtvyfjNRw2BhQZsZBvTE8sbbvfzLJOY1UC9CeQnHxDGZYXG3WSMr7b+44ifg4OBweATmEsdIVPD7kgexunJvHw0vzQ25vsf+huYwLorVc7uRghoYY8SoaLMEcmP50Jsl2Mn7AUoFUyM3tl/kOub11BV4/yGrGJC1BysT7l48frSKYqSU1yeT+0xiJjgkOwpV8BcxOmXrgm2s6PDzWDmiXtBRhE6n79iG2IuuTuYLk4n/Rm7uwKYu6EdnooKSnhGV6DW7mLVJ5Rcb655xCB+AoXb79Ilp60YxsMFTqzdhMkf3QpQV/OsEHFrzNhab6+pWcrwOeCq/CXU0MDO0rQuX4YIBwdEyAlDrj2JDvJ868lpdTJTxUUgUovH2j8rFrtCf5Bx0gqg0Cj81s/7cMdhtoV+wbTtHoQ7TLTZkvqYyFAMCkl2d5g00UhZpq+HTjzcPOL5xKc0mZhsuYq03nTVMQWzIJiKkaWbDPoY3eZcLga0cO8VD2HgzsQ5lg300ZTF73AxonZheyzJVWtLQvrpT8dPI=
