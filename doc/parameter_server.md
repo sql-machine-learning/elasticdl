@@ -3,11 +3,11 @@
 ## Overview
 
 
-A typical parameter server architecture contains three roles:
+A typical parameter server(pserver) architecture contains three roles:
 
-- master, responsible for creating/deleting/scheduling pservers and workers
-- pserver, responsible for provide parameter pull/push/optimize/checkpoint service
-- worker, responsible for training minibatches of data
+- master, creating/deleting/scheduling pservers and workers
+- pserver, providing parameter pull/push/optimize/checkpoint service
+- worker, computing gradients of model parameters using local data and collaboratively updating the global model
 
 
 Please refer to:
@@ -19,18 +19,32 @@ Please refer to:
 
 ### Parameter sharding
 
-We usually shard big parameters of a neural network model to some nodes under a rule, in order to achieve network load banlance. There are several kinds of parameter to be handled seperately:
+
+We prefer to shard the global model for some reasons:
+
+- A model could be too large to fit in the memory of a process. For example, many recommending and ranking models take very high-dimensional (and sparse) inputs, thus require large embedding tables. In such cases, we'd have to have multiple parameter server instances to hold the global model.
+
+- Even when a single process can hold the global model, we might still shard it onto multiple parameter server instances, who share the both communication and optimization workload.
+
+There are several kinds of parameter to be handled separately:
 
 - Very big embedding table: Embedding table is a collection of <item id, embedding vector> pairs. There is also a mapping from item id to pserver id, so the corresonding embedding vector will be stored at the certain pserver
 
-- Big dense tensor: If the dense tensor parameter exceeds certain size, it will be sliced into several subtensors. The parameter name combines subtensor id will become a unique key, and the value is the subtensor(Please note that the slice tensor operation is zero-copy)
+- Big dense tensor: If the dense tensor parameter exceeds certain size, it will be sliced into several subtensors. The parameter name combining subtensor id will become a unique key, and the value is the subtensor(Please note that the slice tensor operation is zero-copy)
 
 - Small dense tensor: The small dense tensor parameter will be stored at certain pserver wholely
+
+
+The local model on workers and the global model on the parameter server(s) have the same size. In case that large embedding tables make the model size too big to fit in a single process's memory space, an intuitive solution is to save the model copies on an external storage service like Redis or Memcached.
+
+However, such a solution creates a complex workflow which introduces too many cross-node communications.
+
+We propose an alternative solution that doesn't rely on Redis or Memcachd. Instead, the global model, including the large embedding tables, is sharded across parameter servers, and the local model contains only part of the embedding table -- the small fraction that is required to compute recent minibatch(es).
 
 ### Parameter Initialization
 
 
-Parameter initialization of very big embedding table is lazy. For example, in online learing, there could be unkown item id in the training data. So, after worker send the unkown item id to pserver, pserver will initialize corresponding embedding vector and send back to worker. This is a get_or_create semantic.
+Parameter initialization of a very big embedding table is lazy. For example, in online learning, there could be unkown item id in the training data. So, until worker send the unkown item id to pserver, will pserver initialize corresponding embedding vector and send back to worker. This is a `get_or_create` semantic.
 
 Other parameters could be initialized before training.
 
@@ -40,7 +54,7 @@ Other parameters could be initialized before training.
 ### Assumption
 
 - only support asynchronous SGD
-- only support worker failover, do not support pserver
+- only support worker failover, do not support pserver failover
 
 ### Master
 
