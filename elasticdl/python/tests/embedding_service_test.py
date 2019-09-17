@@ -64,7 +64,7 @@ class EmbeddingServiceTest(unittest.TestCase):
             time.sleep(1)
             self.assertFalse(embedding_endpoint is None)
             # connection
-            redis_cluster = embedding_service._get_embedding_cluster()
+            redis_cluster = embedding_service._redis_cluster
             self.assertFalse(redis_cluster is None)
             # set value to a key
             self.assertTrue(redis_cluster.set("test_key", "OK", nx=True))
