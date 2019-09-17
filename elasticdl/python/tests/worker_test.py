@@ -233,7 +233,9 @@ class WorkerTest(unittest.TestCase):
                 test_grads.append(grads)
                 ids = {}
                 for layer in worker._embedding_layers:
-                    ids[layer.name] = copy.deepcopy(layer.embedding_and_ids[0].batch_ids)
+                    ids[layer.name] = copy.deepcopy(
+                        layer.embedding_and_ids[0].batch_ids
+                    )
                 test_ids_list.append(ids)
                 worker._reset_embedding()
 

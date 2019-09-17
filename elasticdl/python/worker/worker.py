@@ -315,7 +315,12 @@ class Worker(object):
         bets = []
         if self._embedding_layers:
             for layer in self._embedding_layers:
-                bets.extend([batch_embedding for (batch_embedding, _) in layer.embedding_and_ids])
+                bets.extend(
+                    [
+                        batch_embedding
+                        for (batch_embedding, _) in layer.embedding_and_ids
+                    ]
+                )
         return self._non_embed_vars + bets
 
     def training_process(self, features, labels):

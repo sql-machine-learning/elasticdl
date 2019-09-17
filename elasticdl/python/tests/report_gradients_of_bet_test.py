@@ -6,11 +6,11 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl.python.common.constants import JobType
+from elasticdl.python.elasticdl.layers.embedding import EmbeddingAndIds
 from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
-from elasticdl.python.elasticdl.layers.embedding import EmbeddingAndIds
 
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -167,14 +167,20 @@ class ReportBETGradientTest(unittest.TestCase):
             layer1.name: tf.IndexedSlices(
                 tf.concat(edlembed_grads[:2], axis=0),
                 tf.concat(
-                    [layer1.embedding_and_ids[0].batch_ids, layer1.embedding_and_ids[1].batch_ids],
+                    [
+                        layer1.embedding_and_ids[0].batch_ids,
+                        layer1.embedding_and_ids[1].batch_ids,
+                    ],
                     axis=0,
                 ),
             ),
             layer2.name: tf.IndexedSlices(
                 tf.concat(edlembed_grads[2:], axis=0),
                 tf.concat(
-                    [layer2.embedding_and_ids[0].batch_ids, layer2.embedding_and_ids[1].batch_ids],
+                    [
+                        layer2.embedding_and_ids[0].batch_ids,
+                        layer2.embedding_and_ids[1].batch_ids,
+                    ],
                     axis=0,
                 ),
             ),

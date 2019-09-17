@@ -1,12 +1,14 @@
 import collections
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.utils import tf_utils
 
 from elasticdl.python.master.embedding_service import EmbeddingService
 
-
-EmbeddingAndIds = collections.namedtuple('EmbeddingAndIds', ['batch_embedding', 'batch_ids'])
+EmbeddingAndIds = collections.namedtuple(
+    "EmbeddingAndIds", ["batch_embedding", "batch_ids"]
+)
 
 
 class Embedding(tf.keras.layers.Layer):
@@ -58,19 +60,19 @@ class Embedding(tf.keras.layers.Layer):
 
         self._embedding_and_ids_eagerly = []
 
-        # BET's shape and ids' shape in `self._embedding_and_ids_graph` have `None`
-        # dimension. This is because they have different shapes in different
-        # iterations.
+        # BET's shape and ids' shape in `self._embedding_and_ids_graph` have
+        # `None` dimension. This is because they have different shapes in
+        # different iterations.
         # `tf.Variable` requires initial value if shape has `None` dimension.
         self._embedding_and_ids_graph = [
             EmbeddingAndIds(
-                batch_embedding = tf.Variable(
+                batch_embedding=tf.Variable(
                     initial_value=tf.zeros((1, self.output_dim)),
                     shape=tf.TensorShape((None, self.output_dim)),
                     dtype=tf.float32,
                     trainable=True,
                 ),
-                batch_ids = tf.Variable(
+                batch_ids=tf.Variable(
                     initial_value=tf.zeros((1, 1), dtype=tf.int64),
                     shape=tf.TensorShape(None),
                     dtype=tf.int64,
@@ -198,9 +200,7 @@ class Embedding(tf.keras.layers.Layer):
         )
         # TODO: use tf.cond rather than python if statement
         if self.tape:
-            batch_embedding = (
-                self._record_gradients(batch_embedding, flat_ids)
-            )
+            batch_embedding = self._record_gradients(batch_embedding, flat_ids)
 
         outputs = tf.gather(batch_embedding, idx)
         # tf.reshape does not support shape with None. Replace None with -1.

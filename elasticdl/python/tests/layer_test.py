@@ -276,7 +276,10 @@ class EmbeddingLayerTest(unittest.TestCase):
             self.assertTrue(len(layer.embedding_and_ids) == len(inputs_list))
             for i, correct_ids in enumerate(correct_ids_list):
                 self.assertTrue(
-                    (layer.embedding_and_ids[i].batch_ids.numpy() == correct_ids).all()
+                    (
+                        layer.embedding_and_ids[i].batch_ids.numpy()
+                        == correct_ids
+                    ).all()
                 )
 
     def test_embedding_layer_gradient_with_sparse_inputs(self):
@@ -355,7 +358,10 @@ class EmbeddingLayerTest(unittest.TestCase):
                 self.assertTrue(len(layer.embedding_and_ids) == 2)
                 for i in range(2):
                     self.assertTrue(
-                        (layer.embedding_and_ids[i].batch_ids.numpy() == correct_ids).all()
+                        (
+                            layer.embedding_and_ids[i].batch_ids.numpy()
+                            == correct_ids
+                        ).all()
                     )
 
 
