@@ -86,6 +86,7 @@ def parse_envs(arg):
 
 
 def add_common_params(parser):
+    """Common arguments for training/prediction/evaluation"""
     add_common_args_between_master_and_worker(parser)
     parser.add_argument(
         "--docker_image_prefix",
