@@ -84,7 +84,11 @@ class EvaluationServiceTest(unittest.TestCase):
             chkp_dir = os.path.join(tempdir, "testEvaluationService")
             checkpoint_service = CheckpointService(chkp_dir, 5, 5, True)
             task_d = _TaskDispatcher(
-                {"f1": 10, "f2": 10}, {"f1": 10, "f2": 10}, {}, 3, 1
+                {"f1": (0, 10), "f2": (0, 10)},
+                {"f1": (0, 10), "f2": (0, 10)},
+                {},
+                3,
+                1,
             )
 
             # Evaluation metrics will not be accepted if no evaluation ongoing
@@ -130,7 +134,7 @@ class EvaluationServiceTest(unittest.TestCase):
             self.assertFalse(evaluation_service.try_to_create_new_job())
 
     def testEvaluationOnly(self):
-        task_d = _TaskDispatcher({}, {"f1": 10, "f2": 10}, {}, 3, 1)
+        task_d = _TaskDispatcher({}, {"f1": (0, 10), "f2": (0, 10)}, {}, 3, 1)
 
         evaluation_service = EvaluationService(
             None, None, task_d, 0, 0, 0, True
