@@ -20,15 +20,16 @@ jobs:
     - stage: precommit
       name: "Pre-commit Check"
       script:
-        #- docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
-        #- docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python model_zoo setup.py -name '*.py' -print0 | tr '\0' ' ')"
+        - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
+        - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python model_zoo setup.py -name '*.py' -print0 | tr '\0' ' ')"
     - stage: unittest
       name: "Unit Tests"
       script:
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
+        # Run unit tests without k8s or ODPS
         - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests --cov=elasticdl/python"
-        # Run ODPS-related unit tests
-        - docker run --rm -it -e ODPS_PROJECT_NAME=gomaxcompute_driver_w7u -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_* --cov=elasticdl/python"
+        # Run unit tests related to ODPS
+        - docker run --rm -it -e ODPS_PROJECT_NAME=gomaxcompute_driver_w7u -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_*"
     - stage: integrationtest
       name: "Integration Tests"
       script:
@@ -58,6 +59,7 @@ branches:
   - develop
   - ci-odps-io-test
 
+# Secure tokens for ODPS-related environment variables
 env:
   global:
   - secure: kr79IltMhuW+pmmdP0KBMY87+iePGBGiaOUYTZhxx3zW3a1t2xK5wJnxJvrOwgBipqxLvIQnYUu20Lwfo0I2bwPRVvZAExb1vFBDQgzCaXEj+DHanE0XR1nivMzUcI3iHiBNRo5GalAUuiCzc/8fTxwcd0az8uxbWgPsTGkE0b8Y4epmLfsBn87rfc/lq6zWV9Q/dogBtiSZSS+bWR+U1/KopoY2hQE9hDVlZwlh/5gqbtWDOKDWE+pOnHJfHzfLzjrTb1qKgcUdA0FWU4+TyXwU09qYG5YvXRDHb6tpryacQC99E2rLkVZSqhIaSxjGAxbIcpvi0osv0R2FfeRd1hpgtB1Ro+NkZioW7dfZfhMxJm8Q0yVCmNx3D4HyZzGX/rO4estNZbX2+Zq522wakX7YCQ7TYWjWaJJNOOuYJaFp8y80sa+kE4ecF/5ZPSFiL/pUqbmnLNLNgYIq//jVgsyvJyW5luYdmD5+oTXKYi67ofzGqtY6y2nAJYHzkR2iVTwJ7CqxamkQ+3tPgoorApEc/I3DdLEIWrjTbHIfzQC/RpvdJukF3hjIrrcF/CnHq//rumVjPkn05yX4LzO/H5q6Bdto/+o+RGfamdAfJD09nfQAw7lQZ4yzUdzhSILTvONSNkLygyvW1NUL353TXXCa36uQvFwguJiSwzS2eDM=
