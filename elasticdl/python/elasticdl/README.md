@@ -64,7 +64,7 @@ python -m elasticdl.python.elasticdl.client train \
 
 ### Submit to a GKE cluster
 
-Please checkout [this tutorial](../../doc/elastic_scheduling.md) for instructions on submitting jobs to a GKE cluster.
+Please checkout [this tutorial](../../../doc/tutorials/elasticdl_cloud.md) for instructions on submitting jobs to a GKE cluster.
 
 ### Submit to an on-premise Kubernetes cluster
 

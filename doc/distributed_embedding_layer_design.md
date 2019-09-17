@@ -201,7 +201,7 @@ a minibatch output with 3 instances, each with 2 embedding vectors
 ```
 Below, we will illustrate the forward-pass of model with `Embedding` in detail.
 
-In *ElasticDL*, the core function of model calculation is `worker.training_process_eagerly()`. It takes a minibatch of features and labels, performs forward calculation and backward calculation, and returns loss and gradients. Here is its code in [worker.py](../python/worker/worker.py):
+In *ElasticDL*, the core function of model calculation is `worker.training_process_eagerly()`. It takes a minibatch of features and labels, performs forward calculation and backward calculation, and returns loss and gradients. Here is its code in [worker.py](../elasticdl/python/worker/worker.py):
 
 ```
 [1]    def training_process_eagerly(self, features, labels):

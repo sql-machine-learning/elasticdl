@@ -107,7 +107,9 @@ class OptimizerWrapper(object):
     vectors and slot values in kv store after updating variables.
     """
 
-    def __init__(self, opt, kv_store_endpoint, embedding_dims):
+    def __init__(
+        self, opt, kv_store_endpoint, embedding_dims, use_async=False
+    ):
         """
         Arguments:
             opt: A TensorFlow optimizer instance.
@@ -116,15 +118,16 @@ class OptimizerWrapper(object):
                 {layer name: `embedding_dim`} where layer name is the
                 name of ElasticDL embedding layer and `embedding_dim`
                 is the output dimension of corresponding embedding layer.
+            use_async: A python bool. True if using asynchronous updates.
         """
         self._opt = opt
         self._kv_store_endpoint = kv_store_endpoint
         self._embed_dims = embedding_dims
+        self._use_async = use_async
         self._slot_initial_value = {}
         self._embed_variables = {}
         self._slot_variables = {}
 
-        # TODO: support more TensorFlow optimizers
         # "-" in slot name is not supported
         if isinstance(opt, SGD):
             self._allowed_slot_names = []
@@ -171,6 +174,14 @@ class OptimizerWrapper(object):
             grads_and_vars: A list of (gradient, variable) pairs.
 
         """
+
+        # TODO (yunjian.lmh): support `use_async=True`
+        if self._use_async:
+            raise NotImplementedError(
+                "`use_async=True` in Optimizer Wrapper is not "
+                "supported now."
+            )
+
         grads_and_vars = list(grads_and_vars)
 
         # split `grads_and_vars` according to whether it is from

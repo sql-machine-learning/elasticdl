@@ -267,7 +267,7 @@ class EmbeddingService(object):
 
     @staticmethod
     def lookup_embedding(
-        keys=None, embedding_service_endpoint=None, parse_type=np.float32
+        keys=[], embedding_service_endpoint=None, parse_type=np.float32
     ):
         """
         Arguments:
@@ -312,8 +312,8 @@ class EmbeddingService(object):
 
     @staticmethod
     def update_embedding(
-        keys=None,
-        embedding_vectors=None,
+        keys=[],
+        embedding_vectors=[],
         embedding_service_endpoint=None,
         set_if_not_exist=False,
     ):
@@ -330,16 +330,15 @@ class EmbeddingService(object):
         """
         if not embedding_service_endpoint:
             raise Exception("Can't find embedding service!")
-        if (
-            keys is None
-            or embedding_vectors is None
-            or len(keys) != len(embedding_vectors)
-        ):
+        key_num = len(keys)
+        embedding_vector_num = len(embedding_vectors)
+        if key_num != embedding_vector_num:
             raise Exception(
-                "keys and embedding_vectors can not be 'None'. "
-                "And the length of keys must equal to the first dimension "
-                "of embedding_vectors's shape."
+                "The number of keys %d does not equal to the number of "
+                "embedding vectors %d." % (key_num, embedding_vector_num)
             )
+        if not key_num:
+            return
         startup_nodes = [
             {"host": ip, "port": "%d" % port}
             for ip, port_list in embedding_service_endpoint.items()

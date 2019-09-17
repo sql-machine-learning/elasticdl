@@ -19,6 +19,7 @@ from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.lr_modulation import (
     add_lr_modulation_to_optimizer,
 )
+from elasticdl.python.master.optimizer_wrapper import OptimizerWrapper
 
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
@@ -36,11 +37,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         checkpoint_service,
         evaluation_service,
         embedding_service_endpoint=None,
+        embedding_dims={},
         lr_staleness_modulation=False,
         use_async=False,
     ):
         # TODO: group params together into a single object.
-        self._opt = optimizer
         self._task_d = task_d
         self._lock = threading.Lock()
         self._gradient_sum = {}
@@ -59,15 +60,18 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version = 0
         self._embedding_service_endpoint = embedding_service_endpoint
         self._init_model(checkpoint_filename_for_init, init_var)
-        self._modulate_lr_if_needed()
+        self._opt = self._init_optimizer(
+            optimizer, embedding_service_endpoint, embedding_dims, use_async
+        )
 
         self._checkpoint_service = checkpoint_service
         self._evaluation_service = evaluation_service
         if evaluation_service:
             evaluation_service.set_master_servicer(self)
 
-    # TODO: This is currently being used by multiple tests to initilize
-    # self._model, where the initialization should be done via constructor.
+    # TODO: Multiple tests are currently using the function `set_model_var` to
+    # initialize self._model, where the initialization should be done via
+    # servicer's constructor.
     def set_model_var(self, name, value):
         """Add or set model variable. Value should be a float32 ndarray"""
         if value.dtype != np.float32:
@@ -76,9 +80,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             value, name=MasterServicer.var_name_encode(name)
         )
 
-    def _modulate_lr_if_needed(self):
+    def _modulate_lr_if_needed(self, opt):
         if self._use_async and self._lr_staleness_modulation:
-            self._lr_modulation = add_lr_modulation_to_optimizer(self._opt)
+            self._lr_modulation = add_lr_modulation_to_optimizer(opt)
         else:
             self._lr_modulation = None
 
@@ -105,6 +109,18 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 "the worker."
             )
 
+    def _init_optimizer(
+        self, opt, embedding_service_endpoint, embedding_dims, use_async
+    ):
+        # `embedding_service_endpoint` is not None means ElasticDL embedding
+        # layers are used
+        self._modulate_lr_if_needed(opt)
+        if embedding_service_endpoint:
+            return OptimizerWrapper(
+                opt, embedding_service_endpoint, embedding_dims, use_async
+            )
+        return opt
+
     @staticmethod
     def var_name_encode(name):
         return name.replace(":", "-")
@@ -116,7 +132,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         task_id, task = self._task_d.get(request.worker_id)
         if task:
             res.task_id = task_id
-            res.shard_file_name = task.file_name
+            res.shard_name = task.shard_name
             res.start = task.start
             res.end = task.end
             res.type = task.type
@@ -207,47 +223,12 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             grad_var.append((self._gradient_sum_indexed[k], self._model[k]))
 
         # (grad, var) pair of ElasticDL Embedding layer
-        edl_embedding_offset = len(grad_var)
-        unique_ids_list = []
         if self._edl_embedding_gradients:
             for layer_name, grads in self._edl_embedding_gradients.items():
-                unique_ids, idx = tf.unique(grads.indices)
-                unique_ids_list.append(unique_ids)
-                grads_idx_transformed = tf.IndexedSlices(grads.values, idx)
-                keys = [
-                    Embedding.get_key([layer_name, i])
-                    for i in unique_ids.numpy()
-                ]
-                embeddings, unknown_keys = EmbeddingService.lookup_embedding(
-                    embedding_service_endpoint=(
-                        self._embedding_service_endpoint
-                    ),
-                    keys=keys,
-                )
-                if unknown_keys:
-                    raise RuntimeError(
-                        "Master reviced %d unknown embedding keys: %s ..."
-                        % (len(unknown_keys), str(unknown_keys[0]))
-                    )
-                if not embeddings:
-                    continue
-                embeddings = np.concatenate(embeddings, axis=0).reshape(
-                    len(keys), -1
-                )
-                embedding_var = tf.Variable(embeddings)
-                grad_var.append((grads_idx_transformed, embedding_var))
+                grad_var.append((grads, layer_name))
 
-        # TODO: support optimizer with slots such as Adam, FTRL
         self._opt.apply_gradients(grad_var)
 
-        # report updated embedding table to EmbeddingService
-        self._update_edl_embedding_table(
-            zip(
-                self._edl_embedding_gradients.keys(),
-                unique_ids_list,
-                [v for g, v in grad_var[edl_embedding_offset:]],
-            )
-        )
         self._update_model_version()
         self._gradient_sum.clear()
         self._gradient_sum_indexed.clear()

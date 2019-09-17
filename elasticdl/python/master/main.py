@@ -1,10 +1,8 @@
 import os
 import time
 from concurrent import futures
-from contextlib import closing
 
 import grpc
-import recordio
 from kubernetes.client import V1EnvVar
 
 from elasticdl.proto import elasticdl_pb2_grpc
@@ -14,6 +12,7 @@ from elasticdl.python.common.constants import (
     JobType,
     WorkerManagerStatus,
 )
+from elasticdl.python.common.data_reader import RecordIODataReader
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_util import get_logger
 from elasticdl.python.common.model_helper import (
@@ -40,23 +39,15 @@ def _make_task_dispatcher(
     records_per_task,
     num_epochs,
 ):
-    def _collect_file_records_from_dir(data_dir):
-        if not data_dir:
-            return {}
-        f_records = {}
-        for f in os.listdir(data_dir):
-            p = os.path.join(data_dir, f)
-            with closing(recordio.Index(p)) as rio:
-                f_records[p] = rio.num_records()
-        return f_records
-
-    training_f_records = _collect_file_records_from_dir(training_data_dir)
-    evaluation_f_records = _collect_file_records_from_dir(evaluation_data_dir)
-    prediction_f_records = _collect_file_records_from_dir(prediction_data_dir)
+    # TODO: Support any subclasses of `AbstractDataReader`
+    # and support passing specified parameters to the constructor
+    prediction_f_records = RecordIODataReader(
+        data_dir=prediction_data_dir
+    ).create_shards()
 
     return _TaskDispatcher(
-        training_f_records,
-        evaluation_f_records,
+        RecordIODataReader(data_dir=training_data_dir).create_shards(),
+        RecordIODataReader(data_dir=evaluation_data_dir).create_shards(),
         prediction_f_records,
         records_per_task,
         # Only generate prediction tasks for 1 epoch
@@ -172,6 +163,7 @@ def main():
         task_d.set_evaluation_service(evaluation_service)
 
     embedding_service_endpoint = None
+    embedding_dims = {}
     # Search for embedding layers in the model,
     # if found, initialize embedding service
     layers = find_layer(model_inst, Embedding)
@@ -193,6 +185,9 @@ def main():
             "Embedding service start succeeded. The endpoint is %s."
             % str(embedding_service_endpoint)
         )
+        embedding_dims = dict(
+            [(layer.name, layer.output_dim) for layer in layers]
+        )
 
     # The master service
     logger.info("Starting master service")
@@ -212,6 +207,7 @@ def main():
         optimizer,
         task_d,
         init_var=model_inst.trainable_variables if model_inst.built else [],
+        embedding_dims=embedding_dims,
         checkpoint_filename_for_init=args.checkpoint_filename_for_init,
         checkpoint_service=checkpoint_service,
         evaluation_service=evaluation_service,

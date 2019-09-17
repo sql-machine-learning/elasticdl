@@ -1,9 +1,11 @@
 import argparse
 
 from elasticdl.python.common.args import (
+    ALL_ARGS_GROUPS,
     add_common_params,
     add_train_params,
     pos_int,
+    print_args,
 )
 
 
@@ -37,6 +39,7 @@ def parse_args():
     add_train_params(parser)
 
     args = parser.parse_args()
+    print_args(args, groups=ALL_ARGS_GROUPS)
 
     if all(
         v == "" or v is None

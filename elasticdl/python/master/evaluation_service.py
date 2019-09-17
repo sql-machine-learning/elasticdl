@@ -5,6 +5,7 @@ from threading import Thread
 
 import numpy as np
 
+from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.common.ndarray import tensor_to_ndarray
 
@@ -155,8 +156,8 @@ class EvaluationService(object):
         with self._lock:
             if self._eval_job is None and self._eval_checkpoint_versions:
                 checkpoint_version = self._eval_checkpoint_versions.pop(0)
-                tasks = self._task_d.create_evaluation_tasks(
-                    checkpoint_version
+                tasks = self._task_d.create_tasks(
+                    elasticdl_pb2.EVALUATION, checkpoint_version
                 )
                 self._eval_job = _EvaluationJob(checkpoint_version, len(tasks))
                 return True
