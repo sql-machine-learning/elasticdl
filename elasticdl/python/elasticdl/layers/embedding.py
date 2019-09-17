@@ -1,8 +1,12 @@
+import collections
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.utils import tf_utils
 
 from elasticdl.python.master.embedding_service import EmbeddingService
+
+
+EmbeddingAndIds = collections.namedtuple('EmbeddingAndIds', ['batch_embedding', 'batch_ids'])
 
 
 class Embedding(tf.keras.layers.Layer):
@@ -59,14 +63,14 @@ class Embedding(tf.keras.layers.Layer):
         # iterations.
         # `tf.Variable` requires initial value if shape has `None` dimension.
         self._bet_ids_pair_graph = [
-            (
-                tf.Variable(
+            EmbeddingAndIds(
+                batch_embedding = tf.Variable(
                     initial_value=tf.zeros((1, self.output_dim)),
                     shape=tf.TensorShape((None, self.output_dim)),
                     dtype=tf.float32,
                     trainable=True,
                 ),
-                tf.Variable(
+                batch_ids = tf.Variable(
                     initial_value=tf.zeros((1, 1), dtype=tf.int64),
                     shape=tf.TensorShape(None),
                     dtype=tf.int64,
@@ -163,6 +167,22 @@ class Embedding(tf.keras.layers.Layer):
         embedding_vectors = np.concatenate(embedding_vectors, axis=0)
         return embedding_vectors.reshape((len(keys), self.output_dim))
 
+    def _record_gradients_of_tensor(self, batch_embedding, ids):
+        if tf.executing_eagerly():
+            self.tape.watch(batch_embedding)
+            self._bet_ids_pair_eagerly.append(
+                EmbeddingAndIds(batch_embedding, ids)
+            )
+        else:
+            # In graph mode, assigning tensors to trainable variables is
+            # allowed and tape can record the gradients of trainable
+            # variables automatically.
+            embedding_and_ids = self._bet_ids_pair_graph[0]
+            embedding_and_ids.batch_embedding.assign(batch_embedding)
+            embedding_and_ids.batch_ids.assign(ids)
+            batch_embedding = embedding_and_ids.batch_embedding
+        return batch_embedding
+
     def call(self, input):
         if isinstance(input, tf.SparseTensor):
             return self._sparse_input_call(input)
@@ -178,17 +198,9 @@ class Embedding(tf.keras.layers.Layer):
         )
         # TODO: use tf.cond rather than python if statement
         if self.tape:
-            if tf.executing_eagerly():
-                self.tape.watch(batch_embedding)
-                self._bet_ids_pair_eagerly.append((batch_embedding, flat_ids))
-                batch_embedding = self._bet_ids_pair_eagerly[-1][0]
-            else:
-                # In graph mode, assigning tensors to trainable variables is
-                # allowed and tape can record the gradients of trainable
-                # variables automatically.
-                self._bet_ids_pair_graph[0][0].assign(batch_embedding)
-                self._bet_ids_pair_graph[0][1].assign(flat_ids)
-                batch_embedding = self._bet_ids_pair_graph[0][0]
+            batch_embedding = (
+                self._record_gradients_of_tensor(batch_embedding, flat_ids)
+            )
 
         outputs = tf.gather(batch_embedding, idx)
         # tf.reshape does not support shape with None. Replace None with -1.
@@ -212,19 +224,9 @@ class Embedding(tf.keras.layers.Layer):
         )
         # TODO: use tf.cond rather than python if statement
         if self.tape:
-            if tf.executing_eagerly():
-                self.tape.watch(batch_embedding)
-                self._bet_ids_pair_eagerly.append(
-                    (batch_embedding, unique_ids)
-                )
-                batch_embedding = self._bet_ids_pair_eagerly[-1][0]
-            else:
-                # In graph mode, assigning tensors to trainable variables is
-                # allowed and tape can record the gradients of trainable
-                # variables automatically.
-                self._bet_ids_pair_graph[0][0].assign(batch_embedding)
-                self._bet_ids_pair_graph[0][1].assign(unique_ids)
-                batch_embedding = self._bet_ids_pair_graph[0][0]
+            batch_embedding = self._record_gradients_of_tensor(
+                batch_embedding, unique_ids
+            )
 
         segment_ids = sparse_input.indices[:, 0]
         if segment_ids.dtype != tf.int32:
