@@ -91,8 +91,8 @@ class EmbeddingServiceTest(unittest.TestCase):
             origin_data = np.random.rand(100, 10).astype(np.float32)
             keys = ["test_%d" % i for i in range(origin_data.shape[0])]
 
-            EmbeddingService.update_embedding(keys, origin_data)
-            lookup_data, unknown_keys_idx = EmbeddingService.lookup_embedding(
+            embedding_service.update_embedding(keys, origin_data)
+            lookup_data, unknown_keys_idx = embedding_service.lookup_embedding(
                 keys, parse_type=np.float32
             )
             self.assertTrue(len(unknown_keys_idx) == 0)
@@ -104,10 +104,10 @@ class EmbeddingServiceTest(unittest.TestCase):
             # Test set_if_not_exist
             origin_data_2 = np.random.rand(100, 10).astype(np.float32)
             self.assertFalse(np.equal(origin_data, origin_data_2).all())
-            EmbeddingService.update_embedding(
+            embedding_service.update_embedding(
                 keys, origin_data_2, set_if_not_exist=True
             )
-            lookup_data, unknown_keys_idx = EmbeddingService.lookup_embedding(
+            lookup_data, unknown_keys_idx = embedding_service.lookup_embedding(
                 keys, parse_type=np.float32
             )
             lookup_data = np.concatenate(lookup_data, axis=0)
@@ -117,7 +117,7 @@ class EmbeddingServiceTest(unittest.TestCase):
 
             # Test non-exist keys
             keys_do_not_exist = ["test_no_exist_%d" % i for i in range(10)]
-            lookup_data, unknown_keys_idx = EmbeddingService.lookup_embedding(
+            lookup_data, unknown_keys_idx = embedding_service.lookup_embedding(
                 keys_do_not_exist, parse_type=np.float32
             )
             self.assertTrue(len(unknown_keys_idx) == 10)
