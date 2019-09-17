@@ -169,7 +169,7 @@ def main():
     layers = find_layer(model_inst, Embedding)
     if layers:
         embedding_service = EmbeddingService()
-        embedding_service_endpoint = embedding_service.start_embedding_service(
+        embedding_service.start_embedding_service(
             job_name=args.job_name,
             image_name=args.worker_image,
             namespace=args.namespace,
@@ -183,7 +183,7 @@ def main():
         )
         logger.info(
             "Embedding service start succeeded. The endpoint is %s."
-            % str(embedding_service_endpoint)
+            % str(embedding_service._embedding_service_endpoint)
         )
         embedding_dims = dict(
             [(layer.name, layer.output_dim) for layer in layers]

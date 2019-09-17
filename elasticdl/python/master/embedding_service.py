@@ -82,7 +82,9 @@ class EmbeddingService(object):
             address_ip: [30001 + i for i in range(6)]
         }
 
-    def _create_redis_cluster(self):
+    def _create_redis_cluster(self, test_endpoint):
+        if not self._embedding_service_endpoint and test_endpoint:
+            self._embedding_service_endpoint = test_endpoint
         redis_cluster_command = " ".join(
             [
                 "%s:%d" % (ip, port)
@@ -136,7 +138,7 @@ class EmbeddingService(object):
             restart_policy=restart_policy,
             **kargs,
         )
-        self._create_redis_cluster()
+        self._create_redis_cluster(test_endpoint=None)
 
     def stop_embedding_service(self, save="nosave"):
         failed_redis_nodes = []

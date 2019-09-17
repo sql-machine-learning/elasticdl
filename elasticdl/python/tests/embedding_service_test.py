@@ -58,8 +58,10 @@ class EmbeddingServiceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             embedding_endpoint = start_redis_instances(temp_dir)
             # start
-            embedding_service = EmbeddingService(embedding_endpoint)
-            embedding_endpoint = embedding_service._create_redis_cluster()
+            embedding_service = EmbeddingService()
+            embedding_endpoint = embedding_service._create_redis_cluster(
+                test_endpoint=embedding_endpoint
+            )
             # wait for cluster up-running
             time.sleep(1)
             self.assertFalse(embedding_endpoint is None)
@@ -80,18 +82,18 @@ class EmbeddingServiceTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             embedding_endpoint = start_redis_instances(temp_dir)
             # start
-            embedding_service = EmbeddingService(embedding_endpoint)
-            embedding_endpoint = embedding_service._create_redis_cluster()
+            embedding_service = EmbeddingService()
+            embedding_endpoint = embedding_service._create_redis_cluster(
+                embedding_endpoint
+            )
             # wait for cluster up-running
             time.sleep(1)
             origin_data = np.random.rand(100, 10).astype(np.float32)
             keys = ["test_%d" % i for i in range(origin_data.shape[0])]
 
-            EmbeddingService.update_embedding(
-                keys, origin_data, embedding_endpoint
-            )
+            EmbeddingService.update_embedding(keys, origin_data)
             lookup_data, unknown_keys_idx = EmbeddingService.lookup_embedding(
-                keys, embedding_endpoint, parse_type=np.float32
+                keys, parse_type=np.float32
             )
             self.assertTrue(len(unknown_keys_idx) == 0)
             output_length = len(keys)
@@ -103,10 +105,10 @@ class EmbeddingServiceTest(unittest.TestCase):
             origin_data_2 = np.random.rand(100, 10).astype(np.float32)
             self.assertFalse(np.equal(origin_data, origin_data_2).all())
             EmbeddingService.update_embedding(
-                keys, origin_data_2, embedding_endpoint, set_if_not_exist=True
+                keys, origin_data_2, set_if_not_exist=True
             )
             lookup_data, unknown_keys_idx = EmbeddingService.lookup_embedding(
-                keys, embedding_endpoint, parse_type=np.float32
+                keys, parse_type=np.float32
             )
             lookup_data = np.concatenate(lookup_data, axis=0)
             lookup_data = lookup_data.reshape((output_length, -1))
@@ -116,7 +118,7 @@ class EmbeddingServiceTest(unittest.TestCase):
             # Test non-exist keys
             keys_do_not_exist = ["test_no_exist_%d" % i for i in range(10)]
             lookup_data, unknown_keys_idx = EmbeddingService.lookup_embedding(
-                keys_do_not_exist, embedding_endpoint, parse_type=np.float32
+                keys_do_not_exist, parse_type=np.float32
             )
             self.assertTrue(len(unknown_keys_idx) == 10)
             self.assertTrue(len(lookup_data) == 10)
