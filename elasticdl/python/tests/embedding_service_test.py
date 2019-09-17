@@ -59,7 +59,7 @@ class EmbeddingServiceTest(unittest.TestCase):
             embedding_endpoint = start_redis_instances(temp_dir)
             # start
             embedding_service = EmbeddingService()
-            embedding_endpoint = embedding_service._create_redis_cluster(
+            embedding_service._create_redis_cluster(
                 test_endpoint=embedding_endpoint
             )
             # wait for cluster up-running
@@ -83,7 +83,9 @@ class EmbeddingServiceTest(unittest.TestCase):
             embedding_endpoint = start_redis_instances(temp_dir)
             # start
             embedding_service = EmbeddingService()
-            embedding_service._create_redis_cluster(embedding_endpoint)
+            embedding_service._create_redis_cluster(
+                test_endpoint=embedding_endpoint
+            )
             # wait for cluster up-running
             time.sleep(1)
             origin_data = np.random.rand(100, 10).astype(np.float32)
