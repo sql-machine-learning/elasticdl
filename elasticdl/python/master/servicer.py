@@ -374,6 +374,20 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
         if not self._use_async:
             self._lock.acquire()
+        self._process_gradients(
+            edl_embedding_gradients, indexed_grads, tmp, request.model_version
+        )
+        if not self._use_async:
+            self._lock.release()
+
+        res.accepted = True
+        res.model_version = self._version
+        return res
+
+    def _process_gradients(
+        self, edl_embedding_gradients, indexed_grads, grads, request_version
+    ):
+        if not self._use_async:
             # grads of ElasticDL Embedding layer
             for k, v in edl_embedding_gradients.items():
                 if k in self._edl_embedding_gradients:
@@ -394,7 +408,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                     )
 
             # other grads
-            for k, v in tmp.items():
+            for k, v in grads.items():
                 if not self._use_async and k in self._gradient_sum:
                     self._gradient_sum[k] = self._gradient_sum[k] + v
                 else:
@@ -406,16 +420,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
         # staleness-aware learning rate modulation
         if self._lr_modulation:
-            staleness = max(1, self._version - request.model_version)
+            staleness = max(1, self._version - request_version)
             self._lr_modulation.set_multiplier(1.0 / staleness)
         if self._use_async or self._grad_n >= self._grad_to_wait:
             self._update_model()
-        if not self._use_async:
-            self._lock.release()
-
-        res.accepted = True
-        res.model_version = self._version
-        return res
 
     def ReportTaskResult(self, request, _):
         if request.err_message:
