@@ -1,8 +1,11 @@
+import math
 import os
 from abc import ABC, abstractmethod
 from contextlib import closing
 
 import recordio
+
+from elasticdl.python.common.odps_io import ODPSReader
 
 
 class AbstractDataReader(ABC):
@@ -61,3 +64,44 @@ class RecordIODataReader(AbstractDataReader):
             with closing(recordio.Index(p)) as rio:
                 f_records[p] = (start_ind, rio.num_records())
         return f_records
+
+
+class ODPSDataReader(AbstractDataReader):
+    def __init__(self, **kwargs):
+        AbstractDataReader.__init__(self, **kwargs)
+        self._kwargs = kwargs
+        self._reader = ODPSReader(
+            project=self._kwargs["project"],
+            access_id=self._kwargs["access_id"],
+            access_key=self._kwargs["access_key"],
+            endpoint=self._kwargs["endpoint"],
+            table=self._kwargs["table"],
+            num_processes=self._kwargs["num_processes"],
+        )
+
+    def read_records(self, task):
+        records = self._reader.read_batch(
+            start=task.start, end=task.end, columns=None
+        )
+        for batch in records:
+            yield batch
+
+    def create_shards(self):
+        table_size = self._reader.get_table_size()
+        records_per_task = self._kwargs["records_per_task"]
+        shards = {}
+        num_shards = math.floor(table_size / records_per_task)
+        start_ind = 0
+        for shard_id in range(num_shards):
+            shards["shard_" + str(shard_id)] = (
+                start_ind,
+                start_ind + records_per_task - 1,
+            )
+            start_ind += records_per_task
+        num_records_remain = table_size % records_per_task
+        if num_records_remain != 0:
+            shards["shard_" + str(num_shards)] = (
+                start_ind,
+                start_ind + num_records_remain,
+            )
+        return shards
