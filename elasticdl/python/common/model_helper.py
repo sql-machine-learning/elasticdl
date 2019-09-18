@@ -160,7 +160,7 @@ def get_non_embedding_trainable_vars(model, embedding_layers):
     """
     embedding_items = []
     for layer in embedding_layers:
-        embedding_items.extend([bet for bet, _ in layer.bet_ids_pair])
+        embedding_items.extend(layer.trainable_variables)
     return [
         var for var in model.trainable_variables if var not in embedding_items
     ]

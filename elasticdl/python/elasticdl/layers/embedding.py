@@ -1,8 +1,14 @@
+import collections
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.utils import tf_utils
 
 from elasticdl.python.master.embedding_service import EmbeddingService
+
+EmbeddingAndIds = collections.namedtuple(
+    "EmbeddingAndIds", ["batch_embedding", "batch_ids"]
+)
 
 
 class Embedding(tf.keras.layers.Layer):
@@ -51,7 +57,29 @@ class Embedding(tf.keras.layers.Layer):
         self.embedding_service_endpoint = embedding_service_endpoint
         self.tape = None
         self.lookup_func = None
-        self.bet_ids_pair = []
+
+        self._embedding_and_ids_eagerly = []
+
+        # BET's shape and ids' shape in `self._embedding_and_ids_graph` have
+        # `None` dimension. This is because they have different shapes in
+        # different iterations.
+        # `tf.Variable` requires initial value if shape has `None` dimension.
+        self._embedding_and_ids_graph = [
+            EmbeddingAndIds(
+                batch_embedding=tf.Variable(
+                    initial_value=tf.zeros((1, self.output_dim)),
+                    shape=tf.TensorShape((None, self.output_dim)),
+                    dtype=tf.float32,
+                    trainable=True,
+                ),
+                batch_ids=tf.Variable(
+                    initial_value=tf.zeros((1, 1), dtype=tf.int64),
+                    shape=tf.TensorShape(None),
+                    dtype=tf.int64,
+                    trainable=False,
+                ),
+            )
+        ]
 
     @tf_utils.shape_type_conversion
     def compute_output_shape(self, input_shape):
@@ -141,6 +169,22 @@ class Embedding(tf.keras.layers.Layer):
         embedding_vectors = np.concatenate(embedding_vectors, axis=0)
         return embedding_vectors.reshape((len(keys), self.output_dim))
 
+    def _record_gradients(self, batch_embedding, ids):
+        if tf.executing_eagerly():
+            self.tape.watch(batch_embedding)
+            self._embedding_and_ids_eagerly.append(
+                EmbeddingAndIds(batch_embedding, ids)
+            )
+        else:
+            # In graph mode, assigning tensors to trainable variables is
+            # allowed and tape can record the gradients of trainable
+            # variables automatically.
+            embedding_and_ids = self._embedding_and_ids_graph[0]
+            embedding_and_ids.batch_embedding.assign(batch_embedding)
+            embedding_and_ids.batch_ids.assign(ids)
+            batch_embedding = embedding_and_ids.batch_embedding
+        return batch_embedding
+
     def call(self, input):
         if isinstance(input, tf.SparseTensor):
             return self._sparse_input_call(input)
@@ -148,19 +192,17 @@ class Embedding(tf.keras.layers.Layer):
         ids = tf.convert_to_tensor(input, name="embedding_ids")
         flat_ids = tf.reshape(ids, [-1])
         unique_ids, idx = tf.unique(flat_ids)
-        batch_embedding_tensor = tf.py_function(
+        # Gradient for `batch_embedding` is SparseTensor here due to
+        # `tf.gather` op. `tf.gather` accesses tensor slices, resulting in
+        # sparse tensor gradient.
+        batch_embedding = tf.py_function(
             self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
         )
+        # TODO: use tf.cond rather than python if statement
         if self.tape:
-            # tape.watch works with eager mode only.
-            # Gradient for embeddings is SparseTensor here due to tf.gather op.
-            # tf.gather accesses tensor slices, resulting in sparse tensor
-            # gradient.
-            if not tf.executing_eagerly():
-                raise RuntimeError("tape.watch only works with eager mode")
-            self.tape.watch(batch_embedding_tensor)
-            self.bet_ids_pair.append((batch_embedding_tensor, flat_ids))
-        outputs = tf.gather(batch_embedding_tensor, idx)
+            batch_embedding = self._record_gradients(batch_embedding, flat_ids)
+
+        outputs = tf.gather(batch_embedding, idx)
         # tf.reshape does not support shape with None. Replace None with -1.
         if ids.get_shape().rank == 2:
             output_shape = (-1, ids.get_shape()[1], self.output_dim)
@@ -176,27 +218,33 @@ class Embedding(tf.keras.layers.Layer):
                 "combiner must set sum, mean or sqrtn for sparse input"
             )
         unique_ids, idx = tf.unique(sparse_input.values)
-        embeddings = tf.py_function(
+        # Gradient for `batch_embedding` is dense tensor.
+        batch_embedding = tf.py_function(
             self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
         )
+        # TODO: use tf.cond rather than python if statement
         if self.tape:
-            # tape.watch works with eager mode only
-            # gradient for embeddings is dense tensor for sparse_input_call
-            if not tf.executing_eagerly():
-                raise RuntimeError("tape.watch only works with eager mode")
-            self.tape.watch(embeddings)
-            self.bet_ids_pair.append((embeddings, unique_ids))
+            batch_embedding = self._record_gradients(
+                batch_embedding, unique_ids
+            )
+
         segment_ids = sparse_input.indices[:, 0]
         if segment_ids.dtype != tf.int32:
             segment_ids = tf.cast(segment_ids, tf.int32)
 
         if self.combiner == "sum":
-            embeddings = tf.sparse.segment_sum(embeddings, idx, segment_ids)
+            batch_embedding = tf.sparse.segment_sum(
+                batch_embedding, idx, segment_ids
+            )
         elif self.combiner == "mean":
-            embeddings = tf.sparse.segment_mean(embeddings, idx, segment_ids)
+            batch_embedding = tf.sparse.segment_mean(
+                batch_embedding, idx, segment_ids
+            )
         elif self.combiner == "sqrtn":
-            embeddings = tf.sparse.segment_sqrt_n(embeddings, idx, segment_ids)
-        return embeddings
+            batch_embedding = tf.sparse.segment_sqrt_n(
+                batch_embedding, idx, segment_ids
+            )
+        return batch_embedding
 
     def compute_mask(self, inputs, mask=None):
         if isinstance(input, tf.SparseTensor):
@@ -206,7 +254,7 @@ class Embedding(tf.keras.layers.Layer):
         return tf.math.not_equal(inputs, 0)
 
     def reset(self):
-        self.bet_ids_pair = []
+        self._embedding_and_ids_eagerly = []
         self.tape = None
 
     def set_tape(self, tape):
@@ -214,3 +262,12 @@ class Embedding(tf.keras.layers.Layer):
 
     def set_endpoint(self, endpoint):
         self.embedding_service_endpoint = endpoint
+
+    @property
+    def embedding_and_ids(self):
+        """
+        Return bet and ids pairs.
+        """
+        if self._embedding_and_ids_eagerly:
+            return self._embedding_and_ids_eagerly
+        return self._embedding_and_ids_graph
