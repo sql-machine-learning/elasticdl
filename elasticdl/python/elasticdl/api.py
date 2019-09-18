@@ -39,11 +39,6 @@ def train(args):
         )
     )
 
-    logger.info("============================")
-    logger.info(args)
-    logger.info(container_args)
-    logger.info("============================")
-
     _submit_job(image_name, args, container_args)
     # TODO: print dashboard url after launching the master pod
 
@@ -75,11 +70,6 @@ def evaluate(args):
         )
     )
 
-    logger.info("============================")
-    logger.info(args)
-    logger.info(container_args)
-    logger.info("============================")
-
     _submit_job(image_name, args, container_args)
 
 
@@ -109,11 +99,6 @@ def predict(args):
             args, filter_args=["model_zoo", "cluster_spec", "worker_image"]
         )
     )
-
-    logger.info("============================")
-    logger.info(args)
-    logger.info(container_args)
-    logger.info("============================")
 
     _submit_job(image_name, args, container_args)
 

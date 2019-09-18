@@ -501,7 +501,13 @@ def build_arguments_from_parsed_result(args, filter_args=None):
     items = vars(args).items()
     if filter_args:
         items = filter(lambda item: item[0] not in filter_args, items)
-    arguments = map(str, chain(*items))
+
+    def _str_ignore_none(s):
+        if s is None:
+            return s
+        return str(s)
+
+    arguments = map(_str_ignore_none, chain(*items))
     arguments = [
         "--" + k if i % 2 == 0 else k for i, k in enumerate(arguments)
     ]
