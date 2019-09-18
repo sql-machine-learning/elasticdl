@@ -26,8 +26,8 @@ python setup.py install
 ### Setup kubernetes related environment
 
 ```bash
-kubectl apply -f manifests/examples/elasticdl-rbac.yaml
 minikube start --vm-driver=hyperkit --cpus 2 --memory 6144
+kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
 eval $(minikube docker-env)
 bash elasticdl/docker/build_all.sh
 ```

@@ -6,7 +6,7 @@ from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 class TaskQueueTest(unittest.TestCase):
     def test_create_get(self):
-        task_d = _TaskDispatcher({"f1": 10, "f2": 10}, {}, {}, 3, 1)
+        task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1)
 
         all_tasks = [
             ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
@@ -56,7 +56,7 @@ class TaskQueueTest(unittest.TestCase):
         self.assertTrue(task_d.finished())
 
     def test_epoch(self):
-        task_d = _TaskDispatcher({"f1": 10, "f2": 10}, {}, {}, 3, 2)
+        task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 2)
 
         epoch_tasks = [
             ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),

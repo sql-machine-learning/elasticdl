@@ -249,7 +249,7 @@ class ServicerTest(unittest.TestCase):
 
     def testReportTaskResult(self):
         task_d = _TaskDispatcher(
-            {"shard_1": 10, "shard_2": 9},
+            {"shard_1": (0, 10), "shard_2": (0, 9)},
             {},
             {},
             records_per_task=3,

@@ -59,7 +59,8 @@ class AbstractDataReader(ABC):
     @abstractmethod
     def create_shards(self):
         """This method creates the dictionary of shards where the keys are the
-        shard names and the values are the number of records.
+        shard names and the values are tuples of the starting
+        index and the number of records in each shard.
         """
         pass
 ```
