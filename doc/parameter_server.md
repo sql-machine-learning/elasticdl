@@ -2,7 +2,7 @@
 
 ## Overview
 
-A typical parameter server(pserver) architecture contains three roles:
+A typical parameter server (pserver) architecture contains three roles:
 
 - master, calling Kubernetes API to start workers and optionally parameter servers, and scheduling tasks to workers
 - pserver, maintaining the global model, and providing parameter pull/push/optimize/checkpoint service
@@ -13,10 +13,8 @@ Please refer to:
 
 ![parameter_server](./images/parameter_server.png)
 
-## Key concepts
 
-
-### Parameter sharding
+## Parameter Sharding
 
 
 We prefer to shard the global model for some reasons:
@@ -40,7 +38,7 @@ However, such a solution creates a complex workflow which introduces too many cr
 
 We propose an alternative solution that doesn't rely on Redis or Memcachd. Instead, the global model, including the large embedding tables, is sharded across parameter servers, and the local model contains only part of the embedding table -- the small fraction that is required to compute recent minibatch(es).
 
-### Parameter Initialization
+## Parameter Initialization
 
 
 Parameter initialization of a very big embedding table is lazy. For example, in online learning, there could be unkown item id in the training data. So, until worker send the unkown item id to pserver, will pserver initialize corresponding embedding vector and send back to worker. This is a `get_or_create` semantic.
@@ -48,19 +46,20 @@ Parameter initialization of a very big embedding table is lazy. For example, in 
 Other parameters could be initialized before training.
 
 
-## Workflow
 
-### Assumption
+## Distribution Strategy
 
 We apply different solutions to different scenarios.
 
 
 | scenario| hardware | update stragety | communication  stragety |
 | :----  |:----  |:---|:---|
-| Recommendation  | CPU|  Async |  Parameter server |
-| CV | GPU | BSP| Allreduce|
-| NLP | GPU | BSP| Allreduce |
+| Recommendation  | CPU|  async SGD|  Parameter server |
+| CV | GPU | BSP SGD| AllReduce|
+| NLP | GPU | BSP SGD| AllReduce |
 
+
+BSP is short for Bulk synchronous parallel.
 
 Following is the assumption under recommendation scenario:
 
@@ -70,13 +69,13 @@ Following is the assumption under recommendation scenario:
 
 **Note**
 
-Allreduce failover and pserver failover will be discussed on other design docs.
+AllReduce failover and pserver failover will be discussed on other design docs.
 
-### Master
+## Master
 
-- responsible for creating/deleting/scheduling pserver and worker
-- define parameter sharding strategy, and generate unique key for each parameter(or sharded parameter)
-- define the hash strategy from parameter key to pserver id 
+- Master is responsible for creating/deleting/scheduling pserver and worker
+- Master defines a parameter sharding strategy, and generate unique key for each parameter(or sharded parameter)
+- Master defines a hash strategy from parameter key to pserver id 
 
 Workflow:
 
@@ -88,10 +87,10 @@ Workflow:
 5. monitor cluster, and increase or decrease worker according to priority
 
 
-### Pserver
+## Pserver
 
-- provide kv store service, worker could push/pull <key, value> to the pserver
-- provide optimize service, apply gradients to parameters and update back to kv store
+- Pserver provides kv store service, and workers could push/pull <key, value> to the pserver
+- Pserver provides optimize service, apply gradients to parameters and update back to kv store
 
 
 Workflow:
@@ -107,10 +106,10 @@ Workflow:
 
 We could implement the kv store by ourselves, or we could use some already solution, such as redis.
 
-### Worker
+## Worker
 
-- define forward/backward computation proccess
-- define dataloader module
+- Worker defines a forward/backward computation proccess
+- Worker defines a dataloader module
 
 Workflow:
 
@@ -128,7 +127,7 @@ There is also another kind of worker who does an evalution job. It define its ow
 There could be some same item id in a minibatch data. So some gradient vector of embedding table will have the same item id. We need to sum these gradient before pushing to pserver.
 
 
-### Delayed model updating
+## Delayed model updating
 
 In order to reduce the communication overhead between workers and pservers, we propose a stragety called delayed model updating.
 
