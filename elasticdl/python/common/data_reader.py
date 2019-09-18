@@ -87,21 +87,22 @@ class ODPSDataReader(AbstractDataReader):
             yield batch
 
     def create_shards(self):
+        shard_name_prefix = "shard_"
         table_size = self._reader.get_table_size()
         records_per_task = self._kwargs["records_per_task"]
         shards = {}
         num_shards = math.floor(table_size / records_per_task)
         start_ind = 0
         for shard_id in range(num_shards):
-            shards["shard_" + str(shard_id)] = (
+            shards[shard_name_prefix + str(shard_id)] = (
                 start_ind,
-                start_ind + records_per_task - 1,
+                records_per_task,
             )
             start_ind += records_per_task
-        num_records_remain = table_size % records_per_task
-        if num_records_remain != 0:
-            shards["shard_" + str(num_shards)] = (
+        num_records_left = table_size % records_per_task
+        if num_records_left != 0:
+            shards[shard_name_prefix + str(num_shards)] = (
                 start_ind,
-                start_ind + num_records_remain,
+                num_records_left,
             )
         return shards

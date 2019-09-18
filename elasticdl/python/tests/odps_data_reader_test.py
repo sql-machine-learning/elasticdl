@@ -40,17 +40,20 @@ class DataReaderTest(unittest.TestCase):
     Task = namedtuple("Task", ["start", "end", "shard_name"])
 
     def test_recordio_data_reader(self):
+        num_records = 128
         with tempfile.TemporaryDirectory() as temp_dir_name:
-            shard_name = _create_recordio_file(128, temp_dir_name)
+            shard_name = _create_recordio_file(num_records, temp_dir_name)
 
             # Test shards creation
-            expected_shards = {shard_name: (0, 128)}
+            expected_shards = {shard_name: (0, num_records)}
             reader = RecordIODataReader(data_dir=temp_dir_name)
             self.assertEqual(expected_shards, reader.create_shards())
 
             # Test records reading
-            records = list(reader.read_records(self.Task(0, 2, shard_name)))
-            self.assertEqual(len(records), 2)
+            records = list(
+                reader.read_records(self.Task(0, num_records, shard_name))
+            )
+            self.assertEqual(len(records), num_records)
             for record in records:
                 parsed_record = tf.io.parse_single_example(
                     record,
@@ -78,6 +81,7 @@ class DataReaderTest(unittest.TestCase):
         )
         odps_client = ODPS(access_id, access_key, project, endpoint)
         create_iris_odps_table(odps_client, project, test_table)
+        records_per_task = 50
 
         reader = ODPSDataReader(
             project=project,
@@ -86,14 +90,14 @@ class DataReaderTest(unittest.TestCase):
             endpoint=endpoint,
             table=test_table,
             num_processes=1,
-            records_per_task=50,
+            records_per_task=records_per_task,
         )
 
         # Test shards creation
         expected_shards = {
-            "shard_0": (0, 49),
-            "shard_1": (50, 99),
-            "shard_2": (100, 110),
+            "shard_0": (0, records_per_task),
+            "shard_1": (50, records_per_task),
+            "shard_2": (100, 10),
         }
         self.assertEqual(expected_shards, reader.create_shards())
 
