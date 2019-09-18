@@ -88,7 +88,7 @@ def parse_envs(arg):
 
 def add_bool_param(parser, name, default, help):
     parser.add_argument(
-        name,  # should be int --foo format
+        name,  # should be in "--foo" format
         nargs="?",
         const=not default,
         default=default,
@@ -492,13 +492,11 @@ def parse_worker_args(worker_args=None):
 
 def build_arguments_from_parsed_result(args, filter_args=None):
     """Resconstruct arguments from parsed result
-    Please be aware that for boolean arguments
-    + action="store_true", will be filtered if value is False
-    + action="store_false", will be filtered if value is True
     Args:
         args: result from `parser.parse_args()`
     Returns:
-        list of string: ready for parser to parse
+        list of string: ready for parser to parse,
+        such as ["--foo", "3", "--bar", False]
     """
     items = vars(args).items()
     if filter_args:
