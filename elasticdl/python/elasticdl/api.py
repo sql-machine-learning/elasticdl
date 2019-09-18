@@ -1,7 +1,10 @@
 import os
 
 from elasticdl.python.common import k8s_client as k8s
-from elasticdl.python.common.args import parse_envs
+from elasticdl.python.common.args import (
+    build_arguments_from_parsed_result,
+    parse_envs,
+)
 from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
@@ -23,70 +26,16 @@ def train(args):
     container_args = [
         "-m",
         "elasticdl.python.master.main",
-        "--job_name",
-        args.job_name,
         "--worker_image",
         image_name,
         "--model_zoo",
         _model_zoo_in_docker(args.model_zoo),
         "--cluster_spec",
         _cluster_spec_def_in_docker(args.cluster_spec),
-        "--num_workers",
-        str(args.num_workers),
-        "--master_resource_request",
-        args.master_resource_request,
-        "--master_resource_limit",
-        args.master_resource_limit,
-        "--worker_resource_request",
-        args.worker_resource_request,
-        "--worker_resource_limit",
-        args.worker_resource_limit,
-        "--envs",
-        args.envs,
-        "--namespace",
-        args.namespace,
-        "--tensorboard_log_dir",
-        args.tensorboard_log_dir,
-        "--records_per_task",
-        str(args.records_per_task),
-        "--num_epochs",
-        str(args.num_epochs),
-        "--grads_to_wait",
-        str(args.grads_to_wait),
-        "--minibatch_size",
-        str(args.minibatch_size),
-        "--training_data_dir",
-        args.training_data_dir,
-        "--evaluation_data_dir",
-        args.evaluation_data_dir,
-        "--checkpoint_steps",
-        str(args.checkpoint_steps),
-        "--checkpoint_dir",
-        args.checkpoint_dir,
-        "--keep_checkpoint_max",
-        str(args.keep_checkpoint_max),
-        "--evaluation_steps",
-        str(args.evaluation_steps),
-        "--evaluation_start_delay_secs",
-        str(args.evaluation_start_delay_secs),
-        "--evaluation_throttle_secs",
-        str(args.evaluation_throttle_secs),
-        "--dataset_fn",
-        args.dataset_fn,
-        "--loss",
-        args.loss,
-        "--optimizer",
-        args.optimizer,
-        "--eval_metrics_fn",
-        args.eval_metrics_fn,
-        "--model_def",
-        args.model_def,
-        "--model_params",
-        args.model_params,
     ]
-    container_args.extend(["--image_pull_policy", args.image_pull_policy])
-    container_args.extend(["--restart_policy", args.restart_policy])
-    container_args.extend(["--volume", args.volume])
+    container_args.extend(
+        build_arguments_from_parsed_result(args), filter_args=["model_zoo"]
+    )
 
     _submit_job(image_name, args, container_args)
     # TODO: print dashboard url after launching the master pod
@@ -106,44 +55,16 @@ def evaluate(args):
     container_args = [
         "-m",
         "elasticdl.python.master.main",
-        "--job_name",
-        args.job_name,
         "--worker_image",
         image_name,
         "--model_zoo",
         _model_zoo_in_docker(args.model_zoo),
         "--cluster_spec",
         _cluster_spec_def_in_docker(args.cluster_spec),
-        "--num_workers",
-        str(args.num_workers),
-        "--worker_resource_request",
-        args.worker_resource_request,
-        "--worker_resource_limit",
-        args.worker_resource_limit,
-        "--envs",
-        args.envs,
-        "--namespace",
-        args.namespace,
-        "--records_per_task",
-        str(args.records_per_task),
-        "--minibatch_size",
-        str(args.minibatch_size),
-        "--evaluation_data_dir",
-        args.evaluation_data_dir,
-        "--checkpoint_filename_for_init",
-        args.checkpoint_filename_for_init,
-        "--dataset_fn",
-        args.dataset_fn,
-        "--eval_metrics_fn",
-        args.eval_metrics_fn,
-        "--model_def",
-        args.model_def,
-        "--model_params",
-        args.model_params,
     ]
-    container_args.extend(["--image_pull_policy", args.image_pull_policy])
-    container_args.extend(["--restart_policy", args.restart_policy])
-    container_args.extend(["--volume", args.volume])
+    container_args.extend(
+        build_arguments_from_parsed_result(args), filter_args=["model_zoo"]
+    )
 
     _submit_job(image_name, args, container_args)
 
@@ -162,42 +83,16 @@ def predict(args):
     container_args = [
         "-m",
         "elasticdl.python.master.main",
-        "--job_name",
-        args.job_name,
         "--worker_image",
         image_name,
         "--model_zoo",
         _model_zoo_in_docker(args.model_zoo),
         "--cluster_spec",
         _cluster_spec_def_in_docker(args.cluster_spec),
-        "--num_workers",
-        str(args.num_workers),
-        "--worker_resource_request",
-        args.worker_resource_request,
-        "--worker_resource_limit",
-        args.worker_resource_limit,
-        "--envs",
-        args.envs,
-        "--namespace",
-        args.namespace,
-        "--records_per_task",
-        str(args.records_per_task),
-        "--minibatch_size",
-        str(args.minibatch_size),
-        "--prediction_data_dir",
-        args.prediction_data_dir,
-        "--checkpoint_filename_for_init",
-        args.checkpoint_filename_for_init,
-        "--dataset_fn",
-        args.dataset_fn,
-        "--model_def",
-        args.model_def,
-        "--model_params",
-        args.model_params,
     ]
-    container_args.extend(["--image_pull_policy", args.image_pull_policy])
-    container_args.extend(["--restart_policy", args.restart_policy])
-    container_args.extend(["--volume", args.volume])
+    container_args.extend(
+        build_arguments_from_parsed_result(args), filter_args=["model_zoo"]
+    )
 
     _submit_job(image_name, args, container_args)
 

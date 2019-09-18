@@ -1,4 +1,5 @@
 import argparse
+from itertools import chain
 
 from elasticdl.python.common.log_util import default_logger as logger
 
@@ -83,6 +84,17 @@ def parse_envs(arg):
             pre_key = fields[i][r + 1 :]  # noqa: E203
         i += 1
     return envs
+
+
+def add_bool_param(parser, name, default, help):
+    parser.add_argument(
+        name,  # should be int --foo format
+        nargs="?",
+        const=not default,
+        default=default,
+        type=lambda x: x.lower() in ["true", "yes", "t", "y"],
+        help=help,
+    )
 
 
 def add_common_params(parser):
@@ -262,13 +274,16 @@ def add_train_params(parser):
         default="",
         help="The path to save the final trained model",
     )
-    parser.add_argument(
-        "--use_async",
+
+    add_bool_param(
+        parser=parser,
+        name="--use_async",
         default=False,
         help="True for asynchronous SGD, False for synchronous SGD",
     )
-    parser.add_argument(
-        "--lr_staleness_modulation",
+    add_bool_param(
+        parser=parser,
+        name="--lr_staleness_modulation",
         default=False,
         help="If True, master will modulate the learning rate with staleness "
         "in asynchronous SGD",
@@ -473,3 +488,23 @@ def parse_worker_args(worker_args=None):
     print_args(args, groups=ALL_ARGS_GROUPS)
     logger.warning("Unknown arguments: %s", _)
     return args
+
+
+def build_arguments_from_parsed_result(args, filter_args=None):
+    """Resconstruct arguments from parsed result
+    Please be aware that for boolean arguments
+    + action="store_true", will be filtered if value is False
+    + action="store_false", will be filtered if value is True
+    Args:
+        args: result from `parser.parse_args()`
+    Returns:
+        list of string: ready for parser to parse
+    """
+    items = vars(args).items()
+    if filter_args:
+        items = filter(lambda item: item[0] not in filter_args, items)
+    arguments = map(str, chain(*items))
+    arguments = [
+        "--" + k if i % 2 == 0 else k for i, k in enumerate(arguments)
+    ]
+    return arguments
