@@ -41,7 +41,7 @@ class EmbeddingService(object):
         self._embedding_service_endpoint = None
         self._replicas = replicas
 
-        # TODO: Now, we use single pod to start redis cluster service, we
+        # TODO: Now, we use a single pod to start redis cluster service, we
         # should support a redis cluster service running on multi-pods in
         # the future.
 
@@ -73,7 +73,7 @@ class EmbeddingService(object):
         )
 
         # TODO: assign address with pod's domain name instead of pod's ip.
-        # and should not fix ports
+        # and should not use fixed ports
         address_ip = pod.status.pod_ip
         while not address_ip:
             pod = k8s_client.get_embedding_service_pod(embedding_service_id)
@@ -128,7 +128,7 @@ class EmbeddingService(object):
     ):
         self._start_embedding_pod_and_redis(
             command=["python"],
-            args=["-m", "elasticdl.python.common.start_redis"],
+            args=["-m", "elasticdl.python.master.redis_util"],
             embedding_service_id=embedding_service_id,
             resource_request=resource_request,
             resource_limit=resource_limit,
