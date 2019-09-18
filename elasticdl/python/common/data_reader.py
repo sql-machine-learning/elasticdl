@@ -24,7 +24,8 @@ class AbstractDataReader(ABC):
     @abstractmethod
     def create_shards(self):
         """This method creates the dictionary of shards where the keys
-        are the shard names and the values are the number of records.
+        are the shard names and the values are tuples of the starting
+        index and the number of records in each shard.
         """
         pass
 
@@ -51,11 +52,12 @@ class RecordIODataReader(AbstractDataReader):
 
     def create_shards(self):
         data_dir = self._kwargs["data_dir"]
+        start_ind = 0
         if not data_dir:
             return {}
         f_records = {}
         for f in os.listdir(data_dir):
             p = os.path.join(data_dir, f)
             with closing(recordio.Index(p)) as rio:
-                f_records[p] = rio.num_records()
+                f_records[p] = (start_ind, rio.num_records())
         return f_records

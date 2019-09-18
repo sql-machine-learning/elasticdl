@@ -195,7 +195,7 @@ class ReportBETGradientTest(unittest.TestCase):
                 np.all(tf.equal(grads.indices, result[name].indices))
             )
             self.assertTrue(
-                np.all(grads.values - result[name].values < 0.0001)
+                np.isclose(grads.values, result[name].values).all()
             )
 
         # make sure other gradients are calculated correctly
@@ -240,7 +240,7 @@ class ReportBETGradientTest(unittest.TestCase):
         )
 
         for i, j in zip(master._model.values(), expected_weights):
-            self.assertTrue(np.all(i.numpy() - j < 0.0001))
+            self.assertTrue(np.isclose(i.numpy(), j).all())
 
     def test_report_bet_gradients_master_to_service(self):
         layer_names = ["test_layer_1", "test_layer_2"]
@@ -301,10 +301,9 @@ class ReportBETGradientTest(unittest.TestCase):
 
         for layer in layer_names:
             self.assertTrue(
-                (
-                    expected_embedding_table[layer]
-                    - mock_embedding_service.mock_embedding_table[layer]
-                    < 0.0001
+                np.isclose(
+                    expected_embedding_table[layer],
+                    mock_embedding_service.mock_embedding_table[layer],
                 ).all()
             )
 

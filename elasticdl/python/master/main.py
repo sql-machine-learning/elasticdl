@@ -6,7 +6,7 @@ import grpc
 from kubernetes.client import V1EnvVar
 
 from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.python.common.args import parse_envs
+from elasticdl.python.common.args import parse_envs, parse_master_args
 from elasticdl.python.common.constants import (
     GRPC,
     JobType,
@@ -22,7 +22,6 @@ from elasticdl.python.common.model_helper import (
     load_module,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.master.args import parse_args
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.evaluation_service import EvaluationService
@@ -56,7 +55,7 @@ def _make_task_dispatcher(
 
 
 def main():
-    args = parse_args()
+    args = parse_master_args()
     logger = get_logger("master", level=args.log_level.upper())
 
     # Master addr

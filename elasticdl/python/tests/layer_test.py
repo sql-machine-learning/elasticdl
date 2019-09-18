@@ -122,7 +122,7 @@ class EmbeddingLayerTest(unittest.TestCase):
             values = call_fn()
             values = values.numpy().reshape(-1, output_dim)
             for v, correct_v in zip(values, correct_values):
-                self.assertTrue((np.absolute(v - correct_v) < 0.00001).all())
+                self.assertTrue(np.isclose(v, correct_v).all())
 
     def test_embedding_layer(self):
         output_dim = 8
@@ -345,12 +345,9 @@ class EmbeddingLayerTest(unittest.TestCase):
                 for n, v in enumerate(correct_grads[combiner]):
                     self.assertAlmostEqual(grads[n][0], v, place)
                 self.assertTrue(
-                    (
-                        np.absolute(
-                            layer.embedding_and_ids[0].batch_ids.numpy()
-                            - np.array([1, 3, 2, 0, 6])
-                        )
-                        < 0.00001
+                    np.isclose(
+                        layer.embedding_and_ids[0].batch_ids.numpy(),
+                        np.array([1, 3, 2, 0, 6]),
                     ).all()
                 )
                 layer.reset()
