@@ -34,8 +34,9 @@ def train(args):
         _cluster_spec_def_in_docker(args.cluster_spec),
     ]
     container_args.extend(
-        build_arguments_from_parsed_result(args),
-        filter_args=["model_zoo", "cluster_spec", "worker_image"],
+        build_arguments_from_parsed_result(
+            args, filter_args=["model_zoo", "cluster_spec", "worker_image"]
+        )
     )
 
     _submit_job(image_name, args, container_args)
@@ -64,8 +65,9 @@ def evaluate(args):
         _cluster_spec_def_in_docker(args.cluster_spec),
     ]
     container_args.extend(
-        build_arguments_from_parsed_result(args),
-        filter_args=["model_zoo", "cluster_spec", "worker_image"],
+        build_arguments_from_parsed_result(
+            args, filter_args=["model_zoo", "cluster_spec", "worker_image"]
+        )
     )
 
     _submit_job(image_name, args, container_args)
@@ -93,8 +95,9 @@ def predict(args):
         _cluster_spec_def_in_docker(args.cluster_spec),
     ]
     container_args.extend(
-        build_arguments_from_parsed_result(args),
-        filter_args=["model_zoo", "cluster_spec", "worker_image"],
+        build_arguments_from_parsed_result(
+            args, filter_args=["model_zoo", "cluster_spec", "worker_image"]
+        )
     )
 
     _submit_job(image_name, args, container_args)
