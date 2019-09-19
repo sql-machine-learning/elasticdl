@@ -1,4 +1,3 @@
-import math
 import os
 from abc import ABC, abstractmethod
 from contextlib import closing
@@ -37,8 +36,7 @@ class RecordIODataReader(AbstractDataReader):
     def __init__(self, **kwargs):
         AbstractDataReader.__init__(self, **kwargs)
         self._kwargs = kwargs
-        if "data_dir" not in self._kwargs:
-            raise ValueError("data_dir is required for RecordIODataReader()")
+        _check_required_kwargs(["data_dir"], self._kwargs)
 
     def read_records(self, task):
         with closing(
@@ -70,13 +68,23 @@ class ODPSDataReader(AbstractDataReader):
     def __init__(self, **kwargs):
         AbstractDataReader.__init__(self, **kwargs)
         self._kwargs = kwargs
+        _check_required_kwargs(
+            [
+                "project",
+                "access_id",
+                "access_key",
+                "table",
+                "records_per_task",
+            ],
+            self._kwargs,
+        )
         self._reader = ODPSReader(
             project=self._kwargs["project"],
             access_id=self._kwargs["access_id"],
             access_key=self._kwargs["access_key"],
-            endpoint=self._kwargs["endpoint"],
             table=self._kwargs["table"],
-            num_processes=self._kwargs["num_processes"],
+            endpoint=self._kwargs.get("endpoint"),
+            num_processes=self._kwargs.get("num_processes", 1),
         )
 
     def read_records(self, task):
@@ -91,7 +99,7 @@ class ODPSDataReader(AbstractDataReader):
         table_size = self._reader.get_table_size()
         records_per_task = self._kwargs["records_per_task"]
         shards = {}
-        num_shards = math.floor(table_size / records_per_task)
+        num_shards = table_size // records_per_task
         start_ind = 0
         for shard_id in range(num_shards):
             shards[shard_name_prefix + str(shard_id)] = (
@@ -106,3 +114,12 @@ class ODPSDataReader(AbstractDataReader):
                 num_records_left,
             )
         return shards
+
+
+def _check_required_kwargs(required_args, kwargs):
+    missing_args = [k for k in required_args if k not in kwargs]
+    if missing_args:
+        raise ValueError(
+            "The following required arguments are missing: %s"
+            % ", ".join(missing_args)
+        )

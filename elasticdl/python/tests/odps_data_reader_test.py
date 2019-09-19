@@ -36,9 +36,10 @@ def _create_recordio_file(size, temp_dir):
     return temp_file.name
 
 
-class DataReaderTest(unittest.TestCase):
-    Task = namedtuple("Task", ["start", "end", "shard_name"])
+_MockedTask = namedtuple("Task", ["start", "end", "shard_name"])
 
+
+class RecordIODataReaderTest(unittest.TestCase):
     def test_recordio_data_reader(self):
         num_records = 128
         with tempfile.TemporaryDirectory() as temp_dir_name:
@@ -51,7 +52,7 @@ class DataReaderTest(unittest.TestCase):
 
             # Test records reading
             records = list(
-                reader.read_records(self.Task(0, num_records, shard_name))
+                reader.read_records(_MockedTask(0, num_records, shard_name))
             )
             self.assertEqual(len(records), num_records)
             for record in records:
@@ -65,47 +66,50 @@ class DataReaderTest(unittest.TestCase):
                 for k, v in parsed_record.items():
                     self.assertEqual(len(v.numpy()), 1)
 
-    @unittest.skipIf(
-        os.environ.get("ODPS_TESTS", "False") == "False",
-        "ODPS environment is not configured",
-    )
-    def test_odps_data_reader(self):
-        # Setup
-        project = os.environ[ODPSConfig.PROJECT_NAME]
+
+@unittest.skipIf(
+    os.environ.get("ODPS_TESTS", "False") == "False",
+    "ODPS environment is not configured",
+)
+class ODPSDataReaderTest(unittest.TestCase):
+    def setUp(self):
+        self.project = os.environ[ODPSConfig.PROJECT_NAME]
         access_id = os.environ[ODPSConfig.ACCESS_ID]
         access_key = os.environ[ODPSConfig.ACCESS_KEY]
         endpoint = os.environ.get(ODPSConfig.ENDPOINT)
-        test_table = "test_odps_data_reader_%d_%d" % (
+        self.test_table = "test_odps_data_reader_%d_%d" % (
             int(time.time()),
             random.randint(1, 101),
         )
-        odps_client = ODPS(access_id, access_key, project, endpoint)
-        create_iris_odps_table(odps_client, project, test_table)
-        records_per_task = 50
+        self.odps_client = ODPS(access_id, access_key, self.project, endpoint)
+        create_iris_odps_table(self.odps_client, self.project, self.test_table)
+        self.records_per_task = 50
 
-        reader = ODPSDataReader(
-            project=project,
+        self.reader = ODPSDataReader(
+            project=self.project,
             access_id=access_id,
             access_key=access_key,
             endpoint=endpoint,
-            table=test_table,
+            table=self.test_table,
             num_processes=1,
-            records_per_task=records_per_task,
+            records_per_task=self.records_per_task,
         )
 
-        # Test shards creation
+    def test_odps_data_reader_shards_creation(self):
         expected_shards = {
-            "shard_0": (0, records_per_task),
-            "shard_1": (50, records_per_task),
+            "shard_0": (0, self.records_per_task),
+            "shard_1": (50, self.records_per_task),
             "shard_2": (100, 10),
         }
-        self.assertEqual(expected_shards, reader.create_shards())
+        self.assertEqual(expected_shards, self.reader.create_shards())
 
-        # Test records reading
-        records = list(reader.read_records(self.Task(0, 2, "shard_0")))
+    def test_odps_data_reader_records_reading(self):
+        records = list(self.reader.read_records(_MockedTask(0, 2, "shard_0")))
         self.assertEqual(
             [[6.4, 2.8, 5.6, 2.2, 2], [5.0, 2.3, 3.3, 1.0, 1]], records
         )
 
-        # Teardown
-        odps_client.delete_table(test_table, project, if_exists=True)
+    def tearDown(self):
+        self.odps_client.delete_table(
+            self.test_table, self.project, if_exists=True
+        )
