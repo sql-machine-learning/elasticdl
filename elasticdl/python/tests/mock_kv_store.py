@@ -15,9 +15,7 @@ class MockKvStore(object):
                     )
         self._store = store
 
-    def lookup(
-        self, keys=[], embedding_service_endpoint=None, parse_type=np.float32
-    ):
+    def lookup(self, keys=[], parse_type=np.float32):
         """
         Lookup values in Kv Store. Arguments should keep same with
         EmbeddingService.lookup_embedding.
@@ -32,13 +30,7 @@ class MockKvStore(object):
                 unknown_key.append(i)
         return values, unknown_key
 
-    def update(
-        self,
-        keys=[],
-        embedding_vectors=[],
-        embedding_service_endpoint=None,
-        set_if_not_exist=False,
-    ):
+    def update(self, keys=[], embedding_vectors=[], set_if_not_exist=False):
         """
         Update values in Kv Store. Arguemnts should keep same with
         EmbeddingService.update_embedding.

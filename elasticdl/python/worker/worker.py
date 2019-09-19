@@ -36,7 +36,7 @@ class Worker(object):
         optimizer="optimizer",
         eval_metrics_fn="eval_metrics_fn",
         channel=None,
-        embedding_service_endpoint=None,
+        embedding_service=None,
         model_def=None,
         model_params="",
         prediction_outputs_processor="PredictionOutputsProcessor",
@@ -57,7 +57,7 @@ class Worker(object):
             eval_metrics_fn: The name of the evaluation metrics function
                 defined in the model file.
             channel: The channel for the gRPC master service.
-            embedding_service_endpoint: The endpoint to the embedding service.
+            embedding_service: The embedding service.
             model_def: The import path to the model definition
                 function/class in the model zoo, e.g.
                 "cifar10_subclass.CustomModel".
@@ -91,7 +91,7 @@ class Worker(object):
             model_params=model_params,
             prediction_outputs_processor=prediction_outputs_processor,
         )
-        self._embedding_service_endpoint = embedding_service_endpoint
+        self._embedding_service = embedding_service
         self.set_model(model_inst)
 
         if channel is None:
@@ -125,7 +125,7 @@ class Worker(object):
         """
         self._embedding_layers = find_layer(self._model, Embedding)
         for layer in self._embedding_layers:
-            layer.set_endpoint(self._embedding_service_endpoint)
+            layer.set_embeding_service(self._embedding_service)
         self._need_embedding_layer_check = (
             True if self._embedding_layers else False
         )

@@ -16,7 +16,6 @@ from tensorflow.keras.optimizers import (
 
 from elasticdl.python.common.log_util import default_logger as logger
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.master.embedding_service import EmbeddingService
 
 
 def _parse_lookup_values(values, key_index):
@@ -107,9 +106,7 @@ class OptimizerWrapper(object):
     vectors and slot values in kv store after updating variables.
     """
 
-    def __init__(
-        self, opt, kv_store_endpoint, embedding_dims, use_async=False
-    ):
+    def __init__(self, opt, kv_store_service, embedding_dims, use_async=False):
         """
         Arguments:
             opt: A TensorFlow optimizer instance.
@@ -121,7 +118,7 @@ class OptimizerWrapper(object):
             use_async: A python bool. True if using asynchronous updates.
         """
         self._opt = opt
-        self._kv_store_endpoint = kv_store_endpoint
+        self._kv_store_service = kv_store_service
         self._embed_dims = embedding_dims
         self._use_async = use_async
         self._slot_initial_value = {}
@@ -237,8 +234,8 @@ class OptimizerWrapper(object):
 
         keys = embed_keys + slot_keys
         embed_keys_num = len(embed_keys)
-        values, unknown_keys = EmbeddingService.lookup_embedding(
-            keys=keys, embedding_service_endpoint=self._kv_store_endpoint
+        values, unknown_keys = self._kv_store_service.lookup_embedding(
+            keys=keys
         )
 
         if unknown_keys:
@@ -471,9 +468,7 @@ class OptimizerWrapper(object):
                     keys.append(Embedding.get_key([layer, slot, id]))
                     values.append(v)
 
-        EmbeddingService.update_embedding(
-            keys, values, self._kv_store_endpoint
-        )
+        self._kv_store_service.update_embedding(keys, values)
 
     @property
     def allowed_slot_names(self):

@@ -161,7 +161,7 @@ def main():
         evaluation_service.start()
         task_d.set_evaluation_service(evaluation_service)
 
-    embedding_service_endpoint = None
+    embedding_service = None
     embedding_dims = {}
     # Search for embedding layers in the model,
     # if found, initialize embedding service
@@ -210,7 +210,7 @@ def main():
         checkpoint_filename_for_init=args.checkpoint_filename_for_init,
         checkpoint_service=checkpoint_service,
         evaluation_service=evaluation_service,
-        embedding_service_endpoint=embedding_service_endpoint,
+        embedding_service=embedding_service,
         lr_staleness_modulation=args.lr_staleness_modulation,
         use_async=args.use_async,
     )
@@ -247,8 +247,8 @@ def main():
             job_type,
             "--minibatch_size",
             str(args.minibatch_size),
-            "--embedding_service_endpoint",
-            str(embedding_service_endpoint),
+            "--embedding_service",
+            embedding_service,
             "--get_model_steps",
             str(args.get_model_steps),
         ]

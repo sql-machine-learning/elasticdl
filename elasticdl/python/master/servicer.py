@@ -15,7 +15,6 @@ from elasticdl.python.common.ndarray import (
 from elasticdl.python.common.tensor_helper import merge_indexed_slices
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
-from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.lr_modulation import (
     add_lr_modulation_to_optimizer,
 )
@@ -36,7 +35,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         checkpoint_filename_for_init,
         checkpoint_service,
         evaluation_service,
-        embedding_service_endpoint=None,
+        embedding_service=None,
         embedding_dims={},
         lr_staleness_modulation=False,
         use_async=False,
@@ -58,10 +57,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # optimizer's apply_gradients() function.
         self._model = {}
         self._version = 0
-        self._embedding_service_endpoint = embedding_service_endpoint
+        self._embedding_service = embedding_service
         self._init_model(checkpoint_filename_for_init, init_var)
         self._opt = self._init_optimizer(
-            optimizer, embedding_service_endpoint, embedding_dims, use_async
+            optimizer, embedding_service, embedding_dims, use_async
         )
 
         self._checkpoint_service = checkpoint_service
@@ -110,14 +109,14 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             )
 
     def _init_optimizer(
-        self, opt, embedding_service_endpoint, embedding_dims, use_async
+        self, opt, embedding_service, embedding_dims, use_async
     ):
-        # `embedding_service_endpoint` is not None means ElasticDL embedding
+        # `embedding_service` is not None means ElasticDL embedding
         # layers are used
         self._modulate_lr_if_needed(opt)
-        if embedding_service_endpoint:
+        if embedding_service:
             return OptimizerWrapper(
-                opt, embedding_service_endpoint, embedding_dims, use_async
+                opt, embedding_service, embedding_dims, use_async
             )
         return opt
 
@@ -194,10 +193,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             embeddings.extend([i for i in embedding_var.numpy()])
 
         if embeddings:
-            EmbeddingService.update_embedding(
-                keys=keys,
-                embedding_vectors=embeddings,
-                embedding_service_endpoint=self._embedding_service_endpoint,
+            self._embedding_service.update_embedding(
+                key=keys, embedding_vectors=embeddings
             )
 
     def _update_model(self):

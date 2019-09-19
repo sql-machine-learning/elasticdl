@@ -28,7 +28,7 @@ def main():
         args.minibatch_size,
         args.model_zoo,
         channel=channel,
-        embedding_service_endpoint=eval(args.embedding_service_endpoint),
+        embedding_service=args.embedding_service,
         dataset_fn=args.dataset_fn,
         loss=args.loss,
         optimizer=args.optimizer,

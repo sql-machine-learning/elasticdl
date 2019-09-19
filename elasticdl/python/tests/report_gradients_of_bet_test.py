@@ -20,9 +20,7 @@ class MockEmbeddingService:
     def __init__(self):
         self.mock_embedding_table = None
 
-    def mock_lookup_embedding(
-        self, keys=[], embedding_service_endpoint=None, parse_type=np.float32
-    ):
+    def mock_lookup_embedding(self, keys=[], parse_type=np.float32):
         embeddings = []
         for k in keys:
             layer_name, idx = k.split("-")
@@ -31,11 +29,7 @@ class MockEmbeddingService:
         return embeddings, []
 
     def mock_update_embedding(
-        self,
-        keys=[],
-        embedding_vectors=[],
-        embedding_service_endpoint=None,
-        set_if_not_exist=False,
+        self, keys=[], embedding_vectors=[], set_if_not_exist=False
     ):
         if embedding_vectors is None:
             return
@@ -72,7 +66,7 @@ class MockEdlEmbedding:
 
 class ReportBETGradientTest(unittest.TestCase):
     def _create_master_and_worker(
-        self, service_endpoint=None, embedding_dims={}
+        self, embedding_service=None, embedding_dims={}
     ):
         model_inst = custom_model()
         master = MasterServicer(
@@ -81,7 +75,7 @@ class ReportBETGradientTest(unittest.TestCase):
             tf.optimizers.SGD(0.1),
             None,
             init_var=model_inst.trainable_variables,
-            embedding_service_endpoint=service_endpoint,
+            embedding_service=embedding_service,
             embedding_dims=embedding_dims,
             checkpoint_filename_for_init=None,
             checkpoint_service=None,
@@ -102,13 +96,12 @@ class ReportBETGradientTest(unittest.TestCase):
 
     def test_report_bet_gradients_worker_to_master(self):
         layer_names = ["test_edlembedding_1", "test_edlembedding__2"]
+        mock_embedding_service = MockEmbeddingService()
         embedding_dims = dict([(layer, 3) for layer in layer_names])
-        mock_embedding_service_endpoint = {"host": "1.1.1.1", "port": "12123"}
         master, worker = self._create_master_and_worker(
-            mock_embedding_service_endpoint, embedding_dims
+            mock_embedding_service, embedding_dims
         )
 
-        mock_embedding_service = MockEmbeddingService()
         mock_embedding_service.mock_embedding_table = dict(
             [
                 (layer, np.zeros((5, 3), dtype=np.float32))
@@ -244,13 +237,12 @@ class ReportBETGradientTest(unittest.TestCase):
 
     def test_report_bet_gradients_master_to_service(self):
         layer_names = ["test_layer_1", "test_layer_2"]
+        mock_embedding_service = MockEmbeddingService()
         embedding_dims = dict([(layer, 4) for layer in layer_names])
-        mock_embedding_service_endpoint = {"host": "1.1.1.1", "port": "12123"}
         master, _ = self._create_master_and_worker(
-            mock_embedding_service_endpoint, embedding_dims
+            mock_embedding_service, embedding_dims
         )
 
-        mock_embedding_service = MockEmbeddingService()
         mock_embedding_service.mock_embedding_table = {
             layer_names[0]: np.zeros((2, 4), dtype=np.float32),
             layer_names[1]: np.zeros((4, 4), dtype=np.float32),
