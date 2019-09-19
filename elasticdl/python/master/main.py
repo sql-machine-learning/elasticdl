@@ -6,7 +6,11 @@ import grpc
 from kubernetes.client import V1EnvVar
 
 from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.python.common.args import parse_envs, parse_master_args
+from elasticdl.python.common.args import (
+    build_arguments_from_parsed_result,
+    parse_envs,
+    parse_master_args,
+)
 from elasticdl.python.common.constants import (
     GRPC,
     JobType,
@@ -227,31 +231,14 @@ def main():
         worker_args = [
             "-m",
             "elasticdl.python.worker.main",
-            "--model_zoo",
-            args.model_zoo,
             "--master_addr",
             master_addr,
-            "--log_level",
-            args.log_level,
-            "--dataset_fn",
-            args.dataset_fn,
-            "--loss",
-            args.loss,
-            "--optimizer",
-            args.optimizer,
-            "--eval_metrics_fn",
-            args.eval_metrics_fn,
-            "--model_def",
-            args.model_def,
             "--job_type",
             job_type,
-            "--minibatch_size",
-            str(args.minibatch_size),
             "--embedding_service_endpoint",
             str(embedding_service_endpoint),
-            "--get_model_steps",
-            str(args.get_model_steps),
         ]
+        worker_args.extend(build_arguments_from_parsed_result(args))
 
         env_dict = parse_envs(args.envs)
         env = []
