@@ -200,25 +200,21 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 embedding_service_endpoint=self._embedding_service_endpoint,
             )
 
-    def _update_model(self):
+    def _update_model(self, grads, indexed_grads, edl_embedding_gradients):
         grad_var = []
 
         # (grad, var) pairs excluding keras Embedding layer and
         # ElasticDL Embedding layer
-        for k in self._gradient_sum:
-            if not self._use_async:
-                self._gradient_sum[k] = (
-                    self._gradient_sum[k] / self._grad_to_wait
-                )
-            grad_var.append((self._gradient_sum[k], self._model[k]))
+        for k in grads:
+            grad_var.append((grads[k], self._model[k]))
 
         # (grad, var) pair of Keras Embedding layer
-        for k in self._gradient_sum_indexed:
-            grad_var.append((self._gradient_sum_indexed[k], self._model[k]))
+        for k in indexed_grads:
+            grad_var.append((indexed_grads[k], self._model[k]))
 
         # (grad, var) pair of ElasticDL Embedding layer
-        if self._edl_embedding_gradients:
-            for layer_name, grads in self._edl_embedding_gradients.items():
+        if edl_embedding_gradients:
+            for layer_name, grads in edl_embedding_gradients.items():
                 grad_var.append((grads, layer_name))
 
         self._opt.apply_gradients(grad_var)
@@ -414,16 +410,23 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 else:
                     self._gradient_sum[k] = v
             self._grad_n += 1
-        else:
-            # TODO: do not accumulate gradients but apply directly.
-            pass
 
         # staleness-aware learning rate modulation
         if self._lr_modulation:
             staleness = max(1, self._version - request_version)
             self._lr_modulation.set_multiplier(1.0 / staleness)
         if self._use_async or self._grad_n >= self._grad_to_wait:
-            self._update_model()
+            if not self._use_async:
+                # get gradient average for sync SGD
+                for k in self._gradient_sum:
+                    if not self._use_async:
+                        self._gradient_sum[k] = (
+                            self._gradient_sum[k] / self._grad_to_wait
+                        )
+                edl_embedding_gradients = self._edl_embedding_gradients
+                indexed_grads = self._gradient_sum_indexed
+                grads = self._gradient_sum
+            self._update_model(grads, indexed_grads, edl_embedding_gradients)
 
     def ReportTaskResult(self, request, _):
         if request.err_message:
