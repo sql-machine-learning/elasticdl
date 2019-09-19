@@ -182,7 +182,7 @@ class EmbeddingService(object):
             unknown_keys_idx: If some keys do not have a corresponding
             embedding vector, it returns the index of these keys.
         """
-        if not keys:
+        if keys is None:
             return [], []
         embedding_service = self._redis_cluster.pipeline()
         for key in keys:
@@ -213,9 +213,9 @@ class EmbeddingService(object):
         Returns:
             None
         """
-        if not keys:
+        if keys is None:
             keys = []
-        if not embedding_vectors:
+        if embedding_vectors is None:
             embedding_vectors = []
         key_num = len(keys)
         embedding_vector_num = len(embedding_vectors)
