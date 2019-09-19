@@ -17,7 +17,7 @@ def create_dataset_from_tasks(tasks):
         def gen(self):
             for task in self._tasks:
                 for data in self._data_reader.read_records(task):
-                    if data:
+                    if data is not None:
                         yield data
 
     generator = _Generator(tasks)

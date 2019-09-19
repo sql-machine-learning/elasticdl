@@ -129,5 +129,5 @@ class TaskDataService(object):
                 if len(self._pending_tasks_with_counts) == 1:
                     self._current_task = task
             for data in self._data_reader.read_records(task):
-                if data:
+                if data is not None:
                     yield data

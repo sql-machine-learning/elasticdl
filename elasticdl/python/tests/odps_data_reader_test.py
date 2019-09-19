@@ -16,6 +16,7 @@ from elasticdl.python.common.data_reader import (
     ODPSDataReader,
     RecordIODataReader,
 )
+from elasticdl.python.common.model_helper import load_module
 from elasticdl.python.tests.odps_test_utils import create_iris_odps_table
 
 
@@ -108,6 +109,35 @@ class ODPSDataReaderTest(unittest.TestCase):
         self.assertEqual(
             [[6.4, 2.8, 5.6, 2.2, 2], [5.0, 2.3, 3.3, 1.0, 1]], records
         )
+
+    def test_odps_data_reader_integration_with_local_keras(self):
+        model_spec = load_module(
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                "odps_test_module.py",
+            )
+        ).__dict__
+        model = model_spec["custom_model"]()
+        optimizer = model_spec["optimizer"]()
+        loss = model_spec["loss"]
+        dataset_fn = model_spec["dataset_fn"]
+
+        def _gen():
+            for data in self.reader.read_records(_MockedTask(0, 2, "shard_0")):
+                if data is not None:
+                    yield data
+
+        dataset = tf.data.Dataset.from_generator(_gen, (tf.float32))
+        dataset = dataset_fn(dataset, None)
+
+        loss_history = []
+        for features, labels in dataset:
+            with tf.GradientTape() as tape:
+                logits = model(features, training=True)
+                loss_value = loss(logits, labels)
+            loss_history.append(loss_value.numpy())
+            grads = tape.gradient(loss_value, model.trainable_variables)
+            optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
     def tearDown(self):
         self.odps_client.delete_table(
