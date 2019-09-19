@@ -55,7 +55,7 @@ def parse_embedding_service_args():
         "can be unavailable",
     )
 
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
 
     return args
 
