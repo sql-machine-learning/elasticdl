@@ -283,7 +283,11 @@ class ReportBETGradientTest(unittest.TestCase):
         ):
             with master._lock:
                 assert master._lock.locked()
-                master._update_model()
+                master._update_model(
+                    master._gradient_sum,
+                    master._gradient_sum_indexed,
+                    master._edl_embedding_gradients,
+                )
 
         expected_embedding_table = {
             layer_names[0]: np.array(
