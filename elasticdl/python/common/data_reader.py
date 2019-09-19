@@ -4,6 +4,8 @@ from contextlib import closing
 
 import recordio
 
+from elasticdl.python.common.odps_io import ODPSReader
+
 
 class AbstractDataReader(ABC):
     def __init__(self, **kwargs):
@@ -34,8 +36,7 @@ class RecordIODataReader(AbstractDataReader):
     def __init__(self, **kwargs):
         AbstractDataReader.__init__(self, **kwargs)
         self._kwargs = kwargs
-        if "data_dir" not in self._kwargs:
-            raise ValueError("data_dir is required for RecordIODataReader()")
+        _check_required_kwargs(["data_dir"], self._kwargs)
 
     def read_records(self, task):
         with closing(
@@ -61,3 +62,64 @@ class RecordIODataReader(AbstractDataReader):
             with closing(recordio.Index(p)) as rio:
                 f_records[p] = (start_ind, rio.num_records())
         return f_records
+
+
+class ODPSDataReader(AbstractDataReader):
+    def __init__(self, **kwargs):
+        AbstractDataReader.__init__(self, **kwargs)
+        self._kwargs = kwargs
+        _check_required_kwargs(
+            [
+                "project",
+                "access_id",
+                "access_key",
+                "table",
+                "records_per_task",
+            ],
+            self._kwargs,
+        )
+        self._reader = ODPSReader(
+            project=self._kwargs["project"],
+            access_id=self._kwargs["access_id"],
+            access_key=self._kwargs["access_key"],
+            table=self._kwargs["table"],
+            endpoint=self._kwargs.get("endpoint"),
+            num_processes=self._kwargs.get("num_processes", 1),
+        )
+
+    def read_records(self, task):
+        records = self._reader.read_batch(
+            start=task.start, end=task.end, columns=None
+        )
+        for batch in records:
+            yield batch
+
+    def create_shards(self):
+        shard_name_prefix = "shard_"
+        table_size = self._reader.get_table_size()
+        records_per_task = self._kwargs["records_per_task"]
+        shards = {}
+        num_shards = table_size // records_per_task
+        start_ind = 0
+        for shard_id in range(num_shards):
+            shards[shard_name_prefix + str(shard_id)] = (
+                start_ind,
+                records_per_task,
+            )
+            start_ind += records_per_task
+        num_records_left = table_size % records_per_task
+        if num_records_left != 0:
+            shards[shard_name_prefix + str(num_shards)] = (
+                start_ind,
+                num_records_left,
+            )
+        return shards
+
+
+def _check_required_kwargs(required_args, kwargs):
+    missing_args = [k for k in required_args if k not in kwargs]
+    if missing_args:
+        raise ValueError(
+            "The following required arguments are missing: %s"
+            % ", ".join(missing_args)
+        )
