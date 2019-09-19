@@ -111,6 +111,7 @@ class ODPSDataReaderTest(unittest.TestCase):
         )
 
     def test_odps_data_reader_integration_with_local_keras(self):
+        num_records = 2
         model_spec = load_module(
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
@@ -123,7 +124,9 @@ class ODPSDataReaderTest(unittest.TestCase):
         dataset_fn = model_spec["dataset_fn"]
 
         def _gen():
-            for data in self.reader.read_records(_MockedTask(0, 2, "shard_0")):
+            for data in self.reader.read_records(
+                _MockedTask(0, num_records, "shard_0")
+            ):
                 if data is not None:
                     yield data
 
@@ -131,6 +134,7 @@ class ODPSDataReaderTest(unittest.TestCase):
         dataset = dataset_fn(dataset, None)
 
         loss_history = []
+        grads = None
         for features, labels in dataset:
             with tf.GradientTape() as tape:
                 logits = model(features, training=True)
@@ -138,6 +142,10 @@ class ODPSDataReaderTest(unittest.TestCase):
             loss_history.append(loss_value.numpy())
             grads = tape.gradient(loss_value, model.trainable_variables)
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
+
+        self.assertEqual(len(loss_history), num_records)
+        self.assertEqual(len(grads), num_records)
+        self.assertEqual(len(model.trainable_variables), num_records)
 
     def tearDown(self):
         self.odps_client.delete_table(
