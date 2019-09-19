@@ -25,10 +25,10 @@ class EmbeddingService(object):
         1. master.main calls EmbeddingService.start_embedding_service
            when the embedding service is required by the model.
         2. EmbeddingService.start_embedding_service calls
-           EmbeddingService.start_embedding_pod_and_redis to ask
+           EmbeddingService._start_embedding_pod_and_redis to ask
            k8s_client create pods for Redis.
         3. k8s_client creates pods, then pods call
-           EmbeddingService.start_redis_service() to start their local
+           redis_util.start_redis_service to start their local
            redis instances.
         4. After pods running, EmbeddingService.start_embedding_service
            gets and saves addresses(ip/dns and port) of pods, and creates a
@@ -85,6 +85,9 @@ class EmbeddingService(object):
     def _create_redis_cluster(self, test_endpoint):
         if not self._embedding_service_endpoint and test_endpoint:
             self._embedding_service_endpoint = test_endpoint
+        else:
+            raise ValueError("embedding service endpoint is not set!")
+
         redis_cluster_command = " ".join(
             [
                 "%s:%d" % (ip, port)
@@ -166,7 +169,7 @@ class EmbeddingService(object):
             return False
         return True
 
-    def lookup_embedding(self, keys=[], parse_type=np.float32):
+    def lookup_embedding(self, keys=None, parse_type=np.float32):
         """
         Arguments:
             keys: The list of key, which be used to locate embedding vector
@@ -198,7 +201,7 @@ class EmbeddingService(object):
         return embedding_vectors_ndarray, unknown_keys_idx
 
     def update_embedding(
-        self, keys=[], embedding_vectors=[], set_if_not_exist=False
+        self, keys=None, embedding_vectors=None, set_if_not_exist=False
     ):
         """
         Arguments:
@@ -210,6 +213,10 @@ class EmbeddingService(object):
         Returns:
             None
         """
+        if not keys:
+            keys = []
+        if not embedding_vectors:
+            embedding_vectors = []
         key_num = len(keys)
         embedding_vector_num = len(embedding_vectors)
         if key_num != embedding_vector_num:
