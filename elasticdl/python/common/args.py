@@ -436,9 +436,10 @@ def parse_master_args(master_args=None):
     add_common_params(parser)
     add_train_params(parser)
 
-    args, _ = parser.parse_known_args(args=master_args)
+    args, unknown_args = parser.parse_known_args(args=master_args)
     print_args(args, groups=ALL_ARGS_GROUPS)
-    logger.warning("Unknown arguments: %s", _)
+    if unknown_args:
+        logger.warning("Unknown arguments: %s", unknown_args)
 
     if all(
         v == "" or v is None
@@ -484,9 +485,10 @@ def parse_worker_args(worker_args=None):
         "e.g. \"{'ip_0': [port_0,port_1]}\"",
     )
 
-    args, _ = parser.parse_known_args(args=worker_args)
+    args, unknown_args = parser.parse_known_args(args=worker_args)
     print_args(args, groups=ALL_ARGS_GROUPS)
-    logger.warning("Unknown arguments: %s", _)
+    if unknown_args:
+        logger.warning("Unknown arguments: %s", unknown_args)
     return args
 
 
