@@ -423,11 +423,14 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             indexed_grads = self._gradient_sum_indexed
             grads = self._gradient_sum
         if need_to_update_model:
-            if self._lr_modulation:
-                # staleness-aware learning rate modulation
-                staleness = max(1, self._version - request_version)
-                self._lr_modulation.set_multiplier(1.0 / staleness)
+            self._update_optimizer(request_version)
             self._update_model(grads, indexed_grads, edl_embedding_gradients)
+
+    def _update_optimizer(self, request_version):
+        if self._lr_modulation:
+            # staleness-aware learning rate modulation
+            staleness = max(1, self._version - request_version)
+            self._lr_modulation.set_multiplier(1.0 / staleness)
 
     def ReportTaskResult(self, request, _):
         if request.err_message:
