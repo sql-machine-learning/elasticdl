@@ -411,21 +411,23 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                     self._gradient_sum[k] = v
             self._grad_n += 1
 
-        # staleness-aware learning rate modulation
-        if self._lr_modulation:
-            staleness = max(1, self._version - request_version)
-            self._lr_modulation.set_multiplier(1.0 / staleness)
-        if self._use_async or self._grad_n >= self._grad_to_wait:
-            if not self._use_async:
-                # get gradient average for sync SGD
-                for k in self._gradient_sum:
-                    if not self._use_async:
-                        self._gradient_sum[k] = (
-                            self._gradient_sum[k] / self._grad_to_wait
-                        )
-                edl_embedding_gradients = self._edl_embedding_gradients
-                indexed_grads = self._gradient_sum_indexed
-                grads = self._gradient_sum
+        need_to_update_model = self._use_async
+        if not self._use_async and self._grad_n >= self._grad_to_wait:
+            need_to_update_model = True
+            # get gradient average for sync SGD
+            for k in self._gradient_sum:
+                if not self._use_async:
+                    self._gradient_sum[k] = (
+                        self._gradient_sum[k] / self._grad_to_wait
+                    )
+            edl_embedding_gradients = self._edl_embedding_gradients
+            indexed_grads = self._gradient_sum_indexed
+            grads = self._gradient_sum
+        if need_to_update_model:
+            if self._lr_modulation:
+                # staleness-aware learning rate modulation
+                staleness = max(1, self._version - request_version)
+                self._lr_modulation.set_multiplier(1.0 / staleness)
             self._update_model(grads, indexed_grads, edl_embedding_gradients)
 
     def ReportTaskResult(self, request, _):
