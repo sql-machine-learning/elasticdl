@@ -16,7 +16,7 @@ from elasticdl.python.common.tensor_helper import merge_indexed_slices
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.embedding_service import EmbeddingService
-from elasticdl.python.master.lr_modulation import (
+from elasticdl.python.master.learning_rate_modulator import (
     add_lr_modulation_to_optimizer,
 )
 from elasticdl.python.master.optimizer_wrapper import OptimizerWrapper
