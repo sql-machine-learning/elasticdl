@@ -416,10 +416,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             need_to_update_model = True
             # get gradient average for sync SGD
             for k in self._gradient_sum:
-                if not self._use_async:
-                    self._gradient_sum[k] = (
-                        self._gradient_sum[k] / self._grad_to_wait
-                    )
+                self._gradient_sum[k] = (
+                    self._gradient_sum[k] / self._grad_to_wait
+                )
             edl_embedding_gradients = self._edl_embedding_gradients
             indexed_grads = self._gradient_sum_indexed
             grads = self._gradient_sum
