@@ -194,13 +194,3 @@ We need to make both transformations to network definition and model parameter. 
 If the checkpoint file is too large to load into a single node, we have to spilt it into several pieces. The largest parameter could be a embedding table. We can split the embedding table by rows, and each piece hold a part of the embedding tale. 
 
 We apply the first solution to each model piece. And then, the upcoming item id will be handled and dispatched to correct model piece. This is a divide-conque solution.
-
-
-
-
-
-
-
-
-
-
