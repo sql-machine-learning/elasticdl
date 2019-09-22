@@ -49,7 +49,7 @@ Other parameters could be initialized before training.
 
 ## Distribution Strategy
 
-We apply different solutions to different scenarios.
+We apply different strategies to different scenarios.
 
 
 | scenario| hardware | update stragety | communication  stragety |
@@ -63,8 +63,10 @@ BSP is short for Bulk synchronous parallel.
 
 Following is the assumption under recommendation scenario:
 
-- only support asynchronous SGD
-- only support worker failover, do not support pserver failover
+- support asynchronous SGD
+- support elastic scheduling and failover of pserver/worker
+
+Please refer to [Elastic Scheduling](#Elastic Scheduling) part for more details.
 
 
 **Note**
@@ -80,11 +82,11 @@ AllReduce failover and pserver failover will be discussed on other design docs.
 Workflow:
 
 
-1. create several pservers and workers according to user's configuration
-2. generate parameter sharding strategy based on model definition provided by user
-3. initialize parameter, and send to pservers
-4. trigger pservers and workers and start training
-5. monitor cluster, and increase or decrease worker according to priority
+1. Master creates several pservers and workers according to user's configuration
+2. Master generates parameter sharding strategy based on model definition provided by user
+3. Master initializes parameter, and send to pservers
+4. Master triggers pservers and workers and start training
+5. Master monitors cluster, and increase or decrease workerers according to priority
 
 
 ## Pserver
@@ -95,11 +97,11 @@ Workflow:
 
 Workflow:
 
-1. wait for workers pushing <key, gradient> to pserver
-2. get the key and query kv store to get corresponding parameter
-3. call optimizer, apply <key, gradient> to <key, parameter>
-4. update <key, parameter> back to kv store
-5. save model checkpoint to disk periodially
+1. Pserver waits for workers pushing <key, gradient> to pserver
+2. Pserver gets the key and queries kv store to get corresponding parameter
+3. Pserver calls optimizer, applys <key, gradient> to <key, parameter>
+4. Pserver updates <key, parameter> back to kv store
+5. Pserver saves model checkpoint to disk periodially
 
 
 **Note**
@@ -113,10 +115,10 @@ We could implement the kv store by ourselves, or we could use some already solut
 
 Workflow:
 
-1. before forward layer starting, send key to pserver, and pull <key, parameter> back from pserver
-2. start forward layer computation
-3. after backward layer finishing, generate <key, gradient>
-4. push <key, gradient> to pserver
+1. Before forward layer starting, worker sends key to pserver, and pull <key, parameter> back from pserver
+2. Worker starts forward layer computation
+3. After backward layer finishing, worker generates <key, gradient>
+4. Worker pushes <key, gradient> to pserver
 
 
 There is also another kind of worker who does an evalution job. It define its own evalution computation process and dataloader of validation data. It pulls <key, parameter> from pserver, but never push data to pserver.
@@ -138,6 +140,67 @@ A worker runs a round of forward/backward computation using its local model, and
 Since local model is only a part of global model, in some circumstance, worker still has to pull embedding vector parameter from pservers if there exits unknow item ids in a minibatch data.
 
 In async mode, this will lead to relative newer embedding part parameters, but relative older other part parameters.
+
+
+## Elastic scheduling
+
+### Analysis
+
+First, we analyse that pserver and worker consume which kinds of hardware resources.
+
+
+| role| CPU | memory | network bandwidth |  disk |
+| :----  |:----  |:---|:---|:---|
+| worker  | high| medium |  medium | low|
+| pserver | low | medium | high| medium |
+
+
+Worker does the forward/backward computation and consumes CPU most, while pserver provides kvstore service and consumes network bandwidth most.
+
+Since our target is to scheduling deep learning jobs elasticly, we should have the ability to increase/decrease CPU resources of worker, and increase/decrease network bandwidth resources of pserver.
+
+### Solution
+
+Since we use asynchronous SGD, increasing/decreasing CPU resources of worker is trivial. We just create more workers or kill some workers under different cluster status.
+
+And for pserver, how can we adjust network bandwidth? One way is to create or delete pserver nodes. Since each node has a network interface card, more pserver nodes means more network bandwidth.
+
+The second way is to adjust network bandwidth limit of current pserver node. We can create many pserver nodes first, but set network bandwidth limit to certain medium value. If we want to increase/decrease network bandwith, we just increase/decrease the network bandwidth limit.
+
+The second way consumes same memory, a little more CPU comparing to the first way, but avoids complex parameter sharding stragety under varying pserver nodes. The complex parameter sharding stragety usually raises the time complexity of each push/pull operation, which will has a remarkable loss on performance.
+
+## Failover
+
+Failover has a close relationship with elastic scheduling. If we have to create or kill pserver and worker frequently, we have to take failover into consideration seriously.
+
+Since worker is stateless, we do not have to support failover for elastic scheduling worker.
+
+And pserver is stateful, we will save checkpoint periodially to a distributed file system. If we apply the second way to schedule pserver, then checkpoint is enough to handle occasional machine breakdown. Because we do not need to create/kill pserver node frequently, but just increase/decrease the network bandwidth limit.
+
+## Deployment
+
+After training some epoches, we will choose one checkpoint which has the best evalution metric as the final model. And this model will be deployed to online.
+
+We provide two solutions to handle different model size.
+
+### Solution 1
+
+If the checkpoint file is not very large, and could be loaded to a single node, the deployment of parameter server architecture will be the same as single node. 
+
+We need to make both transformations to network definition and model parameter. In parameter server architecture, we may define some customized layers, but we have to use standard layers in deloyment. And some model parameter has to be merged, in order to coordinate with standard layers.
+
+### Solution 2
+
+If the checkpoint file is so large, we have to spilt it into several pieces. The largest parameter could be a embedding table. We can split the embedding table by rows, and each piece hold a part of the embedding tale. 
+
+We apply the first solution to each model piece. And then, the upcoming item id will be handled and dispatched to correct model piece. This is a divide-conque solution.
+
+
+
+
+
+
+
 
 
 
