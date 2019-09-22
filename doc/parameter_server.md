@@ -146,7 +146,7 @@ In async mode, this will lead to relative newer embedding part parameters, but r
 
 ### Analysis
 
-First, we analyse that pserver and worker consume which kinds of hardware resources.
+First, we analyse the hardware resources that pserver and worker consume.
 
 
 | role| CPU | memory | network bandwidth |  disk |
@@ -157,17 +157,17 @@ First, we analyse that pserver and worker consume which kinds of hardware resour
 
 Worker does the forward/backward computation and consumes CPU most, while pserver provides kvstore service and consumes network bandwidth most.
 
-Since our target is to scheduling deep learning jobs elasticly, we should have the ability to increase/decrease CPU resources of worker, and increase/decrease network bandwidth resources of pserver.
+Since our target is to scheduling deep learning jobs elasticly, we must have the ability to increase/decrease CPU resources of worker, and increase/decrease network bandwidth resources of pserver.
 
 ### Solution
 
-Since we use asynchronous SGD, increasing/decreasing CPU resources of worker is trivial. We just create more workers or kill some workers under different cluster status.
+As we are using asynchronous SGD, increasing/decreasing CPU resources of worker is trivial. We can just create more workers or kill some workers under different cluster status.
 
-And for pserver, how can we adjust network bandwidth? One way is to create or delete pserver nodes. Since each node has a network interface card, more pserver nodes means more network bandwidth.
+And for pserver, how can we adjust network bandwidth? One solution is to create or delete pserver nodes. Since each node has a network interface card, more pserver nodes means more network bandwidth.
 
-The second way is to adjust network bandwidth limit of current pserver node. We can create many pserver nodes first, but set network bandwidth limit to certain medium value. If we want to increase/decrease network bandwith, we just increase/decrease the network bandwidth limit.
+The second solution is to adjust network bandwidth of current pserver node. We can create many pserver nodes first, but set network bandwidth limit to certain medium value. If we want to increase/decrease network bandwith, we increase/decrease the network bandwidth limit.
 
-The second way consumes same memory, a little more CPU comparing to the first way, but avoids complex parameter sharding stragety under varying pserver nodes. The complex parameter sharding stragety usually raises the time complexity of each push/pull operation, which will has a remarkable loss on performance.
+The second solution consumes the same memory, a little more CPU comparing to the first way, but avoids complex parameter sharding stragety under varying pserver nodes. The complex parameter sharding stragety usually raises the time complexity of each push/pull operation, which causes a remarkable loss on performance.
 
 ## Failover
 
@@ -175,13 +175,13 @@ Failover has a close relationship with elastic scheduling. If we have to create 
 
 Since worker is stateless, we do not have to support failover for elastic scheduling worker.
 
-And pserver is stateful, we will save checkpoint periodially to a distributed file system. If we apply the second way to schedule pserver, then checkpoint is enough to handle occasional machine breakdown. Because we do not need to create/kill pserver node frequently, but just increase/decrease the network bandwidth limit.
+And pserver is stateful, we will save checkpoint periodially to a distributed file system. If we apply the second way to schedule pserver, then checkpoint is enough to handle occasional machine breakdown. We do not need to create/kill pserver node frequently, but just increase/decrease the network bandwidth limit value.
 
 ## Deployment
 
 After training some epoches, we will choose one checkpoint which has the best evalution metric as the final model. And this model will be deployed to online.
 
-We provide two solutions to handle different model size.
+We provide two depolyment solutions which handles different model size separately.
 
 ### Solution 1
 
@@ -191,7 +191,7 @@ We need to make both transformations to network definition and model parameter. 
 
 ### Solution 2
 
-If the checkpoint file is so large, we have to spilt it into several pieces. The largest parameter could be a embedding table. We can split the embedding table by rows, and each piece hold a part of the embedding tale. 
+If the checkpoint file is too large to load into a single node, we have to spilt it into several pieces. The largest parameter could be a embedding table. We can split the embedding table by rows, and each piece hold a part of the embedding tale. 
 
 We apply the first solution to each model piece. And then, the upcoming item id will be handled and dispatched to correct model piece. This is a divide-conque solution.
 
