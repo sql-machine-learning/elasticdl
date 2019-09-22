@@ -122,7 +122,7 @@ class ODPSReader(object):
         if not batch_size > 0:
             raise ValueError("batch_size should be positive")
 
-        table_size = self._count_table_size(self._odps_table)
+        table_size = self.get_table_size()
         if 0 < limit < table_size:
             table_size = limit
         if columns is None:
@@ -236,8 +236,8 @@ class ODPSReader(object):
                 time.sleep(5)
                 retry_count += 1
 
-    def _count_table_size(self, odps_table):
-        with odps_table.open_reader(partition=self._partition) as reader:
+    def get_table_size(self):
+        with self._odps_table.open_reader(partition=self._partition) as reader:
             return reader.count
 
     def _estimate_cache_batch_count(self, columns, table_size, batch_size):

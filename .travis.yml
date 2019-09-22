@@ -29,7 +29,12 @@ jobs:
         # Run unit tests without k8s or ODPS
         - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests --cov=elasticdl/python"
         # Run unit tests related to ODPS
-        # - docker run --rm -it -e ODPS_PROJECT_NAME=gomaxcompute_driver_w7u -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_*"
+        - |
+          if [ "$ODPS_ACCESS_ID" == "" ] || [ "$ODPS_ACCESS_KEY" == "" ]; then
+            echo "Skipping ODPS related unit tests since either ODPS_ACCESS_ID or ODPS_ACCESS_KEY is not set"
+          else
+            docker run --rm -it -e ODPS_PROJECT_NAME=gomaxcompute_driver_w7u -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_*"
+          fi
     - stage: integrationtest
       name: "Integration Tests"
       script:
