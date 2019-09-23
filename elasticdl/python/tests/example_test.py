@@ -183,6 +183,7 @@ class ExampleTest(unittest.TestCase):
         task = master.GetTask(req, None)
         # No more task.
         self.assertTrue(not task.shard_name)
+        return master._version
 
     def test_deepfm_functional_train(self):
         model_params = (
@@ -219,10 +220,15 @@ class ExampleTest(unittest.TestCase):
         use_asyncs = [False, True]
         configs = list(itertools.product(model_defs, use_asyncs))
 
+        model_versions = []
         for config in configs:
-            self.distributed_train_and_evaluate(
+            model_version = self.distributed_train_and_evaluate(
                 [28, 28], config[0], training=True, use_async=config[1]
             )
+            model_versions.append(model_version)
+        # async model version = sync model version * 2
+        self.assertEqual(model_versions[0] * 2, model_versions[1])
+        self.assertEqual(model_versions[2] * 2, model_versions[3])
 
     def test_mnist_evaluate(self):
         model_defs = [
@@ -242,10 +248,15 @@ class ExampleTest(unittest.TestCase):
         use_asyncs = [False, True]
         configs = list(itertools.product(model_defs, use_asyncs))
 
+        model_versions = []
         for config in configs:
-            self.distributed_train_and_evaluate(
+            model_version = self.distributed_train_and_evaluate(
                 [32, 32, 3], config[0], training=True, use_async=config[1]
             )
+            model_versions.append(model_version)
+        # async model version = sync model version * 2
+        self.assertEqual(model_versions[0] * 2, model_versions[1])
+        self.assertEqual(model_versions[2] * 2, model_versions[3])
 
     def test_cifar10_evaluate(self):
         model_defs = [
