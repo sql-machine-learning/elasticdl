@@ -511,7 +511,6 @@ class Worker(object):
         #     last minibatch is evaluation task
         #     last minibatch is training task and failed
         #     local_update_count >= worker._get_model_steps
-        #     train_with_local_model = False
         # otherwise, train with local model, i.e. `train_with_local_model=True`
         train_with_local_model = False
 
