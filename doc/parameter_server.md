@@ -175,7 +175,9 @@ Failover has a close relationship with elastic scheduling. If we have to create 
 
 Since worker is stateless, we do not have to support failover for elastic scheduling worker.
 
-And pserver is stateful, we will save checkpoint periodially to a distributed file system. If we apply the second way to schedule pserver, then checkpoint is enough to handle occasional machine breakdown. We do not need to create/kill pserver node frequently, but just increase/decrease the network bandwidth limit value.
+And pserver is stateful, we will save checkpoint periodially to a distributed file system. If we apply the second way to schedule pserver, then checkpoint is enough to handle occasional machine breakdown. In addition, if there is no big embedding table in the model, which means a worker holds whole parameters, the pserver could also recover from a worker.
+
+We do not need to create/kill pserver node frequently, but just increase/decrease the network bandwidth limit value.
 
 ## Deployment
 
