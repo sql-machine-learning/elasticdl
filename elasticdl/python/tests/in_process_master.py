@@ -24,7 +24,9 @@ class InProcessMaster(object):
 
     def ReportEvaluationMetrics(self, req):
         for callback in self._callbacks:
-            if test_call_back.ON_REPORT_GRADIENT_BEGIN in callback.call_times:
+            if test_call_back.ON_REPORT_EVALUATION_METRICS_BEGIN in (
+                callback.call_times
+            ):
                 callback()
         return self._m.ReportEvaluationMetrics(req, None)
 

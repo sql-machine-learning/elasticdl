@@ -505,21 +505,22 @@ class Worker(object):
         else:
             mode = Mode.TRAINING
 
-        # need to get model from PS, i.e. `train_with_local_model=False`
-        # at following situations:
+        # The worker needs to get model from PS if
+        # `train_with_local_model=False`. This happens when:
         #     processing first minibatch
         #     last minibatch is evaluation task
         #     last minibatch is training task and failed
         #     local_update_count >= worker._get_model_steps
-        # otherwise, train with local model, i.e. `train_with_local_model=True`
+        # Otherwise, worker trains with local model, i.e.
+        # `train_with_local_model=True`
         train_with_local_model = False
 
-        local_update_count = 0
-        last_training_minibatch_failed = False
-        # initialize `last_minibatch_do_evaluation` to True in order to set
-        # `train_with_local_model` to False inside forloop for the first
+        # Initialize `local_update_count=get_model_steps` in order to set
+        # `train_with_local_model` to False inside for-loop for the first
         # minibatch.
-        last_minibatch_do_evaluation = True
+        local_update_count = self._get_model_steps
+        last_training_minibatch_failed = False
+        last_minibatch_do_evaluation = False
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
@@ -556,8 +557,6 @@ class Worker(object):
                         last_training_minibatch_failed = False
                         if local_update_count < self._get_model_steps:
                             self._update_local_model()
-                elif task.type == elasticdl_pb2.EVALUATION:
-                    last_minibatch_do_evaluation = True
                 self._task_data_service.report_record_done(
                     self._minibatch_size, err_msg
                 )

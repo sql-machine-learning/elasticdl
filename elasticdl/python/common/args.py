@@ -210,7 +210,7 @@ def add_train_params(parser):
         "--grads_to_wait",
         type=int,
         help="Number of gradients to wait before updating model",
-        default=2,
+        default=1,
     )
     parser.add_argument(
         "--training_data_dir",
