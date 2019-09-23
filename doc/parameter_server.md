@@ -179,7 +179,7 @@ Another solution to avoid parameter re-sharding is using consistent hashing. How
 
 The second solution is to adjust network bandwidth of current pserver node. We can create many pserver nodes first, but set network bandwidth limit to certain medium value. If we want to increase/decrease network bandwith, we increase/decrease the network bandwidth limit.
 
-The second solution consumes the same memory, a little more CPU comparing to the first way, but avoids complex parameter re-sharding/consistent sharding under varying pserver nodes.
+The second solution consumes the same memory, a little more CPU comparing to the first solution, but avoids complex parameter re-sharding/consistent hashing under varying pserver nodes.
 
 ## Failover
 
@@ -193,7 +193,6 @@ Since worker is stateless, we do not have to support failover for worker.
 And pserver is stateful, we will save checkpoint periodially to a distributed file system. If we meets occasional machine breakdown, the only thing to do is to setup a new pserver pod, and load corresponding parameter shard from checkpoint. In addition, if there is no big embedding table in the model, which means a worker holds whole parameters, the pserver could also recover from a worker.
 
 We should avoid changing pserver numbers, since it will bring lots of other work. If this assumption is valid, the second scenario would be skipped.
-And pserver is stateful, we will save checkpoint periodially to a distributed file system. If we apply the second way to schedule pserver, then checkpoint is enough to handle occasional machine breakdown. In addition, if there is no big embedding table in the model, which means a worker holds whole parameters, the pserver could also recover from a worker.
 
 ## Deployment
 
