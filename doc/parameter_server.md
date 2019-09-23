@@ -173,9 +173,13 @@ If we change pserver node number, following things also need to be done:
 4. reseting grpc channels between pservers and workers
 5. reseting parameters pull/gradients push logic in workers
 
+
+Another solution to avoid parameter re-sharding is using consistent hashing. However, this parameter sharding strategy usually raises the time complexity of each push/pull operation, which causes a remarkable loss on performance.
+
+
 The second solution is to adjust network bandwidth of current pserver node. We can create many pserver nodes first, but set network bandwidth limit to certain medium value. If we want to increase/decrease network bandwith, we increase/decrease the network bandwidth limit.
 
-The second solution consumes the same memory, a little more CPU comparing to the first way, but avoids complex parameter sharding strategy under varying pserver nodes. The complex parameter sharding strategy usually raises the time complexity of each push/pull operation, which causes a remarkable loss on performance.
+The second solution consumes the same memory, a little more CPU comparing to the first way, but avoids complex parameter re-sharding/consistent sharding under varying pserver nodes.
 
 ## Failover
 
