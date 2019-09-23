@@ -62,8 +62,13 @@ def create_recordio_file(size):
 
 
 class CheckRetrainCallback(BaseCallback):
-    # For testing of retrain when gradient not accepted.
-    # Increase master version to reject the gradient.
+    """Checks the retry functionality of workers.
+
+    When workers report Gradient or evaluation metrics, this callback
+    adds 1 to master's model version. The master rejects the report request and
+    workers retry.
+    """
+
     def __init__(self, master, worker, unittest_inst):
         super(CheckRetrainCallback, self).__init__(
             master,
@@ -81,10 +86,10 @@ class CheckRetrainCallback(BaseCallback):
 
 
 class CheckWorkerModelCallback(BaseCallback):
-    """Callback for testing of retrain mechanism of worker when gradient not
-    accepted.
+    """Checks worker model parameters.
 
-
+    Before master updating model parameters, master and workers should have
+    same model parameters if `master._grad_n=0`.
     """
 
     def __init__(self, master, worker, unittest_inst):
@@ -110,6 +115,9 @@ class CheckWorkerModelCallback(BaseCallback):
 
 
 class WorkerTest(unittest.TestCase):
+    # TODO (yunjian.lmh): `distributed_train_and_evaluate` is used in
+    # `worker_test` and `example_test`, which can be extracted as a reusable
+    # function.
     def distributed_train_and_evaluate(
         self,
         training=True,
@@ -178,7 +186,6 @@ class WorkerTest(unittest.TestCase):
             callback_class(master, worker, self)
             for callback_class in callback_classes
         ]
-        # worker._stub = _Master(master, callbacks)
         worker._stub = InProcessMaster(master, callbacks)
 
         for var in worker._model.trainable_variables:

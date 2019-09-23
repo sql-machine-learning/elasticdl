@@ -504,11 +504,21 @@ class Worker(object):
             mode = Mode.EVALUATION
         else:
             mode = Mode.TRAINING
-        local_update_count = 0
+
+        # need to get model from master, i.e. `train_with_local_model=False`
+        # at following situations:
+        #     processing first minibatch
+        #     last minibatch is evaluation task
+        #     last minibatch is training task and failed
+        #     local_update_count >= worker._get_model_steps
+        #     train_with_local_model = False
+        # otherwise, train with local model, i.e. `train_with_local_model=True`
         train_with_local_model = False
+
+        local_update_count = 0
         last_training_minibatch_failed = False
-        # set to True in order to initialize `train_with_local_model` to False
-        # for the first minibatch.
+        # initialize `last_minibatch_do_evaluation` to True in order to
+        # initialize `train_with_local_model` to False for the first minibatch.
         last_minibatch_do_evaluation = True
         while True:
             dataset = self._task_data_service.get_dataset()
@@ -531,7 +541,6 @@ class Worker(object):
                         train_with_local_model = False
                     else:
                         train_with_local_model = True
-                print("train_with_local_model", train_with_local_model)
                 err_msg = self._process_minibatch_and_report(
                     dataset_batch,
                     task.type,
