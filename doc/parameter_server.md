@@ -190,7 +190,9 @@ There are two scenarios of failover to be taken into consideration:
 
 Since worker is stateless, we do not have to support failover for worker. 
 
-And pserver is stateful, we will save checkpoint periodially to a distributed file system. If we meets occasional machine breakdown, the only thing to do is to setup a new pserver pod, and load corresponding parameter shard from checkpoint. In addition, if there is no big embedding table in the model, which means a worker holds whole parameters, the pserver could also recover from a worker.
+However, pserver is stateful, which stores parameter shards. We will save checkpoint periodially to a distributed file system. If we meets occasional machine breakdown, the only thing to do is to setup a new pserver pod, and load corresponding parameter shard from checkpoint.
+
+In addition, if there is no big embedding table in the model, which means a worker holds whole parameters, the pserver could also recover from a worker.
 
 We should avoid changing pserver numbers, since it will bring lots of other work. If this assumption is valid, the second scenario would be skipped.
 
