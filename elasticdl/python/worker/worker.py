@@ -505,7 +505,7 @@ class Worker(object):
         else:
             mode = Mode.TRAINING
 
-        # need to get model from master, i.e. `train_with_local_model=False`
+        # need to get model from PS, i.e. `train_with_local_model=False`
         # at following situations:
         #     processing first minibatch
         #     last minibatch is evaluation task
@@ -516,8 +516,9 @@ class Worker(object):
 
         local_update_count = 0
         last_training_minibatch_failed = False
-        # initialize `last_minibatch_do_evaluation` to True in order to
-        # initialize `train_with_local_model` to False for the first minibatch.
+        # initialize `last_minibatch_do_evaluation` to True in order to set
+        # `train_with_local_model` to False inside forloop for the first
+        # minibatch.
         last_minibatch_do_evaluation = True
         while True:
             dataset = self._task_data_service.get_dataset()
