@@ -1,3 +1,6 @@
+import argparse
+from itertools import chain
+
 from elasticdl.python.common.log_util import default_logger as logger
 
 MODEL_SPEC_GROUP = [
@@ -83,13 +86,20 @@ def parse_envs(arg):
     return envs
 
 
-def add_common_params(parser):
+def add_bool_param(parser, name, default, help):
     parser.add_argument(
-        "--model_zoo",
-        help="The directory that contains user-defined model files "
-        "or a specific model file",
-        required=True,
+        name,  # should be in "--foo" format
+        nargs="?",
+        const=not default,
+        default=default,
+        type=lambda x: x.lower() in ["true", "yes", "t", "y"],
+        help=help,
     )
+
+
+def add_common_params(parser):
+    """Common arguments for training/prediction/evaluation"""
+    add_common_args_between_master_and_worker(parser)
     parser.add_argument(
         "--docker_image_prefix",
         default="",
@@ -164,39 +174,6 @@ def add_common_params(parser):
         "pods will be created",
     )
     parser.add_argument("--records_per_task", type=int, required=True)
-    parser.add_argument(
-        "--minibatch_size",
-        type=int,
-        help="Minibatch size used by workers",
-        required=True,
-    )
-    parser.add_argument(
-        "--dataset_fn",
-        type=str,
-        default="dataset_fn",
-        help="The name of the dataset function defined in the model file",
-    )
-    parser.add_argument(
-        "--eval_metrics_fn",
-        type=str,
-        default="eval_metrics_fn",
-        help="The name of the evaluation metrics function defined "
-        "in the model file",
-    )
-    parser.add_argument(
-        "--model_def",
-        type=str,
-        required=True,
-        help="The import path to the model definition function/class in the "
-        'model zoo, e.g. "cifar10_subclass.cifar10_subclass.CustomModel"',
-    )
-    parser.add_argument(
-        "--model_params",
-        type=str,
-        default="",
-        help="The dictionary of model parameters in a string that will be "
-        'used to instantiate the model, e.g. "param1=1,param2=2"',
-    )
     parser.add_argument(
         "--cluster_spec",
         help="The file that contains user-defined cluster specification",
@@ -292,39 +269,24 @@ def add_train_params(parser):
         default="",
     )
     parser.add_argument(
-        "--loss",
-        type=str,
-        default="loss",
-        help="The name of the loss function defined in the model file",
-    )
-    parser.add_argument(
-        "--optimizer",
-        type=str,
-        default="optimizer",
-        help="The name of the optimizer defined in the model file",
-    )
-    parser.add_argument(
         "--output",
         type=str,
         default="",
         help="The path to save the final trained model",
     )
-    parser.add_argument(
-        "--use_async",
+
+    add_bool_param(
+        parser=parser,
+        name="--use_async",
         default=False,
         help="True for asynchronous SGD, False for synchronous SGD",
     )
-    parser.add_argument(
-        "--lr_staleness_modulation",
+    add_bool_param(
+        parser=parser,
+        name="--lr_staleness_modulation",
         default=False,
         help="If True, master will modulate the learning rate with staleness "
         "in asynchronous SGD",
-    )
-    parser.add_argument(
-        "--get_model_steps",
-        type=int,
-        default=1,
-        help="Worker will get_model from PS every these steps.",
     )
 
 
@@ -383,3 +345,180 @@ def print_args(args, groups=None):
     ]
     for key, value in other_options:
         logger.info("%s = %s", key, value)
+
+
+def add_common_args_between_master_and_worker(parser):
+    parser.add_argument(
+        "--minibatch_size",
+        help="Minibatch size for worker",
+        type=int,
+        required=True,
+    )
+    parser.add_argument(
+        "--model_zoo",
+        help="The directory that contains user-defined model files "
+        "or a specific model file",
+        required=True,
+    )
+    parser.add_argument(
+        "--log_level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        type=str.upper,
+        default="INFO",
+        help="Set the logging level",
+    )
+    parser.add_argument(
+        "--dataset_fn",
+        type=str,
+        default="dataset_fn",
+        help="The name of the dataset function defined in the model file",
+    )
+    parser.add_argument(
+        "--loss",
+        type=str,
+        default="loss",
+        help="The name of the loss function defined in the model file",
+    )
+    parser.add_argument(
+        "--optimizer",
+        type=str,
+        default="optimizer",
+        help="The name of the optimizer defined in the model file",
+    )
+    parser.add_argument(
+        "--eval_metrics_fn",
+        type=str,
+        default="eval_metrics_fn",
+        help="The name of the evaluation metrics function defined "
+        "in the model file",
+    )
+    parser.add_argument(
+        "--model_def",
+        type=str,
+        required=True,
+        help="The import path to the model definition function/class in the "
+        'model zoo, e.g. "cifar10_subclass.cifar10_subclass.CustomModel"',
+    )
+    parser.add_argument(
+        "--model_params",
+        type=str,
+        default="",
+        help="The dictionary of model parameters in a string that will be "
+        'used to instantiate the model, e.g. "param1=1,param2=2"',
+    )
+    parser.add_argument(
+        "--get_model_steps",
+        type=int,
+        default=1,
+        help="Worker will get_model from PS every these steps.",
+    )
+
+
+def parse_master_args(master_args=None):
+    parser = argparse.ArgumentParser(description="ElasticDL Master")
+    parser.add_argument(
+        "--port",
+        default=50001,
+        type=pos_int,
+        help="The listening port of master",
+    )
+    parser.add_argument(
+        "--worker_image", help="Docker image for workers", default=None
+    )
+    parser.add_argument(
+        "--worker_pod_priority", help="Priority requested by workers"
+    )
+    parser.add_argument(
+        "--prediction_data_dir",
+        help="Prediction data directory. Files should be in RecordIO format",
+        default="",
+    )
+    add_common_params(parser)
+    add_train_params(parser)
+
+    args, unknown_args = parser.parse_known_args(args=master_args)
+    print_args(args, groups=ALL_ARGS_GROUPS)
+    if unknown_args:
+        logger.warning("Unknown arguments: %s", unknown_args)
+
+    if all(
+        v == "" or v is None
+        for v in [
+            args.training_data_dir,
+            args.evaluation_data_dir,
+            args.prediction_data_dir,
+        ]
+    ):
+        raise ValueError(
+            "At least one of the data directories needs to be provided"
+        )
+
+    if args.prediction_data_dir and (
+        args.training_data_dir or args.evaluation_data_dir
+    ):
+        raise ValueError(
+            "Running prediction together with training or evaluation "
+            "is not supported"
+        )
+    if args.prediction_data_dir and not args.checkpoint_filename_for_init:
+        raise ValueError(
+            "checkpoint_filename_for_init is required for running "
+            "prediction job"
+        )
+    if not args.use_async and args.get_model_steps > 1:
+        raise ValueError(
+            "get_model_steps should be 1 when using synchronous SGD."
+        )
+    if args.use_async and args.grads_to_wait > 1:
+        raise ValueError(
+            "grads_to_wait should be 1 when using asynchronous SGD."
+        )
+
+    return args
+
+
+def parse_worker_args(worker_args=None):
+    parser = argparse.ArgumentParser(description="ElasticDL Worker")
+    add_common_args_between_master_and_worker(parser)
+    parser.add_argument(
+        "--worker_id", help="Id unique to the worker", type=int, required=True
+    )
+    parser.add_argument("--job_type", help="Job type", required=True)
+    parser.add_argument("--master_addr", help="Master ip:port", required=True)
+    parser.add_argument(
+        "--embedding_service_endpoint",
+        type=str,
+        default="{}",
+        help="The endpoint of embedding service, "
+        "e.g. \"{'ip_0': [port_0,port_1]}\"",
+    )
+
+    args, unknown_args = parser.parse_known_args(args=worker_args)
+    print_args(args, groups=ALL_ARGS_GROUPS)
+    if unknown_args:
+        logger.warning("Unknown arguments: %s", unknown_args)
+    return args
+
+
+def build_arguments_from_parsed_result(args, filter_args=None):
+    """Resconstruct arguments from parsed result
+    Args:
+        args: result from `parser.parse_args()`
+    Returns:
+        list of string: ready for parser to parse,
+        such as ["--foo", "3", "--bar", False]
+    """
+    items = vars(args).items()
+    if filter_args:
+        items = filter(lambda item: item[0] not in filter_args, items)
+
+    def _str_ignore_none(s):
+        if s is None:
+            return s
+        return str(s)
+
+    arguments = map(_str_ignore_none, chain(*items))
+    arguments = [
+        "--" + k if i % 2 == 0 else k for i, k in enumerate(arguments)
+    ]
+    return arguments

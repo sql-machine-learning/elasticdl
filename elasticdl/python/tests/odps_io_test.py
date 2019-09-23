@@ -11,6 +11,7 @@ from elasticdl.python.common.odps_io import ODPSReader, ODPSWriter
 from elasticdl.python.common.odps_recordio_conversion_utils import (
     write_recordio_shards_from_iterator,
 )
+from elasticdl.python.tests.odps_test_utils import create_iris_odps_table
 
 
 @unittest.skipIf(
@@ -22,14 +23,20 @@ class ODPSIOTest(unittest.TestCase):
         self._project = os.environ[ODPSConfig.PROJECT_NAME]
         self._access_id = os.environ[ODPSConfig.ACCESS_ID]
         self._access_key = os.environ[ODPSConfig.ACCESS_KEY]
-        self._endpoint = os.environ[ODPSConfig.ENDPOINT]
-        self._test_read_table = "chicago_taxi_train_data"
+        self._endpoint = os.environ.get(ODPSConfig.ENDPOINT)
+        self._test_read_table = "test_odps_reader_%d_%d" % (
+            int(time.time()),
+            random.randint(1, 101),
+        )
         self._test_write_table = "test_odps_writer_%d_%d" % (
             int(time.time()),
             random.randint(1, 101),
         )
         self._odps_client = ODPS(
             self._access_id, self._access_key, self._project, self._endpoint
+        )
+        create_iris_odps_table(
+            self._odps_client, self._project, self._test_read_table
         )
 
     def test_read_to_iterator(self):
@@ -43,11 +50,17 @@ class ODPSIOTest(unittest.TestCase):
             4,
             None,
         )
-        records_iter = reader.to_iterator(1, 0, 200, 2, False, None)
-        for batch in records_iter:
-            self.assertEqual(
-                len(batch), 200, "incompatible size: %d" % len(batch)
-            )
+        records_iter = reader.to_iterator(1, 0, 50, 2, False, None)
+        records = list(records_iter)
+        self.assertEqual(
+            len(records), 6, "Unexpected number of batches: %d" % len(records)
+        )
+        flattened_records = [record for batch in records for record in batch]
+        self.assertEqual(
+            len(flattened_records),
+            220,
+            "Unexpected number of total records: %d" % len(flattened_records),
+        )
 
     def test_write_odps_to_recordio_shards_from_iterator(self):
         reader = ODPSReader(
@@ -60,15 +73,15 @@ class ODPSIOTest(unittest.TestCase):
             4,
             None,
         )
-        records_iter = reader.to_iterator(1, 0, 200, 2, False, None)
+        records_iter = reader.to_iterator(1, 0, 50, 2, False, None)
         with tempfile.TemporaryDirectory() as output_dir:
             write_recordio_shards_from_iterator(
                 records_iter,
-                ["f" + str(i) for i in range(18)],
+                ["f" + str(i) for i in range(5)],
                 output_dir,
-                records_per_shard=200,
+                records_per_shard=50,
             )
-            self.assertEqual(len(os.listdir(output_dir)), 100)
+            self.assertEqual(len(os.listdir(output_dir)), 5)
 
     def test_write_from_iterator(self):
         columns = ["num", "num2"]
@@ -111,6 +124,9 @@ class ODPSIOTest(unittest.TestCase):
     def tearDown(self):
         self._odps_client.delete_table(
             self._test_write_table, self._project, if_exists=True
+        )
+        self._odps_client.delete_table(
+            self._test_read_table, self._project, if_exists=True
         )
 
 

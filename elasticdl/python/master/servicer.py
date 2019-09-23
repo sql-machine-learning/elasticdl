@@ -16,7 +16,7 @@ from elasticdl.python.common.tensor_helper import merge_indexed_slices
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.embedding_service import EmbeddingService
-from elasticdl.python.master.lr_modulation import (
+from elasticdl.python.master.learning_rate_modulator import (
     add_lr_modulation_to_optimizer,
 )
 from elasticdl.python.master.optimizer_wrapper import OptimizerWrapper
@@ -200,40 +200,38 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 embedding_service_endpoint=self._embedding_service_endpoint,
             )
 
-    def _update_model(self):
-        if not self._use_async and not self._lock.locked():
-            # TODO (chengfu.wcy) `self._lock.locked` may be removed
-            # according to  changes in `ReportGradient` in async mode.
-            raise RuntimeError(
-                "Lock must be acquired when updating the model in sync mode"
-            )
+    def _update_model(self, grads, indexed_grads, edl_embedding_gradients):
         grad_var = []
 
         # (grad, var) pairs excluding keras Embedding layer and
         # ElasticDL Embedding layer
-        for k in self._gradient_sum:
-            if not self._use_async:
-                self._gradient_sum[k] = (
-                    self._gradient_sum[k] / self._grad_to_wait
-                )
-            grad_var.append((self._gradient_sum[k], self._model[k]))
+        for k in grads:
+            grad_var.append((grads[k], self._model[k]))
 
         # (grad, var) pair of Keras Embedding layer
-        for k in self._gradient_sum_indexed:
-            grad_var.append((self._gradient_sum_indexed[k], self._model[k]))
+        for k in indexed_grads:
+            grad_var.append((indexed_grads[k], self._model[k]))
 
         # (grad, var) pair of ElasticDL Embedding layer
-        if self._edl_embedding_gradients:
-            for layer_name, grads in self._edl_embedding_gradients.items():
+        if edl_embedding_gradients:
+            for layer_name, grads in edl_embedding_gradients.items():
                 grad_var.append((grads, layer_name))
 
         self._opt.apply_gradients(grad_var)
 
+        # need the lock for model version update in async SGD
+        if self._use_async:
+            self._lock.acquire()
         self._update_model_version()
-        self._gradient_sum.clear()
-        self._gradient_sum_indexed.clear()
-        self._edl_embedding_gradients.clear()
-        self._grad_n = 0
+        self._update_evaluation()
+        self._update_checkpoint()
+        if self._use_async:
+            self._lock.release()
+        else:
+            self._gradient_sum.clear()
+            self._gradient_sum_indexed.clear()
+            self._edl_embedding_gradients.clear()
+            self._grad_n = 0
 
     def get_model_version(self):
         return self._version
@@ -324,58 +322,68 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             res.model_version = self._version
             return res
 
-        # TODO: Update task queue with task_id
-        with self._lock:
-            tmp = {}
-            indexed_grads = {}
-            edl_embedding_gradients = {}
-            # Do sanity check before accumulating gradients.
-            for k, v in request.gradient.items():
-                if k not in self._model:
-                    if v.indices:
-                        # grads of ElasticDL Embedding layer
-                        # TODO: check arr.shape[1] = embedding_dim of this
-                        # EdlEmbedding layer
-                        arr = tensor_to_ndarray(v)
-                        edl_embedding_gradients[k] = arr
-                        continue
-                    else:
-                        raise ValueError(
-                            "Gradient key: %s is not part of model", k
-                        )
-
-                arr = tensor_to_ndarray(v)
-                if isinstance(arr, tf.IndexedSlices):
-                    if arr.values.shape[1] != self._model[k].numpy().shape[1]:
-                        raise ValueError(
-                            "Gradient key: %s has incompatible "
-                            "indexed slice dimension %d, expected %d"
-                            % (
-                                k,
-                                arr.values.shape[1],
-                                self._model[k].numpy().shape[1],
-                            )
-                        )
-
-                    max_index = tf.math.reduce_max(arr.indices).numpy()
-                    if max_index >= self._model[k].numpy().shape[0]:
-                        raise ValueError(
-                            "Gradient key: %s has wrong indices %d, "
-                            "out of range %d"
-                            % (
-                                k,
-                                max_index,
-                                self._model[k].numpy().shape[0] - 1,
-                            )
-                        )
-                    indexed_grads[k] = arr
+        tmp = {}
+        indexed_grads = {}
+        edl_embedding_gradients = {}
+        # Do sanity check before accumulating gradients.
+        for k, v in request.gradient.items():
+            if k not in self._model:
+                if v.indices:
+                    # grads of ElasticDL Embedding layer
+                    # TODO: check arr.shape[1] = embedding_dim of this
+                    # EdlEmbedding layer
+                    arr = tensor_to_ndarray(v)
+                    edl_embedding_gradients[k] = arr
+                    continue
                 else:
-                    if arr.shape != self._model[k].numpy().shape:
-                        raise ValueError(
-                            "Gradient key: %s has incompatible dimension", k
-                        )
-                    tmp[k] = arr
+                    raise ValueError(
+                        "Gradient key: %s is not part of model", k
+                    )
 
+            arr = tensor_to_ndarray(v)
+            if isinstance(arr, tf.IndexedSlices):
+                if arr.values.shape[1] != self._model[k].numpy().shape[1]:
+                    raise ValueError(
+                        "Gradient key: %s has incompatible "
+                        "indexed slice dimension %d, expected %d"
+                        % (
+                            k,
+                            arr.values.shape[1],
+                            self._model[k].numpy().shape[1],
+                        )
+                    )
+
+                max_index = tf.math.reduce_max(arr.indices).numpy()
+                if max_index >= self._model[k].numpy().shape[0]:
+                    raise ValueError(
+                        "Gradient key: %s has wrong indices %d, "
+                        "out of range %d"
+                        % (k, max_index, self._model[k].numpy().shape[0] - 1)
+                    )
+                indexed_grads[k] = arr
+            else:
+                if arr.shape != self._model[k].numpy().shape:
+                    raise ValueError(
+                        "Gradient key: %s has incompatible dimension", k
+                    )
+                tmp[k] = arr
+
+        if not self._use_async:
+            self._lock.acquire()
+        self._process_gradients(
+            edl_embedding_gradients, indexed_grads, tmp, request.model_version
+        )
+        if not self._use_async:
+            self._lock.release()
+
+        res.accepted = True
+        res.model_version = self._version
+        return res
+
+    def _process_gradients(
+        self, edl_embedding_gradients, indexed_grads, grads, request_version
+    ):
+        if not self._use_async:
             # grads of ElasticDL Embedding layer
             for k, v in edl_embedding_gradients.items():
                 if k in self._edl_embedding_gradients:
@@ -396,25 +404,33 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                     )
 
             # other grads
-            for k, v in tmp.items():
+            for k, v in grads.items():
                 if not self._use_async and k in self._gradient_sum:
                     self._gradient_sum[k] = self._gradient_sum[k] + v
                 else:
                     self._gradient_sum[k] = v
-
             self._grad_n += 1
-            # staleness-aware learning rate modulation
-            if self._lr_modulation:
-                staleness = max(1, self._version - request.model_version)
-                self._lr_modulation.set_multiplier(1.0 / staleness)
-            if self._use_async or self._grad_n >= self._grad_to_wait:
-                self._update_model()
-                self._update_evaluation()
-                self._update_checkpoint()
 
-        res.accepted = True
-        res.model_version = self._version
-        return res
+        need_to_update_model = self._use_async
+        if not self._use_async and self._grad_n >= self._grad_to_wait:
+            need_to_update_model = True
+            # get gradient average for sync SGD
+            for k in self._gradient_sum:
+                self._gradient_sum[k] = (
+                    self._gradient_sum[k] / self._grad_to_wait
+                )
+            edl_embedding_gradients = self._edl_embedding_gradients
+            indexed_grads = self._gradient_sum_indexed
+            grads = self._gradient_sum
+        if need_to_update_model:
+            self._update_optimizer(request_version)
+            self._update_model(grads, indexed_grads, edl_embedding_gradients)
+
+    def _update_optimizer(self, request_version):
+        if self._lr_modulation:
+            # staleness-aware learning rate modulation
+            staleness = max(1, self._version - request_version)
+            self._lr_modulation.set_multiplier(1.0 / staleness)
 
     def ReportTaskResult(self, request, _):
         if request.err_message:
