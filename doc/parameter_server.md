@@ -165,13 +165,13 @@ As we are using asynchronous SGD, increasing/decreasing CPU resources of worker 
 
 And for pserver, how can we adjust network bandwidth? One solution is to create or delete pserver nodes. Since each node has a network interface card, more pserver nodes means more network bandwidth.
 
-If we change pserver node number, following things need to changed:
+If we change pserver node number, following things also need to be done:
 
-1. modify parameter sharding strategy
-2. transform old checkpoint to new one under new sharding strategy
-3. load changed checkpoint to pserver nodes
-4. reset grpc channels between pservers and workers
-5. reset parameters pull/gradients push logic in workers
+1. modifying parameter sharding strategy
+2. transforming old checkpoint to new one under new sharding strategy
+3. loading changed checkpoint to pserver nodes
+4. reseting grpc channels between pservers and workers
+5. reseting parameters pull/gradients push logic in workers
 
 The second solution is to adjust network bandwidth of current pserver node. We can create many pserver nodes first, but set network bandwidth limit to certain medium value. If we want to increase/decrease network bandwith, we increase/decrease the network bandwidth limit.
 
