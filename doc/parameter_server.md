@@ -167,7 +167,7 @@ And for pserver, how can we adjust network bandwidth? One solution is to create 
 
 The second solution is to adjust network bandwidth of current pserver node. We can create many pserver nodes first, but set network bandwidth limit to certain medium value. If we want to increase/decrease network bandwith, we increase/decrease the network bandwidth limit.
 
-The second solution consumes the same memory, a little more CPU comparing to the first way, but avoids complex parameter sharding stragety under varying pserver nodes. The complex parameter sharding stragety usually raises the time complexity of each push/pull operation, which causes a remarkable loss on performance.
+The second solution consumes the same memory, a little more CPU comparing to the first way, but avoids complex parameter sharding strategy under varying pserver nodes. The complex parameter sharding strategy usually raises the time complexity of each push/pull operation, which causes a remarkable loss on performance.
 
 ## Failover
 
