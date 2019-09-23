@@ -165,17 +165,30 @@ As we are using asynchronous SGD, increasing/decreasing CPU resources of worker 
 
 And for pserver, how can we adjust network bandwidth? One solution is to create or delete pserver nodes. Since each node has a network interface card, more pserver nodes means more network bandwidth.
 
+If we change pserver node number, following things need to changed:
+
+1. modify parameter sharding strategy
+2. transform old checkpoint to new one under new sharding strategy
+3. load changed checkpoint to pserver nodes
+4. reset grpc channels between pservers and workers
+5. reset parameters pull/gradients push logic in workers
+
 The second solution is to adjust network bandwidth of current pserver node. We can create many pserver nodes first, but set network bandwidth limit to certain medium value. If we want to increase/decrease network bandwith, we increase/decrease the network bandwidth limit.
 
 The second solution consumes the same memory, a little more CPU comparing to the first way, but avoids complex parameter sharding stragety under varying pserver nodes. The complex parameter sharding stragety usually raises the time complexity of each push/pull operation, which causes a remarkable loss on performance.
 
 ## Failover
 
-Failover has a close relationship with elastic scheduling. If we have to create or kill pserver and worker frequently, we have to take failover into consideration seriously.
+There are two scenarios of failover to be taken into consideration:
 
-Since worker is stateless, we do not have to support failover for elastic scheduling worker.
+- machines get breakdown
+- some pods are killed because of priority scheduling
 
-And pserver is stateful, we will save checkpoint periodially to a distributed file system. If we apply the second way to schedule pserver, then checkpoint is enough to handle occasional machine breakdown. We do not need to create/kill pserver node frequently, but just increase/decrease the network bandwidth limit value.
+Since worker is stateless, we do not have to support failover for worker. 
+
+And pserver is stateful, we will save checkpoint periodially to a distributed file system. If we meets occasional machine breakdown, the only thing to do is to setup a new pserver pod, and load corresponding parameter shard from checkpoint.
+
+We should avoid changing pserver numbers, since it will bring lots of other work. If this assumption is valid, the second scenario would be skipped.
 
 ## Deployment
 
@@ -183,13 +196,13 @@ After training some epoches, we will choose one checkpoint which has the best ev
 
 We provide two depolyment solutions which handles different model size separately.
 
-### Solution 1
+### Solution one
 
 If the checkpoint file is not very large, and could be loaded to a single node, the deployment of parameter server architecture will be the same as single node. 
 
 We need to make both transformations to network definition and model parameter. In parameter server architecture, we may define some customized layers, but we have to use standard layers in deloyment. And some model parameter has to be merged, in order to coordinate with standard layers.
 
-### Solution 2
+### Solution two
 
 If the checkpoint file is too large to load into a single node, we have to spilt it into several pieces. The largest parameter could be a embedding table. We can split the embedding table by rows, and each piece hold a part of the embedding tale. 
 
