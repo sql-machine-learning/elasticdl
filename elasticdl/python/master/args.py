@@ -65,5 +65,13 @@ def parse_args():
             "checkpoint_filename_for_init is required for running "
             "prediction job"
         )
+    if not args.use_async and args.get_model_steps > 1:
+        raise ValueError(
+            "get_model_steps should be 1 when using synchronous SGD."
+        )
+    if args.use_async and args.grads_to_wait > 1:
+        raise ValueError(
+            "grads_to_wait should be 1 when using asynchronous SGD."
+        )
 
     return args

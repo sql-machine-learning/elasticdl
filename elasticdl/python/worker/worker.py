@@ -104,6 +104,9 @@ class Worker(object):
             self, self._job_type == JobType.TRAINING_WITH_EVALUATION
         )
         self._get_model_steps = get_model_steps
+        if self._get_model_steps > 1:
+            self._opt = self._opt_fn()
+            self._non_embed_grads = None
 
     # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
@@ -137,6 +140,14 @@ class Worker(object):
     def _reset_embedding(self):
         for layer in self._embedding_layers:
             layer.reset()
+
+    def _update_local_model(self):
+        if not self._non_embed_grads:
+            return
+        self._opt.apply_gradients(
+            zip(self._non_embed_grads, self._non_embed_vars)
+        )
+        self._non_embed_grads = None
 
     def get_task(self):
         """
@@ -362,6 +373,9 @@ class Worker(object):
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process(features, labels)
         accepted, min_model_version = self.report_gradient(grads)
+        if accepted and self._get_model_steps > 1:
+            non_embed_vars_n = len(self._non_embed_vars)
+            self._non_embed_grads = grads[:non_embed_vars_n]
         self._reset_embedding()
         return accepted, min_model_version, loss
 
@@ -375,7 +389,12 @@ class Worker(object):
         return self.report_prediction_outputs(predictions)
 
     def _process_minibatch(
-        self, task_type, features, labels, min_model_version
+        self,
+        task_type,
+        features,
+        labels,
+        min_model_version,
+        train_with_local_model=False,
     ):
         if self._need_embedding_layer_check or not self._var_created:
             self._run_model_call_before_training(features)
@@ -392,10 +411,11 @@ class Worker(object):
             elif task_type == elasticdl_pb2.TRAINING:
                 # TODO: optimize the logic to avoid unnecessary
                 #       get_model call.
-                self.get_model(
-                    max(self._model_version, min_model_version),
-                    elasticdl_pb2.MINIMUM,
-                )
+                if not train_with_local_model:
+                    self.get_model(
+                        max(self._model_version, min_model_version),
+                        elasticdl_pb2.MINIMUM,
+                    )
                 accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )
@@ -420,10 +440,14 @@ class Worker(object):
     def _process_eval_task_if_needed(self):
         """
         Check if there are evaluation tasks and process the tasks if any.
+
+        Return:
+            A python bool indicating whether worker processed some evaluation
+            tasks.
         """
         eval_info = self._task_data_service.get_evaluation_dataset()
         if not eval_info:
-            return
+            return False
         (eval_dataset, model_version, task_id) = eval_info
         eval_dataset = self._dataset_fn(eval_dataset, Mode.EVALUATION)
         eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
@@ -437,9 +461,14 @@ class Worker(object):
                 break
         del eval_dataset
         self.report_task_result(task_id, err_msg)
+        return True
 
     def _process_minibatch_and_report(
-        self, dataset_batch, task_type, model_version
+        self,
+        dataset_batch,
+        task_type,
+        model_version,
+        train_with_local_model=False,
     ):
         err_msg = ""
         try:
@@ -449,7 +478,13 @@ class Worker(object):
             else:
                 features = dataset_batch[0]
                 labels = dataset_batch[1]
-            self._process_minibatch(task_type, features, labels, model_version)
+            self._process_minibatch(
+                task_type,
+                features,
+                labels,
+                model_version,
+                train_with_local_model,
+            )
         except RuntimeError as err:
             err_msg = str(err)
             traceback.print_exc()
@@ -469,6 +504,12 @@ class Worker(object):
             mode = Mode.EVALUATION
         else:
             mode = Mode.TRAINING
+        local_update_count = 0
+        train_with_local_model = False
+        last_training_minibatch_failed = False
+        # set to True in order to initialize `train_with_local_model` to False
+        # for the first minibatch.
+        last_minibatch_do_evaluation = True
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
@@ -477,11 +518,37 @@ class Worker(object):
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
             for dataset_batch in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
-                    self._process_eval_task_if_needed()
+                    if self._process_eval_task_if_needed():
+                        last_minibatch_do_evaluation = True
                 task = self._task_data_service.get_current_task()
+                if task.type == elasticdl_pb2.TRAINING:
+                    if (
+                        last_minibatch_do_evaluation
+                        or last_training_minibatch_failed
+                        or local_update_count >= self._get_model_steps
+                    ):
+                        local_update_count = 0
+                        train_with_local_model = False
+                    else:
+                        train_with_local_model = True
+                print("train_with_local_model", train_with_local_model)
                 err_msg = self._process_minibatch_and_report(
-                    dataset_batch, task.type, task.model_version
+                    dataset_batch,
+                    task.type,
+                    task.model_version,
+                    train_with_local_model,
                 )
+                if task.type == elasticdl_pb2.TRAINING:
+                    last_minibatch_do_evaluation = False
+                    local_update_count += 1
+                    if err_msg:
+                        last_training_minibatch_failed = True
+                    else:
+                        last_training_minibatch_failed = False
+                        if local_update_count < self._get_model_steps:
+                            self._update_local_model()
+                elif task.type == elasticdl_pb2.EVALUATION:
+                    last_minibatch_do_evaluation = True
                 self._task_data_service.report_record_done(
                     self._minibatch_size, err_msg
                 )
@@ -490,4 +557,5 @@ class Worker(object):
             # training tasks are done, as other workers' may still
             # have pending training tasks.
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
-                self._process_eval_task_if_needed()
+                if self._process_eval_task_if_needed():
+                    last_minibatch_do_evaluation = True

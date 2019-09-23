@@ -17,8 +17,10 @@ from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.tests import test_call_back
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.tests.mock_kv_store import MockKvStore
+from elasticdl.python.tests.test_call_back import BaseCallback
 from elasticdl.python.worker.worker import Worker
 
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
@@ -59,27 +61,72 @@ def create_recordio_file(size):
     return temp_file.name
 
 
+class CheckRetrainCallback(BaseCallback):
+    # For testing of retrain when gradient not accepted.
+    # Increase master version to reject the gradient.
+    def __init__(self, master, worker, unittest_inst):
+        super(CheckRetrainCallback, self).__init__(
+            master,
+            worker,
+            unittest_inst,
+            call_times=[
+                test_call_back.ON_REPORT_GRADIENT_BEGIN,
+                test_call_back.ON_REPORT_EVALUATION_METRICS_BEGIN,
+            ],
+        )
+
+    def __call__(self):
+        if 2 < self._master._version < 80:
+            self._master._version += 1
+
+
+class CheckWorkerModelCallback(BaseCallback):
+    """Callback for testing of retrain mechanism of worker when gradient not
+    accepted.
+
+
+    """
+
+    def __init__(self, master, worker, unittest_inst):
+        super(CheckWorkerModelCallback, self).__init__(
+            master,
+            worker,
+            unittest_inst,
+            call_times=[test_call_back.ON_REPORT_GRADIENT_BEGIN],
+        )
+
+    def __call__(self):
+        if self._master._grad_n:
+            return
+        self._unittest_inst.assertTrue(
+            len(self._worker._non_embed_vars) == len(self._master._model)
+        )
+        for var in self._worker._non_embed_vars:
+            self._unittest_inst.assertTrue(
+                np.isclose(
+                    var.numpy(), self._master._model[var.name].numpy()
+                ).all()
+            )
+
+
 class WorkerTest(unittest.TestCase):
-    def distributed_train_and_evaluate(self, training=True):
+    def distributed_train_and_evaluate(
+        self,
+        training=True,
+        callback_classes=[],
+        use_async=False,
+        grads_to_wait=2,
+        get_model_steps=1,
+    ):
         """
         Run distributed training and evaluation with a local master.
         grpc calls are mocked by local master call.
         """
 
-        class _Master(InProcessMaster):
-            def ReportGradient(self, req):
-                if 2 < self._m._version < 80:
-                    # For testing of retrain when gradient not accepted.
-                    # Increase master version to reject the gradient.
-                    self._m._version += 1
-                return self._m.ReportGradient(req, None)
-
-            def ReportEvaluationMetrics(self, req):
-                if 2 < self._m._version < 80:
-                    # Testing of evaluation retries. Increase the master
-                    # version so the evaluation metrics will not be accepted.
-                    self._m._version += 1
-                return self._m.ReportEvaluationMetrics(req, None)
+        if use_async and grads_to_wait > 1:
+            raise ValueError(
+                "grads_to_wait should be 1 when using asynchronous SGD."
+            )
 
         job_type = (
             JobType.TRAINING_ONLY if training else JobType.EVALUATION_ONLY
@@ -92,6 +139,7 @@ class WorkerTest(unittest.TestCase):
             _model_zoo_path,
             model_def="test_module.custom_model",
             channel=None,
+            get_model_steps=get_model_steps,
         )
 
         shards = {create_recordio_file(128): (0, 128)}
@@ -116,7 +164,7 @@ class WorkerTest(unittest.TestCase):
         else:
             evaluation_service = None
         master = MasterServicer(
-            2,
+            grads_to_wait,
             batch_size,
             worker._opt_fn(),
             task_d,
@@ -124,8 +172,14 @@ class WorkerTest(unittest.TestCase):
             checkpoint_filename_for_init="",
             checkpoint_service=None,
             evaluation_service=evaluation_service,
+            use_async=use_async,
         )
-        worker._stub = _Master(master)
+        callbacks = [
+            callback_class(master, worker, self)
+            for callback_class in callback_classes
+        ]
+        # worker._stub = _Master(master, callbacks)
+        worker._stub = InProcessMaster(master, callbacks)
 
         for var in worker._model.trainable_variables:
             master.set_model_var(var.name, var.numpy())
@@ -139,10 +193,24 @@ class WorkerTest(unittest.TestCase):
         self.assertTrue(not task.shard_name)
 
     def test_distributed_train_tf_example(self):
-        self.distributed_train_and_evaluate(training=True)
+        self.distributed_train_and_evaluate(
+            training=True, callback_classes=[CheckRetrainCallback]
+        )
 
     def test_distributed_evaluate_tf_example(self):
-        self.distributed_train_and_evaluate(training=False)
+        self.distributed_train_and_evaluate(
+            training=False, callback_classes=[CheckRetrainCallback]
+        )
+
+    def test_distributed_train_get_model_steps(self):
+        # When `use_async=True`, `grads_to_wait` should be set to 1
+        self.distributed_train_and_evaluate(
+            training=True,
+            callback_classes=[CheckWorkerModelCallback],
+            use_async=True,
+            get_model_steps=4,
+            grads_to_wait=1,
+        )
 
     def test_embedding_layer(self):
         worker = Worker(
