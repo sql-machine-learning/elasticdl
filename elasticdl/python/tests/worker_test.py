@@ -115,7 +115,7 @@ class CheckWorkerModelCallback(BaseCallback):
 
 
 class WorkerTest(unittest.TestCase):
-    # TODO (yunjian.lmh): `distributed_train_and_evaluate` is used in
+    # TODO (yunjian.lmh): Function `distributed_train_and_evaluate` is used in
     # `worker_test` and `example_test`, which can be extracted as a reusable
     # function.
     def distributed_train_and_evaluate(
