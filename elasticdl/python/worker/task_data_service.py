@@ -3,7 +3,7 @@ import threading
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.data_reader import RecordIODataReader
+from elasticdl.python.common.data_reader import create_data_reader
 from elasticdl.python.common.dataset_utils import create_dataset_from_tasks
 from elasticdl.python.common.log_util import default_logger as logger
 
@@ -16,8 +16,7 @@ class TaskDataService(object):
         self._pending_dataset = True
         self._pending_eval_tasks = []
         self._reset()
-        # TODO: Support any subclasses of `AbstractDataReader`
-        self._data_reader = RecordIODataReader(data_dir=None)
+        self._data_reader = create_data_reader(data_origin=None)
 
     def _reset(self):
         """
@@ -92,7 +91,7 @@ class TaskDataService(object):
                 return None
             self._reset()
             ds = tf.data.Dataset.from_generator(
-                self._gen, (tf.string), (tf.TensorShape([]))
+                self._gen, self._data_reader.records_output_types
             )
             self._pending_dataset = False
             return ds

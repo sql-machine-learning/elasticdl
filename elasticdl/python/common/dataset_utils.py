@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from elasticdl.python.common.data_reader import RecordIODataReader
+from elasticdl.python.common.data_reader import create_data_reader
 
 
 def create_dataset_from_tasks(tasks):
@@ -11,8 +11,7 @@ def create_dataset_from_tasks(tasks):
     class _Generator:
         def __init__(self, tasks):
             self._tasks = tasks
-            # TODO: Support any subclasses of `AbstractDataReader`
-            self._data_reader = RecordIODataReader(data_dir=None)
+            self._data_reader = create_data_reader(data_origin=None)
 
         def gen(self):
             for task in self._tasks:
@@ -22,6 +21,6 @@ def create_dataset_from_tasks(tasks):
 
     generator = _Generator(tasks)
     dataset = tf.data.Dataset.from_generator(
-        generator.gen, (tf.string), (tf.TensorShape([]))
+        generator.gen, generator._data_reader.records_output_types
     )
     return dataset

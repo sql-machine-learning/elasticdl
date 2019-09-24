@@ -3,8 +3,10 @@ from abc import ABC, abstractmethod
 from contextlib import closing
 
 import recordio
+import tensorflow as tf
 
 from elasticdl.python.common.odps_io import ODPSReader
+from elasticdl.python.common.constants import ODPSConfig
 
 
 class AbstractDataReader(ABC):
@@ -30,6 +32,17 @@ class AbstractDataReader(ABC):
         index and the number of records in each shard.
         """
         pass
+
+    @property
+    def records_output_types(self):
+        """This method returns the output data types used for
+        `tf.data.Dataset.from_generator` when creating the
+        `tf.data.Dataset` object from the generator created
+        by `read_records()`. Note that the returned output types
+        should be a nested structure of `tf.DType` objects corresponding
+        to each component of an element yielded by the created generator.
+        """
+        return None
 
 
 class RecordIODataReader(AbstractDataReader):
@@ -63,40 +76,31 @@ class RecordIODataReader(AbstractDataReader):
                 f_records[p] = (start_ind, rio.num_records())
         return f_records
 
+    @property
+    def records_output_types(self):
+        return tf.string
+
 
 class ODPSDataReader(AbstractDataReader):
     def __init__(self, **kwargs):
         AbstractDataReader.__init__(self, **kwargs)
         self._kwargs = kwargs
-        _check_required_kwargs(
-            [
-                "project",
-                "access_id",
-                "access_key",
-                "table",
-                "records_per_task",
-            ],
-            self._kwargs,
-        )
-        self._reader = ODPSReader(
-            project=self._kwargs["project"],
-            access_id=self._kwargs["access_id"],
-            access_key=self._kwargs["access_key"],
-            table=self._kwargs["table"],
-            endpoint=self._kwargs.get("endpoint"),
-            num_processes=self._kwargs.get("num_processes", 1),
-        )
 
     def read_records(self, task):
-        records = self._reader.read_batch(
+        reader = self._get_reader(
+            table_name=self._get_odps_table_name(task.shard_name)
+        )
+        records = reader.read_batch(
             start=task.start, end=task.end, columns=None
         )
         for batch in records:
             yield batch
 
     def create_shards(self):
-        shard_name_prefix = "shard_"
-        table_size = self._reader.get_table_size()
+        _check_required_kwargs(["table", "records_per_task"], self._kwargs)
+        reader = self._get_reader(self._kwargs["table"])
+        shard_name_prefix = self._kwargs["table"] + ":shard_"
+        table_size = reader.get_table_size()
         records_per_task = self._kwargs["records_per_task"]
         shards = {}
         num_shards = table_size // records_per_task
@@ -114,6 +118,47 @@ class ODPSDataReader(AbstractDataReader):
                 num_records_left,
             )
         return shards
+
+    @property
+    def records_output_types(self):
+        return tf.float32
+
+    def _get_reader(self, table_name):
+        _check_required_kwargs(
+            ["project", "access_id", "access_key"], self._kwargs
+        )
+        return ODPSReader(
+            project=self._kwargs["project"],
+            access_id=self._kwargs["access_id"],
+            access_key=self._kwargs["access_key"],
+            table=table_name,
+            endpoint=self._kwargs.get("endpoint"),
+            num_processes=self._kwargs.get("num_processes", 1),
+        )
+
+    @staticmethod
+    def _get_odps_table_name(shard_name):
+        return shard_name.split(":")[0]
+
+
+def create_data_reader(data_origin):
+    if all(
+        k in os.environ
+        for k in (
+            ODPSConfig.PROJECT_NAME,
+            ODPSConfig.ACCESS_ID,
+            ODPSConfig.ACCESS_KEY,
+        )
+    ):
+        return ODPSDataReader(
+            project=os.environ[ODPSConfig.PROJECT_NAME],
+            access_id=os.environ[ODPSConfig.ACCESS_ID],
+            access_key=os.environ[ODPSConfig.ACCESS_KEY],
+            table=data_origin,
+            endpoint=os.environ.get(ODPSConfig.ENDPOINT),
+        )
+    else:
+        return RecordIODataReader(data_dir=data_origin)
 
 
 def _check_required_kwargs(required_args, kwargs):
