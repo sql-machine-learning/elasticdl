@@ -9,7 +9,7 @@ There are three different type branches:
 - **feature** branches: branch off from the `develop` branch and merge back into `develop`. `Feature` branches are used to develop new features, and created/maintained by developers themselves. `Feature` branches will be deleted after code changes get merge info `develop` branch.
 - **release** branches: branch off from the `develop` branch. When the `develop` branch reaches the desired state of a new release, cut off a new release branch, and start to publish new versions there. Release branches will be kept.
 
-For version numbers, we follow the [Semantic Versioning 2.0.0](https://semver.org/ with style MAJOR.MINOR.PATCH (e.g. 0.2.1). For each MAJOR.MINOR, we keep a corresponding `release` branch (named `release-x.y`), and each following patch version x.y.z is released from it.
+For version numbers, we follow the [Semantic Versioning 2.0.0](https://semver.org/ with style MAJOR.MINOR.PATCH (e.g. 0.2.1). For each MAJOR.MINOR, we keep a corresponding `release` branch (named `branch-x.y`), and each following patch version x.y.z is released from it.
 
 
 ## Feature Development
@@ -28,34 +28,38 @@ $ git checkout develop
 $ git branch -D feature1
 ```
 
+Here is the [tutorial](https://help.github.com/en/articles/creating-a-pull-request#changing-the-branch-range-and-destination-repository) on how to open a pull request.
+
 ## Releasing
 
 Here are detailed steps for releasing an example version 0.1.0.
 
 ```bash
 # Start a new release branch from develop branch
-$ git checkout -b release-0.1 develop
-$ git push origin release-0.1
-# Prepare the first release candidate version 0.1.0rc0
-$ ./bump_version.sh 0.1.0rc0
+$ git checkout -b branch-0.1 develop
+$ git push origin branch-0.1
+# Prepare the first release candidate version v0.1.0rc0
+$ ./bump_version.sh v0.1.0rc0
 # Update RELEASE.md to include major changes in this version
 # Then commit changes
-$ git commit -a -m "Release 0.1.0rc0"
-$ git push origin release-0.1
-# Publish 0.1.0rc0 to PyPI
+$ git commit -a -m "Release v0.1.0rc0"
+$ git push origin branch-0.1
+# Publish v0.1.0rc0 to PyPI
+# TODO (ywskycn): add detailed instructions here
 ```
 
-So now we have 0.1.0rc0 ready to use. Test out this version. If any issues found, get them fixed in `develop` branch, merged into `release-0.1` branch, and repeat the aforementioned steps to publish a new release candidate version. We keep releasing `rc` version until no further issues found. At that time, release the official `0.1.0` version.
+So now we have v0.1.0rc0 ready to use. Test out this version. If any issues found, get them fixed in `develop` branch, merged into `branch-0.1` branch, and repeat the aforementioned steps to publish a new release candidate version. We keep releasing `rc` version until no further issues found. At that time, release the official `v0.1.0` version.
 
 ```bash
-$ git checkout -b release-0.1 develop
-$ ./bump_version.sh 0.1.0
-$ git commit -a -m "Release 0.1.0"
-$ git push origin release-0.1
-# Publish 0.1.0 to PyPI
+$ git checkout -b branch-0.1 develop
+$ ./bump_version.sh v0.1.0
+# Also remember to update RELEASE.md
+$ git commit -a -m "Release v0.1.0"
+$ git push origin branch-0.1
+# Publish v0.1.0 to PyPI
 # Also add a tag for this release
-$ git tag release-0.1.0 -a
-$ git push origin release-0.1.0
+$ git tag v0.1.0 -a
+$ git push origin v0.1.0
 ```
 
-For cases where the `release` branch already exists (for example when releasing 0.1.1 and `release-0.1` is already there), just reuse that `release` branch and merge required commits from `develop` branch to the corresponding `release` branch.
+For cases where the `release` branch already exists (for example when releasing 0.1.1 and `branch-0.1` is already there), just reuse that `release` branch and merge required commits from `develop` branch to the corresponding `release` branch.
