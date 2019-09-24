@@ -173,13 +173,15 @@ If we change pserver node number, following things also need to be done:
 4. reseting grpc channels between pservers and workers
 5. reseting parameters pull/gradients push logic in workers
 
+The second solution to avoid parameter re-sharding is using consistent hashing. However, consistent hashing usually raises the time complexity of each push/pull operation, which causes a remarkable loss on performance.
 
-Another solution to avoid parameter re-sharding is using consistent hashing. However, this parameter sharding strategy usually raises the time complexity of each push/pull operation, which causes a remarkable loss on performance.
+The third solution is to adjust network bandwidth of current pserver node. We can create many pserver nodes first, but set network bandwidth limit to certain medium value. If we want to increase/decrease network bandwith, we increase/decrease the network bandwidth limit.
+
+The third solution consumes the same memory, a little more CPU comparing to the former solutions, but avoids complex parameter re-sharding/consistent hashing under varying pserver nodes.
+
+However, it's hard to manage network bandwidth resources in a data center. There could be a complex network topology. 
 
 
-The second solution is to adjust network bandwidth of current pserver node. We can create many pserver nodes first, but set network bandwidth limit to certain medium value. If we want to increase/decrease network bandwith, we increase/decrease the network bandwidth limit.
-
-The second solution consumes the same memory, a little more CPU comparing to the first solution, but avoids complex parameter re-sharding/consistent hashing under varying pserver nodes.
 
 ## Failover
 
@@ -190,11 +192,19 @@ There are two scenarios of failover to be taken into consideration:
 
 Since worker is stateless, we do not have to support failover for worker. 
 
-However, pserver is stateful, which stores parameter shards. We will save checkpoint periodially to a distributed file system. If we meets occasional machine breakdown, the only thing to do is to setup a new pserver pod, and load corresponding parameter shard from checkpoint.
+However, pserver is stateful, which stores parameter shards. We must be careful when handling pserver.
+
+To solve machines breakdown problem, we make replication for each pserver pod. The parameter sharding will be stored at one pserver pod, and also the neighbour pserver pods. The replication number is exposed to users to set, from 0 to 2.
+
+So, if one pserver pod is breakdown, we could keep providing kvstore service without suspension. At the same time, the master will find another place to start a new pserver pod to recover to the original state.
 
 In addition, if there is no big embedding table in the model, which means a worker holds whole parameters, the pserver could also recover from a worker.
 
-We should avoid changing pserver numbers, since it will bring lots of other work. If this assumption is valid, the second scenario would be skipped.
+Besides, we will save checkpoint periodially to a distributed file system. If we meets occasional many machines breakdown, the only thing to do is to setup a new job, and load corresponding parameter shards from the checkpoint.
+
+Since pserver pods has relative higher priority than worker pods, worker pods of one lower priority job will be killed first to satisfy another job. If we kill all worker pods of one job, then the pserver pods of this job will also be idle. There is no load on CPU and network bandwidth, the pserver pods only occupy some memory. So, we do not need to kill pserver pods further.
+
+We should avoid changing pserver numbers in general, since it will bring lots of other work. If this assumption is valid, the second scenario would be skipped.
 
 ## Deployment
 
