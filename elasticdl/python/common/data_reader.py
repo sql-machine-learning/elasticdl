@@ -141,7 +141,7 @@ class ODPSDataReader(AbstractDataReader):
         return shard_name.split(":")[0]
 
 
-def create_data_reader(data_origin):
+def create_data_reader(data_origin, records_per_task=None):
     if all(
         k in os.environ
         for k in (
@@ -156,6 +156,7 @@ def create_data_reader(data_origin):
             access_key=os.environ[ODPSConfig.ACCESS_KEY],
             table=data_origin,
             endpoint=os.environ.get(ODPSConfig.ENDPOINT),
+            records_per_task=records_per_task,
         )
     else:
         return RecordIODataReader(data_dir=data_origin)

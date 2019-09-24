@@ -45,7 +45,7 @@ def _make_task_dispatcher(
     # TODO: Support any subclasses of `AbstractDataReader`
     # and support passing specified parameters to the constructor
     prediction_f_records = create_data_reader(
-        data_origin=prediction_data_dir
+        data_origin=prediction_data_dir, records_per_task=records_per_task
     ).create_shards()
 
     return _TaskDispatcher(
