@@ -163,11 +163,11 @@ Since our target is to scheduling deep learning jobs elasticly, we must have the
 
 As we are using asynchronous SGD, increasing/decreasing CPU resources of worker is trivial. We can just create more workers or kill some workers under different cluster status.
 
-If job A requests 50 CPU cores, however, current cluster only has 30 CPU cores, it will lanuch the job immediately with 30 CPU cores. If the cluster has more CPU cores after a while, it will tell the master of job A to occupy the CPU cores and create more workers.
+For example, if job A requests 50 CPU cores, but current cluster only has 30 CPU cores. The cluster will lanuch the job immediately with 30 CPU cores. If the cluster has more CPU cores after a while, it will tell the master of job A to occupy the idle CPU cores and create more workers.
 
-And for pserver, how can we adjust network bandwidth? One solution is to create or delete pserver nodes. Since each node has a network interface card, more pserver nodes means more network bandwidth.
+And for pserver, how can we adjust network bandwidth? One solution is to create or delete pserver pods. Since each node has a network interface card, more pserver pods means more network bandwidth.
 
-If we change pserver node number, following things also need to be done:
+If we change pserver pod number, following things also need to be done:
 
 1. modifying parameter sharding strategy
 2. transforming old checkpoint to new one under new sharding strategy
@@ -177,11 +177,15 @@ If we change pserver node number, following things also need to be done:
 
 The second solution to avoid parameter re-sharding is using consistent hashing. However, consistent hashing usually raises the time complexity of each push/pull operation, which causes a remarkable loss on performance.
 
-The third solution is to adjust network bandwidth of current pserver node. We can create many pserver nodes first, but set network bandwidth limit to certain medium value. If we want to increase/decrease network bandwith, we increase/decrease the network bandwidth limit.
+The third solution is to adjust network bandwidth of current pserver pod. We can create many pserver pods first, but set network bandwidth limit to certain medium value. If we want to increase/decrease network bandwith, we increase/decrease the network bandwidth limit.
 
-The third solution consumes the same memory, a little more CPU comparing to the former solutions, but avoids complex parameter re-sharding/consistent hashing under varying pserver nodes.
+The third solution consumes the same memory, a little more CPU comparing to the former solutions, but avoids complex parameter re-sharding/consistent hashing under varying pserver nodes. However, it's hard to manage network bandwidth resources in a data center. There could be a complex network topology. 
 
-However, it's hard to manage network bandwidth resources in a data center. There could be a complex network topology. 
+The forth solution is to create many pserver pods but keep the pserver pod number unchanged. Each parameter sharding will be mapped to a pserver pod. But the location of pserver pods could be changed.
+
+In general, one team's job has high prority on his own resources. For example, team A has a job A which require 3 pserver nodes, but team A only has two nodes for pserver. So it will "borrow" one from other team, and schedules pserver pods to 3 nodes, 2 of them is his own, 1 is from another team.
+
+It the other team launch his own job, it will tell job A to release the "borrowed" node. So the pserver pods of job A will be moved to his own 2 nodes.
 
 ## Failover
 
@@ -204,7 +208,7 @@ Besides, we will save checkpoint periodially to a distributed file system. If we
 
 Since pserver pods has relative higher priority than worker pods, worker pods of one lower priority job will be killed first to satisfy another job. If we kill all worker pods of one job, then the pserver pods of this job will also be idle. There is no load on CPU and network bandwidth, the pserver pods only occupy some memory. So, we do not need to kill pserver pods further.
 
-We should avoid changing pserver numbers in general, since it will bring lots of other work. If this assumption is valid, the second scenario would be skipped.
+We should avoid changing pserver pod numbers in general, since it will bring lots of other work. If this assumption is valid, the second scenario would be skipped.
 
 ## Deployment
 
