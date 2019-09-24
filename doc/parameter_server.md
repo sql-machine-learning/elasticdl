@@ -171,7 +171,7 @@ If we change pserver pod number, following things also need to be done:
 
 1. modifying parameter sharding strategy
 2. transforming old checkpoint to new one under new sharding strategy
-3. loading changed checkpoint to pserver nodes
+3. loading changed checkpoint to pserver pods
 4. reseting grpc channels between pservers and workers
 5. reseting parameters pull/gradients push logic in workers
 
@@ -179,9 +179,9 @@ The second solution to avoid parameter re-sharding is using consistent hashing. 
 
 The third solution is to adjust network bandwidth of current pserver pod. We can create many pserver pods first, but set network bandwidth limit to certain medium value. If we want to increase/decrease network bandwith, we increase/decrease the network bandwidth limit.
 
-The third solution consumes the same memory, a little more CPU comparing to the former solutions, but avoids complex parameter re-sharding/consistent hashing under varying pserver nodes. However, it's hard to manage network bandwidth resources in a data center. There could be a complex network topology. 
+The third solution consumes the same memory, a little more CPU comparing to the former solutions, but avoids complex parameter re-sharding/consistent hashing under varying pserver pods. However, it's hard to manage network bandwidth resources in a data center. There could be a complex network topology. 
 
-The forth solution is to create many pserver pods but keep the pserver pod number unchanged. Each parameter sharding will be mapped to a pserver pod. But the location of pserver pods could be changed.
+The forth solution is to create many pserver pods and keep the pserver pod number unchanged. Each parameter sharding will be mapped to a pserver pod. But the location of pserver pods could be changed.
 
 In general, one team's job has high prority on his own resources. For example, team A has a job A which require 3 pserver nodes, but team A only has two nodes for pserver. So it will "borrow" one from other team, and schedules pserver pods to 3 nodes, 2 of them is his own, 1 is from another team.
 
