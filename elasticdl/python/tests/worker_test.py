@@ -61,7 +61,7 @@ def create_recordio_file(size):
     return temp_file.name
 
 
-class CheckRetrainCallback(BaseCallback):
+class CheckRetryCallback(BaseCallback):
     """Checks the retry functionality of workers.
 
     When workers report Gradient or evaluation metrics, this callback
@@ -70,7 +70,7 @@ class CheckRetrainCallback(BaseCallback):
     """
 
     def __init__(self, master, worker, unittest_inst):
-        super(CheckRetrainCallback, self).__init__(
+        super(CheckRetryCallback, self).__init__(
             master,
             worker,
             unittest_inst,
@@ -201,12 +201,12 @@ class WorkerTest(unittest.TestCase):
 
     def test_distributed_train_tf_example(self):
         self.distributed_train_and_evaluate(
-            training=True, callback_classes=[CheckRetrainCallback]
+            training=True, callback_classes=[CheckRetryCallback]
         )
 
     def test_distributed_evaluate_tf_example(self):
         self.distributed_train_and_evaluate(
-            training=False, callback_classes=[CheckRetrainCallback]
+            training=False, callback_classes=[CheckRetryCallback]
         )
 
     def test_distributed_train_get_model_steps(self):
