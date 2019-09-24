@@ -466,12 +466,14 @@ def parse_master_args(master_args=None):
             "prediction job"
         )
     if not args.use_async and args.get_model_steps > 1:
-        raise ValueError(
-            "get_model_steps should be 1 when using synchronous SGD."
+        args.get_model_steps = 1
+        logger.warning(
+            "get_model_steps is set to 1 when using synchronous SGD."
         )
     if args.use_async and args.grads_to_wait > 1:
-        raise ValueError(
-            "grads_to_wait should be 1 when using asynchronous SGD."
+        args.grads_to_wait = 1
+        logger.warning(
+            "grads_to_wait is set to 1 when using asynchronous SGD."
         )
 
     return args
