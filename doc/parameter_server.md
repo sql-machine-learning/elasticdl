@@ -163,6 +163,8 @@ Since our target is to scheduling deep learning jobs elasticly, we must have the
 
 As we are using asynchronous SGD, increasing/decreasing CPU resources of worker is trivial. We can just create more workers or kill some workers under different cluster status.
 
+If job A requests 50 CPU cores, however, current cluster only has 30 CPU cores, it will lanuch the job immediately with 30 CPU cores. If the cluster has more CPU cores after a while, it will tell the master of job A to occupy the CPU cores and create more workers.
+
 And for pserver, how can we adjust network bandwidth? One solution is to create or delete pserver nodes. Since each node has a network interface card, more pserver nodes means more network bandwidth.
 
 If we change pserver node number, following things also need to be done:
@@ -180,8 +182,6 @@ The third solution is to adjust network bandwidth of current pserver node. We ca
 The third solution consumes the same memory, a little more CPU comparing to the former solutions, but avoids complex parameter re-sharding/consistent hashing under varying pserver nodes.
 
 However, it's hard to manage network bandwidth resources in a data center. There could be a complex network topology. 
-
-
 
 ## Failover
 
