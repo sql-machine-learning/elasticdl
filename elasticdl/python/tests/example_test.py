@@ -1,3 +1,4 @@
+import itertools
 import os
 import tempfile
 import unittest
@@ -104,6 +105,7 @@ class ExampleTest(unittest.TestCase):
         model_params="",
         training=True,
         dataset="",
+        use_async=False,
     ):
         """
         Run distributed training and evaluation with a local master.
@@ -167,6 +169,7 @@ class ExampleTest(unittest.TestCase):
             checkpoint_filename_for_init="",
             checkpoint_service=checkpoint_service,
             evaluation_service=evaluation_service,
+            use_async=use_async,
         )
         worker._stub = InProcessMaster(master)
 
@@ -180,18 +183,22 @@ class ExampleTest(unittest.TestCase):
         task = master.GetTask(req, None)
         # No more task.
         self.assertTrue(not task.shard_name)
+        return master._version
 
     def test_deepfm_functional_train(self):
         model_params = (
             "input_dim=5383,embedding_dim=4,input_length=10,fc_unit=4"
         )
-        self.distributed_train_and_evaluate(
-            10,
-            "deepfm_functional_api.deepfm_functional_api.custom_model",
-            model_params=model_params,
-            training=True,
-            dataset="frappe",
-        )
+        use_asyncs = [False, True]
+        for use_async in use_asyncs:
+            self.distributed_train_and_evaluate(
+                10,
+                "deepfm_functional_api.deepfm_functional_api.custom_model",
+                model_params=model_params,
+                training=True,
+                dataset="frappe",
+                use_async=use_async,
+            )
 
     def test_deepfm_functional_evaluate(self):
         model_params = (
@@ -205,69 +212,72 @@ class ExampleTest(unittest.TestCase):
             dataset="frappe",
         )
 
-    def test_mnist_functional_train(self):
-        self.distributed_train_and_evaluate(
-            [28, 28],
+    def test_mnist_train(self):
+        model_defs = [
             "mnist_functional_api.mnist_functional_api.custom_model",
-            training=True,
-        )
+            "mnist_subclass.mnist_subclass.CustomModel",
+        ]
+        use_asyncs = [False, True]
+        configs = list(itertools.product(model_defs, use_asyncs))
 
-    def test_mnist_functional_evaluate(self):
-        self.distributed_train_and_evaluate(
-            [28, 28],
+        model_versions = []
+        for config in configs:
+            model_version = self.distributed_train_and_evaluate(
+                [28, 28], config[0], training=True, use_async=config[1]
+            )
+            model_versions.append(model_version)
+        # async model version = sync model version * 2
+        self.assertEqual(model_versions[0] * 2, model_versions[1])
+        self.assertEqual(model_versions[2] * 2, model_versions[3])
+
+    def test_mnist_evaluate(self):
+        model_defs = [
             "mnist_functional_api.mnist_functional_api.custom_model",
-            training=False,
-        )
-
-    def test_mnist_subclass_train(self):
-        self.distributed_train_and_evaluate(
-            [28, 28],
             "mnist_subclass.mnist_subclass.CustomModel",
-            training=True,
-        )
+        ]
+        for model_def in model_defs:
+            self.distributed_train_and_evaluate(
+                [28, 28], model_def, training=False
+            )
 
-    def test_mnist_subclass_evaluate(self):
-        self.distributed_train_and_evaluate(
-            [28, 28],
-            "mnist_subclass.mnist_subclass.CustomModel",
-            training=False,
-        )
-
-    def test_cifar10_functional_train(self):
-        self.distributed_train_and_evaluate(
-            [32, 32, 3],
+    def test_cifar10_train(self):
+        model_defs = [
             "cifar10_functional_api.cifar10_functional_api.custom_model",
-            training=True,
-        )
+            "cifar10_subclass.cifar10_subclass.CustomModel",
+        ]
+        use_asyncs = [False, True]
+        configs = list(itertools.product(model_defs, use_asyncs))
 
-    def test_cifar10_functional_evaluate(self):
-        self.distributed_train_and_evaluate(
-            [32, 32, 3],
+        model_versions = []
+        for config in configs:
+            model_version = self.distributed_train_and_evaluate(
+                [32, 32, 3], config[0], training=True, use_async=config[1]
+            )
+            model_versions.append(model_version)
+        # async model version = sync model version * 2
+        self.assertEqual(model_versions[0] * 2, model_versions[1])
+        self.assertEqual(model_versions[2] * 2, model_versions[3])
+
+    def test_cifar10_evaluate(self):
+        model_defs = [
             "cifar10_functional_api.cifar10_functional_api.custom_model",
-            training=False,
-        )
-
-    def test_cifar10_subclass_train(self):
-        self.distributed_train_and_evaluate(
-            [32, 32, 3],
             "cifar10_subclass.cifar10_subclass.CustomModel",
-            training=True,
-        )
-
-    def test_cifar10_subclass_evaluate(self):
-        self.distributed_train_and_evaluate(
-            [32, 32, 3],
-            "cifar10_subclass.cifar10_subclass.CustomModel",
-            training=False,
-        )
+        ]
+        for model_def in model_defs:
+            self.distributed_train_and_evaluate(
+                [32, 32, 3], model_def, training=False
+            )
 
     def test_resnet50_subclass_train(self):
-        self.distributed_train_and_evaluate(
-            [224, 224, 3],
-            "resnet50_subclass.resnet50_subclass.CustomModel",
-            training=True,
-            dataset="imagenet",
-        )
+        use_asyncs = [False, True]
+        for use_async in use_asyncs:
+            self.distributed_train_and_evaluate(
+                [224, 224, 3],
+                "resnet50_subclass.resnet50_subclass.CustomModel",
+                training=True,
+                dataset="imagenet",
+                use_async=use_async,
+            )
 
     def test_resnet50_subclass_evaluate(self):
         self.distributed_train_and_evaluate(
