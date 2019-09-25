@@ -20,5 +20,6 @@ The master node plays the master role in two aspects.
 ## Dynamic Data Sharding
 
 ## Data IO Pipeline
+![data_io_pipeline](/doc/images/data_io_pipeline.jpg)
 
 ## Open Questions
