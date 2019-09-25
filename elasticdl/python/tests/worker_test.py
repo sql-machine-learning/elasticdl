@@ -1,26 +1,21 @@
 import copy
 import os
-import tempfile
 import unittest
-from contextlib import closing
 
 import mock
 import numpy as np
-import recordio
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Dense, Flatten
 
-from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import JobType
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.embedding_service import EmbeddingService
-from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.tests import test_call_back
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.tests.mock_kv_store import MockKvStore
 from elasticdl.python.tests.test_call_back import BaseCallback
+from elasticdl.python.tests.test_helper import distributed_train_and_evaluate
 from elasticdl.python.worker.worker import Worker
 
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
@@ -44,23 +39,6 @@ class CustomModel(tf.keras.Model):
         return self.flatten(x)
 
 
-def create_recordio_file(size):
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    with closing(recordio.Writer(temp_file.name)) as f:
-        for _ in range(size):
-            x = np.random.rand(1).astype(np.float32)
-            y = 2 * x + 1
-            example_dict = {
-                "x": tf.train.Feature(float_list=tf.train.FloatList(value=x)),
-                "y": tf.train.Feature(float_list=tf.train.FloatList(value=y)),
-            }
-            example = tf.train.Example(
-                features=tf.train.Features(feature=example_dict)
-            )
-            f.write(example.SerializeToString())
-    return temp_file.name
-
-
 class CheckRetrainCallback(BaseCallback):
     """Checks the retry functionality of workers.
 
@@ -69,11 +47,10 @@ class CheckRetrainCallback(BaseCallback):
     workers retry.
     """
 
-    def __init__(self, master, worker, unittest_inst):
+    def __init__(self, master, worker):
         super(CheckRetrainCallback, self).__init__(
             master,
             worker,
-            unittest_inst,
             call_times=[
                 test_call_back.ON_REPORT_GRADIENT_BEGIN,
                 test_call_back.ON_REPORT_EVALUATION_METRICS_BEGIN,
@@ -92,131 +69,65 @@ class CheckWorkerModelCallback(BaseCallback):
     same model parameters if `master._grad_n=0`.
     """
 
-    def __init__(self, master, worker, unittest_inst):
+    def __init__(self, master, worker):
         super(CheckWorkerModelCallback, self).__init__(
             master,
             worker,
-            unittest_inst,
             call_times=[test_call_back.ON_REPORT_GRADIENT_BEGIN],
         )
 
     def __call__(self):
         if self._master._grad_n:
             return
-        self._unittest_inst.assertTrue(
-            len(self._worker._non_embed_vars) == len(self._master._model)
-        )
-        for var in self._worker._non_embed_vars:
-            self._unittest_inst.assertTrue(
-                np.isclose(
-                    var.numpy(), self._master._model[var.name].numpy()
-                ).all()
+        worker_var_n = len(self._worker._non_embed_vars)
+        master_var_n = len(self._master._model)
+        if worker_var_n != master_var_n:
+            raise RuntimeError(
+                "The number of non-embedding variables in worker %d differs "
+                "from the number of `_model` variables in master %d."
+                % (worker_var_n, master_var_n)
             )
+        for var in self._worker._non_embed_vars:
+            if not np.isclose(
+                var.numpy(), self._master._model[var.name].numpy()
+            ).all():
+                raise RuntimeError(
+                    "The value of variable %s in worker differs from its "
+                    "value in master." % (var.name)
+                )
 
 
 class WorkerTest(unittest.TestCase):
-    # TODO (yunjian.lmh): Function `distributed_train_and_evaluate` is used in
-    # `worker_test` and `example_test`, which can be extracted as a reusable
-    # function.
-    def distributed_train_and_evaluate(
-        self,
-        training=True,
-        callback_classes=[],
-        use_async=False,
-        grads_to_wait=2,
-        get_model_steps=1,
-    ):
-        """
-        Run distributed training and evaluation with a local master.
-        grpc calls are mocked by local master call.
-        """
-
-        if use_async and grads_to_wait > 1:
-            raise ValueError(
-                "grads_to_wait should be 1 when using asynchronous SGD."
-            )
-
-        job_type = (
-            JobType.TRAINING_ONLY if training else JobType.EVALUATION_ONLY
-        )
-        batch_size = 16
-        worker = Worker(
-            1,
-            job_type,
-            batch_size,
-            _model_zoo_path,
-            model_def="test_module.custom_model",
-            channel=None,
-            get_model_steps=get_model_steps,
-        )
-
-        shards = {create_recordio_file(128): (0, 128)}
-        if training:
-            training_shards = shards
-            evaluation_shards = {}
-        else:
-            training_shards = {}
-            evaluation_shards = shards
-        task_d = _TaskDispatcher(
-            training_shards,
-            evaluation_shards,
-            {},
-            records_per_task=64,
-            num_epochs=1,
-        )
-        if not training:
-            evaluation_service = EvaluationService(
-                None, None, task_d, 0, 0, 0, True
-            )
-            task_d.set_evaluation_service(evaluation_service)
-        else:
-            evaluation_service = None
-        master = MasterServicer(
-            grads_to_wait,
-            batch_size,
-            worker._opt_fn(),
-            task_d,
-            init_var=[],
-            checkpoint_filename_for_init="",
-            checkpoint_service=None,
-            evaluation_service=evaluation_service,
-            use_async=use_async,
-        )
-        callbacks = [
-            callback_class(master, worker, self)
-            for callback_class in callback_classes
-        ]
-        worker._stub = InProcessMaster(master, callbacks)
-
-        for var in worker._model.trainable_variables:
-            master.set_model_var(var.name, var.numpy())
-
-        worker.run()
-
-        req = elasticdl_pb2.GetTaskRequest()
-        req.worker_id = 1
-        task = master.GetTask(req, None)
-        # No more task.
-        self.assertTrue(not task.shard_name)
-
     def test_distributed_train_tf_example(self):
-        self.distributed_train_and_evaluate(
-            training=True, callback_classes=[CheckRetrainCallback]
+        distributed_train_and_evaluate(
+            1,
+            _model_zoo_path,
+            "test_module.custom_model",
+            training=True,
+            dataset="test_module",
+            callback_classes=[CheckRetrainCallback],
         )
 
     def test_distributed_evaluate_tf_example(self):
-        self.distributed_train_and_evaluate(
-            training=False, callback_classes=[CheckRetrainCallback]
+        distributed_train_and_evaluate(
+            1,
+            _model_zoo_path,
+            "test_module.custom_model",
+            training=False,
+            dataset="test_module",
+            callback_classes=[CheckRetrainCallback],
         )
 
     def test_distributed_train_get_model_steps(self):
-        # When `use_async=True`, `grads_to_wait` should be set to 1
-        self.distributed_train_and_evaluate(
+        distributed_train_and_evaluate(
+            1,
+            _model_zoo_path,
+            "test_module.custom_model",
             training=True,
+            dataset="test_module",
             callback_classes=[CheckWorkerModelCallback],
             use_async=True,
             get_model_steps=4,
-            grads_to_wait=1,
         )
 
     def test_embedding_layer(self):
