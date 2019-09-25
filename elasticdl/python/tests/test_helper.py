@@ -79,7 +79,7 @@ def create_recordio_file(size, dataset, shape):
 
 def distributed_train_and_evaluate(
     feature_shape,
-    _model_zoo_path,
+    model_zoo_path,
     model_def,
     model_params="",
     training=True,
@@ -102,7 +102,7 @@ def distributed_train_and_evaluate(
         1,
         job_type,
         batch_size,
-        _model_zoo_path,
+        model_zoo_path,
         model_def=model_def,
         model_params=model_params,
         channel=None,
