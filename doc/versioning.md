@@ -61,5 +61,7 @@ $ git push origin branch-0.1
 $ git tag v0.1.0 -a
 $ git push origin v0.1.0
 ```
+Note that for creating new releases and tags, you can also do from the [website](https://github.com/sql-machine-learning/elasticdl/releases).
+
 
 For cases where the `release` branch already exists (for example when releasing 0.1.1 and `branch-0.1` is already there), just reuse that `release` branch and merge required commits from `develop` branch to the corresponding `release` branch.
