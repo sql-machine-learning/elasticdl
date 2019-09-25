@@ -98,14 +98,18 @@ class ODPSDataReaderTest(unittest.TestCase):
 
     def test_odps_data_reader_shards_creation(self):
         expected_shards = {
-            "shard_0": (0, self.records_per_task),
-            "shard_1": (50, self.records_per_task),
-            "shard_2": (100, 10),
+            self.test_table + ":shard_0": (0, self.records_per_task),
+            self.test_table + ":shard_1": (50, self.records_per_task),
+            self.test_table + ":shard_2": (100, 10),
         }
         self.assertEqual(expected_shards, self.reader.create_shards())
 
     def test_odps_data_reader_records_reading(self):
-        records = list(self.reader.read_records(_MockedTask(0, 2, "shard_0")))
+        records = list(
+            self.reader.read_records(
+                _MockedTask(0, 2, self.test_table + ":shard_0")
+            )
+        )
         self.assertEqual(
             [[6.4, 2.8, 5.6, 2.2, 2], [5.0, 2.3, 3.3, 1.0, 1]], records
         )
@@ -125,12 +129,12 @@ class ODPSDataReaderTest(unittest.TestCase):
 
         def _gen():
             for data in self.reader.read_records(
-                _MockedTask(0, num_records, "shard_0")
+                _MockedTask(0, num_records, self.test_table + ":shard_0")
             ):
                 if data is not None:
                     yield data
 
-        dataset = tf.data.Dataset.from_generator(_gen, (tf.float32))
+        dataset = tf.data.Dataset.from_generator(_gen, tf.float32)
         dataset = dataset_fn(dataset, None)
 
         loss_history = []

@@ -39,7 +39,7 @@ class CustomModel(tf.keras.Model):
         return self.flatten(x)
 
 
-class CheckRetrainCallback(BaseCallback):
+class CheckRetryCallback(BaseCallback):
     """Checks the retry functionality of workers.
 
     When workers report Gradient or evaluation metrics, this callback
@@ -48,7 +48,7 @@ class CheckRetrainCallback(BaseCallback):
     """
 
     def __init__(self, master, worker):
-        super(CheckRetrainCallback, self).__init__(
+        super(CheckRetryCallback, self).__init__(
             master,
             worker,
             call_times=[
@@ -105,7 +105,7 @@ class WorkerTest(unittest.TestCase):
             "test_module.custom_model",
             training=True,
             dataset="test_module",
-            callback_classes=[CheckRetrainCallback],
+            callback_classes=[CheckRetryCallback],
         )
 
     def test_distributed_evaluate_tf_example(self):
@@ -115,7 +115,7 @@ class WorkerTest(unittest.TestCase):
             "test_module.custom_model",
             training=False,
             dataset="test_module",
-            callback_classes=[CheckRetrainCallback],
+            callback_classes=[CheckRetryCallback],
         )
 
     def test_distributed_train_get_model_steps(self):
