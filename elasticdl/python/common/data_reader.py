@@ -67,8 +67,6 @@ class RecordIODataReader(AbstractDataReader):
     def create_shards(self):
         data_dir = self._kwargs["data_dir"]
         start_ind = 0
-        if not data_dir:
-            return {}
         f_records = {}
         for f in os.listdir(data_dir):
             p = os.path.join(data_dir, f)

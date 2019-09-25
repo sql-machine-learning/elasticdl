@@ -44,13 +44,20 @@ def _make_task_dispatcher(
 ):
     # TODO: Support any subclasses of `AbstractDataReader`
     # and support passing specified parameters to the constructor
-    prediction_f_records = create_data_reader(
-        data_origin=prediction_data_dir, records_per_task=records_per_task
-    ).create_shards()
+    def _maybe_create_shards(data_origin):
+        return (
+            create_data_reader(
+                data_origin=data_origin, records_per_task=records_per_task
+            ).create_shards()
+            if data_origin
+            else {}
+        )
+
+    prediction_f_records = _maybe_create_shards(prediction_data_dir)
 
     return _TaskDispatcher(
-        create_data_reader(data_origin=training_data_dir).create_shards(),
-        create_data_reader(data_origin=evaluation_data_dir).create_shards(),
+        _maybe_create_shards(training_data_dir),
+        _maybe_create_shards(evaluation_data_dir),
         prediction_f_records,
         records_per_task,
         # Only generate prediction tasks for 1 epoch

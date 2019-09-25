@@ -119,7 +119,8 @@ class ODPSDataReaderTest(unittest.TestCase):
         model_spec = load_module(
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
-                "odps_test_module.py",
+                "../../../model_zoo",
+                "odps_iris_dnn_model/odps_iris_dnn_model.py",
             )
         ).__dict__
         model = model_spec["custom_model"]()
