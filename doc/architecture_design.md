@@ -21,6 +21,6 @@ The master node plays the master role in two aspects.
 
 ## Data IO Pipeline
 
-![data_io_pipeline](/doc/images/data_io_pipeline.jpg)
+![data_io_pipeline]<img src="images/data_io_pipeline.jpg" height="300" width="350" >
 
 ## Open Questions
