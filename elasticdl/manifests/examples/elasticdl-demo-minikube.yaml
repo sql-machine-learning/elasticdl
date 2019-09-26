@@ -20,10 +20,10 @@ spec:
       --model_def=mnist_functional_api.mnist_functional_api.custom_model
       --training_data_dir=/data/mnist/train
       --evaluation_data_dir=/data/mnist/test
-      --records_per_task=100
       --num_epochs=2
       --grads_to_wait=10
       --minibatch_size=64
+      --minibatches_per_task=2
       --num_workers=2
       --checkpoint_steps=10
       --evaluation_steps=15
