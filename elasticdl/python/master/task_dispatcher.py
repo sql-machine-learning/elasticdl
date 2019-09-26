@@ -99,7 +99,7 @@ class _TaskDispatcher(object):
                     )
                 # Note that only records in [start, end) of this task
                 # will be consumed later in the worker that handles
-                # this task
+                # this task.
                 tasks.append(
                     _Task(
                         shard_name=shard_name,
