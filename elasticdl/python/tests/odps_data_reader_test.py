@@ -4,10 +4,7 @@ import tempfile
 import time
 import unittest
 from collections import namedtuple
-from contextlib import closing
 
-import numpy as np
-import recordio
 import tensorflow as tf
 from odps import ODPS
 
@@ -18,24 +15,10 @@ from elasticdl.python.common.data_reader import (
 )
 from elasticdl.python.common.model_helper import load_module
 from elasticdl.python.tests.odps_test_utils import create_iris_odps_table
-
-
-def _create_recordio_file(size, temp_dir):
-    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
-    with closing(recordio.Writer(temp_file.name)) as f:
-        for _ in range(size):
-            x = np.random.rand(1).astype(np.float32)
-            y = 2 * x + 1
-            example_dict = {
-                "x": tf.train.Feature(float_list=tf.train.FloatList(value=x)),
-                "y": tf.train.Feature(float_list=tf.train.FloatList(value=y)),
-            }
-            example = tf.train.Example(
-                features=tf.train.Features(feature=example_dict)
-            )
-            f.write(example.SerializeToString())
-    return temp_file.name
-
+from elasticdl.python.tests.test_helper import (
+    DatasetName,
+    create_recordio_file,
+)
 
 _MockedTask = namedtuple("Task", ["start", "end", "shard_name"])
 
@@ -44,7 +27,9 @@ class RecordIODataReaderTest(unittest.TestCase):
     def test_recordio_data_reader(self):
         num_records = 128
         with tempfile.TemporaryDirectory() as temp_dir_name:
-            shard_name = _create_recordio_file(num_records, temp_dir_name)
+            shard_name = create_recordio_file(
+                num_records, DatasetName.TEST_MODULE, 1, temp_dir=temp_dir_name
+            )
 
             # Test shards creation
             expected_shards = {shard_name: (0, num_records)}
@@ -98,14 +83,18 @@ class ODPSDataReaderTest(unittest.TestCase):
 
     def test_odps_data_reader_shards_creation(self):
         expected_shards = {
-            "shard_0": (0, self.records_per_task),
-            "shard_1": (50, self.records_per_task),
-            "shard_2": (100, 10),
+            self.test_table + ":shard_0": (0, self.records_per_task),
+            self.test_table + ":shard_1": (50, self.records_per_task),
+            self.test_table + ":shard_2": (100, 10),
         }
         self.assertEqual(expected_shards, self.reader.create_shards())
 
     def test_odps_data_reader_records_reading(self):
-        records = list(self.reader.read_records(_MockedTask(0, 2, "shard_0")))
+        records = list(
+            self.reader.read_records(
+                _MockedTask(0, 2, self.test_table + ":shard_0")
+            )
+        )
         self.assertEqual(
             [[6.4, 2.8, 5.6, 2.2, 2], [5.0, 2.3, 3.3, 1.0, 1]], records
         )
@@ -115,7 +104,8 @@ class ODPSDataReaderTest(unittest.TestCase):
         model_spec = load_module(
             os.path.join(
                 os.path.dirname(os.path.realpath(__file__)),
-                "odps_test_module.py",
+                "../../../model_zoo",
+                "odps_iris_dnn_model/odps_iris_dnn_model.py",
             )
         ).__dict__
         model = model_spec["custom_model"]()
@@ -125,12 +115,12 @@ class ODPSDataReaderTest(unittest.TestCase):
 
         def _gen():
             for data in self.reader.read_records(
-                _MockedTask(0, num_records, "shard_0")
+                _MockedTask(0, num_records, self.test_table + ":shard_0")
             ):
                 if data is not None:
                     yield data
 
-        dataset = tf.data.Dataset.from_generator(_gen, (tf.float32))
+        dataset = tf.data.Dataset.from_generator(_gen, tf.float32)
         dataset = dataset_fn(dataset, None)
 
         loss_history = []

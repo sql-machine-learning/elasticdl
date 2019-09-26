@@ -1,24 +1,24 @@
 import copy
 import os
-import tempfile
 import unittest
-from contextlib import closing
 
 import mock
 import numpy as np
-import recordio
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Dense, Flatten
 
-from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import JobType
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.embedding_service import EmbeddingService
-from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.tests import test_call_back
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.tests.mock_kv_store import MockKvStore
+from elasticdl.python.tests.test_call_back import BaseCallback
+from elasticdl.python.tests.test_helper import (
+    DatasetName,
+    distributed_train_and_evaluate,
+)
 from elasticdl.python.worker.worker import Worker
 
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
@@ -42,107 +42,96 @@ class CustomModel(tf.keras.Model):
         return self.flatten(x)
 
 
-def create_recordio_file(size):
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    with closing(recordio.Writer(temp_file.name)) as f:
-        for _ in range(size):
-            x = np.random.rand(1).astype(np.float32)
-            y = 2 * x + 1
-            example_dict = {
-                "x": tf.train.Feature(float_list=tf.train.FloatList(value=x)),
-                "y": tf.train.Feature(float_list=tf.train.FloatList(value=y)),
-            }
-            example = tf.train.Example(
-                features=tf.train.Features(feature=example_dict)
+class CheckRetryCallback(BaseCallback):
+    """Checks the retry functionality of workers.
+
+    When workers report Gradient or evaluation metrics, this callback
+    adds 1 to master's model version. The master rejects the report request and
+    workers retry.
+    """
+
+    def __init__(self, master, worker):
+        super(CheckRetryCallback, self).__init__(
+            master,
+            worker,
+            call_times=[
+                test_call_back.ON_REPORT_GRADIENT_BEGIN,
+                test_call_back.ON_REPORT_EVALUATION_METRICS_BEGIN,
+            ],
+        )
+
+    def __call__(self):
+        if 2 < self._master._version < 80:
+            self._master._version += 1
+
+
+class CheckWorkerModelCallback(BaseCallback):
+    """Checks worker model parameters.
+
+    Before master updating model parameters, master and workers should have
+    same model parameters if `master._grad_n=0`.
+    """
+
+    def __init__(self, master, worker):
+        super(CheckWorkerModelCallback, self).__init__(
+            master,
+            worker,
+            call_times=[test_call_back.ON_REPORT_GRADIENT_BEGIN],
+        )
+
+    def __call__(self):
+        if self._master._grad_n:
+            return
+        worker_var_n = len(self._worker._non_embed_vars)
+        master_var_n = len(self._master._model)
+        if worker_var_n != master_var_n:
+            raise RuntimeError(
+                "The number of non-embedding variables in worker %d differs "
+                "from the number of `_model` variables in master %d."
+                % (worker_var_n, master_var_n)
             )
-            f.write(example.SerializeToString())
-    return temp_file.name
+        for var in self._worker._non_embed_vars:
+            if not np.isclose(
+                var.numpy(), self._master._model[var.name].numpy()
+            ).all():
+                raise RuntimeError(
+                    "The value of variable %s in worker differs from its "
+                    "value in master." % (var.name)
+                )
 
 
 class WorkerTest(unittest.TestCase):
-    def distributed_train_and_evaluate(self, training=True):
-        """
-        Run distributed training and evaluation with a local master.
-        grpc calls are mocked by local master call.
-        """
-
-        class _Master(InProcessMaster):
-            def ReportGradient(self, req):
-                if 2 < self._m._version < 80:
-                    # For testing of retrain when gradient not accepted.
-                    # Increase master version to reject the gradient.
-                    self._m._version += 1
-                return self._m.ReportGradient(req, None)
-
-            def ReportEvaluationMetrics(self, req):
-                if 2 < self._m._version < 80:
-                    # Testing of evaluation retries. Increase the master
-                    # version so the evaluation metrics will not be accepted.
-                    self._m._version += 1
-                return self._m.ReportEvaluationMetrics(req, None)
-
-        job_type = (
-            JobType.TRAINING_ONLY if training else JobType.EVALUATION_ONLY
-        )
-        batch_size = 16
-        worker = Worker(
-            1,
-            job_type,
-            batch_size,
-            _model_zoo_path,
-            model_def="test_module.custom_model",
-            channel=None,
-        )
-
-        shards = {create_recordio_file(128): (0, 128)}
-        if training:
-            training_shards = shards
-            evaluation_shards = {}
-        else:
-            training_shards = {}
-            evaluation_shards = shards
-        task_d = _TaskDispatcher(
-            training_shards,
-            evaluation_shards,
-            {},
-            records_per_task=64,
-            num_epochs=1,
-        )
-        if not training:
-            evaluation_service = EvaluationService(
-                None, None, task_d, 0, 0, 0, True
-            )
-            task_d.set_evaluation_service(evaluation_service)
-        else:
-            evaluation_service = None
-        master = MasterServicer(
-            2,
-            batch_size,
-            worker._opt_fn(),
-            task_d,
-            init_var=[],
-            checkpoint_filename_for_init="",
-            checkpoint_service=None,
-            evaluation_service=evaluation_service,
-        )
-        worker._stub = _Master(master)
-
-        for var in worker._model.trainable_variables:
-            master.set_model_var(var.name, var.numpy())
-
-        worker.run()
-
-        req = elasticdl_pb2.GetTaskRequest()
-        req.worker_id = 1
-        task = master.GetTask(req, None)
-        # No more task.
-        self.assertTrue(not task.shard_name)
-
     def test_distributed_train_tf_example(self):
-        self.distributed_train_and_evaluate(training=True)
+        distributed_train_and_evaluate(
+            1,
+            _model_zoo_path,
+            "test_module.custom_model",
+            training=True,
+            dataset_name=DatasetName.TEST_MODULE,
+            callback_classes=[CheckRetryCallback],
+        )
 
     def test_distributed_evaluate_tf_example(self):
-        self.distributed_train_and_evaluate(training=False)
+        distributed_train_and_evaluate(
+            1,
+            _model_zoo_path,
+            "test_module.custom_model",
+            training=False,
+            dataset_name=DatasetName.TEST_MODULE,
+            callback_classes=[CheckRetryCallback],
+        )
+
+    def test_distributed_train_get_model_steps(self):
+        distributed_train_and_evaluate(
+            1,
+            _model_zoo_path,
+            "test_module.custom_model",
+            training=True,
+            dataset_name=DatasetName.TEST_MODULE,
+            callback_classes=[CheckWorkerModelCallback],
+            use_async=True,
+            get_model_steps=4,
+        )
 
     def test_embedding_layer(self):
         worker = Worker(

@@ -210,7 +210,7 @@ def add_train_params(parser):
         "--grads_to_wait",
         type=int,
         help="Number of gradients to wait before updating model",
-        default=2,
+        default=1,
     )
     parser.add_argument(
         "--training_data_dir",
@@ -464,6 +464,16 @@ def parse_master_args(master_args=None):
         raise ValueError(
             "checkpoint_filename_for_init is required for running "
             "prediction job"
+        )
+    if not args.use_async and args.get_model_steps > 1:
+        args.get_model_steps = 1
+        logger.warning(
+            "get_model_steps is set to 1 when using synchronous SGD."
+        )
+    if args.use_async and args.grads_to_wait > 1:
+        args.grads_to_wait = 1
+        logger.warning(
+            "grads_to_wait is set to 1 when using asynchronous SGD."
         )
 
     return args
