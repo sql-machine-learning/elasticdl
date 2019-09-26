@@ -8,7 +8,7 @@
 
 The master node plays the master role in two aspects.
 
-1. It's the master of the cluster. Take charge of the lifecycle of the worker node. Start the worker pod, listen to the pod event and relaunch the killed worker if necessary.
+1. It's the master of the cluster. It manages the lifecycle of the worker node. Start the worker pod, listen to the pod event and relaunch the killed worker if necessary.
 2. It's the master of the model training process.
    * Shard the training/evaluation data
    * Generate the training/evaluation task from the sharded data
@@ -33,9 +33,10 @@ Data IO pipeline for elasticdl involve reading data from [RecordIO](https://gith
 </center>
 
 After worker is launched, the worker will send request to get task from master. Each task contains record index range [m, m+N) which can locate records in RecordIO file. DataReader read N records from RecordIO file by task index rane and yield each record to create a generator. Then worker will perform the following steps to comsume record data in generator:
+
 1. Create a dataset by [tf.data.Dataset.from_generator](https://www.tensorflow.org/api_docs/python/tf/data/Dataset#from_generator).
 2. Convert dataset by dataset_fn user defined to generate features and label.  
-3. Calculate gradients of trainable variables for train task and predictions of samples for eualuation task. 
+3. Calculate gradients of trainable variables for train task and predictions of samples for eualuation task.
 4. Send calculation result to master.
 5. Send task execution status to master after completing all records for the task.
 
