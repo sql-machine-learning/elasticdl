@@ -95,6 +95,7 @@ def main():
         args.prediction_data_dir,
     )
 
+    # Make sure that records_per_task is integral multiple of minibatch_size
     records_per_task = args.minibatch_size * args.minibatches_per_task
     task_d = _make_task_dispatcher(
         args.training_data_dir,
