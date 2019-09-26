@@ -19,7 +19,7 @@ The general idea is to give users enough flexibility to prepare the data. The on
 
 ### `user_defined_model_file`
 
-This file defines the [model](https://github.com/sql-machine-learning/elasticdl/blob/0b7d75fd5073802f33e192244283b86ccf2684e0/elasticdl/doc/model_building.md) that is going to be trained. In this file, there are two parts that are needed by data preparation:
+This file defines the [model](https://github.com/sql-machine-learning/elasticdl/blob/develop/doc/model_building.md) that is going to be trained. In this file, there are two parts that are needed by data preparation:
 
 1. Feature Column. In order to convert data into RecordIO format, we have to know the corresponding feature columns. Given that the feature columns are already defined in the current model file (e.g. [MNIST functional API example](https://github.com/sql-machine-learning/elasticdl/blob/0b7d75fd5073802f33e192244283b86ccf2684e0/elasticdl/python/examples/mnist_functional_api.py#L18-L24)), we can just leverage the existing model file in order to keep the feature columns consistent between data preparation and model training.
 
