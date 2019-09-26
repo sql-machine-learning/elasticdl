@@ -1,11 +1,6 @@
 import os
 import tempfile
 import unittest
-from contextlib import closing
-
-import numpy as np
-import recordio
-import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import JobType
@@ -17,28 +12,15 @@ from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.tests.in_process_master import InProcessMaster
+from elasticdl.python.tests.test_helper import (
+    DatasetName,
+    create_recordio_file,
+)
 from elasticdl.python.worker.worker import Worker
 
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
 _model_file = get_module_file_path(_model_zoo_path, "test_module.custom_model")
 m = load_module(_model_file).__dict__
-
-
-def create_recordio_file(size):
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
-    with closing(recordio.Writer(temp_file.name)) as f:
-        for _ in range(size):
-            x = np.random.rand(1).astype(np.float32)
-            y = 2 * x + 1
-            example_dict = {
-                "x": tf.train.Feature(float_list=tf.train.FloatList(value=x)),
-                "y": tf.train.Feature(float_list=tf.train.FloatList(value=y)),
-            }
-            example = tf.train.Example(
-                features=tf.train.Features(feature=example_dict)
-            )
-            f.write(example.SerializeToString())
-    return temp_file.name
 
 
 class CheckpointTest(unittest.TestCase):
@@ -102,7 +84,7 @@ class CheckpointTest(unittest.TestCase):
                 model_def="test_module.custom_model",
                 channel=None,
             )
-            filename = create_recordio_file(128)
+            filename = create_recordio_file(128, DatasetName.TEST_MODULE, 1)
             task_d = _TaskDispatcher(
                 {filename: (0, 128)}, {}, {}, records_per_task=64, num_epochs=1
             )

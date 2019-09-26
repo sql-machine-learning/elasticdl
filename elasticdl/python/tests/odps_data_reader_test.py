@@ -4,10 +4,7 @@ import tempfile
 import time
 import unittest
 from collections import namedtuple
-from contextlib import closing
 
-import numpy as np
-import recordio
 import tensorflow as tf
 from odps import ODPS
 
@@ -18,24 +15,10 @@ from elasticdl.python.common.data_reader import (
 )
 from elasticdl.python.common.model_helper import load_module
 from elasticdl.python.tests.odps_test_utils import create_iris_odps_table
-
-
-def _create_recordio_file(size, temp_dir):
-    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
-    with closing(recordio.Writer(temp_file.name)) as f:
-        for _ in range(size):
-            x = np.random.rand(1).astype(np.float32)
-            y = 2 * x + 1
-            example_dict = {
-                "x": tf.train.Feature(float_list=tf.train.FloatList(value=x)),
-                "y": tf.train.Feature(float_list=tf.train.FloatList(value=y)),
-            }
-            example = tf.train.Example(
-                features=tf.train.Features(feature=example_dict)
-            )
-            f.write(example.SerializeToString())
-    return temp_file.name
-
+from elasticdl.python.tests.test_helper import (
+    DatasetName,
+    create_recordio_file,
+)
 
 _MockedTask = namedtuple("Task", ["start", "end", "shard_name"])
 
@@ -44,7 +27,9 @@ class RecordIODataReaderTest(unittest.TestCase):
     def test_recordio_data_reader(self):
         num_records = 128
         with tempfile.TemporaryDirectory() as temp_dir_name:
-            shard_name = _create_recordio_file(num_records, temp_dir_name)
+            shard_name = create_recordio_file(
+                num_records, DatasetName.TEST_MODULE, 1, temp_dir=temp_dir_name
+            )
 
             # Test shards creation
             expected_shards = {shard_name: (0, num_records)}

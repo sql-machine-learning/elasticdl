@@ -8,10 +8,9 @@ ON_REPORT_EVALUATION_METRICS_BEGIN = "on_report_evaluation_metrics_begin"
 class BaseCallback(ABC):
     """Base class of callbacks used for testing."""
 
-    def __init__(self, master, worker, unittest_inst, call_times):
+    def __init__(self, master, worker, call_times):
         self._master = master
         self._worker = worker
-        self._unittest_inst = unittest_inst
         self.call_times = call_times
 
     @abstractmethod
