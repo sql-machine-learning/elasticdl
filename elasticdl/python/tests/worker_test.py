@@ -15,7 +15,7 @@ from elasticdl.python.tests import test_call_back
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.tests.mock_kv_store import MockKvStore
 from elasticdl.python.tests.test_call_back import BaseCallback
-from elasticdl.python.tests.test_helper import (
+from elasticdl.python.tests.test_utils import (
     DatasetName,
     distributed_train_and_evaluate,
 )

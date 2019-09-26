@@ -7,8 +7,8 @@ from contextlib import closing
 import recordio
 from pyspark import SparkContext, TaskContext
 
-from elasticdl.python.common.log_util import default_logger as logger
-from elasticdl.python.common.model_helper import load_module
+from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.model_utils import load_module
 
 
 def write_to_recordio(filename, data_list):

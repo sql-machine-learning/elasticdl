@@ -4,8 +4,8 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType, Mode
-from elasticdl.python.common.log_util import default_logger as logger
-from elasticdl.python.common.model_helper import (
+from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.model_utils import (
     find_layer,
     get_model_spec,
     get_non_embedding_trainable_vars,

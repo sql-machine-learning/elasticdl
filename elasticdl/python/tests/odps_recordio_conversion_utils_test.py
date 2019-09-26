@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-from elasticdl.python.common.odps_recordio_conversion_utils import (
+from elasticdl.python.data.odps_recordio_conversion_utils import (
     _find_features_indices,
     _maybe_encode_unicode_string,
     _parse_row_to_example,

@@ -16,15 +16,15 @@ from elasticdl.python.common.constants import (
     JobType,
     WorkerManagerStatus,
 )
-from elasticdl.python.common.data_reader import create_data_reader
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
-from elasticdl.python.common.log_util import get_logger
-from elasticdl.python.common.model_helper import (
+from elasticdl.python.common.log_utils import get_logger
+from elasticdl.python.common.model_utils import (
     find_layer,
     get_module_file_path,
     load_model_from_module,
     load_module,
 )
+from elasticdl.python.data.data_reader import create_data_reader
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.embedding_service import EmbeddingService

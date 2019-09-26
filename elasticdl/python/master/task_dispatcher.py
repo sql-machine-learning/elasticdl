@@ -4,7 +4,7 @@ import random
 import threading
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.log_util import default_logger as logger
+from elasticdl.python.common.log_utils import default_logger as logger
 
 
 class _Task(object):

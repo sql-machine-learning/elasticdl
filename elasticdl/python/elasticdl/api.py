@@ -5,7 +5,7 @@ from elasticdl.python.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
 )
-from elasticdl.python.common.log_util import default_logger as logger
+from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
 )
