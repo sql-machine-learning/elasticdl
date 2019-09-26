@@ -127,7 +127,8 @@ def distributed_train_and_evaluate(
             server every this many steps.
 
     Returns:
-        An integer indicating the version of trained model in master.
+        An integer indicating the model version after the distributed training
+        and evaluation.
     """
     job_type = (
         JobType.TRAINING_WITH_EVALUATION
