@@ -712,6 +712,14 @@ class OptimizerWrapperTest(unittest.TestCase):
                 )
 
     def test_async_correctness(self):
+        """Tests the correctness of async updates in `OptimizerWrapper`.
+
+        Testing the correctness is not simple because OptimizerWrapper is not
+        thread-safe for embedding table. This test case lists all the possible
+        results when `thread_number=2` and test the correctness. This test case
+        also tests that OptimizerWrapper does not raise Error when
+        `thread_num=8.`
+        """
         max_thread_num = 8
         input_dim = 4
         output_dim = 3
@@ -758,13 +766,8 @@ class OptimizerWrapperTest(unittest.TestCase):
             for i in range(max_thread_num)
         ]
 
+        # thread number = 2
         expected_non_embed_values = [[-0.3, -0.3, -0.3], [1.3, 1.3, 1.3]]
-
-        # For embedding table, `OptimizerWrapper` is not thread-safe.
-        # When `async=True`, many threads are calling `apply_gradients()` at
-        # the same time, and each thread may or may not cover the updating
-        # results of other threads. So there are many possible
-        # updating results.
         expected_embed_values = {
             embed_layers[0]: [
                 (np.arange(12) - 0.1).reshape(embed_shape),
@@ -783,7 +786,6 @@ class OptimizerWrapperTest(unittest.TestCase):
             for i in range(2)
         ]
 
-        # Check updating results of embedding table when `thread_num=2`.
         self._test_async_correctness(
             grads_and_vars_batches,
             embed_values,
@@ -791,6 +793,7 @@ class OptimizerWrapperTest(unittest.TestCase):
             expected_embed_values,
         )
 
+        # thread number = 8
         grads_sum = max_thread_num * (max_thread_num + 1) / 2 / 10.0
         expected_non_embed_values = [[-grads_sum] * 3, [1 + grads_sum] * 3]
         grads_and_vars_batches = [
