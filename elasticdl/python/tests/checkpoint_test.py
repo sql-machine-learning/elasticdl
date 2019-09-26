@@ -4,7 +4,7 @@ import unittest
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import JobType
-from elasticdl.python.common.model_helper import (
+from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
 )
@@ -12,10 +12,7 @@ from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.tests.in_process_master import InProcessMaster
-from elasticdl.python.tests.test_helper import (
-    DatasetName,
-    create_recordio_file,
-)
+from elasticdl.python.tests.test_utils import DatasetName, create_recordio_file
 from elasticdl.python.worker.worker import Worker
 
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))

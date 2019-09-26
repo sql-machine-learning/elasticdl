@@ -2,7 +2,7 @@ import itertools
 import os
 import unittest
 
-from elasticdl.python.tests.test_helper import (
+from elasticdl.python.tests.test_utils import (
     DatasetName,
     distributed_train_and_evaluate,
 )

@@ -9,7 +9,7 @@ from rediscluster import RedisCluster
 from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.common.args import pos_int
 from elasticdl.python.common.constants import Redis
-from elasticdl.python.common.log_util import default_logger as logger
+from elasticdl.python.common.log_utils import default_logger as logger
 
 
 class EmbeddingService(object):

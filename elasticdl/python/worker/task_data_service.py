@@ -3,9 +3,9 @@ import threading
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.data_reader import create_data_reader
-from elasticdl.python.common.dataset_utils import create_dataset_from_tasks
-from elasticdl.python.common.log_util import default_logger as logger
+from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.data.data_reader import create_data_reader
+from elasticdl.python.data.dataset_utils import create_dataset_from_tasks
 
 
 class TaskDataService(object):

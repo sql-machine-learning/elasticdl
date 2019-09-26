@@ -9,7 +9,7 @@ import odps
 from odps import ODPS
 from odps.models import Schema
 
-from elasticdl.python.common.log_util import default_logger as logger
+from elasticdl.python.common.log_utils import default_logger as logger
 
 
 def _nested_list_size(l):

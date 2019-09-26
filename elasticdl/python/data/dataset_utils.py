@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from elasticdl.python.common.data_reader import create_data_reader
+from elasticdl.python.data.data_reader import create_data_reader
 
 
 def create_dataset_from_tasks(tasks):

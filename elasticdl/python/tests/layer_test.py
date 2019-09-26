@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from elasticdl.python.common.model_helper import (
+from elasticdl.python.common.model_utils import (
     find_layer,
     get_module_file_path,
     load_model_from_module,

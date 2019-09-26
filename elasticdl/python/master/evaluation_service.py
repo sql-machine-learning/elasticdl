@@ -6,7 +6,7 @@ from threading import Thread
 import numpy as np
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.log_util import default_logger as logger
+from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.ndarray import tensor_to_ndarray
 
 

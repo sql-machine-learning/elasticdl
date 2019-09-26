@@ -9,14 +9,14 @@ import tensorflow as tf
 from odps import ODPS
 
 from elasticdl.python.common.constants import ODPSConfig
-from elasticdl.python.common.data_reader import (
+from elasticdl.python.common.model_utils import load_module
+from elasticdl.python.data.data_reader import (
     ODPSDataReader,
     RecordIODataReader,
 )
-from elasticdl.python.common.model_helper import load_module
-from elasticdl.python.tests.odps_test_utils import create_iris_odps_table
-from elasticdl.python.tests.test_helper import (
+from elasticdl.python.tests.test_utils import (
     DatasetName,
+    create_iris_odps_table,
     create_recordio_file,
 )
 

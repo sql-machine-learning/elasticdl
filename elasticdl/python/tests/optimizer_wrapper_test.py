@@ -18,7 +18,7 @@ from tensorflow.keras.optimizers import (
 )
 from tensorflow.python.ops import init_ops
 
-from elasticdl.python.common.model_helper import (
+from elasticdl.python.common.model_utils import (
     find_layer,
     get_module_file_path,
     get_non_embedding_trainable_vars,
