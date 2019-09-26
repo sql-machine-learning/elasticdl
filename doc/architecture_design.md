@@ -17,6 +17,8 @@ The master node plays the master role in two aspects.
 
 ## Distributed Training
 
+![distributed_training_sequence](/doc/figures/distributed_training_sequence.jpg)
+
 ## Dynamic Data Sharding
 
 ## Data IO Pipeline
@@ -39,5 +41,3 @@ After worker is launched, the worker will send request to get task from master. 
 3. Calculate gradients of trainable variables for train task and predictions of samples for eualuation task.
 4. Send calculation result to master.
 5. Send task execution status to master after completing all records for the task.
-
-## Open Questions
