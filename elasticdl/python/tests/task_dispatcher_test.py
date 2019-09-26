@@ -5,7 +5,7 @@ from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 
 class TaskQueueTest(unittest.TestCase):
-    def test_create_get(self):
+    def test_create_get_zero_start_ind(self):
         task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1)
 
         all_tasks = [

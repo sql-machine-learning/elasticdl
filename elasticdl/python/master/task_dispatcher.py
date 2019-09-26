@@ -90,13 +90,16 @@ class _TaskDispatcher(object):
             for start in range(
                 start_ind, start_ind + num_records, self._records_per_task
             ):
-                end_ind = (
-                    min(start + self._records_per_task, num_records)
-                    if start_ind == 0
-                    else min(
+                end_ind = min(start + self._records_per_task, num_records)
+                # If the start index is not smaller than end index,
+                # we need to take the start index into account
+                if start >= end_ind:
+                    end_ind = min(
                         start + self._records_per_task, start + num_records
                     )
-                )
+                # Note that only records in [start, end) of this task
+                # will be consumed later in the worker that handles
+                # this task
                 tasks.append(
                     _Task(
                         shard_name=shard_name,
