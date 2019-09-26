@@ -177,7 +177,8 @@ def add_common_params(parser):
         "--minibatches_per_task",
         type=int,
         help="Minibatch number per task",
-        required=True)
+        required=True,
+    )
     parser.add_argument(
         "--cluster_spec",
         help="The file that contains user-defined cluster specification",
