@@ -3,8 +3,8 @@ import os
 import unittest
 
 from elasticdl.python.tests.test_helper import (
+    DatasetName,
     distributed_train_and_evaluate,
-    DatasetName
 )
 
 _model_zoo_path = os.path.join(

@@ -16,8 +16,8 @@ from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.tests.mock_kv_store import MockKvStore
 from elasticdl.python.tests.test_call_back import BaseCallback
 from elasticdl.python.tests.test_helper import (
+    DatasetName,
     distributed_train_and_evaluate,
-    DatasetName
 )
 from elasticdl.python.worker.worker import Worker
 

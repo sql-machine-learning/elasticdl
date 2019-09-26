@@ -22,8 +22,8 @@ class DatasetName(object):
     IMAGE_DEFAULT = "image_default1"
 
 
-def create_recordio_file(size, dataset, shape):
-    temp_file = tempfile.NamedTemporaryFile(delete=False)
+def create_recordio_file(size, dataset, shape, temp_dir=None):
+    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
     with closing(recordio.Writer(temp_file.name)) as f:
         for _ in range(size):
             if dataset == DatasetName.IMAGENET:
