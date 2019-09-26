@@ -159,7 +159,11 @@ As we are using asynchronous SGD, increasing/decreasing CPU resources of worker 
 
 For example, if job A requests 50 CPU cores, but current cluster only has 30 CPU cores. The cluster will lanuch the job immediately with 30 CPU cores. If the cluster has more CPU cores after a while, it will tell the master of job A to occupy the idle CPU cores and create more workers.
 
-And for pserver, how can we adjust network bandwidth? One solution is to create or delete pserver pods. Since each node has a network interface card, more pserver pods means more network bandwidth.
+And for pserver, how can we adjust network bandwidth? One solution is to create or delete pserver pods. Since each node has a network interface card, more pserver pods in different nodes might mean more network bandwidth.
+
+**Note**
+
+ElasticDL has no ability to control network bandwidth, or get current network traffic status. So a naive stragety could be making pservers occupy more nodes.
 
 If we change pserver pod number, following things also need to be done:
 
@@ -180,6 +184,10 @@ The forth solution is to create many pserver pods and keep the pserver pod numbe
 In general, one team's job has high prority on his own resources. For example, team A has a job A which require 3 pserver nodes, but team A only has two nodes for pserver. So it will "borrow" one from other team, and schedules pserver pods to 3 nodes, 2 of them is his own, 1 is from another team.
 
 It the other team launch his own job, it will tell job A to release the "borrowed" node. So the pserver pods of job A will be moved to his own 2 nodes.
+
+**Note**
+
+The premise of "moving" pserver pod to another place is that the new node has sufficient resources, such as memory to load parameter shards.
 
 ## Failover
 
