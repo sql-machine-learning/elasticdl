@@ -131,6 +131,8 @@ docker run --net=host --rm -it -v $EDL_REPO:/v -w /v \
           --worker_id=1 \
           --model_zoo=model_zoo \
           --model_def=mnist_functional_api.mnist_functional_api.custom_model \
+          --minibatch_size=10 \
+          --job_type=TRAINING \
           --master_addr=localhost:50001 \
           --log_level=INFO"
 ```
