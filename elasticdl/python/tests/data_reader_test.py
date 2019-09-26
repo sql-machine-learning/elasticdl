@@ -13,6 +13,7 @@ from elasticdl.python.common.model_utils import load_module
 from elasticdl.python.data.data_reader import (
     ODPSDataReader,
     RecordIODataReader,
+    create_data_reader,
 )
 from elasticdl.python.tests.test_utils import (
     DatasetName,
@@ -98,6 +99,14 @@ class ODPSDataReaderTest(unittest.TestCase):
         self.assertEqual(
             [[6.4, 2.8, 5.6, 2.2, 2], [5.0, 2.3, 3.3, 1.0, 1]], records
         )
+
+    def test_create_data_reader(self):
+        reader = create_data_reader(data_origin="table", records_per_task=10, **{"columns": ["a", "b"]})
+        self.assertEqual(reader._kwargs["columns"], ['a', 'b'])
+        self.assertEqual(reader._kwargs["records_per_task"], 10)
+        reader = create_data_reader(data_origin="table", records_per_task=10)
+        self.assertEqual(reader._kwargs["records_per_task"], 10)
+        self.assertTrue("columns" not in reader._kwargs)
 
     def test_odps_data_reader_integration_with_local_keras(self):
         num_records = 2

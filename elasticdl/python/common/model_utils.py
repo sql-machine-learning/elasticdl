@@ -24,14 +24,22 @@ def load_model_from_module(model_def, model_module, model_params):
             "in model definition files"
         )
     if model_params:
-        kvs = model_params.split(",")
-        model_params_dict = {}
-        for kv in kvs:
-            k, v = kv.split("=")
-            model_params_dict[k] = eval(v)
+        model_params_dict = get_dict_from_params_str(model_params)
         return model_module[custom_model_name](**model_params_dict)
     else:
         return model_module[custom_model_name]()
+
+
+def get_dict_from_params_str(params_str):
+    if params_str:
+        kvs = params_str.split(",")
+        params_dict = {}
+        for kv in kvs:
+            k, v = kv.split("=")
+            params_dict[k] = eval(v)
+        return params_dict
+    else:
+        return None
 
 
 def get_module_file_path(model_zoo, spec_key):

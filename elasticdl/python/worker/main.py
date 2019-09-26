@@ -35,6 +35,7 @@ def main():
         eval_metrics_fn=args.eval_metrics_fn,
         model_def=args.model_def,
         model_params=args.model_params,
+        data_reader_params=args.data_reader_params,
         get_model_steps=args.get_model_steps,
     )
     worker.run()

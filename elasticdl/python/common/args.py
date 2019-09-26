@@ -412,6 +412,13 @@ def add_common_args_between_master_and_worker(parser):
         default=1,
         help="Worker will get_model from PS every these steps.",
     )
+    parser.add_argument(
+        "--data_reader_params",
+        type=str,
+        default="",
+        help="The dictionary of data reader parameters in a string that will be "
+             'used to instantiate the data reader, e.g. "columns=["a", "b"]"',
+    )
 
 
 def parse_master_args(master_args=None):

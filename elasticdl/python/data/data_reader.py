@@ -89,7 +89,7 @@ class ODPSDataReader(AbstractDataReader):
             table_name=self._get_odps_table_name(task.shard_name)
         )
         records = reader.read_batch(
-            start=task.start, end=task.end, columns=None
+            start=task.start, end=task.end, columns=self._kwargs.get("columns")
         )
         for batch in records:
             yield batch
@@ -139,7 +139,7 @@ class ODPSDataReader(AbstractDataReader):
         return shard_name.split(":")[0]
 
 
-def create_data_reader(data_origin, records_per_task=None):
+def create_data_reader(data_origin, records_per_task=None, **kwargs):
     if all(
         k in os.environ
         for k in (
@@ -155,6 +155,7 @@ def create_data_reader(data_origin, records_per_task=None):
             table=data_origin,
             endpoint=os.environ.get(ODPSConfig.ENDPOINT),
             records_per_task=records_per_task,
+            **kwargs,
         )
     else:
         return RecordIODataReader(data_dir=data_origin)
