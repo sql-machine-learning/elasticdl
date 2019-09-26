@@ -25,7 +25,7 @@ class ExampleTest(unittest.TestCase):
                 "deepfm_functional_api.deepfm_functional_api.custom_model",
                 model_params=model_params,
                 training=True,
-                dataset=DatasetName.FRAPPE,
+                dataset_name=DatasetName.FRAPPE,
                 use_async=use_async,
             )
 
@@ -39,7 +39,7 @@ class ExampleTest(unittest.TestCase):
             "deepfm_functional_api.deepfm_functional_api.custom_model",
             model_params=model_params,
             training=False,
-            dataset=DatasetName.FRAPPE,
+            dataset_name=DatasetName.FRAPPE,
         )
 
     def test_mnist_train(self):
@@ -114,7 +114,7 @@ class ExampleTest(unittest.TestCase):
                 _model_zoo_path,
                 "resnet50_subclass.resnet50_subclass.CustomModel",
                 training=True,
-                dataset=DatasetName.IMAGENET,
+                dataset_name=DatasetName.IMAGENET,
                 use_async=use_async,
             )
 
@@ -125,7 +125,7 @@ class ExampleTest(unittest.TestCase):
             "resnet50_subclass.resnet50_subclass.CustomModel",
             model_params='num_classes=10,dtype="float32"',
             training=False,
-            dataset=DatasetName.IMAGENET,
+            dataset_name=DatasetName.IMAGENET,
         )
 
 

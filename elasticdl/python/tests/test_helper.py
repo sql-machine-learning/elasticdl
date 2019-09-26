@@ -22,11 +22,22 @@ class DatasetName(object):
     IMAGE_DEFAULT = "image_default1"
 
 
-def create_recordio_file(size, dataset, shape, temp_dir=None):
+def create_recordio_file(size, dataset_name, shape, temp_dir=None):
+    """Creates a temporary file containing data of `recordio` format.
+
+    Args:
+        size: The number of records in the temporary file.
+        dataset_name: A dataset name from `DatasetName`.
+        shape: The shape of records to be created.
+        temp_dir: The storage path of the temporary file.
+
+    Returns:
+        A python string indicating the temporary file name.
+    """
     temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
     with closing(recordio.Writer(temp_file.name)) as f:
         for _ in range(size):
-            if dataset == DatasetName.IMAGENET:
+            if dataset_name == DatasetName.IMAGENET:
                 image = np.random.randint(255, size=shape, dtype=np.uint8)
                 image = tf.image.encode_jpeg(tf.convert_to_tensor(value=image))
                 image = image.numpy()
@@ -40,7 +51,7 @@ def create_recordio_file(size, dataset, shape, temp_dir=None):
                         int64_list=tf.train.Int64List(value=[label])
                     ),
                 }
-            elif dataset == DatasetName.FRAPPE:
+            elif dataset_name == DatasetName.FRAPPE:
                 feature = np.random.randint(5383, size=(shape,))
                 label = np.random.randint(2, size=(1,))
                 example_dict = {
@@ -51,7 +62,7 @@ def create_recordio_file(size, dataset, shape, temp_dir=None):
                         int64_list=tf.train.Int64List(value=[label])
                     ),
                 }
-            elif dataset == DatasetName.TEST_MODULE:
+            elif dataset_name == DatasetName.TEST_MODULE:
                 x = np.random.rand(shape).astype(np.float32)
                 y = 2 * x + 1
                 example_dict = {
@@ -62,7 +73,7 @@ def create_recordio_file(size, dataset, shape, temp_dir=None):
                         float_list=tf.train.FloatList(value=y)
                     ),
                 }
-            elif dataset == DatasetName.IMAGE_DEFAULT:
+            elif dataset_name == DatasetName.IMAGE_DEFAULT:
                 image = np.random.rand(np.prod(shape)).astype(np.float32)
                 label = np.ndarray([1], dtype=np.int64)
                 label[0] = np.random.randint(0, 10)
@@ -75,7 +86,7 @@ def create_recordio_file(size, dataset, shape, temp_dir=None):
                     ),
                 }
             else:
-                raise ValueError("Unknown dataset name %s." % dataset)
+                raise ValueError("Unknown dataset name %s." % dataset_name)
 
             example = tf.train.Example(
                 features=tf.train.Features(feature=example_dict)
@@ -90,21 +101,40 @@ def distributed_train_and_evaluate(
     model_def,
     model_params="",
     training=True,
-    dataset=DatasetName.IMAGE_DEFAULT,
+    dataset_name=DatasetName.IMAGE_DEFAULT,
     callback_classes=[],
     use_async=False,
     get_model_steps=1,
 ):
-    """
-    Run distributed training and evaluation with a local master.
-    grpc calls are mocked by local master call.
+    """Runs distributed training and evaluation with a local master. Grpc
+    calls are mocked by local master call.
+
+    Args:
+        feature_shape: The shape of model input.
+        model_zoo_path: The directory that contains user-defined model files
+            or a specific model file.
+        model_def: The import path to the model definition function/class in
+            the model zoo, e.g.  "cifar10_subclass.CustomModel".
+        model_params: The dictionary of model parameters in a string that will
+            be used to instantiate the model, e.g. "param1=1,param2=2".
+        training: True for job type `TRAIN_WITH_EVALUATION`, False for
+            job type `EVALUATION`.
+        dataset_name: A dataset name from `DatasetName`.
+        callback_classes: A List of callbacks that will be called at given
+            stages of the training procedure.
+        use_async: A python bool. True if using asynchronous updates.
+        get_model_steps: Worker will perform `get_model` from the parameter
+            server every this many steps.
+
+    Returns:
+        An integer indicating the version of trained model in master.
     """
     job_type = (
         JobType.TRAINING_WITH_EVALUATION
         if training
         else JobType.EVALUATION_ONLY
     )
-    batch_size = 8 if dataset == DatasetName.IMAGENET else 16
+    batch_size = 8 if dataset_name == DatasetName.IMAGENET else 16
     worker = Worker(
         1,
         job_type,
@@ -116,12 +146,12 @@ def distributed_train_and_evaluate(
         get_model_steps=get_model_steps,
     )
 
-    if dataset in [DatasetName.IMAGENET, DatasetName.FRAPPE]:
+    if dataset_name in [DatasetName.IMAGENET, DatasetName.FRAPPE]:
         record_num = batch_size
     else:
         record_num = 128
     shards = {
-        create_recordio_file(record_num, dataset, feature_shape): (
+        create_recordio_file(record_num, dataset_name, feature_shape): (
             0,
             record_num,
         )

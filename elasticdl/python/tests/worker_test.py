@@ -107,7 +107,7 @@ class WorkerTest(unittest.TestCase):
             _model_zoo_path,
             "test_module.custom_model",
             training=True,
-            dataset=DatasetName.TEST_MODULE,
+            dataset_name=DatasetName.TEST_MODULE,
             callback_classes=[CheckRetryCallback],
         )
 
@@ -117,7 +117,7 @@ class WorkerTest(unittest.TestCase):
             _model_zoo_path,
             "test_module.custom_model",
             training=False,
-            dataset=DatasetName.TEST_MODULE,
+            dataset_name=DatasetName.TEST_MODULE,
             callback_classes=[CheckRetryCallback],
         )
 
@@ -127,7 +127,7 @@ class WorkerTest(unittest.TestCase):
             _model_zoo_path,
             "test_module.custom_model",
             training=True,
-            dataset=DatasetName.TEST_MODULE,
+            dataset_name=DatasetName.TEST_MODULE,
             callback_classes=[CheckWorkerModelCallback],
             use_async=True,
             get_model_steps=4,
