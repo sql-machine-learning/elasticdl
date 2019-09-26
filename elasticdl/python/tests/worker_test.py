@@ -15,7 +15,10 @@ from elasticdl.python.tests import test_call_back
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.tests.mock_kv_store import MockKvStore
 from elasticdl.python.tests.test_call_back import BaseCallback
-from elasticdl.python.tests.test_helper import distributed_train_and_evaluate
+from elasticdl.python.tests.test_helper import (
+    distributed_train_and_evaluate,
+    DatasetName
+)
 from elasticdl.python.worker.worker import Worker
 
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
@@ -104,7 +107,7 @@ class WorkerTest(unittest.TestCase):
             _model_zoo_path,
             "test_module.custom_model",
             training=True,
-            dataset="test_module",
+            dataset=DatasetName.TEST_MODULE,
             callback_classes=[CheckRetryCallback],
         )
 
@@ -114,7 +117,7 @@ class WorkerTest(unittest.TestCase):
             _model_zoo_path,
             "test_module.custom_model",
             training=False,
-            dataset="test_module",
+            dataset=DatasetName.TEST_MODULE,
             callback_classes=[CheckRetryCallback],
         )
 
@@ -124,7 +127,7 @@ class WorkerTest(unittest.TestCase):
             _model_zoo_path,
             "test_module.custom_model",
             training=True,
-            dataset="test_module",
+            dataset=DatasetName.TEST_MODULE,
             callback_classes=[CheckWorkerModelCallback],
             use_async=True,
             get_model_steps=4,

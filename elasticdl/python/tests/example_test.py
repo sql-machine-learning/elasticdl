@@ -2,7 +2,10 @@ import itertools
 import os
 import unittest
 
-from elasticdl.python.tests.test_helper import distributed_train_and_evaluate
+from elasticdl.python.tests.test_helper import (
+    distributed_train_and_evaluate,
+    DatasetName
+)
 
 _model_zoo_path = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), "../../../model_zoo"
@@ -22,7 +25,7 @@ class ExampleTest(unittest.TestCase):
                 "deepfm_functional_api.deepfm_functional_api.custom_model",
                 model_params=model_params,
                 training=True,
-                dataset="frappe",
+                dataset=DatasetName.FRAPPE,
                 use_async=use_async,
             )
 
@@ -36,7 +39,7 @@ class ExampleTest(unittest.TestCase):
             "deepfm_functional_api.deepfm_functional_api.custom_model",
             model_params=model_params,
             training=False,
-            dataset="frappe",
+            dataset=DatasetName.FRAPPE,
         )
 
     def test_mnist_train(self):
@@ -111,7 +114,7 @@ class ExampleTest(unittest.TestCase):
                 _model_zoo_path,
                 "resnet50_subclass.resnet50_subclass.CustomModel",
                 training=True,
-                dataset="imagenet",
+                dataset=DatasetName.IMAGENET,
                 use_async=use_async,
             )
 
@@ -122,7 +125,7 @@ class ExampleTest(unittest.TestCase):
             "resnet50_subclass.resnet50_subclass.CustomModel",
             model_params='num_classes=10,dtype="float32"',
             training=False,
-            dataset="imagenet",
+            dataset=DatasetName.IMAGENET,
         )
 
 

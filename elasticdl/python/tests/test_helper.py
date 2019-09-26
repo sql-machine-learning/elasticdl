@@ -15,11 +15,18 @@ from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
 
 
+class DatasetName(object):
+    IMAGENET = "imagenet1"
+    FRAPPE = "frappe1"
+    TEST_MODULE = "test_module1"
+    IMAGE_DEFAULT = "image_default1"
+
+
 def create_recordio_file(size, dataset, shape):
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     with closing(recordio.Writer(temp_file.name)) as f:
         for _ in range(size):
-            if dataset == "imagenet":
+            if dataset == DatasetName.IMAGENET:
                 image = np.random.randint(255, size=shape, dtype=np.uint8)
                 image = tf.image.encode_jpeg(tf.convert_to_tensor(value=image))
                 image = image.numpy()
@@ -33,7 +40,7 @@ def create_recordio_file(size, dataset, shape):
                         int64_list=tf.train.Int64List(value=[label])
                     ),
                 }
-            elif dataset == "frappe":
+            elif dataset == DatasetName.FRAPPE:
                 feature = np.random.randint(5383, size=(shape,))
                 label = np.random.randint(2, size=(1,))
                 example_dict = {
@@ -44,7 +51,7 @@ def create_recordio_file(size, dataset, shape):
                         int64_list=tf.train.Int64List(value=[label])
                     ),
                 }
-            elif dataset == "test_module":
+            elif dataset == DatasetName.TEST_MODULE:
                 x = np.random.rand(shape).astype(np.float32)
                 y = 2 * x + 1
                 example_dict = {
@@ -55,7 +62,7 @@ def create_recordio_file(size, dataset, shape):
                         float_list=tf.train.FloatList(value=y)
                     ),
                 }
-            elif dataset == "image_default":
+            elif dataset == DatasetName.IMAGE_DEFAULT:
                 image = np.random.rand(np.prod(shape)).astype(np.float32)
                 label = np.ndarray([1], dtype=np.int64)
                 label[0] = np.random.randint(0, 10)
@@ -83,7 +90,7 @@ def distributed_train_and_evaluate(
     model_def,
     model_params="",
     training=True,
-    dataset="image_default",
+    dataset=DatasetName.IMAGE_DEFAULT,
     callback_classes=[],
     use_async=False,
     get_model_steps=1,
@@ -97,7 +104,7 @@ def distributed_train_and_evaluate(
         if training
         else JobType.EVALUATION_ONLY
     )
-    batch_size = 8 if dataset == "imagenet" else 16
+    batch_size = 8 if dataset == DatasetName.IMAGENET else 16
     worker = Worker(
         1,
         job_type,
@@ -109,7 +116,7 @@ def distributed_train_and_evaluate(
         get_model_steps=get_model_steps,
     )
 
-    if dataset in ["imagenet", "frappe"]:
+    if dataset in [DatasetName.IMAGENET, DatasetName.FRAPPE]:
         record_num = batch_size
     else:
         record_num = 128
