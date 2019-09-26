@@ -1,9 +1,7 @@
 import tensorflow as tf
 
-from elasticdl.python.data.data_reader import create_data_reader
 
-
-def create_dataset_from_tasks(tasks, data_reader_params=None):
+def create_dataset_from_tasks(tasks, data_reader):
     """
     Returns a `tf.data.Dataset` from a list of `Task`s.
     """
@@ -11,10 +9,7 @@ def create_dataset_from_tasks(tasks, data_reader_params=None):
     class _Generator:
         def __init__(self, tasks):
             self._tasks = tasks
-            if data_reader_params:
-                self._data_reader = create_data_reader(data_origin=None, **data_reader_params)
-            else:
-                self._data_reader = create_data_reader(data_origin=None)
+            self._data_reader = data_reader
 
         def gen(self):
             for task in self._tasks:

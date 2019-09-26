@@ -75,7 +75,7 @@ class TaskDataService(object):
                 shards.append(task)
         if shards and task:
             return (
-                create_dataset_from_tasks(shards),
+                create_dataset_from_tasks(shards, self._data_reader),
                 task.model_version,
                 task.task_id,
             )
