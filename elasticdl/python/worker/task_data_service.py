@@ -9,7 +9,9 @@ from elasticdl.python.data.dataset_utils import create_dataset_from_tasks
 
 
 class TaskDataService(object):
-    def __init__(self, worker, training_with_evaluation, data_reader_params=None):
+    def __init__(
+        self, worker, training_with_evaluation, data_reader_params=None
+    ):
         self._worker = worker
         self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
@@ -17,7 +19,9 @@ class TaskDataService(object):
         self._pending_eval_tasks = []
         self._reset()
         if data_reader_params:
-            self._data_reader = create_data_reader(data_origin=None, **data_reader_params)
+            self._data_reader = create_data_reader(
+                data_origin=None, **data_reader_params
+            )
         else:
             self._data_reader = create_data_reader(data_origin=None)
 

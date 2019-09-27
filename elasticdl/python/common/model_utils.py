@@ -31,11 +31,13 @@ def load_model_from_module(model_def, model_module, model_params):
 
 
 def get_dict_from_params_str(params_str):
+    """Get the dictionary of kv pairs in a string separated
+    by semi-colon."""
     if params_str:
-        kvs = params_str.split(",")
+        kvs = params_str.split(";")
         params_dict = {}
         for kv in kvs:
-            k, v = kv.split("=")
+            k, v = kv.strip().split("=")
             params_dict[k] = eval(v)
         return params_dict
     else:
