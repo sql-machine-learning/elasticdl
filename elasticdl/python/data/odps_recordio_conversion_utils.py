@@ -1,48 +1,9 @@
 import os
-from collections import OrderedDict, namedtuple
-from datetime import datetime as _datetime
+from collections import namedtuple
 
 import numpy as np
 import recordio
 import tensorflow as tf
-from odps.types import (
-    Bigint,
-    Binary,
-    Boolean,
-    Datetime,
-    Double,
-    Float,
-    Int,
-    Smallint,
-    String,
-    Tinyint,
-)
-
-
-def _infer_primitive_data_type(value):
-    """Infer the primitive data type for an ODPS value."""
-    integer_builtins = (int, np.integer)
-    float_builtins = (float, np.float)
-
-    odps_primitive_to_builtin_types = OrderedDict(
-        (
-            (Bigint(), integer_builtins),
-            (Tinyint(), integer_builtins),
-            (Smallint(), integer_builtins),
-            (Int(), integer_builtins),
-            (Double(), float_builtins),
-            (Float(), float_builtins),
-            (String(), (str, bytes)),
-            (Binary(), bytes),
-            (Datetime(), _datetime),
-            (Boolean(), bool),
-        )
-    )
-    for data_type, builtin_types in odps_primitive_to_builtin_types.items():
-        if isinstance(value, builtin_types):
-            return builtin_types
-        else:
-            return None
 
 
 def _find_features_indices(

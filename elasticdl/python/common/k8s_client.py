@@ -12,8 +12,8 @@ from kubernetes.client import (
 
 from elasticdl.python.common.k8s_resource import parse as parse_resource
 from elasticdl.python.common.k8s_volume import parse as parse_volume
-from elasticdl.python.common.log_util import default_logger as logger
-from elasticdl.python.common.model_helper import load_module
+from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.model_utils import load_module
 
 ELASTICDL_APP_NAME = "elasticdl"
 ELASTICDL_JOB_KEY = "elasticdl-job-name"

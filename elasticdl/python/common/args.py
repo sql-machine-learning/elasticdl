@@ -1,7 +1,7 @@
 import argparse
 from itertools import chain
 
-from elasticdl.python.common.log_util import default_logger as logger
+from elasticdl.python.common.log_utils import default_logger as logger
 
 MODEL_SPEC_GROUP = [
     "dataset_fn",

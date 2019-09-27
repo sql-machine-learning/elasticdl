@@ -7,11 +7,11 @@ import unittest
 from odps import ODPS
 
 from elasticdl.python.common.constants import ODPSConfig
-from elasticdl.python.common.odps_io import ODPSReader, ODPSWriter
-from elasticdl.python.common.odps_recordio_conversion_utils import (
+from elasticdl.python.data.odps_io import ODPSReader, ODPSWriter
+from elasticdl.python.data.odps_recordio_conversion_utils import (
     write_recordio_shards_from_iterator,
 )
-from elasticdl.python.tests.odps_test_utils import create_iris_odps_table
+from elasticdl.python.tests.test_utils import create_iris_odps_table
 
 
 @unittest.skipIf(

@@ -14,7 +14,7 @@ from tensorflow.keras.optimizers import (
     RMSprop,
 )
 
-from elasticdl.python.common.log_util import default_logger as logger
+from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.embedding_service import EmbeddingService
 

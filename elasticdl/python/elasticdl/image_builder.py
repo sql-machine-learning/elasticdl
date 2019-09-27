@@ -5,8 +5,8 @@ from urllib.parse import urlparse
 
 import docker
 
-from elasticdl.python.common.file_helper import copy_if_not_exists
-from elasticdl.python.common.log_util import default_logger as logger
+from elasticdl.python.common.file_utils import copy_if_not_exists
+from elasticdl.python.common.log_utils import default_logger as logger
 
 
 def build_and_push_docker_image(

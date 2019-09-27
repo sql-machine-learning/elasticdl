@@ -6,7 +6,7 @@ import recordio
 import tensorflow as tf
 
 from elasticdl.python.common.constants import ODPSConfig
-from elasticdl.python.common.odps_io import ODPSReader
+from elasticdl.python.data.odps_io import ODPSReader
 
 
 class AbstractDataReader(ABC):

@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from elasticdl.python.common.model_helper import (
+from elasticdl.python.common.model_utils import (
     _get_spec_value,
     get_model_spec,
     get_module_file_path,
