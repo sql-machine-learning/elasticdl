@@ -182,6 +182,8 @@ class OptimizerWrapper(object):
             grads_and_vars: A list of (gradient, variable) pairs.
 
         """
+        # TODO (#1255): Discuss whether `OptimizerWrapper` needs a lock after
+        # implementing PS.
         self._init_thread_local()
 
         grads_and_vars = list(grads_and_vars)
