@@ -4,8 +4,6 @@
 
 ![component_architecture](/doc/figures/component_architecture.jpg)
 
-## Distributed Task Execution Framework
-
 The master node plays the master role in two aspects.
 
 1. It's the master of the cluster. It manages the lifecycle of the worker node. Start the worker pod, listen to the pod event and relaunch the killed worker if necessary.
@@ -20,6 +18,8 @@ The master node plays the master role in two aspects.
 ![distributed_training_sequence](/doc/figures/distributed_training_sequence.jpg)
 
 ## Dynamic Data Sharding
+
+ElasticDL is data based distributed execution, not graph based. Each worker holds the whole graph def of the model.
 
 ## Data IO Pipeline
 
