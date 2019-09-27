@@ -15,7 +15,7 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --worker_resource_request="cpu=400m,memory=2048Mi" \
       --worker_resource_limit="cpu=1,memory=3072Mi" \
       --minibatch_size=64 \
-      --minibatches_per_task=2 \
+      --num_minibatches_per_task=2 \
       --num_workers=2 \
       --checkpoint_steps=10 \
       --evaluation_steps=15 \
@@ -37,7 +37,7 @@ elif [[ "$JOB_TYPE" == "evaluate" ]]; then
       --worker_resource_request="cpu=400m,memory=2048Mi" \
       --worker_resource_limit="cpu=1,memory=3072Mi" \
       --minibatch_size=64 \
-      --minibatches_per_task=2 \
+      --num_minibatches_per_task=2 \
       --num_workers=2 \
       --evaluation_steps=15 \
       --job_name=test-mnist-evaluate \
@@ -55,7 +55,7 @@ elif [[ "$JOB_TYPE" == "predict" ]]; then
       --worker_resource_request="cpu=400m,memory=2048Mi" \
       --worker_resource_limit="cpu=1,memory=3072Mi" \
       --minibatch_size=64 \
-      --minibatches_per_task=2 \
+      --num_minibatches_per_task=2 \
       --num_workers=2 \
       --job_name=test-mnist-predict \
       --log_level=INFO \

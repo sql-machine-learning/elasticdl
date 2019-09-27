@@ -174,9 +174,9 @@ def add_common_params(parser):
         "pods will be created",
     )
     parser.add_argument(
-        "--minibatches_per_task",
+        "--num_minibatches_per_task",
         type=int,
-        help="Minibatch number per task",
+        help="The number of minibatches per task",
         required=True,
     )
     parser.add_argument(

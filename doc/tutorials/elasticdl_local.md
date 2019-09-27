@@ -62,7 +62,7 @@ elasticdl train \
   --worker_resource_request="cpu=400m,memory=2048Mi" \
   --worker_resource_limit="cpu=1,memory=3072Mi" \
   --minibatch_size=64 \
-  --minibatches_per_task=2 \
+  --num_minibatches_per_task=2 \
   --num_workers=2 \
   --checkpoint_steps=10 \
   --evaluation_steps=15 \

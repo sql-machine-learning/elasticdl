@@ -71,7 +71,7 @@ python -m elasticdl.python.elasticdl.client train \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --num_epochs=1 \
     --minibatch_size=10 \
-    --minibatches_per_task=10 \
+    --num_minibatches_per_task=10 \
     --num_workers=2 \
     --checkpoint_steps=2 \
     --grads_to_wait=2 \
@@ -110,7 +110,7 @@ python -m elasticdl.python.elasticdl.client train \
     --evaluation_data_dir=${MNIST_DATA_DIR}/test \
     --num_epochs=1 \
     --minibatch_size=10 \
-    --minibatches_per_task=10 \
+    --num_minibatches_per_task=10 \
     --num_workers=2 \
     --checkpoint_steps=2 \
     --grads_to_wait=2 \
@@ -173,7 +173,7 @@ python -m elasticdl.python.elasticdl.client train \
     --worker_pod_priority=low-priority \
     --num_epochs=1 \
     --minibatch_size=10 \
-    --minibatches_per_task=10 \
+    --num_minibatches_per_task=10 \
     --num_workers=2 \
     --checkpoint_steps=2 \
     --master_resource_request="cpu=1,memory=1024Mi" \
@@ -205,7 +205,7 @@ python -m elasticdl.python.elasticdl.client train \
     --worker_pod_priority=high-priority \
     --num_epochs=1 \
     --minibatch_size=10 \
-    --minibatches_per_task=10 \
+    --num_minibatches_per_task=10 \
     --num_workers=1 \
     --checkpoint_steps=2 \
     --master_resource_request="cpu=1,memory=1024Mi" \

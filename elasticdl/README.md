@@ -117,7 +117,7 @@ docker run --net=host --rm -it elasticdl:dev \
           --checkpoint_steps=2 \
           --grads_to_wait=2 \
           --minibatch_size=10 \
-          --minibatches_per_task=10 \
+          --num_minibatches_per_task=10 \
           --log_level=INFO"
 ```
 

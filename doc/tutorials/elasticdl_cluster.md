@@ -33,7 +33,7 @@ elasticdl train \
  --master_resource_request="cpu=1,memory=2048Mi,ephemeral-storage=5000Mi" \
  --worker_resource_request="cpu=1,memory=2048Mi,ephemeral-storage=5000Mi" \
  --minibatch_size=64 \
- --minibatches_per_task=2 \
+ --num_minibatches_per_task=2 \
  --num_workers=2 \
  --checkpoint_steps=10 \
  --grads_to_wait=2 \

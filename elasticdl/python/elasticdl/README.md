@@ -52,7 +52,7 @@ python -m elasticdl.python.elasticdl.client train \
     --worker_resource_request="cpu=1,memory=1024Mi" \
     --worker_resource_limit="cpu=1,memory=1024Mi" \
     --minibatch_size=10 \
-    --minibatches_per_task=10 \
+    --num_minibatches_per_task=10 \
     --num_workers=1 \
     --checkpoint_steps=2 \
     --grads_to_wait=2 \
@@ -82,7 +82,7 @@ python -m elasticdl.python.elasticdl.client train \
     --evaluation_data_dir=/data/mnist_nfs/mnist/test \
     --num_epochs=1 \
     --minibatch_size=10 \
-    --minibatches_per_task=10 \
+    --num_minibatches_per_task=10 \
     --num_workers=1 \
     --checkpoint_steps=2 \
     --master_pod_priority=high-priority \
