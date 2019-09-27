@@ -31,7 +31,7 @@ If the worker is preempted while processing the assigned task, master will recov
 
 ![dynamic_data_sharding](/doc/figures/dynamic_data_sharding.png)
 
-The worker gets the task containing the data shard index (contains filename, startIndex, endIndex), it would be important to read the data content of this shard efficiently from the data storage. In order to reach the IO efficiency, We recommend using the [RecordIO](https://github.com/elasticdl/recordio) data format for the input data.
+The worker gets the task containing the data shard index (contains filename, startIndex, endIndex), it would be important to read the data content of this shard efficiently from the data storage. In order to reach the IO efficiency, We choose the [RecordIO](https://github.com/elasticdl/recordio) data format for the input data.
 
 ## Data IO Pipeline
 
