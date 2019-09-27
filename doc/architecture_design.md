@@ -19,7 +19,13 @@ The master node plays the master role in two aspects.
 
 ## Dynamic Data Sharding
 
-ElasticDL is data based distributed execution, not graph based. Each worker holds the whole graph def of the model.
+The distributed execution of ElasticDL is data based, not graph based. Each worker holds the whole graph definition of the model. Different shards of data are dispatched to different workers. As a result, while the worker gets the task containing the data shard index, it would be important to read the data content of this shard efficiently from the data storage.
+
+Elastic is a key feature of ElasticDL. A worker can join and left at any time and the entire job still keeps running.
+
+At the start of an epoch, master node splits the entire data set into multiple shards and then generate a list of task. Each task corresponds to a shard of data. At this time, each shard doesn't have a owner. The worker pulls a task(aka a shard of data) at runtime and the master assign the task to the worker.
+
+![dynamic_data_sharding](/doc/figures/dynamic_data_sharding.png)
 
 ## Data IO Pipeline
 
