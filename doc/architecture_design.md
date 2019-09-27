@@ -8,10 +8,10 @@ ElasticDL uses the master-worker architecture. The master node plays the master 
 
 1. It's the master of the cluster. It manages the lifecycle of the worker pod, starts the worker pod, listens to the pod event and relaunches the terminated worker pod if necessary.
 2. It's the master of the model training process.
-   * Shard the training/evaluation data
-   * Generate the training/evaluation task from the sharded data
-   * Aggregate the gradients reported from the workers
-   * Update the model and save the checkpoint
+   * Partition the training/evaluation data into mutiple shards.
+   * Generate the training/evaluation tasks from the data shards.
+   * Aggregate the gradients reported from the workers.
+   * Update the model variables and save the checkpoint if necessary.
 
 ## Distributed Training
 
