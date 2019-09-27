@@ -65,10 +65,10 @@ class Worker(object):
                 "cifar10_subclass.CustomModel".
             model_params: The dictionary of model parameters in a string
                 separated by semi-colon used to instantiate the model,
-                e.g. "param1=1,param2=2".
+                e.g. "param1=1; param2=2".
             data_reader_params: The data reader parameters in a string
                 separated by semi-colon used to instantiate the data reader,
-                e.g. "param1=1,param2=2".
+                e.g. "param1=1; param2=2".
             prediction_outputs_processor: The name of the prediction output
                 processor class defined in the model file.
             get_model_steps: Worker will perform `get_model` from the

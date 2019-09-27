@@ -417,7 +417,7 @@ def add_common_args_between_master_and_worker(parser):
         type=str,
         default="",
         help="The data reader parameters in a string separated by semi-colon "
-        'used to instantiate the data reader, e.g. "columns=["a", "b"]"',
+        'used to instantiate the data reader, e.g. "param1=1; param2=2"',
     )
 
 
