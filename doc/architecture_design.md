@@ -4,9 +4,9 @@
 
 ![component_architecture](/doc/figures/component_architecture.jpg)
 
-The master node plays the master role in two aspects.
+ElasticDL uses the master-worker architecture. The master node plays the master role in two aspects.
 
-1. It's the master of the cluster. It manages the lifecycle of the worker node. Start the worker pod, listen to the pod event and relaunch the killed worker if necessary.
+1. It's the master of the cluster. It manages the lifecycle of the worker pod, starts the worker pod, listens to the pod event and relaunches the terminated worker pod if necessary.
 2. It's the master of the model training process.
    * Shard the training/evaluation data
    * Generate the training/evaluation task from the sharded data
@@ -19,13 +19,19 @@ The master node plays the master role in two aspects.
 
 ## Dynamic Data Sharding
 
-The distributed execution of ElasticDL is data based, not graph based. Each worker holds the whole graph definition of the model. Different shards of data are dispatched to different workers. As a result, while the worker gets the task containing the data shard index, it would be important to read the data content of this shard efficiently from the data storage.
+**Elastic** is the key feature of ElasticDL. A worker can join and left at any time and the entire job still keeps running.
 
-Elastic is a key feature of ElasticDL. A worker can join and left at any time and the entire job still keeps running.
+The distributed execution of ElasticDL is data based, not graph based. Each worker holds the whole graph definition of the model. Different shards of data are dispatched to different workers. Master doesn't care which worker reports the gradients, it just care how many gradients are reported for the model version. In this way, add or remove a worker won't interrupt the training process.
 
-At the start of an epoch, master node splits the entire data set into multiple shards and then generate a list of task. Each task corresponds to a shard of data. At this time, each shard doesn't have a owner. The worker pulls a task(aka a shard of data) at runtime and the master assign the task to the worker.
+At the start of an epoch, master node partitions the entire data set into multiple shards and then generate a todo list of task. Each task corresponds to a shard of data.\
+At the start point, each data shard doesn't have a owner.\
+The worker pulls a task (aka. a shard of data) at runtime and the master assigns the task to this worker. And then move this task to doing list.\
+After processing this task and reports the result, the worker will pull the next task.\
+If the worker is preempted while processing the assigned task, master will recover the unifinished tasks and insert them back into todo list.
 
 ![dynamic_data_sharding](/doc/figures/dynamic_data_sharding.png)
+
+The worker gets the task containing the data shard index (contains filename, startIndex, endIndex), it would be important to read the data content of this shard efficiently from the data storage. In order to reach the IO efficiency, We recommend using the [RecordIO](https://github.com/elasticdl/recordio) data format for the input data.
 
 ## Data IO Pipeline
 
