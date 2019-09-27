@@ -15,7 +15,7 @@ _model_zoo_path = os.path.join(
 class ExampleTest(unittest.TestCase):
     def test_deepfm_functional_train(self):
         model_params = (
-            "input_dim=5383,embedding_dim=4,input_length=10,fc_unit=4"
+            "input_dim=5383;embedding_dim=4;input_length=10;fc_unit=4"
         )
         use_asyncs = [False, True]
         for use_async in use_asyncs:
@@ -31,7 +31,7 @@ class ExampleTest(unittest.TestCase):
 
     def test_deepfm_functional_evaluate(self):
         model_params = (
-            "input_dim=5383,embedding_dim=4,input_length=10,fc_unit=4"
+            "input_dim=5383;embedding_dim=4;input_length=10;fc_unit=4"
         )
         distributed_train_and_evaluate(
             10,
@@ -123,7 +123,7 @@ class ExampleTest(unittest.TestCase):
             [224, 224, 3],
             _model_zoo_path,
             "resnet50_subclass.resnet50_subclass.CustomModel",
-            model_params='num_classes=10,dtype="float32"',
+            model_params='num_classes=10;dtype="float32"',
             training=False,
             dataset_name=DatasetName.IMAGENET,
         )
