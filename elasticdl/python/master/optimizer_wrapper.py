@@ -484,8 +484,8 @@ class OptimizerWrapper(object):
         )
 
     def _delete_variables(self):
-        # Deleting slot_variables is dependent on
-        # embedding variables. So delete slot variables first.
+        # Slot variable access in optimizer requires corresponding embedding
+        # variable information. Delete slot variables first.
         for layer_name, slots in self._tls._slot_variables.items():
             embed_var = self._get_embedding_variable(layer_name)
             embed_var_key = _var_key(embed_var)

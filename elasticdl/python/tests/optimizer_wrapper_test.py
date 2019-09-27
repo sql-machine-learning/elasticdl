@@ -717,8 +717,8 @@ class OptimizerWrapperTest(unittest.TestCase):
         Testing the correctness is not simple because OptimizerWrapper is not
         thread-safe for embedding table. This test case lists all the possible
         results when `thread_number=2` and test the correctness. This test case
-        also tests that OptimizerWrapper does not raise Error when
-        `thread_num=8.`
+        also tests that OptimizerWrapper does not raise Error with a large
+        thread number(8).
         """
         max_thread_num = 8
         input_dim = 4
