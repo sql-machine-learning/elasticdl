@@ -3,6 +3,7 @@ import unittest
 
 from elasticdl.python.common.model_utils import (
     _get_spec_value,
+    get_dict_from_params_str,
     get_model_spec,
     get_module_file_path,
 )
@@ -68,6 +69,16 @@ class ModelHelperTest(unittest.TestCase):
             {},
             True,
         )
+
+    def test_get_dict_from_params_str(self):
+        self.assertEqual(
+            get_dict_from_params_str('ls=["a", "b"]'), {"ls": ["a", "b"]}
+        )
+        self.assertEqual(
+            get_dict_from_params_str('ls=["a", "b"]; d={"a": 3}'),
+            {"ls": ["a", "b"], "d": {"a": 3}},
+        )
+        self.assertEqual(get_dict_from_params_str(""), None)
 
 
 if __name__ == "__main__":

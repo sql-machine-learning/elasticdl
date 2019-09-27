@@ -9,14 +9,21 @@ from elasticdl.python.data.dataset_utils import create_dataset_from_tasks
 
 
 class TaskDataService(object):
-    def __init__(self, worker, training_with_evaluation):
+    def __init__(
+        self, worker, training_with_evaluation, data_reader_params=None
+    ):
         self._worker = worker
         self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
         self._pending_dataset = True
         self._pending_eval_tasks = []
         self._reset()
-        self._data_reader = create_data_reader(data_origin=None)
+        if data_reader_params:
+            self._data_reader = create_data_reader(
+                data_origin=None, **data_reader_params
+            )
+        else:
+            self._data_reader = create_data_reader(data_origin=None)
 
     def _reset(self):
         """
@@ -72,7 +79,7 @@ class TaskDataService(object):
                 shards.append(task)
         if shards and task:
             return (
-                create_dataset_from_tasks(shards),
+                create_dataset_from_tasks(shards, self._data_reader),
                 task.model_version,
                 task.task_id,
             )

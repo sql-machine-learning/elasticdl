@@ -7,6 +7,7 @@ from elasticdl.python.common.constants import JobType, Mode
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import (
     find_layer,
+    get_dict_from_params_str,
     get_model_spec,
     get_non_embedding_trainable_vars,
 )
@@ -39,6 +40,7 @@ class Worker(object):
         embedding_service_endpoint=None,
         model_def=None,
         model_params="",
+        data_reader_params="",
         prediction_outputs_processor="PredictionOutputsProcessor",
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
         get_model_steps=1,
@@ -61,9 +63,12 @@ class Worker(object):
             model_def: The import path to the model definition
                 function/class in the model zoo, e.g.
                 "cifar10_subclass.CustomModel".
-            model_params: The dictionary of model parameters in a string that
-                will be used to instantiate the model,
-                e.g. "param1=1,param2=2".
+            model_params: The dictionary of model parameters in a string
+                separated by semi-colon used to instantiate the model,
+                e.g. "param1=1; param2=2".
+            data_reader_params: The data reader parameters in a string
+                separated by semi-colon used to instantiate the data reader,
+                e.g. "param1=1; param2=2".
             prediction_outputs_processor: The name of the prediction output
                 processor class defined in the model file.
             get_model_steps: Worker will perform `get_model` from the
@@ -101,7 +106,9 @@ class Worker(object):
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._model_version = -1
         self._task_data_service = TaskDataService(
-            self, self._job_type == JobType.TRAINING_WITH_EVALUATION
+            self,
+            self._job_type == JobType.TRAINING_WITH_EVALUATION,
+            data_reader_params=get_dict_from_params_str(data_reader_params),
         )
         self._get_model_steps = get_model_steps
         if self._get_model_steps > 1:

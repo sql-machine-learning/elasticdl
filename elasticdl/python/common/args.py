@@ -403,14 +403,21 @@ def add_common_args_between_master_and_worker(parser):
         "--model_params",
         type=str,
         default="",
-        help="The dictionary of model parameters in a string that will be "
-        'used to instantiate the model, e.g. "param1=1,param2=2"',
+        help="The model parameters in a string separated by semi-colon "
+        'used to instantiate the model, e.g. "param1=1; param2=2"',
     )
     parser.add_argument(
         "--get_model_steps",
         type=int,
         default=1,
         help="Worker will get_model from PS every these steps.",
+    )
+    parser.add_argument(
+        "--data_reader_params",
+        type=str,
+        default="",
+        help="The data reader parameters in a string separated by semi-colon "
+        'used to instantiate the data reader, e.g. "param1=1; param2=2"',
     )
 
 
