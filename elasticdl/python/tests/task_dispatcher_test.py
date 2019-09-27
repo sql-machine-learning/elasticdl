@@ -5,7 +5,7 @@ from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 
 class TaskQueueTest(unittest.TestCase):
-    def test_create_get_zero_start_ind(self):
+    def test_create_tasks_with_zero_start_ind(self):
         task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1)
 
         all_tasks = [
@@ -55,7 +55,7 @@ class TaskQueueTest(unittest.TestCase):
 
         self.assertTrue(task_d.finished())
 
-    def test_create_get_none_zero_start_ind(self):
+    def test_create_tasks_with_non_zero_start_ind(self):
         task_d = _TaskDispatcher({"f1": (0, 10), "f2": (10, 10)}, {}, {}, 3, 1)
 
         all_tasks = [
@@ -66,7 +66,7 @@ class TaskQueueTest(unittest.TestCase):
             ("f2", 10, 13, elasticdl_pb2.TRAINING, -1),
             ("f2", 13, 16, elasticdl_pb2.TRAINING, -1),
             ("f2", 16, 19, elasticdl_pb2.TRAINING, -1),
-            ("f2", 19, 22, elasticdl_pb2.TRAINING, -1),
+            ("f2", 19, 20, elasticdl_pb2.TRAINING, -1),
         ]
 
         # get all tasks out, each worker is assigned 2 tasks.
