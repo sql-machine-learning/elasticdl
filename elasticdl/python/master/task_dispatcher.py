@@ -105,7 +105,9 @@ class _TaskDispatcher(object):
                 )
                 # If the start index is not smaller than end index,
                 # we need to find the correct end index by taking the start
-                # index into account.
+                # index into account. We should not create task with
+                # end index that exceeds the maximally possible number of
+                # records available in this shard.
                 if start_ind_this_task >= end_ind_this_task:
                     end_ind_this_task = min(
                         max_ind_this_task,
