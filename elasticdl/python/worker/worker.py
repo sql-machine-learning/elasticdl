@@ -7,8 +7,8 @@ from elasticdl.python.common.constants import JobType, Mode
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import (
     find_layer,
-    get_model_spec,
     get_dict_from_params_str,
+    get_model_spec,
     get_non_embedding_trainable_vars,
 )
 from elasticdl.python.common.ndarray import (

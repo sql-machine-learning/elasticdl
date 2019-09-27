@@ -3,9 +3,9 @@ import unittest
 
 from elasticdl.python.common.model_utils import (
     _get_spec_value,
+    get_dict_from_params_str,
     get_model_spec,
     get_module_file_path,
-    get_dict_from_params_str,
 )
 
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
