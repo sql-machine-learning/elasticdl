@@ -21,17 +21,17 @@ ElasticDL uses the master-worker architecture. The master node plays the master 
 
 **Elastic** is the key feature of ElasticDL. A worker can join and left at any time and the entire job still keeps running.
 
-The distributed execution of ElasticDL is data based, not graph based. Each worker holds the whole graph definition of the model. Different shards of data are dispatched to different workers. Master doesn't care which worker reports the gradients, it just care how many gradients are reported for the model version. In this way, add or remove a worker won't interrupt the training process.
+The distributed execution of ElasticDL is data based, not model based. Each worker holds the whole model definition. Different shards of data are dispatched to different workers. Master doesn't care which worker reports the gradients, it just care how many gradients are reported for the model version. In this way, add or remove a worker won't interrupt the training process.
 
-At the start of an epoch, master node partitions the entire data set into multiple shards and then generate a todo list of task. Each task corresponds to a shard of data.\
-At the start point, each data shard doesn't have a owner.\
+At the start of an epoch, master node partitions the entire dataset into multiple shards which contain many records and then generate a todo list of task. Each task corresponds to a shard of data.\
+At the start point, each task doesn't have a owner.\
 The worker pulls a task (aka. a shard of data) at runtime and the master assigns the task to this worker. And then move this task to doing list.\
 After processing this task and reports the result, the worker will pull the next task.\
-If the worker is preempted while processing the assigned task, master will recover the unifinished tasks and insert them back into todo list.
+Master will remove the task from doing list when master receive the result of task and insert it into todo list to recover if the result is not success. For example the worker is preempted while processing the assigned task or connection timeout.
 
 ![dynamic_data_sharding](/doc/figures/dynamic_data_sharding.png)
 
-The worker gets the task containing the data shard index (contains filename, startIndex, endIndex), it would be important to read the data content of this shard efficiently from the data storage. In order to reach the IO efficiency, We choose the [RecordIO](https://github.com/elasticdl/recordio) data format for the input data.
+The worker gets the task containing the data shard index (contains filename, startIndex, endIndex), it would be important to read the records of this shard efficiently from the data storage. In order to reach the IO efficiency, We choose the [RecordIO](https://github.com/elasticdl/recordio) data format for the input data.
 
 ## Data IO Pipeline
 
