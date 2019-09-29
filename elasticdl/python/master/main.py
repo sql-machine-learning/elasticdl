@@ -170,6 +170,7 @@ def main():
             args.evaluation_throttle_secs,
             args.evaluation_steps,
             job_type == JobType.EVALUATION_ONLY,
+            model_module[args.eval_metrics_fn],
         )
         evaluation_service.start()
         task_d.set_evaluation_service(evaluation_service)

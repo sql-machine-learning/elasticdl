@@ -13,12 +13,25 @@ from elasticdl.python.common.ndarray import tensor_to_ndarray
 class _EvaluationJob(object):
     """Representation of an evaluation job"""
 
-    def __init__(self, model_version, total_tasks=-1):
+    def __init__(self, metrics_dict, model_version, total_tasks=-1):
         self.model_version = model_version
         self._total_tasks = total_tasks
         self._completed_tasks = 0
-        self._completed_minibatches = 0
-        self._evaluation_metrics = defaultdict()
+        self._init_metrics_dict(metrics_dict)
+
+    def _init_metrics_dict(self, metrics_dict):
+        if not metrics_dict:
+            raise ValueError(
+                "Doing evaluation with empty evaluation metrics dict."
+            )
+        for metrics in metrics_dict.values():
+            if isinstance(metrics, dict):
+                self._have_multiple_outputs = True
+                self._metrics_dict = metrics_dict
+            else:
+                self._have_multiple_outputs = False
+                self._metrics_dict = {"default": metrics_dict}
+            break
 
     def complete_task(self):
         self._completed_tasks += 1
@@ -27,7 +40,7 @@ class _EvaluationJob(object):
         return self._completed_tasks >= self._total_tasks
 
     def report_evaluation_metrics(
-        self, evaluation_version, evaluation_metrics
+        self, evaluation_version, model_outputs, labels
     ):
         if (
             self.model_version >= 0
@@ -38,18 +51,29 @@ class _EvaluationJob(object):
                 % (self.model_version, evaluation_version)
             )
             return False
-        for k, v in evaluation_metrics.items():
-            if k in self._evaluation_metrics:
-                self._evaluation_metrics[k] += tensor_to_ndarray(v)
-            else:
-                self._evaluation_metrics[k] = np.copy(tensor_to_ndarray(v))
-        self._completed_minibatches += 1
+        labels = tensor_to_ndarray(labels)
+        for key, tensor in model_outputs.items():
+            metrics = self._metrics_dict.get(key, {})
+            if not metrics:
+                continue
+            model_outputs = tensor_to_ndarray(tensor)
+            print("model_outputs", model_outputs)
+            for metric_inst in metrics.values():
+                metric_inst.update_state(labels, model_outputs)
         return True
 
     def get_evaluation_summary(self):
+        if self._have_multiple_outputs:
+            return {
+                output_name: {
+                    metric_name: metric_inst.result()
+                    for metric_name, metric_inst in metrics.items()
+                }
+                for output_name, metrics in self._metrics_dict.items()
+            }
         return {
-            k: v / self._completed_minibatches
-            for k, v in self._evaluation_metrics.items()
+            metric_name: metric_inst.result()
+            for metric_name, metric_inst in self._metrics_dict["default"].items()
         }
 
 
@@ -100,6 +124,7 @@ class EvaluationService(object):
         throttle_secs,
         eval_steps,
         eval_only,
+        get_eval_metrics_dict,
     ):
         self._checkpoint_service = checkpoint_service
         self._tensorboard_service = tensorboard_service
@@ -114,6 +139,7 @@ class EvaluationService(object):
         self._eval_checkpoint_versions = []
         self._last_eval_checkpoint_version = -1
         self._eval_only = eval_only
+        self._get_eval_metrics_dict = get_eval_metrics_dict
 
     def start(self):
         if self._time_based_eval and not self._eval_only:
@@ -127,7 +153,7 @@ class EvaluationService(object):
         self._master_servicer = master_servicer
 
     def init_eval_only_job(self, num_task):
-        self._eval_job = _EvaluationJob(-1, num_task)
+        self._eval_job = _EvaluationJob(self._get_eval_metrics_dict(), -1, num_task)
 
     def add_evaluation_task(self, is_time_based_eval, master_locking=True):
         """
@@ -159,7 +185,7 @@ class EvaluationService(object):
                 tasks = self._task_d.create_tasks(
                     elasticdl_pb2.EVALUATION, checkpoint_version
                 )
-                self._eval_job = _EvaluationJob(checkpoint_version, len(tasks))
+                self._eval_job = _EvaluationJob(self._get_eval_metrics_dict(), checkpoint_version, len(tasks))
                 return True
         return False
 
@@ -174,12 +200,12 @@ class EvaluationService(object):
             )
 
     def report_evaluation_metrics(
-        self, evaluation_version, evaluation_metrics
+        self, evaluation_version, model_outputs, labels
     ):
         if self._eval_job is None:
             return False
         return self._eval_job.report_evaluation_metrics(
-            evaluation_version, evaluation_metrics
+            evaluation_version, model_outputs, labels
         )
 
     def complete_task(self):

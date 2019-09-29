@@ -441,8 +441,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return empty_pb2.Empty()
 
     def ReportEvaluationMetrics(self, request, _):
+        model_outputs = tensor_to_ndarray(request.model_outputs)
+        labels = tensor_to_ndarray(request.labels)
         report_metrics = self._evaluation_service.report_evaluation_metrics(
-            request.model_version, request.evaluation_metrics
+            request.model_version, model_outputs, labels
         )
         res = elasticdl_pb2.ReportEvaluationMetricsResponse()
         res.model_version = self._version
