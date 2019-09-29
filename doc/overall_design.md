@@ -1,4 +1,4 @@
-# ElasticDL Architecture Design
+# ElasticDL Overall Design
 
 ## Component Architecture
 
