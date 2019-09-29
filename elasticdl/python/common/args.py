@@ -173,7 +173,12 @@ def add_common_params(parser):
         help="The name of the Kubernetes namespace where ElasticDL "
         "pods will be created",
     )
-    parser.add_argument("--records_per_task", type=int, required=True)
+    parser.add_argument(
+        "--num_minibatches_per_task",
+        type=int,
+        help="The number of minibatches per task",
+        required=True,
+    )
     parser.add_argument(
         "--cluster_spec",
         help="The file that contains user-defined cluster specification",

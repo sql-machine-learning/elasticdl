@@ -114,11 +114,11 @@ docker run --net=host --rm -it -v $EDL_REPO:/edl_dir -w /edl_dir \
           --job_name=test \
           --training_data_dir=/data/mnist/train \
           --evaluation_data_dir=/data/mnist/test \
-          --records_per_task=100 \
           --num_epochs=2 \
           --checkpoint_steps=2 \
           --grads_to_wait=2 \
           --minibatch_size=10 \
+          --num_minibatches_per_task=10 \
           --log_level=INFO"
 ```
 

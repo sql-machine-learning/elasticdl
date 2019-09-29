@@ -41,7 +41,7 @@ All tests are done with CIFAR10 training data. The timing-related arguments used
   --master_resource_request="cpu=2,memory=2048Mi,ephemeral-storage=5000Mi"
   --worker_resource_request="cpu=4,memory=2048Mi,ephemeral-storage=5000Mi,gpu=1"
   --minibatch_size=128
-  --records_per_task=4096
+  --num_minibatches_per_task=32
   --num_workers=1
   --grads_to_wait=1
   --model_def=cifar10_functional_api.cifar10_functional_api.custom_model

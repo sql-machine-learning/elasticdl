@@ -94,11 +94,13 @@ def main():
         args.evaluation_data_dir,
         args.prediction_data_dir,
     )
+
+    records_per_task = args.minibatch_size * args.num_minibatches_per_task
     task_d = _make_task_dispatcher(
         args.training_data_dir,
         args.evaluation_data_dir,
         args.prediction_data_dir,
-        args.records_per_task,
+        records_per_task,
         args.num_epochs,
     )
     model_module = load_module(
