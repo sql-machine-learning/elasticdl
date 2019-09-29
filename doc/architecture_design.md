@@ -6,7 +6,7 @@
 
 ElasticDL uses the master-worker architecture. The master node plays the master role in two aspects.
 
-1. It's the master of the cluster. It manages the lifecycle of the worker pod, starts the worker pod, listens to the pod event and relaunches the terminated worker pod if necessary.
+1. It's the master of the cluster. It manages the lifecycle of all the worker pods, starts the worker pod, listens to the pod event and relaunches the terminated worker pod if necessary.
 2. It's the master of the model training process.
    * Partition the training/evaluation data into mutiple shards.
    * Generate the training/evaluation tasks from the data shards.
@@ -27,8 +27,8 @@ At the start of an epoch, master node partitions the entire dataset into multipl
 At the start point, each task is not assigned to any worker. The worker pulls a task (aka. a shard of data) at runtime and the master assigns the task to this worker. And then master moves this task to the doing list.\
 After processing this task and reporting the result, the worker will pull the next task and continue processing it.
 
-* If the task result is success, master removes the task from doing list.
-* If the task result is fail, master removes the task from doing list and then inserts it back into todo list for recovery. Several issues can cause the task failure, such as the worker is preempted by the job of higher priority, the network connection is timeout and so on.
+* If the task result is success, master removes the task from the *doing* list and mark it done.
+* If the task result is fail, master removes the task from doing list and then inserts it back into the *todo* list for recovery. Several issues can cause the task failure, such as the worker is preempted by a job of higher priority, the network connection is timeout and so on.
 
 ![dynamic_data_sharding](/doc/figures/dynamic_data_sharding.png)
 
@@ -47,10 +47,10 @@ Data IO pipeline for elasticdl involve reading data from [RecordIO](https://gith
     padding: 2px;"><em>Figure 2 </em>. elasticdl data IO pipeline</div>
 </center>
 
-After worker is launched, the worker will send request to get task from master. Each task contains record index range [m, m+N) which can locate records in RecordIO file. DataReader read N records from RecordIO file by task index rane and yield each record to create a generator. Then worker will perform the following steps to comsume record data in generator:
+After worker is launched, the worker will send request to get tasks from master. Each task contains the record index range [m, m+N) which can locate records in RecordIO file. DataReader read N records from RecordIO file by task index range and yield each record to create a generator. Then worker will perform the following steps to comsume record data from the generator:
 
 1. Create a dataset by [tf.data.Dataset.from_generator](https://www.tensorflow.org/api_docs/python/tf/data/Dataset#from_generator).
 2. Convert dataset by dataset_fn user defined to generate features and label.  
 3. Calculate gradients of trainable variables for train task and predictions of samples for eualuation task.
 4. Send calculation result to master.
-5. Send task execution status to master after completing all records for the task.
+5. Send task execution status to master after completing all records of this task.
