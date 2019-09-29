@@ -2,7 +2,7 @@
 
 ## Component Architecture
 
-![component_architecture](/doc/figures/component_architecture.jpg)
+![component_architecture](/doc/figures/component_architecture.png)
 
 ElasticDL uses the master-worker architecture. The master node plays the master role in two aspects.
 
