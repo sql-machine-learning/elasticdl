@@ -21,13 +21,14 @@ ElasticDL uses the master-worker architecture. The master node plays the master 
 
 **Elastic** is the key feature of ElasticDL. A worker can join and left at any time and the entire job still keeps running.
 
-The distributed execution of ElasticDL is data based, not model based. Each worker holds the whole model definition. Different shards of data are dispatched to different workers. Master doesn't care which worker reports the gradients, it just care how many gradients are reported for the model version. In this way, add or remove a worker won't interrupt the training process.
+The distributed execution of ElasticDL is data parallelism, not model parallelism. Each worker holds the whole model definition. Different shards of data are dispatched to different workers. Master doesn't care which worker reports the gradients, it just cares how many gradients are reported for the model version. In this way, adding or removing a worker won't interrupt the training process.
 
-At the start of an epoch, master node partitions the entire dataset into multiple shards which contain many records and then generate a todo list of task. Each task corresponds to a shard of data.\
-At the start point, each task doesn't have a owner.\
-The worker pulls a task (aka. a shard of data) at runtime and the master assigns the task to this worker. And then move this task to doing list.\
-After processing this task and reports the result, the worker will pull the next task.\
-Master will remove the task from doing list when master receive the result of task and insert it into todo list to recover if the result is not success. For example the worker is preempted while processing the assigned task or connection timeout.
+At the start of an epoch, master node partitions the entire dataset into multiple shards which contain many records and then generates a todo list of tasks. Each task corresponds to a shard of data.\
+At the start point, each task is not assigned to any worker. The worker pulls a task (aka. a shard of data) at runtime and the master assigns the task to this worker. And then master moves this task to the doing list.\
+After processing this task and reporting the result, the worker will pull the next task and continue processing it.
+
+* If the task result is success, master removes the task from doing list.
+* If the task result is fail, master removes the task from doing list and then inserts it back into todo list for recovery. Several issues can cause the task failure, such as the worker is preempted by the job of higher priority, the network connection is timeout and so on.
 
 ![dynamic_data_sharding](/doc/figures/dynamic_data_sharding.png)
 
