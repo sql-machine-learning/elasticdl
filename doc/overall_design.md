@@ -13,6 +13,8 @@ ElasticDL uses the master-worker architecture. The master node plays the master 
    * Aggregate the gradients reported from the workers.
    * Update the model variables and save the checkpoint if necessary.
 
+ElasticDL client is simple, just like a CLI command. User types ElaticDL command in the terminal to start the training/evaluation/prediction job. The client parses the parameters, builds the image which packages the ElasticDL framework the and model code, pushes the image into hub, and then applies the CRD of the master node to the kubernetes ApiServer. After the master pod is created and started, it will then create other components and drive the process of the entire job.
+
 ## Distributed Training
 
 ![distributed_training_sequence](/doc/figures/distributed_training_sequence.jpg)
