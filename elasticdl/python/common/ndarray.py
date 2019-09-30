@@ -14,7 +14,10 @@ def tensor_to_ndarray(tensor_pb):
     if not tensor_pb.dim:
         raise ValueError("Tensor PB has no dim defined")
 
-    dtype = np.dtype(tensor_pb.dtype)
+    # TODO (yunjian.lmh): Tensor of checkpoint file in `tests/testdata` does
+    # not have `dtype` field. Remove default value for `tensor_pb.dtype` after
+    # generating a new checkpoint file.
+    dtype = np.dtype(tensor_pb.dtype or "float32")
     # Check that the buffer size agrees with dimensions.
     size = dtype.itemsize
     for d in tensor_pb.dim:
