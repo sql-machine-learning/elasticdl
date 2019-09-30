@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from elasticdl.proto import elasticdl_pb2
+from elasticdl.proto import elasticdl_pb2, tensor_dtype_pb2
 from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
@@ -43,7 +43,7 @@ class ConverterTest(unittest.TestCase):
         # Empty array, should be ok.
         t.dim.append(0)
         t.content = b""
-        t.dtype = "float32"
+        t.dtype = tensor_dtype_pb2.DT_FLOAT32
         arr = tensor_to_ndarray(t)
         np.testing.assert_array_equal(np.array([], dtype=np.float32), arr)
 
@@ -51,7 +51,7 @@ class ConverterTest(unittest.TestCase):
         del t.dim[:]
         t.dim.extend([2, 0, 1, 9])
         t.content = b""
-        t.dtype = "float32"
+        t.dtype = tensor_dtype_pb2.DT_FLOAT32
         arr = tensor_to_ndarray(t)
         np.testing.assert_array_equal(
             np.ndarray(shape=[2, 0, 1, 9], dtype=np.float32), arr
@@ -62,7 +62,7 @@ class ConverterTest(unittest.TestCase):
         # Wrong content size, should raise
         del t.dim[:]
         t.dim.extend([11])
-        t.dtype = "float32"
+        t.dtype = tensor_dtype_pb2.DT_FLOAT32
         self.assertRaises(ValueError, tensor_to_ndarray, t)
 
         # Compatible dimensions, should be ok.
@@ -70,7 +70,7 @@ class ConverterTest(unittest.TestCase):
             del t.dim[:]
             t.content = b"\0" * (4 * 12)
             t.dim.extend([m, 12 // m])
-            t.dtype = "float32"
+            t.dtype = tensor_dtype_pb2.DT_FLOAT32
             arr = tensor_to_ndarray(t)
 
     def testRoundTrip(self):

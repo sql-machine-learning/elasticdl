@@ -1,7 +1,11 @@
 import numpy as np
 import tensorflow as tf
 
-from elasticdl.proto import elasticdl_pb2
+from elasticdl.proto import elasticdl_pb2, tensor_dtype_pb2
+from elasticdl.python.common.dtypes import (
+    dtype_numpy_to_tensor,
+    dtype_tensor_to_numpy,
+)
 
 
 def tensor_to_ndarray(tensor_pb):
@@ -17,7 +21,9 @@ def tensor_to_ndarray(tensor_pb):
     # TODO (yunjian.lmh): Tensor of checkpoint file in `tests/testdata` does
     # not have `dtype` field. Remove default value for `tensor_pb.dtype` after
     # generating a new checkpoint file.
-    dtype = np.dtype(tensor_pb.dtype or "float32")
+    if not tensor_pb.dtype:
+        tensor_pb.dtype = tensor_dtype_pb2.DT_FLOAT32
+    dtype = dtype_tensor_to_numpy(tensor_pb.dtype)
     # Check that the buffer size agrees with dimensions.
     size = dtype.itemsize
     for d in tensor_pb.dim:
@@ -51,6 +57,6 @@ def ndarray_to_tensor(arr, indices=None):
     tensor.content = arr.tobytes()
     if indices:
         tensor.indices.extend(indices)
-    tensor.dtype = arr.dtype.name
+    tensor.dtype = dtype_numpy_to_tensor(arr.dtype)
 
     return tensor

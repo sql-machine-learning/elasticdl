@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
+import "elasticdl/proto/tensor_dtype.proto";
 
 package master;
 
@@ -55,7 +56,7 @@ message Tensor {
     repeated int32 indices = 3;
 
     // Dtype of the tensor, e.g. "int64", "float32".
-    string dtype = 4;
+    TensorDtype dtype = 4;
 }
 
 message Model {
