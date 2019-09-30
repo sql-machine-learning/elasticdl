@@ -13,6 +13,10 @@ def dtype_numpy_to_tensor(dtype):
     return _DT_NP_TO_TENSOR.get(dtype.type, tensor_dtype_pb2.DT_INVALID)
 
 
+def is_numpy_dtype_allowed(dtype):
+    return dtype.type in _DT_NP_TO_TENSOR
+
+
 _DT_TENSOR_TO_NP = {
     tensor_dtype_pb2.DT_INT8: np.int8,
     tensor_dtype_pb2.DT_INT16: np.int16,

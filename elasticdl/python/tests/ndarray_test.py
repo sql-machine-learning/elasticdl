@@ -11,6 +11,10 @@ from elasticdl.python.common.ndarray import (
 
 class ConverterTest(unittest.TestCase):
     def test_ndarray_to_tensor(self):
+        # Wrong type, should raise
+        arr = np.array([1, 2, 3, 4], dtype=np.uint8)
+        self.assertRaises(ValueError, ndarray_to_tensor, arr)
+
         # Empty array
         arr = np.array([], dtype=np.float32)
         t = ndarray_to_tensor(arr)

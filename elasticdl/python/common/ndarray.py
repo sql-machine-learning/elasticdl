@@ -5,6 +5,7 @@ from elasticdl.proto import elasticdl_pb2, tensor_dtype_pb2
 from elasticdl.python.common.dtypes import (
     dtype_numpy_to_tensor,
     dtype_tensor_to_numpy,
+    is_numpy_dtype_allowed,
 )
 
 
@@ -52,6 +53,8 @@ def tensor_to_ndarray(tensor_pb):
 def ndarray_to_tensor(arr, indices=None):
     """Convert ndarray to Tensor PB"""
 
+    if not is_numpy_dtype_allowed(arr.dtype):
+        raise ValueError("Dtype of ndarray %s is not supported", arr.dtype)
     tensor = elasticdl_pb2.Tensor()
     tensor.dim.extend(arr.shape)
     tensor.content = arr.tobytes()
