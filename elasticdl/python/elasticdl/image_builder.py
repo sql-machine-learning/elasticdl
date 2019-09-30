@@ -68,19 +68,62 @@ after _build_docker_image.
             )
 
         image_name = _generate_unique_image_name(docker_image_prefix)
-        if docker_tlscert and docker_tlskey:
-            tls_config = docker.tls.TLSConfig(
-                client_cert=(docker_tlscert, docker_tlskey)
-            )
-            client = docker.APIClient(base_url=docker_base_url, tls=tls_config)
-        else:
-            client = docker.APIClient(base_url=docker_base_url)
+        client = _get_docker_client(
+            docker_base_url=docker_base_url,
+            docker_tlscert=docker_tlscert,
+            docker_tlskey=docker_tlskey,
+        )
         _build_docker_image(client, ctx_dir, df.name, image_name)
 
         if docker_image_prefix:
             _push_docker_image(client, image_name)
 
     return image_name
+
+
+def remove_images(
+    docker_image_prefix="",
+    docker_base_url="unix://var/run/docker.sock",
+    docker_tlscert="",
+    docker_tlskey="",
+):
+    """Remove all docker images with repository name equal to
+    docker_image_prefix. If docker_image_prefix is empyt, it
+    will remove all images.
+    """
+    client = _get_docker_client(
+        docker_base_url=docker_base_url,
+        docker_tlscert=docker_tlscert,
+        docker_tlskey=docker_tlskey,
+    )
+    # Use repository tags to delete images
+    images = client.images(name=docker_image_prefix, quiet=False)
+    for image in images:
+        repo_tags = image.get("RepoTags", [])
+        for repo_tag in repo_tags:
+            logger.info("Removing image %s" % repo_tag)
+            try:
+                client.remove_image(repo_tag)
+            except docker.errors.APIError as e:
+                logger.warning("Failed to delete image %s: %s" % (repo_tag, e))
+    # For image not having full repository tags, use ID
+    # Note that, here we need to re-list images
+    images = client.images(name=docker_image_prefix, quiet=False)
+    for image in images:
+        image_id = image.get("Id")
+        if image_id:
+            logger.info("Removing image %s" % image_id)
+            try:
+                client.remove_image(image_id)
+            except docker.errors.APIError as e:
+                logger.warning("Failed to delete image %s: %s" % (image_id, e))
+    # If we want to remove all images, also run prune to remove untagged images
+    if not docker_image_prefix:
+        logger.info("Cleanning up unused images")
+        try:
+            client.prune_images()
+        except docker.errors.APIError as e:
+            logger.warning("Failed to prune images: %s" % e)
 
 
 def _find_elasticdl_root():
@@ -200,3 +243,13 @@ def _push_docker_image(client, image_name):
     logger.info("===== Pushing Docker Image =====")
     for line in client.push(image_name, stream=True, decode=True):
         _print_docker_progress(line)
+
+
+def _get_docker_client(docker_base_url, docker_tlscert, docker_tlskey):
+    if docker_tlscert and docker_tlskey:
+        tls_config = docker.tls.TLSConfig(
+            client_cert=(docker_tlscert, docker_tlskey)
+        )
+        return docker.APIClient(base_url=docker_base_url, tls=tls_config)
+    else:
+        return docker.APIClient(base_url=docker_base_url)

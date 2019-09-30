@@ -8,6 +8,7 @@ from elasticdl.python.common.args import (
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
+    remove_images,
 )
 
 
@@ -101,6 +102,22 @@ def predict(args):
     )
 
     _submit_job(image_name, args, container_args)
+
+
+def clean(args):
+    if args.docker_image_prefix and args.all:
+        raise ValueError("--docker_image_prefix and --all cannot be specified at the same time")
+    if not args.docker_image_prefix and not args.all:
+        raise ValueError("--docker_image_prefix and --all")
+    
+    if args.all:
+    remove_images()
+    # if args.docker_image_prefix and args.all:
+    #     # throw exception
+    # if args.docker_image_prefix:
+    #     # Only clean images with the given prefix
+    # elif args.all:
+    #     # Clean all
 
 
 def _submit_job(image_name, client_args, container_args):
