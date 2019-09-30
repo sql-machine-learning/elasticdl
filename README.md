@@ -5,6 +5,11 @@
 
 ElasticDL is a Kubernetes-native deep learning framework built on top of TensorFlow 2.0 that supports fault-tolerance and elastic scheduling.
 
+|                          | TensorFlow 1.x graph mode | TensorFlow 2.x eager execution |
+|--------------------------|---------------------------|--------------------------------|
+| No change to the runtime | Uber Horovod              | ElasticDL (early stage)        |
+| Changes the runtime      | TensorFlow ps-based distribution | TensorFlow distribution strategies |
+
 ## Main Features
 
 #### Elastic Scheduling and Fault-Tolerance
@@ -32,15 +37,9 @@ SELECT * FROM employee LABEL income INTO my_elasticdl_model
 
 **Note that ElasticDL is still under active development, and we have not extensively tested it in production environments. We open sourced this early-stage project with the hope of encouraging further work on fault-tolerance and elastic scheduling from the community.**
 
-|                          | TensorFlow 1.x graph mode | TensorFlow 2.x eager execution |
-|--------------------------|---------------------------|--------------------------------|
-| No change to the runtime | Uber Horovod              | ElasticDL (early stage)        |
-| Changes the runtime      | TensorFlow ps-based distribution | TensorFlow distribution strategies |
-
-
 ## Quick Start
 
-Please check out our [step-by-step tutorial](doc/tutorials/get_started.md) for you to run ElasticDL.
+Please check out our [step-by-step tutorial](doc/tutorials/get_started.md) for running ElasticDL on local laptop, on-prem cluster, or on public cloud such as Google Kubernetes Engine.
 
 ## Background
 
@@ -56,6 +55,6 @@ The feature of elastic scheduling of ElasticDL comes from its Kubernetes-native 
 
 In short, ElasticDL enhances TensorFlow with fault-tolerance and elastic scheduling in the case that you have a Kubernetes cluster. We provide a tutorial showing how to set up a Kubernetes cluster on Google Cloud and run ElasticDL jobs there.  We respect TensorFlow's native distributed computing feature, which doesn't require specific computing platforms like Kubernetes and allows TensorFlow running on any platform.
 
-For development guide, please refer to [this document](elasticdl/README.md).
+## Development Guide
 
-For running ElasticDL jobs in Google Kubernetes Engine, please check out [this tutorial](doc/tutorials/elasticdl_cloud.md).
+Please refer to [this document](elasticdl/README.md) for development guide.
