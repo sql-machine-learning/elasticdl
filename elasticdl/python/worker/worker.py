@@ -269,9 +269,9 @@ class Worker(object):
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         if not isinstance(model_outputs, dict):
             model_outputs = {"default": model_outputs}
-        for name, ndarray in model_outputs.items():
-            req.model_outputs[name].CopyFrom(ndarray_to_tensor(ndarray))
-        req.labels.CopyFrom(ndarray_to_tensor(labels))
+        for name, output in model_outputs.items():
+            req.model_outputs[name].CopyFrom(ndarray_to_tensor(output.numpy()))
+        req.labels.CopyFrom(ndarray_to_tensor(labels.numpy()))
         req.model_version = self._model_version
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version

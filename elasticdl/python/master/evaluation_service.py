@@ -64,8 +64,9 @@ class _EvaluationJob(object):
             metrics = self._metrics_dict.get(key, {})
             if not metrics:
                 continue
+            outputs = tensor_to_ndarray(tensor)
             for metric_inst in metrics.values():
-                metric_inst.update_state(labels, model_outputs)
+                metric_inst.update_state(labels, outputs)
         return True
 
     def get_evaluation_summary(self):
