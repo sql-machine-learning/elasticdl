@@ -8,6 +8,8 @@ import numpy as np
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.ndarray import tensor_to_ndarray
+from tensorflow.python.keras import metrics as metrics_module
+
 
 
 class _EvaluationJob(object):
@@ -24,14 +26,20 @@ class _EvaluationJob(object):
             raise ValueError(
                 "Doing evaluation with empty evaluation metrics dict."
             )
-        for metrics in metrics_dict.values():
-            if isinstance(metrics, dict):
-                self._have_multiple_outputs = True
-                self._metrics_dict = metrics_dict
-            else:
-                self._have_multiple_outputs = False
-                self._metrics_dict = {"default": metrics_dict}
-            break
+        first_metrics = list(metrics_dict.values())[0]
+        if isinstance(first_metrics, dict):
+            self._have_multiple_outputs = True
+            self._metrics_dict = metrics_dict
+        else:
+            self._have_multiple_outputs = False
+            self._metrics_dict = {"default": metrics_dict}
+        for output_name, metrics in self._metrics_dict.items():
+            for metric_name, metric in metrics.items():
+                if not isinstance(metric, metrics_module.Metric):
+                    metrics[metric_name] = metrics_module.MeanMetricWrapper(
+                        metric, name=metric_name
+                    )
+
 
     def complete_task(self):
         self._completed_tasks += 1
@@ -56,8 +64,6 @@ class _EvaluationJob(object):
             metrics = self._metrics_dict.get(key, {})
             if not metrics:
                 continue
-            model_outputs = tensor_to_ndarray(tensor)
-            print("model_outputs", model_outputs)
             for metric_inst in metrics.values():
                 metric_inst.update_state(labels, model_outputs)
         return True

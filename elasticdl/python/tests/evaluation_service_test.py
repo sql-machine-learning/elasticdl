@@ -3,6 +3,7 @@ import tempfile
 import unittest
 
 import numpy as np
+import tensorflow as tf
 
 from elasticdl.python.common.ndarray import ndarray_to_tensor
 from elasticdl.python.master.checkpoint_service import CheckpointService
@@ -12,11 +13,16 @@ from elasticdl.python.master.evaluation_service import (
 )
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
-from tensorflow.keras.metrics import Accuracy, AUC, MeanSquaredError
+from tensorflow.keras.metrics import Accuracy, MeanSquaredError
 
 def _get_eval_metrics_dict():
     return {
         'acc': Accuracy(),
+        'mse': MeanSquaredError(),
+        'acc_fn': lambda labels, outputs: tf.equal(
+            tf.cast(outputs, tf.int32),
+            tf.cast(labels, tf.int32),
+        ),
     }
 
 
@@ -55,8 +61,8 @@ class EvaluationServiceTest(unittest.TestCase):
 
         # Start to report metrics
         evaluation_version = job.model_version + 1
-        model_outputs = {"default": ndarray_to_tensor(np.array([1,6,3], dtype=np.float32))}
-        labels = ndarray_to_tensor(np.array([1,0,3], dtype=np.float32))
+        model_outputs = {"default": ndarray_to_tensor(np.array([[1],[6],[3]], dtype=np.float32))}
+        labels = ndarray_to_tensor(np.array([[1],[0],[3]], dtype=np.float32))
         self.assertFalse(
             job.report_evaluation_metrics(evaluation_version, model_outputs, labels)
         )
@@ -68,14 +74,21 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertTrue(
             job.report_evaluation_metrics(
                 evaluation_version,
-                {"default": ndarray_to_tensor(np.array([4,5,6,7,8], dtype=np.float32))},
-                ndarray_to_tensor(np.array([7,8,9,10,11], dtype=np.float32)),
+                {"default": ndarray_to_tensor(np.array([[4],[5],[6],[7],[8]], dtype=np.float32))},
+                ndarray_to_tensor(np.array([[7],[8],[9],[10],[11]], dtype=np.float32)),
             )
         )
+        expected_acc = 0.25
+        evaluation_metrics = job.get_evaluation_summary()
         self.assertAlmostEqual(
-            0.25, job.get_evaluation_summary().get('acc').numpy()
+            expected_acc, evaluation_metrics.get('acc').numpy()
         )
-        return
+        self.assertAlmostEqual(
+            expected_acc, evaluation_metrics.get('acc_fn').numpy()
+        )
+        self.assertAlmostEqual(
+            10.125, evaluation_metrics.get('mse').numpy()
+        )
 
     def testEvaluationService(self):
         with tempfile.TemporaryDirectory() as tempdir:

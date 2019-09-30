@@ -51,22 +51,20 @@ def custom_model(
     nn_h = Dense(fc_unit)(nn_input)
     deep_output = Dense(1)(nn_h)
     deep_output = tf.reshape(deep_output, shape=(-1,))
-    outputs = tf.keras.layers.Add()([fm_output, deep_output])
+    logits = tf.keras.layers.Add()([fm_output, deep_output])
+    probs = tf.sigmoid(logits)
 
-    m = tf.keras.Model(inputs=inputs, outputs=outputs)
-
-    global AUC_metric
-    AUC_metric = tf.keras.metrics.AUC()
-
+    m = tf.keras.Model(inputs=inputs, outputs={"logits": logits, "probs": probs})
     return m
 
 
 def loss(output, labels):
+    logits = output["logits"]
     labels = tf.cast(tf.reshape(labels, [-1]), tf.dtypes.float32)
-    output = tf.reshape(output, [-1])
+    logits = tf.reshape(logits, [-1])
     return tf.reduce_mean(
         input_tensor=tf.nn.sigmoid_cross_entropy_with_logits(
-            logits=output, labels=labels
+            logits=logits, labels=labels
         )
     )
 
@@ -99,16 +97,15 @@ def dataset_fn(dataset, mode):
     return dataset
 
 
-def eval_metrics_fn(predictions, labels):
-    labels = tf.reshape(labels, [-1])
-    predictions = tf.reshape(predictions, [-1])
-    global AUC_metric
+def eval_metrics_fn():
     return {
-        "accuracy": tf.reduce_mean(
-            input_tensor=tf.cast(
-                tf.equal(tf.cast(predictions > 0.0, tf.dtypes.int32), labels),
-                tf.float32,
-            )
-        ),
-        "auc": AUC_metric(labels, tf.sigmoid(predictions)),
+        "logits": {
+            "accuracy": lambda labels, predictions: tf.equal(
+                tf.cast(tf.reshape(predictions, [-1]) > 0.0, tf.int32),
+                tf.reshape(labels, [-1])
+            ),
+        },
+        "probs": {
+            "auc": tf.keras.metrics.AUC()
+        }
     }

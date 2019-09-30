@@ -75,16 +75,10 @@ def dataset_fn(dataset, mode):
     return dataset
 
 
-def eval_metrics_fn(predictions, labels):
-    labels = tf.reshape(labels, [-1])
+def eval_metrics_fn():
     return {
-        "accuracy": tf.reduce_mean(
-            input_tensor=tf.cast(
-                tf.equal(
-                    tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
-                    labels,
-                ),
-                tf.float32,
+        "accuracy": lambda labels, predictions: tf.equal(
+                tf.argmax(predictions, 1, output_type=tf.int32),
+                tf.reshape(labels, [-1])
             )
-        )
     }
