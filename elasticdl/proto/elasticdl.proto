@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
+import "elasticdl/proto/tensor_dtype.proto";
 
 package master;
 
@@ -53,6 +54,9 @@ message Tensor {
     // Indices will be tf.IndexedSlices.indices if the tensor is in the form
     // of tf.IndexedSlices. Ohterwise indices will be None.
     repeated int32 indices = 3;
+
+    // Dtype of the tensor, e.g. "int64", "float32".
+    TensorDtype dtype = 4;
 }
 
 message Model {
