@@ -115,11 +115,8 @@ def clean(args):
             "Either --docker_image_repository or --all "
             "needs to be configured"
         )
-    repository = (
-        args.docker_image_repository if args.docker_image_repository else ""
-    )
     remove_images(
-        docker_image_repository=repository,
+        docker_image_repository=args.docker_image_repository,
         docker_base_url=args.docker_base_url,
         docker_tlscert=args.docker_tlscert,
         docker_tlskey=args.docker_tlskey,
