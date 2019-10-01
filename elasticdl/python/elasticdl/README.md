@@ -95,7 +95,7 @@ python -m elasticdl.python.elasticdl.client train \
     --volume="mount_path=/data,claim_name=fileserver-claim" \
     --image_pull_policy=Always \
     --log_level=INFO \
-    --docker_image_prefix=gcr.io/elasticdl \
+    --docker_image_repository=gcr.io/elasticdl \
     --envs=e1=v1,e2=v2
 ```
 

@@ -101,10 +101,10 @@ def add_common_params(parser):
     """Common arguments for training/prediction/evaluation"""
     add_common_args_between_master_and_worker(parser)
     parser.add_argument(
-        "--docker_image_prefix",
+        "--docker_image_repository",
         default="",
-        help="The prefix for generated Docker images, if set, the image is "
-        "also pushed to the registry",
+        help="The repository for generated Docker images, if set, the image "
+        "is also pushed to the repository",
     )
     parser.add_argument("--image_base", help="Base Docker image.")
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)

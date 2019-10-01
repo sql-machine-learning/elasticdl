@@ -15,7 +15,7 @@ def train(args):
     image_name = build_and_push_docker_image(
         model_zoo=args.model_zoo,
         base_image=args.image_base,
-        docker_image_prefix=args.docker_image_prefix,
+        docker_image_repository=args.docker_image_repository,
         extra_pypi=args.extra_pypi_index,
         cluster_spec=args.cluster_spec,
         docker_base_url=args.docker_base_url,
@@ -47,7 +47,7 @@ def evaluate(args):
     image_name = build_and_push_docker_image(
         model_zoo=args.model_zoo,
         base_image=args.image_base,
-        docker_image_prefix=args.docker_image_prefix,
+        docker_image_repository=args.docker_image_repository,
         extra_pypi=args.extra_pypi_index,
         cluster_spec=args.cluster_spec,
         docker_base_url=args.docker_base_url,
@@ -77,7 +77,7 @@ def predict(args):
     image_name = build_and_push_docker_image(
         model_zoo=args.model_zoo,
         base_image=args.image_base,
-        docker_image_prefix=args.docker_image_prefix,
+        docker_image_repository=args.docker_image_repository,
         extra_pypi=args.extra_pypi_index,
         cluster_spec=args.cluster_spec,
         docker_base_url=args.docker_base_url,
