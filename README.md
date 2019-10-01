@@ -10,32 +10,32 @@ ElasticDL is a Kubernetes-native deep learning framework built on top of TensorF
 | No change to the runtime | Uber Horovod              | ElasticDL (early stage)        |
 | Changes the runtime      | TensorFlow ps-based distribution | TensorFlow distribution strategies |
 
+**Note that ElasticDL is still under active development, and we have not extensively tested it in production environments. We open sourced this early-stage project with the hope of encouraging further work on fault-tolerance and elastic scheduling from the community.**
+
 ## Main Features
 
-#### Elastic Scheduling and Fault-Tolerance
+### Elastic Scheduling and Fault-Tolerance
 
 Through Kubernetes-native design, ElasticDL enables fault-tolerance and works with the priority-based preemption of Kubernetes to achieve elastic scheduling for deep learning tasks.
 
-#### TensorFlow 2.0 Eager Execution
+### TensorFlow 2.0 Eager Execution
 
 A distributed deep learning framework needs to know local gradients before the model update. Eager Execution allows ElasticDL to do it without hacking into the graph execution process.
 
-#### Minimalism Interface
+### Minimalism Interface
 
 Given a model defined with Keras API, train the model with a command line.
 ```bash
 elasticdl train --model_def=mnist_functional_api.custom_model --training_data_dir=/mnist/train --output=output
 ```
 
-#### Integration with SQLFlow
+### Integration with SQLFlow
 
 ElasticDL will be integrated seamlessly with SQLFlow to connect SQL to distributed deep learning tasks with ElasticDL.
 
 ```sql
 SELECT * FROM employee LABEL income INTO my_elasticdl_model
 ```
-
-**Note that ElasticDL is still under active development, and we have not extensively tested it in production environments. We open sourced this early-stage project with the hope of encouraging further work on fault-tolerance and elastic scheduling from the community.**
 
 ## Quick Start
 
