@@ -323,14 +323,12 @@ def add_predict_params(parser):
 
 def add_clean_params(parser):
     parser.add_argument(
-        "--docker_image_prefix",
+        "--docker_image_repository",
         type=str,
-        help="Only clean docker images with the given prefix",
+        help="Clean docker images belonging to this repository.",
     )
     parser.add_argument(
-        "--all",
-        action="store_true",
-        help="Clean all local docker images",
+        "--all", action="store_true", help="Clean all local docker images"
     )
     parser.add_argument(
         "--docker_base_url",

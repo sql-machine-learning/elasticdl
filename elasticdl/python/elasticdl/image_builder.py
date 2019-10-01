@@ -82,13 +82,13 @@ after _build_docker_image.
 
 
 def remove_images(
-    docker_image_prefix="",
+    docker_image_repository="",
     docker_base_url="unix://var/run/docker.sock",
     docker_tlscert="",
     docker_tlskey="",
 ):
     """Remove all docker images with repository name equal to
-    docker_image_prefix. If docker_image_prefix is empyt, it
+    docker_image_repository. If docker_image_repository is empty, it
     will remove all images.
     """
     client = _get_docker_client(
@@ -97,7 +97,7 @@ def remove_images(
         docker_tlskey=docker_tlskey,
     )
     # Use repository tags to delete images
-    images = client.images(name=docker_image_prefix, quiet=False)
+    images = client.images(name=docker_image_repository, quiet=False)
     for image in images:
         repo_tags = image.get("RepoTags", [])
         for repo_tag in repo_tags:
@@ -108,7 +108,7 @@ def remove_images(
                 logger.warning("Failed to delete image %s: %s" % (repo_tag, e))
     # For image not having full repository tags, use ID
     # Note that, here we need to re-list images
-    images = client.images(name=docker_image_prefix, quiet=False)
+    images = client.images(name=docker_image_repository, quiet=False)
     for image in images:
         image_id = image.get("Id")
         if image_id:
@@ -118,7 +118,7 @@ def remove_images(
             except docker.errors.APIError as e:
                 logger.warning("Failed to delete image %s: %s" % (image_id, e))
     # If we want to remove all images, also run prune to remove untagged images
-    if not docker_image_prefix:
+    if not docker_image_repository:
         logger.info("Cleanning up unused images")
         try:
             client.prune_images()

@@ -105,19 +105,25 @@ def predict(args):
 
 
 def clean(args):
-    if args.docker_image_prefix and args.all:
-        raise ValueError("--docker_image_prefix and --all cannot be specified at the same time")
-    if not args.docker_image_prefix and not args.all:
-        raise ValueError("--docker_image_prefix and --all")
-    
-    if args.all:
-    remove_images()
-    # if args.docker_image_prefix and args.all:
-    #     # throw exception
-    # if args.docker_image_prefix:
-    #     # Only clean images with the given prefix
-    # elif args.all:
-    #     # Clean all
+    if args.docker_image_repository and args.all:
+        raise ValueError(
+            "--docker_image_repository and --all cannot "
+            "be specified at the same time"
+        )
+    if not (args.docker_image_repository or args.all):
+        raise ValueError(
+            "Either --docker_image_repository or --all "
+            "needs to be configured"
+        )
+    repository = (
+        args.docker_image_repository if args.docker_image_repository else ""
+    )
+    remove_images(
+        docker_image_repository=repository,
+        docker_base_url=args.docker_base_url,
+        docker_tlscert=args.docker_tlscert,
+        docker_tlskey=args.docker_tlskey,
+    )
 
 
 def _submit_job(image_name, client_args, container_args):
