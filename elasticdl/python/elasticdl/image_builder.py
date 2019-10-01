@@ -11,7 +11,7 @@ from elasticdl.python.common.log_utils import default_logger as logger
 
 def build_and_push_docker_image(
     model_zoo,
-    docker_image_prefix,
+    docker_image_repository,
     base_image="",
     extra_pypi="",
     cluster_spec="",
@@ -24,10 +24,8 @@ zoo.  The parameter model_zoo could be a local directory or an URL.
 In the later case, we do git clone.
 
     The basename of the Docker image is auto-generated and is globally
-unique.  The full name is docker_image_prefix + "/" + basename.
-
-    The fullname of the Docker image is docker_image_prefix + "/" +
-basename.  Unless prefix is None or "", _push_docker_image is called
+unique.  The fullname of the Docker image is docker_image_repository + ":" +
+basename.  Unless repository is None or "", _push_docker_image is called
 after _build_docker_image.
 
     Returns the full Docker image name.  So the caller can docker rmi
@@ -67,7 +65,7 @@ after _build_docker_image.
                 )
             )
 
-        image_name = _generate_unique_image_name(docker_image_prefix)
+        image_name = _generate_unique_image_name(docker_image_repository)
         client = _get_docker_client(
             docker_base_url=docker_base_url,
             docker_tlscert=docker_tlscert,
@@ -75,7 +73,7 @@ after _build_docker_image.
         )
         _build_docker_image(client, ctx_dir, df.name, image_name)
 
-        if docker_image_prefix:
+        if docker_image_repository:
             _push_docker_image(client, image_name)
 
     return image_name
@@ -99,14 +97,18 @@ def remove_images(
     # Use repository tags to delete images
     images = client.images(name=docker_image_repository, quiet=False)
     for image in images:
-        repo_tags = image.get("RepoTags", [])
+        repo_tags = image.get("RepoTags") or []
         for repo_tag in repo_tags:
+            if repo_tag == "<none>:<none>":
+                # A special case where both repository and tag are none,
+                # and we need to delete it through Id in the following code.
+                continue
             logger.info("Removing image %s" % repo_tag)
             try:
                 client.remove_image(repo_tag)
             except docker.errors.APIError as e:
                 logger.warning("Failed to delete image %s: %s" % (repo_tag, e))
-    # For image not having full repository tags, use ID
+    # For image not having full repository tags, use ID instead.
     # Note that, here we need to re-list images
     images = client.images(name=docker_image_repository, quiet=False)
     for image in images:
@@ -117,9 +119,9 @@ def remove_images(
                 client.remove_image(image_id)
             except docker.errors.APIError as e:
                 logger.warning("Failed to delete image %s: %s" % (image_id, e))
-    # If we want to remove all images, also run prune to remove untagged images
+    # If removing all images, we also run prune to remove untagged images
     if not docker_image_repository:
-        logger.info("Cleanning up unused images")
+        logger.info("Pruning unused images")
         try:
             client.prune_images()
         except docker.errors.APIError as e:
@@ -210,9 +212,9 @@ RUN python -c 'import sys, pkgutil; exit_code = 0 if \
     )
 
 
-def _generate_unique_image_name(prefix):
+def _generate_unique_image_name(repository):
     return os.path.join(
-        prefix if prefix else "", "elasticdl:" + uuid.uuid4().hex
+        repository if repository else "", "elasticdl:" + uuid.uuid4().hex
     )
 
 

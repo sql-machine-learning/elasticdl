@@ -37,7 +37,7 @@ def main():
     add_predict_params(predict_parser)
 
     clean_parser = subparsers.add_parser(
-        "clean", help="Cleanup local docker images built by ElasticDL"
+        "clean", help="Clean up local docker images"
     )
     clean_parser.set_defaults(func=clean)
     add_clean_params(clean_parser)
