@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+from elasticdl.python.common.constants import Mode
+
 
 def custom_model():
     inputs = tf.keras.layers.Input(shape=(4, 1), name="input")
@@ -15,11 +17,18 @@ def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
 
-def dataset_fn(dataset, _):
+def dataset_fn(dataset, mode):
     def _parse_data(record):
-        return tf.reshape(record[0:3], (3, 1)), tf.reshape(record[4], (1,))
+        features = tf.reshape(record[0:3], (3, 1))
+        if mode == Mode.PREDICTION:
+            return features
+        else:
+            return features, tf.reshape(record[4], (1,))
 
     dataset = dataset.map(_parse_data)
+
+    if mode != Mode.PREDICTION:
+        dataset = dataset.shuffle(buffer_size=200)
     return dataset
 
 
