@@ -10,6 +10,11 @@ class K8SVolumeTest(unittest.TestCase):
             {"claim_name": "c1", "mount_path": "/path1"},
             parse("claim_name=c1,mount_path=/path1"),
         )
+        # parse works as expected with redundant spaces
+        self.assertEqual(
+            {"claim_name": "c1", "mount_path": "/path1"},
+            parse("  claim_name=c1,   mount_path = /path1 "),
+        )
         # When volume key is unknown, raise an error
         self.assertRaisesRegex(
             ValueError,
