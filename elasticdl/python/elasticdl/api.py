@@ -8,6 +8,7 @@ from elasticdl.python.common.args import (
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
+    remove_images,
 )
 
 
@@ -101,6 +102,25 @@ def predict(args):
     )
 
     _submit_job(image_name, args, container_args)
+
+
+def clean(args):
+    if args.docker_image_repository and args.all:
+        raise ValueError(
+            "--docker_image_repository and --all cannot "
+            "be specified at the same time"
+        )
+    if not (args.docker_image_repository or args.all):
+        raise ValueError(
+            "Either --docker_image_repository or --all "
+            "needs to be configured"
+        )
+    remove_images(
+        docker_image_repository=args.docker_image_repository,
+        docker_base_url=args.docker_base_url,
+        docker_tlscert=args.docker_tlscert,
+        docker_tlskey=args.docker_tlskey,
+    )
 
 
 def _submit_job(image_name, client_args, container_args):
