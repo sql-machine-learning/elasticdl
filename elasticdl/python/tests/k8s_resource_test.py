@@ -28,7 +28,8 @@ class K8SResourceTest(unittest.TestCase):
                 "ephemeral-storage": "32Mi",
             },
             parse(
-                " cpu=250m, memory=32Mi,disk =64Mi,gpu= 1,ephemeral-storage=32Mi "
+                " cpu=250m, memory=32Mi,disk =64Mi,"
+                "gpu= 1,ephemeral-storage=32Mi "
             ),
         )
         # When cpu is non-numeric, parse works as expected
