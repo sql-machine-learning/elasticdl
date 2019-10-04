@@ -11,11 +11,13 @@ from odps import ODPS
 from elasticdl.python.common.constants import ODPSConfig
 from elasticdl.python.common.model_utils import load_module
 from elasticdl.python.data.data_reader import (
+    Metadata,
     ODPSDataReader,
     RecordIODataReader,
     create_data_reader,
 )
 from elasticdl.python.tests.test_utils import (
+    IRIS_TABLE_COLUMN_NAMES,
     DatasetName,
     create_iris_odps_table,
     create_recordio_file,
@@ -99,6 +101,9 @@ class ODPSDataReaderTest(unittest.TestCase):
         self.assertEqual(
             [[6.4, 2.8, 5.6, 2.2, 2], [5.0, 2.3, 3.3, 1.0, 1]], records
         )
+        self.assertEqual(
+            self.reader.metadata.column_names, IRIS_TABLE_COLUMN_NAMES
+        )
 
     def test_create_data_reader(self):
         reader = create_data_reader(
@@ -132,7 +137,9 @@ class ODPSDataReaderTest(unittest.TestCase):
                     yield data
 
         dataset = tf.data.Dataset.from_generator(_gen, tf.float32)
-        dataset = dataset_fn(dataset, None)
+        dataset = dataset_fn(
+            dataset, None, Metadata(column_names=IRIS_TABLE_COLUMN_NAMES)
+        )
 
         loss_history = []
         grads = None

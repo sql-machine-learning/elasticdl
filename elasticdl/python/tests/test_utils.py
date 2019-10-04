@@ -214,6 +214,15 @@ def distributed_train_and_evaluate(
     return master._version
 
 
+IRIS_TABLE_COLUMN_NAMES = [
+    "sepal_length",
+    "sepal_width",
+    "petal_length",
+    "petal_width",
+    "class",
+]
+
+
 def create_iris_odps_table(odps_client, project_name, table_name):
     sql_tmpl = """
     DROP TABLE IF EXISTS {PROJECT_NAME}.{TABLE_NAME};
