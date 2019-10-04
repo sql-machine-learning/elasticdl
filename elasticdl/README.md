@@ -138,7 +138,12 @@ docker run --net=host --rm -it -v $EDL_REPO:/edl_dir -w /edl_dir \
           --log_level=INFO"
 ```
 
-This will train MNIST data with a model defined in [model_zoo/mnist_functional_api/mnist_functional_api.py](../model_zoo/mnist_functional_api/mnist_functional_api.py) for 2 epoches.
+This will train MNIST data with a model defined in [model_zoo/mnist_functional_api/mnist_functional_api.py](../model_zoo/mnist_functional_api/mnist_functional_api.py) for 2 epoches. Note that, the master will save model checkpoints in a local directory `checkpoint_dir`.
+
+If you get some issues related to proto definitions, please run the following command to build latest proto components.
+```bash
+make -f elasticdl/Makefile
+```
 
 ### Test with Kubernetes
 
