@@ -456,7 +456,11 @@ class Worker(object):
         if not eval_info:
             return False
         (eval_dataset, model_version, task_id) = eval_info
-        eval_dataset = self._dataset_fn(eval_dataset, Mode.EVALUATION)
+        eval_dataset = self._dataset_fn(
+            eval_dataset,
+            Mode.EVALUATION,
+            self._task_data_service.data_reader.metadata,
+        )
         eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
         err_msg = ""
         for dataset_batch in eval_dataset:
@@ -532,7 +536,9 @@ class Worker(object):
             dataset = self._task_data_service.get_dataset()
             if not dataset:
                 break
-            dataset = self._dataset_fn(dataset, mode)
+            dataset = self._dataset_fn(
+                dataset, mode, self._task_data_service.data_reader.metadata
+            )
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
             for dataset_batch in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
