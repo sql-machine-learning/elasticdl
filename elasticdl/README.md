@@ -114,6 +114,7 @@ docker run --net=host --rm -it -v $EDL_REPO:/edl_dir -w /edl_dir \
           --job_name=test \
           --training_data_dir=/data/mnist/train \
           --evaluation_data_dir=/data/mnist/test \
+          --evaluation_steps=15 \
           --num_epochs=2 \
           --checkpoint_steps=2 \
           --grads_to_wait=2 \
@@ -132,7 +133,7 @@ docker run --net=host --rm -it -v $EDL_REPO:/edl_dir -w /edl_dir \
           --model_zoo=model_zoo \
           --model_def=mnist_functional_api.mnist_functional_api.custom_model \
           --minibatch_size=10 \
-          --job_type=TRAINING \
+          --job_type=training_with_evaluation \
           --master_addr=localhost:50001 \
           --log_level=INFO"
 ```
