@@ -205,7 +205,7 @@ RUN python -c 'import sys, pkgutil; exit_code = 0 if \
     return tmpl.format(
         BASE_IMAGE=base_image
         if base_image
-        else "tensorflow/tensorflow:2.0.0b1-py3",
+        else "tensorflow/tensorflow:2.0.0-py3",
         ELASTIC_DL=elasticdl,
         MODEL_ZOO=model_zoo,
         EXTRA_PYPI_INDEX=extra_pypi_index,
