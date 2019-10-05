@@ -1,8 +1,8 @@
 # ElasticDL Overall Design
 
-## Component Architecture
+## Architecture
 
-![component_architecture](/doc/figures/component_architecture.png)
+![architecture](/doc/figures/architecture.png)
 
 ElasticDL uses the master-worker architecture. The master node plays the master role in two aspects.
 
@@ -13,7 +13,7 @@ ElasticDL uses the master-worker architecture. The master node plays the master 
    * Aggregate the gradients reported from the workers.
    * Update the model variables and save the checkpoint if necessary.
 
-ElasticDL client is simple, just like a CLI command. User types ElasticDL command in the terminal to start the training/evaluation/prediction job. The client parses the parameters, builds the image which packages the ElasticDL framework and the model code, pushes the image into the hub, and then applies the CRD of the master node to the kubernetes ApiServer. After the master pod is created and started, it will then create other components and drive the process of the entire job.
+ElasticDL client is simple, just like a CLI command. User types ElasticDL command in the terminal to start the training/evaluation/prediction job. The client parses the parameters, builds the image which packages the ElasticDL framework and the model code, pushes the image into the hub, and then sends Http request to the kubernetes ApiServer to create the master pod. After the master pod is created and started, it will then create other components and drive the process of the entire job.
 
 ## Distributed Training
 
