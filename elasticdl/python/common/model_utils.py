@@ -170,11 +170,14 @@ def get_non_embedding_trainable_vars(model, embedding_layers):
     """
     embedding_items = []
     for layer in embedding_layers:
-        embedding_items.extend(
-            [var.numpy() for var in layer.trainable_variables]
-        )
-    return [
-        var
-        for var in model.trainable_variables
-        if (var.numpy() != embedding_items).all()
-    ]
+        embedding_items.extend(layer.trainable_variables)
+    non_embedding_trainable_vars = []
+    for var in model.trainable_variables:
+        is_embedding_item = False
+        for embedding_item in embedding_items:
+            if var is embedding_item:
+                is_embedding_item = True
+                break
+        if not is_embedding_item:
+            non_embedding_trainable_vars.append(var)
+    return non_embedding_trainable_vars

@@ -493,7 +493,15 @@ class OptimizerWrapper(object):
             embed_var_key = _var_key(embed_var)
             del self._opt._slots[embed_var_key]
             for _, var in slots.items():
-                self._opt._weights.remove(var)
+                opt_weight_iter = 0
+                # TODO (yunjian.lmh): Maybe we should delete var from
+                # `self._opt._weights`
+                while opt_weight_iter < len(self._opt._weights):
+                    if var is self._opt._weights[opt_weight_iter]:
+                        self._opt._weights[opt_weight_iter] = None
+                        break
+                    else:
+                        opt_weight_iter += 1
         for key in list(self._tls._slot_variables.keys()):
             del self._tls._slot_variables[key]
 
