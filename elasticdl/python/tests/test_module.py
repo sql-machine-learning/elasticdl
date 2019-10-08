@@ -35,7 +35,7 @@ def optimizer(lr=0.1):
 
 
 def eval_metrics_fn():
-    return {"mse": tf.keras.metrics.MeanSquaredError()}
+    return {"mse": lambda labels, outputs: tf.square(outputs - labels)}
 
 
 class PredictionOutputsProcessor(BasePredictionOutputsProcessor):

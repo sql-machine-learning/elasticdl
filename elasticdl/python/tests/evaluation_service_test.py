@@ -16,7 +16,7 @@ from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 
-def _get_eval_metrics_dict():
+def _eval_metrics_fn():
     return {
         "acc": Accuracy(),
         "mse": MeanSquaredError(),
@@ -36,7 +36,7 @@ class EvaluationServiceTest(unittest.TestCase):
         total_tasks = 5
         latest_chkp_version = 2
         job = _EvaluationJob(
-            _get_eval_metrics_dict(), model_version, total_tasks
+            _eval_metrics_fn(), model_version, total_tasks
         )
         self.assertEqual(0, job._completed_tasks)
         self.assertFalse(job.finished())
@@ -125,7 +125,7 @@ class EvaluationServiceTest(unittest.TestCase):
                 20,
                 0,
                 False,
-                _get_eval_metrics_dict,
+                _eval_metrics_fn,
             )
             model_outputs = {
                 "default": ndarray_to_tensor(
@@ -157,8 +157,7 @@ class EvaluationServiceTest(unittest.TestCase):
 
             # Add an evaluation task and we can start evaluation
             self.assertEqual(8, len(task_d._todo))
-            # TODO (yunjian.lmh): this argument should be a bool
-            evaluation_service.add_evaluation_task(0)
+            evaluation_service.add_evaluation_task(False)
             self.assertEqual(16, len(task_d._todo))
             self.assertFalse(evaluation_service._eval_job.finished())
 
@@ -172,7 +171,7 @@ class EvaluationServiceTest(unittest.TestCase):
         task_d = _TaskDispatcher({}, {"f1": (0, 10), "f2": (0, 10)}, {}, 3, 1)
 
         evaluation_service = EvaluationService(
-            None, None, task_d, 0, 0, 0, True, _get_eval_metrics_dict
+            None, None, task_d, 0, 0, 0, True, _eval_metrics_fn
         )
         task_d.set_evaluation_service(evaluation_service)
 

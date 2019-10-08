@@ -16,10 +16,10 @@ class _EvaluationJob(object):
         """
         Args:
             metrics_dict: A python dictionary. If model has only one output,
-                `metrics_dict` is a dict of `{metric_name: metric_instnace}`,
+                `metrics_dict` is a dictionary of `{metric_name: metric}`,
                 i.e. `{"acc": tf.keras.metrics.Accuracy()}`.
-                If model has multiple outputs, `metric_dict` is a dict of
-                `{output_name: {metric_name: metric_instance}}`,
+                If model has multiple outputs, `metric_dict` is a dictionary of
+                `{output_name: {metric_name: metric}}`,
                 i.e. `{
                     "output_a": {"acc": tf.keras.metrics.Accuracy()},
                     "output_b": {"auc": tf.keras.metrics.AUC()},
@@ -147,7 +147,7 @@ class EvaluationService(object):
         throttle_secs,
         eval_steps,
         eval_only,
-        get_eval_metrics_dict,
+        eval_metrics_fn,
     ):
         self._checkpoint_service = checkpoint_service
         self._tensorboard_service = tensorboard_service
@@ -162,7 +162,7 @@ class EvaluationService(object):
         self._eval_checkpoint_versions = []
         self._last_eval_checkpoint_version = -1
         self._eval_only = eval_only
-        self._get_eval_metrics_dict = get_eval_metrics_dict
+        self._eval_metrics_fn = eval_metrics_fn
 
     def start(self):
         if self._time_based_eval and not self._eval_only:
@@ -177,7 +177,7 @@ class EvaluationService(object):
 
     def init_eval_only_job(self, num_task):
         self._eval_job = _EvaluationJob(
-            self._get_eval_metrics_dict(), -1, num_task
+            self._eval_metrics_fn(), -1, num_task
         )
 
     def add_evaluation_task(self, is_time_based_eval, master_locking=True):
@@ -211,7 +211,7 @@ class EvaluationService(object):
                     elasticdl_pb2.EVALUATION, checkpoint_version
                 )
                 self._eval_job = _EvaluationJob(
-                    self._get_eval_metrics_dict(),
+                    self._eval_metrics_fn(),
                     checkpoint_version,
                     len(tasks),
                 )
