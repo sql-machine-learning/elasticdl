@@ -99,7 +99,6 @@ We have to define a `Tensor` proto message and a corresponding `Tensor` Python c
 The `Tensor` proto message could be like this:
 
 ```python
-
 message Tensor {
     enum DataType {
         BOOL = 0;
@@ -117,12 +116,11 @@ message Tensor {
     repeated int64 indices = 5;
     int64 version = 6;
 }
-
 ```
 
 The `Tensor` Python class could be like this:
 
-```
+```python
 class Tensor(object):
     def __init__(self, name=None, value=None, indices=None, version=None):
         self.name = name
@@ -133,7 +131,7 @@ class Tensor(object):
 
 There are also some helper functions:
 
-```
+```python
 def serialize_to_pb(tensor, pb):
     pass
 
