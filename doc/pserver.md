@@ -150,7 +150,7 @@ def convert_to_tf_tensor(tensor):
 
 We decouple KVStore and Optimizer by a gradient queue to make the overall design clean. And the complexity is all handled at the gradient queue.
 
-- Question 1, out-of-memory
+**Question 1** out-of-memory
 
 Workers push gradients to the gradient queue of KVStore, pserver optimizer gets gradient from the queue, and does parameter optimization.
 
@@ -162,7 +162,7 @@ We could set a limit size to the queue, if the condition is satisfied:
 - blocking `push_gradient` return from KVStore to workers
 
 
-- Question 2, multi-threading optimizer
+**Question 2** multi-threading optimizer
 
 We could expose the optimizer numbers to users. If there is only one optimizer, the gradients will be handled one-by-one. So all gradients will be applied to parameters.
 
@@ -170,7 +170,7 @@ If there are multi-optimizers doing optimization, this will cause a race conditi
 
 The second choice is faster, but might loss some accuracy. Besides, we could also add a read-write-lock to avoid race condition.
 
-- Question 3, async and sync update
+**Question 3** async and sync update
 
 In async mode, optimizer will get gradient from the queue immediately.
 
