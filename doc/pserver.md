@@ -31,44 +31,44 @@ The interfaces of KVStore Servicer could be like this:
 
 ```python
 class KVStoreServicer(elasticdl_pb2_grpc.KVStoreServicer):
-	def __init__(self):
-		self.param_db = {}
-		self.embedding_param_db = {}
-		self.grad_queue = queue.Queue()
-			
-	def pull_param(self, request, _):
-		pass
-		
-	def push_param(self, request, _):
-		pass
-		
-	def push_gradient(self, request, _):
-		pass
-		
-	def get_param(self):
-		pass
-	
-	def set_param(self):
-		pass
-	
-	def get_gradient(self):
-		pass
-	
-	# embedding related interface is exposed explictly
-	def pull_embedding_param(self, request, _):
-		pass
-		
-	def push_embedding_param(self, request, _):
-		pass
-		
-	def push_embedding_gradient(self, request, _):
-		pass
-	
-	def get_embedding_param(self):
-		pass
-		
-	def set_embedding_param(self):
-		pass
+    def __init__(self):
+        self.param_db = {}
+        self.embedding_param_db = {}
+        self.grad_queue = queue.Queue()
+
+    def pull_param(self, request, _):
+        pass
+
+    def push_param(self, request, _):
+        pass
+
+    def push_gradient(self, request, _):
+        pass
+
+    def get_param(self):
+        pass
+
+    def set_param(self):
+        pass
+
+    def get_gradient(self):
+        pass
+
+    # embedding related interface is exposed explictly
+    def pull_embedding_param(self, request, _):
+        pass
+
+    def push_embedding_param(self, request, _):
+        pass
+
+    def push_embedding_gradient(self, request, _):
+        pass
+
+    def get_embedding_param(self):
+        pass
+
+    def set_embedding_param(self):
+        pass
 ```
 
 ### Parameter Transfromation
@@ -124,27 +124,27 @@ The `Tensor` Python class could be like this:
 
 ```
 class Tensor(object):
-	def __init__(self, name=None, value=None, indices=None, version=None):
-		self.name = name
-		self.value = value
-		self.indices = indices
-		self.version = version
+    def __init__(self, name=None, value=None, indices=None, version=None):
+        self.name = name
+        self.value = value
+        self.indices = indices
+        self.version = version
 ```
 
 There are also some helper functions:
 
 ```
 def serialize_to_pb(tensor, pb):
-	pass
-	
+    pass
+
 def deserialize_from_pb(pb, tensor):
-	pass
+    pass
 
 def convert_to_tf_variable(tensor):
-	pass
-	
+    pass
+
 def convert_to_tf_tensor(tensor):
-	pass
+    pass
 ```
 
 
