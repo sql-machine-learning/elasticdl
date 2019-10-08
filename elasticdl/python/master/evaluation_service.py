@@ -13,6 +13,21 @@ class _EvaluationJob(object):
     """Representation of an evaluation job"""
 
     def __init__(self, metrics_dict, model_version, total_tasks=-1):
+        """
+        Args:
+            metrics_dict: A python dictionary. If model has only one output,
+                `metrics_dict` is a dict of `{metric_name: metric_instnace}`,
+                i.e. `{"acc": tf.keras.metrics.Accuracy()}`.
+                If model has multiple outputs, `metric_dict` is a dict of
+                `{output_name: {metric_name: metric_instance}}`,
+                i.e. `{
+                    "output_a": {"acc": tf.keras.metrics.Accuracy()},
+                    "output_b": {"auc": tf.keras.metrics.AUC()},
+                }`.
+            model_version: The version of the model to be evaluated.
+            total_tasks: The number of evaluation tasks.
+        """
+
         self.model_version = model_version
         self._total_tasks = total_tasks
         self._completed_tasks = 0
@@ -25,10 +40,13 @@ class _EvaluationJob(object):
             )
         first_metrics = list(metrics_dict.values())[0]
         if isinstance(first_metrics, dict):
-            self._have_multiple_outputs = True
+            self._model_have_multiple_outputs = True
             self._metrics_dict = metrics_dict
         else:
-            self._have_multiple_outputs = False
+            # When model has only one output, save it in a dict in order to
+            # keep the same data structure as the `metrics_dict` when model
+            # has multiple outputs.
+            self._model_have_multiple_outputs = False
             self._metrics_dict = {"default": metrics_dict}
         for output_name, metrics in self._metrics_dict.items():
             for metric_name, metric in metrics.items():
@@ -66,7 +84,7 @@ class _EvaluationJob(object):
         return True
 
     def get_evaluation_summary(self):
-        if self._have_multiple_outputs:
+        if self._model_have_multiple_outputs:
             return {
                 output_name: {
                     metric_name: metric_inst.result()
