@@ -168,7 +168,7 @@ We could expose the optimizer numbers to users. If there is only one optimizer, 
 
 If there are multi-optimizers doing optimization, this will cause a race condition, and the order of reading/writing parameters will not be ensured.
 
-The second choice is faster, but might loss some accuracy. Besides, we could also add a read-write-lock to avoid race condition.
+The second choice is faster, but might loss some accuracy. Besides, we could also add a read-write-lock to avoid race condition in multi-threading circumstance.
 
 **Question 3** async and sync update
 
