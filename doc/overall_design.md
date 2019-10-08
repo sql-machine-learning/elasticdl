@@ -25,7 +25,7 @@ Master
 
 Worker
 
-* Pull the task from the master. The task contains the data index of this shard.
+* Pull the task from the master. The task contains the index of this data shard.
 * Read the data according to the data index message. (see [data_io_pipeline_design](/doc/data_io_pipeline_design.md))
-* Run training process using the mini-batch of data.
+* Run the training process using the mini-batch of data.
 * Report the calculated gradients and task result to the master.
