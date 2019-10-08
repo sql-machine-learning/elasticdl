@@ -45,11 +45,13 @@ def parse(resource_str):
     Return:
         A Python dictionary parsed from the given resource string.
     """
-    kvs = resource_str.split(",")
+    kvs = resource_str.strip().split(",")
     resource_names = []
     parsed_res_dict = {}
     for kv in kvs:
-        k, v = kv.split("=")
+        k, v = kv.strip().split("=")
+        k = k.strip()
+        v = v.strip()
         if k not in resource_names:
             resource_names.append(k)
         else:

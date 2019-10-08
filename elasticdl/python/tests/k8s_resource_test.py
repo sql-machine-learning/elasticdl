@@ -18,6 +18,20 @@ class K8SResourceTest(unittest.TestCase):
                 "cpu=250m,memory=32Mi,disk=64Mi,gpu=1,ephemeral-storage=32Mi"
             ),
         )
+        # parse works as expected with redundant spaces
+        self.assertEqual(
+            {
+                "cpu": "250m",
+                "memory": "32Mi",
+                "disk": "64Mi",
+                "nvidia.com/gpu": "1",
+                "ephemeral-storage": "32Mi",
+            },
+            parse(
+                " cpu=250m, memory=32Mi,disk =64Mi,"
+                "gpu= 1,ephemeral-storage=32Mi "
+            ),
+        )
         # When cpu is non-numeric, parse works as expected
         self.assertEqual(
             {

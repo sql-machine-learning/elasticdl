@@ -101,10 +101,10 @@ def add_common_params(parser):
     """Common arguments for training/prediction/evaluation"""
     add_common_args_between_master_and_worker(parser)
     parser.add_argument(
-        "--docker_image_prefix",
+        "--docker_image_repository",
         default="",
-        help="The prefix for generated Docker images, if set, the image is "
-        "also pushed to the registry",
+        help="The repository for generated Docker images, if set, the image "
+        "is also pushed to the repository",
     )
     parser.add_argument("--image_base", help="Base Docker image.")
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
@@ -318,6 +318,28 @@ def add_predict_params(parser):
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",
         required=True,
+    )
+
+
+def add_clean_params(parser):
+    parser.add_argument(
+        "--docker_image_repository",
+        type=str,
+        help="Clean docker images belonging to this repository.",
+    )
+    parser.add_argument(
+        "--all", action="store_true", help="Clean all local docker images"
+    )
+    parser.add_argument(
+        "--docker_base_url",
+        help="URL to the Docker server",
+        default="unix://var/run/docker.sock",
+    )
+    parser.add_argument(
+        "--docker_tlscert", help="Path to Docker client cert", default=""
+    )
+    parser.add_argument(
+        "--docker_tlskey", help="Path to Docker client key", default=""
     )
 
 

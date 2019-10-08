@@ -9,6 +9,11 @@ from elasticdl.python.common.constants import ODPSConfig
 from elasticdl.python.data.odps_io import ODPSReader
 
 
+class Metadata(object):
+    def __init__(self, column_names):
+        self.column_names = column_names
+
+
 class AbstractDataReader(ABC):
     def __init__(self, **kwargs):
         pass
@@ -44,6 +49,13 @@ class AbstractDataReader(ABC):
         """
         return None
 
+    @property
+    def metadata(self):
+        """This method returns the `Metadata` object that contains
+         some metadata collected for the read records, such as the
+         list of column names."""
+        return Metadata(column_names=None)
+
 
 class RecordIODataReader(AbstractDataReader):
     def __init__(self, **kwargs):
@@ -78,18 +90,28 @@ class RecordIODataReader(AbstractDataReader):
     def records_output_types(self):
         return tf.string
 
+    @property
+    def metadata(self):
+        return Metadata(column_names=None)
+
 
 class ODPSDataReader(AbstractDataReader):
     def __init__(self, **kwargs):
         AbstractDataReader.__init__(self, **kwargs)
         self._kwargs = kwargs
+        self._metadata = Metadata(column_names=None)
 
     def read_records(self, task):
         reader = self._get_reader(
             table_name=self._get_odps_table_name(task.shard_name)
         )
+        if self._metadata.column_names is None:
+            columns = self._kwargs.get("columns")
+            self._metadata.column_names = (
+                reader._odps_table.schema.names if columns is None else columns
+            )
         records = reader.read_batch(
-            start=task.start, end=task.end, columns=self._kwargs.get("columns")
+            start=task.start, end=task.end, columns=self._metadata.column_names
         )
         for batch in records:
             yield batch
@@ -120,6 +142,10 @@ class ODPSDataReader(AbstractDataReader):
     @property
     def records_output_types(self):
         return tf.float32
+
+    @property
+    def metadata(self):
+        return self._metadata
 
     def _get_reader(self, table_name):
         _check_required_kwargs(

@@ -11,7 +11,7 @@ from elasticdl.python.common.log_utils import default_logger as logger
 
 def build_and_push_docker_image(
     model_zoo,
-    docker_image_prefix,
+    docker_image_repository,
     base_image="",
     extra_pypi="",
     cluster_spec="",
@@ -24,10 +24,8 @@ zoo.  The parameter model_zoo could be a local directory or an URL.
 In the later case, we do git clone.
 
     The basename of the Docker image is auto-generated and is globally
-unique.  The full name is docker_image_prefix + "/" + basename.
-
-    The fullname of the Docker image is docker_image_prefix + "/" +
-basename.  Unless prefix is None or "", _push_docker_image is called
+unique.  The fullname of the Docker image is docker_image_repository + ":" +
+basename.  Unless repository is None or "", _push_docker_image is called
 after _build_docker_image.
 
     Returns the full Docker image name.  So the caller can docker rmi
@@ -67,20 +65,67 @@ after _build_docker_image.
                 )
             )
 
-        image_name = _generate_unique_image_name(docker_image_prefix)
-        if docker_tlscert and docker_tlskey:
-            tls_config = docker.tls.TLSConfig(
-                client_cert=(docker_tlscert, docker_tlskey)
-            )
-            client = docker.APIClient(base_url=docker_base_url, tls=tls_config)
-        else:
-            client = docker.APIClient(base_url=docker_base_url)
+        image_name = _generate_unique_image_name(docker_image_repository)
+        client = _get_docker_client(
+            docker_base_url=docker_base_url,
+            docker_tlscert=docker_tlscert,
+            docker_tlskey=docker_tlskey,
+        )
         _build_docker_image(client, ctx_dir, df.name, image_name)
 
-        if docker_image_prefix:
+        if docker_image_repository:
             _push_docker_image(client, image_name)
 
     return image_name
+
+
+def remove_images(
+    docker_image_repository="",
+    docker_base_url="unix://var/run/docker.sock",
+    docker_tlscert="",
+    docker_tlskey="",
+):
+    """Remove all docker images with repository name equal to
+    docker_image_repository. If docker_image_repository is empty, it
+    will remove all images.
+    """
+    client = _get_docker_client(
+        docker_base_url=docker_base_url,
+        docker_tlscert=docker_tlscert,
+        docker_tlskey=docker_tlskey,
+    )
+    # Use repository tags to delete images
+    images = client.images(name=docker_image_repository, quiet=False)
+    for image in images:
+        repo_tags = image.get("RepoTags") or []
+        for repo_tag in repo_tags:
+            if repo_tag == "<none>:<none>":
+                # A special case where both repository and tag are none,
+                # and we need to delete it through Id in the following code.
+                continue
+            logger.info("Removing image %s" % repo_tag)
+            try:
+                client.remove_image(repo_tag)
+            except docker.errors.APIError as e:
+                logger.warning("Failed to delete image %s: %s" % (repo_tag, e))
+    # For image not having full repository tags, use ID instead.
+    # Note that, here we need to re-list images
+    images = client.images(name=docker_image_repository, quiet=False)
+    for image in images:
+        image_id = image.get("Id")
+        if image_id:
+            logger.info("Removing image %s" % image_id)
+            try:
+                client.remove_image(image_id)
+            except docker.errors.APIError as e:
+                logger.warning("Failed to delete image %s: %s" % (image_id, e))
+    # If removing all images, we also run prune to remove untagged images
+    if not docker_image_repository:
+        logger.info("Pruning unused images")
+        try:
+            client.prune_images()
+        except docker.errors.APIError as e:
+            logger.warning("Failed to prune images: %s" % e)
 
 
 def _find_elasticdl_root():
@@ -160,16 +205,16 @@ RUN python -c 'import sys, pkgutil; exit_code = 0 if \
     return tmpl.format(
         BASE_IMAGE=base_image
         if base_image
-        else "tensorflow/tensorflow:2.0.0b1-py3",
+        else "tensorflow/tensorflow:2.0.0-py3",
         ELASTIC_DL=elasticdl,
         MODEL_ZOO=model_zoo,
         EXTRA_PYPI_INDEX=extra_pypi_index,
     )
 
 
-def _generate_unique_image_name(prefix):
+def _generate_unique_image_name(repository):
     return os.path.join(
-        prefix if prefix else "", "elasticdl:" + uuid.uuid4().hex
+        repository if repository else "", "elasticdl:" + uuid.uuid4().hex
     )
 
 
@@ -200,3 +245,13 @@ def _push_docker_image(client, image_name):
     logger.info("===== Pushing Docker Image =====")
     for line in client.push(image_name, stream=True, decode=True):
         _print_docker_progress(line)
+
+
+def _get_docker_client(docker_base_url, docker_tlscert, docker_tlskey):
+    if docker_tlscert and docker_tlskey:
+        tls_config = docker.tls.TLSConfig(
+            client_cert=(docker_tlscert, docker_tlskey)
+        )
+        return docker.APIClient(base_url=docker_base_url, tls=tls_config)
+    else:
+        return docker.APIClient(base_url=docker_base_url)

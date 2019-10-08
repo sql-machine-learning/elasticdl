@@ -48,7 +48,7 @@ def optimizer(lr=0.01):
     return tf.optimizers.SGD(lr)
 
 
-def dataset_fn(dataset, mode):
+def dataset_fn(dataset, mode, _):
     def _parse_data(record):
         if mode == Mode.PREDICTION:
             feature_description = {
