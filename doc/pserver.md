@@ -178,6 +178,8 @@ In async mode, optimizer will get gradient from the queue immediately.
 
 In sync mode, optimizer needs to wait for a certain number of gradients, and then get the gradient after addition.
 
+We could implement a customized queue structure to support such logic efficiently.
+
 
 ## Master
 
