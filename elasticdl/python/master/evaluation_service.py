@@ -1,15 +1,12 @@
 import threading
 import time
-from collections import defaultdict
 from threading import Thread
 
-import numpy as np
+from tensorflow.python.keras import metrics as metrics_module
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.ndarray import tensor_to_ndarray
-from tensorflow.python.keras import metrics as metrics_module
-
 
 
 class _EvaluationJob(object):
@@ -39,7 +36,6 @@ class _EvaluationJob(object):
                     metrics[metric_name] = metrics_module.MeanMetricWrapper(
                         metric, name=metric_name
                     )
-
 
     def complete_task(self):
         self._completed_tasks += 1
@@ -80,7 +76,9 @@ class _EvaluationJob(object):
             }
         return {
             metric_name: metric_inst.result()
-            for metric_name, metric_inst in self._metrics_dict["default"].items()
+            for metric_name, metric_inst in self._metrics_dict[
+                "default"
+            ].items()
         }
 
 
@@ -160,7 +158,9 @@ class EvaluationService(object):
         self._master_servicer = master_servicer
 
     def init_eval_only_job(self, num_task):
-        self._eval_job = _EvaluationJob(self._get_eval_metrics_dict(), -1, num_task)
+        self._eval_job = _EvaluationJob(
+            self._get_eval_metrics_dict(), -1, num_task
+        )
 
     def add_evaluation_task(self, is_time_based_eval, master_locking=True):
         """
@@ -192,7 +192,11 @@ class EvaluationService(object):
                 tasks = self._task_d.create_tasks(
                     elasticdl_pb2.EVALUATION, checkpoint_version
                 )
-                self._eval_job = _EvaluationJob(self._get_eval_metrics_dict(), checkpoint_version, len(tasks))
+                self._eval_job = _EvaluationJob(
+                    self._get_eval_metrics_dict(),
+                    checkpoint_version,
+                    len(tasks),
+                )
                 return True
         return False
 

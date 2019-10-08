@@ -69,4 +69,3 @@ def eval_metrics_fn():
             tf.reduce_mean(tf.reshape(predictions, [-1])) - labels
         )
     }
-

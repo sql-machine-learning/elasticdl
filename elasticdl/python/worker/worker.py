@@ -365,7 +365,8 @@ class Worker(object):
         grads = tape.gradient(loss, self.get_trainable_items())
         return loss, grads
 
-    # TODO (yunjian.lmh): `evaluation_process` and `predict_process` are the same now.
+    # TODO (yunjian.lmh): `evaluation_process` and `predict_process` are the
+    # same now.
     @tf.function
     def evaluation_process(self, features, labels):
         outputs = self._model.call(features, training=False)

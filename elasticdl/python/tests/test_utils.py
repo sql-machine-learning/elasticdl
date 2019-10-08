@@ -182,11 +182,25 @@ def distributed_train_and_evaluate(
     checkpoint_service = CheckpointService("", 0, 0, True)
     if training:
         evaluation_service = EvaluationService(
-            checkpoint_service, None, task_d, 0, 0, 1, False, model_module[eval_metrics_fn]
+            checkpoint_service,
+            None,
+            task_d,
+            0,
+            0,
+            1,
+            False,
+            model_module[eval_metrics_fn],
         )
     else:
         evaluation_service = EvaluationService(
-            checkpoint_service, None, task_d, 0, 0, 0, True, model_module[eval_metrics_fn]
+            checkpoint_service,
+            None,
+            task_d,
+            0,
+            0,
+            0,
+            True,
+            model_module[eval_metrics_fn],
         )
     task_d.set_evaluation_service(evaluation_service)
     grads_to_wait = 1 if use_async else 2

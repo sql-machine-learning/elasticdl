@@ -84,7 +84,7 @@ def dataset_fn(dataset, mode, _):
 def eval_metrics_fn():
     return {
         "accuracy": lambda labels, predictions: tf.equal(
-                tf.argmax(predictions, 1, output_type=tf.int32),
-                tf.reshape(labels, [-1])
-            )
+            tf.argmax(predictions, 1, output_type=tf.int32),
+            tf.cast(tf.reshape(labels, [-1]), tf.int32),
+        )
     }

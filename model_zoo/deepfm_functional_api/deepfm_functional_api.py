@@ -63,9 +63,11 @@ def custom_model(
     deep_output = Dense(1)(nn_h)
     deep_output = tf.reshape(deep_output, shape=(-1,))
     logits = tf.keras.layers.Add()([fm_output, deep_output])
-    probs = tf.sigmoid(logits)
+    probs = tf.reshape(tf.sigmoid(logits), shape=(-1, 1))
 
-    m = tf.keras.Model(inputs=inputs, outputs={"logits": logits, "probs": probs})
+    m = tf.keras.Model(
+        inputs=inputs, outputs={"logits": logits, "probs": probs}
+    )
     return m
 
 
@@ -113,10 +115,8 @@ def eval_metrics_fn():
         "logits": {
             "accuracy": lambda labels, predictions: tf.equal(
                 tf.cast(tf.reshape(predictions, [-1]) > 0.0, tf.int32),
-                tf.reshape(labels, [-1])
-            ),
+                tf.cast(tf.reshape(labels, [-1]), tf.int32),
+            )
         },
-        "probs": {
-            "auc": tf.keras.metrics.AUC()
-        }
+        "probs": {"auc": tf.keras.metrics.AUC()},
     }
