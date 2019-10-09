@@ -13,36 +13,37 @@
 ![pserver](./images/pserver.png)
 
 
-PServer contains two main compoments:
+PServer contains three main compoments:
 
-- KVStore Servier
+- KVStore
+- Gradient Queue
 - Optimizer
 
-1. The worker initializes a model, and push parameters to KVStore.
+1. The worker initializes a model, and pushes parameters to KVStore.
 2. Before each step of training, the worker pulls the latest model from KVStore.
-3. After forward/backward computation, the worker push gradients to KVStore. And KVStore will put the gradients to a Queue waiting for processing.
+3. After forward/backward computation, the worker push gradients to Gradient Queue waiting for processing.
 4. Optimizer gets a gradient from the Gradient Queue.
 5. Then, Optimizer looks up the corresponding parameter from KVStore.
 6. Optimizer applies gradients to parameters, and updates parameter back to KVStore.
 
 
-The interfaces of KVStore Servicer could be like this:
+The interfaces of KVStore could be like this:
 
 
 ```python
-class KVStoreServicer(elasticdl_pb2_grpc.KVStoreServicer):
+class KVStore(elasticdl_pb2_grpc.KVStoreServicer):
     def __init__(self):
         self.param_db = {}
         self.embedding_param_db = {}
-        self.grad_queue = queue.Queue()
 
-    def pull_param(self, request, _):
+    def pull_model(self, request, _):
         pass
 
-    def push_param(self, request, _):
+    def push_model(self, request, _):
         pass
-
-    def push_gradient(self, request, _):
+    
+    # embedding param is handled lazily   
+    def pull_embedding_param(self, reques, _):
         pass
 
     def get_param(self):
@@ -50,29 +51,28 @@ class KVStoreServicer(elasticdl_pb2_grpc.KVStoreServicer):
 
     def set_param(self):
         pass
+```
 
+
+The interface of Gradient Queue could be like this:
+
+```python
+
+class GradientQueue(elasticdl_pb2_grpc.GradientQueueServicer):
+    def __init__(self):
+        self.grad_queue = queue.Queue()
+        
+    def push_gradient(self, request, _):
+        pass
+    
     def get_gradient(self):
         pass
-
-    # embedding related interface is exposed explictly
-    def pull_embedding_param(self, request, _):
-        pass
-
-    def push_embedding_param(self, request, _):
-        pass
-
-    def push_embedding_gradient(self, request, _):
-        pass
-
-    def get_embedding_param(self):
-        pass
-
-    def set_embedding_param(self):
+        
+    def put_gradient(self):
         pass
 ```
 
-### Parameter Transfromation
-
+### Parameters Transfromation
 
 Parameters will be transformed into different data types in different stages.
 
@@ -90,8 +90,6 @@ Embedding parameter:
 - worker pushing parameter: serialized protobuf
 - KVStore embedding parameter DB: numpy ndarry based Python struct
 - optimizer: TensorFlow Variable
-
-
 
 We have to define a `Tensor` proto message and a corresponding `Tensor` Python class to support all these tranformations.
 
@@ -111,10 +109,9 @@ message Tensor {
     }
     string name = 1;
     DataType data_type = 2;
-    repeated int64 dim = 3;
+    repeated int64 dims = 3;
     bytes content = 4;
     repeated int64 indices = 5;
-    int64 version = 6;
 }
 ```
 
@@ -122,11 +119,10 @@ The `Tensor` Python class could be like this:
 
 ```python
 class Tensor(object):
-    def __init__(self, name=None, value=None, indices=None, version=None):
+    def __init__(self, name=None, value=None, indices=None):
         self.name = name
         self.value = value
         self.indices = indices
-        self.version = version
 ```
 
 There are also some helper functions:
@@ -145,6 +141,35 @@ def convert_to_tf_tensor(tensor):
     pass
 ```
 
+PServer will store a subset of the full model. And a worker will push/pull a submodel from the pserver. The model message is defined as following:
+
+```python
+message Model {
+    int64 version = 1;
+    repeated Tensor tensors = 2;
+}
+```
+
+Model could also be used as gradients collection.
+
+So the RPC service will be defined as following:
+
+```python
+message EmbeddingResponse{
+    Tensor value = 1;
+    repeated int64 unknown_indices = 2;
+}
+
+service KVStore{
+    rpc push_model(Model) returns (google.protobuf.Empty) {}
+    rpc pull_model(Model) returns (google.protobuf.Empty) {}
+    rpc pull_embedding_param(Tensor) returns (EmbeddingResponse) {}
+}
+
+service GradientQueue {
+    rpc push_gradient(Model) returns (google.protobuf.Empty) {}
+}
+```
 
 ### Gradient Queue
 
@@ -179,10 +204,23 @@ In sync mode, optimizer needs to wait for a certain number of gradients, and the
 We could implement a customized queue structure to support such logic efficiently.
 
 
+### Checkpoint
+
+
+
+### Evaluation
+
+
+
+## Replica of PServer
+
+
+
+
 ## Master
 
 
 ## Worker
 
 
-## Replica
+
