@@ -7,7 +7,7 @@
 ElasticDL uses the master-worker architecture. The master node plays the master role in two aspects.
 
 1. It's the master of the cluster. It manages the lifecycle of all the worker pods, starts the worker pod, listens to the pod event and relaunches the terminated worker pod if necessary.
-2. It's the master of the model training/evaluation/prediction process. It partition data into shards, generates and dispatches tasks to workers, coordinates all the nodes to complete the training/evaluation/prediction job. (see more details in *distributed training* section)
+2. It's the master of the model training/evaluation/prediction process. It partitions data into shards, generates and dispatches tasks to workers, coordinates all the nodes to complete the training/evaluation/prediction job. (see more details in *distributed training* section)
 
 ElasticDL client is simple, just like a CLI command. User inputs ElasticDL command in the terminal to start the training/evaluation/prediction job. The client parses the parameters, builds the docker image which packages the ElasticDL framework and the model code, pushes the image into the hub, and then sends request to the kubernetes ApiServer to create the master pod. After the master pod is created and started, it will then create other components and drive the process of the entire job.
 
