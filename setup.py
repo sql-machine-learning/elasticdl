@@ -5,7 +5,7 @@ with open("elasticdl/requirements.txt") as f:
 
 setup(
     name="elasticdl",
-    version="0.0.1",
+    version="v0.1.0rc0",
     description="A Kubernetes-native Deep Learning Framework",
     author="Ant Financial",
     url="https://github.com/sql-machine-learning/elasticdl",
