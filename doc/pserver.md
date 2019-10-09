@@ -57,7 +57,6 @@ class KVStore(elasticdl_pb2_grpc.KVStoreServicer):
 The interface of Gradient Queue could be like this:
 
 ```python
-
 class GradientQueue(elasticdl_pb2_grpc.GradientQueueServicer):
     def __init__(self):
         self.grad_queue = queue.Queue()
