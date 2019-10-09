@@ -202,25 +202,26 @@ In sync mode, optimizer needs to wait for a certain number of gradients, and the
 
 We could implement a customized queue structure to support such logic efficiently.
 
-### Checkpoint
-
-
-
-
-
 ### Evaluation
 
+After some steps training, master will start to do evaluation. It will send evaluation tasks to workers. We allow some in-consistency, some workers do evaluation, some workers do training, and pservers still update the model.
 
+The evaluation metrics will be calculated at the master.
+
+### Checkpoint
+
+we will save checkpoint periodially to a distributed file system during training. And we will also want to evaluate the checkpoint with validate dataset.
+
+There are two candidate ways:
+
+- Master sends sync signal to all workers and pservers, and training job is stopped. Evaluation job will be started. After evaluation, pservers will save checkpoint respectively. 
+
+- Master send signal to all pservers, and tell pservers to save checkpoint. Then, master launch another evaluation worker pods and pserver pods to do evaluation job. The evaluation pserver pod will load the latest checkpoint. The training job will be still runing at the same time.
 
 ## Replica of PServer
-
-
 
 
 ## Master
 
 
 ## Worker
-
-
-
