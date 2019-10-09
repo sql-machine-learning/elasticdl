@@ -1,6 +1,6 @@
+import os
 import tempfile
 from contextlib import closing
-import os
 
 import numpy as np
 import recordio
