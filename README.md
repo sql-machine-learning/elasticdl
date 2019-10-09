@@ -26,7 +26,7 @@ A distributed deep learning framework needs to know local gradients before the m
 
 Given a model defined with Keras API, train the model with a command line.
 ```bash
-elasticdl train --model_def=mnist_functional_api.custom_model --training_data_dir=/mnist/train --output=output
+elasticdl train --model_def=mnist_functional_api.custom_model --training_data=/mnist/train --output=output
 ```
 
 ### Integration with SQLFlow
