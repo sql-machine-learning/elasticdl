@@ -214,7 +214,7 @@ we will save checkpoint periodially to a distributed file system during training
 
 There are two candidate ways:
 
-- Master sends sync signal to all workers and pservers, and training job is stopped. Evaluation job will be started. After evaluation, pservers will save checkpoint respectively. And afrer checkpoint is saved, the training job will be started again.
+- Master sends sync signal to all workers and pservers, and training job is stopped. Evaluation job will be started. After evaluation, pservers will save checkpoint respectively. And after checkpoint is saved, the training job will be started again.
 
 - Master send signal to all pservers, and tell pservers to save checkpoint. Then, master launch another evaluation worker pods and pserver pods to do evaluation job. The evaluation pserver pod will load the latest checkpoint. The training job will be still runing at the same time.
 
