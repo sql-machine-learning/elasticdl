@@ -82,7 +82,6 @@ elif [[ "$JOB_TYPE" == "odps" ]]; then
       --log_level=INFO \
       --image_pull_policy=Never \
       --output=model_output
-    docker run --rm -it -e ODPS_TABLE_NAME=$ODPS_TABLE_NAME -e ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c 'python -c "from elasticdl.python.tests.test_utils import *; delete_iris_odps_table_from_env()"'
 else
     echo "Unsupported job type specified: $JOB_TYPE"
     exit 1
