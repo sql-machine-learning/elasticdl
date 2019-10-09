@@ -35,9 +35,7 @@ class EvaluationServiceTest(unittest.TestCase):
         model_version = 1
         total_tasks = 5
         latest_chkp_version = 2
-        job = _EvaluationJob(
-            _eval_metrics_fn(), model_version, total_tasks
-        )
+        job = _EvaluationJob(_eval_metrics_fn(), model_version, total_tasks)
         self.assertEqual(0, job._completed_tasks)
         self.assertFalse(job.finished())
         self.assertFalse(self.ok_to_new_job(job, latest_chkp_version))

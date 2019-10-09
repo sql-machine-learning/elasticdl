@@ -176,9 +176,7 @@ class EvaluationService(object):
         self._master_servicer = master_servicer
 
     def init_eval_only_job(self, num_task):
-        self._eval_job = _EvaluationJob(
-            self._eval_metrics_fn(), -1, num_task
-        )
+        self._eval_job = _EvaluationJob(self._eval_metrics_fn(), -1, num_task)
 
     def add_evaluation_task(self, is_time_based_eval, master_locking=True):
         """
@@ -211,9 +209,7 @@ class EvaluationService(object):
                     elasticdl_pb2.EVALUATION, checkpoint_version
                 )
                 self._eval_job = _EvaluationJob(
-                    self._eval_metrics_fn(),
-                    checkpoint_version,
-                    len(tasks),
+                    self._eval_metrics_fn(), checkpoint_version, len(tasks)
                 )
                 return True
         return False
