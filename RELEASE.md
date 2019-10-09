@@ -6,3 +6,4 @@
 - Supports different job types: training-only, training-with-evaluation, evaluation-only and prediction-only.
 - Provides high-level APIs and CLI for training, evaluation and prediction.
 - Supports running in environments, including MiniKube, GCP, and on-prem clusters.
+- Adds experimental integration with SQLFlow for ODPS data source.
