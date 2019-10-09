@@ -96,7 +96,7 @@ We have to define a `Tensor` proto message and a corresponding `Tensor` Python c
 
 The `Tensor` proto message could be like this:
 
-```python
+```proto
 message Tensor {
     enum DataType {
         BOOL = 0;
@@ -143,7 +143,7 @@ def convert_to_tf_tensor(tensor):
 
 PServer will store a subset of the full model. And a worker will push/pull a submodel from the pserver. The model message is defined as following:
 
-```python
+```proto
 message Model {
     int64 version = 1;
     repeated Tensor tensors = 2;
@@ -154,7 +154,7 @@ Model could also be used as gradients collection.
 
 So the RPC service will be defined as following:
 
-```python
+```proto
 message EmbeddingResponse{
     Tensor value = 1;
     repeated int64 unknown_indices = 2;
@@ -203,8 +203,9 @@ In sync mode, optimizer needs to wait for a certain number of gradients, and the
 
 We could implement a customized queue structure to support such logic efficiently.
 
-
 ### Checkpoint
+
+
 
 
 
