@@ -96,7 +96,7 @@ class CustomDataReader(AbstractDataReader):
 data reader for ElasticDL, and preserves the current ElasticDL functionality.
 * Implement a `ODPSDataReader` that implements the abstract methods in `AbstractDataReader` and
 reuses the existing `ODPSReader` we currently have.
-* Keep the existing CLI arguments `--training_data_dir`, `--evaluation_data_dir`, and `--prediction_data_dir` that
+* Keep the existing CLI arguments `--training_data`, `--evaluation_data`, and `--prediction_data` that
 will be used for specifying paths to RecordIO files if no custom data reader is specified.
 * Add CLI argument `--custom_data_reader_params` to pass parameters to the constructor of user-defined `CustomDataReader`
 similar to the existing `--model_params` used for passing parameters to model constructor.

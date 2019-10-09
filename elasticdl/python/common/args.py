@@ -15,17 +15,17 @@ MODEL_SPEC_GROUP = [
     "grads_to_wait",
     "num_epochs",
     "tensorboard_log_dir",
-    "training_data_dir",
+    "training_data",
 ]
 
 EVALUATION_GROUP = [
     "evaluation_steps",
-    "evaluation_data_dir",
+    "evaluation_data",
     "evaluation_start_delay_secs",
     "evaluation_throttle_secs",
 ]
 
-PREDICTION_GROUP = ["prediction_data_dir"]
+PREDICTION_GROUP = ["prediction_data"]
 
 CHECKPOINT_GROUP = [
     "checkpoint_filename_for_init",
@@ -218,13 +218,15 @@ def add_train_params(parser):
         default=1,
     )
     parser.add_argument(
-        "--training_data_dir",
-        help="Training data directory. Files should be in RecordIO format",
+        "--training_data",
+        help="Either the data directory that contains RecordIO files "
+        "or an ODPS table name used for training.",
         default="",
     )
     parser.add_argument(
-        "--evaluation_data_dir",
-        help="Evaluation data directory. Files should be in RecordIO format",
+        "--evaluation_data",
+        help="Either the data directory that contains RecordIO files "
+        "or an ODPS table name used for evaluation.",
         default="",
     )
     parser.add_argument(
@@ -297,8 +299,9 @@ def add_train_params(parser):
 
 def add_evaluate_params(parser):
     parser.add_argument(
-        "--evaluation_data_dir",
-        help="Evaluation data directory. Files should be in RecordIO format",
+        "--evaluation_data",
+        help="Either the data directory that contains RecordIO files "
+        "or an ODPS table name used for evaluation.",
         required=True,
     )
     parser.add_argument(
@@ -310,8 +313,9 @@ def add_evaluate_params(parser):
 
 def add_predict_params(parser):
     parser.add_argument(
-        "--prediction_data_dir",
-        help="Prediction data directory. Files should be in RecordIO format",
+        "--prediction_data",
+        help="Either the data directory that contains RecordIO files "
+        "or an ODPS table name used for prediction.",
         required=True,
     )
     parser.add_argument(
@@ -463,8 +467,9 @@ def parse_master_args(master_args=None):
         "--worker_pod_priority", help="Priority requested by workers"
     )
     parser.add_argument(
-        "--prediction_data_dir",
-        help="Prediction data directory. Files should be in RecordIO format",
+        "--prediction_data",
+        help="Either the data directory that contains RecordIO files "
+        "or an ODPS table name used for prediction.",
         default="",
     )
     add_common_params(parser)
@@ -478,23 +483,21 @@ def parse_master_args(master_args=None):
     if all(
         v == "" or v is None
         for v in [
-            args.training_data_dir,
-            args.evaluation_data_dir,
-            args.prediction_data_dir,
+            args.training_data,
+            args.evaluation_data,
+            args.prediction_data,
         ]
     ):
         raise ValueError(
             "At least one of the data directories needs to be provided"
         )
 
-    if args.prediction_data_dir and (
-        args.training_data_dir or args.evaluation_data_dir
-    ):
+    if args.prediction_data and (args.training_data or args.evaluation_data):
         raise ValueError(
             "Running prediction together with training or evaluation "
             "is not supported"
         )
-    if args.prediction_data_dir and not args.checkpoint_filename_for_init:
+    if args.prediction_data and not args.checkpoint_filename_for_init:
         raise ValueError(
             "checkpoint_filename_for_init is required for running "
             "prediction job"

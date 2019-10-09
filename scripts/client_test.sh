@@ -7,8 +7,8 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --image_base=elasticdl:ci \
       --model_zoo=model_zoo \
       --model_def=mnist_functional_api.mnist_functional_api.custom_model \
-      --training_data_dir=/data/mnist/train \
-      --evaluation_data_dir=/data/mnist/test \
+      --training_data=/data/mnist/train \
+      --evaluation_data=/data/mnist/test \
       --num_epochs=2 \
       --master_resource_request="cpu=400m,memory=1024Mi" \
       --master_resource_limit="cpu=1,memory=2048Mi" \
@@ -30,7 +30,7 @@ elif [[ "$JOB_TYPE" == "evaluate" ]]; then
       --model_zoo=model_zoo \
       --model_def=mnist_functional_api.mnist_functional_api.custom_model \
       --checkpoint_filename_for_init=elasticdl/python/tests/testdata/mnist_functional_api_model_v110.chkpt \
-      --evaluation_data_dir=/data/mnist/test \
+      --evaluation_data=/data/mnist/test \
       --num_epochs=1 \
       --master_resource_request="cpu=400m,memory=1024Mi" \
       --master_resource_limit="cpu=1,memory=2048Mi" \
@@ -49,7 +49,7 @@ elif [[ "$JOB_TYPE" == "predict" ]]; then
       --model_zoo=model_zoo \
       --model_def=mnist_functional_api.mnist_functional_api.custom_model \
       --checkpoint_filename_for_init=elasticdl/python/tests/testdata/mnist_functional_api_model_v110.chkpt \
-      --prediction_data_dir=/data/mnist/test \
+      --prediction_data=/data/mnist/test \
       --master_resource_request="cpu=400m,memory=1024Mi" \
       --master_resource_limit="cpu=1,memory=2048Mi" \
       --worker_resource_request="cpu=400m,memory=2048Mi" \
@@ -65,7 +65,7 @@ elif [[ "$JOB_TYPE" == "odps" ]]; then
       --image_base=elasticdl:ci \
       --model_zoo=model_zoo \
       --model_def=odps_iris_dnn_model.odps_iris_dnn_model.custom_model \
-      --training_data_dir=$ODPS_TABLE_NAME \
+      --training_data=$ODPS_TABLE_NAME \
       --data_reader_params='columns=["sepal_length", "sepal_width", "petal_length", "petal_width", "class"]' \
       --envs="ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME,ODPS_ACCESS_ID=$ODPS_ACCESS_ID,ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY" \
       --num_epochs=2 \

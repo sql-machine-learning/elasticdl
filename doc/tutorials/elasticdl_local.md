@@ -54,8 +54,8 @@ elasticdl train \
   --docker_tlskey=${DOCKER_TLSKEY} \
   --model_zoo=model_zoo \
   --model_def=mnist_functional_api.mnist_functional_api.custom_model \
-  --training_data_dir=/data/mnist/train \
-  --evaluation_data_dir=/data/mnist/test \
+  --training_data=/data/mnist/train \
+  --evaluation_data=/data/mnist/test \
   --num_epochs=2 \
   --master_resource_request="cpu=400m,memory=1024Mi" \
   --master_resource_limit="cpu=1,memory=2048Mi" \
