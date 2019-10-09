@@ -58,7 +58,7 @@ def dataset_fn(dataset, mode, metadata):
 
     dataset = dataset.map(_parse_data)
 
-    if mode != Mode.PREDICTION:
+    if mode == Mode.TRAINING:
         dataset = dataset.shuffle(buffer_size=200)
     return dataset
 
