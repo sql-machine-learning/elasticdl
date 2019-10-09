@@ -268,7 +268,7 @@ class Worker(object):
         """
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         if not isinstance(model_outputs, dict):
-            model_outputs = {"default": model_outputs}
+            model_outputs = {"output": model_outputs}
         for name, output in model_outputs.items():
             req.model_outputs[name].CopyFrom(ndarray_to_tensor(output.numpy()))
         req.labels.CopyFrom(ndarray_to_tensor(labels.numpy()))

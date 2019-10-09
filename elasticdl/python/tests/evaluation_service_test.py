@@ -62,7 +62,7 @@ class EvaluationServiceTest(unittest.TestCase):
         # Start to report metrics
         evaluation_version = job.model_version + 1
         model_outputs = {
-            "default": ndarray_to_tensor(
+            "output": ndarray_to_tensor(
                 np.array([[1], [6], [3]], dtype=np.float32)
             )
         }
@@ -83,7 +83,7 @@ class EvaluationServiceTest(unittest.TestCase):
             job.report_evaluation_metrics(
                 evaluation_version,
                 {
-                    "default": ndarray_to_tensor(
+                    "output": ndarray_to_tensor(
                         np.array([[4], [5], [6], [7], [8]], dtype=np.float32)
                     )
                 },
@@ -126,7 +126,7 @@ class EvaluationServiceTest(unittest.TestCase):
                 _eval_metrics_fn,
             )
             model_outputs = {
-                "default": ndarray_to_tensor(
+                "output": ndarray_to_tensor(
                     np.array([1, 6, 3], dtype=np.float32)
                 )
             }

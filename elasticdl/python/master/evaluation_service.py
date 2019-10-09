@@ -23,7 +23,8 @@ class _EvaluationJob(object):
                 i.e. `{
                     "output_a": {"acc": tf.keras.metrics.Accuracy()},
                     "output_b": {"auc": tf.keras.metrics.AUC()},
-                }`.
+                }`. Note that for model with multiple outputs, each metric
+                only uses one output.
             model_version: The version of the model to be evaluated.
             total_tasks: The number of evaluation tasks.
         """
@@ -47,7 +48,7 @@ class _EvaluationJob(object):
             # keep the same data structure as the `metrics_dict` when model
             # has multiple outputs.
             self._model_have_multiple_outputs = False
-            self._metrics_dict = {"default": metrics_dict}
+            self._metrics_dict = {"output": metrics_dict}
         for output_name, metrics in self._metrics_dict.items():
             for metric_name, metric in metrics.items():
                 if not isinstance(metric, metrics_module.Metric):
@@ -95,7 +96,7 @@ class _EvaluationJob(object):
         return {
             metric_name: metric_inst.result()
             for metric_name, metric_inst in self._metrics_dict[
-                "default"
+                "output"
             ].items()
         }
 
