@@ -241,11 +241,18 @@ We could implement a customized queue structure to support such logic efficientl
 
 Optimizer gets a gradient from the gradient queue, and query to get the corresponding parameter from KVStore. Then it will apply the gradient to the parameter. It has a `tf.keras.optimizer` instance inside.
 
-Many `tf.keras.optimizer` subclasses, such as `Adam` and `Adagrad` allocate and manage additional variables associated with the variables to train.  These are called `Slots`. Slots have names and you can ask the optimizer for the names of the slots that it uses.  Once you have a slot name you can ask the optimizer for the variable it created to hold the slot value.
+Many `tf.keras.optimizer` subclasses, such as `Adam` and `Adagrad` allocate and manage additional variables associated with the variables to train.  These are called `Slots`.
 
 Embedding table slots are stored at KVStore, and other common parameter slots are stored and managed by `tf.keras.optimizer`.
 
 The embedding table slot is also a embedding table data structure. For example, a embedding table parameter with name `embedding_layer0`, we will create a corresponding `embedding_layer0-momentum` EmbeddingTable object in `KVStore.embedding_table_db`.
+
+
+### Checkpoint and Serving
+
+Master will send signal to pservers to make checkpoint. Each pserver will save parameters in its current KVStore. 
+
+Since one pserver only has a subset of the whole model, we have to merge these submodel to get final model for serving.
 
 
 ## Replica of PServer
