@@ -5,7 +5,7 @@ with open("elasticdl/requirements.txt") as f:
 
 setup(
     name="elasticdl",
-    version="0.1.0rc0",
+    version="develop",
     description="A Kubernetes-native Deep Learning Framework",
     long_description="ElasticDL is a Kubernetes-native deep learning framework"
     " built on top of TensorFlow 2.0 that supports"
