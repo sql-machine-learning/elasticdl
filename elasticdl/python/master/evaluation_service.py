@@ -5,9 +5,9 @@ from threading import Thread
 from tensorflow.python.keras import metrics as metrics_module
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.constants import MetricsDictKey
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.ndarray import tensor_to_ndarray
+from elasticdl.python.common.constants import MetricsDictKey
 
 
 class _EvaluationJob(object):

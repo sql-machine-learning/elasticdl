@@ -365,16 +365,9 @@ class Worker(object):
         grads = tape.gradient(loss, self.get_trainable_items())
         return loss, grads
 
-    # `evaluation_process` does not need `labels`. This is because workers
-    # report model outputs and labels to the master, and the master calculates
-    # evaluation metrics.
     @tf.function
-    def evaluation_process(self, features):
-        outputs = self._model.call(features, training=False)
-        return outputs
-
-    @tf.function
-    def predict_process(self, features):
+    def forward_process(self, features):
+        """Calculates model outputs in non-training mode."""
         outputs = self._model.call(features, training=False)
         return outputs
 
@@ -388,12 +381,12 @@ class Worker(object):
         return accepted, min_model_version, loss
 
     def _run_evaluation_task(self, features, labels):
-        outputs = self.evaluation_process(features)
+        outputs = self.forward_process(features)
         accepted, _ = self.report_evaluation_metrics(outputs, labels)
         return accepted
 
     def _run_prediction_task(self, features):
-        predictions = self.predict_process(features)
+        predictions = self.forward_process(features)
         return self.report_prediction_outputs(predictions)
 
     def _process_minibatch(
