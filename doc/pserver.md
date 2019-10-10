@@ -77,8 +77,6 @@ def convert_to_tf_tensor(tensor):
     pass
 ```
 
-
-
 ### KVStore
 
 For a common model variable, we use save it as a `tf.Variable` in Parameter DB. For the embedding table, we introduce a customized data structure.
@@ -121,70 +119,18 @@ class KVStore(object):
         pass
 ```
 
-### RPC Service
-
-KVStore and GradientQueue provide RPC service for workers.
-
-Since pserver will store a subset of the full model. And a worker will push/pull a submodel from the pserver. The model message is defined as following:
-
-```proto
-message Model {
-    int64 version = 1;
-    repeated Tensor tensors = 2;
-}
-```
-
-Model could also be used as gradients collection.
-
-So the RPC service will be defined as following:
-
-```proto
-message EmbeddingResponse{
-    Tensor value = 1;
-    repeated int64 unknown_indices = 2;
-}
-
-service KVStore{
-    rpc push_model(Model) returns (google.protobuf.Empty) {}
-    rpc pull_model(Model) returns (Model) {}
-    rpc pull_embedding_vector(Tensor) returns (EmbeddingResponse) {}
-}
-
-service GradientQueue {
-    rpc push_gradient(Model) returns (google.protobuf.Empty) {}
-}
-```
-
-The interfaces of KVStore could be like this:
 
 
-```python
-class KVStore(elasticdl_pb2_grpc.KVStoreServicer):
-    def __init__(self):
-        self.param_db = {}
-        self.embedding_param_db = {}
+### Gradient Queue
 
-    def pull_model(self, request, _):
-        pass
-
-    def push_model(self, request, _):
-        pass
-    
-    # embedding param is handled lazily   
-    def pull_embedding_vector(self, reques, _):
-        pass
-```
-
+We decouple KVStore and Optimizer by a gradient queue to make the overall design clean. And the complexity is all handled at the gradient queue.
 
 The interface of Gradient Queue could be like this:
 
 ```python
-class GradientQueue(elasticdl_pb2_grpc.GradientQueueServicer):
+class GradientQueue(object):
     def __init__(self):
         self.grad_queue = queue.Queue()
-        
-    def push_gradient(self, request, _):
-        pass
     
     def get_gradient(self):
         pass
@@ -192,10 +138,6 @@ class GradientQueue(elasticdl_pb2_grpc.GradientQueueServicer):
     def put_gradient(self):
         pass
 ```
-
-### Gradient Queue
-
-We decouple KVStore and Optimizer by a gradient queue to make the overall design clean. And the complexity is all handled at the gradient queue.
 
 **Question 1** out-of-memory
 
@@ -244,6 +186,62 @@ Embedding table slots are stored at KVStore, and other common parameter slots ar
 
 The embedding table slot is also a embedding table data structure. For example, a embedding table parameter with name `embedding_layer0`, we will create a corresponding `embedding_layer0-momentum` EmbeddingTable object in `KVStore.embedding_table_db`.
 
+
+### RPC Service
+
+PServer provide RPC service for workers.
+
+Since pserver will store a subset of the full model. And a worker will push/pull a submodel from the pserver. The model message is defined as following:
+
+```proto
+message Model {
+    int64 version = 1;
+    repeated Tensor tensors = 2;
+}
+```
+
+Model could also be used as gradients collection.
+
+So the RPC service will be defined as following:
+
+```proto
+message EmbeddingResponse{
+    Tensor value = 1;
+    repeated int64 unknown_indices = 2;
+}
+
+service PServer{
+    rpc push_model(Model) returns (google.protobuf.Empty) {}
+    rpc pull_model(Model) returns (Model) {}
+    rpc pull_embedding_vector(Tensor) returns (EmbeddingResponse) {}
+    rpc push_gradient(Model) returns (google.protobuf.Empty)
+}
+
+```
+
+The interfaces of PServer could be like this:
+
+
+```python
+class PServer(elasticdl_pb2_grpc.PServerServicer):
+    def __init__(self, opt):
+        self.kvstore = KVStore()
+        self.grad_queue = GradientQueue()
+        self.opt = Optimizer(opt, self.kvstore, self.grad_queue)
+
+    def pull_model(self, request, _):
+        pass
+
+    def push_model(self, request, _):
+        pass
+
+    def push_gradient(self, request, _):
+        pass
+
+    # embedding param is handled lazily
+    def pull_embedding_vector(self, reques, _):
+        pass
+```
 
 ### Checkpoint and Serving
 
