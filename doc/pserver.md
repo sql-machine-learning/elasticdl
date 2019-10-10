@@ -225,7 +225,6 @@ There are two ways to support async-SGD:
 - Calling `apply_gradient` inside `push_gradient` gRPC service. The gradients will not be put into the queue.
 - Putting gradients into the queue, and optimizer gets gradients from the queue immediately to `apply_gradient`.
 
-
 In the first way, there may be several gRPC threads running in parallel. This will introduce race condition on parameter updating, some gradients may be overwrited.
 
 The second way ensure each gradient could be applied, and decoupling these two procedures, `push_gradient` of worker and `apply_gradient` of optimizer. But the second way introduces more staleness in updating model, and may influence the final training accuracy.
@@ -233,9 +232,7 @@ The second way ensure each gradient could be applied, and decoupling these two p
 We may consider the second way later.
 
 
-In sync-SGD, optimizer needs to wait for a certain number of gradients, and then get the gradient after addition.
-
-We could implement a customized queue structure to support such logic efficiently.
+In sync-SGD, optimizer needs to wait for a certain number of gradients, and then get the gradient after addition. We could implement a customized queue structure to support such logic efficiently.
 
 ### Optimizer
 
@@ -250,9 +247,9 @@ The embedding table slot is also a embedding table data structure. For example, 
 
 ### Checkpoint and Serving
 
-Master will send signal to pservers to make checkpoint. Each pserver will save parameters in its current KVStore. 
+Master will send signal to pservers to make checkpoint. Each pserver will save parameters in its current KVStore to a distributed file system.
 
-Since one pserver only has a subset of the whole model, we have to merge these submodel to get final model for serving.
+Since a pserver only has a subset of the whole model, we have to merge these submodels to get final model for serving.
 
 
 ## Replica of PServer
