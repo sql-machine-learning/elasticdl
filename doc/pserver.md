@@ -21,79 +21,15 @@ PServer contains three main compoments:
 
 1. The worker initializes a model, and pushes parameters to KVStore.
 2. Before each step of training, the worker pulls the latest model from KVStore.
-3. After forward/backward computation, the worker push gradients to Gradient Queue waiting for processing.
+3. After a round of forward/backward computation, the worker pushes gradients to the Gradient Queue waiting for processing.
 4. Optimizer gets a gradient from the Gradient Queue.
 5. Then, Optimizer looks up the corresponding parameter from KVStore.
 6. Optimizer applies gradients to parameters, and updates parameter back to KVStore.
 
 
-The interfaces of KVStore could be like this:
+### Tensor Data Structure
 
-
-```python
-class KVStore(elasticdl_pb2_grpc.KVStoreServicer):
-    def __init__(self):
-        self.param_db = {}
-        self.embedding_param_db = {}
-
-    def pull_model(self, request, _):
-        pass
-
-    def push_model(self, request, _):
-        pass
-    
-    # embedding param is handled lazily   
-    def pull_embedding_param(self, reques, _):
-        pass
-
-    def get_param(self):
-        pass
-
-    def set_param(self):
-        pass
-```
-
-
-The interface of Gradient Queue could be like this:
-
-```python
-class GradientQueue(elasticdl_pb2_grpc.GradientQueueServicer):
-    def __init__(self):
-        self.grad_queue = queue.Queue()
-        
-    def push_gradient(self, request, _):
-        pass
-    
-    def get_gradient(self):
-        pass
-        
-    def put_gradient(self):
-        pass
-```
-
-### Parameters Transfromation
-
-Parameters will be transformed into different data types in different stages.
-
-Common parameter:
-
-- worker forward/backward computation: TensorFlow Variable
-- worker pushing parameter: serialized protobuf
-- KVStore parameter DB: TensorFlow Variable
-- optimizer: TensorFlow Variable
-
-
-Embedding parameter:
-
-- worker forward/backward computation: numpy ndarry based Python struct
-- worker pushing parameter: serialized protobuf
-- KVStore embedding parameter DB: numpy ndarry based Python struct
-- optimizer: TensorFlow Variable
-
-We have to define a `Tensor` proto message and a corresponding `Tensor` Python class to support all these tranformations.
-
-
-The `Tensor` proto message could be like this:
+To support data communication between pods, we introduce a `Tensor` proto message:
 
 ```proto
 message Tensor {
@@ -114,7 +50,8 @@ message Tensor {
 }
 ```
 
-The `Tensor` Python class could be like this:
+Correspondingly, we have a `Tensor` Python class.
+
 
 ```python
 class Tensor(object):
@@ -140,7 +77,55 @@ def convert_to_tf_tensor(tensor):
     pass
 ```
 
-PServer will store a subset of the full model. And a worker will push/pull a submodel from the pserver. The model message is defined as following:
+
+
+### KVStore
+
+For a common model variable, we use save it as a `tf.Variable` in Parameter DB. For the embedding table, we introduce a customized data structure.
+
+
+```python
+class EmbeddingTable(object):
+    def __init__(self, name):
+        self.name = name
+        self.vectors = {}
+        
+    def get(self, indices):
+        ...
+        return tensor, unknown_indices
+        
+    def set(self, indices, value):
+        pass        
+```
+
+The name of embedding table is the embedding layer name. EmbeddingTable uses a dictionary `vectors` to store `<id, embedding_vector>` pairs.
+
+The KVStore could be like following:
+
+```python
+class KVStore(object):
+    def __init__(self):
+        self.param_db = {}
+        self.embedding_table_db = {}
+        
+    def get_param(self, name):
+        pass
+        
+    def get_embedding_vector(self, name, indices):
+        pass
+        
+    def set_param(self, name, value):
+        pass
+        
+    def set_embedding_vector(self, name, indices, value):
+        pass
+```
+
+### RPC Service
+
+KVStore and GradientQueue provide RPC service for workers.
+
+Since pserver will store a subset of the full model. And a worker will push/pull a submodel from the pserver. The model message is defined as following:
 
 ```proto
 message Model {
@@ -161,13 +146,51 @@ message EmbeddingResponse{
 
 service KVStore{
     rpc push_model(Model) returns (google.protobuf.Empty) {}
-    rpc pull_model(Model) returns (google.protobuf.Empty) {}
-    rpc pull_embedding_param(Tensor) returns (EmbeddingResponse) {}
+    rpc pull_model(Model) returns (Model) {}
+    rpc pull_embedding_vector(Tensor) returns (EmbeddingResponse) {}
 }
 
 service GradientQueue {
     rpc push_gradient(Model) returns (google.protobuf.Empty) {}
 }
+```
+
+The interfaces of KVStore could be like this:
+
+
+```python
+class KVStore(elasticdl_pb2_grpc.KVStoreServicer):
+    def __init__(self):
+        self.param_db = {}
+        self.embedding_param_db = {}
+
+    def pull_model(self, request, _):
+        pass
+
+    def push_model(self, request, _):
+        pass
+    
+    # embedding param is handled lazily   
+    def pull_embedding_vector(self, reques, _):
+        pass
+```
+
+
+The interface of Gradient Queue could be like this:
+
+```python
+class GradientQueue(elasticdl_pb2_grpc.GradientQueueServicer):
+    def __init__(self):
+        self.grad_queue = queue.Queue()
+        
+    def push_gradient(self, request, _):
+        pass
+    
+    def get_gradient(self):
+        pass
+        
+    def put_gradient(self):
+        pass
 ```
 
 ### Gradient Queue
@@ -194,29 +217,36 @@ If there are multi-optimizers doing optimization, this will cause a race conditi
 
 The second choice is faster, but might loss some accuracy. Besides, we could also add a read-write-lock to avoid race condition in multi-threading circumstance.
 
-**Question 3** async and sync update
+**Question 3** async-SGD and sync-SGD
 
-In async mode, optimizer will get gradient from the queue immediately.
 
-In sync mode, optimizer needs to wait for a certain number of gradients, and then get the gradient after addition.
+There are two ways to support async-SGD:
+ 
+- Calling `apply_gradient` inside `push_gradient` gRPC service. The gradients will not be put into the queue.
+- Putting gradients into the queue, and optimizer gets gradients from the queue immediately to `apply_gradient`.
+
+
+In the first way, there may be several gRPC threads running in parallel. This will introduce race condition on parameter updating, some gradients may be overwrited.
+
+The second way ensure each gradient could be applied, and decoupling these two procedures, `push_gradient` of worker and `apply_gradient` of optimizer. But the second way introduces more staleness in updating model, and may influence the final training accuracy.
+
+We may consider the second way later.
+
+
+In sync-SGD, optimizer needs to wait for a certain number of gradients, and then get the gradient after addition.
 
 We could implement a customized queue structure to support such logic efficiently.
 
-### Evaluation
+### Optimizer
 
-After some steps training, master will start to do evaluation. It will send evaluation tasks to workers. We allow some in-consistency, some workers do evaluation, some workers do training, and pservers still update the model.
+Optimizer gets a gradient from the gradient queue, and query to get the corresponding parameter from KVStore. Then it will apply the gradient to the parameter. It has a `tf.keras.optimizer` instance inside.
 
-The evaluation metrics will be calculated at the master.
+Many `tf.keras.optimizer` subclasses, such as `Adam` and `Adagrad` allocate and manage additional variables associated with the variables to train.  These are called `Slots`. Slots have names and you can ask the optimizer for the names of the slots that it uses.  Once you have a slot name you can ask the optimizer for the variable it created to hold the slot value.
 
-### Checkpoint
+Embedding table slots are stored at KVStore, and other common parameter slots are stored and managed by `tf.keras.optimizer`.
 
-we will save checkpoint periodially to a distributed file system during training. And we will also want to evaluate the checkpoint with validate dataset.
+The embedding table slot is also a embedding table data structure. For example, a embedding table parameter with name `embedding_layer0`, we will create a corresponding `embedding_layer0-momentum` EmbeddingTable object in `KVStore.embedding_table_db`.
 
-There are two candidate ways:
-
-- Master sends sync signal to all workers and pservers, and training job is stopped. Evaluation job will be started. After evaluation, pservers will save checkpoint respectively. And after checkpoint is saved, the training job will be started again.
-
-- Master send signal to all pservers, and tell pservers to save checkpoint. Then, master launch another evaluation worker pods and pserver pods to do evaluation job. The evaluation pserver pod will load the latest checkpoint. The training job will be still runing at the same time.
 
 ## Replica of PServer
 
