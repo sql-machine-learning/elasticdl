@@ -53,10 +53,8 @@ class _EvaluationJob(object):
         for output_name, metrics in self._metrics_dict.items():
             for metric_name, metric in metrics.items():
                 if not isinstance(metric, metrics_module.Metric):
-                    # Using `tf.keras.metrics.MeanMetricWrapper` to wrap
-                    # stateless functions. This idea is borrowed from
-                    # `tf.keras.Model.compile` function, please refer to
-                    # https://github.com/tensorflow/tensorflow/blob/1cf0898dd4331baf93fe77205550f2c2e6c90ee5/tensorflow/python/keras/engine/training.py#L184
+                    # `tf.keras.metrics.MeanMetricWrapper` wraps stateless
+                    # functions into `tf.keras.metrics.Metric` instance.
                     metrics[metric_name] = metrics_module.MeanMetricWrapper(
                         metric, name=metric_name
                     )
