@@ -1,19 +1,19 @@
-# ElasticDL on local
+# ElasticDL on Local Environment
 
-This document aims to give a simple example to show how to sumbmit deep learning jobs to a local kubernetes cluster in a local computer. It helps to understand the working process of ElasticDL.
+This document aims to give a simple example to show how to submit deep learning jobs to a local kubernetes cluster in a local computer. It helps to understand the working process of ElasticDL.
 
 
 ## Environment preparation
 
-Here we should install minikube first. Please refer to the official [installation guide](https://kubernetes.io/docs/tasks/tools/install-minikube/).
+Here we should install Minikube first. Please refer to the official [installation guide](https://kubernetes.io/docs/tasks/tools/install-minikube/).
 
-In this tutorial, we use [hyperkit](https://github.com/moby/hyperkit) as the hypervisor of minikube.
+In this tutorial, we use [hyperkit](https://github.com/moby/hyperkit) as the hypervisor of Minikube.
 
 ## Write model file
 
-We use TensorFlow Keras API to build our models. Please refer to this [tutorials](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/doc/model_building.md) on model building for details.
+We use TensorFlow Keras API to build our models. Please refer to this [tutorials](model_building.md) on model building for details.
 
-## Summit Job to minikube
+## Summit Job to Minikube
 
 ### Install ElasticDL
 
@@ -76,7 +76,7 @@ elasticdl train \
 
 ### Check job status
 
-After summitting the job to minikube, you can run following command to check the status of each pod:
+After submitting the job to Minikube, you can run following command to check the status of each pod:
 
 ```bash
 kubectl get pods

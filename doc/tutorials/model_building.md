@@ -1,4 +1,5 @@
 # ElasticDL Model Building
+
 To submit an ElasticDL job, a user needs to provide a model file, such as [`mnist_functional_api.py`](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist_functional_api/mnist_functional_api.py) used in [this example](https://github.com/sql-machine-learning/elasticdl/blob/develop/doc/tutorials/elasticdl_cloud.md#submit-the-first-job-with-low-priority).
 
 This model file contains a [model](#model) built with TensorFlow Keras API and other components required by ElasticDL, including [dataset\_fn](#dataset_fn), [loss](#loss), [optimizer](#optimizer), and [eval_metrics_fn](#eval\_metrics\_fn). 

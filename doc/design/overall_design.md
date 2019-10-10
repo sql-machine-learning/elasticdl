@@ -2,7 +2,7 @@
 
 ## Architecture
 
-![architecture](/doc/figures/architecture.png)
+![architecture](../images/architecture.png)
 
 ElasticDL uses the master-worker architecture. The master node plays the master role in two aspects.
 
@@ -13,11 +13,11 @@ ElasticDL client is simple, just like a CLI command. User inputs ElasticDL comma
 
 ## Distributed Training
 
-![distributed_training_sequence](/doc/figures/distributed_training_sequence.jpg)
+![distributed_training_sequence](../images/distributed_training_sequence.jpg)
 
 Master
 
-* Partition the training/evaluation data into mutiple shards. (see [dynamic_data_sharding_design](/doc/dynamic_data_sharding_design.md))
+* Partition the training/evaluation data into mutiple shards. (see [dynamic_data_sharding_design](dynamic_data_sharding_design.md))
 * Generate the training/evaluation tasks from the data shards.
 * Dispatch these tasks to different workers.
 * Aggregate the gradients reported from the workers.
@@ -26,6 +26,6 @@ Master
 Worker
 
 * Pull the task from the master. The task contains the index of this data shard.
-* Read the data according to the data index message. (see [data_io_pipeline_design](/doc/data_io_pipeline_design.md))
+* Read the data according to the data index message. (see [data_io_pipeline_design](data_io_pipeline_design.md))
 * Run the training process using this data shard.
 * Report the calculated gradients and task result to the master.

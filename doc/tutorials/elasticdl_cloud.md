@@ -1,6 +1,6 @@
-# ElasticDL on Google Kubernetes Engine
+# ElasticDL on Public Cloud
 
-ElasticDL is a Kubernetes-native machine learning framework.  This document explains how to run an ElasticDL job on Google Kubernetes Engine (GKE).
+ElasticDL is a Kubernetes-native machine learning framework.  This document explains how to run an ElasticDL job on a public cloud, namely, Google Kubernetes Engine (GKE).
 
 ## Configure Your GKE Environment
 

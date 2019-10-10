@@ -1,34 +1,38 @@
 # Getting Started with ElasticDL
 
-This tutorial contains a series of documents which covers ElasticDL usage under different scenarios: 
+The tutorials in this document aims to help users get hands on quickly and have a preliminary understanding of ElasticDL.
 
-- local computer
-- private cluster
-- public cloud. 
+## Run ElasticDL on Various Environments
 
-It aims to help users get hands on quickly and have a preliminary understanding of ElasticDL.
+The following tutorials demonstrates how to run ElasticDL on different environments: 
 
-## ElasticDL on local
+1. Local Environment
+2. On-prem cluster
+3. Public cloud
 
-Minikube is a tool that makes it easy to run Kubernetes locally. Minikube runs a single-node Kubernetes cluster inside a Virtual Machine (VM) on users' laptop for who looking to try out Kubernetes or develop with it day-to-day.
+### ElasticDL on Local Environment
 
-Here we use minikube to run ElasticDL in a local laptop. Please refer to [elasticdl_local](./elastic_local.md) for more details.
+[Minikube](https://kubernetes.io/docs/setup/learning-environment/minikube/) is a tool that makes it easy to run Kubernetes locally.
+It runs a single-node Kubernetes cluster inside a Virtual Machine (VM) on the laptop so developers can try out Kubernetes or develop with it day-to-day.
 
-
-## ElasticDL on cluster
-
-Here we will show how to run ElasticDL on a cluster.
-
-Please refer to [elasticdl_cluster](elasticdl_cluster.md) for more details.
+[This tutorial](elastic_local.md) uses Minikube to run ElasticDL on a local laptop.
 
 
-## ElasticDL on cloud
+### ElasticDL on On-prem Cluster
 
-Here we will show how to run ElasticDL on Google cloud.
-
-Please refer to [elasticdl_cloud](elasticdl_cloud.md) for more details.
+[This tutorial](elasticdl_on_prem_cluster.md) demonstrates how to run ElasticDL on an on-prem cluster.
 
 
-## Reference
+### ElasticDL on Public Cloud
 
-- https://kubernetes.io/docs/setup/learning-environment/minikube/
+[This tutorial](elasticdl_cloud.md) shows how to run ElasticDL on a public cloud, namely, Google Kubernetes Engine (GKE).
+
+## Model Building
+
+We have also provided [this tutorial](model_building.md) to illustrate how to define necessary components that will be
+used for ElasticDL model training, evaluation, and prediction. 
+
+## Data Preparation
+
+[This tutorial](recordio_data_preparation.md) demonstrates how to prepare datasets into the right format that can be
+used by ElasticDL. 
