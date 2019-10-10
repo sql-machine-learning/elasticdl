@@ -3,7 +3,7 @@ import traceback
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.constants import JobType, Mode
+from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import (
     find_layer,
@@ -268,7 +268,7 @@ class Worker(object):
         """
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         if not isinstance(model_outputs, dict):
-            model_outputs = {"output": model_outputs}
+            model_outputs = {MetricsDictKey.MODEL_OUTPUT: model_outputs}
         for name, output in model_outputs.items():
             req.model_outputs[name].CopyFrom(ndarray_to_tensor(output.numpy()))
         req.labels.CopyFrom(ndarray_to_tensor(labels.numpy()))
@@ -365,10 +365,11 @@ class Worker(object):
         grads = tape.gradient(loss, self.get_trainable_items())
         return loss, grads
 
-    # TODO (yunjian.lmh): `evaluation_process` and `predict_process` are the
-    # same now.
+    # `evaluation_process` does not need `labels`. This is because workers
+    # report model outputs and labels to the master, and the master calculates
+    # evaluation metrics.
     @tf.function
-    def evaluation_process(self, features, labels):
+    def evaluation_process(self, features):
         outputs = self._model.call(features, training=False)
         return outputs
 
@@ -387,7 +388,7 @@ class Worker(object):
         return accepted, min_model_version, loss
 
     def _run_evaluation_task(self, features, labels):
-        outputs = self.evaluation_process(features, labels)
+        outputs = self.evaluation_process(features)
         accepted, _ = self.report_evaluation_metrics(outputs, labels)
         return accepted
 

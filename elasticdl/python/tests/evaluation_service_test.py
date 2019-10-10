@@ -6,6 +6,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.metrics import Accuracy, MeanSquaredError
 
+from elasticdl.python.common.constants import MetricsDictKey
 from elasticdl.python.common.ndarray import ndarray_to_tensor
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import (
@@ -62,7 +63,7 @@ class EvaluationServiceTest(unittest.TestCase):
         # Start to report metrics
         evaluation_version = job.model_version + 1
         model_outputs = {
-            "output": ndarray_to_tensor(
+            MetricsDictKey.MODEL_OUTPUT: ndarray_to_tensor(
                 np.array([[1], [6], [3]], dtype=np.float32)
             )
         }
@@ -83,7 +84,7 @@ class EvaluationServiceTest(unittest.TestCase):
             job.report_evaluation_metrics(
                 evaluation_version,
                 {
-                    "output": ndarray_to_tensor(
+                    MetricsDictKey.MODEL_OUTPUT: ndarray_to_tensor(
                         np.array([[4], [5], [6], [7], [8]], dtype=np.float32)
                     )
                 },
@@ -126,7 +127,7 @@ class EvaluationServiceTest(unittest.TestCase):
                 _eval_metrics_fn,
             )
             model_outputs = {
-                "output": ndarray_to_tensor(
+                MetricsDictKey.MODEL_OUTPUT: ndarray_to_tensor(
                     np.array([1, 6, 3], dtype=np.float32)
                 )
             }

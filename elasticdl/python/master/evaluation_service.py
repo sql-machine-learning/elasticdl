@@ -5,6 +5,7 @@ from threading import Thread
 from tensorflow.python.keras import metrics as metrics_module
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.constants import MetricsDictKey
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.ndarray import tensor_to_ndarray
 
@@ -37,7 +38,7 @@ class _EvaluationJob(object):
     def _init_metrics_dict(self, metrics_dict):
         if not metrics_dict:
             raise ValueError(
-                "Doing evaluation with empty evaluation metrics dict."
+                "Evaluation metrics dictionary must not be empty."
             )
         first_metrics = list(metrics_dict.values())[0]
         if isinstance(first_metrics, dict):
@@ -48,10 +49,14 @@ class _EvaluationJob(object):
             # keep the same data structure as the `metrics_dict` when model
             # has multiple outputs.
             self._model_have_multiple_outputs = False
-            self._metrics_dict = {"output": metrics_dict}
+            self._metrics_dict = {MetricsDictKey.MODEL_OUTPUT: metrics_dict}
         for output_name, metrics in self._metrics_dict.items():
             for metric_name, metric in metrics.items():
                 if not isinstance(metric, metrics_module.Metric):
+                    # Using `tf.keras.metrics.MeanMetricWrapper` to wrap
+                    # stateless functions. This idea is borrowed from
+                    # `tf.keras.Model.compile` function, please refer to
+                    # https://github.com/tensorflow/tensorflow/blob/1cf0898dd4331baf93fe77205550f2c2e6c90ee5/tensorflow/python/keras/engine/training.py#L184
                     metrics[metric_name] = metrics_module.MeanMetricWrapper(
                         metric, name=metric_name
                     )
@@ -96,7 +101,7 @@ class _EvaluationJob(object):
         return {
             metric_name: metric_inst.result()
             for metric_name, metric_inst in self._metrics_dict[
-                "output"
+                MetricsDictKey.MODEL_OUTPUT
             ].items()
         }
 
