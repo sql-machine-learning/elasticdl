@@ -442,7 +442,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def ReportEvaluationMetrics(self, request, _):
         report_metrics = self._evaluation_service.report_evaluation_metrics(
-            request.model_version, request.evaluation_metrics
+            request.model_version, request.model_outputs, request.labels
         )
         res = elasticdl_pb2.ReportEvaluationMetricsResponse()
         res.model_version = self._version

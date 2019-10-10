@@ -33,3 +33,7 @@ class Mode(object):
 
 class Redis(object):
     MAX_COMMAND_RETRY_TIMES = 10
+
+
+class MetricsDictKey(object):
+    MODEL_OUTPUT = "output"

@@ -3,7 +3,10 @@ import tempfile
 import unittest
 
 import numpy as np
+import tensorflow as tf
+from tensorflow.keras.metrics import Accuracy, MeanSquaredError
 
+from elasticdl.python.common.constants import MetricsDictKey
 from elasticdl.python.common.ndarray import ndarray_to_tensor
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import (
@@ -12,6 +15,16 @@ from elasticdl.python.master.evaluation_service import (
 )
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+
+
+def _eval_metrics_fn():
+    return {
+        "acc": Accuracy(),
+        "mse": MeanSquaredError(),
+        "acc_fn": lambda labels, outputs: tf.equal(
+            tf.cast(outputs, tf.int32), tf.cast(labels, tf.int32)
+        ),
+    }
 
 
 class EvaluationServiceTest(unittest.TestCase):
@@ -23,7 +36,7 @@ class EvaluationServiceTest(unittest.TestCase):
         model_version = 1
         total_tasks = 5
         latest_chkp_version = 2
-        job = _EvaluationJob(model_version, total_tasks)
+        job = _EvaluationJob(_eval_metrics_fn(), model_version, total_tasks)
         self.assertEqual(0, job._completed_tasks)
         self.assertFalse(job.finished())
         self.assertFalse(self.ok_to_new_job(job, latest_chkp_version))
@@ -47,37 +60,48 @@ class EvaluationServiceTest(unittest.TestCase):
         latest_chkp_version = job.model_version + 1
         self.assertTrue(self.ok_to_new_job(job, latest_chkp_version))
 
-        # At the beginning, no metrics
-        self.assertFalse(job._evaluation_metrics)
-
         # Start to report metrics
         evaluation_version = job.model_version + 1
-        evaluation_metrics = {
-            "mse": ndarray_to_tensor(np.array([100, 200], dtype=np.float32))
+        model_outputs = {
+            MetricsDictKey.MODEL_OUTPUT: ndarray_to_tensor(
+                np.array([[1], [6], [3]], dtype=np.float32)
+            )
         }
+        labels = ndarray_to_tensor(np.array([[1], [0], [3]], dtype=np.float32))
         self.assertFalse(
             job.report_evaluation_metrics(
-                evaluation_version, evaluation_metrics
+                evaluation_version, model_outputs, labels
             )
         )
-        self.assertFalse(job._evaluation_metrics)
         evaluation_version = job.model_version
         self.assertTrue(
             job.report_evaluation_metrics(
-                evaluation_version, evaluation_metrics
+                evaluation_version, model_outputs, labels
             )
         )
         # One more
-        evaluation_metrics = {
-            "mse": ndarray_to_tensor(np.array([300, 400], dtype=np.float32))
-        }
-        job.report_evaluation_metrics(evaluation_version, evaluation_metrics)
         self.assertTrue(
-            np.array_equal(
-                np.array([200, 300], dtype=np.float32),
-                job.get_evaluation_summary().get("mse"),
+            job.report_evaluation_metrics(
+                evaluation_version,
+                {
+                    MetricsDictKey.MODEL_OUTPUT: ndarray_to_tensor(
+                        np.array([[4], [5], [6], [7], [8]], dtype=np.float32)
+                    )
+                },
+                ndarray_to_tensor(
+                    np.array([[7], [8], [9], [10], [11]], dtype=np.float32)
+                ),
             )
         )
+        expected_acc = 0.25
+        evaluation_metrics = job.get_evaluation_summary()
+        self.assertAlmostEqual(
+            expected_acc, evaluation_metrics.get("acc").numpy()
+        )
+        self.assertAlmostEqual(
+            expected_acc, evaluation_metrics.get("acc_fn").numpy()
+        )
+        self.assertAlmostEqual(10.125, evaluation_metrics.get("mse").numpy())
 
     def testEvaluationService(self):
         with tempfile.TemporaryDirectory() as tempdir:
@@ -93,16 +117,25 @@ class EvaluationServiceTest(unittest.TestCase):
 
             # Evaluation metrics will not be accepted if no evaluation ongoing
             evaluation_service = EvaluationService(
-                checkpoint_service, None, task_d, 10, 20, 0, False
+                checkpoint_service,
+                None,
+                task_d,
+                10,
+                20,
+                0,
+                False,
+                _eval_metrics_fn,
             )
-            evaluation_metrics = {
-                "mse": ndarray_to_tensor(
-                    np.array([100, 200], dtype=np.float32)
+            model_outputs = {
+                MetricsDictKey.MODEL_OUTPUT: ndarray_to_tensor(
+                    np.array([1, 6, 3], dtype=np.float32)
                 )
             }
+            labels = ndarray_to_tensor(np.array([1, 0, 3], dtype=np.float32))
+
             self.assertFalse(
                 evaluation_service.report_evaluation_metrics(
-                    1, evaluation_metrics
+                    1, model_outputs, labels
                 )
             )
 
@@ -123,7 +156,7 @@ class EvaluationServiceTest(unittest.TestCase):
 
             # Add an evaluation task and we can start evaluation
             self.assertEqual(8, len(task_d._todo))
-            evaluation_service.add_evaluation_task(0)
+            evaluation_service.add_evaluation_task(False)
             self.assertEqual(16, len(task_d._todo))
             self.assertFalse(evaluation_service._eval_job.finished())
 
@@ -137,7 +170,7 @@ class EvaluationServiceTest(unittest.TestCase):
         task_d = _TaskDispatcher({}, {"f1": (0, 10), "f2": (0, 10)}, {}, 3, 1)
 
         evaluation_service = EvaluationService(
-            None, None, task_d, 0, 0, 0, True
+            None, None, task_d, 0, 0, 0, True, _eval_metrics_fn
         )
         task_d.set_evaluation_service(evaluation_service)
 

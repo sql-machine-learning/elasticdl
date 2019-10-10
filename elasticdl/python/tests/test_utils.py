@@ -9,6 +9,10 @@ from odps import ODPS
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import JobType, ODPSConfig
+from elasticdl.python.common.model_utils import (
+    get_module_file_path,
+    load_module,
+)
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
@@ -102,6 +106,7 @@ def distributed_train_and_evaluate(
     model_zoo_path,
     model_def,
     model_params="",
+    eval_metrics_fn="eval_metrics_fn",
     training=True,
     dataset_name=DatasetName.IMAGE_DEFAULT,
     callback_classes=[],
@@ -173,14 +178,31 @@ def distributed_train_and_evaluate(
         num_epochs=1,
     )
 
+    model_module = load_module(
+        get_module_file_path(model_zoo_path, model_def)
+    ).__dict__
     checkpoint_service = CheckpointService("", 0, 0, True)
     if training:
         evaluation_service = EvaluationService(
-            checkpoint_service, None, task_d, 0, 0, 1, False
+            checkpoint_service,
+            None,
+            task_d,
+            0,
+            0,
+            1,
+            False,
+            model_module[eval_metrics_fn],
         )
     else:
         evaluation_service = EvaluationService(
-            checkpoint_service, None, task_d, 0, 0, 0, True
+            checkpoint_service,
+            None,
+            task_d,
+            0,
+            0,
+            0,
+            True,
+            model_module[eval_metrics_fn],
         )
     task_d.set_evaluation_service(evaluation_service)
     grads_to_wait = 1 if use_async else 2

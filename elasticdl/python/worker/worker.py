@@ -3,7 +3,7 @@ import traceback
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.constants import JobType, Mode
+from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import (
     find_layer,
@@ -261,18 +261,17 @@ class Worker(object):
         res = self._stub.ReportGradient(req)
         return res.accepted, res.model_version
 
-    def report_evaluation_metrics(self, evaluation_metrics):
+    def report_evaluation_metrics(self, model_outputs, labels):
         """
         report evaluation metrics to ps, return (accepted, model_version)
         from rpc call.
         """
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
-        for k, v in evaluation_metrics.items():
-            v_np = v.numpy()
-            # If scalar, convert to numpy 1D array with size 1
-            if not v_np.shape:
-                v_np = v_np.reshape(1)
-            req.evaluation_metrics[k].CopyFrom(ndarray_to_tensor(v_np))
+        if not isinstance(model_outputs, dict):
+            model_outputs = {MetricsDictKey.MODEL_OUTPUT: model_outputs}
+        for name, output in model_outputs.items():
+            req.model_outputs[name].CopyFrom(ndarray_to_tensor(output.numpy()))
+        req.labels.CopyFrom(ndarray_to_tensor(labels.numpy()))
         req.model_version = self._model_version
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
@@ -367,13 +366,8 @@ class Worker(object):
         return loss, grads
 
     @tf.function
-    def evaluation_process(self, features, labels):
-        outputs = self._model.call(features, training=False)
-        evaluation_metrics = self._eval_metrics_fn(outputs, labels)
-        return evaluation_metrics
-
-    @tf.function
-    def predict_process(self, features):
+    def forward_process(self, features):
+        """Calculates model outputs in non-training mode."""
         outputs = self._model.call(features, training=False)
         return outputs
 
@@ -387,12 +381,12 @@ class Worker(object):
         return accepted, min_model_version, loss
 
     def _run_evaluation_task(self, features, labels):
-        evaluation_metrics = self.evaluation_process(features, labels)
-        accepted, _ = self.report_evaluation_metrics(evaluation_metrics)
+        outputs = self.forward_process(features)
+        accepted, _ = self.report_evaluation_metrics(outputs, labels)
         return accepted
 
     def _run_prediction_task(self, features):
-        predictions = self.predict_process(features)
+        predictions = self.forward_process(features)
         return self.report_prediction_outputs(predictions)
 
     def _process_minibatch(
