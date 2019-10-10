@@ -11,7 +11,7 @@ The following events involve interactions among the master, workers and PS:
 * Relaunch of PS.
 * Workers get model parameters from PS.
 * Workers push gradients to PS.
-* PS reports submodel version to the master
+* PS reports submodel version to the master.
 * The master tells PS to save checkpoint.
 
 
