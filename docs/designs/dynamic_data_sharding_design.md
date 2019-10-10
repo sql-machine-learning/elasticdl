@@ -11,6 +11,6 @@ After processing this task and reporting the result, the worker will pull the ne
 * If the task result is success, the master removes the task from the *doing* list and mark it done.
 * If the task result is fail, the master removes the task from doing list and then inserts it back into the *todo* list for recovery. Several issues can cause the task failure, such as the worker is preempted by a job of higher priority, the network connection is timeout and so on.
 
-![dynamic_data_sharding](/doc/figures/dynamic_data_sharding.png)
+![dynamic_data_sharding](../images/dynamic_data_sharding.png)
 
 The worker gets the task containing the data shard index (filename, startIndex, endIndex). It would be important to read the records of this shard efficiently from the data storage. In order to reach the IO efficiency, we choose data that supports AbstractDataReader, such as [RecordIO](https://github.com/elasticdl/recordio) and ODPS table.
