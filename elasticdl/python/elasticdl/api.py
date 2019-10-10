@@ -4,6 +4,7 @@ from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
+    remove_end_slash,
 )
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.image_builder import (
@@ -13,8 +14,10 @@ from elasticdl.python.elasticdl.image_builder import (
 
 
 def train(args):
+    model_zoo = remove_end_slash(args.model_zoo)
+
     image_name = build_and_push_docker_image(
-        model_zoo=args.model_zoo,
+        model_zoo=model_zoo,
         base_image=args.image_base,
         docker_image_repository=args.docker_image_repository,
         extra_pypi=args.extra_pypi_index,
@@ -30,7 +33,7 @@ def train(args):
         "--worker_image",
         image_name,
         "--model_zoo",
-        _model_zoo_in_docker(args.model_zoo),
+        _model_zoo_in_docker(model_zoo),
         "--cluster_spec",
         _cluster_spec_def_in_docker(args.cluster_spec),
     ]
@@ -45,8 +48,10 @@ def train(args):
 
 
 def evaluate(args):
+    model_zoo = remove_end_slash(args.model_zoo)
+
     image_name = build_and_push_docker_image(
-        model_zoo=args.model_zoo,
+        model_zoo=model_zoo,
         base_image=args.image_base,
         docker_image_repository=args.docker_image_repository,
         extra_pypi=args.extra_pypi_index,
@@ -61,7 +66,7 @@ def evaluate(args):
         "--worker_image",
         image_name,
         "--model_zoo",
-        _model_zoo_in_docker(args.model_zoo),
+        _model_zoo_in_docker(model_zoo),
         "--cluster_spec",
         _cluster_spec_def_in_docker(args.cluster_spec),
     ]
@@ -75,8 +80,10 @@ def evaluate(args):
 
 
 def predict(args):
+    model_zoo = remove_end_slash(args.model_zoo)
+
     image_name = build_and_push_docker_image(
-        model_zoo=args.model_zoo,
+        model_zoo=model_zoo,
         base_image=args.image_base,
         docker_image_repository=args.docker_image_repository,
         extra_pypi=args.extra_pypi_index,
@@ -91,7 +98,7 @@ def predict(args):
         "--worker_image",
         image_name,
         "--model_zoo",
-        _model_zoo_in_docker(args.model_zoo),
+        _model_zoo_in_docker(model_zoo),
         "--cluster_spec",
         _cluster_spec_def_in_docker(args.cluster_spec),
     ]

@@ -4,6 +4,7 @@ import unittest
 from elasticdl.python.common.args import (
     add_bool_param,
     build_arguments_from_parsed_result,
+    remove_end_slash,
 )
 
 
@@ -34,3 +35,10 @@ class ArgsTest(unittest.TestCase):
         value = "\t".join(sorted(original_arguments))
         target = "\t".join(sorted(["--bar", "False", "--foo", "4"]))
         self.assertEqual(value, target)
+
+    def test_remove_end_slash(self):
+        self.assertEqual("abc", remove_end_slash("abc/"))
+        self.assertEqual("/abc", remove_end_slash("/abc/"))
+        self.assertEqual("a/b/c", remove_end_slash("a/b/c/"))
+        self.assertEqual("/a/b/c", remove_end_slash("/a/b/c/"))
+        self.assertIsNone(remove_end_slash(None))

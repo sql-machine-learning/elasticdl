@@ -561,3 +561,10 @@ def build_arguments_from_parsed_result(args, filter_args=None):
         "--" + k if i % 2 == 0 else k for i, k in enumerate(arguments)
     ]
     return arguments
+
+
+def remove_end_slash(val):
+    """Remove the end slash if it has"""
+    if val and val.endswith("/"):
+        return val[0:-1]
+    return val

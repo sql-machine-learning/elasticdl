@@ -202,12 +202,6 @@ RUN python -c 'import sys, pkgutil; exit_code = 0 if \
         % tmpl
     )
 
-    print("Before %s" % model_zoo)
-    if model_zoo.endswith("/"):
-        model_zoo = model_zoo[:-1]
-
-
-    print("After %s" % model_zoo)
     return tmpl.format(
         BASE_IMAGE=base_image
         if base_image
