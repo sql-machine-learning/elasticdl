@@ -34,5 +34,5 @@ used for ElasticDL model training, evaluation, and prediction.
 
 ## Data Preparation
 
-[This tutorial](recordio_data_preparation.md) demonstrates how to prepare datasets into the right format that can be
+[This tutorial](data_preparation.md) demonstrates how to prepare datasets into the right format that can be
 used by ElasticDL. 

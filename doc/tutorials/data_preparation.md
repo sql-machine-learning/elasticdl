@@ -1,4 +1,4 @@
-# RecordIO Data Preparation Tutorial
+# Data Preparation Tutorial
 
 
 ## Background
