@@ -10,7 +10,9 @@ def custom_model():
 
 
 def loss(output, labels):
-    return tf.reduce_sum(tf.reduce_mean(tf.reshape(output, [-1])) - labels)
+    return tf.reduce_mean(
+        tf.nn.sparse_softmax_cross_entropy_with_logits(labels, output)
+    )
 
 
 def optimizer(lr=0.1):
@@ -65,7 +67,8 @@ def dataset_fn(dataset, mode, metadata):
 
 def eval_metrics_fn():
     return {
-        "dummy_metric": lambda labels, predictions: tf.reduce_sum(
-            tf.reduce_mean(tf.reshape(predictions, [-1])) - labels
+        "accuracy": lambda labels, predictions: tf.equal(
+            tf.argmax(predictions, 1, output_type=tf.int32),
+            tf.cast(tf.reshape(labels, [-1]), tf.int32),
         )
     }
