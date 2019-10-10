@@ -39,7 +39,7 @@ SELECT * FROM employee LABEL income INTO my_elasticdl_model
 
 ## Quick Start
 
-Please check out our [step-by-step tutorial](doc/tutorials/get_started.md) for running ElasticDL on local laptop, on-prem cluster, or on public cloud such as Google Kubernetes Engine.
+Please check out our [step-by-step tutorial](docs/tutorials/get_started.md) for running ElasticDL on local laptop, on-prem cluster, or on public cloud such as Google Kubernetes Engine.
 
 ## Background
 
