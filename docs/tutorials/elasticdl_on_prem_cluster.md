@@ -1,4 +1,4 @@
-# ElasticDL on cluster
+# ElasticDL on On-prem Cluster
 
 ## Environment preparation
 
