@@ -89,8 +89,7 @@ class EmbeddingTable(object):
         self.vectors = {}
         
     def get(self, indices):
-        ...
-        return tensor, unknown_indices
+        pass
         
     def set(self, indices, value):
         pass        
