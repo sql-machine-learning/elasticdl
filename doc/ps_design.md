@@ -10,24 +10,18 @@ The master will monitor PS pods status similar to what it does for worker pods. 
 
 Each worker has a local copy of the model variables. After the master relaunches a PS, the PS pod can recover model variables from workers. For embedding vectors, PS must create replicas to support fault tolerance. For each PS *P(i)*, it will store *M* replicas in the following *M* PSs from *P(i+1 % N)* to *P(i+M % N)*. The relaunched PS can recover embedding vectors from one of its replicas. If there are more than *M* continuously-indexed PSs failing, at least one PS fails with all of its replica PSs. The ElasticDL job has to recover from a recent checkpoint.
 
-## PServer
+## PS
 
 ### Compoments
 
 ![pserver](./images/pserver.png)
 
-PServer contains three main compoments:
+PS contains two main compoments:
 
 - KVStore
-- Gradient Queue
 - Optimizer
 
-1. The worker initializes a model, and pushes parameters to KVStore.
-2. Before each step of training, the worker pulls the latest model from KVStore.
-3. After a round of forward/backward computation, the worker pushes gradients to the Gradient Queue waiting for processing.
-4. Optimizer gets a gradient from the Gradient Queue.
-5. Then, Optimizer looks up the corresponding parameter from KVStore.
-6. Optimizer applies gradients to parameters, and updates parameter back to KVStore.
+The worker initializes a model, and pushes parameters to KVStore. Before each step of training, the worker pulls the latest model from KVStore. After a round of forward/backward computation, the worker pushes gradients to the PS waiting for processing. Then, optimizer of PS will look up the corresponding parameter from KVStore. At last, it applies gradients to parameters, and updates parameter back to KVStore.
 
 ### Tensor Data Structure
 
@@ -86,8 +80,9 @@ For a common model variable, we use save it as a `tf.Variable` in Parameter DB. 
 
 ```python
 class EmbeddingTable(object):
-    def __init__(self, name):
+    def __init__(self, name, meta_info):
         self.name = name
+        self.meta_info = meta_info
         self.vectors = {}
         
     def get(self, indices):
@@ -104,7 +99,7 @@ The KVStore could be like following:
 ```python
 class KVStore(object):
     def __init__(self):
-        self.param_db = {}
+        self.var_db = {}
         self.embedding_table_db = {}
         
     def get_param(self, name):
@@ -120,9 +115,30 @@ class KVStore(object):
         pass
 ```
 
-### Gradient Queue
+### Optimizer
 
-We decouple KVStore and Optimizer by a gradient queue to make the overall design clean. And the complexity is all handled at the gradient queue.
+Once optimizer gets a gradient it will query the KVStore to get the corresponding parameter. Then it will apply the gradient to the parameter. It has a `tf.keras.optimizer` instance inside.
+
+Many `tf.keras.optimizer` subclasses, such as `Adam` and `Adagrad` allocate and manage additional variables associated with the variables to train.  These are called `Slots`.
+
+Embedding table slots are stored at KVStore, and other common parameter slots are stored and managed by `tf.keras.optimizer`.
+
+The embedding table slot is also a embedding table data structure. For example, a embedding table parameter with name `embedding_layer0`, we will create a corresponding `embedding_layer0-momentum` EmbeddingTable object in `KVStore.embedding_table_db`.
+
+We support async-SGD and sync-SGD both.
+
+There are two ways to support async-SGD:
+ 
+- Calling `apply_gradient` inside `push_gradient` gRPC service.
+- Putting gradients into a gradient queue, and optimizer gets gradients from the queue immediately to `apply_gradient`.
+
+In the first way, there may be several gRPC threads running in parallel. This will introduce race condition on parameter updating, some gradients may be overwrited.
+
+The second way ensure each gradient could be applied, and decoupling these two procedures, `push_gradient` of worker and `apply_gradient` of optimizer. But the second way introduces more staleness in updating model, and may influence the final training accuracy.
+
+We may consider the second way later.
+
+In sync-SGD, optimizer needs to wait for a certain number of gradients, and then get the gradient after addition. We could implement a customized gradient queue structure to support such logic efficiently.
 
 The interface of Gradient Queue could be like this:
 
@@ -137,53 +153,6 @@ class GradientQueue(object):
     def put_gradient(self):
         pass
 ```
-
-**Question 1** out-of-memory
-
-Workers push gradients to the gradient queue of KVStore, pserver optimizer gets gradient from the queue, and does parameter optimization.
-
-This is a classical producer-consumer problem. We have to ensure that the speed of optimizer processing gradients is large than the speed of workers pushing gradients. Otherwise, the gradient queue will become larger and larger and lead to out-of-memory.
-
-We could set a limit size to the queue, if the condition is satisfied:
-
-- just throwing away upcoming gradients from workers
-- blocking `push_gradient` return from KVStore to workers
-
-
-**Question 2** multi-threading optimizer
-
-We could expose the optimizer numbers to users. If there is only one optimizer, the gradients will be handled one-by-one. So all gradients will be applied to parameters.
-
-If there are multi-optimizers doing optimization, this will cause a race condition, and the order of reading/writing parameters will not be ensured.
-
-The second choice is faster, but might loss some accuracy. Besides, we could also add a read-write-lock to avoid race condition in multi-threading circumstance.
-
-**Question 3** async-SGD and sync-SGD
-
-
-There are two ways to support async-SGD:
- 
-- Calling `apply_gradient` inside `push_gradient` gRPC service. The gradients will not be put into the queue.
-- Putting gradients into the queue, and optimizer gets gradients from the queue immediately to `apply_gradient`.
-
-In the first way, there may be several gRPC threads running in parallel. This will introduce race condition on parameter updating, some gradients may be overwrited.
-
-The second way ensure each gradient could be applied, and decoupling these two procedures, `push_gradient` of worker and `apply_gradient` of optimizer. But the second way introduces more staleness in updating model, and may influence the final training accuracy.
-
-We may consider the second way later.
-
-In sync-SGD, optimizer needs to wait for a certain number of gradients, and then get the gradient after addition. We could implement a customized queue structure to support such logic efficiently.
-
-### Optimizer
-
-Optimizer gets a gradient from the gradient queue, and query to get the corresponding parameter from KVStore. Then it will apply the gradient to the parameter. It has a `tf.keras.optimizer` instance inside.
-
-Many `tf.keras.optimizer` subclasses, such as `Adam` and `Adagrad` allocate and manage additional variables associated with the variables to train.  These are called `Slots`.
-
-Embedding table slots are stored at KVStore, and other common parameter slots are stored and managed by `tf.keras.optimizer`.
-
-The embedding table slot is also a embedding table data structure. For example, a embedding table parameter with name `embedding_layer0`, we will create a corresponding `embedding_layer0-momentum` EmbeddingTable object in `KVStore.embedding_table_db`.
-
 
 ### RPC Service
 
@@ -205,13 +174,12 @@ message EmbeddingTableInfo{
 
 message Model {
     int64 version = 1;
-    repeated Tensor tensors = 2;
+    repeated Tensor variables = 2;
     repeated EmbeddingTableInfo embedding_table_info = 3;
 }
 ```
 
 Model could also be used as gradients collection.
-
 
 
 So the RPC service will be defined as following:
@@ -220,7 +188,7 @@ So the RPC service will be defined as following:
 
 service PServer{
     rpc push_model(Model) returns (google.protobuf.Empty) {}
-    rpc pull_model(Model) returns (Model) {}
+    rpc pull_variable(Model) returns (Model) {}
     rpc pull_embedding_vector(Tensor) returns (EmbeddingResponse) {}
     rpc push_gradient(Model) returns (google.protobuf.Empty)
 }
@@ -236,13 +204,13 @@ class PServer(elasticdl_pb2_grpc.PServerServicer):
         self.grad_queue = GradientQueue()
         self.opt = Optimizer(opt, self.kvstore, self.grad_queue)
 
-    def pull_model(self, request, _):
-        pass
-
     def push_model(self, request, _):
         pass
 
     def push_gradient(self, request, _):
+        pass
+        
+    def pull_variable(self, request, _):
         pass
 
     # embedding param is handled lazily
