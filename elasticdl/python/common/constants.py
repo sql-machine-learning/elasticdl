@@ -37,3 +37,4 @@ class Redis(object):
 
 class MetricsDictKey(object):
     MODEL_OUTPUT = "output"
+    LABEL = "label"
