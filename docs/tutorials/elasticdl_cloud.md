@@ -1,6 +1,6 @@
-# ElasticDL on Google Kubernetes Engine
+# ElasticDL on Public Cloud
 
-ElasticDL is a Kubernetes-native machine learning framework.  This document explains how to run an ElasticDL job on Google Kubernetes Engine (GKE).
+ElasticDL is a Kubernetes-native machine learning framework.  This document explains how to run an ElasticDL job on a public cloud, namely, Google Kubernetes Engine (GKE).
 
 ## Configure Your GKE Environment
 
@@ -67,8 +67,8 @@ python -m elasticdl.python.elasticdl.client train \
     --job_name=hello-world \
     --model_zoo=model_zoo \
     --model_def=mnist_subclass.mnist_subclass.CustomModel \
-    --training_data_dir=${MNIST_DATA_DIR}/train \
-    --evaluation_data_dir=${MNIST_DATA_DIR}/test \
+    --training_data=${MNIST_DATA_DIR}/train \
+    --evaluation_data=${MNIST_DATA_DIR}/test \
     --num_epochs=1 \
     --minibatch_size=10 \
     --num_minibatches_per_task=10 \
@@ -106,8 +106,8 @@ python -m elasticdl.python.elasticdl.client train \
     --job_name=fault-tolerance \
     --model_zoo=model_zoo \
     --model_def=mnist_subclass.mnist_subclass.CustomModel \
-    --training_data_dir=${MNIST_DATA_DIR}/train \
-    --evaluation_data_dir=${MNIST_DATA_DIR}/test \
+    --training_data=${MNIST_DATA_DIR}/train \
+    --evaluation_data=${MNIST_DATA_DIR}/test \
     --num_epochs=1 \
     --minibatch_size=10 \
     --num_minibatches_per_task=10 \
@@ -167,8 +167,8 @@ python -m elasticdl.python.elasticdl.client train \
     --job_name=low-prio-job \
     --model_zoo=model_zoo \
     --model_def=mnist_subclass.mnist_subclass.CustomModel \
-    --training_data_dir=${MNIST_DATA_DIR}/train \
-    --evaluation_data_dir=${MNIST_DATA_DIR}/test \
+    --training_data=${MNIST_DATA_DIR}/train \
+    --evaluation_data=${MNIST_DATA_DIR}/test \
     --master_pod_priority=high-priority \
     --worker_pod_priority=low-priority \
     --num_epochs=1 \
@@ -199,8 +199,8 @@ python -m elasticdl.python.elasticdl.client train \
     --job_name=high-prio-job \
     --model_zoo=model_zoo \
     --model_def=mnist_subclass.mnist_subclass.CustomModel \
-    --training_data_dir=${MNIST_DATA_DIR}/train \
-    --evaluation_data_dir=${MNIST_DATA_DIR}/test \
+    --training_data=${MNIST_DATA_DIR}/train \
+    --evaluation_data=${MNIST_DATA_DIR}/test \
     --master_pod_priority=high-priority \
     --worker_pod_priority=high-priority \
     --num_epochs=1 \

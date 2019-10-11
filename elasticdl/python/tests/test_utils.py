@@ -1,12 +1,18 @@
+import os
 import tempfile
 from contextlib import closing
 
 import numpy as np
 import recordio
 import tensorflow as tf
+from odps import ODPS
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.constants import JobType
+from elasticdl.python.common.constants import JobType, ODPSConfig
+from elasticdl.python.common.model_utils import (
+    get_module_file_path,
+    load_module,
+)
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
@@ -100,6 +106,7 @@ def distributed_train_and_evaluate(
     model_zoo_path,
     model_def,
     model_params="",
+    eval_metrics_fn="eval_metrics_fn",
     training=True,
     dataset_name=DatasetName.IMAGE_DEFAULT,
     callback_classes=[],
@@ -171,14 +178,31 @@ def distributed_train_and_evaluate(
         num_epochs=1,
     )
 
+    model_module = load_module(
+        get_module_file_path(model_zoo_path, model_def)
+    ).__dict__
     checkpoint_service = CheckpointService("", 0, 0, True)
     if training:
         evaluation_service = EvaluationService(
-            checkpoint_service, None, task_d, 0, 0, 1, False
+            checkpoint_service,
+            None,
+            task_d,
+            0,
+            0,
+            1,
+            False,
+            model_module[eval_metrics_fn],
         )
     else:
         evaluation_service = EvaluationService(
-            checkpoint_service, None, task_d, 0, 0, 0, True
+            checkpoint_service,
+            None,
+            task_d,
+            0,
+            0,
+            0,
+            True,
+            model_module[eval_metrics_fn],
         )
     task_d.set_evaluation_service(evaluation_service)
     grads_to_wait = 1 if use_async else 2
@@ -348,4 +372,26 @@ def create_iris_odps_table(odps_client, project_name, table_name):
     odps_client.execute_sql(
         sql_tmpl.format(PROJECT_NAME=project_name, TABLE_NAME=table_name),
         hints={"odps.sql.submit.mode": "script"},
+    )
+
+
+def get_odps_client_from_env():
+    project = os.environ[ODPSConfig.PROJECT_NAME]
+    access_id = os.environ[ODPSConfig.ACCESS_ID]
+    access_key = os.environ[ODPSConfig.ACCESS_KEY]
+    endpoint = os.environ.get(ODPSConfig.ENDPOINT)
+    return ODPS(access_id, access_key, project, endpoint)
+
+
+def create_iris_odps_table_from_env():
+    project = os.environ[ODPSConfig.PROJECT_NAME]
+    table_name = os.environ["ODPS_TABLE_NAME"]
+    create_iris_odps_table(get_odps_client_from_env(), project, table_name)
+
+
+def delete_iris_odps_table_from_env():
+    project = os.environ[ODPSConfig.PROJECT_NAME]
+    table_name = os.environ["ODPS_TABLE_NAME"]
+    get_odps_client_from_env().delete_table(
+        table_name, project, if_exists=True
     )
