@@ -10,16 +10,11 @@ The master will monitor PS pods status similar to what it does for worker pods. 
 
 Each worker has a local copy of the model variables. After the master relaunches a PS, the PS pod can recover model variables from workers. For embedding vectors, PS must create replicas to support fault tolerance. For each PS *P(i)*, it will store *M* replicas in the following *M* PSs from *P(i+1 % N)* to *P(i+M % N)*. The relaunched PS can recover embedding vectors from one of its replicas. If there are more than *M* continuously-indexed PSs failing, at least one PS fails with all of its replica PSs. The ElasticDL job has to recover from a recent checkpoint.
 
-
-
 ## PServer
-
 
 ### Compoments
 
-
 ![pserver](./images/pserver.png)
-
 
 PServer contains three main compoments:
 
@@ -33,7 +28,6 @@ PServer contains three main compoments:
 4. Optimizer gets a gradient from the Gradient Queue.
 5. Then, Optimizer looks up the corresponding parameter from KVStore.
 6. Optimizer applies gradients to parameters, and updates parameter back to KVStore.
-
 
 ### Tensor Data Structure
 
@@ -126,8 +120,6 @@ class KVStore(object):
         pass
 ```
 
-
-
 ### Gradient Queue
 
 We decouple KVStore and Optimizer by a gradient queue to make the overall design clean. And the complexity is all handled at the gradient queue.
@@ -197,36 +189,37 @@ The embedding table slot is also a embedding table data structure. For example, 
 
 PServer provide RPC service for workers.
 
-Since pserver will store a subset of the full model. And a worker will push/pull a submodel from the pserver. The model message is defined as following:
+Since pserver will store a subset of the full model. And a worker will push/pull a submodel from the pserver. 
+
+However, embedding table is initialized lazily in pserver, worker should also send embedding table information to pserver. We have to add another filed to describe embedding table related information.
+
+The model message is defined as following:
 
 ```proto
 
-message Model {
-    int64 version = 1;
-    repeated Tensor tensors = 2;
-}
-```
-
-Model could also be used as gradients collection.
-
-Since embedding table is initialized lazily in pserver, worker should also send embedding table information to pserver.
-
-So the RPC service will be defined as following:
-
-```proto
 message EmbeddingTableInfo{
     string name = 1;
     repeated int64 dims = 2;
     string initializer = 3;
 }
 
-message InitModel {
-    Model model = 1;
-    repeated EmbeddingTableInfo embedding_table_info = 2;
+message Model {
+    int64 version = 1;
+    repeated Tensor tensors = 2;
+    repeated EmbeddingTableInfo embedding_table_info = 3;
 }
+```
+
+Model could also be used as gradients collection.
+
+
+
+So the RPC service will be defined as following:
+
+```proto
 
 service PServer{
-    rpc push_model(InitModel) returns (google.protobuf.Empty) {}
+    rpc push_model(Model) returns (google.protobuf.Empty) {}
     rpc pull_model(Model) returns (Model) {}
     rpc pull_embedding_vector(Tensor) returns (EmbeddingResponse) {}
     rpc push_gradient(Model) returns (google.protobuf.Empty)
