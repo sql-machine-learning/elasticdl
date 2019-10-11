@@ -42,7 +42,7 @@ class KVStore(object):
 
     def set_parameter(self, name, value):
         pass
-q
+
     def set_embedding_vector(self, name, indices, value):
         pass
 ```
