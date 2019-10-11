@@ -4,7 +4,6 @@ from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
-    remove_end_slash,
 )
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.image_builder import (
@@ -14,7 +13,7 @@ from elasticdl.python.elasticdl.image_builder import (
 
 
 def train(args):
-    model_zoo = remove_end_slash(args.model_zoo)
+    model_zoo = os.path.normpath(args.model_zoo)
 
     image_name = build_and_push_docker_image(
         model_zoo=model_zoo,
@@ -48,7 +47,7 @@ def train(args):
 
 
 def evaluate(args):
-    model_zoo = remove_end_slash(args.model_zoo)
+    model_zoo = os.path.normpath(args.model_zoo)
 
     image_name = build_and_push_docker_image(
         model_zoo=model_zoo,
@@ -80,7 +79,7 @@ def evaluate(args):
 
 
 def predict(args):
-    model_zoo = remove_end_slash(args.model_zoo)
+    model_zoo = os.path.normpath(args.model_zoo)
 
     image_name = build_and_push_docker_image(
         model_zoo=model_zoo,
