@@ -5,13 +5,17 @@ from elasticdl.python.common.constants import Mode
 
 def custom_model():
     inputs = tf.keras.layers.Input(shape=(4, 1), name="input")
-    outputs = tf.keras.layers.Dense(3, name="output")(inputs)
+    x = tf.keras.layers.Flatten()(inputs)
+    outputs = tf.keras.layers.Dense(3, name="output")(x)
     return tf.keras.Model(inputs=inputs, outputs=outputs, name="simple-model")
 
 
 def loss(output, labels):
     return tf.reduce_mean(
-        tf.nn.sparse_softmax_cross_entropy_with_logits(labels, output)
+        tf.nn.sparse_softmax_cross_entropy_with_logits(
+            tf.cast(tf.reshape(labels, [-1]), tf.int32),
+            output
+        )
     )
 
 
