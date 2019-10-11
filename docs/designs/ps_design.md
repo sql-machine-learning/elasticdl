@@ -23,6 +23,48 @@ PS contains two main compoments:
 
 The worker initializes a model, and pushes parameters to KVStore. Before each step of training, the worker pulls the latest model from KVStore. After a round of forward/backward computation, the worker pushes gradients to the PS waiting for processing. Then, optimizer of PS will look up the corresponding parameter from KVStore. At last, it applies gradients to parameters, and updates parameter back to KVStore.
 
+
+### KVStore
+
+The KVStore could be like following:
+
+```python
+class KVStore(object):
+    def __init__(self):
+        self.variable_db = {}
+        self.embedding_table_db = {}
+
+    def get_parameter(self, name):
+        pass
+
+    def get_embedding_vector(self, name, indices):
+        pass
+
+    def set_parameter(self, name, value):
+        pass
+q
+    def set_embedding_vector(self, name, indices, value):
+        pass
+```
+
+For a common model variable, we use save it as a `tf.Variable` in Parameter DB. For the embedding table, we introduce a customized data structure.
+
+```python
+class EmbeddingTable(object):
+    def __init__(self, name, meta_info):
+        self.name = name
+        self.meta_info = meta_info
+        self.vectors = {}
+
+    def get(self, indices):
+        pass
+
+    def set(self, indices, value):
+        pass
+```
+
+The name of embedding table is the embedding layer name. EmbeddingTable uses a dictionary `vectors` to store `<id, embedding_vector>` pairs.
+
 ### Tensor Data Structure
 
 To support data communication between pods, we introduce a `Tensor` proto message:
@@ -71,48 +113,6 @@ def convert_to_tf_variable(tensor):
 
 def convert_to_tf_tensor(tensor):
     pass
-```
-
-### KVStore
-
-For a common model variable, we use save it as a `tf.Variable` in Parameter DB. For the embedding table, we introduce a customized data structure.
-
-
-```python
-class EmbeddingTable(object):
-    def __init__(self, name, meta_info):
-        self.name = name
-        self.meta_info = meta_info
-        self.vectors = {}
-        
-    def get(self, indices):
-        pass
-        
-    def set(self, indices, value):
-        pass        
-```
-
-The name of embedding table is the embedding layer name. EmbeddingTable uses a dictionary `vectors` to store `<id, embedding_vector>` pairs.
-
-The KVStore could be like following:
-
-```python
-class KVStore(object):
-    def __init__(self):
-        self.var_db = {}
-        self.embedding_table_db = {}
-        
-    def get_param(self, name):
-        pass
-        
-    def get_embedding_vector(self, name, indices):
-        pass
-        
-    def set_param(self, name, value):
-        pass
-        
-    def set_embedding_vector(self, name, indices, value):
-        pass
 ```
 
 ### Optimizer
@@ -186,11 +186,16 @@ So the RPC service will be defined as following:
 
 ```proto
 
+message PushGradientResponse {
+    bool accepted = 1;
+    int64 version = 2;
+}
+
 service PServer{
     rpc push_model(Model) returns (google.protobuf.Empty) {}
     rpc pull_variable(Model) returns (Model) {}
     rpc pull_embedding_vector(Tensor) returns (EmbeddingResponse) {}
-    rpc push_gradient(Model) returns (google.protobuf.Empty)
+    rpc push_gradient(Model) returns (PushGradientResponse)
 }
 ```
 
