@@ -202,10 +202,12 @@ message Model {
 
 Model could also be used as gradients collection.
 
+Since embedding table is initialized lazily in pserver, worker should also send embedding table information to pserver.
+
 So the RPC service will be defined as following:
 
 ```proto
-message EmbeddingInfo{
+message EmbeddingTableInfo{
     string name = 1;
     repeated int64 dims = 2;
     string initializer = 3;
@@ -213,7 +215,7 @@ message EmbeddingInfo{
 
 message InitModel {
     Model model = 1;
-    repeated EmbeddingInfo embedding_infos = 2;
+    repeated EmbeddingTableInfo embedding_table_info = 2;
 }
 
 service PServer{
