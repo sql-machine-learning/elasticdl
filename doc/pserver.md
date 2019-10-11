@@ -173,7 +173,6 @@ The second way ensure each gradient could be applied, and decoupling these two p
 
 We may consider the second way later.
 
-
 In sync-SGD, optimizer needs to wait for a certain number of gradients, and then get the gradient after addition. We could implement a customized queue structure to support such logic efficiently.
 
 ### Optimizer
@@ -194,6 +193,7 @@ PServer provide RPC service for workers.
 Since pserver will store a subset of the full model. And a worker will push/pull a submodel from the pserver. The model message is defined as following:
 
 ```proto
+
 message Model {
     int64 version = 1;
     repeated Tensor tensors = 2;
@@ -205,18 +205,23 @@ Model could also be used as gradients collection.
 So the RPC service will be defined as following:
 
 ```proto
-message EmbeddingResponse{
-    Tensor value = 1;
-    repeated int64 unknown_indices = 2;
+message EmbeddingInfo{
+    string name = 1;
+    repeated int64 dims = 2;
+    string initializer = 3;
+}
+
+message InitModel {
+    Model model = 1;
+    repeated EmbeddingInfo embedding_infos = 2;
 }
 
 service PServer{
-    rpc push_model(Model) returns (google.protobuf.Empty) {}
+    rpc push_model(InitModel) returns (google.protobuf.Empty) {}
     rpc pull_model(Model) returns (Model) {}
     rpc pull_embedding_vector(Tensor) returns (EmbeddingResponse) {}
     rpc push_gradient(Model) returns (google.protobuf.Empty)
 }
-
 ```
 
 The interfaces of PServer could be like this:
@@ -224,7 +229,7 @@ The interfaces of PServer could be like this:
 
 ```python
 class PServer(elasticdl_pb2_grpc.PServerServicer):
-    def __init__(self, opt):
+    def __init__(self, kvstore, grad_queue, opt):
         self.kvstore = KVStore()
         self.grad_queue = GradientQueue()
         self.opt = Optimizer(opt, self.kvstore, self.grad_queue)
