@@ -483,13 +483,13 @@ class Worker(object):
                 err_msg = data_err_msg
                 break
         del eval_dataset
-        self.report_task_result(task_id, err_msg)
         accepted, _ = self.report_evaluation_metrics(
             self._evaluation_result[MetricsDictKey.MODEL_OUTPUT],
             self._evaluation_result[MetricsDictKey.LABEL],
         )
         if not accepted:
             raise RuntimeError("Report evaluation metric failed!")
+        self.report_task_result(task_id, err_msg)
         self._evaluation_result = {}
         return True
 
