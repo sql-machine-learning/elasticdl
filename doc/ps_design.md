@@ -275,16 +275,16 @@ When the master decides to save checkpoint, the master tells all the pservers to
 
 
 ## Embedding Replicas in PS
-An ElasticDL job has *N* PSs. Embedding vectors are partitioned into these *N* PSs. The user provides *M*, the number of replicas for embedding vectors. *M* must be smaller than *N* as each PS uses other PSs to store its embedding replicas.
+An ElasticDL job has *N* PS nodes. Embedding vectors are partitioned into these PS nodes. The user provides *M*, the number of replicas for embedding vectors. *M* must be smaller than *N* as each PS node uses other PS nodes to store its embedding replicas.
 
-Assume *E(i)* is the embedding vectors in PS *PS(i)*, it has *M* replicas which are stored in PSs from *P(i + 1 % N)* to *P(i + M % N)*. Also, *PS(i)* has replicas for *E(i - M % N)* to *E(i - 1 % N)*. 
+Assume *E(i)* is the embedding vectors in PS node *PS(i)*, it has *M* replicas which are stored in PS nodes from *P((i + 1) % N)* to *P((i + M) % N)*. Also, *PS(i)* has *M* other PS node replicas from *E((i - M) % N)* to *E((i - 1) % N)*. 
 
-*PS(i)* stores *E(i)* as a dictionary so that every embedding vector has a corresponding key.  *PS(i)* maintains *M* updated embedding vector key sets *UKS_i(j) for j from 0 to M - 1*. When *PS(i)* sparsely updates its embedding vectors *E(i)*, it also add the updated embedding vector keys into these *M* sets. 
+*PS(i)* maintains *M* updated embedding vector key sets *UKS_i(j) for j from 0 to M - 1*. When *PS(i)* sparsely updates its embedding vectors *E(i)*, it also add the updated embedding vector keys into these *M* sets. 
 
 
-*PS(i)* also periodically synchronize the replicas stored in it from *E(i - M % N)* to *E(i - 1 % N)*. The synchronization frequency can be several seconds.
+*PS(i)* also periodically synchronize the replicas stored in it from PS nodes *PS((i - M) % N)* to *PS((i - 1) % N)*. The synchronization frequency can be several seconds.
 
-Each PS will provide a GRPC service for the replica synchronization.
+Each PS will provide a gRPC service for the replica synchronization.
 
 ```
 message SynchronizeEmbeddingRequest {
@@ -302,23 +302,22 @@ rpc SynchronizeEmbedding(SynchronizeEmbeddingRequest) returns (SynchronizeEmbedd
 rpc GetReplica(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
 ```
 
-Each PS has a thread dedicated for replica synchronization. In this dedicated thread, PS will synchronize the stored replicas in it.
+Each PS node has a thread dedicated for the replica synchronization:
 
 ```
 # T is the number of seconds for synchronization frequency
-# Assume current PS is PS(i), self._stub[index] is the stub for PS(i - index)'s GRPC server.
-# self.replicas[index] is the replica for PS(i - index).
+# Assume current PS is PS(i), self._stub[index] is the stub for PS((i - index) % N)'s GRPC server.
+# self.replicas[index] is the replica for PS((i - index) % N).
 req = elasticdl_pb2.SynchronizeEmbeddingRequest()
 while still training:
     time.sleep(T)
-    for replica_index in range(M):
-        req.replica_index = replica_index
+    for index in range(M):
+        req.replica_index = index
         updated_vectors = self._stub[replica_index].SynchronizeEmbedding(req)
-        for key in updated_vectors.embedding_vectors:
-            self.replicas[index][key] = updated_vectors.embedding_vectors[key] 
+        update self.replicas[index] from updated_vectors.embedding_vectors
 ```
 
-The implementation of the GRPC services:
+The implementation of the gRPC services:
 
 ```
 def SynchronizeEmbedding(self, request, _):
@@ -326,17 +325,13 @@ def SynchronizeEmbedding(self, request, _):
     # self.UKS are the M updated embedding vector key sets in current PS
     # self.embedding_vector are the embedding vectors in current PS
     with self.lock():
-        for key in self.UKS[request.replica_index]:
-            synch_embeddings.embedding_vectors[key].CopyFrom(self.embedding_vector[key])
+        assign synch_embeddings.embedding_vectors from self.embedding_vector
         self.UKS.clear()
     return synch_embeddings
     
 def GetReplica(self, request, _):
     replica = elasticdl_pb2. SynchronizeEmbeddingResponse()
-    for key in self.replicas[request.replica_index]:
-        replica.embedding_vectors[key].CopyFrom(self.replicas[request.replica_index][key])
+    assign replica.embedding_vectors from self.replicas[request.replica_index]
     return replica
 ```
-Note that PS also need the lock for adding updated embedding vector keys into `self.UKS` after embedding table sparse update.
-
-
+Note that PS also needs the lock for adding updated embedding vector keys into `self.UKS` after embedding table sparse updates.
