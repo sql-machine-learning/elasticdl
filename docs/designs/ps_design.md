@@ -192,10 +192,10 @@ message PushGradientResponse {
 }
 
 service PServer{
-    rpc push_model(Model) returns (google.protobuf.Empty) {}
-    rpc pull_variable(Model) returns (Model) {}
-    rpc pull_embedding_vector(Tensor) returns (EmbeddingResponse) {}
-    rpc push_gradient(Model) returns (PushGradientResponse)
+    rpc push_model(Model) returns (google.protobuf.Empty);
+    rpc pull_variable(PullModelRequest) returns (PullModelResponse);
+    rpc pull_embedding_vector(Tensor) returns (EmbeddingTable);
+    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
 }
 ```
 
@@ -242,16 +242,62 @@ The following events involve interactions among the master, workers and PS:
 * The master tells PS to save checkpoint.
 
 ### The master starts PS
-When an ElasticDL task starts, `master.main` is responsible for starting PS as a Kubernetes service. Through kubernetes service, we can fix domain name for every PS node. 
+When an ElasticDL task starts, `master.main` is responsible for starting PS as a Kubernetes service. Through Kubernetes service, we can fix domain name for every PS node.
 
-After starting PS, `master.main` starts the master servicer and workers, and tells them the domain name of PS. For PS with embedding replicas, every PS node also needs to know the domain name of its replicas.
+After starting PS, `master.main` starts the master servicer and workers, and tells them the domain names of all PS nodes. For PS with embedding replicas, every PS node also needs to know the domain name of its replicas.
 
 ### Initialization of parameters in PS
-PS does not have any model variable and model meta info after starting. Model meta info includes dimension of embedding layers, initialization methods of embedding vectors, initialization methods of slot variables in optimizer.
+PS does not have any model parameters and model meta info after starting. Model meta info includes dimension of embedding layers, initialization methods of embedding vectors, initialization methods of slot variables in optimizer.
 
-There are two ways for PS to get model variables and model meta info, one is to read from a checkpoint file, one is to obtain them from workers.
+There are two ways for PS to get model parameters and model meta info, one is to read from a checkpoint file, one is to obtain them from workers.
 
-When `master.main` starts PS, `master.main` decides how to initialize PS. If `master.main` passes an argument specifying the checkpoint file name to PS, PS reads from the checkpoint. Otherwise, PS does nothing but waiting for the first `get_model` from worker. In the reponse of `get_model` call, PS tells the worker to initialize model, and report model variables and meta info to the PS.
+When `master.main` starts PS, `master.main` decides how to initialize PS according to the arguments specified by users (train from scratch or train from checkpoint).
+
+If `master.main` passes an argument specifying the checkpoint file name to PS, PS reads from the checkpoint. Every PS node scans the variables and embedding vectors in the checkpoint, and saves the part which belong to it after parameter sharding.
+
+Otherwise, PS obtains model variables and model meta info from workers. PS does nothing but waiting for the first `pull_variable` call from worker. In the reponse of `pull_variable` call, PS tells the worker to initialize model, and report model variables and meta info to the PS. This process can be represented in the pseudocode:
+
+```python
+message PullModelRequest{
+    ... # keep the same with current code `GetModelRequest`
+}
+
+message PullModelResponse{
+    bool need_push_model = 1;
+    Model model = 2;
+}
+
+class PServer(elasticdl_pb2_grpc.PServerServicer):
+    ...
+    def pull_variable(self, request):
+        res = PullModelResponse()
+        if self._need_initialize_model:
+            res.need_push_model = True
+            return res
+        res.need_push_model = False
+        res.model = self._get_model() # get model in this PS node
+        return res
+
+def push_model(self, request):
+    model = request.model
+    ... # initialize model in this PS node
+		
+class Worker(object):
+    ...
+    def pull_variable(self):
+        # for-loop should be implemented in multithread
+        for ps_index in range(self._ps_node_num):
+            req = PullModelRequest() # create request code keeps the same with current code 
+            res = self._stub[ps_index].pull_variable() # pull variable from PS
+            if res.need_push_model:
+                // worker initializes its model here if needed
+                model = transform_worker's_model_to_protobuf()
+                self._stub[ps_index].push_model(model) # get model in this worker
+            req = PullModelRequest() # create request code keeps the same with current code
+            res = self._stub[ps_index].pull_variable() # pull variable from PS
+            if res.need_push_model:
+                raise Error or try a pre-defined constant times
+```
 
 Please Note that the worker only initializes model variables. ElasticDL adopts lazy initialization for embedding vectors. Please refer to "[Workers get model parameters from PS](#Workers-get-model-parameters-from-PS)" section.
 
@@ -260,24 +306,62 @@ In case a PS pod fails, the master will try to relaunch one PS and it should rec
 
 For model variables, PS can recover from workers in the same way as the variable initialization.
 
-For embedding tables, the `master.main` tells PS through in starting command that PS should recover from replica. If there is no replica, PS has to recover from checkpoint.
+For embedding tables, the `master.main` tells PS through in starting command that PS should recover from replica. If there is no replica, PS has to recover from checkpoint. More details can be find in section [Embedding Replicas in PS](#Embedding-Replicas-in-PS).
 
 ### Workers get model variables from PS
 Before each forward-pass, workers need to get all model variables from PS. Currently, workers call function `get_model()` to get variables.
 
 Workers get embedding vectors from PS when the forward-pass function of the ElasticDL embedding layer is called. PS may not possess all the embedding vectors needed because ElasticDL adopts lazy initialization for embedding vectors, i.e. iniatializing embedding vectors when they are needed. Thus, if a worker wants to pull some embedding vectors that are not existing in PS, PS will create and initialize these embedding vectors and return their value to the worker.
 
+```python
+message EmbeddingTable{
+    string name;
+    Tensor embeddings;
+}
+service PServer{
+    rpc pull_embedding_vector(Tensor) returns (EmbeddingTable);
+}
+```
+
 ### Push Gradients
 After backward-pass, workers push gradients to PS.
 
+```python
+message PushGradientRequest{
+    int32 model_version = 1;
+    repeated Tensor gradient = 2;
+}
+message PushGradientResponse{
+    bool accepted = 1;
+    int32 model_version = 2;
+}
+service PServer{
+    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
+}
+```
+
 ### PS reports submodel version to the master
-The master needs to know the model version to decide when to save checkpoint and when to evaluate model. PS regularly reports the version of the submodel it possessed to the master. 
+The master needs to know the model version to decide when to save checkpoint and when to evaluate model. PS regularly reports the version of the submodel it possessed to the master.
 
 Please note different pserver has different submodel version. The master choose the maximum of these submodel versions as the current model version.
+
+```python
+message ReportSubmodelVersionRequest{
+    int32 model_version = 1;
+}
+service PServer{
+    rpc report_submodel_version(ReportSubmodelVersionRequest) returns (google.protobuf.Empty);
+}
+```
 
 ### The master tells PS to save checkpoint
 When the master decides to save checkpoint, the master tells all the pservers to save checkpoint. Every pserver saves the submodel it possessed into a separate file.
 
+```python
+service PServer{
+    rpc save_checkpoint(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+```
 
 ## Embedding Replicas in PS
 An ElasticDL job has *N* PS nodes. Embedding vectors are partitioned into these PS nodes. The user provides *M*, the number of replicas for embedding vectors. *M* must be smaller than *N* as each PS node uses other PS nodes to store its embedding replicas.
