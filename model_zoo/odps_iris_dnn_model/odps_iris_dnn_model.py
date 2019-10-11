@@ -13,8 +13,7 @@ def custom_model():
 def loss(output, labels):
     return tf.reduce_mean(
         tf.nn.sparse_softmax_cross_entropy_with_logits(
-            tf.cast(tf.reshape(labels, [-1]), tf.int32),
-            output
+            tf.cast(tf.reshape(labels, [-1]), tf.int32), output
         )
     )
 
