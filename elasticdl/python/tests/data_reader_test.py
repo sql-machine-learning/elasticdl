@@ -140,6 +140,7 @@ class ODPSDataReaderTest(unittest.TestCase):
         dataset = dataset_fn(
             dataset, None, Metadata(column_names=IRIS_TABLE_COLUMN_NAMES)
         )
+        dataset = dataset.batch(1)
 
         loss_history = []
         grads = None
