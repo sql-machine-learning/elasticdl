@@ -1,5 +1,6 @@
 import traceback
 
+import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
@@ -114,6 +115,7 @@ class Worker(object):
         if self._get_model_steps > 1:
             self._opt = self._opt_fn()
             self._non_embed_grads = None
+        self._evaluation_result = {}
 
     # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
@@ -267,11 +269,11 @@ class Worker(object):
         from rpc call.
         """
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
-        if not isinstance(model_outputs, dict):
-            model_outputs = {MetricsDictKey.MODEL_OUTPUT: model_outputs}
         for name, output in model_outputs.items():
-            req.model_outputs[name].CopyFrom(ndarray_to_tensor(output.numpy()))
-        req.labels.CopyFrom(ndarray_to_tensor(labels.numpy()))
+            output = np.concatenate(output)
+            req.model_outputs[name].CopyFrom(ndarray_to_tensor(output))
+        labels = np.concatenate(labels)
+        req.labels.CopyFrom(ndarray_to_tensor(labels))
         req.model_version = self._model_version
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
@@ -380,10 +382,26 @@ class Worker(object):
         self._reset_embedding()
         return accepted, min_model_version, loss
 
+    def _collect_evaluation_result(self, outputs, labels):
+        key = MetricsDictKey.MODEL_OUTPUT
+        if key not in self._evaluation_result:
+            outputs = {k: [v.numpy()] for k, v in outputs.items()}
+            self._evaluation_result[key] = outputs
+        else:
+            for k, v in outputs.items():
+                self._evaluation_result[key][k].append(v.numpy())
+        key = MetricsDictKey.LABEL
+        if key not in self._evaluation_result:
+            self._evaluation_result[key] = [labels.numpy()]
+        else:
+            self._evaluation_result[key].append(labels.numpy())
+
     def _run_evaluation_task(self, features, labels):
         outputs = self.forward_process(features)
-        accepted, _ = self.report_evaluation_metrics(outputs, labels)
-        return accepted
+        if not isinstance(outputs, dict):
+            outputs = {MetricsDictKey.MODEL_OUTPUT: outputs}
+        self._collect_evaluation_result(outputs, labels)
+        return True
 
     def _run_prediction_task(self, features):
         predictions = self.forward_process(features)
@@ -465,7 +483,14 @@ class Worker(object):
                 err_msg = data_err_msg
                 break
         del eval_dataset
+        accepted, _ = self.report_evaluation_metrics(
+            self._evaluation_result[MetricsDictKey.MODEL_OUTPUT],
+            self._evaluation_result[MetricsDictKey.LABEL],
+        )
+        if not accepted:
+            raise RuntimeError("Report evaluation metric failed!")
         self.report_task_result(task_id, err_msg)
+        self._evaluation_result = {}
         return True
 
     def _process_minibatch_and_report(
