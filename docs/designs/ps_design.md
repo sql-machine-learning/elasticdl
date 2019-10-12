@@ -253,7 +253,7 @@ If `master.main` passes an argument specifying the checkpoint file name to PS, P
 
 Otherwise, PS obtains model variables and model meta info from workers. PS does nothing but waiting for the first `pull_variable` call from worker. In the reponse of `pull_variable` call, PS tells the worker to initialize model, and report model variables and meta info to the PS. This process can be represented in the pseudocode:
 
-```python
+```proto
 message PullModelRequest{
     enum MethodType {
         MINIMUM = 0;
@@ -266,7 +266,9 @@ message PullModelResponse{
     bool need_push_model = 1;
     Model model = 2;
 }
+```
 
+```python
 class PServer(elasticdl_pb2_grpc.PServerServicer):
     ...
     def pull_variable(self, request):
@@ -278,9 +280,9 @@ class PServer(elasticdl_pb2_grpc.PServerServicer):
         res.model = self._get_model() # get model in this PS node
         return res
 
-def push_model(self, request):
-    model = request.model
-    ... # initialize model in this PS node
+    def push_model(self, request):
+        model = request.model
+        ... # initialize model in this PS node
 		
 class Worker(object):
     ...
@@ -291,7 +293,7 @@ class Worker(object):
             res = self._stub[ps_index].pull_variable() # pull variable from PS
             if res.need_push_model:
                 // worker initializes its model here if needed
-                model = transform_worker's_model_to_protobuf()
+                model = serialize_model_to_pb()
                 self._stub[ps_index].push_model(model) # get model in this worker
             req = PullModelRequest() # create request code keeps the same with current code
             res = self._stub[ps_index].pull_variable() # pull variable from PS
