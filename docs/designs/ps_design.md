@@ -51,9 +51,10 @@ For a common model variable, we use save it as a `tf.Variable` in Parameter DB. 
 
 ```python
 class EmbeddingTable(object):
-    def __init__(self, name, meta_info):
+    def __init__(self, name, dim, initializer):
         self.name = name
-        self.meta_info = meta_info
+        self.dim = dim
+        self.initializer = initializer
         self.vectors = {}
 
     def get(self, indices):
@@ -64,6 +65,8 @@ class EmbeddingTable(object):
 ```
 
 The name of embedding table is the embedding layer name. EmbeddingTable uses a dictionary `vectors` to store `<id, embedding_vector>` pairs.
+
+Since embedding table is lazily initialized in PS, it also has `dim` and `initializer` fields.
 
 ### Tensor Data Structure
 
@@ -82,7 +85,7 @@ message Tensor {
     }
     string name = 1;
     DataType data_type = 2;
-    repeated int64 dims = 3;
+    repeated int64 dim = 3;
     bytes content = 4;
     repeated int64 indices = 5;
 }
@@ -168,7 +171,7 @@ The model message is defined as following:
 
 message EmbeddingTableInfo{
     string name = 1;
-    repeated int64 dims = 2;
+    repeated int64 dim = 2;
     string initializer = 3;
 }
 
@@ -194,7 +197,7 @@ message PushGradientResponse {
 service PServer{
     rpc push_model(Model) returns (google.protobuf.Empty);
     rpc pull_variable(PullModelRequest) returns (PullModelResponse);
-    rpc pull_embedding_vector(Tensor) returns (EmbeddingTable);
+    rpc pull_embedding_vector(Tensor) returns (Tensor);
     rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
 }
 ```
@@ -329,7 +332,7 @@ After backward-pass, workers push gradients to PS.
 ```python
 message PushGradientRequest{
     int32 model_version = 1;
-    repeated Tensor gradient = 2;
+    repeated Tensor gradients = 2;
 }
 message PushGradientResponse{
     bool accepted = 1;
