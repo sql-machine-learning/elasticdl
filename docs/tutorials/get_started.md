@@ -15,7 +15,7 @@ The following tutorials demonstrates how to run ElasticDL on different environme
 [Minikube](https://kubernetes.io/docs/setup/learning-environment/minikube/) is a tool that makes it easy to run Kubernetes locally.
 It runs a single-node Kubernetes cluster inside a Virtual Machine (VM) on the laptop so developers can try out Kubernetes or develop with it day-to-day.
 
-[This tutorial](elastic_local.md) uses Minikube to run ElasticDL on a local laptop.
+[This tutorial](elasticdl_local.md) uses Minikube to run ElasticDL on a local laptop.
 
 
 ### ElasticDL on On-prem Cluster
