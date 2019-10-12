@@ -70,7 +70,7 @@ Since embedding table is lazily initialized in PS, it also has `dim` and `initia
 
 ### Tensor Data Structure
 
-To support data communication between pods, we introduce a `Tensor` proto message:
+To support data communication between workers and PS, we introduce a `Tensor` proto message:
 
 ```proto
 message Tensor {
@@ -143,7 +143,7 @@ We may consider the second way later.
 
 In sync-SGD, optimizer needs to wait for a certain number of gradients, and then get the gradient after addition. We could implement a customized gradient queue structure to support such logic efficiently.
 
-The interface of Gradient Queue could be like this:
+The interface of gradient queue could be like this:
 
 ```python
 class GradientQueue(object):
@@ -159,11 +159,11 @@ class GradientQueue(object):
 
 ### RPC Service
 
-PServer provide RPC service for workers.
+PS provides RPC service for workers.
 
-Since pserver will store a subset of the full model. And a worker will push/pull a submodel from the pserver. 
+Since PS will store a subset of the full model. And a worker will push/pull a submodel from the PS.
 
-However, embedding table is initialized lazily in pserver, worker should also send embedding table information to pserver. We have to add another filed to describe embedding table related information.
+However, embedding table is initialized lazily in PS, worker should also send embedding table information to PS. We have to add another filed to describe embedding table related information.
 
 The model message is defined as following:
 
@@ -182,18 +182,9 @@ message Model {
 }
 ```
 
-Model could also be used as gradients collection.
-
-
 So the RPC service will be defined as following:
 
 ```proto
-
-message PushGradientResponse {
-    bool accepted = 1;
-    int64 version = 2;
-}
-
 service PServer{
     rpc push_model(Model) returns (google.protobuf.Empty);
     rpc pull_variable(PullModelRequest) returns (PullModelResponse);
@@ -201,6 +192,8 @@ service PServer{
     rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
 }
 ```
+
+For the details of RPC service definition, please refer to next section.
 
 The interfaces of PServer could be like this:
 
@@ -262,7 +255,11 @@ Otherwise, PS obtains model variables and model meta info from workers. PS does 
 
 ```python
 message PullModelRequest{
-    ... # keep the same with current code `GetModelRequest`
+    enum MethodType {
+        MINIMUM = 0;
+        FIXED = 1;
+    }
+    int64 version = 2;
 }
 
 message PullModelResponse{
@@ -317,12 +314,8 @@ Before each forward-pass, workers need to get all model variables from PS. Curre
 Workers get embedding vectors from PS when the forward-pass function of the ElasticDL embedding layer is called. PS may not possess all the embedding vectors needed because ElasticDL adopts lazy initialization for embedding vectors, i.e. iniatializing embedding vectors when they are needed. Thus, if a worker wants to pull some embedding vectors that are not existing in PS, PS will create and initialize these embedding vectors and return their value to the worker.
 
 ```python
-message EmbeddingTable{
-    string name;
-    Tensor embeddings;
-}
 service PServer{
-    rpc pull_embedding_vector(Tensor) returns (EmbeddingTable);
+    rpc pull_embedding_vector(Tensor) returns (Tensor);
 }
 ```
 
