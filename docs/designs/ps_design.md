@@ -161,9 +161,9 @@ class GradientQueue(object):
 
 PS provides RPC service for workers.
 
-Since PS will store a subset of the full model. And a worker will push/pull a submodel from the PS.
+Since each PS node will store a subset of the whole model. A worker will push/pull submodels to/from all PS nodes.
 
-However, embedding table is initialized lazily in PS, worker should also send embedding table information to PS. We have to add another filed to describe embedding table related information.
+However, embedding table is initialized lazily in PS, worker should also send embedding table information to PS. We have to add another field to describe embedding table related information.
 
 The model message is defined as following:
 
@@ -221,9 +221,9 @@ class PServer(elasticdl_pb2_grpc.PServerServicer):
 
 ### Checkpoint and Serving
 
-Master will send signal to pservers to make checkpoint. Each pserver will save parameters in its current KVStore to a distributed file system.
+Master will send signal to PS to make checkpoint. Each PS node will save parameters in its current KVStore to a distributed file system.
 
-Since a pserver only has a subset of the whole model, we have to merge these submodels to get final model for serving.
+Since a PS node only has a subset of the whole model, we have to merge these submodels to get final model for serving.
 
 
 ## Interactions among Master, PS and Worker
