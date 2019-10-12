@@ -7,12 +7,12 @@ The document describes the ElasticDL evaluation process design.
 The master starts to evaluate model every many steps defined by `eval_steps` or every many seconds defined by `eval_secs`. When an evaluation job starts, the master creates evaluation tasks and inserts them into todo queue at head. Then the worker pulls an evaluation task after completing the current task. Because evaluation tasks are located at the head of todo queue.\
 The worker pulls model from parameter serve (pserver) and calculates model prediction outputs with records in the evaluation task, then it reports outputs to master. The evaluation sequence is shown as:
 
-![evaluate_sequence](/doc/figures/evaluate_sequence.svg)
+![evaluate_sequence](/docs/images/evaluate_sequence.svg)
  <em>Figure 1 </em>. ElasticDL Evaluate Sequence
 
 In order to speed up training, the worker creates `tf.data.Dataset` by [tf.data]((https://www.tensorflow.org/guide/data_performance)) API to construct an input pipeline to load data. The flowchart of train loop and evaluation in worker is shown as:
 
-![evaluate_flowchart](/doc/figures/train_and_evaluate_flowchart.svg)
+![evaluate_flowchart](/docs/images/train_and_evaluate_flowchart.svg)
 <em>Figure 2 </em>. Flowchart of Train and Evaluation in Worker
 
 While the worker is performing train step N, the Dataset.prefetch thread is preparing the data for step N+1. If step N is the last batch in the task, the generator in the worker for dataset will get next task until the task mode is train. Then worker generates a train batch for step N+1 by Dataset.prefetch. 
@@ -31,7 +31,7 @@ As shown in <em>Figure 1</em>. The worker 1 gets model from the pserver at 15th 
 1. The pserver updates model variables if it receives gradient from the worker after an evaluation job starts.\
 The solution is the same as existing design in ElasticDL which can not resolve Problem 2. In order to resolve Problem 1, the master can divide train and evaluation tasks into two todo lists at 10th step in <em>Figure 1</em>. When evaluation starts, the master generates evaluation tasks and inserts those into evaluation todo list not train list. Meanwhile the master needs to tell all pservers to change the model mode to evaluation.  The worker starts to pull evaluation tasks and inferences outputs when the mode of model it gets is evaluation. The pserver updates model variables by the mini-batch gradients from each worker at most once. Because the model mode is evaluating when the worker get for next mini-batch. The master will change the model mode to train after receiving all record outputs of evaluation tasks. Then worker(s) continues to process training tasks.
 
-![evaluate_flowchart_proposal](/doc/figures/train_and_evaluate_flowchart_proposal.svg)
+![evaluate_flowchart_proposal](/docs/images/train_and_evaluate_flowchart_proposal.svg)
 <em>Figure 3 </em>. Proposal Flowchart of Train and Evaluation
 
 2. Pserver stops to update model variables when an evaluation job starts.\
