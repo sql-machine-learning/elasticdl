@@ -10,7 +10,7 @@ The worker pulls model from parameter serve (pserver) and calculates model predi
 ![evaluate_sequence](/doc/figures/evaluate_sequence.svg)
  <em>Figure 1 </em>. ElasticDL Evaluate Sequence
 
-In order to speed up training, the worker creates `tf.data.Dataset` by [tf.data]((https://www.tensorflow.org/guide/data_performance)) API to construct an input pipeline to load data. The flowchart of train loop and evluation in worker is shown as:
+In order to speed up training, the worker creates `tf.data.Dataset` by [tf.data]((https://www.tensorflow.org/guide/data_performance)) API to construct an input pipeline to load data. The flowchart of train loop and evaluation in worker is shown as:
 
 ![evaluate_flowchart](/doc/figures/train_and_evaluate_flowchart.svg)
 <em>Figure 2 </em>. Flowchart of Train and Evaluation in Worker
@@ -24,39 +24,39 @@ As shown in the 10th step of <em> Figure 1.</em>, the master generates evaluatio
 
 * Problem 2: 
 For current ElasticDL, workers may use different model versions for evaluation for embedding vectors. For non-embedding variables, workers will use the same version from checkpoint.\
-As shown in <em>Figure 1</em>. The worker 1 gets model from the pserver at 15th step and the worker 2 gets model later at 25th step for the reason that the worker 2 is slower. However, the pserver has updated the model by gradients from the worker 2 before the worker2 gets the model to evaluate. So records assigned to different worker in a same validation dataset will be evluated with different model verion. 
+As shown in <em>Figure 1</em>. The worker 1 gets model from the pserver at 15th step and the worker 2 gets model later at 25th step for the reason that the worker 2 is slower. However, the pserver has updated the model by gradients from the worker 2 before the worker2 gets the model to evaluate. So records assigned to different worker in a same validation dataset will be evaluated with different model version. 
 
 
 ## Evaluate with Current Model in Pserver 
 1. The pserver updates model variables if it receives gradient from the worker after an evaluation job starts.\
-The solution is the same as existing desigin in ElasticDL which can not resolve Problem 2. In order to resolve Problem 1, the master can divide train and evaluation tasks into two todo lists at 10th step in <em>Figure 1</em>. When evalution starts, the master generates evaluation tasks and inserts those into evluation todo list not train list. Meanwhile the master needs to tell all pservers to change the model mode to evaluation.  The worker starts to pull evaluation tasks and inferences outputs when the mode of model it gets is evluation. The pserver updates model variables by the mini-batch gradients from each worker at most once. Because the model mode is evluating when the worker get for next mini-batch. The master will change the model mode to train after receiving all record outputs of evluation tasks. Then worker(s) continues to process training tasks.
+The solution is the same as existing design in ElasticDL which can not resolve Problem 2. In order to resolve Problem 1, the master can divide train and evaluation tasks into two todo lists at 10th step in <em>Figure 1</em>. When evaluation starts, the master generates evaluation tasks and inserts those into evaluation todo list not train list. Meanwhile the master needs to tell all pservers to change the model mode to evaluation.  The worker starts to pull evaluation tasks and inferences outputs when the mode of model it gets is evaluation. The pserver updates model variables by the mini-batch gradients from each worker at most once. Because the model mode is evaluating when the worker get for next mini-batch. The master will change the model mode to train after receiving all record outputs of evaluation tasks. Then worker(s) continues to process training tasks.
 
 ![evaluate_flowchart_proposal](/doc/figures/train_and_evaluate_flowchart_proposal.svg)
 <em>Figure 3 </em>. Proposal Flowchart of Train and Evaluation
 
 2. Pserver stops to update model variables when an evaluation job starts.\
-As shown in <em>Figure 1</em>, pserver will not execute the 18th and 19th steps after an evaluation job starts at the 10th step. So, the model worker 2 get is the same as the worker 1. The solution can resolve Problem 2 and also can resolve Problem 1 by solution in <em>Figure 3.</em>. But, the train process must wait all evaluationt tasks have been completed. 
+As shown in <em>Figure 1</em>, pserver will not execute the 18th and 19th steps after an evaluation job starts at the 10th step. So, the model worker 2 get is the same as the worker 1. The solution can resolve Problem 2 and also can resolve Problem 1 by solution in <em>Figure 3.</em>. But, the train process must wait all evaluation tasks have been completed. 
 
 Questions to discuss:
-* None of training checkpoints will be evaluted in above two solutions which is different from tf.estimator. tf.estimator will load the lastest checkpoint saved by train to evaluate in a separated pod named evaluator. 
+* None of training checkpoints will be evaluated in above two solutions which is different from tf.estimator. tf.estimator will load the last checkpoint saved by train to evaluate in a separated pod named evaluator. 
 * Should master preserve the model to checkpoint after evaluation?
 
 ## Evaluate by Loading Checkpoint to Pserver
 Generally, deep learning framework preserves model as checkpoint every many seconds or steps. So pserver can load model from checkpoint for evaluation. There are also two designs for pserver to load model. 
 
-1. The master launches additional pods as evalution pserver.\
+1. The master launches additional pods as evaluation pserver.\
 When an evaluation job starts, the master will launch additional pods as evaluation pservers and evaluation pservers will load model from checkpoint.\
-The worker gets model from evaluation pservers to inference outputs for evluation tasks and reports outputs to master.\
-The master will release those pods after receiving all outputs of evalution tasks from worker.\
+The worker gets model from evaluation pservers to inference outputs for eavauation tasks and reports outputs to master.\
+The master will release those pods after receiving all outputs of evaluation tasks from worker.\
 In this case, evaluation is separated from train. So, some workers can process evaluation tasks and other workers can process train tasks at same time. But more additional pods are needed.
 
 2. Existing pservers stop train task and load model from checkpoint to evaluate.\
-When an evaluation job starts, pservers preserve the current model to temporary file and load model from the lastest checkpoint. After evaluation, pservers will restore model from temporary file preserved and continue to train. \
+When an evaluation job starts, pservers preserve the current model to temporary file and load model from the last checkpoint. After evaluation, pservers will restore model from temporary file preserved and continue to train. \
 The design of pserver will be complicated in this case. What's more,some workers may be reporting gradients when the master change model to evaluation for psersers and pservers can not update model by those gradients at this moment.
 
 
 ## Introduction to tf.estimator to Evaluate
-tf.estimator will launch pods as pservers, workers and evalutor when a distributed train job is submitted with ParameterServerStrategy. The evaluator does not participate in train. tf.estimator decides when to evaluate by [throttle_secs](https://www.tensorflow.org/api_docs/python/tf/estimator/EvalSpec#throttle_secs). tf.estimator will check whether there are new checkpoints in checkpoint directory every throttle_secs after the last evaluation ends. The evaluator only has one instance and it will restore the whole model from the lastest checkpoint. So, evaluaion of tf.estimator is not distributed and not fault-tolerant.
+tf.estimator will launch pods as pservers, workers and evaluator when a distributed train job is submitted with ParameterServerStrategy. The evaluator does not participate in train. tf.estimator decides when to evaluate by [throttle_secs](https://www.tensorflow.org/api_docs/python/tf/estimator/EvalSpec#throttle_secs). tf.estimator will check whether there are new checkpoints in checkpoint directory every throttle_secs after the last evaluation ends. The evaluator only has one instance and it will restore the whole model from the last checkpoint. So, evaluation of tf.estimator is not distributed and not fault-tolerant.
 
 ## Summary:
 1. If difference with gradients of several mini-batches of model between workers to evaluate is acceptable, the first solution in `Evaluate with Current Model in Pserver` can be adopted. Otherwise，the master should send stop signal to pservers to stop update model after an evaluation job starts.
