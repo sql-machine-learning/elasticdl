@@ -131,6 +131,7 @@ class OptimizerWrapper(object):
         self._use_async = use_async
         self._slot_initial_value = {}
 
+        self._opt_weights_delete_lock = threading.Lock()
         self._tls = threading.local()
         self._init_thread_local()
 
@@ -496,12 +497,13 @@ class OptimizerWrapper(object):
                 opt_weight_iter = 0
                 # TODO (yunjian.lmh): Maybe we should delete var from
                 # `self._opt._weights`
-                while opt_weight_iter < len(self._opt._weights):
-                    if var is self._opt._weights[opt_weight_iter]:
-                        self._opt._weights[opt_weight_iter] = None
-                        break
-                    else:
-                        opt_weight_iter += 1
+                with self._opt_weights_delete_lock:
+                    while opt_weight_iter < len(self._opt._weights):
+                        if var is self._opt._weights[opt_weight_iter]:
+                            self._opt._weights.pop(opt_weight_iter)
+                            break
+                        else:
+                            opt_weight_iter += 1
         for key in list(self._tls._slot_variables.keys()):
             del self._tls._slot_variables[key]
 
