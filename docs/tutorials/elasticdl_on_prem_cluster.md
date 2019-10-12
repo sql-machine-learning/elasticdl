@@ -1,4 +1,4 @@
-# ElasticDL on cluster
+# ElasticDL on On-prem Cluster
 
 ## Environment preparation
 
@@ -27,8 +27,8 @@ elasticdl train \
  --model_zoo=./model_zoo \
  --docker_image_prefix=$DOCKER_HUB_REPO \
  --model_def=mnist_functional_api.mnist_functional_api.custom_model \
- --training_data_dir=/data/mnist/train \
- --evaluation_data_dir=/data/mnist/test \
+ --training_data=/data/mnist/train \
+ --evaluation_data=/data/mnist/test \
  --num_epochs=2 \
  --master_resource_request="cpu=1,memory=2048Mi,ephemeral-storage=5000Mi" \
  --worker_resource_request="cpu=1,memory=2048Mi,ephemeral-storage=5000Mi" \

@@ -112,7 +112,8 @@ message ReportEvaluationMetricsResponse {
 message ReportEvaluationMetricsRequest {
     // Model version used to compute evaluation metrics.
     int32 model_version = 1;
-    map<string, Tensor> evaluation_metrics = 2;
+    map<string, Tensor> model_outputs = 2;
+    Tensor labels = 3;
 }
 
 service Master {

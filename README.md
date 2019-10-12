@@ -2,6 +2,7 @@
 
 [![Travis-CI Build Status](https://travis-ci.org/sql-machine-learning/elasticdl.svg?branch=develop)](https://travis-ci.org/sql-machine-learning/elasticdl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![PyPI Status Badge](https://badge.fury.io/py/elasticdl.svg)](https://pypi.org/project/elasticdl/)
 
 ElasticDL is a Kubernetes-native deep learning framework built on top of TensorFlow 2.0 that supports fault-tolerance and elastic scheduling.
 
@@ -26,7 +27,7 @@ A distributed deep learning framework needs to know local gradients before the m
 
 Given a model defined with Keras API, train the model with a command line.
 ```bash
-elasticdl train --model_def=mnist_functional_api.custom_model --training_data_dir=/mnist/train --output=output
+elasticdl train --model_def=mnist_functional_api.custom_model --training_data=/mnist/train --output=output
 ```
 
 ### Integration with SQLFlow
@@ -39,7 +40,7 @@ SELECT * FROM employee LABEL income INTO my_elasticdl_model
 
 ## Quick Start
 
-Please check out our [step-by-step tutorial](doc/tutorials/get_started.md) for running ElasticDL on local laptop, on-prem cluster, or on public cloud such as Google Kubernetes Engine.
+Please check out our [step-by-step tutorial](docs/tutorials/get_started.md) for running ElasticDL on local laptop, on-prem cluster, or on public cloud such as Google Kubernetes Engine.
 
 ## Background
 
