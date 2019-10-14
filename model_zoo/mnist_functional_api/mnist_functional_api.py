@@ -54,7 +54,7 @@ def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
 
-def dataset_fn(dataset, mode):
+def dataset_fn(dataset, mode, _):
     def _parse_data(record):
         if mode == Mode.PREDICTION:
             feature_description = {
@@ -76,21 +76,15 @@ def dataset_fn(dataset, mode):
 
     dataset = dataset.map(_parse_data)
 
-    if mode != Mode.PREDICTION:
+    if mode == Mode.TRAINING:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
 
 
-def eval_metrics_fn(predictions, labels):
-    labels = tf.reshape(labels, [-1])
+def eval_metrics_fn():
     return {
-        "accuracy": tf.reduce_mean(
-            input_tensor=tf.cast(
-                tf.equal(
-                    tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
-                    labels,
-                ),
-                tf.float32,
-            )
+        "accuracy": lambda labels, predictions: tf.equal(
+            tf.argmax(predictions, 1, output_type=tf.int32),
+            tf.cast(tf.reshape(labels, [-1]), tf.int32),
         )
     }

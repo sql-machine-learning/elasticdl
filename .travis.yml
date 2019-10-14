@@ -33,7 +33,7 @@ jobs:
           if [ "$ODPS_ACCESS_ID" == "" ] || [ "$ODPS_ACCESS_KEY" == "" ]; then
             echo "Skipping ODPS related unit tests since either ODPS_ACCESS_ID or ODPS_ACCESS_KEY is not set"
           else
-            docker run --rm -it -e ODPS_PROJECT_NAME=gomaxcompute_driver_w7u -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_*"
+            docker run --rm -it -e ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_* elasticdl/python/tests/data_reader_test.py"
           fi
     - stage: integrationtest
       name: "Integration Tests"
@@ -48,14 +48,27 @@ jobs:
         - kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
         - |
           JOB_TYPES=(
+              odps
               train
               evaluate
               predict
           )
           for JOB_TYPE in "${JOB_TYPES[@]}"; do
-              echo "Running test for elasticdl ${JOB_TYPE}"
-              docker run --rm -it --net=host -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:ci bash -c "scripts/client_test.sh ${JOB_TYPE}"
-              bash scripts/validate_job_status.sh ${JOB_TYPE}
+              if [[ "$JOB_TYPE" == "odps" ]] && { [[ "$ODPS_ACCESS_ID" == "" ]] || [[ "$ODPS_ACCESS_KEY" == "" ]]; }; then
+                echo "Skipping ODPS related integration tests since either ODPS_ACCESS_ID or ODPS_ACCESS_KEY is not set"
+                continue
+              else
+                echo "Running ElasticDL job: ${JOB_TYPE}"
+                if [[ "$JOB_TYPE" == "odps" ]]; then
+                    export ODPS_TABLE_NAME="odps_integration_build_${TRAVIS_BUILD_NUMBER}_$(date +%s)"
+                    docker run --rm -it -e ODPS_TABLE_NAME=$ODPS_TABLE_NAME -e ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c 'python -c "from elasticdl.python.tests.test_utils import *; create_iris_odps_table_from_env()"'
+                fi
+                docker run --rm -it --net=host -e ODPS_TABLE_NAME=$ODPS_TABLE_NAME -e ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:ci bash -c "scripts/client_test.sh ${JOB_TYPE}"
+                bash scripts/validate_job_status.sh ${JOB_TYPE}
+                if [[ "$JOB_TYPE" == "odps" ]]; then
+                    docker run --rm -it -e ODPS_TABLE_NAME=$ODPS_TABLE_NAME -e ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c 'python -c "from elasticdl.python.tests.test_utils import *; delete_iris_odps_table_from_env()"'
+                fi
+            fi
           done
 
 # Only build on this list of branches
@@ -68,3 +81,4 @@ env:
   global:
   - secure: kr79IltMhuW+pmmdP0KBMY87+iePGBGiaOUYTZhxx3zW3a1t2xK5wJnxJvrOwgBipqxLvIQnYUu20Lwfo0I2bwPRVvZAExb1vFBDQgzCaXEj+DHanE0XR1nivMzUcI3iHiBNRo5GalAUuiCzc/8fTxwcd0az8uxbWgPsTGkE0b8Y4epmLfsBn87rfc/lq6zWV9Q/dogBtiSZSS+bWR+U1/KopoY2hQE9hDVlZwlh/5gqbtWDOKDWE+pOnHJfHzfLzjrTb1qKgcUdA0FWU4+TyXwU09qYG5YvXRDHb6tpryacQC99E2rLkVZSqhIaSxjGAxbIcpvi0osv0R2FfeRd1hpgtB1Ro+NkZioW7dfZfhMxJm8Q0yVCmNx3D4HyZzGX/rO4estNZbX2+Zq522wakX7YCQ7TYWjWaJJNOOuYJaFp8y80sa+kE4ecF/5ZPSFiL/pUqbmnLNLNgYIq//jVgsyvJyW5luYdmD5+oTXKYi67ofzGqtY6y2nAJYHzkR2iVTwJ7CqxamkQ+3tPgoorApEc/I3DdLEIWrjTbHIfzQC/RpvdJukF3hjIrrcF/CnHq//rumVjPkn05yX4LzO/H5q6Bdto/+o+RGfamdAfJD09nfQAw7lQZ4yzUdzhSILTvONSNkLygyvW1NUL353TXXCa36uQvFwguJiSwzS2eDM=
   - secure: OHi/YUNWjG2NGRNPkTSULN7d7fJG4/uFGIpsSrh6MUl7zFIK39Qh1enCPeHmOKO5Fo6HxiiqzN0TbGwxnx5gkptEYwLV0DgWrT6pugwvWBehDU5koJmaEDuqJ5EGLHhJ0fm0wESHzv9hlK+Pb9vTD6by8X40LAwgU1PdcS9W5hpzXJuM2cRoRp8kiOKv7vJZXhbdYCcSU2zpizhJgh6B6zpv5gI0rdgTPL8EDYCxUQg1RrNw27+Dti3kCD59FphlRnxMzC7OoANJdFHMDBmruQIdq4/0UfPrFp7ZubwM3k+DFuZkRohyPeup8L0GYTwIt+PzuEC1+1rhIy7kxinwCn0jc/DK7hSEduxxr+CbPSBV60oqi+eZSahLFZYG26xsNUR5q7B2n36pYj0eK8d54ionHqsqP39ure10T+mRZS/SF9KPcpo+ZeEJaPTP41s3/5i3r5BlKfGr9GaA1yVtsbOwTx4McwJfW7Vd/HN+++swP+x1pPsC6iJ8KluZ6iSx6andHGnLyzvltaPqXxR8KNmfhDKXCcX8U/OPN1v22irdyAqWrZe7geNNVZJF1BRMEby1UYmAVZyZJ8xfhod/Acpv3Di+ZKSGGhbKvt20J1oYpVsV5lcNGAuCLgd175HHgkpFfjGuw97rRberBgCwzQdrRJjSvgsSp7VPjzOnrAE=
+  - ODPS_PROJECT_NAME=gomaxcompute_driver_w7u

@@ -4,7 +4,7 @@ import random
 import threading
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.log_util import default_logger as logger
+from elasticdl.python.common.log_utils import default_logger as logger
 
 
 class _Task(object):
@@ -86,13 +86,42 @@ class _TaskDispatcher(object):
         else:
             shards = self._prediction_shards
         tasks = []
-        for shard_name, (start_ind, num_records) in shards.items():
-            for start in range(start_ind, num_records, self._records_per_task):
+        # Note that a shard may contain records for multiple tasks.
+        for (
+            shard_name,
+            (start_ind_this_shard, num_records_this_shard),
+        ) in shards.items():
+            max_ind_this_shard = start_ind_this_shard + num_records_this_shard
+            for start_ind_this_task in range(
+                start_ind_this_shard,
+                start_ind_this_shard + num_records_this_shard,
+                self._records_per_task,
+            ):
+                max_ind_this_task = (
+                    start_ind_this_task + self._records_per_task
+                )
+                end_ind_this_task = min(
+                    max_ind_this_task, num_records_this_shard
+                )
+                # If the start index is not smaller than end index,
+                # we need to find the correct end index by taking the start
+                # index into account. We should not create task with
+                # end index that exceeds the maximally possible number of
+                # records available in this shard.
+                if start_ind_this_task >= end_ind_this_task:
+                    end_ind_this_task = min(
+                        max_ind_this_task,
+                        start_ind_this_task + num_records_this_shard,
+                        max_ind_this_shard,
+                    )
+                # Note that only records in [start, end) of this task
+                # will be consumed later in the worker that handles
+                # this task.
                 tasks.append(
                     _Task(
                         shard_name=shard_name,
-                        start=start,
-                        end=min(start + self._records_per_task, num_records),
+                        start=start_ind_this_task,
+                        end=end_ind_this_task,
                         type=task_type,
                         model_version=model_version,
                     )

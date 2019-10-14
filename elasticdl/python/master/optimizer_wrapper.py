@@ -1,6 +1,8 @@
 """Optimizer Wrapper for ElasticDL"""
 
 
+import threading
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.optimizers import (
@@ -14,7 +16,7 @@ from tensorflow.keras.optimizers import (
     RMSprop,
 )
 
-from elasticdl.python.common.log_util import default_logger as logger
+from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.embedding_service import EmbeddingService
 
@@ -118,15 +120,20 @@ class OptimizerWrapper(object):
                 {layer name: `embedding_dim`} where layer name is the
                 name of ElasticDL embedding layer and `embedding_dim`
                 is the output dimension of corresponding embedding layer.
-            use_async: A python bool. True if using asynchronous updates.
+            use_async: A python bool. True if using asynchronous updates. When
+                using asynchronoues updates, `OptimizerWrapper` is thread-safe
+                for non-embedding variables and is not thread-safe for
+                embedding table.
         """
         self._opt = opt
         self._kv_store_endpoint = kv_store_endpoint
         self._embed_dims = embedding_dims
         self._use_async = use_async
         self._slot_initial_value = {}
-        self._embed_variables = {}
-        self._slot_variables = {}
+
+        self._opt_weights_delete_lock = threading.Lock()
+        self._tls = threading.local()
+        self._init_thread_local()
 
         # "-" in slot name is not supported
         if isinstance(opt, SGD):
@@ -164,8 +171,10 @@ class OptimizerWrapper(object):
         for slot in self._allowed_slot_names:
             self._slot_initial_value.setdefault(slot, 0.0)
 
-        # record unique ids of gradients
-        self._unique_ids_all_layers = {}
+    def _init_thread_local(self):
+        self._tls._unique_ids_all_layers = {}
+        self._tls._embed_variables = {}
+        self._tls._slot_variables = {}
 
     def apply_gradients(self, grads_and_vars):
         """Update variable values.
@@ -174,13 +183,9 @@ class OptimizerWrapper(object):
             grads_and_vars: A list of (gradient, variable) pairs.
 
         """
-
-        # TODO (yunjian.lmh): support `use_async=True`
-        if self._use_async:
-            raise NotImplementedError(
-                "`use_async=True` in Optimizer Wrapper is not "
-                "supported now."
-            )
+        # TODO (#1255): Discuss whether `OptimizerWrapper` needs a lock after
+        # implementing PS.
+        self._init_thread_local()
 
         grads_and_vars = list(grads_and_vars)
 
@@ -211,6 +216,8 @@ class OptimizerWrapper(object):
         )
 
         self._report_to_kv_store()
+
+        self._delete_variables()
 
     def _lookup_embeddings_and_slots(self, grads_and_vars):
         """Look up embedding vectors and slot values form kv store.
@@ -293,19 +300,19 @@ class OptimizerWrapper(object):
         embed_key_index = {}
         slot_keys = []
         slot_key_index = {}
-        self._unique_ids_all_layers = {}
+        self._tls._unique_ids_all_layers = {}
 
         # generate keys
         for it, (grad, layer_name) in enumerate(grads_and_vars):
             # de-duplicate gradient's indices
             unique_ids, indices = tf.unique(grad.indices)
             unique_ids = unique_ids.numpy()
-            if layer_name in self._unique_ids_all_layers:
+            if layer_name in self._tls._unique_ids_all_layers:
                 # TODO: support grads_and_vars with duplicated layer name
                 logger.warning(
                     "grads_and_vars has duplicated layer name %s." % layer_name
                 )
-            self._unique_ids_all_layers[layer_name] = unique_ids
+            self._tls._unique_ids_all_layers[layer_name] = unique_ids
             grad_new = tf.IndexedSlices(grad.values, indices)
             grads_and_vars[it] = (grad_new, layer_name)
 
@@ -365,11 +372,13 @@ class OptimizerWrapper(object):
 
     def _get_slot_variable(self, layer_name, slot_name):
         """Get the variable for specified slot."""
-        return self._slot_variables.get(layer_name, {}).get(slot_name, None)
+        return self._tls._slot_variables.get(layer_name, {}).get(
+            slot_name, None
+        )
 
     def _get_embedding_variable(self, layer_name):
         """Get the variable for the specified ElasticDL embedding layer."""
-        return self._embed_variables.get(layer_name, None)
+        return self._tls._embed_variables.get(layer_name, None)
 
     # TODO: refactor _create_slot_variable and _create_embedding_variable
     # into one function
@@ -381,7 +390,7 @@ class OptimizerWrapper(object):
         # this number may differ between different iterations
         shape = tf.TensorShape((None, dim))
 
-        if self._embed_variables.get(layer_name, None) is not None:
+        if self._tls._embed_variables.get(layer_name, None) is not None:
             raise RuntimeError(
                 "Embedding variable with layer name=%s has already be "
                 "created." % (layer_name)
@@ -389,12 +398,12 @@ class OptimizerWrapper(object):
 
         embed_var = tf.Variable(
             initial_value,
-            name=layer_name,
+            name=layer_name + str(threading.get_ident()),
             shape=shape,
             dtype=tf.float32,
             trainable=False,
         )
-        self._embed_variables[layer_name] = embed_var
+        self._tls._embed_variables[layer_name] = embed_var
         return embed_var
 
     def _create_slot_variable(self, layer_name, slot_name, initial_value):
@@ -405,7 +414,9 @@ class OptimizerWrapper(object):
         # this number may differ between different iterations
         shape = tf.TensorShape((None, dim))
 
-        slot_variables_dict = self._slot_variables.setdefault(layer_name, {})
+        slot_variables_dict = self._tls._slot_variables.setdefault(
+            layer_name, {}
+        )
         if slot_variables_dict.get(slot_name, None) is not None:
             raise RuntimeError(
                 "Slot variable with (layer name=%s, slot name=%s) has "
@@ -459,7 +470,7 @@ class OptimizerWrapper(object):
         """Report updated embedding vectors and slots to kv store."""
         keys = []
         values = []
-        for layer, ids in self._unique_ids_all_layers.items():
+        for layer, ids in self._tls._unique_ids_all_layers.items():
             value = self._get_embedding_variable(layer).numpy()
             for id, v in zip(ids, value):
                 keys.append(Embedding.get_key([layer, id]))
@@ -474,6 +485,33 @@ class OptimizerWrapper(object):
         EmbeddingService.update_embedding(
             keys, values, self._kv_store_endpoint
         )
+
+    def _delete_variables(self):
+        # Slot variable access in optimizer requires corresponding embedding
+        # variable information. Delete slot variables first.
+        for layer_name, slots in self._tls._slot_variables.items():
+            embed_var = self._get_embedding_variable(layer_name)
+            embed_var_key = _var_key(embed_var)
+            del self._opt._slots[embed_var_key]
+            for _, var in slots.items():
+                opt_weight_iter = 0
+                with self._opt_weights_delete_lock:
+                    while opt_weight_iter < len(self._opt._weights):
+                        if var is self._opt._weights[opt_weight_iter]:
+                            self._opt._weights.pop(opt_weight_iter)
+                            break
+                        else:
+                            opt_weight_iter += 1
+        for key in list(self._tls._slot_variables.keys()):
+            del self._tls._slot_variables[key]
+
+        # Delete variables in embed_variables.
+        for key in list(self._tls._embed_variables.keys()):
+            del self._tls._embed_variables[key]
+
+        # Delete variables in unique_ids_all_layers.
+        for key in list(self._tls._unique_ids_all_layers.keys()):
+            del self._tls._unique_ids_all_layers[key]
 
     @property
     def allowed_slot_names(self):

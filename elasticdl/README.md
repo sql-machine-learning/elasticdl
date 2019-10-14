@@ -16,7 +16,7 @@ To build the Docker image with GPU support, run the following command:
 docker build \
     -t elasticdl:dev-gpu \
     -f elasticdl/docker/Dockerfile \
-    --build-arg BASE_IMAGE=tensorflow/tensorflow:2.0.0b1-gpu-py3 .
+    --build-arg BASE_IMAGE=tensorflow/tensorflow:2.0.0-gpu-py3 .
 ```
 
 Note that since ElasticDL depends on TensorFlow, the base image must have TensorFlow installed.
@@ -36,8 +36,8 @@ To develop in the Docker container, run the following command to mount your clon
 ```bash
 EDL_REPO=<your_elasticdl_git_repo>
 docker run --rm -u $(id -u):$(id -g) -it \
-    -v $EDL_REPO:/v \
-    -w /v \
+    -v $EDL_REPO:/edl_dir \
+    -w /edl_dir \
     elasticdl:dev
 ```
 
@@ -59,7 +59,7 @@ docker build \
 We have set up pre-commit checks in the Github repo for pull requests, which can catch some Python style problems. However, to avoid waiting in the Travis CI queue, you can run the pre-commit checks locally:
 
 ```bash
-docker run --rm -it -v $EDL_REPO:/v -w /v \
+docker run --rm -it -v $EDL_REPO:/edl_dir -w /edl_dir \
     elasticdl:dev \
     bash -c \
     "pre-commit run --files $(find elasticdl/python model_zoo -name '*.py' -print0 | tr '\0' ' ')"
@@ -77,8 +77,8 @@ Could also start Docker container and run unit tests in a single command:
 
 ```bash
 docker run --rm -u $(id -u):$(id -g) -it \
-    -v $EDL_REPO:/v \
-    -w /v \
+    -v $EDL_REPO:/edl_dir \
+    -w /edl_dir \
     elasticdl:dev \
     bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests"
 ```
@@ -93,7 +93,7 @@ make -f elasticdl/Makefile && pytest elasticdl/python/tests
 [ODPS](https://www.alibabacloud.com/product/maxcompute)-related tests require additional environment variables. To run those tests, execute the following:
 
 ```bash
-docker run --rm -it -v $PWD:/work -w /work \
+docker run --rm -it -v $PWD:/edl_dir -w /edl_dir \
     -e ODPS_PROJECT_NAME=xxx \
     -e ODPS_ACCESS_ID=xxx \
     -e ODPS_ACCESS_KEY=xxx \
@@ -105,35 +105,45 @@ docker run --rm -it -v $PWD:/work -w /work \
 
 In a terminal, start master to distribute mnist training tasks.
 
-```
-docker run --net=host --rm -it elasticdl:dev \
+```bash
+docker run --net=host --rm -it -v $EDL_REPO:/edl_dir -w /edl_dir \
+    elasticdl:dev \
     bash -c "python -m elasticdl.python.master.main \
           --model_zoo=model_zoo \
           --model_def=mnist_functional_api.mnist_functional_api.custom_model \
           --job_name=test \
-          --training_data_dir=/data/mnist/train \
-          --evaluation_data_dir=/data/mnist/test \
-          --records_per_task=100 \
+          --training_data=/data/mnist/train \
+          --evaluation_data=/data/mnist/test \
+          --evaluation_steps=15 \
           --num_epochs=2 \
           --checkpoint_steps=2 \
           --grads_to_wait=2 \
           --minibatch_size=10 \
+          --num_minibatches_per_task=10 \
           --log_level=INFO"
 ```
 
 In another terminal, start a worker
 
-```
-docker run --net=host --rm -it elasticdl:dev \
+```bash
+docker run --net=host --rm -it -v $EDL_REPO:/edl_dir -w /edl_dir \
+    elasticdl:dev \
     bash -c "python -m elasticdl.python.worker.main \
           --worker_id=1 \
           --model_zoo=model_zoo \
           --model_def=mnist_functional_api.mnist_functional_api.custom_model \
+          --minibatch_size=10 \
+          --job_type=training_with_evaluation \
           --master_addr=localhost:50001 \
           --log_level=INFO"
 ```
 
-This will train MNIST data with a model defined in [model_zoo/mnist_functional_api/mnist_functional_api.py](../model_zoo/mnist_functional_api/mnist_functional_api.py) for 2 epoches.
+This will train MNIST data with a model defined in [model_zoo/mnist_functional_api/mnist_functional_api.py](../model_zoo/mnist_functional_api/mnist_functional_api.py) for 2 epoches. Note that, the master will save model checkpoints in a local directory `checkpoint_dir`.
+
+If you get some issues related to proto definitions, please run the following command to build latest proto components.
+```bash
+make -f elasticdl/Makefile
+```
 
 ### Test with Kubernetes
 

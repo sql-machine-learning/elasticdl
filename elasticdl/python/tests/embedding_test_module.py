@@ -89,7 +89,7 @@ def loss(predictions, labels):
     return tf.reduce_mean(tf.square(predictions - labels))
 
 
-def dataset_fn(dataset, training=True):
+def dataset_fn(dataset, mode, metadata):
     def _parse_data(record):
         feature_description = {
             "f1": tf.io.FixedLenFeature([1], tf.int64),

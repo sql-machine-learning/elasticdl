@@ -16,15 +16,15 @@ from elasticdl.python.common.constants import (
     JobType,
     WorkerManagerStatus,
 )
-from elasticdl.python.common.data_reader import RecordIODataReader
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
-from elasticdl.python.common.log_util import get_logger
-from elasticdl.python.common.model_helper import (
+from elasticdl.python.common.log_utils import get_logger
+from elasticdl.python.common.model_utils import (
     find_layer,
     get_module_file_path,
     load_model_from_module,
     load_module,
 )
+from elasticdl.python.data.data_reader import create_data_reader
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.embedding_service import EmbeddingService
@@ -36,21 +36,28 @@ from elasticdl.python.master.tensorboard_service import TensorboardService
 
 
 def _make_task_dispatcher(
-    training_data_dir,
-    evaluation_data_dir,
-    prediction_data_dir,
+    training_data,
+    evaluation_data,
+    prediction_data,
     records_per_task,
     num_epochs,
 ):
     # TODO: Support any subclasses of `AbstractDataReader`
     # and support passing specified parameters to the constructor
-    prediction_f_records = RecordIODataReader(
-        data_dir=prediction_data_dir
-    ).create_shards()
+    def _maybe_create_shards(data_origin):
+        return (
+            create_data_reader(
+                data_origin=data_origin, records_per_task=records_per_task
+            ).create_shards()
+            if data_origin
+            else {}
+        )
+
+    prediction_f_records = _maybe_create_shards(prediction_data)
 
     return _TaskDispatcher(
-        RecordIODataReader(data_dir=training_data_dir).create_shards(),
-        RecordIODataReader(data_dir=evaluation_data_dir).create_shards(),
+        _maybe_create_shards(training_data),
+        _maybe_create_shards(evaluation_data),
         prediction_f_records,
         records_per_task,
         # Only generate prediction tasks for 1 epoch
@@ -83,15 +90,17 @@ def main():
         "Starting task queue with training data directory %s, "
         "evaluation data directory %s, "
         "and prediction data directory %s",
-        args.training_data_dir,
-        args.evaluation_data_dir,
-        args.prediction_data_dir,
+        args.training_data,
+        args.evaluation_data,
+        args.prediction_data,
     )
+
+    records_per_task = args.minibatch_size * args.num_minibatches_per_task
     task_d = _make_task_dispatcher(
-        args.training_data_dir,
-        args.evaluation_data_dir,
-        args.prediction_data_dir,
-        args.records_per_task,
+        args.training_data,
+        args.evaluation_data,
+        args.prediction_data,
+        records_per_task,
         args.num_epochs,
     )
     model_module = load_module(
@@ -104,25 +113,25 @@ def main():
 
     if all(
         (
-            args.training_data_dir,
-            args.evaluation_data_dir,
+            args.training_data,
+            args.evaluation_data,
             args.evaluation_throttle_secs or args.evaluation_steps,
         )
     ):
         job_type = JobType.TRAINING_WITH_EVALUATION
     elif all(
         (
-            args.evaluation_data_dir,
-            not args.training_data_dir,
-            not args.prediction_data_dir,
+            args.evaluation_data,
+            not args.training_data,
+            not args.prediction_data,
         )
     ):
         job_type = JobType.EVALUATION_ONLY
     elif all(
         (
-            args.prediction_data_dir,
-            not args.evaluation_data_dir,
-            not args.training_data_dir,
+            args.prediction_data,
+            not args.evaluation_data,
+            not args.training_data,
         )
     ):
         job_type = JobType.PREDICTION_ONLY
@@ -161,6 +170,7 @@ def main():
             args.evaluation_throttle_secs,
             args.evaluation_steps,
             job_type == JobType.EVALUATION_ONLY,
+            model_module[args.eval_metrics_fn],
         )
         evaluation_service.start()
         task_d.set_evaluation_service(evaluation_service)

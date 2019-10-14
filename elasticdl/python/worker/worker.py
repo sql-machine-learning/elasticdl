@@ -1,12 +1,14 @@
 import traceback
 
+import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.constants import JobType, Mode
-from elasticdl.python.common.log_util import default_logger as logger
-from elasticdl.python.common.model_helper import (
+from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
+from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.model_utils import (
     find_layer,
+    get_dict_from_params_str,
     get_model_spec,
     get_non_embedding_trainable_vars,
 )
@@ -39,6 +41,7 @@ class Worker(object):
         embedding_service_endpoint=None,
         model_def=None,
         model_params="",
+        data_reader_params="",
         prediction_outputs_processor="PredictionOutputsProcessor",
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
         get_model_steps=1,
@@ -61,9 +64,12 @@ class Worker(object):
             model_def: The import path to the model definition
                 function/class in the model zoo, e.g.
                 "cifar10_subclass.CustomModel".
-            model_params: The dictionary of model parameters in a string that
-                will be used to instantiate the model,
-                e.g. "param1=1,param2=2".
+            model_params: The dictionary of model parameters in a string
+                separated by semi-colon used to instantiate the model,
+                e.g. "param1=1; param2=2".
+            data_reader_params: The data reader parameters in a string
+                separated by semi-colon used to instantiate the data reader,
+                e.g. "param1=1; param2=2".
             prediction_outputs_processor: The name of the prediction output
                 processor class defined in the model file.
             get_model_steps: Worker will perform `get_model` from the
@@ -101,9 +107,15 @@ class Worker(object):
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._model_version = -1
         self._task_data_service = TaskDataService(
-            self, self._job_type == JobType.TRAINING_WITH_EVALUATION
+            self,
+            self._job_type == JobType.TRAINING_WITH_EVALUATION,
+            data_reader_params=get_dict_from_params_str(data_reader_params),
         )
         self._get_model_steps = get_model_steps
+        if self._get_model_steps > 1:
+            self._opt = self._opt_fn()
+            self._non_embed_grads = None
+        self._evaluation_result = {}
 
     # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
@@ -137,6 +149,14 @@ class Worker(object):
     def _reset_embedding(self):
         for layer in self._embedding_layers:
             layer.reset()
+
+    def _update_local_model(self):
+        if not self._non_embed_grads:
+            return
+        self._opt.apply_gradients(
+            zip(self._non_embed_grads, self._non_embed_vars)
+        )
+        self._non_embed_grads = None
 
     def get_task(self):
         """
@@ -243,18 +263,17 @@ class Worker(object):
         res = self._stub.ReportGradient(req)
         return res.accepted, res.model_version
 
-    def report_evaluation_metrics(self, evaluation_metrics):
+    def report_evaluation_metrics(self, model_outputs, labels):
         """
         report evaluation metrics to ps, return (accepted, model_version)
         from rpc call.
         """
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
-        for k, v in evaluation_metrics.items():
-            v_np = v.numpy()
-            # If scalar, convert to numpy 1D array with size 1
-            if not v_np.shape:
-                v_np = v_np.reshape(1)
-            req.evaluation_metrics[k].CopyFrom(ndarray_to_tensor(v_np))
+        for name, output in model_outputs.items():
+            output = np.concatenate(output)
+            req.model_outputs[name].CopyFrom(ndarray_to_tensor(output))
+        labels = np.concatenate(labels)
+        req.labels.CopyFrom(ndarray_to_tensor(labels))
         req.model_version = self._model_version
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
@@ -349,33 +368,52 @@ class Worker(object):
         return loss, grads
 
     @tf.function
-    def evaluation_process(self, features, labels):
-        outputs = self._model.call(features, training=False)
-        evaluation_metrics = self._eval_metrics_fn(outputs, labels)
-        return evaluation_metrics
-
-    @tf.function
-    def predict_process(self, features):
+    def forward_process(self, features):
+        """Calculates model outputs in non-training mode."""
         outputs = self._model.call(features, training=False)
         return outputs
 
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process(features, labels)
         accepted, min_model_version = self.report_gradient(grads)
+        if accepted and self._get_model_steps > 1:
+            non_embed_vars_n = len(self._non_embed_vars)
+            self._non_embed_grads = grads[:non_embed_vars_n]
         self._reset_embedding()
         return accepted, min_model_version, loss
 
+    def _collect_evaluation_result(self, outputs, labels):
+        key = MetricsDictKey.MODEL_OUTPUT
+        if key not in self._evaluation_result:
+            outputs = {k: [v.numpy()] for k, v in outputs.items()}
+            self._evaluation_result[key] = outputs
+        else:
+            for k, v in outputs.items():
+                self._evaluation_result[key][k].append(v.numpy())
+        key = MetricsDictKey.LABEL
+        if key not in self._evaluation_result:
+            self._evaluation_result[key] = [labels.numpy()]
+        else:
+            self._evaluation_result[key].append(labels.numpy())
+
     def _run_evaluation_task(self, features, labels):
-        evaluation_metrics = self.evaluation_process(features, labels)
-        accepted, _ = self.report_evaluation_metrics(evaluation_metrics)
-        return accepted
+        outputs = self.forward_process(features)
+        if not isinstance(outputs, dict):
+            outputs = {MetricsDictKey.MODEL_OUTPUT: outputs}
+        self._collect_evaluation_result(outputs, labels)
+        return True
 
     def _run_prediction_task(self, features):
-        predictions = self.predict_process(features)
+        predictions = self.forward_process(features)
         return self.report_prediction_outputs(predictions)
 
     def _process_minibatch(
-        self, task_type, features, labels, min_model_version
+        self,
+        task_type,
+        features,
+        labels,
+        min_model_version,
+        train_with_local_model=False,
     ):
         if self._need_embedding_layer_check or not self._var_created:
             self._run_model_call_before_training(features)
@@ -392,10 +430,11 @@ class Worker(object):
             elif task_type == elasticdl_pb2.TRAINING:
                 # TODO: optimize the logic to avoid unnecessary
                 #       get_model call.
-                self.get_model(
-                    max(self._model_version, min_model_version),
-                    elasticdl_pb2.MINIMUM,
-                )
+                if not train_with_local_model:
+                    self.get_model(
+                        max(self._model_version, min_model_version),
+                        elasticdl_pb2.MINIMUM,
+                    )
                 accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )
@@ -420,12 +459,20 @@ class Worker(object):
     def _process_eval_task_if_needed(self):
         """
         Check if there are evaluation tasks and process the tasks if any.
+
+        Return:
+            A python bool indicating whether worker processed some evaluation
+            tasks.
         """
         eval_info = self._task_data_service.get_evaluation_dataset()
         if not eval_info:
-            return
+            return False
         (eval_dataset, model_version, task_id) = eval_info
-        eval_dataset = self._dataset_fn(eval_dataset, Mode.EVALUATION)
+        eval_dataset = self._dataset_fn(
+            eval_dataset,
+            Mode.EVALUATION,
+            self._task_data_service.data_reader.metadata,
+        )
         eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
         err_msg = ""
         for dataset_batch in eval_dataset:
@@ -436,10 +483,22 @@ class Worker(object):
                 err_msg = data_err_msg
                 break
         del eval_dataset
+        accepted, _ = self.report_evaluation_metrics(
+            self._evaluation_result[MetricsDictKey.MODEL_OUTPUT],
+            self._evaluation_result[MetricsDictKey.LABEL],
+        )
+        if not accepted:
+            raise RuntimeError("Report evaluation metric failed!")
         self.report_task_result(task_id, err_msg)
+        self._evaluation_result = {}
+        return True
 
     def _process_minibatch_and_report(
-        self, dataset_batch, task_type, model_version
+        self,
+        dataset_batch,
+        task_type,
+        model_version,
+        train_with_local_model=False,
     ):
         err_msg = ""
         try:
@@ -449,7 +508,13 @@ class Worker(object):
             else:
                 features = dataset_batch[0]
                 labels = dataset_batch[1]
-            self._process_minibatch(task_type, features, labels, model_version)
+            self._process_minibatch(
+                task_type,
+                features,
+                labels,
+                model_version,
+                train_with_local_model,
+            )
         except RuntimeError as err:
             err_msg = str(err)
             traceback.print_exc()
@@ -469,19 +534,61 @@ class Worker(object):
             mode = Mode.EVALUATION
         else:
             mode = Mode.TRAINING
+
+        # The worker needs to get model from PS if
+        # `train_with_local_model=False`. This happens when:
+        #     processing first minibatch
+        #     last minibatch is evaluation task
+        #     last minibatch is training task and failed
+        #     local_update_count >= worker._get_model_steps
+        # Otherwise, worker trains with local model, i.e.
+        # `train_with_local_model=True`
+        train_with_local_model = False
+
+        # Initialize `local_update_count=get_model_steps` in order to set
+        # `train_with_local_model` to False inside for-loop for the first
+        # minibatch.
+        local_update_count = self._get_model_steps
+        last_training_minibatch_failed = False
+        last_minibatch_do_evaluation = False
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
                 break
-            dataset = self._dataset_fn(dataset, mode)
+            dataset = self._dataset_fn(
+                dataset, mode, self._task_data_service.data_reader.metadata
+            )
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
             for dataset_batch in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
-                    self._process_eval_task_if_needed()
+                    if self._process_eval_task_if_needed():
+                        last_minibatch_do_evaluation = True
                 task = self._task_data_service.get_current_task()
+                if task.type == elasticdl_pb2.TRAINING:
+                    if (
+                        last_minibatch_do_evaluation
+                        or last_training_minibatch_failed
+                        or local_update_count >= self._get_model_steps
+                    ):
+                        local_update_count = 0
+                        train_with_local_model = False
+                    else:
+                        train_with_local_model = True
                 err_msg = self._process_minibatch_and_report(
-                    dataset_batch, task.type, task.model_version
+                    dataset_batch,
+                    task.type,
+                    task.model_version,
+                    train_with_local_model,
                 )
+                if task.type == elasticdl_pb2.TRAINING:
+                    last_minibatch_do_evaluation = False
+                    local_update_count += 1
+                    if err_msg:
+                        last_training_minibatch_failed = True
+                    else:
+                        last_training_minibatch_failed = False
+                        if local_update_count < self._get_model_steps:
+                            self._update_local_model()
                 self._task_data_service.report_record_done(
                     self._minibatch_size, err_msg
                 )
@@ -490,4 +597,5 @@ class Worker(object):
             # training tasks are done, as other workers' may still
             # have pending training tasks.
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
-                self._process_eval_task_if_needed()
+                if self._process_eval_task_if_needed():
+                    last_minibatch_do_evaluation = True

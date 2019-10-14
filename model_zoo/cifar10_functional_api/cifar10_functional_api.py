@@ -3,8 +3,8 @@ import os
 import tensorflow as tf
 
 from elasticdl.python.common.constants import Mode, ODPSConfig
-from elasticdl.python.common.log_util import default_logger as logger
-from elasticdl.python.common.odps_io import ODPSWriter
+from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.data.odps_io import ODPSWriter
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
 )
@@ -114,7 +114,7 @@ def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
 
-def dataset_fn(dataset, mode):
+def dataset_fn(dataset, mode, _):
     def _parse_data(record):
         if mode == Mode.PREDICTION:
             feature_description = {
@@ -136,22 +136,16 @@ def dataset_fn(dataset, mode):
 
     dataset = dataset.map(_parse_data)
 
-    if mode != Mode.PREDICTION:
+    if mode == Mode.TRAINING:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
 
 
-def eval_metrics_fn(predictions, labels):
-    labels = tf.reshape(labels, [-1])
+def eval_metrics_fn():
     return {
-        "accuracy": tf.reduce_mean(
-            input_tensor=tf.cast(
-                tf.equal(
-                    tf.argmax(predictions, 1, output_type=tf.dtypes.int32),
-                    labels,
-                ),
-                tf.float32,
-            )
+        "accuracy": lambda labels, predictions: tf.equal(
+            tf.argmax(predictions, 1, output_type=tf.int32),
+            tf.cast(tf.reshape(labels, [-1]), tf.int32),
         )
     }
 

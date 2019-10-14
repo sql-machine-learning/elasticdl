@@ -17,7 +17,7 @@ def loss(predictions, labels):
     return tf.reduce_mean(tf.square(predictions - labels))
 
 
-def dataset_fn(dataset, training=True):
+def dataset_fn(dataset, mode, metadata):
     def _parse_data(record):
         feature_description = {
             "x": tf.io.FixedLenFeature([1], tf.float32),
@@ -34,8 +34,8 @@ def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
 
-def eval_metrics_fn(predictions, labels):
-    return {"mse": tf.reduce_mean(tf.square(predictions - labels))}
+def eval_metrics_fn():
+    return {"mse": lambda labels, outputs: tf.square(outputs - labels)}
 
 
 class PredictionOutputsProcessor(BasePredictionOutputsProcessor):

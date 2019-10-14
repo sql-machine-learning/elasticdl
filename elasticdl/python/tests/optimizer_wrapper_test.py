@@ -1,7 +1,9 @@
 import copy
 import os
 import random
+import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 
 import mock
 import numpy as np
@@ -18,7 +20,7 @@ from tensorflow.keras.optimizers import (
 )
 from tensorflow.python.ops import init_ops
 
-from elasticdl.python.common.model_helper import (
+from elasticdl.python.common.model_utils import (
     find_layer,
     get_module_file_path,
     get_non_embedding_trainable_vars,
@@ -269,7 +271,7 @@ class OptimizerWrapperTest(unittest.TestCase):
 
         for layer, ids in zip(layers, ids_list):
             self.assertTrue(
-                (opt_wrapper._unique_ids_all_layers[layer] == ids).all()
+                (opt_wrapper._tls._unique_ids_all_layers[layer] == ids).all()
             )
 
     def test_parse_lookup_values(self):
@@ -334,7 +336,7 @@ class OptimizerWrapperTest(unittest.TestCase):
 
         for ids, layer in zip(ids_list, layers):
             self.assertTrue(
-                (opt_wrapper._unique_ids_all_layers[layer] == ids).all()
+                (opt_wrapper._tls._unique_ids_all_layers[layer] == ids).all()
             )
 
             values, _ = mock_kv_store.lookup(
@@ -392,17 +394,20 @@ class OptimizerWrapperTest(unittest.TestCase):
                 self.assertTrue(
                     (
                         slots_dict[slot].numpy()
-                        == opt_wrapper._slot_variables[layer][slot].numpy()
+                        == opt_wrapper._tls._slot_variables[layer][
+                            slot
+                        ].numpy()
                     ).all()
                 )
 
                 slots_dict[slot].assign(tf.ones((10, 4)))
                 self.assertTrue(
                     np.isclose(
-                        opt_wrapper._slot_variables[layer][slot].numpy(), 1.0
+                        opt_wrapper._tls._slot_variables[layer][slot].numpy(),
+                        1.0,
                     ).all()
                 )
-                opt_wrapper._slot_variables[layer][slot].assign(
+                opt_wrapper._tls._slot_variables[layer][slot].assign(
                     -tf.ones((10, 4))
                 )
                 self.assertTrue(
@@ -413,7 +418,7 @@ class OptimizerWrapperTest(unittest.TestCase):
         opt_wrapper._set_slot_values_to_variables(slot_values_new)
         self.assertTrue(
             np.isclose(
-                opt_wrapper._slot_variables["test-1"]["m"].numpy(), 0.0
+                opt_wrapper._tls._slot_variables["test-1"]["m"].numpy(), 0.0
             ).all()
         )
 
@@ -443,14 +448,14 @@ class OptimizerWrapperTest(unittest.TestCase):
         for i, layer in enumerate(layers):
             self.assertTrue(
                 (
-                    opt_wrapper._embed_variables[layer].numpy()
+                    opt_wrapper._tls._embed_variables[layer].numpy()
                     == embedding_values[layer]
                 ).all()
             )
             self.assertTrue(
                 (
                     grads_and_vars[i][1].numpy()
-                    == opt_wrapper._embed_variables[layer].numpy()
+                    == opt_wrapper._tls._embed_variables[layer].numpy()
                 ).all()
             )
 
@@ -461,7 +466,7 @@ class OptimizerWrapperTest(unittest.TestCase):
         )
         self.assertTrue(
             np.isclose(
-                opt_wrapper._embed_variables["test-1"].numpy(), 0.0
+                opt_wrapper._tls._embed_variables["test-1"].numpy(), 0.0
             ).all()
         )
 
@@ -470,16 +475,16 @@ class OptimizerWrapperTest(unittest.TestCase):
         opt_wrapper = OptimizerWrapper(opt, None, {})
 
         ids_list = [[1, 5], [10]]
-        opt_wrapper._unique_ids_all_layers = {
+        opt_wrapper._tls._unique_ids_all_layers = {
             "test_1": np.array(ids_list[0]),
             "test_2": np.array(ids_list[1]),
         }
         t = np.array([1.0, 1.0, 1.0])
-        opt_wrapper._embed_variables = {
+        opt_wrapper._tls._embed_variables = {
             "test_1": tf.Variable([t, t * 5]),
             "test_2": tf.Variable([t * 10]),
         }
-        opt_wrapper._slot_variables = {
+        opt_wrapper._tls._slot_variables = {
             "test_1": {"momentum": tf.Variable([t / 10.0, t / 2.0])},
             "test_2": {"momentum": tf.Variable([t])},
         }
@@ -619,6 +624,188 @@ class OptimizerWrapperTest(unittest.TestCase):
                 self._test_correctness(
                     opt, X_sparse_one_iter, Y_sparse_one_iter, seed, **kargs
                 )
+
+    def _test_async_correctness(
+        self,
+        grads_and_vars_batches,
+        embed_values,
+        expected_non_embed_values,
+        expected_embed_values=None,
+    ):
+        """Checks the correctness of async OptimizerWrapper. This function
+        creates many threads and these threads call
+        `OptimizerWrapper.apply_gradients` simultaneously.
+
+        Args:
+            grads_and_vars_batches: A python list of `grads_and_vars`. Every
+                thread takes a `grads_and_vars` and calls `apply_gradients`.
+            embed_values: A python dictionary of
+                `(layer_name, embedding table)`.
+            expected_non_embed_values: A python list of expected non-embdding
+                values after applying gradients.
+            expected_embed_values: A python dictionary of expected embedding
+                values after applying gradients. None means no need to check
+                embedding values.
+        """
+        thread_num = len(grads_and_vars_batches)
+        embed_dims = {}
+        embed_var_n = len(embed_values)
+        mock_kv_store = MockKvStore()
+        for layer, values in embed_values.items():
+            embed_dims[layer] = values.shape[1]
+            input_dim = values.shape[0]
+
+            keys = [
+                Embedding.get_key([layer, idx]) for idx in range(input_dim)
+            ]
+            mock_kv_store.update(keys, values)
+
+        opt = SGD(0.1)
+        opt_wrapper = OptimizerWrapper(opt, None, embed_dims, True)
+
+        with mock.patch.object(
+            EmbeddingService, "lookup_embedding", mock_kv_store.lookup
+        ), mock.patch.object(
+            EmbeddingService, "update_embedding", mock_kv_store.update
+        ):
+            # call optimizer_wrapper.apply_gradients asynchronously
+            def _apply_gradients(opt_wrapper, grads_and_vars):
+                # sleep 1s to wait that all threads are in this method call
+                time.sleep(1)
+                opt_wrapper.apply_gradients(grads_and_vars)
+
+            executor = ThreadPoolExecutor(max_workers=thread_num)
+            tasks = [
+                executor.submit(_apply_gradients, opt_wrapper, grads_and_vars)
+                for grads_and_vars in grads_and_vars_batches
+            ]
+            _ = [task.result() for task in tasks]
+
+            # check updated results of non-embedding variables
+            non_embed_vars = [
+                var for grad, var in grads_and_vars_batches[0][:-embed_var_n]
+            ]
+            for var, expected_value in zip(
+                non_embed_vars, expected_non_embed_values
+            ):
+                self.assertTrue(np.isclose(var.numpy(), expected_value).all())
+
+            # `expected_embed_values=None` means that no need to check
+            # embedding table
+            if not expected_embed_values:
+                return
+            # check updated results of embedding table
+            for layer, expected_values in expected_embed_values.items():
+                keys = [
+                    Embedding.get_key([layer, idx]) for idx in range(input_dim)
+                ]
+                raw_value, _ = mock_kv_store.lookup(keys)
+                value = np.concatenate(raw_value).reshape(input_dim, -1)
+
+                self.assertTrue(
+                    any(
+                        [
+                            np.isclose(value, expected).all()
+                            for expected in expected_values
+                        ]
+                    )
+                )
+
+    def test_async_correctness(self):
+        """Tests the correctness of async updates in `OptimizerWrapper`.
+
+        Testing the correctness is not simple because OptimizerWrapper is not
+        thread-safe for embedding table. This test case lists all the possible
+        results when `thread_number=2` and test the correctness. This test case
+        also tests that OptimizerWrapper does not raise Error with a large
+        thread number(8).
+        """
+        max_thread_num = 8
+        input_dim = 4
+        output_dim = 3
+        non_embed_vars = [
+            tf.Variable([0.0] * output_dim),
+            tf.Variable([1.0] * output_dim),
+        ]
+        non_embed_vars_copy = copy.deepcopy(non_embed_vars)
+        non_embed_grads_batches = [
+            [
+                tf.constant([i + 1] * output_dim, dtype=tf.float32),
+                tf.constant([-i - 1] * output_dim, dtype=tf.float32),
+            ]
+            for i in range(max_thread_num)
+        ]
+        embed_shape = (input_dim, output_dim)
+        embed_value_count = output_dim * input_dim
+        embed_layers = ["embed_1", "embed_2"]
+        embed_values = {
+            embed_layers[0]: np.arange(
+                embed_value_count, dtype=np.float32
+            ).reshape(embed_shape),
+            embed_layers[1]: np.arange(
+                embed_value_count, dtype=np.float32
+            ).reshape(embed_shape),
+        }
+
+        embed_grads_batches = [
+            [
+                tf.IndexedSlices(
+                    tf.reshape(
+                        tf.constant([i + 1.0] * embed_value_count), embed_shape
+                    ),
+                    tf.constant(list(range(input_dim))),
+                ),
+                tf.IndexedSlices(
+                    tf.reshape(
+                        tf.constant([-i - 1.0] * embed_value_count),
+                        embed_shape,
+                    ),
+                    tf.constant(list(range(input_dim))),
+                ),
+            ]
+            for i in range(max_thread_num)
+        ]
+
+        # thread number = 2
+        expected_non_embed_values = [[-0.3, -0.3, -0.3], [1.3, 1.3, 1.3]]
+        expected_embed_values = {
+            embed_layers[0]: [
+                (np.arange(12) - 0.1).reshape(embed_shape),
+                (np.arange(12) - 0.2).reshape(embed_shape),
+                (np.arange(12) - 0.3).reshape(embed_shape),
+            ],
+            embed_layers[1]: [
+                (np.arange(12) + 0.1).reshape(embed_shape),
+                (np.arange(12) + 0.2).reshape(embed_shape),
+                (np.arange(12) + 0.3).reshape(embed_shape),
+            ],
+        }
+        grads_and_vars_batches = [
+            list(zip(non_embed_grads_batches[i], non_embed_vars))
+            + list(zip(embed_grads_batches[i], embed_layers))
+            for i in range(2)
+        ]
+
+        self._test_async_correctness(
+            grads_and_vars_batches,
+            embed_values,
+            expected_non_embed_values,
+            expected_embed_values,
+        )
+
+        # thread number = 8
+        grads_sum = max_thread_num * (max_thread_num + 1) / 2 / 10.0
+        expected_non_embed_values = [[-grads_sum] * 3, [1 + grads_sum] * 3]
+        grads_and_vars_batches = [
+            list(zip(non_embed_grads_batches[i], non_embed_vars_copy))
+            + list(zip(embed_grads_batches[i], embed_layers))
+            for i in range(max_thread_num)
+        ]
+        # Do not check updating results of embedding table when `thread_num>2`.
+        # Because there are too many possible results.
+        self._test_async_correctness(
+            grads_and_vars_batches, embed_values, expected_non_embed_values
+        )
 
 
 if __name__ == "__main__":

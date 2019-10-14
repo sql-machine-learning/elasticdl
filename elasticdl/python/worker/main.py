@@ -1,6 +1,6 @@
 import grpc
 
-from elasticdl.python.common import log_util
+from elasticdl.python.common import log_utils
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.worker.worker import Worker
@@ -19,7 +19,7 @@ def main():
         ],
     )
 
-    logger = log_util.get_logger(__name__)
+    logger = log_utils.get_logger(__name__)
 
     logger.info("Starting worker %d", args.worker_id)
     worker = Worker(
@@ -35,6 +35,7 @@ def main():
         eval_metrics_fn=args.eval_metrics_fn,
         model_def=args.model_def,
         model_params=args.model_params,
+        data_reader_params=args.data_reader_params,
         get_model_steps=args.get_model_steps,
     )
     worker.run()

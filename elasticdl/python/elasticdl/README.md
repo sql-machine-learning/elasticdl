@@ -44,15 +44,15 @@ python -m elasticdl.python.elasticdl.client train \
     --model_zoo=model_zoo \
     --model_def=mnist_subclass.mnist_subclass.CustomModel \
     --image_base=elasticdl:ci \
-    --training_data_dir=/data/mnist/train \
-    --evaluation_data_dir=/data/mnist/test \
+    --training_data=/data/mnist/train \
+    --evaluation_data=/data/mnist/test \
     --num_epochs=1 \
     --master_resource_request="cpu=1,memory=512Mi" \
     --master_resource_limit="cpu=1,memory=512Mi" \
     --worker_resource_request="cpu=1,memory=1024Mi" \
     --worker_resource_limit="cpu=1,memory=1024Mi" \
     --minibatch_size=10 \
-    --records_per_task=100 \
+    --num_minibatches_per_task=10 \
     --num_workers=1 \
     --checkpoint_steps=2 \
     --grads_to_wait=2 \
@@ -64,7 +64,7 @@ python -m elasticdl.python.elasticdl.client train \
 
 ### Submit to a GKE cluster
 
-Please checkout [this tutorial](../../../doc/tutorials/elasticdl_cloud.md) for instructions on submitting jobs to a GKE cluster.
+Please checkout [this tutorial](../../../docs/tutorials/elasticdl_cloud.md) for instructions on submitting jobs to a GKE cluster.
 
 ### Submit to an on-premise Kubernetes cluster
 
@@ -78,11 +78,11 @@ python -m elasticdl.python.elasticdl.client train \
     --model_zoo=model_zoo \
     --model_def=mnist_subclass.mnist_subclass.CustomModel \
     --cluster_spec=<path_to_cluster_specification_file> \
-    --training_data_dir=/data/mnist_nfs/mnist/train \
-    --evaluation_data_dir=/data/mnist_nfs/mnist/test \
+    --training_data=/data/mnist_nfs/mnist/train \
+    --evaluation_data=/data/mnist_nfs/mnist/test \
     --num_epochs=1 \
     --minibatch_size=10 \
-    --records_per_task=100 \
+    --num_minibatches_per_task=10 \
     --num_workers=1 \
     --checkpoint_steps=2 \
     --master_pod_priority=high-priority \
@@ -95,7 +95,7 @@ python -m elasticdl.python.elasticdl.client train \
     --volume="mount_path=/data,claim_name=fileserver-claim" \
     --image_pull_policy=Always \
     --log_level=INFO \
-    --docker_image_prefix=gcr.io/elasticdl \
+    --docker_image_repository=gcr.io/elasticdl \
     --envs=e1=v1,e2=v2
 ```
 

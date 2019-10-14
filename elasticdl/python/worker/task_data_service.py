@@ -3,21 +3,29 @@ import threading
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.data_reader import RecordIODataReader
-from elasticdl.python.common.dataset_utils import create_dataset_from_tasks
-from elasticdl.python.common.log_util import default_logger as logger
+from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.data.data_reader import create_data_reader
+from elasticdl.python.data.dataset_utils import create_dataset_from_tasks
 
 
 class TaskDataService(object):
-    def __init__(self, worker, training_with_evaluation):
+    def __init__(
+        self, worker, training_with_evaluation, data_reader_params=None
+    ):
         self._worker = worker
         self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
         self._pending_dataset = True
         self._pending_eval_tasks = []
         self._reset()
-        # TODO: Support any subclasses of `AbstractDataReader`
-        self._data_reader = RecordIODataReader(data_dir=None)
+        if data_reader_params:
+            self.data_reader = create_data_reader(
+                data_origin=None, **data_reader_params
+            )
+        else:
+            self.data_reader = create_data_reader(data_origin=None)
+        self._warm_up_task = None
+        self._has_warmed_up = False
 
     def _reset(self):
         """
@@ -73,7 +81,7 @@ class TaskDataService(object):
                 shards.append(task)
         if shards and task:
             return (
-                create_dataset_from_tasks(shards),
+                create_dataset_from_tasks(shards, self.data_reader),
                 task.model_version,
                 task.task_id,
             )
@@ -91,8 +99,19 @@ class TaskDataService(object):
                 )
                 return None
             self._reset()
+            # We use a task to perform warm-up for data reader in order
+            # to collect useful metadata. Note that we only performs
+            # data fetching for this task and `break` instantly to make
+            # sure `read_records()` is executed without iterating all the
+            # records so this should not be time consuming.
+            if self._warm_up_task is None and not self._has_warmed_up:
+                task = self._worker.get_task()
+                self._warm_up_task = task
+                for _ in self.data_reader.read_records(task):
+                    break
+                self._has_warmed_up = True
             ds = tf.data.Dataset.from_generator(
-                self._gen, (tf.string), (tf.TensorShape([]))
+                self._gen, self.data_reader.records_output_types
             )
             self._pending_dataset = False
             return ds
@@ -105,7 +124,12 @@ class TaskDataService(object):
         used to create a `tf.data.Dataset` from a list of tasks.
         """
         while True:
-            task = self._worker.get_task()
+            # Make sure we also generate data from the warm-up task.
+            if self._warm_up_task is not None and self._has_warmed_up:
+                task = self._warm_up_task
+                self._warm_up_task = None
+            else:
+                task = self._worker.get_task()
             if not task.shard_name:
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True
@@ -128,6 +152,6 @@ class TaskDataService(object):
                 )
                 if len(self._pending_tasks_with_counts) == 1:
                     self._current_task = task
-            for data in self._data_reader.read_records(task):
+            for data in self.data_reader.read_records(task):
                 if data:
                     yield data

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 JOB_TYPE=$1
-MASTER_POD_NAME=elasticdl-test-mnist-${JOB_TYPE}-master
-WORKER_0_POD_NAME=elasticdl-test-mnist-${JOB_TYPE}-worker-0
-WORKER_1_POD_NAME=elasticdl-test-mnist-${JOB_TYPE}-worker-1
+MASTER_POD_NAME=elasticdl-test-${JOB_TYPE}-master
+WORKER_0_POD_NAME=elasticdl-test-${JOB_TYPE}-worker-0
+WORKER_1_POD_NAME=elasticdl-test-${JOB_TYPE}-worker-1
 CHECK_INTERVAL_SECS=10
 
 function get_pod_status {
