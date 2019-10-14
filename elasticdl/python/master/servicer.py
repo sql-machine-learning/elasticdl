@@ -13,9 +13,7 @@ from elasticdl.python.common.ndarray import (
     tensor_to_ndarray,
 )
 from elasticdl.python.common.tensor_utils import merge_indexed_slices
-from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
-from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.learning_rate_modulator import (
     add_lr_modulation_to_optimizer,
 )
@@ -175,30 +173,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def _update_model_version(self):
         assert self._lock.locked()
         self._version += 1
-
-    def _update_edl_embedding_table(self, name_var_list):
-        """
-            Put updated embedding vectors' ids and values together
-            and use EmbeddingService.update_embedding() to update
-            embedding table in the distributed storage
-        """
-        keys = []
-        embeddings = []
-        for layer_name, unique_ids, embedding_var in name_var_list:
-            keys.extend(
-                [
-                    Embedding.get_key([layer_name, i])
-                    for i in unique_ids.numpy()
-                ]
-            )
-            embeddings.extend([i for i in embedding_var.numpy()])
-
-        if embeddings:
-            EmbeddingService.update_embedding(
-                keys=keys,
-                embedding_vectors=embeddings,
-                embedding_service_endpoint=self._embedding_service_endpoint,
-            )
 
     def _update_model(self, grads, indexed_grads, edl_embedding_gradients):
         grad_var = []
