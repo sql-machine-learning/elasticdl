@@ -24,7 +24,7 @@ def optimizer(lr=0.1):
 
 def dataset_fn(dataset, mode, metadata):
     def _parse_data(record):
-        label_col_name = "label"
+        label_col_name = "class"
         record = tf.strings.to_number(record, tf.float32)
 
         def _get_features_without_labels(
