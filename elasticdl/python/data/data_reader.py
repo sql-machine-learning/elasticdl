@@ -141,7 +141,7 @@ class ODPSDataReader(AbstractDataReader):
 
     @property
     def records_output_types(self):
-        return tf.float32
+        return tf.string
 
     @property
     def metadata(self):
