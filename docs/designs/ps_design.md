@@ -115,12 +115,11 @@ PS provides RPC service for workers. There are three important events that PS sh
 * pull model parameters
 * push gradients
 
-#### Initialization of model parameters
+**Initialization of model parameters**
+
 After starting, PS does not contain any parameter. For model variables, ElasticDL should initialize them before training process. For embedding vectors, ElasticDL adopts lazy initialization, i.e. initialize them when they are needed in training process.
 
-In distributed learning scenario, model variables can be very large and each PS node only contains a subset of model variables. We can't assume that memory of single PS node can store all model variables. Thus, workers are responsible for model variables random initialization. After random initialization, workers sends model variables to the corresponding PS node.
-
-Here is the RPC call definition for pushing initialized model.
+Since a single PS pod may not have enough memory for big modle, workers are responsible for random initializing model variables. After initializing, workers push initialized model variables to corresponding PS pod. Here is the RPC call definition for pushing initialized model.
 
 ```proto
 service PServer{
@@ -128,12 +127,13 @@ service PServer{
 }
 ```
 
-#### Pull model parameters
+**Pull model parameters**
+
 Since ElasticDL saves parameters in PS, workers should pull parameters from PS in each iteration of training/evaluation process.
 
 For model variables, we can simply pull all model variables in one gRPC call before the forward-pass.
 
-For embedding vectors, we assume that the embedding vectors used in each iteration only account for a very small proportion of the embedding tables. Due to this assumption, ElasticDL should only pull embedding vectors that are used in this iteration. Only when the `call` function of embedding layer is called do we know which embedding vectors will be uses in this function. Thus, embedding layer is responsible for pull embedding vectors from PS. 
+For embedding vectors, ElasticDL should only pull embedding vectors that are used in this iteration. This is because embedding vectors used in each iteration only account for a small proportion of the embedding tables. Only when the `call` function of embedding layer is called do we know which embedding vectors will be uses in this function. Thus, embedding layer is responsible for pull embedding vectors from PS in its `call` function.
 
 Currently, ElasticDL has already implemented its embedding layer in `elasticdl.layers.embedding` module.
 
@@ -146,7 +146,8 @@ service PServer{
 }
 ```
 
-#### Push Gradients
+**Push Gradients**
+
 As introduced above, after backward-pass, workers push gradients to PS. PS is responsible for using these gradients to update model parameters.
 
 Here is the RPC call definition for pushing gradients.
