@@ -164,23 +164,6 @@ Master will send signal to PS to make checkpoint. Each PS node will save paramet
 
 Since a PS node only has a subset of the whole model, we have to merge these submodels to get final model for serving.
 
-## Interactions among Master, PS and Worker
-The following events involve interactions among the master and PS:
-
-* The master starts PS.
-* PS reports submodel version to the master.
-* The master tells PS to save checkpoint.
-
-### The master starts PS
-When an ElasticDL task starts, `master.main` is responsible for starting PS as a Kubernetes service. Through Kubernetes service, we can fix domain name for every PS node.
-
-After starting PS, `master.main` starts the master servicer and workers, and tells them the domain names of all PS nodes. For PS with embedding replicas, every PS node also needs to know the domain name of its replicas.
-
-### PS reports submodel version to the master
-
-The master needs to know the model version to decide when to save checkpoint and when to evaluate model. PS regularly reports the version of the submodel it possessed to the master.
-
-
 ## PS Fault Tolerance
 
 We support PS falut tolerance by relaunching any failed PS pod and recovering its model parameters. 
