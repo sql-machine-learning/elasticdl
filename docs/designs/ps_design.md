@@ -20,9 +20,9 @@ In the following [PS](#ps) section, we will explain the distributed PS. In [PS F
 
 ## PS
 
-We will distribute model parameters into multiple PS pods, which is called parameter sharding. There is a hash function that maps a parameter to a PS pod id. For a variable, the key of hash function is its name. For embedding vector, the key is its embedding layer name combining an item id. We could use a simple round-robin policy at first. Each PS pod only holds a subset of the whole model.
+We will distribute model parameters into multiple PS pods, which is called parameter sharding. There is a hash function that maps a parameter to a PS pod id. For a variable, the key of hash function is its name. For a embedding vector, the key is its embedding layer name combining an item id. We could use a simple round-robin policy, *PS(i)=hash(key) mod N*, at first. Each PS pod only holds a subset of the whole model.
 
-We use a KVStore to store model parameters in PS. There is a KVStore instance in each PS pod. The KVStore instances from the PS pods forms a distributed KVStore, which could be expanded easily to support a model with a large size.
+We use a KVStore to store model parameters in PS. There is a KVStore instance in each PS pod. The KVStore instances from the PS pods forms a distributed KVStore, which could be scaled easily to support a model with a large size.
 
 We also need an optimizer to update the model parameters stored in PS pods. To update a single parameter, the optimizer needs to get the parameter, apply the gradient to the parameter, and then write the parameter back. It involves one time read and one time write. There will be huge accesses to parameters during a training job. Since model parameters are store at PS, it's better to make the optimization at the same place to reduce the cost of accessing parameters.
 
