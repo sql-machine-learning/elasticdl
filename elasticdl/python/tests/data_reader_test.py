@@ -136,7 +136,7 @@ class ODPSDataReaderTest(unittest.TestCase):
                 if data is not None:
                     yield data
 
-        dataset = tf.data.Dataset.from_generator(_gen, tf.float32)
+        dataset = tf.data.Dataset.from_generator(_gen, tf.string)
         dataset = dataset_fn(
             dataset, None, Metadata(column_names=IRIS_TABLE_COLUMN_NAMES)
         )
