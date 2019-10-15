@@ -15,7 +15,7 @@ After the relaunch of a PS pod, the PS pod needs to recover the model parameters
 
 Each worker has a local copy of all variables. The relaunched PS pod can recover variables from any of the workers. For embedding vectors, PS must create replicas to support fault tolerance. Each PS pod has its embedding vector replicas stored in other PS pods. The relaunched PS pod can recover embedding vectors from its replicas.
 
-In the following [PS](#ps) section, we will explain the distributed PS. In [PS Fault Tolerance](##ps-fault-tolerance) section, we will explain how to support PS fault tolerance in detail.
+In the following [PS](#ps) section, we will explain the distributed PS. In [PS Fault Tolerance](#ps-fault-tolerance) section, we will explain how to support PS fault tolerance in detail.
 
 
 ## PS
