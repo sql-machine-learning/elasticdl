@@ -125,9 +125,9 @@ service PServer{
 
 **Pull model parameters**
 
-Since ElasticDL saves parameters in PS, workers should pull parameters from PS in each iteration of training/evaluation process.
+Since ElasticDL saves parameters in PS, workers should pull parameters from PS in each iteration of training/evaluation process. 
 
-For model variables, we can simply pull all model variables in one gRPC call before the forward-pass.
+For model variables, a worker needs to pull model variables from all PS pods before the forward-pass.
 
 For embedding vectors, ElasticDL should only pull embedding vectors that are used in this iteration. This is because embedding vectors used in each iteration only account for a small proportion of the embedding tables. Only when the `call` function of embedding layer is called do we know which embedding vectors will be used in this function. Thus, embedding layer is responsible for pulling embedding vectors from PS in its `call` function.
 
@@ -144,7 +144,7 @@ service PServer{
 
 **Push Gradients**
 
-As introduced above, after backward-pass, workers push gradients to PS. PS is responsible for using these gradients to update model parameters.
+As introduced above, after backward-pass, a worker shards the gradients in the same way as the corresponding variables and push them to PS pods. PS is responsible for using these gradients to update model parameters. 
 
 Here is the RPC call definition for pushing gradients.
 
