@@ -52,8 +52,7 @@ For the embedding vector parameter, there are two reasons that we could not init
 - Feature ID is usually calculated by the hash function. The training dataset is too large to get the range of the ID before training.
 - Sometimes, there comes a new feature ID in online learning.
 
-
-we introduce a customized data structure `EmbeddingVectors`, Following is the definition of `EmbeddingVectors`:
+We introduce a customized data structure `EmbeddingVectors`, Following is the definition of `EmbeddingVectors`:
 
 ```python
 class EmbeddingVectors(object):
