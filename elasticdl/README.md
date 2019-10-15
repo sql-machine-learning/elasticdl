@@ -163,3 +163,18 @@ If you find permission error in the main pod log, e.g., `"pods is forbidden: Use
 ```bash
 kubectl apply -f manifests/examples/elasticdl-rbac.yaml
 ```
+
+### Test on Travis CI
+
+All tests will be executed on [Travis CI](https://travis-ci.org/sql-machine-learning/elasticdl), which includes:
+* Pre-commit checks
+* Unit tests
+* Integration tests
+
+The unit tests and integration tests also contain tests running on a local Kubernetes cluster via Minikube and tests that
+require data sources from ODPS. Please refer to [Travis configuration file](../.travis.yml) for more details.
+
+Note that tests related to ODPS will not be executed on pull requests created from forks since
+the ODPS access information has been secured on Travis and only those who have write access can retrieve it. Developers who
+have write access to this repo are encouraged to submit pull requests from branches instead of forks if any code related to ODPS
+are modifed.
