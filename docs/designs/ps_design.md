@@ -20,7 +20,7 @@ In the following [PS](#ps) section, we will explain the distributed PS. In [PS F
 
 ## PS
 
-We will distribute model parameters into multiple PS pods, which is called parameter sharding. The key of a variable is its name. The key of an embedding vector is its embedding layer name combining an item id. There is a hash function that maps the key to a PS pod id. Each PS pod only holds a subset of the whole model.
+We will distribute model parameters into multiple PS pods, which is called parameter sharding. The key of a variable is its name. The key of an embedding vector is its embedding layer name combining an item id. There is a hash function that maps the key to a PS pod id. We could use a simple round-robin policy at first. Each PS pod only holds a subset of the whole model.
 
 There is a KVStore instance in each PS pod. The KVStore instances of all the PS pods combine together and become a distributed KVStore, which could be expanded easily to support a model with a large size.
 
