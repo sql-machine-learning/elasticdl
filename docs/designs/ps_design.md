@@ -15,7 +15,7 @@ After the relaunch of a PS pod, the PS pod needs to recover the model parameters
 
 Each worker has a local copy of all variables. The relaunched PS pod can recover variables from any of the workers. For embedding vectors, PS must create replicas to support fault tolerance. Each PS pod has its embedding vector replicas stored in other PS pods. The relaunched PS pod can recover embedding vectors from its replicas.
 
-In the following [PS](#ps) section, we will explain the distributed PS. In [PS Fault Tolerance](#ps_fault_tolerance) section, we will explain how to support PS fault tolerance in detail.
+In the following [PS](#ps) section, we will explain the distributed PS. In [PS Fault Tolerance](#ps-fault-tolerance) section, we will explain how to support PS fault tolerance in detail.
 
 
 ## PS
@@ -116,7 +116,7 @@ PS provides RPC service for workers. There are three important events that PS sh
 
 After starting, PS does not contain any parameter. For model variables, ElasticDL should initialize them before training process. For embedding vectors, ElasticDL adopts lazy initialization, i.e. initialize them when they are needed in training process.
 
-Since a single PS pod may not have enough memory for big modle, workers are responsible for random initializing model variables. After initializing, workers push initialized model variables to corresponding PS pod. Here is the RPC call definition for pushing initialized model.
+Since a single PS pod may not have enough memory for big model, workers are responsible for random initializing model variables. After initializing, workers push initialized model variables to corresponding PS pod. Here is the RPC call definition for pushing initialized model.
 
 ```proto
 service PServer{
@@ -130,9 +130,9 @@ Since ElasticDL saves parameters in PS, workers should pull parameters from PS i
 
 For model variables, we can simply pull all model variables in one gRPC call before the forward-pass.
 
-For embedding vectors, ElasticDL should only pull embedding vectors that are used in this iteration. This is because embedding vectors used in each iteration only account for a small proportion of the embedding tables. Only when the `call` function of embedding layer is called do we know which embedding vectors will be uses in this function. Thus, embedding layer is responsible for pull embedding vectors from PS in its `call` function.
+For embedding vectors, ElasticDL should only pull embedding vectors that are used in this iteration. This is because embedding vectors used in each iteration only account for a small proportion of the embedding tables. Only when the `call` function of embedding layer is called do we know which embedding vectors will be used in this function. Thus, embedding layer is responsible for pulling embedding vectors from PS in its `call` function.
 
-Currently, ElasticDL has already implemented its embedding layer in `elasticdl.layers.embedding` module.
+Currently, ElasticDL has already implemented its embedding layer in [`elasticdl.layers.embedding`](../../elasticdl/python/elasticdl/layers/embedding.py) module.
 
 Here are the RPC call definitions for pulling model variables and pulling embedding vectors.
 
@@ -161,17 +161,18 @@ Master will send signal to PS to make checkpoint. Each PS pod will save paramete
 
 ## PS Fault Tolerance
 
-We support PS falut tolerance by relaunching any failed PS pod and recovering its model parameters. 
+We support PS fault tolerance by relaunching any failed PS pod and recovering its model parameters. 
 
 The master will create a distributed PS with *N* PS pods, where *N* is specified by the user. In case a PS pod fails, the master will relaunch it by Kubernetes APIs. As we discussed in [Overview](#overview), the relaunch will succeed as long as there are still running worker pods.
 
 ### Fixed Domain Name for PS Pod
-PS provides RPC service for workers. In order to continuously provide the RPC service for workers after a PS pod relaunch, we use fixed domain name for PS pods. When an ElasticDL task starts, the master is responsible for starting each PS pod as a Kubernetes service. Through Kubernetes service, we can fix domain name for every PS pod even after the relaunch.
+PS provides RPC service for workers. In order to continuously provide the RPC service for workers after a PS pod relaunch, we use fixed domain names for PS pods. When an ElasticDL task starts, the master is responsible for starting each PS pod as a Kubernetes service. Through Kubernetes service, we can fix domain name for every PS pod even after the relaunch.
 
 ### Model Parameter Recovery after Relaunch
 
-The relaunched PS pod will recover model parameters to continue the training. 
-For model variables, the PS pod can recover from workers in the same way as the variable initialization by setting its variable status as uninitialized.
+The relaunched PS pod will recover model parameters to continue the training process. 
+
+For model variables, the PS pod can recover from workers in the same way as the variable initialization.
 
 For embedding vectors, PS creates replicas to support fault tolerance. For each PS pod *PS(i)*, it will store *M* replicas in the following *M* PS pods from *PS(i+1 % N)* to *PS(i+M % N)*. The relaunched PS pod can recover embedding vectors from one of its replicas. 
 
