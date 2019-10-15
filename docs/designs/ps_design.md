@@ -43,7 +43,7 @@ Following is the architecture diagram of PS:
 ![pserver](../images/pserver.png)
 
 
-Correspondingly, there are an optimizer instance and a RPC servicer instance in each PS node. The optimizer gets gradients for RPC servicer, parameters from KVStore, and then applies the gradients to parameters. At last, it updates parameters back to the KVStore.
+Correspondingly, there are an optimizer instance and a RPC servicer instance in each PS pod. The optimizer gets gradients for RPC servicer, parameters from KVStore, and then applies the gradients to parameters. At last, it updates parameters back to the KVStore.
 
 ### KVStore
 
@@ -160,9 +160,9 @@ service PServer{
 
 ### Checkpoint and Serving
 
-Master will send signal to PS to make checkpoint. Each PS node will save parameters in its current KVStore to a distributed file system.
+Master will send signal to PS to make checkpoint. Each PS pod will save parameters in its current KVStore to a distributed file system.
 
-Since a PS node only has a subset of the whole model, we have to merge these submodels to get final model for serving.
+Since a PS pod only has a subset of the whole model, we have to merge these submodels to get final model for serving.
 
 ## PS Fault Tolerance
 
@@ -171,7 +171,7 @@ We support PS falut tolerance by relaunching any failed PS pod and recovering it
 The master will create a distributed PS with *N* PS pods, where *N* is specified by the user. In case a PS pod fails, the master will relaunch it by Kubernetes APIs. As we discussed in [Overview](#overview), the relaunch will succeed as long as there are still running worker pods.
 
 ### Fixed Domain Name for PS Pod
-PS provides RPC service for workers. In order to continuously provide the RPC service for workers after a PS pod relaunch, we use fixed domain name for PS pods. When an ElasticDL task starts, the master is responsible for starting each PS pod as a Kubernetes service. Through Kubernetes service, we can fix domain name for every PS node even after the relaunch.
+PS provides RPC service for workers. In order to continuously provide the RPC service for workers after a PS pod relaunch, we use fixed domain name for PS pods. When an ElasticDL task starts, the master is responsible for starting each PS pod as a Kubernetes service. Through Kubernetes service, we can fix domain name for every PS pod even after the relaunch.
 
 ### Model Parameter Recovery after Relaunch
 
