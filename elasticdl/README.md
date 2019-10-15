@@ -98,7 +98,7 @@ docker run --rm -it -v $PWD:/edl_dir -w /edl_dir \
     -e ODPS_ACCESS_ID=xxx \
     -e ODPS_ACCESS_KEY=xxx \
     -e ODPS_ENDPOINT=xxx \
-    elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_*_test.py"
+    elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_* elasticdl/python/tests/data_reader_test.py"
 ```
 
 ### Test in Docker
@@ -171,10 +171,10 @@ All tests will be executed on [Travis CI](https://travis-ci.org/sql-machine-lear
 * Unit tests
 * Integration tests
 
-The unit tests and integration tests also contain tests running on a local Kubernetes cluster via Minikube and tests that
-require data sources from ODPS. Please refer to [Travis configuration file](../.travis.yml) for more details.
+The unit tests and integration tests also contain tests running on a local Kubernetes cluster via [Minikube](https://kubernetes.io/docs/setup/learning-environment/minikube/) and tests that
+require data sources from [ODPS](https://www.alibabacloud.com/product/maxcompute). Please refer to [Travis configuration file](../.travis.yml) for more details.
 
 Note that tests related to ODPS will not be executed on pull requests created from forks since
 the ODPS access information has been secured on Travis and only those who have write access can retrieve it. Developers who
 have write access to this repo are encouraged to submit pull requests from branches instead of forks if any code related to ODPS
-are modifed.
+has been modified.
