@@ -20,13 +20,13 @@ In the following [PS](#ps) section, we will explain the distributed PS. In [PS F
 
 ## PS
 
-We will distribute model parameter into multiple PS pods, which is called parameter sharding. The key of a variable is its name. The key of a embedding vector is its embedding layer name combining an item id. There is a hash function which maps the key to a PS pod id. Each PS pod only holds a subset of the whole model.
+We will distribute model parameters into multiple PS pods, which is called parameter sharding. The key of a variable is its name. The key of an embedding vector is its embedding layer name combining an item id. There is a hash function that maps the key to a PS pod id. Each PS pod only holds a subset of the whole model.
 
-There is a KVStore instance in each PS pod. The KVStore instances of all the PS pods combine together and become a distributed KVStore, which could be expanded easily to support a model with large size.
+There is a KVStore instance in each PS pod. The KVStore instances of all the PS pods combine together and become a distributed KVStore, which could be expanded easily to support a model with a large size.
 
-We also need an optimizer to update the model parameters stored in PS pods. To update a single parameter, optimizer needs to get the parameter, apply the gradient to the parameter, and then write the parameter back. It involves one time read and one time write.There will be huge accesses to parameters during a training job. Since model parameters are store at PS, it's better to make the optimization at the same place to reduce the cost of accessing parameters.
+We also need an optimizer to update the model parameters stored in PS pods. To update a single parameter, the optimizer needs to get the parameter, apply the gradient to the parameter, and then write the parameter back. It involves one time read and one time write. There will be huge accesses to parameters during a training job. Since model parameters are store at PS, it's better to make the optimization at the same place to reduce the cost of accessing parameters.
 
-So, workers need to pull the latest model parameters from PS, and push gradients to PS in each iteration of training.
+The PS holds KVStore and optimizer. So, workers need to pull the latest model parameters from PS, and push gradients to PS in each iteration of training.
 
 Thus, we propose that PS has three basic components:
 
@@ -49,9 +49,9 @@ Correspondingly, there are an optimizer instance and a RPC servicer instance in 
 
 The typical big parameter of a model could be an embedding table. There could be billions of feature ID in a recommendation system. The KVStore needs to support both embedding vector parameter and non-embedding parameter.
 
-Since `tf.keras.optimizer` only accept `tf.Variable` as the parameter. To avoid uncessary memory copy, we save non-embedding parameter as a `tf.Variable` in variable DB directly.
+Since `tf.keras.optimizer` only accept `tf.Variable` as the parameter. To avoid unnecessary memory copy, we save non-embedding parameter as a `tf.Variable` in variable DB directly.
 
-For the embedding vector parameter, we introduce a customized data structure because we could not get the determine dimension infomation, and initialize the embedding vectors before training. There are mainly two reasons:
+For the embedding vector parameter, we introduce a customized data structure because we could not get the determine dimension information, and initialize the embedding vectors before training. There are mainly two reasons:
 
 - Feature ID is usually calculated by the hash function. The training dataset is too large to get the range of the ID before training.
 - Sometimes, there comes a new feature ID in online learning.
@@ -84,7 +84,7 @@ The name is the embedding layer name of embedding vectors. It uses a dictionary 
 
 Since embedding vectors are lazily initialized in PS, it also has `dim` and `initializer` fields. Inside the `get` interface of `EmbeddingVectors `, if the id is not in the `vectors` dictionary, the corresponding value will be initialized and return back.
 
-There could be multiple embedding vectors from different embedding layer. We save all these embedding vectors in a independent embedding vector DB of KVStore.
+There could be multiple embedding vectors from different embedding layer. We save all these embedding vectors in an independent embedding vector DB of KVStore.
 
 Following is the definition of KVStore:
 
@@ -106,7 +106,7 @@ class KVStore(object):
 
 The optimizer of PS is responsible for applying gradients to parameters in KVStore. Embedding table parameter needs to be handled carefully, since its not a standard `tf.Variable`. We have implemented a [OptimizeWrapper](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/python/master/optimizer_wrapper.py) already to handle this. We will move it to from master to pserver part.
 
-The optimzer supports two kinds of parameter updating strategies: sync-SGD and async-SGD. In sync-SGD, optimizer needs to wait for a certain number of gradients, and then apply the gradients to parameters. In async-SGD, the  `apply_gradient` function of optimizer inside will be called inside `push_gradient` RPC service directly.
+The optimizer supports two kinds of parameter updating strategies: sync-SGD and async-SGD. In sync-SGD, the optimizer needs to wait for a certain number of gradients, and then apply the gradients to parameters. In async-SGD, the  `apply_gradient` function of optimizer inside will be called inside `push_gradient` RPC service directly.
 
 ### RPC Service
 PS provides RPC service for workers. There are three important events that PS should interact with workers:
