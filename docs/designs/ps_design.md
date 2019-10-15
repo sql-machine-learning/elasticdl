@@ -1,7 +1,7 @@
 # Parameter Server Design
 
-
 ## Overview
+
 In order to support the scalability of model size and PS fault tolerance in ElasticDL, ElasticDL needs a distributed parameter server. 
 
 If a model has a very large size, it may not fit in a single parameter server (PS) memory. For example, many recommending and ranking models take very high-dimensional (and sparse) inputs, thus require large embedding tables. Processing all model parameters in a single PS requires huge computation and I/O bandwidth when the model size becomes very large. By distributing the model parameters into multiple PS pods, a distributed PS can solve the memory, the computation and the I/O bandwidth issues when scaling up the model size.
@@ -105,6 +105,7 @@ The optimizer of PS is responsible for applying gradients to parameters in KVSto
 The optimizer supports two kinds of parameter updating strategies: sync-SGD and async-SGD. In sync-SGD, the optimizer needs to wait for a certain number of gradients, and then apply the gradients to parameters. In async-SGD, the  `apply_gradient` function of optimizer inside will be called inside `push_gradient` RPC service directly.
 
 ### RPC Service
+
 PS provides RPC service for workers. There are three important events that PS should interact with workers:
 
 * initialization of model parameters
@@ -165,6 +166,7 @@ We support PS fault tolerance by relaunching any failed PS pod and recovering it
 The master will create a distributed PS with *N* PS pods, where *N* is specified by the user. In case a PS pod fails, the master will relaunch it by Kubernetes APIs. As we discussed in [Overview](#overview), the relaunch will succeed as long as there are still running worker pods.
 
 ### Fixed Domain Name for PS Pod
+
 PS provides RPC service for workers. In order to continuously provide the RPC service for workers after a PS pod relaunch, we use fixed domain names for PS pods. When an ElasticDL task starts, the master is responsible for starting each PS pod as a Kubernetes service. Through Kubernetes service, we can fix domain name for every PS pod even after the relaunch.
 
 ### Model Parameter Recovery after Relaunch
