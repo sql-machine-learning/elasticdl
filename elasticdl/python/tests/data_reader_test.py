@@ -6,6 +6,7 @@ import unittest
 from collections import namedtuple
 
 import tensorflow as tf
+import numpy as np
 from odps import ODPS
 
 from elasticdl.python.common.constants import ODPSConfig
@@ -98,6 +99,7 @@ class ODPSDataReaderTest(unittest.TestCase):
                 _MockedTask(0, 2, self.test_table + ":shard_0")
             )
         )
+        records = np.array(records, dtype='float').tolist()
         self.assertEqual(
             [[6.4, 2.8, 5.6, 2.2, 2], [5.0, 2.3, 3.3, 1.0, 1]], records
         )
