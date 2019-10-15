@@ -166,17 +166,18 @@ Since a PS pod only has a subset of the whole model, we have to merge these subm
 
 ## PS Fault Tolerance
 
-We support PS falut tolerance by relaunching any failed PS pod and recovering its model parameters. 
+We support PS fault tolerance by relaunching any failed PS pod and recovering its model parameters. 
 
 The master will create a distributed PS with *N* PS pods, where *N* is specified by the user. In case a PS pod fails, the master will relaunch it by Kubernetes APIs. As we discussed in [Overview](#overview), the relaunch will succeed as long as there are still running worker pods.
 
 ### Fixed Domain Name for PS Pod
-PS provides RPC service for workers. In order to continuously provide the RPC service for workers after a PS pod relaunch, we use fixed domain name for PS pods. When an ElasticDL task starts, the master is responsible for starting each PS pod as a Kubernetes service. Through Kubernetes service, we can fix domain name for every PS pod even after the relaunch.
+PS provides RPC service for workers. In order to continuously provide the RPC service for workers after a PS pod relaunch, we use fixed domain names for PS pods. When an ElasticDL task starts, the master is responsible for starting each PS pod as a Kubernetes service. Through Kubernetes service, we can fix domain name for every PS pod even after the relaunch.
 
 ### Model Parameter Recovery after Relaunch
 
-The relaunched PS pod will recover model parameters to continue the training. 
-For model variables, the PS pod can recover from workers in the same way as the variable initialization by setting its variable status as uninitialized.
+The relaunched PS pod will recover model parameters to continue the training process. 
+
+For model variables, the PS pod can recover from workers in the same way as the variable initialization.
 
 For embedding vectors, PS creates replicas to support fault tolerance. For each PS pod *PS(i)*, it will store *M* replicas in the following *M* PS pods from *PS(i+1 % N)* to *PS(i+M % N)*. The relaunched PS pod can recover embedding vectors from one of its replicas. 
 
