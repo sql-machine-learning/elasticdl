@@ -14,16 +14,16 @@ Model sharding benefits performance, even if the model parameters are not very b
 
 In the literature, we see works about parameter server designs that handle large models and improve performance. However, ElasticDL needs an additional property -- fault-tolerance. The rest of the document will focus on how to achieve the three goals simultaneously:
 
-model sharding
-high performance
-fault-tolerance
+1. model sharding
+1. high performance
+1. fault-tolerance
 
 ## Model Sharding
 
 We consider two kinds of model parameters and their shardings:
 
-dense tensors, and
-embedding tables
+1. dense tensors, and
+1. embedding tables
 
 Theoretically, dense tensors might have tremendous size and require sharing. However, in practices, limited by the amount of GPU memory, researchers don't often define models depending on huge dense tensor parameters. Hence in this design, we don't partition dense tensors; instead, we place each dense tensor on a parameter server instance.
 
