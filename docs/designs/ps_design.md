@@ -2,9 +2,9 @@
 
 ## Overview
 
-There are commonly two implementations to support distributed training. One is allreduce, the other is parameter server. Sometimes, the model size is out of the memory of a computer.  For example, many recommending and ranking models take very high-dimensional (and sparse) inputs, thus require large embedding tables. In this scenario, parameter server would be more suitable. The parameters of a model will be sharded among several nodes, which are call PS(parameter server) nodes. Since we use a distributed PS, the network bandwidth and CPU resources are increased. Thus, the communication between workers and PS, and the optimization in PS will also be speed up.
+There are commonly two implementations to support distributed training. One is allreduce, the other is parameter server. Sometimes, the model size is out of the memory of a computer.  For example, many recommending and ranking models take very high-dimensional (and sparse) inputs, thus require large embedding tables. In this scenario, parameter server would be more suitable. The parameters of a model will be sharded among several nodes, which are call PS(parameter server) nodes. Since we use a distributed PS, the network bandwidth and CPU resources are increased. Thus, the communication load between workers and PS, and the optimization load in PS will also be balanced.
 
-In addition, we want to launch machine learning jobs in a Kubernetes supported cluster. The pods in k8s is scheduled with priority, and could be preempted all the time. And hardware failure problem is also nonnegligible in a large scale distributed system. Thus, the distributed PS have to support fault-torenlence feature.
+In addition, we want to launch machine learning jobs in a Kubernetes supported cluster. The pods in k8s is scheduled with priority, and could be preempted at any time. Besides, hardware failure problem is also nonnegligible in a large scale distributed system. Thus, the distributed PS have to support fault-torenlence feature.
 
 In conclusion, a parameter server with scalability and fault-tolerance is highly needed.
 
@@ -12,7 +12,7 @@ In the following [PS](#ps) section, we will explain the components of a distribu
 
 ## PS
 
-We will distribute model parameters into multiple PS pods, which is called parameter sharding. There is a hash function that maps a parameter to a PS pod id. And this parameter will be stored at corresponding PS pod.
+We will distribute model parameters into multiple PS pods, which is called parameter sharding. There is a hash function that maps a parameter to a PS pod id. And this parameter will be stored at this corresponding PS pod.
 
 There are several kinds of parameter to be handled separately:
 
@@ -46,7 +46,7 @@ The KVStore needs to support both non-embedding paramteters and embedding table 
 
 Since `tf.keras.optimizer` only accept `tf.Variable` type parameter, to avoid unnecessary memory copy, we save a non-embedding parameter as a `tf.Variable` directly. We use a variable DB to store all the non-embedding parameters, the key is the variable name, the value is the variable itself.
 
-However, a embedding table parameter could not be represented by a standard `tf.Variable`. For example, in an online learing case, new item id may come in sometimes. The shape of the embedding table is not determined. Besides, we have to initialize corresponding embedding vector value on the fly for the new item id in the PS pod.
+However, an embedding table parameter could not be represented by a standard `tf.Variable`. For example, in an online learing case, new item id may come in sometimes. The shape of the embedding table is not determined. Besides, we have to initialize corresponding embedding vector value on the fly for the new item id in the PS pod.
 
 We introduce a customized data structure `EmbeddingTable` to meet such demands. Following is the definition of `EmbeddingTable`:
 
@@ -72,7 +72,7 @@ class EmbeddingTable(object):
         pass
 ```
 
-The name is the embedding layer name. It uses a dictionary `vectors` to store embedding vectors, the key is the item id, the value is the embedding vector.
+The name of an embedding table is actually the embedding layer name. The embedding table uses a dictionary `vectors` to store embedding vectors, the key is the item id, the value is the embedding vector.
 
 Since embedding vectors are lazily initialized in PS, it also has `dim` and `initializer` fields. Inside the `get` interface of `EmbeddingTable `, if the id is not in the `vectors` dictionary, the corresponding value will be initialized.
 
@@ -159,7 +159,7 @@ Worker will pull all non-embedding parameters before a forward pass.
 
 **pull_embedding_vector**
 
-The item id input of a embedding layer is not known, until the model run into this embedding layer. So, the embedding layer will pull needed embedding vectors from the PS within its `call` method.
+Until the model runs into a embedding layer, could we get in item id input of this embedding layer. At this time, PS pods that store the corresponding embedding vectors is pointed out. So, the embedding layer will pull needed embedding vectors from the PS within its `call` method.
 
 **push_gradient**
 
