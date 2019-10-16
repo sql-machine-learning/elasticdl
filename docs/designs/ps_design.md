@@ -4,16 +4,16 @@
 
 In order to support the scalability of model size and PS fault tolerance in ElasticDL, ElasticDL needs a distributed parameter server. 
 
-If a model has a very large size, it may not fit in a single parameter server (PS) memory. For example, many recommending and ranking models take very high-dimensional (and sparse) inputs, thus require large embedding tables. Processing all model parameters in a single PS requires huge computation and I/O bandwidth when the model size becomes very large. By distributing the model parameters into multiple PS pods, a distributed PS can solve the memory, the computation and the I/O bandwidth issues when scaling up the model size.
+If a model has a very large size, it may not fit in the memory of a single parameter server. For example, many recommending and ranking models take very high-dimensional (and sparse) inputs, thus require large embedding tables. Processing all model parameters in a single PS requires huge computation and I/O bandwidth when the model size becomes very large. By distributing the model parameters into multiple PS pods, a distributed PS can solve the memory, the computation and the I/O bandwidth issues when scaling up the model size.
 
-The master can monitor PS pods status similar to what it does for worker pods. In case a PS pod fails, the master will relaunch it. Since PS pods have higher priority than worker pods, if there are still some running worker pods, the relaunch will succeed by using either idle or preempted Kubernetes resources. 
+The master can monitor PS pods' status similar to what it does for the worker pods. In case a PS pod fails, the master will relaunch it. Since PS pods have a higher priority than worker pods, if there are still some running the worker pods, the relaunch will succeed by using either idle or preempted Kubernetes resources.
 
-After the relaunch of a PS pod, the PS pod needs to recover the model parameters distributed in it. There are two kinds of model parameters in ElasticDL.
+After the relaunch of a PS pod, the PS pod needs to recover the model parameters distributed in it. There are two kinds of model parameters in ElasticDL:
 
 * variable: trainable TensorFlow variable defined in a Keras model.
 * embedding vector: embedding vector in an [embedding layer](../../elasticdl/python/elasticdl/layers/embedding.py)
 
-Each worker has a local copy of all variables. The relaunched PS pod can recover variables from any of the workers. For embedding vectors, PS must create replicas to support fault tolerance. Each PS pod has its embedding vector replicas stored in other PS pods. The relaunched PS pod can recover embedding vectors from its replicas.
+Each worker has a local copy of all variables. The relaunched PS pod can recover variables from any one of the workers. For embedding vectors, PS must create replicas to support fault tolerance. Each PS pod has its embedding vector replicas stored in other PS pods. The relaunched PS pod can recover embedding vectors from its replicas.
 
 In the following [PS](#ps) section, we will explain the distributed PS. In [PS Fault Tolerance](#ps-fault-tolerance) section, we will explain how to support PS fault tolerance in detail.
 
@@ -22,13 +22,13 @@ In the following [PS](#ps) section, we will explain the distributed PS. In [PS F
 
 We will distribute model parameters into multiple PS pods, which is called parameter sharding. There is a hash function that maps a parameter to a PS pod id. For a variable, the key of hash function is its name. For a embedding vector, the key is its embedding layer name combining an item id. We could use a simple round-robin policy, *PS(i)=hash(key) mod N*, at first. Each PS pod only holds a subset of the whole model.
 
-We use a KVStore to store model parameters in PS. There is a KVStore instance in each PS pod. The KVStore instances from the PS pods forms a distributed KVStore, which could be scaled easily to support a model with a large size.
+We use a KVStore to store model parameters in PS. There is a KVStore instance in each PS pod. The KVStore instances from the PS pods form a distributed KVStore, which could be scaled easily to support a model with a large size.
 
 We also need an optimizer to update the model parameters stored in PS pods. To update a single parameter, the optimizer needs to get the parameter, apply the gradient to the parameter, and then write the parameter back. It involves one time read and one time write. There will be huge accesses to parameters during a training job. Since model parameters are store at PS, it's better to make the optimization at the same place to reduce the cost of accessing parameters.
 
-Besides KVStore and optimizer, the PS also need to provide necessary RPC services to workers. Workers will pull the latest model parameters from PS, and push gradients to PS in each iteration of training.
+Besides the KVStore and optimizer, the PS also needs to provide necessary RPC services to workers. Workers will pull the latest model parameters from PS, and push gradients to PS in each iteration of training.
 
-Thus, we propose that PS has three basic components:
+Thus, we propose that the PS has three basic components:
 
 | component| functionality |hardware |
 | :----  |:----  |:----  |
@@ -100,7 +100,7 @@ class KVStore(object):
 
 ### Optimizer
 
-The optimizer of PS is responsible for applying gradients to parameters in KVStore. Embedding table parameter needs to be handled carefully, since its not a standard `tf.Variable`. We have already implemented an [OptimizeWrapper](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/python/master/optimizer_wrapper.py) to handle this. We will move it to from master to pserver part.
+The optimizer of PS is responsible for applying gradients to parameters in KVStore. Embedding table parameter needs to be handled carefully, since it is not a standard `tf.Variable`. We have already implemented an [OptimizeWrapper](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/python/master/optimizer_wrapper.py) to handle this. We will move it to from master to pserver part.
 
 The optimizer supports two kinds of parameter updating strategies: sync-SGD and async-SGD. In sync-SGD, the optimizer needs to wait for a certain number of gradients, and then apply the gradients to parameters. In async-SGD, the  `apply_gradient` function of optimizer inside will be called inside `push_gradient` RPC service directly.
 
@@ -114,7 +114,7 @@ PS provides RPC service for workers. There are three important events that PS sh
 
 **Initialization of model parameters**
 
-After starting, PS does not contain any parameter. For model variables, ElasticDL should initialize them before training process. For embedding vectors, ElasticDL adopts lazy initialization, i.e. initialize them when they are needed in training process.
+After starting, PS does not contain any parameter. For model variables, ElasticDL should initialize them before training process. For embedding vectors, ElasticDL adopts lazy initialization, i.e. initialize them when they are needed in the training process.
 
 Since a single PS pod may not have enough memory for big model, workers are responsible for random initializing model variables. After initializing, workers push initialized model variables to corresponding PS pod. Here is the RPC call definition for pushing initialized model.
 
@@ -130,7 +130,7 @@ Since ElasticDL saves parameters in PS, workers should pull parameters from PS i
 
 For model variables, a worker needs to pull model variables from all PS pods before the forward-pass.
 
-For embedding vectors, ElasticDL should only pull embedding vectors that are used in this iteration. This is because embedding vectors used in each iteration only account for a small proportion of the embedding tables. Only when the `call` function of embedding layer is called do we know which embedding vectors will be used in this function. Thus, embedding layer is responsible for pulling embedding vectors from PS in its `call` function.
+For embedding vectors, ElasticDL should only pull embedding vectors that are used in this iteration. This is because embedding vectors used in each iteration only account for a small proportion of the embedding tables. Only when the `call` function of the embedding layer is called do we know which embedding vectors will be used in this function. Thus, the embedding layer is responsible for pulling embedding vectors from PS in its `call` function.
 
 Currently, ElasticDL has already implemented its embedding layer in [`elasticdl.layers.embedding`](../../elasticdl/python/elasticdl/layers/embedding.py) module.
 
