@@ -158,65 +158,42 @@ Since embedding tabel parameter is initialized lazily in the PS side, we have to
 
 **pull_variable**
 
+Worker will pull all non-embedding parameters before a forward pass.
 
 **pull_embedding_vector**
 
+Embedding layer will pull needed embedding vectors from the PS inside its `call` method.
 
 **push_gradient**
 
-**Pull model parameters**
-
-Since ElasticDL saves parameters in PS, workers should pull parameters from PS in each iteration of training/evaluation process. 
-
-For model variables, a worker needs to pull model variables from all PS pods before the forward-pass.
-
-For embedding vectors, ElasticDL should only pull embedding vectors that are used in this iteration. This is because embedding vectors used in each iteration only account for a small proportion of the embedding tables. Only when the `call` function of embedding layer is called do we know which embedding vectors will be used in this function. Thus, embedding layer is responsible for pulling embedding vectors from PS in its `call` function.
-
-Currently, ElasticDL has already implemented its embedding layer in [`elasticdl.layers.embedding`](../../elasticdl/python/elasticdl/layers/embedding.py) module.
-
-Here are the RPC call definitions for pulling model variables and pulling embedding vectors.
-
-```proto
-service PServer{
-    rpc pull_variable(PullModelRequest) returns (PullModelResponse);
-    rpc pull_embedding_vector(Tensor) returns (Tensor);
-}
-```
-
-**Push Gradients**
-
-As introduced above, after backward-pass, a worker shards the gradients in the same way as the corresponding variables and push them to PS pods. PS is responsible for using these gradients to update model parameters. 
-
-Here is the RPC call definition for pushing gradients.
-
-```proto
-service PServer{
-    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
-}
-```
+After backward pass, worker will push the gradients to the PS.
 
 ### Checkpoint
 
 Master will send signal to PS to make checkpoint. Each PS pod will save parameters in its current KVStore to a distributed file system.
 
-## Elastic Scheduling and Fault Tolerance
+## PS Fault Tolerance
 
-We support PS fault tolerance by relaunching any failed PS pod and recovering its model parameters. 
+There are two scenarios of failover to be taken into consideration:
 
-The master will create a distributed PS with *N* PS pods, where *N* is specified by the user. In case a PS pod fails, the master will relaunch it by Kubernetes APIs. As we discussed in [Overview](#overview), the relaunch will succeed as long as there are still running worker pods.
+- machines get breakdown
+- some pods are killed because of priority scheduling
+
+Since PS pods has higher priority than worker pods, worker pods of one lower priority job will be killed first to satisfy another job. If we kill all worker pods of one job, this job is actually stopped.
+
+So we only need to focus on the first scenario. We will support PS fault tolerance by relaunching any failed PS pod and recovering its model parameters from a worker pod or replica in another PS pod.
 
 ### Fixed Domain Name for PS Pod
 
-PS provides RPC service for workers. In order to continuously provide the RPC service for workers after a PS pod relaunch, we use fixed domain names for PS pods. When an ElasticDL task starts, the master is responsible for starting each PS pod as a Kubernetes service. Through Kubernetes service, we can fix domain name for every PS pod even after the relaunch.
+PS provides RPC service for workers. In order to continuously provide the RPC service for workers after a PS pod relaunch, we need to fix the domain names for PS pods. When an ElasticDL job starts, the master is responsible for starting each PS pod as a Kubernetes service. Through Kubernetes service, the domain name remains the same for every PS pod even after the relaunch.
 
 ### Model Parameter Recovery after Relaunch
 
 The relaunched PS pod will recover model parameters to continue the training process. 
 
-For model variables, the PS pod can recover from workers in the same way as the variable initialization.
+For non-embedding parameters, the PS pod can recover from workers in the same way as the [model initialization](push_model).
 
 For embedding vectors, PS creates replicas to support fault tolerance. For each PS pod *PS(i)*, it will store *M* replicas in the following *M* PS pods from *PS(i+1 % N)* to *PS(i+M % N)*. The relaunched PS pod can recover embedding vectors from one of its replicas. 
-
 
 ### Embedding Replica
 
@@ -224,12 +201,11 @@ Assume *E(i)* is the embedding vectors in PS pod *PS(i)*, it has *M* replicas wh
 
 *PS(i)* maintains *M* updated embedding vector key sets *UKS_i(j) for j from 0 to M - 1*. When *PS(i)* sparsely updates its embedding vectors *E(i)*, it also add the updated embedding vector keys into these *M* sets. 
 
-
 *PS(i)* also periodically synchronize the replicas stored in it from PS pods *PS((i - M) % N)* to *PS((i - 1) % N)*. The synchronization frequency can be several seconds.
 
 Each PS will provide a gRPC service for the replica synchronization.
 
-```
+```proto
 message SynchronizeEmbeddingRequest {
     int32 replica_index = 1;
 }
@@ -239,15 +215,15 @@ message SynchronizeEmbeddingResponse {
 }
 
 # GRPC service for replica synchronization
-rpc SynchronizeEmbedding(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
+rpc synchronize_embedding(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
 
 # GRPC service for PS to recover embedding vectors after relaunch
-rpc GetReplica(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
+rpc get_replica(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
 ```
 
 Each PS pod has a thread dedicated to the replica synchronization:
 
-```
+```python
 # T is the number of seconds for synchronization frequency
 # Assume current PS is PS(i), self._stub[index] is the stub for PS((i - index) % N)'s GRPC server.
 # self.replicas[index] is the replica for PS((i - index) % N).
@@ -262,8 +238,8 @@ while still training:
 
 The implementation of the gRPC services:
 
-```
-def SynchronizeEmbedding(self, request, _):
+```python
+def synchronize_embedding(self, request, _):
     synch_embeddings = elasticdl_pb2. SynchronizeEmbeddingResponse()
     # self.UKS are the M updated embedding vector key sets in current PS
     # self.embedding_vector are the embedding vectors in current PS
@@ -272,7 +248,7 @@ def SynchronizeEmbedding(self, request, _):
         self.UKS.clear()
     return synch_embeddings
     
-def GetReplica(self, request, _):
+def get_replica(self, request, _):
     replica = elasticdl_pb2. SynchronizeEmbeddingResponse()
     assign replica.embedding_vectors from self.replicas[request.replica_index]
     return replica
