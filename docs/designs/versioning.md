@@ -40,7 +40,7 @@ Here are detailed steps for releasing an example version 0.1.0.
 $ git checkout -b branch-0.1 develop
 $ git push origin branch-0.1
 # Prepare the first release candidate version v0.1.0rc0
-$ ./bump_version.sh v0.1.0rc0
+$ ./scripts/bump_version.sh v0.1.0rc0
 # Then commit changes
 $ git commit -a -m "Release v0.1.0rc0"
 $ git push origin branch-0.1
@@ -52,7 +52,7 @@ So now we have v0.1.0rc0 ready to use. Test out this version. If any issues foun
 
 ```bash
 $ git checkout -b branch-0.1 develop
-$ ./bump_version.sh v0.1.0
+$ ./scripts/bump_version.sh v0.1.0
 # Also remember to update RELEASE.md
 $ git commit -a -m "Release v0.1.0"
 $ git push origin branch-0.1
