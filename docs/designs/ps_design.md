@@ -1,5 +1,3 @@
-# Design Doc: Parameter Server
-
 This document is about the parameter server of ElasticDL -- a Kubernetes-native and fault-tolerable distributed deep learning system.
 
 ## Background
@@ -43,13 +41,22 @@ As we place a tensor or an embedding vector on a parameter server instance, we n
 
 We can further improve the access performance by analyzing the querying patterns. A typical kind of querying is, given feature IDs {x₁, ..., xₜ} that appear in a sparse input vector and weights {w₁, ..., wₜ}, to return a combination of the corresponding embedding vectors, e(x₁), ..., e(xₜ), say, the weight summation Σₜ wₜ e(xₜ).  By computing the combination on parameter servers, each instance returns one vector, instead of many.
 
-Denote the query by a sparse vector, 𝒙={xₜ : wₜ}, and the partical combinator by Θ, a worker can call a batch query API `lookup(𝒙, Θ)`, which sends 𝒙 and Θ to the set of parameter server instances p(𝒙). On each instance, denote the map data structure by M:x→e(x), it returns 
+Denote the query by a sparse vector, 𝒙={xₜ : wₜ}, and the partial combinator by Θ, a worker can call a batch query API `lookup(𝒙, Θ)`, which sends 𝒙 and Θ to the set of parameter server instances p(𝒙). In each instance, denote the map data structure by M:x→e(x), it runs the following algorithm and returns a vector.
 
 ```
-for x in 𝒙:
-    if x in M:
-        r = Θ(r, e(x))
-return r
+
+def lookup(𝒙, Θ):
+    for x, w in 𝒙:
+        if x in M:
+            r = Θ(r, w e(x))
+    return r
+```
+
+The worker needs to combine results from all parameter servers in p(𝒙) to get the final result r.
+
+```
+for p in p(𝒙):
+    r =  Θ(r, p.lookup(𝒙, Θ))
 ```
 
 Another access pattern is the optimization and update of the model parameters. By sending gradients to the parameter server instance where the corresponding tensors and embedding vectors are, and runs the optimization algorithm on parameter servers, we distribute the computation.
