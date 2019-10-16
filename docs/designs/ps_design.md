@@ -2,27 +2,24 @@
 
 ## Overview
 
-There are commonly two implementations to support distributed training. One is allreduce, the other is parameter server. Sometimes, the model size is out of the memory of a computer.  For example, many recommending and ranking models take very high-dimensional (and sparse) inputs, thus require large embedding tables. In this scenario, parameter server would be more suitable. The parameters of a model will be sharded among several nodes, which are call PS(parameter server) nodes.
+There are commonly two implementations to support distributed training. One is allreduce, the other is parameter server. Sometimes, the model size is out of the memory of a computer.  For example, many recommending and ranking models take very high-dimensional (and sparse) inputs, thus require large embedding tables. In this scenario, parameter server would be more suitable. The parameters of a model will be sharded among several nodes, which are call PS(parameter server) nodes. Since we use a distributed PS, the network bandwidth and CPU resources are increased. Thus, the communication between workers and PS, and the optimization in PS will also be speed up.
 
-Besides, since we use a distributed PS, the network bandwidth and CPU resources are increased. Thus, the communication between workers and PS, and the optimization in PS will also be speed up.
-
-In addition, we want to launch machine learning jobs in a Kubernetes supported cluster. The pods in k8s is scheduled with priority, and could be preempted all the time. And hardware failure problem is also nonnegligible in a big distributed system. Thus, the distributed PS have to support fault-torenlence feature.
+In addition, we want to launch machine learning jobs in a Kubernetes supported cluster. The pods in k8s is scheduled with priority, and could be preempted all the time. And hardware failure problem is also nonnegligible in a large scale distributed system. Thus, the distributed PS have to support fault-torenlence feature.
 
 In conclusion, a parameter server with scalability and fault-tolerance is highly needed.
 
-In the following [PS](#ps) section, we will explain the distributed PS. In [PS Fault Tolerance](#ps-fault-tolerance) section, we will explain how to support PS fault tolerance in detail.
-
+In the following [PS](#ps) section, we will explain the components of a distributed PS with scalability. In [PS Fault Tolerance](#ps-fault-tolerance) section, we will explain how to support PS fault tolerance in detail.
 
 ## PS
 
-We will distribute model parameters into multiple PS pods, which is called parameter sharding. There is a hash function that maps a parameter to a PS pod id.
+We will distribute model parameters into multiple PS pods, which is called parameter sharding. There is a hash function that maps a parameter to a PS pod id. And this parameter will be stored at corresponding PS pod.
 
 There are several kinds of parameter to be handled separately:
 
 - Very big embedding table: Embedding table is a collection of <item id, embedding vector> pairs. The embedding table name combining an item id become a key of the hash function.
 - Dense tensor: The dense tensor parameter name is the key of the hash function.
 
-We could use a simple round-robin policy, *PS(i)=hash(key) mod N*, at first. Each PS pod will store some embedding vectors and dense tensor parameter, it only holds a subset of the whole model.
+We could use a simple round-robin policy, *PS(i) = hash(key) mod N*, at first. Each PS pod will store some embedding vectors and dense tensor parameter, it only holds a subset of the whole model.
 
 We use a customized data structure called KVStore to store model parameters in PS. There is a KVStore instance in each PS pod. The KVStore instances from the PS pods form a distributed KVStore, which could be scaled easily to support a model with a large size.
 
@@ -45,13 +42,13 @@ Following is the architecture diagram of PS:
 
 ### KVStore
 
-The KVStore needs to support both embedding table parameter and non-embedding parameter.
+The KVStore needs to support both non-embedding paramteters and embedding table parameters.
 
-Since `tf.keras.optimizer` only accept `tf.Variable` type parameter, to avoid unnecessary memory copy, we save non-embedding parameter as a `tf.Variable` directly. We use a variable DB to store all the non-embedding parameter, the key is the variable name, the value is the variable itself.
+Since `tf.keras.optimizer` only accept `tf.Variable` type parameter, to avoid unnecessary memory copy, we save a non-embedding parameter as a `tf.Variable` directly. We use a variable DB to store all the non-embedding parameters, the key is the variable name, the value is the variable itself.
 
-However, the embedding table parameter could not be represented by a standard `tf.Variable`. For example, in an online learing case, new item id may come in sometimes. The shape of the embedding table is not determined. Besides, we have to initialize corresponding embedding vector value on the fly for the new item id in the PS pod.
+However, a embedding table parameter could not be represented by a standard `tf.Variable`. For example, in an online learing case, new item id may come in sometimes. The shape of the embedding table is not determined. Besides, we have to initialize corresponding embedding vector value on the fly for the new item id in the PS pod.
 
-We introduce a customized data structure `EmbeddingTable`, Following is the definition of `EmbeddingTable`:
+We introduce a customized data structure `EmbeddingTable` to meet such demands. Following is the definition of `EmbeddingTable`:
 
 ```python
 class EmbeddingTable(object):
@@ -75,9 +72,9 @@ class EmbeddingTable(object):
         pass
 ```
 
-The name is the embedding layer name. It uses a dictionary `vectors` to store embedding vectors, the key is item id, the value is the embedding vector.
+The name is the embedding layer name. It uses a dictionary `vectors` to store embedding vectors, the key is the item id, the value is the embedding vector.
 
-Since embedding vectors are lazily initialized in PS, it also has `dim` and `initializer` fields. Inside the `get` interface of `EmbeddingTable `, if the id is not in the `vectors` dictionary, the corresponding value will be initialized and return back.
+Since embedding vectors are lazily initialized in PS, it also has `dim` and `initializer` fields. Inside the `get` interface of `EmbeddingTable `, if the id is not in the `vectors` dictionary, the corresponding value will be initialized.
 
 There could be multiple embedding table from different embedding layer. We will create an `EmbeddingTable` instance for each embedding layer. These instances are stored at a dictionary called embedding table DB. The key is embeddig layer name, the value is the embedding table itself.
 
@@ -102,7 +99,7 @@ The optimizer of PS is responsible for applying gradients to parameters in KVSto
 
 The optimizer supports two kinds of parameter updating strategies: sync-SGD and async-SGD. 
 
-- In sync-SGD, the optimizer needs to wait for a certain number of gradients, and then apply the gradients to parameters. 
+- In sync-SGD, the optimizer needs to wait for a certain number of gradients from workers, and then apply the gradients to parameters.
 - In async-SGD, the `apply_gradient` function of optimizer inside will be called inside `push_gradient` RPC service directly.
 
 ### RPC Service
@@ -120,9 +117,9 @@ service PServer{
 
 **push_model**
 
-This is a RPC service for model initialization. There is no model definition file in the PS side. Workers will initialize the model when the first mini-batch data comes in. Then it push the model to the PS side.
+This is a RPC service for model initialization. There is no model definition file in the PS side. Workers will initialize the model when the first mini-batch data comes in. Then wotkers push the model to the PS side.
 
-Following is the definition of model proto message:
+Following is the definition of the model proto message:
 
 ```proto
 message Tensor {	
@@ -154,7 +151,7 @@ message Model {
 }
 ```
 
-Since embedding tabel parameter is initialized lazily in the PS side, we have to put some meta info defined in `EmbeddingTableInfo` in the model proto message too.
+Since embedding tabel parameter is initialized lazily in the PS side, we have to put some meta info defined in `EmbeddingTableInfo` in the model proto message too. The `EmbebeddingTableInfo` is used by a PS pod to create a `EmbeddingTable` in KVStore.
 
 **pull_variable**
 
@@ -162,7 +159,7 @@ Worker will pull all non-embedding parameters before a forward pass.
 
 **pull_embedding_vector**
 
-Embedding layer will pull needed embedding vectors from the PS inside its `call` method.
+The item id input of a embedding layer is not known, until the model run into this embedding layer. So, the embedding layer will pull needed embedding vectors from the PS within its `call` method.
 
 **push_gradient**
 
@@ -176,12 +173,12 @@ Master will send signal to PS to make checkpoint. Each PS pod will save paramete
 
 There are two scenarios of failover to be taken into consideration:
 
-- machines get breakdown
-- some pods are killed because of priority scheduling
+- Machines get breakdown
+- Some pods are killed because of priority scheduling
 
-Since PS pods has higher priority than worker pods, worker pods of one lower priority job will be killed first to satisfy another job. If we kill all worker pods of one job, this job is actually stopped.
+Since PS pods has higher priority than worker pods, worker pods of one lower priority job will be killed first to satisfy another job. If we kill all worker pods of one job, this job is actually stopped. There is no chance to kill a PS pod.
 
-So we only need to focus on the first scenario. We will support PS fault tolerance by relaunching any failed PS pod and recovering its model parameters from a worker pod or replica in another PS pod.
+So we only need to focus on the first scenario. We will support PS fault tolerance by relaunching any failed PS pod and recovering its model parameters from a worker pod and a replica in another PS pod.
 
 ### Fixed Domain Name for PS Pod
 
@@ -191,11 +188,11 @@ PS provides RPC service for workers. In order to continuously provide the RPC se
 
 The relaunched PS pod will recover model parameters to continue the training process. 
 
-For non-embedding parameters, the PS pod can recover from workers in the same way as the [model initialization](push_model).
+For non-embedding parameters, the PS pod can recover from workers in the same way as the [model initialization](#push_model).
 
-For embedding vectors, PS creates replicas to support fault tolerance. For each PS pod *PS(i)*, it will store *M* replicas in the following *M* PS pods from *PS(i+1 % N)* to *PS(i+M % N)*. The relaunched PS pod can recover embedding vectors from one of its replicas. 
+For embedding vectors, PS creates replicas to support fault tolerance. For each PS pod *PS(i)*, it will store *M* replicas in the following *M* PS pods from *PS((i+1) % N)* to *PS((i+M) % N)*. The relaunched PS pod can recover embedding vectors from one of its replicas.
 
-### Embedding Replica
+### Embedding Replica Synchronization
 
 Assume *E(i)* is the embedding vectors in PS pod *PS(i)*, it has *M* replicas which are stored in PS pods from *P((i + 1) % N)* to *P((i + M) % N)*. Also, *PS(i)* has *M* other PS pod replicas from *E((i - M) % N)* to *E((i - 1) % N)*. 
 
