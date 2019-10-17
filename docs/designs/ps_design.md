@@ -13,7 +13,7 @@ Sharding the model to multiple parameter servers is a common choice. The reasons
 - Communication load between workers and parameter servers will be balanced. More parameter servers usually means more network bandwidth.
 - Model optimization could be parallelized on multiple parameter servers.
 
-In addition, we want to launch machine learning jobs in a Kubernetes supported cluster. The pods in Kubernetes are scheduled with priority, and could be preempted at any time. At the same time, hardware failure problem is also nonnegligible in a large scale distributed system. Here, We introduce another master to watch the status of worker pods and parameter server pods. It calls Kubernetes API to start or relaunch worker pods and optionally parameter server pods, and scheduling tasks to worker pods.
+In addition, we want to launch machine learning jobs in a Kubernetes supported cluster. The pods in Kubernetes are scheduled with priority, and could be preempted at any time. At the same time, hardware failure problem is also nonnegligible in a large scale distributed system. Here, We introduce another role called master to watch the status of worker pods and parameter server pods. It calls Kubernetes API to start or relaunch worker pods and optionally parameter server pods, and scheduling tasks to worker pods.
 
 In conclusion, a high preformance parameter server architecture with scalability and fault-tolerance is needed.
 
@@ -29,7 +29,7 @@ We will answer following questions in next sections:
 - How parameters are updated in parameter server pods?
 - How to make the parameter server architecture fault-tolerant?
 
-## Model sharding
+## Model Sharding
 
 We will distribute model parameters into multiple PS pods, which is called model sharding. There is a hash function that maps a parameter to a PS pod id. And this parameter will be stored at this corresponding PS pod.
 
@@ -103,7 +103,7 @@ class KVStore(object):
         pass
 ```
 
-## Model initialization
+## Model Initialization
 
 There is no model definition file in the parameter server side. Workers will initialize the model when the first mini-batch data comes in. Then workers push the model to the parameter server side.
 
@@ -151,7 +151,7 @@ message Model {
 Since embedding table parameter is initialized lazily in the PS side, we have to put some meta info defined in `EmbeddingTableInfo` in the model proto message too. The `EmbebeddingTableInfo` is used by a PS pod to create a `EmbeddingTable` in KVStore.
 
 
-## Model optimization
+## Model Optimization
 
 We also need an optimizer to update the model parameters stored in each parameter server pod.
 
@@ -168,7 +168,7 @@ There are three steps of model optimization:
 - The optimizer in each parameter server pod applies gradients from workers to parameters read from KVStore, and writes parameters back to KVStore.
 
 
-### Pull model
+### Pull Model
 
 Parameter server pods provide two RPC service for worker pods to pull model parameters.
 
@@ -183,7 +183,7 @@ Workers will pull all non-embedding parameters before a forward pass.
 
 For embedding parameter, until the model runs into a embedding layer, can we get the item id input of this embedding layer. Then, the embedding layer will pull needed embedding vectors from the right PS pods within its `call` method.
 
-### Push gradients
+### Push Gradients
 
 ```proto
 service PServer{
@@ -193,7 +193,7 @@ service PServer{
 
 After backward pass, workers will push the gradients to the PS.
 
-### Model updating
+### Model Updating
 
 The optimizer of parameter server is responsible for applying gradients to parameters in KVStore. Embedding table parameter needs to be handled carefully, since it's not a standard `tf.Variable`. We have already implemented an [OptimizeWrapper](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/python/master/optimizer_wrapper.py) to handle this. We will move it to from master to parameter server part.
 
@@ -203,7 +203,7 @@ The optimizer supports two kinds of parameter updating strategies: synchronous-S
 - In asynchronous-SGD, the `apply_gradient` function of optimizer inside will be called inside `push_gradient` RPC service directly.
 
 
-### Delayed model updating
+### Delayed Model Updating
 
 In order to reduce the communication overhead between workers and parameter servers, we propose a strategy called delayed model updating. A worker runs several rounds of forward/backward computation using its local model, and keep the gradients locally. After finishing, it pushes gradients to parameter servers.
 
@@ -212,7 +212,7 @@ In order to reduce the communication overhead between workers and parameter serv
 Since the local model is only a part of the global model, in some circumstance, workers still has to pull the embedding vector parameter from parameter servers if there exits unknow item ids in a minibatch data. In async mode, this will lead to relative newer embedding part parameters, but relative older other part parameters.
 
 
-### Short summary
+### Short Summary
 
 Let's make a short summary here, the parameter server has three basic components:
 
