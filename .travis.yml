@@ -75,6 +75,7 @@ jobs:
 branches:
   only:
   - develop
+  - "/branch-\\d+\\.\\d+(\\.\\d+)?(-\\S*)?$/"
 
 # Secure tokens for ODPS-related environment variables
 env:
