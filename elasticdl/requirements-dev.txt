@@ -1,0 +1,5 @@
+pytest
+pytest-cov
+mock
+Pillow
+pre-commit

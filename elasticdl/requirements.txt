@@ -1,10 +1,6 @@
 grpcio-tools
 kubernetes
 docker
-pytest
-pytest-cov
 pyrecordio>=0.0.6
-Pillow
 odps
 redis-py-cluster
-mock
