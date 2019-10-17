@@ -1,26 +1,28 @@
 # Design Doc: Parameter Server
+This document is about the parameter server of ElasticDL. ElasticDL is a Kubernetes-native and fault-tolerable distributed deep learning system.
 
-## Overview
+## Motivation
+The parameter server (PS) is one of the two commonly-used mechanisms for gradient aggregation and model updates in deep learning. The other one is AllReduce, about which we will talk in other design documents.
 
-In distributed machine learning, master-worker-Parameter Server (PS) architecture is commonly used. In this framework, machines are designated as three roles, one master, multiple workers and a PS with one or more PS nodes. The master is mainly responsible for assigning data to all workers. Workers are responsible for doing forward-pass and backward-pass calculation. The PS is responsible for managing model parameters. In each iteration, workers pull parameters from the PS before the forward-pass and push gradients to the PS after the backward-pass. The PS should update model parameters using gradients received.
+In PS mechanism, machines are designated as three roles, one master, multiple workers and a PS with one or more PS instances. In the training process, workers pull parameters from the PS and push gradients to the PS. The PS should update model parameters using gradients received.
 
-There are two problems with the single node PS:
+There are two problems with the single instance PS:
 
-* For models with huge embedding tables, models may not fit in the memory of a single machine. This is especially common in the scenario of models with huge embedding table. In these models, embedding tables may be larger than 1T and model parameters excluding embedding table can fit in a single machine.
-* Communication and I/O bandwidth between workers and the PS node may limit the training speed. Multiple workers may pull parameters or push gradients at the same time. However, the bandwidth of a single machine is limited. Thus, with single PS node, communication may be the bottleneck, especially when using a large number of workers or using a big model.
+* For models with huge embedding tables, model parameters may not fit in the memory of a single process. This is especially common in recommending and ranking models. In these models, embedding tables might be up to terabytes and non-embedding parameters are able to fit in a single process. This inspires us to do model parallelism.
+* Communication and I/O bandwidth between workers and the PS may limit the training speed. Multiple workers may pull parameters or push gradients at the same time. However, the bandwidth of a single machine is limited. Thus, with single PS instance, communication may be the bottleneck, especially when using a large number of workers or using a big model. This insipres us to use multiple PS instances.
 
-Therefore, ElasticDL proposes to implement a PS with multiple PS nodes and place each prarameter of the model on one of the PS nodes. In this setup, we can solve the first problem and alleviate the second problem:
+Therefore, ElasticDL proposes to implement a PS with multiple PS instances and place each prarameter of the model on one of the PS instances. Such distribution is known as model sharding. In this setup, we can solve the first problem and alleviate the second problem:
 
-* For models with huge embedding tables, every PS node only contains a subset of embedding tables. Every worker only contains all non-embedding parameters and embedding parameters that are used in one iteration, which only account for a small proportion of the embedding table. Thus, parameters on every PS node and every worker can fit in the memory of single machine.
-* Everytime workers pull parameters (or push gradients), it communicates with all the PS nodes to get all model parameters (or push all gradients). Thus if the PS have *N* nodes, each worker only uses *1/N* bandwidth of each PS node. Therefore, the PS with multiple PS nodes can alleviate the communication bottleneck.
+* For models with huge embedding tables, every PS instance only contains a subset of embedding parameters. Every worker only contains all non-embedding parameters and embedding parameters that are used in one iteration, which only account for a small proportion of the embedding parameters. Thus, parameters on every PS instance and every worker can fit in the memory of single process.
+* Everytime workers pull parameters (or push gradients), it communicates with all the PS instances to get all model parameters (or push all gradients). Thus if the PS have *N* instances, each worker only uses *1/N* bandwidth of each PS instance. Therefore, the PS with multiple PS instances can alleviate the communication bottleneck.
 
-Also, using the PS with multiple PS nodes can accelerate communication because workers pull parameters concurrently from all the PS nodes, rather than pulling them serially in the single PS node setting.
+Also, using the PS with multiple PS nodes can benefit performance through accelerating communication, because workers pull parameters concurrently from all the PS nodes, rather than pulling them serially in the single PS node setting.
 
-Fault tolerance is an important feature of ElasticDL. The PS with multiple PS nodes can support fault tolerance by making replicas. In case a PS node fails, the master will relaunch it and recover its model parameters. The relaunch will succeed so long as there are running workers in the cluster because PS nodes have a higher priority than workers. There are two kinds of model parameters to recover, non-embedding parameters and embedding parameters. Since each worker contains all non-embedding parameters and a small propotion of embedding parameters, relaunched PS node can recover non-embedding parameters from any worker and can not recover embedding parameters from workers.
+In the literature, we see works about parameter server designs that handle large models and improve performance. However, ElasticDL needs an additional property -- fault-tolerance. The rest of the document will focus on how to achieve the three goals simultaneously:
 
-Therefore, a natural idea is to create replicas for embedding parameters and relaunched PS node can recover from replicas. In fact, Redis uses similiar strategy to support fault tolerance. More specifically, each PS node can create one or more replicas. Each replica contains the copy of all the embedding parameters saved in this PS node and each PS node save its replicas in other PS nodes. Everytime each PS node updates its embedding parameters, it should also update the replicas saved in other PS nodes. This does lead to a certain degree of decelerating training speed. This is the cost of fault tolerance. ElasticDL adopts some strategies that can minimize the efficiency influence of making replicas. More details can be found in [PS Fault Tolerance](#ps-fault-tolerance) section.
-
-Please note that ElasticDL is a Kubernetes-native framework, and runs the master, worker nodes and PS nodes as pods in Kubernetes cluster, in where pod is the smallest deployable object. Thus in this doc, we will call them the master pod, worker pods and the PS with multiple PS pods.
+1. model sharding
+2. high performance
+3. fault-tolerance
 
 ## PS
 As introduced above, the PS is repsonsible for managing model parameters. Thus, it is natural that each PS pod has a custom storage for model parameters and a RPC servicer to handle workers' pull parameter and push gradients requests. Also, it is better to put the optimizer used to update parameters in the same pod as the storage in order to avoid network communication (e.g. pushing updated parameters to storage).
