@@ -71,7 +71,7 @@ We have already implemented an [`OptimizeWrapper`](https://github.com/sql-machin
 In asynchronous SGD, the PS pod can apply gradients directly to update model parameters once it receives gradients. For synchronous SGD, the PS pod accumulates `grads_to_wait` gradients from workers then updates model parameters using these gradients. `grads_to_wait` is an ElasticDL argument specified by the user.
 
 ## Fixed Domain name for PS Pod
-PS provides a RPC service for workers. Workers are using RPC stubs to send RPC service requests to PS. RPC stubs require PS pods domains. Because ElasticDL is Kubernetes-native, the master can use Kubernetes services to launch/relaunch PS pods with fixed domain names. In this way, workers do not need to re-configure RPC stubs after a PS pod relaunch.
+Each PS pod provides a RPC service for workers. Workers are using RPC stubs to send RPC service requests to PS pods. RPC stubs require PS pod domains. Because ElasticDL is Kubernetes-native, the master can use Kubernetes services to launch/relaunch PS pods with fixed domain names. In this way, workers do not need to re-configure RPC stubs after a PS pod relaunch.
 
 ## Model Parameter Recovery
 The relaunched PS pod will recover model parameters to continue the training. 
