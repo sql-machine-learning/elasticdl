@@ -1,7 +1,7 @@
 # Design Doc: Parameter Server
 This document is about the parameter server of ElasticDL. ElasticDL is a Kubernetes-native and fault-tolerable distributed deep learning system.
 
-## Motivation
+## Overview
 The parameter server (PS) is one of the two commonly-used mechanisms for gradient aggregation and model updates in deep learning. The other one is AllReduce, about which we will talk in other design documents.
 
 In PS mechanism, machines are designated as three roles, one master, multiple workers and a PS with one or more PS instances. In the training process, workers pull parameters from the PS and push gradients to the PS. The PS should update model parameters using gradients received.
@@ -11,12 +11,12 @@ There are two problems with the single instance PS:
 * For models with huge embedding tables, model parameters may not fit in the memory of a single process. This is especially common in recommending and ranking models. In these models, embedding tables might be up to terabytes and non-embedding parameters are able to fit in a single process. This inspires us to do model parallelism.
 * Communication and I/O bandwidth between workers and the PS may limit the training speed. Multiple workers may pull parameters or push gradients at the same time. However, the bandwidth of a single machine is limited. Thus, with single PS instance, communication may be the bottleneck, especially when using a large number of workers or using a big model. This insipres us to use multiple PS instances.
 
-Therefore, ElasticDL proposes to implement a PS with multiple PS instances and place each prarameter of the model on one of the PS instances. Such distribution is known as model sharding. In this setup, we can solve the first problem and alleviate the second problem:
+Therefore, ElasticDL proposes to implement a PS with multiple PS instances and adopt model parallelism by placing each prarameter of the model on one of the PS instances. Such distribution is known as model sharding. In this setup, we can solve the first problem and alleviate the second problem:
 
-* For models with huge embedding tables, every PS instance only contains a subset of embedding parameters. Every worker only contains all non-embedding parameters and embedding parameters that are used in one iteration, which only account for a small proportion of the embedding parameters. Thus, parameters on every PS instance and every worker can fit in the memory of single process.
+* For models with large embedding tables, every PS instance only contains a subset of embedding parameters. Every worker only contains all non-embedding parameters and embedding parameters that are used in one iteration, which only account for a small proportion of the embedding parameters. Thus, parameters on every PS instance and every worker can fit in the memory of single process.
 * Everytime workers pull parameters (or push gradients), it communicates with all the PS instances to get all model parameters (or push all gradients). Thus if the PS have *N* instances, each worker only uses *1/N* bandwidth of each PS instance. Therefore, the PS with multiple PS instances can alleviate the communication bottleneck.
 
-Also, using the PS with multiple PS nodes can benefit performance through accelerating communication, because workers pull parameters concurrently from all the PS nodes, rather than pulling them serially in the single PS node setting.
+Also, using the PS with multiple PS instances can benefit performance through accelerating communication, because workers pull parameters concurrently from all the PS nodes, rather than pulling them serially in the single PS node setting.
 
 In the literature, we see works about parameter server designs that handle large models and improve performance. However, ElasticDL needs an additional property -- fault-tolerance. The rest of the document will focus on how to achieve the three goals simultaneously:
 
@@ -24,26 +24,34 @@ In the literature, we see works about parameter server designs that handle large
 2. high performance
 3. fault-tolerance
 
-## PS
-As introduced above, the PS is repsonsible for managing model parameters. Thus, it is natural that each PS pod has a custom storage for model parameters and a RPC servicer to handle workers' pull parameter and push gradients requests. Also, it is better to put the optimizer used to update parameters in the same pod as the storage in order to avoid network communication (e.g. pushing updated parameters to storage).
+## Model Sharding
+There are two kinds of parameters in the training process:
 
-| component| functionality |
-| :----  |:----  |:----  |
-|KVStore  | provides storage of model parameters|
-|Optimizer | uses gradients from workers to update model parameters|
-|RPC servicer |servers for the workers' pull parameters and push gradients requests|
+* Embedding parameters consist of mutliple embedding tables. Each embedding table corresponds to one embedding layer in model structure. An embedding table is a data structure that maps a discrete value, named embedding id *id*, to a 1-d vector, named embedding vector *vector*. 
+* Non-embedding parameters are in the form of multiple dense tensors. In order to distinguish these dense tensors, TensorFlow assigns a unique name to each tensor (or in the form of TensorFlow variables).
 
-This section will introduce the KV store and the optimizer. Since RPC servicer will involve interaction among the master, workers and the PS. It will be introduced in the [Interactions among the master, workers and PS](#Interactions-among-the-master,-workers-and-PS) section.
+For embedding parameters, it is a natural idea to distribute different embedding vectors on different parameter server instance.
 
-### KV Store
-PS storage stores two kinds of parameters, embedding parameters and non-embedding parameters.
+For dense tensors, theoretically, they might have tremendous size and require sharding. However, in practices, researchers don't often define models depending on huge dense tensor parameters. Hence in this design, we don't partition dense tensors; instead, we place each dense tensor on a parameter server instance.
 
-* Embedding parameters consist of mutliple embedding tables. Each embedding table corresponds to one embedding layer in model structure. An embedding table is a data structure that maps a discrete value, *id*, to a 1-d vector *vector*. This can be saved as the form of `dictionary{layer name, dictionary{id, vector}}`.
-* Non-embedding parameters are in the form of mutiple TensorFlow variables in worker. The PS only needs to save the *name* and *value* of those variables. Because the *name* of variable is a unqiue identifier, non-embedding parameters are inherently suitable for KV storage.
+For each dense tensor or an embedding vector, denoted by x, we put it on the parameter server p(x). For a dense tensor x, we denote key(x) for its name; for an embedding vector x, key(x) consists of the name of the embedding layer and its embedding id.
 
-Here is a detail that ElasticDL saves the non-embedding parameters in the form of `dictionary{name, TensorFlow.Variable}`. This is TensorFlow optimizer only accepts `tf.Variable` and transformation between `tf.Variable` and `numpy.ndarray` will copy the array object and thus waste time.
+There are many ways to define p(x). For simplicity, we choose a fixed mapping from x to a range of PS instances [0, N):
 
-We can define the custom storage of PS as following:
+p(x) = hash(key(x)) % N
+
+It is noticeable that Kubernetes might preempt some parameter server instances. In such a case, we might be afraid that N isn't constant. However, we can overcome this case by setting parameter server instances having higher priority than worker processes in a job. By doing so, preemption kills workers other than parameter servers. If all workers are dead, the job stops until there comes free resources, and Kubernetes starts some workers for the job.  For more information about preemption, please refer to [this document](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/). In short, we can assume that N is a constant number in the Kubernetes-native architecture of ElasticDL.
+
+## High Performance
+As introduced above, when using large model and large number of workers, the key to high performance of PS mechanism is achieving efficient communication between workers and the PS. In order to achieve this goal, we need to have a reasonable parameter storage scheme first, then we can design a efficient scheme to pull parameters, push gradient and update parameters.
+
+### Parameter Storage
+Parameter storage includes two kinds of parameters:
+
+* Embedding parameters can be saved in the form of `dictionary{layer name, dictionary{id, vector}}`.
+* Each Non-embedding parameter consists of a name and a dense tensor, which is inherently suitable for KV storage.
+
+There are many high-performant technique for KV storage, for example, hash map and R&B tree. For simplicity, we can use python dictionary at first. Hence we can save parameters in the following structure:
 
 ```python
 class KVStore(object):
@@ -75,15 +83,39 @@ class EmbeddingTable(object):
         pass
 ```
 
-### Optimizer
+### Pull Parameters
+Since ElasticDL saves parameters in PS, workers should pull parameters from the PS in training/evaluation process. 
 
-The optimizer of the PS is responsible for applying gradients to parameters in KV store. The optimizer should support two kinds of parameter updating strategies: 
+For non-embedding parameters, we can pull all non-embedding parameters from the corresponding PS nodes before the forward-pass.
 
-* Synchronous SGD: The optimizer should wait for a certain number of gradients, and then use those gradients to update parameters.
-* Asynchronous SGD: The optimizer should update parameters whenever it receives a gradient. More details can be found in the ElasticDL's [asynchronous SGD design doc](async_sgd_design.md).
+For embedding parameters, ElasticDL should only pull embedding vectors that are used in this iteration. This is because embedding vectors used in each iteration only account for a small proportion of the embedding parameters. Only when it it time for embedding layer to do forward-pass, can we know which embedding vectors will be used in this iteration. Thus, the embedding layer is responsible for pulling embedding vectors from PS in its forward-pass process. 
 
-Please note that there are some details need to handle carefully when updating embedding parameters, e.g. sparse update of embedding table, and managing slot variables in TensorFlow optimizers. ElasticDL has already implement an [OptimizeWrapper](../elasticdl/python/master/optimizer_wrapper.py) to hanldle them. We will move it from master to pserver part.
+Thanks to the model sharding technique, ElasticDL can implement above processes in parallel communication with all PS instances, thus achieve the goal of high performance.
 
+Here are the RPC call definitions for pulling non-embedding parameters and pulling embedding vectors.
+
+```proto
+service PServer{
+    rpc pull_non_embedding_param(PullModelRequest) returns (PullModelResponse);
+    rpc pull_embedding_vectors(Tensor) returns (Tensor);
+}
+```
+
+### Push Gradients
+After backward-pass, a worker shards the gradients in the same way as the corresponding parameters and push them to PS instances concurrently. 
+
+Here is the RPC call definition for pushing gradients.
+
+```proto
+service PServer{
+    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
+}
+```
+
+### Update Parameters
+The optimizer of the PS is responsible for using received gradients to update parameters. The optimizing process should support two kinds of parameter updating strategies, synchronous SGD and asynchronous SGD, about which we have introduced in other design documents.
+
+To avoid communication between optimizer and the PS, ElasticDL proposes to put the optimizer into the parameter server pods, i.e. every parameter server instance has an optimizer instance. This can also distribute the optimization computation.
 
 ## PS Fault Tolerance
 
@@ -160,104 +192,3 @@ def GetReplica(self, request, _):
     return replica
 ```
 Note that PS also needs the lock for adding updated embedding vector keys into `self.UKS` after embedding table sparse updates.
-
-
-## Interactions among the master, workers and PS
-
-This section will introduce the interactions among the master, workers and PS, and some related details. The following events involve interactions of these pods:
-
-* The master starts PS.
-* Initialize model parameters.
-* Parameter sharding.
-* Workers pull model parameters from the PS.
-* Workers push gradients to the PS.
-
-### The master starts the PS
-When an ElasticDL job starts, `master.main` is responsible for starting PS as a Kubernetes service. Through Kubernetes service, we can fix domain name for every PS node.
-
-After starting PS, `master.main` starts the master servicer and workers, and tells them the domain names of all PS nodes. For PS with embedding replicas, every PS node also needs to know the domain name of its replicas.
-
-### Initialize model parameters
-After starting, PS does not contain any parameter. For non-embedding parameters, ElasticDL should initialize them before the training process. For embedding parameters, ElasticDL adopts lazy initialization, i.e. initialize them when they are needed in the training process.
-
-As introduced above, each worker contains all non-embedding parameters while a single PS node contains only a subset of non-embedding parameters. Thus, for models without any embedding layer, the memory of single PS pod, which is specified by the user, can be smaller than the memory of single worker pod. Therefore the model parameters may not fit in the memory of single worker pod. It is better to randomly initialize non-embedding parameters in worker pods. Workers pods push these parameters to the PS.
-
-Here is the RPC call definition for pushing initialized model.
-
-```proto
-service PServer{
-    rpc push_model(Model) returns (google.protobuf.Empty);
-}
-```
-
-For embedding parameters, ElasticDL adopts lazy initialization. Thus, when an worker pull embedding vectors from PS nodes, some PS nodes may find that the worker requires some embedding vectors that does not exist in the KV store. PS nodes will initialized these embedding vectors and return them to the worker. 
-
-Here is the pseudocode for pulling embedding parameters:
-
-```python
-service PServer{
-    rpc pull_embedding_parameters(PullEmbeddingParamRequest) returns (Tensor);
-}
-
-class PServer(elasticdl_pb2_grpc.PServerServicer):
-    def pull_embedding_parameters(self, req, _):
-        layer_name = req.layer_name
-        ids = req.ids
-        return self.KVStore_instance.get_embedding_param(layer_name, ids)
-
-class KVStore(object):
-    def get_embedding_param(self, layer_name):
-        self.embedding_param_db[layer_name].get(ids)
-
-class EmbeddingTable(object):
-    def __init__(self, name, dim, initializer):
-        self.name = name
-        self.vectors = {}
-        # dim and initializer is used for random intialize embedding vectors
-        self.dim = dim # the dimension of embedding vectors
-        self.initializer = initializer # the initializer method of embedding vectors
-
-    def get(self, indices):
-        res = []
-        for i in indices:
-            if i not in self.vectors:
-                value = init_value(self.initializer, self.dim)
-            else:
-                value = self.vectors[i]
-            res.append(value)
-        return res
-```
-
-### Parameter Sharding
-Strictly, parameter sharding is not an interaction between pods. But it is a common functionality that is used by pull parameters request and push gradient request.
-
-As introduced above, ElasticDL places each parameter into one of the multiple PS pods, which is called parameter sharding. Parameter sharding strategy is usually a hash function that maps a parameter to a PS pod id. For non-embedding parameter, the key of hash function is its name. For embedding parameter, the key of hash function is its embedding layer name combined with its embedding id. We could use a simple round-robin policy, *PS(i)=hash(key) % N*, at first.
-
-### Workers pull parameters from the PS
-Since ElasticDL saves parameters in PS, workers should pull parameters from the PS in each iteration of training/evaluation process.
-
-For non-embedding parameters, we can pull all non-embedding parameters from the corresponding PS nodes before the forward-pass.
-
-For embedding parameters, ElasticDL should only pull embedding vectors that are used in this iteration. This is because embedding vectors used in each iteration only account for a small proportion of the embedding parameters. Only when the `call` function of the embedding layer is called do we know which embedding vectors will be used in this function. Thus, the embedding layer is responsible for pulling embedding vectors from PS in its `call` function. 
-
-Currently, ElasticDL has already implemented its embedding layer in `elasticdl.layers.embedding` module.
-
-Here are the RPC call definitions for pulling non-embedding parameters and pulling embedding vectors.
-
-```proto
-service PServer{
-    rpc pull_non_embedding_param(PullModelRequest) returns (PullModelResponse);
-    rpc pull_embedding_vectors(Tensor) returns (Tensor);
-}
-```
-
-### Workers push gradients to the PS
-As introduced above, after backward-pass, a worker shards the gradients in the same way as the corresponding parameters and push them to PS pods. PS is responsible for using these gradients to update model parameters. 
-
-Here is the RPC call definition for pushing gradients.
-
-```proto
-service PServer{
-    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
-}
-```
