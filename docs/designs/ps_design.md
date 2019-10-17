@@ -13,9 +13,9 @@ Sharding the model to multiple parameter servers is a common choice. The reasons
 - Communication load between workers and parameter servers will be balanced. More parameter servers usually means more network bandwidth.
 - Model optimization could be parallelized on multiple parameter servers.
 
-In addition, we want to launch machine learning jobs in a Kubernetes supported cluster. The pods in Kubernetes are scheduled with priority, and could be preempted at any time. At the same time, hardware failure problem is also nonnegligible in a large scale distributed system. Here, We introduce another role called master to watch the status of worker pods and parameter server pods. It calls Kubernetes API to start or relaunch worker pods and optionally parameter server pods, and scheduling tasks to worker pods.
+In addition, we want to launch machine learning jobs in a Kubernetes supported cluster. The pods in Kubernetes are scheduled with priority, and could be preempted at any time. At the same time, hardware failure problem is also nonnegligible in a large scale distributed system. Here, we introduce another role called master to watch the status of worker pods and parameter server pods. It calls Kubernetes API to start or relaunch worker pods and optionally parameter server pods, and scheduling tasks to worker pods.
 
-In conclusion, a high preformance parameter server architecture with scalability and fault-tolerance is needed.
+In conclusion, a high preformance distributed parameter server architecture with scalability and fault-tolerance is needed.
 
 Following is the overview architecture diagram:
 
@@ -44,7 +44,7 @@ Assuming that there are N parameter server pods in a training job. We could use 
 
 Each parameter server pod will store some embedding vectors and dense tensor parameter, it only holds a subset of the whole model.
 
-The number of parameter server pods will keep unchanged during a job. We set the priority of parameter server pods higher than worker pods. Thus, worker pods of a lower priority job will be killed first to satisfy another job. If all worker pods of a job are dead , this job is actually stopped. We will restart the job again when the hardware resources is sufficient.
+The number of parameter server pods will keep unchanged during a job. We set the priority of parameter server pods higher than worker pods. Thus, worker pods of a lower priority job will be killed first to satisfy another job. If all worker pods of a job are dead , this job is actually stopped. We will restart the job again when the hardware resources are sufficient.
 
 ## KVStore
 
@@ -148,7 +148,7 @@ message Model {
 }
 ```
 
-Since embedding table parameter is initialized lazily in the PS side, we have to put some meta info defined in `EmbeddingTableInfo` in the model proto message too. The `EmbebeddingTableInfo` is used by a PS pod to create a `EmbeddingTable` in KVStore.
+Since embedding table parameter is initialized lazily in the PS side, we have to put some meta info defined in `EmbeddingTableInfo` in the model proto message too. The `EmbebeddingTableInfo` is used by a PS pod to create a `EmbeddingTable` instance in KVStore.
 
 
 ## Model Optimization
@@ -157,9 +157,7 @@ We also need an optimizer to update the model parameters stored in each paramete
 
 To update a single parameter, the optimizer needs to get the parameter, apply the gradient to the parameter, and then write the parameter back. It involves one time read and one time write. There will be huge accesses to parameters during a training job.
 
-Since each parameter server pod holds a subset model, it's better to make the optimization to the subset model at the same parameter pod to reduce the cost of accessing parameters.
-
-Thus, each parameter server pod will hold an optimizer instance itself.
+Since each parameter server pod holds a subset model, it's better to make the optimization of the subset model at the same parameter server pod to reduce the cost of accessing parameters. Thus, each parameter server pod will hold an optimizer instance itself.
 
 There are three steps of model optimization:
 
@@ -200,16 +198,16 @@ The optimizer of parameter server is responsible for applying gradients to param
 The optimizer supports two kinds of parameter updating strategies: synchronous-SGD and asynchronous-SGD.
 
 - In synchronous-SGD, the optimizer needs to wait for a certain number of gradients from workers, and then apply the gradients to parameters.
-- In asynchronous-SGD, the `apply_gradient` function of optimizer inside will be called inside `push_gradient` RPC service directly.
+- In asynchronous-SGD, the `apply_gradient` function of optimizer will be called inside `push_gradient` RPC service directly.
 
 
 ### Delayed Model Updating
 
-In order to reduce the communication overhead between workers and parameter servers, we propose a strategy called delayed model updating. A worker runs several rounds of forward/backward computation using its local model, and keep the gradients locally. After finishing, it pushes gradients to parameter servers.
+In order to reduce the communication load between workers and parameter servers, we propose a strategy called delayed model updating. A worker runs several rounds of forward/backward computation using its local model, and keep the gradients locally. After finishing, it pushes gradients to parameter servers.
 
 **Note**
 
-Since the local model is only a part of the global model, in some circumstance, workers still has to pull the embedding vector parameter from parameter servers if there exits unknow item ids in a minibatch data. In async mode, this will lead to relative newer embedding part parameters, but relative older other part parameters.
+Since the local model is only a part of the global model, in some circumstance, workers still has to pull the embedding vector parameter from parameter servers if there exits unknow item ids in a minibatch data. In asynchronous-SGD, this will lead to relative newer embedding part parameters, but relative older other part parameters.
 
 
 ### Short Summary
@@ -222,13 +220,13 @@ Let's make a short summary here, the parameter server has three basic components
 |Optimizer | applies gradients from workers to model parameters|CPU |
 |RPC servicer |servers workers to pull parameters and push gradients | network bandwidth |
 
-Following is the dataflow graph of model parameters:
+Following is the graph that describes model parameters flowing between different roles:
 
 ![pserver](../images/pserver.png)
 
 ## Fault Tolerance
 
-There are two scenarios of failover to be taken into consideration:
+There are two scenarios of system fault to be taken into consideration:
 
 - Machines get breakdown
 - Some pods are killed because of priority scheduling
@@ -250,7 +248,7 @@ PS provides RPC service for workers. In order to continuously provide the RPC se
 
 The relaunched PS pod will recover model parameters to continue the training process. 
 
-For non-embedding parameters, the PS pod can recover from workers in the same way as the [model initialization](#push_model).
+For non-embedding parameters, the PS pod can recover from workers in the same way as the [model initialization](#model initialization).
 
 For embedding vectors, PS creates replicas to support fault tolerance. For each PS pod *PS(i)*, it will store *M* replicas in the following *M* PS pods from *PS((i+1) % N)* to *PS((i+M) % N)*. The relaunched PS pod can recover embedding vectors from one of its replicas.
 
