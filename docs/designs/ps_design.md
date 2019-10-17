@@ -181,7 +181,7 @@ service PServer{
 
 Workers will pull all non-embedding parameters before a forward pass.
 
-For embedding parameter, until the model runs into a embedding layer, can we get the item id input of this embedding layer. Then, the embedding layer will pull needed embedding vectors from the right PS pods within its `call` method.
+For embedding parameter, until the model runs into a embedding layer, can we get the item id input of this embedding layer. Then, the embedding layer will pull needed embedding vectors from the corresponding PS pods within its `call` method.
 
 ### Push Gradients
 
