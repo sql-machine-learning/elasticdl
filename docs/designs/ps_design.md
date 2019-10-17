@@ -2,53 +2,59 @@
 
 ## Overview
 
-There are commonly two gradient synchronization architectures in distributed training. One is all-reduce, the other is parameter server. Sometimes, the model size is out of the memory of a computer. For example, many recommending and ranking models take very high-dimensional (and sparse) inputs, thus require large embedding tables. In this scenario, parameter server would be more suitable.
+A typical parameter server architecture of data parallelism distributed training system contains two roles:
 
-The parameters of a model will be sharded among several nodes, which are call PS(parameter server) nodes. Since we use a distributed PS, the communication load between workers and PS, and the optimization load in PS will also be balanced.
+- parameter server(or PS for short), maintaining the global model, and providing parameter pull/push/optimize/checkpoint service
+- worker, computing gradients of model parameters using local data and pushing gradients to pservers
 
-In addition, we want to launch machine learning jobs in a Kubernetes supported cluster. The pods in Kubernetes are scheduled with priority, and could be preempted at any time. Besides, hardware failure problem is also nonnegligible in a large scale distributed system. Thus, the distributed PS have to support fault-torenlence feature.
+Sharding the model to multiple pservers is a common choice. The reasons are as following:
 
-In conclusion, a PS architecture with scalability and fault-tolerance is highly needed.
+- Sometimes, the model size if out of the memory of a process. For example, many recommending and ranking models take very high-dimensional (and sparse) inputs, thus require large embedding tables.
+- Communication load between workers and parameter servers will be balanced. More parameter servers usually means more network bandwidth.
+- Model optimization could be parallelized on multiple parameter servers.
 
-In the following [PS](#ps) section, we will explain the components of a distributed PS with scalability. In [PS Fault Tolerance](#ps-fault-tolerance) section, we will explain how to support PS fault tolerance in detail.
+In addition, we want to launch machine learning jobs in a Kubernetes supported cluster. The pods in Kubernetes are scheduled with priority, and could be preempted at any time. At the same time, hardware failure problem is also nonnegligible in a large scale distributed system. Here, We introduce another master to watch the status of worker pods and parameter server pods. It calls Kubernetes API to start or relaunch worker pods and optionally parameter server pods, and scheduling tasks to worker pods.
 
-## PS
+In conclusion, a high preformance parameter server architecture with scalability and fault-tolerance is needed.
 
-We will distribute model parameters into multiple PS pods, which is called parameter sharding. There is a hash function that maps a parameter to a PS pod id. And this parameter will be stored at this corresponding PS pod.
+Following is the overview architecture diagram:
+
+![parameter server](../images/parameter_server.png)
+
+We will answer following questions in next sections:
+
+- How to make model sharding in parameter server pods?
+- What kind of data structure is used to keep parameters in the memory of parameter server pods?
+- How parameters are initialized in parameter server pods?
+- How parameters are updated in parameter server pods?
+- How to make the parameter server architecture fault-tolerant?
+
+## Model sharding
+
+We will distribute model parameters into multiple PS pods, which is called model sharding. There is a hash function that maps a parameter to a PS pod id. And this parameter will be stored at this corresponding PS pod.
 
 There are several kinds of parameter to be handled separately:
 
 - Very big embedding table: Embedding table is a collection of <item id, embedding vector> pairs. The embedding table name combining an item id becomes a key of the hash function.
 - Dense tensor: The dense tensor parameter name is the key of the hash function.
 
-We could use a simple round-robin policy, *PS(i) = hash(key) mod N*, at first. Each PS pod will store some embedding vectors and dense tensor parameter, it only holds a subset of the whole model.
+Assuming that there are N parameter server pods in a training job. We could use a simple round-robin policy at first.
+
+*PS(i) = hash(key) mod N*
+
+Each parameter server pod will store some embedding vectors and dense tensor parameter, it only holds a subset of the whole model.
+
+The number of parameter server pods will keep unchanged during a job. We set the priority of parameter server pods higher than worker pods. Thus, worker pods of a lower priority job will be killed first to satisfy another job. If all worker pods of a job are dead , this job is actually stopped. We will restart the job again when the hardware resources is sufficient.
+
+## KVStore
 
 We use a customized data structure called KVStore to store model parameters in PS. There is a KVStore instance in each PS pod. The KVStore instances from the PS pods form a distributed KVStore, which could be scaled easily to support a model with a large size.
-
-We also need an optimizer to update the model parameters stored in PS pods. To update a single parameter, the optimizer needs to get the parameter, apply the gradient to the parameter, and then write the parameter back. It involves one time read and one time write. There will be huge accesses to parameters during a training job. Since each PS pod holds a subset model, it's better to make the optimization to the subset model at the same PS pod to reduce the cost of accessing parameters.
-
-Besides KVStore and optimizer, the PS also need to provide necessary RPC services to workers. Workers will pull the latest model parameters from PS, and push gradients to PS in each iteration of training.
-
-Thus, we propose that PS has three basic components:
-
-| component| functionality |hardware |
-| :----  |:----  |:----  |
-|KVStore  | provides distributed storage of model parameters|memory|
-|Optimizer | applies gradients from workers to model parameters|CPU |
-|RPC servicer |servers workers to pull parameters and push gradients | network bandwidth |
-
-Following is the architecture diagram of PS:
-
-![pserver](../images/pserver.png)
-
-
-### KVStore
 
 The KVStore needs to support both non-embedding paramteters and embedding table parameters.
 
 Since `tf.keras.optimizer` only accept `tf.Variable` type parameter, to avoid unnecessary memory copy, we save a non-embedding parameter as a `tf.Variable` directly. We use a variable DB to store all the non-embedding parameters, the key is the variable name, the value is the variable itself.
 
-However, an embedding table parameter could not be represented by a standard `tf.Variable`. For example, in an online learning case, new item id may come in sometimes. The shape of the embedding table is not determined. Besides, we have to initialize corresponding embedding vector value on the fly for the new item id in the PS pod.
+However, an embedding table parameter could not be represented by a standard `tf.Variable`. For example, in an online learning case, new item id may come in sometimes. The shape of the embedding table is not determined. Besides, we have to initialize corresponding embedding vector value on the fly for the new item id in the parameter server pod.
 
 We introduce a customized data structure `EmbeddingTable` to meet such demands. Following is the definition of `EmbeddingTable`:
 
@@ -76,9 +82,9 @@ class EmbeddingTable(object):
 
 The name of an embedding table is actually the embedding layer name. The embedding table uses a dictionary `vectors` to store embedding vectors, the key is the item id, the value is the embedding vector.
 
-Please note that the embedding tables in the PS pods which have the same name, form the big embedding table for a certain embedding layer.
+Please note that the embedding tables in the parameter seerver pods which have the same name, form the big embedding table for a certain embedding layer.
 
-Since embedding vectors are lazily initialized in PS, `EmbeddingTable` also has `dim` and `initializer` fields. Inside the `get` interface of `EmbeddingTable `, if the id is not in the `vectors` dictionary, the corresponding value will be initialized.
+Since embedding vectors are lazily initialized in parameter server, `EmbeddingTable` also has `dim` and `initializer` fields. Inside the `get` interface of `EmbeddingTable `, if the id is not in the `vectors` dictionary, the corresponding value will be initialized.
 
 There could be multiple embedding table from different embedding layer. We will create an `EmbeddingTable` instance for each embedding layer. These instances are stored at a dictionary called embedding table DB. The key is embedding layer name, the value is the embedding table itself.
 
@@ -97,31 +103,17 @@ class KVStore(object):
         pass
 ```
 
-### Optimizer
+## Model initialization
 
-The optimizer of PS is responsible for applying gradients to parameters in KVStore. Embedding table parameter needs to be handled carefully, since it's not a standard `tf.Variable`. We have already implemented an [OptimizeWrapper](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/python/master/optimizer_wrapper.py) to handle this. We will move it to from master to pserver part.
+There is no model definition file in the parameter server side. Workers will initialize the model when the first mini-batch data comes in. Then workers push the model to the parameter server side.
 
-The optimizer supports two kinds of parameter updating strategies: sync-SGD and async-SGD. 
-
-- In sync-SGD, the optimizer needs to wait for a certain number of gradients from workers, and then apply the gradients to parameters.
-- In async-SGD, the `apply_gradient` function of optimizer inside will be called inside `push_gradient` RPC service directly.
-
-### RPC Service
-
-PS provides necessary RPC service for workers. Following is the definition of PS RPC service:
+Following is a RPC service for model initialization.
 
 ```proto
 service PServer{
     rpc push_model(Model) returns (google.protobuf.Empty);
-    rpc pull_variable(PullModelRequest) returns (PullModelResponse);
-    rpc pull_embedding_vector(Tensor) returns (Tensor);
-    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);    
 }
 ```
-
-**push_model**
-
-This is a RPC service for model initialization. There is no model definition file in the PS side. Workers will initialize the model when the first mini-batch data comes in. Then workers push the model to the PS side.
 
 Following is the definition of the model proto message:
 
@@ -156,34 +148,97 @@ message Model {
 }
 ```
 
-Since embedding tabel parameter is initialized lazily in the PS side, we have to put some meta info defined in `EmbeddingTableInfo` in the model proto message too. The `EmbebeddingTableInfo` is used by a PS pod to create a `EmbeddingTable` in KVStore.
+Since embedding table parameter is initialized lazily in the PS side, we have to put some meta info defined in `EmbeddingTableInfo` in the model proto message too. The `EmbebeddingTableInfo` is used by a PS pod to create a `EmbeddingTable` in KVStore.
 
-**pull_variable**
+
+## Model optimization
+
+We also need an optimizer to update the model parameters stored in each parameter server pod.
+
+To update a single parameter, the optimizer needs to get the parameter, apply the gradient to the parameter, and then write the parameter back. It involves one time read and one time write. There will be huge accesses to parameters during a training job.
+
+Since each parameter server pod holds a subset model, it's better to make the optimization to the subset model at the same parameter pod to reduce the cost of accessing parameters.
+
+Thus, each parameter server pod will hold an optimizer instance itself.
+
+There are three steps of model optimization:
+
+- Worker pods pull latest model from parameter server pods.
+- Worker pods compute the gradients using local data and push the gradients to parameter server pods.
+- The optimizer in each parameter server pod applies gradients from workers to parameters read from KVStore, and writes parameters back to KVStore.
+
+
+### Pull model
+
+Parameter server pods provide two RPC service for worker pods to pull model parameters.
+
+```proto
+service PServer{
+    rpc pull_variable(PullModelRequest) returns (PullModelResponse);
+    rpc pull_embedding_vector(Tensor) returns (Tensor);
+}
+```
 
 Workers will pull all non-embedding parameters before a forward pass.
 
-**pull_embedding_vector**
+For embedding parameter, until the model runs into a embedding layer, can we get the item id input of this embedding layer. Then, the embedding layer will pull needed embedding vectors from the right PS pods within its `call` method.
 
-Until the model runs into a embedding layer, can we get the item id input of this embedding layer. Then, the embedding layer will pull needed embedding vectors from the right PS pods within its `call` method.
+### Push gradients
 
-**push_gradient**
+```proto
+service PServer{
+    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
+}
+```
 
 After backward pass, workers will push the gradients to the PS.
 
-### Checkpoint
+### Model updating
 
-Master will send signal to PS to make checkpoint. Each PS pod will save parameters in its current KVStore to a distributed file system.
+The optimizer of parameter server is responsible for applying gradients to parameters in KVStore. Embedding table parameter needs to be handled carefully, since it's not a standard `tf.Variable`. We have already implemented an [OptimizeWrapper](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/python/master/optimizer_wrapper.py) to handle this. We will move it to from master to pserver part.
 
-## PS Fault Tolerance
+The optimizer supports two kinds of parameter updating strategies: synchronous-SGD and asynchronous-SGD.
+
+- In synchronous-SGD, the optimizer needs to wait for a certain number of gradients from workers, and then apply the gradients to parameters.
+- In asynchronous-SGD, the `apply_gradient` function of optimizer inside will be called inside `push_gradient` RPC service directly.
+
+
+### Delayed model updating
+
+In order to reduce the communication overhead between workers and parameter servers, we propose a strategy called delayed model updating. A worker runs several rounds of forward/backward computation using its local model, and keep the gradients locally. After finishing, it pushes gradients to parameter servers.
+
+**Note**
+
+Since the local model is only a part of the global model, in some circumstance, workers still has to pull the embedding vector parameter from pservers if there exits unknow item ids in a minibatch data. In async mode, this will lead to relative newer embedding part parameters, but relative older other part parameters.
+
+
+### Short summary
+
+Let's make a short summary here, the parameter server has three basic components:
+
+| component| functionality |hardware resource|
+| :----  |:----  |:----  |
+|KVStore  | provides distributed storage of model parameters|memory|
+|Optimizer | applies gradients from workers to model parameters|CPU |
+|RPC servicer |servers workers to pull parameters and push gradients | network bandwidth |
+
+Following is the dataflow graph of model parameters:
+
+![pserver](../images/pserver.png)
+
+## Fault Tolerance
 
 There are two scenarios of failover to be taken into consideration:
 
 - Machines get breakdown
 - Some pods are killed because of priority scheduling
 
-Since PS pods has higher priority than worker pods, worker pods of a lower priority job will be killed first to satisfy another job. If we kill all worker pods of a job, this job is actually stopped. There is no chance to kill a PS pod.
 
-So we only need to focus on the first scenario. We will support PS fault tolerance by relaunching any failed PS pod and recovering its model parameters from a worker pod and a replica in another PS pod.
+Since worker is stateless, we do not have to support failover for worker.
+
+And from the analysis in [model sharding section](#model sharding), parameter server pod number will keep unchanged during a training job.
+
+So we only need to focus on the first scenario for parameter server. We will support parameter server fault tolerance by relaunching any failed parameter server pod and recovering its model parameters from a worker pod and a replica in another parameter server.
 
 Following are the implementation details.
 
