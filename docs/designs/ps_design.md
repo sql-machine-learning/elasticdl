@@ -5,9 +5,9 @@
 A typical parameter server architecture of data parallelism distributed training system contains two roles:
 
 - parameter server(or PS for short), maintaining the global model, and providing parameter pull/push/optimize/checkpoint service
-- worker, computing gradients of model parameters using local data and pushing gradients to pservers
+- worker, computing gradients of model parameters using local data and pushing gradients to parameter servers.
 
-Sharding the model to multiple pservers is a common choice. The reasons are as following:
+Sharding the model to multiple parameter servers is a common choice. The reasons are as following:
 
 - Sometimes, the model size if out of the memory of a process. For example, many recommending and ranking models take very high-dimensional (and sparse) inputs, thus require large embedding tables.
 - Communication load between workers and parameter servers will be balanced. More parameter servers usually means more network bandwidth.
@@ -195,7 +195,7 @@ After backward pass, workers will push the gradients to the PS.
 
 ### Model updating
 
-The optimizer of parameter server is responsible for applying gradients to parameters in KVStore. Embedding table parameter needs to be handled carefully, since it's not a standard `tf.Variable`. We have already implemented an [OptimizeWrapper](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/python/master/optimizer_wrapper.py) to handle this. We will move it to from master to pserver part.
+The optimizer of parameter server is responsible for applying gradients to parameters in KVStore. Embedding table parameter needs to be handled carefully, since it's not a standard `tf.Variable`. We have already implemented an [OptimizeWrapper](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/python/master/optimizer_wrapper.py) to handle this. We will move it to from master to parameter server part.
 
 The optimizer supports two kinds of parameter updating strategies: synchronous-SGD and asynchronous-SGD.
 
@@ -209,7 +209,7 @@ In order to reduce the communication overhead between workers and parameter serv
 
 **Note**
 
-Since the local model is only a part of the global model, in some circumstance, workers still has to pull the embedding vector parameter from pservers if there exits unknow item ids in a minibatch data. In async mode, this will lead to relative newer embedding part parameters, but relative older other part parameters.
+Since the local model is only a part of the global model, in some circumstance, workers still has to pull the embedding vector parameter from parameter servers if there exits unknow item ids in a minibatch data. In async mode, this will lead to relative newer embedding part parameters, but relative older other part parameters.
 
 
 ### Short summary
