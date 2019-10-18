@@ -1,24 +1,14 @@
 # Design Doc: Parameter Server
 This document is about the parameter server of ElasticDL. ElasticDL is a Kubernetes-native and fault-tolerable distributed deep learning system.
 
-## Overview
+## Background
 The parameter server (PS) is one of the two commonly-used mechanisms for gradient aggregation and model updates in deep learning. The other one is AllReduce, about which we will talk in other design documents.
 
 In PS mechanism, machines are designated as three roles, one master, multiple workers and a PS with one or more PS instances. In the training process, workers pull parameters from the PS and push gradients to the PS. The PS should update model parameters using gradients received.
 
-There are two problems with the single instance PS:
+It is noticeable that most designs use multiple PS instances to form a *service* in each job. These instances can collaboratively maintain large models with model sharding. Sometimes, even when the model is not very big, users still want multiple PS instances to benefit performance, because a single PS instance might become the bottleneck of communication and computation.
 
-* For models with huge embedding tables, model parameters may not fit in the memory of a single process. This is especially common in recommending and ranking models. In these models, embedding tables might be up to terabytes and non-embedding parameters are able to fit in a single process. This inspires us to do model parallelism.
-* Communication and I/O bandwidth between workers and the PS may limit the training speed. Multiple workers may pull parameters or push gradients at the same time. However, the bandwidth of a single machine is limited. Thus, with single PS instance, communication may be the bottleneck, especially when using a large number of workers or using a big model. This insipres us to use multiple PS instances.
-
-Therefore, ElasticDL proposes to implement a PS with multiple PS instances and adopt model parallelism by placing each prarameter of the model on one of the PS instances. Such distribution is known as model sharding. In this setup, we can solve the first problem and alleviate the second problem:
-
-* For models with large embedding tables, every PS instance only contains a subset of embedding parameters. Every worker only contains all non-embedding parameters and embedding parameters that are used in one iteration, which only account for a small proportion of the embedding parameters. Thus, parameters on every PS instance and every worker can fit in the memory of single process.
-* Everytime workers pull parameters (or push gradients), it communicates with all the PS instances to get all model parameters (or push all gradients). Thus if the PS have *N* instances, each worker only uses *1/N* bandwidth of each PS instance. Therefore, the PS with multiple PS instances can alleviate the communication bottleneck.
-
-Also, using the PS with multiple PS instances can benefit performance through accelerating communication, because workers pull parameters concurrently from all the PS nodes, rather than pulling them serially in the single PS node setting.
-
-In the literature, we see works about parameter server designs that handle large models and improve performance. However, ElasticDL needs an additional property -- fault-tolerance. The rest of the document will focus on how to achieve the three goals simultaneously:
+In literatures, we see works about parameter server designs that handle large models and improve performance. However, ElasticDL needs an additional property -- fault-tolerance. The rest of the document will focus on how to achieve the three goals simultaneously:
 
 1. model sharding
 2. high performance
@@ -43,7 +33,7 @@ p(x) = hash(key(x)) % N
 It is noticeable that Kubernetes might preempt some parameter server instances. In such a case, we might be afraid that N isn't constant. However, we can overcome this case by setting parameter server instances having higher priority than worker processes in a job. By doing so, preemption kills workers other than parameter servers. If all workers are dead, the job stops until there comes free resources, and Kubernetes starts some workers for the job.  For more information about preemption, please refer to [this document](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/). In short, we can assume that N is a constant number in the Kubernetes-native architecture of ElasticDL.
 
 ## High Performance
-As introduced above, when using large model and large number of workers, the key to high performance of PS mechanism is achieving efficient communication between workers and the PS. In order to achieve this goal, we need to have a reasonable parameter storage scheme first, then we can design a efficient scheme to pull parameters, push gradient and update parameters.
+As introduced above, when using a large model and a large number of workers, the key to high performance of PS mechanism is achieving efficient communication between workers and the PS. In order to achieve this goal, we need to have a reasonable parameter storage scheme first, then we can design an efficient scheme to pull parameters, push gradient and update parameters.
 
 ### Parameter Storage
 Parameter storage includes two kinds of parameters:
@@ -74,7 +64,7 @@ class KVStore(object):
 class EmbeddingTable(object):
     def __init__(self, layer_name):
         self.layer_name = layer_name
-        self.embeddings = {} # maps `id` to numpy 1-d array
+        self.embeddings = {} # maps `id` to 1-D numpy.ndarray
     
     def get(self, ids):
         pass
@@ -86,7 +76,7 @@ class EmbeddingTable(object):
 ### Pull Parameters
 Since ElasticDL saves parameters in PS, workers should pull parameters from the PS in training/evaluation process. 
 
-For non-embedding parameters, we can pull all non-embedding parameters from the corresponding PS nodes before the forward-pass.
+For non-embedding parameters, we can pull all non-embedding parameters from the corresponding PS instances before the forward-pass.
 
 For embedding parameters, ElasticDL should only pull embedding vectors that are used in this iteration. This is because embedding vectors used in each iteration only account for a small proportion of the embedding parameters. Only when it it time for embedding layer to do forward-pass, can we know which embedding vectors will be used in this iteration. Thus, the embedding layer is responsible for pulling embedding vectors from PS in its forward-pass process. 
 
@@ -115,7 +105,7 @@ service PServer{
 ### Update Parameters
 The optimizer of the PS is responsible for using received gradients to update parameters. The optimizing process should support two kinds of parameter updating strategies, synchronous SGD and asynchronous SGD, about which we have introduced in other design documents.
 
-To avoid communication between optimizer and the PS, ElasticDL proposes to put the optimizer into the parameter server pods, i.e. every parameter server instance has an optimizer instance. This can also distribute the optimization computation.
+To avoid communication between optimizer and the PS, we propose to put the optimizer into the parameter server pods, i.e. every parameter server instance has an optimizer instance. This can also distribute the optimization computation, thus benefit performance.
 
 ## PS Fault Tolerance
 
