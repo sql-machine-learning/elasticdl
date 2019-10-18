@@ -2,18 +2,16 @@
 
 ## Overview
 
-A typical parameter server architecture of data parallelism distributed training system contains two roles:
 
-- parameter server(or PS for short), maintaining the global model, and providing parameter pull/push/optimize/checkpoint service
-- worker, computing gradients of model parameters using local data and pushing gradients to parameter servers.
+Parameter server design is widely used in distributed
+training systems. Both data and workloads
+are distributed over workers, while the servers
+maintain globally shared parameters, represented as dense
+or sparse tensors.
 
-Sharding the model to multiple parameter servers is a common choice. The reasons are as following:
+Many systems use multiple parameter server instances in a job, especially when the model could be large and overruns the memory space of a process. In such cases, we can shard the model and distribute the pieces to multiple parameter server instances. Even if the model is not too big, model sharding prevents the case that a single-node parameter server architecture becomes the bottleneck of communication and computation.
 
-- Sometimes, the model size if out of the memory of a process. For example, many recommending and ranking models take very high-dimensional (and sparse) inputs, thus require large embedding tables.
-- Communication load between workers and parameter servers will be balanced. More parameter servers usually means more network bandwidth.
-- Model optimization could be parallelized on multiple parameter servers.
-
-In addition, we want to launch machine learning jobs in a Kubernetes supported cluster. The pods in Kubernetes are scheduled with priority, and could be preempted at any time. At the same time, hardware failure problem is also nonnegligible in a large scale distributed system. Here, we introduce another role called master to watch the status of worker pods and parameter server pods. It calls Kubernetes API to start or relaunch worker pods and optionally parameter server pods, and scheduling tasks to worker pods.
+In addition, we want to launch machine learning jobs in a Kubernetes supported cluster. The pods in Kubernetes are scheduled with priority, and could be preempted at any time. At the same time, hardware failure problem is also nonnegligible in a large scale distributed system. Here, we introduce another role called master to watch the status of worker pods and parameter server pods. It calls Kubernetes API to start or relaunch worker pods and optionally parameter server pods, and scheduling tasks to worker pods. For more details on the master role, please refer to the [project background](https://github.com/sql-machine-learning/elasticdl#background).
 
 In conclusion, a high preformance distributed parameter server architecture with scalability and fault-tolerance is needed.
 
@@ -46,13 +44,10 @@ Each parameter server pod will store some embedding vectors and dense tensor par
 
 The number of parameter server pods will keep unchanged during a job. We set the priority of parameter server pods higher than worker pods. Thus, worker pods of a lower priority job will be killed first to satisfy another job. If all worker pods of a job are dead , this job is actually stopped. We will restart the job again when the hardware resources are sufficient.
 
-## KVStore
+## Model Data Structure
 
-We use a customized data structure called KVStore to store model parameters in PS. There is a KVStore instance in each PS pod. The KVStore instances from the PS pods form a distributed KVStore, which could be scaled easily to support a model with a large size.
 
-The KVStore needs to support both non-embedding paramteters and embedding table parameters.
-
-Since `tf.keras.optimizer` only accept `tf.Variable` type parameter, to avoid unnecessary memory copy, we save a non-embedding parameter as a `tf.Variable` directly. We use a variable DB to store all the non-embedding parameters, the key is the variable name, the value is the variable itself.
+Since `tf.keras.optimizer` only accept `tf.Variable` type parameter, to avoid unnecessary memory copy, we save a non-embedding parameter as a `tf.Variable` directly. We use a hashmap to store all the non-embedding parameters, the key is the variable name, the value is the variable itself.
 
 However, an embedding table parameter could not be represented by a standard `tf.Variable`. For example, in an online learning case, new item id may come in sometimes. The shape of the embedding table is not determined. Besides, we have to initialize corresponding embedding vector value on the fly for the new item id in the parameter server pod.
 
@@ -86,22 +81,8 @@ Please note that the embedding tables in the parameter seerver pods which have t
 
 Since embedding vectors are lazily initialized in parameter server, `EmbeddingTable` also has `dim` and `initializer` fields. Inside the `get` interface of `EmbeddingTable `, if the id is not in the `vectors` dictionary, the corresponding value will be initialized.
 
-There could be multiple embedding table from different embedding layer. We will create an `EmbeddingTable` instance for each embedding layer. These instances are stored at a dictionary called embedding table DB. The key is embedding layer name, the value is the embedding table itself.
+There could be multiple embedding table from different embedding layer. We will create an `EmbeddingTable` instance for each embedding layer. These instances are stored at another hashmap. The key is embedding layer name, the value is the embedding table itself.
 
-Following is the definition of KVStore:
-
-```python
-class KVStore(object):
-    def __init__(self):
-        self.variable_db = {}
-        self.embedding_table_db = {}
-
-    def get_parameter(self, name):
-        pass
-
-    def set_parameter(self, name, value):
-        pass
-```
 
 ## Model Initialization
 
@@ -148,7 +129,7 @@ message Model {
 }
 ```
 
-Since embedding table parameter is initialized lazily in the PS side, we have to put some meta info defined in `EmbeddingTableInfo` in the model proto message too. The `EmbebeddingTableInfo` is used by a PS pod to create a `EmbeddingTable` instance in KVStore.
+Since embedding table parameter is initialized lazily in the PS side, we have to put some meta info defined in `EmbeddingTableInfo` in the model proto message too. The `EmbebeddingTableInfo` is used by a PS pod to create a `EmbeddingTable` instance in the hashmap.
 
 
 ## Model Optimization
@@ -161,9 +142,9 @@ Since each parameter server pod holds a subset model, it's better to make the op
 
 There are three steps of model optimization:
 
-- Worker pods pull latest model from parameter server pods.
-- Worker pods compute the gradients using local data and push the gradients to parameter server pods.
-- The optimizer in each parameter server pod applies gradients from workers to parameters read from KVStore, and writes parameters back to KVStore.
+1. Worker pods pull latest model from parameter server pods.
+2. Worker pods compute the gradients using local data and push the gradients to parameter server pods.
+3. The optimizer in each parameter server pod applies gradients from workers to parameters read from the hashmap, and writes parameters back to the hasmap.
 
 
 ### Pull Model
@@ -193,7 +174,7 @@ After backward pass, workers will push the gradients to the PS.
 
 ### Model Updating
 
-The optimizer of parameter server is responsible for applying gradients to parameters in KVStore. Embedding table parameter needs to be handled carefully, since it's not a standard `tf.Variable`. We have already implemented an [OptimizeWrapper](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/python/master/optimizer_wrapper.py) to handle this. We will move it to from master to parameter server part.
+The optimizer of parameter server is responsible for applying gradients to parameters. Embedding table parameter needs to be handled carefully, since it's not a standard `tf.Variable`. We have already implemented an [OptimizeWrapper](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/python/master/optimizer_wrapper.py) to handle this. We will move it to from master to parameter server part.
 
 The optimizer supports two kinds of parameter updating strategies: synchronous-SGD and asynchronous-SGD.
 
@@ -211,14 +192,6 @@ Since the local model is only a part of the global model, in some circumstance, 
 
 
 ### Short Summary
-
-Let's make a short summary here, the parameter server has three basic components:
-
-| component| functionality |hardware resource|
-| :----  |:----  |:----  |
-|KVStore  | provides distributed storage of model parameters|memory|
-|Optimizer | applies gradients from workers to model parameters|CPU |
-|RPC servicer |servers workers to pull parameters and push gradients | network bandwidth |
 
 Following is the graph that describes model parameters flowing between different roles:
 
