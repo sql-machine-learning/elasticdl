@@ -15,14 +15,11 @@ In literatures, we see works about parameter server designs that handle large mo
 3. fault-tolerance
 
 ## Model Sharding
-There are two kinds of parameters in the training process:
+There are two kinds of parameters in the training process, embedding parameters and non-embedding parameters. 
 
-* Embedding parameters consist of mutliple embedding tables. Each embedding table corresponds to one embedding layer in model structure. An embedding table is a data structure that maps a discrete value, named embedding id *id*, to a 1-d vector, named embedding vector *vector*. 
-* Non-embedding parameters are in the form of multiple dense tensors. In order to distinguish these dense tensors, TensorFlow assigns a unique name to each tensor (or in the form of TensorFlow variables).
+Embedding parameters consist of multiple embedding tables. Each embedding table correponds to one embedding layer in the user-defined model structure. An embedding table is a data structure that maps a discrete value, named embedding id *id*, to a vector, named embedding vector *vector*. Since embedding parameters might be up to terabytes, we can distribute them by placing different embedding vectors on different parameter server instance. 
 
-For embedding parameters, it is a natural idea to distribute different embedding vectors on different parameter server instance.
-
-For dense tensors, theoretically, they might have tremendous size and require sharding. However, in practices, researchers don't often define models depending on huge dense tensor parameters. Hence in this design, we don't partition dense tensors; instead, we place each dense tensor on a parameter server instance.
+Non-embedding parameters are in the form multiple dense tensors. Theoretically, dense tensors might have tremendous size and require sharding. However, in practices, researchers don't often define models depending on huge dense tensor parameters. Hence in this design, we don't partition dense tensors; instead, we place each dense tensor on a parameter server instance.
 
 For each dense tensor or an embedding vector, denoted by x, we put it on the parameter server p(x). For a dense tensor x, we denote key(x) for its name; for an embedding vector x, key(x) consists of the name of the embedding layer and its embedding id.
 
@@ -39,7 +36,7 @@ As introduced above, when using a large model and a large number of workers, the
 Parameter storage includes two kinds of parameters:
 
 * Embedding parameters can be saved in the form of `dictionary{layer name, dictionary{id, vector}}`.
-* Each Non-embedding parameter consists of a name and a dense tensor, which is inherently suitable for KV storage.
+* Each Non-embedding parameter consists of a name and a dense tensor, which is inherently suitable for KV storage. In order to distinguish these dense tensors, TensorFlow assigns a unique name to each tensor (or in the form of TensorFlow variables).
 
 There are many high-performant technique for KV storage, for example, hash map and R&B tree. For simplicity, we can use python dictionary at first. Hence we can save parameters in the following structure:
 
