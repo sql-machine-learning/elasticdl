@@ -9,7 +9,6 @@ from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
-    parse_master_args,
 )
 from elasticdl.python.common.constants import (
     GRPC,
@@ -33,6 +32,7 @@ from elasticdl.python.master.k8s_worker_manager import WorkerManager
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.master.tensorboard_service import TensorboardService
+
 
 def _make_task_dispatcher(
     training_data,
@@ -63,41 +63,25 @@ def _make_task_dispatcher(
         1 if prediction_f_records else num_epochs,
     )
 
-class Master(Object):
-    def __init__(self, args):
-        self.logger = get_logger("master", level=args.log_level.upper())
-        # Master addr
-        master_ip = os.getenv("MY_POD_IP", "localhost")
-        master_addr = "%s:%d" % (master_ip, args.port)
 
-        # Start TensorBoard service if requested
-        self.tb_service = None
-        if args.tensorboard_log_dir:
+class Master(object):
+    logger = get_logger("master")
+
+    def _create_tensorboard_service(self, tensorboard_log_dir, master_ip):
+        tb_service = None
+        if tensorboard_log_dir:
             logger.info(
                 "Starting TensorBoard service with log directory %s",
-                args.tensorboard_log_dir,
+                tensorboard_log_dir,
             )
             # Start TensorBoard CLI
-            tb_service = TensorboardService(args.tensorboard_log_dir, master_ip)
+            tb_service = TensorboardService(tensorboard_log_dir, master_ip)
             tb_service.start()
 
-        # Start task queue
-        records_per_task = args.minibatch_size * args.num_minibatches_per_task
-        self.task_d = _make_task_dispatcher(
-            args.training_data,
-            args.evaluation_data,
-            args.prediction_data,
-            records_per_task,
-            args.num_epochs,
-        )
-        model_module = load_module(
-            get_module_file_path(args.model_zoo, args.model_def)
-        ).__dict__
-        model_inst = load_model_from_module(
-            args.model_def, model_module, args.model_params
-        )
-        optimizer = model_module[args.optimizer]()
+        return tb_service
 
+    @staticmethod
+    def _get_job_type(args):
         if all(
             (
                 args.training_data,
@@ -125,23 +109,13 @@ class Master(Object):
         else:
             job_type = JobType.TRAINING_ONLY
 
-        # Initialize checkpoint service
-        if args.checkpoint_steps or job_type == JobType.TRAINING_WITH_EVALUATION:
-            logger.info("Starting checkpoint service")
-            checkpoint_service = CheckpointService(
-                args.checkpoint_dir,
-                args.checkpoint_steps,
-                args.keep_checkpoint_max,
-                job_type == JobType.TRAINING_WITH_EVALUATION,
-            )
-        else:
-            checkpoint_service = None
+        return job_type
 
-        # Initialize evaluation service
-        self.evaluation_service = None
+    def _create_evaluation_service(self, args):
+        evaluation_service = None
         if (
-            job_type == JobType.TRAINING_WITH_EVALUATION
-            or job_type == JobType.EVALUATION_ONLY
+            self.job_type == JobType.TRAINING_WITH_EVALUATION
+            or self.job_type == JobType.EVALUATION_ONLY
         ):
             logger.info(
                 "Starting evaluation service with throttle seconds %d "
@@ -150,23 +124,24 @@ class Master(Object):
                 args.evaluation_steps,
             )
             evaluation_service = EvaluationService(
-                checkpoint_service,
-                tb_service,
-                task_d,
+                self.checkpoint_service,
+                self.tb_service,
+                self.task_d,
                 args.evaluation_start_delay_secs,
                 args.evaluation_throttle_secs,
                 args.evaluation_steps,
-                job_type == JobType.EVALUATION_ONLY,
-                model_module[args.eval_metrics_fn],
+                self.job_type == JobType.EVALUATION_ONLY,
+                self.model_module[args.eval_metrics_fn],
             )
             evaluation_service.start()
-            task_d.set_evaluation_service(evaluation_service)
+            self.task_d.set_evaluation_service(evaluation_service)
 
+        return evaluation_service
+
+    def _create_embedding_service(self, layers, args):
         embedding_service_endpoint = None
         embedding_dims = {}
-        # Search for embedding layers in the model,
-        # if found, initialize embedding service
-        layers = find_layer(model_inst, Embedding)
+
         if layers:
             embedding_service = EmbeddingService()
             embedding_service_endpoint = embedding_service.start_embedding_service(
@@ -189,6 +164,9 @@ class Master(Object):
                 [(layer.name, layer.output_dim) for layer in layers]
             )
 
+        return embedding_service_endpoint, embedding_dims
+
+    def _create_master_service(self, args):
         # The master service
         logger.info("Starting master service")
         self.server = grpc.server(
@@ -204,22 +182,27 @@ class Master(Object):
         self.master_servicer = MasterServicer(
             args.grads_to_wait,
             args.minibatch_size,
-            optimizer,
-            task_d,
-            init_var=model_inst.trainable_variables if model_inst.built else [],
-            embedding_dims=embedding_dims,
+            self.optimizer,
+            self.task_d,
+            init_var=self.model_inst.trainable_variables
+            if self.model_inst.built
+            else [],
+            embedding_dims=self.embedding_dims,
             checkpoint_filename_for_init=args.checkpoint_filename_for_init,
-            checkpoint_service=checkpoint_service,
-            evaluation_service=evaluation_service,
-            embedding_service_endpoint=embedding_service_endpoint,
+            checkpoint_service=self.checkpoint_service,
+            evaluation_service=self.evaluation_service,
+            embedding_service_endpoint=self.embedding_service_endpoint,
             lr_staleness_modulation=args.lr_staleness_modulation,
             use_async=args.use_async,
         )
-        elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
-        server.add_insecure_port("[::]:{}".format(args.port))
-        server.start()
+        elasticdl_pb2_grpc.add_MasterServicer_to_server(
+            self.master_servicer, self.server
+        )
+        self.server.add_insecure_port("[::]:{}".format(args.port))
+        self.server.start()
         logger.info("Server started at port: %d", args.port)
 
+    def _create_worker_manager(self, args):
         self.worker_manager = None
         if args.num_workers:
             assert args.worker_image, "Worker image cannot be empty"
@@ -229,11 +212,11 @@ class Master(Object):
                 "-m",
                 "elasticdl.python.worker.main",
                 "--master_addr",
-                master_addr,
+                self.master_addr,
                 "--job_type",
-                job_type,
+                self.job_type,
                 "--embedding_service_endpoint",
-                str(embedding_service_endpoint),
+                str(self.embedding_service_endpoint),
             ]
             worker_args.extend(build_arguments_from_parsed_result(args))
 
@@ -242,8 +225,8 @@ class Master(Object):
             for key in env_dict:
                 env.append(V1EnvVar(name=key, value=env_dict[key]))
 
-            worker_manager = WorkerManager(
-                task_d,
+            self.worker_manager = WorkerManager(
+                self.task_d,
                 job_name=args.job_name,
                 image_name=args.worker_image,
                 command=worker_command,
@@ -259,46 +242,114 @@ class Master(Object):
                 cluster_spec=args.cluster_spec,
                 envs=env,
             )
-            worker_manager.update_status(WorkerManagerStatus.PENDING)
+            self.worker_manager.update_status(WorkerManagerStatus.PENDING)
             logger.info("Launching %d workers", args.num_workers)
-            worker_manager.start_workers()
-            worker_manager.update_status(WorkerManagerStatus.RUNNING)
+            self.worker_manager.start_workers()
+            self.worker_manager.update_status(WorkerManagerStatus.RUNNING)
 
+    def __init__(self, args):
+        self.output = args.output
+
+        # Master addr
+        master_ip = os.getenv("MY_POD_IP", "localhost")
+        self.master_addr = "%s:%d" % (master_ip, args.port)
+
+        # Start TensorBoard service if requested
+        self.tb_service = self._create_tensorboard_service(
+            args.tensorboard_log_dir, master_ip
+        )
+
+        # Start task queue
+        records_per_task = args.minibatch_size * args.num_minibatches_per_task
+        self.task_d = _make_task_dispatcher(
+            args.training_data,
+            args.evaluation_data,
+            args.prediction_data,
+            records_per_task,
+            args.num_epochs,
+        )
+
+        self.model_module = load_module(
+            get_module_file_path(args.model_zoo, args.model_def)
+        ).__dict__
+        self.model_inst = load_model_from_module(
+            args.model_def, self.model_module, args.model_params
+        )
+        self.optimizer = self.model_module[args.optimizer]()
+
+        self.job_type = _get_job_type(args)
+
+        # Initialize checkpoint service
+        self.checkpoint_service = None
+        if (
+            args.checkpoint_steps
+            or self.job_type == JobType.TRAINING_WITH_EVALUATION
+        ):
+            logger.info("Starting checkpoint service")
+            self.checkpoint_service = CheckpointService(
+                args.checkpoint_dir,
+                args.checkpoint_steps,
+                args.keep_checkpoint_max,
+                self.job_type == JobType.TRAINING_WITH_EVALUATION,
+            )
+
+        # Initialize evaluation service
+        self.evaluation_service = self._create_evaluation_service(args)
+
+        # Search for embedding layers in the model,
+        # if found, initialize embedding service
+        layers = find_layer(self.model_inst, Embedding)
+        self.embedding_service_endpoint, self.embedding_dims = self._create_embedding_service(
+            layers, args
+        )
+
+        self._create_master_service(args)
+
+        self._create_worker_manager(args)
+
+    def start(self, args):
         # Start TensorBoard k8s Service if requested
-        if tb_service:
+        if self.tb_service:
             TensorBoardClient(
                 job_name=args.job_name,
                 image_name=args.worker_image,
                 namespace=args.namespace,
             ).start_tensorboard_service()
 
-    def run(self, args):
+    def run(self):
         try:
             while True:
-                if task_d.finished():
-                    if worker_manager:
-                        worker_manager.update_status(WorkerManagerStatus.FINISHED)
-                    if args.output:
-                        master_servicer.save_latest_checkpoint(args.output)
+                if self.task_d.finished():
+                    if self.worker_manager:
+                        self.worker_manager.update_status(
+                            WorkerManagerStatus.FINISHED
+                        )
+                    if self.output:
+                        self.master_servicer.save_latest_checkpoint(
+                            self.output
+                        )
                     break
                 time.sleep(30)
         except KeyboardInterrupt:
             logger.warning("Server stopping")
 
-        if evaluation_service:
+        self._cleanup()
+
+    def _cleanup(self):
+        if self.evaluation_service:
             logger.info("Stopping evaluation service")
-            evaluation_service.stop()
+            self.evaluation_service.stop()
 
         logger.info("Stopping RPC server")
-        server.stop(0)
+        self.server.stop(0)
 
         # Keep TensorBoard running when all the tasks are finished
-        if tb_service:
+        if self.tb_service:
             logger.info(
                 "All tasks finished. Keeping TensorBoard service running..."
             )
             while True:
-                if tb_service.is_active():
+                if self.tb_service.is_active():
                     time.sleep(10)
                 else:
                     logger.warning(
