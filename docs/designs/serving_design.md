@@ -96,4 +96,8 @@ replace_model_embedding_layer(model)
 ```
 
 ## Model Saving Process
+
+We designed the master-worker architecture and task dispatch mechanism in ElasticDL to make sure the job execution fault tolerant. Please check [overall design](./overall_design.md).
+For model saving work, we use the same mechanism. After all the training/evaluation/prediction tasks are completed, master will generate a SaveModel task and insert it into the todo task queue. The first worker pulling the task execute the model saving process. Please check the diagram below:
+
 ![saved_model_task](../images/saved_model_task.png)
