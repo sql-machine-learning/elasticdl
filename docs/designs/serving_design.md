@@ -9,7 +9,7 @@ Model serving is an essential part in an end-to-end machine learning lifecycle. 
 The model size can vary from several kilobytes to several terabytes. Exporting to savedModel can't apply to all the scenarios. We divide the model size into two categories: *Small or medium size* and *large size*. The small or medium size model can be loaded by a process, and the latter can not fit in a single process. Training and serving strategies are different between these two cases. Please check the following table:
 
 |                            | Master Central Storage |  AllReduce  |            Parameter Server              |
-|----------------------------|:----------------------:|:-----------:|------------------------------------------|
+|:--------------------------:|:----------------------:|:-----------:|:----------------------------------------:|
 | Small or Medium Size Model |       SavedModel       |  SavedModel |               SavedModel                 |
 | Large Size Model           |          N/A           |     N/A     | Distributed Parameter Server for Serving |
 
