@@ -100,5 +100,10 @@ def replace_model_embedding_layer(model):
 replace_model_embedding_layer(model)
 ```
 
+
 ## Execute task to save model with fault-tolerance in distributed environment
+
+We designed the master-worker architecture and task dispatch&recover mechanism in ElasticDL to make the job execution fault tolerant. Please check [overall design](./overall_design.md).
+For model saving work, we use the same mechanism. After completing all the training/evaluation/prediction tasks, master will generate a SaveModel task and insert it into the todo task queue. The first worker pulling this task will execute the model saving process. Please check the diagram below:
+
 ![saved_model_task](../images/saved_model_task.png)
