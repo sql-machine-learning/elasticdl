@@ -19,7 +19,7 @@ A single serving process can load the entire model into memory. No matter which 
 Large size model\
 A single serving process will run out of memory while loading the model. We partition the model variables into multiple shards, store them in distributed parameter server for serving. The inference engine will execute the serving graph, query the variable values from the distributed parameter server as needed and finish the calculation. It's necessary to upgrade the serving framework to support this. **We will discuss this case in a separate design in the next step.**
 
-Although it is very easy to use SavedModel to save the model in TensorFlow, we also need to achieve the three goals in ElasticDL:
+In this article, we want to achieve these three goals in ElasticDL:
 
 1. Guarantee consistency between training and serving for data input.
 2. Export the model with elasticdl.layers.Embedding to SavedModel for serving.
