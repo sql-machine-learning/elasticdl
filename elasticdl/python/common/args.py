@@ -166,7 +166,7 @@ def add_common_params(parser):
     parser.add_argument(
         "--extra_pypi_index",
         default="https://pypi.org/simple",
-        help="The extra python package repository",
+        help="The extra URLs of Python package repository indexes",
     )
     parser.add_argument(
         "--namespace",
