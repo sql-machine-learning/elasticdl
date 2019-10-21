@@ -86,15 +86,6 @@ def main():
         tb_service = None
 
     # Start task queue
-    logger.debug(
-        "Starting task queue with training data directory %s, "
-        "evaluation data directory %s, "
-        "and prediction data directory %s",
-        args.training_data,
-        args.evaluation_data,
-        args.prediction_data,
-    )
-
     records_per_task = args.minibatch_size * args.num_minibatches_per_task
     task_d = _make_task_dispatcher(
         args.training_data,

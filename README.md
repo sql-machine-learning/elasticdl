@@ -1,6 +1,7 @@
 # ElasticDL: A Kubernetes-native Deep Learning Framework
 
 [![Travis-CI Build Status](https://travis-ci.org/sql-machine-learning/elasticdl.svg?branch=develop)](https://travis-ci.org/sql-machine-learning/elasticdl)
+[![Code Coverage](https://codecov.io/gh/sql-machine-learning/elasticdl/branch/develop/graph/badge.svg)](https://codecov.io/gh/sql-machine-learning/elasticdl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![PyPI Status Badge](https://badge.fury.io/py/elasticdl.svg)](https://pypi.org/project/elasticdl/)
 

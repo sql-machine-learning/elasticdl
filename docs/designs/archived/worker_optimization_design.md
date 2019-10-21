@@ -17,8 +17,8 @@ while True:
         elif task is evaluation:
             metrics = compute_metrics(features, labels)
             report_evaluation_metrics(metrics)
-        elif task if prediction:
-            predict = compute_predictfeatures)
+        elif task is prediction:
+            predict = compute_predict(features)
             report_prediction_outputs(predict) 
     report_task_result()
 ```
