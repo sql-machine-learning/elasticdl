@@ -27,7 +27,7 @@ We will answer following questions in next sections:
 
 ## Model Sharding
 
-We will distribute model parameters into multiple PS pods, which is called model sharding. There is a hash function that maps a parameter to a PS pod id. And this parameter will be stored at this corresponding PS pod.
+We will distribute model parameters into multiple PS pods, which is called model sharding. We can use a hash function p(x) to decide that parameter x will be stored at PS pod p(x).
 
 There are several kinds of parameter to be handled separately:
 
@@ -58,15 +58,15 @@ class EmbeddingTable(object):
         self.name = name
         self.dim = dim
         self.initializer = initializer
-        self.vectors = {}
+        self.embedding_vectors = {}
 
     def get(self, indices):
         res = []
         for i in indices:
-            if i not in self.vectors:
+            if i not in self.embedding_vectors:
                 value = init_value(self.initializer, self.dim)
             else:
-                value = self.vectors[i]
+                value = self.embedding_vectors[i]
             res.append(value)
         return res
 
@@ -74,13 +74,13 @@ class EmbeddingTable(object):
         pass
 ```
 
-The name of an embedding table is actually the embedding layer name. The embedding table uses a dictionary `vectors` to store embedding vectors, the key is the item id, the value is the embedding vector.
+The name of an embedding table is actually the embedding layer name. The embedding table uses a dictionary `embedding_vectors` to store embedding vectors, the key is the item id, the value is the embedding vector.
 
 Please note that the embedding tables in the parameter server pods which have the same name, form the big embedding table for a certain embedding layer.
 
 Since embedding vectors are lazily initialized in parameter server, `EmbeddingTable` also has `dim` and `initializer` fields. Inside the `get` interface of `EmbeddingTable `, if the id is not in the `vectors` dictionary, the corresponding value will be initialized.
 
-There could be multiple embedding table from different embedding layer. We will create an `EmbeddingTable` instance for each embedding layer. These instances are stored at another hashmap. The key is embedding layer name, the value is the embedding table itself.
+There could be multiple embedding tables from different embedding layers. We will create an `EmbeddingTable` instance for each embedding layer. These instances are stored at another hashmap. The key is embedding layer name, the value is the embedding table itself.
 
 
 ## Model Initialization
@@ -128,7 +128,7 @@ message Model {
 }
 ```
 
-Since embedding table parameter is initialized lazily in the PS side, we have to put some meta info defined in `EmbeddingTableInfo` in the model proto message too. The `EmbebeddingTableInfo` is used by a PS pod to create a `EmbeddingTable` instance in the hashmap.
+Since an embedding table parameter is initialized lazily in the PS side, we have to put some meta info defined in `EmbeddingTableInfo` in the model proto message too. The `EmbebeddingTableInfo` is used by a PS pod to create a `EmbeddingTable` instance in the hashmap.
 
 
 ## Model Optimization
@@ -159,7 +159,7 @@ service PServer{
 
 Workers will pull all non-embedding parameters before a forward pass.
 
-For embedding parameter, until the model runs into a embedding layer, can we get the item id input of this embedding layer. Then, the embedding layer will pull needed embedding vectors from the corresponding PS pods within its `call` method.
+For an embedding table parameter, until the model runs into a embedding layer, can we get the item id input of this embedding layer. Then, the embedding layer will pull needed embedding vectors from the corresponding PS pods within its `call` method.
 
 ### Push Gradients
 
