@@ -18,8 +18,10 @@ Small or medium size model\
 A single serving process can load the entire model into memory. No matter which training strategy to choose, we will serialzied the model into SavedModel format. And then we can deploy it using the existed serving frameworks like TFServing. **We focus on this case in this article.**
 
 Large size model\
-A single serving process will run out of memory while loading the model. We partition the model variables into multiple shards, store them in distributed parameter server for serving. The inference engine will execute the serving graph, query the variable values from the distributed parameter server as needed and finish the calculation. It's necessary to upgrade the serving framework to support this. **We will discuss this case in a separate doc in the next step.**
+A single serving process will run out of memory while loading the model. We partition the model variables into multiple shards, store them in distributed parameter server for serving. The inference engine will execute the serving graph, query the variable values from the distributed parameter server as needed and finish the calculation. It's necessary to upgrade the serving framework to support this. **We will discuss this case in a separate design in the next step.**
 
 ## Feature Columns
+
+During model development, we can use feature columns to describe the feature engineering process. And then we wrap feature_column array with tf.keras.layer.DenseFeatures and pass it to keras Model. While exporting the trained model to SavedModel, the logic and variable weights of feature columns will be saved together.
 
 ## Model Saving Process
