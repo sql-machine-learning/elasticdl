@@ -30,45 +30,57 @@ p(x) = hash(key(x)) % N
 It is noticeable that Kubernetes might preempt some parameter server instances. In such a case, we might be afraid that N isn't constant. However, we can overcome this case by setting parameter server instances having higher priority than worker processes in a job. By doing so, preemption kills workers other than parameter servers. If all workers are dead, the job stops until there comes free resources, and Kubernetes starts some workers for the job.  For more information about preemption, please refer to [this document](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/). In short, we can assume that N is a constant number in the Kubernetes-native architecture of ElasticDL.
 
 ## High Performance
-As introduced above, when using a large model and a large number of workers, the key to high performance of PS mechanism is achieving efficient communication between workers and the PS. In order to achieve this goal, we need to have a reasonable parameter storage scheme first, then we can design an efficient scheme to pull parameters, push gradient and update parameters.
+As introduced above, when using a large model and a large number of workers, the key to high performance of PS mechanism is achieving efficient communication and computation. In order to achieve this goal, we need to have a reasonable parameter storage scheme first, then we can design an efficient scheme to pull parameters, push gradient and update parameters.
 
 ### Parameter Storage
-Parameter storage includes two kinds of parameters:
-
-* Embedding parameters can be saved in the form of `dictionary{layer name, dictionary{id, vector}}`.
-* Each Non-embedding parameter consists of a name and a dense tensor, which is inherently suitable for KV storage. In order to distinguish these dense tensors, TensorFlow assigns a unique name to each tensor (or in the form of TensorFlow variables).
+Parameter storage needs to cover two kinds of parameters, embedding parameters and non-embedding parameters. We have illustrated the structure of embedding parameters, and accordingly we can save embedding parameters in the form of `dictionary{layer name, dictionary{id, vector}}`. Each non-embedding parameter is a dense tensor, and TensorFlow assigns a unqiue name to each tensor in order to distinguish them. Hence non-embedding parameters are inherently suitable for KV storage.
 
 There are many high-performant technique for KV storage, for example, hash map and R&B tree. For simplicity, we can use python dictionary at first. Hence we can save parameters in the following structure:
 
 ```python
-class KVStore(object):
+class Parameters(object):
     def __init__(self):
-        self.non_embedding_param_db = {} # maps `variable_name` to TensorFlow variable instance
-        self.embedding_param_db = {} # maps `layer_name` to `EmbeddingTable` instance 
+        self._non_embedding_params = {} # maps `variable_name` to TensorFlow variable instance
+        self._embedding_params = {} # maps `layer_name` to `EmbeddingTable` instance
 
     def get_non_embedding_param(self, names):
         pass
     
-    def get_embedding_param(self, layer_name):
-        pass
+    def get_embedding_param(self, layer_name, ids):
+        return self._embedding_params.get(layer_name).get(ids)
 
     def set_non_embedding_param(self, names, values):
         pass
         
     def set_embedding_param(self, layer_name, value):
         pass
+    
+    def init_non_embedding_param(self, names, values):
+        pass
 
 class EmbeddingTable(object):
-    def __init__(self, layer_name):
+    def __init__(self, layer_name, meta_info):
         self.layer_name = layer_name
         self.embeddings = {} # maps `id` to 1-D numpy.ndarray
+        self.meta_info = meta_info # meta_info is used for initializing embedding vectors
     
     def get(self, ids):
-        pass
+        values = []
+        for id in ids:
+            if id not self.embeddings:
+                val = initialize_embedding_vector(self.meta_info)
+            else:
+                val = self.embeddings.get(id)
+            values.append(val)
+        return np.concatenate(values).reshape(len(ids), -1)
         
     def set(self, ids, values):
         pass
 ```
+
+It is noticeable that we only have one interface for initializing parameters, `init_non_embedding_param`. This is because ElasticDL initializes embedding parameters lazily, i.e. initialize them when they are needed in the training process. When a worker sends a pull parameters request with some embedding ids to a PS instance, the PS instance calls the `get_embedding_param` function of its `Parameters` instance, and the `Parameters` instance will initialize embedding vectors for unknown ids, as shown in the above pseudocode. 
+
+For non-embedding parameters, workers are responsible for initializing them. This is because that initializing parameters of`subclass` models, a kind of Keras interface to write model structure, needs a batch of data (another way to initialize parameters requires users to provide input shape for each layer, and thus is not user-friendly). Thus workers are responsible for initializing parameters in ElasticDL and push initialized parameters to the PS. A PS instance might receive initialized parameters from more than one worker, it only accepts the first one. 
 
 ### Pull Parameters
 Since ElasticDL saves parameters in PS, workers should pull parameters from the PS in training/evaluation process. 
