@@ -20,16 +20,18 @@ Large size model\
 A single serving process will run out of memory while loading the model. We partition the model variables into multiple shards, store them in distributed parameter server for serving. The inference engine will execute the serving graph, query the variable values from the distributed parameter server as needed and finish the calculation. It's necessary to upgrade the serving framework to support this. **We will discuss this case in a separate design in the next step.**
  
 Although it is very easy to use SavedModel to save the model in TensorFlow, we also need to achieve the three goals in ElasticDL:
+
 1. Guarantee consistency in training and serving for data input.
 2. Save the model with elasticdl.layers.Embedding using SavedModel for serving.
 3. Execute task to save model with fault-tolerance in distributed environment.
 
-## Guarantee consistency in training and serving for data input
+## Guarantee consistency between training and serving for data input
 
-ElasticDL is a distributed deep learning framework based TensorFlow 2.0 eager execution. In ElasticDL, we use tf.data.Dataset to create input pipeline for training. The recommended way to preprocess data from tf.data.Dataset is to use [feature columns](https://www.tensorflow.org/tutorials/structured_data/feature_columns) in TensorFlow. What's more, tf.saved_model.save will save the defined feature columns with the model. So, tf-serving will use the same preprocessing as training to make inference.
+ElasticDL is a distributed deep learning framework based on TensorFlow 2.0 eager execution. In ElasticDL, we use tf.data.Dataset to create input pipeline for training. The recommended way to preprocess data from tf.data.Dataset is to use [feature columns](https://www.tensorflow.org/tutorials/structured_data/feature_columns) in TensorFlow. What's more, tf.saved_model.save will save the defined feature columns with the model. So, tf-serving will use the same preprocessing as training to make inference.
 
 Define a keras model with feature columns:
-```
+
+```python
 def get_feature_columns():
     age = tf.feature_column.numeric_column("age", dtype=tf.int64)
     education = tf.feature_column.categorical_column_with_hash_bucket(
@@ -49,15 +51,15 @@ def custom_model(feature_columns):
     dense = tf.keras.layers.Dense(10, activation='relu')(dense_feature)
     dense = tf.keras.layers.Dense(1, activation='sigmoid')(dense)
     return tf.keras.models.Model(inputs=input_layers, outputs=dense)
-
 ```
 
 Although all feature columns in TensorFlow can be used in ElasticDL, the tf.feature_column.embedding_column is not recommended in ElasticDL. Because the embedding_column has a large trainable embedding parameters. In eager execution the model must get all embedding parameters to train which will cost large inter-process communication overhead.
 
 ## Save the model with elasticdl.layers.Embedding using SavedModel for serving
+
 Using native Keras layers to define a model is more user-friendly than using custom layers in ElasticDL. However, it is inefficient to train a model with tf.keras.layers.Embedding. When the model executes the forward-pass computation for each mini-batch, it must get all embedding parameters from the parameter server (PS) even if the mini-batch only contains several embedding ids. So, the elastic.layers.Embedding is designed to improve the training efficiency in ElasticDL. Considering user-friendliness and training efficiency, we need to define a model with tf.keras.layers.Embedding and train the model with elastic.layers.Embedding. For the Sequential model and the Model class used with the functional API, we can use tf.keras.models.clone_model to replace the tf.keras.layers.Embedding with elastic.layers.Embedding before training starts.
 
-```
+```python
 def clone_function(layer):
     if type(layer) == keras.layers.Embedding:
         edl_layer = elastic.layers.Embedding(layer.output_dim)
@@ -70,7 +72,7 @@ new_model = keras.models.clone_model(model, clone_function=clone_function)
 
 For subclass model, we can replace the tf.keras.layers.Embedding attribute with elastic.layers.Embedding.
 
-```
+```python
 class CustomModel(tf.keras.Model):
     def __init__(self):
         super(MyModel, self).__init__()
@@ -87,11 +89,11 @@ for attr_name, attr_value in model.__dict__.items():
 
 However, tf.saved_model.save can not save the replaced model using SavedModel, because elasticDL.layers.Embedding is not the native layer in tf.keras.layers. There are two methods to save the model using SavedModel. One is that we add the elasticDL.layers.Embedding to tensorflow.keras.layers and compile TensorFlow with the custom layer to a custom version. It may be incompatible with a new TensorFlow version. In this case, we may need to adjust the elasticDL.layers.Embedding implementation when every new version of TensorFlow is released. Another method is that we can save the origin model and replace the embedding parameters with the trained parameters of elasticDL.layers.embedding layer. 
 
-```
+```python
 def replace_embedding_params_with_edl(layer):
     embedding_params = EmbeddingService.get_all_embedding_params(layer)
     layer.trainable_variables.assign(embedding_params)
-    
+
 def replace_model_embedding_layer(model):
     for layer in model.layers:
         if type(layer) == tf.keras.layers.Embedding:
@@ -100,10 +102,9 @@ def replace_model_embedding_layer(model):
 replace_model_embedding_layer(model)
 ```
 
-
 ## Execute task to save model with fault-tolerance in distributed environment
 
-We designed the master-worker architecture and task dispatch&recover mechanism in ElasticDL to make the job execution fault tolerant. Please check [overall design](./overall_design.md).
+We designed the master-worker architecture and task dispatch&recover mechanism in ElasticDL to make the job execution fault tolerant. Please check [overall design](./overall_design.md).\
 For model saving work, we use the same mechanism. After completing all the training/evaluation/prediction tasks, master will generate a SaveModel task and insert it into the todo task queue. The first worker pulling this task will execute the model saving process. Please check the diagram below:
 
 ![saved_model_task](../images/saved_model_task.png)
