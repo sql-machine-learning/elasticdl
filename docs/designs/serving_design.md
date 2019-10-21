@@ -59,7 +59,7 @@ Although all feature columns in TensorFlow can be used in ElasticDL, the tf.feat
 
 Using native Keras layers to define a model is more user-friendly than using custom layers in ElasticDL. However, it is inefficient to train a model with tf.keras.layers.Embedding. When the model executes the forward-pass computation for each mini-batch, it must get all embedding parameters from the parameter server (PS) even if the mini-batch only contains several embedding ids. So, the elastic.layers.Embedding is designed to improve the training efficiency in ElasticDL. Considering user-friendliness and training efficiency, we need to define a model with tf.keras.layers.Embedding and train the model with elastic.layers.Embedding. For the Sequential model and the Model class used with the functional API, we can use tf.keras.models.clone_model to replace the tf.keras.layers.Embedding with elastic.layers.Embedding before training starts. For subclass model, we can replace the tf.keras.layers.Embedding attribute with elastic.layers.Embedding.
 
-```
+```python
 def clone_model(model)
     # replace the embedding layer for Sequential and functional API models
     if isinstance(model, tf.keras.Sequential) or model._is_graph_network:
@@ -79,7 +79,7 @@ def clone_model(model)
 
 However, tf.saved_model.save can not save the replaced model using SavedModel, because elasticDL.layers.Embedding is not the native layer in tf.keras.layers. There are two methods to save the model using SavedModel. One is that we add the elasticDL.layers.Embedding to tensorflow.keras.layers and compile TensorFlow with the custom layer to a custom version. It may be incompatible with a new TensorFlow version. In this case, we may need to adjust the elasticDL.layers.Embedding implementation when every new version of TensorFlow is released. Another method is that we can save the origin model and replace the embedding parameters with the trained parameters of elasticDL.layers.embedding layer.
 
-```
+```python
 def restore_model(model):
     for layer in model.layers:
         if type(layer) == tf.keras.layers.Embedding:
