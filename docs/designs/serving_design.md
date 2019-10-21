@@ -77,7 +77,7 @@ def replace_keras_embedding_with_edl_embedding(model)
         return model
 ```
 
-However, tf.saved_model.save can not save the replaced model using SavedModel, because elasticDL.layers.Embedding is not the native layer in tf.keras.layers. There are two methods to save the model using SavedModel. One is that we add the elasticDL.layers.Embedding to tensorflow.keras.layers and compile TensorFlow with the custom layer to a custom version. It may be incompatible with a new TensorFlow version. In this case, we may need to adjust the elasticDL.layers.Embedding implementation when every new version of TensorFlow is released. Another method is that we can save the origin model and replace the embedding parameters with the trained parameters of elasticDL.layers.embedding layer.
+However, tf.saved_model.save can not export the replaced model to SavedModel. Because ElasticDL.Embedding use tf.py_function to invoke Rpc to interact with the parameter server. It is not mapped to any native TensorFlow op. As a result we choose to save the origin model with native keras embedding layer, replace the embedding parameters with the trained parameters of elasticdl.layers.embedding.
 
 ```python
 def restore_keras_embedding_for_subclass(model):
