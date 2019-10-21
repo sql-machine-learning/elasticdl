@@ -1,4 +1,6 @@
 import traceback
+import time
+import os
 
 import numpy as np
 import tensorflow as tf
@@ -524,6 +526,12 @@ class Worker(object):
             raise ex
         return err_msg
 
+    def _export_to_saved_model(self, model_version, export_dir=None):
+        export_dir = './' if export_dir is None else export_dir
+        export_dir = os.path.join(export_dir, str(int(time.time())))
+        self.get_model(model_version, elasticdl_pb2.MINIMUM)
+        tf.saved_model.save(self._model, export_dir)
+
     def run(self):
         """
         Fetches task from master with and performs training or evaluation.
@@ -599,3 +607,6 @@ class Worker(object):
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                 if self._process_eval_task_if_needed():
                     last_minibatch_do_evaluation = True
+
+        self._export_to_saved_model(self._model_version,
+                                    export_dir='saved_model')
