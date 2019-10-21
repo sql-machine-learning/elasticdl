@@ -14,7 +14,7 @@ The model size can vary from several kilobytes to several terabytes. Exporting t
 | Large Size Model           |          N/A           |     N/A     | Distributed Parameter Server for Serving |
 
 Small or medium size model\
-A single serving process can load the entire model into memory. No matter which training strategy to choose, we will export the model to the SavedModel format. And then we can deploy it using the existed serving frameworks like TFServing. **We focus on this case in this article.**
+A single serving process can load the entire model into memory. No matter which training strategy to choose, we will export the model to the SavedModel format. For master central storage and AllReduce strategy, each worker has a replica of the entire model and then export it directly. For parameter server strategy, the model contains unsaveable elasticdl.layers.Embedding layer and the variables are stored in the PS. We will use the process in [the section below](#Export-the-model-with-elasticdl.layers.Embedding-to-SavedModel) to export the model. And then we can deploy it using the existed serving frameworks like TFServing. **We focus on this case in this article.**
 
 Large size model\
 A single serving process will run out of memory while loading the model. We partition the model variables into multiple shards, store them in distributed parameter server for serving. The inference engine will execute the serving graph, query the variable values from the distributed parameter server as needed and finish the calculation. It's necessary to upgrade the serving framework to support this. **We will discuss this case in a separate design in the next step.**
@@ -22,7 +22,7 @@ A single serving process will run out of memory while loading the model. We part
 In this article, we want to achieve these three goals in ElasticDL:
 
 1. Guarantee consistency between training and serving for data input.
-2. Export the model with elasticdl.layers.Embedding to SavedModel for serving.
+2. Export the model with elasticdl.layers.Embedding to SavedModel.
 3. Execute task to save model with fault-tolerance.
 
 ## Guarantee consistency between training and serving for data input
@@ -55,7 +55,7 @@ def custom_model(feature_columns):
 
 Although all feature columns in TensorFlow can be used in ElasticDL, tf.feature_column.embedding_column is not recommended in ElasticDL. Because the embedding_column has a variable containing a large embedding table. In eager execution the model must get all the embedding parameters to train. It will bring a large inter-process communication overhead.
 
-## Export the model with elasticdl.layers.Embedding to SavedModel for serving
+## Export the model with elasticdl.layers.Embedding to SavedModel
 
 Using native Keras layers to define a model is more user-friendly than using custom layers in ElasticDL. However, it is inefficient to train a model with tf.keras.layers.Embedding. When the model executes the forward-pass computation for each mini-batch, it must get all embedding parameters from the parameter server (PS) even if the mini-batch only contains several embedding ids. So, the elastic.layers.Embedding is designed to improve the training efficiency in ElasticDL. Considering user-friendliness and training efficiency, we need to define a model with tf.keras.layers.Embedding and train the model with elasticdl.layers.Embedding. For the Sequential model and the Functional models, we can use tf.keras.models.clone_model to replace the tf.keras.layers.Embedding with elasticdl.layers.Embedding before training starts. For subclass model, we can replace the attribute of tf.keras.layers.Embedding type with elastic.layers.Embedding.
 
