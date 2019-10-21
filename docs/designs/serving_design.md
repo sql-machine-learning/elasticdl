@@ -66,7 +66,6 @@ def clone_model(model)
                 edl_layer = elastic.layers.Embedding(layer.output_dim)
                 return edl_layer
             return layer
-        model = tf.keras.Model(inputs=[inputs], outputs=[output])
         return keras.models.clone_model(model, clone_function=clone_function)
     else:
     # replace embedding attribute for subclass model
