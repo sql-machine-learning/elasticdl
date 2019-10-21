@@ -55,49 +55,36 @@ def custom_model(feature_columns):
 Although all feature columns in TensorFlow can be used in ElasticDL, the tf.feature_column.embedding_column is not recommended in ElasticDL. Because the embedding_column has a large trainable embedding parameters. In eager execution the model must get all embedding parameters to train which will cost large inter-process communication overhead.
 
 ## Save the model with elasticdl.layers.Embedding using SavedModel for serving
-Using native Keras layers to define a model is more user-friendly than using custom layers in ElasticDL. However, it is inefficient to train a model with tf.keras.layers.Embedding. When the model executes the forward-pass computation for each mini-batch, it must get all embedding parameters from the parameter server (PS) even if the mini-batch only contains several embedding ids. So, the elastic.layers.Embedding is designed to improve the training efficiency in ElasticDL. Considering user-friendliness and training efficiency, we need to define a model with tf.keras.layers.Embedding and train the model with elastic.layers.Embedding. For the Sequential model and the Model class used with the functional API, we can use tf.keras.models.clone_model to replace the tf.keras.layers.Embedding with elastic.layers.Embedding before training starts.
+Using native Keras layers to define a model is more user-friendly than using custom layers in ElasticDL. However, it is inefficient to train a model with tf.keras.layers.Embedding. When the model executes the forward-pass computation for each mini-batch, it must get all embedding parameters from the parameter server (PS) even if the mini-batch only contains several embedding ids. So, the elastic.layers.Embedding is designed to improve the training efficiency in ElasticDL. Considering user-friendliness and training efficiency, we need to define a model with tf.keras.layers.Embedding and train the model with elastic.layers.Embedding. For the Sequential model and the Model class used with the functional API, we can use tf.keras.models.clone_model to replace the tf.keras.layers.Embedding with elastic.layers.Embedding before training starts. For subclass model, we can replace the tf.keras.layers.Embedding attribute with elastic.layers.Embedding.
 
 ```
-def clone_function(layer):
-    if type(layer) == keras.layers.Embedding:
-        edl_layer = elastic.layers.Embedding(layer.output_dim)
-        return edl_layer
-    return layer
+def clone_model(model)
+    # replace the embedding layer for Sequential and functional API models
+    if isinstance(model, tf.keras.Sequential) or model._is_graph_network:
+        def _clone_function(layer):
+            if type(layer) == keras.layers.Embedding:
+                edl_layer = elastic.layers.Embedding(layer.output_dim)
+                return edl_layer
+            return layer
+        model = tf.keras.Model(inputs=[inputs], outputs=[output])
+        return keras.models.clone_model(model, clone_function=clone_function)
+    else:
+    # replace embedding attribute for subclass model
+        for attr_name, attr_value in model.__dict__.items():
+        if type(attr_value) == keras.layers.Embedding:
+            setattr(model, attr_name, edl_Embedding(attr_value.output_dim))
+        return model
 
-model = tf.keras.Model(inputs=[inputs], outputs=[output])
-new_model = keras.models.clone_model(model, clone_function=clone_function)
-```
-
-For subclass model, we can replace the tf.keras.layers.Embedding attribute with elastic.layers.Embedding.
-
-```
-class CustomModel(tf.keras.Model):
-    def __init__(self):
-        super(MyModel, self).__init__()
-        self.embedding = Embedding(10,4)
-    def call(self, inputs):
-        embedding = self.embedding(inputs)
-        return embedding
-model = CustomModel()
-
-for attr_name, attr_value in model.__dict__.items():
-    if type(attr_value) == keras.layers.Embedding:
-        setattr(model, attr_name, edl_Embedding(attr_value.output_dim))
 ```
 
 However, tf.saved_model.save can not save the replaced model using SavedModel, because elasticDL.layers.Embedding is not the native layer in tf.keras.layers. There are two methods to save the model using SavedModel. One is that we add the elasticDL.layers.Embedding to tensorflow.keras.layers and compile TensorFlow with the custom layer to a custom version. It may be incompatible with a new TensorFlow version. In this case, we may need to adjust the elasticDL.layers.Embedding implementation when every new version of TensorFlow is released. Another method is that we can save the origin model and replace the embedding parameters with the trained parameters of elasticDL.layers.embedding layer. 
 
 ```
-def replace_embedding_params_with_edl(layer):
-    embedding_params = EmbeddingService.get_all_embedding_params(layer)
-    layer.trainable_variables.assign(embedding_params)
-    
-def replace_model_embedding_layer(model):
+def restore_model(model):
     for layer in model.layers:
         if type(layer) == tf.keras.layers.Embedding:
-            replace_embedding_params_with_edl(layer)
-
-replace_model_embedding_layer(model)
+            embedding_params = EmbeddingService.get_all_embedding_params(layer)
+            layer.embeddings.assign(embedding_params)
 ```
 
 
