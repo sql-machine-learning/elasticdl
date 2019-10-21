@@ -72,8 +72,8 @@ def clone_model(model)
     else:
     # replace embedding attribute for subclass model
         for attr_name, attr_value in model.__dict__.items():
-        if type(attr_value) == keras.layers.Embedding:
-            setattr(model, attr_name, edl_Embedding(attr_value.output_dim))
+            if type(attr_value) == keras.layers.Embedding:
+                setattr(model, attr_name, edl_Embedding(attr_value.output_dim))
         return model
 ```
 
