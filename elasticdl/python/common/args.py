@@ -164,7 +164,9 @@ def add_common_params(parser):
         "comma is supported in value field",
     )
     parser.add_argument(
-        "--extra_pypi_index", help="The extra python package repository"
+        "--extra_pypi_index",
+        default="https://pypi.org/simple",
+        help="The extra python package repository",
     )
     parser.add_argument(
         "--namespace",
