@@ -101,3 +101,4 @@ replace_model_embedding_layer(model)
 ```
 
 ## Model Saving Process
+![saved_model_task](../images/saved_model_task.png)
