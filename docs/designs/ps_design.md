@@ -2,12 +2,10 @@
 
 ## Overview
 
-
 Parameter server design is widely used in distributed
 training systems. Both data and workloads
-are distributed over workers, while the servers
-maintain globally shared parameters, represented as dense
-or sparse tensors.
+are distributed over workers, while the server
+maintains global model.
 
 Many systems use multiple parameter server instances in a job, especially when the model could be large and overruns the memory space of a process. In such cases, we can shard the model and distribute the pieces to multiple parameter server instances. Even if the model is not too big, model sharding prevents the case that a single-node parameter server architecture becomes the bottleneck of communication and computation.
 
@@ -46,8 +44,9 @@ The number of parameter server pods will keep unchanged during a job. We set the
 
 ## Model Data Structure
 
+We use two hashmaps to store embeding table parameters and dense tensor parameters.
 
-Since `tf.keras.optimizer` only accept `tf.Variable` type parameter, to avoid unnecessary memory copy, we save a non-embedding parameter as a `tf.Variable` directly. We use a hashmap to store all the non-embedding parameters, the key is the variable name, the value is the variable itself.
+Since `tf.keras.optimizer` only accept `tf.Variable` type parameter, to avoid unnecessary memory copy, we save a dense tensor parameter as a `tf.Variable` directly. We use a hashmap to store all the dense tensor parameters, the key is the variable name, the value is the variable itself.
 
 However, an embedding table parameter could not be represented by a standard `tf.Variable`. For example, in an online learning case, new item id may come in sometimes. The shape of the embedding table is not determined. Besides, we have to initialize corresponding embedding vector value on the fly for the new item id in the parameter server pod.
 
@@ -77,7 +76,7 @@ class EmbeddingTable(object):
 
 The name of an embedding table is actually the embedding layer name. The embedding table uses a dictionary `vectors` to store embedding vectors, the key is the item id, the value is the embedding vector.
 
-Please note that the embedding tables in the parameter seerver pods which have the same name, form the big embedding table for a certain embedding layer.
+Please note that the embedding tables in the parameter server pods which have the same name, form the big embedding table for a certain embedding layer.
 
 Since embedding vectors are lazily initialized in parameter server, `EmbeddingTable` also has `dim` and `initializer` fields. Inside the `get` interface of `EmbeddingTable `, if the id is not in the `vectors` dictionary, the corresponding value will be initialized.
 
@@ -178,7 +177,7 @@ The optimizer of parameter server is responsible for applying gradients to param
 
 The optimizer supports two kinds of parameter updating strategies: synchronous-SGD and asynchronous-SGD.
 
-- In synchronous-SGD, the optimizer needs to wait for a certain number of gradients from workers, and then apply the gradients to parameters.
+- In synchronous-SGD, the optimizer needs to wait for a certain number of gradients from workers. The gradients are put into a gradient queue, and then the optimizer apply the gradients to parameters.
 - In asynchronous-SGD, the `apply_gradient` function of optimizer will be called inside `push_gradient` RPC service directly.
 
 
