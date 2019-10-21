@@ -15,7 +15,7 @@ In literatures, we see works about parameter server designs that handle large mo
 3. fault-tolerance
 
 ## Model Sharding
-There are two kinds of parameters in the training process, embedding parameters and non-embedding parameters. 
+There are two kinds of parameters in the training process, embedding parameters and non-embedding parameters.
 
 Embedding parameters consist of multiple embedding tables. Each embedding table correponds to one embedding layer in the user-defined model structure. An embedding table is a data structure that maps a discrete value, named embedding id *id*, to a vector, named embedding vector *vector*. Since embedding parameters might be up to terabytes, we can distribute them by placing different embedding vectors on different parameter server instance. 
 
@@ -87,7 +87,7 @@ Since ElasticDL saves parameters in PS, workers should pull parameters from the 
 
 For non-embedding parameters, we can pull all non-embedding parameters from the corresponding PS instances before the forward-pass.
 
-For embedding parameters, ElasticDL should only pull embedding vectors that are used in this iteration. This is because embedding vectors used in each iteration only account for a small proportion of the embedding parameters. Only when it it time for embedding layer to do forward-pass, can we know which embedding vectors will be used in this iteration. Thus, the embedding layer is responsible for pulling embedding vectors from PS in its forward-pass process. 
+For embedding parameters, ElasticDL should only pull embedding vectors that are used in this iteration. This is because embedding vectors used in each iteration only account for a small proportion of the embedding parameters. Only when it is time for embedding layer to do forward-pass, can we know which embedding vectors will be used in this iteration. Thus, the embedding layer is responsible for pulling embedding vectors from PS in its forward-pass process. 
 
 Thanks to the model sharding technique, ElasticDL can implement above processes in parallel communication with all PS instances, thus achieve the goal of high performance.
 
