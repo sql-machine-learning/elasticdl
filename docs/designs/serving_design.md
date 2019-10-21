@@ -23,7 +23,7 @@ In this article, we want to achieve these three goals in ElasticDL:
 
 1. Guarantee consistency between training and serving for data input.
 2. Export the model with elasticdl.layers.Embedding to SavedModel for serving.
-3. Execute task to save model with fault-tolerance in ElasticDL.
+3. Execute task to save model with fault-tolerance.
 
 ## Guarantee consistency between training and serving for data input
 
@@ -93,7 +93,7 @@ def restore_keras_embedding_from_edl_embedding(model):
             layer.embeddings.assign(embedding_params)
 ```
 
-## Execute task to save model with fault-tolerance in ElasticDL
+## Execute task to save model with fault-tolerance
 
 We designed the master-worker architecture and task dispatch&recover mechanism in ElasticDL to make the job execution fault tolerant. Please check [overall design](./overall_design.md).\
 For model saving work, we use the same mechanism. After completing all the training/evaluation/prediction tasks, master will generate a SaveModel task and insert it into the todo task queue. The first worker pulling this task will execute the model saving process. Please check the diagram below:
