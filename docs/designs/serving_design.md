@@ -53,11 +53,11 @@ def custom_model(feature_columns):
     return tf.keras.models.Model(inputs=input_layers, outputs=dense)
 ```
 
-Although all feature columns in TensorFlow can be used in ElasticDL, the tf.feature_column.embedding_column is not recommended in ElasticDL. Because the embedding_column has a variable containing a large embedding table. In eager execution the model must get all the embedding parameters to train. It will bring a large inter-process communication overhead.
+Although all feature columns in TensorFlow can be used in ElasticDL, tf.feature_column.embedding_column is not recommended in ElasticDL. Because the embedding_column has a variable containing a large embedding table. In eager execution the model must get all the embedding parameters to train. It will bring a large inter-process communication overhead.
 
 ## Export the model with elasticdl.layers.Embedding to SavedModel for serving
 
-Using native Keras layers to define a model is more user-friendly than using custom layers in ElasticDL. However, it is inefficient to train a model with tf.keras.layers.Embedding. When the model executes the forward-pass computation for each mini-batch, it must get all embedding parameters from the parameter server (PS) even if the mini-batch only contains several embedding ids. So, the elastic.layers.Embedding is designed to improve the training efficiency in ElasticDL. Considering user-friendliness and training efficiency, we need to define a model with tf.keras.layers.Embedding and train the model with elastic.layers.Embedding. For the Sequential model and the Model class used with the functional API, we can use tf.keras.models.clone_model to replace the tf.keras.layers.Embedding with elastic.layers.Embedding before training starts. For subclass model, we can replace the tf.keras.layers.Embedding attribute with elastic.layers.Embedding.
+Using native Keras layers to define a model is more user-friendly than using custom layers in ElasticDL. However, it is inefficient to train a model with tf.keras.layers.Embedding. When the model executes the forward-pass computation for each mini-batch, it must get all embedding parameters from the parameter server (PS) even if the mini-batch only contains several embedding ids. So, the elastic.layers.Embedding is designed to improve the training efficiency in ElasticDL. Considering user-friendliness and training efficiency, we need to define a model with tf.keras.layers.Embedding and train the model with elasticdl.layers.Embedding. For the Sequential model and the Functional models, we can use tf.keras.models.clone_model to replace the tf.keras.layers.Embedding with elasticdl.layers.Embedding before training starts. For subclass model, we can replace the attribute of tf.keras.layers.Embedding type with elastic.layers.Embedding.
 
 ```python
 def replace_keras_embedding_with_edl_embedding(model)
@@ -68,7 +68,7 @@ def replace_keras_embedding_with_edl_embedding(model)
                 edl_layer = elastic.layers.Embedding(layer.output_dim)
                 return edl_layer
             return layer
-        return keras.models.clone_model(model, clone_function=clone_function)
+        return keras.models.clone_model(model, clone_function=_clone_function)
     else:
     # replace embedding attribute for subclass model
         for attr_name, attr_value in model.__dict__.items():
