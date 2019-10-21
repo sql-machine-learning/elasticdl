@@ -17,9 +17,9 @@ In literatures, we see works about parameter server designs that handle large mo
 ## Model Sharding
 There are two kinds of parameters in the training process, embedding parameters and non-embedding parameters.
 
-Embedding parameters consist of multiple embedding tables. Each embedding table correponds to one embedding layer in the user-defined model structure. An embedding table is a data structure that maps a discrete value, named embedding id *id*, to a vector, named embedding vector *vector*. Since embedding parameters might be up to terabytes, we can distribute them by placing different embedding vectors on different parameter server instance. 
+Embedding parameters consist of multiple embedding tables. Each embedding table correponds to one embedding layer in the user-defined model structure. An embedding table is a data structure that maps a discrete value, named embedding id *id*, to a vector, named embedding vector *vector*. Since embedding parameters might be up to terabytes, we can distribute embedding vectors into multiple PS instances.
 
-Non-embedding parameters are in the form multiple dense tensors. Theoretically, dense tensors might have tremendous size and require sharding. However, in practices, researchers don't often define models depending on huge dense tensor parameters. Hence in this design, we don't partition dense tensors; instead, we place each dense tensor on a parameter server instance.
+Non-embedding parameters are in the form of multiple dense tensors. Theoretically, dense tensors might have tremendous size and require sharding. However, in practices, researchers don't often define models depending on huge dense tensor parameters. Hence in this design, we don't partition dense tensors; instead, we place each dense tensor on a parameter server instance.
 
 For each dense tensor or an embedding vector, denoted by x, we put it on the parameter server p(x). For a dense tensor x, we denote key(x) for its name; for an embedding vector x, key(x) consists of the name of the embedding layer and its embedding id.
 
@@ -30,7 +30,7 @@ p(x) = hash(key(x)) % N
 It is noticeable that Kubernetes might preempt some parameter server instances. In such a case, we might be afraid that N isn't constant. However, we can overcome this case by setting parameter server instances having higher priority than worker processes in a job. By doing so, preemption kills workers other than parameter servers. If all workers are dead, the job stops until there comes free resources, and Kubernetes starts some workers for the job.  For more information about preemption, please refer to [this document](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/). In short, we can assume that N is a constant number in the Kubernetes-native architecture of ElasticDL.
 
 ## High Performance
-As introduced above, when using a large model and a large number of workers, the key to high performance of PS mechanism is achieving efficient communication and computation. In order to achieve this goal, we need to have a reasonable parameter storage scheme first, then we can design an efficient scheme to pull parameters, push gradient and update parameters.
+As introduced above, when using a large model and a large number of workers, the key to high performance of PS mechanism is achieving efficient communication and computation. In order to achieve this goal, we need to have a reasonable parameter storage scheme first, then we can design an efficient scheme to pull parameters, push gradients and update parameters.
 
 ### Parameter Storage
 Parameter storage needs to cover two kinds of parameters, embedding parameters and non-embedding parameters. We have illustrated the structure of embedding parameters, and accordingly we can save embedding parameters in the form of `dictionary{layer name, dictionary{id, vector}}`. Each non-embedding parameter is a dense tensor, and TensorFlow assigns a unqiue name to each tensor in order to distinguish them. Hence non-embedding parameters are inherently suitable for KV storage.
@@ -78,7 +78,7 @@ class EmbeddingTable(object):
         pass
 ```
 
-It is noticeable that we only have one interface for initializing parameters, `init_non_embedding_param`. This is because ElasticDL initializes embedding parameters lazily, i.e. initialize them when they are needed in the training process. When a worker sends a pull parameters request with some embedding ids to a PS instance, the PS instance calls the `get_embedding_param` function of its `Parameters` instance, and the `Parameters` instance will initialize embedding vectors for unknown ids, as shown in the above pseudocode. 
+It is noticeable that we only have one interface for initializing parameters before the training process, `init_non_embedding_param`. This is because that the set of embedding ids cannot be defined at once and is growing, hence ElasticDL initializes embedding parameters lazily, i.e. initialize them when they are needed in the training process. When a worker sends a pull parameters request with some embedding ids to a PS instance, the PS instance calls the `get_embedding_param` function of its `Parameters` instance, and the `Parameters` instance will initialize embedding vectors for unknown ids, as shown in the above pseudocode.
 
 For non-embedding parameters, workers are responsible for initializing them. This is because that initializing parameters of`subclass` models, a kind of Keras interface to write model structure, needs a batch of data (another way to initialize parameters requires users to provide input shape for each layer, and thus is not user-friendly). Thus workers are responsible for initializing parameters in ElasticDL and push initialized parameters to the PS. A PS instance might receive initialized parameters from more than one worker, it only accepts the first one. 
 
