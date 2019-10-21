@@ -201,3 +201,4 @@ Finally, we save the model with replaced parameters using SavedModel and test th
 ```
 
 ## Model Saving Process
+![saved_model_task](../images/saved_model_task.png)
