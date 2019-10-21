@@ -19,11 +19,6 @@ A single serving process can load the entire model into memory. No matter which 
 Large size model\
 A single serving process will run out of memory while loading the model. We partition the model variables into multiple shards, store them in distributed parameter server for serving. The inference engine will execute the serving graph, query the variable values from the distributed parameter server as needed and finish the calculation. It's necessary to upgrade the serving framework to support this. **We will discuss this case in a separate design in the next step.**
 
-
-1. 训练与预测的数据一致性
-2. Embedding layer 怎么保存 SavedModel
-3. fault-tolerance to save model
-
 ## Feature Columns
 
 ElasticDL is a distributed deep learning framework based TensorFlow 2.0 eager execution. In ElasticDL, we use dataset to create input pipeline for training and the recommended way to preprocess data from dataset is to use [feature columns](https://www.tensorflow.org/tutorials/structured_data/feature_columns) in TensorFlow. What's more, tf.saved_model.save will save the defined feature columns with the model. So, tf-serving will use the same preprocessing as training to make inference.
