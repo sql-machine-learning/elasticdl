@@ -80,7 +80,13 @@ def clone_model(model)
 However, tf.saved_model.save can not save the replaced model using SavedModel, because elasticDL.layers.Embedding is not the native layer in tf.keras.layers. There are two methods to save the model using SavedModel. One is that we add the elasticDL.layers.Embedding to tensorflow.keras.layers and compile TensorFlow with the custom layer to a custom version. It may be incompatible with a new TensorFlow version. In this case, we may need to adjust the elasticDL.layers.Embedding implementation when every new version of TensorFlow is released. Another method is that we can save the origin model and replace the embedding parameters with the trained parameters of elasticDL.layers.embedding layer.
 
 ```python
-def restore_model(model):
+def restore_keras_embedding_for_subclass(model):
+    for attr_name, attr_value in model.__dict__.items():
+        if type(attr_value) == elasticdl.layers.Embedding:
+            setattr(model, attr_name, keras.layers.Embedding(attr_value.output_dim))
+    return model
+
+def replace_keras_embedding_params(model):    
     for layer in model.layers:
         if type(layer) == tf.keras.layers.Embedding:
             embedding_params = EmbeddingService.get_all_embedding_params(layer)
