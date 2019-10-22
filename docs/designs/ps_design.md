@@ -6,9 +6,9 @@ Parameter server (PS) stores model parameters which are used by workers. Workers
 
 We want to have one or more PS instances in each ElasticDL job. One reason is that models could be large and overrun the memory space of a single PS instance. In such case, we need to partition the model and store different partitions in different PS instances. Even if the model is not too big and fits in the memory of a single PS instance, we might still want to partition the model, as this distributes the model parameter communication from workers among PS instances. This also distributes the computation on PS such as parameter optimization. 
 
-ElasticDL is a Kubernetes-native fault-tolerable deep learning system. An ElasticDL distributed PS consists of multiple PS pods, with each PS pod as a PS instance. A PS pod stores a partition of model parameters. Workers need to get model parameters from all PS pods. A failed PS pod will interrupt the training. We can relaunch any failed PS pod and recover the corresponding model parameter partition to support PS fault tolerance.
+ElasticDL is a Kubernetes-native fault-tolerable deep learning system. An ElasticDL distributed PS consists of multiple PS pods, with each PS pod as a PS instance. A failed PS pod will interrupt the training. We can relaunch any failed PS pod and recover the corresponding model parameter partition to support PS fault tolerance.
 
-In the following sections, we will explain how to design the ElasticDL distributed PS with fault-tolerance, including how to [partition the model](#model-parameter-partition), [store model parameters](#model-parameter-storage), [access parameters from workers](#model-parameter-access-from-worker), [initialize parameters](#model-parameter-initialization), [update parameters from gradients](#model-parameter-update) and support [PS fault-tolerance](#ps-fault-tolerance).
+In the following sections, we will explain the design of the ElasticDL distributed PS with fault-tolerance in detail, including how to [partition the model](#model-parameter-partition), [store model parameters](#model-parameter-storage), [access parameters from workers](#model-parameter-access-from-worker), [initialize parameters](#model-parameter-initialization), [update parameters from gradients](#model-parameter-update) and support [PS fault-tolerance](#ps-fault-tolerance).
 
 ## Model Parameter Partition
 For a distributed PS with *N* PS pods, each PS pod stores a model parameter partition. It is noticeable that Kubernetes may preempt some PS pods. In such a case, *N* might not be a constant. However, we can overcome this case by setting PS pods having higher priority than worker pods in a job. In case a PS pod is preempted, the master will relaunch it using Kubernetes APIs. Since PS pods have a higher priority than worker pods, if there are still some worker pods running, the relaunch will succeed by using either idle or preempted Kubernetes resources. If no worker pods left, ElasticDL has to wait for Kubernetes resources to continue the training. Thus, we can assume that *N* is a constant number in ElasticDL.
@@ -55,7 +55,7 @@ Each PS pod has a RPC servicer to provide RPC services. Workers use RPC services
 ```proto
 service PServer{
     rpc pull_variable(PullModelRequest) returns (PullModelResponse);
-    rpc pull_embedding_vector(Tensor) returns (Tensor);
+    rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
 }
 ```
 
