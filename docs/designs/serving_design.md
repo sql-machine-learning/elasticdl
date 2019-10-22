@@ -23,11 +23,11 @@ A single serving process will run out of memory while loading the model. We part
 
 In this article, we want to achieve these three goals in ElasticDL:
 
-1. Guarantee consistency between training and serving for data input.
+1. Guarantee consistency between training and serving for input data preprocessing.
 2. Export the model with elasticdl.layers.Embedding to SavedModel.
 3. Execute task to save model with fault-tolerance.
 
-## Guarantee consistency between training and serving for data input
+## Guarantee consistency between training and serving for input data preprocessing
 
 ElasticDL is a distributed deep learning framework based on TensorFlow 2.0 eager execution. In ElasticDL, we use tf.data.Dataset to create input pipeline for training. The recommended way to preprocess data from tf.data.Dataset is to use [feature columns](https://www.tensorflow.org/tutorials/structured_data/feature_columns) in TensorFlow. What's more, tf.saved_model.save will save the defined feature columns with the model. So tf-serving will use the same preprocessing logic with training to make inference.
 
