@@ -2,25 +2,23 @@
 This document describes the design of a distributed parameter server for ElasticDL.
 
 ## Motivation
-Parameter server (PS) stores model parameters which are used by workers. Workers get model parameters from PS, compute gradients using different training data and send computed gradients to PS. PS iteratively updates these model parameters using gradients sent by workers. A PS based distributed training can use an arbitrary number of workers to support the scalability of training data size.
+Parameter server (PS) stores model parameters which are used by workers. Workers get model parameters from PS, compute gradients using different training data and send computed gradients to PS. PS iteratively updates these model parameters using gradients sent by workers. A PS based distributed training system can use an arbitrary number of workers to support the scalability of training data size.
 
 We want to have one or more PS instances in each ElasticDL job. One reason is that models could be large and overrun the memory space of a single PS instance. In such case, we need to partition the model and store different partitions in different PS instances. Even if the model is not too big and fits in the memory of a single PS instance, we might still want to partition the model, as this distributes the model parameter communication from workers among PS instances. This also distributes the computation on PS such as parameter optimization. 
 
-## PS Fault Tolerance
 ElasticDL is a Kubernetes-native fault-tolerable deep learning system. An ElasticDL distributed PS consists of multiple PS pods, with each PS pod as a PS instance. A PS pod stores a partition of model parameters. Workers need to get model parameters from all PS pods. A failed PS pod will interrupt the training. We can relaunch any failed PS pod and recover the corresponding model parameter partition to support PS fault tolerance.
 
-In ElasticDL, a master is responsible for creating PS pods and worker pods using Kubernetes APIs. The master launches PS pods with high priority and launches worker pods with low priority. The master also monitor PS and worker pods status. In case a PS pod fails, the master will relaunch it using Kubernetes APIs. Since PS pods have a higher priority than worker pods, if there are still some worker pods running, the relaunch will succeed by using either idle or preempted Kubernetes resources. If no worker pods left, ElasticDL has to wait for Kubernetes resources to continue the training.
-
-After the relaunch of a PS pod, the PS pod needs to recover its partition of model parameters. The model may contain one or more embedding layers with embedding tables as their parameters. If so, a minibatch of training data in a worker contains some embedding vectors, which is a subset of embedding tables. The worker pulls all non-embedding parameters and and only a subset of embedding tables from PS pods in the training. Thus, the PS pod can recover non-embedding parameters from workers but not embedding tables.
-
-In order to recover the embedding table partition in the relaunched PS pod, PS needs to replicate embedding tables. A PS pod can store its embedding table partition replicas in other PS pods. For example, assume there are *N* PS pods from *PS₀* to *PS<sub>N-1</sub>*, *PSᵢ* can stores its replica in *PS<sub>(i + 1) % N</sub>*. The relaunched PS pod  *PSᵢ* can recover its embedding table partition from its replica in  *PS<sub>(i + 1) % N</sub>*.
-
-In the following sections, we will explain the distributed PS design in detail, including how to [partition the model](#model-parameter-partition), [store model parameters](#model-parameter-storage), [access parameters from workers](#model-parameter-access-from-worker), [initialize parameters](#model-parameter-initialization), [update parameters from gradients](#model-parameter-update) and support PS fault-tolerance with [replicas](#embedding-replica).
+In the following sections, we will explain how to design the ElasticDL distributed PS with fault-tolerance, including how to [partition the model](#model-parameter-partition), [store model parameters](#model-parameter-storage), [access parameters from workers](#model-parameter-access-from-worker), [initialize parameters](#model-parameter-initialization), [update parameters from gradients](#model-parameter-update) and support [PS fault-tolerance](#ps-fault-tolerance).
 
 ## Model Parameter Partition
-For a distributed PS with *N* PS pods, each PS pod stores a model parameter partition.
+For a distributed PS with *N* PS pods, each PS pod stores a model parameter partition. It is noticeable that Kubernetes may preempt some PS pods. In such a case, *N* might not be a constant. However, we can overcome this case by setting PS pods having higher priority than worker pods in a job. In case a PS pod is preempted, the master will relaunch it using Kubernetes APIs. Since PS pods have a higher priority than worker pods, if there are still some worker pods running, the relaunch will succeed by using either idle or preempted Kubernetes resources. If no worker pods left, ElasticDL has to wait for Kubernetes resources to continue the training. Thus, we can assume that *N* is a constant number in ElasticDL.
 
-Theoretically, non-embedding tensors might have tremendous size and require partitioning. However, in practices, limited by the amount of GPU memory, researchers don't often define models depending on huge dense tensor parameters. Hence in this design, we don't partition non-embedding tensors; instead, we place each of them on a PS pod.
+We consider two kinds of model parameters:
+
+1. non-embedding parameters, and
+1. embedding tables
+
+Theoretically, non-embedding parameters might have tremendous size and require partitioning. However, in practices, limited by the amount of GPU memory, researchers don't often define models depending on huge dense tensor parameters. Hence in this design, we don't partition non-embedding parameters; instead, we place each of them on a PS pod.
 
 For a non-embedding parameter, we select its PS pod *PSᵢ* using a hashing function *hash* and the parameter name *p_name*:
 
@@ -62,7 +60,9 @@ service PServer{
 ```
 
 ## Model Parameter Initialization
-We use lazy initialization for model parameters in PS. Each PS pod has a parameter initialization status, which is `False` after the PS pod launch. When a worker tries to get non-embedding parameters from the PS pod through a RPC call `pull_variable`, the PS pod tells the worker that the parameter initialization  status is `False` in response. If the worker has already initialized non-embedding parameters, it sends non-embedding parameter values to the PS pod by a GRPC call `push_model`. `push_model` is a RPC service in the PS pod.
+We use lazy initialization for model parameters in PS. PS does have the model definition. Even if PS has the model definition, it cannot initialize Keras subclass model parameters, as only a forward-pass with a minibatch of data can initialize the parameters. Thus workers are responsible for initializing parameters and push the initialized parameters to corresponding PS pods.
+
+Each PS pod has a parameter initialization status, which is `False` after the PS pod launch. When a worker tries to get non-embedding parameters from the PS pod through a RPC call `pull_variable`, the PS pod tells the worker that the parameter initialization  status is `False` in response. If the worker has already initialized non-embedding parameters, it sends non-embedding parameter values to the PS pod by a GRPC call `push_model`. `push_model` is a RPC service in the PS pod.
 
 ```proto
 service PServer{
@@ -75,6 +75,28 @@ If worker has not initialized non-embedding parameters, since the worker has the
 When the PS pod receives non-embedding parameters in its first RPC service for `push_model`, it initializes non-embedding parameters and sets the parameter initialization status as `True`.
 
 For an embedding vector, the corresponding PS pod will initialize it in the first `pull_embedding_vector` service that contains this embedding vector. The PS pod needs the embedding vector size and the initialization method for the initialization. The embedding vector size and the initialization method are in the model definition and workers can send them in `push_model` to PS pods together with non-embedding parameter values.
+
+Thus, we need to add more attributes to class `Parameters` and `EmbeddingTable`:
+
+```
+class Parameters(object):
+    def __init__(self):
+        # Parameter initialization status
+        self.parameter_init_status = False
+        # Non-embedding parameter dict, maps parameter name to tf.Variable instance
+        self.non_embedding_params = {}
+        # Embedding table dict, maps embedding layer name to `EmbeddingTable` instance
+        self.embedding_params = {}
+
+class EmbeddingTable(object):
+    def __init__(self, dim, initializer):
+        # Embedding vector dict, maps ID to 1-D numpy.ndarray
+        self._embedding_vectors = {}
+        # the dimension of embedding vectors
+        self._dim = dim
+        # the initializer name for initializing embedding vectors
+        self._initializer = initializer
+```
 
 ## Model Parameter Update
 A worker computes gradients in each training iteration, which contain gradients for non-embedding parameters and some embedding vectors if applicable. The worker partitions these gradients using their corresponding parameter names or discrete IDs for embedding vectors. Then the worker sends gradient partitions to their corresponding PS pods by RPC calls `push_gradient`.
@@ -91,17 +113,21 @@ We have already implemented an [`OptimizeWrapper`](https://github.com/sql-machin
 
 In asynchronous SGD, the PS pod can apply gradients directly to model parameters once it receives gradients. For synchronous SGD, the PS pod accumulates `grads_to_wait` gradients from workers then updates model parameters with these gradients. `grads_to_wait` is an ElasticDL argument specified by the user.
 
-## Fixed Domain name for PS Pod
+
+## PS Fault Tolerance
+When the master detects that a PS pod fails, it will relaunch it using Kurbernetes APIs to keep the number of PS pods *N* constant. After the relaunch, the PS pod recovers its partition of model parameters so that ElasticDL can continue the training job. 
+
+### Fixed Domain name for PS Pod
 Each PS pod provides RPC services for workers. Workers are using RPC stubs to send RPC service requests to PS pods. RPC stubs require PS pod domains. Because ElasticDL is Kubernetes-native, the master can use Kubernetes services to launch/relaunch PS pods with fixed domain names. The master sends PS pod domain names to workers as arguments when launch worker pods. In such way, workers do not need to re-configure RPC stubs after a PS pod relaunch.
 
-## Model Parameter Recovery
-The relaunched PS pod will recover model parameters to continue the training. 
+### Model Parameter Recovery
+The model may contain one or more embedding layers with embedding tables as their parameters. If so, a minibatch of training data in a worker contains some embedding vectors, which is a subset of embedding tables. The worker pulls all non-embedding parameters and and only a subset of embedding tables from PS pods in the training. Thus, the PS pod can recover non-embedding parameters from workers but not embedding tables.
 
 For non-embedding parameters, the PS pod can recover them from workers in the same way as the parameter initialization by setting its parameter initialization  status as `False`.
 
-For embedding tables, PS creates replicas to support fault tolerance. For each PS pod *PSᵢ*, it can store *M* replicas of its embedding table partitions in *M* PS pods from *PS<sub>i+1 % N</sub>* to *PS<sub>i+M % N</sub>*. The relaunched PS pod can recover embedding tables from one of its replicas. 
+For embedding tables, PS creates replicas to support fault-tolerance. For each PS pod *PSᵢ*, it can store *M* replicas of its embedding table partitions in *M* PS pods from *PS<sub>i+1 % N</sub>* to *PS<sub>i+M % N</sub>*. The relaunched PS pod can recover embedding tables from one of its replicas. 
 
-## Embedding Replica
+### Embedding Replica
 Assume *Eᵢ* is the embedding table partition in PS pod *PSᵢ*, it has *M* replicas stored in PS pods from *P<sub>(i + 1) % N</sub>* to *P<sub>(i + M) % N</sub>*. Also, *PSᵢ* stores *M* other PS pod replicas *E<sub>(i - M) % N</sub>* to *E<sub>(i - 1) % N</sub>*. 
 
 *PSᵢ* maintains *M* updated embedding vector key sets *UKSᵢ(j) for j ∈ [0， M)*. When *PSᵢ* sparsely updates its embedding table partition *Eᵢ*, it also adds the updated embedding vector keys into these *M* sets. 
@@ -111,6 +137,12 @@ Assume *Eᵢ* is the embedding table partition in PS pod *PSᵢ*, it has *M* rep
 *PSᵢ* uses *M* RPC calls `SynchronizeEmbedding` the replicas store in it. `replica_index` values in `SynchronizeEmbeddingRequest` are from *(i - M) % N* to *(i - 1) % N*.
 
 When *PSᵢ* needs to recover its embedding vectors after relaunch, it chooses a pod *PSⱼ* from *P<sub>(i + 1) % N</sub>* to *P<sub>(i + M) % N</sub>* which is still alive. *PSᵢ* uses a RPC call `GetReplica` to get its replica from *PSⱼ*.
+
+Following diagram shows the RPC calls among PS pods for PS fault-tolerance:
+
+![pserver_replica](../images/pserver_replica.png)
+
+Here, we set up 5 PS pods, and set embedding replica number *M* to 1. PS pod 2 has an embedding replica `R1` of PS pod 1. It will periodically synchronize the replica from PS pod 1. If PS pod 1 is dead, the master will relaunched it and it needs to get the replica from PS pod 2 after relaunch.
 
 ```
 message SynchronizeEmbeddingRequest {
@@ -150,12 +182,6 @@ while still training:
 Following diagram shows the details inside a PS pod:
 
 ![pserver_detail](../images/pserver_detail.png)
-
-Following diagram shows the RPC calls among PS pods for PS fault-tolerance:
-
-![pserver_replica](../images/pserver_replica.png)
-
-Here, we set up 5 PS pods, and set embedding replica number to 1. PS pod 2 has an embedding replica `R1` of PS pod 1. It will periodically synchronize the replica from PS pod 1. If PS pod 1 is dead, the master will relaunched it and it needs to get the replica from PS pod 2 after relaunch.
 
 Following diagram shows the RPC calls between a worker pod and two PS pods:
 
