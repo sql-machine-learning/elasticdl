@@ -87,7 +87,7 @@ def replace_keras_embedding_with_edl_embedding(model)
 
 However, tf.saved_model.save cannot export the replaced model to SavedModel. Because ElasticDL.Embedding uses tf.py_function to invoke Rpc to interact with the parameter server. It is not mapped to any native TensorFlow op. As a result we choose to save the origin model with native keras embedding layer, replace the embedding parameters with the trained parameters of elasticdl.layers.embedding.
 
-SavedModel needs to generate model inputs and outputs signatures to map to TensorFlow Serving's APIs. However, the user usually does not set inputs and outputs for sequential and subclass models. We should build model with the input dataset to generate inputs and outputs for those models before using SavedModel.
+SavedModel needs to generate model inputs and outputs signatures to map to TensorFlow Serving's APIs. However, the user does not need to define inputs and outputs for sequential and subclass models. We should build model with the input dataset to generate inputs and outputs for those models before using SavedModel.
 
 ```python
 def export_saved_model_from_trained_model(model, dataset):
