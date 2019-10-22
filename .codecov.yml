@@ -13,16 +13,5 @@ coverage:
 
 ignore:
   - "elasticdl/python/tests"
-  - "elasticdl/python/common/k8s_client.py"
-  - "elasticdl/python/common/k8s_tensorboard_client.py"
-  - "elasticdl/python/master/k8s_worker_manager.py"
-  - "elasticdl/python/master/main.py"
-  - "elasticdl/python/master/tensorboard_service.py"
-  - "elasticdl/python/worker/main.py"
-  - "elasticdl/python/elasticdl/api.py"
-  - "elasticdl/python/elasticdl/client.py"
-  - "elasticdl/python/elasticdl/image_builder.py"
-  - "elasticdl/python/data/recordio_gen"
-  - "elasticdl/python/data/odps_io.py"
 
 comment: false
