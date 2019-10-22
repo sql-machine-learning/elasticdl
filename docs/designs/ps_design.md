@@ -35,20 +35,6 @@ We choose to store each non-embedding parameter using the parameter name as its 
 
 If a model has one or more embedding layers, a minibatch of training data contains a set of discrete IDs. These discrete IDs correspond to a set of embedding vectors. The worker needs to pull these embedding vectors from their corresponding PS pods using the embedding layer name and the discrete IDs. To store an embedding vector, We use its corresponding embedding layer name and discrete ID as the key, and a 1-D numpy.ndarry as the value.
 
-```
-class Parameters(object):
-    def __init__(self):
-        # Non-embedding parameter dict, maps parameter name to tf.Variable instance
-        self.non_embedding_params = {}
-        # Embedding table dict, maps embedding layer name to `EmbeddingTable` instance
-        self.embedding_params = {}
-
-class EmbeddingTable(object):
-    def __init__(self):
-        # Embedding vector dict, maps ID to 1-D numpy.ndarray
-        self.embeddings = {}
-```
-
 ## Model Parameter Access from Worker
 Each PS pod has a RPC servicer to provide RPC services. Workers use RPC services to pull model parameters. `pull_variable` service is to pull all non-embedding parameters. `pull_embedding_vector` service is to pull embedding vectors specified by an embedding layer name and a list of discrete IDs.
 
@@ -76,9 +62,9 @@ When the PS pod receives non-embedding parameters in its first RPC service for `
 
 For an embedding vector, the corresponding PS pod will initialize it in the first `pull_embedding_vector` service that contains this embedding vector. The PS pod needs the embedding vector size and the initialization method for the initialization. The embedding vector size and the initialization method are in the model definition and workers can send them in `push_model` to PS pods together with non-embedding parameter values.
 
-Thus, we need to add more attributes to class `Parameters` and `EmbeddingTable`:
+Thus, we introduce two data structures: `Parameters ` and `EmbeddingTable`. The `Parameters` stores both embedding parameters and non-embedding parameters. The `EmbeddingTable` stores embedding vectors, which is a subset embedding table of an embedding layer.
 
-```
+```python
 class Parameters(object):
     def __init__(self):
         # Parameter initialization status
