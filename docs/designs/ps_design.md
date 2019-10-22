@@ -74,9 +74,7 @@ If worker has not initialized non-embedding parameters, since the worker has the
 
 When the PS pod receives non-embedding parameters in its first RPC service for `push_model`, it initializes non-embedding parameters and sets the parameter initialization status as `True`.
 
-
 For an embedding vector, the corresponding PS pod will initialize it in the first `pull_embedding_vector` service that contains this embedding vector. The PS pod needs the embedding vector size and the initialization method for the initialization. The embedding vector size and the initialization method are in the model definition and workers can send them in `push_model` to PS pods together with non-embedding parameter values.
-
 
 ## Model Parameter Update
 A worker computes gradients in each training iteration, which contain gradients for non-embedding parameters and some embedding vectors if applicable. The worker partitions these gradients using their corresponding parameter names or discrete IDs for embedding vectors. Then the worker sends gradient partitions to their corresponding PS pods by RPC calls `push_gradient`.
@@ -93,8 +91,6 @@ We have already implemented an [`OptimizeWrapper`](https://github.com/sql-machin
 
 In asynchronous SGD, the PS pod can apply gradients directly to model parameters once it receives gradients. For synchronous SGD, the PS pod accumulates `grads_to_wait` gradients from workers then updates model parameters with these gradients. `grads_to_wait` is an ElasticDL argument specified by the user.
 
-
-
 ## Fixed Domain name for PS Pod
 Each PS pod provides RPC services for workers. Workers are using RPC stubs to send RPC service requests to PS pods. RPC stubs require PS pod domains. Because ElasticDL is Kubernetes-native, the master can use Kubernetes services to launch/relaunch PS pods with fixed domain names. The master sends PS pod domain names to workers as arguments when launch worker pods. In such way, workers do not need to re-configure RPC stubs after a PS pod relaunch.
 
@@ -110,13 +106,11 @@ Assume *Eᵢ* is the embedding table partition in PS pod *PSᵢ*, it has *M* rep
 
 *PSᵢ* maintains *M* updated embedding vector key sets *UKSᵢ(j) for j ∈ [0， M)*. When *PSᵢ* sparsely updates its embedding table partition *Eᵢ*, it also adds the updated embedding vector keys into these *M* sets. 
 
-
 *PSᵢ* also periodically synchronize the replicas stored in it from PS pods *PS<sub>(i - M) % N</sub>* to *PS<sub>(i - 1) % N</sub>*. The synchronization frequency can be several seconds.
 
 *PSᵢ* uses *M* RPC calls `SynchronizeEmbedding` the replicas store in it. `replica_index` values in `SynchronizeEmbeddingRequest` are from *(i - M) % N* to *(i - 1) % N*.
 
 When *PSᵢ* needs to recover its embedding vectors after relaunch, it chooses a pod *PSⱼ* from *P<sub>(i + 1) % N</sub>* to *P<sub>(i + M) % N</sub>* which is still alive. *PSᵢ* uses a RPC call `GetReplica` to get its replica from *PSⱼ*.
-
 
 ```
 message SynchronizeEmbeddingRequest {
@@ -151,24 +145,23 @@ while still training:
         update self.replicas[index] from updated_vectors.embedding_vectors
 ```
 
-
 ## Diagram
 
 Following diagram shows the details inside a PS pod:
 
 ![pserver_detail](../images/pserver_detail.png)
 
-Following diagram shows the communication between PS pods:
+Following diagram shows the RPC calls among PS pods for PS fault-tolerance:
 
 ![pserver_replica](../images/pserver_replica.png)
 
-Here, we set up 5 PS pods, and set embedding replica number to 1. We could find that PS pod 2 has a embedding replica `R1` of PS pod 1. It will periodically synchronize the replica from PS pod 1. If PS pod 1 is dead, a relaunched PS pod needs to get the replica from PS pod 2.
+Here, we set up 5 PS pods, and set embedding replica number to 1. PS pod 2 has an embedding replica `R1` of PS pod 1. It will periodically synchronize the replica from PS pod 1. If PS pod 1 is dead, the master will relaunched it and it needs to get the replica from PS pod 2 after relaunch.
 
-Following diagram shows the RPC calls among PS pods and worker pods:
+Following diagram shows the RPC calls between a worker pod and two PS pods:
 
 ![pserver_rpc](../images/pserver_rpc.png)
 
-Please note that there are many worker pods in an ElasticDL job, and each worker pod will set up connection with all the PS pods. Here we only put one for simplicity.
+Please note that there are many worker pods in an ElasticDL job, and each worker pod will have RPC connections with all the PS pods. Here we only show one worker pod for simplicity.
 
 ## Appendix
 ### Message Definition
