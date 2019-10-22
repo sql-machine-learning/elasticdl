@@ -163,8 +163,9 @@ Following diagram shows the communication between PS pods:
 
 Following diagram shows the RPC calls among PS pods and worker pods:
 
-
 ![pserver_rpc](../images/pserver_rpc.png)
+
+Please note that there are many worker pods in an ElasticDL job, and each worker pod will set up connection with all the PS pods. Here we only put one for simplicity.
 
 
 ## Appendix
