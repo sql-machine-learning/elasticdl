@@ -153,6 +153,7 @@ while still training:
 
 
 ## Diagram
+
 Following diagram shows the details inside a PS pod:
 
 ![pserver_detail](../images/pserver_detail.png)
@@ -161,12 +162,13 @@ Following diagram shows the communication between PS pods:
 
 ![pserver_replica](../images/pserver_replica.png)
 
+Here, we set up 5 PS pods, and set embedding replica number to 1. We could find that PS pod 2 has a embedding replica `R1` of PS pod 1. It will periodically synchronize the replica from PS pod 1. If PS pod 1 is dead, a relaunched PS pod needs to get the replica from PS pod 2.
+
 Following diagram shows the RPC calls among PS pods and worker pods:
 
 ![pserver_rpc](../images/pserver_rpc.png)
 
 Please note that there are many worker pods in an ElasticDL job, and each worker pod will set up connection with all the PS pods. Here we only put one for simplicity.
-
 
 ## Appendix
 ### Message Definition
