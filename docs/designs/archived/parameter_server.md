@@ -11,7 +11,7 @@ A typical parameter server (pserver) architecture contains three roles:
 
 Please refer to:
 
-![parameter_server](../images/parameter_server.png)
+![parameter_server](images/parameter_server.png)
 
 
 ## Parameter Sharding
