@@ -226,7 +226,7 @@ message PullModelRequest{
 }
 
 message PullModelResponse{
-    bool need_push_model = 1;
+    bool model_init_status = 1;
     Model model = 2;
 }
 
@@ -238,6 +238,11 @@ message PushGradientRequest{
 message PushGradientResponse{
     bool accepted = 1;
     int32 model_version = 2;
+}
+
+message PullEmbeddingVectorRequest{
+    string name = 1;
+    repeated int64 ids = 2;
 }
 
 message SynchronizeEmbeddingRequest {
@@ -257,7 +262,7 @@ service PServer{
     
     # pull embedding vectors in ElasticDL embedding layers
     # Do we need to create a new message `PullEmbeddingVectorRequest` rather than use `Tensor`?
-    rpc pull_embedding_vector(Tensor) returns (Tensor);
+    rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
     
     # push trainable tensorflow variables and meta info for ElasticDL embedding layers
     rpc push_model(Model) returns (google.protobuf.Empty);
@@ -358,9 +363,9 @@ class PServer(elasticdl_pb2_grpc.PServerServicer):
     def pull_variable(self, request):
         res = PullModelResponse()
         if self._need_initialize_model:
-            res.need_push_model = True
+            res.model_init_status = True
             return res
-        res.need_push_model = False
+        res.model_init_status = False
         res.model = self._get_model() # get model in this PS instance
         return res
 
@@ -375,13 +380,13 @@ class Worker(object):
         for ps_index in range(self._ps_node_num):
             req = PullModelRequest() # create request code keeps the same with current code
             res = self._stub[ps_index].pull_variable() # pull variable from PS
-            if res.need_push_model:
+            if res.model_init_status:
                 // worker initializes its model here if needed
                 model = serialize_model_to_pb()
                 self._stub[ps_index].push_model(model) # get model in this worker
             req = PullModelRequest() # create request code keeps the same with current code
             res = self._stub[ps_index].pull_variable() # pull variable from PS
-            if res.need_push_model:
+            if res.model_init_status:
                 raise Error or try a pre-defined constant times 
 ```
 
