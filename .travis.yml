@@ -27,6 +27,7 @@ jobs:
         # Set up Kubernetes environment
         - bash scripts/setup_k8s_env.sh
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
+        - docker build -t elasticdl:ci -f elasticdl/docker/Dockerfile.ci .
         # Create shared folder to store coverage report
         - mkdir shared
         # Run unit tests not related to ODPS
@@ -40,7 +41,6 @@ jobs:
           else
             docker run --rm -it -e ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_* elasticdl/python/tests/data_reader_test.py"
           fi
-        - docker build -t elasticdl:ci -f elasticdl/docker/Dockerfile.ci .
         # Run integration tests
         - kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
         - |
