@@ -19,6 +19,7 @@ setup(
     url="https://elasticdl.org",
     install_requires=required_deps,
     extras_require=extras,
+    python_requires=">=3.5",
     packages=find_packages(exclude=["*test*"]),
     package_data={"": ["proto/elasticdl.proto", "docker/*", "Makefile"]},
     entry_points={
