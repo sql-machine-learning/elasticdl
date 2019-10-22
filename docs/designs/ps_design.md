@@ -35,7 +35,7 @@ Each PS node has a dictionary-based data structure to store its partition of mod
 
 We choose to store each non-embedding parameter using the parameter name as its key, and a [`tf.Variable`](https://www.tensorflow.org/api_docs/python/tf/Variable) instance as its value. This is because that we want to update non-embedding parameters directly by [TensorFlow optimizers](https://www.tensorflow.org/api_docs/python/tf/optimizers).
 
-If a model has one or more embedding layers, a minibatch of training data contains a set of discrete IDs. These discrete IDs correspond to a set of embedding vectors. The Worker needs to pull these embedding vectors from their corresponding PS pods using the embedding layer name and the discrete IDs. To store an embedding vector, We use its corresponding embedding layer name and discrete ID as the keys and the embedding vector itself as the value.
+If a model has one or more embedding layers, a minibatch of training data contains a set of discrete IDs. These discrete IDs correspond to a set of embedding vectors. The worker needs to pull these embedding vectors from their corresponding PS pods using the embedding layer name and the discrete IDs. To store an embedding vector, We use its corresponding embedding layer name and discrete ID as the key, and a 1-D numpy.ndarry as the value.
 
 ```
 class Parameters(object):
