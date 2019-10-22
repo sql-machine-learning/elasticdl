@@ -31,7 +31,7 @@ In this article, we want to achieve these three goals in ElasticDL:
 
 ElasticDL is a distributed deep learning framework based on TensorFlow 2.0 eager execution. In ElasticDL, we use tf.data.Dataset to create input pipeline for training. The recommended way to preprocess data from tf.data.Dataset is to use [feature columns](https://www.tensorflow.org/tutorials/structured_data/feature_columns) in TensorFlow. What's more, tf.saved_model.save will save the defined feature columns with the model. So tf-serving will use the same preprocessing logic with training to make inference.
 
-Define a keras model with feature columns:
+Define a Keras model with feature columns:
 
 ```python
 def get_feature_columns():
@@ -79,7 +79,7 @@ def replace_keras_embedding_with_edl_embedding(model)
         return model
 ```
 
-However, tf.saved_model.save cannot export the replaced model to SavedModel. Because ElasticDL.Embedding uses tf.py_function to invoke Rpc to interact with the parameter server. It is not mapped to any native TensorFlow op. As a result we choose to save the origin model with native keras embedding layer, replace the embedding parameters with the trained parameters of elasticdl.layers.embedding.
+However, tf.saved_model.save cannot export the replaced model to SavedModel. Because ElasticDL.Embedding uses tf.py_function to invoke RPC to interact with the parameter server. It is not mapped to any native TensorFlow op. As a result we choose to save the origin model with native keras embedding layer, replace the embedding parameters with the trained parameters of elasticdl.layers.embedding.
 
 ```python
 def restore_keras_embedding_for_subclass(model):
