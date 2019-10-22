@@ -118,10 +118,10 @@ In asynchronous SGD, the PS pod can apply gradients directly to model parameters
 When the master detects that a PS pod fails, it will relaunch it using Kurbernetes APIs to keep the number of PS pods *N* constant. After the relaunch, the PS pod recovers its partition of model parameters so that ElasticDL can continue the training job. 
 
 ### Fixed Domain name for PS Pod
-Each PS pod provides RPC services for workers. Workers are using RPC stubs to send RPC service requests to PS pods. RPC stubs require PS pod domains. Because ElasticDL is Kubernetes-native, the master can use Kubernetes services to launch/relaunch PS pods with fixed domain names. The master sends PS pod domain names to workers as arguments when launch worker pods. In such way, workers do not need to re-configure RPC stubs after a PS pod relaunch.
+Each PS pod provides RPC services for workers. Workers are using RPC stubs to send RPC service requests to PS pods. RPC stubs require PS pod domains. Because ElasticDL is Kubernetes-native, the master can use Kubernetes services to launch/relaunch PS pods with fixed domain names. The master sends these domain names to workers as arguments when launching worker pods. In such way, workers do not need to re-configure RPC stubs after a PS pod relaunch.
 
 ### Model Parameter Recovery
-The model may contain one or more embedding layers with embedding tables as their parameters. If so, a minibatch of training data in a worker contains some embedding vectors, which is a subset of embedding tables. The worker pulls all non-embedding parameters and and only a subset of embedding tables from PS pods in the training. Thus, the PS pod can recover non-embedding parameters from workers but not embedding tables.
+The model may contain one or more embedding layers with embedding tables as their parameters. If so, a minibatch of training data in a worker contains some embedding IDs, which correspond to a subset of embedding tables. The worker pulls all non-embedding parameters and only a subset of embedding tables from PS pods in the training. Thus, the PS pod can recover non-embedding parameters from workers but not embedding tables.
 
 For non-embedding parameters, the PS pod can recover them from workers in the same way as the parameter initialization by setting its parameter initialization status as `False`.
 
