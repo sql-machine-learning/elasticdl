@@ -310,7 +310,7 @@ class EmbeddingTable(object):
 
 ### Some pseudocode
 
-Here is the pseudocode for a worker to pull variable from the PS:
+Here is the pseudocode for a worker to pull variable from the PS. If the non-embedding variables are not initialized, the PS will tell the worker to initialize them and report to the PS.
 
 ```python
 class PServer(elasticdl_pb2_grpc.PServerServicer):
@@ -333,7 +333,7 @@ class Worker(object):
     def pull_variable(self):
         # for-loop should be implemented in multithread
         for ps_index in range(self._ps_node_num):
-            req = PullModelRequest() # create request code keeps the same with current code 
+            req = PullModelRequest() # create request code keeps the same with current code
             res = self._stub[ps_index].pull_variable() # pull variable from PS
             if res.need_push_model:
                 // worker initializes its model here if needed
@@ -373,5 +373,5 @@ def GetReplica(self, request, _):
     replica = elasticdl_pb2. SynchronizeEmbeddingResponse()
     assign replica.embedding_vectors from self.replicas[request.replica_index]
     return replica
-
 ```
+
