@@ -6,7 +6,7 @@ Model serving is an essential part in an end-to-end machine learning lifecycle. 
 
 [SavedModel](https://www.tensorflow.org/guide/saved_model) is the universal file format for TensorFlow models. It's language neutral and can be loaded by multiple frameworks (such as TFServing, TFLite, TensorFlow.js and so on). We choose to export the ElasticDL model to the SavedModel format. In this way, we can leverage various mature solutions to serving our model in different scenarios.
 
-The model size can vary from several kilobytes to several terabytes. Exporting to savedModel can't apply to all the scenarios. We divide the model size into two categories: *Small or medium size* and *large size*. The small or medium size model can be loaded by a process, and the latter can not fit in a single process. Training and serving strategies are different between these two cases. Please check the following table:
+The model size can vary from several kilobytes to several terabytes. Exporting to SavedModel can't apply to all the scenarios. We divide the model size into two categories: *Small or medium size* and *large size*. The small or medium size model can be loaded by a process, and the latter cannot fit in a single process. Training and serving strategies are different between these two cases. Please check the following table:
 
 |                            | Master Central Storage |  AllReduce  |            Parameter Server              |
 |:--------------------------:|:----------------------:|:-----------:|:----------------------------------------:|
@@ -77,7 +77,7 @@ def replace_keras_embedding_with_edl_embedding(model)
         return model
 ```
 
-However, tf.saved_model.save can not export the replaced model to SavedModel. Because ElasticDL.Embedding use tf.py_function to invoke Rpc to interact with the parameter server. It is not mapped to any native TensorFlow op. As a result we choose to save the origin model with native keras embedding layer, replace the embedding parameters with the trained parameters of elasticdl.layers.embedding.
+However, tf.saved_model.save cannot export the replaced model to SavedModel. Because ElasticDL.Embedding uses tf.py_function to invoke Rpc to interact with the parameter server. It is not mapped to any native TensorFlow op. As a result we choose to save the origin model with native keras embedding layer, replace the embedding parameters with the trained parameters of elasticdl.layers.embedding.
 
 ```python
 def restore_keras_embedding_for_subclass(model):
