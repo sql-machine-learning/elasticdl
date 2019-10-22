@@ -156,3 +156,222 @@ def GetReplica(self, request, _):
     return replica
 ```
 Note that PS also needs the lock for adding updated embedding vector keys into `self.UKS` after embedding table sparse updates.
+
+## Appendix
+### RPC Definition
+```python
+service PServer{
+    # pull trainable tensorflow variables created by Keras layers
+    rpc pull_variable(PullModelRequest) returns (PullModelResponse);
+    
+    # pull embedding vectors in ElasticDL embedding layers
+    # Do we need to create a new message `PullEmbeddingVectorRequest` rather than use `Tensor`?
+    rpc pull_embedding_vector(Tensor) returns (Tensor);
+    
+    # push trainable tensorflow variables and meta info for ElasticDL embedding layers
+    rpc push_model(Model) returns (google.protobuf.Empty);
+    
+    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
+    
+    # PS to recover embedding vectors after relaunch
+    rpc get_replica(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
+    
+    # PS replica synchronization
+    rpc synchronize_embedding(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
+}
+```
+
+
+### Message Definition
+```python
+message Tensor {	
+    enum DataType {	
+        BOOL = 0;	
+        INT16 = 1;	
+        INT32 = 2;	
+        INT64 = 3;	
+        FP16 = 4;	
+        FP32 = 5;	
+        FP64 = 6;	
+    }	
+    string name = 1;
+    DataType data_type = 2;
+    repeated int64 dim = 3;
+    bytes content = 4;
+    repeated int64 indices = 5;
+}
+
+message EmbeddingTableInfo{
+    string name = 1;
+    repeated int64 dim = 2;
+    string initializer = 3;
+}
+
+message Model {
+    int64 version = 1;
+    repeated Tensor variables = 2;
+    repeated EmbeddingTableInfo embedding_table_info = 3;
+}
+
+message PullModelRequest{
+    int64 version = 1;
+}
+
+message PullModelResponse{
+    bool need_push_model = 1;
+    Model model = 2;
+}
+
+message PushGradientRequest{
+    int32 model_version = 1;
+    repeated Tensor gradients = 2;
+}
+
+message PushGradientResponse{
+    bool accepted = 1;
+    int32 model_version = 2;
+}
+
+message SynchronizeEmbeddingRequest {
+    int32 replica_index = 1;
+}
+
+message SynchronizeEmbeddingResponse {
+    repeated Tensor embedding_vectors = 1;
+}
+```
+
+### Data Structure
+```python
+class Tensor(object):
+    def __init__(self, name=None, value=None, indices=None):
+        self.name = name
+        self.value = value
+        self.indices = indices
+        
+def serialize_to_pb(tensor, pb):
+    pass
+
+def deserialize_from_pb(pb, tensor):
+    pass
+
+def convert_to_tf_variable(tensor):
+    pass
+
+def convert_to_tf_tensor(tensor):
+    pass
+```
+
+```python
+# In `Parameters`, interfaces `set_*_param` have two arguments, `value` and `name` (or `layer_name`).  If `value` is a ElasticDL `Tensor` instance, `name` can be None. Otherwise `value` is a numpy ndarray, and `name` must be specified.
+class Parameters(object):
+    def __init__(self):
+        self._non_embedding_params = {} # maps `variable_name` to TensorFlow variable instance
+        self._embedding_params = {} # maps `layer_name` to `EmbeddingTable` instance
+
+    @property
+    def non_embedding_params(self):
+        return self._non_embedding_params
+
+    def set_embedding_param(self, value, layer_name=None):
+        pass
+    
+    def get_embedding_param(self, layer_name, ids):
+        return self._embedding_params.get(layer_name).get(ids)
+
+    def set_non_embedding_param(self, value, name=None):
+        pass
+         
+    def init_non_embedding_param(self, value, name=None):
+        pass
+        
+    def set_meta_info(self, layer_name, dim, initializer):
+        pass
+
+class EmbeddingTable(object):
+    def __init__(self, dim, initializer):
+        self._embedding_vectors = {} # maps `id` to 1-D numpy.ndarray
+        self._dim = dim # the dimension of embedding vectors
+        self._initializer = initializer # the initializer name for initializing embedding vectors
+    
+    def get(self, ids):
+        values = []
+        for id in ids:
+            if id not self._embedding_vectors:
+                val = initialize_embedding_vector(self._dim, self._initializer)
+            else:
+                val = self._embedding_vectors.get(id)
+            values.append(val)
+        return np.concatenate(values).reshape(len(ids), -1)
+        
+    def set(self, ids, values):
+        pass
+```
+
+### Some pseudocode
+
+Here is the pseudocode for a worker to pull variable from the PS:
+
+```python
+class PServer(elasticdl_pb2_grpc.PServerServicer):
+    ...
+    def pull_variable(self, request):
+        res = PullModelResponse()
+        if self._need_initialize_model:
+            res.need_push_model = True
+            return res
+        res.need_push_model = False
+        res.model = self._get_model() # get model in this PS instance
+        return res
+
+    def push_model(self, request):
+        model = request.model
+        ... # initialize model in this PS instance
+	
+class Worker(object):
+    ...
+    def pull_variable(self):
+        # for-loop should be implemented in multithread
+        for ps_index in range(self._ps_node_num):
+            req = PullModelRequest() # create request code keeps the same with current code 
+            res = self._stub[ps_index].pull_variable() # pull variable from PS
+            if res.need_push_model:
+                // worker initializes its model here if needed
+                model = serialize_model_to_pb()
+                self._stub[ps_index].push_model(model) # get model in this worker
+            req = PullModelRequest() # create request code keeps the same with current code
+            res = self._stub[ps_index].pull_variable() # pull variable from PS
+            if res.need_push_model:
+                raise Error or try a pre-defined constant times 
+```
+
+
+Here is the pseudocode for getting replica from specified PS pod and synching replicas:
+
+```python
+# T is the number of seconds for synchronization frequency
+# Assume current PS is PS(i), self._stub[index] is the stub for PS((i - index) % N)'s GRPC server.
+# self.replicas[index] is the replica for PS((i - index) % N).
+req = elasticdl_pb2.SynchronizeEmbeddingRequest()
+while still training:
+    time.sleep(T)
+    for index in range(M):
+        req.replica_index = index
+        updated_vectors = self._stub[replica_index].SynchronizeEmbedding(req)
+        update self.replicas[index] from updated_vectors.embedding_vectors
+
+def SynchronizeEmbedding(self, request, _):
+    synch_embeddings = elasticdl_pb2. SynchronizeEmbeddingResponse()
+    # self.UKS are the M updated embedding vector key sets in current PS
+    # self.embedding_vector are the embedding vectors in current PS
+    with self.lock():
+        assign synch_embeddings.embedding_vectors from self.embedding_vector
+        self.UKS.clear()
+    return synch_embeddings
+    
+def GetReplica(self, request, _):
+    replica = elasticdl_pb2. SynchronizeEmbeddingResponse()
+    assign replica.embedding_vectors from self.replicas[request.replica_index]
+    return replica
+
+```
