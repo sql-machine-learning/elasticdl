@@ -206,7 +206,7 @@ class Embedding(tf.keras.layers.Layer):
         # tf.reshape does not support shape with None. Replace None with -1.
         if ids.get_shape().rank == 2:
             input_dim = (
-                -1 if ids.get_shape()[1] is None else ids.get_shape()[1]
+                1 if ids.get_shape()[1] is None else ids.get_shape()[1]
             )
             output_shape = (-1, input_dim, self.output_dim)
         else:
