@@ -62,7 +62,7 @@ service PServer{
 ## Model Parameter Initialization
 We use lazy initialization for model parameters in PS. PS does have the model definition. Even if PS has the model definition, it cannot initialize Keras subclass model parameters, as only a forward-pass with a minibatch of data can initialize the parameters. Thus workers are responsible for initializing parameters and push the initialized parameters to corresponding PS pods.
 
-Each PS pod has a parameter initialization status, which is `False` after the PS pod launch. When a worker tries to get non-embedding parameters from the PS pod through a RPC call `pull_variable`, the PS pod tells the worker that the parameter initialization  status is `False` in response. If the worker has already initialized non-embedding parameters, it sends non-embedding parameter values to the PS pod by a GRPC call `push_model`. `push_model` is a RPC service in the PS pod.
+Each PS pod has a parameter initialization status, which is `False` after the PS pod launch. When a worker tries to get non-embedding parameters from the PS pod through a RPC call `pull_variable`, the PS pod tells the worker that the parameter initialization status is `False` in response. If the worker has already initialized non-embedding parameters, it sends non-embedding parameter values to the PS pod by a GRPC call `push_model`. `push_model` is a RPC service in the PS pod.
 
 ```proto
 service PServer{
@@ -123,7 +123,7 @@ Each PS pod provides RPC services for workers. Workers are using RPC stubs to se
 ### Model Parameter Recovery
 The model may contain one or more embedding layers with embedding tables as their parameters. If so, a minibatch of training data in a worker contains some embedding vectors, which is a subset of embedding tables. The worker pulls all non-embedding parameters and and only a subset of embedding tables from PS pods in the training. Thus, the PS pod can recover non-embedding parameters from workers but not embedding tables.
 
-For non-embedding parameters, the PS pod can recover them from workers in the same way as the parameter initialization by setting its parameter initialization  status as `False`.
+For non-embedding parameters, the PS pod can recover them from workers in the same way as the parameter initialization by setting its parameter initialization status as `False`.
 
 For embedding tables, PS creates replicas to support fault-tolerance. For each PS pod *PSᵢ*, it can store *M* replicas of its embedding table partitions in *M* PS pods from *PS<sub>i+1 % N</sub>* to *PS<sub>i+M % N</sub>*. The relaunched PS pod can recover embedding tables from one of its replicas. 
 
