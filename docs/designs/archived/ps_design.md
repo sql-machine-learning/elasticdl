@@ -14,7 +14,7 @@ Each worker has a local copy of the model variables. After the master relaunches
 
 ### Compoments
 
-![pserver](../images/pserver.png)
+![pserver](images/pserver.png)
 
 PS contains two main compoments:
 
