@@ -37,6 +37,20 @@ class ModelHelperTest(unittest.TestCase):
         self.assertTrue(optimizer is not None)
         self.assertTrue(eval_metrics_fn is not None)
         self.assertTrue(prediction_outputs_processor is not None)
+        self.assertRaisesRegex(
+            Exception,
+            "Cannot find the custom model function/class "
+            "in model definition files",
+            get_model_spec,
+            model_zoo=_model_zoo_path,
+            model_def="test_module.undefined",
+            dataset_fn="dataset_fn",
+            loss="loss",
+            optimizer="optimizer",
+            eval_metrics_fn="eval_metrics_fn",
+            model_params="",
+            prediction_outputs_processor="PredictionOutputsProcessor",
+        )
 
     def test_get_module_file_path(self):
         self.assertEqual(

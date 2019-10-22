@@ -12,8 +12,7 @@ install:
 
 stages:
   - precommit
-  - unittest
-  - integrationtest
+  - tests
 
 jobs:
   include:
@@ -22,32 +21,26 @@ jobs:
       script:
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
         - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python model_zoo setup.py -name '*.py' -print0 | tr '\0' ' ')"
-    - stage: unittest
-      name: "Unit Tests"
+    - stage: tests
+      name: "Tests"
       script:
+        # Set up Kubernetes environment
+        - bash scripts/setup_k8s_env.sh
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
+        - docker build -t elasticdl:ci -f elasticdl/docker/Dockerfile.ci .
         # Create shared folder to store coverage report
         - mkdir shared
-        # Run unit tests without k8s or ODPS
-        - docker run --rm -it -v $PWD/shared:/shared -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests --cov=elasticdl/python --cov-report=xml; mv coverage.xml shared"
+        # Run unit tests not related to ODPS
+        - docker run --rm -it --net=host -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $PWD/shared:/shared -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=True ODPS_TESTS=False pytest elasticdl/python/tests --cov=elasticdl/python --cov-report=xml; mv coverage.xml shared"
         # Report code coverage to https://codecov.io
         - bash <(curl -s https://codecov.io/bash)
-        # Run unit tests related to ODPS
+        # Run unit tests related to ODPS (skipped for pull requests from forks)
         - |
           if [ "$ODPS_ACCESS_ID" == "" ] || [ "$ODPS_ACCESS_KEY" == "" ]; then
             echo "Skipping ODPS related unit tests since either ODPS_ACCESS_ID or ODPS_ACCESS_KEY is not set"
           else
             docker run --rm -it -e ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_* elasticdl/python/tests/data_reader_test.py"
           fi
-    - stage: integrationtest
-      name: "Integration Tests"
-      script:
-        # Set up Kubernetes environment
-        - bash scripts/setup_k8s_env.sh
-        - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
-        - docker build -t elasticdl:ci -f elasticdl/docker/Dockerfile.ci .
-        # Run unit tests related to k8s
-        - docker run --rm -it --net=host -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=True pytest elasticdl/python/tests/k8s*.py"
         # Run integration tests
         - kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
         - |
