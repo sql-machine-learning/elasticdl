@@ -93,16 +93,6 @@ We have already implemented an [`OptimizeWrapper`](https://github.com/sql-machin
 
 In asynchronous SGD, the PS pod can apply gradients directly to model parameters once it receives gradients. For synchronous SGD, the PS pod accumulates `grads_to_wait` gradients from workers then updates model parameters with these gradients. `grads_to_wait` is an ElasticDL argument specified by the user.
 
-## Short Summary
-
-Following are the details inside a PS instance:
-
-![pserver_detail](../images/pserver_detail.png)
-
-Following are the rpc calls among PS pods and worker pods:
-
-
-![pserver_rpc](../images/pserver_rpc.png)
 
 
 ## Fixed Domain name for PS Pod
@@ -161,9 +151,25 @@ while still training:
         update self.replicas[index] from updated_vectors.embedding_vectors
 ```
 
+
+## Diagram
+Following diagram shows the details inside a PS pod:
+
+![pserver_detail](../images/pserver_detail.png)
+
+Following diagram shows the communication between PS pods:
+
+![pserver_replica](../images/pserver_replica.png)
+
+Following diagram shows the RPC calls among PS pods and worker pods:
+
+
+![pserver_rpc](../images/pserver_rpc.png)
+
+
 ## Appendix
 ### Message Definition
-```python
+```proto
 message Tensor {	
     enum DataType {	
         BOOL = 0;	
@@ -222,7 +228,7 @@ message SynchronizeEmbeddingResponse {
 ```
 
 ### RPC Definition
-```python
+```proto
 service PServer{
     # pull trainable tensorflow variables created by Keras layers
     rpc pull_variable(PullModelRequest) returns (PullModelResponse);
