@@ -161,25 +161,6 @@ while still training:
         update self.replicas[index] from updated_vectors.embedding_vectors
 ```
 
-The implementation of the RPC services:
-
-```
-def SynchronizeEmbedding(self, request, _):
-    synch_embeddings = elasticdl_pb2. SynchronizeEmbeddingResponse()
-    # self.UKS are the M updated embedding vector key sets in current PS
-    # self.embedding_vector are the embedding vectors in current PS
-    with self.lock():
-        assign synch_embeddings.embedding_vectors from self.embedding_vector
-        self.UKS.clear()
-    return synch_embeddings
-    
-def GetReplica(self, request, _):
-    replica = elasticdl_pb2. SynchronizeEmbeddingResponse()
-    assign replica.embedding_vectors from self.replicas[request.replica_index]
-    return replica
-```
-Note that PS also needs the lock for adding updated embedding vector keys into `self.UKS` after embedding table sparse updates.
-
 ## Appendix
 ### Message Definition
 ```python
