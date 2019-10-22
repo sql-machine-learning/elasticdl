@@ -51,6 +51,7 @@ class Client(object):
                 # Use user's kube config
                 config.load_kube_config()
         except Exception as ex:
+            traceback.print_exc()
             raise Exception(
                 "Failed to load configuration for Kubernetes:\n%s" % str(ex)
             )
