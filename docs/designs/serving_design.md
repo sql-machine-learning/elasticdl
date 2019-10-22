@@ -4,7 +4,7 @@
 
 Model serving is an essential part in an end-to-end machine learning lifecycle. Publishing the trained model as a service in production can make it valuable in the real world. In this article, we focus on how to save the model trained in ElasticDL for serving.
 
-[SavedModel](https://www.tensorflow.org/guide/saved_model?hl=zh_cn) is the universal file format for TensorFlow models. It's language neutral and can be loaded by multiple frameworks (such as TFServing, TFLite, TensorFlow.js and so on). We choose to export the ElasticDL model to the SavedModel format. In this way, we can leverage various mature solutions to serving our model in different scenarios.
+[SavedModel](https://www.tensorflow.org/guide/saved_model) is the universal file format for TensorFlow models. It's language neutral and can be loaded by multiple frameworks (such as TFServing, TFLite, TensorFlow.js and so on). We choose to export the ElasticDL model to the SavedModel format. In this way, we can leverage various mature solutions to serving our model in different scenarios.
 
 The model size can vary from several kilobytes to several terabytes. Exporting to savedModel can't apply to all the scenarios. We divide the model size into two categories: *Small or medium size* and *large size*. The small or medium size model can be loaded by a process, and the latter can not fit in a single process. Training and serving strategies are different between these two cases. Please check the following table:
 
