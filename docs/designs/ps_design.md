@@ -268,7 +268,9 @@ def convert_to_tf_tensor(tensor):
 ```
 
 ```python
-# In `Parameters`, interfaces `set_*_param` have two arguments, `value` and `name` (or `layer_name`).  If `value` is a ElasticDL `Tensor` instance, `name` can be None. Otherwise `value` is a numpy ndarray, and `name` must be specified.
+# In `Parameters`, interfaces `set_*_param` have two arguments, `value` and `name` (or `layer_name`).
+# If `value` is a ElasticDL `Tensor` instance, `name` can be None. 
+# Otherwise `value` is a numpy ndarray, and `name` must be specified.
 class Parameters(object):
     def __init__(self):
         # Parameter initialization status
@@ -320,7 +322,7 @@ class EmbeddingTable(object):
         pass
 ```
 
-### Some pseudocode
+### Some pseudocodes
 
 Here is the pseudocode for a worker to pull variable from the PS. If the non-embedding variables are not initialized, the PS will tell the worker to initialize them and report to the PS.
 
