@@ -205,9 +205,9 @@ class Embedding(tf.keras.layers.Layer):
         outputs = tf.gather(batch_embedding, idx)
         # tf.reshape does not support shape with None. Replace None with -1.
         if ids.get_shape().rank == 2:
-            input_length = (
-                1 if ids.get_shape()[1] is None else ids.get_shape()[1]
-            )
+            input_length = ids.get_shape()[1]
+            if input_length is None:
+                return outputs
             output_shape = (-1, input_length, self.output_dim)
         else:
             output_shape = ids.get_shape().concatenate(self.output_dim)
