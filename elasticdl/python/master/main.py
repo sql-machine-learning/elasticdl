@@ -7,7 +7,7 @@ def main():
     args = parse_master_args()
     Master.logger = get_logger("master", level=args.log_level.upper())
     master = Master(args)
-    master.start(args)
+    master.start()
     master.run()
 
 

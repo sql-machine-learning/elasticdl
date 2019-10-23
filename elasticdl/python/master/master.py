@@ -16,7 +16,7 @@ from elasticdl.python.common.constants import (
     WorkerManagerStatus,
 )
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
-from elasticdl.python.common.log_utils import get_logger
+from elasticdl.python.common.log_utils import default_logger
 from elasticdl.python.common.model_utils import (
     find_layer,
     get_module_file_path,
@@ -65,7 +65,7 @@ def _make_task_dispatcher(
 
 
 class Master(object):
-    logger = get_logger("master")
+    logger = default_logger
 
     def __init__(self, args):
         self.output = args.output
