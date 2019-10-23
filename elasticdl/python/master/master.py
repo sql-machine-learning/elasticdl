@@ -68,12 +68,12 @@ class Master(object):
     logger = default_logger
 
     def __init__(self, args):
-        self.output = args.output
+        self.checkpoint_output_path = args.output
 
         # Master addr
         master_ip = os.getenv("MY_POD_IP", "localhost")
         self.master_addr = "%s:%d" % (master_ip, args.port)
-        self.job_type = _get_job_type(args)
+        self.job_type = Master._get_job_type(args)
 
         # Start TensorBoard service if requested
         self.tb_service = self._create_tensorboard_service(
@@ -106,7 +106,7 @@ class Master(object):
         self.optimizer = self.model_module[args.optimizer]()
 
         # Initialize checkpoint service
-        self.checkpoint_service = self._create_checkpoint_service(args) 
+        self.checkpoint_service = self._create_checkpoint_service(args)
 
         # Initialize evaluation service
         self.evaluation_service = self._create_evaluation_service(args)
@@ -116,7 +116,7 @@ class Master(object):
         layers = find_layer(self.model_inst, Embedding)
         (
             self.embedding_service_endpoint,
-            self.embedding_dims
+            self.embedding_dims,
         ) = self._create_embedding_service(layers, args)
 
         # Initialize master service
@@ -158,9 +158,9 @@ class Master(object):
                         self.worker_manager.update_status(
                             WorkerManagerStatus.FINISHED
                         )
-                    if self.output:
+                    if self.checkpoint_output_path:
                         self.master_servicer.save_latest_checkpoint(
-                            self.output
+                            self.checkpoint_output_path
                         )
                     break
                 time.sleep(30)
