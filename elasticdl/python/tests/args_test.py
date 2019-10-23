@@ -60,6 +60,8 @@ class ArgsTest(unittest.TestCase):
         parsed_args = parse_ps_args(original_args)
         self.assertEqual(parsed_args.num_ps_pods, num_ps_pods)
         self.assertEqual(parsed_args.minibatch_size, minibatch_size)
-        self.assertEqual(parsed_args.num_minibatches_per_task, num_minibatches_per_task)
+        self.assertEqual(
+            parsed_args.num_minibatches_per_task, num_minibatches_per_task
+        )
         self.assertEqual(parsed_args.model_zoo, model_zoo)
         self.assertEqual(parsed_args.model_def, model_def)

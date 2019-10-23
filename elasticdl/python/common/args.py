@@ -520,6 +520,7 @@ def parse_master_args(master_args=None):
 
     return args
 
+
 def parse_ps_args(ps_args=None):
     parser = argparse.ArgumentParser(description="ElasticDL PS")
     add_common_params(parser)
