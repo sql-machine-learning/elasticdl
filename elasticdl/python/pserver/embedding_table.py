@@ -34,6 +34,6 @@ class EmbeddingTable(object):
 
 def create_embedding_table(embedding_table_info_pb):
     name = embedding_table_info_pb.name
-    dim = embedding_table_info_pb.dim
+    dim = tuple(embedding_table_info_pb.dim)
     initializer = embedding_table_info_pb.initializer
     return EmbeddingTable(name, dim, initializer)

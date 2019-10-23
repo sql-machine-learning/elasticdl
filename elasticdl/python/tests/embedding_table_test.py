@@ -1,9 +1,18 @@
+import operator
 import unittest
+from functools import reduce
 
 import numpy as np
 
 from elasticdl.proto.elasticdl_pb2 import EmbeddingTableInfo
-from elasticdl.python.pserver import EmbeddingTable, create_embedding_table
+from elasticdl.python.pserver.embedding_table import (
+    EmbeddingTable,
+    create_embedding_table,
+)
+
+
+def prod(iterable):
+    return reduce(operator.mul, iterable, 1)
 
 
 class EmbeddingTableTest(unittest.TestCase):
@@ -23,14 +32,15 @@ class EmbeddingTableTest(unittest.TestCase):
         self.table.clear()
         indices = [0, 3, 7]
         res = self.table.get(indices)
-        self.assertListEqual(res.shape, [3, 10])
+        self.assertTupleEqual(res.shape, (3, 10))
 
     def test_embedding_table_set(self):
         self.table.clear()
         indices = [0, 1, 4]
         x = len(indices)
-        y = self.dim
-        values = np.random.uniform(size=x * y).reshape(shape=(x, y))
+        values = np.random.uniform(size=x * prod(self.dim)).reshape(
+            (x,) + self.dim
+        )
         self.table.set(indices, values)
 
         row0 = self.table.get([0])
@@ -38,7 +48,6 @@ class EmbeddingTableTest(unittest.TestCase):
         row4 = self.table.get([4])
 
         rows = [row0, row1, row4]
-
         rows = np.concatenate(rows)
         np.testing.assert_array_equal(rows, values)
 
