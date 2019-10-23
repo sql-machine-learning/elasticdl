@@ -13,7 +13,7 @@ The model size can vary from several kilobytes to several terabytes. Exporting t
 | Small or Medium Size Model |       SavedModel       |  SavedModel |               SavedModel                 |
 | Large Size Model           |          N/A           |     N/A     | Distributed Parameter Server for Serving |
 
-We consider three main training strategies of ElasticDL. 1) Master central storage strategy (Implemented): The master node loads the entire model. Workers pull the model from the master while processing each minibatch of data. 2) AllReduce strategy (Planning): It mainly supports synchronized training. Each worker loads a replica of the entire model. AllReduce aggregates gradients across all the workers and publish them to each worker. 3) Parameter server strategy (In Progress): We store the model variables on the parameter servers. All the workers pull the variables as needed from the parameter server and execute computation.
+We consider three main training strategies of ElasticDL. 1) Master central storage strategy (implemented): The master node loads the entire model. Workers pull the model from the master while processing each minibatch of data. 2) AllReduce strategy (planning): It mainly supports synchronized training. Each worker loads a replica of the entire model. AllReduce aggregates gradients across all workers and publishes them to each worker. 3) Parameter server strategy (in Progress): We store the model variables on the parameter servers. All the workers pull the variables as needed from the parameter server and execute computation.
 
 Small or medium size model  
 A single serving process can load the entire model into memory. No matter which training strategy to choose, we will export the model to the SavedModel format. For master central storage and AllReduce strategy, each worker has a replica of the entire model and then export it directly. For parameter server strategy, the model contains unsaveable elasticdl.layers.Embedding layer and the variables are stored in the PS. We will use the process in [the section below](#Export-the-model-with-elasticdl.layers.Embedding-to-SavedModel) to export the model. And then we can deploy it using the existed serving frameworks like TFServing. **We focus on this case in this article.**
@@ -55,7 +55,7 @@ def custom_model(feature_columns):
     return tf.keras.models.Model(inputs=input_layers, outputs=dense)
 ```
 
-Although all feature columns in TensorFlow can be used in ElasticDL, tf.feature_column.embedding_column is not recommended in ElasticDL. Because the embedding_column has a variable containing a large embedding table. In eager execution the model must get all the embedding parameters to train. It will bring a large inter-process communication overhead.
+Although all feature columns in TensorFlow can be used in ElasticDL, tf.feature_column.embedding_column is not recommended in ElasticDL at present. Because the embedding_column has a variable containing a large embedding table. In eager execution the model must get all the embedding parameters to train. It will bring a large inter-process communication overhead. 
 
 ## Export the model with elasticdl.layers.Embedding to SavedModel
 
@@ -87,23 +87,23 @@ def replace_keras_embedding_with_edl_embedding(model)
 
 However, tf.saved_model.save cannot export the replaced model to SavedModel. Because ElasticDL.Embedding uses tf.py_function to invoke RPC to interact with the parameter server. It is not mapped to any native TensorFlow op. As a result we choose to save the origin model with native keras embedding layer, replace the embedding parameters with the trained parameters of elasticdl.layers.embedding.
 
-SavedModel needs to generate model inputs and outputs signatures to map to TensorFlow Serving's APIs. However, the user does not need to define inputs and outputs for sequential and subclass models. We should build model with the input dataset to generate inputs and outputs for those models before using SavedModel.
+SavedModel needs to generate model inputs and outputs signatures to map to TensorFlow Serving's APIs. But, the user does not need to define inputs and outputs for sequential and subclass models. We should build model with the input dataset to generate inputs and outputs for those models before using SavedModel.
 
 ```python
 def export_saved_model_from_trained_model(model, dataset):
-    # build model to add inputs and outputs for tf-serving
-    if not model.inputs:
-        model._build_model_with_inputs(inputs=dataset, targets=None)
-    
     # change elasticdl.layers.Embedding back to keras.layers.Embedding for subclass
     if type(model) == tf.keras.layers.Model and not model._is_graph_network:
         model = restore_keras_embedding_for_subclass(model)
+
+    # build model to add inputs and outputs for tf-serving
+    if not model.inputs:
+        model._build_model_with_inputs(inputs=dataset, targets=None)
     
     restore_keras_embedding_from_edl_embedding(model)
 
     tf.saved_model.save(model, export_dir)
 
-def restore_keras_embedding_for_subclass(model):
+def restore_keras_subclass_model_def(model):
     for attr_name, attr_value in model.__dict__.items():
         if type(attr_value) == elasticdl.layers.Embedding:
             setattr(model, attr_name, keras.layers.Embedding(attr_value.output_dim))
