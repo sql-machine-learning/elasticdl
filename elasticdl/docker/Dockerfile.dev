@@ -14,9 +14,10 @@ RUN add-apt-repository ppa:chris-lea/redis-server -y \
     && apt-get install -y redis-server
 
 COPY elasticdl/requirements.txt /requirements.txt
-ARG EXTRA_PYPI_INDEX
+COPY elasticdl/requirements-dev.txt /requirements-dev.txt
+ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 RUN pip install -r /requirements.txt --extra-index-url=${EXTRA_PYPI_INDEX}
-RUN pip install pre-commit --extra-index-url=${EXTRA_PYPI_INDEX}
+RUN pip install -r /requirements-dev.txt --extra-index-url=${EXTRA_PYPI_INDEX}
 
 # Copy the data generation package to /var and run them from there.
 # This assumes that the data generation package is independent with the

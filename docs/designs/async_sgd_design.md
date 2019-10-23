@@ -72,7 +72,7 @@ staleness = PS_model_version - version
 
 According to some [researches](https://arxiv.org/abs/1810.03264), this staleness affects the training convergence, and large staleness may result in poor training accuracy. The deeper the model, the more impact of the staleness. Some optimizers such as [SGD](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/SGD) and [Adagrad](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Adagrad) are more robust to staleness, some optimizers such as other with momentum are very bad with staleness.
 
-[Staleness-aware asychronous SGD](https://arxiv.org/abs/1511.05950) proposes a method to modulate learning rate by the staleness. If the staleness if not 0, this method modulates the learning rate used in the optimizer as:
+[Staleness-aware asychronous SGD](https://arxiv.org/abs/1511.05950) proposes a method to modulate learning rate by the staleness. If the staleness is not 0, this method modulates the learning rate used in the optimizer as:
 
 ```
 if staleness > 0:
