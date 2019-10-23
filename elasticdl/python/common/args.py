@@ -126,6 +126,9 @@ def add_common_params(parser):
         "--num_workers", type=int, help="Number of workers", default=0
     )
     parser.add_argument(
+        "--num_ps_pods", type=int, help="Number of PS pods", default=0
+    )
+    parser.add_argument(
         "--worker_resource_request",
         default="cpu=1,memory=4096Mi",
         type=str,
@@ -515,6 +518,18 @@ def parse_master_args(master_args=None):
             "grads_to_wait is set to 1 when using asynchronous SGD."
         )
 
+    return args
+
+def parse_ps_args(ps_args=None):
+    parser = argparse.ArgumentParser(description="ElasticDL PS")
+    add_common_params(parser)
+    add_train_params(parser)
+    # TODO: add PS replica address for RPC stub creation
+
+    args, unknown_args = parser.parse_known_args(args=ps_args)
+    print_args(args, groups=ALL_ARGS_GROUPS)
+    if unknown_args:
+        logger.warning("Unknown arguments: %s", unknown_args)
     return args
 
 
