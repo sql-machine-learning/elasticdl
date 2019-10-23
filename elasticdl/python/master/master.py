@@ -132,9 +132,9 @@ class Master(object):
             logger.info("Evaluation service started")
 
         # Start the master GRPC server
-        logger.info("Starting master service")
+        logger.info("Starting master RPC server")
         self.server.start()
-        logger.info("Master service started")
+        logger.info("Master RPC server started")
 
         # Start the worker manager if requested
         if self.worker_manager:
@@ -169,6 +169,8 @@ class Master(object):
         self._stop()
 
     def _stop(self):
+        logger.info("Stopping master")
+
         if self.evaluation_service:
             logger.info("Stopping evaluation service")
             self.evaluation_service.stop()
