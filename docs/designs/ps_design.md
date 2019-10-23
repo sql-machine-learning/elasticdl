@@ -62,7 +62,7 @@ When the PS pod receives non-embedding parameters in its first RPC service for `
 
 For an embedding vector, the corresponding PS pod will initialize it in the first `pull_embedding_vector` service that contains this embedding vector. The PS pod needs the embedding vector size and the initialization method for the initialization. The embedding vector size and the initialization method are in the model definition and workers can send them in `push_model` to PS pods together with non-embedding parameter values.
 
-Thus, we introduce two data structures: `Parameters ` and `EmbeddingTable`. The `Parameters` stores both embedding parameters and non-embedding parameters. The `EmbeddingTable` stores embedding vectors, which is a subset embedding table of an embedding layer.
+Thus, we introduce two data structures: `Parameters` and `EmbeddingTable`. `Parameters` stores both embedding parameters and non-embedding parameters. `EmbeddingTable` stores embedding vectors, which is a subset of an embedding table.
 
 ```python
 class Parameters(object):
