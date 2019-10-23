@@ -60,8 +60,8 @@ class CheckpointTest(unittest.TestCase):
             checkpointer.save(0, model, False)
             loaded_model = checkpointer.get_checkpoint_model(0)
             self.assertEqual(model.version, loaded_model.version)
-            for k in model.param:
-                self.assertEqual(model.param[k], loaded_model.param[k])
+            for var, loaded_var in zip(model.param, loaded_model.param):
+                self.assertEqual(var, loaded_var)
 
     def testMaxCheckpointVersions(self):
         with tempfile.TemporaryDirectory() as tempdir:

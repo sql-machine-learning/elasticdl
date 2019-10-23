@@ -17,6 +17,10 @@ from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 
+def _get_variable_names(model_pb):
+    return [v.name for v in model_pb.param]
+
+
 class SimpleModel(tf.keras.Model):
     def __init__(self):
         super(SimpleModel, self).__init__(name="test_model")
@@ -66,6 +70,16 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual("", task.shard_name)
         self.assertEqual(1, task.model_version)
 
+    def _check_get_model_response(self, version, expected, response):
+        self.assertEqual(version, response.version)
+        self.assertEqual(
+            list(sorted(expected.keys())),
+            sorted([v.name for v in response.param]),
+        )
+        for var in response.param:
+            exp_value = expected[var.name]
+            np.testing.assert_array_equal(exp_value, tensor_to_ndarray(var))
+
     def testGetModel(self):
         master = MasterServicer(
             2,
@@ -86,11 +100,8 @@ class ServicerTest(unittest.TestCase):
         req.version = 0
         req.method = elasticdl_pb2.MINIMUM
         model = master.GetModel(req, None)
-        self.assertEqual(0, model.version)
-        self.assertEqual(["x"], list(model.param.keys()))
-        np.testing.assert_array_equal(
-            np.array([1.0, 1.0]), tensor_to_ndarray(model.param["x"])
-        )
+        expected_value = {"x": np.array([1.0, 1.0])}
+        self._check_get_model_response(0, expected_value, model)
 
         # Increase master model version to 1, but still request
         # version 0 with minimum method, we should get version 1
@@ -98,14 +109,11 @@ class ServicerTest(unittest.TestCase):
         master.set_model_var("x", np.array([2.0, 2.0], dtype=np.float32))
         master.set_model_var("y", np.array([12.0, 13.0], dtype=np.float32))
         model = master.GetModel(req, None)
-        self.assertEqual(1, model.version)
-        self.assertEqual(["x", "y"], list(sorted(model.param.keys())))
-        np.testing.assert_array_equal(
-            np.array([2.0, 2.0]), tensor_to_ndarray(model.param["x"])
-        )
-        np.testing.assert_array_equal(
-            np.array([12.0, 13.0]), tensor_to_ndarray(model.param["y"])
-        )
+        expected_value = {
+            "x": np.array([2.0, 2.0]),
+            "y": np.array([12.0, 13.0]),
+        }
+        self._check_get_model_response(1, expected_value, model)
 
         # Try to get version 2, it should raise exception.
         req.version = 2
@@ -115,14 +123,7 @@ class ServicerTest(unittest.TestCase):
         req.method = elasticdl_pb2.FIXED
         req.version = 1
         model = master.GetModel(req, None)
-        self.assertEqual(1, model.version)
-        self.assertEqual(["x", "y"], list(sorted(model.param.keys())))
-        np.testing.assert_array_equal(
-            np.array([2.0, 2.0]), tensor_to_ndarray(model.param["x"])
-        )
-        np.testing.assert_array_equal(
-            np.array([12.0, 13.0]), tensor_to_ndarray(model.param["y"])
-        )
+        self._check_get_model_response(1, expected_value, model)
 
         # Previous model unavailable due to no checkpoint
         req.version = 0
@@ -145,24 +146,25 @@ class ServicerTest(unittest.TestCase):
             req.version = 1
             req.method = elasticdl_pb2.FIXED
             model = master.GetModel(req, None)
-            self.assertEqual(1, model.version)
-            self.assertEqual(["x", "y"], list(sorted(model.param.keys())))
-            np.testing.assert_array_equal(
-                np.array([2.0, 2.0]), tensor_to_ndarray(model.param["x"])
-            )
-            np.testing.assert_array_equal(
-                np.array([12.0, 13.0]), tensor_to_ndarray(model.param["y"])
-            )
+            self._check_get_model_response(1, expected_value, model)
 
     def testReportGradient(self):
         def makeGrad():
             """ Make a ReportGradientRequest compatible with model"""
             req = elasticdl_pb2.ReportGradientRequest()
-            req.gradient["x"].CopyFrom(
-                ndarray_to_tensor(np.array([0.1], dtype=np.float32))
+            req.gradient.extend(
+                [
+                    ndarray_to_tensor(
+                        np.array([0.1], dtype=np.float32), name="x"
+                    )
+                ]
             )
-            req.gradient["y"].CopyFrom(
-                ndarray_to_tensor(np.array([0.03, 0.06], dtype=np.float32))
+            req.gradient.extend(
+                [
+                    ndarray_to_tensor(
+                        np.array([0.03, 0.06], dtype=np.float32), name="y"
+                    )
+                ]
             )
             req.model_version = 1
             return req
@@ -195,15 +197,15 @@ class ServicerTest(unittest.TestCase):
 
         # Report a unknown gradient, should raise.
         req = makeGrad()
-        req.gradient["z"].CopyFrom(
-            ndarray_to_tensor(np.array([0.1], dtype=np.float32))
+        req.gradient.extend(
+            [ndarray_to_tensor(np.array([0.1], dtype=np.float32), name="z")]
         )
         self.assertRaises(ValueError, master.ReportGradient, req, None)
 
         # Report an incompatible gradient, should raise.
         req = makeGrad()
-        req.gradient["y"].CopyFrom(
-            ndarray_to_tensor(np.array([0.1], dtype=np.float32))
+        req.gradient.extend(
+            [ndarray_to_tensor(np.array([0.1], dtype=np.float32), name="y")]
         )
         self.assertRaises(ValueError, master.ReportGradient, req, None)
 
@@ -215,7 +217,7 @@ class ServicerTest(unittest.TestCase):
 
         # Report a current version with part of gradients, should be accepted.
         req = makeGrad()
-        del req.gradient["y"]
+        req.gradient.pop(-1)
         res = master.ReportGradient(req, None)
         self.assertTrue(res.accepted)
         self.assertEqual(1, res.model_version)
@@ -326,7 +328,7 @@ class ServicerTest(unittest.TestCase):
                 "dense_2/bias:0",
                 "dense_2/kernel:0",
             ],
-            list(sorted(model.param.keys())),
+            sorted([v.name for v in model.param]),
         )
 
 
