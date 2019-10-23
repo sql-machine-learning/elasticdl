@@ -74,11 +74,18 @@ class Master(object):
         master_ip = os.getenv("MY_POD_IP", "localhost")
         self.master_addr = "%s:%d" % (master_ip, args.port)
         self.job_type = _get_job_type(args)
+        self.args = args
 
         # Start TensorBoard service if requested
         self.tb_service = self._create_tensorboard_service(
             args.tensorboard_log_dir, master_ip
         )
+        if self.tb_service:
+            self.tb_client = TensorBoardClient(
+                job_name=args.job_name,
+                image_name=args.worker_image,
+                namespace=args.namespace,
+            )
 
         # Start task queue
         records_per_task = args.minibatch_size * args.num_minibatches_per_task
@@ -116,7 +123,7 @@ class Master(object):
 
         self.worker_manager = self._create_worker_manager(args)
 
-    def start(self, args):
+    def start(self):
         # Start the evaluation service if requested
         if self.evaluation_service:
             logger.info("Starting evaluation service")
@@ -131,19 +138,14 @@ class Master(object):
         # Start the worker manager if requested
         if self.worker_manager:
             worker_manager.update_status(WorkerManagerStatus.PENDING)
-            logger.info("Launching %d workers", args.num_workers)
             worker_manager.start_workers()
             worker_manager.update_status(WorkerManagerStatus.RUNNING)
 
         # Start TensorBoard k8s Service if requested
-        if self.tb_service:
+        if self.tb_service and self.tb_client:
             logger.info("Starting tensorboard service")
-            tb_service.start()
-            TensorBoardClient(
-                job_name=args.job_name,
-                image_name=args.worker_image,
-                namespace=args.namespace,
-            ).start_tensorboard_service()
+            self.tb_service.start()
+            self.tb_client.start_tensorboard_service()
             logger.info("Tensorboard service started")
 
     def run(self):
@@ -163,7 +165,31 @@ class Master(object):
         except KeyboardInterrupt:
             logger.warning("Server stopping")
 
-        self._cleanup()
+        self._stop()
+
+    def _stop(self):
+        if self.evaluation_service:
+            logger.info("Stopping evaluation service")
+            self.evaluation_service.stop()
+
+        logger.info("Stopping RPC server")
+        self.server.stop(0)
+
+        # Keep TensorBoard running when all the tasks are finished
+        if self.tb_service:
+            logger.info(
+                "All tasks finished. Keeping TensorBoard service running..."
+            )
+            while True:
+                if self.tb_service.is_active():
+                    time.sleep(10)
+                else:
+                    logger.warning(
+                        "Unable to keep TensorBoard running. "
+                        "It has already terminated"
+                    )
+                    break
+        logger.info("Master stopped")
 
     @staticmethod
     def _get_job_type(args):
@@ -357,27 +383,3 @@ class Master(object):
             )
 
         return worker_manager
-
-    def _cleanup(self):
-        if self.evaluation_service:
-            logger.info("Stopping evaluation service")
-            self.evaluation_service.stop()
-
-        logger.info("Stopping RPC server")
-        self.server.stop(0)
-
-        # Keep TensorBoard running when all the tasks are finished
-        if self.tb_service:
-            logger.info(
-                "All tasks finished. Keeping TensorBoard service running..."
-            )
-            while True:
-                if self.tb_service.is_active():
-                    time.sleep(10)
-                else:
-                    logger.warning(
-                        "Unable to keep TensorBoard running. "
-                        "It has already terminated"
-                    )
-                    break
-        logger.info("Master stopped")
