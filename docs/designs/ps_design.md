@@ -1,80 +1,185 @@
-# Parameter Server Design
+# ElasticDL Parameter Server Design
+This document describes the design of a distributed parameter server for ElasticDL.
 
+## Motivation
+Parameter server (PS) stores model parameters which are used by workers. Workers get model parameters from PS, compute gradients using different training data and send computed gradients to PS. PS iteratively updates these model parameters using gradients sent by workers. A PS based distributed training system can use an arbitrary number of workers to support the scalability of training data size.
 
-## Overview
-Currently, there is one parameter server (PS) co-existed with the master. In order to support PS with multiple nodes and PS fault tolerance, we need to separate PS from the master. Besides a KV store for model parameters, PS should also support updating parameters using gradients. Currently, models have two kinds of parameter, variable and embedding vector. PS should support model variable update and embedding table sparse update.
+We want to have one or more PS instances in each ElasticDL job. One reason is that models could be large and overrun the memory space of a single PS instance. In such case, we need to partition the model and store different partitions in different PS instances. Even if the model is not too big and fits in the memory of a single PS instance, we might still want to partition the model, as this distributes the model parameter communication from workers among PS instances. This also distributes the computation on PS such as parameter optimization. 
 
-The master will create a PS with *N* PS nodes, where *N* is specified by the user. Each model variable and embedding vector has a corresponding PS node. Thus, every PS node has a subset of model variables and embedding tables.
+ElasticDL is a Kubernetes-native fault-tolerable deep learning system. An ElasticDL distributed PS consists of multiple PS pods, with each PS pod as a PS instance. A failed PS pod will interrupt the training. We can relaunch any failed PS pod and recover the corresponding model parameter partition to support PS fault tolerance.
 
-The master will monitor PS nodes status similar to what it does for workers. In case a PS node fails, the master will try to relaunch it. Since PS nodes have higher priority than workers, if there are still some running workers, the relaunch will succeed by using either idle or preempted Kubernetes resources. If the relaunch fails, there are no workers left. The Elastic job has to wait for resources for the PS node and workers.
+In the following sections, we will explain the design of the ElasticDL distributed PS with fault-tolerance in detail, including how to [partition the model](#model-parameter-partition), [store model parameters](#model-parameter-storage), [access parameters from workers](#model-parameter-access-from-worker), [initialize parameters](#model-parameter-initialization), [update parameters from gradients](#model-parameter-update) and support [PS fault-tolerance](#ps-fault-tolerance).
 
-Each worker has a local copy of the model variables. After the master relaunches a PS node, the PS node can recover model variables from workers. For embedding vectors, PS must create replicas to support fault tolerance. For each PS node *PS(i)*, it will store *M* replicas in the following *M* PS nodes from *PS(i+1 % N)* to *PS(i+M % N)*. The relaunched PS node can recover embedding vectors from one of its replicas. If there are more than *M* continuously-indexed PS nodes failing, at least one PS node fails with all of its replicas. The ElasticDL job has to recover from a recent checkpoint.
+## Model Parameter Partition
+For a distributed PS with *N* PS pods, each PS pod stores a model parameter partition. It is noticeable that Kubernetes may preempt some PS pods. In such a case, *N* might not be a constant. However, we can overcome this case by setting PS pods having higher priority than worker pods in a job. In case a PS pod is preempted, the master will relaunch it using Kubernetes APIs. Since PS pods have a higher priority than worker pods, if there are still some worker pods running, the relaunch will succeed by using either idle or preempted Kubernetes resources. If no worker pods left, ElasticDL has to wait for Kubernetes resources to continue the training. Thus, we can assume that *N* is a constant number in ElasticDL.
 
-## PS
+We consider two kinds of model parameters:
 
-### Compoments
+1. non-embedding parameters, and
+1. embedding tables
 
-![pserver](../images/pserver.png)
+Theoretically, non-embedding parameters might have tremendous size and require partitioning. However, in practice, limited by the amount of GPU memory, researchers don't often define models depending on huge dense tensor parameters. Hence in this design, we don't partition non-embedding parameters; instead, we place each of them on a PS pod.
 
-PS contains two main compoments:
+For a non-embedding parameter, we select its PS pod *PSᵢ* using a hashing function *hash* and the parameter name *p_name*:
 
-- KVStore
-- Optimizer
-
-The worker initializes a model, and pushes parameters to KVStore. Before each step of training, the worker pulls the latest model from KVStore. After a round of forward/backward computation, the worker pushes gradients to the PS waiting for processing. Then, optimizer of PS will look up the corresponding parameter from KVStore. At last, it applies gradients to parameters, and updates parameter back to KVStore.
-
-
-### KVStore
-
-The KVStore could be like following:
-
-```python
-class KVStore(object):
-    def __init__(self):
-        self.variable_db = {}
-        self.embedding_table_db = {}
-
-    def get_parameter(self, name):
-        pass
-
-    def get_embedding_vector(self, name, indices):
-        pass
-
-    def set_parameter(self, name, value):
-        pass
-
-    def set_embedding_vector(self, name, indices, value):
-        pass
+```
+i = hash(p_name) % N
 ```
 
-For a common model variable, we use save it as a `tf.Variable` in Parameter DB. For the embedding table, we introduce a customized data structure.
+Each embedding layer has an embedding table which maps a discrete ID *i* to an embedding vector *vᵢ*. Embedding tables could be huge, especially in some recommending and ranking models. Thus, we partition each embedding table and store every partition in an unique PS pod. For an embedding vector *vᵢ*, we select *PS<sub>i % N</sub>* to store it.
 
-```python
-class EmbeddingTable(object):
-    def __init__(self, name, dim, initializer):
-        self.name = name
-        self.dim = dim
-        self.initializer = initializer
-        self.vectors = {}
+## Model Parameter Storage
+Each PS node has a dictionary-based data structure to store its partition of model parameters.
 
-    def get(self, indices):
-        pass
+We choose to store each non-embedding parameter using the parameter name as its key, and a [`tf.Variable`](https://www.tensorflow.org/api_docs/python/tf/Variable) instance as its value. This is because that we want to update non-embedding parameters directly by [TensorFlow optimizers](https://www.tensorflow.org/api_docs/python/tf/optimizers).
 
-    def set(self, indices, value):
-        pass
-```
+If a model has one or more embedding layers, a minibatch of training data contains a set of discrete IDs. These discrete IDs correspond to a set of embedding vectors. The worker needs to pull these embedding vectors from their corresponding PS pods using the embedding layer name and the discrete IDs. To store an embedding vector, We use its corresponding embedding layer name and discrete ID as the key, and a 1-D numpy.ndarry as the value.
 
-The name of embedding table is the embedding layer name. EmbeddingTable uses a dictionary `vectors` to store `<id, embedding_vector>` pairs.
-
-Since embedding table is lazily initialized in PS, it also has `dim` and `initializer` fields.
-
-### Tensor Data Structure
-
-To support data communication between workers and PS, we introduce a `Tensor` proto message:
+## Model Parameter Access from Worker
+Each PS pod has a RPC servicer to provide RPC services. Workers use RPC services to pull model parameters. `pull_variable` service is to pull all non-embedding parameters. `pull_embedding_vector` service is to pull embedding vectors specified by an embedding layer name and a list of discrete IDs.
 
 ```proto
-message Tensor {
-    enum DataType {
+service PServer{
+    rpc pull_variable(PullModelRequest) returns (PullModelResponse);
+    rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
+}
+```
+
+## Model Parameter Initialization
+We use lazy initialization for model parameters in PS. PS does not have the model definition. Even if PS has the model definition, it cannot initialize Keras subclass model parameters, as only a forward-pass with a minibatch of data can initialize the parameters. Thus workers are responsible for initializing parameters and push the initialized parameters to corresponding PS pods.
+
+Each PS pod has a parameter initialization status, which is `False` after the PS pod launch. When a worker tries to get non-embedding parameters from the PS pod through a RPC call `pull_variable`, the PS pod tells the worker that the parameter initialization status is `False` in response. If the worker has already initialized non-embedding parameters, it sends non-embedding parameter values to the PS pod by a gRPC call `push_model`. `push_model` is a RPC service in the PS pod.
+
+```proto
+service PServer{
+    rpc push_model(Model) returns (google.protobuf.Empty);
+}
+```
+
+If worker has not initialized non-embedding parameters, since the worker has the model definition and some training data, it can run a forward-pass to initialize them first before `push_model`.
+
+When the PS pod receives non-embedding parameters in its first RPC service for `push_model`, it initializes non-embedding parameters and sets the parameter initialization status as `True`.
+
+For an embedding vector, the corresponding PS pod will initialize it in the first `pull_embedding_vector` service that contains this embedding vector. The PS pod needs the embedding vector size and the initialization method for the initialization. The embedding vector size and the initialization method are in the model definition and workers can send them in `push_model` to PS pods together with non-embedding parameter values.
+
+Thus, we introduce two data structures: `Parameters` and `EmbeddingTable`. `Parameters` stores both embedding parameters and non-embedding parameters. `EmbeddingTable` stores embedding vectors, which is a subset of an embedding table.
+
+```python
+class Parameters(object):
+    def __init__(self):
+        # Parameter initialization status
+        self.parameter_init_status = False
+        # Non-embedding parameter dict, maps parameter name to tf.Variable instance
+        self.non_embedding_params = {}
+        # Embedding table dict, maps embedding layer name to `EmbeddingTable` instance
+        self.embedding_params = {}
+
+class EmbeddingTable(object):
+    def __init__(self, dim, initializer):
+        # Embedding vector dict, maps ID to 1-D numpy.ndarray
+        self._embedding_vectors = {}
+        # the dimension of embedding vectors
+        self._dim = dim
+        # the initializer name for initializing embedding vectors
+        self._initializer = initializer
+```
+
+## Model Parameter Update
+A worker computes gradients in each training iteration, which contain gradients for non-embedding parameters and some embedding vectors if applicable. The worker partitions these gradients using their corresponding parameter names or discrete IDs for embedding vectors. Then the worker sends gradient partitions to their corresponding PS pods by RPC calls `push_gradient`.
+
+```proto
+service PServer{
+    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
+}
+```
+
+When a PS pod receives gradients in `push_gradient`, it uses a TensorFlow optimizer to apply gradients to non-embedding parameters. 
+
+We have already implemented an [`OptimizeWrapper`](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl/python/master/optimizer_wrapper.py) to sparsely update embedding vectors. `OptimizeWrapper` uses corresponding embedding vectors to form a temporary variable, applies gradients to this temporary variable, and writes results back to these embedding vectors. The PS pod can use this OptimizeWrapper directly to update embedding vectors.
+
+In asynchronous SGD, the PS pod can apply gradients directly to model parameters once it receives gradients. For synchronous SGD, the PS pod accumulates `grads_to_wait` gradients from workers then updates model parameters with these gradients. `grads_to_wait` is an ElasticDL argument specified by the user.
+
+
+## PS Fault Tolerance
+When the master detects that a PS pod fails, it will relaunch it using Kurbernetes APIs to keep the number of PS pods *N* constant. After the relaunch, the PS pod recovers its partition of model parameters so that ElasticDL can continue the training job. 
+
+### Fixed Domain name for PS Pod
+Each PS pod provides RPC services for workers. Workers are using RPC stubs to send RPC service requests to PS pods. RPC stubs require PS pod domains. Because ElasticDL is Kubernetes-native, the master can use Kubernetes services to launch/relaunch PS pods with fixed domain names. The master sends these domain names to workers as arguments when launching worker pods. In such way, workers do not need to re-configure RPC stubs after a PS pod relaunch.
+
+### Model Parameter Recovery
+The model may contain one or more embedding layers with embedding tables as their parameters. If so, a minibatch of training data in a worker contains some embedding IDs, which correspond to a subset of embedding tables. The worker pulls all non-embedding parameters and only a subset of embedding tables from PS pods in the training. Thus, the PS pod can recover non-embedding parameters from workers but not embedding tables.
+
+For non-embedding parameters, the PS pod can recover them from workers in the same way as the parameter initialization by setting its parameter initialization status as `False`.
+
+For embedding tables, PS creates replicas to support fault-tolerance. For each PS pod *PSᵢ*, it can store *M* replicas of its embedding table partitions in *M* PS pods from *PS<sub>i+1 % N</sub>* to *PS<sub>i+M % N</sub>*. The relaunched PS pod can recover embedding tables from one of its replicas. 
+
+### Embedding Replica
+Assume *Eᵢ* is the embedding table partition in PS pod *PSᵢ*, it has *M* replicas stored in PS pods from *P<sub>(i + 1) % N</sub>* to *P<sub>(i + M) % N</sub>*. Also, *PSᵢ* stores *M* other PS pod replicas *E<sub>(i - M) % N</sub>* to *E<sub>(i - 1) % N</sub>*. 
+
+*PSᵢ* maintains *M* updated embedding vector key sets *UKSᵢ(j) for j ∈ [0， M)*. When *PSᵢ* sparsely updates its embedding table partition *Eᵢ*, it also adds the updated embedding vector keys into these *M* sets. 
+
+*PSᵢ* also periodically synchronize the replicas stored in it from PS pods *PS<sub>(i - M) % N</sub>* to *PS<sub>(i - 1) % N</sub>*. The synchronization frequency can be several seconds.
+
+*PSᵢ* uses *M* RPC calls `SynchronizeEmbedding` the replicas store in it. `replica_index` values in `SynchronizeEmbeddingRequest` are from *(i - M) % N* to *(i - 1) % N*.
+
+When *PSᵢ* needs to recover its embedding vectors after relaunch, it chooses a pod *PSⱼ* from *P<sub>(i + 1) % N</sub>* to *P<sub>(i + M) % N</sub>* which is still alive. *PSᵢ* uses a RPC call `GetReplica` to get its replica from *PSⱼ*.
+
+Following diagram shows the RPC calls among PS pods for PS fault-tolerance:
+
+![pserver_replica](../images/pserver_replica.png)
+
+Here, we set up 5 PS pods, and set embedding replica number *M* to 1. PS pod 2 has an embedding replica `R1` of PS pod 1. It will periodically synchronize the replica from PS pod 1. If PS pod 1 is dead, the master will relaunched it and it needs to get the replica from PS pod 2 after relaunch.
+
+```
+message SynchronizeEmbeddingRequest {
+    int32 replica_index = 1;
+}
+
+message SynchronizeEmbeddingResponse {
+    repeated Tensor embedding_vectors = 1;
+}
+
+service PServer{
+    # RPC service for replica synchronization
+    rpc SynchronizeEmbedding(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
+
+    # RPC service for PS to recover embedding vectors after relaunch
+    rpc GetReplica(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
+}
+```
+
+Each PS pod has a thread dedicated to the replica synchronization:
+
+```
+# T is the number of seconds for synchronization frequency
+# Assume current PS is PS(i), self._stub[index] is the stub for PS((i - index) % N)'s gRPC server.
+# self.replicas[index] is the replica for PS((i - index) % N).
+req = elasticdl_pb2.SynchronizeEmbeddingRequest()
+while still training:
+    time.sleep(T)
+    for index in range(M):
+        req.replica_index = index
+        updated_vectors = self._stub[replica_index].SynchronizeEmbedding(req)
+        update self.replicas[index] from updated_vectors.embedding_vectors
+```
+
+## Diagram
+
+Following diagram shows the details inside a PS pod:
+
+![pserver_detail](../images/pserver_detail.png)
+
+Following diagram shows the RPC calls between a worker pod and two PS pods:
+
+![pserver_rpc](../images/pserver_rpc.png)
+
+Please note that there are many worker pods in an ElasticDL job, and each worker pod will have RPC connections with all the PS pods. Here we only show one worker pod for simplicity.
+
+## Appendix
+### Message Definition
+```proto
+message Tensor {	
+    enum DataType {	
         BOOL = 0;
         INT16 = 1;
         INT32 = 2;
@@ -89,22 +194,83 @@ message Tensor {
     bytes content = 4;
     repeated int64 indices = 5;
 }
+
+message EmbeddingTableInfo{
+    string name = 1;
+    repeated int64 dim = 2;
+    string initializer = 3;
+}
+
+message Model {
+    int64 version = 1;
+    repeated Tensor variables = 2;
+    repeated EmbeddingTableInfo embedding_table_info = 3;
+}
+
+message PullModelRequest{
+    int64 version = 1;
+}
+
+message PullModelResponse{
+    bool model_init_status = 1;
+    Model model = 2;
+}
+
+message PushGradientRequest{
+    int32 model_version = 1;
+    repeated Tensor gradients = 2;
+}
+
+message PushGradientResponse{
+    bool accepted = 1;
+    int32 model_version = 2;
+}
+
+message PullEmbeddingVectorRequest{
+    string name = 1;
+    repeated int64 ids = 2;
+}
+
+message SynchronizeEmbeddingRequest {
+    int32 replica_index = 1;
+}
+
+message SynchronizeEmbeddingResponse {
+    repeated Tensor embedding_vectors = 1;
+}
 ```
 
-Correspondingly, we have a `Tensor` Python class.
+### RPC Definition
+```proto
+service PServer{
+    # pull trainable tensorflow variables created by Keras layers
+    rpc pull_variable(PullModelRequest) returns (PullModelResponse);
 
+    # pull embedding vectors in ElasticDL embedding layers
+    # Do we need to create a new message `PullEmbeddingVectorRequest` rather than use `Tensor`?
+    rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
 
+    # push trainable tensorflow variables and meta info for ElasticDL embedding layers
+    rpc push_model(Model) returns (google.protobuf.Empty);
+
+    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
+
+    # PS to recover embedding vectors after relaunch
+    rpc get_replica(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
+
+    # PS replica synchronization
+    rpc synchronize_embedding(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
+}
+```
+
+### Data Structure
 ```python
 class Tensor(object):
     def __init__(self, name=None, value=None, indices=None):
         self.name = name
         self.value = value
         self.indices = indices
-```
 
-There are also some helper functions:
-
-```python
 def serialize_to_pb(tensor, pb):
     pass
 
@@ -118,155 +284,64 @@ def convert_to_tf_tensor(tensor):
     pass
 ```
 
-### Optimizer
-
-Once optimizer gets a gradient it will query the KVStore to get the corresponding parameter. Then it will apply the gradient to the parameter. It has a `tf.keras.optimizer` instance inside.
-
-Many `tf.keras.optimizer` subclasses, such as `Adam` and `Adagrad` allocate and manage additional variables associated with the variables to train.  These are called `Slots`.
-
-Embedding table slots are stored at KVStore, and other common parameter slots are stored and managed by `tf.keras.optimizer`.
-
-The embedding table slot is also a embedding table data structure. For example, a embedding table parameter with name `embedding_layer0`, we will create a corresponding `embedding_layer0-momentum` EmbeddingTable object in `KVStore.embedding_table_db`.
-
-We support async-SGD and sync-SGD both.
-
-There are two ways to support async-SGD:
- 
-- Calling `apply_gradient` inside `push_gradient` gRPC service.
-- Putting gradients into a gradient queue, and optimizer gets gradients from the queue immediately to `apply_gradient`.
-
-In the first way, there may be several gRPC threads running in parallel. This will introduce race condition on parameter updating, some gradients may be overwrited.
-
-The second way ensure each gradient could be applied, and decoupling these two procedures, `push_gradient` of worker and `apply_gradient` of optimizer. But the second way introduces more staleness in updating model, and may influence the final training accuracy.
-
-We may consider the second way later.
-
-In sync-SGD, optimizer needs to wait for a certain number of gradients, and then get the gradient after addition. We could implement a customized gradient queue structure to support such logic efficiently.
-
-The interface of gradient queue could be like this:
-
 ```python
-class GradientQueue(object):
+# In `Parameters`, interfaces `set_*_param` have two arguments, `value` and `name` (or `layer_name`).
+# If `value` is a ElasticDL `Tensor` instance, `name` can be None.
+# Otherwise `value` is a numpy ndarray, and `name` must be specified.
+class Parameters(object):
     def __init__(self):
-        self.grad_queue = queue.Queue()
-    
-    def get_gradient(self):
-        pass
-        
-    def put_gradient(self):
-        pass
-```
+        # Parameter initialization status
+        self.parameter_init_status = False
+        # Non-embedding parameter dict, maps parameter name to tf.Variable instance
+        self.non_embedding_params = {}
+        # Embedding table dict, maps embedding layer name to `EmbeddingTable` instance
+        self.embedding_params = {}
 
-### RPC Service
+    @property
+    def non_embedding_params(self):
+        return self._non_embedding_params
 
-PS provides RPC service for workers.
-
-Since each PS node will store a subset of the whole model. A worker will push/pull submodels to/from all PS nodes.
-
-However, embedding table is initialized lazily in PS, worker should also send embedding table information to PS. We have to add another field to describe embedding table related information.
-
-The model message is defined as following:
-
-```proto
-
-message EmbeddingTableInfo{
-    string name = 1;
-    repeated int64 dim = 2;
-    string initializer = 3;
-}
-
-message Model {
-    int64 version = 1;
-    repeated Tensor variables = 2;
-    repeated EmbeddingTableInfo embedding_table_info = 3;
-}
-```
-
-So the RPC service will be defined as following:
-
-```proto
-service PServer{
-    rpc push_model(Model) returns (google.protobuf.Empty);
-    rpc pull_variable(PullModelRequest) returns (PullModelResponse);
-    rpc pull_embedding_vector(Tensor) returns (Tensor);
-    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
-}
-```
-
-For the details of RPC service definition, please refer to next section.
-
-The interfaces of PServer could be like this:
-
-
-```python
-class PServer(elasticdl_pb2_grpc.PServerServicer):
-    def __init__(self, kvstore, grad_queue, opt):
-        self.kvstore = KVStore()
-        self.grad_queue = GradientQueue()
-        self.opt = Optimizer(opt, self.kvstore, self.grad_queue)
-
-    def push_model(self, request, _):
+    def set_embedding_param(self, value, layer_name=None):
         pass
 
-    def push_gradient(self, request, _):
-        pass
-        
-    def pull_variable(self, request, _):
+    def get_embedding_param(self, layer_name, ids):
+        return self._embedding_params.get(layer_name).get(ids)
+
+    def set_non_embedding_param(self, value, name=None):
         pass
 
-    # embedding param is handled lazily
-    def pull_embedding_vector(self, reques, _):
+    def init_non_embedding_param(self, value, name=None):
+        pass
+
+    def set_meta_info(self, layer_name, dim, initializer):
+        pass
+
+class EmbeddingTable(object):
+    def __init__(self, dim, initializer):
+        # Embedding vector dict, maps ID to 1-D numpy.ndarray
+        self._embedding_vectors = {}
+        # the dimension of embedding vectors
+        self._dim = dim
+        # the initializer name for initializing embedding vectors
+        self._initializer = initializer
+
+    def get(self, ids):
+        values = []
+        for id in ids:
+            if id not self._embedding_vectors:
+                val = initialize_embedding_vector(self._dim, self._initializer)
+            else:
+                val = self._embedding_vectors.get(id)
+            values.append(val)
+        return np.concatenate(values).reshape(len(ids), -1)
+
+    def set(self, ids, values):
         pass
 ```
 
-### Checkpoint and Serving
+### Some pseudocodes
 
-Master will send signal to PS to make checkpoint. Each PS node will save parameters in its current KVStore to a distributed file system.
-
-Since a PS node only has a subset of the whole model, we have to merge these submodels to get final model for serving.
-
-
-## Interactions among Master, PS and Worker
-The following events involve interactions among the master, workers and PS:
-
-* The master starts PS.
-* Initialization of parameters in PS.
-* Relaunch of PS.
-* Workers get model variables from PS.
-* Workers push gradients to PS.
-* PS reports submodel version to the master.
-* The master tells PS to save checkpoint.
-
-### The master starts PS
-When an ElasticDL task starts, `master.main` is responsible for starting PS as a Kubernetes service. Through Kubernetes service, we can fix domain name for every PS node.
-
-After starting PS, `master.main` starts the master servicer and workers, and tells them the domain names of all PS nodes. For PS with embedding replicas, every PS node also needs to know the domain name of its replicas.
-
-### Initialization of parameters in PS
-PS does not have any model parameters and model meta info after starting. Model meta info includes dimension of embedding layers, initialization methods of embedding vectors, initialization methods of slot variables in optimizer.
-
-There are two ways for PS to get model parameters and model meta info, one is to read from a checkpoint file, one is to obtain them from workers.
-
-When `master.main` starts PS, `master.main` decides how to initialize PS according to the arguments specified by users (train from scratch or train from checkpoint).
-
-If `master.main` passes an argument specifying the checkpoint file name to PS, PS reads from the checkpoint. Every PS node scans the variables and embedding vectors in the checkpoint, and saves the part which belong to it after parameter sharding.
-
-Otherwise, PS obtains model variables and model meta info from workers. PS does nothing but waiting for the first `pull_variable` call from worker. In the reponse of `pull_variable` call, PS tells the worker to initialize model, and report model variables and meta info to the PS. This process can be represented in the pseudocode:
-
-```proto
-message PullModelRequest{
-    enum MethodType {
-        MINIMUM = 0;
-        FIXED = 1;
-    }
-    int64 version = 2;
-}
-
-message PullModelResponse{
-    bool need_push_model = 1;
-    Model model = 2;
-}
-```
+Here is the pseudocode for a worker to pull variable from the PS. If the non-embedding variables are not initialized, the PS will tell the worker to initialize them and report to the PS.
 
 ```python
 class PServer(elasticdl_pb2_grpc.PServerServicer):
@@ -274,126 +349,39 @@ class PServer(elasticdl_pb2_grpc.PServerServicer):
     def pull_variable(self, request):
         res = PullModelResponse()
         if self._need_initialize_model:
-            res.need_push_model = True
+            res.model_init_status = True
             return res
-        res.need_push_model = False
-        res.model = self._get_model() # get model in this PS node
+        res.model_init_status = False
+        res.model = self._get_model() # get model in this PS instance
         return res
 
     def push_model(self, request):
         model = request.model
-        ... # initialize model in this PS node
-		
+        ... # initialize model in this PS instance
+
 class Worker(object):
     ...
     def pull_variable(self):
         # for-loop should be implemented in multithread
         for ps_index in range(self._ps_node_num):
-            req = PullModelRequest() # create request code keeps the same with current code 
+            req = PullModelRequest() # create request code keeps the same with current code
             res = self._stub[ps_index].pull_variable() # pull variable from PS
-            if res.need_push_model:
-                // worker initializes its model here if needed
+            if res.model_init_status:
+                # worker initializes its model here if needed
                 model = serialize_model_to_pb()
                 self._stub[ps_index].push_model(model) # get model in this worker
             req = PullModelRequest() # create request code keeps the same with current code
             res = self._stub[ps_index].pull_variable() # pull variable from PS
-            if res.need_push_model:
-                raise Error or try a pre-defined constant times
+            if res.model_init_status:
+                raise Error or try a pre-defined constant times 
 ```
 
-Please Note that the worker only initializes model variables. ElasticDL adopts lazy initialization for embedding vectors. Please refer to "[Workers get model parameters from PS](#Workers-get-model-parameters-from-PS)" section.
 
-### Relaunch of PS
-In case a PS pod fails, the master will try to relaunch one PS and it should recover model variables and embedding tables.
-
-For model variables, PS can recover from workers in the same way as the variable initialization.
-
-For embedding tables, the `master.main` tells PS through in starting command that PS should recover from replica. If there is no replica, PS has to recover from checkpoint. More details can be find in section [Embedding Replicas in PS](#Embedding-Replicas-in-PS).
-
-### Workers get model variables from PS
-Before each forward-pass, workers need to get all model variables from PS. Currently, workers call function `get_model()` to get variables.
-
-Workers get embedding vectors from PS when the forward-pass function of the ElasticDL embedding layer is called. PS may not possess all the embedding vectors needed because ElasticDL adopts lazy initialization for embedding vectors, i.e. iniatializing embedding vectors when they are needed. Thus, if a worker wants to pull some embedding vectors that are not existing in PS, PS will create and initialize these embedding vectors and return their value to the worker.
+Here is the pseudocode for getting replica from specified PS pod and synching replicas:
 
 ```python
-service PServer{
-    rpc pull_embedding_vector(Tensor) returns (Tensor);
-}
-```
-
-### Push Gradients
-After backward-pass, workers push gradients to PS.
-
-```python
-message PushGradientRequest{
-    int32 model_version = 1;
-    repeated Tensor gradients = 2;
-}
-message PushGradientResponse{
-    bool accepted = 1;
-    int32 model_version = 2;
-}
-service PServer{
-    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
-}
-```
-
-### PS reports submodel version to the master
-The master needs to know the model version to decide when to save checkpoint and when to evaluate model. PS regularly reports the version of the submodel it possessed to the master.
-
-Please note different pserver has different submodel version. The master choose the maximum of these submodel versions as the current model version.
-
-```python
-message ReportSubmodelVersionRequest{
-    int32 model_version = 1;
-}
-service PServer{
-    rpc report_submodel_version(ReportSubmodelVersionRequest) returns (google.protobuf.Empty);
-}
-```
-
-### The master tells PS to save checkpoint
-When the master decides to save checkpoint, the master tells all the pservers to save checkpoint. Every pserver saves the submodel it possessed into a separate file.
-
-```python
-service PServer{
-    rpc save_checkpoint(google.protobuf.Empty) returns (google.protobuf.Empty);
-}
-```
-
-## Embedding Replicas in PS
-An ElasticDL job has *N* PS nodes. Embedding vectors are partitioned into these PS nodes. The user provides *M*, the number of replicas for embedding vectors. *M* must be smaller than *N* as each PS node uses other PS nodes to store its embedding replicas.
-
-Assume *E(i)* is the embedding vectors in PS node *PS(i)*, it has *M* replicas which are stored in PS nodes from *P((i + 1) % N)* to *P((i + M) % N)*. Also, *PS(i)* has *M* other PS node replicas from *E((i - M) % N)* to *E((i - 1) % N)*. 
-
-*PS(i)* maintains *M* updated embedding vector key sets *UKS_i(j) for j from 0 to M - 1*. When *PS(i)* sparsely updates its embedding vectors *E(i)*, it also add the updated embedding vector keys into these *M* sets. 
-
-
-*PS(i)* also periodically synchronize the replicas stored in it from PS nodes *PS((i - M) % N)* to *PS((i - 1) % N)*. The synchronization frequency can be several seconds.
-
-Each PS will provide a gRPC service for the replica synchronization.
-
-```
-message SynchronizeEmbeddingRequest {
-    int32 replica_index = 1;
-}
-
-message SynchronizeEmbeddingResponse {
-    map<string, Tensor> embedding_vectors = 1;
-}
-
-# GRPC service for replica synchronization
-rpc SynchronizeEmbedding(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
-
-# GRPC service for PS to recover embedding vectors after relaunch
-rpc GetReplica(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
-```
-
-Each PS node has a thread dedicated for the replica synchronization:
-
-```
 # T is the number of seconds for synchronization frequency
-# Assume current PS is PS(i), self._stub[index] is the stub for PS((i - index) % N)'s GRPC server.
+# Assume current PS is PS(i), self._stub[index] is the stub for PS((i - index) % N)'s gRPC server.
 # self.replicas[index] is the replica for PS((i - index) % N).
 req = elasticdl_pb2.SynchronizeEmbeddingRequest()
 while still training:
@@ -402,23 +390,19 @@ while still training:
         req.replica_index = index
         updated_vectors = self._stub[replica_index].SynchronizeEmbedding(req)
         update self.replicas[index] from updated_vectors.embedding_vectors
-```
 
-The implementation of the gRPC services:
-
-```
 def SynchronizeEmbedding(self, request, _):
-    synch_embeddings = elasticdl_pb2. SynchronizeEmbeddingResponse()
+    synch_embeddings = elasticdl_pb2.SynchronizeEmbeddingResponse()
     # self.UKS are the M updated embedding vector key sets in current PS
     # self.embedding_vector are the embedding vectors in current PS
     with self.lock():
         assign synch_embeddings.embedding_vectors from self.embedding_vector
         self.UKS.clear()
     return synch_embeddings
-    
+
 def GetReplica(self, request, _):
-    replica = elasticdl_pb2. SynchronizeEmbeddingResponse()
+    replica = elasticdl_pb2.SynchronizeEmbeddingResponse()
     assign replica.embedding_vectors from self.replicas[request.replica_index]
     return replica
 ```
-Note that PS also needs the lock for adding updated embedding vector keys into `self.UKS` after embedding table sparse updates.
+
