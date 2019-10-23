@@ -16,7 +16,7 @@ from elasticdl.python.common.constants import (
     WorkerManagerStatus,
 )
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
-from elasticdl.python.common.log_utils import default_logger
+from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
     find_layer,
     get_module_file_path,
@@ -65,9 +65,8 @@ def _make_task_dispatcher(
 
 
 class Master(object):
-    logger = default_logger
-
     def __init__(self, args):
+        self.logger = get_logger("master", level=args.log_level.upper())
         self.checkpoint_output_path = args.output
 
         # Master addr
@@ -128,14 +127,14 @@ class Master(object):
     def start(self):
         # Start the evaluation service if requested
         if self.evaluation_service:
-            logger.info("Starting evaluation service")
+            self.logger.info("Starting evaluation service")
             self.evaluation_service.start()
-            logger.info("Evaluation service started")
+            self.logger.info("Evaluation service started")
 
         # Start the master GRPC server
-        logger.info("Starting master RPC server")
+        self.logger.info("Starting master RPC server")
         self.server.start()
-        logger.info("Master RPC server started")
+        self.logger.info("Master RPC server started")
 
         # Start the worker manager if requested
         if self.worker_manager:
@@ -145,10 +144,10 @@ class Master(object):
 
         # Start TensorBoard k8s Service if requested
         if self.tb_service and self.tb_client:
-            logger.info("Starting tensorboard service")
+            self.logger.info("Starting tensorboard service")
             self.tb_service.start()
             self.tb_client.start_tensorboard_service()
-            logger.info("Tensorboard service started")
+            self.logger.info("Tensorboard service started")
 
     def run(self):
         try:
@@ -165,35 +164,35 @@ class Master(object):
                     break
                 time.sleep(30)
         except KeyboardInterrupt:
-            logger.warning("Server stopping")
+            self.logger.warning("Server stopping")
 
         self._stop()
 
     def _stop(self):
-        logger.info("Stopping master")
+        self.logger.info("Stopping master")
 
         if self.evaluation_service:
-            logger.info("Stopping evaluation service")
+            self.logger.info("Stopping evaluation service")
             self.evaluation_service.stop()
 
-        logger.info("Stopping RPC server")
+        self.logger.info("Stopping RPC server")
         self.server.stop(0)
 
         # Keep TensorBoard running when all the tasks are finished
         if self.tb_service:
-            logger.info(
+            self.logger.info(
                 "All tasks finished. Keeping TensorBoard service running..."
             )
             while True:
                 if self.tb_service.is_active():
                     time.sleep(10)
                 else:
-                    logger.warning(
+                    self.logger.warning(
                         "Unable to keep TensorBoard running. "
                         "It has already terminated"
                     )
                     break
-        logger.info("Master stopped")
+        self.logger.info("Master stopped")
 
     @staticmethod
     def _get_job_type(args):
@@ -229,7 +228,7 @@ class Master(object):
     def _create_tensorboard_service(self, tensorboard_log_dir, master_ip):
         tb_service = None
         if tensorboard_log_dir:
-            logger.info(
+            self.logger.info(
                 "Create TensorBoard service with log directory %s",
                 tensorboard_log_dir,
             )
@@ -244,7 +243,7 @@ class Master(object):
             args.checkpoint_steps
             or self.job_type == JobType.TRAINING_WITH_EVALUATION
         ):
-            logger.info("Create checkpoint service")
+            self.logger.info("Create checkpoint service")
             checkpoint_service = CheckpointService(
                 args.checkpoint_dir,
                 args.checkpoint_steps,
@@ -260,7 +259,7 @@ class Master(object):
             self.job_type == JobType.TRAINING_WITH_EVALUATION
             or self.job_type == JobType.EVALUATION_ONLY
         ):
-            logger.info(
+            self.logger.info(
                 "Create evaluation service with throttle seconds %d "
                 " and evaluation steps %d",
                 args.evaluation_throttle_secs,
@@ -298,7 +297,7 @@ class Master(object):
                 restart_policy=args.restart_policy,
                 cluster_spec=args.cluster_spec,
             )
-            logger.info(
+            self.logger.info(
                 "Embedding service start succeeded. The endpoint is %s."
                 % str(endpoint)
             )
@@ -310,7 +309,7 @@ class Master(object):
 
     def _create_master_service(self, args):
         # The master service
-        logger.info("Create master service")
+        self.logger.info("Create master service")
         server = grpc.server(
             futures.ThreadPoolExecutor(max_workers=64),
             options=[
@@ -341,7 +340,7 @@ class Master(object):
             master_servicer, server
         )
         server.add_insecure_port("[::]:{}".format(args.port))
-        logger.info("The port of the master server is: %d", args.port)
+        self.logger.info("The port of the master server is: %d", args.port)
 
         return master_servicer, server
 
