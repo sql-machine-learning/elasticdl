@@ -59,7 +59,7 @@ Although all feature columns in TensorFlow can be used in ElasticDL, tf.feature_
 
 ## Export the model with elasticdl.layers.Embedding to SavedModel
 
-Using native Keras layers to define a model is more user-friendly than using custom layers in ElasticDL. However, it is inefficient to train a model with tf.keras.layers.Embedding. When the model executes the forward-pass computation for each mini-batch, it must get all embedding parameters from the parameter server (PS) even if the mini-batch only contains several embedding ids. So, the elastic.layers.Embedding is designed to improve the training efficiency in ElasticDL. Considering user-friendliness and training efficiency, we need to define a model with tf.keras.layers.Embedding and train the model with elasticdl.layers.Embedding. For the Sequential model and the Functional models, we can use tf.keras.models.clone_model to replace the tf.keras.layers.Embedding with elasticdl.layers.Embedding before training starts. For subclass model, we can replace the attribute of tf.keras.layers.Embedding type with elastic.layers.Embedding.
+Using native Keras layers to define a model is more user-friendly than using custom layers in ElasticDL. However, it is inefficient to train a model with tf.keras.layers.Embedding. When the model executes the forward-pass computation for each mini-batch, it must get all embedding parameters from the parameter server (PS) even if the mini-batch only contains several embedding ids. So, the elasticdl.layers.Embedding is designed to improve the training efficiency in ElasticDL. Considering user-friendliness and training efficiency, we need to define a model with tf.keras.layers.Embedding and train the model with elasticdl.layers.Embedding. For the Sequential model and the Functional models, we can use tf.keras.models.clone_model to replace the tf.keras.layers.Embedding with elasticdl.layers.Embedding before training starts. For subclass model, we can replace the attribute of tf.keras.layers.Embedding type with elasticdl.layers.Embedding.
 
 ```python
 def generate_train_model_for_elasticdl(model, distribute_strategy):
@@ -73,7 +73,7 @@ def replace_keras_embedding_with_edl_embedding(model)
     if isinstance(model, tf.keras.Sequential) or model._is_graph_network:
         def _clone_function(layer):
             if type(layer) == keras.layers.Embedding:
-                edl_layer = elastic.layers.Embedding(layer.output_dim)
+                edl_layer = elasticdl.layers.Embedding(layer.output_dim)
                 return edl_layer
             return layer
         return keras.models.clone_model(model, clone_function=_clone_function)
