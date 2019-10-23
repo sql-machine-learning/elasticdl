@@ -13,12 +13,12 @@ The model size can vary from several kilobytes to several terabytes. Exporting t
 | Small or Medium Size Model |       SavedModel       |  SavedModel |               SavedModel                 |
 | Large Size Model           |          N/A           |     N/A     | Distributed Parameter Server for Serving |
 
-We consider three main training strategies of ElasticDL. Master central storage strategy (Implemented): The master node loads the entire model. Workers pull the model from the master while processing each minibatch of data. AllReduce strategy (Planning): It mainly supports synchronized training. Each worker loads a replica of the entire model. AllReduce aggregates gradients across all the workers and publish them to each worker. Parameter server strategy (In Progress): We store the model variables on the parameter servers. All the workers pull the variables as needed from the parameter server and execute computation.
+We consider three main training strategies of ElasticDL. 1) Master central storage strategy (Implemented): The master node loads the entire model. Workers pull the model from the master while processing each minibatch of data. 2) AllReduce strategy (Planning): It mainly supports synchronized training. Each worker loads a replica of the entire model. AllReduce aggregates gradients across all the workers and publish them to each worker. 3) Parameter server strategy (In Progress): We store the model variables on the parameter servers. All the workers pull the variables as needed from the parameter server and execute computation.
 
-Small or medium size model\
+Small or medium size model  
 A single serving process can load the entire model into memory. No matter which training strategy to choose, we will export the model to the SavedModel format. For master central storage and AllReduce strategy, each worker has a replica of the entire model and then export it directly. For parameter server strategy, the model contains unsaveable elasticdl.layers.Embedding layer and the variables are stored in the PS. We will use the process in [the section below](#Export-the-model-with-elasticdl.layers.Embedding-to-SavedModel) to export the model. And then we can deploy it using the existed serving frameworks like TFServing. **We focus on this case in this article.**
 
-Large size model\
+Large size model  
 A single serving process will run out of memory while loading the model. We partition the model variables into multiple shards, store them in distributed parameter server for serving. The inference engine will execute the serving graph, query the variable values from the distributed parameter server as needed and finish the calculation. It's necessary to upgrade the serving framework to support this. **We will discuss this case in a separate design in the next step.**
 
 In this article, we want to achieve these three goals in ElasticDL:
@@ -31,7 +31,7 @@ In this article, we want to achieve these three goals in ElasticDL:
 
 ElasticDL is a distributed deep learning framework based on TensorFlow 2.0 eager execution. In ElasticDL, we use tf.data.Dataset to create input pipeline for training. The recommended way to preprocess data from tf.data.Dataset is to use [feature columns](https://www.tensorflow.org/tutorials/structured_data/feature_columns) in TensorFlow. What's more, tf.saved_model.save will save the defined feature columns with the model. So tf-serving will use the same preprocessing logic with training to make inference.
 
-Define a keras model with feature columns:
+Define a Keras model with feature columns:
 
 ```python
 def get_feature_columns():
@@ -85,7 +85,7 @@ def replace_keras_embedding_with_edl_embedding(model)
         return model
 ```
 
-However, tf.saved_model.save cannot export the replaced model to SavedModel. Because ElasticDL.Embedding uses tf.py_function to invoke Rpc to interact with the parameter server. It is not mapped to any native TensorFlow op. As a result we choose to save the origin model with native keras embedding layer, replace the embedding parameters with the trained parameters of elasticdl.layers.embedding.
+However, tf.saved_model.save cannot export the replaced model to SavedModel. Because ElasticDL.Embedding uses tf.py_function to invoke RPC to interact with the parameter server. It is not mapped to any native TensorFlow op. As a result we choose to save the origin model with native keras embedding layer, replace the embedding parameters with the trained parameters of elasticdl.layers.embedding.
 
 SavedModel needs to generate model inputs and outputs signatures to map to TensorFlow Serving's APIs. However, the user does not need to define inputs and outputs for sequential and subclass models. We should build model with the input dataset to generate inputs and outputs for those models before using SavedModel.
 
