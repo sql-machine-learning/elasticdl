@@ -18,7 +18,7 @@ We consider two kinds of model parameters:
 1. non-embedding parameters, and
 1. embedding tables
 
-Theoretically, non-embedding parameters might have tremendous size and require partitioning. However, in practices, limited by the amount of GPU memory, researchers don't often define models depending on huge dense tensor parameters. Hence in this design, we don't partition non-embedding parameters; instead, we place each of them on a PS pod.
+Theoretically, non-embedding parameters might have tremendous size and require partitioning. However, in practice, limited by the amount of GPU memory, researchers don't often define models depending on huge dense tensor parameters. Hence in this design, we don't partition non-embedding parameters; instead, we place each of them on a PS pod.
 
 For a non-embedding parameter, we select its PS pod *PSᵢ* using a hashing function *hash* and the parameter name *p_name*:
 
@@ -46,9 +46,9 @@ service PServer{
 ```
 
 ## Model Parameter Initialization
-We use lazy initialization for model parameters in PS. PS does have the model definition. Even if PS has the model definition, it cannot initialize Keras subclass model parameters, as only a forward-pass with a minibatch of data can initialize the parameters. Thus workers are responsible for initializing parameters and push the initialized parameters to corresponding PS pods.
+We use lazy initialization for model parameters in PS. PS does not have the model definition. Even if PS has the model definition, it cannot initialize Keras subclass model parameters, as only a forward-pass with a minibatch of data can initialize the parameters. Thus workers are responsible for initializing parameters and push the initialized parameters to corresponding PS pods.
 
-Each PS pod has a parameter initialization status, which is `False` after the PS pod launch. When a worker tries to get non-embedding parameters from the PS pod through a RPC call `pull_variable`, the PS pod tells the worker that the parameter initialization status is `False` in response. If the worker has already initialized non-embedding parameters, it sends non-embedding parameter values to the PS pod by a GRPC call `push_model`. `push_model` is a RPC service in the PS pod.
+Each PS pod has a parameter initialization status, which is `False` after the PS pod launch. When a worker tries to get non-embedding parameters from the PS pod through a RPC call `pull_variable`, the PS pod tells the worker that the parameter initialization status is `False` in response. If the worker has already initialized non-embedding parameters, it sends non-embedding parameter values to the PS pod by a gRPC call `push_model`. `push_model` is a RPC service in the PS pod.
 
 ```proto
 service PServer{
@@ -152,7 +152,7 @@ Each PS pod has a thread dedicated to the replica synchronization:
 
 ```
 # T is the number of seconds for synchronization frequency
-# Assume current PS is PS(i), self._stub[index] is the stub for PS((i - index) % N)'s GRPC server.
+# Assume current PS is PS(i), self._stub[index] is the stub for PS((i - index) % N)'s gRPC server.
 # self.replicas[index] is the replica for PS((i - index) % N).
 req = elasticdl_pb2.SynchronizeEmbeddingRequest()
 while still training:
@@ -180,14 +180,14 @@ Please note that there are many worker pods in an ElasticDL job, and each worker
 ```proto
 message Tensor {	
     enum DataType {	
-        BOOL = 0;	
-        INT16 = 1;	
-        INT32 = 2;	
-        INT64 = 3;	
-        FP16 = 4;	
-        FP32 = 5;	
-        FP64 = 6;	
-    }	
+        BOOL = 0;
+        INT16 = 1;
+        INT32 = 2;
+        INT64 = 3;
+        FP16 = 4;
+        FP32 = 5;
+        FP64 = 6;
+    }
     string name = 1;
     DataType data_type = 2;
     repeated int64 dim = 3;
@@ -245,19 +245,19 @@ message SynchronizeEmbeddingResponse {
 service PServer{
     # pull trainable tensorflow variables created by Keras layers
     rpc pull_variable(PullModelRequest) returns (PullModelResponse);
-    
+
     # pull embedding vectors in ElasticDL embedding layers
     # Do we need to create a new message `PullEmbeddingVectorRequest` rather than use `Tensor`?
     rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
-    
+
     # push trainable tensorflow variables and meta info for ElasticDL embedding layers
     rpc push_model(Model) returns (google.protobuf.Empty);
-    
+
     rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
-    
+
     # PS to recover embedding vectors after relaunch
     rpc get_replica(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
-    
+
     # PS replica synchronization
     rpc synchronize_embedding(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
 }
@@ -270,7 +270,7 @@ class Tensor(object):
         self.name = name
         self.value = value
         self.indices = indices
-        
+
 def serialize_to_pb(tensor, pb):
     pass
 
@@ -286,7 +286,7 @@ def convert_to_tf_tensor(tensor):
 
 ```python
 # In `Parameters`, interfaces `set_*_param` have two arguments, `value` and `name` (or `layer_name`).
-# If `value` is a ElasticDL `Tensor` instance, `name` can be None. 
+# If `value` is a ElasticDL `Tensor` instance, `name` can be None.
 # Otherwise `value` is a numpy ndarray, and `name` must be specified.
 class Parameters(object):
     def __init__(self):
@@ -303,16 +303,16 @@ class Parameters(object):
 
     def set_embedding_param(self, value, layer_name=None):
         pass
-    
+
     def get_embedding_param(self, layer_name, ids):
         return self._embedding_params.get(layer_name).get(ids)
 
     def set_non_embedding_param(self, value, name=None):
         pass
-         
+
     def init_non_embedding_param(self, value, name=None):
         pass
-        
+
     def set_meta_info(self, layer_name, dim, initializer):
         pass
 
@@ -324,7 +324,7 @@ class EmbeddingTable(object):
         self._dim = dim
         # the initializer name for initializing embedding vectors
         self._initializer = initializer
-    
+
     def get(self, ids):
         values = []
         for id in ids:
@@ -334,7 +334,7 @@ class EmbeddingTable(object):
                 val = self._embedding_vectors.get(id)
             values.append(val)
         return np.concatenate(values).reshape(len(ids), -1)
-        
+
     def set(self, ids, values):
         pass
 ```
@@ -358,7 +358,7 @@ class PServer(elasticdl_pb2_grpc.PServerServicer):
     def push_model(self, request):
         model = request.model
         ... # initialize model in this PS instance
-	
+
 class Worker(object):
     ...
     def pull_variable(self):
@@ -367,7 +367,7 @@ class Worker(object):
             req = PullModelRequest() # create request code keeps the same with current code
             res = self._stub[ps_index].pull_variable() # pull variable from PS
             if res.model_init_status:
-                // worker initializes its model here if needed
+                # worker initializes its model here if needed
                 model = serialize_model_to_pb()
                 self._stub[ps_index].push_model(model) # get model in this worker
             req = PullModelRequest() # create request code keeps the same with current code
@@ -381,7 +381,7 @@ Here is the pseudocode for getting replica from specified PS pod and synching re
 
 ```python
 # T is the number of seconds for synchronization frequency
-# Assume current PS is PS(i), self._stub[index] is the stub for PS((i - index) % N)'s GRPC server.
+# Assume current PS is PS(i), self._stub[index] is the stub for PS((i - index) % N)'s gRPC server.
 # self.replicas[index] is the replica for PS((i - index) % N).
 req = elasticdl_pb2.SynchronizeEmbeddingRequest()
 while still training:
@@ -392,16 +392,16 @@ while still training:
         update self.replicas[index] from updated_vectors.embedding_vectors
 
 def SynchronizeEmbedding(self, request, _):
-    synch_embeddings = elasticdl_pb2. SynchronizeEmbeddingResponse()
+    synch_embeddings = elasticdl_pb2.SynchronizeEmbeddingResponse()
     # self.UKS are the M updated embedding vector key sets in current PS
     # self.embedding_vector are the embedding vectors in current PS
     with self.lock():
         assign synch_embeddings.embedding_vectors from self.embedding_vector
         self.UKS.clear()
     return synch_embeddings
-    
+
 def GetReplica(self, request, _):
-    replica = elasticdl_pb2. SynchronizeEmbeddingResponse()
+    replica = elasticdl_pb2.SynchronizeEmbeddingResponse()
     assign replica.embedding_vectors from self.replicas[request.replica_index]
     return replica
 ```
