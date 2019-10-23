@@ -109,7 +109,7 @@ def restore_keras_subclass_model_def(model):
             setattr(model, attr_name, keras.layers.Embedding(attr_value.output_dim))
     return model
 
-def restore_keras_embedding_from_edl_embedding(model):
+def restore_keras_model_params(model):
     for layer in model.layers:
         if type(layer) == tf.keras.layers.Embedding:
             embedding_params = EmbeddingService.get_all_embedding_params(layer)
