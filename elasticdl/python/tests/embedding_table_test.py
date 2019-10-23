@@ -34,6 +34,12 @@ class EmbeddingTableTest(unittest.TestCase):
         res = self.table.get(indices)
         self.assertTupleEqual(res.shape, (3, 10))
 
+        res = self.table.get([])
+        self.assertIsNone(res)
+
+        self.table.get([0, 3, 8])
+        self.assertEqual(len(self.table.embedding_vectors), 4)
+
     def test_embedding_table_set(self):
         self.table.clear()
         indices = [0, 1, 4]
