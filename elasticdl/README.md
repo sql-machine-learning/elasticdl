@@ -178,3 +178,8 @@ Note that tests related to ODPS will not be executed on pull requests created fr
 the ODPS access information has been secured on Travis and only those who have write access can retrieve it. Developers who
 have write access to this repo are encouraged to submit pull requests from branches instead of forks if any code related to ODPS
 has been modified.
+
+If you want to trigger Travis builds without submitting a pull request, you can do so by developing on a branch and add this
+branch name to the list in `branches` section in [Travis configuration file](../.travis.yml). Note that you can also trigger
+Travis builds from forks but it requires additional work such as activating Travis for the forked repo and ODPS related tests
+will be skipped as mentioned earlier.
