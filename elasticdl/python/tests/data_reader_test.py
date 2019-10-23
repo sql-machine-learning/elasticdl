@@ -5,6 +5,7 @@ import time
 import unittest
 from collections import namedtuple
 
+import numpy as np
 import tensorflow as tf
 from odps import ODPS
 
@@ -98,6 +99,7 @@ class ODPSDataReaderTest(unittest.TestCase):
                 _MockedTask(0, 2, self.test_table + ":shard_0")
             )
         )
+        records = np.array(records, dtype="float").tolist()
         self.assertEqual(
             [[6.4, 2.8, 5.6, 2.2, 2], [5.0, 2.3, 3.3, 1.0, 1]], records
         )
@@ -136,7 +138,7 @@ class ODPSDataReaderTest(unittest.TestCase):
                 if data is not None:
                     yield data
 
-        dataset = tf.data.Dataset.from_generator(_gen, tf.float32)
+        dataset = tf.data.Dataset.from_generator(_gen, tf.string)
         dataset = dataset_fn(
             dataset, None, Metadata(column_names=IRIS_TABLE_COLUMN_NAMES)
         )

@@ -373,6 +373,15 @@ class EmbeddingLayerTest(unittest.TestCase):
                         ).all()
                     )
 
+    def test_embedding_layer_with_none_shape_input(self):
+        output_dim = 8
+        embedding_size = 16
+        layer = create_embedding_layer(embedding_size, output_dim)
+        input = tf.keras.layers.Input(shape=(None,))
+        embedding_output = layer(input)
+        embedding_output_shape = embedding_output.get_shape().as_list()
+        self.assertEquals(embedding_output_shape, [None, None, 8])
+
 
 if __name__ == "__main__":
     unittest.main()

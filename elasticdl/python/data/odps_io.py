@@ -221,7 +221,7 @@ class ODPSReader(object):
                         start=start, count=end - start, columns=columns
                     ):
                         batch_record.append(
-                            [record[column] for column in columns]
+                            [str(record[column]) for column in columns]
                         )
                 return batch_record
             except Exception as e:
