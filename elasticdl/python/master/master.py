@@ -114,9 +114,10 @@ class Master(object):
         # Search for embedding layers in the model,
         # if found, initialize embedding service
         layers = find_layer(self.model_inst, Embedding)
-        self.embedding_service_endpoint, self.embedding_dims = self._create_embedding_service(
-            layers, args
-        )
+        (
+            self.embedding_service_endpoint,
+            self.embedding_dims
+        ) = self._create_embedding_service(layers, args)
 
         # Initialize master service
         self.master_servicer, self.server = self._create_master_service(args)
@@ -138,9 +139,9 @@ class Master(object):
 
         # Start the worker manager if requested
         if self.worker_manager:
-            worker_manager.update_status(WorkerManagerStatus.PENDING)
-            worker_manager.start_workers()
-            worker_manager.update_status(WorkerManagerStatus.RUNNING)
+            self.worker_manager.update_status(WorkerManagerStatus.PENDING)
+            self.worker_manager.start_workers()
+            self.worker_manager.update_status(WorkerManagerStatus.RUNNING)
 
         # Start TensorBoard k8s Service if requested
         if self.tb_service and self.tb_client:
@@ -280,12 +281,12 @@ class Master(object):
         return evaluation_service
 
     def _create_embedding_service(self, layers, args):
-        embedding_service_endpoint = None
+        endpoint = None
         embedding_dims = {}
 
         if layers:
             embedding_service = EmbeddingService()
-            embedding_service_endpoint = embedding_service.start_embedding_service(
+            endpoint = embedding_service.start_embedding_service(
                 job_name=args.job_name,
                 image_name=args.worker_image,
                 namespace=args.namespace,
@@ -299,13 +300,13 @@ class Master(object):
             )
             logger.info(
                 "Embedding service start succeeded. The endpoint is %s."
-                % str(embedding_service_endpoint)
+                % str(endpoint)
             )
             embedding_dims = dict(
                 [(layer.name, layer.output_dim) for layer in layers]
             )
 
-        return embedding_service_endpoint, embedding_dims
+        return endpoint, embedding_dims
 
     def _create_master_service(self, args):
         # The master service
