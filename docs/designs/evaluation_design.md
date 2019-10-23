@@ -32,7 +32,7 @@ As shown in <em>Figure 1</em>. The worker 1 gets model from the PS at the 15th s
 The solution is the same as existing design in ElasticDL which can not resolve Problem 2. To resolve Problem 1, the master can divide train and evaluation tasks into two todo lists at the 10th step in <em>Figure 1</em>. When evaluation starts, the master generates evaluation tasks and inserts those into the evaluation todo list not the training list. The worker will try to pull a evaluation task before the worker executes forward-pass computation for every mini-batch samples. If the worker succeed pulling an evaluation task, it will make inference and report the results to master until it cannot get any evaluation task. 
 
 ![evaluate_flowchart_proposal](/docs/images/train_and_evaluate_flowchart_proposal.svg)\
-<em>Figure 3</em>. Proposal Flowchart of Train and Evaluation
+<em>Figure 3</em>. Proposal Flowchart to Train and Evaluate
 
 2. PS stops to update model variables when an evaluation job starts.\
 As shown in <em>Figure 1</em>, PS will not execute the 18th and 19th steps after an evaluation job starts at the 10th step. So, the model worker 2 get is the same as the worker 1. The solution can resolve Problem 2 and also can resolve Problem 1 by solution in <em>Figure 3.</em>. But, the training process must wait all evaluation tasks have been completed. 
