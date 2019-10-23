@@ -57,7 +57,7 @@ When an evaluation job starts, the PS save the current model to the temporary fi
 3. During training loop, we can allow some inconsistencies in stand-alone evaluation job but ensure correct and precise evaluation results when doing checkpoint evaluation job.
 
 ## The Selected Solution for ElasticDL
-Considering the complexity to launch and manage a new job to load checkpoint, we choose to evaluate model with the current model in PS. For simplicity, we don't stop training tasks when an evaluation job starts. To implement the solution, we should make the follow modification:
+Considering the complexity to launch and manage a new job to load checkpoint, we choose to evaluate the model with the current model in PS. For simplicity, we don't stop training tasks when an evaluation job starts. To implement the solution, we should make the following modification:
 1. The master should create two todo queues to save training tasks and evaluation tasks.
 2. We should add the `type` attribute to GetTaskRequest. The master returns a training task or an evaluation task according to the type in GetTaskRequest. 
 ```
