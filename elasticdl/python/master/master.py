@@ -74,7 +74,6 @@ class Master(object):
         master_ip = os.getenv("MY_POD_IP", "localhost")
         self.master_addr = "%s:%d" % (master_ip, args.port)
         self.job_type = _get_job_type(args)
-        self.args = args
 
         # Start TensorBoard service if requested
         self.tb_service = self._create_tensorboard_service(
@@ -119,8 +118,10 @@ class Master(object):
             layers, args
         )
 
+        # Initialize master service
         self.master_servicer, self.server = self._create_master_service(args)
 
+        # Initialize worker manager
         self.worker_manager = self._create_worker_manager(args)
 
     def start(self):
