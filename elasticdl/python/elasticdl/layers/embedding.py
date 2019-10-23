@@ -207,7 +207,8 @@ class Embedding(tf.keras.layers.Layer):
         if ids.get_shape().rank == 2:
             input_length = ids.get_shape()[1]
             if input_length is None:
-                return tf.reshape(outputs, (-1, self.output_dim))
+                outputs.set_shape(shape=(None, None, self.output_dim))
+                return outputs
             output_shape = (-1, input_length, self.output_dim)
         else:
             output_shape = ids.get_shape().concatenate(self.output_dim)
