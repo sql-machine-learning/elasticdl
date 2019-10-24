@@ -38,9 +38,7 @@ class EmbeddingTableTest(unittest.TestCase):
         self.table.clear()
         indices = [0, 1, 4]
         x = len(indices)
-        values = np.random.uniform(size=x * np.prod(self.dim)).reshape(
-            (x, self.dim)
-        )
+        values = np.random.uniform(size=x * self.dim).reshape((x, self.dim))
         self.table.set(indices, values)
 
         row0 = self.table.get([0])
