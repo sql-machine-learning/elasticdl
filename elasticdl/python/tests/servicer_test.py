@@ -153,14 +153,12 @@ class ServicerTest(unittest.TestCase):
             """ Make a ReportGradientRequest compatible with model"""
             req = elasticdl_pb2.ReportGradientRequest()
             req.gradient.append(
-                ndarray_to_tensor(
-                    np.array([0.1], dtype=np.float32), name="x"
-                )
+                ndarray_to_tensor(np.array([0.1], dtype=np.float32), name="x")
             )
             req.gradient.append(
-                    ndarray_to_tensor(
-                        np.array([0.03, 0.06], dtype=np.float32), name="y"
-                    )
+                ndarray_to_tensor(
+                    np.array([0.03, 0.06], dtype=np.float32), name="y"
+                )
             )
             req.model_version = 1
             return req
@@ -213,7 +211,7 @@ class ServicerTest(unittest.TestCase):
 
         # Report a current version with part of gradients, should be accepted.
         req = makeGrad()
-        req.gradient.pop(-1)
+        req.gradient.pop()
         res = master.ReportGradient(req, None)
         self.assertTrue(res.accepted)
         self.assertEqual(1, res.model_version)

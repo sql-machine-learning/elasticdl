@@ -219,9 +219,9 @@ class Worker(object):
         ):
             if isinstance(g, tf.IndexedSlices):
                 req.gradient.append(
-                        ndarray_to_tensor(
-                            g.values.numpy(), v.name, tuple(g.indices.numpy())
-                        )
+                    ndarray_to_tensor(
+                        g.values.numpy(), v.name, tuple(g.indices.numpy())
+                    )
                 )
             else:
                 req.gradient.append(ndarray_to_tensor(g.numpy(), v.name))
@@ -263,11 +263,9 @@ class Worker(object):
                         g_indices = ids
 
                 req.gradient.append(
-                        ndarray_to_tensor(
-                            g_values.numpy(),
-                            layer.name,
-                            tuple(g_indices.numpy()),
-                        )
+                    ndarray_to_tensor(
+                        g_values.numpy(), layer.name, tuple(g_indices.numpy())
+                    )
                 )
 
         req.model_version = self._model_version
