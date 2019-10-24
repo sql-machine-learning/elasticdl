@@ -1,6 +1,4 @@
-import operator
 import unittest
-from functools import reduce
 
 import numpy as np
 
@@ -9,10 +7,6 @@ from elasticdl.python.pserver.embedding_table import (
     EmbeddingTable,
     create_embedding_table,
 )
-
-
-def prod(iterable):
-    return reduce(operator.mul, iterable, 1)
 
 
 class EmbeddingTableTest(unittest.TestCase):
@@ -44,7 +38,7 @@ class EmbeddingTableTest(unittest.TestCase):
         self.table.clear()
         indices = [0, 1, 4]
         x = len(indices)
-        values = np.random.uniform(size=x * prod(self.dim)).reshape(
+        values = np.random.uniform(size=x * np.prod(self.dim)).reshape(
             (x,) + self.dim
         )
         self.table.set(indices, values)
