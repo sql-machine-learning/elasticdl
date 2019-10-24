@@ -5,20 +5,21 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.dtypes import (
     dtype_numpy_to_tensor,
     dtype_tensor_to_numpy,
-    is_numpy_dtype_allowed,
 )
 
 
 def serialize_tensor(tensor, tensor_pb):
     """Convert Tensor to Tensor PB"""
-    dtype = tensor.values.dtype
-    if not is_numpy_dtype_allowed(dtype):
-        raise ValueError("Dtype of ndarray %s is not supported", dtype)
+    dtype = dtype_numpy_to_tensor(tensor.values.dtype)
+    if not dtype:
+        raise ValueError(
+            "Dtype of ndarray %s is not supported", tensor.values.dtype
+        )
+    tensor_pb.dtype = dtype
     tensor_pb.dim.extend(tensor.values.shape)
     tensor_pb.content = tensor.values.tobytes()
     if tensor.is_indexed_slices():
         tensor_pb.indices.extend(tensor.indices)
-    tensor_pb.dtype = dtype_numpy_to_tensor(dtype)
     if tensor.name:
         tensor_pb.name = tensor.name
 
