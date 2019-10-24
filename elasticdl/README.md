@@ -179,6 +179,8 @@ the ODPS access information has been secured on Travis and only those who have w
 have write access to this repo are encouraged to submit pull requests from branches instead of forks if any code related to ODPS
 has been modified.
 
+Also note that two test cases of integration tests involve loading checkpoint. It is not easy to automatically generate checkpoints when doing integration tests. Currently we save a checkpoint file in the [test data folder](python/tests/testdata) of the ElasticDL Github repository and use this checkpoint file for integration tests. Thus you need to re-generate a new checkpoint file if your PR modifies the definition of Model protocol buffer.
+
 If you want to trigger Travis builds without submitting a pull request, you can do so by developing on a branch and add this
 branch name to the list in `branches` section in [Travis configuration file](../.travis.yml). Note that you can also trigger
 Travis builds from forks but it requires additional work such as activating Travis for the forked repo and ODPS related tests
