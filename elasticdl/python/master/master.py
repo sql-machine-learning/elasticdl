@@ -74,7 +74,7 @@ class Master(object):
         self.master_addr = "%s:%d" % (master_ip, args.port)
         self.job_type = Master._get_job_type(args)
 
-        # Start TensorBoard service if requested
+        # Initialize TensorBoard service if requested
         self.tb_service = self._create_tensorboard_service(
             args.tensorboard_log_dir, master_ip
         )
@@ -110,6 +110,7 @@ class Master(object):
         # Initialize evaluation service
         self.evaluation_service = self._create_evaluation_service(args)
 
+        # Initialize embedding service
         (
             self.embedding_service_endpoint,
             self.embedding_dims,
