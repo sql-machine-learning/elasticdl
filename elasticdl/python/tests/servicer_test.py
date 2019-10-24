@@ -152,19 +152,15 @@ class ServicerTest(unittest.TestCase):
         def makeGrad():
             """ Make a ReportGradientRequest compatible with model"""
             req = elasticdl_pb2.ReportGradientRequest()
-            req.gradient.extend(
-                [
-                    ndarray_to_tensor(
-                        np.array([0.1], dtype=np.float32), name="x"
-                    )
-                ]
+            req.gradient.append(
+                ndarray_to_tensor(
+                    np.array([0.1], dtype=np.float32), name="x"
+                )
             )
-            req.gradient.extend(
-                [
+            req.gradient.append(
                     ndarray_to_tensor(
                         np.array([0.03, 0.06], dtype=np.float32), name="y"
                     )
-                ]
             )
             req.model_version = 1
             return req
@@ -197,15 +193,15 @@ class ServicerTest(unittest.TestCase):
 
         # Report a unknown gradient, should raise.
         req = makeGrad()
-        req.gradient.extend(
-            [ndarray_to_tensor(np.array([0.1], dtype=np.float32), name="z")]
+        req.gradient.append(
+            ndarray_to_tensor(np.array([0.1], dtype=np.float32), name="z")
         )
         self.assertRaises(ValueError, master.ReportGradient, req, None)
 
         # Report an incompatible gradient, should raise.
         req = makeGrad()
-        req.gradient.extend(
-            [ndarray_to_tensor(np.array([0.1], dtype=np.float32), name="y")]
+        req.gradient.append(
+            ndarray_to_tensor(np.array([0.1], dtype=np.float32), name="y")
         )
         self.assertRaises(ValueError, master.ReportGradient, req, None)
 

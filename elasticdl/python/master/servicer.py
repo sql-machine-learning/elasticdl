@@ -262,7 +262,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         pb_model = elasticdl_pb2.Model()
         pb_model.version = self._version
         for k, v in self._model.items():
-            pb_model.param.extend([ndarray_to_tensor(v.numpy(), k)])
+            pb_model.param.append(ndarray_to_tensor(v.numpy(), k))
         return pb_model
 
     def _validate_model_version(self, request_model_version):

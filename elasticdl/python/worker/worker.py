@@ -201,7 +201,7 @@ class Worker(object):
         """
         req = elasticdl_pb2.ReportVariableRequest()
         for v in self._non_embed_vars.values():
-            req.variable.extend([ndarray_to_tensor(v.numpy(), v.name)])
+            req.variable.append(ndarray_to_tensor(v.numpy(), v.name))
         self._stub.ReportVariable(req)
 
     def report_gradient(self, grads):
@@ -218,15 +218,13 @@ class Worker(object):
             grads[:non_embed_vars_n], self._non_embed_vars.values()
         ):
             if isinstance(g, tf.IndexedSlices):
-                req.gradient.extend(
-                    [
+                req.gradient.append(
                         ndarray_to_tensor(
                             g.values.numpy(), v.name, tuple(g.indices.numpy())
                         )
-                    ]
                 )
             else:
-                req.gradient.extend([ndarray_to_tensor(g.numpy(), v.name)])
+                req.gradient.append(ndarray_to_tensor(g.numpy(), v.name))
 
         # Accumulate gradients of ElasticDL embedding layer
         if self._embedding_layers:
@@ -264,14 +262,12 @@ class Worker(object):
                         g_values = grad
                         g_indices = ids
 
-                req.gradient.extend(
-                    [
+                req.gradient.append(
                         ndarray_to_tensor(
                             g_values.numpy(),
                             layer.name,
                             tuple(g_indices.numpy()),
                         )
-                    ]
                 )
 
         req.model_version = self._model_version
@@ -286,7 +282,7 @@ class Worker(object):
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         for name, output in model_outputs.items():
             output = np.concatenate(output)
-            req.model_outputs.extend([ndarray_to_tensor(output, name)])
+            req.model_outputs.append(ndarray_to_tensor(output, name))
         labels = np.concatenate(labels)
         req.labels.CopyFrom(ndarray_to_tensor(labels))
         req.model_version = self._model_version
