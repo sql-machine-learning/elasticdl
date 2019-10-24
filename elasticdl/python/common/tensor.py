@@ -25,7 +25,7 @@ def serialize_tensor(tensor, tensor_pb):
 
 
 def deserialize_tensor_pb(tensor_pb, tensor):
-    """Create an Tensor instance from Tensor proto message.
+    """Create a Tensor instance from Tensor proto message.
 
     Note: upon return, the input tensor message is reset and underlying buffer
     passed to the returned ndarray.
@@ -64,9 +64,9 @@ class Tensor(object):
     def __init__(self, values=None, indices=None, name=None):
         """
         `Tensor` can save dense tensors and sparse tensors.
-        To save dense tensors, `values` should be `numpy.ndarray` and `indices`
-            should be None.
-        There are two ways to save sparse tensors:
+        To pass in a dense tensor, `values` should be `numpy.ndarray` and
+            `indices` should be None.
+        There are two ways to pass in a sparse tensor:
             * `values` is a `numpy.ndarray` and `indices` is a `numpy.ndarray`.
             * `values` is a `TensorFlow.IndexedSlices` and `indices` is None.
 
@@ -74,7 +74,8 @@ class Tensor(object):
             values: A `numpy.ndarray` or `TensorFlow.IndexedSlices`.
                 If `values` is a `TensorFlow.IndexedSlices`, `indices` should
                 be None.
-            indices: `indices` of `TensorFlow`
+            indices: A `numpy.ndarray` or None.
+            name: A python string.
         """
         self.set(values, indices, name)
 
