@@ -94,9 +94,9 @@ class ParametersTest(unittest.TestCase):
             self.embedding_table_name, [100]
         )
         row1 = self.params.get_embedding_param(self.embedding_table_name, [34])
-        row4 = self.params.get_embedding_param(self.embedding_table_name, [8])
+        row2 = self.params.get_embedding_param(self.embedding_table_name, [8])
 
-        rows = [row0, row1, row4]
+        rows = [row0, row1, row2]
         rows = np.concatenate(rows)
         np.testing.assert_array_equal(rows, values)
 
