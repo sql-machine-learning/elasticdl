@@ -1,12 +1,23 @@
 # Design for Allreduce Support
 
+This document describes the design for supporting Allreduce in ElasticDL. Note that this is still a work-in-progress.
+
 ## Existing Collective Communication Technologies
 
 The following three libraries provide collective communications and all of them have been adopted by large projects:
 
+* [MPI](https://www.mpi-forum.org/)
 * [Gloo](https://github.com/facebookincubator/gloo/)
 * [NCCL](https://github.com/NVIDIA/nccl)
 * [Rabit](https://github.com/dmlc/rabit)
+
+### MPI
+
+Message Passing Interface (MPI) is a standardized and portable message-passing standard designed by a group of researchers
+from academia and industry to function on a wide variety of parallel computing architectures.
+
+There are several well-tested and efficient implementations of MPI, such as [MPICH](https://www.mpich.org/about/overview/)
+and [Open MPI](https://www.open-mpi.org/). However, these implementations of MPI do not support fault tolerance.
 
 ### Gloo
 
@@ -22,7 +33,7 @@ Gloo does not support fault tolerance but supports both GPUs and CPUs for at lea
 
 ### NCCL
 
-NCCL (NVIDIA Collective Communications Library) is a library of multi-GPU collective communication primitives that are topology-aware and
+NVIDIA Collective Communications Library (NCCL) is a library of multi-GPU collective communication primitives that are topology-aware and
 can be easily integrated into applications. It has been adopted by both [TensorFlow](https://github.com/tensorflow/tensorflow/) and [PyTorch](https://github.com/pytorch/pytorch).
 
 NCCL focuses on accelerating collective communication primitives. For example, NCCL conveniently removes
@@ -59,6 +70,8 @@ resources, then the whole Rabit process will be stuck. The network topology that
 instead of being modified based on the number of available workers. In other words, the fault tolerance of Rabit cannot
 support elastic scheduling.
 
-In addition, Rabit only supports TCP networking but not others like RDMA and InfiniBand. Though tt provides an interface
+Rabit supports many networking options through its [MPI support](https://github.com/dmlc/rabit/blob/master/src/engine_mpi.cc)
+which is not fault tolerant given that the implementation is based on MPI. If fault tolerance is enabled through Rabit's [robust implementation](https://github.com/dmlc/rabit/blob/master/src/allreduce_robust.cc),
+Rabit only supports TCP networking but not others like RDMA and InfiniBand. Though it provides an interface
 so developers can write implementations based on other frameworks such as NCCL and Gloo that provide additional networking
 options. There's an ongoing work for Gloo implementation in Rabit [here](https://github.com/dmlc/rabit/pull/113).
