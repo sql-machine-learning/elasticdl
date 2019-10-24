@@ -43,12 +43,18 @@ class Client(object):
             event_callback: If not None, an event watcher will be created and
                 events passed to the callback.
         """
-        if os.getenv("KUBERNETES_SERVICE_HOST"):
-            # We are running inside k8s
-            config.load_incluster_config()
-        else:
-            # Use user's kube config
-            config.load_kube_config()
+        try:
+            if os.getenv("KUBERNETES_SERVICE_HOST"):
+                # We are running inside a k8s cluster
+                config.load_incluster_config()
+            else:
+                # Use user's kube config
+                config.load_kube_config()
+        except Exception as ex:
+            traceback.print_exc()
+            raise Exception(
+                "Failed to load configuration for Kubernetes:\n%s" % str(ex)
+            )
 
         self.client = client.CoreV1Api()
         self.namespace = namespace

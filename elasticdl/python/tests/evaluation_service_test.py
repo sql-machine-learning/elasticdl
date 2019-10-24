@@ -62,11 +62,12 @@ class EvaluationServiceTest(unittest.TestCase):
 
         # Start to report metrics
         evaluation_version = job.model_version + 1
-        model_outputs = {
-            MetricsDictKey.MODEL_OUTPUT: ndarray_to_tensor(
-                np.array([[1], [6], [3]], dtype=np.float32)
+        model_outputs = [
+            ndarray_to_tensor(
+                np.array([[1], [6], [3]], dtype=np.float32),
+                MetricsDictKey.MODEL_OUTPUT,
             )
-        }
+        ]
         labels = ndarray_to_tensor(np.array([[1], [0], [3]], dtype=np.float32))
         self.assertFalse(
             job.report_evaluation_metrics(
@@ -83,11 +84,12 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertTrue(
             job.report_evaluation_metrics(
                 evaluation_version,
-                {
-                    MetricsDictKey.MODEL_OUTPUT: ndarray_to_tensor(
-                        np.array([[4], [5], [6], [7], [8]], dtype=np.float32)
+                [
+                    ndarray_to_tensor(
+                        np.array([[4], [5], [6], [7], [8]], dtype=np.float32),
+                        MetricsDictKey.MODEL_OUTPUT,
                     )
-                },
+                ],
                 ndarray_to_tensor(
                     np.array([[7], [8], [9], [10], [11]], dtype=np.float32)
                 ),
@@ -126,11 +128,12 @@ class EvaluationServiceTest(unittest.TestCase):
                 False,
                 _eval_metrics_fn,
             )
-            model_outputs = {
-                MetricsDictKey.MODEL_OUTPUT: ndarray_to_tensor(
-                    np.array([1, 6, 3], dtype=np.float32)
+            model_outputs = [
+                ndarray_to_tensor(
+                    np.array([1, 6, 3], dtype=np.float32),
+                    MetricsDictKey.MODEL_OUTPUT,
                 )
-            }
+            ]
             labels = ndarray_to_tensor(np.array([1, 0, 3], dtype=np.float32))
 
             self.assertFalse(

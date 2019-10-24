@@ -78,11 +78,12 @@ class _EvaluationJob(object):
             )
             return False
         labels = tensor_to_ndarray(labels)
-        for key, tensor in model_outputs.items():
+        for tensor_pb in model_outputs:
+            key = tensor_pb.name
             metrics = self._metrics_dict.get(key, {})
             if not metrics:
                 continue
-            outputs = tensor_to_ndarray(tensor)
+            outputs = tensor_to_ndarray(tensor_pb)
             for metric_inst in metrics.values():
                 metric_inst.update_state(labels, outputs)
         return True
