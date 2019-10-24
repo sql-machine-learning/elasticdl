@@ -62,6 +62,12 @@ message Tensor {
     TensorDtype dtype = 5;
 }
 
+message EmbeddingTableInfo {
+    string name = 1;
+    int64 dim = 2;
+    string initializer = 3;
+}
+
 message Model {
     int32 version = 1;
     repeated Tensor param = 2;
