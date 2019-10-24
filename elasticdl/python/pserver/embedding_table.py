@@ -29,7 +29,7 @@ class EmbeddingTable(object):
             value = self.embedding_vectors.get(i, None)
             if value is None:
                 init = tf.keras.initializers.get(self.initializer)
-                value = init(shape=self.dim).numpy()
+                value = init(shape=(self.dim,)).numpy()
                 self.embedding_vectors[i] = value
             values.append(value)
         return np.stack(values)
@@ -46,6 +46,6 @@ class EmbeddingTable(object):
 
 def create_embedding_table(embedding_table_info_pb):
     name = embedding_table_info_pb.name
-    dim = tuple(embedding_table_info_pb.dim)
+    dim = embedding_table_info_pb.dim
     initializer = embedding_table_info_pb.initializer
     return EmbeddingTable(name, dim, initializer)

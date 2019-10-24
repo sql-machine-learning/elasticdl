@@ -12,14 +12,14 @@ from elasticdl.python.pserver.embedding_table import (
 class EmbeddingTableTest(unittest.TestCase):
     def setUp(self):
         self.name = "embedding_1"
-        self.dim = (10,)
+        self.dim = 10
         self.initializer = "uniform"
         self.table = EmbeddingTable(self.name, self.dim, self.initializer)
 
     def test_embedding_table_init(self):
         self.assertIsNotNone(self.table)
         self.assertEqual(self.table.name, self.name)
-        self.assertTupleEqual(self.table.dim, self.dim)
+        self.assertEqual(self.table.dim, self.dim)
         self.assertEqual(self.table.initializer, self.initializer)
 
     def test_embedding_table_get(self):
@@ -39,7 +39,7 @@ class EmbeddingTableTest(unittest.TestCase):
         indices = [0, 1, 4]
         x = len(indices)
         values = np.random.uniform(size=x * np.prod(self.dim)).reshape(
-            (x,) + self.dim
+            (x, self.dim)
         )
         self.table.set(indices, values)
 
@@ -54,10 +54,10 @@ class EmbeddingTableTest(unittest.TestCase):
     def test_create_embedding_table(self):
         embedding_pb = EmbeddingTableInfo()
         embedding_pb.name = self.name
-        embedding_pb.dim.extend(self.dim)
+        embedding_pb.dim = self.dim
         embedding_pb.initializer = self.initializer
         table = create_embedding_table(embedding_pb)
         self.assertIsNotNone(table)
         self.assertEqual(table.name, self.name)
         self.assertEqual(table.initializer, self.initializer)
-        self.assertTupleEqual(table.dim, self.dim)
+        self.assertEqual(table.dim, self.dim)

@@ -61,7 +61,7 @@ message Tensor {
 
 message EmbeddingTableInfo {
     string name = 1;
-    repeated int64 dim = 2;
+    int64 dim = 2;
     string initializer = 3;
 }
 
