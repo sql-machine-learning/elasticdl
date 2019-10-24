@@ -47,8 +47,8 @@ Generally, deep learning frameworks preserve model as checkpoint every many seco
 1. The master launches additional pods as evaluation PS.\
 When an evaluation job starts, the master will launch additional pods as evaluation PS and evaluation PS will load the model from checkpoint.The worker gets a model from evaluation PS to inference model outputs for evaluation tasks and reports outputs to master.The master will release those pods after receiving all outputs of evaluation tasks from the worker. In this case, evaluation is separated from train. So, some workers can process evaluation tasks and other workers can process train tasks at the same time. But more additional pods are needed. What's more, the master can launch a new evaluation-only ElasticDL job to evaluate checkpoint model. The new job has independent master, workers and PS separated from training job.
 
-2. The existing PS stop training tasks and load model from checkpoint to evaluate.\
-When an evaluation job starts, the PS save the current model to the temporary file and load model from the last checkpoint. After evaluation, PS will restore the model from temporary file preserved and continue to train. The design of PS will be very complicated in this case. What's more, some workers may be reporting gradients when the master change model to evaluation for PS and PS can not update model by those gradients at this moment. So, this method may be not good choice for high cost.
+2. The existing PS stops training tasks and loads model from a checkpoint to evaluate.\
+When an evaluation job starts, the PS saves the current model to the temporary file and loads model from the last checkpoint. After evaluation, PS will restore the model from temporary file preserved and continue to train. The design of PS will be very complicated in this case. What's more, some workers may be reporting gradients when the master change model to evaluation for PS and PS can not update model by those gradients at this moment. So, this method may be not good choice for high cost.
 
 
 ### Summary :
