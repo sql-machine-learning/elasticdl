@@ -3,29 +3,35 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from elasticdl.proto.elasticdl_pb2 import EmbeddingTableInfo
+from elasticdl.proto.elasticdl_pb2 import EmbeddingTableInfo, Model
+from elasticdl.python.common.ndarray import ndarray_to_tensor
 from elasticdl.python.ps.parameters import Parameters
 
 
 class ParametersTest(unittest.TestCase):
     def setUp(self):
         self.params = Parameters()
+
+        self.model_pb = Model()
+        self.tensors_pb = self.model_pb.param
+        self.embeddings_pb = self.model_pb.embedding_table_info
+
+        arr1 = np.random.uniform(size=(3, 4))
+        tensor1_pb = ndarray_to_tensor(arr1, "x")
+        arr2 = np.random.uniform(size=(4, 5))
+        tensor2_pb = ndarray_to_tensor(arr2, "y")
+        self.tensors_pb.extend([tensor1_pb, tensor2_pb])
+
         self.embedding_table_name = "embedding_1"
         self.embedding_dim = 10
-        self.embedding_table_info_pb = EmbeddingTableInfo()
-        self.embedding_table_info_pb.name = self.embedding_table_name
-        self.embedding_table_info_pb.dim = self.embedding_dim
-        self.embedding_table_info_pb.initializer = "uniform"
+        embedding_pb = EmbeddingTableInfo()
+        embedding_pb.name = self.embedding_table_name
+        embedding_pb.dim = self.embedding_dim
+        embedding_pb.initializer = "uniform"
 
-    def test_init(self):
-        # TODO(qijun) waiting for Tensor/Model proto message definition
-        pass
+        self.embeddings_pb.append(embedding_pb)
 
-    def test_get_embedding_param(self):
-        self.params.clear()
-
-        self.params._init_embedding_param(self.embedding_table_info_pb)
-
+    def _test_get_embedding_param(self):
         indices = [0, 3, 7]
 
         res = self.params.get_embedding_param(
@@ -39,9 +45,42 @@ class ParametersTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.params.get_embedding_param("tom", indices)
 
+    def test_init_from_model_pb(self):
+        self.params.clear()
+        self.params.init_from_model_pb(self.model_pb)
+
+        res = self.params.get_non_embedding_params()
+        self.assertTrue("x" in res)
+        self.assertTrue("y" in res)
+        self.assertTrue(res["x"].trainable)
+        self.assertTupleEqual(tuple(res["y"].shape.as_list()), (4, 5))
+
+        self._test_get_embedding_param()
+
+    def test_non_embedding_params(self):
+        self.params.clear()
+
+        res = self.params.get_non_embedding_params()
+        self.assertFalse(any(res))
+
+        variables = {
+            "x": tf.Variable(1, name="x"),
+            "y": tf.Variable(2, name="y"),
+        }
+
+        self.params.set_non_embedding_params(variables)
+        res = self.params.get_non_embedding_params()
+        self.assertTrue("x" in res)
+        self.assertTrue("y" in res)
+
+    def test_get_embedding_param(self):
+        self.params.clear()
+        self.params._init_embedding_params(self.embeddings_pb)
+        self._test_get_embedding_param()
+
     def test_set_embedding_param(self):
         self.params.clear()
-        self.params._init_embedding_param(self.embedding_table_info_pb)
+        self.params._init_embedding_params(self.embeddings_pb)
         indices = [100, 34, 8]
         x = len(indices)
         values = np.random.uniform(size=x * self.embedding_dim).reshape(
@@ -64,19 +103,3 @@ class ParametersTest(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.params.set_embedding_param("tom", [0, 1, 2], values)
-
-    def test_non_embedding_params(self):
-        self.params.clear()
-
-        res = self.params.get_non_embedding_params()
-        self.assertFalse(any(res))
-
-        variables = {
-            "x": tf.Variable(1, name="x"),
-            "y": tf.Variable(2, name="y"),
-        }
-
-        self.params.set_non_embedding_params(variables)
-        res = self.params.get_non_embedding_params()
-        self.assertTrue("x" in res)
-        self.assertTrue("y" in res)

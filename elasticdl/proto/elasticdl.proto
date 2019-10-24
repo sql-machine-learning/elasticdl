@@ -71,6 +71,7 @@ message EmbeddingTableInfo {
 message Model {
     int32 version = 1;
     repeated Tensor param = 2;
+    repeated EmbeddingTableInfo embedding_table_info = 3;
 }
 
 message GetTaskRequest {

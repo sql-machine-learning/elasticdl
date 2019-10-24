@@ -1,3 +1,6 @@
+import tensorflow as tf
+
+from elasticdl.python.common.ndarray import tensor_to_ndarray
 from elasticdl.python.ps.embedding_table import create_embedding_table
 
 
@@ -6,6 +9,12 @@ class Parameters(object):
         self.init_status = False
         self.non_embedding_params = {}
         self.embedding_params = {}
+
+    def get_non_embedding_params(self):
+        return self.non_embedding_params
+
+    def set_non_embedding_params(self, variables):
+        self.non_embedding_params = variables
 
     def get_embedding_param(self, name, indices):
         if name not in self.embedding_params:
@@ -21,23 +30,25 @@ class Parameters(object):
             )
         self.embedding_params[name].set(indices, values)
 
-    def set_non_embedding_params(self, variables):
-        self.non_embedding_params = variables
-
-    def get_non_embedding_params(self):
-        return self.non_embedding_params
-
     def init_from_model_pb(self, model_pb):
-        # TODO(qijun) waiting for Tensor/Model proto message definition
-        pass
+        if not self.init_status:
+            tensors_pb = model_pb.param
+            embeddings_pb = model_pb.embedding_table_info
+            self._init_non_embedding_params(tensors_pb)
+            self._init_embedding_params(embeddings_pb)
+            self.init_status = True
 
-    def _init_non_embedding_param(self, variables_pb):
-        # TODO(qijun) waiting for Tensor/Model proto message definition
-        pass
+    def _init_non_embedding_params(self, tensors_pb):
+        for pb in tensors_pb:
+            name = pb.name
+            arr = tensor_to_ndarray(pb)
+            var = tf.Variable(name=name, initial_value=arr, trainable=True)
+            self.non_embedding_params[name] = var
 
-    def _init_embedding_param(self, embedding_table_info):
-        table = create_embedding_table(embedding_table_info)
-        self.embedding_params[table.name] = table
+    def _init_embedding_params(self, embeddings_pb):
+        for pb in embeddings_pb:
+            table = create_embedding_table(pb)
+            self.embedding_params[table.name] = table
 
     def clear(self):
         self.non_embedding_params.clear()
