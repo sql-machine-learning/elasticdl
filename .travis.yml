@@ -72,7 +72,6 @@ jobs:
 branches:
   only:
   - develop
-  - gml/master-func-refactor
   - "/branch-\\d+\\.\\d+(\\.\\d+)?(-\\S*)?$/"
 
 env:
