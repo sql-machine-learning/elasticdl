@@ -123,10 +123,9 @@ class Master(object):
         self.worker_manager = self._create_worker_manager(args)
 
     def prepare(self):
-        '''
-        Start the components one by one.
-        Make sure that the entire cluster is ready to run.
-        '''
+        """
+        Start the components one by one. Make sure that it is ready to run.
+        """
         # Start the evaluation service if requested
         if self.evaluation_service:
             self.logger.info("Starting evaluation service")
@@ -152,10 +151,10 @@ class Master(object):
             self.logger.info("Tensorboard service started")
 
     def run(self):
-        '''
+        """
         The main loop of master.
         Dispatch the tasks to the workers until all the tasks are completed.
-        '''
+        """
         try:
             while True:
                 if self.task_d.finished():
@@ -171,14 +170,14 @@ class Master(object):
                 time.sleep(30)
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")
-
-        self._stop()
+        finally:
+            self._stop()
 
     def _stop(self):
-        '''
+        """
         Stop all the components.
-        Make sure that the entire cluster is shut down.
-        '''
+        Make sure that the created services and components are shut down.
+        """
         self.logger.info("Stopping master")
 
         if self.evaluation_service:
@@ -239,7 +238,7 @@ class Master(object):
         tb_service = None
         if tensorboard_log_dir:
             self.logger.info(
-                "Create TensorBoard service with log directory %s",
+                "Creating TensorBoard service with log directory %s",
                 tensorboard_log_dir,
             )
             # Start TensorBoard CLI
@@ -253,7 +252,7 @@ class Master(object):
             args.checkpoint_steps
             or self.job_type == JobType.TRAINING_WITH_EVALUATION
         ):
-            self.logger.info("Create checkpoint service")
+            self.logger.info("Creating checkpoint service")
             checkpoint_service = CheckpointService(
                 args.checkpoint_dir,
                 args.checkpoint_steps,
@@ -270,7 +269,7 @@ class Master(object):
             or self.job_type == JobType.EVALUATION_ONLY
         ):
             self.logger.info(
-                "Create evaluation service with throttle seconds %d "
+                "Creating evaluation service with throttle seconds %d "
                 " and evaluation steps %d",
                 args.evaluation_throttle_secs,
                 args.evaluation_steps,
@@ -321,8 +320,7 @@ class Master(object):
         return endpoint, embedding_dims
 
     def _create_master_service(self, args):
-        # The master service
-        self.logger.info("Create master service")
+        self.logger.info("Creating master service")
         server = grpc.server(
             futures.ThreadPoolExecutor(max_workers=64),
             options=[
