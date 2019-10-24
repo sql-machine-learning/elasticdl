@@ -68,7 +68,7 @@ def generate_train_model_for_elasticdl(model, distribute_strategy):
     else:
         return model
 
-def replace_keras_embedding_with_edl_embedding(model)
+def replace_keras_embedding_with_edl_embedding(model):
     # replace the embedding layer for Sequential and functional API models
     if isinstance(model, tf.keras.Sequential) or model._is_graph_network:
         def _clone_function(layer):
