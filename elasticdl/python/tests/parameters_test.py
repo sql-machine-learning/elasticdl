@@ -49,7 +49,7 @@ class ParametersTest(unittest.TestCase):
         self.params.clear()
         self.params.init_from_model_pb(self.model_pb)
 
-        res = self.params.get_non_embedding_params()
+        res = self.params.non_embedding_params
         self.assertTrue("x" in res)
         self.assertTrue("y" in res)
         self.assertTrue(res["x"].trainable)
@@ -60,7 +60,7 @@ class ParametersTest(unittest.TestCase):
     def test_non_embedding_params(self):
         self.params.clear()
 
-        res = self.params.get_non_embedding_params()
+        res = self.params.non_embedding_params
         self.assertFalse(any(res))
 
         variables = {
@@ -68,10 +68,9 @@ class ParametersTest(unittest.TestCase):
             "y": tf.Variable(2, name="y"),
         }
 
-        self.params.set_non_embedding_params(variables)
-        res = self.params.get_non_embedding_params()
-        self.assertTrue("x" in res)
-        self.assertTrue("y" in res)
+        self.params.non_embedding_params = variables
+        self.assertTrue("x" in self.params.non_embedding_params)
+        self.assertTrue("y" in self.params.non_embedding_params)
 
     def test_get_embedding_param(self):
         self.params.clear()

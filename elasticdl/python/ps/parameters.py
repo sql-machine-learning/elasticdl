@@ -10,12 +10,6 @@ class Parameters(object):
         self.non_embedding_params = {}
         self.embedding_params = {}
 
-    def get_non_embedding_params(self):
-        return self.non_embedding_params
-
-    def set_non_embedding_params(self, variables):
-        self.non_embedding_params = variables
-
     def get_embedding_param(self, name, indices):
         if name not in self.embedding_params:
             raise ValueError(
