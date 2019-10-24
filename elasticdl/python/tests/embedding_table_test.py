@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from elasticdl.proto.elasticdl_pb2 import EmbeddingTableInfo
-from elasticdl.python.pserver.embedding_table import (
+from elasticdl.python.ps.embedding_table import (
     EmbeddingTable,
     create_embedding_table,
 )
