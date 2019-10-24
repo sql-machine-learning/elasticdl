@@ -39,6 +39,13 @@ class ConverterTest(unittest.TestCase):
         self.assertEqual([2, 1, 3, 4], t.dim)
         self.assertEqual(4 * 2 * 1 * 3 * 4, len(t.content))
 
+        # test name argument
+        arr = np.ndarray(shape=[2, 1, 3, 4], dtype=np.float32)
+        t = ndarray_to_tensor(arr, name="test")
+        self.assertTrue(t.name == "test")
+        self.assertEqual([2, 1, 3, 4], t.dim)
+        self.assertEqual(4 * 2 * 1 * 3 * 4, len(t.content))
+
     def testtensor_to_ndarray(self):
         t = elasticdl_pb2.Tensor()
         # No dim defined, should raise.
@@ -78,8 +85,10 @@ class ConverterTest(unittest.TestCase):
             arr = tensor_to_ndarray(t)
 
     def testRoundTrip(self):
-        def verify(a):
-            b = tensor_to_ndarray(ndarray_to_tensor(a))
+        def verify(a, name=None):
+            b = tensor_to_ndarray(ndarray_to_tensor(a, name=name))
+            if name:
+                assert name == b.name
             np.testing.assert_array_equal(a, b)
 
         # dtype = np.float32

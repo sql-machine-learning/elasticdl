@@ -88,16 +88,16 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         for var in var_list:
             self.set_model_var(var.name, var.numpy())
 
-    def _init_model_from_tensor_dict(self, tensor_dict):
-        assert tensor_dict
-        for name, val in tensor_dict.items():
-            self.set_model_var(name, tensor_to_ndarray(val))
+    def _init_model_from_tensor_list(self, tensor_list):
+        assert tensor_list
+        for var in tensor_list:
+            self.set_model_var(var.name, tensor_to_ndarray(var))
 
     def _init_model(self, checkpoint_filename_for_init, init_var):
         if checkpoint_filename_for_init:
             pb_model = load_from_checkpoint_file(checkpoint_filename_for_init)
             self._version = pb_model.version
-            self._init_model_from_tensor_dict(pb_model.param)
+            self._init_model_from_tensor_list(pb_model.param)
         elif init_var:
             self._init_model_from_var_list(init_var)
         else:
@@ -262,7 +262,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         pb_model = elasticdl_pb2.Model()
         pb_model.version = self._version
         for k, v in self._model.items():
-            pb_model.param[k].CopyFrom(ndarray_to_tensor(v.numpy()))
+            pb_model.param.append(ndarray_to_tensor(v.numpy(), k))
         return pb_model
 
     def _validate_model_version(self, request_model_version):
@@ -278,7 +278,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def ReportVariable(self, request, _):
         with self._lock:
             if not self._model:
-                self._init_model_from_tensor_dict(request.variable)
+                self._init_model_from_tensor_list(request.variable)
         return empty_pb2.Empty()
 
     def ReportGradient(self, request, _):
@@ -300,47 +300,52 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         indexed_grads = {}
         edl_embedding_gradients = {}
         # Do sanity check before accumulating gradients.
-        for k, v in request.gradient.items():
-            if k not in self._model:
+        for v in request.gradient:
+            name = v.name
+            if name not in self._model:
                 if v.indices:
                     # grads of ElasticDL Embedding layer
                     # TODO: check arr.shape[1] = embedding_dim of this
                     # EdlEmbedding layer
                     arr = tensor_to_ndarray(v)
-                    edl_embedding_gradients[k] = arr
+                    edl_embedding_gradients[name] = arr
                     continue
                 else:
                     raise ValueError(
-                        "Gradient key: %s is not part of model", k
+                        "Gradient key: %s is not part of model", name
                     )
 
             arr = tensor_to_ndarray(v)
             if isinstance(arr, tf.IndexedSlices):
-                if arr.values.shape[1] != self._model[k].numpy().shape[1]:
+                if arr.values.shape[1] != self._model[name].numpy().shape[1]:
                     raise ValueError(
                         "Gradient key: %s has incompatible "
                         "indexed slice dimension %d, expected %d"
                         % (
-                            k,
+                            name,
                             arr.values.shape[1],
-                            self._model[k].numpy().shape[1],
+                            self._model[name].numpy().shape[1],
                         )
                     )
 
                 max_index = tf.math.reduce_max(arr.indices).numpy()
-                if max_index >= self._model[k].numpy().shape[0]:
+                if max_index >= self._model[name].numpy().shape[0]:
                     raise ValueError(
                         "Gradient key: %s has wrong indices %d, "
                         "out of range %d"
-                        % (k, max_index, self._model[k].numpy().shape[0] - 1)
+                        % (
+                            name,
+                            max_index,
+                            self._model[name].numpy().shape[0] - 1,
+                        )
                     )
-                indexed_grads[k] = arr
+                indexed_grads[name] = arr
             else:
-                if arr.shape != self._model[k].numpy().shape:
+                if arr.shape != self._model[name].numpy().shape:
                     raise ValueError(
-                        "Gradient key: %s has incompatible dimension", k
+                        "Gradient key: %s has incompatible dimension", name
                     )
-                tmp[k] = arr
+                tmp[name] = arr
 
         if not self._use_async:
             self._lock.acquire()

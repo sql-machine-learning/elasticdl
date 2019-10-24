@@ -43,25 +43,28 @@ message Task {
 }
 
 message Tensor {
+    // Tensor name
+    string name = 1;
+
     // Dimensions of the tensor. The first entry in "dim" is the outermost
     // dimension used to layout the values, the last entry is the innermost
     // dimension.
-    repeated int32 dim = 1;
+    repeated int32 dim = 2;
 
     // ndarray's buffer dump. Each element must be a 32 bit float value.
-    bytes content = 2;
+    bytes content = 3;
 
     // Indices will be tf.IndexedSlices.indices if the tensor is in the form
     // of tf.IndexedSlices. Ohterwise indices will be None.
-    repeated int32 indices = 3;
+    repeated int32 indices = 4;
 
     // Dtype of the tensor, e.g. "int64", "float32".
-    TensorDtype dtype = 4;
+    TensorDtype dtype = 5;
 }
 
 message Model {
     int32 version = 1;
-    map<string, Tensor> param = 2;
+    repeated Tensor param = 2;
 }
 
 message GetTaskRequest {
@@ -74,7 +77,7 @@ message GetModelRequest {
 }
 
 message ReportVariableRequest {
-    map<string, Tensor> variable = 1;
+    repeated Tensor variable = 1;
 }
 
 message ReportGradientRequest {
@@ -84,7 +87,7 @@ message ReportGradientRequest {
     
     // Model version used to compute gradients.
     int32 model_version = 2;
-    map<string, Tensor> gradient = 3;
+    repeated Tensor gradient = 3;
 }
 
 message ReportGradientResponse {
@@ -112,7 +115,7 @@ message ReportEvaluationMetricsResponse {
 message ReportEvaluationMetricsRequest {
     // Model version used to compute evaluation metrics.
     int32 model_version = 1;
-    map<string, Tensor> model_outputs = 2;
+    repeated Tensor model_outputs = 2;
     Tensor labels = 3;
 }
 
