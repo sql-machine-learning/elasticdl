@@ -88,7 +88,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         for var in var_list:
             self.set_model_var(var.name, var.numpy())
 
-    def _init_model_from_tensor_dict(self, tensor_list):
+    def _init_model_from_tensor_list(self, tensor_list):
         assert tensor_list
         for var in tensor_list:
             self.set_model_var(var.name, tensor_to_ndarray(var))
@@ -97,7 +97,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         if checkpoint_filename_for_init:
             pb_model = load_from_checkpoint_file(checkpoint_filename_for_init)
             self._version = pb_model.version
-            self._init_model_from_tensor_dict(pb_model.param)
+            self._init_model_from_tensor_list(pb_model.param)
         elif init_var:
             self._init_model_from_var_list(init_var)
         else:
@@ -278,7 +278,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def ReportVariable(self, request, _):
         with self._lock:
             if not self._model:
-                self._init_model_from_tensor_dict(request.variable)
+                self._init_model_from_tensor_list(request.variable)
         return empty_pb2.Empty()
 
     def ReportGradient(self, request, _):
