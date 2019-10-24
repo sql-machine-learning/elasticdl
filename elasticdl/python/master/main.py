@@ -5,7 +5,7 @@ from elasticdl.python.master.master import Master
 def main():
     args = parse_master_args()
     master = Master(args)
-    master.start()
+    master.prepare()
     master.run()
 
 

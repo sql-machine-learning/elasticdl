@@ -122,7 +122,11 @@ class Master(object):
         # Initialize worker manager
         self.worker_manager = self._create_worker_manager(args)
 
-    def start(self):
+    def prepare(self):
+        '''
+        Start the components one by one.
+        Make sure that the entire cluster is ready to run.
+        '''
         # Start the evaluation service if requested
         if self.evaluation_service:
             self.logger.info("Starting evaluation service")
@@ -148,6 +152,10 @@ class Master(object):
             self.logger.info("Tensorboard service started")
 
     def run(self):
+        '''
+        The main loop of master.
+        Dispatch the tasks to the workers until all the tasks are completed.
+        '''
         try:
             while True:
                 if self.task_d.finished():
@@ -167,6 +175,10 @@ class Master(object):
         self._stop()
 
     def _stop(self):
+        '''
+        Stop all the components.
+        Make sure that the entire cluster is shut down.
+        '''
         self.logger.info("Stopping master")
 
         if self.evaluation_service:
