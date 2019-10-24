@@ -110,13 +110,10 @@ class Master(object):
         # Initialize evaluation service
         self.evaluation_service = self._create_evaluation_service(args)
 
-        # Search for embedding layers in the model,
-        # if found, initialize embedding service
-        layers = find_layer(self.model_inst, Embedding)
         (
             self.embedding_service_endpoint,
             self.embedding_dims,
-        ) = self._create_embedding_service(layers, args)
+        ) = self._create_embedding_service(args)
 
         # Initialize master service
         self.master_servicer, self.server = self._create_master_service(args)
@@ -279,10 +276,13 @@ class Master(object):
 
         return evaluation_service
 
-    def _create_embedding_service(self, layers, args):
+    def _create_embedding_service(self, args):
         endpoint = None
         embedding_dims = {}
 
+        # Search for embedding layers in the model,
+        # if found, initialize embedding service
+        layers = find_layer(self.model_inst, Embedding)
         if layers:
             embedding_service = EmbeddingService()
             endpoint = embedding_service.start_embedding_service(
