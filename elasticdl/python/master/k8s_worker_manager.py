@@ -84,7 +84,6 @@ class WorkerManager(object):
         )
 
     def start_workers(self):
-        logger.info("Launching %d workers", self._num_workers)
         for i in range(self._num_workers):
             self._start_worker(self._next_worker_id())
 
