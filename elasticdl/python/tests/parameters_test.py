@@ -31,6 +31,10 @@ class ParametersTest(unittest.TestCase):
 
         self.embeddings_pb.append(embedding_pb)
 
+    def _clear_params(self):
+        self.params.non_embedding_params.clear()
+        self.params.embedding_params.clear()
+
     def _test_get_embedding_param(self):
         indices = [0, 3, 7]
 
@@ -46,7 +50,7 @@ class ParametersTest(unittest.TestCase):
             self.params.get_embedding_param("tom", indices)
 
     def test_init_from_model_pb(self):
-        self.params.clear()
+        self._clear_params()
         self.params.init_from_model_pb(self.model_pb)
 
         res = self.params.non_embedding_params
@@ -58,7 +62,7 @@ class ParametersTest(unittest.TestCase):
         self._test_get_embedding_param()
 
     def test_non_embedding_params(self):
-        self.params.clear()
+        self._clear_params()
 
         res = self.params.non_embedding_params
         self.assertFalse(any(res))
@@ -73,12 +77,12 @@ class ParametersTest(unittest.TestCase):
         self.assertTrue("y" in self.params.non_embedding_params)
 
     def test_get_embedding_param(self):
-        self.params.clear()
+        self._clear_params()
         self.params._init_embedding_params(self.embeddings_pb)
         self._test_get_embedding_param()
 
     def test_set_embedding_param(self):
-        self.params.clear()
+        self._clear_params()
         self.params._init_embedding_params(self.embeddings_pb)
         indices = [100, 34, 8]
         x = len(indices)

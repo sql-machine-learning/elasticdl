@@ -5,6 +5,18 @@ from elasticdl.python.ps.embedding_table import create_embedding_table
 
 
 class Parameters(object):
+    """
+    There are two kinds of parameters:
+
+    1. non-embedding parameters, or dense tensor parameters. We save it
+       in a hashmap `non-embedding_params`, the key is the parameter name,
+       the value is a tf.Variable` object.
+    2. embedding parameters, or row-sparse parameters. We save it in a
+       hashmap `embedding_params`, the key is the embedding layer name,
+       the value is an `EmbeddingTable` object.
+
+    """
+
     def __init__(self):
         self.init_status = False
         self.non_embedding_params = {}
@@ -41,9 +53,4 @@ class Parameters(object):
 
     def _init_embedding_params(self, embeddings_pb):
         for pb in embeddings_pb:
-            table = create_embedding_table(pb)
-            self.embedding_params[table.name] = table
-
-    def clear(self):
-        self.non_embedding_params.clear()
-        self.embedding_params.clear()
+            self.embedding_params[pb.name] = create_embedding_table(pb)
