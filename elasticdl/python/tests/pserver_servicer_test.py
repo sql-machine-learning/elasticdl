@@ -5,7 +5,7 @@ import grpc
 import tensorflow as tf
 from google.protobuf import empty_pb2
 
-from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.ps.parameters import Parameters
 from elasticdl.python.ps.servicer import PserverServicer
