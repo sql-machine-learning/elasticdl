@@ -142,3 +142,4 @@ service Pserver {
     rpc pull_embedding_vector(google.protobuf.Empty) returns (google.protobuf.Empty);
     rpc push_model(google.protobuf.Empty) returns (google.protobuf.Empty);
     rpc push_gradient(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
