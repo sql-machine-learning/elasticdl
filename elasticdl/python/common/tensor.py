@@ -27,8 +27,8 @@ def serialize_tensor(tensor, tensor_pb):
 def deserialize_tensor_pb(tensor_pb, tensor):
     """Create a Tensor instance from Tensor proto message.
 
-    Note: upon return, the input tensor message is reset and underlying buffer
-    passed to the returned ndarray.
+    Note that the input tensor message is reset and underlying buffer is passed
+    to the returned ndarray.
     """
 
     if not tensor_pb.dim:
@@ -47,7 +47,7 @@ def deserialize_tensor_pb(tensor_pb, tensor):
         )
     tensor.set(
         np.ndarray(shape=tensor_pb.dim, dtype=dtype, buffer=tensor_pb.content),
-        tensor_pb.indices,
+        np.array(tensor_pb.indices),
         tensor_pb.name,
     )
     tensor_pb.Clear()
@@ -83,8 +83,8 @@ class Tensor(object):
         if isinstance(values, tf.IndexedSlices):
             if indices is not None:
                 raise ValueError(
-                    "When creating a Tensor instance with values of type "
-                    "tf.IndexedSlices, indices should be None."
+                    "When creating a Tensor object with values of type "
+                    "tf.IndexedSlices, indices must be None."
                 )
             self.values = values.values.numpy()
             self.indices = values.indices.numpy()
@@ -98,8 +98,8 @@ class Tensor(object):
     def from_tensor_pb(self, tensor_pb):
         """Parse tensor from Tensor proto message.
 
-        Note: upon return, the input tensor message is reset and underlying
-        buffer passed to the returned ndarray.
+        Note that the input tensor message is reset and underlying buffer is
+        passed to the returned ndarray.
         """
         deserialize_tensor_pb(tensor_pb, self)
 

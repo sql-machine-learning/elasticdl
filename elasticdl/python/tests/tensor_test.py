@@ -147,6 +147,8 @@ class TensorTest(unittest.TestCase):
                 pb.dtype = tensor_dtype_pb2.DT_FLOAT32
                 deserialize_tensor_pb(pb, tensor)
                 self.assertEqual((m, 12 // m), tensor.values.shape)
+                self.assertTrue(isinstance(tensor.values, np.ndarray))
+                self.assertTrue(isinstance(tensor.indices, np.ndarray))
 
     def testRoundTrip(self):
         def verify(values, name=None, indices=None):
@@ -159,7 +161,7 @@ class TensorTest(unittest.TestCase):
             if indices is not None:
                 np.testing.assert_array_equal(indices, tensor_new.indices)
             if name:
-                assert name == tensor.name
+                self.assertEqual(name, tensor.name)
 
         # dtype = np.float32
         # 1-D array
