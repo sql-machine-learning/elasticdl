@@ -52,7 +52,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._lr_staleness_modulation = lr_staleness_modulation
 
         # A <string, tf.ResourceVariable> map. We use tf.ResourceVariable
-        # instead ndarray to avoid copying and conversion when calling
+        # instead of ndarray to avoid copying and conversion when calling
         # optimizer's apply_gradients() function.
         self._model = {}
         self._version = 0
