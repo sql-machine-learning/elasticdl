@@ -45,7 +45,6 @@ def deserialize_tensor_pb(tensor_pb, tensor):
             tensor_pb.dim,
             len(tensor_pb.content),
         )
-    tensor = Tensor()
     tensor.set(
         np.ndarray(shape=tensor_pb.dim, dtype=dtype, buffer=tensor_pb.content),
         tensor_pb.indices,

@@ -42,8 +42,8 @@ class TensorTest(unittest.TestCase):
         tensor_new = Tensor()
         tensor_new.from_tensor_pb(pb)
         self.assertEqual(tensor.name, "test")
-        np.testing.assert_array_equal(tensor.values, arr)
-        np.testing.assert_array_equal(tensor.indices, indices)
+        np.testing.assert_array_equal(tensor_new.values, arr)
+        np.testing.assert_array_equal(tensor_new.indices, indices)
 
     def test_serialize_tensor(self):
         def _ndarray_to_tensor_pb(values, name=None, indices=None):
@@ -146,16 +146,18 @@ class TensorTest(unittest.TestCase):
                     pb.indices.extend([0] * m)
                 pb.dtype = tensor_dtype_pb2.DT_FLOAT32
                 deserialize_tensor_pb(pb, tensor)
+                self.assertEqual((m, 12 // m), tensor.values.shape)
 
     def testRoundTrip(self):
         def verify(values, name=None, indices=None):
             tensor = Tensor(values, indices, name)
             pb = elasticdl_pb2.Tensor()
             serialize_tensor(tensor, pb)
-            deserialize_tensor_pb(pb, tensor)
-            np.testing.assert_array_equal(values, tensor.values)
+            tensor_new = Tensor()
+            deserialize_tensor_pb(pb, tensor_new)
+            np.testing.assert_array_equal(values, tensor_new.values)
             if indices is not None:
-                np.testing.assert_array_equal(indices, tensor.indices)
+                np.testing.assert_array_equal(indices, tensor_new.indices)
             if name:
                 assert name == tensor.name
 
