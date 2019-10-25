@@ -240,6 +240,7 @@ class EmbeddingLayerTest(unittest.TestCase):
         output_dim = 8
         embedding_size = 16
         layer = create_embedding_layer(embedding_size, output_dim)
+        layer.init_for_graph_mode()
         inputs_list = [
             tf.keras.backend.constant([[0, 1, 3], [1, 2, 0]], dtype=tf.int64),
             tf.keras.backend.constant(
@@ -329,6 +330,7 @@ class EmbeddingLayerTest(unittest.TestCase):
             layer = create_embedding_layer(
                 embedding_size, output_dim, combiner=combiner
             )
+            layer.init_for_graph_mode()
             call_fns = [
                 lambda: layer.call(inputs),
                 lambda: module_call(layer, inputs),

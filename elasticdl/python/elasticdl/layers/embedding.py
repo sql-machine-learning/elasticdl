@@ -64,6 +64,9 @@ class Embedding(tf.keras.layers.Layer):
         # `None` dimension. This is because they have different shapes in
         # different iterations.
         # `tf.Variable` requires initial value if shape has `None` dimension.
+        self._embedding_and_ids_graph = []
+
+    def init_for_graph_mode(self):
         self._embedding_and_ids_graph = [
             EmbeddingAndIds(
                 batch_embedding=tf.Variable(
@@ -186,6 +189,17 @@ class Embedding(tf.keras.layers.Layer):
         return batch_embedding
 
     def call(self, input):
+        if (
+            self.tape
+            and not tf.executing_eagerly()
+            and not self._embedding_and_ids_graph
+        ):
+            raise RuntimeError(
+                "Call `init_for_graph_mode` for each ElasticDL embedding"
+                "layer before training model in graph mode.(i.e. under"
+                "tf.function decorator)"
+            )
+
         if isinstance(input, tf.SparseTensor):
             return self._sparse_input_call(input)
 
