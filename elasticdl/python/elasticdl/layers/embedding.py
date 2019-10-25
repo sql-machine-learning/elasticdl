@@ -186,6 +186,7 @@ class Embedding(tf.keras.layers.Layer):
         return batch_embedding
 
     def call(self, input):
+        input = tf.cast(input, tf.int64)
         if isinstance(input, tf.SparseTensor):
             return self._sparse_input_call(input)
 
