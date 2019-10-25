@@ -90,7 +90,7 @@ class CheckWorkerModelCallback(BaseCallback):
                 "from the number of `_model` variables in master %d."
                 % (worker_var_n, master_var_n)
             )
-        for var in self._worker._non_embed_vars:
+        for var in self._worker._non_embed_vars.values():
             if not np.isclose(
                 var.numpy(), self._master._model[var.name].numpy()
             ).all():
