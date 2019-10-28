@@ -102,7 +102,8 @@ class ParameterServerModelHandler(ModelHander):
 
     def _replace_embedding_attribute_for_subclass(self, model):
         """
-        Replace the keras embedding attribute with elasticdl.layers.Embedding layer.
+        Replace the keras embedding attribute with
+        elasticdl.layers.Embedding layer.
         """
         for attr_name, attr_value in model.__dict__.items():
             if type(attr_value) == tf.keras.layers.Embedding:
