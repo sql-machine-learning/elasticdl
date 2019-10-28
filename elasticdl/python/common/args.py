@@ -446,7 +446,7 @@ def add_common_args_between_master_and_worker(parser):
         "--get_model_steps",
         type=int,
         default=1,
-        help="Worker will get_model from PS every these steps.",
+        help="Worker will get_model from PS every this many steps",
     )
     parser.add_argument(
         "--data_reader_params",
