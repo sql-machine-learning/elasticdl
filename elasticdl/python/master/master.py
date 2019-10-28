@@ -100,7 +100,6 @@ class Master(object):
         self.model_module = load_module(
             get_module_file_path(args.model_zoo, args.model_def)
         ).__dict__
-
         self.model_inst = load_model_from_module(
             args.model_def, self.model_module, args.model_params
         )
