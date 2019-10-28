@@ -20,14 +20,6 @@ def custom_model_with_embedding():
     return Model(inputs, outputs)
 
 
-def feature_columns_fn():
-    age = tf.feature_column.numeric_column("age", dtype=tf.int64)
-    education = tf.feature_column.categorical_column_with_hash_bucket(
-        'education', hash_bucket_size=4)
-    education_one_hot = tf.feature_column.indicator_column(education)
-    return [age, education_one_hot]
-
-
 def custom_sequential_model(feature_columns):
     model = tf.keras.Sequential([
         tf.keras.layers.DenseFeatures(feature_columns=feature_columns),
@@ -35,6 +27,14 @@ def custom_sequential_model(feature_columns):
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
     return model
+
+
+def feature_columns_fn():
+    age = tf.feature_column.numeric_column("age", dtype=tf.int64)
+    education = tf.feature_column.categorical_column_with_hash_bucket(
+        'education', hash_bucket_size=4)
+    education_one_hot = tf.feature_column.indicator_column(education)
+    return [age, education_one_hot]
 
 
 def loss(predictions, labels):
