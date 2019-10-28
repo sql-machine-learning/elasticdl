@@ -37,6 +37,7 @@ def main():
         model_params=args.model_params,
         data_reader_params=args.data_reader_params,
         get_model_steps=args.get_model_steps,
+        distributed_strategy=args.distributed_strategy,
     )
     worker.run()
 

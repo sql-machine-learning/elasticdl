@@ -24,6 +24,7 @@ from elasticdl.python.common.model_utils import (
     load_model_from_module,
     load_module,
 )
+from elasticdl.python.common.model_handler import ModelHander
 from elasticdl.python.data.data_reader import create_data_reader
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
@@ -100,6 +101,9 @@ def main():
     model_inst = load_model_from_module(
         args.model_def, model_module, args.model_params
     )
+    model_handler = ModelHander.get_model_handler(args.distributed_strategy)
+    model_inst = model_handler.generate_train_model_for_elasticdl(model_inst)
+
     optimizer = model_module[args.optimizer]()
 
     if all(

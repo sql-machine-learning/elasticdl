@@ -12,6 +12,7 @@ from elasticdl.python.common.model_utils import (
     get_model_spec,
     get_non_embedding_trainable_vars,
 )
+from elasticdl.python.common.model_handler import ModelHander
 from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,
@@ -45,6 +46,7 @@ class Worker(object):
         prediction_outputs_processor="PredictionOutputsProcessor",
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
         get_model_steps=1,
+        distributed_strategy=None,
     ):
         """
         Arguments:
@@ -97,6 +99,11 @@ class Worker(object):
             model_params=model_params,
             prediction_outputs_processor=prediction_outputs_processor,
         )
+        model_handler = ModelHander.get_model_handler(distributed_strategy)
+        model_inst = model_handler.generate_train_model_for_elasticdl(
+            model_inst
+        )
+
         self._embedding_service_endpoint = embedding_service_endpoint
         self.set_model(model_inst)
 
@@ -181,9 +188,10 @@ class Worker(object):
 
         # Assumes all trainable variables exist in model.param.
         for tensor_pb in model.param:
-            self._non_embed_vars[tensor_pb.name].assign(
-                tensor_to_ndarray(tensor_pb)
-            )
+            if tensor_pb.name in self._non_embed_vars:
+                self._non_embed_vars[tensor_pb.name].assign(
+                    tensor_to_ndarray(tensor_pb)
+                )
         self._model_version = model.version
 
     def report_task_result(self, task_id, err_msg):
