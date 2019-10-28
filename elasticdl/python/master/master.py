@@ -23,6 +23,7 @@ from elasticdl.python.common.model_utils import (
     load_model_from_module,
     load_module,
 )
+from elasticdl.python.common.model_handler import ModelHander
 from elasticdl.python.data.data_reader import create_data_reader
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
@@ -99,9 +100,14 @@ class Master(object):
         self.model_module = load_module(
             get_module_file_path(args.model_zoo, args.model_def)
         ).__dict__
+
         self.model_inst = load_model_from_module(
             args.model_def, self.model_module, args.model_params
         )
+        model_handler = ModelHander.get_model_handler(
+            args.distributed_strategy)
+        self.model_inst = model_handler.generate_train_model_for_elasticdl(
+            self.model_inst)
         self.optimizer = self.model_module[args.optimizer]()
 
         # Initialize checkpoint service
