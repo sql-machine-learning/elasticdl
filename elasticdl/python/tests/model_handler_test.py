@@ -52,7 +52,7 @@ class DefaultModelHanderTest(unittest.TestCase):
 class ParameterSeverModelHandlerTest(unittest.TestCase):
     def setUp(self):
         self.model_handler = ModelHander.get_model_handler(
-            distributed_strategy="ParameterServerStrategy"
+            distribution_strategy="ParameterServerStrategy"
         )
 
     def test_generate_train_model_for_elasticdl(self):

@@ -46,7 +46,7 @@ class Worker(object):
         prediction_outputs_processor="PredictionOutputsProcessor",
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
         get_model_steps=1,
-        distributed_strategy=None,
+        distribution_strategy=None,
     ):
         """
         Arguments:
@@ -99,7 +99,7 @@ class Worker(object):
             model_params=model_params,
             prediction_outputs_processor=prediction_outputs_processor,
         )
-        model_handler = ModelHander.get_model_handler(distributed_strategy)
+        model_handler = ModelHander.get_model_handler(distribution_strategy)
         model_inst = model_handler.generate_train_model_for_elasticdl(
             model_inst
         )

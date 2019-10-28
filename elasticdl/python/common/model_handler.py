@@ -25,12 +25,12 @@ class ModelHander(metaclass=abc.ABCMeta):
         pass
 
     @classmethod
-    def get_model_handler(cls, distributed_strategy=None):
+    def get_model_handler(cls, distribution_strategy=None):
         """
         Create a model handler to process the model for the
         distributed strategy.
         """
-        if distributed_strategy == "ParameterServerStrategy":
+        if distribution_strategy == "ParameterServerStrategy":
             return ParameterServerModelHandler()
         else:
             return DefaultModelHandler()

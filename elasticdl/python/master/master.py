@@ -104,7 +104,7 @@ class Master(object):
             args.model_def, self.model_module, args.model_params
         )
         model_handler = ModelHander.get_model_handler(
-            args.distributed_strategy)
+            args.distribution_strategy)
         self.model_inst = model_handler.generate_train_model_for_elasticdl(
             self.model_inst)
         self.optimizer = self.model_module[args.optimizer]()
