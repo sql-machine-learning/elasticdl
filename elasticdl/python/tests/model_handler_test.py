@@ -45,8 +45,7 @@ class DefaultModelHanderTest(unittest.TestCase):
             model_inst, dataset)
         self.assertEqual(list(model_inst.inputs.keys()), [
                          'age', 'education'])
-        self.assertEqual(
-            model_inst.outputs[0].name, "sequential/Identity:0")
+        self.assertEqual(len(model_inst.outputs), 1)
 
 
 class ParameterSeverModelHandlerTest(unittest.TestCase):
