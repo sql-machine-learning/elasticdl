@@ -12,14 +12,28 @@ from elasticdl.python.ps.servicer import PserverServicer
 
 
 class PserverServicerTest(unittest.TestCase):
-    @staticmethod
+    def setUp(self):
+        self._port = 9999
+
+        addr = "localhost:%d" % self._port
+        self._channel = grpc.insecure_channel(
+            addr,
+            options=[
+                ("grpc.max_send_message_length", GRPC.MAX_SEND_MESSAGE_LENGTH),
+                (
+                    "grpc.max_receive_message_length",
+                    GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
+                ),
+            ],
+        )
+
     def create_server(
+        self,
         parameters,
         grads_to_wait,
         optimizer,
         lr_staleness_modulation,
         use_async,
-        port,
     ):
         server = grpc.server(
             futures.ThreadPoolExecutor(max_workers=64),
@@ -43,23 +57,11 @@ class PserverServicerTest(unittest.TestCase):
         elasticdl_pb2_grpc.add_PserverServicer_to_server(
             pserver_servicer, server
         )
-        server.add_insecure_port("[::]:{}".format(port))
+        server.add_insecure_port("[::]:{}".format(self._port))
         return server
 
-    @staticmethod
-    def create_stub(port):
-        addr = "localhost:%d" % port
-        channel = grpc.insecure_channel(
-            addr,
-            options=[
-                ("grpc.max_send_message_length", GRPC.MAX_SEND_MESSAGE_LENGTH),
-                (
-                    "grpc.max_receive_message_length",
-                    GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
-                ),
-            ],
-        )
-        stub = elasticdl_pb2_grpc.PserverStub(channel)
+    def create_stub(self):
+        stub = elasticdl_pb2_grpc.PserverStub(self._channel)
         return stub
 
     def testServicer(self):
@@ -68,7 +70,6 @@ class PserverServicerTest(unittest.TestCase):
         optimizer = tf.keras.optimizers.SGD()
         lr_staleness_modulation = False
         use_async = True
-        port = 9999
 
         server = self.create_server(
             parameters,
@@ -76,11 +77,10 @@ class PserverServicerTest(unittest.TestCase):
             optimizer,
             lr_staleness_modulation,
             use_async,
-            port,
         )
         server.start()
 
-        stub = self.create_stub(port)
+        stub = self.create_stub()
 
         # TODO: replace the section below with real RPC service tests
         # after service implementation
