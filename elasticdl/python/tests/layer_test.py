@@ -88,11 +88,6 @@ def create_embedding_layer(
     return layer
 
 
-@tf.function
-def module_call(module, inputs):
-    return module.call(inputs)
-
-
 def get_correct_values_for_sparse_test(indices, values, dense_shape, combiner):
     results = []
     for i in range(dense_shape[0]):
@@ -116,10 +111,10 @@ def get_correct_values_for_sparse_test(indices, values, dense_shape, combiner):
 
 class EmbeddingLayerTest(unittest.TestCase):
     def _run_forward_pass_and_compare(
-        self, call_fns, correct_values, output_dim
+        self, call_fns, inputs, correct_values, output_dim
     ):
         for call_fn in call_fns:
-            values = call_fn()
+            values = call_fn(inputs)
             values = values.numpy().reshape(-1, output_dim)
             for v, correct_v in zip(values, correct_values):
                 self.assertTrue(np.isclose(v, correct_v).all())
@@ -134,12 +129,12 @@ class EmbeddingLayerTest(unittest.TestCase):
         self.assertEqual(output_shape, input_shape + (output_dim,))
 
         ids = [0, 1, 3, 8, 3, 2, 3]
-        call_fns = [lambda: layer.call(ids), lambda: module_call(layer, ids)]
+        call_fns = [layer.call, tf.function(layer.call)]
         correct_values = np.array(
             [np.array([idx] * output_dim, dtype=np.float32) for idx in ids]
         )
         self._run_forward_pass_and_compare(
-            call_fns, correct_values, output_dim
+            call_fns, ids, correct_values, output_dim
         )
 
         # Keras model without/with input_layer
@@ -152,12 +147,9 @@ class EmbeddingLayerTest(unittest.TestCase):
         models = [model_without_input_layer, model_with_input_layer]
         for model in models:
             inputs = tf.constant([ids])
-            call_fns = [
-                lambda: model.call(inputs),
-                lambda: module_call(model, inputs),
-            ]
+            call_fns = [model.call, tf.function(model.call)]
             self._run_forward_pass_and_compare(
-                call_fns, correct_values, output_dim
+                call_fns, inputs, correct_values, output_dim
             )
 
     def test_embedding_layer_with_input_length(self):
@@ -169,7 +161,7 @@ class EmbeddingLayerTest(unittest.TestCase):
         )
         ids = [[0, 1, 3, 8], [5, 3, 2, 3]]
         flatten_ids = ids[0] + ids[1]
-        call_fns = [lambda: layer.call(ids), lambda: module_call(layer, ids)]
+        call_fns = [layer.call, tf.function(layer.call)]
         correct_values = np.array(
             [
                 np.array([idx] * output_dim, dtype=np.float32)
@@ -177,7 +169,7 @@ class EmbeddingLayerTest(unittest.TestCase):
             ]
         )
         self._run_forward_pass_and_compare(
-            call_fns, correct_values, output_dim
+            call_fns, ids, correct_values, output_dim
         )
 
     def test_embedding_layer_with_sparse_input(self):
@@ -195,10 +187,7 @@ class EmbeddingLayerTest(unittest.TestCase):
             inputs = tf.SparseTensor(
                 indices=indices, values=values, dense_shape=dense_shape
             )
-            call_fns = [
-                lambda: layer.call(inputs),
-                lambda: module_call(layer, inputs),
-            ]
+            call_fns = [layer.call, tf.function(layer.call)]
             correct_value_single_line = get_correct_values_for_sparse_test(
                 indices, values, dense_shape, combiner
             )
@@ -209,7 +198,7 @@ class EmbeddingLayerTest(unittest.TestCase):
                 ]
             )
             self._run_forward_pass_and_compare(
-                call_fns, correct_values, output_dim
+                call_fns, inputs, correct_values, output_dim
             )
 
     def test_embedding_layer_with_mask_zero(self):
@@ -240,7 +229,6 @@ class EmbeddingLayerTest(unittest.TestCase):
         output_dim = 8
         embedding_size = 16
         layer = create_embedding_layer(embedding_size, output_dim)
-        layer.init_for_graph_mode()
         inputs_list = [
             tf.keras.backend.constant([[0, 1, 3], [1, 2, 0]], dtype=tf.int64),
             tf.keras.backend.constant(
@@ -254,14 +242,11 @@ class EmbeddingLayerTest(unittest.TestCase):
         multiply_tensor = tf.reshape(multiply_tensor, [2, 3, 8])
 
         for inputs in inputs_list:
-            call_fns = [
-                lambda: layer.call(inputs),
-                lambda: module_call(layer, inputs),
-            ]
+            call_fns = [layer.call, tf.function(layer.call)]
             for call_fn in call_fns:
                 with tf.GradientTape() as tape:
                     layer.set_tape(tape)
-                    output = module_call(layer, inputs)
+                    output = call_fn(inputs)
                     output = output * multiply_tensor
                 batch_embedding = layer.embedding_and_ids[0].batch_embedding
                 grads = tape.gradient(output, batch_embedding)
@@ -330,15 +315,11 @@ class EmbeddingLayerTest(unittest.TestCase):
             layer = create_embedding_layer(
                 embedding_size, output_dim, combiner=combiner
             )
-            layer.init_for_graph_mode()
-            call_fns = [
-                lambda: layer.call(inputs),
-                lambda: module_call(layer, inputs),
-            ]
+            call_fns = [tf.function(layer.call), layer.call]
             for call_fn in call_fns:
                 with tf.GradientTape() as tape:
                     layer.set_tape(tape)
-                    output = module_call(layer, inputs)
+                    output = call_fn(inputs)
                     output = output * multiply_tensor
                 batch_embedding = layer.embedding_and_ids[0].batch_embedding
                 grads = tape.gradient(output, batch_embedding)

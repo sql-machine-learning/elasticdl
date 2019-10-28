@@ -334,10 +334,6 @@ class Worker(object):
                     )
             self._need_embedding_layer_check = False
 
-            if not self._train_eagerly:
-                for layer in self._embedding_layers:
-                    layer.init_for_graph_mode()
-
         self._reset_embedding()
 
     def get_trainable_items(self):
