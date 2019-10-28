@@ -17,9 +17,10 @@ _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
 
 def _get_dataset():
     y_labels = np.array([1, 1, 0, 0, 1])
-    x_data = pd.DataFrame({'age': [14, 56, 78, 38, 80],
-                           'education': ['Bachelors', 'Master', 'Some-college',
-                                         'Bachelors', 'Master']})
+    x_data = pd.DataFrame(
+        {'age': [14, 56, 78, 38, 80],
+         'education': ['Bachelors', 'Master',
+                       'Some-college', 'Bachelors', 'Master']})
     dataset = tf.data.Dataset.from_tensor_slices((dict(x_data), y_labels))
     dataset = dataset.shuffle(len(x_data)).batch(4)
     return dataset
