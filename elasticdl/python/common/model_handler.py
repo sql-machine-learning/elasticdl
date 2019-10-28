@@ -1,5 +1,7 @@
 import abc
+
 import tensorflow as tf
+
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 
@@ -9,6 +11,7 @@ class ModelHander(metaclass=abc.ABCMeta):
     Generate the model to train in ElasticDL for different distributed
     strategies and export trained model in ElasticDL to SavedModel.
     """
+
     @abc.abstractmethod
     def generate_train_model_for_elasticdl(self, model):
         """
@@ -40,6 +43,7 @@ class DefaultModelHandler(ModelHander):
     """
     Return the origin model to train and export.
     """
+
     def generate_train_model_for_elasticdl(self, model):
         return model
 
@@ -76,21 +80,24 @@ class ParameterServerModelHandler(ModelHander):
         Clone a new model with elasticdl.layers.Embedding for
         Sequential and functional API model.
         """
+
         def _clone_function(layer):
             if type(layer) == tf.keras.layers.Embedding:
-                logger.info("Replace Keras Embedding with \
-                            ElasticDL Embedding")
+                logger.info(
+                    "Replace Keras Embedding with \
+                            ElasticDL Embedding"
+                )
                 edl_embedding_layer = Embedding(
                     output_dim=layer.output_dim,
                     embedding_initializer=layer.embeddings_initializer,
                     mask_zero=layer.mask_zero,
-                    input_length=layer.input_length
+                    input_length=layer.input_length,
                 )
                 return edl_embedding_layer
             return layer
+
         return tf.keras.models.clone_model(
-            model,
-            clone_function=_clone_function
+            model, clone_function=_clone_function
         )
 
     def _replace_embedding_attribute_for_subclass(self, model):

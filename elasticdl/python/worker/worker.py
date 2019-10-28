@@ -6,13 +6,13 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.model_handler import ModelHander
 from elasticdl.python.common.model_utils import (
     find_layer,
     get_dict_from_params_str,
     get_model_spec,
     get_non_embedding_trainable_vars,
 )
-from elasticdl.python.common.model_handler import ModelHander
 from elasticdl.python.common.ndarray import (
     ndarray_to_tensor,
     tensor_to_ndarray,

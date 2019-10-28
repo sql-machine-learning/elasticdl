@@ -17,13 +17,13 @@ from elasticdl.python.common.constants import (
 )
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_utils import get_logger
+from elasticdl.python.common.model_handler import ModelHander
 from elasticdl.python.common.model_utils import (
     find_layer,
     get_module_file_path,
     load_model_from_module,
     load_module,
 )
-from elasticdl.python.common.model_handler import ModelHander
 from elasticdl.python.data.data_reader import create_data_reader
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
@@ -104,9 +104,11 @@ class Master(object):
             args.model_def, self.model_module, args.model_params
         )
         model_handler = ModelHander.get_model_handler(
-            args.distribution_strategy)
+            args.distribution_strategy
+        )
         self.model_inst = model_handler.generate_train_model_for_elasticdl(
-            self.model_inst)
+            self.model_inst
+        )
         self.optimizer = self.model_module[args.optimizer]()
 
         # Initialize checkpoint service
