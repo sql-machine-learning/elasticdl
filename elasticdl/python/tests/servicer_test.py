@@ -8,10 +8,7 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.ndarray import (
-    ndarray_to_tensor,
-    tensor_to_ndarray,
-)
+from elasticdl.python.common.tensor import Tensor, tensor_pb_to_ndarray
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
@@ -78,7 +75,7 @@ class ServicerTest(unittest.TestCase):
         )
         for var in response.param:
             exp_value = expected[var.name]
-            np.testing.assert_array_equal(exp_value, tensor_to_ndarray(var))
+            np.testing.assert_array_equal(exp_value, tensor_pb_to_ndarray(var))
 
     def testGetModel(self):
         master = MasterServicer(
@@ -153,12 +150,12 @@ class ServicerTest(unittest.TestCase):
             """ Make a ReportGradientRequest compatible with model"""
             req = elasticdl_pb2.ReportGradientRequest()
             req.gradient.append(
-                ndarray_to_tensor(np.array([0.1], dtype=np.float32), name="x")
+                Tensor(np.array([0.1], np.float32), name="x").to_tensor_pb()
             )
             req.gradient.append(
-                ndarray_to_tensor(
-                    np.array([0.03, 0.06], dtype=np.float32), name="y"
-                )
+                Tensor(
+                    np.array([0.03, 0.06], np.float32), name="y"
+                ).to_tensor_pb()
             )
             req.model_version = 1
             return req
@@ -192,14 +189,14 @@ class ServicerTest(unittest.TestCase):
         # Report a unknown gradient, should raise.
         req = makeGrad()
         req.gradient.append(
-            ndarray_to_tensor(np.array([0.1], dtype=np.float32), name="z")
+            Tensor(np.array([0.1], np.float32), name="z").to_tensor_pb()
         )
         self.assertRaises(ValueError, master.ReportGradient, req, None)
 
         # Report an incompatible gradient, should raise.
         req = makeGrad()
         req.gradient.append(
-            ndarray_to_tensor(np.array([0.1], dtype=np.float32), name="y")
+            Tensor(np.array([0.1], np.float32), name="y").to_tensor_pb()
         )
         self.assertRaises(ValueError, master.ReportGradient, req, None)
 

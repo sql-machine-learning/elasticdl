@@ -6,10 +6,11 @@ from elasticdl.python.common.dtypes import (
     dtype_numpy_to_tensor,
     dtype_tensor_to_numpy,
 )
+from elasticdl.python.common.log_utils import default_logger as logger
 
 
 def serialize_tensor(tensor, tensor_pb):
-    """Convert Tensor to Tensor PB"""
+    """Serialize ElasticDL Tensor to Tensor PB."""
     dtype = dtype_numpy_to_tensor(tensor.values.dtype)
     if not dtype:
         raise ValueError(
@@ -19,16 +20,16 @@ def serialize_tensor(tensor, tensor_pb):
     tensor_pb.dim.extend(tensor.values.shape)
     tensor_pb.content = tensor.values.tobytes()
     if tensor.is_indexed_slices():
-        tensor_pb.indices.extend(tensor.indices)
+        tensor_pb.indices.extend(tuple(tensor.indices))
     if tensor.name:
         tensor_pb.name = tensor.name
 
 
 def deserialize_tensor_pb(tensor_pb, tensor):
-    """Create a Tensor instance from Tensor proto message.
+    """Deserialize tensor protocol buffer to ElasticDL Tensor.
 
-    Note that the input tensor message is reset and underlying buffer is passed
-    to the returned ndarray.
+    Note that the input tensor protocol buffer is reset and underlying buffer
+    is passed to the returned ndarray.
     """
 
     if not tensor_pb.dim:
@@ -47,10 +48,24 @@ def deserialize_tensor_pb(tensor_pb, tensor):
         )
     tensor.set(
         np.ndarray(shape=tensor_pb.dim, dtype=dtype, buffer=tensor_pb.content),
-        np.array(tensor_pb.indices),
+        np.array(tensor_pb.indices) if tensor_pb.indices else None,
         tensor_pb.name,
     )
     tensor_pb.Clear()
+
+
+def tensor_pb_to_ndarray(tensor_pb):
+    # TODO(yunjian.lmh): use a constructor-like function to create Tensor from tensor_pb
+    tensor = Tensor()
+    deserialize_tensor_pb(tensor_pb, tensor)
+    return tensor.to_ndarray()
+
+
+def tensor_pb_to_tf_tensor(tensor_pb):
+    # TODO(yunjian.lmh): use a constructor-like function to create Tensor from tensor_pb
+    tensor = Tensor()
+    deserialize_tensor_pb(tensor_pb, tensor)
+    return tensor.to_tf_tensor()
 
 
 class Tensor(object):
@@ -86,11 +101,25 @@ class Tensor(object):
                     "When creating a Tensor object with values of type "
                     "tf.IndexedSlices, indices must be None."
                 )
+            if values.dense_shape is not None:
+                # TODO(yunjian.lmh): Support dense shape, or do not print
+                #     warning message, or there will be too much warning
+                #     warning messages.
+                logger.warning(
+                    "Convert a TensorFlow.IndexedSlices object with dense "
+                    "shape to ElasticDL Tensor. ElasticDL ignores dense shape "
+                    "now."
+                )
+
             self.values = values.values.numpy()
             self.indices = values.indices.numpy()
         else:
-            self.values = values
-            self.indices = indices
+            self.values = (
+                values.numpy() if isinstance(values, tf.Tensor) else values
+            )
+            self.indices = (
+                indices.numpy() if isinstance(indices, tf.Tensor) else indices
+            )
 
     def is_indexed_slices(self):
         return self.indices is not None
@@ -113,3 +142,13 @@ class Tensor(object):
             return tf.IndexedSlices(self.values, self.indices)
         else:
             return tf.constant(self.values)
+
+    def to_ndarray(self):
+        if self.is_indexed_slices():
+            # Currently Tensor does not have a field representing dense shape,
+            # thus can not convert it to numpy.ndarray.
+            raise NotImplementedError(
+                "Converting an ElasticDL Tensor object, which contains a "
+                "sparse tensor, to a numpy.ndarray is not supported."
+            )
+        return np.array(self.values)

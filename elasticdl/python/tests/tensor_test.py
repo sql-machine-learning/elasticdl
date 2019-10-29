@@ -47,10 +47,7 @@ class TensorTest(unittest.TestCase):
 
     def test_serialize_tensor(self):
         def _ndarray_to_tensor_pb(values, name=None, indices=None):
-            tensor = Tensor(values, indices, name)
-            tensor_pb = elasticdl_pb2.Tensor()
-            serialize_tensor(tensor, tensor_pb)
-            return tensor_pb
+            return Tensor(values, indices, name).to_tensor_pb()
 
         # Wrong type, should raise
         arr = np.array([1, 2, 3, 4], dtype=np.uint8)
@@ -148,7 +145,8 @@ class TensorTest(unittest.TestCase):
                 deserialize_tensor_pb(pb, tensor)
                 self.assertEqual((m, 12 // m), tensor.values.shape)
                 self.assertTrue(isinstance(tensor.values, np.ndarray))
-                self.assertTrue(isinstance(tensor.indices, np.ndarray))
+                if tensor.indices is not None:
+                    self.assertTrue(isinstance(tensor.indices, np.ndarray))
 
     def testRoundTrip(self):
         def verify(values, name=None, indices=None):
