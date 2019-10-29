@@ -105,12 +105,12 @@ class Master(object):
         )
         self.optimizer = self.model_module[args.optimizer]()
 
-        # checkpoint_service, evaluation_service and embedding_service will be
-        # redesigned after distributed PS is implemented
+        # TODO: checkpoint_service, evaluation_service and embedding_service
+        #       will be redesigned after distributed PS is implemented
         if self.num_ps_pods:
             self.checkpoint_service = None
             self.evaluation_service = None
-            self.self.embedding_service_endpoint = None
+            self.embedding_service_endpoint = None
             self.embedding_dims = None
         else:
             # Initialize checkpoint service
