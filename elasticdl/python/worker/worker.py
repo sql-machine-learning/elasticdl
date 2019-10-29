@@ -6,7 +6,7 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.common.model_handler import ModelHander
+from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
     find_layer,
     get_dict_from_params_str,
@@ -99,7 +99,7 @@ class Worker(object):
             model_params=model_params,
             prediction_outputs_processor=prediction_outputs_processor,
         )
-        model_handler = ModelHander.get_model_handler(distribution_strategy)
+        model_handler = ModelHandler.get_model_handler(distribution_strategy)
         model_inst = model_handler.generate_train_model_for_elasticdl(
             model_inst
         )

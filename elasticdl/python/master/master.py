@@ -17,7 +17,7 @@ from elasticdl.python.common.constants import (
 )
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_utils import get_logger
-from elasticdl.python.common.model_handler import ModelHander
+from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
     find_layer,
     get_module_file_path,
@@ -103,7 +103,7 @@ class Master(object):
         self.model_inst = load_model_from_module(
             args.model_def, self.model_module, args.model_params
         )
-        model_handler = ModelHander.get_model_handler(
+        model_handler = ModelHandler.get_model_handler(
             args.distribution_strategy
         )
         self.model_inst = model_handler.generate_train_model_for_elasticdl(

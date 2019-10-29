@@ -6,7 +6,7 @@ from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 
 
-class ModelHander(metaclass=abc.ABCMeta):
+class ModelHandler(metaclass=abc.ABCMeta):
     """
     Generate the model to train in ElasticDL for different distributed
     strategies and export trained model in ElasticDL to SavedModel.
@@ -39,7 +39,7 @@ class ModelHander(metaclass=abc.ABCMeta):
             return DefaultModelHandler()
 
 
-class DefaultModelHandler(ModelHander):
+class DefaultModelHandler(ModelHandler):
     """
     Return the origin model to train and export.
     """
@@ -53,7 +53,7 @@ class DefaultModelHandler(ModelHander):
         return model
 
 
-class ParameterServerModelHandler(ModelHander):
+class ParameterServerModelHandler(ModelHandler):
     def generate_train_model_for_elasticdl(self, model):
         """
         Replace the tf.keras.layers.Embedding layer in the model with

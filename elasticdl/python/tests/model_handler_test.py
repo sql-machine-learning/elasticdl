@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from elasticdl.python.common.model_handler import ModelHander
+from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.tests.test_module import (
     custom_model_with_embedding,
@@ -32,9 +32,9 @@ def _get_dataset():
     return dataset
 
 
-class DefaultModelHanderTest(unittest.TestCase):
+class DefaultModelHandlerTest(unittest.TestCase):
     def setUp(self):
-        self.model_handler = ModelHander.get_model_handler()
+        self.model_handler = ModelHandler.get_model_handler()
 
     def test_generate_train_model_for_elasticdl(self):
         model_inst = custom_model_with_embedding()
@@ -56,7 +56,7 @@ class DefaultModelHanderTest(unittest.TestCase):
 
 class ParameterSeverModelHandlerTest(unittest.TestCase):
     def setUp(self):
-        self.model_handler = ModelHander.get_model_handler(
+        self.model_handler = ModelHandler.get_model_handler(
             distribution_strategy="ParameterServerStrategy"
         )
 
