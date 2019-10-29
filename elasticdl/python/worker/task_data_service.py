@@ -65,7 +65,7 @@ class TaskDataService(object):
                 if len(self._pending_tasks_with_counts):
                     self._current_task = self._pending_tasks_with_counts[0][0]
 
-    def get_evaluation_dataset(self):
+    def get_validation_dataset(self):
         """
         If there are _pending_eval_tasks, return a RecordIO dataset for
         an evaluation task and its corresponding model version, task_id.

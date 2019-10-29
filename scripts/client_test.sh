@@ -8,7 +8,7 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --model_zoo=model_zoo \
       --model_def=mnist_functional_api.mnist_functional_api.custom_model \
       --training_data=/data/mnist/train \
-      --evaluation_data=/data/mnist/test \
+      --validation_data=/data/mnist/test \
       --num_epochs=2 \
       --master_resource_request="cpu=400m,memory=1024Mi" \
       --master_resource_limit="cpu=1,memory=2048Mi" \
@@ -30,7 +30,7 @@ elif [[ "$JOB_TYPE" == "evaluate" ]]; then
       --model_zoo=model_zoo \
       --model_def=mnist_functional_api.mnist_functional_api.custom_model \
       --checkpoint_filename_for_init=elasticdl/python/tests/testdata/mnist_functional_api_model_v110.chkpt \
-      --evaluation_data=/data/mnist/test \
+      --validation_data=/data/mnist/test \
       --num_epochs=1 \
       --master_resource_request="cpu=400m,memory=1024Mi" \
       --master_resource_limit="cpu=1,memory=2048Mi" \

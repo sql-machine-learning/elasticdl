@@ -36,7 +36,7 @@ from elasticdl.python.master.tensorboard_service import TensorboardService
 
 def _make_task_dispatcher(
     training_data,
-    evaluation_data,
+    validation_data,
     prediction_data,
     records_per_task,
     num_epochs,
@@ -56,7 +56,7 @@ def _make_task_dispatcher(
 
     return _TaskDispatcher(
         _maybe_create_shards(training_data),
-        _maybe_create_shards(evaluation_data),
+        _maybe_create_shards(validation_data),
         prediction_f_records,
         records_per_task,
         # Only generate prediction tasks for 1 epoch
@@ -89,7 +89,7 @@ class Master(object):
         records_per_task = args.minibatch_size * args.num_minibatches_per_task
         self.task_d = _make_task_dispatcher(
             args.training_data,
-            args.evaluation_data,
+            args.validation_data,
             args.prediction_data,
             records_per_task,
             args.num_epochs,
@@ -208,14 +208,14 @@ class Master(object):
         if all(
             (
                 args.training_data,
-                args.evaluation_data,
+                args.validation_data,
                 args.evaluation_throttle_secs or args.evaluation_steps,
             )
         ):
             job_type = JobType.TRAINING_WITH_EVALUATION
         elif all(
             (
-                args.evaluation_data,
+                args.validation_data,
                 not args.training_data,
                 not args.prediction_data,
             )
@@ -224,7 +224,7 @@ class Master(object):
         elif all(
             (
                 args.prediction_data,
-                not args.evaluation_data,
+                not args.validation_data,
                 not args.training_data,
             )
         ):
