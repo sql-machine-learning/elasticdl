@@ -68,6 +68,7 @@ class Master(object):
     def __init__(self, args):
         self.logger = get_logger("master", level=args.log_level.upper())
         self.checkpoint_output_path = args.output
+        self.num_ps_pods = args.num_ps_pods
 
         # Master addr
         master_ip = os.getenv("MY_POD_IP", "localhost")
@@ -104,20 +105,32 @@ class Master(object):
         )
         self.optimizer = self.model_module[args.optimizer]()
 
-        # Initialize checkpoint service
-        self.checkpoint_service = self._create_checkpoint_service(args)
+        # TODO: checkpoint_service, evaluation_service and embedding_service
+        #       will be redesigned after distributed PS is implemented
+        if self.num_ps_pods:
+            self.checkpoint_service = None
+            self.evaluation_service = None
+            self.embedding_service_endpoint = None
+            self.embedding_dims = None
+        else:
+            # Initialize checkpoint service
+            self.checkpoint_service = self._create_checkpoint_service(args)
 
-        # Initialize evaluation service
-        self.evaluation_service = self._create_evaluation_service(args)
+            # Initialize evaluation service
+            self.evaluation_service = self._create_evaluation_service(args)
 
-        # Initialize embedding service
-        (
-            self.embedding_service_endpoint,
-            self.embedding_dims,
-        ) = self._create_embedding_service(args)
+            # Initialize embedding service
+            (
+                self.embedding_service_endpoint,
+                self.embedding_dims,
+            ) = self._create_embedding_service(args)
 
         # Initialize master service
         self.master_servicer, self.server = self._create_master_service(args)
+
+        if self.num_ps_pods:
+            # TODO: create ps pod manager for distributed PS
+            pass
 
         # Initialize worker manager
         self.worker_manager = self._create_worker_manager(args)
@@ -136,6 +149,10 @@ class Master(object):
         self.logger.info("Starting master RPC server")
         self.server.start()
         self.logger.info("Master RPC server started")
+
+        if self.num_ps_pods:
+            # TODO: start ps pods
+            pass
 
         # Start the worker manager if requested
         if self.worker_manager:
