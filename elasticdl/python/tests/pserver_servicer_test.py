@@ -4,7 +4,7 @@ import unittest
 import grpc
 from google.protobuf import empty_pb2
 
-from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.ps.parameter_server import ParameterServer
 from elasticdl.python.ps.parameters import Parameters
@@ -80,15 +80,18 @@ class PserverServicerTest(unittest.TestCase):
 
         # TODO: replace the section below with real RPC service tests
         # after service implementation
-        try:
-            req = empty_pb2.Empty()
-            res = self._stub.pull_variable(req)
-            self.assertEqual(res, req)
-            res = self._stub.pull_embedding_vector(req)
-            self.assertEqual(res, req)
-            res = self._stub.push_model(req)
-            self.assertEqual(res, req)
-            res = self._stub.push_gradient(req)
-            self.assertEqual(res, req)
-        except Exception:
-            self.assertTrue(False)
+        req = elasticdl_pb2.PullVariableRequest()
+        res = self._stub.pull_variable(req)
+        self.assertEqual(res, elasticdl_pb2.PullVariableResponse())
+
+        req = elasticdl_pb2.PullEmbeddingVectorRequest()
+        res = self._stub.pull_embedding_vector(req)
+        self.assertEqual(res, elasticdl_pb2.Tensor())
+
+        req = elasticdl_pb2.Model()
+        res = self._stub.push_model(req)
+        self.assertEqual(res, empty_pb2.Empty())
+
+        req = elasticdl_pb2.PushGradientRequest()
+        res = self._stub.push_gradient(req)
+        self.assertEqual(res, elasticdl_pb2.PushGradientResponse())
