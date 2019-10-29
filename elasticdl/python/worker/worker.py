@@ -116,7 +116,6 @@ class Worker(object):
             self._opt = self._opt_fn()
             self._non_embed_grads = None
         self._evaluation_result = {}
-        self._count = 0
 
     # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
