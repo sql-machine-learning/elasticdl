@@ -50,6 +50,8 @@ class _TaskDispatcher(object):
             records_per_task: The number of records per task.
             num_epochs: The total number of epochs for the tasks where
                 an epoch is a complete iteration over the shards.
+            need_save_model: Save model or not after all the
+                training/evaluation/prediction task are completed.
         """
         self._lock = threading.Lock()
 
@@ -66,6 +68,8 @@ class _TaskDispatcher(object):
         self._task_id = 0
         self._evaluation_service = None
 
+        # the callback list to invoke while
+        # all the task are completed.
         self._task_list_done_callbacks = []
         if need_save_model:
             self._task_list_done_callbacks.append(self._create_save_model_task)
@@ -140,7 +144,7 @@ class _TaskDispatcher(object):
         return tasks
 
     def _create_save_model_task(self):
-        # For SavedModel Task, we need a shard of data to build the Model
+        # For SavedModel Task, we need a shard of data to build the model
         shards = self._training_shards
         assert shards is not None
 
@@ -163,6 +167,10 @@ class _TaskDispatcher(object):
         self._todo.append(save_model_task)
 
     def invoke_task_list_done_callback(self):
+        '''
+        Pop a callback and invoke it from the list.
+        If the callback list is empty, return False.
+        '''
         if not self._task_list_done_callbacks:
             return False
 
