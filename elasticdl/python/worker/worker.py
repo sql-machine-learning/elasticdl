@@ -505,10 +505,12 @@ class Worker(object):
         return True
 
     def _process_save_model_task_if_needed(self):
-        save_model_info = self._task_data_service.get_save_model_dataset()
-        if save_model_info:
-            (dataset, model_version, task_id) = save_model_info
-            # TODO: Integrate with the Save Model Execution Process
+        task, dataset = (
+            self._task_data_service.get_save_model_task_and_dataset()
+        )
+        if task and dataset:
+            # TODO: Implement the save model execution process
+            return
 
     def _process_minibatch_and_report(
         self,
