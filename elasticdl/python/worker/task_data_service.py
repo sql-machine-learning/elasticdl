@@ -65,28 +65,19 @@ class TaskDataService(object):
                 if len(self._pending_tasks_with_counts):
                     self._current_task = self._pending_tasks_with_counts[0][0]
 
-    def get_validation_dataset(self):
+    def get_validation_dataset(self, eval_task):
         """
-        If there are _pending_eval_tasks, return a RecordIO dataset for
-        an evaluation task and its corresponding model version, task_id.
-        Return None if no _pending_eval_tasks.
+        Return a RecordIO dataset for an evaluation task and
+        its corresponding model version, task_id.
+        Return None if no evaluation task.
         """
-        if not self._pending_eval_tasks:
+        if not eval_task:
             return None
-        shards = []
-        task = None
-        with self._lock:
-            if self._pending_eval_tasks:
-                task = self._pending_eval_tasks.pop(0)
-                shards.append(task)
-        if shards and task:
-            return (
-                create_dataset_from_tasks(shards, self.data_reader),
-                task.model_version,
-                task.task_id,
+        return (
+                create_dataset_from_tasks([eval_task], self.data_reader),
+                eval_task.model_version,
+                eval_task.task_id,
             )
-        else:
-            return None
 
     def get_dataset(self):
         """
@@ -105,7 +96,7 @@ class TaskDataService(object):
             # sure `read_records()` is executed without iterating all the
             # records so this should not be time consuming.
             if self._warm_up_task is None and not self._has_warmed_up:
-                task = self._worker.get_task()
+                task = self._worker.get_train_task()
                 self._warm_up_task = task
                 for _ in self.data_reader.read_records(task):
                     break
@@ -129,7 +120,7 @@ class TaskDataService(object):
                 task = self._warm_up_task
                 self._warm_up_task = None
             else:
-                task = self._worker.get_task()
+                task = self._worker.get_train_task()
             if not task.shard_name:
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True
@@ -140,12 +131,6 @@ class TaskDataService(object):
                     logger.info("No more task, stopping")
                 break
             with self._lock:
-                if (
-                    self._training_with_evaluation
-                    and task.type == elasticdl_pb2.EVALUATION
-                ):
-                    self._pending_eval_tasks.append(task)
-                    continue
                 self._record_count += task.end - task.start
                 self._pending_tasks_with_counts.append(
                     (task, self._record_count)

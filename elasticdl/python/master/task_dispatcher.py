@@ -63,6 +63,7 @@ class _TaskDispatcher(object):
         # dictionary from task id to Task.
         self._doing = {}
         self._task_id = 0
+        self._eval_todo = []
         self._evaluation_service = None
 
         if self._training_shards:
@@ -131,8 +132,16 @@ class _TaskDispatcher(object):
             self._todo.extend(tasks)
         else:
             with self._lock:
-                self._todo.extend(tasks)
+                self._eval_todo.extend(tasks)
         return tasks
+
+    def get_eval_task(self, worker_id):
+        if not self._eval_todo:
+            return -1, None
+        self._task_id += 1
+        task = self._eval_todo.pop()
+        self._doing[self._task_id] = (worker_id, task)
+        return self._task_id, task
 
     def get(self, worker_id):
         """Return next (task_id, Task) tuple"""
@@ -167,7 +176,10 @@ class _TaskDispatcher(object):
                 logger.warning("Unknown task_id: %d" % task_id)
             elif not success:
                 # TODO: keep count of retries.
-                self._todo.append(task)
+                if task.type == elasticdl_pb2.TRAINING:
+                    self._todo.append(task)
+                else:
+                    self._eval_todo.append(task)
             elif (
                 task.type == elasticdl_pb2.EVALUATION
                 and self._evaluation_service is not None
@@ -201,4 +213,4 @@ class _TaskDispatcher(object):
         with self._lock:
             self._evaluation_service = evaluation_service
             if self._evaluation_shards and not self._training_shards:
-                evaluation_service.init_eval_only_job(len(self._todo))
+                evaluation_service.init_eval_only_job(len(self._eval_todo))
