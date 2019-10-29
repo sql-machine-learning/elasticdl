@@ -39,8 +39,7 @@ class TensorTest(unittest.TestCase):
         np.testing.assert_array_equal(pb.indices, indices)
 
         # tensor PB to tensor
-        tensor_new = Tensor()
-        tensor_new.from_tensor_pb(pb)
+        tensor_new = Tensor.from_tensor_pb(pb)
         self.assertEqual(tensor.name, "test")
         np.testing.assert_array_equal(tensor_new.values, arr)
         np.testing.assert_array_equal(tensor_new.indices, indices)

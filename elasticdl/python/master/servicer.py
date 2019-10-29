@@ -10,8 +10,7 @@ from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import load_from_checkpoint_file
 from elasticdl.python.common.tensor import (
     Tensor,
-    deserialize_tensor_pb,
-    serialize_tensor,
+    append_tensor_pb_from_ndarray,
     tensor_pb_to_ndarray,
 )
 from elasticdl.python.common.tensor_utils import merge_indexed_slices
@@ -264,9 +263,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         pb_model = elasticdl_pb2.Model()
         pb_model.version = self._version
         for k, v in self._model.items():
-            tensor_pb = pb_model.param.add()
-            tensor = Tensor(values=v.numpy(), name=k)
-            serialize_tensor(tensor, tensor_pb)
+            append_tensor_pb_from_ndarray(pb_model.param, v.numpy(), name=k)
         return pb_model
 
     def _validate_model_version(self, request_model_version):
@@ -305,9 +302,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         edl_embedding_gradients = {}
         # Do sanity check before accumulating gradients.
         for v in request.gradient:
-            # TODO(yunjian.lmh): use a constructor-like function to create Tensor from tensor_pb
-            tensor = Tensor()
-            deserialize_tensor_pb(v, tensor)
+            tensor = Tensor.from_tensor_pb(v)
             name = tensor.name
             if name not in self._model:
                 if tensor.is_indexed_slices():

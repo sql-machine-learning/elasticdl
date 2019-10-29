@@ -8,7 +8,10 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.tensor import Tensor, tensor_pb_to_ndarray
+from elasticdl.python.common.tensor import (
+    append_tensor_pb_from_ndarray,
+    tensor_pb_to_ndarray,
+)
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
@@ -149,13 +152,11 @@ class ServicerTest(unittest.TestCase):
         def makeGrad():
             """ Make a ReportGradientRequest compatible with model"""
             req = elasticdl_pb2.ReportGradientRequest()
-            req.gradient.append(
-                Tensor(np.array([0.1], np.float32), name="x").to_tensor_pb()
+            append_tensor_pb_from_ndarray(
+                req.gradient, np.array([0.1], np.float32), name="x"
             )
-            req.gradient.append(
-                Tensor(
-                    np.array([0.03, 0.06], np.float32), name="y"
-                ).to_tensor_pb()
+            append_tensor_pb_from_ndarray(
+                req.gradient, np.array([0.03, 0.06], np.float32), name="y"
             )
             req.model_version = 1
             return req
@@ -188,15 +189,15 @@ class ServicerTest(unittest.TestCase):
 
         # Report a unknown gradient, should raise.
         req = makeGrad()
-        req.gradient.append(
-            Tensor(np.array([0.1], np.float32), name="z").to_tensor_pb()
+        append_tensor_pb_from_ndarray(
+            req.gradient, np.array([0.1], np.float32), name="z"
         )
         self.assertRaises(ValueError, master.ReportGradient, req, None)
 
         # Report an incompatible gradient, should raise.
         req = makeGrad()
-        req.gradient.append(
-            Tensor(np.array([0.1], np.float32), name="y").to_tensor_pb()
+        append_tensor_pb_from_ndarray(
+            req.gradient, np.array([0.1], np.float32), name="y"
         )
         self.assertRaises(ValueError, master.ReportGradient, req, None)
 

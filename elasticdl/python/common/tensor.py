@@ -10,7 +10,7 @@ from elasticdl.python.common.log_utils import default_logger as logger
 
 
 def serialize_tensor(tensor, tensor_pb):
-    """Serialize ElasticDL Tensor to Tensor PB."""
+    """Serialize ElasticDL Tensor to tensor protocol buffer."""
     dtype = dtype_numpy_to_tensor(tensor.values.dtype)
     if not dtype:
         raise ValueError(
@@ -31,7 +31,6 @@ def deserialize_tensor_pb(tensor_pb, tensor):
     Note that the input tensor protocol buffer is reset and underlying buffer
     is passed to the returned ndarray.
     """
-
     if not tensor_pb.dim:
         raise ValueError("Tensor PB has no dim defined")
 
@@ -55,17 +54,19 @@ def deserialize_tensor_pb(tensor_pb, tensor):
 
 
 def tensor_pb_to_ndarray(tensor_pb):
-    # TODO(yunjian.lmh): use a constructor-like function to create Tensor from tensor_pb
-    tensor = Tensor()
-    deserialize_tensor_pb(tensor_pb, tensor)
-    return tensor.to_ndarray()
+    return Tensor.from_tensor_pb(tensor_pb).to_ndarray()
 
 
 def tensor_pb_to_tf_tensor(tensor_pb):
-    # TODO(yunjian.lmh): use a constructor-like function to create Tensor from tensor_pb
-    tensor = Tensor()
-    deserialize_tensor_pb(tensor_pb, tensor)
-    return tensor.to_tf_tensor()
+    return Tensor.from_tensor_pb(tensor_pb).to_tf_tensor()
+
+
+def append_tensor_pb_from_ndarray(
+    tensor_pb_list, values, indices=None, name=None
+):
+    tensor_pb = tensor_pb_list.add()
+    tensor = Tensor(values, indices, name)
+    serialize_tensor(tensor, tensor_pb)
 
 
 class Tensor(object):
@@ -92,6 +93,16 @@ class Tensor(object):
             name: A python string.
         """
         self.set(values, indices, name)
+
+    @classmethod
+    def from_tensor_pb(cls, tensor_pb):
+        tensor = cls()
+        deserialize_tensor_pb(tensor_pb, tensor)
+        return tensor
+
+    @classmethod
+    def from_tf_variable(cls, tf_variable):
+        return cls(tf_variable.numpy(), name=tf.variable.name)
 
     def set(self, values=None, indices=None, name=None):
         self.name = name
@@ -123,14 +134,6 @@ class Tensor(object):
 
     def is_indexed_slices(self):
         return self.indices is not None
-
-    def from_tensor_pb(self, tensor_pb):
-        """Parse tensor from Tensor proto message.
-
-        Note that the input tensor message is reset and underlying buffer is
-        passed to the returned ndarray.
-        """
-        deserialize_tensor_pb(tensor_pb, self)
 
     def to_tensor_pb(self):
         tensor_pb = elasticdl_pb2.Tensor()
