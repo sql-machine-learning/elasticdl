@@ -111,11 +111,12 @@ class TaskQueueTest(unittest.TestCase):
             {},
             3,
             1,
-            save_model_at_end=True,
+            need_save_model=True,
         )
         task_d._todo.clear()
         task_d.invoke_task_list_done_callback()
         self.assertEqual(len(task_d._todo), 1)
+        self.assertEqual(task_d._todo[0].type, elasticdl_pb2.SAVE_MODEL)
 
 
 if __name__ == "__main__":
