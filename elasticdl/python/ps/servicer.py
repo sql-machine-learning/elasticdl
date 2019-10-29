@@ -1,6 +1,6 @@
 from google.protobuf import empty_pb2
 
-from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 
 
 class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
@@ -23,11 +23,11 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
     def pull_variable(self, request, _):
         # TODO: implement this RPC service
-        return empty_pb2.Empty()
+        return elasticdl_pb2.PullVariableResponse()
 
     def pull_embedding_vector(self, request, _):
         # TODO: implement this RPC service
-        return empty_pb2.Empty()
+        return elasticdl_pb2.Tensor()
 
     def push_model(self, request, _):
         # TODO: implement this RPC service
@@ -35,4 +35,4 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
     def push_gradient(self, request, _):
         # TODO: implement this RPC service
-        return empty_pb2.Empty()
+        return elasticdl_pb2.PushGradientResponse()
