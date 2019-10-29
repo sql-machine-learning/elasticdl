@@ -20,7 +20,7 @@ MODEL_SPEC_GROUP = [
 
 EVALUATION_GROUP = [
     "evaluation_steps",
-    "evaluation_data",
+    "validation_data",
     "evaluation_start_delay_secs",
     "evaluation_throttle_secs",
 ]
@@ -229,7 +229,7 @@ def add_train_params(parser):
         default="",
     )
     parser.add_argument(
-        "--evaluation_data",
+        "--validation_data",
         help="Either the data directory that contains RecordIO files "
         "or an ODPS table name used for evaluation.",
         default="",
@@ -304,7 +304,7 @@ def add_train_params(parser):
 
 def add_evaluate_params(parser):
     parser.add_argument(
-        "--evaluation_data",
+        "--validation_data",
         help="Either the data directory that contains RecordIO files "
         "or an ODPS table name used for evaluation.",
         required=True,
@@ -497,7 +497,7 @@ def parse_master_args(master_args=None):
         v == "" or v is None
         for v in [
             args.training_data,
-            args.evaluation_data,
+            args.validation_data,
             args.prediction_data,
         ]
     ):
@@ -505,7 +505,7 @@ def parse_master_args(master_args=None):
             "At least one of the data directories needs to be provided"
         )
 
-    if args.prediction_data and (args.training_data or args.evaluation_data):
+    if args.prediction_data and (args.training_data or args.validation_data):
         raise ValueError(
             "Running prediction together with training or evaluation "
             "is not supported"
