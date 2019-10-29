@@ -5,12 +5,6 @@ from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 
 class TaskQueueTest(unittest.TestCase):
-    def test_invoke_save_model_callback(self):
-        task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1, save_model_at_end=True)
-        task_d._todo.clear()
-        task_d.invoke_task_list_done_callback()
-        self.assertEqual(len(task_d._todo), 1)
-
     def test_create_tasks_with_zero_start_ind(self):
         task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1)
 
@@ -110,6 +104,11 @@ class TaskQueueTest(unittest.TestCase):
             sorted([v._info() for _, v in got_tasks]), epoch_tasks
         )
 
+    def test_invoke_save_model_callback(self):
+        task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1, save_model_at_end=True)
+        task_d._todo.clear()
+        task_d.invoke_task_list_done_callback()
+        self.assertEqual(len(task_d._todo), 1)
 
 if __name__ == "__main__":
     unittest.main()

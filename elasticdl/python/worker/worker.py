@@ -2,7 +2,6 @@ import traceback
 
 import numpy as np
 import tensorflow as tf
-import time
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -459,9 +458,6 @@ class Worker(object):
                 accepted = self._run_prediction_task(features)
                 if accepted:
                     break
-            elif task_type == elasticdl_pb2.SAVE_MODEL:
-                logger.info('Start to process the SavedModel task.')
-                break
             else:
                 raise RuntimeError("Unrecognized task type, %s" % task_type)
         else:
@@ -512,10 +508,7 @@ class Worker(object):
         save_model_info = self._task_data_service.get_save_model_dataset()
         if save_model_info:
             (dataset, model_version, task_id) = save_model_info
-            logger.info('******Start the process the SavedModel task******')
-            time.sleep(10)
-            self.report_task_result(task_id, '' if self._count >= 3 else 'Error happens')
-            self._count += 1
+            #TODO: Integrate with the Save Model Execution Process
 
     def _process_minibatch_and_report(
         self,

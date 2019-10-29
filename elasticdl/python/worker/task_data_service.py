@@ -17,7 +17,7 @@ class TaskDataService(object):
         self._lock = threading.Lock()
         self._pending_dataset = True
         self._pending_eval_tasks = []
-        self._pending_save_model_task = []
+        self._pending_save_model_task = None
         self._reset()
         if data_reader_params:
             self.data_reader = create_data_reader(
@@ -132,8 +132,6 @@ class TaskDataService(object):
             return None
 
     def _gen(self):
-        logger.info('******Task Data Service _gen is invoked******')
-
         """
         A generator supports the iter() protocol (e.g. a generator function),
         used to create a `tf.data.Dataset` from a list of tasks.
@@ -155,8 +153,6 @@ class TaskDataService(object):
                     logger.info("No more task, stopping")
                 break
             with self._lock:
-                logger.info('******The task is type: {}, payload: {}******'.format(task.type, task))
-
                 if (
                     self._training_with_evaluation
                     and task.type == elasticdl_pb2.EVALUATION
