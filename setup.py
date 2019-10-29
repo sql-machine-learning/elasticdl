@@ -20,7 +20,7 @@ setup(
     install_requires=required_deps,
     extras_require=extras,
     python_requires=">=3.5",
-    packages=find_packages(exclude=["*test*"]),
+    packages=find_packages(),
     package_data={"": ["proto/elasticdl.proto", "docker/*", "Makefile"]},
     entry_points={
         "console_scripts": ["elasticdl=elasticdl.python.elasticdl.client:main"]

@@ -10,6 +10,7 @@ enum TaskType {
     EVALUATION = 1;
     PREDICTION = 2;
     WAIT = 3;
+    SAVE_MODEL = 4;
 }
 
 enum MethodType {

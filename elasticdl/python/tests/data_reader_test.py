@@ -57,6 +57,9 @@ class RecordIODataReaderTest(unittest.TestCase):
                     self.assertEqual(len(v.numpy()), 1)
 
 
+if __name__ == "__main__":
+    unittest.main()
+
 @unittest.skipIf(
     os.environ.get("ODPS_TESTS", "False") == "False",
     "ODPS environment is not configured",

@@ -2,7 +2,7 @@ import traceback
 
 import numpy as np
 import tensorflow as tf
-
+import time
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -116,6 +116,7 @@ class Worker(object):
             self._opt = self._opt_fn()
             self._non_embed_grads = None
         self._evaluation_result = {}
+        self._count = 0
 
     # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
@@ -458,6 +459,9 @@ class Worker(object):
                 accepted = self._run_prediction_task(features)
                 if accepted:
                     break
+            elif task_type == elasticdl_pb2.SAVE_MODEL:
+                logger.info('Start to process the SavedModel task.')
+                break
             else:
                 raise RuntimeError("Unrecognized task type, %s" % task_type)
         else:
@@ -503,6 +507,15 @@ class Worker(object):
         self.report_task_result(task_id, err_msg)
         self._evaluation_result = {}
         return True
+
+    def _process_save_model_task_if_needed(self):
+        save_model_info = self._task_data_service.get_save_model_dataset()
+        if save_model_info:
+            (dataset, model_version, task_id) = save_model_info
+            logger.info('******Start the process the SavedModel task******')
+            time.sleep(10)
+            self.report_task_result(task_id, '' if self._count >= 3 else 'Error happens')
+            self._count += 1
 
     def _process_minibatch_and_report(
         self,
@@ -610,3 +623,5 @@ class Worker(object):
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                 if self._process_eval_task_if_needed():
                     last_minibatch_do_evaluation = True
+
+            self._process_save_model_task_if_needed()
