@@ -2,6 +2,7 @@ import traceback
 
 import numpy as np
 import tensorflow as tf
+
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -508,7 +509,7 @@ class Worker(object):
         save_model_info = self._task_data_service.get_save_model_dataset()
         if save_model_info:
             (dataset, model_version, task_id) = save_model_info
-            #TODO: Integrate with the Save Model Execution Process
+            # TODO: Integrate with the Save Model Execution Process
 
     def _process_minibatch_and_report(
         self,
