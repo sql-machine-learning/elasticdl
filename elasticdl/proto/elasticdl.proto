@@ -160,7 +160,6 @@ service Master {
 }
 
 // PS service
-// TODO: define messages and replace `google.protobuf.Empty` with correct message.
 service Pserver {
     rpc pull_variable(PullVariableRequest) returns (PullVariableResponse);
     rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
