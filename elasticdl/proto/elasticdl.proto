@@ -134,3 +134,12 @@ service Master {
     rpc ReportEvaluationMetrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsResponse);
     rpc ReportTaskResult(ReportTaskResultRequest) returns (google.protobuf.Empty);
 }
+
+// PS service
+// TODO: define messages and replace `google.protobuf.Empty` with correct message.
+service Pserver {
+    rpc pull_variable(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc pull_embedding_vector(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc push_model(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc push_gradient(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
