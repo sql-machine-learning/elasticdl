@@ -50,7 +50,7 @@ def tensor_to_ndarray(tensor_pb):
     return arr
 
 
-def ndarray_to_tensor(arr, indices=None):
+def ndarray_to_tensor(arr, name=None, indices=None):
     """Convert ndarray to Tensor PB"""
 
     if not is_numpy_dtype_allowed(arr.dtype):
@@ -61,5 +61,7 @@ def ndarray_to_tensor(arr, indices=None):
     if indices:
         tensor.indices.extend(indices)
     tensor.dtype = dtype_numpy_to_tensor(arr.dtype)
+    if name:
+        tensor.name = name
 
     return tensor
