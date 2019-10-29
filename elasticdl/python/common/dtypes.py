@@ -5,7 +5,10 @@ from elasticdl.proto import tensor_dtype_pb2
 
 def dtype_tensor_to_numpy(dtype):
     """Convert tensor dtype to numpy dtype object."""
-    return np.dtype(_DT_TENSOR_TO_NP.get(dtype, None))
+    np_dtype_name = _DT_TENSOR_TO_NP.get(dtype, None)
+    if not np_dtype_name:
+        raise ValueError("Got wrong tensor PB dtype %s.", dtype)
+    return np.dtype(np_dtype_name)
 
 
 def dtype_numpy_to_tensor(dtype):

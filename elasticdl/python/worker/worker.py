@@ -125,11 +125,12 @@ class Worker(object):
         self._train_eagerly = False
         self._init_embedding_layer()
         self._var_created = self._model.built
-        self._non_embed_vars = []
+        self._non_embed_vars = {}
         if self._var_created:
-            self._non_embed_vars = get_non_embedding_trainable_vars(
+            for var in get_non_embedding_trainable_vars(
                 self._model, self._embedding_layers
-            )
+            ):
+                self._non_embed_vars[var.name] = var
 
     def _init_embedding_layer(self):
         """
@@ -153,8 +154,10 @@ class Worker(object):
     def _update_local_model(self):
         if not self._non_embed_grads:
             return
+        # Take care of the order of grads and vars if worker modifies
+        # `_non_embed_vars` during training.
         self._opt.apply_gradients(
-            zip(self._non_embed_grads, self._non_embed_vars)
+            zip(self._non_embed_grads, self._non_embed_vars.values())
         )
         self._non_embed_grads = None
 
@@ -176,9 +179,11 @@ class Worker(object):
         req.method = method
         model = self._stub.GetModel(req)
 
-        for var in self._non_embed_vars:
-            # Assumes all trainable variables exist in model.param.
-            var.assign(tensor_to_ndarray(model.param[var.name]))
+        # Assumes all trainable variables exist in model.param.
+        for tensor_pb in model.param:
+            self._non_embed_vars[tensor_pb.name].assign(
+                tensor_to_ndarray(tensor_pb)
+            )
         self._model_version = model.version
 
     def report_task_result(self, task_id, err_msg):
@@ -195,8 +200,8 @@ class Worker(object):
         report variable to ps.
         """
         req = elasticdl_pb2.ReportVariableRequest()
-        for v in self._non_embed_vars:
-            req.variable[v.name].CopyFrom(ndarray_to_tensor(v.numpy()))
+        for v in self._non_embed_vars.values():
+            req.variable.append(ndarray_to_tensor(v.numpy(), v.name))
         self._stub.ReportVariable(req)
 
     def report_gradient(self, grads):
@@ -206,16 +211,20 @@ class Worker(object):
         req = elasticdl_pb2.ReportGradientRequest()
         non_embed_vars_n = len(self._non_embed_vars)
         # The first `non_embed_vars_n` items in `grads` are gradients for
-        # `self._non_embed_vars`
-        for g, v in zip(grads[:non_embed_vars_n], self._non_embed_vars):
+        # `self._non_embed_vars`.
+        # Take care of the order of grads and vars if worker modifies
+        # `_non_embed_vars` during training.
+        for g, v in zip(
+            grads[:non_embed_vars_n], self._non_embed_vars.values()
+        ):
             if isinstance(g, tf.IndexedSlices):
-                req.gradient[v.name].CopyFrom(
+                req.gradient.append(
                     ndarray_to_tensor(
-                        g.values.numpy(), tuple(g.indices.numpy())
+                        g.values.numpy(), v.name, tuple(g.indices.numpy())
                     )
                 )
             else:
-                req.gradient[v.name].CopyFrom(ndarray_to_tensor(g.numpy()))
+                req.gradient.append(ndarray_to_tensor(g.numpy(), v.name))
 
         # Accumulate gradients of ElasticDL embedding layer
         if self._embedding_layers:
@@ -253,9 +262,9 @@ class Worker(object):
                         g_values = grad
                         g_indices = ids
 
-                req.gradient[layer.name].CopyFrom(
+                req.gradient.append(
                     ndarray_to_tensor(
-                        g_values.numpy(), tuple(g_indices.numpy())
+                        g_values.numpy(), layer.name, tuple(g_indices.numpy())
                     )
                 )
 
@@ -271,7 +280,7 @@ class Worker(object):
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         for name, output in model_outputs.items():
             output = np.concatenate(output)
-            req.model_outputs[name].CopyFrom(ndarray_to_tensor(output))
+            req.model_outputs.append(ndarray_to_tensor(output, name))
         labels = np.concatenate(labels)
         req.labels.CopyFrom(ndarray_to_tensor(labels))
         req.model_version = self._model_version
@@ -303,9 +312,11 @@ class Worker(object):
                 _ = self._model.call(features)
         else:
             _ = self._model.call(features)
-        self._non_embed_vars = get_non_embedding_trainable_vars(
+        self._non_embed_vars = {}
+        for var in get_non_embedding_trainable_vars(
             self._model, self._embedding_layers
-        )
+        ):
+            self._non_embed_vars[var.name] = var
 
         if not self._var_created:
             self.report_variable()
@@ -340,7 +351,7 @@ class Worker(object):
                         for (batch_embedding, _) in layer.embedding_and_ids
                     ]
                 )
-        return self._non_embed_vars + bets
+        return list(self._non_embed_vars.values()) + bets
 
     def training_process(self, features, labels):
         """

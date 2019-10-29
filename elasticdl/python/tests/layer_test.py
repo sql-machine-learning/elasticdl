@@ -380,7 +380,7 @@ class EmbeddingLayerTest(unittest.TestCase):
         input = tf.keras.layers.Input(shape=(None,))
         embedding_output = layer(input)
         embedding_output_shape = embedding_output.get_shape().as_list()
-        self.assertEquals(embedding_output_shape, [None, None, 8])
+        self.assertEqual(embedding_output_shape, [None, None, 8])
 
 
 if __name__ == "__main__":

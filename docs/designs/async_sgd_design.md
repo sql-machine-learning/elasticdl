@@ -82,7 +82,7 @@ else:
 ```
 
 ### Stale Synchronous Parallel (SSP)
-In the pesudocode for the asynchronous SGD worker, the worker pulls model from PS in every minibatch step. [Stale synchronous parallel (SSP) method](https://dl.acm.org/citation.cfm?id=2999748) uses the strategy that the fastest worker can exceed the slowest one within a predefined staleness threshold. SSP can reduce the number of `get_model_from_ps` calls. The worker training process is:
+In the pseudocode for the asynchronous SGD worker, the worker pulls model from PS in every minibatch step. [Stale synchronous parallel (SSP) method](https://dl.acm.org/citation.cfm?id=2999748) uses the strategy that the fastest worker can exceed the slowest one within a predefined staleness threshold. SSP can reduce the number of `get_model_from_ps` calls. The worker training process is:
 
 ```
 get_model_frequency = predefined_staleness_threshold
@@ -98,7 +98,7 @@ for minibatch in training_data:
     else:
         apply_gradient(local_model, gradients)
 ```
-Althrough the original SSP method uses this strategy in synchronized SGD, we can also adopt SSP strategy in asynchronized SGD to reduce `get_model_from_ps` calls.
+Although the original SSP method uses this strategy in synchronized SGD, we can also adopt SSP strategy in asynchronized SGD to reduce `get_model_from_ps` calls.
 Note that in ElasticDL, local models only have non-embedding variables. So in `apply_gradient(local_model, gradients)`, ElasticDL workers only update non-embedding variables.
 Also, worker can run `report_gradient_to_ps` concurrently with `apply_gradient(local_model, gradients)` when it does not need to `get_model_from_ps`.
 
