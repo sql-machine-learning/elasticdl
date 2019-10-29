@@ -100,10 +100,6 @@ class Tensor(object):
         deserialize_tensor_pb(tensor_pb, tensor)
         return tensor
 
-    @classmethod
-    def from_tf_variable(cls, tf_variable):
-        return cls(tf_variable.numpy(), name=tf.variable.name)
-
     def set(self, values=None, indices=None, name=None):
         self.name = name
         if isinstance(values, tf.IndexedSlices):
