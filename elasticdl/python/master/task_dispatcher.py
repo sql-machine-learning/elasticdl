@@ -168,8 +168,8 @@ class _TaskDispatcher(object):
 
     def invoke_task_list_done_callback(self):
         '''
-        Pop a callback and invoke it from the list.
-        If the callback list is empty, return False.
+        Pop a callback from the list and invoke it.
+        If the callback list is empty, return False directly.
         '''
         if not self._task_list_done_callbacks:
             return False
