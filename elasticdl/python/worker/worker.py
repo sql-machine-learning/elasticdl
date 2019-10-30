@@ -578,6 +578,8 @@ class Worker(object):
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
             for dataset_batch in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
+                    # Give the worker a chance to process an evaluation task
+                    # during training if the task exists
                     self._evaluate_only()
 
                 task = self._task_data_service.get_current_task()
