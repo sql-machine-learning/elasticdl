@@ -111,7 +111,7 @@ class Tensor(object):
             if values.dense_shape is not None:
                 # TODO(yunjian.lmh): Support dense shape, or do not print
                 #     warning message, or there will be too much warning
-                #     warning messages.
+                #     messages.
                 logger.warning(
                     "Convert a TensorFlow.IndexedSlices object with dense "
                     "shape to ElasticDL Tensor. ElasticDL ignores dense shape "
