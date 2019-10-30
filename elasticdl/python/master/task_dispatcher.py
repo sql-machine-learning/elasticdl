@@ -10,12 +10,13 @@ from elasticdl.python.common.log_utils import default_logger as logger
 class _Task(object):
     """Internal representation of a task"""
 
-    def __init__(self, *, shard_name, start, end, type, model_version=-1):
+    def __init__(self, shard_name, start, end, type, model_version=-1, **kwargs):
         self.shard_name = shard_name
         self.start = start
         self.end = end
         self.type = type
         self.model_version = model_version
+        self.extended_config = kwargs
 
     def _info(self):
         return (
@@ -37,7 +38,6 @@ class _TaskDispatcher(object):
         prediction_shards,
         records_per_task,
         num_epochs,
-        need_save_model=False,
     ):
         """
         Arguments:
@@ -70,8 +70,6 @@ class _TaskDispatcher(object):
 
         # Callback list to invoke after all tasks complete.
         self._task_list_done_callbacks = []
-        if need_save_model:
-            self._task_list_done_callbacks.append(self._create_save_model_task)
 
         if self._training_shards:
             logger.info("Starting epoch %d", self._epoch)
@@ -130,7 +128,7 @@ class _TaskDispatcher(object):
                 self._todo.extend(tasks)
         return tasks
 
-    def _create_save_model_task(self):
+    def create_save_model_task(self, saved_model_path):
         """
         Build one instance of SaveModel task and add it to todo list.
         Because we need create a dataset to build the model,
@@ -154,9 +152,14 @@ class _TaskDispatcher(object):
             start=start_ind_this_task,
             end=end_ind_this_task,
             type=elasticdl_pb2.SAVE_MODEL,
+            saved_model_path=saved_model_path,
         )
 
         self._todo.append(save_model_task)
+
+    def append_task_list_done_callback(self, callback):
+        if callable(callback):
+            self._task_list_done_callbacks.append(callback)
 
     def invoke_task_list_done_callback(self):
         """

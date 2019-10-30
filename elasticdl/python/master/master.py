@@ -71,7 +71,6 @@ class Master(object):
 
         self.num_ps_pods = args.num_ps_pods
         self.checkpoint_output_path = args.checkpoint_dir
-        self.saved_model_path = args.output
 
         # Master addr
         master_ip = os.getenv("MY_POD_IP", "localhost")
@@ -98,6 +97,14 @@ class Master(object):
             records_per_task,
             args.num_epochs,
         )
+
+        saved_model_path = args.output
+        if saved_model_path is not None:
+            self.task_d.append_task_list_done_callback(
+                lambda saved_model_path: self.task_d.create_save_model_task(
+                    saved_model_path
+                )
+            )
 
         # Initialize the components from the model definition
         self.model_module = load_module(
