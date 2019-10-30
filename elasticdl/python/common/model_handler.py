@@ -2,9 +2,9 @@ import abc
 
 import tensorflow as tf
 
+from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.common.constants import DistributionStrategy
 
 
 class ModelHandler(metaclass=abc.ABCMeta):
@@ -85,8 +85,7 @@ class ParameterServerModelHandler(ModelHandler):
         def _clone_function(layer):
             if type(layer) == tf.keras.layers.Embedding:
                 logger.info(
-                    "Replace Keras Embedding with"
-                    "ElasticDL Embedding"
+                    "Replace Keras Embedding with ElasticDL Embedding"
                 )
                 edl_embedding_layer = Embedding(
                     output_dim=layer.output_dim,

@@ -38,18 +38,14 @@ class DefaultModelHandlerTest(unittest.TestCase):
 
     def test_get_model_to_ps(self):
         model_inst = custom_model_with_embedding()
-        model_inst = self.model_handler.get_model_to_train(
-            model_inst
-        )
+        model_inst = self.model_handler.get_model_to_train(model_inst)
         self.assertEqual(type(model_inst.layers[1]), tf.keras.layers.Embedding)
 
     def test_get_model_to_export(self):
         feature_columns = feature_columns_fn()
         model_inst = custom_sequential_model(feature_columns)
         dataset = _get_dataset()
-        self.model_handler.get_model_to_export(
-            model_inst, dataset
-        )
+        self.model_handler.get_model_to_export(model_inst, dataset)
         self.assertEqual(list(model_inst.inputs.keys()), ["age", "education"])
         self.assertEqual(len(model_inst.outputs), 1)
 
@@ -62,9 +58,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
 
     def test_get_model_to_train(self):
         model_inst = custom_model_with_embedding()
-        model_inst = self.model_handler.get_model_to_train(
-            model_inst
-        )
+        model_inst = self.model_handler.get_model_to_train(model_inst)
         self.assertEqual(type(model_inst.layers[1]), Embedding)
 
     def test_get_model_to_export(self):
