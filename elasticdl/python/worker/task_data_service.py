@@ -10,7 +10,11 @@ from elasticdl.python.data.dataset_utils import create_dataset_from_tasks
 
 class TaskDataService(object):
     def __init__(
-        self, worker, training_with_evaluation, data_reader_params=None
+        self,
+        worker,
+        training_with_evaluation,
+        data_reader_params=None,
+        record_failure_tolerance=0,
     ):
         self._worker = worker
         self._training_with_evaluation = training_with_evaluation
@@ -26,6 +30,7 @@ class TaskDataService(object):
             self.data_reader = create_data_reader(data_origin=None)
         self._warm_up_task = None
         self._has_warmed_up = False
+        self._record_failure_tolerance = record_failure_tolerance
 
     def _reset(self):
         """
@@ -33,11 +38,15 @@ class TaskDataService(object):
         """
         self._record_count = 0
         self._reported_record_count = 0
+        self._failed_record_count = 0
         self._pending_tasks_with_counts = []
         self._current_task = None
 
     def get_current_task(self):
         return self._current_task
+
+    def report_task_done(self, task_id, err_msg):
+        self._worker.report_task_result(task_id, err_msg)
 
     def report_record_done(self, count, err_msg=""):
         """
@@ -48,20 +57,42 @@ class TaskDataService(object):
         self._pending_tasks_with_counts[0][1] is the number of records
         in this task.
         """
-        self._reported_record_count += count
-        if (
-            len(self._pending_tasks_with_counts)
-            and self._reported_record_count
-            >= self._pending_tasks_with_counts[0][1]
-        ):
+        if err_msg:
+            self._failed_record_count += count
+            logger.warning(
+                "Process records of task contains " "error: %s", err_msg
+            )
+        else:
+            self._reported_record_count += count
+        if self._pending_tasks_with_counts:
+            task, total_record = self._pending_tasks_with_counts[0]
+            if task.type == elasticdl_pb2.TRAINING:
+                # only training, we allow for failures
+                if (
+                    self._failed_record_count / total_record
+                    > self._record_failure_tolerance
+                ):
+                    msg = (
+                        "too many records ({f}/{t})failure, possible "
+                        "reason {err_msg}"
+                    ).format(
+                        err_msg=err_msg,
+                        f=self._failed_record_count,
+                        t=total_record,
+                    )
+                    self.report_task_done(task.task_id, msg)
+            elif self._failed_record_count != 0:
+                self.report_task_done(task.task_id, err_msg)
             with self._lock:
-                while (
+                if (
                     len(self._pending_tasks_with_counts)
                     and self._reported_record_count
                     >= self._pending_tasks_with_counts[0][1]
                 ):
                     task, _ = self._pending_tasks_with_counts.pop(0)
-                    self._worker.report_task_result(task.task_id, err_msg)
+                    self.report_task_done(task.task_id, err_msg)
+                    self._reported_record_count = 0
+                    self._failed_record_count = 0
                 if len(self._pending_tasks_with_counts):
                     self._current_task = self._pending_tasks_with_counts[0][0]
 

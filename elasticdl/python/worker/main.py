@@ -43,6 +43,7 @@ def main():
         get_model_steps=args.get_model_steps,
         distribution_strategy=args.distribution_strategy,
         ps_channels=ps_channels,
+        record_failure_tolerance=args.record_failure_tolerance,
     )
     worker.run()
 

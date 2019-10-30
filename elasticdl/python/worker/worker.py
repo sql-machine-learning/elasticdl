@@ -63,6 +63,7 @@ class Worker(object):
         get_model_steps=1,
         distribution_strategy=None,
         ps_channels=None,
+        record_failure_tolerance=0,
     ):
         """
         Arguments:
@@ -144,6 +145,7 @@ class Worker(object):
             self,
             self._job_type == JobType.TRAINING_WITH_EVALUATION,
             data_reader_params=get_dict_from_params_str(data_reader_params),
+            record_failure_tolerance=record_failure_tolerance,
         )
         self._get_model_steps = get_model_steps
         if self._get_model_steps > 1:

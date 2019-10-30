@@ -476,6 +476,12 @@ def add_common_args_between_master_and_worker(parser):
         help="Master will use a distribution policy on a list of devices "
         "according to the distributed strategy, "
         'e.g. "ParameterServerStrategy"',
+    parser.add_argument(
+        "--record_failure_tolerance",
+        type=int,
+        default=0,
+        help="The percentage of records which is allowed to fail before"
+        " failing the job, e.g. 10, means at most 10% failure is allowed.",
     )
 
 
