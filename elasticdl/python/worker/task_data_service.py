@@ -16,7 +16,6 @@ class TaskDataService(object):
         self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
         self._pending_dataset = True
-        self._pending_eval_tasks = []
         self._reset()
         if data_reader_params:
             self.data_reader = create_data_reader(
@@ -74,10 +73,10 @@ class TaskDataService(object):
         if not eval_task:
             return None
         return (
-                create_dataset_from_tasks([eval_task], self.data_reader),
-                eval_task.model_version,
-                eval_task.task_id,
-            )
+            create_dataset_from_tasks([eval_task], self.data_reader),
+            eval_task.model_version,
+            eval_task.task_id,
+        )
 
     def get_dataset(self):
         """
@@ -96,7 +95,7 @@ class TaskDataService(object):
             # sure `read_records()` is executed without iterating all the
             # records so this should not be time consuming.
             if self._warm_up_task is None and not self._has_warmed_up:
-                task = self._worker.get_train_task()
+                task = self._worker.get_task()
                 self._warm_up_task = task
                 for _ in self.data_reader.read_records(task):
                     break
@@ -120,7 +119,7 @@ class TaskDataService(object):
                 task = self._warm_up_task
                 self._warm_up_task = None
             else:
-                task = self._worker.get_train_task()
+                task = self._worker.get_task()
             if not task.shard_name:
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True

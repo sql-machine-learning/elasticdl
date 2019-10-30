@@ -136,12 +136,14 @@ class _TaskDispatcher(object):
         return tasks
 
     def get_eval_task(self, worker_id):
-        if not self._eval_todo:
-            return -1, None
-        self._task_id += 1
-        task = self._eval_todo.pop()
-        self._doing[self._task_id] = (worker_id, task)
-        return self._task_id, task
+        """Return next evaluation (task_id, Task) tuple"""
+        with self._lock:
+            if not self._eval_todo:
+                return -1, None
+            self._task_id += 1
+            task = self._eval_todo.pop()
+            self._doing[self._task_id] = (worker_id, task)
+            return self._task_id, task
 
     def get(self, worker_id):
         """Return next (task_id, Task) tuple"""

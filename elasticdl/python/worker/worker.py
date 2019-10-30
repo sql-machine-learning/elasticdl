@@ -161,13 +161,12 @@ class Worker(object):
         )
         self._non_embed_grads = None
 
-    def get_train_task(self):
+    def get_task(self):
         """
-        get training task from master
+        get task from master
         """
         req = elasticdl_pb2.GetTaskRequest()
         req.worker_id = self._worker_id
-        req.task_type = elasticdl_pb2.TRAINING
 
         return self._stub.GetTask(req)
 
@@ -485,7 +484,7 @@ class Worker(object):
             A python bool indicating whether worker processed some evaluation
             tasks.
         """
-        logger.info('process an evaluation task: %d' % task.task_id)
+        logger.info("the evaluation task_id: %d" % task.task_id)
         eval_info = self._task_data_service.get_validation_dataset(task)
         if not eval_info:
             return False
@@ -574,7 +573,7 @@ class Worker(object):
             dataset = self._dataset_fn(
                 dataset,
                 Mode.TRAINING,
-                self._task_data_service.data_reader.metadata
+                self._task_data_service.data_reader.metadata,
             )
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
             for dataset_batch in dataset:
@@ -638,16 +637,14 @@ class Worker(object):
             dataset = self._dataset_fn(
                 dataset,
                 Mode.PREDICTION,
-                self._task_data_service.data_reader.metadata
+                self._task_data_service.data_reader.metadata,
             )
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
             for dataset_batch in dataset:
                 task = self._task_data_service.get_current_task()
 
                 err_msg = self._process_minibatch_and_report(
-                    dataset_batch,
-                    task.type,
-                    task.model_version
+                    dataset_batch, task.type, task.model_version
                 )
                 self._task_data_service.report_record_done(
                     self._minibatch_size, err_msg
