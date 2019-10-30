@@ -180,12 +180,12 @@ class Embedding(tf.keras.layers.Layer):
         return embedding_vectors.reshape((len(keys), self.output_dim))
 
     def _check_id_valid(self, ids):
-        if self.input_dim is not None and np.sum(ids >= self.input_dim) > 0:
-            first_out_bound_value = ids[ids >= self.input_dim][0]
+        first_may_exceed_id = ids[np.argmax(ids >= self.input_dim)]
+        if self.input_dim is not None and first_may_exceed_id > self.input_dim:
             raise ValueError(
                 " The embedding id cannot be bigger"
                 "than input_dim. id = %d is not in [0, %d)"
-                % (first_out_bound_value, self.input_dim)
+                % (first_may_exceed_id, self.input_dim)
             )
 
     def _record_gradients(self, batch_embedding, ids):
