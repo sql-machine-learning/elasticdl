@@ -290,12 +290,10 @@ class Tensor(object):
 
 def serialize_to_pb(tensor, pb):
     """Serialize ElasticDL Tensor to tensor protocol buffer."""
-    # Return None
     pass
 
 def deserialize_from_pb(pb, tensor):
     """Deserialize tensor protocol buffer to ElasticDL Tensor."""
-    # Return None
     pass
 
 def tensor_pb_to_ndarray(tensor):

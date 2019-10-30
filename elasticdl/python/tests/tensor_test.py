@@ -7,8 +7,8 @@ from elasticdl.proto import elasticdl_pb2, tensor_dtype_pb2
 from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
 from elasticdl.python.common.tensor import (
     Tensor,
-    append_tensor_pb_from_ndarray,
     deserialize_tensor_pb,
+    emplace_tensor_pb_from_ndarray,
     serialize_tensor,
     tensor_pb_to_ndarray,
     tensor_pb_to_tf_tensor,
@@ -228,12 +228,12 @@ class TensorTest(unittest.TestCase):
         self.assertTrue(np.allclose(tf_tensor.values, values))
         self.assertTrue(np.allclose(tf_tensor.indices, indices))
 
-    def test_append_tensor_pb_from_ndarray(self):
+    def test_emplace_tensor_pb_from_ndarray(self):
         values = np.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]], np.float32)
         indices = np.array([0, 2])
         name = "test"
         model = elasticdl_pb2.Model()
-        append_tensor_pb_from_ndarray(model.param, values, indices, name)
+        emplace_tensor_pb_from_ndarray(model.param, values, indices, name)
         pb = model.param[-1]
         print("pb", pb)
 

@@ -9,7 +9,7 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.tensor import (
-    append_tensor_pb_from_ndarray,
+    emplace_tensor_pb_from_ndarray,
     tensor_pb_to_ndarray,
 )
 from elasticdl.python.master.checkpoint_service import CheckpointService
@@ -152,10 +152,10 @@ class ServicerTest(unittest.TestCase):
         def makeGrad():
             """ Make a ReportGradientRequest compatible with model"""
             req = elasticdl_pb2.ReportGradientRequest()
-            append_tensor_pb_from_ndarray(
+            emplace_tensor_pb_from_ndarray(
                 req.gradient, np.array([0.1], np.float32), name="x"
             )
-            append_tensor_pb_from_ndarray(
+            emplace_tensor_pb_from_ndarray(
                 req.gradient, np.array([0.03, 0.06], np.float32), name="y"
             )
             req.model_version = 1
@@ -189,14 +189,14 @@ class ServicerTest(unittest.TestCase):
 
         # Report a unknown gradient, should raise.
         req = makeGrad()
-        append_tensor_pb_from_ndarray(
+        emplace_tensor_pb_from_ndarray(
             req.gradient, np.array([0.1], np.float32), name="z"
         )
         self.assertRaises(ValueError, master.ReportGradient, req, None)
 
         # Report an incompatible gradient, should raise.
         req = makeGrad()
-        append_tensor_pb_from_ndarray(
+        emplace_tensor_pb_from_ndarray(
             req.gradient, np.array([0.1], np.float32), name="y"
         )
         self.assertRaises(ValueError, master.ReportGradient, req, None)

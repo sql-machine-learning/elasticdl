@@ -14,7 +14,7 @@ from elasticdl.python.common.model_utils import (
 )
 from elasticdl.python.common.tensor import (
     Tensor,
-    append_tensor_pb_from_ndarray,
+    emplace_tensor_pb_from_ndarray,
     serialize_tensor,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
@@ -201,7 +201,9 @@ class Worker(object):
         """
         req = elasticdl_pb2.ReportVariableRequest()
         for v in self._non_embed_vars.values():
-            append_tensor_pb_from_ndarray(req.variable, v.numpy(), name=v.name)
+            emplace_tensor_pb_from_ndarray(
+                req.variable, v.numpy(), name=v.name
+            )
         self._stub.ReportVariable(req)
 
     def report_gradient(self, grads):
@@ -217,7 +219,7 @@ class Worker(object):
         for g, v in zip(
             grads[:non_embed_vars_n], self._non_embed_vars.values()
         ):
-            append_tensor_pb_from_ndarray(req.gradient, g, name=v.name)
+            emplace_tensor_pb_from_ndarray(req.gradient, g, name=v.name)
 
         # Accumulate gradients of ElasticDL embedding layer
         if self._embedding_layers:
@@ -255,7 +257,7 @@ class Worker(object):
                         g_values = grad
                         g_indices = ids
 
-                append_tensor_pb_from_ndarray(
+                emplace_tensor_pb_from_ndarray(
                     req.gradient, g_values, indices=g_indices, name=layer.name
                 )
 
@@ -271,7 +273,9 @@ class Worker(object):
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         for name, output in model_outputs.items():
             output = np.concatenate(output)
-            append_tensor_pb_from_ndarray(req.model_outputs, output, name=name)
+            emplace_tensor_pb_from_ndarray(
+                req.model_outputs, output, name=name
+            )
         labels = np.concatenate(labels)
         tensor = Tensor(values=labels)
         serialize_tensor(tensor, req.labels)

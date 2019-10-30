@@ -9,84 +9,6 @@ from elasticdl.python.common.dtypes import (
 from elasticdl.python.common.log_utils import default_logger as logger
 
 
-def serialize_tensor(tensor, tensor_pb):
-    """Serialize ElasticDL Tensor to tensor protocol buffer."""
-    dtype = dtype_numpy_to_tensor(tensor.values.dtype)
-    if not dtype:
-        raise ValueError(
-            "Dtype of ndarray %s is not supported", tensor.values.dtype
-        )
-    tensor_pb.dtype = dtype
-    tensor_pb.dim.extend(tensor.values.shape)
-    tensor_pb.content = tensor.values.tobytes()
-    if tensor.is_indexed_slices():
-        tensor_pb.indices.extend(tuple(tensor.indices))
-    if tensor.name:
-        tensor_pb.name = tensor.name
-
-
-def deserialize_tensor_pb(tensor_pb, tensor):
-    """Deserialize tensor protocol buffer to ElasticDL Tensor.
-
-    Note that the input tensor protocol buffer is reset and underlying buffer
-    is passed to the returned ndarray.
-    """
-    if not tensor_pb.dim:
-        raise ValueError("Tensor PB has no dim defined")
-
-    dtype = dtype_tensor_to_numpy(tensor_pb.dtype)
-    # Check that the buffer size agrees with dimensions.
-    size = dtype.itemsize
-    for d in tensor_pb.dim:
-        size *= d
-    if size != len(tensor_pb.content):
-        raise ValueError(
-            "Tensor PB size mismatch, dim: %s, len(content): %d",
-            tensor_pb.dim,
-            len(tensor_pb.content),
-        )
-    tensor.set(
-        np.ndarray(shape=tensor_pb.dim, dtype=dtype, buffer=tensor_pb.content),
-        np.array(tensor_pb.indices) if tensor_pb.indices else None,
-        tensor_pb.name,
-    )
-    tensor_pb.Clear()
-
-
-def tensor_pb_to_ndarray(tensor_pb):
-    """Deserialize tensor protocol buffer and return a numpy ndarray."""
-    return Tensor.from_tensor_pb(tensor_pb).to_ndarray()
-
-
-def tensor_pb_to_tf_tensor(tensor_pb):
-    """Deserialize tensor protocol buffer and return a TensorFlow tensor."""
-    return Tensor.from_tensor_pb(tensor_pb).to_tf_tensor()
-
-
-def append_tensor_pb_from_ndarray(
-    tensor_pb_list, values, indices=None, name=None
-):
-    """Generate a tensor procotol buffer and append it to tensor_pb_list.
-
-    Note:
-        This function does not use list append function as following code
-            snippet. It is slow because append function will copy the input
-            protocol buffer.
-
-        ```
-        pb = elasticdl_pb2.Tensor()
-        pb.dim.extend([3])
-        pb.name = "test"
-        pb.dtype = DT_INT64
-        pb.content = np.array([1, 2, 3]).tobytes()
-        tensor_pb_list.append(tensor_pb) # slow, because append copies pb
-        ```
-    """
-    tensor_pb = tensor_pb_list.add()
-    tensor = Tensor(values, indices, name)
-    serialize_tensor(tensor, tensor_pb)
-
-
 class Tensor(object):
     """Data structure for tensors in ElasticDL.
 
@@ -135,9 +57,8 @@ class Tensor(object):
                 #     warning message, or there will be too much warning
                 #     messages.
                 logger.warning(
-                    "Convert a TensorFlow.IndexedSlices object with dense "
-                    "shape to ElasticDL Tensor. ElasticDL ignores dense shape "
-                    "now."
+                    "ElasticDL Tensor ignores dense_shape in "
+                    "TensorFlow.IndexedSlices."
                 )
 
             self.values = values.values.numpy()
@@ -173,3 +94,83 @@ class Tensor(object):
                 "sparse tensor, to a numpy.ndarray is not supported."
             )
         return self.values
+
+
+def serialize_tensor(tensor, tensor_pb):
+    """Serialize ElasticDL Tensor to tensor protocol buffer."""
+    dtype = dtype_numpy_to_tensor(tensor.values.dtype)
+    if not dtype:
+        raise ValueError(
+            "Dtype of ndarray %s is not supported", tensor.values.dtype
+        )
+    tensor_pb.dtype = dtype
+    tensor_pb.dim.extend(tensor.values.shape)
+    tensor_pb.content = tensor.values.tobytes()
+    if tensor.is_indexed_slices():
+        tensor_pb.indices.extend(tuple(tensor.indices))
+    if tensor.name:
+        tensor_pb.name = tensor.name
+
+
+def deserialize_tensor_pb(tensor_pb, tensor):
+    """Deserialize tensor protocol buffer to ElasticDL Tensor.
+
+    Note that the input tensor protocol buffer is reset and underlying buffer
+    is passed to the returned ndarray.
+    """
+    if not tensor_pb.dim:
+        raise ValueError("Tensor PB has no dim defined")
+
+    dtype = dtype_tensor_to_numpy(tensor_pb.dtype)
+    # Check that the buffer size agrees with dimensions.
+    size = dtype.itemsize
+    for d in tensor_pb.dim:
+        size *= d
+    if size != len(tensor_pb.content):
+        raise ValueError(
+            "Tensor PB size mismatch, dim: %s, len(content): %d",
+            tensor_pb.dim,
+            len(tensor_pb.content),
+        )
+    tensor.set(
+        values=np.ndarray(
+            shape=tensor_pb.dim, dtype=dtype, buffer=tensor_pb.content
+        ),
+        indices=np.array(tensor_pb.indices) if tensor_pb.indices else None,
+        name=tensor_pb.name,
+    )
+    tensor_pb.Clear()
+
+
+def tensor_pb_to_ndarray(tensor_pb):
+    """Deserialize tensor protocol buffer and return a numpy ndarray."""
+    return Tensor.from_tensor_pb(tensor_pb).to_ndarray()
+
+
+def tensor_pb_to_tf_tensor(tensor_pb):
+    """Deserialize tensor protocol buffer and return a TensorFlow tensor."""
+    return Tensor.from_tensor_pb(tensor_pb).to_tf_tensor()
+
+
+def emplace_tensor_pb_from_ndarray(
+    tensor_pb_list, values, indices=None, name=None
+):
+    """Generate a tensor procotol buffer and append it to tensor_pb_list.
+
+    Note:
+        This function does not use list append function as following code
+            snippet. It is slow because append function will copy the input
+            protocol buffer.
+
+        ```
+        pb = elasticdl_pb2.Tensor()
+        pb.dim.extend([3])
+        pb.name = "test"
+        pb.dtype = DT_INT64
+        pb.content = np.array([1, 2, 3]).tobytes()
+        tensor_pb_list.append(tensor_pb) # slow, because append copies pb
+        ```
+    """
+    tensor_pb = tensor_pb_list.add()
+    tensor = Tensor(values, indices, name)
+    serialize_tensor(tensor, tensor_pb)

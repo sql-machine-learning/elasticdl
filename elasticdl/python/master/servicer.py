@@ -10,7 +10,7 @@ from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import load_from_checkpoint_file
 from elasticdl.python.common.tensor import (
     Tensor,
-    append_tensor_pb_from_ndarray,
+    emplace_tensor_pb_from_ndarray,
     tensor_pb_to_ndarray,
 )
 from elasticdl.python.common.tensor_utils import merge_indexed_slices
@@ -89,16 +89,16 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         for var in var_list:
             self.set_model_var(var.name, var.numpy())
 
-    def _init_model_from_tensor_list(self, tensor_list):
-        assert tensor_list
-        for var in tensor_list:
-            self.set_model_var(var.name, tensor_pb_to_ndarray(var))
+    def _init_model_from_tensor_pb_list(self, tensor_pb_list):
+        assert tensor_pb_list
+        for pb in tensor_pb_list:
+            self.set_model_var(pb.name, tensor_pb_to_ndarray(pb))
 
     def _init_model(self, checkpoint_filename_for_init, init_var):
         if checkpoint_filename_for_init:
             pb_model = load_from_checkpoint_file(checkpoint_filename_for_init)
             self._version = pb_model.version
-            self._init_model_from_tensor_list(pb_model.param)
+            self._init_model_from_tensor_pb_list(pb_model.param)
         elif init_var:
             self._init_model_from_var_list(init_var)
         else:
@@ -263,7 +263,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         pb_model = elasticdl_pb2.Model()
         pb_model.version = self._version
         for k, v in self._model.items():
-            append_tensor_pb_from_ndarray(pb_model.param, v.numpy(), name=k)
+            emplace_tensor_pb_from_ndarray(pb_model.param, v.numpy(), name=k)
         return pb_model
 
     def _validate_model_version(self, request_model_version):
@@ -279,7 +279,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def ReportVariable(self, request, _):
         with self._lock:
             if not self._model:
-                self._init_model_from_tensor_list(request.variable)
+                self._init_model_from_tensor_pb_list(request.variable)
         return empty_pb2.Empty()
 
     def ReportGradient(self, request, _):
