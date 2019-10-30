@@ -100,9 +100,7 @@ class Worker(object):
             prediction_outputs_processor=prediction_outputs_processor,
         )
         model_handler = ModelHandler.get_model_handler(distribution_strategy)
-        model_inst = model_handler.generate_train_model_for_elasticdl(
-            model_inst
-        )
+        model_inst = model_handler.get_model_to_train(model_inst)
 
         self._embedding_service_endpoint = embedding_service_endpoint
         self.set_model(model_inst)
@@ -188,10 +186,9 @@ class Worker(object):
 
         # Assumes all trainable variables exist in model.param.
         for tensor_pb in model.param:
-            if tensor_pb.name in self._non_embed_vars:
-                self._non_embed_vars[tensor_pb.name].assign(
-                    tensor_to_ndarray(tensor_pb)
-                )
+            self._non_embed_vars[tensor_pb.name].assign(
+                tensor_to_ndarray(tensor_pb)
+            )
         self._model_version = model.version
 
     def report_task_result(self, task_id, err_msg):

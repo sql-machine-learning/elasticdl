@@ -4,6 +4,7 @@ import tensorflow as tf
 
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.layers.embedding import Embedding
+from elasticdl.python.common.constants import DistributionStrategy
 
 
 class ModelHandler(metaclass=abc.ABCMeta):
@@ -13,14 +14,14 @@ class ModelHandler(metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def generate_train_model_for_elasticdl(self, model):
+    def get_model_to_train(self, model):
         """
         Generate a model to train in ElasticDL.
         """
         pass
 
     @abc.abstractmethod
-    def get_model_to_export_from_trained_model(self, model, dataset):
+    def get_model_to_export(self, model, dataset):
         """
         Get the model which can be exported a SavedModel
         by tf.saved_model.save.
@@ -33,7 +34,7 @@ class ModelHandler(metaclass=abc.ABCMeta):
         Create a model handler to process the model for the
         distributed strategy.
         """
-        if distribution_strategy == "ParameterServerStrategy":
+        if distribution_strategy == DistributionStrategy.PARAMETER_SERVER:
             return ParameterServerModelHandler()
         else:
             return DefaultModelHandler()
@@ -44,17 +45,17 @@ class DefaultModelHandler(ModelHandler):
     Return the origin model to train and export.
     """
 
-    def generate_train_model_for_elasticdl(self, model):
+    def get_model_to_train(self, model):
         return model
 
-    def get_model_to_export_from_trained_model(self, model, dataset):
+    def get_model_to_export(self, model, dataset):
         if not model.inputs:
             model._build_model_with_inputs(inputs=dataset, targets=None)
         return model
 
 
 class ParameterServerModelHandler(ModelHandler):
-    def generate_train_model_for_elasticdl(self, model):
+    def get_model_to_train(self, model):
         """
         Replace the tf.keras.layers.Embedding layer in the model with
         an elasticdl.layers.Embedding layer in ParameterServerStrategy.
@@ -65,7 +66,7 @@ class ParameterServerModelHandler(ModelHandler):
             model = self._replace_embedding_attribute_for_subclass(model)
         return model
 
-    def get_model_to_export_from_trained_model(self, model, dataset):
+    def get_model_to_export(self, model, dataset):
         """
         To export model for tf-serving by tf.saved_model.save:
         1. Add inputs and outputs to the model.
@@ -84,8 +85,8 @@ class ParameterServerModelHandler(ModelHandler):
         def _clone_function(layer):
             if type(layer) == tf.keras.layers.Embedding:
                 logger.info(
-                    "Replace Keras Embedding with \
-                            ElasticDL Embedding"
+                    "Replace Keras Embedding with"
+                    "ElasticDL Embedding"
                 )
                 edl_embedding_layer = Embedding(
                     output_dim=layer.output_dim,

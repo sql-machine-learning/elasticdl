@@ -36,18 +36,18 @@ class DefaultModelHandlerTest(unittest.TestCase):
     def setUp(self):
         self.model_handler = ModelHandler.get_model_handler()
 
-    def test_generate_train_model_for_elasticdl(self):
+    def test_get_model_to_ps(self):
         model_inst = custom_model_with_embedding()
-        model_inst = self.model_handler.generate_train_model_for_elasticdl(
+        model_inst = self.model_handler.get_model_to_train(
             model_inst
         )
         self.assertEqual(type(model_inst.layers[1]), tf.keras.layers.Embedding)
 
-    def test_get_saved_model_from_trained_model(self):
+    def test_get_model_to_export(self):
         feature_columns = feature_columns_fn()
         model_inst = custom_sequential_model(feature_columns)
         dataset = _get_dataset()
-        self.model_handler.get_model_to_export_from_trained_model(
+        self.model_handler.get_model_to_export(
             model_inst, dataset
         )
         self.assertEqual(list(model_inst.inputs.keys()), ["age", "education"])
@@ -60,14 +60,14 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
             distribution_strategy="ParameterServerStrategy"
         )
 
-    def test_generate_train_model_for_elasticdl(self):
+    def test_get_model_to_train(self):
         model_inst = custom_model_with_embedding()
-        model_inst = self.model_handler.generate_train_model_for_elasticdl(
+        model_inst = self.model_handler.get_model_to_train(
             model_inst
         )
         self.assertEqual(type(model_inst.layers[1]), Embedding)
 
-    def test_get_saved_model_from_trained_model(self):
+    def test_get_model_to_export(self):
         pass
 
 
