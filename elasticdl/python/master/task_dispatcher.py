@@ -50,7 +50,8 @@ class _TaskDispatcher(object):
             records_per_task: The number of records per task.
             num_epochs: The total number of epochs for the tasks where
                 an epoch is a complete iteration over the shards.
-            need_save_model: Whether to save model after all tasks are completed.
+            need_save_model: Whether to save model after all tasks
+                are completed.
         """
         self._lock = threading.Lock()
 
