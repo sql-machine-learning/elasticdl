@@ -271,16 +271,37 @@ class Tensor(object):
         self.value = value
         self.indices = indices
 
+    @classmethod
+    def from_tensor_pb(cls, tensor_pb):
+        """Create an ElasticDL Tensor object from tensor protocol buffer."""
+        # Return the created tensor object
+        pass
+
+    def to_tensor_pb(self):
+        pass
+
+    def to_tf_tensor(self):
+        pass
+
+    def to_ndarray(self):
+        pass
+
 def serialize_to_pb(tensor, pb):
+    """Serialize ElasticDL Tensor to tensor protocol buffer."""
+    # Return None
     pass
 
 def deserialize_from_pb(pb, tensor):
+    """Deserialize tensor protocol buffer to ElasticDL Tensor."""
+    # Return None
     pass
 
-def convert_to_tf_variable(tensor):
+def tensor_pb_to_ndarray(tensor):
+    """Deserialize tensor protocol buffer and return a numpy ndarray."""
     pass
 
-def convert_to_tf_tensor(tensor):
+def tensor_pb_to_tf_tensor(tensor):
+    """Deserialize tensor protocol buffer and return a TensorFlow tensor."""
     pass
 ```
 
