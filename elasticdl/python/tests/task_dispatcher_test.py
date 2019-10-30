@@ -106,12 +106,7 @@ class TaskQueueTest(unittest.TestCase):
 
     def test_invoke_save_model_callback(self):
         task_d = _TaskDispatcher(
-            {"f1": (0, 10), "f2": (0, 10)},
-            {},
-            {},
-            3,
-            1,
-            need_save_model=True,
+            {"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1, need_save_model=True
         )
         task_d._todo.clear()
         task_d.invoke_task_list_done_callback()

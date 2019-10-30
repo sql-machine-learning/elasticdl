@@ -141,8 +141,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._task_d.invoke_task_list_done_callback()
         ):
             # If the todo and doing tasks are not empty,
-            # Otherwise if callback list is not empty, we are trying to pop and invoke the callback.
-            # Then the master tell the worker to wait in case of new tasks later.
+            # Otherwise if the callback list is not empty,
+            # we are trying to pop and invoke the callback.
+            # Then the master tells the worker to wait
+            # in case of new tasks later.
             res.type = elasticdl_pb2.WAIT
 
         return res

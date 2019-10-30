@@ -167,10 +167,10 @@ class _TaskDispatcher(object):
         self._todo.append(save_model_task)
 
     def invoke_task_list_done_callback(self):
-        '''
+        """
         Pop a callback from the list and invoke it.
         If the callback list is empty, return False directly.
-        '''
+        """
         if not self._task_list_done_callbacks:
             return False
 
