@@ -125,9 +125,11 @@ class PserverServicerTest(unittest.TestCase):
             # and the second push_model has no effect
             self.assertEqual(self._parameters.version, 1)
             for name in param0:
-                np.allclose(
-                    param0[name],
-                    self._parameters.non_embedding_params[name].numpy(),
+                self.assertTrue(
+                    np.allclose(
+                        param0[name],
+                        self._parameters.non_embedding_params[name].numpy(),
+                    )
                 )
             self.assertEqual(
                 embedding_info.name,
