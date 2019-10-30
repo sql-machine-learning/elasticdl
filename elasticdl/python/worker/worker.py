@@ -485,6 +485,7 @@ class Worker(object):
             A python bool indicating whether worker processed some evaluation
             tasks.
         """
+        logger.info('process an evaluation task: %d' % task.task_id)
         eval_info = self._task_data_service.get_validation_dataset(task)
         if not eval_info:
             return False
