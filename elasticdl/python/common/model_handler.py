@@ -84,9 +84,7 @@ class ParameterServerModelHandler(ModelHandler):
 
         def _clone_function(layer):
             if type(layer) == tf.keras.layers.Embedding:
-                logger.info(
-                    "Replace Keras Embedding with ElasticDL Embedding"
-                )
+                logger.info("Replace Keras Embedding with ElasticDL Embedding")
                 edl_embedding_layer = Embedding(
                     output_dim=layer.output_dim,
                     input_dim=layer.input_dim,
