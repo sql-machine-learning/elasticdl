@@ -68,8 +68,10 @@ def _make_task_dispatcher(
 class Master(object):
     def __init__(self, args):
         self.logger = get_logger("master", level=args.log_level.upper())
-        self.checkpoint_output_path = args.output
+
         self.num_ps_pods = args.num_ps_pods
+        self.checkpoint_output_path = args.checkpoint_dir
+        self.saved_model_path = args.output
 
         # Master addr
         master_ip = os.getenv("MY_POD_IP", "localhost")
@@ -183,10 +185,6 @@ class Master(object):
                     if self.worker_manager:
                         self.worker_manager.update_status(
                             WorkerManagerStatus.FINISHED
-                        )
-                    if self.checkpoint_output_path:
-                        self.master_servicer.save_latest_checkpoint(
-                            self.checkpoint_output_path
                         )
                     break
                 time.sleep(30)
