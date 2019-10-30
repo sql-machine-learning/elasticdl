@@ -3,6 +3,7 @@ import threading
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
 
 
 class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
@@ -25,8 +26,32 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._lock = threading.Lock()
 
     def pull_variable(self, request, _):
-        # TODO: implement this RPC service
-        return elasticdl_pb2.PullVariableResponse()
+        """
+        Response with all non-embedding parameters if initialized.
+        """
+        res = elasticdl_pb2.PullVariableResponse()
+        if not self._parameters.init_status:
+            res.model_init_status = False
+            return res
+
+        res.model_init_status = True
+        res.model.version = self._parameters.version
+
+        # Only sync-SGD needs lock
+        # TODO: use a read-write lock to support multiple concurrent reads
+        if not self._use_async:
+            self._lock.acquire()
+        for name in self._parameters.non_embedding_params:
+            tensor = res.model.param.add()
+            tensor.name = name
+            var = self._parameters.non_embedding_params[name]
+            tensor.dim.extend(var.shape.as_list())
+            var_values = var.numpy()
+            tensor.content = var_values.tobytes()
+            tensor.dtype = dtype_numpy_to_tensor(var_values.dtype)
+        if not self._use_async:
+            self._lock.release()
+        return res
 
     def pull_embedding_vector(self, request, _):
         # TODO: implement this RPC service
