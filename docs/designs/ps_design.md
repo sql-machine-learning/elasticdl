@@ -273,8 +273,10 @@ class Tensor(object):
 
     @classmethod
     def from_tensor_pb(cls, tensor_pb):
-        """Create an ElasticDL Tensor object from tensor protocol buffer."""
-        # Return the created tensor object
+        """Create an ElasticDL Tensor object from tensor protocol buffer.
+
+        Return the created tensor object.
+        """
         pass
 
     def to_tensor_pb(self):
