@@ -68,7 +68,7 @@ python -m elasticdl.python.elasticdl.client train \
     --model_zoo=model_zoo \
     --model_def=mnist_subclass.mnist_subclass.CustomModel \
     --training_data=${MNIST_DATA_DIR}/train \
-    --evaluation_data=${MNIST_DATA_DIR}/test \
+    --validation_data=${MNIST_DATA_DIR}/test \
     --num_epochs=1 \
     --minibatch_size=10 \
     --num_minibatches_per_task=10 \
@@ -107,7 +107,7 @@ python -m elasticdl.python.elasticdl.client train \
     --model_zoo=model_zoo \
     --model_def=mnist_subclass.mnist_subclass.CustomModel \
     --training_data=${MNIST_DATA_DIR}/train \
-    --evaluation_data=${MNIST_DATA_DIR}/test \
+    --validation_data=${MNIST_DATA_DIR}/test \
     --num_epochs=1 \
     --minibatch_size=10 \
     --num_minibatches_per_task=10 \
@@ -168,7 +168,7 @@ python -m elasticdl.python.elasticdl.client train \
     --model_zoo=model_zoo \
     --model_def=mnist_subclass.mnist_subclass.CustomModel \
     --training_data=${MNIST_DATA_DIR}/train \
-    --evaluation_data=${MNIST_DATA_DIR}/test \
+    --validation_data=${MNIST_DATA_DIR}/test \
     --master_pod_priority=high-priority \
     --worker_pod_priority=low-priority \
     --num_epochs=1 \
@@ -200,7 +200,7 @@ python -m elasticdl.python.elasticdl.client train \
     --model_zoo=model_zoo \
     --model_def=mnist_subclass.mnist_subclass.CustomModel \
     --training_data=${MNIST_DATA_DIR}/train \
-    --evaluation_data=${MNIST_DATA_DIR}/test \
+    --validation_data=${MNIST_DATA_DIR}/test \
     --master_pod_priority=high-priority \
     --worker_pod_priority=high-priority \
     --num_epochs=1 \

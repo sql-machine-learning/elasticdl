@@ -64,16 +64,21 @@ class Embedding(tf.keras.layers.Layer):
         # `None` dimension. This is because they have different shapes in
         # different iterations.
         # `tf.Variable` requires initial value if shape has `None` dimension.
+        self._embedding_and_ids_graph = []
+
+    def _init_for_graph_mode(self):
         self._embedding_and_ids_graph = [
             EmbeddingAndIds(
                 batch_embedding=tf.Variable(
-                    initial_value=tf.zeros((1, self.output_dim)),
+                    # In some cases, `tf.Variable` requires that initial value
+                    # is callable.
+                    initial_value=lambda: tf.zeros((1, self.output_dim)),
                     shape=tf.TensorShape((None, self.output_dim)),
                     dtype=tf.float32,
                     trainable=True,
                 ),
                 batch_ids=tf.Variable(
-                    initial_value=tf.zeros((1, 1), dtype=tf.int64),
+                    initial_value=lambda: tf.zeros((1, 1), dtype=tf.int64),
                     shape=tf.TensorShape(None),
                     dtype=tf.int64,
                     trainable=False,
@@ -186,6 +191,13 @@ class Embedding(tf.keras.layers.Layer):
         return batch_embedding
 
     def call(self, input):
+        if (
+            self.tape
+            and not tf.executing_eagerly()
+            and not self._embedding_and_ids_graph
+        ):
+            self._init_for_graph_mode()
+
         input = tf.cast(input, tf.int64)
         if isinstance(input, tf.SparseTensor):
             return self._sparse_input_call(input)

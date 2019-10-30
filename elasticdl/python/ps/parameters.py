@@ -18,6 +18,7 @@ class Parameters(object):
     """
 
     def __init__(self):
+        self.version = 0
         self.init_status = False
         self.non_embedding_params = {}
         self.embedding_params = {}
@@ -42,6 +43,7 @@ class Parameters(object):
             embeddings_pb = model_pb.embedding_table_info
             self._init_non_embedding_params(tensors_pb)
             self._init_embedding_params(embeddings_pb)
+            self.version = model_pb.version
             self.init_status = True
 
     def _init_non_embedding_params(self, tensors_pb):

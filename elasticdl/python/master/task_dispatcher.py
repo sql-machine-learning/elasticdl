@@ -94,26 +94,14 @@ class _TaskDispatcher(object):
             max_ind_this_shard = start_ind_this_shard + num_records_this_shard
             for start_ind_this_task in range(
                 start_ind_this_shard,
-                start_ind_this_shard + num_records_this_shard,
+                max_ind_this_shard,
                 self._records_per_task,
             ):
-                max_ind_this_task = (
-                    start_ind_this_task + self._records_per_task
-                )
                 end_ind_this_task = min(
-                    max_ind_this_task, num_records_this_shard
+                    start_ind_this_task + self._records_per_task,
+                    max_ind_this_shard,
                 )
-                # If the start index is not smaller than end index,
-                # we need to find the correct end index by taking the start
-                # index into account. We should not create task with
-                # end index that exceeds the maximally possible number of
-                # records available in this shard.
-                if start_ind_this_task >= end_ind_this_task:
-                    end_ind_this_task = min(
-                        max_ind_this_task,
-                        start_ind_this_task + num_records_this_shard,
-                        max_ind_this_shard,
-                    )
+
                 # Note that only records in [start, end) of this task
                 # will be consumed later in the worker that handles
                 # this task.

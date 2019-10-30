@@ -207,11 +207,11 @@ message Model {
     repeated EmbeddingTableInfo embedding_table_info = 3;
 }
 
-message PullModelRequest{
+message PullVariableRequest{
     int64 version = 1;
 }
 
-message PullModelResponse{
+message PullVariableResponse{
     bool model_init_status = 1;
     Model model = 2;
 }
@@ -244,7 +244,7 @@ message SynchronizeEmbeddingResponse {
 ```proto
 service PServer{
     # pull trainable tensorflow variables created by Keras layers
-    rpc pull_variable(PullModelRequest) returns (PullModelResponse);
+    rpc pull_variable(PullVariableRequest) returns (PullVariableResponse);
 
     # pull embedding vectors in ElasticDL embedding layers
     # Do we need to create a new message `PullEmbeddingVectorRequest` rather than use `Tensor`?
