@@ -70,7 +70,8 @@ def append_tensor_pb_from_ndarray(
 
     Note:
         This function does not use list append function as following code
-            snippet. It is slow because append function does copy operation.
+            snippet. It is slow because append function will copy the input
+            protocol buffer.
 
         ```
         pb = elasticdl_pb2.Tensor()
@@ -171,4 +172,4 @@ class Tensor(object):
                 "Converting an ElasticDL Tensor object, which contains a "
                 "sparse tensor, to a numpy.ndarray is not supported."
             )
-        return np.array(self.values)
+        return self.values
