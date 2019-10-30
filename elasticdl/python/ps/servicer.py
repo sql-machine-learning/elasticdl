@@ -34,13 +34,11 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             res.model_init_status = False
             return res
 
-        res.model_init_status = True
-        res.model.version = self._parameters.version
-
         # Only sync-SGD needs lock
         # TODO: use a read-write lock to support multiple concurrent reads
         if not self._use_async:
             self._lock.acquire()
+        res.model.version = self._parameters.version
         for name in self._parameters.non_embedding_params:
             tensor = res.model.param.add()
             tensor.name = name
@@ -51,6 +49,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             tensor.dtype = dtype_numpy_to_tensor(var_values.dtype)
         if not self._use_async:
             self._lock.release()
+        res.model_init_status = True
         return res
 
     def pull_embedding_vector(self, request, _):
