@@ -50,8 +50,7 @@ class _TaskDispatcher(object):
             records_per_task: The number of records per task.
             num_epochs: The total number of epochs for the tasks where
                 an epoch is a complete iteration over the shards.
-            need_save_model: Save model or not after all the
-                training/evaluation/prediction task are completed.
+            need_save_model: Whether to save model after all tasks are completed.
         """
         self._lock = threading.Lock()
 
@@ -68,8 +67,7 @@ class _TaskDispatcher(object):
         self._task_id = 0
         self._evaluation_service = None
 
-        # the callback list to invoke while
-        # all the task are completed.
+        # Callback list to invoke after all tasks complete.
         self._task_list_done_callbacks = []
         if need_save_model:
             self._task_list_done_callbacks.append(self._create_save_model_task)
