@@ -509,6 +509,14 @@ class Worker(object):
         self._evaluation_result = {}
         return True
 
+    def _process_save_model_task_if_needed(self):
+        task, dataset = (
+            self._task_data_service.get_save_model_task_and_dataset()
+        )
+        if task and dataset:
+            # TODO: Implement the save model execution process
+            return
+
     def _process_minibatch_and_report(
         self,
         dataset_batch,
@@ -615,3 +623,5 @@ class Worker(object):
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                 if self._process_eval_task_if_needed():
                     last_minibatch_do_evaluation = True
+
+            self._process_save_model_task_if_needed()
