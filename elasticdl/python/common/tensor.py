@@ -54,16 +54,33 @@ def deserialize_tensor_pb(tensor_pb, tensor):
 
 
 def tensor_pb_to_ndarray(tensor_pb):
+    """Deserialize tensor protocol buffer and return a numpy ndarray."""
     return Tensor.from_tensor_pb(tensor_pb).to_ndarray()
 
 
 def tensor_pb_to_tf_tensor(tensor_pb):
+    """Deserialize tensor protocol buffer and return a TensorFlow tensor."""
     return Tensor.from_tensor_pb(tensor_pb).to_tf_tensor()
 
 
 def append_tensor_pb_from_ndarray(
     tensor_pb_list, values, indices=None, name=None
 ):
+    """Generate a tensor procotol buffer and append it to tensor_pb_list.
+
+    Note:
+        This function does not use list append function as following code
+            snippet. It is slow because append function does copy operation.
+
+        ```
+        pb = elasticdl_pb2.Tensor()
+        pb.dim.extend([3])
+        pb.name = "test"
+        pb.dtype = DT_INT64
+        pb.content = np.array([1, 2, 3]).tobytes()
+        tensor_pb_list.append(tensor_pb) # slow, because append copies pb
+        ```
+    """
     tensor_pb = tensor_pb_list.add()
     tensor = Tensor(values, indices, name)
     serialize_tensor(tensor, tensor_pb)
@@ -96,6 +113,7 @@ class Tensor(object):
 
     @classmethod
     def from_tensor_pb(cls, tensor_pb):
+        """Create an ElasticDL Tensor object from tensor protocol buffer."""
         tensor = cls()
         deserialize_tensor_pb(tensor_pb, tensor)
         return tensor
