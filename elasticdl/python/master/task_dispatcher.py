@@ -173,9 +173,13 @@ class _TaskDispatcher(object):
         if not self._task_list_done_callbacks:
             return False
 
-        callback = self._task_list_done_callbacks.pop()
-        callback()
-        return True
+        with self._lock:
+            if not self._task_list_done_callbacks:
+                return False
+
+            callback = self._task_list_done_callbacks.pop()
+            callback()
+            return True
 
     def get(self, worker_id):
         """Return next (task_id, Task) tuple"""
