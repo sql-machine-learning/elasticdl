@@ -143,7 +143,12 @@ class _TaskDispatcher(object):
         return tasks
 
     def _create_save_model_task(self):
-        # For the SavedModel Task, we need a shard of data to build the model
+        """
+        Build one instance of SaveModel task and add it to todo list.
+        Because we need create a dataset to build the model,
+        we include a shard of data in this task.
+        """
+
         shards = self._training_shards
         assert shards is not None
 
