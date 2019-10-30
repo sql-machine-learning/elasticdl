@@ -20,7 +20,7 @@ class ModelHandler(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_saved_model_from_trained_model(self, model, dataset):
+    def get_model_to_export_from_trained_model(self, model, dataset):
         """
         Get the model which can be exported a SavedModel
         by tf.saved_model.save.
@@ -47,7 +47,7 @@ class DefaultModelHandler(ModelHandler):
     def generate_train_model_for_elasticdl(self, model):
         return model
 
-    def get_saved_model_from_trained_model(self, model, dataset):
+    def get_model_to_export_from_trained_model(self, model, dataset):
         if not model.inputs:
             model._build_model_with_inputs(inputs=dataset, targets=None)
         return model
@@ -65,7 +65,7 @@ class ParameterServerModelHandler(ModelHandler):
             model = self._replace_embedding_attribute_for_subclass(model)
         return model
 
-    def get_saved_model_from_trained_model(self, model, dataset):
+    def get_model_to_export_from_trained_model(self, model, dataset):
         """
         To export model for tf-serving by tf.saved_model.save:
         1. Add inputs and outputs to the model.
@@ -89,6 +89,7 @@ class ParameterServerModelHandler(ModelHandler):
                 )
                 edl_embedding_layer = Embedding(
                     output_dim=layer.output_dim,
+                    input_dim=layer.input_dim,
                     embedding_initializer=layer.embeddings_initializer,
                     mask_zero=layer.mask_zero,
                     input_length=layer.input_length,
@@ -100,12 +101,19 @@ class ParameterServerModelHandler(ModelHandler):
             model, clone_function=_clone_function
         )
 
-    def _replace_embedding_attribute_for_subclass(self, model):
+    def _replace_embedding_attributes_for_subclass(self, model):
         """
         Replace the keras embedding attribute with
         elasticdl.layers.Embedding layer.
         """
         for attr_name, attr_value in model.__dict__.items():
             if type(attr_value) == tf.keras.layers.Embedding:
-                setattr(model, attr_name, Embedding(attr_value.output_dim))
+                edl_embedding_layer = Embedding(
+                    output_dim=attr_value.output_dim,
+                    input_dim=attr_value.input_dim,
+                    embedding_initializer=attr_value.embeddings_initializer,
+                    mask_zero=attr_value.mask_zero,
+                    input_length=attr_value.input_length,
+                )
+                setattr(model, attr_name, edl_embedding_layer)
         return model

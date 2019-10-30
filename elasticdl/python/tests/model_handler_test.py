@@ -47,7 +47,7 @@ class DefaultModelHandlerTest(unittest.TestCase):
         feature_columns = feature_columns_fn()
         model_inst = custom_sequential_model(feature_columns)
         dataset = _get_dataset()
-        self.model_handler.get_saved_model_from_trained_model(
+        self.model_handler.get_model_to_export_from_trained_model(
             model_inst, dataset
         )
         self.assertEqual(list(model_inst.inputs.keys()), ["age", "education"])
