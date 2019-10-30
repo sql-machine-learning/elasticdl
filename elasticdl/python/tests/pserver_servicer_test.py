@@ -7,7 +7,7 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
-from elasticdl.python.common.ndarray import ndarray_to_tensor
+from elasticdl.python.common.tensor import append_tensor_pb_from_ndarray
 from elasticdl.python.ps.parameter_server import ParameterServer
 
 _test_model_zoo_path = os.path.dirname(os.path.realpath(__file__))
@@ -117,7 +117,9 @@ class PserverServicerTest(unittest.TestCase):
             req = elasticdl_pb2.Model()
             req.version = idx + 1
             for name in model:
-                req.param.append(ndarray_to_tensor(model[name], name))
+                append_tensor_pb_from_ndarray(
+                    req.param, model[name], name=name
+                )
             req.embedding_table_info.append(embedding_info)
             res = self._stub.push_model(req)
             self.assertEqual(res, empty_pb2.Empty())
