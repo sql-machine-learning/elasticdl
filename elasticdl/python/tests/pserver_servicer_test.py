@@ -82,15 +82,21 @@ class PserverServicerTest(unittest.TestCase):
             grads_to_wait, lr_staleness_modulation, use_async
         )
 
+    def get_embedding_vectors(self, name, ids):
+        pull_req = elasticdl_pb2.PullEmbeddingVectorRequest()
+        pull_req.name = name
+        pull_req.ids.extend(ids)
+        res = self._stub.pull_embedding_vector(pull_req)
+        if res.content:
+            return tensor_pb_to_ndarray(res)
+        else:
+            return None
+
     def testServicer(self):
         self.create_default_server_and_stub()
 
         # TODO: replace the section below with real RPC service tests
         # after service implementation
-        req = elasticdl_pb2.PullEmbeddingVectorRequest()
-        res = self._stub.pull_embedding_vector(req)
-        self.assertEqual(res, elasticdl_pb2.Tensor())
-
         req = elasticdl_pb2.PushGradientRequest()
         res = self._stub.push_gradient(req)
         self.assertEqual(res, elasticdl_pb2.PushGradientResponse())
@@ -175,3 +181,52 @@ class PserverServicerTest(unittest.TestCase):
             name = param.name
             tensor = tensor_pb_to_ndarray(param)
             self.assertTrue(np.allclose(param0[name], tensor))
+
+    def testPullEmbeddingVector(self):
+        self.create_default_server_and_stub()
+
+        embedding_info = elasticdl_pb2.EmbeddingTableInfo()
+        embedding_info.name = "layer_a"
+        embedding_info.dim = 32
+        embedding_info.initializer = "normal"
+
+        id_list_0 = [1, 3, 9, 6]
+        id_list_1 = [8, 9, 1, 0, 6]
+
+        req = elasticdl_pb2.Model()
+        req.version = 1
+        req.embedding_table_info.append(embedding_info)
+        embedding_info.name = "layer_b"
+        embedding_info.dim = 16
+        req.embedding_table_info.append(embedding_info)
+        res = self._stub.push_model(req)
+        self.assertEqual(res, empty_pb2.Empty())
+
+        vectors_a_0 = self.get_embedding_vectors("layer_a", id_list_0)
+        self.assertEqual(vectors_a_0.shape[0], len(id_list_0))
+        self.assertEqual(vectors_a_0.shape[1], 32)
+
+        vectors_a_1 = self.get_embedding_vectors("layer_a", id_list_1)
+        self.assertEqual(vectors_a_1.shape[0], len(id_list_1))
+        self.assertEqual(vectors_a_1.shape[1], 32)
+
+        vectors_b_1 = self.get_embedding_vectors("layer_b", id_list_1)
+        self.assertEqual(vectors_b_1.shape[0], len(id_list_1))
+        self.assertEqual(vectors_b_1.shape[1], 16)
+
+        vectors_b_0 = self.get_embedding_vectors("layer_b", id_list_0)
+        self.assertEqual(vectors_b_0.shape[0], len(id_list_0))
+        self.assertEqual(vectors_b_0.shape[1], 16)
+
+        for idx0, id0 in enumerate(id_list_0):
+            for idx1, id1 in enumerate(id_list_1):
+                if id0 == id1:
+                    self.assertTrue(
+                        np.array_equal(vectors_a_0[idx0], vectors_a_1[idx1])
+                    )
+                    self.assertTrue(
+                        np.array_equal(vectors_b_0[idx0], vectors_b_1[idx1])
+                    )
+
+        vectors = self.get_embedding_vectors("layer_a", [])
+        self.assertEqual(vectors, None)

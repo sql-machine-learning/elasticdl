@@ -4,6 +4,7 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
+from elasticdl.python.common.tensor import Tensor, serialize_tensor
 
 
 class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
@@ -52,8 +53,15 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         return res
 
     def pull_embedding_vector(self, request, _):
-        # TODO: implement this RPC service
-        return elasticdl_pb2.Tensor()
+        ret = elasticdl_pb2.Tensor()
+        if len(request.ids) == 0:
+            return ret
+        embedding_vectors = self._parameters.get_embedding_param(
+            request.name, request.ids
+        )
+        tensor = Tensor(values=embedding_vectors)
+        serialize_tensor(tensor, ret)
+        return ret
 
     def push_model(self, request, _):
         with self._lock:
