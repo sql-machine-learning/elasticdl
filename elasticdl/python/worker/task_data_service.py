@@ -69,7 +69,7 @@ class TaskDataService(object):
         """
         If an evaluation task exists, this creates a `tf.data.Dataset`
         object as well as its corresponding model version and task_id.
-        Otherwise, returns `None`.
+        Otherwise, this returns `None`.
         """
         if not eval_task:
             return None
@@ -89,8 +89,8 @@ class TaskDataService(object):
 
     def get_dataset(self):
         """
-        If therre's more data, this creates a `tf.data.Dataset` object.
-        Otherwise, returns `None`.
+        If there's more data, this creates a `tf.data.Dataset` object.
+        Otherwise, this returns `None`.
         """
         if self._pending_dataset:
             if self._pending_tasks_with_counts:
