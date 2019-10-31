@@ -39,10 +39,9 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         if not self._use_async:
             self._lock.acquire()
         res.model.version = self._parameters.version
-        for name in self._parameters.non_embedding_params:
+        for name, var in self._parameters.non_embedding_params.items():
             tensor = res.model.param.add()
             tensor.name = name
-            var = self._parameters.non_embedding_params[name]
             tensor.dim.extend(var.shape.as_list())
             var_values = var.numpy()
             tensor.content = var_values.tobytes()
