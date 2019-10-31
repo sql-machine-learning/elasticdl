@@ -7,7 +7,7 @@ import tensorflow as tf
 from tensorflow.keras.metrics import Accuracy, MeanSquaredError
 
 from elasticdl.python.common.constants import MetricsDictKey
-from elasticdl.python.common.ndarray import ndarray_to_tensor
+from elasticdl.python.common.tensor import Tensor
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import (
     EvaluationService,
@@ -63,12 +63,12 @@ class EvaluationServiceTest(unittest.TestCase):
         # Start to report metrics
         evaluation_version = job.model_version + 1
         model_outputs = [
-            ndarray_to_tensor(
-                np.array([[1], [6], [3]], dtype=np.float32),
-                MetricsDictKey.MODEL_OUTPUT,
-            )
+            Tensor(
+                np.array([[1], [6], [3]], np.float32),
+                name=MetricsDictKey.MODEL_OUTPUT,
+            ).to_tensor_pb()
         ]
-        labels = ndarray_to_tensor(np.array([[1], [0], [3]], dtype=np.float32))
+        labels = Tensor(np.array([[1], [0], [3]], np.float32)).to_tensor_pb()
         self.assertFalse(
             job.report_evaluation_metrics(
                 evaluation_version, model_outputs, labels
@@ -85,14 +85,14 @@ class EvaluationServiceTest(unittest.TestCase):
             job.report_evaluation_metrics(
                 evaluation_version,
                 [
-                    ndarray_to_tensor(
-                        np.array([[4], [5], [6], [7], [8]], dtype=np.float32),
-                        MetricsDictKey.MODEL_OUTPUT,
-                    )
+                    Tensor(
+                        np.array([[4], [5], [6], [7], [8]], np.float32),
+                        name=MetricsDictKey.MODEL_OUTPUT,
+                    ).to_tensor_pb()
                 ],
-                ndarray_to_tensor(
-                    np.array([[7], [8], [9], [10], [11]], dtype=np.float32)
-                ),
+                Tensor(
+                    np.array([[7], [8], [9], [10], [11]], np.float32)
+                ).to_tensor_pb(),
             )
         )
         expected_acc = 0.25
@@ -129,12 +129,12 @@ class EvaluationServiceTest(unittest.TestCase):
                 _eval_metrics_fn,
             )
             model_outputs = [
-                ndarray_to_tensor(
-                    np.array([1, 6, 3], dtype=np.float32),
-                    MetricsDictKey.MODEL_OUTPUT,
-                )
+                Tensor(
+                    np.array([1, 6, 3], np.float32),
+                    name=MetricsDictKey.MODEL_OUTPUT,
+                ).to_tensor_pb()
             ]
-            labels = ndarray_to_tensor(np.array([1, 0, 3], dtype=np.float32))
+            labels = Tensor(np.array([1, 0, 3], np.float32)).to_tensor_pb()
 
             self.assertFalse(
                 evaluation_service.report_evaluation_metrics(
