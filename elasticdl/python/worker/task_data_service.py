@@ -1,4 +1,5 @@
 import threading
+from collections import deque
 
 import tensorflow as tf
 
@@ -36,10 +37,10 @@ class TaskDataService(object):
         """
         Reset pending tasks and record counts
         """
-        self._record_count = 0
+        self._cur_record_count = 0
         self._reported_record_count = 0
         self._failed_record_count = 0
-        self._pending_tasks_with_counts = []
+        self._pending_tasks = deque()
         self._current_task = None
 
     def get_current_task(self):
@@ -53,10 +54,8 @@ class TaskDataService(object):
         Report the number of records in the latest processed batch,
         so TaskDataService knows if some pending tasks are finished
         and report_task_result to the master.
-        self._pending_tasks_with_counts[0][0] is the first pending task,
-        self._pending_tasks_with_counts[0][1] is the number of records
-        in this task.
         """
+        self._reported_record_count += count
         if err_msg:
             self._failed_record_count += count
             logger.warning(
@@ -64,37 +63,37 @@ class TaskDataService(object):
             )
         else:
             self._reported_record_count += count
-        if self._pending_tasks_with_counts:
-            task, total_record = self._pending_tasks_with_counts[0]
+        if self._pending_tasks:
+            task = self._pending_tasks[0]
+            total_record_num = task.end - task.start
             if task.type == elasticdl_pb2.TRAINING:
                 # only training, we allow for failures
                 if (
-                    self._failed_record_count / total_record
+                    self._failed_record_count / total_record_num
                     > self._record_failure_tolerance
                 ):
                     msg = (
-                        "too many records ({f}/{t})failure, possible "
+                        "too many records ({f}/{t}) failure, possible "
                         "reason {err_msg}"
                     ).format(
                         err_msg=err_msg,
                         f=self._failed_record_count,
-                        t=total_record,
+                        t=total_record_num,
                     )
                     self.report_task_done(task.task_id, msg)
             elif self._failed_record_count != 0:
                 self.report_task_done(task.task_id, err_msg)
             with self._lock:
                 if (
-                    len(self._pending_tasks_with_counts)
-                    and self._reported_record_count
-                    >= self._pending_tasks_with_counts[0][1]
+                    self._pending_tasks
+                    and self._reported_record_count >= total_record_num
                 ):
-                    task, _ = self._pending_tasks_with_counts.pop(0)
+                    task = self._pending_tasks.popleft()
                     self.report_task_done(task.task_id, err_msg)
                     self._reported_record_count = 0
                     self._failed_record_count = 0
-                if len(self._pending_tasks_with_counts):
-                    self._current_task = self._pending_tasks_with_counts[0][0]
+                if self._pending_tasks:
+                    self._current_task = self._pending_tasks[0]
 
     def get_validation_dataset(self, eval_task):
         """
@@ -124,7 +123,7 @@ class TaskDataService(object):
         Otherwise, this returns `None`.
         """
         if self._pending_dataset:
-            if self._pending_tasks_with_counts:
+            if self._pending_tasks:
                 logger.error(
                     "Cannot get new dataset when there are pending tasks"
                 )
@@ -175,11 +174,9 @@ class TaskDataService(object):
                     self._pending_save_model_task = task
                     continue
 
-                self._record_count += task.end - task.start
-                self._pending_tasks_with_counts.append(
-                    (task, self._record_count)
-                )
-                if len(self._pending_tasks_with_counts) == 1:
+                self._cur_record_count = task.end - task.start
+                self._pending_tasks.append(task)
+                if len(self._pending_tasks) == 1:
                     self._current_task = task
             for data in self.data_reader.read_records(task):
                 if data:
