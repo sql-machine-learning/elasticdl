@@ -47,7 +47,7 @@ class DefaultModelHandlerTest(unittest.TestCase):
         dataset = _get_dataset()
         self.model_handler.get_model_to_export(model_inst, dataset)
         self.assertEqual(list(model_inst.inputs.keys()), ["age", "education"])
-        self.assertEqual(len(model_inst.outputs), 10)
+        self.assertEqual(len(model_inst.outputs), 1)
 
 
 class ParameterSeverModelHandlerTest(unittest.TestCase):
