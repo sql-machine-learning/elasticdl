@@ -79,13 +79,11 @@ class ParameterServerModelHandler(ModelHandler):
         tf.saved_model.save.
         """
         model = self._restore_keras_model_def(model)
-
         if not model.inputs:
             # build model to add inputs and outputs for tf-serving
             model._build_model_with_inputs(inputs=dataset, targets=None)
         for var in model.trainable_variables:
             var.assign(trained_params[var.name])
-
         return model
 
     def _restore_keras_model_def(self, model):
