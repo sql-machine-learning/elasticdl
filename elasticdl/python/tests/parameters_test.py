@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto.elasticdl_pb2 import EmbeddingTableInfo, Model
-from elasticdl.python.common.ndarray import ndarray_to_tensor
+from elasticdl.python.common.tensor import Tensor
 from elasticdl.python.ps.parameters import Parameters
 
 
@@ -17,9 +17,9 @@ class ParametersTest(unittest.TestCase):
         self.embeddings_pb = self.model_pb.embedding_table_info
 
         arr1 = np.random.uniform(size=(3, 4))
-        tensor1_pb = ndarray_to_tensor(arr1, "x")
+        tensor1_pb = Tensor(arr1, name="x").to_tensor_pb()
         arr2 = np.random.uniform(size=(4, 5))
-        tensor2_pb = ndarray_to_tensor(arr2, "y")
+        tensor2_pb = Tensor(arr2, name="y").to_tensor_pb()
         self.tensors_pb.extend([tensor1_pb, tensor2_pb])
 
         self.embedding_table_name = "embedding_1"

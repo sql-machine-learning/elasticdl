@@ -22,8 +22,8 @@ class Embedding(tf.keras.layers.Layer):
       (batch_size, output_dim) if combiner is not None
     Arguments:
       output_dim: the dimension of the embedding vector
-      input_dim: the max input id. If None, the input_dim will be
-      the max id which can be acquired during training through all records.
+      input_dim: the max input id. If 0 or None, will not check the range of
+        input embedding ids.
       embeddings_initializer: Initializer for embedding table
       mask_zero: Whether or not the input value 0 is a special "padding"
         value that should be masked out.
@@ -183,6 +183,8 @@ class Embedding(tf.keras.layers.Layer):
         return embedding_vectors.reshape((len(keys), self.output_dim))
 
     def _check_id_valid(self, ids):
+        if not self.input_dim:
+            return
         first_may_exceed_id = ids[np.argmax(ids >= self.input_dim)]
         if self.input_dim is not None and first_may_exceed_id > self.input_dim:
             raise ValueError(
