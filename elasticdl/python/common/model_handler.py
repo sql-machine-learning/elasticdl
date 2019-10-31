@@ -88,7 +88,7 @@ class ParameterServerModelHandler(ModelHandler):
                 edl_embedding_layer = Embedding(
                     output_dim=layer.output_dim,
                     input_dim=layer.input_dim,
-                    embedding_initializer=layer.embeddings_initializer,
+                    embeddings_initializer=layer.embeddings_initializer,
                     mask_zero=layer.mask_zero,
                     input_length=layer.input_length,
                 )

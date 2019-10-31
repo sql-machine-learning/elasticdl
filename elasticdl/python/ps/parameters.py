@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from elasticdl.python.common.ndarray import tensor_to_ndarray
+from elasticdl.python.common.tensor import tensor_pb_to_ndarray
 from elasticdl.python.ps.embedding_table import create_embedding_table
 
 
@@ -49,7 +49,7 @@ class Parameters(object):
     def _init_non_embedding_params(self, tensors_pb):
         for pb in tensors_pb:
             name = pb.name
-            arr = tensor_to_ndarray(pb)
+            arr = tensor_pb_to_ndarray(pb)
             var = tf.Variable(name=name, initial_value=arr, trainable=True)
             self.non_embedding_params[name] = var
 
