@@ -553,7 +553,7 @@ class Worker(object):
         # The worker needs to get model from PS if
         # `train_with_local_model=False`. This happens when:
         #     processing first minibatch
-        #     any evaluation task has been executed before the minibatch
+        #     any evaluation task has been executed just before this minibatch
         #     last minibatch is training task and failed
         #     local_update_count >= worker._get_model_steps
         # Otherwise, worker trains with local model, i.e.
@@ -581,7 +581,11 @@ class Worker(object):
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                     # Give the worker a chance to process an evaluation task
                     # during training if the task exists
-                    evaluation_task_executed = self._evaluate_only()
+                    evaluation_task_executed = (
+                        True
+                        if self._evaluate_only()
+                        else evaluation_task_executed
+                    )
 
                 task = self._task_data_service.get_current_task()
                 if (

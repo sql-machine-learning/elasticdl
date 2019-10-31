@@ -125,12 +125,11 @@ class _TaskDispatcher(object):
                 )
         if task_type == elasticdl_pb2.TRAINING:
             random.shuffle(tasks)
-            with self._lock:
-                self._todo.extend(tasks)
+            self._todo.extend(tasks)
+        elif task_type == elasticdl_pb2.EVALUATION:
+            self._eval_todo.extend(tasks)
         else:
-            with self._lock:
-                self._eval_todo.extend(tasks)
-        return tasks
+            self._todo.extend(tasks)
 
     def get_eval_task(self, worker_id):
         """Return next evaluation (task_id, Task) tuple"""
@@ -239,7 +238,7 @@ class _TaskDispatcher(object):
 
     def finished(self):
         """Return if all tasks are done"""
-        return not self._todo and not self._doing
+        return all([not self._todo, not self._eval_todo, not self._doing])
 
     def recover_tasks(self, worker_id):
         """Recover doing tasks for a dead worker"""

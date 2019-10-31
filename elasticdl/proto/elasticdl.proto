@@ -77,7 +77,7 @@ message Model {
 
 message GetTaskRequest {
     int32 worker_id = 1;
-    int32 task_type = 2;
+    TaskType task_type = 2;
 }
 
 message GetModelRequest {
