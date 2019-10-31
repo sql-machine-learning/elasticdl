@@ -10,7 +10,9 @@ from elasticdl.python.common.log_utils import default_logger as logger
 class _Task(object):
     """Internal representation of a task"""
 
-    def __init__(self, shard_name, start, end, type, model_version=-1, **kwargs):
+    def __init__(
+        self, shard_name, start, end, type, model_version=-1, **kwargs
+    ):
         self.shard_name = shard_name
         self.start = start
         self.end = end
