@@ -55,16 +55,21 @@ class DefaultModelHandlerTest(unittest.TestCase):
         model_inst._build_model_with_inputs(inputs=dataset, targets=None)
         trained_params = _mock_model_trained_params(model_inst)
         model_inst = self.model_handler.get_model_to_export(
-            model_inst, trained_params, dataset)
+            model_inst, trained_params, dataset
+        )
         self.assertEqual(list(model_inst.inputs.keys()), ["age", "education"])
         self.assertEqual(len(model_inst.outputs), 1)
 
-        test_data = {"age": [14, 56, 78, 38, 80],
-                     "education": ["Bachelors", "Master",
-                                   "Some-college",
-                                   "Bachelors",
-                                   "Master"],
-                     }
+        test_data = {
+            "age": [14, 56, 78, 38, 80],
+            "education": [
+                "Bachelors",
+                "Master",
+                "Some-college",
+                "Bachelors",
+                "Master",
+            ],
+        }
         result = model_inst.call(test_data).numpy()
         self.assertEqual(result.tolist(), np.ones((5, 1)).tolist())
 

@@ -67,10 +67,12 @@ class ParameterServerModelHandler(ModelHandler):
         """
         if type(model) == tf.keras.Sequential or model._is_graph_network:
             model = self._replace_embedding_layer_to_clone_model(
-                model, tf.keras.layers.Embedding, Embedding)
+                model, tf.keras.layers.Embedding, Embedding
+            )
         else:
             model = self._replace_embedding_attribute_for_subclass(
-                model, tf.keras.layers.Embedding, Embedding)
+                model, tf.keras.layers.Embedding, Embedding
+            )
         return model
 
     def get_model_to_export(self, model, trained_params, dataset):
@@ -107,7 +109,8 @@ class ParameterServerModelHandler(ModelHandler):
         return model
 
     def _replace_embedding_layer_to_clone_model(
-            self, model, src_embedding_class, dst_embedding_class):
+        self, model, src_embedding_class, dst_embedding_class
+    ):
         """
         Clone a new model by cloning model and replace the
         src_embedding_class layer with a dst_embedding_class.
@@ -115,8 +118,10 @@ class ParameterServerModelHandler(ModelHandler):
 
         def _clone_function(layer):
             if type(layer) == src_embedding_class:
-                logger.info("Replace {} with {}".format(
-                    src_embedding_class, dst_embedding_class)
+                logger.info(
+                    "Replace {} with {}".format(
+                        src_embedding_class, dst_embedding_class
+                    )
                 )
                 embedding_layer = dst_embedding_class(
                     output_dim=layer.output_dim,
@@ -133,7 +138,8 @@ class ParameterServerModelHandler(ModelHandler):
         )
 
     def _replace_embedding_attributes_for_subclass(
-            self, model, src_embedding_class, dst_embedding_class):
+        self, model, src_embedding_class, dst_embedding_class
+    ):
         """
         Replace the keras embedding attribute with
         elasticdl.layers.Embedding layer.
