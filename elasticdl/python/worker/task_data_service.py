@@ -55,13 +55,12 @@ class TaskDataService(object):
         so TaskDataService knows if some pending tasks are finished
         and report_task_result to the master.
         """
+        self._reported_record_count += count
         if err_msg:
             self._failed_record_count += count
             logger.warning(
                 "Process records of task contains " "error: %s", err_msg
             )
-        else:
-            self._reported_record_count += count
         if self._pending_tasks:
             task = self._pending_tasks[0]
             total_record_num = task.end - task.start
