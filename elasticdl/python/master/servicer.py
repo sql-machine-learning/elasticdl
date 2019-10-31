@@ -138,9 +138,16 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # For evaluation task, it will use the fixed version model
             if task.type == elasticdl_pb2.EVALUATION:
                 res.model_version = task.model_version
-        elif not self._task_d.finished():
-            # Not all tasks are finished, wait in case of new tasks later.
+        elif (not self._task_d.finished()) or (
+            self._task_d.invoke_task_list_done_callback()
+        ):
+            # If the todo and doing tasks are not empty,
+            # Otherwise if the callback list is not empty,
+            # we are trying to pop and invoke the callback.
+            # Then the master tells the worker to wait
+            # in case of new tasks later.
             res.type = elasticdl_pb2.WAIT
+
         return res
 
     def GetModel(self, request, _):

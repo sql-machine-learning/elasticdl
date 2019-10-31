@@ -7,7 +7,10 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
-from elasticdl.python.common.tensor import emplace_tensor_pb_from_ndarray
+from elasticdl.python.common.tensor import (
+    emplace_tensor_pb_from_ndarray,
+    tensor_pb_to_ndarray,
+)
 from elasticdl.python.ps.parameter_server import ParameterServer
 
 _test_model_zoo_path = os.path.dirname(os.path.realpath(__file__))
@@ -84,10 +87,6 @@ class PserverServicerTest(unittest.TestCase):
 
         # TODO: replace the section below with real RPC service tests
         # after service implementation
-        req = elasticdl_pb2.PullVariableRequest()
-        res = self._stub.pull_variable(req)
-        self.assertEqual(res, elasticdl_pb2.PullVariableResponse())
-
         req = elasticdl_pb2.PullEmbeddingVectorRequest()
         res = self._stub.pull_embedding_vector(req)
         self.assertEqual(res, elasticdl_pb2.Tensor())
@@ -147,3 +146,32 @@ class PserverServicerTest(unittest.TestCase):
                     embedding_info.name
                 ].initializer,
             )
+
+    def testPullVariable(self):
+        self.create_default_server_and_stub()
+        param0 = {
+            "v0": np.random.rand(3, 2).astype(np.float32),
+            "v1": np.random.rand(10, 32).astype(np.float32),
+        }
+        pull_req = empty_pb2.Empty()
+        # try to pull variable
+        res = self._stub.pull_variable(pull_req)
+        # not initialized
+        self.assertFalse(res.model_init_status)
+
+        # init variable
+        req = elasticdl_pb2.Model()
+        req.version = 1
+        for name, var in param0.items():
+            emplace_tensor_pb_from_ndarray(req.param, var, name=name)
+        res = self._stub.push_model(req)
+        self.assertEqual(res, empty_pb2.Empty())
+
+        # pull variable back
+        res = self._stub.pull_variable(pull_req)
+        self.assertTrue(res.model_init_status)
+        self.assertEqual(res.model.version, req.version)
+        for param in res.model.param:
+            name = param.name
+            tensor = tensor_pb_to_ndarray(param)
+            self.assertTrue(np.allclose(param0[name], tensor))

@@ -37,6 +37,7 @@ class _TaskDispatcher(object):
         prediction_shards,
         records_per_task,
         num_epochs,
+        need_save_model=False,
     ):
         """
         Arguments:
@@ -49,6 +50,8 @@ class _TaskDispatcher(object):
             records_per_task: The number of records per task.
             num_epochs: The total number of epochs for the tasks where
                 an epoch is a complete iteration over the shards.
+            need_save_model: Whether to save model after all tasks
+                are completed.
         """
         self._lock = threading.Lock()
 
@@ -64,6 +67,11 @@ class _TaskDispatcher(object):
         self._doing = {}
         self._task_id = 0
         self._evaluation_service = None
+
+        # Callback list to invoke after all tasks complete.
+        self._task_list_done_callbacks = []
+        if need_save_model:
+            self._task_list_done_callbacks.append(self._create_save_model_task)
 
         if self._training_shards:
             logger.info("Starting epoch %d", self._epoch)
@@ -121,6 +129,50 @@ class _TaskDispatcher(object):
             with self._lock:
                 self._todo.extend(tasks)
         return tasks
+
+    def _create_save_model_task(self):
+        """
+        Build one instance of SaveModel task and add it to todo list.
+        Because we need create a dataset to build the model,
+        we include a shard of data in this task.
+        """
+
+        shards = self._training_shards
+        assert shards is not None
+
+        (shard_name, (start_ind_this_shard, num_records_this_shard)) = next(
+            iter(shards.items())
+        )
+        start_ind_this_task = start_ind_this_shard
+        end_ind_this_task = start_ind_this_shard + min(
+            self._records_per_task, num_records_this_shard
+        )
+
+        # Use the first shard of data to do the SavedModel work
+        save_model_task = _Task(
+            shard_name=shard_name,
+            start=start_ind_this_task,
+            end=end_ind_this_task,
+            type=elasticdl_pb2.SAVE_MODEL,
+        )
+
+        self._todo.append(save_model_task)
+
+    def invoke_task_list_done_callback(self):
+        """
+        Pop a callback from the list and invoke it.
+        If the callback list is empty, return False directly.
+        """
+        if not self._task_list_done_callbacks:
+            return False
+
+        with self._lock:
+            if not self._task_list_done_callbacks:
+                return False
+
+            callback = self._task_list_done_callbacks.pop()
+            callback()
+            return True
 
     def get(self, worker_id):
         """Return next (task_id, Task) tuple"""
