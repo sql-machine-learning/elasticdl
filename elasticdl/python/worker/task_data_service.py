@@ -59,7 +59,7 @@ class TaskDataService(object):
         if err_msg:
             self._failed_record_count += count
             logger.warning(
-                "Process records of task contains " "error: %s", err_msg
+                "Process records of task contains error: %s", err_msg
             )
         if self._pending_tasks:
             task = self._pending_tasks[0]
@@ -79,6 +79,7 @@ class TaskDataService(object):
                         t=total_record_num,
                     )
                     self.report_task_done(task.task_id, msg)
+                    return
             elif self._failed_record_count != 0:
                 self.report_task_done(task.task_id, err_msg)
             with self._lock:
