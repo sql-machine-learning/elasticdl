@@ -7,9 +7,9 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
-from elasticdl.python.common.ndarray import (
-    ndarray_to_tensor,
-    tensor_to_ndarray,
+from elasticdl.python.common.tensor import (
+    emplace_tensor_pb_from_ndarray,
+    tensor_pb_to_ndarray,
 )
 from elasticdl.python.ps.parameter_server import ParameterServer
 
@@ -116,7 +116,9 @@ class PserverServicerTest(unittest.TestCase):
             req = elasticdl_pb2.Model()
             req.version = idx + 1
             for name in model:
-                req.param.append(ndarray_to_tensor(model[name], name))
+                emplace_tensor_pb_from_ndarray(
+                    req.param, model[name], name=name
+                )
             req.embedding_table_info.append(embedding_info)
             res = self._stub.push_model(req)
             self.assertEqual(res, empty_pb2.Empty())
@@ -160,8 +162,8 @@ class PserverServicerTest(unittest.TestCase):
         # init variable
         req = elasticdl_pb2.Model()
         req.version = 1
-        for name in param0:
-            req.param.append(ndarray_to_tensor(param0[name], name))
+        for name, var in param0.items():
+            emplace_tensor_pb_from_ndarray(req.param, var, name=name)
         res = self._stub.push_model(req)
         self.assertEqual(res, empty_pb2.Empty())
 
@@ -171,5 +173,5 @@ class PserverServicerTest(unittest.TestCase):
         self.assertEqual(res.model.version, req.version)
         for param in res.model.param:
             name = param.name
-            tensor = tensor_to_ndarray(param)
+            tensor = tensor_pb_to_ndarray(param)
             self.assertTrue(np.allclose(param0[name], tensor))

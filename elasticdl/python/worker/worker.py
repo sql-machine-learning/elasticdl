@@ -13,9 +13,10 @@ from elasticdl.python.common.model_utils import (
     get_model_spec,
     get_non_embedding_trainable_vars,
 )
-from elasticdl.python.common.ndarray import (
-    ndarray_to_tensor,
-    tensor_to_ndarray,
+from elasticdl.python.common.tensor import (
+    Tensor,
+    emplace_tensor_pb_from_ndarray,
+    serialize_tensor,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.worker.task_data_service import TaskDataService
@@ -186,9 +187,8 @@ class Worker(object):
 
         # Assumes all trainable variables exist in model.param.
         for tensor_pb in model.param:
-            self._non_embed_vars[tensor_pb.name].assign(
-                tensor_to_ndarray(tensor_pb)
-            )
+            tensor = Tensor.from_tensor_pb(tensor_pb)
+            self._non_embed_vars[tensor.name].assign(tensor.to_ndarray())
         self._model_version = model.version
 
     def report_task_result(self, task_id, err_msg):
@@ -206,7 +206,9 @@ class Worker(object):
         """
         req = elasticdl_pb2.ReportVariableRequest()
         for v in self._non_embed_vars.values():
-            req.variable.append(ndarray_to_tensor(v.numpy(), v.name))
+            emplace_tensor_pb_from_ndarray(
+                req.variable, v.numpy(), name=v.name
+            )
         self._stub.ReportVariable(req)
 
     def report_gradient(self, grads):
@@ -222,14 +224,7 @@ class Worker(object):
         for g, v in zip(
             grads[:non_embed_vars_n], self._non_embed_vars.values()
         ):
-            if isinstance(g, tf.IndexedSlices):
-                req.gradient.append(
-                    ndarray_to_tensor(
-                        g.values.numpy(), v.name, tuple(g.indices.numpy())
-                    )
-                )
-            else:
-                req.gradient.append(ndarray_to_tensor(g.numpy(), v.name))
+            emplace_tensor_pb_from_ndarray(req.gradient, g, name=v.name)
 
         # Accumulate gradients of ElasticDL embedding layer
         if self._embedding_layers:
@@ -267,10 +262,8 @@ class Worker(object):
                         g_values = grad
                         g_indices = ids
 
-                req.gradient.append(
-                    ndarray_to_tensor(
-                        g_values.numpy(), layer.name, tuple(g_indices.numpy())
-                    )
+                emplace_tensor_pb_from_ndarray(
+                    req.gradient, g_values, indices=g_indices, name=layer.name
                 )
 
         req.model_version = self._model_version
@@ -285,9 +278,12 @@ class Worker(object):
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         for name, output in model_outputs.items():
             output = np.concatenate(output)
-            req.model_outputs.append(ndarray_to_tensor(output, name))
+            emplace_tensor_pb_from_ndarray(
+                req.model_outputs, output, name=name
+            )
         labels = np.concatenate(labels)
-        req.labels.CopyFrom(ndarray_to_tensor(labels))
+        tensor = Tensor(values=labels)
+        serialize_tensor(tensor, req.labels)
         req.model_version = self._model_version
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
