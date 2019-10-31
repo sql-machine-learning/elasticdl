@@ -526,11 +526,7 @@ class Worker(object):
             saved_model_path = config_dict.get(
                 SaveModelConfig.SAVED_MODEL_PATH
             )
-            logger.info(
-                "The saved model path is {}".format(
-                    saved_model_path
-                )
-            )
+            logger.info("The saved model path is {}".format(saved_model_path))
 
             self.report_task_result(task_id=task.task_id, err_msg="")
 
