@@ -52,8 +52,6 @@ class _TaskDispatcher(object):
             records_per_task: The number of records per task.
             num_epochs: The total number of epochs for the tasks where
                 an epoch is a complete iteration over the shards.
-            need_save_model: Whether to save model after all tasks
-                are completed.
         """
         self._lock = threading.Lock()
 
@@ -130,7 +128,7 @@ class _TaskDispatcher(object):
                 self._todo.extend(tasks)
         return tasks
 
-    def create_save_model_task(self, saved_model_path):
+    def _create_save_model_task(self, saved_model_path):
         """
         Build one instance of SaveModel task and add it to todo list.
         Because we need create a dataset to build the model,
@@ -159,9 +157,10 @@ class _TaskDispatcher(object):
 
         self._todo.append(save_model_task)
 
-    def append_task_list_done_callback(self, callback):
-        if callable(callback):
-            self._task_list_done_callbacks.append(callback)
+    def defer_create_save_model_task(self, saved_model_path):
+        self._task_list_done_callbacks.append(
+            lambda: self._create_save_model_task(saved_model_path)
+        )
 
     def invoke_task_list_done_callback(self):
         """

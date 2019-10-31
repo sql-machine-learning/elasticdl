@@ -134,12 +134,12 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             res.start = task.start
             res.end = task.end
             res.type = task.type
-            if task.extended_config:
-                for k,v in task.extended_config.items():
-                    pair = elasticdl_pb2.Pair()
-                    pair.key = k
-                    pair.v = v
-                    res.extended_config.append(pair)
+            res.extended_config.extend(
+                [
+                    elasticdl_pb2.Pair(key=k, value=v)
+                    for k, v in task.extended_config.items()
+                ]
+            )
 
             # For evaluation task, it will use the fixed version model
             if task.type == elasticdl_pb2.EVALUATION:

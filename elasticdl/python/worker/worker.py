@@ -4,7 +4,12 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
+from elasticdl.python.common.constants import (
+    JobType,
+    MetricsDictKey,
+    Mode,
+    SaveModelConfig,
+)
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
@@ -515,7 +520,19 @@ class Worker(object):
         )
         if (task is not None) and (dataset is not None):
             # TODO: Implement the save model execution process
-            return
+            config_dict = {
+                pair.key: pair.value for pair in task.extended_config
+            }
+            saved_model_path = config_dict.get(
+                SaveModelConfig.SAVED_MODEL_PATH
+            )
+            logger.info(
+                "The saved model path is {}".format(
+                    saved_model_path
+                )
+            )
+
+            self.report_task_result(task_id=task.task_id, err_msg="")
 
     def _process_minibatch_and_report(
         self,
