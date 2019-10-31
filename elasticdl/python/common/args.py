@@ -455,6 +455,14 @@ def add_common_args_between_master_and_worker(parser):
         help="The data reader parameters in a string separated by semi-colon "
         'used to instantiate the data reader, e.g. "param1=1; param2=2"',
     )
+    parser.add_argument(
+        "--distribution_strategy",
+        type=str,
+        default="ParameterServerStrategy",
+        help="Master will use a distribution policy on a list of devices "
+        "according to the distributed strategy, "
+        'e.g. "ParameterServerStrategy"',
+    )
 
 
 def parse_master_args(master_args=None):

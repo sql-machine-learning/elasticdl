@@ -6,6 +6,7 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
     find_layer,
     get_dict_from_params_str,
@@ -45,6 +46,7 @@ class Worker(object):
         prediction_outputs_processor="PredictionOutputsProcessor",
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
         get_model_steps=1,
+        distribution_strategy=None,
     ):
         """
         Arguments:
@@ -97,6 +99,9 @@ class Worker(object):
             model_params=model_params,
             prediction_outputs_processor=prediction_outputs_processor,
         )
+        model_handler = ModelHandler.get_model_handler(distribution_strategy)
+        model_inst = model_handler.get_model_to_train(model_inst)
+
         self._embedding_service_endpoint = embedding_service_endpoint
         self.set_model(model_inst)
 
@@ -505,6 +510,14 @@ class Worker(object):
         self.report_task_result(task_id, err_msg)
         self._evaluation_result = {}
 
+    def _process_save_model_task_if_needed(self):
+        task, dataset = (
+            self._task_data_service.get_save_model_task_and_dataset()
+        )
+        if task and dataset:
+            # TODO: Implement the save model execution process
+            return
+
     def _process_minibatch_and_report(
         self,
         dataset_batch,
@@ -608,6 +621,7 @@ class Worker(object):
             # have pending training tasks.
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                 evaluation_task_executed = self._evaluate_only()
+                self._process_save_model_task_if_needed()
 
     def _evaluate_only(self):
         """

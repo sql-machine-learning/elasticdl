@@ -10,6 +10,7 @@ enum TaskType {
     EVALUATION = 1;
     PREDICTION = 2;
     WAIT = 3;
+    SAVE_MODEL = 4;
 }
 
 enum MethodType {
@@ -84,6 +85,11 @@ message GetModelRequest {
     int32 version = 2;
 }
 
+message PullVariableResponse {
+    bool model_init_status = 1;
+    Model model = 2;
+}
+
 message ReportVariableRequest {
     repeated Tensor variable = 1;
 }
@@ -98,10 +104,20 @@ message ReportGradientRequest {
     repeated Tensor gradient = 3;
 }
 
+message PushGradientRequest {
+    int32 model_version = 1;
+    repeated Tensor gradients = 2;
+}
+
 message ReportGradientResponse {
     // If the gradient is accepted.
     bool accepted = 1;
     // Current model version on master.
+    int32 model_version = 2;
+}
+
+message PushGradientResponse {
+    bool accepted = 1;
     int32 model_version = 2;
 }
 
@@ -127,6 +143,11 @@ message ReportEvaluationMetricsRequest {
     Tensor labels = 3;
 }
 
+message PullEmbeddingVectorRequest {
+    string name = 1;
+    repeated int64 ids = 2;
+}
+
 service Master {
     rpc GetTask(GetTaskRequest) returns (Task);
     rpc GetModel(GetModelRequest) returns (Model);
@@ -137,10 +158,9 @@ service Master {
 }
 
 // PS service
-// TODO: define messages and replace `google.protobuf.Empty` with correct message.
 service Pserver {
-    rpc pull_variable(google.protobuf.Empty) returns (google.protobuf.Empty);
-    rpc pull_embedding_vector(google.protobuf.Empty) returns (google.protobuf.Empty);
-    rpc push_model(google.protobuf.Empty) returns (google.protobuf.Empty);
-    rpc push_gradient(google.protobuf.Empty) returns (google.protobuf.Empty);
+    rpc pull_variable(google.protobuf.Empty) returns (PullVariableResponse);
+    rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
+    rpc push_model(Model) returns (google.protobuf.Empty);
+    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
 }

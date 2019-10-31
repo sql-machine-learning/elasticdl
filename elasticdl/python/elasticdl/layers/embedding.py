@@ -22,7 +22,9 @@ class Embedding(tf.keras.layers.Layer):
       (batch_size, output_dim) if combiner is not None
     Arguments:
       output_dim: the dimension of the embedding vector
-      embedding_initializer: Initializer for embedding table
+      input_dim: the max input id. If None, the input_dim will be
+      the max id which can be acquired during training through all records.
+      embeddings_initializer: Initializer for embedding table
       mask_zero: Whether or not the input value 0 is a special "padding"
         value that should be masked out.
         If input is SparseTensor, mask_zero must be False.
@@ -38,7 +40,8 @@ class Embedding(tf.keras.layers.Layer):
     def __init__(
         self,
         output_dim,
-        embedding_initializer="uniform",
+        input_dim=None,
+        embeddings_initializer="uniform",
         mask_zero=False,
         input_length=None,
         combiner=None,
@@ -49,8 +52,9 @@ class Embedding(tf.keras.layers.Layer):
             kwargs["input_shape"] = (input_length,)
         super(Embedding, self).__init__(**kwargs)
 
+        self.input_dim = input_dim
         self.output_dim = output_dim
-        self.embedding_initializer = embedding_initializer
+        self.embeddings_initializer = embeddings_initializer
         self.supports_masking = mask_zero
         self.input_length = input_length
         self.combiner = combiner
@@ -126,6 +130,7 @@ class Embedding(tf.keras.layers.Layer):
 
     def lookup_embedding(self, unique_ids):
         ids = unique_ids.numpy()
+        self._check_id_valid(ids)
         keys = [Embedding.get_key([self._name, id]) for id in ids]
         (
             embedding_vectors,
@@ -138,7 +143,9 @@ class Embedding(tf.keras.layers.Layer):
         if unknown_keys_index:
             # Initialize unknown_keys' embedding vectors and write into Redis.
             unknown_keys = [keys[index] for index in unknown_keys_index]
-            initializer = tf.keras.initializers.get(self.embedding_initializer)
+            initializer = tf.keras.initializers.get(
+                self.embeddings_initializer
+            )
             embedding_vector_init = [
                 initializer(shape=[1, self.output_dim]).numpy()
                 for _ in unknown_keys
@@ -173,6 +180,15 @@ class Embedding(tf.keras.layers.Layer):
                 embedding_vectors[key_index] = vector
         embedding_vectors = np.concatenate(embedding_vectors, axis=0)
         return embedding_vectors.reshape((len(keys), self.output_dim))
+
+    def _check_id_valid(self, ids):
+        first_may_exceed_id = ids[np.argmax(ids >= self.input_dim)]
+        if self.input_dim is not None and first_may_exceed_id > self.input_dim:
+            raise ValueError(
+                " The embedding id cannot be bigger"
+                "than input_dim. id = %d is not in [0, %d)"
+                % (first_may_exceed_id, self.input_dim)
+            )
 
     def _record_gradients(self, batch_embedding, ids):
         if tf.executing_eagerly():

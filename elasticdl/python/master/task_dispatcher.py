@@ -37,6 +37,7 @@ class _TaskDispatcher(object):
         prediction_shards,
         records_per_task,
         num_epochs,
+        need_save_model=False,
     ):
         """
         Arguments:
@@ -49,6 +50,8 @@ class _TaskDispatcher(object):
             records_per_task: The number of records per task.
             num_epochs: The total number of epochs for the tasks where
                 an epoch is a complete iteration over the shards.
+            need_save_model: Whether to save model after all tasks
+                are completed.
         """
         self._lock = threading.Lock()
 
@@ -65,6 +68,11 @@ class _TaskDispatcher(object):
         self._task_id = 0
         self._eval_todo = []
         self._evaluation_service = None
+
+        # Callback list to invoke after all tasks complete.
+        self._task_list_done_callbacks = []
+        if need_save_model:
+            self._task_list_done_callbacks.append(self._create_save_model_task)
 
         if self._training_shards:
             logger.info("Starting epoch %d", self._epoch)
@@ -95,26 +103,14 @@ class _TaskDispatcher(object):
             max_ind_this_shard = start_ind_this_shard + num_records_this_shard
             for start_ind_this_task in range(
                 start_ind_this_shard,
-                start_ind_this_shard + num_records_this_shard,
+                max_ind_this_shard,
                 self._records_per_task,
             ):
-                max_ind_this_task = (
-                    start_ind_this_task + self._records_per_task
-                )
                 end_ind_this_task = min(
-                    max_ind_this_task, num_records_this_shard
+                    start_ind_this_task + self._records_per_task,
+                    max_ind_this_shard,
                 )
-                # If the start index is not smaller than end index,
-                # we need to find the correct end index by taking the start
-                # index into account. We should not create task with
-                # end index that exceeds the maximally possible number of
-                # records available in this shard.
-                if start_ind_this_task >= end_ind_this_task:
-                    end_ind_this_task = min(
-                        max_ind_this_task,
-                        start_ind_this_task + num_records_this_shard,
-                        max_ind_this_shard,
-                    )
+
                 # Note that only records in [start, end) of this task
                 # will be consumed later in the worker that handles
                 # this task.
@@ -145,6 +141,50 @@ class _TaskDispatcher(object):
             task = self._eval_todo.pop()
             self._doing[self._task_id] = (worker_id, task)
             return self._task_id, task
+
+    def _create_save_model_task(self):
+        """
+        Build one instance of SaveModel task and add it to todo list.
+        Because we need create a dataset to build the model,
+        we include a shard of data in this task.
+        """
+
+        shards = self._training_shards
+        assert shards is not None
+
+        (shard_name, (start_ind_this_shard, num_records_this_shard)) = next(
+            iter(shards.items())
+        )
+        start_ind_this_task = start_ind_this_shard
+        end_ind_this_task = start_ind_this_shard + min(
+            self._records_per_task, num_records_this_shard
+        )
+
+        # Use the first shard of data to do the SavedModel work
+        save_model_task = _Task(
+            shard_name=shard_name,
+            start=start_ind_this_task,
+            end=end_ind_this_task,
+            type=elasticdl_pb2.SAVE_MODEL,
+        )
+
+        self._todo.append(save_model_task)
+
+    def invoke_task_list_done_callback(self):
+        """
+        Pop a callback from the list and invoke it.
+        If the callback list is empty, return False directly.
+        """
+        if not self._task_list_done_callbacks:
+            return False
+
+        with self._lock:
+            if not self._task_list_done_callbacks:
+                return False
+
+            callback = self._task_list_done_callbacks.pop()
+            callback()
+            return True
 
     def get(self, worker_id):
         """Return next (task_id, Task) tuple"""

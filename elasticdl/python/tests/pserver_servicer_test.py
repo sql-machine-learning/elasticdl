@@ -2,12 +2,16 @@ import os
 import unittest
 
 import grpc
+import numpy as np
 from google.protobuf import empty_pb2
 
-from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
+from elasticdl.python.common.ndarray import (
+    ndarray_to_tensor,
+    tensor_to_ndarray,
+)
 from elasticdl.python.ps.parameter_server import ParameterServer
-from elasticdl.python.ps.parameters import Parameters
 
 _test_model_zoo_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -55,7 +59,7 @@ class PserverServicerTest(unittest.TestCase):
             self._server.stop(0)
 
     def create_server_and_stub(
-        self, parameters, grads_to_wait, lr_staleness_modulation, use_async
+        self, grads_to_wait, lr_staleness_modulation, use_async
     ):
         args = PserverArgs(
             grads_to_wait=grads_to_wait,
@@ -65,30 +69,107 @@ class PserverServicerTest(unittest.TestCase):
         )
         pserver = ParameterServer(args)
         pserver.prepare()
+        self._parameters = pserver.parameters
         self._server = pserver.server
         self._stub = elasticdl_pb2_grpc.PserverStub(self._channel)
 
-    def testServicer(self):
-        parameters = Parameters()
+    def create_default_server_and_stub(self):
         grads_to_wait = 8
         lr_staleness_modulation = False
         use_async = True
 
         self.create_server_and_stub(
-            parameters, grads_to_wait, lr_staleness_modulation, use_async
+            grads_to_wait, lr_staleness_modulation, use_async
         )
+
+    def testServicer(self):
+        self.create_default_server_and_stub()
 
         # TODO: replace the section below with real RPC service tests
         # after service implementation
-        try:
-            req = empty_pb2.Empty()
-            res = self._stub.pull_variable(req)
-            self.assertEqual(res, req)
-            res = self._stub.pull_embedding_vector(req)
-            self.assertEqual(res, req)
+        req = elasticdl_pb2.PullEmbeddingVectorRequest()
+        res = self._stub.pull_embedding_vector(req)
+        self.assertEqual(res, elasticdl_pb2.Tensor())
+
+        req = elasticdl_pb2.PushGradientRequest()
+        res = self._stub.push_gradient(req)
+        self.assertEqual(res, elasticdl_pb2.PushGradientResponse())
+
+    def testPushModel(self):
+        self.create_default_server_and_stub()
+        param0 = {
+            "v0": np.random.rand(3, 2).astype(np.float32),
+            "v1": np.random.rand(10, 32).astype(np.float32),
+        }
+        param1 = {
+            "v0": np.ones([3, 2], dtype=np.float32),
+            "v1": np.ones([10, 32], dtype=np.float32),
+        }
+        embedding_info = elasticdl_pb2.EmbeddingTableInfo()
+        embedding_info.name = "layer0"
+        embedding_info.dim = 32
+        embedding_info.initializer = "normal"
+
+        models = [param0, param1]
+
+        for idx, model in enumerate(models):
+            req = elasticdl_pb2.Model()
+            req.version = idx + 1
+            for name in model:
+                req.param.append(ndarray_to_tensor(model[name], name))
+            req.embedding_table_info.append(embedding_info)
             res = self._stub.push_model(req)
-            self.assertEqual(res, req)
-            res = self._stub.push_gradient(req)
-            self.assertEqual(res, req)
-        except Exception:
-            self.assertTrue(False)
+            self.assertEqual(res, empty_pb2.Empty())
+            # self._parameters is initialized with the first push_model call
+            # and the second push_model has no effect
+            self.assertEqual(self._parameters.version, 1)
+            for name in param0:
+                self.assertTrue(
+                    np.allclose(
+                        param0[name],
+                        self._parameters.non_embedding_params[name].numpy(),
+                    )
+                )
+            self.assertEqual(
+                embedding_info.name,
+                self._parameters.embedding_params[embedding_info.name].name,
+            )
+            self.assertEqual(
+                embedding_info.dim,
+                self._parameters.embedding_params[embedding_info.name].dim,
+            )
+            self.assertEqual(
+                embedding_info.initializer,
+                self._parameters.embedding_params[
+                    embedding_info.name
+                ].initializer,
+            )
+
+    def testPullVariable(self):
+        self.create_default_server_and_stub()
+        param0 = {
+            "v0": np.random.rand(3, 2).astype(np.float32),
+            "v1": np.random.rand(10, 32).astype(np.float32),
+        }
+        pull_req = empty_pb2.Empty()
+        # try to pull variable
+        res = self._stub.pull_variable(pull_req)
+        # not initialized
+        self.assertFalse(res.model_init_status)
+
+        # init variable
+        req = elasticdl_pb2.Model()
+        req.version = 1
+        for name in param0:
+            req.param.append(ndarray_to_tensor(param0[name], name))
+        res = self._stub.push_model(req)
+        self.assertEqual(res, empty_pb2.Empty())
+
+        # pull variable back
+        res = self._stub.pull_variable(pull_req)
+        self.assertTrue(res.model_init_status)
+        self.assertEqual(res.model.version, req.version)
+        for param in res.model.param:
+            name = param.name
+            tensor = tensor_to_ndarray(param)
+            self.assertTrue(np.allclose(param0[name], tensor))
