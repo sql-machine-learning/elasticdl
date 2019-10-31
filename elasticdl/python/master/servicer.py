@@ -128,7 +128,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         res = elasticdl_pb2.Task()
         res.model_version = self._version
         res.minibatch_size = self._minibatch_size
-        task_id, task = self._task_d.get(request.worker_id)
+        if request.task_type == elasticdl_pb2.EVALUATION:
+            task_id, task = self._task_d.get_eval_task(request.worker_id)
+        else:
+            task_id, task = self._task_d.get(request.worker_id)
+
         if task:
             res.task_id = task_id
             res.shard_name = task.shard_name

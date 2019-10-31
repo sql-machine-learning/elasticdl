@@ -160,7 +160,7 @@ class EvaluationServiceTest(unittest.TestCase):
             # Add an evaluation task and we can start evaluation
             self.assertEqual(8, len(task_d._todo))
             evaluation_service.add_evaluation_task(False)
-            self.assertEqual(16, len(task_d._todo))
+            self.assertEqual(8, len(task_d._eval_todo))
             self.assertFalse(evaluation_service._eval_job.finished())
 
             for i in range(8):
@@ -189,7 +189,7 @@ class EvaluationServiceTest(unittest.TestCase):
         )
         master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
 
-        self.assertEqual(8, len(task_d._todo))
+        self.assertEqual(8, len(task_d._eval_todo))
         for i in range(8):
             self.assertFalse(evaluation_service._eval_job.finished())
             evaluation_service.complete_task()
