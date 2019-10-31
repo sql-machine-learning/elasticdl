@@ -67,9 +67,9 @@ class TaskDataService(object):
 
     def get_validation_dataset(self, eval_task):
         """
-        Return a RecordIO dataset for an evaluation task and
-        its corresponding model version, task_id.
-        Return None if no evaluation task.
+        If an evaluation task exists, this creates a `tf.data.Dataset`
+        object as well as its corresponding model version and task_id.
+        Otherwise, returns `None`.
         """
         if not eval_task:
             return None
@@ -89,7 +89,8 @@ class TaskDataService(object):
 
     def get_dataset(self):
         """
-        Return a RecordIO dataset, or None if no more data.
+        If therre's more data, this creates a `tf.data.Dataset` object.
+        Otherwise, returns `None`.
         """
         if self._pending_dataset:
             if self._pending_tasks_with_counts:
@@ -120,7 +121,7 @@ class TaskDataService(object):
     def _gen(self):
         """
         A generator supports the iter() protocol (e.g. a generator function),
-        used to create a `tf.data.Dataset` from a list of tasks.
+        used to create a `tf.data.Dataset` object from a list of tasks.
         """
         while True:
             # Make sure we also generate data from the warm-up task.
