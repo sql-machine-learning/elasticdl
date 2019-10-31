@@ -21,7 +21,7 @@ class ModelHandler(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_model_to_export(self, model, dataset):
+    def get_model_to_export(self, model, trained_params, dataset):
         """
         Get the model which can be exported a SavedModel
         by tf.saved_model.save.
@@ -48,9 +48,14 @@ class DefaultModelHandler(ModelHandler):
     def get_model_to_train(self, model):
         return model
 
-    def get_model_to_export(self, model, dataset):
+    def get_model_to_export(self, model, trained_params, dataset):
+        """
+        Get model with inputs and trained parameters to export.
+        """
         if not model.inputs:
             model._build_model_with_inputs(inputs=dataset, targets=None)
+        for var in model.trainable_variables:
+            var.assign(trained_params[var.name])
         return model
 
 
@@ -61,57 +66,89 @@ class ParameterServerModelHandler(ModelHandler):
         an elasticdl.layers.Embedding layer in ParameterServerStrategy.
         """
         if type(model) == tf.keras.Sequential or model._is_graph_network:
-            model = self._clone_model_for_sequential_and_functional(model)
+            model = self._replace_embedding_layer_to_clone_model(
+                model, tf.keras.layers.Embedding, Embedding)
         else:
-            model = self._replace_embedding_attribute_for_subclass(model)
+            model = self._replace_embedding_attribute_for_subclass(
+                model, tf.keras.layers.Embedding, Embedding)
         return model
 
-    def get_model_to_export(self, model, dataset):
+    def get_model_to_export(self, model, trained_params, dataset):
         """
-        To export model for tf-serving by tf.saved_model.save:
-        1. Add inputs and outputs to the model.
-        2. Restore Keras model and replace embedding parameters with trained
-        model.
+        Get the model which can be exported a SavedModel by
+        tf.saved_model.save.
         """
-        # TODO
-        pass
+        model = self._restore_keras_model_def(model)
 
-    def _clone_model_for_sequential_and_functional(self, model):
+        if not model.inputs:
+            # build model to add inputs and outputs for tf-serving
+            model._build_model_with_inputs(inputs=dataset, targets=None)
+        for var in model.trainable_variables:
+            var.assign(trained_params[var.name])
+
+        return model
+
+    def _restore_keras_model_def(self, model):
         """
-        Clone a new model with elasticdl.layers.Embedding for
-        Sequential and functional API model.
+        Restore Keras model definition by replacing elasticdl.layers.Embedding
+        layers with tf.keras.Embedding layers.
+        """
+        # clear keras model session to avoid clutter from old models/layers.
+        tf.keras.backend.clear_session()
+        if (
+            type(model) == tf.keras.models.Model
+            and not model._is_graph_network
+        ):
+            model = self._replace_embedding_attributes_for_subclass(
+                model, Embedding, tf.keras.layers.Embedding
+            )
+        else:
+            model = self._replace_embedding_layer_to_clone_model(
+                model, Embedding, tf.keras.layers.Embedding
+            )
+        return model
+
+    def _replace_embedding_layer_to_clone_model(
+            self, model, src_embedding_class, dst_embedding_class):
+        """
+        Clone a new model by cloning model and replace the
+        src_embedding_class layer with a dst_embedding_class.
         """
 
         def _clone_function(layer):
-            if type(layer) == tf.keras.layers.Embedding:
-                logger.info("Replace Keras Embedding with ElasticDL Embedding")
-                edl_embedding_layer = Embedding(
+            if type(layer) == src_embedding_class:
+                logger.info("Replace {} with {}".format(
+                    src_embedding_class, dst_embedding_class)
+                )
+                embedding_layer = dst_embedding_class(
                     output_dim=layer.output_dim,
                     input_dim=layer.input_dim,
-                    embedding_initializer=layer.embeddings_initializer,
+                    embeddings_initializer=layer.embeddings_initializer,
                     mask_zero=layer.mask_zero,
                     input_length=layer.input_length,
                 )
-                return edl_embedding_layer
+                return embedding_layer
             return layer
 
         return tf.keras.models.clone_model(
             model, clone_function=_clone_function
         )
 
-    def _replace_embedding_attributes_for_subclass(self, model):
+    def _replace_embedding_attributes_for_subclass(
+            self, model, src_embedding_class, dst_embedding_class):
         """
         Replace the keras embedding attribute with
         elasticdl.layers.Embedding layer.
         """
-        for attr_name, attr_value in model.__dict__.items():
-            if type(attr_value) == tf.keras.layers.Embedding:
-                edl_embedding_layer = Embedding(
-                    output_dim=attr_value.output_dim,
-                    input_dim=attr_value.input_dim,
-                    embedding_initializer=attr_value.embeddings_initializer,
-                    mask_zero=attr_value.mask_zero,
-                    input_length=attr_value.input_length,
+        for name, value in model.__dict__.items():
+            if type(value) == src_embedding_class:
+                embedding_layer = dst_embedding_class(
+                    output_dim=value.output_dim,
+                    input_dim=value.input_dim,
+                    embeddings_initializer=value.embeddings_initializer,
+                    mask_zero=value.mask_zero,
+                    input_length=value.input_length,
                 )
-                setattr(model, attr_name, edl_embedding_layer)
+                del value
+                setattr(model, name, embedding_layer)
         return model

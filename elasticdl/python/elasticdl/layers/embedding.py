@@ -55,6 +55,7 @@ class Embedding(tf.keras.layers.Layer):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.embeddings_initializer = embeddings_initializer
+        self.mask_zero = mask_zero
         self.supports_masking = mask_zero
         self.input_length = input_length
         self.combiner = combiner
