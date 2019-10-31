@@ -161,22 +161,14 @@ class Worker(object):
         )
         self._non_embed_grads = None
 
-    def get_task(self):
+    def get_task(self, task_type=None):
         """
         get task from master
         """
         req = elasticdl_pb2.GetTaskRequest()
         req.worker_id = self._worker_id
-
-        return self._stub.GetTask(req)
-
-    def get_eval_task(self):
-        """
-        get evaluation task from master
-        """
-        req = elasticdl_pb2.GetTaskRequest()
-        req.worker_id = self._worker_id
-        req.task_type = elasticdl_pb2.EVALUATION
+        if task_type is not None:
+            req.task_type = task_type
 
         return self._stub.GetTask(req)
 
@@ -487,7 +479,7 @@ class Worker(object):
         logger.info("the evaluation task_id: %d" % task.task_id)
         eval_info = self._task_data_service.get_validation_dataset(task)
         if not eval_info:
-            return False
+            return
         (eval_dataset, model_version, task_id) = eval_info
         eval_dataset = self._dataset_fn(
             eval_dataset,
@@ -512,7 +504,6 @@ class Worker(object):
             raise RuntimeError("Report evaluation metric failed!")
         self.report_task_result(task_id, err_msg)
         self._evaluation_result = {}
-        return True
 
     def _process_minibatch_and_report(
         self,
@@ -553,7 +544,7 @@ class Worker(object):
         # The worker needs to get model from PS if
         # `train_with_local_model=False`. This happens when:
         #     processing first minibatch
-        #     last minibatch is evaluation task
+        #     any evaluation task has been executed before the minibatch
         #     last minibatch is training task and failed
         #     local_update_count >= worker._get_model_steps
         # Otherwise, worker trains with local model, i.e.
@@ -566,6 +557,7 @@ class Worker(object):
 
         local_update_count = self._get_model_steps
         last_training_minibatch_failed = False
+        evaluation_task_executed = False
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
@@ -580,12 +572,12 @@ class Worker(object):
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                     # Give the worker a chance to process an evaluation task
                     # during training if the task exists
-                    self._evaluate_only()
+                    evaluation_task_executed = self._evaluate_only()
 
                 task = self._task_data_service.get_current_task()
-
                 if (
-                    last_training_minibatch_failed
+                    evaluation_task_executed
+                    or last_training_minibatch_failed
                     or local_update_count >= self._get_model_steps
                 ):
                     local_update_count = 0
@@ -615,18 +607,21 @@ class Worker(object):
             # training tasks are done, as other workers' may still
             # have pending training tasks.
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
-                self._evaluate_only()
+                evaluation_task_executed = self._evaluate_only()
 
     def _evaluate_only(self):
         """
         Only evaluate the model on the worker.
         """
+        evaluation_task_executed = False
         while True:
-            task = self.get_eval_task()
+            task = self.get_task(elasticdl_pb2.EVALUATION)
             # no evaluation task in eval_todo of master
             if not task.shard_name:
                 break
             self._process_eval_task(task)
+            evaluation_task_executed = True
+        return evaluation_task_executed
 
     def _predict_only(self):
         """

@@ -129,7 +129,8 @@ class _TaskDispatcher(object):
                 )
         if task_type == elasticdl_pb2.TRAINING:
             random.shuffle(tasks)
-            self._todo.extend(tasks)
+            with self._lock:
+                self._todo.extend(tasks)
         else:
             with self._lock:
                 self._eval_todo.extend(tasks)
