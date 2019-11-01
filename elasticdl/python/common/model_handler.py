@@ -77,12 +77,13 @@ class ParameterServerModelHandler(ModelHandler):
 
     def get_model_to_export(self, model, trained_params, dataset):
         """
-        Get the model which can be exported a SavedModel by
-        tf.saved_model.save.
+        Get the model which can be exported to a SavedModel by
+        `tf.saved_model.save`.
         """
         model = self._restore_keras_model_def(model)
         if not model.inputs:
-            # build model to add inputs and outputs for tf-serving
+            # build model to add inputs and outputs that
+            # can be consumed by tf-serving
             model._build_model_with_inputs(inputs=dataset, targets=None)
         for var in model.trainable_variables:
             var.assign(trained_params[var.name])
@@ -90,8 +91,9 @@ class ParameterServerModelHandler(ModelHandler):
 
     def _restore_keras_model_def(self, model):
         """
-        Restore Keras model definition by replacing elasticdl.layers.Embedding
-        layers with tf.keras.Embedding layers.
+        Restore Keras model definition by replacing
+        `elasticdl.layers.Embedding` layers with
+        `tf.keras.layers.Embedding` layers.
         """
         # clear keras model session to avoid clutter from old models/layers.
         tf.keras.backend.clear_session()
@@ -118,7 +120,7 @@ class ParameterServerModelHandler(ModelHandler):
 
         def _clone_function(layer):
             if type(layer) == src_embedding_class:
-                logger.info(
+                logger.debug(
                     "Replace {} with {}".format(
                         src_embedding_class, dst_embedding_class
                     )
@@ -153,6 +155,5 @@ class ParameterServerModelHandler(ModelHandler):
                     mask_zero=value.mask_zero,
                     input_length=value.input_length,
                 )
-                del value
                 setattr(model, name, embedding_layer)
         return model
