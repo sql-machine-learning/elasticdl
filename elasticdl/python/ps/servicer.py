@@ -54,7 +54,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
     def pull_embedding_vector(self, request, _):
         ret = elasticdl_pb2.Tensor()
-        if len(request.ids) == 0:
+        if not request.ids:
             return ret
         embedding_vectors = self._parameters.get_embedding_param(
             request.name, request.ids
