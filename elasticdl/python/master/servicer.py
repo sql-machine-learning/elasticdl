@@ -308,7 +308,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             res.model_version = self._version
             return res
 
-        tmp = {}
+        non_embedding_gradients = {}
         indexed_grads = {}
         edl_embedding_gradients = {}
         # Do sanity check before accumulating gradients.
@@ -359,12 +359,15 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                     raise ValueError(
                         "Gradient key: %s has incompatible dimension", name
                     )
-                tmp[name] = tensor.to_tf_tensor()
+                non_embedding_gradients[name] = tensor.to_tf_tensor()
 
         if not self._use_async:
             self._lock.acquire()
         self._process_gradients(
-            edl_embedding_gradients, indexed_grads, tmp, request.model_version
+            edl_embedding_gradients,
+            indexed_grads,
+            non_embedding_gradients,
+            request.model_version,
         )
         if not self._use_async:
             self._lock.release()
