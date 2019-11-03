@@ -85,9 +85,6 @@ class CheckpointTest(unittest.TestCase):
             task_d = _TaskDispatcher(
                 {filename: (0, 128)}, {}, {}, records_per_task=64, num_epochs=1
             )
-            task_d.add_deferred_callback_create_save_model_task(
-                "mock_saved_model_path"
-            )
             master = MasterServicer(
                 2,
                 batch_size,

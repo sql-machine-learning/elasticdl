@@ -99,7 +99,10 @@ class Master(object):
         )
 
         saved_model_path = args.output
-        if saved_model_path is not None:
+        if saved_model_path is not None and self.job_type in [
+            JobType.TRAINING_ONLY,
+            JobType.TRAINING_WITH_EVALUATION,
+        ]:
             self.task_d.add_deferred_callback_create_save_model_task(
                 saved_model_path
             )
