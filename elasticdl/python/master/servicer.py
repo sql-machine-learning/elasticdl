@@ -8,9 +8,10 @@ from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.file_utils import copy_if_not_exists
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import load_from_checkpoint_file
-from elasticdl.python.common.ndarray import (
-    ndarray_to_tensor,
-    tensor_to_ndarray,
+from elasticdl.python.common.tensor import (
+    Tensor,
+    emplace_tensor_pb_from_ndarray,
+    tensor_pb_to_ndarray,
 )
 from elasticdl.python.common.tensor_utils import merge_indexed_slices
 from elasticdl.python.master.checkpoint_service import CheckpointService
@@ -88,16 +89,16 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         for var in var_list:
             self.set_model_var(var.name, var.numpy())
 
-    def _init_model_from_tensor_list(self, tensor_list):
-        assert tensor_list
-        for var in tensor_list:
-            self.set_model_var(var.name, tensor_to_ndarray(var))
+    def _init_model_from_tensor_pb_list(self, tensor_pb_list):
+        assert tensor_pb_list
+        for pb in tensor_pb_list:
+            self.set_model_var(pb.name, tensor_pb_to_ndarray(pb))
 
     def _init_model(self, checkpoint_filename_for_init, init_var):
         if checkpoint_filename_for_init:
             pb_model = load_from_checkpoint_file(checkpoint_filename_for_init)
             self._version = pb_model.version
-            self._init_model_from_tensor_list(pb_model.param)
+            self._init_model_from_tensor_pb_list(pb_model.param)
         elif init_var:
             self._init_model_from_var_list(init_var)
         else:
@@ -127,7 +128,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         res = elasticdl_pb2.Task()
         res.model_version = self._version
         res.minibatch_size = self._minibatch_size
-        task_id, task = self._task_d.get(request.worker_id)
+        if request.task_type == elasticdl_pb2.EVALUATION:
+            task_id, task = self._task_d.get_eval_task(request.worker_id)
+        else:
+            task_id, task = self._task_d.get(request.worker_id)
+
         if task:
             res.task_id = task_id
             res.shard_name = task.shard_name
@@ -272,7 +277,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         pb_model = elasticdl_pb2.Model()
         pb_model.version = self._version
         for k, v in self._model.items():
-            pb_model.param.append(ndarray_to_tensor(v.numpy(), k))
+            emplace_tensor_pb_from_ndarray(pb_model.param, v.numpy(), name=k)
         return pb_model
 
     def _validate_model_version(self, request_model_version):
@@ -288,7 +293,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def ReportVariable(self, request, _):
         with self._lock:
             if not self._model:
-                self._init_model_from_tensor_list(request.variable)
+                self._init_model_from_tensor_pb_list(request.variable)
         return empty_pb2.Empty()
 
     def ReportGradient(self, request, _):
@@ -306,39 +311,41 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             res.model_version = self._version
             return res
 
-        tmp = {}
+        non_embedding_gradients = {}
         indexed_grads = {}
         edl_embedding_gradients = {}
         # Do sanity check before accumulating gradients.
         for v in request.gradient:
-            name = v.name
+            tensor = Tensor.from_tensor_pb(v)
+            name = tensor.name
             if name not in self._model:
-                if v.indices:
+                if tensor.is_indexed_slices():
                     # grads of ElasticDL Embedding layer
                     # TODO: check arr.shape[1] = embedding_dim of this
                     # EdlEmbedding layer
-                    arr = tensor_to_ndarray(v)
-                    edl_embedding_gradients[name] = arr
+                    edl_embedding_gradients[name] = tensor.to_tf_tensor()
                     continue
                 else:
                     raise ValueError(
                         "Gradient key: %s is not part of model", name
                     )
 
-            arr = tensor_to_ndarray(v)
-            if isinstance(arr, tf.IndexedSlices):
-                if arr.values.shape[1] != self._model[name].numpy().shape[1]:
+            if tensor.is_indexed_slices():
+                if (
+                    tensor.values.shape[1]
+                    != self._model[name].numpy().shape[1]
+                ):
                     raise ValueError(
                         "Gradient key: %s has incompatible "
                         "indexed slice dimension %d, expected %d"
                         % (
                             name,
-                            arr.values.shape[1],
+                            tensor.values.shape[1],
                             self._model[name].numpy().shape[1],
                         )
                     )
 
-                max_index = tf.math.reduce_max(arr.indices).numpy()
+                max_index = tf.math.reduce_max(tensor.indices).numpy()
                 if max_index >= self._model[name].numpy().shape[0]:
                     raise ValueError(
                         "Gradient key: %s has wrong indices %d, "
@@ -349,18 +356,21 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                             self._model[name].numpy().shape[0] - 1,
                         )
                     )
-                indexed_grads[name] = arr
+                indexed_grads[name] = tensor.to_tf_tensor()
             else:
-                if arr.shape != self._model[name].numpy().shape:
+                if tensor.values.shape != self._model[name].numpy().shape:
                     raise ValueError(
                         "Gradient key: %s has incompatible dimension", name
                     )
-                tmp[name] = arr
+                non_embedding_gradients[name] = tensor.to_tf_tensor()
 
         if not self._use_async:
             self._lock.acquire()
         self._process_gradients(
-            edl_embedding_gradients, indexed_grads, tmp, request.model_version
+            edl_embedding_gradients,
+            indexed_grads,
+            non_embedding_gradients,
+            request.model_version,
         )
         if not self._use_async:
             self._lock.release()

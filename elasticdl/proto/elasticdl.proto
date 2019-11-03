@@ -81,15 +81,12 @@ message Model {
 
 message GetTaskRequest {
     int32 worker_id = 1;
+    TaskType task_type = 2;
 }
 
 message GetModelRequest {
     MethodType method = 1;
     int32 version = 2;
-}
-
-message PullVariableRequest {
-    int32 version = 1;
 }
 
 message PullVariableResponse {
@@ -166,7 +163,7 @@ service Master {
 
 // PS service
 service Pserver {
-    rpc pull_variable(PullVariableRequest) returns (PullVariableResponse);
+    rpc pull_variable(google.protobuf.Empty) returns (PullVariableResponse);
     rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
     rpc push_model(Model) returns (google.protobuf.Empty);
     rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);

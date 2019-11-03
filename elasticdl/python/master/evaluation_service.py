@@ -7,7 +7,7 @@ from tensorflow.python.keras import metrics as metrics_module
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import MetricsDictKey
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.common.ndarray import tensor_to_ndarray
+from elasticdl.python.common.tensor import tensor_pb_to_ndarray
 
 
 class _EvaluationJob(object):
@@ -77,13 +77,13 @@ class _EvaluationJob(object):
                 % (self.model_version, evaluation_version)
             )
             return False
-        labels = tensor_to_ndarray(labels)
+        labels = tensor_pb_to_ndarray(labels)
         for tensor_pb in model_outputs:
             key = tensor_pb.name
             metrics = self._metrics_dict.get(key, {})
             if not metrics:
                 continue
-            outputs = tensor_to_ndarray(tensor_pb)
+            outputs = tensor_pb_to_ndarray(tensor_pb)
             for metric_inst in metrics.values():
                 metric_inst.update_state(labels, outputs)
         return True
@@ -210,11 +210,12 @@ class EvaluationService(object):
         with self._lock:
             if self._eval_job is None and self._eval_checkpoint_versions:
                 checkpoint_version = self._eval_checkpoint_versions.pop(0)
-                tasks = self._task_d.create_tasks(
+                self._task_d.create_tasks(
                     elasticdl_pb2.EVALUATION, checkpoint_version
                 )
+                task_count = len(self._task_d._eval_todo)
                 self._eval_job = _EvaluationJob(
-                    self._eval_metrics_fn(), checkpoint_version, len(tasks)
+                    self._eval_metrics_fn(), checkpoint_version, task_count
                 )
                 return True
         return False

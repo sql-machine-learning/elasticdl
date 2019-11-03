@@ -3,6 +3,8 @@ import threading
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
+from elasticdl.python.common.tensor import Tensor, serialize_tensor
 
 
 class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
@@ -25,12 +27,41 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._lock = threading.Lock()
 
     def pull_variable(self, request, _):
-        # TODO: implement this RPC service
-        return elasticdl_pb2.PullVariableResponse()
+        """
+        Response with all non-embedding parameters if initialized.
+        """
+        res = elasticdl_pb2.PullVariableResponse()
+        if not self._parameters.init_status:
+            res.model_init_status = False
+            return res
+
+        # Only sync-SGD needs lock
+        # TODO: use a read-write lock to support multiple concurrent reads
+        if not self._use_async:
+            self._lock.acquire()
+        res.model.version = self._parameters.version
+        for name, var in self._parameters.non_embedding_params.items():
+            tensor = res.model.param.add()
+            tensor.name = name
+            tensor.dim.extend(var.shape.as_list())
+            var_values = var.numpy()
+            tensor.content = var_values.tobytes()
+            tensor.dtype = dtype_numpy_to_tensor(var_values.dtype)
+        if not self._use_async:
+            self._lock.release()
+        res.model_init_status = True
+        return res
 
     def pull_embedding_vector(self, request, _):
-        # TODO: implement this RPC service
-        return elasticdl_pb2.Tensor()
+        ret = elasticdl_pb2.Tensor()
+        if not request.ids:
+            return ret
+        embedding_vectors = self._parameters.get_embedding_param(
+            request.name, request.ids
+        )
+        tensor = Tensor(values=embedding_vectors)
+        serialize_tensor(tensor, ret)
+        return ret
 
     def push_model(self, request, _):
         with self._lock:

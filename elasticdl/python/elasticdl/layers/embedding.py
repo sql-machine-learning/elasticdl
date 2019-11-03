@@ -22,9 +22,9 @@ class Embedding(tf.keras.layers.Layer):
       (batch_size, output_dim) if combiner is not None
     Arguments:
       output_dim: the dimension of the embedding vector
-      input_dim: the max input id. If None, the input_dim will be
-      the max id which can be acquired during training through all records.
-      embedding_initializer: Initializer for embedding table
+      input_dim: the max input id. If 0 or None, will not check the range of
+        input embedding ids.
+      embeddings_initializer: Initializer for embedding table
       mask_zero: Whether or not the input value 0 is a special "padding"
         value that should be masked out.
         If input is SparseTensor, mask_zero must be False.
@@ -41,7 +41,7 @@ class Embedding(tf.keras.layers.Layer):
         self,
         output_dim,
         input_dim=None,
-        embedding_initializer="uniform",
+        embeddings_initializer="uniform",
         mask_zero=False,
         input_length=None,
         combiner=None,
@@ -54,7 +54,8 @@ class Embedding(tf.keras.layers.Layer):
 
         self.input_dim = input_dim
         self.output_dim = output_dim
-        self.embedding_initializer = embedding_initializer
+        self.embeddings_initializer = embeddings_initializer
+        self.mask_zero = mask_zero
         self.supports_masking = mask_zero
         self.input_length = input_length
         self.combiner = combiner
@@ -143,7 +144,9 @@ class Embedding(tf.keras.layers.Layer):
         if unknown_keys_index:
             # Initialize unknown_keys' embedding vectors and write into Redis.
             unknown_keys = [keys[index] for index in unknown_keys_index]
-            initializer = tf.keras.initializers.get(self.embedding_initializer)
+            initializer = tf.keras.initializers.get(
+                self.embeddings_initializer
+            )
             embedding_vector_init = [
                 initializer(shape=[1, self.output_dim]).numpy()
                 for _ in unknown_keys
@@ -180,6 +183,8 @@ class Embedding(tf.keras.layers.Layer):
         return embedding_vectors.reshape((len(keys), self.output_dim))
 
     def _check_id_valid(self, ids):
+        if not self.input_dim:
+            return
         first_may_exceed_id = ids[np.argmax(ids >= self.input_dim)]
         if self.input_dim is not None and first_may_exceed_id > self.input_dim:
             raise ValueError(

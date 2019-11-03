@@ -16,7 +16,6 @@ class TaskDataService(object):
         self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
         self._pending_dataset = True
-        self._pending_eval_tasks = []
         self._pending_save_model_task = None
         self._reset()
         if data_reader_params:
@@ -66,28 +65,19 @@ class TaskDataService(object):
                 if len(self._pending_tasks_with_counts):
                     self._current_task = self._pending_tasks_with_counts[0][0]
 
-    def get_validation_dataset(self):
+    def get_validation_dataset(self, eval_task):
         """
-        If there are _pending_eval_tasks, return a RecordIO dataset for
-        an evaluation task and its corresponding model version, task_id.
-        Return None if no _pending_eval_tasks.
+        If an evaluation task exists, this creates a `tf.data.Dataset`
+        object as well as its corresponding model version and task_id.
+        Otherwise, this returns `None`.
         """
-        if not self._pending_eval_tasks:
+        if not eval_task:
             return None
-        shards = []
-        task = None
-        with self._lock:
-            if self._pending_eval_tasks:
-                task = self._pending_eval_tasks.pop(0)
-                shards.append(task)
-        if shards and task:
-            return (
-                create_dataset_from_tasks(shards, self.data_reader),
-                task.model_version,
-                task.task_id,
-            )
-        else:
-            return None
+        return (
+            create_dataset_from_tasks([eval_task], self.data_reader),
+            eval_task.model_version,
+            eval_task.task_id,
+        )
 
     def get_save_model_task_and_dataset(self):
         if not self._pending_save_model_task:
@@ -99,7 +89,8 @@ class TaskDataService(object):
 
     def get_dataset(self):
         """
-        Return a RecordIO dataset, or None if no more data.
+        If there's more data, this creates a `tf.data.Dataset` object.
+        Otherwise, this returns `None`.
         """
         if self._pending_dataset:
             if self._pending_tasks_with_counts:
@@ -130,7 +121,7 @@ class TaskDataService(object):
     def _gen(self):
         """
         A generator supports the iter() protocol (e.g. a generator function),
-        used to create a `tf.data.Dataset` from a list of tasks.
+        used to create a `tf.data.Dataset` object from a list of tasks.
         """
         while True:
             # Make sure we also generate data from the warm-up task.
@@ -149,12 +140,6 @@ class TaskDataService(object):
                     logger.info("No more task, stopping")
                 break
             with self._lock:
-                if (
-                    self._training_with_evaluation
-                    and task.type == elasticdl_pb2.EVALUATION
-                ):
-                    self._pending_eval_tasks.append(task)
-                    continue
                 if task.type == elasticdl_pb2.SAVE_MODEL:
                     self._pending_save_model_task = task
                     continue

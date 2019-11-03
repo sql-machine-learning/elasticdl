@@ -18,9 +18,10 @@ from elasticdl.python.common.model_utils import (
     get_model_spec,
     get_non_embedding_trainable_vars,
 )
-from elasticdl.python.common.ndarray import (
-    ndarray_to_tensor,
-    tensor_to_ndarray,
+from elasticdl.python.common.tensor import (
+    Tensor,
+    emplace_tensor_pb_from_ndarray,
+    serialize_tensor,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.worker.task_data_service import TaskDataService
@@ -171,12 +172,14 @@ class Worker(object):
         )
         self._non_embed_grads = None
 
-    def get_task(self):
+    def get_task(self, task_type=None):
         """
         get task from master
         """
         req = elasticdl_pb2.GetTaskRequest()
         req.worker_id = self._worker_id
+        if task_type is not None:
+            req.task_type = task_type
 
         return self._stub.GetTask(req)
 
@@ -191,9 +194,8 @@ class Worker(object):
 
         # Assumes all trainable variables exist in model.param.
         for tensor_pb in model.param:
-            self._non_embed_vars[tensor_pb.name].assign(
-                tensor_to_ndarray(tensor_pb)
-            )
+            tensor = Tensor.from_tensor_pb(tensor_pb)
+            self._non_embed_vars[tensor.name].assign(tensor.to_ndarray())
         self._model_version = model.version
 
     def report_task_result(self, task_id, err_msg):
@@ -211,7 +213,9 @@ class Worker(object):
         """
         req = elasticdl_pb2.ReportVariableRequest()
         for v in self._non_embed_vars.values():
-            req.variable.append(ndarray_to_tensor(v.numpy(), v.name))
+            emplace_tensor_pb_from_ndarray(
+                req.variable, v.numpy(), name=v.name
+            )
         self._stub.ReportVariable(req)
 
     def report_gradient(self, grads):
@@ -227,14 +231,7 @@ class Worker(object):
         for g, v in zip(
             grads[:non_embed_vars_n], self._non_embed_vars.values()
         ):
-            if isinstance(g, tf.IndexedSlices):
-                req.gradient.append(
-                    ndarray_to_tensor(
-                        g.values.numpy(), v.name, tuple(g.indices.numpy())
-                    )
-                )
-            else:
-                req.gradient.append(ndarray_to_tensor(g.numpy(), v.name))
+            emplace_tensor_pb_from_ndarray(req.gradient, g, name=v.name)
 
         # Accumulate gradients of ElasticDL embedding layer
         if self._embedding_layers:
@@ -272,10 +269,8 @@ class Worker(object):
                         g_values = grad
                         g_indices = ids
 
-                req.gradient.append(
-                    ndarray_to_tensor(
-                        g_values.numpy(), layer.name, tuple(g_indices.numpy())
-                    )
+                emplace_tensor_pb_from_ndarray(
+                    req.gradient, g_values, indices=g_indices, name=layer.name
                 )
 
         req.model_version = self._model_version
@@ -290,9 +285,12 @@ class Worker(object):
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         for name, output in model_outputs.items():
             output = np.concatenate(output)
-            req.model_outputs.append(ndarray_to_tensor(output, name))
+            emplace_tensor_pb_from_ndarray(
+                req.model_outputs, output, name=name
+            )
         labels = np.concatenate(labels)
-        req.labels.CopyFrom(ndarray_to_tensor(labels))
+        tensor = Tensor(values=labels)
+        serialize_tensor(tensor, req.labels)
         req.model_version = self._model_version
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
@@ -477,17 +475,17 @@ class Worker(object):
             raise RuntimeError("Worker got stuck")
         return min_model_version
 
-    def _process_eval_task_if_needed(self):
+    def _process_eval_task(self, task):
         """
         Check if there are evaluation tasks and process the tasks if any.
-
         Return:
             A python bool indicating whether worker processed some evaluation
             tasks.
         """
-        eval_info = self._task_data_service.get_validation_dataset()
+        logger.info("the evaluation task_id: %d" % task.task_id)
+        eval_info = self._task_data_service.get_validation_dataset(task)
         if not eval_info:
-            return False
+            return
         (eval_dataset, model_version, task_id) = eval_info
         eval_dataset = self._dataset_fn(
             eval_dataset,
@@ -512,7 +510,6 @@ class Worker(object):
             raise RuntimeError("Report evaluation metric failed!")
         self.report_task_result(task_id, err_msg)
         self._evaluation_result = {}
-        return True
 
     def _process_save_model_task_if_needed(self):
         task, dataset = (
@@ -560,21 +557,15 @@ class Worker(object):
             raise ex
         return err_msg
 
-    def run(self):
+    def _train_and_evaluate(self):
         """
-        Fetches task from master with and performs training or evaluation.
+        Train and evaluate the model on the worker
         """
-        if self._job_type == JobType.PREDICTION_ONLY:
-            mode = Mode.PREDICTION
-        elif self._job_type == JobType.EVALUATION_ONLY:
-            mode = Mode.EVALUATION
-        else:
-            mode = Mode.TRAINING
 
         # The worker needs to get model from PS if
         # `train_with_local_model=False`. This happens when:
         #     processing first minibatch
-        #     last minibatch is evaluation task
+        #     any evaluation task has been executed just before this minibatch
         #     last minibatch is training task and failed
         #     local_update_count >= worker._get_model_steps
         # Otherwise, worker trains with local model, i.e.
@@ -584,47 +575,55 @@ class Worker(object):
         # Initialize `local_update_count=get_model_steps` in order to set
         # `train_with_local_model` to False inside for-loop for the first
         # minibatch.
+
         local_update_count = self._get_model_steps
         last_training_minibatch_failed = False
-        last_minibatch_do_evaluation = False
+        evaluation_task_executed = False
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
                 break
             dataset = self._dataset_fn(
-                dataset, mode, self._task_data_service.data_reader.metadata
+                dataset,
+                Mode.TRAINING,
+                self._task_data_service.data_reader.metadata,
             )
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
             for dataset_batch in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
-                    if self._process_eval_task_if_needed():
-                        last_minibatch_do_evaluation = True
+                    # Give the worker a chance to process an evaluation task
+                    # during training if the task exists
+                    evaluation_task_executed = (
+                        True
+                        if self._evaluate_only()
+                        else evaluation_task_executed
+                    )
+
                 task = self._task_data_service.get_current_task()
-                if task.type == elasticdl_pb2.TRAINING:
-                    if (
-                        last_minibatch_do_evaluation
-                        or last_training_minibatch_failed
-                        or local_update_count >= self._get_model_steps
-                    ):
-                        local_update_count = 0
-                        train_with_local_model = False
-                    else:
-                        train_with_local_model = True
+                if (
+                    evaluation_task_executed
+                    or last_training_minibatch_failed
+                    or local_update_count >= self._get_model_steps
+                ):
+                    local_update_count = 0
+                    train_with_local_model = False
+                else:
+                    train_with_local_model = True
+
                 err_msg = self._process_minibatch_and_report(
                     dataset_batch,
                     task.type,
                     task.model_version,
                     train_with_local_model,
                 )
-                if task.type == elasticdl_pb2.TRAINING:
-                    last_minibatch_do_evaluation = False
-                    local_update_count += 1
-                    if err_msg:
-                        last_training_minibatch_failed = True
-                    else:
-                        last_training_minibatch_failed = False
-                        if local_update_count < self._get_model_steps:
-                            self._update_local_model()
+
+                local_update_count += 1
+                if err_msg:
+                    last_training_minibatch_failed = True
+                else:
+                    last_training_minibatch_failed = False
+                    if local_update_count < self._get_model_steps:
+                        self._update_local_model()
                 self._task_data_service.report_record_done(
                     self._minibatch_size, err_msg
                 )
@@ -633,7 +632,56 @@ class Worker(object):
             # training tasks are done, as other workers' may still
             # have pending training tasks.
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
-                if self._process_eval_task_if_needed():
-                    last_minibatch_do_evaluation = True
+                evaluation_task_executed = self._evaluate_only()
+                self._process_save_model_task_if_needed()
 
-            self._process_save_model_task_if_needed()
+    def _evaluate_only(self):
+        """
+        Only evaluate the model on the worker.
+        """
+        evaluation_task_executed = False
+        while True:
+            task = self.get_task(elasticdl_pb2.EVALUATION)
+            # no evaluation task in eval_todo of master
+            if not task.shard_name:
+                break
+            self._process_eval_task(task)
+            evaluation_task_executed = True
+        return evaluation_task_executed
+
+    def _predict_only(self):
+        """
+        Only predict outputs of the model with data in tasks on the worker.
+        """
+        while True:
+            dataset = self._task_data_service.get_dataset()
+            if not dataset:
+                break
+            dataset = self._dataset_fn(
+                dataset,
+                Mode.PREDICTION,
+                self._task_data_service.data_reader.metadata,
+            )
+            dataset = dataset.batch(self._minibatch_size).prefetch(1)
+            for dataset_batch in dataset:
+                task = self._task_data_service.get_current_task()
+
+                err_msg = self._process_minibatch_and_report(
+                    dataset_batch, task.type, task.model_version
+                )
+                self._task_data_service.report_record_done(
+                    self._minibatch_size, err_msg
+                )
+            del dataset
+
+    def run(self):
+        """
+        Fetches task from master with and performs training, evaluation
+        or prediction.
+        """
+        if self._job_type == JobType.PREDICTION_ONLY:
+            self._predict_only()
+        elif self._job_type == JobType.EVALUATION_ONLY:
+            self._evaluate_only()
+        else:
+            self._train_and_evaluate()
