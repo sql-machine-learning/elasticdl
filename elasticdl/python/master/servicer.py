@@ -134,7 +134,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             res.start = task.start
             res.end = task.end
             res.type = task.type
-            for k,v in task.extended_config.items():
+            for k, v in task.extended_config.items():
                 res.extended_config[k] = v
 
             # For evaluation task, it will use the fixed version model

@@ -523,7 +523,9 @@ class Worker(object):
             saved_model_path = task.extended_config.get(
                 SaveModelConfig.SAVED_MODEL_PATH
             )
-            logger.info("The path to export model is {}".format(saved_model_path))
+            logger.info(
+                "The path to export model is {}".format(saved_model_path)
+            )
 
             self.report_task_result(task_id=task.task_id, err_msg="")
 
