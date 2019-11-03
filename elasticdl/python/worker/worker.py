@@ -520,13 +520,10 @@ class Worker(object):
         )
         if task is not None and dataset is not None:
             # TODO: Implement the save model execution process
-            config_dict = {
-                pair.key: pair.value for pair in task.extended_config
-            }
-            saved_model_path = config_dict.get(
+            saved_model_path = task.extended_config.get(
                 SaveModelConfig.SAVED_MODEL_PATH
             )
-            logger.info("The saved model path is {}".format(saved_model_path))
+            logger.info("The path to export model is {}".format(saved_model_path))
 
             self.report_task_result(task_id=task.task_id, err_msg="")
 

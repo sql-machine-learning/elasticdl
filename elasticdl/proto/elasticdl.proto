@@ -18,12 +18,6 @@ enum MethodType {
     FIXED = 1;
 }
 
-// Key value pair
-message Pair {
-    string key = 1;
-    string value = 2;
-}
-
 // A task is a unit of work for ElasticDL training workers, assigned by master.
 // Worker divides a task into multiple minibatches and compute a gradient for
 // each minibatch. For now, only RecordIO file format is supported.
@@ -48,8 +42,9 @@ message Task {
     // Whether this is training or evaluation task.
     TaskType type = 7;
 
-    // Extended task configuration as a key value list
-    repeated Pair extended_config = 8;
+    // Extended task configuration as a list of key-value pair.
+    // The Task message is mainly targeted to Data and Model.
+    map<string, string> extended_config = 8;
 }
 
 message Tensor {
