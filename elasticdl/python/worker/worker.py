@@ -633,7 +633,8 @@ class Worker(object):
             # have pending training tasks.
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                 evaluation_task_executed = self._evaluate_only()
-                self._process_save_model_task_if_needed()
+            
+            self._process_save_model_task_if_needed()
 
     def _evaluate_only(self):
         """
