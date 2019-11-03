@@ -43,7 +43,13 @@ message Task {
     TaskType type = 7;
 
     // Extended task configuration as a list of key-value pair.
-    // The Task message is mainly targeted to Data and Model.
+    // The task message is mainly targeted to data and model.
+    // What's more, we also leverage task mechanism to complete
+    // some work such as saving the model. To keep the message
+    // fields clean, we put the additional configurations of these
+    // task type into this field.
+    // For example:
+    // SAVE_MODEL task: saved_model_path
     map<string, string> extended_config = 8;
 }
 
