@@ -69,7 +69,7 @@ class _TaskDispatcher(object):
         self._evaluation_service = None
 
         # Callback list to invoke after all tasks complete.
-        self._task_list_done_callbacks = []
+        self._tasks_done_deferred_callbacks = []
 
         if self._training_shards:
             logger.info("Starting epoch %d", self._epoch)
@@ -157,24 +157,24 @@ class _TaskDispatcher(object):
 
         self._todo.append(save_model_task)
 
-    def defer_create_save_model_task(self, saved_model_path):
-        self._task_list_done_callbacks.append(
+    def add_deferred_callback_create_save_model_task(self, saved_model_path):
+        self._tasks_done_deferred_callbacks.append(
             lambda: self._create_save_model_task(saved_model_path)
         )
 
-    def invoke_task_list_done_callback(self):
+    def invoke_deferred_callback(self):
         """
         Pop a callback from the list and invoke it.
         If the callback list is empty, return False directly.
         """
-        if not self._task_list_done_callbacks:
+        if not self._tasks_done_deferred_callbacks:
             return False
 
         with self._lock:
-            if not self._task_list_done_callbacks:
+            if not self._tasks_done_deferred_callbacks:
                 return False
 
-            callback = self._task_list_done_callbacks.pop()
+            callback = self._tasks_done_deferred_callbacks.pop()
             callback()
             return True
 

@@ -100,7 +100,9 @@ class Master(object):
 
         saved_model_path = args.output
         if saved_model_path is not None:
-            self.task_d.defer_create_save_model_task(saved_model_path)
+            self.task_d.add_deferred_callback_create_save_model_task(
+                saved_model_path
+            )
 
         # Initialize the components from the model definition
         self.model_module = load_module(

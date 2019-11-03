@@ -141,7 +141,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             if task.type == elasticdl_pb2.EVALUATION:
                 res.model_version = task.model_version
         elif (not self._task_d.finished()) or (
-            self._task_d.invoke_task_list_done_callback()
+            self._task_d.invoke_deferred_callback()
         ):
             # If the todo and doing tasks are not empty,
             # Otherwise if the callback list is not empty,
