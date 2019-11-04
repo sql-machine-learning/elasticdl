@@ -100,7 +100,7 @@ class PserverServicerTest(unittest.TestCase):
         else:
             return None
 
-    def testPushModel(self):
+    def test_push_model(self):
         self.create_default_server_and_stub()
         param0 = {
             "v0": np.random.rand(3, 2).astype(np.float32),
@@ -152,7 +152,7 @@ class PserverServicerTest(unittest.TestCase):
                 ].initializer,
             )
 
-    def testPullVariable(self):
+    def test_pull_variable(self):
         self.create_default_server_and_stub()
         param0 = {
             "v0": np.random.rand(3, 2).astype(np.float32),
@@ -181,7 +181,7 @@ class PserverServicerTest(unittest.TestCase):
             tensor = tensor_pb_to_ndarray(param)
             self.assertTrue(np.allclose(param0[name], tensor))
 
-    def testPullEmbeddingVector(self):
+    def test_pull_embedding_vector(self):
         self.create_default_server_and_stub()
 
         id_list_0 = [1, 3, 9, 6]
@@ -227,7 +227,7 @@ class PserverServicerTest(unittest.TestCase):
         vectors = self.get_embedding_vectors("layer_a", [])
         self.assertEqual(vectors, None)
 
-    def testAsyncPushGradient(self):
+    def test_push_gradient_async_update(self):
         self.create_default_server_and_stub()
 
         var_name = ["test_1", "test_2"]
@@ -282,6 +282,64 @@ class PserverServicerTest(unittest.TestCase):
             - self._lr * grad_value[0] * 2
             - self._lr * grad_value[1],
             var_value[1] - self._lr * grad_value[1],
+        ]
+        for expected_value, name in zip(expected_values, var_name):
+            self.assertTrue(
+                np.allclose(expected_value, non_embedding_params[name].numpy())
+            )
+
+        # TODO: test applying gradients with embedding params
+
+    def test_push_gradient_sync_update(self):
+        self.create_server_and_stub(
+            grads_to_wait=2, lr_staleness_modulation=False, use_async=False
+        )
+        var_name = ["test_1", "test_2"]
+        var_value = [
+            np.array([10.0, 20.0, 30.0], np.float32),
+            np.array([20.0, 40.0, 60.0], np.float32),
+        ]
+
+        non_embedding_params = self._parameters.non_embedding_params
+        for i in range(2):
+            non_embedding_params[var_name[i]] = tf.Variable(var_value[i])
+
+        grad_value0 = [
+            np.array([1.0, 2.0, 3.0], np.float32),
+            np.array([2.0, 4.0, 6.0], np.float32),
+        ]
+        grad_value1 = [
+            np.array([0.0, 0.0, 7.0], np.float32),
+            np.array([9.0, 9.0, 6.0], np.float32),
+        ]
+
+        req = elasticdl_pb2.PushGradientRequest()
+        req.model_version = 0
+        for g, name in zip(grad_value0, var_name):
+            emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
+        res = self._stub.push_gradient(req)
+        self.assertEqual(res.accepted, True)
+        self.assertEqual(res.model_version, 0)
+
+        req = elasticdl_pb2.PushGradientRequest()
+        req.model_version = 0
+        for g, name in zip(grad_value1, var_name):
+            emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
+        res = self._stub.push_gradient(req)
+        self.assertEqual(res.accepted, True)
+        self.assertEqual(res.model_version, 1)
+
+        req = elasticdl_pb2.PushGradientRequest()
+        req.model_version = 0
+        for g, name in zip(grad_value1, var_name):
+            emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
+        res = self._stub.push_gradient(req)
+        self.assertEqual(res.accepted, False)
+        self.assertEqual(res.model_version, 1)
+
+        expected_values = [
+            var_value[0] - self._lr * (grad_value0[0] + grad_value1[0]) / 2,
+            var_value[1] - self._lr * (grad_value0[1] + grad_value1[1]) / 2,
         ]
         for expected_value, name in zip(expected_values, var_name):
             self.assertTrue(
