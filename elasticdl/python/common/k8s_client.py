@@ -313,7 +313,7 @@ class Client(object):
         port=80,
         target_port=6006,
         replica_type="master",
-        replica_index=0,
+        replica_index="0",
         service_type="LoadBalancer",
     ):
         return self._create_service(
