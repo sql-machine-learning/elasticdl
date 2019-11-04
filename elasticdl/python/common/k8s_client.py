@@ -336,7 +336,9 @@ class Client(object):
             # Otherwise annotation is `None` and cannot be modified
             # using `with_service()` for cluster specific information.
             annotations=labels,
-            owner_references=kargs.get("owner", None),
+            owner_references=self.create_owner_reference(kargs["owner"])
+            if "owner" in kargs
+            else None,
             namespace=self.namespace,
         )
         spec = client.V1ServiceSpec(
