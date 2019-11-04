@@ -202,10 +202,7 @@ class Client(object):
             spec=spec,
             metadata=client.V1ObjectMeta(
                 name=kargs["pod_name"],
-                labels={
-                    "app": ELASTICDL_APP_NAME,
-                    ELASTICDL_JOB_KEY: kargs["job_name"],
-                },
+                labels=self._get_common_labels(),
                 owner_references=self.create_owner_reference(
                     kargs["owner_pod"]
                 ),
@@ -307,3 +304,62 @@ class Client(object):
             self.namespace,
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )
+
+    def get_tensorboard_service_name(self):
+        return "tensorboard-" + self.job_name
+
+    def create_tensorboard_service(
+        self,
+        port=80,
+        target_port=6006,
+        replica_type="master",
+        service_type="LoadBalancer",
+    ):
+        return self._create_service(
+            name=self.get_tensorboard_service_name(),
+            port=port,
+            target_port=6006,
+            replica_type=replica_type,
+            service_type=service_type,
+            owner=self.get_master_pod(),
+        )
+
+    def _create_service(self, **kargs):
+        labels = self._get_common_labels()
+
+        metadata = client.V1ObjectMeta(
+            name=kargs["name"],
+            labels=labels,
+            # Note: We have to add at least one annotation here.
+            # Otherwise annotation is `None` and cannot be modified
+            # using `with_service()` for cluster specific information.
+            annotations=labels,
+            owner_references=kargs["owner_reference"],
+            namespace=self.namespace,
+        )
+        spec = client.V1ServiceSpec(
+            ports=[
+                client.V1ServicePort(
+                    port=kargs["port"], target_port=kargs["target_port"]
+                )
+            ],
+            selector={
+                "app": ELASTICDL_APP_NAME,
+                ELASTICDL_JOB_KEY: self.job_name,
+                ELASTICDL_REPLICA_TYPE_KEY: kargs["replica_type"],
+                ELASTICDL_REPLICA_INDEX_KEY: kargs["replica_index"],
+            },
+            type=kargs["service_type"],
+        )
+        service = client.V1Service(
+            api_version="v1", kind="Service", metadata=metadata, spec=spec
+        )
+        if self.cluster:
+            service = self.cluster.with_service(service)
+        return self.client.create_namespaced_service(self.namespace, service)
+
+    def _get_common_labels(self):
+        """Labels that should be attached to all k8s objects belong to
+           current job.
+        """
+        return {"app": ELASTICDL_APP_NAME, ELASTICDL_JOB_KEY: self.job_name}
