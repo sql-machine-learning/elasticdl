@@ -36,6 +36,7 @@ def main():
         model_def=args.model_def,
         model_params=args.model_params,
         data_reader_params=args.data_reader_params,
+        prediction_outputs_processor=args.prediction_outputs_processor,
         get_model_steps=args.get_model_steps,
         distribution_strategy=args.distribution_strategy,
     )

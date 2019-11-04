@@ -25,7 +25,7 @@ EVALUATION_GROUP = [
     "evaluation_throttle_secs",
 ]
 
-PREDICTION_GROUP = ["prediction_data"]
+PREDICTION_GROUP = ["prediction_data", "prediction_outputs_processor"]
 
 CHECKPOINT_GROUP = [
     "checkpoint_filename_for_init",
@@ -324,6 +324,12 @@ def add_predict_params(parser):
         required=True,
     )
     parser.add_argument(
+        "--prediction_outputs_processor",
+        help="The name of the prediction output processor class "
+        "defined in the model definition file.",
+        default="PredictionOutputsProcessor",
+    )
+    parser.add_argument(
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",
         required=True,
@@ -556,6 +562,12 @@ def parse_worker_args(worker_args=None):
         default="{}",
         help="The endpoint of embedding service, "
         "e.g. \"{'ip_0': [port_0,port_1]}\"",
+    )
+    parser.add_argument(
+        "--prediction_outputs_processor",
+        help="The name of the prediction output processor class "
+        "defined in the model definition file.",
+        default="PredictionOutputsProcessor",
     )
 
     args, unknown_args = parser.parse_known_args(args=worker_args)
