@@ -27,6 +27,9 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._version_lock = threading.Lock()
         self._lock = threading.Lock()
 
+        self._grads_n = 0
+        self._grads_buffer = {}
+
     def pull_variable(self, request, _):
         """
         Response with all non-embedding parameters if initialized.
@@ -70,6 +73,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         return empty_pb2.Empty()
 
     def push_gradient(self, request, _):
+        res = elasticdl_pb2.PushGradientResponse()
         if self._use_async:
             grad_vars = []
             for pb in request.gradients:
@@ -87,12 +91,34 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             with self._version_lock:
                 self._parameters.version += 1
 
-            res = elasticdl_pb2.PushGradientResponse()
             res.accepted = True
-            res.model_version = self._parameters.version
-            return res
+        else:
+            if request.version != self._parameters.version:
+                res.accepted = False
+                res.model_version = self._parameters.version
+                return res
 
-        raise NotImplementedError(
-            "Updating parameters synchronously is not implemented."
-        )
-        return elasticdl_pb2.PushGradientResponse()
+            for pb in request.gradients:
+                tensor = Tensor.from_tensor_pb(pb)
+                if tensor in self.grads_buffer:
+                    self._grads_buffer[tensor.name] = (
+                        self._grads_buffer[tensor.name] + tensor
+                    )
+                else:
+                    self._grads_buffer[tensor.name] = tensor
+
+            self._grads_n += 1
+            res.accepted = True
+
+            if self._grads_n == self._grads_to_wait:
+                grad_vars = []
+                for grad in self._grads_buffer:
+                    var = self._parameters.get_non_embedding_param(grad.name)
+                    grad_vars.append((grad.to_tf_tensor(), var))
+
+                self._optimizer.apply_gradients(grad_vars)
+                with self._version_lock:
+                    self._parameters.version += 1
+
+        res.model_version = self._parameters.version
+        return res
