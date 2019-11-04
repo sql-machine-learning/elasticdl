@@ -182,7 +182,7 @@ elasticdl train \
 --loss=<loss-function-name> \
 --eval_metrics_fn=<eval-metrics-function-name> \
 --training_data=<training-input-table> \
---evaluation_data=<evaluation-input-table> \
+--validation_data=<validation-input-table> \
 --num_epochs=2 \
 --master_resource_request="cpu=400m,memory=1024Mi" \
 --master_resource_limit="cpu=1,memory=2048Mi" \
