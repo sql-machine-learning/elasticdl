@@ -19,7 +19,7 @@ class K8sTensorBoardClientTest(unittest.TestCase):
             % (int(time.time()), random.randint(1, 101)),
             event_callback=None,
         )
-        tb_client._create_tensorboard_service(
+        tb_client._k8s_client.create_tensorboard_service(
             port=80, service_type="LoadBalancer"
         )
         time.sleep(1)
