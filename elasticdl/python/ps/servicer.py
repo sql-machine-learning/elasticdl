@@ -96,7 +96,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             res.model_version = self._parameters.version
             return res
         else:
-            if request.version != self._parameters.version:
+            if request.model_version != self._parameters.version:
                 res.accepted = False
                 res.model_version = self._parameters.version
                 return res
@@ -105,7 +105,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                 for pb in request.gradients:
                     grad = Tensor.from_tensor_pb(pb)
                     self._parameters.check_grad(grad)
-                    if grad in self.grads_buffer:
+                    if grad.name in self._grads_buffer:
                         self._grads_buffer[grad.name] = (
                             self._grads_buffer[grad.name] + grad
                         )
@@ -117,14 +117,12 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
                 if self._grads_n == self._grads_to_wait:
                     grad_vars = []
-                    for grad in self._grads_buffer:
+                    for name, grad in self._grads_buffer.items():
                         # Dense gradients are averaged,
                         # while sparse gradients are summed
                         if not grad.is_indexed_slices():
                             grad.values = grad.values / self._grads_to_wait
-                        var = self._parameters.get_non_embedding_param(
-                            grad.name
-                        )
+                        var = self._parameters.get_non_embedding_param(name)
                         grad_vars.append((grad.to_tf_tensor(), var))
 
                     self._optimizer.apply_gradients(grad_vars)

@@ -243,27 +243,12 @@ class PserverServicerTest(unittest.TestCase):
         for i in range(2):
             non_embedding_params[var_name[i]] = tf.Variable(var_value[i])
 
-        # Ignore grad with wrong name, still return accepted and add version
-        req = elasticdl_pb2.PushGradientRequest()
-        emplace_tensor_pb_from_ndarray(
-            req.gradients, grad_value[0], name="wrong_name"
-        )
-        res = self._stub.push_gradient(req)
-        self.assertEqual(res.accepted, True)
-        self.assertEqual(res.model_version, 1)
-        for idx, name in enumerate(var_name):
-            expected_value = var_value[idx]
-            self.assertTrue(
-                np.allclose(expected_value, non_embedding_params[name].numpy())
-            )
-
-        # grads with right name should be applied to variables
         req = elasticdl_pb2.PushGradientRequest()
         for g, name in zip(grad_value, var_name):
             emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
         res = self._stub.push_gradient(req)
         self.assertEqual(res.accepted, True)
-        self.assertEqual(res.model_version, 2)
+        self.assertEqual(res.model_version, 1)
         for idx, name in enumerate(var_name):
             expected_value = var_value[idx] - self._lr * grad_value[idx]
             self.assertTrue(
@@ -276,7 +261,7 @@ class PserverServicerTest(unittest.TestCase):
             emplace_tensor_pb_from_ndarray(req.gradients, g, name=var_name[0])
         res = self._stub.push_gradient(req)
         self.assertEqual(res.accepted, True)
-        self.assertEqual(res.model_version, 3)
+        self.assertEqual(res.model_version, 2)
         expected_values = [
             var_value[0]
             - self._lr * grad_value[0] * 2
