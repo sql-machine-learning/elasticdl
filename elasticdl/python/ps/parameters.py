@@ -43,7 +43,9 @@ class Parameters(object):
     def check_grad(self, grad):
         name = grad.name
         if name in self.non_embedding_params:
-            param_shape = self.non_embedding_params[name].get_shape().as_list()
+            param_shape = tuple(
+                self.non_embedding_params[name].get_shape().as_list()
+            )
             if grad.is_indexed_slices():
                 dim0 = tf.math.reduce_max(grad.indices).numpy()
                 dim1 = grad.values.shape[1]

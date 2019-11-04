@@ -102,7 +102,7 @@ class Tensor(object):
                 (self.indices, other.indices), axis=0
             )
         elif not self.is_indexed_slices() and not other.is_indexed_slices():
-            self.values = np.concatenate((self.values, other.values), axis=0)
+            self.values = self.values + other.values
         else:
             raise NotImplementedError(
                 "Only Tensor with the same type could be added"

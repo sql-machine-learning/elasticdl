@@ -539,6 +539,11 @@ def parse_ps_args(ps_args=None):
     print_args(args, groups=ALL_ARGS_GROUPS)
     if unknown_args:
         logger.warning("Unknown arguments: %s", unknown_args)
+    if args.use_async and args.grads_to_wait > 1:
+        args.grads_to_wait = 1
+        logger.warning(
+            "grads_to_wait is set to 1 when using asynchronous SGD."
+        )
     return args
 
 

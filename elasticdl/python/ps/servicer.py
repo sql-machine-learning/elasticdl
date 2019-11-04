@@ -92,8 +92,8 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             with self._version_lock:
                 self._parameters.version += 1
 
-            res.model_version = self._parameters.version
             res.accepted = True
+            res.model_version = self._parameters.version
             return res
         else:
             if request.version != self._parameters.version:
