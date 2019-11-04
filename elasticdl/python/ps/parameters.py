@@ -23,6 +23,9 @@ class Parameters(object):
         self.non_embedding_params = {}
         self.embedding_params = {}
 
+    def get_non_embedding_param(self, name, default_value=None):
+        return self.non_embedding_params.get(name, default_value)
+
     def get_embedding_param(self, name, indices):
         if name not in self.embedding_params:
             raise ValueError(
