@@ -109,6 +109,9 @@ class Tensor(object):
             )
         return self
 
+    def __radd__(self, other):
+        return self + other
+
 
 def serialize_tensor(tensor, tensor_pb):
     """Serialize ElasticDL Tensor to tensor protocol buffer."""

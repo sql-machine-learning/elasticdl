@@ -40,6 +40,24 @@ class Parameters(object):
             )
         self.embedding_params[name].set(indices, values)
 
+    def check_grad(self, grad):
+        name = grad.name
+        if name in self.non_embedding_params:
+            param_shape = self.non_embedding_params[name].get_shape().as_list()
+            if grad.is_indexed_slices():
+                dim0 = tf.math.reduce_max(grad.indices).numpy()
+                dim1 = grad.values.shape[1]
+                if dim0 > param_shape[0] or dim1 != param_shape[1]:
+                    raise ValueError("Gradient %s shape is incompatible", name)
+            else:
+                if grad.values.shape != param_shape:
+                    raise ValueError("Gradient %s shape is incompatible", name)
+        elif name in self.embedding_params:
+            if grad.values.shape[1] != self.embedding_params[name].dim:
+                raise ValueError("Gradient %s shape is incompatible", name)
+        else:
+            raise ValueError("Gradient %s is not in Parameters", name)
+
     def init_from_model_pb(self, model_pb):
         if not self.init_status:
             tensors_pb = model_pb.param

@@ -77,48 +77,60 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         if self._use_async:
             grad_vars = []
             for pb in request.gradients:
-                tensor = Tensor.from_tensor_pb(pb)
-                var = self._parameters.get_non_embedding_param(tensor.name)
+                grad = Tensor.from_tensor_pb(pb)
+                self._parameters.check_grad(grad)
+                var = self._parameters.get_non_embedding_param(grad.name)
                 if var is None:
                     logger.warning(
-                        "Gradients with invalid name %s" % tensor.name
+                        "Gradients with invalid name %s" % grad.name
                     )
                     continue
-                grad = tensor.to_tf_tensor()
+                grad = grad.to_tf_tensor()
                 grad_vars.append((grad, var))
 
             self._optimizer.apply_gradients(grad_vars)
             with self._version_lock:
                 self._parameters.version += 1
 
+            res.model_version = self._parameters.version
             res.accepted = True
+            return res
         else:
             if request.version != self._parameters.version:
                 res.accepted = False
                 res.model_version = self._parameters.version
                 return res
 
-            for pb in request.gradients:
-                tensor = Tensor.from_tensor_pb(pb)
-                if tensor in self.grads_buffer:
-                    self._grads_buffer[tensor.name] = (
-                        self._grads_buffer[tensor.name] + tensor
-                    )
-                else:
-                    self._grads_buffer[tensor.name] = tensor
+            with self._lock:
+                for pb in request.gradients:
+                    grad = Tensor.from_tensor_pb(pb)
+                    self._parameters.check_grad(grad)
+                    if grad in self.grads_buffer:
+                        self._grads_buffer[grad.name] = (
+                            self._grads_buffer[grad.name] + grad
+                        )
+                    else:
+                        self._grads_buffer[grad.name] = grad
 
-            self._grads_n += 1
-            res.accepted = True
+                self._grads_n += 1
+                res.accepted = True
 
-            if self._grads_n == self._grads_to_wait:
-                grad_vars = []
-                for grad in self._grads_buffer:
-                    var = self._parameters.get_non_embedding_param(grad.name)
-                    grad_vars.append((grad.to_tf_tensor(), var))
+                if self._grads_n == self._grads_to_wait:
+                    grad_vars = []
+                    for grad in self._grads_buffer:
+                        # Dense gradients are averaged,
+                        # while sparse gradients are summed
+                        if not grad.is_indexed_slices():
+                            grad.values = grad.values / self._grads_to_wait
+                        var = self._parameters.get_non_embedding_param(
+                            grad.name
+                        )
+                        grad_vars.append((grad.to_tf_tensor(), var))
 
-                self._optimizer.apply_gradients(grad_vars)
-                with self._version_lock:
+                    self._optimizer.apply_gradients(grad_vars)
+                    self._grads_n = 0
+                    self._grads_buffer.clear()
                     self._parameters.version += 1
 
-        res.model_version = self._parameters.version
-        return res
+                res.model_version = self._parameters.version
+                return res
