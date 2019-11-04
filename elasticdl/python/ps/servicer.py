@@ -4,6 +4,7 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
+from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor import Tensor, serialize_tensor
 
 
@@ -23,7 +24,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._optimizer = optimizer
         self._lr_staleness_modulation = lr_staleness_modulation
         self._use_async = use_async
-        self._version = 0
+        self._version_lock = threading.Lock()
         self._lock = threading.Lock()
 
     def pull_variable(self, request, _):
@@ -69,5 +70,29 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         return empty_pb2.Empty()
 
     def push_gradient(self, request, _):
-        # TODO: implement this RPC service
+        if self._use_async:
+            grad_vars = []
+            for pb in request.gradients:
+                tensor = Tensor.from_tensor_pb(pb)
+                var = self._parameters.get_non_embedding_param(tensor.name)
+                if var is None:
+                    logger.warning(
+                        "Gradients with invalid name %s" % tensor.name
+                    )
+                    continue
+                grad = tensor.to_tf_tensor()
+                grad_vars.append((grad, var))
+
+            self._optimizer.apply_gradients(grad_vars)
+            with self._version_lock:
+                self._parameters.version += 1
+
+            res = elasticdl_pb2.PushGradientResponse()
+            res.accepted = True
+            res.model_version = self._parameters.version
+            return res
+
+        raise NotImplementedError(
+            "Updating parameters synchronously is not implemented."
+        )
         return elasticdl_pb2.PushGradientResponse()
