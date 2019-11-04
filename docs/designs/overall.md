@@ -17,7 +17,7 @@ ElasticDL client is simple, just like a CLI command. User inputs ElasticDL comma
 
 Master
 
-* Partition the training/evaluation data into mutiple shards. (see [dynamic_data_sharding_design](dynamic_data_sharding_design.md))
+* Partition the training/evaluation data into mutiple shards. (see [dynamic_data_sharding_design](dynamic_data_sharding.md))
 * Generate the training/evaluation tasks from the data shards.
 * Dispatch these tasks to different workers.
 * Aggregate the gradients reported from the workers.
@@ -26,6 +26,6 @@ Master
 Worker
 
 * Pull the task from the master. The task contains the index of this data shard.
-* Read the data according to the data index message. (see [data_io_pipeline_design](data_io_pipeline_design.md))
+* Read the data according to the data index message. (see [data_io_pipeline_design](data_io_pipeline.md))
 * Run the training process using this data shard.
 * Report the calculated gradients and task result to the master.

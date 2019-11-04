@@ -118,7 +118,7 @@ def restore_keras_model_params(model):
 
 ## Execute task to save model with fault-tolerance
 
-We designed the master-worker architecture and task dispatch&recover mechanism in ElasticDL to make the job execution fault tolerant. Please check [overall design](./overall_design.md).\
+We designed the master-worker architecture and task dispatch&recover mechanism in ElasticDL to make the job execution fault tolerant. Please check [overall design](overall.md).\
 For model saving work, we use the same mechanism. After completing all the training/evaluation/prediction tasks, master will generate only one SaveModel task and insert it into the todo task queue. The first worker pulling this task will execute the model saving process. The other workers are waiting. After executing the SavedModel task, all the workers exit and the entire job is completed. Please check the diagram below:
 
 ![saved_model_task](../images/saved_model_task.png)
