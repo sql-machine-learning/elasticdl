@@ -318,7 +318,7 @@ class Client(object):
         return self._create_service(
             name=self.get_tensorboard_service_name(),
             port=port,
-            target_port=6006,
+            target_port=target_port,
             replica_type=replica_type,
             service_type=service_type,
             owner=self.get_master_pod(),
