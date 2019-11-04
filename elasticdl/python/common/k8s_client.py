@@ -313,6 +313,7 @@ class Client(object):
         port=80,
         target_port=6006,
         replica_type="master",
+        replica_index=0,
         service_type="LoadBalancer",
     ):
         return self._create_service(
@@ -320,6 +321,7 @@ class Client(object):
             port=port,
             target_port=target_port,
             replica_type=replica_type,
+            replica_index=replica_index,
             service_type=service_type,
             owner=self.get_master_pod(),
         )
@@ -334,7 +336,7 @@ class Client(object):
             # Otherwise annotation is `None` and cannot be modified
             # using `with_service()` for cluster specific information.
             annotations=labels,
-            owner_references=kargs["owner_reference"],
+            owner_references=kargs.get("owner", None),
             namespace=self.namespace,
         )
         spec = client.V1ServiceSpec(
