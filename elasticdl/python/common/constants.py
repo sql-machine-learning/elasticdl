@@ -42,3 +42,7 @@ class MetricsDictKey(object):
 
 class DistributionStrategy(object):
     PARAMETER_SERVER = "ParameterServerStrategy"
+
+
+class SaveModelConfig(object):
+    SAVED_MODEL_PATH = "saved_model_path"

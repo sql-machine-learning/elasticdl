@@ -10,12 +10,15 @@ from elasticdl.python.common.log_utils import default_logger as logger
 class _Task(object):
     """Internal representation of a task"""
 
-    def __init__(self, *, shard_name, start, end, type, model_version=-1):
+    def __init__(
+        self, shard_name, start, end, type, model_version=-1, **kwargs
+    ):
         self.shard_name = shard_name
         self.start = start
         self.end = end
         self.type = type
         self.model_version = model_version
+        self.extended_config = kwargs
 
     def _info(self):
         return (
@@ -37,7 +40,6 @@ class _TaskDispatcher(object):
         prediction_shards,
         records_per_task,
         num_epochs,
-        need_save_model=False,
     ):
         """
         Arguments:
@@ -50,8 +52,6 @@ class _TaskDispatcher(object):
             records_per_task: The number of records per task.
             num_epochs: The total number of epochs for the tasks where
                 an epoch is a complete iteration over the shards.
-            need_save_model: Whether to save model after all tasks
-                are completed.
         """
         self._lock = threading.Lock()
 
@@ -70,9 +70,7 @@ class _TaskDispatcher(object):
         self._evaluation_service = None
 
         # Callback list to invoke after all tasks complete.
-        self._task_list_done_callbacks = []
-        if need_save_model:
-            self._task_list_done_callbacks.append(self._create_save_model_task)
+        self._tasks_done_deferred_callbacks = []
 
         if self._training_shards:
             logger.info("Starting epoch %d", self._epoch)
@@ -141,7 +139,7 @@ class _TaskDispatcher(object):
             self._doing[self._task_id] = (worker_id, task)
             return self._task_id, task
 
-    def _create_save_model_task(self):
+    def _create_save_model_task(self, saved_model_path):
         """
         Build one instance of SaveModel task and add it to todo list.
         Because we need create a dataset to build the model,
@@ -165,23 +163,29 @@ class _TaskDispatcher(object):
             start=start_ind_this_task,
             end=end_ind_this_task,
             type=elasticdl_pb2.SAVE_MODEL,
+            saved_model_path=saved_model_path,
         )
 
         self._todo.append(save_model_task)
 
-    def invoke_task_list_done_callback(self):
+    def add_deferred_callback_create_save_model_task(self, saved_model_path):
+        self._tasks_done_deferred_callbacks.append(
+            lambda: self._create_save_model_task(saved_model_path)
+        )
+
+    def invoke_deferred_callback(self):
         """
         Pop a callback from the list and invoke it.
         If the callback list is empty, return False directly.
         """
-        if not self._task_list_done_callbacks:
+        if not self._tasks_done_deferred_callbacks:
             return False
 
         with self._lock:
-            if not self._task_list_done_callbacks:
+            if not self._tasks_done_deferred_callbacks:
                 return False
 
-            callback = self._task_list_done_callbacks.pop()
+            callback = self._tasks_done_deferred_callbacks.pop()
             callback()
             return True
 

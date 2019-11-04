@@ -68,8 +68,9 @@ def _make_task_dispatcher(
 class Master(object):
     def __init__(self, args):
         self.logger = get_logger("master", level=args.log_level.upper())
-        self.checkpoint_output_path = args.output
+
         self.num_ps_pods = args.num_ps_pods
+        self.checkpoint_output_path = args.checkpoint_dir
 
         # Master addr
         master_ip = os.getenv("MY_POD_IP", "localhost")
@@ -96,6 +97,15 @@ class Master(object):
             records_per_task,
             args.num_epochs,
         )
+
+        saved_model_path = args.output
+        if saved_model_path is not None and self.job_type in [
+            JobType.TRAINING_ONLY,
+            JobType.TRAINING_WITH_EVALUATION,
+        ]:
+            self.task_d.add_deferred_callback_create_save_model_task(
+                saved_model_path
+            )
 
         # Initialize the components from the model definition
         self.model_module = load_module(
@@ -183,10 +193,6 @@ class Master(object):
                     if self.worker_manager:
                         self.worker_manager.update_status(
                             WorkerManagerStatus.FINISHED
-                        )
-                    if self.checkpoint_output_path:
-                        self.master_servicer.save_latest_checkpoint(
-                            self.checkpoint_output_path
                         )
                     break
                 time.sleep(30)

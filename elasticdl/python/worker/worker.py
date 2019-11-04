@@ -4,7 +4,12 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.constants import JobType, MetricsDictKey, Mode
+from elasticdl.python.common.constants import (
+    JobType,
+    MetricsDictKey,
+    Mode,
+    SaveModelConfig,
+)
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
@@ -510,9 +515,16 @@ class Worker(object):
         task, dataset = (
             self._task_data_service.get_save_model_task_and_dataset()
         )
-        if task and dataset:
+        if task is not None and dataset is not None:
             # TODO: Implement the save model execution process
-            return
+            saved_model_path = task.extended_config.get(
+                SaveModelConfig.SAVED_MODEL_PATH
+            )
+            logger.info(
+                "The path to export model is {}".format(saved_model_path)
+            )
+
+            self.report_task_result(task_id=task.task_id, err_msg="")
 
     def _process_minibatch_and_report(
         self,
@@ -621,7 +633,8 @@ class Worker(object):
             # have pending training tasks.
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                 evaluation_task_executed = self._evaluate_only()
-                self._process_save_model_task_if_needed()
+
+            self._process_save_model_task_if_needed()
 
     def _evaluate_only(self):
         """
