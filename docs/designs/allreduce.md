@@ -1,14 +1,42 @@
 # Design for Allreduce Support
 
-This document describes the design for supporting Allreduce in ElasticDL. Note that this is still a work-in-progress.
+This document describes the design for supporting Allreduce-tyle training in ElasticDL. Note that this is still a work-in-progress.
+
+## Motivation
+
+TBA
+
+## Design Components
+
+### Fault-tolerant Allreduce Implementation
+
+We are collaborating with [Caicloud](https://github.com/caicloud/) on building an API that provides implementations of
+fault-tolerant Allreduce. The initial implementation will contain an experimental Python binding for NCCL that is
+fault-tolerant and Kubernetes-native. This will include but not limited to the following objectives (more details to be disclosed later once
+the implementation has been open-sourced):
+
+* Fault-tolerant: if any of the worker pod fails, the [NCCL Communicator](https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs/usage/communicators.html)
+can be reconstructed. The Allreduce operation continues as long as there's at least one healthy worker pod.
+* Elastic: the number of worker pods can be dynamically added if there are enough computational resources available.
+Ranks can be re-assigned as the number of worker pods changes.
+
+
+### Allreduce-style Training in ElasticDL
+
+TBA
+
+## Potential Future Optimizations
+
+* We can potentially overlap the backward computations and gradient optimizations. More discussions on this can be found
+in [this Github issue](https://github.com/tensorflow/tensorflow/issues/33274).
 
 ## Existing Collective Communication Technologies
 
 The following three libraries provide collective communications and all of them have been adopted by large projects:
 
 * [MPI](https://www.mpi-forum.org/)
-* [Gloo](https://github.com/facebookincubator/gloo/)
 * [NCCL](https://github.com/NVIDIA/nccl)
+* [Gloo](https://github.com/facebookincubator/gloo/)
 * [Rabit](https://github.com/dmlc/rabit)
 
 ### MPI
@@ -17,19 +45,9 @@ Message Passing Interface (MPI) is a standardized and portable message-passing s
 from academia and industry to function on a wide variety of parallel computing architectures.
 
 There are several well-tested and efficient implementations of MPI, such as [MPICH](https://www.mpich.org/about/overview/)
-and [Open MPI](https://www.open-mpi.org/). However, these implementations of MPI do not support fault tolerance.
-
-### Gloo
-
-Gloo is a collective communications library. It comes with a number of collective algorithms useful for machine learning
-applications, which includes but not limited to Broadcast and Allreduce. It has been adopted by [PyTorch](https://github.com/pytorch/pytorch).
-
-Transport of data between participating machines is abstracted so that IP can be used at all times, or InifiniBand (or RoCE)
-when available. In the latter case, if the InfiniBand transport is used, GPUDirect can be used to accelerate cross machine
-GPU-to-GPU memory transfers. Gloo includes several collective algorithm implementations that work directly with NVIDIA GPU buffers.
-These take advantage of overlapping host and GPU operations to decrease overall latency.
-
-Gloo does not support fault tolerance but supports both GPUs and CPUs for at least Allreduce and Broadcast primitives.
+and [Open MPI](https://www.open-mpi.org/). Some recent implementations, such as [MVAPICH](https://developer.nvidia.com/mvapich)
+and [IBM Spectrum MPI](https://developer.nvidia.com/ibm-spectrum-mpi), are also able to take advantage of CUDA IPC and GPU Direct technologies in order to avoid memory copies through the CPU.
+However, these implementations of MPI do not support fault tolerance.
 
 ### NCCL
 
@@ -45,6 +63,19 @@ GPU interconnect topology.
 NCCL does not support fault tolerance but one can support this by filtering out the failed workers, reassigning ranks, and then
 reconstructuring the [NCCL Communicator](https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs/usage/communicators.html).
 Also note that NCCL only supports GPUs for the collective communication primitives.
+
+### Gloo
+
+Gloo is a collective communications library. It comes with a number of collective algorithms useful for machine learning
+applications, which includes but not limited to Broadcast and Allreduce. It has been adopted by [PyTorch](https://github.com/pytorch/pytorch).
+
+Transport of data between participating machines is abstracted so that IP can be used at all times, or InifiniBand (or RoCE)
+when available. In the latter case, if the InfiniBand transport is used, GPUDirect can be used to accelerate cross machine
+GPU-to-GPU memory transfers. Gloo includes several collective algorithm implementations that work directly with NVIDIA GPU buffers.
+These take advantage of overlapping host and GPU operations to decrease overall latency.
+
+Gloo does not support fault tolerance but supports both GPUs and CPUs for at least Allreduce and Broadcast primitives.
+The implementation of the collective operations for CUDA tensors is not as optimized as the ones provided by the NCCL backend.
 
 ### Rabit
 
