@@ -19,6 +19,7 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --num_workers=2 \
       --checkpoint_steps=10 \
       --evaluation_steps=15 \
+      --tensorboard_log_dir=/tmp/tensorboard-log \
       --grads_to_wait=2 \
       --job_name=test-train \
       --log_level=INFO \
@@ -40,6 +41,7 @@ elif [[ "$JOB_TYPE" == "evaluate" ]]; then
       --num_minibatches_per_task=2 \
       --num_workers=2 \
       --evaluation_steps=15 \
+      --tensorboard_log_dir=/tmp/tensorboard-log \
       --job_name=test-evaluate \
       --log_level=INFO \
       --image_pull_policy=Never
