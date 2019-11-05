@@ -1,5 +1,5 @@
 import threading
-from collections import deque
+from collections import defaultdict, deque
 
 import tensorflow as tf
 
@@ -15,7 +15,7 @@ class TaskDataService(object):
         worker,
         training_with_evaluation,
         data_reader_params=None,
-        record_failure_tolerance=0,
+        record_failure_tolerance_percentage=0.0,
     ):
         self._worker = worker
         self._training_with_evaluation = training_with_evaluation
@@ -31,15 +31,19 @@ class TaskDataService(object):
             self.data_reader = create_data_reader(data_origin=None)
         self._warm_up_task = None
         self._has_warmed_up = False
-        self._record_failure_tolerance = record_failure_tolerance
+        self._record_failure_tolerance_percentage = (
+            record_failure_tolerance_percentage
+        )
 
     def _reset(self):
         """
         Reset pending tasks and record counts
         """
-        self._cur_record_count = 0
-        self._reported_record_count = 0
-        self._failed_record_count = 0
+
+        # Counters are keyed by task id.
+        self._cur_record_count = defaultdict(int)
+        self._reported_record_count = defaultdict(int)
+        self._failed_record_count = defaultdict(int)
         self._pending_tasks = deque()
         self._current_task = None
 
@@ -49,50 +53,55 @@ class TaskDataService(object):
     def report_task_done(self, task_id, err_msg):
         self._worker.report_task_result(task_id, err_msg)
 
+    def handle_next_task(self, err_msg=""):
+        with self._lock:
+            task = self._pending_tasks.popleft()
+            self._reported_record_count.pop(task.task_id, None)
+            self._failed_record_count.pop(task.task_id, None)
+            if self._pending_tasks:
+                self._current_task = self._pending_tasks[0]
+            self.report_task_done(task.task_id, err_msg)
+
     def report_record_done(self, count, err_msg=""):
         """
         Report the number of records in the latest processed batch,
         so TaskDataService knows if some pending tasks are finished
         and report_task_result to the master.
         """
-        self._reported_record_count += count
-        if err_msg:
-            self._failed_record_count += count
-            logger.warning(
-                "Process records of task contains error: %s", err_msg
-            )
         if self._pending_tasks:
             task = self._pending_tasks[0]
+            self._reported_record_count[task.task_id] += count
+            if err_msg:
+                self._failed_record_count[task.task_id] += count
+
             total_record_num = task.end - task.start
+            should_handle_next = False
             if task.type == elasticdl_pb2.TRAINING:
                 # only training, we allow for failures
                 if (
-                    self._failed_record_count / total_record_num
-                    > self._record_failure_tolerance
+                    self._failed_record_count[task.task_id] / total_record_num
+                    > self._record_failure_tolerance_percentage
                 ):
+                    should_handle_next = True
+            elif self._failed_record_count != 0:
+                should_handle_next = True
+            if self._reported_record_count[task.task_id] >= total_record_num:
+                should_handle_next = True
+            if should_handle_next:
+                if err_msg:
                     msg = (
                         "too many records ({f}/{t}) failure, possible "
-                        "reason {err_msg}"
+                        "in task_id: {task_id} "
+                        'reason "{err_msg}"'
                     ).format(
+                        task_id=task.task_id,
                         err_msg=err_msg,
-                        f=self._failed_record_count,
+                        f=self._failed_record_count[task.task_id],
                         t=total_record_num,
                     )
-                    self.report_task_done(task.task_id, msg)
-                    return
-            elif self._failed_record_count != 0:
-                self.report_task_done(task.task_id, err_msg)
-            with self._lock:
-                if (
-                    self._pending_tasks
-                    and self._reported_record_count >= total_record_num
-                ):
-                    task = self._pending_tasks.popleft()
-                    self.report_task_done(task.task_id, err_msg)
-                    self._reported_record_count = 0
-                    self._failed_record_count = 0
-                if self._pending_tasks:
-                    self._current_task = self._pending_tasks[0]
+                    err_msg = msg
+                    logger.warning(err_msg)
+                self.handle_next_task(err_msg=err_msg)
 
     def get_validation_dataset(self, eval_task):
         """
@@ -173,7 +182,7 @@ class TaskDataService(object):
                     self._pending_save_model_task = task
                     continue
 
-                self._cur_record_count = task.end - task.start
+                self._cur_record_count[task.task_id] = task.end - task.start
                 self._pending_tasks.append(task)
                 if len(self._pending_tasks) == 1:
                     self._current_task = task

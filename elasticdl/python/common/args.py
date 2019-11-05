@@ -478,9 +478,9 @@ def add_common_args_between_master_and_worker(parser):
         'e.g. "ParameterServerStrategy"',
     )
     parser.add_argument(
-        "--record_failure_tolerance",
-        type=int,
-        default=0,
+        "--record_failure_tolerance_percentage",
+        type=float,
+        default=0.0,
         help="The percentage of records which is allowed to fail before"
         " failing the job, e.g. 10, means at most 10% failure is allowed.",
     )
