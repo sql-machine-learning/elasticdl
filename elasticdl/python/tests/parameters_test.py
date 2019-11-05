@@ -106,3 +106,33 @@ class ParametersTest(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.params.set_embedding_param("tom", [0, 1, 2], values)
+
+    def test_check_grad(self):
+        self._clear_params()
+        self.params.init_from_model_pb(self.model_pb)
+
+        grad0 = Tensor(name="z")
+        with self.assertRaisesRegex(ValueError, "Name error"):
+            self.params.check_grad(grad0)
+
+        grad1 = Tensor(name="x", values=np.random.uniform(size=(3, 5)))
+        with self.assertRaisesRegex(ValueError, "Non embedding param error"):
+            self.params.check_grad(grad1)
+
+        grad2 = Tensor(
+            name="embedding_1",
+            values=np.random.uniform(size=(3, 11)),
+            indices=np.array([1, 2, 3]),
+        )
+        with self.assertRaisesRegex(
+            ValueError, "ElasticDL embedding param error"
+        ):
+            self.params.check_grad(grad2)
+
+        grad3 = Tensor(
+            name="x",
+            values=np.random.uniform(size=(4, 4)),
+            indices=np.array([1, 2, 3, 4]),
+        )
+        with self.assertRaisesRegex(ValueError, "Keras embedding param error"):
+            self.params.check_grad(grad3)

@@ -4,7 +4,6 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
-from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor import Tensor, serialize_tensor
 
 
@@ -26,6 +25,9 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._use_async = use_async
         self._version_lock = threading.Lock()
         self._lock = threading.Lock()
+
+        self._grads_n = 0
+        self._grads_buffer = {}
 
     def pull_variable(self, request, _):
         """
@@ -70,29 +72,57 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         return empty_pb2.Empty()
 
     def push_gradient(self, request, _):
+        res = elasticdl_pb2.PushGradientResponse()
         if self._use_async:
             grad_vars = []
             for pb in request.gradients:
-                tensor = Tensor.from_tensor_pb(pb)
-                var = self._parameters.get_non_embedding_param(tensor.name)
-                if var is None:
-                    logger.warning(
-                        "Gradients with invalid name %s" % tensor.name
-                    )
-                    continue
-                grad = tensor.to_tf_tensor()
+                grad = Tensor.from_tensor_pb(pb)
+                self._parameters.check_grad(grad)
+                var = self._parameters.get_non_embedding_param(grad.name)
+                grad = grad.to_tf_tensor()
                 grad_vars.append((grad, var))
 
             self._optimizer.apply_gradients(grad_vars)
             with self._version_lock:
                 self._parameters.version += 1
 
-            res = elasticdl_pb2.PushGradientResponse()
             res.accepted = True
             res.model_version = self._parameters.version
             return res
+        else:
+            if request.model_version != self._parameters.version:
+                res.accepted = False
+                res.model_version = self._parameters.version
+                return res
 
-        raise NotImplementedError(
-            "Updating parameters synchronously is not implemented."
-        )
-        return elasticdl_pb2.PushGradientResponse()
+            with self._lock:
+                for pb in request.gradients:
+                    grad = Tensor.from_tensor_pb(pb)
+                    self._parameters.check_grad(grad)
+                    if grad.name in self._grads_buffer:
+                        self._grads_buffer[grad.name] = (
+                            self._grads_buffer[grad.name] + grad
+                        )
+                    else:
+                        self._grads_buffer[grad.name] = grad
+
+                self._grads_n += 1
+                res.accepted = True
+
+                if self._grads_n == self._grads_to_wait:
+                    grad_vars = []
+                    for name, grad in self._grads_buffer.items():
+                        # Dense gradients are averaged,
+                        # while sparse gradients are summed
+                        if not grad.is_indexed_slices():
+                            grad.values = grad.values / self._grads_to_wait
+                        var = self._parameters.get_non_embedding_param(name)
+                        grad_vars.append((grad.to_tf_tensor(), var))
+
+                    self._optimizer.apply_gradients(grad_vars)
+                    self._grads_n = 0
+                    self._grads_buffer.clear()
+                    self._parameters.version += 1
+
+                res.model_version = self._parameters.version
+                return res
