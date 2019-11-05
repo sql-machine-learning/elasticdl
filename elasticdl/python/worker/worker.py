@@ -1,7 +1,9 @@
+import hashlib
 import traceback
 
 import numpy as np
 import tensorflow as tf
+from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import (
@@ -53,6 +55,7 @@ class Worker(object):
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
         get_model_steps=1,
         distribution_strategy=None,
+        ps_channels=None,
     ):
         """
         Arguments:
@@ -128,6 +131,12 @@ class Worker(object):
             self._non_embed_grads = None
         self._evaluation_result = {}
 
+        self._ps_stubs = [
+            elasticdl_pb2_grpc.PserverStub(c) for c in ps_channels
+        ]
+        self._use_multi_ps = len(self._ps_stubs.empty()) > 0
+        self._var_to_ps = {}
+
     # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
     def set_model(self, model_inst):
@@ -183,7 +192,7 @@ class Worker(object):
 
         return self._stub.GetTask(req)
 
-    def get_model(self, version, method):
+    def get_model_from_master(self, version, method):
         """
         get model from master, and update model_version
         """
@@ -198,6 +207,22 @@ class Worker(object):
             self._non_embed_vars[tensor.name].assign(tensor.to_ndarray())
         self._model_version = model.version
 
+    def get_model_from_ps(self, version, method):
+        for stub in self._ps_stubs:
+            req = empty_pb2.Empty()
+            res = stub.pull_variable(req)
+
+            for tensor_pb in res.model.param:
+                tensor = Tensor.from_tensor_pb(tensor_pb)
+                self._non_embed_vars[tensor.name].assign(tensor.to_ndarray())
+            self._model_version = res.model.version
+
+    def get_model(self, version, method):
+        if self._use_multi_ps:
+            self.get_model_from_ps(version, method)
+        else:
+            self.get_model_from_master(version, method)
+
     def report_task_result(self, task_id, err_msg):
         """
         report task result to master
@@ -207,10 +232,7 @@ class Worker(object):
         report.err_message = err_msg
         return self._stub.ReportTaskResult(report)
 
-    def report_variable(self):
-        """
-        report variable to ps.
-        """
+    def report_variable_to_master(self):
         req = elasticdl_pb2.ReportVariableRequest()
         for v in self._non_embed_vars.values():
             emplace_tensor_pb_from_ndarray(
@@ -218,10 +240,37 @@ class Worker(object):
             )
         self._stub.ReportVariable(req)
 
-    def report_gradient(self, grads):
-        """
-        report gradient to ps, return (accepted, model_version) from rpc call.
-        """
+    def _hash_var_to_ps(self, name):
+        h = hashlib.sha256(name.encode("utf-8"))
+        return int(h.hexdigest(), base=32) % len(self._ps_stubs)
+
+    def report_variable_to_ps(self):
+        ps_vars = {}
+        for v in self._non_embed_vars.values():
+            if v.name not in self._var_to_ps:
+                self._var_to_ps[v.name] = self._hash_var_to_ps(v.name)
+            ps_id = self._var_to_ps[v.name]
+            if ps_id not in ps_vars:
+                ps_vars[ps_id] = [v]
+            else:
+                ps_vars[ps_id].append(v)
+
+        # TODO: call `push_model` in parallel
+        for ps_id, vars in ps_vars.items():
+            model = elasticdl_pb2.Model()
+            for var in vars:
+                emplace_tensor_pb_from_ndarray(
+                    model.param, var.numpy(), name=var.name
+                )
+            self._ps_stubs[ps_id].push_model(model)
+
+    def report_variable(self):
+        if self._use_multi_ps:
+            self.report_variable_to_ps()
+        else:
+            self.report_variable_to_master()
+
+    def report_gradient_to_master(self, grads):
         req = elasticdl_pb2.ReportGradientRequest()
         non_embed_vars_n = len(self._non_embed_vars)
         # The first `non_embed_vars_n` items in `grads` are gradients for
@@ -276,6 +325,35 @@ class Worker(object):
         req.model_version = self._model_version
         res = self._stub.ReportGradient(req)
         return res.accepted, res.model_version
+
+    def report_gradient_to_ps(self, grads):
+        ps_grads = {}
+        non_embed_vars_n = len(self._non_embed_vars)
+        for g, v in zip(
+            grads[:non_embed_vars_n], self._non_embed_vars.values()
+        ):
+            ps_id = self._var_to_ps[v.name]
+            if ps_id not in ps_grads:
+                ps_grads[ps_id] = [(g, v.name)]
+            else:
+                ps_grads[ps_id].append((g, v.name))
+
+        # TODO: call `push_gradient` in parallel
+        for ps_id, grads in ps_grads.items():
+            req = elasticdl_pb2.PushGradientRequest()
+            for g, name in grads:
+                emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
+            req.model_version = self._model_version
+            res = self._ps_stubs[ps_id].push_gradient(req)
+
+        # TODO: choose the last response temporarily
+        return res.accepted, res.model_version
+
+    def report_gradient(self, grads):
+        if self._use_multi_ps:
+            return self.report_gradient_to_ps(grads)
+        else:
+            return self.report_gradient_to_master(grads)
 
     def report_evaluation_metrics(self, model_outputs, labels):
         """

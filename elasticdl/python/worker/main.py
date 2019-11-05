@@ -19,6 +19,9 @@ def main():
         ],
     )
 
+    # TODO, create PS channels here
+    ps_channels = []
+
     logger = log_utils.get_logger(__name__)
 
     logger.info("Starting worker %d", args.worker_id)
@@ -39,6 +42,7 @@ def main():
         prediction_outputs_processor=args.prediction_outputs_processor,
         get_model_steps=args.get_model_steps,
         distribution_strategy=args.distribution_strategy,
+        ps_channels=ps_channels,
     )
     worker.run()
 
