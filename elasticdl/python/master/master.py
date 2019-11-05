@@ -12,8 +12,8 @@ from elasticdl.python.common.args import (
 )
 from elasticdl.python.common.constants import (
     GRPC,
-    JobType,
     InstanceManagerStatus,
+    JobType,
 )
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_utils import get_logger
