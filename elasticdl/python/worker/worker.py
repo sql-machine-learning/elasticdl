@@ -512,9 +512,10 @@ class Worker(object):
         self._evaluation_result = {}
 
     def _process_save_model_task_if_needed(self):
-        task, dataset = (
-            self._task_data_service.get_save_model_task_and_dataset()
-        )
+        (
+            task,
+            dataset,
+        ) = self._task_data_service.get_save_model_task_and_dataset()
         if task is not None and dataset is not None:
             # TODO: Implement the save model execution process
             saved_model_path = task.extended_config.get(
