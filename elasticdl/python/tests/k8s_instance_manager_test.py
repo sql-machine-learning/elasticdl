@@ -172,7 +172,9 @@ class InstanceManagerTest(unittest.TestCase):
                     all_live_ps.add(k)
         self.assertTrue(all_live_ps)
 
-        instance_manager._remove_ps(all_live_ps.pop())
+        ps_to_be_removed = all_live_ps.pop()
+        all_current_ps.remove(ps_to_be_removed)
+        instance_manager._remove_ps(ps_to_be_removed)
         # verify a new ps get launched
         found = False
         for _ in range(max_check_num):
