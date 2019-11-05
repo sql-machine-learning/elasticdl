@@ -88,6 +88,9 @@ class Client(object):
     def get_worker_pod_name(self, worker_id):
         return "elasticdl-%s-worker-%s" % (self.job_name, str(worker_id))
 
+    def get_ps_pod_name(self, ps_id):
+        return "elasticdl-%s-ps-%s" % (self.job_name, str(ps_id))
+
     def get_embedding_service_pod_name(self, embedding_service_id):
         return "elasticdl-%s-embedding-service-%s" % (
             self.job_name,
@@ -121,6 +124,15 @@ class Client(object):
             )
         except client.api_client.ApiException as e:
             logger.warning("Exception when reading worker pod: %s\n" % e)
+            return None
+
+    def get_ps_pod(self, ps_id):
+        try:
+            return self.client.read_namespaced_pod(
+                name=self.get_ps_pod_name(ps_id), namespace=self.namespace
+            )
+        except client.api_client.ApiException as e:
+            logger.warning("Exception when reading ps pod: %s\n" % e)
             return None
 
     def get_embedding_service_pod(self, embedding_service_id):
@@ -248,9 +260,9 @@ class Client(object):
         self.client.create_namespaced_pod(self.namespace, pod)
         logger.info("Master launched.")
 
-    def _create_worker_pod(self, pod_name, type_key, **kargs):
+    def _create_ps_worker_pod(self, pod_name, type_key, index_key, **kargs):
         # Find that master pod that will be used as the owner reference
-        # for this worker pod.
+        # for the ps or worker pod.
         master_pod = self.get_master_pod()
         env = kargs["envs"] if "envs" in kargs else None
         pod = self._create_pod(
@@ -270,18 +282,26 @@ class Client(object):
         )
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = type_key
-        pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = str(
-            kargs["worker_id"]
-        )
+        pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = str(index_key)
         return self.client.create_namespaced_pod(self.namespace, pod)
 
     def create_worker(self, **kargs):
         pod_name = self.get_worker_pod_name(kargs["worker_id"])
-        return self._create_worker_pod(pod_name, "worker", **kargs)
+        return self._create_ps_worker_pod(
+            pod_name, "worker", kargs["worker_id"], **kargs
+        )
 
     def create_embedding_service(self, **kargs):
         pod_name = self.get_embedding_service_pod_name(kargs["worker_id"])
-        return self._create_worker_pod(pod_name, "embedding_service", **kargs)
+        return self._create_ps_worker_pod(
+            pod_name, "embedding_service", kargs["worker_id"], **kargs
+        )
+
+    def create_ps(self, **kargs):
+        pod_name = self.get_ps_pod_name(kargs["ps_id"])
+        return self._create_ps_worker_pod(
+            pod_name, "ps", kargs["ps_id"], **kargs
+        )
 
     def delete_master(self):
         logger.info("pod name is %s" % self.get_master_pod_name())
@@ -301,6 +321,13 @@ class Client(object):
     def delete_embedding_service(self, embedding_service_id):
         self.client.delete_namespaced_pod(
             self.get_embedding_service_pod_name(embedding_service_id),
+            self.namespace,
+            body=client.V1DeleteOptions(grace_period_seconds=0),
+        )
+
+    def delete_ps(self, ps_id):
+        self.client.delete_namespaced_pod(
+            self.get_ps_pod_name(ps_id),
             self.namespace,
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )
