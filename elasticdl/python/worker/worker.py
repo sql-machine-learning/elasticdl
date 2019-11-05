@@ -131,11 +131,13 @@ class Worker(object):
             self._non_embed_grads = None
         self._evaluation_result = {}
 
-        self._ps_stubs = [
-            elasticdl_pb2_grpc.PserverStub(c) for c in ps_channels
-        ]
-        self._use_multi_ps = len(self._ps_stubs.empty()) > 0
-        self._var_to_ps = {}
+        self._use_multi_ps = False
+        if ps_channels is not None:
+            self._use_multi_ps = True
+            self._ps_stubs = [
+                elasticdl_pb2_grpc.PserverStub(c) for c in ps_channels
+            ]
+            self._var_to_ps = {}
 
     # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
