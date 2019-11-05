@@ -50,15 +50,46 @@ class Parameters(object):
                 dim0 = tf.math.reduce_max(grad.indices).numpy()
                 dim1 = grad.values.shape[1]
                 if dim0 > param_shape[0] or dim1 != param_shape[1]:
-                    raise ValueError("Gradient %s shape is incompatible", name)
+                    raise ValueError(
+                        "Keras embedding param error: \
+                        the shape of gradient %s is (%d, %d), \
+                        the shape of parameter %s is (%d, %d), \
+                        which is incompatible",
+                        name,
+                        dim0,
+                        dim1,
+                        name,
+                        param_shape[0],
+                        param_shape[1],
+                    )
             else:
                 if grad.values.shape != param_shape:
-                    raise ValueError("Gradient %s shape is incompatible", name)
+                    raise ValueError(
+                        "Non embedding param error: \
+                        the shape of gradient %s is %s, \
+                        the shape of parameter %s is %s, \
+                        which is incompatible",
+                        name,
+                        str(grad.values.shape),
+                        name,
+                        str(param_shape),
+                    )
         elif name in self.embedding_params:
             if grad.values.shape[1] != self.embedding_params[name].dim:
-                raise ValueError("Gradient %s shape is incompatible", name)
+                raise ValueError(
+                    "ElasticDL embedding param error: \
+                    the shape of gradient %s is (None, %d), \
+                    the shape of parameter %s is (None, %d), \
+                    which is incompatible",
+                    name,
+                    grad.values.shape[1],
+                    name,
+                    self.embedding_params[name].dim,
+                )
         else:
-            raise ValueError("Gradient %s is not in Parameters", name)
+            raise ValueError(
+                "Name error: Gradient %s is not in Parameters", name
+            )
 
     def init_from_model_pb(self, model_pb):
         if not self.init_status:
