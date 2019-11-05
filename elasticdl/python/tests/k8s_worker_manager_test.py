@@ -21,8 +21,8 @@ class WorkerManagerTest(unittest.TestCase):
             job_name="test-create-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="gcr.io/google-samples/hello-app:1.0",
-            command=["echo"],
-            args=[],
+            worker_command=["echo"],
+            worker_args=[],
             namespace="default",
             num_workers=3,
         )
@@ -63,8 +63,8 @@ class WorkerManagerTest(unittest.TestCase):
             job_name="test-failed-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="gcr.io/google-samples/hello-app:1.0",
-            command=["badcommand"],
-            args=["badargs"],
+            worker_command=["badcommand"],
+            worker_args=["badargs"],
             namespace="default",
             num_workers=3,
             restart_policy="Never",
@@ -100,8 +100,8 @@ class WorkerManagerTest(unittest.TestCase):
             job_name="test-relaunch-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="gcr.io/google-samples/hello-app:1.0",
-            command=["sleep 10"],
-            args=[],
+            worker_command=["sleep 10"],
+            worker_args=[],
             namespace="default",
             num_workers=3,
         )
@@ -120,7 +120,7 @@ class WorkerManagerTest(unittest.TestCase):
         current_workers = set()
         live_workers = set()
         with worker_manager._lock:
-            for k, (_, phase) in worker_manager._pods_phase.items():
+            for k, (_, phase) in worker_manager._worker_pods_phase.items():
                 current_workers.add(k)
                 if phase in ["Running", "Pending"]:
                     live_workers.add(k)
@@ -137,7 +137,7 @@ class WorkerManagerTest(unittest.TestCase):
             counters = worker_manager.get_counters()
             print(counters)
             with worker_manager._lock:
-                for k in worker_manager._pods_phase:
+                for k in worker_manager._worker_pods_phase:
                     if k not in current_workers:
                         found = True
         else:
