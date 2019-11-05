@@ -4,7 +4,6 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
-from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor import Tensor, serialize_tensor
 
 
@@ -80,11 +79,6 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                 grad = Tensor.from_tensor_pb(pb)
                 self._parameters.check_grad(grad)
                 var = self._parameters.get_non_embedding_param(grad.name)
-                if var is None:
-                    logger.warning(
-                        "Gradients with invalid name %s" % grad.name
-                    )
-                    continue
                 grad = grad.to_tf_tensor()
                 grad_vars.append((grad, var))
 
