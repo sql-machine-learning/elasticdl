@@ -170,6 +170,7 @@ class K8sClientTest(unittest.TestCase):
         # Check ps services
         for i in range(2):
             service = c.get_ps_service(i)
+            self.assertIsNotNone(service)
             self.assertEqual(
                 service.spec.selector[k8s.ELASTICDL_JOB_KEY], c.job_name
             )

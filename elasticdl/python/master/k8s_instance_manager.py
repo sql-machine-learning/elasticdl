@@ -109,7 +109,6 @@ class InstanceManager(object):
             name = pod.metadata.name
             self._ps_pod_name_to_id[name] = ps_id
             self._ps_pods_phase[ps_id] = (name, None)
-            # Also create PS service
             self._k8s_client.create_ps_service(ps_id)
 
     def update_status(self, status):
