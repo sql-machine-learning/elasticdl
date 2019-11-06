@@ -1,4 +1,4 @@
-_ALLOWED_VOLUME_KEYS = ["claim_name", "mount_path"]
+_ALLOWED_VOLUME_KEYS = ["claim_name", "host_path", "mount_path"]
 
 
 def parse(volume_str):

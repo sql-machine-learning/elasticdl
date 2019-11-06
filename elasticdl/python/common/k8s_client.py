@@ -6,6 +6,7 @@ from kubernetes import client, config, watch
 from kubernetes.client import (
     V1EnvVar,
     V1EnvVarSource,
+    V1HostPathVolumeSource,
     V1ObjectFieldSelector,
     V1PersistentVolumeClaimVolumeSource,
 )
@@ -185,12 +186,20 @@ class Client(object):
         if kargs["volume"]:
             volume_dict = parse_volume(kargs["volume"])
             volume_name = kargs["pod_name"] + "-volume"
-            volume = client.V1Volume(
-                name=volume_name,
-                persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
+            if "claim_name" in volume_dict:
+                pvc_volume_source = V1PersistentVolumeClaimVolumeSource(
                     claim_name=volume_dict["claim_name"], read_only=False
-                ),
-            )
+                )
+                volume = client.V1Volume(
+                    name=volume_name, persistent_volume_claim=pvc_volume_source
+                )
+            elif "host_path" in volume_dict:
+                volume = client.V1Volume(
+                    name=volume_name,
+                    host_path=V1HostPathVolumeSource(
+                        path=volume_dict["host_path"], type="Directory"
+                    ),
+                )
             spec.volumes = [volume]
             container.volume_mounts = [
                 client.V1VolumeMount(
