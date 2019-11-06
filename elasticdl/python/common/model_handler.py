@@ -2,8 +2,11 @@ import abc
 
 import tensorflow as tf
 
+from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common import model_utils
 from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.tensor import Tensor
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 
 
@@ -21,7 +24,7 @@ class ModelHandler(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def get_model_to_export(self, model, trained_params, dataset):
+    def get_model_to_export(self, model, dataset):
         """
         Get the model which can be exported a SavedModel
         by tf.saved_model.save.
@@ -29,13 +32,13 @@ class ModelHandler(metaclass=abc.ABCMeta):
         pass
 
     @classmethod
-    def get_model_handler(cls, distribution_strategy=None):
+    def get_model_handler(cls, distribution_strategy=None, stub=None):
         """
         Create a model handler to process the model for the
         distributed strategy.
         """
         if distribution_strategy == DistributionStrategy.PARAMETER_SERVER:
-            return ParameterServerModelHandler()
+            return ParameterServerModelHandler(stub=stub)
         else:
             return DefaultModelHandler()
 
@@ -48,18 +51,19 @@ class DefaultModelHandler(ModelHandler):
     def get_model_to_train(self, model):
         return model
 
-    def get_model_to_export(self, model, trained_params, dataset):
+    def get_model_to_export(self, model, dataset):
         """
         Get model with inputs and trained parameters to export.
         """
         if not model.inputs:
             model._build_model_with_inputs(inputs=dataset, targets=None)
-        for var in model.trainable_variables:
-            var.assign(trained_params[var.name])
         return model
 
 
 class ParameterServerModelHandler(ModelHandler):
+    def __init__(self, stub=None):
+        self._stub = stub
+
     def get_model_to_train(self, model):
         """
         Replace the tf.keras.layers.Embedding layer in the model with
@@ -75,7 +79,7 @@ class ParameterServerModelHandler(ModelHandler):
             )
         return model
 
-    def get_model_to_export(self, model, trained_params, dataset):
+    def get_model_to_export(self, model, dataset):
         """
         Get the model which can be exported to a SavedModel by
         `tf.saved_model.save`.
@@ -85,6 +89,8 @@ class ParameterServerModelHandler(ModelHandler):
             # build model to add inputs and outputs that
             # can be consumed by tf-serving
             model._build_model_with_inputs(inputs=dataset, targets=None)
+
+        trained_params = self._get_trained_params(model)
         for var in model.trainable_variables:
             var.assign(trained_params[var.name])
         return model
@@ -157,3 +163,39 @@ class ParameterServerModelHandler(ModelHandler):
                 )
                 setattr(model, name, embedding_layer)
         return model
+
+    def _get_trained_params(self, model):
+        """
+        get all trained variable values of the model
+        """
+        trained_params = self._get_non_embedding_variables(
+            -1, elasticdl_pb2.MINIMUM
+        )
+        trained_embedding_params = self._get_trained_embedding_params(model)
+        trained_params.update(trained_embedding_params)
+        return trained_params
+
+    def _get_trained_embedding_params(self, model):
+        """
+        Get trained embedding table from PS
+        """
+        embedding_params = {}
+        embedding_layers = model_utils.find_layer(model, Embedding)
+        for embedding_layer in embedding_layers:
+            # TODO get all embedding vectors of the embedding layer from PS
+            pass
+        return embedding_params
+
+    def _get_non_embedding_variables(self, version, method):
+        """
+        get model from master, and update model_version
+        """
+        req = elasticdl_pb2.GetModelRequest()
+        req.version = version
+        req.method = method
+        model = self._stub.GetModel(req, None)
+        variables = {}
+        for tensor_pb in model.param:
+            tensor = Tensor.from_tensor_pb(tensor_pb)
+            variables[tensor.name] = tensor.to_ndarray()
+        return variables
