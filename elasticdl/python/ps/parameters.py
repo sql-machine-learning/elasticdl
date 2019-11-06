@@ -103,6 +103,8 @@ class Parameters(object):
             self._init_embedding_params(embeddings_pb)
             self.version = model_pb.version
             self.init_status = True
+            return True
+        return False
 
     def _init_non_embedding_params(self, tensors_pb):
         for pb in tensors_pb:
@@ -128,5 +130,8 @@ class Parameters(object):
                         "An embedding layer has unexpected name %s" % key
                     )
                 self.embedding_params[key] = EmbeddingTable(
-                    key, self.embedding_params[layer_name].dim, init_values[slot_name], True
+                    key,
+                    self.embedding_params[layer_name].dim,
+                    init_values[slot_name],
+                    True,
                 )

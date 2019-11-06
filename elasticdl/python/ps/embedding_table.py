@@ -53,3 +53,7 @@ def create_embedding_table(embedding_table_info_pb):
     dim = embedding_table_info_pb.dim
     initializer = embedding_table_info_pb.initializer
     return EmbeddingTable(name, dim, initializer)
+
+
+def get_slot_table_name(embedding_name, slot_name):
+    return embedding_name + "-" + slot_name

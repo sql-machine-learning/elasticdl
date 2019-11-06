@@ -69,8 +69,8 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
     def push_model(self, request, _):
         with self._lock:
-            self._parameters.init_from_model_pb(request)
-        if self._parameters.has_embedding_params() and not isinstance(self._optimizer, OptimizerWrapper):
+            accepted = self._parameters.init_from_model_pb(request)
+        if accepted and self._parameters.has_embedding_params():
             self.wrap_optimizer()
             self._parameters.create_slot_params(
                 self._optimizer.allowed_slot_names,
