@@ -20,10 +20,49 @@ can be reconstructed. The Allreduce operation continues as long as there's at le
 * Elastic: the number of worker pods can be dynamically added if there are enough computational resources available.
 Ranks can be re-assigned as the number of worker pods changes.
 
+The interface would look like the following:
+
+```python
+num_epochs = 1
+num_batches = 10
+data_loader = DataLoader(num_batches)
+communicator = AllReduceCommunicator()
+
+for _ in range(num_epochs):
+    for features, labels in data_loader:
+        outputs = model(features)
+        loss = loss_fn(outputs, labels)
+        grads = calculate_gradients(loss, model)
+        res, averaged_grads = communicator.average_gradients(grads)
+        if res == SUCCESS:
+            update_model(averaged_grads)
+        elif res == FAILED:
+            continue
+```
 
 ### Allreduce-style Training in ElasticDL
 
-TBA
+In PS-style training, we first send local gradients from each worker to master, take the average on
+all the received gradients, and then update the model in master.
+
+On contrary, in Allreduce-style training, each worker in ElasticDL calculates its local gradients and then calculates
+the average of gradients across all workers using collective communication via `AllReduceCommunicator.average_gradients()`
+that we mentioned in the previous section.
+
+```python
+communicator = AllReduceCommunicator()
+
+with tf.GradientTape() as tape:
+    outputs = model(features, training=True)
+    loss = loss_fn(outputs, labels)
+local_grads = tape.gradient(loss, get_trainable_items())
+res, averaged_grads = communicator.average_gradients(grads)
+if res == SUCCESS:
+    update_model(averaged_grads)
+else:
+    report_failure()
+    continue
+```
 
 ## Potential Future Optimizations
 
