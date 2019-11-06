@@ -151,7 +151,8 @@ class Client(object):
         try:
             return self.client.read_namespaced_service(
                 # PS service has the same name as pod name
-                name=self.get_ps_pod_name(ps_id), namespace=self.namespace
+                name=self.get_ps_pod_name(ps_id),
+                namespace=self.namespace,
             )
         except client.api_client.ApiException as e:
             logger.warning("Exception when reading PS service: %s\n" % e)
@@ -398,9 +399,9 @@ class Client(object):
                 "app": ELASTICDL_APP_NAME,
                 ELASTICDL_JOB_KEY: self.job_name,
                 ELASTICDL_REPLICA_TYPE_KEY: kargs["replica_type"],
-                ELASTICDL_REPLICA_INDEX_KEY: kargs["replica_index"],
+                ELASTICDL_REPLICA_INDEX_KEY: str(kargs["replica_index"]),
             },
-            type=kargs["service_type"],
+            type=kargs.get("service_type", None),
         )
         service = client.V1Service(
             api_version="v1", kind="Service", metadata=metadata, spec=spec

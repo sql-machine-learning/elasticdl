@@ -146,7 +146,7 @@ class K8sClientTest(unittest.TestCase):
             )
             time.sleep(5)
 
-        # Wait for embedding services to be added
+        # Wait for ps to be added
         while tracker._count < 9:
             time.sleep(1)
 
@@ -163,10 +163,27 @@ class K8sClientTest(unittest.TestCase):
                 ps.metadata.labels[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
             )
 
+        # Start 2 ps services
+        for i in range(2):
+            c.create_ps_service(i)
+
+        # Check ps services
+        for i in range(2):
+            service = c.get_ps_service(i)
+            self.assertEqual(
+                service.spec.selector[k8s.ELASTICDL_JOB_KEY], c.job_name
+            )
+            self.assertEqual(
+                service.spec.selector[k8s.ELASTICDL_REPLICA_TYPE_KEY], "ps"
+            )
+            self.assertEqual(
+                service.spec.selector[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
+            )
+
         # Delete master and all ps and workers should also be deleted
         c.delete_master()
 
-        # wait for workers to be deleted
+        # wait for all ps, workers and services to be deleted
         while tracker._count > 0:
             time.sleep(1)
 

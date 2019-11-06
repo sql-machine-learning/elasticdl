@@ -155,6 +155,16 @@ class InstanceManagerTest(unittest.TestCase):
 
         instance_manager.start_all_ps()
 
+        # Check we also have ps services started
+        for i in range(3):
+            service = instance_manager._k8s_client.get_ps_service(i)
+            self.assertTrue(service.metadata.owner_references)
+            owner = service.metadata.owner_references[0]
+            self.assertEqual(owner.kind, "Pod")
+            self.assertEqual(
+                owner.name, instance_manager._k8s_client.get_ps_pod_name(i)
+            )
+
         max_check_num = 60
         for _ in range(max_check_num):
             time.sleep(1)
@@ -175,7 +185,7 @@ class InstanceManagerTest(unittest.TestCase):
         ps_to_be_removed = all_live_ps.pop()
         all_current_ps.remove(ps_to_be_removed)
         instance_manager._remove_ps(ps_to_be_removed)
-        # verify a new ps get launched
+        # Verify a new ps get launched
         found = False
         for _ in range(max_check_num):
             if found:
