@@ -104,8 +104,14 @@ class Parameters(object):
         for pb in tensors_pb:
             name = pb.name
             arr = tensor_pb_to_ndarray(pb)
-            var = tf.Variable(name=name, initial_value=arr, trainable=True)
-            self.non_embedding_params[name] = var
+            # This is hack here, `tf.Variable` has the magic! If you pass a
+            # name "somename" to a `tf.Variable`, the final name will be
+            # "somename:0". So, we have to truncate the input name first,
+            # and wait for `tf.Variable` to add it back.
+            var = tf.Variable(
+                name=name[0:-2], initial_value=arr, trainable=True
+            )
+            self.non_embedding_params[var.name] = var
 
     def _init_embedding_params(self, embeddings_pb):
         for pb in embeddings_pb:
