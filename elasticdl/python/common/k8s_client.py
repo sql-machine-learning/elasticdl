@@ -147,6 +147,16 @@ class Client(object):
             )
             return None
 
+    def get_ps_service(self, ps_id):
+        try:
+            return self.client.read_namespaced_service(
+                # PS service has the same name as pod name
+                name=self.get_ps_pod_name(ps_id), namespace=self.namespace
+            )
+        except client.api_client.ApiException as e:
+            logger.warning("Exception when reading PS service: %s\n" % e)
+            return None
+
     @staticmethod
     def create_owner_reference(owner_pod):
         owner_ref = (
@@ -351,6 +361,16 @@ class Client(object):
             replica_index=replica_index,
             service_type=service_type,
             owner=self.get_master_pod(),
+        )
+
+    def create_ps_service(self, ps_id):
+        return self._create_service(
+            name=self.get_ps_pod_name(ps_id),
+            port=2222,
+            target_port=2222,
+            replica_type="ps",
+            replica_index=ps_id,
+            owner=self.get_ps_pod(ps_id),
         )
 
     def _create_service(self, **kargs):
