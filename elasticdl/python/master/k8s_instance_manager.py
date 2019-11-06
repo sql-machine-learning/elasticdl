@@ -170,6 +170,10 @@ class InstanceManager(object):
             logger.error("Event doesn't have object or type: %s" % event)
             return
 
+        if evt_obj.kind != "Pod":
+            # We only care about pod related events
+            return
+
         pod_name = evt_obj.metadata.name
         phase = evt_obj.status.phase
         logger.info(
