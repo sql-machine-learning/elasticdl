@@ -6,6 +6,9 @@ This document describes the design for supporting Allreduce-tyle training in Ela
 
 TBA
 
+For details on the existing technologies relevant to collective communications, please head over to the last section of
+this design doc.
+
 ## Design Components
 
 ### Fault-tolerant Allreduce Implementation
@@ -23,7 +26,7 @@ Ranks can be re-assigned as the number of worker pods changes.
 The interface would look like the following:
 
 ```python
-num_epochs = 1
+num_epochs = 2
 num_batches = 10
 data_loader = DataLoader(num_batches)
 communicator = AllReduceCommunicator()
@@ -42,12 +45,21 @@ for _ in range(num_epochs):
 
 ### Allreduce-style Training in ElasticDL
 
-In PS-style training, we first send local gradients from each worker to master, take the average on
-all the received gradients, and then update the model in master.
+For training based on parameter servers, gradients calculation and model updating include the following steps:
 
-On contrary, in Allreduce-style training, each worker in ElasticDL calculates its local gradients and then calculates
+1. Send the gradients calculated locally from each worker to master
+2. Calculate the average of all the received gradients on master
+3. Update the model in master
+
+On contrary, in Allreduce-style training, each worker in ElasticDL calculates gradients locally and then calculates
 the average of gradients across all workers using collective communication via `AllReduceCommunicator.average_gradients()`
-that we mentioned in the previous section.
+that we mentioned in the previous section. The main differences are the following:
+
+1. Gradients from each worker are not sent to master
+2. The average of gradients across all workers is calculated locally on each worker
+3. The model is updated directly on each worker and each worker has the exact same copy of the model
+
+Below is the pseudo-code for this process on each worker:
 
 ```python
 communicator = AllReduceCommunicator()
@@ -63,6 +75,32 @@ else:
     report_failure()
     continue
 ```
+
+#### Training Task Continuation
+
+The above pseudo-code will be wrapped and executed for each batch of the dataset inside `process_minibatch_and_report()`
+in the code below. Each worker continues to perform tasks until there is no new batch available.
+
+```python
+while True:
+    dataset = self._task_data_service.get_dataset()
+    if not dataset:
+        break
+    dataset = dataset.batch(self._minibatch_size).prefetch(1)
+    for dataset_batch in dataset:
+        task = self._task_data_service.get_current_task()
+        process_minibatch_and_report(dataset_batch, task)
+```
+
+In addition, if any of the gradients averaging operation fails, we simply report the failure and continues.
+The `AllReduceCommunicator` will deal with any failures among the workers and recovers when any failure happens.
+
+#### Training with Evaluation
+
+If the worker encounters any evaluation tasks in the above process, it will evaluate the model directly on master once the
+under-going Allreduce-based gradients averaging has completed and the model has been updated. The behavior is the same as
+what's described in [model evaluation design doc](model_evaluation.md) except that we are evaluating the model on workers
+instead of on parameter servers.
 
 ## Potential Future Optimizations
 
