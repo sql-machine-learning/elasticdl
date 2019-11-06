@@ -1,4 +1,3 @@
-import hashlib
 import traceback
 
 import numpy as np
@@ -12,6 +11,7 @@ from elasticdl.python.common.constants import (
     Mode,
     SaveModelConfig,
 )
+from elasticdl.python.common.hash_utils import string_to_id
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
@@ -242,15 +242,13 @@ class Worker(object):
             )
         self._stub.ReportVariable(req)
 
-    def _hash_var_to_ps(self, name):
-        h = hashlib.sha256(name.encode("utf-8"))
-        return int(h.hexdigest(), base=32) % len(self._ps_stubs)
-
     def report_variable_to_ps(self):
         ps_vars = {}
         for v in self._non_embed_vars.values():
             if v.name not in self._var_to_ps:
-                self._var_to_ps[v.name] = self._hash_var_to_ps(v.name)
+                self._var_to_ps[v.name] = string_to_id(
+                    v.name, len(self._ps_stubs)
+                )
             ps_id = self._var_to_ps[v.name]
             if ps_id not in ps_vars:
                 ps_vars[ps_id] = [v]
