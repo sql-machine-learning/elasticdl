@@ -12,8 +12,8 @@ from elasticdl.python.common.args import (
 )
 from elasticdl.python.common.constants import (
     GRPC,
+    InstanceManagerStatus,
     JobType,
-    WorkerManagerStatus,
 )
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_utils import get_logger
@@ -29,7 +29,7 @@ from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.evaluation_service import EvaluationService
-from elasticdl.python.master.k8s_worker_manager import WorkerManager
+from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.master.tensorboard_service import TensorboardService
@@ -147,8 +147,8 @@ class Master(object):
             # TODO: create ps pod manager for distributed PS
             pass
 
-        # Initialize worker manager
-        self.worker_manager = self._create_worker_manager(args)
+        # Initialize instance manager
+        self.instance_manager = self._create_instance_manager(args)
 
     def prepare(self):
         """
@@ -170,10 +170,10 @@ class Master(object):
             pass
 
         # Start the worker manager if requested
-        if self.worker_manager:
-            self.worker_manager.update_status(WorkerManagerStatus.PENDING)
-            self.worker_manager.start_workers()
-            self.worker_manager.update_status(WorkerManagerStatus.RUNNING)
+        if self.instance_manager:
+            self.instance_manager.update_status(InstanceManagerStatus.PENDING)
+            self.instance_manager.start_workers()
+            self.instance_manager.update_status(InstanceManagerStatus.RUNNING)
 
         # Start TensorBoard k8s Service if requested
         if self.tb_service and self.tb_client:
@@ -190,9 +190,9 @@ class Master(object):
         try:
             while True:
                 if self.task_d.finished():
-                    if self.worker_manager:
-                        self.worker_manager.update_status(
-                            WorkerManagerStatus.FINISHED
+                    if self.instance_manager:
+                        self.instance_manager.update_status(
+                            InstanceManagerStatus.FINISHED
                         )
                     break
                 time.sleep(30)
@@ -383,8 +383,8 @@ class Master(object):
 
         return master_servicer, server
 
-    def _create_worker_manager(self, args):
-        worker_manager = None
+    def _create_instance_manager(self, args):
+        instance_manager = None
         if args.num_workers:
             assert args.worker_image, "Worker image cannot be empty"
 
@@ -406,7 +406,7 @@ class Master(object):
             for key in env_dict:
                 env.append(V1EnvVar(name=key, value=env_dict[key]))
 
-            worker_manager = WorkerManager(
+            instance_manager = InstanceManager(
                 self.task_d,
                 job_name=args.job_name,
                 image_name=args.worker_image,
@@ -424,4 +424,4 @@ class Master(object):
                 envs=env,
             )
 
-        return worker_manager
+        return instance_manager

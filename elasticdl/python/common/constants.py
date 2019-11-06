@@ -5,7 +5,7 @@ class GRPC(object):
     MAX_RECEIVE_MESSAGE_LENGTH = 256 * 1024 * 1024
 
 
-class WorkerManagerStatus(object):
+class InstanceManagerStatus(object):
     PENDING = "Pending"
     RUNNING = "Running"
     FINISHED = "Finished"
