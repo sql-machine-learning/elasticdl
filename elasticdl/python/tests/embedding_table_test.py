@@ -82,8 +82,4 @@ class EmbeddingTableTest(unittest.TestCase):
         self.assertEqual(table.dim, self.dim)
         # test initialize
         embedding = table.get([2])
-        self.assertTrue(
-            np.allclose(
-                np.full((1, self.dim), init_value, np.float32), embedding
-            )
-        )
+        self.assertTrue((embedding - init_value < 0.0001).all())

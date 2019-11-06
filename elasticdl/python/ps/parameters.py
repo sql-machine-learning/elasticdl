@@ -1,10 +1,10 @@
 import tensorflow as tf
 
 from elasticdl.python.common.tensor import tensor_pb_to_ndarray
-from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.ps.embedding_table import (
     EmbeddingTable,
     create_embedding_table,
+    get_slot_table_name,
 )
 
 
@@ -124,7 +124,7 @@ class Parameters(object):
         embed_layer_names = list(self.embedding_params.keys())
         for layer_name in embed_layer_names:
             for slot_name in slot_names:
-                key = Embedding.get_key([layer_name, slot_name])
+                key = get_slot_table_name(layer_name, slot_name)
                 if key in self.embedding_params:
                     raise ValueError(
                         "An embedding layer has unexpected name %s" % key
