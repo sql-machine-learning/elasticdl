@@ -1,5 +1,5 @@
 import threading
-from collections import defaultdict, deque
+from collections import deque
 
 import tensorflow as tf
 
@@ -41,9 +41,9 @@ class TaskDataService(object):
         """
 
         # Counters are keyed by task id.
-        self._cur_record_count = defaultdict(int)
-        self._reported_record_count = defaultdict(int)
-        self._failed_record_count = defaultdict(int)
+        self._cur_record_count = 0
+        self._reported_record_count = 0
+        self._failed_record_count = 0
         self._pending_tasks = deque()
         self._current_task = None
 
@@ -56,8 +56,8 @@ class TaskDataService(object):
     def handle_next_task(self, err_msg=""):
         with self._lock:
             task = self._pending_tasks.popleft()
-            self._reported_record_count.pop(task.task_id, None)
-            self._failed_record_count.pop(task.task_id, None)
+            self._reported_record_count = 0
+            self._failed_record_count = 0
             if self._pending_tasks:
                 self._current_task = self._pending_tasks[0]
             self.report_task_done(task.task_id, err_msg)
@@ -70,22 +70,22 @@ class TaskDataService(object):
         """
         if self._pending_tasks:
             task = self._pending_tasks[0]
-            self._reported_record_count[task.task_id] += count
+            self._reported_record_count += count
             if err_msg:
-                self._failed_record_count[task.task_id] += count
+                self._failed_record_count += count
 
             total_record_num = task.end - task.start
             should_handle_next = False
             if task.type == elasticdl_pb2.TRAINING:
                 # only training, we allow for failures
                 if (
-                    self._failed_record_count[task.task_id] / total_record_num
+                    self._failed_record_count / total_record_num
                     > self._record_failure_tolerance_percentage
                 ):
                     should_handle_next = True
             elif self._failed_record_count != 0:
                 should_handle_next = True
-            if self._reported_record_count[task.task_id] >= total_record_num:
+            if self._reported_record_count >= total_record_num:
                 should_handle_next = True
             if should_handle_next:
                 if err_msg:
@@ -96,7 +96,7 @@ class TaskDataService(object):
                     ).format(
                         task_id=task.task_id,
                         err_msg=err_msg,
-                        f=self._failed_record_count[task.task_id],
+                        f=self._failed_record_count,
                         t=total_record_num,
                     )
                     err_msg = msg
@@ -182,7 +182,7 @@ class TaskDataService(object):
                     self._pending_save_model_task = task
                     continue
 
-                self._cur_record_count[task.task_id] = task.end - task.start
+                self._cur_record_count = task.end - task.start
                 self._pending_tasks.append(task)
                 if len(self._pending_tasks) == 1:
                     self._current_task = task
