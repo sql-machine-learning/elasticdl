@@ -516,3 +516,9 @@ class OptimizerWrapper(object):
     @property
     def allowed_slot_names(self):
         return self._allowed_slot_names
+
+    # TODO(yunjian.lmh): Do not need to save slot_initial_value in
+    #     optimizer wrapper after we do not need to support Redis.
+    @property
+    def slot_initial_value(self):
+        return self._slot_initial_value

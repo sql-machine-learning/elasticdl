@@ -146,10 +146,10 @@ class PserverServicerTest(unittest.TestCase):
                 ].dim,
             )
             self.assertEqual(
-                self._embedding_info.initializer,
+                tf.keras.initializers.get(self._embedding_info.initializer).__class__,
                 self._parameters.embedding_params[
                     self._embedding_info.name
-                ].initializer,
+                ].initializer.__class__,
             )
 
     def test_pull_variable(self):

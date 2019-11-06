@@ -1,7 +1,11 @@
 import tensorflow as tf
 
 from elasticdl.python.common.tensor import tensor_pb_to_ndarray
-from elasticdl.python.ps.embedding_table import create_embedding_table
+from elasticdl.python.elasticdl.layers.embedding import Embedding
+from elasticdl.python.ps.embedding_table import (
+    EmbeddingTable,
+    create_embedding_table,
+)
 
 
 class Parameters(object):
@@ -110,3 +114,19 @@ class Parameters(object):
     def _init_embedding_params(self, embeddings_pb):
         for pb in embeddings_pb:
             self.embedding_params[pb.name] = create_embedding_table(pb)
+
+    def has_embedding_params(self):
+        return len(self.embedding_params) > 0
+
+    def create_slot_params(self, slot_names, init_values):
+        embed_layer_names = list(self.embedding_params.keys())
+        for layer_name in embed_layer_names:
+            for slot_name in slot_names:
+                key = Embedding.get_key([layer_name, slot_name])
+                if key in self.embedding_params:
+                    raise ValueError(
+                        "An embedding layer has unexpected name %s" % key
+                    )
+                self.embedding_params[key] = EmbeddingTable(
+                    key, self.embedding_params[layer_name].dim, init_values[slot_name], True
+                )
