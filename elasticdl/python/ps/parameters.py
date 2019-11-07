@@ -96,6 +96,17 @@ class Parameters(object):
             )
 
     def init_from_model_pb(self, model_pb):
+        """Initializes `Parameters` with model protocol buffer.
+
+        The `Parameters` accepts model pb and initialize only when it is
+        not initialized. Otherwise, it ignores the model pb.
+
+        Args:
+            model_pb: The model protocol buffer used for initialization.
+
+        Returns:
+            A bool indicates whether `Parameters` accepts this model pb or not.
+        """
         if not self.init_status:
             tensors_pb = model_pb.param
             embeddings_pb = model_pb.embedding_table_info

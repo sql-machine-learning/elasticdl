@@ -16,6 +16,16 @@ class EmbeddingTable(object):
     """
 
     def __init__(self, name, dim=None, initializer=None, is_slot=False):
+        """
+        Args:
+            name: The embedding table name.
+            dim: The dimension of embeddings in this embedding table.
+            initializer: The initializer to initialize new embeddings. If this
+                embedding table is for slots, `initializer` is a float and this
+                table will initialize with constant initializer. Otherwise
+                `initializer` is the name of Keras initializer.
+            is_slot: A bool. True for storing slot variable, otherwise false.
+        """
         self.name = name
         self.dim = dim
         if is_slot:
