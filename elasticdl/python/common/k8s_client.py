@@ -184,28 +184,32 @@ class Client(object):
 
         # Mount data path
         if kargs["volume"]:
-            volume_dict = parse_volume(kargs["volume"])
-            volume_name = kargs["pod_name"] + "-volume"
-            if "claim_name" in volume_dict:
-                pvc_volume_source = V1PersistentVolumeClaimVolumeSource(
-                    claim_name=volume_dict["claim_name"], read_only=False
+            spec.volumes = []
+            container.volume_mounts = []
+            volume_dicts = parse_volume(kargs["volume"])
+            for i, volume_dict in enumerate(volume_dicts):
+                volume_name = kargs["pod_name"] + "-volume-%d" % i
+                if "claim_name" in volume_dict:
+                    pvc_volume_source = V1PersistentVolumeClaimVolumeSource(
+                        claim_name=volume_dict["claim_name"], read_only=False
+                    )
+                    volume = client.V1Volume(
+                        name=volume_name,
+                        persistent_volume_claim=pvc_volume_source,
+                    )
+                elif "host_path" in volume_dict:
+                    volume = client.V1Volume(
+                        name=volume_name,
+                        host_path=V1HostPathVolumeSource(
+                            path=volume_dict["host_path"], type="Directory"
+                        ),
+                    )
+                spec.volumes.append(volume)
+                container.volume_mounts.append(
+                    client.V1VolumeMount(
+                        name=volume_name, mount_path=volume_dict["mount_path"]
+                    )
                 )
-                volume = client.V1Volume(
-                    name=volume_name, persistent_volume_claim=pvc_volume_source
-                )
-            elif "host_path" in volume_dict:
-                volume = client.V1Volume(
-                    name=volume_name,
-                    host_path=V1HostPathVolumeSource(
-                        path=volume_dict["host_path"], type="Directory"
-                    ),
-                )
-            spec.volumes = [volume]
-            container.volume_mounts = [
-                client.V1VolumeMount(
-                    name=volume_name, mount_path=volume_dict["mount_path"]
-                )
-            ]
 
         pod = client.V1Pod(
             spec=spec,
