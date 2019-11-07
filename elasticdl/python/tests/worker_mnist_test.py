@@ -136,9 +136,11 @@ class WorkerMNISTTest(unittest.TestCase):
 
         for v in model.trainable_variables:
             ps_id = string_to_id(v.name, len(self._channel))
+            print(v.name)
             ps_v = self._pserver[ps_id].parameters.get_non_embedding_param(
                 v.name
             )
+            print(ps_v.name)
             np.testing.assert_array_equal(ps_v.numpy(), v.numpy())
 
 
