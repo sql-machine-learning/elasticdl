@@ -45,19 +45,21 @@ for _ in range(num_epochs):
 
 ### Allreduce-style Training in ElasticDL
 
+#### Gradients Averaging and Model Updating
+
 For training based on parameter servers, gradients calculation and model updating include the following steps:
 
-1. Send the gradients calculated locally from each worker to master
-2. Calculate the average of all the received gradients on master
-3. Update the model in master
+1. Send the gradients calculated locally from each worker to master.
+1. Calculate the average of all the received gradients on master.
+1. Update the model in master.
 
 On contrary, in Allreduce-style training, each worker in ElasticDL calculates gradients locally and then calculates
 the average of gradients across all workers using collective communication via `AllReduceCommunicator.average_gradients()`
 that we mentioned in the previous section. The main differences are the following:
 
-1. Gradients from each worker are not sent to master
-2. The average of gradients across all workers is calculated locally on each worker
-3. The model is updated directly on each worker and each worker has the exact same copy of the model
+1. Gradients from each worker are not sent to master.
+1. The average of gradients across all workers is calculated locally on each worker.
+1. The model is updated directly on each worker and each worker has the exact same copy of the model.
 
 Below is the pseudo-code for this process on each worker:
 
@@ -76,7 +78,7 @@ else:
     continue
 ```
 
-#### Training Task Continuation
+#### Failure Handling during Training
 
 The above pseudo-code will be wrapped and executed for each batch of the dataset inside `process_minibatch_and_report()`
 in the code below. Each worker continues to perform tasks until there is no new batch available.
@@ -92,15 +94,40 @@ while True:
         process_minibatch_and_report(dataset_batch, task)
 ```
 
-In addition, if any of the gradients averaging operation fails, we simply report the failure and continues.
-The `AllReduceCommunicator` will deal with any failures among the workers and recovers when any failure happens.
+If any of the gradients averaging operation fails while the workers are still active and healthy, we simply report the
+failure and continue training on the next batch.
+
+If any of the workers fails, e.g. the pod is accidentally killed, the following steps will be performed:
+
+1. The task that the failed worker was handling will be added back to the task queue.
+1. Since the `AllReduceCommunicator` is aware of the failure. It will reconstruct the communicator and re-assign ranks among
+the existing active workers. The existing workers will then continue to run on the tasks at hand.
+1. The master pod will try to create a new worker pod.
+1. Once the worker pod becomes active and `AllReduceCommunicator` is aware of it, we initialize the model on the new
+worker pod and perform an Allreduce operation to update the model.
+
+Note that since the existing workers have the exact same copy of the model after the previous Allreduce operation completes,
+we can guarantee that the new worker will have the same copy of the model as the ones on other workers once the next
+Allreduce operation completes.
 
 #### Training with Evaluation
 
 If the worker encounters any evaluation tasks in the above process, it will evaluate the model directly on master once the
 under-going Allreduce-based gradients averaging has completed and the model has been updated. The behavior is the same as
 what's described in [model evaluation design doc](model_evaluation.md) except that we are evaluating the model on workers
-instead of on parameter servers.
+instead of on parameter servers. Once an evaluation completes, we send the evaluation result to master for TensorBoard
+service to consume.
+
+#### Relevant CLI Arguments
+
+* ``--restart_policy``: The pod restart policy when pod crashed.
+* ``--restart_delay_secs``: The number of seconds to delay before restarting the failed pods. This could be useful when
+the `AllReduceCommunicator` just reconstructed the communicator and we want to wait for a while before restarting the
+failed worker pod which requires reconstruction of the communicator again once the pod becomes active. 
+* ``--distribution_strategy``: In addition to the existing "ParameterServerStrategy" that we have, we add a new strategy
+called "AllreduceStrategy".
+* ``--num_ps_pods`` will be ignored if "AllreduceStrategy" is used and only ``--num_workers`` will be taken into account.
+* ``--use_async`` and ``--lr_staleness_modulation`` will be ignored if "AllreduceStrategy" is used.
 
 ## Potential Future Optimizations
 
