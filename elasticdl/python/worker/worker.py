@@ -210,6 +210,7 @@ class Worker(object):
         self._model_version = model.version
 
     def get_model_from_ps(self, version, method):
+        model_version = -1
         for stub in self._ps_stubs:
             req = empty_pb2.Empty()
             res = stub.pull_variable(req)
@@ -217,7 +218,9 @@ class Worker(object):
             for tensor_pb in res.model.param:
                 tensor = Tensor.from_tensor_pb(tensor_pb)
                 self._non_embed_vars[tensor.name].assign(tensor.to_ndarray())
-            self._model_version = res.model.version
+
+            model_version = max(model_version, res.model.version)
+        self._model_version = model_version
 
     def get_model(self, version, method):
         if self._use_multi_ps:
