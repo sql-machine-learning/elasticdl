@@ -11,8 +11,18 @@ function get_pod_status {
     echo ${pod_status}
 }
 
+# If TensorBoard service keeps running when the tasks are finished,
+# the master pod status would always be running and thus cannot reflect the true status.
+# This function finds the true status under master pod's `metadata.labels.status`
+# when TensorBoard service is enabled.
+function get_master_pod_label_status {
+    local master_pod_status=$(kubectl get pod ${MASTER_POD_NAME} -o jsonpath='{.metadata.labels.status}')
+    echo ${master_pod_status}
+}
+
 for i in {1..200}; do
     MASTER_POD_STATUS=$(get_pod_status ${MASTER_POD_NAME})
+    MASTER_POD_LABEL_STATUS=$(get_master_pod_label_status)
     WORKER_0_POD_STATUS=$(get_pod_status ${WORKER_0_POD_NAME})
     WORKER_1_POD_STATUS=$(get_pod_status ${WORKER_1_POD_NAME})
 
@@ -20,6 +30,13 @@ for i in {1..200}; do
      [[ "$WORKER_0_POD_STATUS" == "Succeeded" ]] &&
      [[ "$WORKER_1_POD_STATUS" == "Succeeded" ]]; then
       echo "ElasticDL job succeeded."
+      kubectl delete pod ${MASTER_POD_NAME}
+      exit 0
+    elif [[ "$MASTER_POD_STATUS" == "Running" ]] &&
+     [[ "$MASTER_POD_LABEL_STATUS" == "Finished" ]] &&
+     [[ "$WORKER_0_POD_STATUS" == "Succeeded" ]] &&
+     [[ "$WORKER_1_POD_STATUS" == "Succeeded" ]]; then
+      echo "ElasticDL job succeeded (master pod keeps running for TensorBoard service)."
       kubectl delete pod ${MASTER_POD_NAME}
       exit 0
     elif [[ "$MASTER_POD_STATUS" == "Failed" ]] ||
