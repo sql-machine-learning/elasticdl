@@ -146,6 +146,9 @@ def add_common_params(parser):
         "--master_pod_priority", help="The requested priority of master pod"
     )
     parser.add_argument(
+        "--worker_pod_priority", help="The requested priority of worker pod"
+    )
+    parser.add_argument(
         "--volume",
         help="The Kubernetes volume information, "
         'e.g. "claim_name=c1,mount_path=/path1".',
@@ -481,9 +484,6 @@ def parse_master_args(master_args=None):
     )
     parser.add_argument(
         "--worker_image", help="Docker image for workers", default=None
-    )
-    parser.add_argument(
-        "--worker_pod_priority", help="Priority requested by workers"
     )
     parser.add_argument(
         "--prediction_data",

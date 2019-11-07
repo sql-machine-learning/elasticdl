@@ -131,10 +131,60 @@ class K8sClientTest(unittest.TestCase):
                 str(i),
             )
 
-        # Delete master and all workers should also be deleted
+        # Start 2 ps pods
+        for i in range(2):
+            _ = c.create_ps(
+                ps_id=str(i),
+                resource_requests=resource,
+                resource_limits=resource,
+                command=["echo"],
+                pod_priority=None,
+                args=None,
+                volume=None,
+                image_pull_policy="Never",
+                restart_policy="Never",
+            )
+            time.sleep(5)
+
+        # Wait for ps to be added
+        while tracker._count < 9:
+            time.sleep(1)
+
+        # Check ps pods labels
+        for i in range(2):
+            ps = c.get_ps_pod(i)
+            self.assertEqual(
+                ps.metadata.labels[k8s.ELASTICDL_JOB_KEY], c.job_name
+            )
+            self.assertEqual(
+                ps.metadata.labels[k8s.ELASTICDL_REPLICA_TYPE_KEY], "ps"
+            )
+            self.assertEqual(
+                ps.metadata.labels[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
+            )
+
+        # Start 2 ps services
+        for i in range(2):
+            c.create_ps_service(i)
+
+        # Check ps services
+        for i in range(2):
+            service = c.get_ps_service(i)
+            self.assertIsNotNone(service)
+            self.assertEqual(
+                service.spec.selector[k8s.ELASTICDL_JOB_KEY], c.job_name
+            )
+            self.assertEqual(
+                service.spec.selector[k8s.ELASTICDL_REPLICA_TYPE_KEY], "ps"
+            )
+            self.assertEqual(
+                service.spec.selector[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
+            )
+
+        # Delete master and all ps and workers should also be deleted
         c.delete_master()
 
-        # wait for workers to be deleted
+        # wait for all ps, workers and services to be deleted
         while tracker._count > 0:
             time.sleep(1)
 

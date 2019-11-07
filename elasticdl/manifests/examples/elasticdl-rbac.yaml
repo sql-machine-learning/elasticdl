@@ -9,6 +9,7 @@ rules:
   resources:
   - pods
   - pods/exec
+  - services
   verbs:
   - create
   - get
