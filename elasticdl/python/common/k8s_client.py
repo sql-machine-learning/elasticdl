@@ -6,7 +6,6 @@ from kubernetes import client, config, watch
 from kubernetes.client import (
     V1EnvVar,
     V1EnvVarSource,
-    V1HostPathVolumeSource,
     V1ObjectFieldSelector,
     V1PersistentVolumeClaimVolumeSource,
 )
@@ -200,7 +199,7 @@ class Client(object):
                 elif "host_path" in volume_dict:
                     volume = client.V1Volume(
                         name=volume_name,
-                        host_path=V1HostPathVolumeSource(
+                        host_path=client.V1HostPathVolumeSource(
                             path=volume_dict["host_path"], type="Directory"
                         ),
                     )

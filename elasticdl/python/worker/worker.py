@@ -116,7 +116,7 @@ class Worker(object):
             self._stub = elasticdl_pb2_grpc.MasterStub(channel)
 
         self._model_handler = ModelHandler.get_model_handler(
-            distribution_strategy
+            distribution_strategy, stub=self._stub
         )
         model_inst = self._model_handler.get_model_to_train(model_inst)
         self.set_model(model_inst)
