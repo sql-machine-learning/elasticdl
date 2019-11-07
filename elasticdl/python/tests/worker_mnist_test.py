@@ -134,13 +134,15 @@ class WorkerMNISTTest(unittest.TestCase):
             grads = tape.gradient(loss, model.trainable_variables)
             opt_fn().apply_gradients(zip(grads, model.trainable_variables))
 
+        for ps in self._pserver:
+            for k, v in ps.parameters.non_embedding_params.items():
+                print(k, v.name)
+
         for v in model.trainable_variables:
             ps_id = string_to_id(v.name, len(self._channel))
-            print(v.name, ps_id)
             ps_v = self._pserver[ps_id].parameters.get_non_embedding_param(
                 v.name
             )
-            print(ps_v.name)
             np.testing.assert_array_equal(ps_v.numpy(), v.numpy())
 
 
