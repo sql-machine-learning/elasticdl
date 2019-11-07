@@ -92,6 +92,7 @@ class WorkerMNISTTest(unittest.TestCase):
         batch_size = 16
         images, labels = random_batch(batch_size)
 
+        tf.keras.backend.clear_session()
         tf.random.set_seed(22)
         worker = Worker(
             worker_id=0,
@@ -107,7 +108,6 @@ class WorkerMNISTTest(unittest.TestCase):
         worker.report_gradient(w_grads)
 
         tf.keras.backend.clear_session()
-
         tf.random.set_seed(22)
         (
             model,
