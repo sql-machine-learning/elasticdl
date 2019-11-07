@@ -83,3 +83,7 @@ class EmbeddingTableTest(unittest.TestCase):
         # test initialize
         embedding = table.get([2])
         self.assertTrue((embedding - init_value < 0.0001).all())
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -95,11 +95,6 @@ message GetModelRequest {
     int32 version = 2;
 }
 
-message PullVariableResponse {
-    bool model_init_status = 1;
-    Model model = 2;
-}
-
 message ReportVariableRequest {
     repeated Tensor variable = 1;
 }
@@ -114,20 +109,10 @@ message ReportGradientRequest {
     repeated Tensor gradient = 3;
 }
 
-message PushGradientRequest {
-    int32 model_version = 1;
-    repeated Tensor gradients = 2;
-}
-
 message ReportGradientResponse {
     // If the gradient is accepted.
     bool accepted = 1;
     // Current model version on master.
-    int32 model_version = 2;
-}
-
-message PushGradientResponse {
-    bool accepted = 1;
     int32 model_version = 2;
 }
 
@@ -153,11 +138,6 @@ message ReportEvaluationMetricsRequest {
     Tensor labels = 3;
 }
 
-message PullEmbeddingVectorRequest {
-    string name = 1;
-    repeated int64 ids = 2;
-}
-
 service Master {
     rpc GetTask(GetTaskRequest) returns (Task);
     rpc GetModel(GetModelRequest) returns (Model);
@@ -165,6 +145,26 @@ service Master {
     rpc ReportGradient(ReportGradientRequest) returns (ReportGradientResponse);
     rpc ReportEvaluationMetrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsResponse);
     rpc ReportTaskResult(ReportTaskResultRequest) returns (google.protobuf.Empty);
+}
+
+message PullVariableResponse {
+    bool model_init_status = 1;
+    Model model = 2;
+}
+
+message PullEmbeddingVectorRequest {
+    string name = 1;
+    repeated int64 ids = 2;
+}
+
+message PushGradientRequest {
+    int32 model_version = 1;
+    repeated Tensor gradients = 2;
+}
+
+message PushGradientResponse {
+    bool accepted = 1;
+    int32 model_version = 2;
 }
 
 // PS service

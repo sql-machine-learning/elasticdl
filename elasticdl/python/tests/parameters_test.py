@@ -155,3 +155,7 @@ class ParametersTest(unittest.TestCase):
         slot_init_value = {slot_names[0]: 3.5, slot_names[1]: 0.0}
         self.params.create_slot_params(slot_names, slot_init_value)
         self._test_get_embedding_param(slot_names, slot_init_value)
+
+
+if __name__ == "__main__":
+    unittest.main()

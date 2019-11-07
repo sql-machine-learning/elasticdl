@@ -121,7 +121,11 @@ class Parameters(object):
         for pb in tensors_pb:
             name = pb.name
             arr = tensor_pb_to_ndarray(pb)
-            var = tf.Variable(name=name, initial_value=arr, trainable=True)
+            # Please note that `tf.Variable` will do something with magic.
+            # If you pass a name "somename" to a `tf.Variable`, the final
+            # variable name will be "somename:0". So the `tf.Variable.name`
+            # is meaningless, we must avoid use it in PS side.
+            var = tf.Variable(initial_value=arr, trainable=True)
             self.non_embedding_params[name] = var
 
     def _init_embedding_params(self, embeddings_pb):

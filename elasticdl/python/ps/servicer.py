@@ -3,8 +3,11 @@ import threading
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
-from elasticdl.python.common.tensor import Tensor, serialize_tensor
+from elasticdl.python.common.tensor import (
+    Tensor,
+    emplace_tensor_pb_from_ndarray,
+    serialize_tensor,
+)
 from elasticdl.python.master.optimizer_wrapper import OptimizerWrapper
 
 
@@ -45,12 +48,9 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             self._lock.acquire()
         res.model.version = self._parameters.version
         for name, var in self._parameters.non_embedding_params.items():
-            tensor = res.model.param.add()
-            tensor.name = name
-            tensor.dim.extend(var.shape.as_list())
-            var_values = var.numpy()
-            tensor.content = var_values.tobytes()
-            tensor.dtype = dtype_numpy_to_tensor(var_values.dtype)
+            emplace_tensor_pb_from_ndarray(
+                res.model.param, var.numpy(), name=name
+            )
         if not self._use_async:
             self._lock.release()
         res.model_init_status = True
