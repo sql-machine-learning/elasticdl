@@ -1,11 +1,13 @@
 import unittest
 
 import numpy as np
+import tensorflow as tf
 
 from elasticdl.proto.elasticdl_pb2 import EmbeddingTableInfo
 from elasticdl.python.ps.embedding_table import (
     EmbeddingTable,
     create_embedding_table,
+    get_slot_table_name,
 )
 
 
@@ -20,7 +22,10 @@ class EmbeddingTableTest(unittest.TestCase):
         self.assertIsNotNone(self.table)
         self.assertEqual(self.table.name, self.name)
         self.assertEqual(self.table.dim, self.dim)
-        self.assertEqual(self.table.initializer, self.initializer)
+        self.assertEqual(
+            tf.keras.initializers.get(self.initializer).__class__,
+            self.table.initializer.__class__,
+        )
 
     def test_embedding_table_get(self):
         self.table.clear()
@@ -57,5 +62,24 @@ class EmbeddingTableTest(unittest.TestCase):
         table = create_embedding_table(embedding_pb)
         self.assertIsNotNone(table)
         self.assertEqual(table.name, self.name)
-        self.assertEqual(table.initializer, self.initializer)
+        self.assertEqual(
+            tf.keras.initializers.get(self.initializer).__class__,
+            table.initializer.__class__,
+        )
         self.assertEqual(table.dim, self.dim)
+
+    def test_create_embedding_table_for_slots(self):
+        slot_name = "momentum"
+        init_value = 3.5
+        table = EmbeddingTable(
+            get_slot_table_name(self.name, slot_name),
+            dim=self.dim,
+            initializer=init_value,
+            is_slot=True,
+        )
+        self.assertIsNotNone(table)
+        self.assertEqual(table.name, get_slot_table_name(self.name, slot_name))
+        self.assertEqual(table.dim, self.dim)
+        # test initialize
+        embedding = table.get([2])
+        self.assertTrue((embedding - init_value < 0.0001).all())

@@ -5,6 +5,7 @@ import tensorflow as tf
 
 from elasticdl.proto.elasticdl_pb2 import EmbeddingTableInfo, Model
 from elasticdl.python.common.tensor import Tensor
+from elasticdl.python.ps.embedding_table import get_slot_table_name
 from elasticdl.python.ps.parameters import Parameters
 
 
@@ -35,13 +36,18 @@ class ParametersTest(unittest.TestCase):
         self.params.non_embedding_params.clear()
         self.params.embedding_params.clear()
 
-    def _test_get_embedding_param(self):
+    def _test_get_embedding_param(self, slot_names=[], slot_init_value={}):
         indices = [0, 3, 7]
 
         res = self.params.get_embedding_param(
             self.embedding_table_name, indices
         )
         self.assertTupleEqual(res.shape, (3, 10))
+        for slot in slot_names:
+            res = self.params.get_embedding_param(
+                get_slot_table_name(self.embedding_table_name, slot), indices
+            )
+            self.assertTrue(((res - slot_init_value[slot]) < 0.0001).all())
 
         res = self.params.get_embedding_param(self.embedding_table_name, [])
         self.assertIsNone(res)
@@ -136,3 +142,16 @@ class ParametersTest(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "Keras embedding param error"):
             self.params.check_grad(grad3)
+
+    def test_create_slot_params(self):
+        # At first, no embedding table are in the parameters
+        self.assertFalse(self.params.has_embedding_params())
+
+        # create embedding tables in the parameters
+        self.params._init_embedding_params(self.embeddings_pb)
+        self.assertTrue(self.params.has_embedding_params())
+
+        slot_names = ["accumulator", "linear"]
+        slot_init_value = {slot_names[0]: 3.5, slot_names[1]: 0.0}
+        self.params.create_slot_params(slot_names, slot_init_value)
+        self._test_get_embedding_param(slot_names, slot_init_value)

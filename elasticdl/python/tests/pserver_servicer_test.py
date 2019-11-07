@@ -8,13 +8,21 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
+from elasticdl.python.common.model_utils import (
+    get_module_file_path,
+    load_module,
+)
 from elasticdl.python.common.tensor import (
     emplace_tensor_pb_from_ndarray,
     tensor_pb_to_ndarray,
 )
+from elasticdl.python.ps.embedding_table import get_slot_table_name
 from elasticdl.python.ps.parameter_server import ParameterServer
 
 _test_model_zoo_path = os.path.dirname(os.path.realpath(__file__))
+_module_file = get_module_file_path(
+    _test_model_zoo_path, "test_module.custom_model"
+)
 
 
 class PserverArgs(object):
@@ -65,13 +73,14 @@ class PserverServicerTest(unittest.TestCase):
             self._server.stop(0)
 
     def create_server_and_stub(
-        self, grads_to_wait, lr_staleness_modulation, use_async
+        self, grads_to_wait, lr_staleness_modulation, use_async, **kwargs
     ):
         args = PserverArgs(
             grads_to_wait=grads_to_wait,
             lr_staleness_modulation=lr_staleness_modulation,
             use_async=use_async,
             port=self._port,
+            **kwargs,
         )
         pserver = ParameterServer(args)
         pserver.prepare()
@@ -81,13 +90,13 @@ class PserverServicerTest(unittest.TestCase):
 
         self._lr = 0.1
 
-    def create_default_server_and_stub(self):
+    def create_default_server_and_stub(self, **kwargs):
         grads_to_wait = 8
         lr_staleness_modulation = False
         use_async = True
 
         self.create_server_and_stub(
-            grads_to_wait, lr_staleness_modulation, use_async
+            grads_to_wait, lr_staleness_modulation, use_async, **kwargs
         )
 
     def get_embedding_vectors(self, name, ids):
@@ -101,7 +110,16 @@ class PserverServicerTest(unittest.TestCase):
             return None
 
     def test_push_model(self):
-        self.create_default_server_and_stub()
+        opt_func_name = "ftrl_optimizer"
+        opt = load_module(_module_file).__dict__[opt_func_name]()
+        opt_config = opt.get_config()
+        slot_names = ["accumulator", "linear"]
+        slot_init_value = {
+            "accumulator": opt_config["initial_accumulator_value"],
+            "linear": 0.0,
+        }
+
+        self.create_default_server_and_stub(optimizer=opt_func_name)
         param0 = {
             "v0": np.random.rand(3, 2).astype(np.float32),
             "v1": np.random.rand(10, 32).astype(np.float32),
@@ -146,11 +164,25 @@ class PserverServicerTest(unittest.TestCase):
                 ].dim,
             )
             self.assertEqual(
-                self._embedding_info.initializer,
+                tf.keras.initializers.get(
+                    self._embedding_info.initializer
+                ).__class__,
                 self._parameters.embedding_params[
                     self._embedding_info.name
-                ].initializer,
+                ].initializer.__class__,
             )
+
+            for slot_name in slot_names:
+                name = get_slot_table_name(
+                    self._embedding_info.name, slot_name
+                )
+                table = self._parameters.embedding_params[name]
+                self.assertTrue(name, table.name)
+                self.assertTrue(self._embedding_info.dim, table.dim)
+                embedding = table.get([2])
+                self.assertTrue(
+                    (embedding - slot_init_value[slot_name] < 0.0001).all()
+                )
 
     def test_pull_variable(self):
         self.create_default_server_and_stub()
