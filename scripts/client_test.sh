@@ -23,7 +23,8 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --job_name=test-train \
       --log_level=INFO \
       --image_pull_policy=Never \
-      --output=model_output
+      --output=/saved_model/model_output \
+      --volume="host_path=${PWD},mount_path=/saved_model"
 elif [[ "$JOB_TYPE" == "evaluate" ]]; then
     elasticdl evaluate \
       --image_base=elasticdl:ci \
