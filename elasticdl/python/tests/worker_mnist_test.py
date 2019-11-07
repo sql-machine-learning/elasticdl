@@ -104,6 +104,7 @@ class WorkerMNISTTest(unittest.TestCase):
         )
         worker._run_model_call_before_training(images)
         worker.report_variable()
+        worker.get_model(0, elasticdl_pb2.MINIMUM)
         w_loss, w_grads = worker.training_process_eagerly(images, labels)
         worker.report_gradient(w_grads)
 
