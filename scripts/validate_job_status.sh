@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# We intentionally `set +e` here since we want to allow certain kinds of known failures that can be ignored.
+# For example, pods may not have been created yet so neither `kubectl get pod` nor `kubectl delete pod` would
+# be successful at earlier stages of this script.
+set +e
+
 JOB_TYPE=$1
 MASTER_POD_NAME=elasticdl-test-${JOB_TYPE}-master
 WORKER_0_POD_NAME=elasticdl-test-${JOB_TYPE}-worker-0

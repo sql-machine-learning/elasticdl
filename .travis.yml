@@ -24,6 +24,7 @@ jobs:
     - stage: tests
       name: "Tests"
       script:
+        - set -e
         # Set up Kubernetes environment
         - bash scripts/setup_k8s_env.sh
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
