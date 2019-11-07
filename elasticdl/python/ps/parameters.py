@@ -1,7 +1,11 @@
 import tensorflow as tf
 
 from elasticdl.python.common.tensor import tensor_pb_to_ndarray
-from elasticdl.python.ps.embedding_table import create_embedding_table
+from elasticdl.python.ps.embedding_table import (
+    EmbeddingTable,
+    create_embedding_table,
+    get_slot_table_name,
+)
 
 
 class Parameters(object):
@@ -92,6 +96,17 @@ class Parameters(object):
             )
 
     def init_from_model_pb(self, model_pb):
+        """Initializes `Parameters` with model protocol buffer.
+
+        The `Parameters` accepts model pb and initialize only when it is
+        not initialized. Otherwise, it ignores the model pb.
+
+        Args:
+            model_pb: The model protocol buffer used for initialization.
+
+        Returns:
+            A bool indicates whether `Parameters` accepts this model pb or not.
+        """
         if not self.init_status:
             tensors_pb = model_pb.param
             embeddings_pb = model_pb.embedding_table_info
@@ -99,6 +114,8 @@ class Parameters(object):
             self._init_embedding_params(embeddings_pb)
             self.version = model_pb.version
             self.init_status = True
+            return True
+        return False
 
     def _init_non_embedding_params(self, tensors_pb):
         for pb in tensors_pb:
@@ -114,3 +131,22 @@ class Parameters(object):
     def _init_embedding_params(self, embeddings_pb):
         for pb in embeddings_pb:
             self.embedding_params[pb.name] = create_embedding_table(pb)
+
+    def has_embedding_params(self):
+        return len(self.embedding_params) > 0
+
+    def create_slot_params(self, slot_names, init_values):
+        embed_layer_names = list(self.embedding_params.keys())
+        for layer_name in embed_layer_names:
+            for slot_name in slot_names:
+                key = get_slot_table_name(layer_name, slot_name)
+                if key in self.embedding_params:
+                    raise ValueError(
+                        "An embedding layer has unexpected name %s" % key
+                    )
+                self.embedding_params[key] = EmbeddingTable(
+                    key,
+                    self.embedding_params[layer_name].dim,
+                    init_values[slot_name],
+                    True,
+                )

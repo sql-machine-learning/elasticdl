@@ -15,10 +15,25 @@ class EmbeddingTable(object):
     dictionary, the corresponding value will be initialized.
     """
 
-    def __init__(self, name, dim=None, initializer=None):
+    def __init__(self, name, dim=None, initializer=None, is_slot=False):
+        """
+        Args:
+            name: The embedding table name.
+            dim: The dimension of embeddings in this embedding table.
+            initializer: The initializer to initialize new embeddings. If this
+                embedding table is for slots, `initializer` is a float and this
+                table will initialize with constant initializer. Otherwise
+                `initializer` is the name of Keras initializer.
+            is_slot: A bool. True for storing slot variable, otherwise false.
+        """
         self.name = name
         self.dim = dim
-        self.initializer = initializer
+        if is_slot:
+            initializer = float(initializer)
+            self.initializer = tf.keras.initializers.Constant(initializer)
+        else:
+            self.initializer = tf.keras.initializers.get(initializer)
+        self.is_slot = is_slot
         self.embedding_vectors = {}
 
     def get(self, indices):
@@ -28,8 +43,7 @@ class EmbeddingTable(object):
         for i in indices:
             value = self.embedding_vectors.get(i, None)
             if value is None:
-                init = tf.keras.initializers.get(self.initializer)
-                value = init(shape=(self.dim,)).numpy()
+                value = self.initializer(shape=(self.dim,)).numpy()
                 self.embedding_vectors[i] = value
             values.append(value)
         return np.stack(values)
@@ -37,7 +51,7 @@ class EmbeddingTable(object):
     def set(self, indices, values):
         # TODO(qijun) need to add a RWLock in Sync-SGD
         for index, i in enumerate(indices):
-            embedding_vector = values[index, :]
+            embedding_vector = values[index]
             self.embedding_vectors[i] = embedding_vector
 
     def clear(self):
@@ -49,3 +63,7 @@ def create_embedding_table(embedding_table_info_pb):
     dim = embedding_table_info_pb.dim
     initializer = embedding_table_info_pb.initializer
     return EmbeddingTable(name, dim, initializer)
+
+
+def get_slot_table_name(embedding_name, slot_name):
+    return embedding_name + "-" + slot_name

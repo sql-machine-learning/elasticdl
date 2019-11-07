@@ -8,6 +8,7 @@ from elasticdl.python.common.tensor import (
     emplace_tensor_pb_from_ndarray,
     serialize_tensor,
 )
+from elasticdl.python.master.optimizer_wrapper import OptimizerWrapper
 
 
 class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
@@ -68,7 +69,13 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
     def push_model(self, request, _):
         with self._lock:
-            self._parameters.init_from_model_pb(request)
+            accepted = self._parameters.init_from_model_pb(request)
+        if accepted and self._parameters.has_embedding_params():
+            self.wrap_optimizer()
+            self._parameters.create_slot_params(
+                self._optimizer.allowed_slot_names,
+                self._optimizer.slot_initial_value,
+            )
         return empty_pb2.Empty()
 
     def push_gradient(self, request, _):
@@ -126,3 +133,16 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
                 res.model_version = self._parameters.version
                 return res
+
+    def wrap_optimizer(self):
+        # TODO(yunjian.lmh): refine these arguments when we don't need
+        # to support using Redis as distributed KV storage.
+        embedding_dims = None
+        embedding_service_endpoint = None
+
+        self._optimizer = OptimizerWrapper(
+            self._optimizer,
+            embedding_service_endpoint,
+            embedding_dims,
+            self._use_async,
+        )

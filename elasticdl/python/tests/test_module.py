@@ -61,6 +61,10 @@ def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
 
+def ftrl_optimizer(lr=0.1):
+    return tf.optimizers.Ftrl(lr)
+
+
 def eval_metrics_fn():
     return {"mse": lambda labels, outputs: tf.square(outputs - labels)}
 
