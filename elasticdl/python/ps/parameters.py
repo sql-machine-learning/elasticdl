@@ -104,14 +104,28 @@ class Parameters(object):
         for pb in tensors_pb:
             name = pb.name
             arr = tensor_pb_to_ndarray(pb)
-            # This is hack here, `tf.Variable` has the magic! If you pass a
-            # name "somename" to a `tf.Variable`, the final name will be
-            # "somename:0". So, we have to truncate the input name first,
-            # and wait for `tf.Variable` to add it back.
-            var = tf.Variable(
-                name=name[0:-2], initial_value=arr, trainable=True
-            )
-            self.non_embedding_params[var.name] = var
+            """
+            This is hack here, `tf.Variable` has the magic! If you pass a
+            name "somename" to a `tf.Variable`, the final name will be
+            "somename:0".
+
+            Case 1: If the input name is generated automatically
+            by TensorFlow when creating a `tf.Variable`, it will be added a
+            ":0" suffix. So we truncate it first, and wait for `tf.Variable`
+            to add it back.
+
+            Case 2: If the input name is set to protobuf directly, we will
+            keep using it. Please note that here, the name and
+            `tf.Variable.name` are different.
+            """
+            if ":0" in name:
+                var = tf.Variable(
+                    name=name[0:-2], initial_value=arr, trainable=True
+                )
+            else:
+                var = tf.Variable(name=name, initial_value=arr, trainable=True)
+
+            self.non_embedding_params[name] = var
 
     def _init_embedding_params(self, embeddings_pb):
         for pb in embeddings_pb:

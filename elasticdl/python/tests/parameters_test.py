@@ -136,3 +136,7 @@ class ParametersTest(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "Keras embedding param error"):
             self.params.check_grad(grad3)
+
+
+if __name__ == "__main__":
+    unittest.main()

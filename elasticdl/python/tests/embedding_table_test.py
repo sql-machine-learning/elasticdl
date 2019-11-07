@@ -59,3 +59,7 @@ class EmbeddingTableTest(unittest.TestCase):
         self.assertEqual(table.name, self.name)
         self.assertEqual(table.initializer, self.initializer)
         self.assertEqual(table.dim, self.dim)
+
+
+if __name__ == "__main__":
+    unittest.main()
