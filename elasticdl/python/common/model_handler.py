@@ -20,10 +20,10 @@ class ModelHandler(metaclass=abc.ABCMeta):
         """Generate a model to train in ElasticDL.
 
         Args:
-            model: A keras model instance.
+            model: A native keras model instance.
 
         Returns:
-            A keras model instance.
+            A keras model instance for ElasticDL training.
         """
 
     @abc.abstractmethod
@@ -32,18 +32,26 @@ class ModelHandler(metaclass=abc.ABCMeta):
         by tf.saved_model.save.
 
         Args:
-            model: A keras model instance.
+            model: A native keras model instance.
             dataset: A `tf.data.Dataset` instance which has the same outputs as
                 the training dataset.
 
         Returns:
-            A keras model instance.
+            A keras model instance trained by ElasticDL.
         """
 
     @classmethod
     def get_model_handler(cls, distribution_strategy=None, stub=None):
         """Create a model handler to process the model for the
         distributed strategy.
+
+        Args:
+            distribution_strategy (string): distribution strategy name
+            stub: A stub to communicate with parameter server(s) or the master,
+            e.g. `elasticdl_pb2_grpc.MasterStub`.
+
+        Return:
+            ModelHandler subclass instance.
         """
         if distribution_strategy == DistributionStrategy.PARAMETER_SERVER:
             return ParameterServerModelHandler(stub=stub)
@@ -75,6 +83,11 @@ class ParameterServerModelHandler(ModelHandler):
     """
 
     def __init__(self, stub=None):
+        """
+        Arguments:
+            stub: A stub to get parameters from parameter server(s) or
+            the master,e.g. `elasticdl_pb2_grpc.MasterStub`
+        """
         self._stub = stub
 
     def get_model_to_train(self, model):
@@ -192,6 +205,8 @@ class ParameterServerModelHandler(ModelHandler):
             pass
         return embedding_params
 
+    # TODO: Get model from parameter servers not the master if
+    # parameter servers are ready.
     def _get_non_embedding_variables(self, version, method):
         """Get model from master, and update model_version
         """

@@ -11,7 +11,7 @@ from kubernetes.client import (
 )
 
 from elasticdl.python.common.k8s_resource import parse as parse_resource
-from elasticdl.python.common.k8s_volume import parse as parse_volume
+from elasticdl.python.common.k8s_volume import parse_volume_and_mount
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import load_module
 
@@ -183,33 +183,11 @@ class Client(object):
 
         # Mount data path
         if kargs["volume"]:
-            spec.volumes = []
-            container.volume_mounts = []
-            volume_dicts = parse_volume(kargs["volume"])
-            for i, volume_dict in enumerate(volume_dicts):
-                volume_name = kargs["pod_name"] + "-volume-%d" % i
-                if "claim_name" in volume_dict:
-                    pvc_volume_source = V1PersistentVolumeClaimVolumeSource(
-                        claim_name=volume_dict["claim_name"], read_only=False
-                    )
-                    volume = client.V1Volume(
-                        name=volume_name,
-                        persistent_volume_claim=pvc_volume_source,
-                    )
-                elif "host_path" in volume_dict:
-                    volume = client.V1Volume(
-                        name=volume_name,
-                        host_path=client.V1HostPathVolumeSource(
-                            path=volume_dict["host_path"],
-                            type=volume_dict.get("type", None),
-                        ),
-                    )
-                spec.volumes.append(volume)
-                container.volume_mounts.append(
-                    client.V1VolumeMount(
-                        name=volume_name, mount_path=volume_dict["mount_path"]
-                    )
-                )
+            volumes, volume_mounts = parse_volume_and_mount(
+                kargs['volume'], kargs['pod_name']
+            )
+            spec.volumes = volumes
+            container.volume_mounts = volume_mounts
 
         pod = client.V1Pod(
             spec=spec,

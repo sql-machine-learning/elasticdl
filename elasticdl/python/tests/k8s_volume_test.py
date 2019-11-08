@@ -1,6 +1,9 @@
 import unittest
 
-from elasticdl.python.common.k8s_volume import parse
+from elasticdl.python.common.k8s_volume import (
+    parse,
+    parse_volume_and_mount
+)
 
 
 class K8SVolumeTest(unittest.TestCase):
@@ -49,3 +52,13 @@ class K8SVolumeTest(unittest.TestCase):
             parse,
             "claim_name=c1,mount_path=/path1,mount_path=/path2",
         )
+
+    def test_parse_volume_and_mount(self):
+        volume_config = """host_path=c0,mount_path=/path0;
+        claim_name=c1,mount_path=/path1"""
+        volumes, volume_mounts = parse_volume_and_mount(volume_config, "test")
+        self.assertEqual(len(volumes), 2)
+        self.assertEqual(volumes[0].host_path.path, "c0")
+        self.assertEqual(volumes[1].persistent_volume_claim.claim_name, "c1")
+        self.assertEqual(volume_mounts[0].mount_path, "/path0")
+        self.assertEqual(volume_mounts[1].mount_path, "/path1")
