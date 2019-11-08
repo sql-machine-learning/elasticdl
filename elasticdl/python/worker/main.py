@@ -20,7 +20,7 @@ def main():
     )
 
     # TODO, create PS channels here
-    ps_channels = []
+    ps_channels = None
 
     logger = log_utils.get_logger(__name__)
 
