@@ -1,10 +1,36 @@
-# Design for Allreduce Support
+# Design for Allreduce-based Training Support
 
-This document describes the design for supporting Allreduce-tyle training in ElasticDL. Note that this is still a work-in-progress.
+This document describes the design for supporting allreduce-based distributed training in ElasticDL.
 
 ## Motivation
 
-TBA
+While distributed training based on parameter servers can support training very large models and datasets by adding
+more workers and parameter servers as described in [parameter server design doc](parameter_server.md), there are additional
+challenges involved in order to optimize the performance, for example:
+
+* It is not easy to identify the right ratio of the number of workers to the number of parameter servers. For example,
+if only a small number of parameter servers are used, there will likely be network communication overheads. If many parameter
+servers are used, the communication may saturate network interconnects.
+* If the model could fit within the computational resources on each worker, additional maintenance and communication overheads are
+introduced when the model is partitioned to multiple parameter servers.
+* Additional computational resources for replicating models of each parameter server are needed to support fault-tolerance.
+
+In contrast, distributed training based on collective communication primitives such as [allreduce](https://mpitutorial.com/tutorials/mpi-reduce-and-allreduce/)
+and [ring-allreduce](http://research.baidu.com/bringing-hpc-techniques-deep-learning/) could be more efficient and easier
+to use in many use cases. There are many existing technologies available that provide implementations for these collective
+communication primitives and please head over to the section on [existing collective communication technologies](#existing-collective-communication-technologies)
+for details if interested. Allreduce-based distributed training could address many of the challenges mentioned above, for example:
+
+* Each worker stores a complete set of model parameters. In other words, no parameter server is needed so it's straightforward
+to add more workers when necessary.
+* Failures among the workers can be recovered easily by restarting the failed workers and then load the current model sent from
+any of the existing workers. Model does not need to be replicated to support fault-tolerance, which avoids the waste of resources.
+* The model can be updated more efficiently by fully leveraging the network structure and collective communication algorithms.
+For example, in ring-allreduce algorithm, each of *N* workers only needs to communicate with two of its peer workers *2 * (N − 1)* times.
+* Scaling up and down of the number of workers is as easy as reconstructing the underlying allreduce communicator and
+re-assigning the ranks among the workers.
+
+In the following sections, we will explain the design of allreduce-based distributed training in ElasticDL in detail.
 
 For details on the existing technologies relevant to collective communications, please head over to the last section of
 this design doc.
@@ -14,12 +40,12 @@ this design doc.
 ### Fault-tolerant Allreduce Implementation
 
 We are collaborating with [Caicloud](https://github.com/caicloud/) on building an API that provides implementations of
-fault-tolerant Allreduce. The initial implementation will contain an experimental Python binding for NCCL that is
+fault-tolerant allreduce. The initial implementation will contain an experimental Python binding for NCCL that is
 fault-tolerant and Kubernetes-native. This will include but not limited to the following objectives (more details to be disclosed later once
 the implementation has been open-sourced):
 
 * Fault-tolerant: if any of the worker pod fails, the [NCCL Communicator](https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs/usage/communicators.html)
-can be reconstructed. The Allreduce operation continues as long as there's at least one healthy worker pod.
+can be reconstructed. The allreduce operation continues as long as there's at least one healthy worker pod.
 * Elastic: the number of worker pods can be dynamically added if there are enough computational resources available.
 Ranks can be re-assigned as the number of worker pods changes.
 
@@ -29,7 +55,7 @@ The interface would look like the following:
 num_epochs = 2
 num_batches = 10
 data_loader = DataLoader(num_batches)
-communicator = AllReduceCommunicator()
+communicator = AllreduceCommunicator()
 
 for _ in range(num_epochs):
     for features, labels in data_loader:
@@ -53,8 +79,8 @@ For training based on parameter servers, gradients calculation and model updatin
 1. Calculate the average of all the received gradients on master.
 1. Update the model in master.
 
-On contrary, in Allreduce-based training, each worker in ElasticDL calculates gradients locally and then calculates
-the average of gradients across all workers using collective communication via `AllReduceCommunicator.average_gradients()`
+On contrary, in allreduce-based training, each worker in ElasticDL calculates gradients locally and then calculates
+the average of gradients across all workers using collective communication via `AllreduceCommunicator.average_gradients()`
 that we mentioned in the previous section. The main differences are the following:
 
 1. Gradients from each worker are not sent to master.
@@ -64,7 +90,7 @@ that we mentioned in the previous section. The main differences are the followin
 Below is the pseudo-code for this process on each worker:
 
 ```python
-communicator = AllReduceCommunicator()
+communicator = AllreduceCommunicator()
 
 with tf.GradientTape() as tape:
     outputs = model(features, training=True)
@@ -100,39 +126,39 @@ failure and continue training on the next batch.
 If any of the workers fails, e.g. the pod is accidentally killed, the following steps will be performed:
 
 1. The task that the failed worker was handling will be added back to the task queue.
-1. Since the `AllReduceCommunicator` is aware of the failure. It will reconstruct the communicator and re-assign ranks among
+1. Since the `AllreduceCommunicator` is aware of the failure. It will reconstruct the communicator and re-assign ranks among
 the existing active workers. The existing workers will then continue to run on the tasks at hand.
 1. The master pod will try to create a new worker pod after a specified restart delay period.
-1. Once the worker pod becomes active and `AllReduceCommunicator` is aware of it, we perform the following steps:
+1. Once the worker pod becomes active and `AllreduceCommunicator` is aware of it, we perform the following steps:
     1. Lock all existing worker pods
     1. Send the current model from one of the worker pods to master pod
     1. Initialize the model on the new worker pod using the current model that master pod just received
-    1. All workers continue to operate and perform Allreduce operations to update the model
+    1. All workers continue to operate and perform allreduce operations to update the model
 
-Note that since the existing active workers have the exact same copy of the model after the previous Allreduce operation completes,
+Note that since the existing active workers have the exact same copy of the model after the previous allreduce operation completes,
 we can guarantee that the new worker will have the same copy of the model as the ones on other workers once the next
-Allreduce operation completes.
+allreduce operation completes.
 
 #### Training with Evaluation
 
 If the worker encounters any evaluation tasks in the above process, it will evaluate the model directly on master once the
-under-going Allreduce-based gradients averaging has completed and the model has been updated. The behavior is the same as
+under-going allreduce-based gradients averaging has completed and the model has been updated. The behavior is the same as
 what's described in [model evaluation design doc](model_evaluation.md) except that we are evaluating the model on workers
 instead of on parameter servers. Once an evaluation completes, we send the evaluation result to master for TensorBoard
 service to consume.
 
 #### ElasticDL Embedding Layer
 
-ElasticDL embedding layer is not supported under Allreduce-based training since each worker has the exact same copy of
+ElasticDL embedding layer is not supported under allreduce-based training since each worker has the exact same copy of
 the model that must fit within each worker's specified resources. Any layers in the model defined via
 ``elasticdl.layers.embedding`` will be replaced by `tf.keras.layers.Embedding`.
 
 #### Relevant CLI Arguments
 
-The following CLI arguments are relevant and their behaviors might be changed under Allreduce-based training:
+The following CLI arguments are relevant and their behaviors might be changed under allreduce-based training:
 
 * ``--restart_policy``: The pod restart policy when pod crashed.
-the `AllReduceCommunicator` just reconstructed the communicator and we want to wait for a while before restarting the
+the `AllreduceCommunicator` just reconstructed the communicator and we want to wait for a while before restarting the
 failed worker pod which requires reconstruction of the communicator again once the pod becomes active. 
 * ``--distribution_strategy``: In addition to the existing "ParameterServerStrategy" that we have, we add a new strategy
 called "AllreduceStrategy".
@@ -149,6 +175,9 @@ The following new CLI arguments are added:
 
 * We can potentially overlap the backward computations and gradient optimizations. More discussions on this can be found
 in [this Github issue](https://github.com/tensorflow/tensorflow/issues/33274).
+* For models with a large amount of tensors, such as ResNet, many small allreduce operations are needed. In this case,
+we could fuse multiple small tensors together before performing allreduce operations to maximize performance since
+allreduce utilizes the network in an optimal way if the tensors are large enough.
 
 ## Existing Collective Communication Technologies
 
@@ -187,19 +216,19 @@ Also note that NCCL only supports GPUs for the collective communication primitiv
 ### Gloo
 
 Gloo is a collective communications library. It comes with a number of collective algorithms useful for machine learning
-applications, which includes but not limited to Broadcast and Allreduce. It has been adopted by [PyTorch](https://github.com/pytorch/pytorch).
+applications, which includes but not limited to broadcast and allreduce. It has been adopted by [PyTorch](https://github.com/pytorch/pytorch).
 
 Transport of data between participating machines is abstracted so that IP can be used at all times, or InifiniBand (or RoCE)
 when available. In the latter case, if the InfiniBand transport is used, GPUDirect can be used to accelerate cross machine
 GPU-to-GPU memory transfers. Gloo includes several collective algorithm implementations that work directly with NVIDIA GPU buffers.
 These take advantage of overlapping host and GPU operations to decrease overall latency.
 
-Gloo does not support fault tolerance but supports both GPUs and CPUs for at least Allreduce and Broadcast primitives.
+Gloo does not support fault tolerance but supports both GPUs and CPUs for at least allreduce and broadcast primitives.
 The implementation of the collective operations for CUDA tensors is not as optimized as the ones provided by the NCCL backend.
 
 ### Rabit
 
-Rabit is a lightweight library that provides a fault tolerant interface of Allreduce and Broadcast. It has been adopted
+Rabit is a lightweight library that provides a fault tolerant interface of allreduce and broadcast. It has been adopted
 by [XGBoost](https://github.com/dmlc/xgboost) and [Apache MXNet](https://github.com/apache/incubator-mxnet).
 
 Rabit provides fault tolerance via the following steps:
@@ -207,14 +236,14 @@ Rabit provides fault tolerance via the following steps:
 * If a worker fails, other workers will pause before the failed worker recovers
 * Once the failed worker restarts, load the latest checkpoint from one of the existing workers and continue running
 
-Since all the workers will get the same result after calling Allreduce/Broadcast. Any of the workers can record the history 
-of Allreduce/Broadcast call results. The restarted node can be recovered correctly and continue running with existing workers.
+Since all the workers will get the same result after calling allreduce/broadcast. Any of the workers can record the history
+of allreduce/broadcast call results. The restarted node can be recovered correctly and continue running with existing workers.
 More details on this can be found [here](https://rabit.readthedocs.io/en/latest/guide.html#fault-tolerance).
 
 A couple of things worth mentioning are:
 
 * The checkpoints are saved to memory instead of disk
-* All the alive workers will be blocked in subsequent Allreduce calls
+* All the alive workers will be blocked in subsequent allreduce calls
 
 Rabit assumes the number of workers is fixed so if somehow the failed worker cannot be recovered, e.g. due to lack of
 resources, then the whole Rabit process will be stuck. The network topology that Rabit constructs can only be recovered
