@@ -116,8 +116,7 @@ class WorkerMNISTTest(unittest.TestCase):
             output = model.call(images, training=True)
             labels = tf.reshape(labels, [-1])
             loss = loss_fn(output, labels)
-            grads = tape.gradient(loss, model.trainable_variables)
-
+        grads = tape.gradient(loss, model.trainable_variables)
         opt_fn().apply_gradients(zip(grads, model.trainable_variables))
 
         for v in model.trainable_variables:
@@ -208,7 +207,7 @@ class WorkerMNISTTest(unittest.TestCase):
             with tf.GradientTape() as tape:
                 out = model.call(x, training=True)
                 ll = loss_fn(out, y)
-                grads = tape.gradient(ll, model.trainable_variables)
+            grads = tape.gradient(ll, model.trainable_variables)
             opt_fn().apply_gradients(zip(grads, model.trainable_variables))
 
             if step % 20 == 0:
