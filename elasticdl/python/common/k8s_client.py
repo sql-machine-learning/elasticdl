@@ -201,7 +201,7 @@ class Client(object):
                         name=volume_name,
                         host_path=client.V1HostPathVolumeSource(
                             path=volume_dict["host_path"],
-                            type=volume_dict.get('type', None)
+                            type=volume_dict.get("type", None),
                         ),
                     )
                 spec.volumes.append(volume)

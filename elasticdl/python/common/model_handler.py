@@ -67,12 +67,13 @@ class DefaultModelHandler(ModelHandler):
 
 
 class ParameterServerModelHandler(ModelHandler):
-    """Model handler for parameter server strategy. 
-    For training, The handler will replace `tf.keras.layers.Embedding` 
-    layers with`elasticdl.layers.Embedding` for training. 
+    """Model handler for parameter server strategy.
+    For training, The handler will replace `tf.keras.layers.Embedding`
+    layers with`elasticdl.layers.Embedding` for training.
     For saving model, the handler will restore Keras model definition and
     pull trained parameters from parameter server(s) for the model.
     """
+
     def __init__(self, stub=None):
         self._stub = stub
 
