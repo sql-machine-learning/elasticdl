@@ -56,11 +56,7 @@ class WorkerMNISTTest(unittest.TestCase):
     def setUp(self):
         ports = [12345, 12346]
         self._pserver, self._channel = self._create_pserver_and_channel(ports)
-
-        batch_size = 1
-        # tf.keras.backend.clear_session()
         tf.random.set_seed(22)
-        self.images, self.labels = random_batch(batch_size)
 
     def tearDown(self):
         for pserver in self._pserver:
@@ -180,28 +176,27 @@ class WorkerMNISTTest(unittest.TestCase):
             model_def=model_def,
             ps_channels=self._channel,
         )
-
+        worker_results = []
         for step, (x, y) in enumerate(db):
             if step == 0:
                 worker._run_model_call_before_training(x)
                 worker.report_variable()
 
             worker.get_model(step, elasticdl_pb2.MINIMUM)
-            w_loss, w_grads = worker.training_process_eagerly(x, y)
-            worker.report_gradient(w_grads)
+            worker_loss, worker_grads = worker.training_process_eagerly(x, y)
+            worker.report_gradient(worker_grads)
 
             if step % 20 == 0:
                 worker.get_model(step, elasticdl_pb2.MINIMUM)
                 for (x, y) in test_db:
                     out = worker.forward_process(x)
                     acc_meter.update_state(tf.argmax(out, axis=1), y)
-
-                print(
-                    step,
-                    "loss:",
-                    float(w_loss.numpy()),
-                    "acc:",
-                    acc_meter.result().numpy(),
+                print(worker_loss.numpy(), acc_meter.result().numpy())
+                worker_results.append(
+                    (
+                        float(worker_loss.numpy()),
+                        float(acc_meter.result().numpy()),
+                    )
                 )
                 acc_meter.reset_states()
             if step > 20:
@@ -210,12 +205,6 @@ class WorkerMNISTTest(unittest.TestCase):
         tf.keras.backend.clear_session()
         tf.random.set_seed(22)
         acc_meter.reset_states()
-
-        # batch_size = 16
-        # db = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-        # db = db.batch(batch_size).repeat(10)
-        # test_db = tf.data.Dataset.from_tensor_slices((x_test, y_test))
-        # test_db = test_db.batch(batch_size)
 
         (
             model,
@@ -234,32 +223,33 @@ class WorkerMNISTTest(unittest.TestCase):
             eval_metrics_fn="eval_metrics_fn",
             prediction_outputs_processor="PredictionOutputsProcessor",
         )
-
+        local_results = []
         for step, (x, y) in enumerate(db):
 
             with tf.GradientTape() as tape:
                 out = model.call(x, training=True)
-                ll = loss_fn(out, y)
-                grads = tape.gradient(ll, model.trainable_variables)
-                # grads = [tf.divide(grad, 2) for grad in grads]
+                local_loss = loss_fn(out, y)
+                grads = tape.gradient(local_loss, model.trainable_variables)
                 opt_fn().apply_gradients(zip(grads, model.trainable_variables))
 
             if step % 20 == 0:
                 for (x, y) in test_db:
                     out = model.call(x, training=False)
                     acc_meter.update_state(tf.argmax(out, axis=1), y)
-
-                print(
-                    step,
-                    "loss:",
-                    float(ll.numpy()),
-                    "acc:",
-                    acc_meter.result().numpy(),
+                local_results.append(
+                    (
+                        float(local_loss.numpy()),
+                        float(acc_meter.result().numpy()),
+                    )
                 )
+                print(local_loss.numpy(), acc_meter.result().numpy())
                 acc_meter.reset_states()
 
             if step > 20:
                 break
+
+        # for w, l in zip(worker_results, local_results):
+        #    self.assertTupleEqual(w, l)
 
 
 if __name__ == "__main__":
