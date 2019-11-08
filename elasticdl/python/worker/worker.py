@@ -330,6 +330,23 @@ class Worker(object):
         res = self._stub.ReportGradient(req)
         return res.accepted, res.model_version
 
+    def _split_tensor(self, values, indices):
+        ps_ids = {}
+        indices_list = indices.numpy().tolist()
+        for i, item_id in enumerate(indices_list):
+            ps_id = item_id % len(self._ps_stubs)
+            if ps_id not in ps_ids:
+                ps_ids[ps_id] = [(i, item_id)]
+            else:
+                ps_ids[ps_id].append((i, item_id))
+
+        results = {}
+        for ps_id, i_item_id in ps_ids.items():
+            i = [v[0] for v in i_item_id]
+            item_id = tf.convert_to_tensor([v[1] for v in i_item_id])
+            results[ps_id] = (tf.gather(values, i), item_id)
+        return results
+
     def report_gradient_to_ps(self, grads):
         ps_grads = {}
         non_embed_vars_n = len(self._non_embed_vars)
@@ -341,6 +358,45 @@ class Worker(object):
                 ps_grads[ps_id] = [(g, v.name)]
             else:
                 ps_grads[ps_id].append((g, v.name))
+
+        if self._embedding_layers:
+            edl_embedding_grads = grads[non_embed_vars_n:]
+            bet_number = 0
+            for layer in self._embedding_layers:
+                bet_number += len(layer.embedding_and_ids)
+            if len(edl_embedding_grads) != bet_number:
+                raise ValueError(
+                    "elasticdl.layers.embedding related gradient number %d "
+                    "does not match the number of its output tensor %d."
+                    % (len(edl_embedding_grads), bet_number)
+                )
+
+        grad_accum_iter = 0
+        for layer in self._embedding_layers:
+            g_values = None
+            g_indices = None
+            for _, ids in layer.embedding_and_ids:
+                grad = edl_embedding_grads[grad_accum_iter]
+                grad_accum_iter += 1
+                # ElasticDL embedding layer with Sparse Gradients
+                if isinstance(grad, tf.IndexedSlices):
+                    grad = grad.values
+                if g_values is not None:
+                    g_values = tf.concat([g_values, grad], axis=0)
+                    g_indices = tf.concat([g_indices, ids], axis=0)
+                else:
+                    g_values = grad
+                    g_indices = ids
+
+            results = self._split_tensor(g_values, g_indices)
+
+            for ps_id, (gv, gi) in results:
+                req = elasticdl_pb2.PushGradientRequest()
+                emplace_tensor_pb_from_ndarray(
+                    req.gradients, values=gv, indices=gi, name=layer.name
+                )
+                req.model_version = self._model_version
+                res = self._ps_stubs[ps_id].push_gradient(req)
 
         # TODO: call `push_gradient` in parallel
         for ps_id, grads in ps_grads.items():
