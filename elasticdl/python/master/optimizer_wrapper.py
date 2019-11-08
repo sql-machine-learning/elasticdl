@@ -110,7 +110,13 @@ class OptimizerWrapper(object):
     """
 
     def __init__(
-        self, opt, kv_store_endpoint, embedding_dims, use_async=False, lookup_embedding_func=None, update_embedding_func=None
+        self,
+        opt,
+        kv_store_endpoint,
+        embedding_dims,
+        use_async=False,
+        lookup_embedding_func=None,
+        update_embedding_func=None,
     ):
         """
         Note:
@@ -129,7 +135,7 @@ class OptimizerWrapper(object):
                 using asynchronoues updates, `OptimizerWrapper` is thread-safe
                 for non-embedding variables and is not thread-safe for
                 embedding table.
-            lookup_embedding_func: The function to lookup embeddings. The 
+            lookup_embedding_func: The function to lookup embeddings. The
                 argument of this function is a list of keys.
             update_embedding_func: The function to update embeddings. The
                 arguments of this function is a key list and a value list.
