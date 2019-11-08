@@ -123,8 +123,9 @@ class OptimizerWrapper(object):
         """
         Note:
             We need to support Redis and ElasticDL parameter server at the
-            same time. If `kv_store_endpoint` is not None, use Redis.
-            Otherwise use ElasticDL parameter server.
+            same time. If `lookup_embedding_func`/`update_embedding_func`
+            is not None, use parameter server to lookup/update embedding.
+            Otherwise use Redis.
 
         Arguments:
             opt: A TensorFlow optimizer instance.
