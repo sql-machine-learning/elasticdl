@@ -57,6 +57,11 @@ class WorkerMNISTTest(unittest.TestCase):
         ports = [12345, 12346]
         self._pserver, self._channel = self._create_pserver_and_channel(ports)
 
+        batch_size = 1
+        # tf.keras.backend.clear_session()
+        tf.random.set_seed(22)
+        self.images, self.labels = random_batch(batch_size)
+
     def tearDown(self):
         for pserver in self._pserver:
             pserver.server.stop(0)
@@ -65,7 +70,7 @@ class WorkerMNISTTest(unittest.TestCase):
         pservers = []
         channels = []
         for port in ports:
-            args = PserverArgs(grads_to_wait=1, use_async=True, port=port,)
+            args = PserverArgs(grads_to_wait=2, use_async=False, port=port,)
             pserver = ParameterServer(args)
             pserver.prepare()
             pservers.append(pserver)
@@ -107,6 +112,7 @@ class WorkerMNISTTest(unittest.TestCase):
         worker.get_model(0, elasticdl_pb2.MINIMUM)
         w_loss, w_grads = worker.training_process_eagerly(images, labels)
         worker.report_gradient(w_grads)
+        print(w_loss.numpy())
 
         tf.keras.backend.clear_session()
         tf.random.set_seed(22)
@@ -132,6 +138,7 @@ class WorkerMNISTTest(unittest.TestCase):
             output = model.call(images, training=True)
             labels = tf.reshape(labels, [-1])
             loss = loss_fn(output, labels)
+            print(loss.numpy())
             grads = tape.gradient(loss, model.trainable_variables)
             opt_fn().apply_gradients(zip(grads, model.trainable_variables))
 
@@ -141,6 +148,118 @@ class WorkerMNISTTest(unittest.TestCase):
                 v.name
             )
             np.testing.assert_array_equal(ps_v.numpy(), v.numpy())
+
+    def test_compare_train(self):
+        model_def = "mnist_functional_api.mnist_functional_api.custom_model"
+        batch_size = 16
+        (
+            (x_train, y_train),
+            (x_test, y_test),
+        ) = tf.keras.datasets.mnist.load_data()
+        x_train = tf.convert_to_tensor(x_train, dtype=tf.float32) / 255.0
+        y_train = tf.convert_to_tensor(y_train, dtype=tf.int32)
+
+        x_test = tf.convert_to_tensor(x_test, dtype=tf.float32) / 255.0
+        y_test = tf.convert_to_tensor(y_test, dtype=tf.int32)
+
+        db = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+        db = db.batch(batch_size).repeat(10)
+        test_db = tf.data.Dataset.from_tensor_slices((x_test, y_test))
+        test_db = test_db.batch(batch_size)
+
+        acc_meter = tf.keras.metrics.Accuracy()
+
+        tf.keras.backend.clear_session()
+        tf.random.set_seed(22)
+
+        worker = Worker(
+            worker_id=0,
+            job_type=elasticdl_pb2.TRAINING,
+            minibatch_size=batch_size,
+            model_zoo=_model_zoo_path,
+            model_def=model_def,
+            ps_channels=self._channel,
+        )
+
+        for step, (x, y) in enumerate(db):
+            if step == 0:
+                worker._run_model_call_before_training(x)
+                worker.report_variable()
+
+            worker.get_model(step, elasticdl_pb2.MINIMUM)
+            w_loss, w_grads = worker.training_process_eagerly(x, y)
+            worker.report_gradient(w_grads)
+
+            if step % 20 == 0:
+                worker.get_model(step, elasticdl_pb2.MINIMUM)
+                for (x, y) in test_db:
+                    out = worker.forward_process(x)
+                    acc_meter.update_state(tf.argmax(out, axis=1), y)
+
+                print(
+                    step,
+                    "loss:",
+                    float(w_loss.numpy()),
+                    "acc:",
+                    acc_meter.result().numpy(),
+                )
+                acc_meter.reset_states()
+            if step > 100:
+                break
+
+        tf.keras.backend.clear_session()
+        tf.random.set_seed(22)
+        acc_meter.reset_states()
+
+        batch_size = 32
+        db = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+        db = db.batch(batch_size).repeat(10)
+        test_db = tf.data.Dataset.from_tensor_slices((x_test, y_test))
+        test_db = test_db.batch(batch_size)
+
+        (
+            model,
+            dataset_fn,
+            loss_fn,
+            opt_fn,
+            eval_metrics_fn,
+            prediction_outputs_processor,
+        ) = get_model_spec(
+            model_zoo=_model_zoo_path,
+            model_def=model_def,
+            dataset_fn="dataset_fn",
+            model_params=None,
+            loss="loss",
+            optimizer="optimizer",
+            eval_metrics_fn="eval_metrics_fn",
+            prediction_outputs_processor="PredictionOutputsProcessor",
+        )
+
+        for step, (x, y) in enumerate(db):
+
+            with tf.GradientTape() as tape:
+                out = model.call(x, training=True)
+                ll = loss_fn(out, y)
+                grads = tape.gradient(ll, model.trainable_variables)
+                # grads = [tf.divide(grad, 2) for grad in grads]
+                opt_fn().apply_gradients(zip(grads, model.trainable_variables))
+
+            if step % 20 == 0:
+                for (x, y) in test_db:
+                    out = model.call(x, training=False)
+                    acc_meter.update_state(tf.argmax(out, axis=1), y)
+
+                print(
+                    step,
+                    "loss:",
+                    float(ll.numpy()),
+                    "acc:",
+                    acc_meter.result().numpy(),
+                )
+                acc_meter.reset_states()
+
+            if step > 100:
+                break
 
 
 if __name__ == "__main__":
