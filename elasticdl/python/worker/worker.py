@@ -259,9 +259,6 @@ class Worker(object):
             else:
                 ps_vars[ps_id].append(v)
 
-        for k, v in self._var_to_ps.items():
-            print(k, v)
-
         # TODO: call `push_model` in parallel
         for ps_id, vars in ps_vars.items():
             model = elasticdl_pb2.Model()
