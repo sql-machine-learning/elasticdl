@@ -11,8 +11,7 @@ from elasticdl.python.elasticdl.layers.embedding import Embedding
 
 
 class ModelHandler(metaclass=abc.ABCMeta):
-    """
-    Generate the model to train in ElasticDL for different distributed
+    """Generate the model to train in ElasticDL for different distributed
     strategies and export trained model in ElasticDL to SavedModel.
     """
 
@@ -29,8 +28,7 @@ class ModelHandler(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_model_to_export(self, model, dataset):
-        """
-        Get the model which can be exported a SavedModel
+        """Get the model which can be exported a SavedModel
         by tf.saved_model.save.
 
         Args:
@@ -44,8 +42,7 @@ class ModelHandler(metaclass=abc.ABCMeta):
 
     @classmethod
     def get_model_handler(cls, distribution_strategy=None, stub=None):
-        """
-        Create a model handler to process the model for the
+        """Create a model handler to process the model for the
         distributed strategy.
         """
         if distribution_strategy == DistributionStrategy.PARAMETER_SERVER:
@@ -55,9 +52,7 @@ class ModelHandler(metaclass=abc.ABCMeta):
 
 
 class DefaultModelHandler(ModelHandler):
-    """
-    Return the origin model to train and export.
-    """
+    """Return the origin model to train and export."""
 
     def get_model_to_train(self, model):
         return model
@@ -82,8 +77,7 @@ class ParameterServerModelHandler(ModelHandler):
         self._stub = stub
 
     def get_model_to_train(self, model):
-        """
-        Replace the tf.keras.layers.Embedding layer in the model with
+        """Replace the tf.keras.layers.Embedding layer in the model with
         an elasticdl.layers.Embedding layer in ParameterServerStrategy.
         """
         if type(model) == tf.keras.Sequential or model._is_graph_network:
@@ -97,8 +91,7 @@ class ParameterServerModelHandler(ModelHandler):
         return model
 
     def get_model_to_export(self, model, dataset):
-        """
-        Get the model which can be exported to a SavedModel by
+        """Get the model which can be exported to a SavedModel by
         `tf.saved_model.save`.
         """
         model = self._restore_keras_model_def(model)
@@ -113,8 +106,7 @@ class ParameterServerModelHandler(ModelHandler):
         return model
 
     def _restore_keras_model_def(self, model):
-        """
-        Restore Keras model definition by replacing
+        """Restore Keras model definition by replacing
         `elasticdl.layers.Embedding` layers with
         `tf.keras.layers.Embedding` layers.
         """
@@ -136,8 +128,7 @@ class ParameterServerModelHandler(ModelHandler):
     def _replace_embedding_layer_to_clone_model(
         self, model, src_embedding_class, dst_embedding_class
     ):
-        """
-        Clone a new model by cloning model and replace the
+        """Clone a new model by cloning model and replace the
         src_embedding_class layer with a dst_embedding_class.
         """
 
@@ -165,8 +156,7 @@ class ParameterServerModelHandler(ModelHandler):
     def _replace_embedding_attributes_for_subclass(
         self, model, src_embedding_class, dst_embedding_class
     ):
-        """
-        Replace the keras embedding attribute with
+        """Replace the keras embedding attribute with
         elasticdl.layers.Embedding layer.
         """
         for name, value in model.__dict__.items():
@@ -182,8 +172,7 @@ class ParameterServerModelHandler(ModelHandler):
         return model
 
     def _get_trained_params(self, model):
-        """
-        get all trained variable values of the model
+        """Get all trained variable values of the model
         """
         trained_params = self._get_non_embedding_variables(
             -1, elasticdl_pb2.MINIMUM
@@ -193,8 +182,7 @@ class ParameterServerModelHandler(ModelHandler):
         return trained_params
 
     def _get_trained_embedding_params(self, model):
-        """
-        Get trained embedding table from PS
+        """Get trained embedding table from PS
         """
         embedding_params = {}
         embedding_layers = model_utils.find_layer(model, Embedding)
@@ -204,8 +192,7 @@ class ParameterServerModelHandler(ModelHandler):
         return embedding_params
 
     def _get_non_embedding_variables(self, version, method):
-        """
-        get model from master, and update model_version
+        """Get model from master, and update model_version
         """
         req = elasticdl_pb2.GetModelRequest()
         req.version = version
