@@ -61,7 +61,8 @@ class Embedding(tf.keras.layers.Layer):
         self.combiner = combiner
         self.embedding_service_endpoint = embedding_service_endpoint
         self.tape = None
-        self.lookup_func = None
+        # function args: (layer name, embedding id list)
+        self._lookup_embedding_func = None
 
         self._embedding_and_ids_eagerly = []
 
@@ -132,6 +133,10 @@ class Embedding(tf.keras.layers.Layer):
     def lookup_embedding(self, unique_ids):
         ids = unique_ids.numpy()
         self._check_id_valid(ids)
+        if self._lookup_embedding_func:
+            embedding_vectors = self._lookup_embedding_func(self._name, ids)
+            return embedding_vectors
+
         keys = [Embedding.get_key([self._name, id]) for id in ids]
         (
             embedding_vectors,

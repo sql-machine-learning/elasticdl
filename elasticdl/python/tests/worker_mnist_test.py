@@ -7,8 +7,9 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import GRPC
-from elasticdl.python.common.hash_utils import string_to_id
+from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.model_utils import get_model_spec
+from elasticdl.python.ps.embedding_table import EmbeddingTable
 from elasticdl.python.ps.parameter_server import ParameterServer
 from elasticdl.python.tests.test_utils import PserverArgs
 from elasticdl.python.worker.worker import Worker
@@ -225,6 +226,45 @@ class WorkerMNISTTest(unittest.TestCase):
 
         for w, l in zip(worker_results, local_results):
             self.assertTupleEqual(w, l)
+
+    def test_worker_pull_embedding(self):
+        worker = Worker(
+            worker_id=0,
+            job_type=elasticdl_pb2.TRAINING,
+            minibatch_size=self._batch_size,
+            model_zoo=self._model_zoo_path,
+            model_def=self._model_def,
+            ps_channels=self._channel,
+        )
+
+        # Test lookup embedding vectors that do not exist
+        layers = ["test-2", "test-2-slot"]
+        ids = [3, 5, 1, 6, 10, 2, 1, 2, 4, 7, 9]
+        embedding_table_args = [
+            (layers[0], 8, "uniform", False),
+            (layers[1], 8, 3.3, True),
+        ]
+
+        # initialize embedding table object
+        for pserver in self._pserver:
+            for layer, table_args in zip(layers, embedding_table_args):
+                pserver.parameters.embedding_params[layer] = EmbeddingTable(
+                    *table_args
+                )
+
+        result_dict = {}
+        for layer in layers:
+            embedding = worker.pull_embedding_vector(layer, ids)
+            result_dict[layer] = embedding
+
+        for layer in layers:
+            expected_result = []
+            for embedding_id in ids:
+                ps_id = int_to_id(embedding_id, len(self._pserver))
+                table = self._pserver[ps_id].parameters.embedding_params[layer]
+                expected_result.append(table.get([embedding_id]))
+            expected_result = np.concatenate(expected_result)
+            self.assertTrue(np.allclose(expected_result, result_dict[layer]))
 
 
 if __name__ == "__main__":
