@@ -17,7 +17,7 @@ introduced when the model is partitioned to multiple parameter servers.
 
 In contrast, distributed training based on collective communication primitives such as [allreduce](https://mpitutorial.com/tutorials/mpi-reduce-and-allreduce/)
 and [ring-allreduce](http://research.baidu.com/bringing-hpc-techniques-deep-learning/) could be more efficient and easier
-to use in many use cases. There are many existing technologies available that provide implementations for these collective
+to use in certain use cases. There are many existing technologies available that provide implementations for these collective
 communication primitives and please head over to the section on [existing collective communication technologies](#existing-collective-communication-technologies)
 for details if interested. Allreduce-based distributed training could address many of the challenges mentioned above, for example:
 
@@ -30,12 +30,19 @@ For example, in ring-allreduce algorithm, each of *N* workers only needs to comm
 * Scaling up and down of the number of workers is as easy as reconstructing the underlying allreduce communicator and
 re-assigning the ranks among the workers.
 
+We'd like to support allreduce-based distributed training in ElasticDL so our users may obtain more efficient distributed
+training performance in certain use cases without having to worry about many challenges involved in performance tuning and
+resource allocation under parameter-server-based distributed training.
+
 In the following sections, we will explain the design of allreduce-based distributed training in ElasticDL in detail.
 
 For details on the existing technologies relevant to collective communications, please head over to the last section of
 this design doc.
 
 ## Design Components
+
+There are two major design components: the fault-tolerant allreduce implementation and support for allreduce-based training in ElasticDL.
+The next two sections will illustrate the details of these components.
 
 ### Fault-tolerant Allreduce Implementation
 
@@ -130,10 +137,10 @@ If any of the workers fails, e.g. the pod is accidentally killed, the following 
 the existing active workers. The existing workers will then continue to run on the tasks at hand.
 1. The master pod will try to create a new worker pod after a specified restart delay period.
 1. Once the worker pod becomes active and `AllreduceCommunicator` is aware of it, we perform the following steps:
-    1. Lock all existing worker pods
-    1. Send the current model from one of the worker pods to master pod
-    1. Initialize the model on the new worker pod using the current model that master pod just received
-    1. All workers continue to operate and perform allreduce operations to update the model
+    1. Lock all existing worker pods.
+    1. Send the current model from one of the worker pods to master pod.
+    1. Initialize the model on the new worker pod using the current model that master pod just received.
+    1. All workers continue to operate and perform allreduce operations to update the model.
 
 Note that since the existing active workers have the exact same copy of the model after the previous allreduce operation completes,
 we can guarantee that the new worker will have the same copy of the model as the ones on other workers once the next
