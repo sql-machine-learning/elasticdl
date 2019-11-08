@@ -148,7 +148,12 @@ def add_common_params(parser):
     parser.add_argument(
         "--volume",
         help="The Kubernetes volume information, "
-        'e.g. "claim_name=c1,mount_path=/path1".',
+        "the supported volumes are `persistentVolumeClaim` and `hostPath`,"
+        'e.g. "claim_name=c1,mount_path=/path1" for `persistentVolumeClaim`,'
+        '"host_path=c0,mount_path=/path0" for `hostPath`,'
+        'or "host_path=c0,mount_path=/path0,type=Directory" for `hostPath`,'
+        '"host_path=c0,mount_path=/path0;claim_name=c1,mount_path=/path1" for'
+        "multiple volumes",
     )
     parser.add_argument(
         "--image_pull_policy",

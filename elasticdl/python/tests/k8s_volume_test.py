@@ -19,8 +19,8 @@ class K8SVolumeTest(unittest.TestCase):
                 {"claim_name": "c1", "mount_path": "/path1"},
             ],
             parse(
-                "host_path=c0,mount_path=/path0;\
-            claim_name=c1,mount_path=/path1"
+                """host_path=c0,mount_path=/path0;
+                claim_name=c1,mount_path=/path1"""
             ),
         )
 

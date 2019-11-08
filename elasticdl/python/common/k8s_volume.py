@@ -1,9 +1,8 @@
-_ALLOWED_VOLUME_KEYS = ["claim_name", "host_path", "mount_path"]
+_ALLOWED_VOLUME_KEYS = ["claim_name", "host_path", "type", "mount_path"]
 
 
 def parse(volume_str):
-    """
-    Parse combined k8s volume strings separated by
+    """Parse combined k8s volume strings separated by
     semicolons to Python dictionaries.
 
     Args:

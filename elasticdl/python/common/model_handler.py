@@ -18,18 +18,29 @@ class ModelHandler(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_model_to_train(self, model):
+        """Generate a model to train in ElasticDL.
+
+        Args:
+            model: A keras model instance.
+
+        Returns:
+            A keras model instance.
         """
-        Generate a model to train in ElasticDL.
-        """
-        pass
 
     @abc.abstractmethod
     def get_model_to_export(self, model, dataset):
         """
         Get the model which can be exported a SavedModel
         by tf.saved_model.save.
+
+        Args:
+            model: A keras model instance.
+            dataset: A `tf.data.Dataset` instance which has the same outputs as
+                the training dataset.
+
+        Returns:
+            A keras model instance.
         """
-        pass
 
     @classmethod
     def get_model_handler(cls, distribution_strategy=None, stub=None):
@@ -61,6 +72,12 @@ class DefaultModelHandler(ModelHandler):
 
 
 class ParameterServerModelHandler(ModelHandler):
+    """Model handler for parameter server strategy. 
+    For training, The handler will replace `tf.keras.layers.Embedding` 
+    layers with`elasticdl.layers.Embedding` for training. 
+    For saving model, the handler will restore Keras model definition and
+    pull trained parameters from parameter server(s) for the model.
+    """
     def __init__(self, stub=None):
         self._stub = stub
 
