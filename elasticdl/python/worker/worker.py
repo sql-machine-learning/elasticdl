@@ -231,26 +231,26 @@ class Worker(object):
     def pull_embedding_vector(self, layer_name, embedding_ids):
         """Pulls and returns embedding vectors as the order of ids."""
         ps_ids = {}
-        ps_ids_idx = {}
+        ps_ids_index = {}
         for idx, embedding_id in enumerate(embedding_ids):
             ps_id = int_to_id(embedding_id, len(self._ps_stubs))
             ps_ids.setdefault(ps_id, []).append(embedding_id)
-            ps_ids_idx.setdefault(ps_id, []).append(idx)
+            ps_ids_index.setdefault(ps_id, []).append(idx)
 
-        all_embeddings = []
-        all_embedding_ids = []
+        embeddings = []
+        index = []
         for ps_id, embedding_ids in ps_ids.items():
             req = elasticdl_pb2.PullEmbeddingVectorRequest()
             req.name = layer_name
             req.ids.extend(embedding_ids)
             pb = self._ps_stubs[ps_id].pull_embedding_vector(req)
-            all_embeddings.append(tensor_pb_to_ndarray(pb))
-            all_embedding_ids.extend(ps_ids_idx[ps_id])
-        all_embeddings = np.concatenate(all_embeddings)
+            embeddings.append(tensor_pb_to_ndarray(pb))
+            index.extend(ps_ids_index[ps_id])
+        embeddings = np.concatenate(embeddings)
 
         # adjust the order of embedding vectors
-        new_embeddings = np.ndarray(all_embeddings.shape, all_embeddings.dtype)
-        new_embeddings[all_embedding_ids] = all_embeddings
+        new_embeddings = np.empty_like(embeddings)
+        new_embeddings[index] = embeddings
         return new_embeddings
 
     def get_model(self, version, method):
