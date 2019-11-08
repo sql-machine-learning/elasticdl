@@ -88,6 +88,7 @@ class WorkerMNISTTest(unittest.TestCase):
         return pservers, channels
 
     def test_train(self):
+        # TODO(yunjian.lmh): test optimizer wrapper
         model_def = "mnist_functional_api.mnist_functional_api.custom_model"
         batch_size = 16
         images, labels = random_batch(batch_size)
