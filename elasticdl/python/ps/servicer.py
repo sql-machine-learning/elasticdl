@@ -139,10 +139,28 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         # to support using Redis as distributed KV storage.
         embedding_dims = None
         embedding_service_endpoint = None
+        def lookup_embedding_func(keys):
+            embeddings = []
+            for key in keys:
+                arrs = key.split("-")
+                layer_name = "-".join(arrs[:-1]),
+                id = int(arrs[-1])
+                embedding = self._parameters.get_embedding_param(layer_name, [id])
+                embeddings.append(embedding.flatten())
+            return embeddings, []
+
+        def update_embedding_func(keys, values):
+            for key, value in zip(keys, values):
+                arrs = key.split("-")
+                layer_name = "-".join(arrs[:-1]),
+                id = int(arrs[-1])
+                self._params.set_embedding_param(layer_name, [id], [value])
 
         self._optimizer = OptimizerWrapper(
             self._optimizer,
             embedding_service_endpoint,
             embedding_dims,
             self._use_async,
+            lookup_embedding_func,
+            update_embedding_func,
         )
