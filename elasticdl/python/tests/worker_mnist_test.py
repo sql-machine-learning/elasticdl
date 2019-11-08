@@ -10,6 +10,7 @@ from elasticdl.python.common.constants import GRPC
 from elasticdl.python.common.hash_utils import string_to_id
 from elasticdl.python.common.model_utils import get_model_spec
 from elasticdl.python.ps.parameter_server import ParameterServer
+from elasticdl.python.tests.test_utils import PserverArgs
 from elasticdl.python.worker.worker import Worker
 
 
@@ -24,42 +25,17 @@ def random_batch(batch_size):
     return images, labels
 
 
-_model_zoo_path = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)), "../../../model_zoo"
-)
-_test_model_zoo_path = os.path.dirname(os.path.realpath(__file__))
-
-
-class PserverArgs(object):
-    def __init__(
-        self,
-        grads_to_wait=8,
-        lr_staleness_modulation=0,
-        use_async=False,
-        model_zoo=_test_model_zoo_path,
-        model_def="test_module.custom_model",
-        optimizer="optimizer",
-        port=9999,
-        log_level="INFO",
-    ):
-        self.grads_to_wait = grads_to_wait
-        self.lr_staleness_modulation = lr_staleness_modulation
-        self.use_async = use_async
-        self.model_zoo = model_zoo
-        self.model_def = model_def
-        self.optimizer = optimizer
-        self.port = port
-        self.log_level = log_level
-
-
 class WorkerMNISTTest(unittest.TestCase):
     def setUp(self):
-        ports = [12345, 12346]
-        self._pserver, self._channel = self._create_pserver_and_channel(ports)
+        self._model_zoo_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "../../../model_zoo"
+        )
         self._model_def = (
             "mnist_functional_api.mnist_functional_api.custom_model"
         )
         self._batch_size = 16
+        ports = [12345, 12346]
+        self._pserver, self._channel = self._create_pserver_and_channel(ports)
 
     def tearDown(self):
         for pserver in self._pserver:
@@ -69,7 +45,13 @@ class WorkerMNISTTest(unittest.TestCase):
         pservers = []
         channels = []
         for port in ports:
-            args = PserverArgs(grads_to_wait=1, use_async=False, port=port,)
+            args = PserverArgs(
+                grads_to_wait=1,
+                use_async=False,
+                port=port,
+                model_zoo=self._model_zoo_path,
+                model_def=self._model_def,
+            )
             pserver = ParameterServer(args)
             pserver.prepare()
             pservers.append(pserver)
@@ -91,16 +73,16 @@ class WorkerMNISTTest(unittest.TestCase):
             channels.append(channel)
         return pservers, channels
 
-    def test_train(self):
+    def test_compare_onebatch_train(self):
         images, labels = random_batch(self._batch_size)
-
+        # TODO(yunjian.lmh): test optimizer wrapper
         tf.keras.backend.clear_session()
         tf.random.set_seed(22)
         worker = Worker(
             worker_id=0,
             job_type=elasticdl_pb2.TRAINING,
             minibatch_size=self._batch_size,
-            model_zoo=_model_zoo_path,
+            model_zoo=self._model_zoo_path,
             model_def=self._model_def,
             ps_channels=self._channel,
         )
@@ -120,7 +102,7 @@ class WorkerMNISTTest(unittest.TestCase):
             eval_metrics_fn,
             prediction_outputs_processor,
         ) = get_model_spec(
-            model_zoo=_model_zoo_path,
+            model_zoo=self._model_zoo_path,
             model_def=self._model_def,
             dataset_fn="dataset_fn",
             model_params=None,
@@ -145,7 +127,7 @@ class WorkerMNISTTest(unittest.TestCase):
             )
             np.testing.assert_array_equal(ps_v.numpy(), v.numpy())
 
-    def test_compare_train(self):
+    def test_compare_mnist_train(self):
         (
             (x_train, y_train),
             (x_test, y_test),
@@ -170,7 +152,7 @@ class WorkerMNISTTest(unittest.TestCase):
             worker_id=0,
             job_type=elasticdl_pb2.TRAINING,
             minibatch_size=self._batch_size,
-            model_zoo=_model_zoo_path,
+            model_zoo=self._model_zoo_path,
             model_def=self._model_def,
             ps_channels=self._channel,
         )
@@ -211,7 +193,7 @@ class WorkerMNISTTest(unittest.TestCase):
             eval_metrics_fn,
             prediction_outputs_processor,
         ) = get_model_spec(
-            model_zoo=_model_zoo_path,
+            model_zoo=self._model_zoo_path,
             model_def=self._model_def,
             dataset_fn="dataset_fn",
             model_params=None,

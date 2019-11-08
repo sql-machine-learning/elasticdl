@@ -21,6 +21,28 @@ from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
 
 
+class PserverArgs(object):
+    def __init__(
+        self,
+        grads_to_wait=8,
+        lr_staleness_modulation=0,
+        use_async=False,
+        model_zoo=None,
+        model_def=None,
+        optimizer="optimizer",
+        port=9999,
+        log_level="INFO",
+    ):
+        self.grads_to_wait = grads_to_wait
+        self.lr_staleness_modulation = lr_staleness_modulation
+        self.use_async = use_async
+        self.model_zoo = model_zoo
+        self.model_def = model_def
+        self.optimizer = optimizer
+        self.port = port
+        self.log_level = log_level
+
+
 class DatasetName(object):
     IMAGENET = "imagenet1"
     FRAPPE = "frappe1"

@@ -1,4 +1,6 @@
 """Optimizer Wrapper for ElasticDL"""
+# TODO(yunjian.lmh): move this file to PS module after we don't need to
+#     support ps in master.
 
 
 import threading
@@ -110,9 +112,21 @@ class OptimizerWrapper(object):
     """
 
     def __init__(
-        self, opt, kv_store_endpoint, embedding_dims, use_async=False
+        self,
+        opt,
+        kv_store_endpoint,
+        embedding_dims,
+        use_async=False,
+        lookup_embedding_func=None,
+        update_embedding_func=None,
     ):
         """
+        Note:
+            We need to support Redis and ElasticDL parameter server at the
+            same time. If `lookup_embedding_func`/`update_embedding_func`
+            is not None, use parameter server to lookup/update embedding.
+            Otherwise use Redis.
+
         Arguments:
             opt: A TensorFlow optimizer instance.
             kv_store_endpoint: The endpoint to kv store.
@@ -124,11 +138,17 @@ class OptimizerWrapper(object):
                 using asynchronoues updates, `OptimizerWrapper` is thread-safe
                 for non-embedding variables and is not thread-safe for
                 embedding table.
+            lookup_embedding_func: The function to lookup embeddings. The
+                argument of this function is a list of keys.
+            update_embedding_func: The function to update embeddings. The
+                arguments of this function is a key list and a value list.
         """
         self._opt = opt
         self._kv_store_endpoint = kv_store_endpoint
         self._embed_dims = embedding_dims
         self._use_async = use_async
+        self._lookup_embedding_func = lookup_embedding_func
+        self._update_embedding_func = update_embedding_func
         self._slot_initial_value = {}
 
         self._opt_weights_delete_lock = threading.Lock()
@@ -244,9 +264,12 @@ class OptimizerWrapper(object):
 
         keys = embed_keys + slot_keys
         embed_keys_num = len(embed_keys)
-        values, unknown_keys = EmbeddingService.lookup_embedding(
-            keys=keys, embedding_service_endpoint=self._kv_store_endpoint
-        )
+        if self._lookup_embedding_func:
+            values, unknown_keys = self._lookup_embedding_func(keys)
+        else:
+            values, unknown_keys = EmbeddingService.lookup_embedding(
+                keys=keys, embedding_service_endpoint=self._kv_store_endpoint
+            )
 
         if unknown_keys:
             # raise Error if an unknown embedding key exists
@@ -482,9 +505,12 @@ class OptimizerWrapper(object):
                     keys.append(Embedding.get_key([layer, slot, id]))
                     values.append(v)
 
-        EmbeddingService.update_embedding(
-            keys, values, self._kv_store_endpoint
-        )
+        if self._update_embedding_func:
+            self._update_embedding_func(keys, values)
+        else:
+            EmbeddingService.update_embedding(
+                keys, values, self._kv_store_endpoint
+            )
 
     def _delete_variables(self):
         # Slot variable access in optimizer requires corresponding embedding

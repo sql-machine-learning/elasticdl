@@ -18,33 +18,12 @@ from elasticdl.python.common.tensor import (
 )
 from elasticdl.python.ps.embedding_table import get_slot_table_name
 from elasticdl.python.ps.parameter_server import ParameterServer
+from elasticdl.python.tests.test_utils import PserverArgs
 
 _test_model_zoo_path = os.path.dirname(os.path.realpath(__file__))
 _module_file = get_module_file_path(
     _test_model_zoo_path, "test_module.custom_model"
 )
-
-
-class PserverArgs(object):
-    def __init__(
-        self,
-        grads_to_wait=8,
-        lr_staleness_modulation=0,
-        use_async=False,
-        model_zoo=_test_model_zoo_path,
-        model_def="test_module.custom_model",
-        optimizer="optimizer",
-        port=9999,
-        log_level="INFO",
-    ):
-        self.grads_to_wait = grads_to_wait
-        self.lr_staleness_modulation = lr_staleness_modulation
-        self.use_async = use_async
-        self.model_zoo = model_zoo
-        self.model_def = model_def
-        self.optimizer = optimizer
-        self.port = port
-        self.log_level = log_level
 
 
 class PserverServicerTest(unittest.TestCase):
@@ -80,6 +59,8 @@ class PserverServicerTest(unittest.TestCase):
             lr_staleness_modulation=lr_staleness_modulation,
             use_async=use_async,
             port=self._port,
+            model_zoo=_test_model_zoo_path,
+            model_def="test_module.custom_model",
             **kwargs,
         )
         pserver = ParameterServer(args)
