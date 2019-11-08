@@ -89,7 +89,7 @@ class WorkerMNISTTest(unittest.TestCase):
 
     def test_train(self):
         model_def = "mnist_functional_api.mnist_functional_api.custom_model"
-        batch_size = 16
+        batch_size = 8
         images, labels = random_batch(batch_size)
 
         tf.keras.backend.clear_session()
