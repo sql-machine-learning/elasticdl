@@ -26,8 +26,7 @@ def parse_volume_and_mount(volume_conf, pod_name):
                 claim_name=volume_dict["claim_name"], read_only=False
             )
             volume = client.V1Volume(
-                name=volume_name,
-                persistent_volume_claim=pvc_volume_source,
+                name=volume_name, persistent_volume_claim=pvc_volume_source
             )
         elif "host_path" in volume_dict:
             volume = client.V1Volume(

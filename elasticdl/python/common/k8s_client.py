@@ -3,12 +3,7 @@ import threading
 import traceback
 
 from kubernetes import client, config, watch
-from kubernetes.client import (
-    V1EnvVar,
-    V1EnvVarSource,
-    V1ObjectFieldSelector,
-    V1PersistentVolumeClaimVolumeSource,
-)
+from kubernetes.client import V1EnvVar, V1EnvVarSource, V1ObjectFieldSelector
 
 from elasticdl.python.common.k8s_resource import parse as parse_resource
 from elasticdl.python.common.k8s_volume import parse_volume_and_mount
@@ -184,7 +179,7 @@ class Client(object):
         # Mount data path
         if kargs["volume"]:
             volumes, volume_mounts = parse_volume_and_mount(
-                kargs['volume'], kargs['pod_name']
+                kargs["volume"], kargs["pod_name"]
             )
             spec.volumes = volumes
             container.volume_mounts = volume_mounts
