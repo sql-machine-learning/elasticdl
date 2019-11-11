@@ -85,9 +85,13 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             for pb in request.gradients:
                 grad = Tensor.from_tensor_pb(pb)
                 self._parameters.check_grad(grad)
-                var = self._parameters.get_non_embedding_param(grad.name)
+                name = grad.name
+                var = self._parameters.get_non_embedding_param(name)
                 grad = grad.to_tf_tensor()
-                grad_vars.append((grad, var))
+                if var is None:
+                    grad_vars.append((grad, name))
+                else:
+                    grad_vars.append((grad, var))
 
             self._optimizer.apply_gradients(grad_vars)
             with self._version_lock:
@@ -124,7 +128,11 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                         if not grad.is_indexed_slices():
                             grad.values = grad.values / self._grads_to_wait
                         var = self._parameters.get_non_embedding_param(name)
-                        grad_vars.append((grad.to_tf_tensor(), var))
+                        grad = grad.to_tf_tensor()
+                        if var is None:
+                            grad_vars.append((grad, name))
+                        else:
+                            grad_vars.append((grad, var))
 
                     self._optimizer.apply_gradients(grad_vars)
                     self._grads_n = 0
@@ -137,7 +145,9 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
     def wrap_optimizer(self):
         # TODO(yunjian.lmh): refine these arguments when we don't need
         # to support using Redis as distributed KV storage.
-        embedding_dims = None
+        embedding_dims = {}
+        for table in self._parameters.embedding_params.values():
+            embedding_dims[table.name] = table.dim
         embedding_service_endpoint = None
 
         def lookup_embedding_func(keys):
@@ -157,7 +167,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                 arrs = key.split("-")
                 layer_name = "-".join(arrs[:-1])
                 id = int(arrs[-1])
-                self._params.set_embedding_param(layer_name, [id], [value])
+                self._parameters.set_embedding_param(layer_name, [id], [value])
 
         self._optimizer = OptimizerWrapper(
             self._optimizer,
