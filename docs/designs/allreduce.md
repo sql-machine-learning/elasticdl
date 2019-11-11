@@ -9,16 +9,16 @@ more workers and parameter servers as described in [parameter server design doc]
 challenges involved in order to optimize the performance, for example:
 
 * It is not easy to identify the right ratio of the number of workers to the number of parameter servers. For example,
-if only a small number of parameter servers are used, there will likely be network communication overheads. If many parameter
-servers are used, the communication may saturate network interconnects.
+if only a small number of parameter servers are used, network communication will likely become the bottleneck for training.
+If many parameter servers are used, the communication may saturate network interconnects.
 * If the model could fit within the computational resources on each worker, additional maintenance and communication overheads are
 introduced when the model is partitioned to multiple parameter servers.
 * Additional computational resources for replicating models of each parameter server are needed to support fault-tolerance.
 
 In contrast, distributed training based on collective communication primitives such as [allreduce](https://mpitutorial.com/tutorials/mpi-reduce-and-allreduce/)
-and [ring-allreduce](http://research.baidu.com/bringing-hpc-techniques-deep-learning/) could be more efficient and easier
-to use in certain use cases. There are many existing technologies available that provide implementations for these collective
-communication primitives and please head over to the section on [existing collective communication technologies](#existing-collective-communication-technologies)
+could be more efficient and easier to use in certain use cases. There are many existing technologies available that provide
+implementations for these collective communication primitives and please head over to the section on
+[existing collective communication technologies](#existing-collective-communication-technologies)
 for details if interested. Allreduce-based distributed training could address many of the challenges mentioned above, for example:
 
 * Each worker stores a complete set of model parameters. In other words, no parameter server is needed so it's straightforward
@@ -26,7 +26,8 @@ to add more workers when necessary.
 * Failures among the workers can be recovered easily by restarting the failed workers and then load the current model sent from
 any of the existing workers. Model does not need to be replicated to support fault-tolerance, which avoids the waste of resources.
 * The model can be updated more efficiently by fully leveraging the network structure and collective communication algorithms.
-For example, in ring-allreduce algorithm, each of *N* workers only needs to communicate with two of its peer workers *2 * (N − 1)* times.
+For example, in [ring-allreduce](http://research.baidu.com/bringing-hpc-techniques-deep-learning/) algorithm, each of *N* workers only needs to communicate with two of its peer workers *2 * (N − 1)* times
+to update all the model parameters completely.
 * Scaling up and down of the number of workers is as easy as reconstructing the underlying allreduce communicator and
 re-assigning the ranks among the workers.
 
@@ -51,12 +52,12 @@ fault-tolerant allreduce. The initial implementation will contain an experimenta
 fault-tolerant and Kubernetes-native. This will include but not limited to the following objectives (more details to be disclosed later once
 the implementation has been open-sourced):
 
-* Fault-tolerant: if any of the worker pod fails, the [NCCL Communicator](https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs/usage/communicators.html)
+* Fault-tolerant: if any of the worker pod fails, the [NCCL communicator](https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs/usage/communicators.html)
 can be reconstructed. The allreduce operation continues as long as there's at least one healthy worker pod.
 * Elastic: the number of worker pods can be dynamically added if there are enough computational resources available.
-Ranks can be re-assigned as the number of worker pods changes.
+The NCCL communicator will be reconstructed and the ranks can be re-assigned as the number of worker pods changes.
 
-The interface would look like the following:
+The interface for allreduce would look like the following:
 
 ```python
 num_epochs = 2
@@ -76,13 +77,23 @@ for _ in range(num_epochs):
             continue
 ```
 
+We also provide API to broadcast all model parameters from one of the worker pods to all other active worker pods.
+This would be useful to initialize the model parameters for a restarted or new joining worker pod. The interface would
+look like the following:
+
+```python
+communicator = BroadcastCommunicator()
+init_local_model(worker_0_ip)
+communicator.broadcast(worker_ips, get_model_params(worker_0_ip)
+```
+
 ### Allreduce-based Training in ElasticDL
 
 #### Gradients Averaging and Model Updating
 
 For training based on parameter servers, gradients calculation and model updating include the following steps:
 
-1. Send the gradients calculated locally from each worker to master.
+1. Send the gradients calculated locally from each worker to parameter servers.
 1. Calculate the average of all the received gradients on master.
 1. Update the model in master.
 
@@ -138,9 +149,9 @@ the existing active workers. The existing workers will then continue to run on t
 1. The master pod will try to create a new worker pod after a specified restart delay period.
 1. Once the worker pod becomes active and `AllreduceCommunicator` is aware of it, we perform the following steps:
     1. Lock all existing worker pods.
-    1. Send the current model from one of the worker pods to master pod.
-    1. Initialize the model on the new worker pod using the current model that master pod just received.
-    1. All workers continue to operate and perform allreduce operations to update the model.
+    1. Select one of the worker pods to broadcast the current model parameters to all worker pods.
+    1. Release the lock that each worker pod holds.
+    1. All worker pods continue to process training tasks at hand and perform allreduce operations.
 
 Note that since the existing active workers have the exact same copy of the model after the previous allreduce operation completes,
 we can guarantee that the new worker will have the same copy of the model as the ones on other workers once the next
@@ -148,7 +159,7 @@ allreduce operation completes.
 
 #### Training with Evaluation
 
-If the worker encounters any evaluation tasks in the above process, it will evaluate the model directly on master once the
+If the worker encounters any evaluation tasks in the above process, it will evaluate the model directly on the worker once the
 under-going allreduce-based gradients averaging has completed and the model has been updated. The behavior is the same as
 what's described in [model evaluation design doc](model_evaluation.md) except that we are evaluating the model on workers
 instead of on parameter servers. Once an evaluation completes, we send the evaluation result to master for TensorBoard
@@ -185,6 +196,12 @@ in [this Github issue](https://github.com/tensorflow/tensorflow/issues/33274).
 * For models with a large amount of tensors, such as ResNet, many small allreduce operations are needed. In this case,
 we could fuse multiple small tensors together before performing allreduce operations to maximize performance since
 allreduce utilizes the network in an optimal way if the tensors are large enough.
+* Since the gradients of the embedding layer are row-sparse, supporting sparse allreduce for embedding layers
+will decrease communication costs.
+* Since the number of workers may change during training, the batch size (sum of the size of minibatches on each worker)
+will affect the model training accuracy. We can support customized learning rate scheduler, which will take epoch/batch_size
+into account. We can also support [LARS (Layer-wise Adaptive Rate Scaling)](https://arxiv.org/abs/1708.03888) so that
+large batch size can be used.
 
 ## Existing Collective Communication Technologies
 
