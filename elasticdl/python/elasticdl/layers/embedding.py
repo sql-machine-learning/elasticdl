@@ -61,7 +61,6 @@ class Embedding(tf.keras.layers.Layer):
         self.combiner = combiner
         self.embedding_service_endpoint = embedding_service_endpoint
         self.tape = None
-        # function args: (layer name, embedding id list)
         self._lookup_embedding_func = None
 
         self._embedding_and_ids_eagerly = []
@@ -134,6 +133,7 @@ class Embedding(tf.keras.layers.Layer):
         ids = unique_ids.numpy()
         self._check_id_valid(ids)
         if self._lookup_embedding_func:
+            # function args: (layer name, embedding id list)
             embedding_vectors = self._lookup_embedding_func(self._name, ids)
             return embedding_vectors
 
@@ -303,6 +303,17 @@ class Embedding(tf.keras.layers.Layer):
 
     def set_endpoint(self, endpoint):
         self.embedding_service_endpoint = endpoint
+
+    def set_lookup_embedding_func(self, func):
+        """Sets function for looking up embeddings in the PS.
+
+        Args:
+            func: The function used to look up embeddings. The arguments of
+                are `(layer_name, embedding_id_list)`, where `layer_name` is
+                the name of embedding layer, and `embedding_id_list` is a list
+                of embedding ids to be looked up.
+        """
+        self._lookup_embedding_func = func
 
     @property
     def embedding_and_ids(self):

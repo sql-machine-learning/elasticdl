@@ -122,7 +122,6 @@ class Worker(object):
         model_inst = model_handler.get_model_to_train(model_inst)
 
         self._embedding_service_endpoint = embedding_service_endpoint
-        # self.set_model will use self._use_multi_ps
         self.set_model(model_inst)
 
         if channel is None:
@@ -229,7 +228,7 @@ class Worker(object):
         self._model_version = model_version
 
     def pull_embedding_vector(self, layer_name, embedding_ids):
-        """Pulls and returns embedding vectors as the order of ids."""
+        """Pulls and returns embedding vectors ordered by the embedding ids."""
         ps_ids = {}
         ps_ids_index = {}
         for idx, embedding_id in enumerate(embedding_ids):
