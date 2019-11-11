@@ -26,7 +26,7 @@ def random_batch(batch_size):
     return images, labels
 
 
-class WorkerMNISTTest(unittest.TestCase):
+class WorkerPSInteractionTest(unittest.TestCase):
     def setUp(self):
         self._model_zoo_path = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), "../../../model_zoo"

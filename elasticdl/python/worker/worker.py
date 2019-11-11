@@ -11,7 +11,11 @@ from elasticdl.python.common.constants import (
     Mode,
     SaveModelConfig,
 )
-from elasticdl.python.common.hash_utils import int_to_id, string_to_id
+from elasticdl.python.common.hash_utils import (
+    int_to_id,
+    scatter_embedding_vector,
+    string_to_id,
+)
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
@@ -289,12 +293,22 @@ class Worker(object):
                 ps_vars[ps_id].append(v)
 
         # TODO: call `push_model` in parallel
-        for ps_id, vars in ps_vars.items():
+        for ps_id in range(len(self._ps_stubs)):
             model = elasticdl_pb2.Model()
-            for var in vars:
-                emplace_tensor_pb_from_ndarray(
-                    model.param, var.numpy(), name=var.name
-                )
+            if ps_id in ps_vars:
+                vars = ps_vars[ps_id]
+                for var in vars:
+                    emplace_tensor_pb_from_ndarray(
+                        model.param, var.numpy(), name=var.name
+                    )
+            if self._embedding_layers:
+                embedding_infos = elasticdl_pb2.EmbeddingTableInfo
+                for layer in self._embedding_layers:
+                    embedding_info = embedding_infos.add()
+                    embedding_info.name = layer.name
+                    embedding_info.dim = layer.output_dim
+                    embedding_info.initializer = layer.embeddings_initializer
+
             self._ps_stubs[ps_id].push_model(model)
 
     def report_variable(self):
@@ -371,14 +385,58 @@ class Worker(object):
             else:
                 ps_grads[ps_id].append((g, v.name))
 
+        if self._embedding_layers:
+            edl_embedding_grads = grads[non_embed_vars_n:]
+            bet_number = 0
+            for layer in self._embedding_layers:
+                bet_number += len(layer.embedding_and_ids)
+            if len(edl_embedding_grads) != bet_number:
+                raise ValueError(
+                    "elasticdl.layers.embedding related gradient number %d "
+                    "does not match the number of its output tensor %d."
+                    % (len(edl_embedding_grads), bet_number)
+                )
+
+            grad_accum_iter = 0
+            for layer in self._embedding_layers:
+                g_values = None
+                g_indices = None
+                for _, ids in layer.embedding_and_ids:
+                    grad = edl_embedding_grads[grad_accum_iter]
+                    grad_accum_iter += 1
+                    # ElasticDL embedding layer with Sparse Gradients
+                    if isinstance(grad, tf.IndexedSlices):
+                        grad = grad.values
+                    if g_values is not None:
+                        g_values = tf.concat([g_values, grad], axis=0)
+                        g_indices = tf.concat([g_indices, ids], axis=0)
+                    else:
+                        g_values = grad
+                        g_indices = ids
+
+                results = scatter_embedding_vector(
+                    g_values.numpy(), g_indices.numpy()
+                )
+
         # TODO: call `push_gradient` in parallel
-        for ps_id, grads in ps_grads.items():
+        for ps_id in range(len(self._ps_stubs)):
             req = elasticdl_pb2.PushGradientRequest()
-            for g, name in grads:
-                emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
+            if ps_id in ps_grads:
+                for g, name in ps_grads[ps_id]:
+                    emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
+
+            if self._embedding_layers:
+                if ps_id in results:
+                    for (gv, gi) in results[ps_id]:
+                        emplace_tensor_pb_from_ndarray(
+                            req.gradients,
+                            values=gv,
+                            indices=gi,
+                            name=layer.name,
+                        )
+
             req.model_version = self._model_version
             res = self._ps_stubs[ps_id].push_gradient(req)
-
         # TODO: choose the last response temporarily
         return res.accepted, res.model_version
 
