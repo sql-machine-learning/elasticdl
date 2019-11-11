@@ -425,11 +425,15 @@ class Worker(object):
                 for g, name in ps_grads[ps_id]:
                     emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
 
-            if ps_id in results:
-                for (gv, gi) in results[ps_id]:
-                    emplace_tensor_pb_from_ndarray(
-                        req.gradients, values=gv, indices=gi, name=layer.name,
-                    )
+            if self._embedding_layers:
+                if ps_id in results:
+                    for (gv, gi) in results[ps_id]:
+                        emplace_tensor_pb_from_ndarray(
+                            req.gradients,
+                            values=gv,
+                            indices=gi,
+                            name=layer.name,
+                        )
 
             req.model_version = self._model_version
             res = self._ps_stubs[ps_id].push_gradient(req)
