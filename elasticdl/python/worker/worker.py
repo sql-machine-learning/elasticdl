@@ -330,7 +330,7 @@ class Worker(object):
         res = self._stub.ReportGradient(req)
         return res.accepted, res.model_version
 
-    def _split_tensor(self, values, indices):
+    def _scatter_embedding_param(self, values, indices):
         ps_ids = {}
         indices_list = indices.numpy().tolist()
         for i, item_id in enumerate(indices_list):
@@ -371,32 +371,35 @@ class Worker(object):
                     % (len(edl_embedding_grads), bet_number)
                 )
 
-        grad_accum_iter = 0
-        for layer in self._embedding_layers:
-            g_values = None
-            g_indices = None
-            for _, ids in layer.embedding_and_ids:
-                grad = edl_embedding_grads[grad_accum_iter]
-                grad_accum_iter += 1
-                # ElasticDL embedding layer with Sparse Gradients
-                if isinstance(grad, tf.IndexedSlices):
-                    grad = grad.values
-                if g_values is not None:
-                    g_values = tf.concat([g_values, grad], axis=0)
-                    g_indices = tf.concat([g_indices, ids], axis=0)
-                else:
-                    g_values = grad
-                    g_indices = ids
+            grad_accum_iter = 0
+            for layer in self._embedding_layers:
+                g_values = None
+                g_indices = None
+                for _, ids in layer.embedding_and_ids:
+                    grad = edl_embedding_grads[grad_accum_iter]
+                    grad_accum_iter += 1
+                    # ElasticDL embedding layer with Sparse Gradients
+                    if isinstance(grad, tf.IndexedSlices):
+                        grad = grad.values
+                    if g_values is not None:
+                        g_values = tf.concat([g_values, grad], axis=0)
+                        g_indices = tf.concat([g_indices, ids], axis=0)
+                    else:
+                        g_values = grad
+                        g_indices = ids
 
-            results = self._split_tensor(g_values, g_indices)
+                results = self._scatter_embedding_param(g_values, g_indices)
 
-            for ps_id, (gv, gi) in results:
-                req = elasticdl_pb2.PushGradientRequest()
-                emplace_tensor_pb_from_ndarray(
-                    req.gradients, values=gv, indices=gi, name=layer.name
-                )
-                req.model_version = self._model_version
-                res = self._ps_stubs[ps_id].push_gradient(req)
+                for ps_id, (gv, gi) in results:
+                    req = elasticdl_pb2.PushGradientRequest()
+                    emplace_tensor_pb_from_ndarray(
+                        req.gradients,
+                        values=gv.numpy(),
+                        indices=gi.numpy(),
+                        name=layer.name,
+                    )
+                    req.model_version = self._model_version
+                    res = self._ps_stubs[ps_id].push_gradient(req)
 
         # TODO: call `push_gradient` in parallel
         for ps_id, grads in ps_grads.items():
