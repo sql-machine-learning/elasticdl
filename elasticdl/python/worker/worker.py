@@ -11,7 +11,10 @@ from elasticdl.python.common.constants import (
     Mode,
     SaveModelConfig,
 )
-from elasticdl.python.common.hash_utils import string_to_id
+from elasticdl.python.common.hash_utils import (
+    scatter_embedding_vector,
+    string_to_id,
+)
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
@@ -330,23 +333,6 @@ class Worker(object):
         res = self._stub.ReportGradient(req)
         return res.accepted, res.model_version
 
-    def _scatter_embedding_param(self, values, indices):
-        ps_ids = {}
-        indices_list = indices.numpy().tolist()
-        for i, item_id in enumerate(indices_list):
-            ps_id = item_id % len(self._ps_stubs)
-            if ps_id not in ps_ids:
-                ps_ids[ps_id] = [(i, item_id)]
-            else:
-                ps_ids[ps_id].append((i, item_id))
-
-        results = {}
-        for ps_id, i_item_id in ps_ids.items():
-            i = [v[0] for v in i_item_id]
-            item_id = tf.convert_to_tensor([v[1] for v in i_item_id])
-            results[ps_id] = (tf.gather(values, i), item_id)
-        return results
-
     def report_gradient_to_ps(self, grads):
         ps_grads = {}
         non_embed_vars_n = len(self._non_embed_vars)
@@ -388,15 +374,14 @@ class Worker(object):
                         g_values = grad
                         g_indices = ids
 
-                results = self._scatter_embedding_param(g_values, g_indices)
+                results = scatter_embedding_vector(
+                    g_values.numpy(), g_indices.numpy()
+                )
 
                 for ps_id, (gv, gi) in results:
                     req = elasticdl_pb2.PushGradientRequest()
                     emplace_tensor_pb_from_ndarray(
-                        req.gradients,
-                        values=gv.numpy(),
-                        indices=gi.numpy(),
-                        name=layer.name,
+                        req.gradients, values=gv, indices=gi, name=layer.name,
                     )
                     req.model_version = self._model_version
                     res = self._ps_stubs[ps_id].push_gradient(req)
