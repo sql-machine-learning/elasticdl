@@ -11,7 +11,7 @@ from elasticdl.python.common.constants import (
     Mode,
     SaveModelConfig,
 )
-from elasticdl.python.common.hash_utils import string_to_id
+from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
@@ -24,6 +24,7 @@ from elasticdl.python.common.tensor import (
     Tensor,
     emplace_tensor_pb_from_ndarray,
     serialize_tensor,
+    tensor_pb_to_ndarray,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.worker.task_data_service import TaskDataService
@@ -88,6 +89,15 @@ class Worker(object):
             max_minibatch_retry_num: The maximum number of a minibatch retry
                 as its results (e.g. gradients) are not accepted by master.
         """
+        self._use_multi_ps = False
+        if isinstance(ps_channels, list):
+            if len(ps_channels) > 0:
+                self._use_multi_ps = True
+                self._ps_stubs = [
+                    elasticdl_pb2_grpc.PserverStub(c) for c in ps_channels
+                ]
+                self._var_to_ps = {}
+
         self._worker_id = worker_id
         self._job_type = job_type
         self._minibatch_size = minibatch_size
@@ -131,15 +141,6 @@ class Worker(object):
             self._non_embed_grads = None
         self._evaluation_result = {}
 
-        self._use_multi_ps = False
-        if isinstance(ps_channels, list):
-            if len(ps_channels) > 0:
-                self._use_multi_ps = True
-                self._ps_stubs = [
-                    elasticdl_pb2_grpc.PserverStub(c) for c in ps_channels
-                ]
-                self._var_to_ps = {}
-
     # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
     def set_model(self, model_inst):
@@ -162,6 +163,9 @@ class Worker(object):
         self._embedding_layers = find_layer(self._model, Embedding)
         for layer in self._embedding_layers:
             layer.set_endpoint(self._embedding_service_endpoint)
+            if self._use_multi_ps:
+                layer.set_lookup_embedding_func(self.pull_embedding_vector)
+
         self._need_embedding_layer_check = (
             True if self._embedding_layers else False
         )
@@ -222,6 +226,31 @@ class Worker(object):
 
             model_version = max(model_version, res.model.version)
         self._model_version = model_version
+
+    def pull_embedding_vector(self, layer_name, embedding_ids):
+        """Pulls and returns embedding vectors ordered by the embedding ids."""
+        ps_ids = {}
+        ps_ids_index = {}
+        for idx, embedding_id in enumerate(embedding_ids):
+            ps_id = int_to_id(embedding_id, len(self._ps_stubs))
+            ps_ids.setdefault(ps_id, []).append(embedding_id)
+            ps_ids_index.setdefault(ps_id, []).append(idx)
+
+        embeddings = []
+        index = []
+        for ps_id, embedding_ids in ps_ids.items():
+            req = elasticdl_pb2.PullEmbeddingVectorRequest()
+            req.name = layer_name
+            req.ids.extend(embedding_ids)
+            pb = self._ps_stubs[ps_id].pull_embedding_vector(req)
+            embeddings.append(tensor_pb_to_ndarray(pb))
+            index.extend(ps_ids_index[ps_id])
+        embeddings = np.concatenate(embeddings)
+
+        # adjust the order of embedding vectors
+        new_embeddings = np.empty_like(embeddings)
+        new_embeddings[index] = embeddings
+        return new_embeddings
 
     def get_model(self, version, method):
         if self._use_multi_ps:
