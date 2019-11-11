@@ -133,7 +133,6 @@ class Embedding(tf.keras.layers.Layer):
         ids = unique_ids.numpy()
         self._check_id_valid(ids)
         if self._lookup_embedding_func:
-            # function args: (layer name, embedding id list)
             embedding_vectors = self._lookup_embedding_func(self._name, ids)
             return embedding_vectors
 
