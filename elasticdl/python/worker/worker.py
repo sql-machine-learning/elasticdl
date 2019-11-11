@@ -263,12 +263,22 @@ class Worker(object):
                 ps_vars[ps_id].append(v)
 
         # TODO: call `push_model` in parallel
-        for ps_id, vars in ps_vars.items():
+        for ps_id in range(len(self._ps_stubs)):
             model = elasticdl_pb2.Model()
-            for var in vars:
-                emplace_tensor_pb_from_ndarray(
-                    model.param, var.numpy(), name=var.name
-                )
+            if ps_id in ps_vars:
+                vars = ps_vars[ps_id]
+                for var in vars:
+                    emplace_tensor_pb_from_ndarray(
+                        model.param, var.numpy(), name=var.name
+                    )
+            if self._embedding_layers:
+                embedding_infos = elasticdl_pb2.EmbeddingTableInfo
+                for layer in self._embedding_layers:
+                    embedding_info = embedding_infos.add()
+                    embedding_info.name = layer.name
+                    embedding_info.dim = layer.output_dim
+                    embedding_info.initializer = layer.embeddings_initializer
+
             self._ps_stubs[ps_id].push_model(model)
 
     def report_variable(self):
