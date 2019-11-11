@@ -385,14 +385,6 @@ class Worker(object):
             else:
                 ps_grads[ps_id].append((g, v.name))
 
-        # TODO: call `push_gradient` in parallel
-        for ps_id, grads in ps_grads.items():
-            req = elasticdl_pb2.PushGradientRequest()
-            for g, name in grads:
-                emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
-            req.model_version = self._model_version
-            res = self._ps_stubs[ps_id].push_gradient(req)
-
         if self._embedding_layers:
             edl_embedding_grads = grads[non_embed_vars_n:]
             bet_number = 0
@@ -426,14 +418,21 @@ class Worker(object):
                     g_values.numpy(), g_indices.numpy()
                 )
 
-                for ps_id, (gv, gi) in results:
-                    req = elasticdl_pb2.PushGradientRequest()
+        # TODO: call `push_gradient` in parallel
+        for ps_id in range(len(self._ps_stubs)):
+            req = elasticdl_pb2.PushGradientRequest()
+            if ps_id in ps_grads:
+                for g, name in ps_grads[ps_id]:
+                    emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
+
+            if ps_id in results:
+                for (gv, gi) in results[ps_id]:
                     emplace_tensor_pb_from_ndarray(
                         req.gradients, values=gv, indices=gi, name=layer.name,
                     )
-                    req.model_version = self._model_version
-                    res = self._ps_stubs[ps_id].push_gradient(req)
 
+            req.model_version = self._model_version
+            res = self._ps_stubs[ps_id].push_gradient(req)
         # TODO: choose the last response temporarily
         return res.accepted, res.model_version
 
