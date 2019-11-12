@@ -16,7 +16,7 @@ stages:
 
 cache:
   directories:
-  - $HOME/.keras/datasets
+    - $HOME/.keras/datasets
 
 
 jobs:
