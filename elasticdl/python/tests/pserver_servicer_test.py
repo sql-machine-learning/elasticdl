@@ -61,7 +61,7 @@ class PserverServicerTest(unittest.TestCase):
             port=self._port,
             model_zoo=_test_model_zoo_path,
             model_def="test_module.custom_model",
-            **kwargs,
+            **kwargs
         )
         pserver = ParameterServer(args)
         pserver.prepare()
@@ -419,8 +419,10 @@ class PserverServicerTest(unittest.TestCase):
             expected_embed_table[gi] -= self._lr * gv
 
         actual_embed_table = self._parameters.get_embedding_param(
-            self._embedding_info.name, range(len(self.expected_embed_table))
+            self._embedding_info.name, range(len(expected_embed_table))
         )
-        self.assertTrue(
-            np.allclose(self.expected_embed_table, actual_embed_table)
-        )
+        self.assertTrue(np.allclose(expected_embed_table, actual_embed_table))
+
+
+if __name__ == "__main__":
+    unittest.main()
