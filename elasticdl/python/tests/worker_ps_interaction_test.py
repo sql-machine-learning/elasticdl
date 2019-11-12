@@ -1,5 +1,6 @@
 import os
 import unittest
+from pathlib import Path
 
 import grpc
 import numpy as np
@@ -9,6 +10,9 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.model_utils import get_model_spec
+from elasticdl.python.data.recordio_gen.frappe_recordio_gen import (
+    load_raw_data,
+)
 from elasticdl.python.ps.embedding_table import EmbeddingTable
 from elasticdl.python.ps.parameter_server import ParameterServer
 from elasticdl.python.tests.test_utils import PserverArgs
@@ -265,6 +269,66 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 expected_result.append(table.get([embedding_id]))
             expected_result = np.concatenate(expected_result)
             self.assertTrue(np.allclose(expected_result, result_dict[layer]))
+
+    def test_deepfm_train(self):
+        worker = Worker(
+            worker_id=0,
+            job_type=elasticdl_pb2.TRAINING,
+            minibatch_size=self._batch_size,
+            model_zoo=self._model_zoo_path,
+            model_def="deepfm_functional_api. \
+                deepfm_functional_api.custom_model",
+            ps_channels=self._channel,
+        )
+
+        home = str(Path.home())
+
+        class TmpArgs(object):
+            def __init__(self, data):
+                self.data = data
+
+        args = TmpArgs(data=home + "/.keras/datasets/")
+
+        x_train, y_train, x_val, y_val, x_test, y_test = load_raw_data(args)
+        x_train = tf.convert_to_tensor(x_train, dtype=tf.int64)
+        x_test = tf.convert_to_tensor(x_test, dtype=tf.int64)
+        y_train = tf.convert_to_tensor(y_train, dtype=tf.int64)
+        y_test = tf.convert_to_tensor(y_test, dtype=tf.int64)
+
+        db = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+        db = db.batch(self._batch_size).repeat(10)
+        test_db = tf.data.Dataset.from_tensor_slices((x_test, y_test))
+        test_db = test_db.batch(self._batch_size)
+
+        acc_meter = tf.keras.metrics.Accuracy()
+
+        for step, (x, y) in enumerate(db):
+            if step == 0:
+                worker._run_model_call_before_training(x)
+                worker.report_variable()
+
+            worker.get_model(step, elasticdl_pb2.MINIMUM)
+            w_loss, w_grads = worker.training_process_eagerly(x, y)
+            worker.report_gradient(w_grads)
+
+            if step % 20 == 0:
+                worker.get_model(step, elasticdl_pb2.MINIMUM)
+                for (x, y) in test_db:
+                    out = worker.forward_process(x)
+                    out["probs"] = tf.reshape(out["probs"], [-1])
+                    acc_meter.update_state(
+                        tf.where(
+                            out["probs"] < 0.5,
+                            x=tf.zeros_like(y),
+                            y=tf.ones_like(y),
+                        ),
+                        y,
+                    )
+                acc = acc_meter.result().numpy()
+                print("loss: ", w_loss.numpy(), " acc: ", acc)
+                if acc > 0.7:
+                    return
+                acc_meter.reset_states()
 
 
 if __name__ == "__main__":
