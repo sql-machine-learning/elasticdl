@@ -259,18 +259,18 @@ class PserverServicerTest(unittest.TestCase):
         self.embedding_table = (
             np.random.rand(4 * dim).reshape((4, dim)).astype(np.float32)
         )
-        self.embedding_grads = tf.IndexedSlices(
+        self.embedding_grads0 = tf.IndexedSlices(
             values=np.random.rand(3 * dim)
             .reshape((3, dim))
             .astype(np.float32),
             indices=(3, 1, 3),
         )
-        self.expected_embed_table = np.copy(self.embedding_table)
-        for gv, gi in zip(
-            self.embedding_grads.values, self.embedding_grads.indices
-        ):
-            self.expected_embed_table[gi] -= self._lr * gv
-
+        self.embedding_grads1 = tf.IndexedSlices(
+            values=np.random.rand(3 * dim)
+            .reshape((3, dim))
+            .astype(np.float32),
+            indices=(2, 2, 3),
+        )
         push_model_req = elasticdl_pb2.Model()
         push_model_req.version = self._parameters.version
         for name, value in zip(self.var_names, self.var_values):
@@ -297,8 +297,8 @@ class PserverServicerTest(unittest.TestCase):
             emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
         emplace_tensor_pb_from_ndarray(
             req.gradients,
-            values=self.embedding_grads.values,
-            indices=self.embedding_grads.indices,
+            values=self.embedding_grads0.values,
+            indices=self.embedding_grads0.indices,
             name=self._embedding_info.name,
         )
         res = self._stub.push_gradient(req)
@@ -316,12 +316,16 @@ class PserverServicerTest(unittest.TestCase):
                 )
             )
 
+        expected_embed_table = np.copy(self.embedding_table)
+        for gv, gi in zip(
+            self.embedding_grads0.values, self.embedding_grads0.indices
+        ):
+            expected_embed_table[gi] -= self._lr * gv
+
         actual_embed_table = self._parameters.get_embedding_param(
-            self._embedding_info.name, range(len(self.expected_embed_table))
+            self._embedding_info.name, range(len(expected_embed_table))
         )
-        self.assertTrue(
-            np.allclose(self.expected_embed_table, actual_embed_table)
-        )
+        self.assertTrue(np.allclose(expected_embed_table, actual_embed_table))
 
         # Test applying gradients with same name
         for name, var in zip(self.var_names, self.var_values):
@@ -358,6 +362,12 @@ class PserverServicerTest(unittest.TestCase):
         req.model_version = 0
         for g, name in zip(self.grad_values0, self.var_names):
             emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
+        emplace_tensor_pb_from_ndarray(
+            req.gradients,
+            values=self.embedding_grads0.values,
+            indices=self.embedding_grads0.indices,
+            name=self._embedding_info.name,
+        )
         res = self._stub.push_gradient(req)
         self.assertEqual(res.accepted, True)
         self.assertEqual(res.model_version, 0)
@@ -368,8 +378,8 @@ class PserverServicerTest(unittest.TestCase):
             emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
         emplace_tensor_pb_from_ndarray(
             req.gradients,
-            values=self.embedding_grads.values,
-            indices=self.embedding_grads.indices,
+            values=self.embedding_grads1.values,
+            indices=self.embedding_grads1.indices,
             name=self._embedding_info.name,
         )
         res = self._stub.push_gradient(req)
@@ -397,6 +407,16 @@ class PserverServicerTest(unittest.TestCase):
                     self._parameters.non_embedding_params[name].numpy(),
                 )
             )
+
+        expected_embed_table = np.copy(self.embedding_table)
+        for gv, gi in zip(
+            self.embedding_grads0.values, self.embedding_grads0.indices
+        ):
+            expected_embed_table[gi] -= self._lr * gv
+        for gv, gi in zip(
+            self.embedding_grads1.values, self.embedding_grads1.indices
+        ):
+            expected_embed_table[gi] -= self._lr * gv
 
         actual_embed_table = self._parameters.get_embedding_param(
             self._embedding_info.name, range(len(self.expected_embed_table))
