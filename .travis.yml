@@ -14,6 +14,11 @@ stages:
   - precommit
   - tests
 
+cache:
+  directories:
+  - $HOME/.keras/datasets
+
+
 jobs:
   include:
     - stage: precommit
