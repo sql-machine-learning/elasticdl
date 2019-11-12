@@ -100,7 +100,7 @@ class ParameterServerModelHandler(ModelHandler):
                 model, tf.keras.layers.Embedding, Embedding
             )
         else:
-            model = self._replace_embedding_attribute_for_subclass(
+            model = self._replace_embedding_attributes_for_subclass(
                 model, tf.keras.layers.Embedding, Embedding
             )
         return model
