@@ -11,9 +11,11 @@ challenges involved in order to optimize the performance, for example:
 * It is not easy to identify the right ratio of the number of workers to the number of parameter servers. For example,
 if only a small number of parameter servers are used, network communication will likely become the bottleneck for training.
 If many parameter servers are used, the communication may saturate network interconnects.
+* The memory quota of workers and parameter servers requires fine tuning to avoid out-of-memory or memory waste.
 * If the model could fit within the computational resources on each worker, additional maintenance and communication overheads are
 introduced when the model is partitioned to multiple parameter servers.
-* Additional computational resources for replicating models of each parameter server are needed to support fault-tolerance.
+* We need to replicate the model on each parameter server in order to support fault-tolerance, which requires additional
+computational and storage resources.
 
 In contrast, distributed training based on collective communication primitives such as [allreduce](https://mpitutorial.com/tutorials/mpi-reduce-and-allreduce/)
 could be more efficient and easier to use in certain use cases. There are many existing technologies available that provide
@@ -23,8 +25,8 @@ for details if interested. Allreduce-based distributed training could address ma
 
 * Each worker stores a complete set of model parameters. In other words, no parameter server is needed so it's straightforward
 to add more workers when necessary.
-* Failures among the workers can be recovered easily by restarting the failed workers and then load the current model sent from
-any of the existing workers. Model does not need to be replicated to support fault-tolerance, which avoids the waste of resources.
+* Failures among the workers can be recovered easily by restarting the failed workers and then load the current model from
+any of the existing workers. Model does not need to be replicated to support fault-tolerance.
 * The model can be updated more efficiently by fully leveraging the network structure and collective communication algorithms.
 For example, in [ring-allreduce](http://research.baidu.com/bringing-hpc-techniques-deep-learning/) algorithm, each of *N* workers only needs to communicate with two of its peer workers *2 * (N − 1)* times
 to update all the model parameters completely.
@@ -53,7 +55,7 @@ fault-tolerant and Kubernetes-native. This will include but not limited to the f
 the implementation has been open-sourced):
 
 * Fault-tolerant: if any of the worker pod fails, the [NCCL communicator](https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs/usage/communicators.html)
-can be reconstructed. The allreduce operation continues as long as there's at least one healthy worker pod.
+can be reconstructed for the active worker pods. The allreduce operation continues as long as there's at least one healthy worker pod.
 * Elastic: the number of worker pods can be dynamically added if there are enough computational resources available.
 The NCCL communicator will be reconstructed and the ranks can be re-assigned as the number of worker pods changes.
 
@@ -83,9 +85,16 @@ look like the following:
 
 ```python
 communicator = BroadcastCommunicator()
-init_local_model(worker_0_ip)
-communicator.broadcast(worker_ips, get_model_params(worker_0_ip)
+res, model_params = communicator.broadcast(from=worker_0_ip)
+init_local_model(model_params)
 ```
+
+There are a couple of implementation details that are worth mentioning here:
+
+1. All NCCL API calls are asynchronous but our implementation of the communication collective primitives is synchronous
+so it's easier for other frameworks like ElasticDL to use without worrying about failure handling.
+1. It is not necessary to pass the list of IPs of the worker pods to either `AllreduceCommunicator` or `BroadcastCommunicator`
+since the shared storage used in the implementation would keep track of the list of IPs.
 
 ### Allreduce-based Training in ElasticDL
 
@@ -95,7 +104,7 @@ For training based on parameter servers, gradients calculation and model updatin
 
 1. Send the gradients calculated locally from each worker to parameter servers.
 1. Calculate the average of all the received gradients on master.
-1. Update the model in master.
+1. Update the model in parameter servers.
 
 On contrary, in allreduce-based training, each worker in ElasticDL calculates gradients locally and then calculates
 the average of gradients across all workers using collective communication via `AllreduceCommunicator.average_gradients()`
@@ -149,7 +158,7 @@ the existing active workers. The existing workers will then continue to run on t
 1. The master pod will try to create a new worker pod after a specified restart delay period.
 1. Once the worker pod becomes active and `AllreduceCommunicator` is aware of it, we perform the following steps:
     1. Lock all existing worker pods.
-    1. Select one of the worker pods to broadcast the current model parameters to all worker pods.
+    1. Master pod selects one of the worker pods to broadcast the current model parameters to all worker pods.
     1. Release the lock that each worker pod holds.
     1. All worker pods continue to process training tasks at hand and perform allreduce operations.
 
