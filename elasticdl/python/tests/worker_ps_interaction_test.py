@@ -78,8 +78,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
     def _restart_pserver(self):
         # Stop first
-        for ps in self._pserver:
-            ps.server.stop(0)
+        self.tearDown()
         # Start again
         self._pserver, self._channel = self._create_pserver_and_channel(
             self._ports
