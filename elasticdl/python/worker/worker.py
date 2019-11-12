@@ -285,13 +285,15 @@ class Worker(object):
         else:
             self.get_model_from_master(version, method)
 
-    def report_task_result(self, task_id, err_msg):
+    def report_task_result(self, task_id, err_msg, exec_counters=None):
         """
         report task result to master
         """
         report = elasticdl_pb2.ReportTaskResultRequest()
         report.task_id = task_id
         report.err_message = err_msg
+        if isinstance(exec_counters, dict):
+            report.exec_counters.update(exec_counters)
         return self._stub.ReportTaskResult(report)
 
     def report_variable_to_master(self):

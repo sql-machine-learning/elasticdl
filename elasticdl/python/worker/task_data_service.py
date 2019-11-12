@@ -4,6 +4,7 @@ from collections import deque
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.constants import TaskExecCounterKey
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.data.data_reader import create_data_reader
 from elasticdl.python.data.dataset_utils import create_dataset_from_tasks
@@ -40,7 +41,6 @@ class TaskDataService(object):
         Reset pending tasks and record counts
         """
 
-        # Counters are keyed by task id.
         self._cur_record_count = 0
         self._reported_record_count = 0
         self._failed_record_count = 0
@@ -50,17 +50,43 @@ class TaskDataService(object):
     def get_current_task(self):
         return self._current_task
 
-    def report_task_done(self, task_id, err_msg):
-        self._worker.report_task_result(task_id, err_msg)
+    def report_task_done(self, task_id, err_msg, exec_counters=None):
+        self._worker.report_task_result(
+            task_id, err_msg, exec_counters=exec_counters
+        )
 
     def handle_next_task(self, err_msg=""):
         with self._lock:
-            task = self._pending_tasks.popleft()
-            self._reported_record_count = 0
+            # Reason for keep_poping, batch_size may be large than
+            # task.end - task.start, so we keep poping task until
+            # reported count is less than current data size
+            keep_poping = True
+
+            # Becuase a single batch comes from multiple tasks,
+            # We just report the number of failing records together
+            # with first task
+            if self._failed_record_count != 0:
+                exec_counters = {
+                    TaskExecCounterKey.FAIL_COUNT: self._failed_record_count
+                }
+            else:
+                exec_counters = None
+            while keep_poping:
+                task = self._pending_tasks.popleft()
+                self._reported_record_count -= task.end - task.start
+                self.report_task_done(
+                    task.task_id, err_msg, exec_counters=exec_counters
+                )
+                exec_counters = None  # reset counters
+                if self._pending_tasks:
+                    self._current_task = self._pending_tasks[0]
+                    task_len = (
+                        self._current_task.end - self._current_task.start
+                    )
+                    keep_poping = self._reported_record_count >= task_len
+                else:
+                    break
             self._failed_record_count = 0
-            if self._pending_tasks:
-                self._current_task = self._pending_tasks[0]
-            self.report_task_done(task.task_id, err_msg)
 
     def report_record_done(self, count, err_msg=""):
         """
@@ -75,22 +101,10 @@ class TaskDataService(object):
                 self._failed_record_count += count
 
             total_record_num = task.end - task.start
-            should_handle_next = False
-            if task.type == elasticdl_pb2.TRAINING:
-                # only training, we allow for failures
-                if (
-                    self._failed_record_count / total_record_num
-                    > self._record_failure_tolerance_percentage
-                ):
-                    should_handle_next = True
-            elif self._failed_record_count != 0:
-                should_handle_next = True
             if self._reported_record_count >= total_record_num:
-                should_handle_next = True
-            if should_handle_next:
                 if err_msg:
                     msg = (
-                        "too many records ({f}/{t}) failure, possible "
+                        "records ({f}/{t}) failure, possible "
                         "in task_id: {task_id} "
                         'reason "{err_msg}"'
                     ).format(

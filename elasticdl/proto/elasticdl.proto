@@ -122,6 +122,8 @@ message ReportTaskResultRequest {
 
     // When error occurred, err_message contains error message in plain text.
     string err_message = 2;
+    // statistics of the task being executed.
+    map<string, int32> exec_counters = 3;
 }
 
 message ReportEvaluationMetricsResponse {
