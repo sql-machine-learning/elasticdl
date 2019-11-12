@@ -6,7 +6,6 @@ from elasticdl.python.common.dtypes import (
     dtype_numpy_to_tensor,
     dtype_tensor_to_numpy,
 )
-from elasticdl.python.common.log_utils import default_logger as logger
 
 
 class Tensor(object):
@@ -53,13 +52,8 @@ class Tensor(object):
                     "tf.IndexedSlices, indices must be None."
                 )
             if values.dense_shape is not None:
-                # TODO(yunjian.lmh): Support dense shape, or do not print
-                #     warning message, or there will be too much warning
-                #     messages.
-                logger.warning(
-                    "ElasticDL Tensor ignores dense_shape in "
-                    "TensorFlow.IndexedSlices."
-                )
+                # TODO(yunjian.lmh): Support dense shape
+                pass
 
             self.values = values.values.numpy()
             self.indices = values.indices.numpy()
