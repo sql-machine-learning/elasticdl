@@ -32,7 +32,8 @@ class ModelHandler(metaclass=abc.ABCMeta):
         by tf.saved_model.save.
 
         Args:
-            model: A native keras model instance.
+            model: A keras model instance trained by ElasticDL and
+            it may contains `elasticdl.layers.Embedding` layers.
             dataset: A `tf.data.Dataset` instance which has the same outputs as
                 the training dataset.
 

@@ -47,7 +47,7 @@ def parse_volume_and_mount(volume_conf, pod_name):
 
 def parse(volume_str):
     """Parse combined k8s volume strings separated by
-    semicolons to Python dictionaries.
+    semicolons to a list of python dictionaries.
 
     Args:
         volume_str: The string representation for k8s volume,
