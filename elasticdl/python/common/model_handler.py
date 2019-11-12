@@ -99,8 +99,8 @@ class ParameterServerModelHandler(ModelHandler):
             model = self._replace_embedding_layer_to_clone_model(
                 model, tf.keras.layers.Embedding, Embedding
             )
-        else:
-            model = self._replace_embedding_attribute_for_subclass(
+        else:_replace_embedding_attributes_for_subclass
+            model = self._replace_embedding_attributes_for_subclass(
                 model, tf.keras.layers.Embedding, Embedding
             )
         return model
