@@ -232,6 +232,11 @@ class Worker(object):
                 # push variable to ps for initialization
                 self.report_variable_to_ps(ps_id)
                 res = stub.pull_variable(req)
+                if not res.model_init_status:
+                    # TODO: support PS fault-tolerance
+                    raise RuntimeError(
+                        "PS pod %d cannot be initialized" % ps_id
+                    )
 
             for tensor_pb in res.model.param:
                 tensor = Tensor.from_tensor_pb(tensor_pb)
