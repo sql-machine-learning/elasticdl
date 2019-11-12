@@ -276,8 +276,9 @@ class WorkerPSInteractionTest(unittest.TestCase):
             job_type=elasticdl_pb2.TRAINING,
             minibatch_size=self._batch_size,
             model_zoo=self._model_zoo_path,
-            model_def="deepfm_functional_api. \
-                deepfm_functional_api.custom_model",
+            model_def=(
+                "deepfm_functional_api.deepfm_functional_api" ".custom_model"
+            ),
             ps_channels=self._channel,
         )
 
