@@ -72,7 +72,7 @@ for _ in range(num_epochs):
         outputs = model(features)
         loss = loss_fn(outputs, labels)
         grads = calculate_gradients(loss, model)
-        res, averaged_grads = communicator.average_gradients(grads)
+        res, averaged_grads = communicator.allreduce_average(grads)
         if res == SUCCESS:
             update_model(averaged_grads)
         elif res == FAILED:
@@ -107,7 +107,7 @@ For training based on parameter servers, gradients calculation and model updatin
 1. Update the model in parameter servers.
 
 On contrary, in allreduce-based training, each worker in ElasticDL calculates gradients locally and then calculates
-the average of gradients across all workers using collective communication via `AllreduceCommunicator.average_gradients()`
+the average of gradients across all workers using collective communication via `AllreduceCommunicator.allreduce_average()`
 that we mentioned in the previous section. The main differences are the following:
 
 1. Gradients from each worker are not sent to master.
@@ -123,7 +123,7 @@ with tf.GradientTape() as tape:
     outputs = model(features, training=True)
     loss = loss_fn(outputs, labels)
 local_grads = tape.gradient(loss, get_trainable_items())
-res, averaged_grads = communicator.average_gradients(grads)
+res, averaged_grads = communicator.allreduce_average(grads)
 if res == SUCCESS:
     update_model(averaged_grads)
 else:
@@ -157,7 +157,7 @@ If any of the workers fails, e.g. the pod is accidentally killed, the following 
 the existing active workers. The existing workers will then continue to run on the tasks at hand.
 1. The master pod will try to create a new worker pod after a specified restart delay period.
 1. Once the worker pod becomes active and `AllreduceCommunicator` is aware of it, we perform the following steps:
-    1. Lock all existing worker pods.
+    1. Lock all existing worker pods, which can be done via a barrier operation.
     1. Master pod selects one of the worker pods to broadcast the current model parameters to all worker pods.
     1. Release the lock that each worker pod holds.
     1. All worker pods continue to process training tasks at hand and perform allreduce operations.
@@ -165,6 +165,24 @@ the existing active workers. The existing workers will then continue to run on t
 Note that since the existing active workers have the exact same copy of the model after the previous allreduce operation completes,
 we can guarantee that the new worker will have the same copy of the model as the ones on other workers once the next
 allreduce operation completes.
+
+#### Data Distribution among Workers
+
+In order to perform allreduce operation, every worker must have training data to calculate gradients. However,
+ElasticDL is a task-based system where any worker may stop receiving tasks with data as the dataset has been fully
+distributed to all the workers. As a result, some workers may have already exited and will not be able to generate gradients
+to continue perform allreduce operations with the rest of the workers.
+
+In this situation, if we treat the exited worker pods as succeeded, the `AllreduceCommunicator` will not be reconstructed
+and thus the training will be stuck. If we treat the exited worker pods as failed, the `AllreduceCommunicator` will be reconstructed
+every time when a worker exits, which introduces a lot of unnecessary reconstructions.
+
+Alternative, we can perform the following steps to address this issue:
+
+1. If any worker finds out that no additional tasks are available, this worker will inform other workers to stop any
+allreduce operations that might be undergoing, which can be done via a barrier operation.
+1. All workers continue calculating gradients and then update the local model directly.
+1. All workers perform allreduce operation to average the model parameters on each worker.
 
 #### Training with Evaluation
 
