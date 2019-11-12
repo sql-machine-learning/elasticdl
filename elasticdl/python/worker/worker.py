@@ -159,6 +159,8 @@ class Worker(object):
                 self._model, self._embedding_layers
             ):
                 self._non_embed_vars[var.name] = var
+            if self._use_multi_ps:
+                self.init_ps_var_partition()
 
     def _init_embedding_layer(self):
         """
@@ -220,9 +222,16 @@ class Worker(object):
 
     def get_model_from_ps(self, version, method):
         model_version = -1
-        for stub in self._ps_stubs:
+        for ps_id, stub in enumerate(self._ps_stubs):
+            if ps_id not in self._ps_vars:
+                continue
             req = empty_pb2.Empty()
             res = stub.pull_variable(req)
+
+            if not res.model_init_status:
+                # push variable to ps for initialization
+                self.report_variable_to_ps(ps_id)
+                res = stub.pull_variable(req)
 
             for tensor_pb in res.model.param:
                 tensor = Tensor.from_tensor_pb(tensor_pb)
@@ -279,7 +288,7 @@ class Worker(object):
             )
         self._stub.ReportVariable(req)
 
-    def report_variable_to_ps(self):
+    def init_ps_var_partition(self):
         ps_vars = {}
         for v in self._non_embed_vars.values():
             if v.name not in self._var_to_ps:
@@ -291,29 +300,34 @@ class Worker(object):
                 ps_vars[ps_id] = [v]
             else:
                 ps_vars[ps_id].append(v)
+        self._ps_vars = ps_vars
 
+    def report_variable_to_ps(self, ps_id):
+        model = elasticdl_pb2.Model()
+        if ps_id in self._ps_vars:
+            vars = self._ps_vars[ps_id]
+            for var in vars:
+                emplace_tensor_pb_from_ndarray(
+                    model.param, var.numpy(), name=var.name
+                )
+        if self._embedding_layers:
+            embedding_infos = elasticdl_pb2.EmbeddingTableInfo
+            for layer in self._embedding_layers:
+                embedding_info = embedding_infos.add()
+                embedding_info.name = layer.name
+                embedding_info.dim = layer.output_dim
+                embedding_info.initializer = layer.embeddings_initializer
+
+        self._ps_stubs[ps_id].push_model(model)
+
+    def report_variable_to_all_ps(self):
         # TODO: call `push_model` in parallel
         for ps_id in range(len(self._ps_stubs)):
-            model = elasticdl_pb2.Model()
-            if ps_id in ps_vars:
-                vars = ps_vars[ps_id]
-                for var in vars:
-                    emplace_tensor_pb_from_ndarray(
-                        model.param, var.numpy(), name=var.name
-                    )
-            if self._embedding_layers:
-                embedding_infos = elasticdl_pb2.EmbeddingTableInfo
-                for layer in self._embedding_layers:
-                    embedding_info = embedding_infos.add()
-                    embedding_info.name = layer.name
-                    embedding_info.dim = layer.output_dim
-                    embedding_info.initializer = layer.embeddings_initializer
-
-            self._ps_stubs[ps_id].push_model(model)
+            self.report_variable_to_ps(ps_id)
 
     def report_variable(self):
         if self._use_multi_ps:
-            self.report_variable_to_ps()
+            self.report_variable_to_all_ps()
         else:
             self.report_variable_to_master()
 
@@ -496,7 +510,10 @@ class Worker(object):
             self._non_embed_vars[var.name] = var
 
         if not self._var_created:
-            self.report_variable()
+            if self._use_multi_ps:
+                self.init_ps_var_partition()
+            else:
+                self.report_variable()
             self._var_created = True
 
         if self._need_embedding_layer_check:
