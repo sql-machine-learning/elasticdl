@@ -277,7 +277,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             minibatch_size=self._batch_size,
             model_zoo=self._model_zoo_path,
             model_def=(
-                "deepfm_functional_api.deepfm_functional_api" ".custom_model"
+                "deepfm_functional_api.deepfm_functional_api.custom_model"
             ),
             ps_channels=self._channel,
         )
