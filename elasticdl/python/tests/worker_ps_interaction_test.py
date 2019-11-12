@@ -255,8 +255,9 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
         tf.keras.backend.clear_session()
         tf.random.set_seed(22)
+        stop_step = 20
         worker_results = self._worker_train(
-            train_db=db, test_db=test_db, dataset="mnist", stop_step=50
+            train_db=db, test_db=test_db, dataset="mnist", stop_step=stop_step
         )
 
         tf.keras.backend.clear_session()
@@ -302,7 +303,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 )
                 acc_meter.reset_states()
 
-            if step > 50:
+            if step > stop_step:
                 break
 
         for w, l in zip(worker_results, local_results):
@@ -331,10 +332,10 @@ class WorkerPSInteractionTest(unittest.TestCase):
         test_db = test_db.batch(self._batch_size)
 
         worker_results = self._worker_train(
-            train_db=db, test_db=test_db, dataset="frappe", stop_step=200
+            train_db=db, test_db=test_db, dataset="frappe", stop_step=100
         )
         acc = max([r[1] for r in worker_results])
-        self.assertLess(0.7, acc)
+        self.assertLess(0.6, acc)
 
     def test_restart_ps(self):
         num_data = 8
