@@ -1,3 +1,5 @@
+import os
+import time
 import traceback
 
 import numpy as np
@@ -122,16 +124,20 @@ class Worker(object):
             model_params=model_params,
             prediction_outputs_processor=prediction_outputs_processor,
         )
-        model_handler = ModelHandler.get_model_handler(distribution_strategy)
-        model_inst = model_handler.get_model_to_train(model_inst)
 
         self._embedding_service_endpoint = embedding_service_endpoint
-        self.set_model(model_inst)
 
         if channel is None:
             self._stub = None
         else:
             self._stub = elasticdl_pb2_grpc.MasterStub(channel)
+
+        self._model_handler = ModelHandler.get_model_handler(
+            distribution_strategy, stub=self._stub
+        )
+        model_inst = self._model_handler.get_model_to_train(model_inst)
+        self.set_model(model_inst)
+
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._model_version = -1
         self._task_data_service = TaskDataService(
@@ -690,10 +696,16 @@ class Worker(object):
             saved_model_path = task.extended_config.get(
                 SaveModelConfig.SAVED_MODEL_PATH
             )
+            saved_model_path = os.path.join(
+                saved_model_path, str(int(time.time()))
+            )
             logger.info(
                 "The path to export model is {}".format(saved_model_path)
             )
-
+            model = self._model_handler.get_model_to_export(
+                self._model, dataset
+            )
+            tf.saved_model.save(model, saved_model_path)
             self.report_task_result(task_id=task.task_id, err_msg="")
 
     def _process_minibatch_and_report(

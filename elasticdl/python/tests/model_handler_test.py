@@ -6,6 +6,8 @@ import tensorflow as tf
 
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.elasticdl.layers.embedding import Embedding
+from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.tests.test_module import (
     custom_model_with_embedding,
     custom_sequential_model,
@@ -35,7 +37,9 @@ def _get_dataset():
 def _mock_model_trained_params(model):
     trained_params = {}
     for var in model.trainable_variables:
-        trained_params[var.name] = np.ones(var.shape.as_list())
+        trained_params[var.name] = np.ones(
+            var.shape.as_list(), dtype="float32"
+        )
     return trained_params
 
 
@@ -53,12 +57,15 @@ class DefaultModelHandlerTest(unittest.TestCase):
         feature_columns = feature_columns_fn()
         model_inst = custom_sequential_model(feature_columns)
         model_inst._build_model_with_inputs(inputs=dataset, targets=None)
-        trained_params = _mock_model_trained_params(model_inst)
         model_inst = self.model_handler.get_model_to_export(
-            model_inst, trained_params, dataset
+            model_inst, dataset
         )
         self.assertEqual(list(model_inst.inputs.keys()), ["age", "education"])
         self.assertEqual(len(model_inst.outputs), 1)
+
+        mock_params = _mock_model_trained_params(model_inst)
+        for var in model_inst.trainable_variables:
+            var.assign(mock_params[var.name])
 
         test_data = {
             "age": [14, 56, 78, 38, 80],
@@ -77,8 +84,19 @@ class DefaultModelHandlerTest(unittest.TestCase):
 class ParameterSeverModelHandlerTest(unittest.TestCase):
     def setUp(self):
         tf.keras.backend.clear_session()
+        self.master = MasterServicer(
+            2,
+            3,
+            None,
+            None,
+            init_var=[],
+            checkpoint_filename_for_init="",
+            checkpoint_service=CheckpointService("", 0, 0, False),
+            evaluation_service=None,
+        )
+        self.master._version = 1
         self.model_handler = ModelHandler.get_model_handler(
-            distribution_strategy="ParameterServerStrategy"
+            distribution_strategy="ParameterServerStrategy", stub=self.master
         )
 
     def test_get_model_to_train(self):
@@ -89,10 +107,12 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
     def test_get_model_to_export(self):
         model_inst = custom_model_with_embedding()
         trained_params = _mock_model_trained_params(model_inst)
+        for name, value in trained_params.items():
+            self.master.set_model_var(name, value)
 
         train_model = self.model_handler.get_model_to_train(model_inst)
         export_model = self.model_handler.get_model_to_export(
-            train_model, trained_params, dataset=None
+            train_model, dataset=None
         )
 
         test_data = tf.constant([0])

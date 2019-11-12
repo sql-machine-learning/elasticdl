@@ -3,15 +3,10 @@ import threading
 import traceback
 
 from kubernetes import client, config, watch
-from kubernetes.client import (
-    V1EnvVar,
-    V1EnvVarSource,
-    V1ObjectFieldSelector,
-    V1PersistentVolumeClaimVolumeSource,
-)
+from kubernetes.client import V1EnvVar, V1EnvVarSource, V1ObjectFieldSelector
 
 from elasticdl.python.common.k8s_resource import parse as parse_resource
-from elasticdl.python.common.k8s_volume import parse as parse_volume
+from elasticdl.python.common.k8s_volume import parse_volume_and_mount
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import load_module
 
@@ -206,20 +201,11 @@ class Client(object):
 
         # Mount data path
         if kargs["volume"]:
-            volume_dict = parse_volume(kargs["volume"])
-            volume_name = kargs["pod_name"] + "-volume"
-            volume = client.V1Volume(
-                name=volume_name,
-                persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
-                    claim_name=volume_dict["claim_name"], read_only=False
-                ),
+            volumes, volume_mounts = parse_volume_and_mount(
+                kargs["volume"], kargs["pod_name"]
             )
-            spec.volumes = [volume]
-            container.volume_mounts = [
-                client.V1VolumeMount(
-                    name=volume_name, mount_path=volume_dict["mount_path"]
-                )
-            ]
+            spec.volumes = volumes
+            container.volume_mounts = volume_mounts
 
         pod = client.V1Pod(
             spec=spec,
