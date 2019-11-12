@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Dense, Embedding, Input
+from tensorflow.keras.layers import Dense, Input
 
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,

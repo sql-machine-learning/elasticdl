@@ -153,7 +153,8 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
     def test_get_subclass_model_to_export(self):
         def _get_dataset():
             dataset = tf.data.Dataset.from_tensor_slices(
-                np.random.randint(0, 10, (10, 4)))
+                np.random.randint(0, 10, (10, 4))
+            )
             dataset = dataset.batch(2)
             return dataset
 
@@ -161,10 +162,11 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
         dataset = _get_dataset()
 
         trained_params = {
-            "custom_model/embedding/embeddings:0": np.ones((4, 2),
-                                                           dtype="float32"),
+            "custom_model/embedding/embeddings:0": np.ones(
+                (4, 2), dtype="float32"
+            ),
             "custom_model/dense/kernel:0": np.ones((2, 1), dtype="float32"),
-            "custom_model/dense/bias:0": np.ones((1), dtype="float32")
+            "custom_model/dense/bias:0": np.ones((1), dtype="float32"),
         }
 
         for name, value in trained_params.items():
