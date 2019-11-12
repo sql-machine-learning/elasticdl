@@ -39,8 +39,10 @@ class WorkerPSInteractionTest(unittest.TestCase):
             "mnist_functional_api.mnist_functional_api.custom_model"
         )
         self._batch_size = 16
-        ports = [12345, 12346]
-        self._pserver, self._channel = self._create_pserver_and_channel(ports)
+        self._ports = [12345, 12346]
+        self._pserver, self._channel = self._create_pserver_and_channel(
+            self._ports
+        )
 
     def tearDown(self):
         for pserver in self._pserver:
@@ -77,6 +79,14 @@ class WorkerPSInteractionTest(unittest.TestCase):
             )
             channels.append(channel)
         return pservers, channels
+
+    def _restart_pserver(self):
+        # Stop first
+        self.tearDown()
+        # Start again
+        self._pserver, self._channel = self._create_pserver_and_channel(
+            self._ports
+        )
 
     def test_worker_pull_embedding(self):
         worker = Worker(
@@ -133,7 +143,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
             ps_channels=self._channel,
         )
         worker._run_model_call_before_training(images)
-        worker.report_variable()
         worker.get_model(0, elasticdl_pb2.MINIMUM)
         w_loss, w_grads = worker.training_process_eagerly(images, labels)
         worker.report_gradient(w_grads)
@@ -198,7 +207,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
         for step, (x, y) in enumerate(train_db):
             if step == 0:
                 worker._run_model_call_before_training(x)
-                worker.report_variable()
 
             worker.get_model(step, elasticdl_pb2.MINIMUM)
             w_loss, w_grads = worker.training_process_eagerly(x, y)
@@ -247,8 +255,9 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
         tf.keras.backend.clear_session()
         tf.random.set_seed(22)
+        stop_step = 20
         worker_results = self._worker_train(
-            train_db=db, test_db=test_db, dataset="mnist", stop_step=50
+            train_db=db, test_db=test_db, dataset="mnist", stop_step=stop_step
         )
 
         tf.keras.backend.clear_session()
@@ -294,7 +303,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 )
                 acc_meter.reset_states()
 
-            if step > 50:
+            if step > stop_step:
                 break
 
         for w, l in zip(worker_results, local_results):
@@ -323,10 +332,52 @@ class WorkerPSInteractionTest(unittest.TestCase):
         test_db = test_db.batch(self._batch_size)
 
         worker_results = self._worker_train(
-            train_db=db, test_db=test_db, dataset="frappe", stop_step=200
+            train_db=db, test_db=test_db, dataset="frappe", stop_step=100
         )
         acc = max([r[1] for r in worker_results])
-        self.assertLess(0.7, acc)
+        self.assertLess(0.6, acc)
+
+    def test_restart_ps(self):
+        num_data = 8
+        training_data = [
+            random_batch(self._batch_size) for _ in range(num_data)
+        ]
+        workers = []
+        for w in range(2):
+            self._restart_pserver()
+            tf.keras.backend.clear_session()
+            tf.random.set_seed(22)
+            worker = Worker(
+                worker_id=0,
+                job_type=elasticdl_pb2.TRAINING,
+                minibatch_size=self._batch_size,
+                model_zoo=self._model_zoo_path,
+                model_def=self._model_def,
+                ps_channels=self._channel,
+            )
+            workers.append(worker)
+            worker._run_model_call_before_training(training_data[0][0])
+            for i in range(num_data):
+                worker.get_model(0, elasticdl_pb2.MINIMUM)
+                w_loss, w_grads = worker.training_process_eagerly(
+                    training_data[i][0], training_data[i][1]
+                )
+                worker.report_gradient(w_grads)
+                if w == 1 and i == 3:
+                    # Restart ps for the 2nd worker at i==3
+                    self._restart_pserver()
+                    # `report_variable` will be called in `get_model` to
+                    # initialize variables on ps with worker variables
+                    worker.get_model(0, elasticdl_pb2.MINIMUM)
+                    # send the grads again as these grads are not applied
+                    # on worker variables
+                    worker.report_gradient(w_grads)
+
+        for var_name in workers[0]._non_embed_vars:
+            np.testing.assert_array_equal(
+                workers[0]._non_embed_vars[var_name].numpy(),
+                workers[1]._non_embed_vars[var_name].numpy(),
+            )
 
 
 if __name__ == "__main__":
