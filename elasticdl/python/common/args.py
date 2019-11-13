@@ -126,9 +126,6 @@ def add_common_params(parser):
         "--num_workers", type=int, help="Number of workers", default=0
     )
     parser.add_argument(
-        "--num_ps_pods", type=int, help="Number of PS pods", default=0
-    )
-    parser.add_argument(
         "--worker_resource_request",
         default="cpu=1,memory=4096Mi",
         type=str,
@@ -211,6 +208,26 @@ def add_common_params(parser):
 
 
 def add_train_params(parser):
+    parser.add_argument(
+        "--num_ps_pods", type=int, help="Number of PS pods", default=0
+    )
+    parser.add_argument(
+        "--ps_resource_request",
+        default="cpu=1,memory=4096Mi",
+        type=str,
+        help="The minimal resource required by worker, "
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+    )
+    parser.add_argument(
+        "--ps_resource_limit",
+        type=str,
+        help="The maximal resource required by worker, "
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1,"
+        "default to worker_resource_request",
+    )
+    parser.add_argument(
+        "--ps_pod_priority", help="The requested priority of PS pod"
+    )
     parser.add_argument(
         "--tensorboard_log_dir",
         default="",
@@ -542,6 +559,10 @@ def parse_master_args(master_args=None):
 
 def parse_ps_args(ps_args=None):
     parser = argparse.ArgumentParser(description="ElasticDL PS")
+    parser.add_argument(
+        "--ps_id", help="ID unique to the PS", type=int, required=True
+    )
+
     add_common_params(parser)
     add_train_params(parser)
     # TODO: add PS replica address for RPC stub creation
@@ -562,7 +583,7 @@ def parse_worker_args(worker_args=None):
     parser = argparse.ArgumentParser(description="ElasticDL Worker")
     add_common_args_between_master_and_worker(parser)
     parser.add_argument(
-        "--worker_id", help="Id unique to the worker", type=int, required=True
+        "--worker_id", help="ID unique to the worker", type=int, required=True
     )
     parser.add_argument("--job_type", help="Job type", required=True)
     parser.add_argument("--master_addr", help="Master ip:port", required=True)
@@ -588,7 +609,7 @@ def parse_worker_args(worker_args=None):
 
 
 def build_arguments_from_parsed_result(args, filter_args=None):
-    """Resconstruct arguments from parsed result
+    """Reconstruct arguments from parsed result
     Args:
         args: result from `parser.parse_args()`
     Returns:
