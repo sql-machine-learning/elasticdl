@@ -143,10 +143,6 @@ class Master(object):
         # Initialize master service
         self.master_servicer, self.server = self._create_master_service(args)
 
-        if self.num_ps_pods:
-            # TODO: create ps pod manager for distributed PS
-            pass
-
         # Initialize instance manager
         self.instance_manager = self._create_instance_manager(args)
 
@@ -165,13 +161,10 @@ class Master(object):
         self.server.start()
         self.logger.info("Master RPC server started")
 
-        if self.num_ps_pods:
-            # TODO: start ps pods
-            pass
-
         # Start the worker manager if requested
         if self.instance_manager:
             self.instance_manager.update_status(InstanceManagerStatus.PENDING)
+            self.instance_manager.start_all_ps()
             self.instance_manager.start_workers()
             self.instance_manager.update_status(InstanceManagerStatus.RUNNING)
 
@@ -401,6 +394,30 @@ class Master(object):
             ]
             worker_args.extend(build_arguments_from_parsed_result(args))
 
+            ps_command = ["python"]
+            ps_args = [
+                "-m",
+                "elasticdl.python.ps.main",
+                "--grads_to_wait",
+                str(args.grads_to_wait),
+                "--lr_staleness_modulation",
+                str(args.lr_staleness_modulation),
+                "--use_async",
+                str(args.use_async),
+                "--minibatch_size",
+                str(args.minibatch_size),
+                "--model_zoo",
+                args.model_zoo,
+                "--model_def",
+                args.model_def,
+                "--job_name",
+                args.job_name,
+                "--num_minibatches_per_task",
+                str(args.num_minibatches_per_task),
+                "--port",
+                "2222",
+            ]
+
             env_dict = parse_envs(args.envs)
             env = []
             for key in env_dict:
@@ -417,6 +434,12 @@ class Master(object):
                 worker_resource_request=args.worker_resource_request,
                 worker_resource_limit=args.worker_resource_limit,
                 worker_pod_priority=args.worker_pod_priority,
+                num_ps=args.num_ps_pods,
+                ps_command=ps_command,
+                ps_args=ps_args,
+                ps_resource_request=args.ps_resource_request,
+                ps_resource_limit=args.ps_resource_limit,
+                ps_pod_priority=args.ps_pod_priority,
                 volume=args.volume,
                 image_pull_policy=args.image_pull_policy,
                 restart_policy=args.restart_policy,
