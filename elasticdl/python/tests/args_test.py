@@ -45,6 +45,8 @@ class ArgsTest(unittest.TestCase):
         original_args = [
             "--ps_id",
             str(0),
+            "--port",
+            str(2222),
             "--minibatch_size",
             str(minibatch_size),
             "--model_zoo",
@@ -58,6 +60,7 @@ class ArgsTest(unittest.TestCase):
         ]
         parsed_args = parse_ps_args(original_args)
         self.assertEqual(parsed_args.ps_id, 0)
+        self.assertEqual(parsed_args.port, 2222)
         self.assertEqual(parsed_args.minibatch_size, minibatch_size)
         self.assertEqual(
             parsed_args.num_minibatches_per_task, num_minibatches_per_task

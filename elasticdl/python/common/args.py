@@ -562,6 +562,9 @@ def parse_ps_args(ps_args=None):
     parser.add_argument(
         "--ps_id", help="ID unique to the PS", type=int, required=True
     )
+    parser.add_argument(
+        "--port", help="Port used by the PS pod", type=int, required=True
+    )
 
     add_common_params(parser)
     add_train_params(parser)
