@@ -177,6 +177,7 @@ class Worker(object):
             layer.set_endpoint(self._embedding_service_endpoint)
             if self._use_multi_ps:
                 layer.set_lookup_embedding_func(self.pull_embedding_vector)
+                self.report_embedding_info()
 
         self._need_embedding_layer_check = (
             True if self._embedding_layers else False
@@ -511,7 +512,7 @@ class Worker(object):
               more than once during one forward-pass.
         """
         if self._embedding_layers:
-            self.report_embedding_info()
+
             with tf.GradientTape() as tape:
                 self._set_tape_for_embedding(tape)
                 _ = self._model.call(features)
