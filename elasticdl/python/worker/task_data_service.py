@@ -50,43 +50,30 @@ class TaskDataService(object):
     def get_current_task(self):
         return self._current_task
 
-    def report_task_done(self, task_id, err_msg, exec_counters=None):
+    def _do_report_task(self, task, err_msg=""):
+        if self._failed_record_count != 0:
+            exec_counters = {
+                TaskExecCounterKey.FAIL_COUNT: self._failed_record_count
+            }
+        else:
+            exec_counters = None
         self._worker.report_task_result(
-            task_id, err_msg, exec_counters=exec_counters
+            task.task_id, err_msg, exec_counters=exec_counters
         )
 
-    def handle_next_task(self, err_msg=""):
-        with self._lock:
-            # Reason for keep_poping, batch_size may be larger than
-            # task.end - task.start, so we keep poping task until
-            # reported count is less than current data size
-            keep_poping = True
-
-            # Becuase a single batch comes from multiple tasks,
-            # We just report the number of failing records together
-            # with the first task
-            if self._failed_record_count != 0:
-                exec_counters = {
-                    TaskExecCounterKey.FAIL_COUNT: self._failed_record_count
-                }
-            else:
-                exec_counters = None
-            while keep_poping:
-                task = self._pending_tasks.popleft()
-                self._reported_record_count -= task.end - task.start
-                self.report_task_done(
-                    task.task_id, err_msg, exec_counters=exec_counters
-                )
-                exec_counters = None  # reset counters
-                if self._pending_tasks:
-                    self._current_task = self._pending_tasks[0]
-                    task_len = (
-                        self._current_task.end - self._current_task.start
-                    )
-                    keep_poping = self._reported_record_count >= task_len
-                else:
-                    break
-            self._failed_record_count = 0
+    def _log_fail_records(self, task, err_msg):
+        task_len = task.end - task.start
+        msg = (
+            "records ({f}/{t}) failure, possible "
+            "in task_id: {task_id} "
+            'reason "{err_msg}"'
+        ).format(
+            task_id=task.task_id,
+            err_msg=err_msg,
+            f=self._failed_record_count,
+            t=task_len,
+        )
+        logger.warning(msg)
 
     def report_record_done(self, count, err_msg=""):
         """
@@ -94,28 +81,33 @@ class TaskDataService(object):
         so TaskDataService knows if some pending tasks are finished
         and report_task_result to the master.
         """
-        if self._pending_tasks:
-            task = self._pending_tasks[0]
-            self._reported_record_count += count
-            if err_msg:
-                self._failed_record_count += count
+        self._reported_record_count += count
+        if err_msg:
+            self._failed_record_count += count
 
-            total_record_num = task.end - task.start
-            if self._reported_record_count >= total_record_num:
-                if err_msg:
-                    msg = (
-                        "records ({f}/{t}) failure, possible "
-                        "in task_id: {task_id} "
-                        'reason "{err_msg}"'
-                    ).format(
-                        task_id=task.task_id,
-                        err_msg=err_msg,
-                        f=self._failed_record_count,
-                        t=total_record_num,
-                    )
-                    err_msg = msg
-                    logger.warning(err_msg)
-                self.handle_next_task(err_msg=err_msg)
+        task = self._pending_tasks[0]
+        total_record_num = task.end - task.start
+        if self._reported_record_count >= total_record_num:
+            if err_msg:
+                self._log_fail_records(task, err_msg)
+
+            # Keep poping: batch_size may be larger than
+            # task.end - task.start, so we keep poping task until
+            # reported count is less than current data size
+            with self._lock:
+                while self._pending_tasks and self._reported_record_count >= (
+                    self._pending_tasks[0].end - self._pending_tasks[0].start
+                ):
+                    task = self._pending_tasks[0]
+                    self._reported_record_count -= task.end - task.start
+                    self._pending_tasks.popleft()
+                    self._do_report_task(task, err_msg)
+                    # Becuase a single batch comes from multiple tasks,
+                    # We just report the number of failing records together
+                    # with the first task
+                    self._failed_record_count = 0
+                if self._pending_tasks:
+                    self._current_task = self._pending_tasks[0]
 
     def get_validation_dataset(self, eval_task):
         """
