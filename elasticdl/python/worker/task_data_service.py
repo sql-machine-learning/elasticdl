@@ -57,14 +57,14 @@ class TaskDataService(object):
 
     def handle_next_task(self, err_msg=""):
         with self._lock:
-            # Reason for keep_poping, batch_size may be large than
+            # Reason for keep_poping, batch_size may be larger than
             # task.end - task.start, so we keep poping task until
             # reported count is less than current data size
             keep_poping = True
 
             # Becuase a single batch comes from multiple tasks,
             # We just report the number of failing records together
-            # with first task
+            # with the first task
             if self._failed_record_count != 0:
                 exec_counters = {
                     TaskExecCounterKey.FAIL_COUNT: self._failed_record_count
