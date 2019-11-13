@@ -25,7 +25,6 @@ def main():
     logger = log_utils.get_logger(__name__)
 
     logger.info("Starting worker %d", args.worker_id)
-    percentage = args.record_failure_tolerance_percentage
     worker = Worker(
         args.worker_id,
         args.job_type,
@@ -44,7 +43,6 @@ def main():
         get_model_steps=args.get_model_steps,
         distribution_strategy=args.distribution_strategy,
         ps_channels=ps_channels,
-        record_failure_tolerance_percentage=percentage,
     )
     worker.run()
 

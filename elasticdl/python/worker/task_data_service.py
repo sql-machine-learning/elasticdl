@@ -12,11 +12,7 @@ from elasticdl.python.data.dataset_utils import create_dataset_from_tasks
 
 class TaskDataService(object):
     def __init__(
-        self,
-        worker,
-        training_with_evaluation,
-        data_reader_params=None,
-        record_failure_tolerance_percentage=0.0,
+        self, worker, training_with_evaluation, data_reader_params=None,
     ):
         self._worker = worker
         self._training_with_evaluation = training_with_evaluation
@@ -32,9 +28,6 @@ class TaskDataService(object):
             self.data_reader = create_data_reader(data_origin=None)
         self._warm_up_task = None
         self._has_warmed_up = False
-        self._record_failure_tolerance_percentage = (
-            record_failure_tolerance_percentage
-        )
 
     def _reset(self):
         """

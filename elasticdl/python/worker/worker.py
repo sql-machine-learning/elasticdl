@@ -63,7 +63,6 @@ class Worker(object):
         get_model_steps=1,
         distribution_strategy=None,
         ps_channels=None,
-        record_failure_tolerance_percentage=0.0,
     ):
         """
         Arguments:
@@ -141,12 +140,10 @@ class Worker(object):
 
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._model_version = -1
-        percentage = record_failure_tolerance_percentage
         self._task_data_service = TaskDataService(
             self,
             self._job_type == JobType.TRAINING_WITH_EVALUATION,
             data_reader_params=get_dict_from_params_str(data_reader_params),
-            record_failure_tolerance_percentage=percentage,
         )
         self._get_model_steps = get_model_steps
         if self._get_model_steps > 1:
