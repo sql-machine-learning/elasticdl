@@ -202,7 +202,7 @@ If the worker encounters any evaluation tasks in the above process, it will eval
 under-going allreduce-based gradients averaging has completed and the model has been updated. The behavior is the same as
 what's described in [model evaluation design doc](model_evaluation.md) except that we are evaluating the model on workers
 instead of on parameter servers. Once an evaluation completes, we send the evaluation result to master for TensorBoard
-service to consume.
+service to consume for visualization.
 
 #### ElasticDL Embedding Layer
 
@@ -242,9 +242,13 @@ will affect the model training accuracy. We can support customized learning rate
 into account. We can also support [LARS (Layer-wise Adaptive Rate Scaling)](https://arxiv.org/abs/1708.03888) so that
 large batch size can be used.
 * The fault-tolerant allreduce APIs only accept `numpy.array` as input and NCCL APIs only support data located in GPU memory.
-In order to work with TensorFlow, we have to first convert `tf.Tensor` object to `numpy.array` and then copy it from GPU
-to CPU memory via a `cudaMemcpy` call before making the allreduce call. We can optimize this process to avoid unnecessary
+In order to work with TensorFlow, we have to first convert `tf.Tensor` object to `numpy.array` and then copy it from CPU
+to GPU memory via a `cudaMemcpy` call before making the allreduce call. We can optimize this process to avoid unnecessary
 conversions and copies.
+* Under the current design of [model evaluation](model_evaluation.md), the training tasks are not paused before an evaluation
+job starts, which could easily results in outdated models on each worker that will be used for evaluation. On the other hand,
+pausing the training tasks before the evaluation job starts could slow down the training process. We can improve the model evaluation
+process so it will work more seamlessly with allreduce-based training.
 
 ## Existing Collective Communication Technologies
 
