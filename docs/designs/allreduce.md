@@ -89,7 +89,19 @@ res, model_params = communicator.broadcast(from=worker_0_ip)
 init_local_model(model_params)
 ```
 
-There are a couple of implementation details that are worth mentioning here:
+In addition, sometimes we need an API similar to [MPI_Barrier](https://www.mpich.org/static/docs/latest/www3/MPI_Barrier.html)
+to lock/unlock all the existing worker pods in order to pause allreduce operations in case of failures, which we will illustrate in
+more details in the following section. The interface of this is simple:
+
+```python
+communicator = BarrierCommunicator()
+res = communicator.barrier()
+```
+
+Though NCCL doesn't provide an implementation of barrier operation, it should be straightforward to do so, e.g. allreduce
+1 byte and then perform a CUDA synchronization. A reference implementation can be found in PyTorch [here](https://github.com/pytorch/pytorch/pull/14142).
+
+There are a couple of implementation details for the proposed interfaces above that are worth mentioning here:
 
 1. All NCCL API calls are asynchronous but our implementation of the communication collective primitives is synchronous
 so it's easier for other frameworks like ElasticDL to use without worrying about failure handling.
@@ -196,24 +208,24 @@ service to consume.
 
 ElasticDL embedding layer is not supported under allreduce-based training since each worker has the exact same copy of
 the model that must fit within each worker's specified resources. Any layers in the model defined via
-``elasticdl.layers.embedding`` will be replaced by `tf.keras.layers.Embedding`.
+`elasticdl.layers.embedding` will be replaced by `tf.keras.layers.Embedding`.
 
 #### Relevant CLI Arguments
 
 The following CLI arguments are relevant and their behaviors might be changed under allreduce-based training:
 
-* ``--restart_policy``: The pod restart policy when pod crashed.
+* `--restart_policy`: The pod restart policy when pod crashed.
 the `AllreduceCommunicator` just reconstructed the communicator and we want to wait for a while before restarting the
 failed worker pod which requires reconstruction of the communicator again once the pod becomes active. 
-* ``--distribution_strategy``: In addition to the existing "ParameterServerStrategy" that we have, we add a new strategy
+* `--distribution_strategy`: In addition to the existing "ParameterServerStrategy" that we have, we add a new strategy
 called "AllreduceStrategy".
-* ``--num_ps_pods`` will be ignored if "AllreduceStrategy" is used and only ``--num_workers`` will be taken into account.
-* ``--use_async`` and ``--lr_staleness_modulation`` will be ignored if "AllreduceStrategy" is used.
-* Only ``--grads_to_wait = 1`` will be supported if "AllreduceStrategy" is used.
+* `--num_ps_pods` will be ignored if "AllreduceStrategy" is used and only `--num_workers` will be taken into account.
+* `--use_async` and `--lr_staleness_modulation` will be ignored if "AllreduceStrategy" is used.
+* Only `--grads_to_wait = 1` will be supported if "AllreduceStrategy" is used.
 
 The following new CLI arguments are added:
 
-* ``--restart_delay_secs``: The number of seconds to delay before restarting the failed pods. This could be useful when
+* `--restart_delay_secs`: The number of seconds to delay before restarting the failed pods. This could be useful when
 
 
 ## Potential Future Optimizations
@@ -229,6 +241,10 @@ will decrease communication costs.
 will affect the model training accuracy. We can support customized learning rate scheduler, which will take epoch/batch_size
 into account. We can also support [LARS (Layer-wise Adaptive Rate Scaling)](https://arxiv.org/abs/1708.03888) so that
 large batch size can be used.
+* The fault-tolerant allreduce APIs only accept `numpy.array` as input and NCCL APIs only support data located in GPU memory.
+In order to work with TensorFlow, we have to first convert `tf.Tensor` object to `numpy.array` and then copy it from GPU
+to CPU memory via a `cudaMemcpy` call before making the allreduce call. We can optimize this process to avoid unnecessary
+conversions and copies.
 
 ## Existing Collective Communication Technologies
 
