@@ -172,5 +172,6 @@ service Pserver {
     rpc pull_variable(google.protobuf.Empty) returns (PullVariableResponse);
     rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
     rpc push_model(Model) returns (google.protobuf.Empty);
+    rpc push_embedding_info(Model) returns (google.protobuf.Empty);
     rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
 }

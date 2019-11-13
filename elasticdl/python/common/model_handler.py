@@ -154,10 +154,14 @@ class ParameterServerModelHandler(ModelHandler):
                         src_embedding_class, dst_embedding_class
                     )
                 )
+                # ElasticDL embedding only accept a string type initializer
+                init_class_name = tf.keras.initializers.serialize(
+                    layer.embeddings_initializer
+                )["class_name"]
                 embedding_layer = dst_embedding_class(
                     output_dim=layer.output_dim,
                     input_dim=layer.input_dim,
-                    embeddings_initializer=layer.embeddings_initializer,
+                    embeddings_initializer=init_class_name,
                     mask_zero=layer.mask_zero,
                     input_length=layer.input_length,
                 )

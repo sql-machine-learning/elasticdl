@@ -10,7 +10,7 @@ def int_to_id(number, bucket_num):
     return number % bucket_num
 
 
-def scatter_embedding_vector(values, indices, num):
+def scatter_embedding_vector(values, indices, bucket_num):
     """
     Scatter embedding vectors to different parameter servers.
     There are two steps to process <id, embedding vector> pairs:
@@ -36,7 +36,7 @@ def scatter_embedding_vector(values, indices, num):
     ps_ids = {}
     indices_list = indices.tolist()
     for i, item_id in enumerate(indices_list):
-        ps_id = int_to_id(item_id, num)
+        ps_id = int_to_id(item_id, bucket_num)
         if ps_id not in ps_ids:
             ps_ids[ps_id] = [(i, item_id)]
         else:

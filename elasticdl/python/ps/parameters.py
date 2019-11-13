@@ -33,14 +33,14 @@ class Parameters(object):
     def get_embedding_param(self, name, indices):
         if name not in self.embedding_params:
             raise ValueError(
-                "Please initialize embedding param %s first!", name
+                "Please initialize embedding param %s first!" % name
             )
         return self.embedding_params[name].get(indices)
 
     def set_embedding_param(self, name, indices, values):
         if name not in self.embedding_params:
             raise ValueError(
-                "Please initialize embedding param %s first!", name
+                "Please initialize embedding param %s first!" % name
             )
         self.embedding_params[name].set(indices, values)
 
@@ -58,13 +58,15 @@ class Parameters(object):
                         "Keras embedding param error: "
                         "the shape of gradient %s is (%d, %d), "
                         "the shape of parameter %s is (%d, %d), "
-                        "which is incompatible",
-                        name,
-                        dim0,
-                        dim1,
-                        name,
-                        param_shape[0],
-                        param_shape[1],
+                        "which is incompatible"
+                        % (
+                            name,
+                            dim0,
+                            dim1,
+                            name,
+                            param_shape[0],
+                            param_shape[1],
+                        )
                     )
             else:
                 if grad.values.shape != param_shape:
@@ -72,11 +74,13 @@ class Parameters(object):
                         "Non embedding param error: "
                         "the shape of gradient %s is %s, "
                         "the shape of parameter %s is %s, "
-                        "which is incompatible",
-                        name,
-                        str(grad.values.shape),
-                        name,
-                        str(param_shape),
+                        "which is incompatible"
+                        % (
+                            name,
+                            str(grad.values.shape),
+                            name,
+                            str(param_shape),
+                        )
                     )
         elif name in self.embedding_params:
             if grad.values.shape[1] != self.embedding_params[name].dim:
@@ -84,15 +88,17 @@ class Parameters(object):
                     "ElasticDL embedding param error: "
                     "the shape of gradient %s is (None, %d), "
                     "the shape of parameter %s is (None, %d), "
-                    "which is incompatible",
-                    name,
-                    grad.values.shape[1],
-                    name,
-                    self.embedding_params[name].dim,
+                    "which is incompatible"
+                    % (
+                        name,
+                        grad.values.shape[1],
+                        name,
+                        self.embedding_params[name].dim,
+                    )
                 )
         else:
             raise ValueError(
-                "Name error: Gradient %s is not in Parameters", name
+                "Name error: Gradient %s is not in Parameters" % name
             )
 
     def init_from_model_pb(self, model_pb):
@@ -111,7 +117,7 @@ class Parameters(object):
             tensors_pb = model_pb.param
             embeddings_pb = model_pb.embedding_table_info
             self._init_non_embedding_params(tensors_pb)
-            self._init_embedding_params(embeddings_pb)
+            self.init_embedding_params(embeddings_pb)
             self.version = model_pb.version
             self.init_status = True
             return True
@@ -128,9 +134,10 @@ class Parameters(object):
             var = tf.Variable(initial_value=arr, trainable=True)
             self.non_embedding_params[name] = var
 
-    def _init_embedding_params(self, embeddings_pb):
+    def init_embedding_params(self, embeddings_pb):
         for pb in embeddings_pb:
-            self.embedding_params[pb.name] = create_embedding_table(pb)
+            if pb.name not in self.embedding_params:
+                self.embedding_params[pb.name] = create_embedding_table(pb)
 
     def has_embedding_params(self):
         return len(self.embedding_params) > 0
