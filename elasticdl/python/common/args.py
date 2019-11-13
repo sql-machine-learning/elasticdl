@@ -605,6 +605,11 @@ def parse_worker_args(worker_args=None):
         "defined in the model definition file.",
         default="PredictionOutputsProcessor",
     )
+    parser.add_argument(
+        "--ps_addrs",
+        type=str,
+        help="Addresses of parameter service pods, separated by comma",
+    )
 
     args, unknown_args = parser.parse_known_args(args=worker_args)
     print_args(args, groups=ALL_ARGS_GROUPS)
