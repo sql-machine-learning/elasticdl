@@ -41,7 +41,6 @@ class TaskDataService(object):
         Reset pending tasks and record counts
         """
 
-        self._cur_record_count = 0
         self._reported_record_count = 0
         self._failed_record_count = 0
         self._pending_tasks = deque()
@@ -188,7 +187,6 @@ class TaskDataService(object):
                     self._pending_save_model_task = task
                     continue
 
-                self._cur_record_count = task.end - task.start
                 self._pending_tasks.append(task)
                 if len(self._pending_tasks) == 1:
                     self._current_task = task
