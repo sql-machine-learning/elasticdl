@@ -37,15 +37,14 @@ class ArgsTest(unittest.TestCase):
         self.assertEqual(value, target)
 
     def test_parse_ps_args(self):
-        num_ps_pods = 2
         minibatch_size = 16
         num_minibatches_per_task = 8
         model_zoo = "dummy_zoo"
         model_def = "dummy_def"
 
         original_args = [
-            "--num_ps_pods",
-            str(num_ps_pods),
+            "--ps_id",
+            str(0),
             "--minibatch_size",
             str(minibatch_size),
             "--model_zoo",
@@ -58,7 +57,7 @@ class ArgsTest(unittest.TestCase):
             str(num_minibatches_per_task),
         ]
         parsed_args = parse_ps_args(original_args)
-        self.assertEqual(parsed_args.num_ps_pods, num_ps_pods)
+        self.assertEqual(parsed_args.ps_id, 0)
         self.assertEqual(parsed_args.minibatch_size, minibatch_size)
         self.assertEqual(
             parsed_args.num_minibatches_per_task, num_minibatches_per_task
