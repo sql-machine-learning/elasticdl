@@ -20,6 +20,7 @@ def main():
     )
 
     # TODO, create PS channels here
+    ps_addrs = args.ps_addrs.split(",")
     ps_channels = None
 
     logger = log_utils.get_logger(__name__)

@@ -71,6 +71,7 @@ class InstanceManager(object):
         self._relaunch_deleted_live_ps = True
 
         self._k8s_client = k8s.Client(event_callback=self._event_cb, **kwargs)
+        self._ps_addrs = self._get_ps_addrs()
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
@@ -83,8 +84,11 @@ class InstanceManager(object):
                 volume=self._volume,
                 image_pull_policy=self._image_pull_policy,
                 command=self._worker_command,
-                args=self._worker_args + ["--worker_id", str(worker_id)],
+                args=self._worker_args
+                + ["--worker_id", str(worker_id)]
+                + ["--ps_addrs", self._ps_addrs],
                 restart_policy=self._restart_policy,
+                ps_addrs=self._ps_addrs,
                 envs=self._envs,
             )
             name = pod.metadata.name
@@ -112,9 +116,10 @@ class InstanceManager(object):
             self._k8s_client.create_ps_service(ps_id)
 
     def _get_ps_addrs(self):
+        addrs = []
         for ps_id in range(self._num_ps):
-            self._k8s_client.get_ps_service_name()
-        return ",".join(self._num_ps)
+            addrs.append(self._k8s_client.get_ps_service_address(ps_id))
+        return ",".join(addrs)
 
     def update_status(self, status):
         master_name = self._k8s_client.get_master_pod_name()

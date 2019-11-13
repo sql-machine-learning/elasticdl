@@ -89,6 +89,13 @@ class Client(object):
     def get_ps_service_name(self, ps_id):
         return self.get_ps_pod_name(ps_id)
 
+    def get_ps_service_address(self, ps_id):
+        return "%s.%s.svc:%d" % (
+            self.get_ps_service_name(ps_id),
+            self.namespace,
+            2222,
+        )
+
     def get_embedding_service_pod_name(self, embedding_service_id):
         return "elasticdl-%s-embedding-service-%s" % (
             self.job_name,
@@ -278,6 +285,7 @@ class Client(object):
             restart_policy=kargs["restart_policy"],
             volume=kargs["volume"],
             owner_pod=master_pod,
+            ps_addrs=kargs.get("ps_addrs", ""),
             env=env,
         )
         # Add replica type and index
