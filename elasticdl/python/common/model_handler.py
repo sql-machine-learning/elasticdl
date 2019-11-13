@@ -128,7 +128,7 @@ class ParameterServerModelHandler(ModelHandler):
         # clear keras model session to avoid clutter from old models/layers.
         tf.keras.backend.clear_session()
         if (
-            type(model) == tf.keras.models.Model
+            isinstance(model, tf.keras.models.Model)
             and not model._is_graph_network
         ):
             model = self._replace_embedding_attributes_for_subclass(

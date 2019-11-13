@@ -1,4 +1,3 @@
-import os
 import unittest
 
 import numpy as np
@@ -8,13 +7,45 @@ from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.tests.test_module import (
-    custom_model_with_embedding,
-    custom_sequential_model,
-    feature_columns_fn,
-)
 
-_model_zoo_path = os.path.dirname(os.path.realpath(__file__))
+
+class CustomModel(tf.keras.models.Model):
+    def __init__(self):
+        super(CustomModel, self).__init__()
+        self.embedding = tf.keras.layers.Embedding(4, 2)
+        self.dense = tf.keras.layers.Dense(1)
+
+    def call(self, inputs):
+        embedding = self.embedding(inputs)
+        output = self.dense(embedding)
+        return output
+
+
+def custom_model_with_embedding():
+    inputs = tf.keras.layers.Input(shape=(4,), name="x")
+    embedding = tf.keras.layers.Embedding(4, 2)(inputs)
+    outputs = tf.keras.layers.Dense(1)(embedding)
+    return tf.keras.models.Model(inputs, outputs)
+
+
+def custom_sequential_model(feature_columns):
+    model = tf.keras.Sequential(
+        [
+            tf.keras.layers.DenseFeatures(feature_columns=feature_columns),
+            tf.keras.layers.Dense(10, activation="relu"),
+            tf.keras.layers.Dense(1, activation="sigmoid"),
+        ]
+    )
+    return model
+
+
+def feature_columns_fn():
+    age = tf.feature_column.numeric_column("age", dtype=tf.int64)
+    education = tf.feature_column.categorical_column_with_hash_bucket(
+        "education", hash_bucket_size=4
+    )
+    education_one_hot = tf.feature_column.indicator_column(education)
+    return [age, education_one_hot]
 
 
 def _get_dataset():
@@ -113,6 +144,39 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
         train_model = self.model_handler.get_model_to_train(model_inst)
         export_model = self.model_handler.get_model_to_export(
             train_model, dataset=None
+        )
+
+        test_data = tf.constant([0])
+        result = export_model.call(test_data).numpy()
+        self.assertEqual(result[0][0], 3.0)
+
+    def test_get_subclass_model_to_export(self):
+        def _get_dataset():
+            dataset = tf.data.Dataset.from_tensor_slices(
+                np.random.randint(0, 10, (10, 4))
+            )
+            dataset = dataset.batch(2)
+            return dataset
+
+        model_inst = CustomModel()
+        dataset = _get_dataset()
+
+        trained_params = {
+            "custom_model/embedding/embeddings:0": np.ones(
+                (4, 2), dtype="float32"
+            ),
+            "custom_model/dense/kernel:0": np.ones((2, 1), dtype="float32"),
+            "custom_model/dense/bias:0": np.ones((1), dtype="float32"),
+        }
+
+        for name, value in trained_params.items():
+            self.master.set_model_var(name, value)
+
+        train_model = self.model_handler.get_model_to_train(model_inst)
+        self.assertEqual(type(train_model.embedding), Embedding)
+
+        export_model = self.model_handler.get_model_to_export(
+            train_model, dataset=dataset
         )
 
         test_data = tf.constant([0])

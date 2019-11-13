@@ -159,11 +159,13 @@ def add_common_params(parser):
         "--image_pull_policy",
         default="Always",
         help="The image pull policy of master and worker",
+        choices=["Never", "IfNotPresent", "Always"],
     )
     parser.add_argument(
         "--restart_policy",
         default="Never",
         help="The pod restart policy when pod crashed",
+        choices=["Never", "OnFailure", "Always"],
     )
     parser.add_argument(
         "--envs",
