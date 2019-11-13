@@ -517,7 +517,6 @@ class Worker(object):
               more than once during one forward-pass.
         """
         if self._embedding_layers:
-
             with tf.GradientTape() as tape:
                 self._set_tape_for_embedding(tape)
                 _ = self._model.call(features)
