@@ -223,7 +223,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
             model_def,
             "--distribution_strategy",
             "ParameterServerStrategy",
-
         ]
         args = parse_worker_args(arguments)
 
