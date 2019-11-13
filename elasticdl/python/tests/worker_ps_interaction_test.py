@@ -96,6 +96,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             model_zoo=self._model_zoo_path,
             model_def=self._model_def,
             ps_channels=self._channel,
+            distribution_strategy="ParameterServerStrategy",
         )
 
         # Test lookup embedding vectors that do not exist
@@ -141,6 +142,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 "mnist_functional_api.mnist_functional_api.custom_model"
             ),
             ps_channels=self._channel,
+            distribution_strategy="ParameterServerStrategy",
         )
         worker._run_model_call_before_training(images)
         worker.get_model(0, elasticdl_pb2.MINIMUM)
@@ -201,6 +203,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             model_zoo=self._model_zoo_path,
             model_def=model_def,
             ps_channels=self._channel,
+            distribution_strategy="ParameterServerStrategy",
         )
         acc_meter = tf.keras.metrics.Accuracy()
         worker_results = []
@@ -209,6 +212,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 worker._run_model_call_before_training(x)
 
             worker.get_model(step, elasticdl_pb2.MINIMUM)
+
             w_loss, w_grads = worker.training_process_eagerly(x, y)
             worker.report_gradient(w_grads)
 
@@ -354,6 +358,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 model_zoo=self._model_zoo_path,
                 model_def=self._model_def,
                 ps_channels=self._channel,
+                distribution_strategy="ParameterServerStrategy",
             )
             workers.append(worker)
             worker._run_model_call_before_training(training_data[0][0])

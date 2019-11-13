@@ -177,6 +177,7 @@ class Worker(object):
             layer.set_endpoint(self._embedding_service_endpoint)
             if self._use_multi_ps:
                 layer.set_lookup_embedding_func(self.pull_embedding_vector)
+                self.report_embedding_info()
 
         self._need_embedding_layer_check = (
             True if self._embedding_layers else False
@@ -315,6 +316,19 @@ class Worker(object):
                 ps_vars[ps_id].append(v)
         self._ps_vars = ps_vars
 
+    def report_embedding_info(self):
+        model = elasticdl_pb2.Model()
+        if self._embedding_layers:
+            embedding_infos = model.embedding_table_info
+            for layer in self._embedding_layers:
+                embedding_info = embedding_infos.add()
+                embedding_info.name = layer.name
+                embedding_info.dim = layer.output_dim
+                embedding_info.initializer = layer.embeddings_initializer
+
+        for ps_id in range(len(self._ps_stubs)):
+            self._ps_stubs[ps_id].push_embedding_info(model)
+
     def report_variable_to_ps(self, ps_id):
         model = elasticdl_pb2.Model()
         if ps_id in self._ps_vars:
@@ -323,14 +337,6 @@ class Worker(object):
                 emplace_tensor_pb_from_ndarray(
                     model.param, var.numpy(), name=var.name
                 )
-        if self._embedding_layers:
-            embedding_infos = elasticdl_pb2.EmbeddingTableInfo
-            for layer in self._embedding_layers:
-                embedding_info = embedding_infos.add()
-                embedding_info.name = layer.name
-                embedding_info.dim = layer.output_dim
-                embedding_info.initializer = layer.embeddings_initializer
-
         self._ps_stubs[ps_id].push_model(model)
 
     def report_variable_to_all_ps(self):
@@ -401,6 +407,10 @@ class Worker(object):
         return res.accepted, res.model_version
 
     def report_gradient_to_ps(self, grads):
+        reqs = [
+            elasticdl_pb2.PushGradientRequest()
+            for i in range(len(self._ps_stubs))
+        ]
         ps_grads = {}
         non_embed_vars_n = len(self._non_embed_vars)
         for g, v in zip(
@@ -411,6 +421,11 @@ class Worker(object):
                 ps_grads[ps_id] = [(g, v.name)]
             else:
                 ps_grads[ps_id].append((g, v.name))
+
+        for ps_id in ps_grads:
+            req = reqs[ps_id]
+            for g, name in ps_grads[ps_id]:
+                emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
 
         if self._embedding_layers:
             edl_embedding_grads = grads[non_embed_vars_n:]
@@ -442,26 +457,19 @@ class Worker(object):
                         g_indices = ids
 
                 results = scatter_embedding_vector(
-                    g_values.numpy(), g_indices.numpy()
+                    g_values.numpy(), g_indices.numpy(), len(self._ps_stubs)
                 )
+
+                for ps_id in results:
+                    req = reqs[ps_id]
+                    gv, gi = results[ps_id]
+                    emplace_tensor_pb_from_ndarray(
+                        req.gradients, values=gv, indices=gi, name=layer.name,
+                    )
 
         # TODO: call `push_gradient` in parallel
         for ps_id in range(len(self._ps_stubs)):
-            req = elasticdl_pb2.PushGradientRequest()
-            if ps_id in ps_grads:
-                for g, name in ps_grads[ps_id]:
-                    emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
-
-            if self._embedding_layers:
-                if ps_id in results:
-                    for (gv, gi) in results[ps_id]:
-                        emplace_tensor_pb_from_ndarray(
-                            req.gradients,
-                            values=gv,
-                            indices=gi,
-                            name=layer.name,
-                        )
-
+            req = reqs[ps_id]
             req.model_version = self._model_version
             res = self._ps_stubs[ps_id].push_gradient(req)
         # TODO: choose the last response temporarily

@@ -78,6 +78,13 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             )
         return empty_pb2.Empty()
 
+    def push_embedding_info(self, request, _):
+        with self._lock:
+            self._parameters.init_embedding_params(
+                request.embedding_table_info
+            )
+        return empty_pb2.Empty()
+
     def push_gradient(self, request, _):
         res = elasticdl_pb2.PushGradientResponse()
         if self._use_async:
