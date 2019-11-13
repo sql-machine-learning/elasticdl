@@ -84,12 +84,12 @@ class ParametersTest(unittest.TestCase):
 
     def test_get_embedding_param(self):
         self._clear_params()
-        self.params._init_embedding_params(self.embeddings_pb)
+        self.params.init_embedding_params(self.embeddings_pb)
         self._test_get_embedding_param()
 
     def test_set_embedding_param(self):
         self._clear_params()
-        self.params._init_embedding_params(self.embeddings_pb)
+        self.params.init_embedding_params(self.embeddings_pb)
         indices = [100, 34, 8]
         x = len(indices)
         values = np.random.uniform(size=x * self.embedding_dim).reshape(
@@ -148,7 +148,7 @@ class ParametersTest(unittest.TestCase):
         self.assertFalse(self.params.has_embedding_params())
 
         # create embedding tables in the parameters
-        self.params._init_embedding_params(self.embeddings_pb)
+        self.params.init_embedding_params(self.embeddings_pb)
         self.assertTrue(self.params.has_embedding_params())
 
         slot_names = ["accumulator", "linear"]
