@@ -3,6 +3,7 @@ import tempfile
 import unittest
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
@@ -73,14 +74,21 @@ class CheckpointTest(unittest.TestCase):
 
             batch_size = 2
             # Launch the training
-            worker = Worker(
+            arguments = [
+                "--worker_id",
                 1,
+                "--job_type",
                 JobType.TRAINING_ONLY,
+                "--minibatch_size",
                 batch_size,
+                "--model_zoo",
                 _model_zoo_path,
-                model_def="test_module.custom_model",
-                channel=None,
-            )
+                "--model_def",
+                "test_module.custom_model",
+            ]
+            args = parse_worker_args(arguments)
+            worker = Worker(args)
+
             filename = create_recordio_file(128, DatasetName.TEST_MODULE, 1)
             task_d = _TaskDispatcher(
                 {filename: (0, 128)}, {}, {}, records_per_task=64, num_epochs=1

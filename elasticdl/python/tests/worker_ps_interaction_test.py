@@ -7,6 +7,7 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.model_utils import get_model_spec
@@ -89,15 +90,22 @@ class WorkerPSInteractionTest(unittest.TestCase):
         )
 
     def test_worker_pull_embedding(self):
-        worker = Worker(
-            worker_id=0,
-            job_type=elasticdl_pb2.TRAINING,
-            minibatch_size=self._batch_size,
-            model_zoo=self._model_zoo_path,
-            model_def=self._model_def,
-            ps_channels=self._channel,
-            distribution_strategy="ParameterServerStrategy",
-        )
+        arguments = [
+            "--worker_id",
+            0,
+            "--job_type",
+            elasticdl_pb2.TRAINING,
+            "--minibatch_size",
+            self._batch_size,
+            "--model_zoo",
+            self._model_zoo_path,
+            "--model_def",
+            self._model_def,
+            "--distribution_strategy",
+            "ParameterServerStrategy",
+        ]
+        args = parse_worker_args(arguments)
+        worker = Worker(args, ps_channels=self._channel)
 
         # Test lookup embedding vectors that do not exist
         layers = ["test-2", "test-2-slot"]
@@ -133,17 +141,23 @@ class WorkerPSInteractionTest(unittest.TestCase):
         # TODO(yunjian.lmh): test optimizer wrapper
         tf.keras.backend.clear_session()
         tf.random.set_seed(22)
-        worker = Worker(
-            worker_id=0,
-            job_type=elasticdl_pb2.TRAINING,
-            minibatch_size=self._batch_size,
-            model_zoo=self._model_zoo_path,
-            model_def=(
-                "mnist_functional_api.mnist_functional_api.custom_model"
-            ),
-            ps_channels=self._channel,
-            distribution_strategy="ParameterServerStrategy",
-        )
+        arguments = [
+            "--worker_id",
+            0,
+            "--job_type",
+            elasticdl_pb2.TRAINING,
+            "--minibatch_size",
+            self._batch_size,
+            "--model_zoo",
+            self._model_zoo_path,
+            "--model_def",
+            "mnist_functional_api.mnist_functional_api.custom_model",
+            "--distribution_strategy",
+            "ParameterServerStrategy",
+        ]
+        args = parse_worker_args(arguments)
+
+        worker = Worker(args, ps_channels=self._channel)
         worker._run_model_call_before_training(images)
         worker.get_model(0, elasticdl_pb2.MINIMUM)
         w_loss, w_grads = worker.training_process_eagerly(images, labels)
@@ -196,15 +210,24 @@ class WorkerPSInteractionTest(unittest.TestCase):
             )
         else:
             raise ValueError("dataset %s is not supported", dataset)
-        worker = Worker(
-            worker_id=0,
-            job_type=elasticdl_pb2.TRAINING,
-            minibatch_size=self._batch_size,
-            model_zoo=self._model_zoo_path,
-            model_def=model_def,
-            ps_channels=self._channel,
-            distribution_strategy="ParameterServerStrategy",
-        )
+        arguments = [
+            "--worker_id",
+            0,
+            "--job_type",
+            elasticdl_pb2.TRAINING,
+            "--minibatch_size",
+            self._batch_size,
+            "--model_zoo",
+            self._model_zoo_path,
+            "--model_def",
+            model_def,
+            "--distribution_strategy",
+            "ParameterServerStrategy",
+
+        ]
+        args = parse_worker_args(arguments)
+
+        worker = Worker(args, ps_channels=self._channel)
         acc_meter = tf.keras.metrics.Accuracy()
         worker_results = []
         for step, (x, y) in enumerate(train_db):
@@ -351,15 +374,23 @@ class WorkerPSInteractionTest(unittest.TestCase):
             self._restart_pserver()
             tf.keras.backend.clear_session()
             tf.random.set_seed(22)
-            worker = Worker(
-                worker_id=0,
-                job_type=elasticdl_pb2.TRAINING,
-                minibatch_size=self._batch_size,
-                model_zoo=self._model_zoo_path,
-                model_def=self._model_def,
-                ps_channels=self._channel,
-                distribution_strategy="ParameterServerStrategy",
-            )
+            arguments = [
+                "--worker_id",
+                0,
+                "--job_type",
+                elasticdl_pb2.TRAINING,
+                "--minibatch_size",
+                self._batch_size,
+                "--model_zoo",
+                self._model_zoo_path,
+                "--model_def",
+                self._model_def,
+                "--distribution_strategy",
+                "ParameterServerStrategy",
+            ]
+            args = parse_worker_args(arguments)
+
+            worker = Worker(args, ps_channels=self._channel)
             workers.append(worker)
             worker._run_model_call_before_training(training_data[0][0])
             for i in range(num_data):

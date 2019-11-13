@@ -4,6 +4,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
+from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import JobType
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.tests.in_process_master import InProcessMaster
@@ -40,14 +41,21 @@ class IndexedSlicesTest(unittest.TestCase):
             checkpoint_service=None,
             evaluation_service=None,
         )
-        worker = Worker(
+        arguments = [
+            "--worker_id",
             1,
+            "--job_type",
             JobType.TRAINING_ONLY,
+            "--minibatch_size",
             2,
+            "--model_zoo",
             _model_zoo_path,
-            model_def="test_module.custom_model",
-            channel=None,
-        )
+            "--model_def",
+            "test_module.custom_model",
+        ]
+        args = parse_worker_args(arguments)
+
+        worker = Worker(args)
         worker.set_model(model_inst)
         worker._stub = InProcessMaster(master)
 

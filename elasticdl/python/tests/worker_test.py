@@ -7,6 +7,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.layers import Concatenate, Dense, Flatten
 
+from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import JobType
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.embedding_service import EmbeddingService
@@ -134,14 +135,20 @@ class WorkerTest(unittest.TestCase):
         )
 
     def test_embedding_layer(self):
-        worker = Worker(
+        arguments = [
+            "--worker_id",
             1,
+            "--job_type",
             JobType.TRAINING_ONLY,
+            "--minibatch_size",
             32,
+            "--model_zoo",
             _model_zoo_path,
-            model_def="embedding_test_module.EdlEmbeddingModel",
-            channel=None,
-        )
+            "--model_def",
+            "embedding_test_module.EdlEmbeddingModel",
+        ]
+        args = parse_worker_args(arguments)
+        worker = Worker(args)
         self.assertTrue(len(worker._embedding_layers) == 2)
 
     def test_train_acceleration_with_embedding(self):
@@ -157,14 +164,20 @@ class WorkerTest(unittest.TestCase):
             checkpoint_service=None,
             evaluation_service=None,
         )
-        worker = Worker(
+        arguments = [
+            "--worker_id",
             1,
+            "--job_type",
             JobType.TRAINING_ONLY,
+            "--minibatch_size",
             32,
+            "--model_zoo",
             _model_zoo_path,
-            model_def="embedding_test_module.EdlEmbeddingModel",
-            channel=None,
-        )
+            "--model_def",
+            "embedding_test_module.EdlEmbeddingModel",
+        ]
+        args = parse_worker_args(arguments)
+        worker = Worker(args)
         worker._stub = InProcessMaster(master)
 
         inputs_list = [

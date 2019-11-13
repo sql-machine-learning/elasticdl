@@ -45,56 +45,25 @@ class Worker(object):
 
     def __init__(
         self,
-        worker_id,
-        job_type,
-        minibatch_size,
-        model_zoo,
-        dataset_fn="dataset_fn",
-        loss="loss",
-        optimizer="optimizer",
-        eval_metrics_fn="eval_metrics_fn",
+        args,
         channel=None,
-        embedding_service_endpoint=None,
-        model_def=None,
-        model_params="",
-        data_reader_params="",
-        prediction_outputs_processor="PredictionOutputsProcessor",
-        max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
-        get_model_steps=1,
-        distribution_strategy=None,
         ps_channels=None,
+        max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
     ):
         """
         Arguments:
-            worker_id: The worker ID.
-            job_type: The job type.
-            minibatch_size: The size of the minibatch used for each iteration.
-            model_zoo: The directory that contains user-defined model files
-                or a specific model file.
-            dataset_fn: The name of the dataset function defined in the
-                model file.
-            loss: The name of the loss function defined in the model file.
-            optimizer: The name of the optimizer defined in the model file.
-            eval_metrics_fn: The name of the evaluation metrics function
-                defined in the model file.
             channel: The channel for the gRPC master service.
-            embedding_service_endpoint: The endpoint to the embedding service.
-            model_def: The import path to the model definition
-                function/class in the model zoo, e.g.
-                "cifar10_subclass.CustomModel".
-            model_params: The dictionary of model parameters in a string
-                separated by semi-colon used to instantiate the model,
-                e.g. "param1=1; param2=2".
-            data_reader_params: The data reader parameters in a string
-                separated by semi-colon used to instantiate the data reader,
-                e.g. "param1=1; param2=2".
-            prediction_outputs_processor: The name of the prediction output
-                processor class defined in the model file.
-            get_model_steps: Worker will perform `get_model` from the
-                parameter server every this many steps.
+            ps_channels: TODO
             max_minibatch_retry_num: The maximum number of a minibatch retry
                 as its results (e.g. gradients) are not accepted by master.
+
         """
+        self._args = args
+        if channel is None:
+            self._stub = None
+        else:
+            self._stub = elasticdl_pb2_grpc.MasterStub(channel)
+
         self._use_multi_ps = False
         if isinstance(ps_channels, list):
             if len(ps_channels) > 0:
@@ -103,10 +72,17 @@ class Worker(object):
                     elasticdl_pb2_grpc.PserverStub(c) for c in ps_channels
                 ]
                 self._var_to_ps = {}
+        self._max_minibatch_retry_num = max_minibatch_retry_num
+        self._init_from_args(args)
 
-        self._worker_id = worker_id
-        self._job_type = job_type
-        self._minibatch_size = minibatch_size
+    def _init_from_args(self, args):
+        """
+        Please refer to elastic/python/common/args.py for more
+        details about arguments of a worker.
+        """
+        self._worker_id = args.worker_id
+        self._job_type = args.job_type
+        self._minibatch_size = args.minibatch_size
         (
             model_inst,
             self._dataset_fn,
@@ -115,37 +91,35 @@ class Worker(object):
             self._eval_metrics_fn,
             self._prediction_outputs_processor,
         ) = get_model_spec(
-            model_zoo=model_zoo,
-            model_def=model_def,
-            dataset_fn=dataset_fn,
-            loss=loss,
-            optimizer=optimizer,
-            eval_metrics_fn=eval_metrics_fn,
-            model_params=model_params,
-            prediction_outputs_processor=prediction_outputs_processor,
+            model_zoo=args.model_zoo,
+            model_def=args.model_def,
+            dataset_fn=args.dataset_fn,
+            loss=args.loss,
+            optimizer=args.optimizer,
+            eval_metrics_fn=args.eval_metrics_fn,
+            model_params=args.model_params,
+            prediction_outputs_processor=args.prediction_outputs_processor,
         )
 
-        self._embedding_service_endpoint = embedding_service_endpoint
-
-        if channel is None:
-            self._stub = None
-        else:
-            self._stub = elasticdl_pb2_grpc.MasterStub(channel)
+        self._embedding_service_endpoint = eval(
+            args.embedding_service_endpoint
+        )
 
         self._model_handler = ModelHandler.get_model_handler(
-            distribution_strategy, stub=self._stub
+            args.distribution_strategy, stub=self._stub
         )
         model_inst = self._model_handler.get_model_to_train(model_inst)
         self.set_model(model_inst)
 
-        self._max_minibatch_retry_num = max_minibatch_retry_num
         self._model_version = -1
         self._task_data_service = TaskDataService(
             self,
             self._job_type == JobType.TRAINING_WITH_EVALUATION,
-            data_reader_params=get_dict_from_params_str(data_reader_params),
+            data_reader_params=get_dict_from_params_str(
+                args.data_reader_params
+            ),
         )
-        self._get_model_steps = get_model_steps
+        self._get_model_steps = args.get_model_steps
         if self._get_model_steps > 1:
             self._opt = self._opt_fn()
             self._non_embed_grads = None
