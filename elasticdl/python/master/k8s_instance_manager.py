@@ -111,6 +111,11 @@ class InstanceManager(object):
             self._ps_pods_phase[ps_id] = (name, None)
             self._k8s_client.create_ps_service(ps_id)
 
+    def _get_ps_addrs(self):
+        for ps_id in range(self._num_ps):
+            self._k8s_client.get_ps_service_name()
+        return ",".join(self._num_ps)
+
     def update_status(self, status):
         master_name = self._k8s_client.get_master_pod_name()
         self._k8s_client.patch_labels_to_pod(
