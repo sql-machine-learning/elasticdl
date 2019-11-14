@@ -8,9 +8,12 @@ from elasticdl.python.worker.worker import Worker
 
 def main():
     args = parse_worker_args()
+    logger = log_utils.get_logger(__name__)
+    logger.info("Starting worker %d", args.worker_id)
     if args.master_addr is None:
         raise ValueError("master_addr is missing for worker")
-    channel = grpc.insecure_channel(
+
+    master_channel = grpc.insecure_channel(
         args.master_addr,
         options=[
             ("grpc.max_send_message_length", GRPC.MAX_SEND_MESSAGE_LENGTH),
@@ -21,18 +24,39 @@ def main():
         ],
     )
 
-    # TODO, create PS channels here
-    ps_addrs = args.ps_addrs.split(",")
-    # Just print ps_addrs out to avoid flake8 failure
-    # This print can be removed once we initialize ps_channels
-    # by using ps_addrs
-    print("Parameter server addresses are %s" % ps_addrs)
-    ps_channels = None
+    ps_channels = []
+    if args.ps_addrs:
+        # TODO: use ps_addrs from master directly after ps service is working.
+        #       Get ps pod ip for ps grpc connection for now.
+        ps_addrs = args.ps_addrs.split(",")
+        from kubernetes import client, config
 
-    logger = log_utils.get_logger(__name__)
+        config.load_incluster_config()
+        api = client.CoreV1Api()
 
-    logger.info("Starting worker %d", args.worker_id)
-    worker = Worker(args, channel=channel, ps_channels=ps_channels)
+        for addr in ps_addrs:
+            # addr is in the form as "ps-pod-name.namespace.svc:port"
+            addr_splitted = addr.split(".")
+            pod = api.read_namespaced_pod(
+                namespace=addr_splitted[1], name=addr_splitted[0]
+            )
+            addr = pod.status.pod_ip + ":" + addr.split(":")[-1]
+            channel = grpc.insecure_channel(
+                addr,
+                options=[
+                    (
+                        "grpc.max_send_message_length",
+                        GRPC.MAX_SEND_MESSAGE_LENGTH,
+                    ),
+                    (
+                        "grpc.max_receive_message_length",
+                        GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
+                    ),
+                ],
+            )
+            ps_channels.append(channel)
+
+    worker = Worker(args, channel=master_channel, ps_channels=ps_channels)
     worker.run()
 
 
