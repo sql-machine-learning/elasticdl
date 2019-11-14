@@ -361,7 +361,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         db, test_db = get_frappe_dataset(self._batch_size)
         self._create_worker(1)
         worker_results = self._worker_train(
-            train_db=db, test_db=test_db, model_def=model_def, stop_step=100
+            0, train_db=db, test_db=test_db, stop_step=100
         )
         acc = max([r[1] for r in worker_results])
         self.assertLess(0.6, acc)
