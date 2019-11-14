@@ -253,8 +253,10 @@ class WorkerPSInteractionTest(unittest.TestCase):
             "ParameterServerStrategy",
         ]
         args = parse_worker_args(arguments)
+
         tf.keras.backend.clear_session()
         tf.random.set_seed(22)
+
         worker = Worker(args, ps_channels=self._channel)
         worker._run_model_call_before_training(images)
         worker.get_model(0, elasticdl_pb2.MINIMUM)
@@ -263,6 +265,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
         tf.keras.backend.clear_session()
         tf.random.set_seed(22)
+
         (
             model,
             dataset_fn,
@@ -356,10 +359,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
         model_def = "deepfm_functional_api.deepfm_functional_api.custom_model"
         self._create_pserver_and_channel(model_def)
         db, test_db = get_frappe_dataset(self._batch_size)
-
-        tf.keras.backend.clear_session()
-        tf.random.set_seed(22)
-
         self._create_worker(1)
         worker_results = self._worker_train(
             train_db=db, test_db=test_db, model_def=model_def, stop_step=100
