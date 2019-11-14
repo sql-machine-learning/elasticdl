@@ -491,7 +491,6 @@ def add_common_args_between_master_and_worker(parser):
     parser.add_argument(
         "--distribution_strategy",
         type=str,
-        default="ParameterServerStrategy",
         help="Master will use a distribution policy on a list of devices "
         "according to the distributed strategy, "
         'e.g. "ParameterServerStrategy"',
@@ -591,7 +590,7 @@ def parse_worker_args(worker_args=None):
         "--worker_id", help="ID unique to the worker", type=int, required=True
     )
     parser.add_argument("--job_type", help="Job type", required=True)
-    parser.add_argument("--master_addr", help="Master ip:port", required=True)
+    parser.add_argument("--master_addr", help="Master ip:port")
     parser.add_argument(
         "--embedding_service_endpoint",
         type=str,
@@ -611,6 +610,8 @@ def parse_worker_args(worker_args=None):
         help="Addresses of parameter service pods, separated by comma",
     )
 
+    if worker_args:
+        worker_args = list(map(str, worker_args))
     args, unknown_args = parser.parse_known_args(args=worker_args)
     print_args(args, groups=ALL_ARGS_GROUPS)
     if unknown_args:
