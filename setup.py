@@ -21,7 +21,9 @@ setup(
     extras_require=extras,
     python_requires=">=3.5",
     packages=find_packages(exclude=["*test*"]),
-    package_data={"": ["proto/*.proto", "docker/*", "Makefile", "requirements.txt"]},
+    package_data={
+        "": ["proto/*.proto", "docker/*", "Makefile", "requirements.txt"]
+    },
     entry_points={
         "console_scripts": ["elasticdl=elasticdl.python.elasticdl.client:main"]
     },
