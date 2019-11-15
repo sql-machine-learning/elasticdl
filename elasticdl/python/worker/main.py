@@ -30,6 +30,7 @@ def main():
         #       Get ps pod ip for ps grpc connection for now.
         ps_addrs = args.ps_addrs.split(",")
         from kubernetes import client, config
+        import time
 
         config.load_incluster_config()
         api = client.CoreV1Api()
@@ -37,9 +38,14 @@ def main():
         for addr in ps_addrs:
             # addr is in the form as "ps-pod-name.namespace.svc:port"
             addr_splitted = addr.split(".")
-            pod = api.read_namespaced_pod(
-                namespace=addr_splitted[1], name=addr_splitted[0]
-            )
+            while True:
+                pod = api.read_namespaced_pod(
+                    namespace=addr_splitted[1], name=addr_splitted[0]
+                )
+                if pod.status.pod_ip:
+                    break
+                # If ps pod is not ready yet, sleep 2 seconds and try again.
+                time.sleep(2)
             addr = pod.status.pod_ip + ":" + addr.split(":")[-1]
             channel = grpc.insecure_channel(
                 addr,
