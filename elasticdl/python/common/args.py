@@ -493,6 +493,7 @@ def add_common_args_between_master_and_worker(parser):
         "--distribution_strategy",
         type=str,
         choices=[
+            "",
             DistributionStrategy.PARAMETER_SERVER,
             DistributionStrategy.ALLREDUCE,
         ],
