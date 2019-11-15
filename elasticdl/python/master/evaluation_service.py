@@ -70,6 +70,7 @@ class _EvaluationJob(object):
     ):
         if (
             self.model_version >= 0
+            and evaluation_version >= 0
             and evaluation_version != self.model_version
         ):
             logger.error(
@@ -225,7 +226,11 @@ class EvaluationService(object):
         """
         if not model_version:
             model_version = self._master_servicer.get_model_version()
-        if self._eval_steps and model_version % self._eval_steps == 0:
+        if (
+            self._eval_steps
+            and model_version % self._eval_steps == 0
+            and model_version > self._last_eval_checkpoint_version
+        ):
             self.add_evaluation_task(
                 is_time_based_eval=False,
                 master_locking=master_locking,

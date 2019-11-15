@@ -137,6 +137,8 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                 self._grads_n += 1
                 res.accepted = True
 
+                updated_version = False
+                version = self._parameters.version
                 if self._grads_n == self._grads_to_wait:
                     grad_vars = []
                     for name, grad in self._grads_buffer.items():
@@ -156,8 +158,10 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                     self._grads_buffer.clear()
                     self._parameters.version += 1
                     version = self._parameters.version
+                    updated_version = True
 
-            self._report_version_if_needed(version)
+            if updated_version:
+                self._report_version_if_needed(version)
             res.model_version = version
             return res
 
