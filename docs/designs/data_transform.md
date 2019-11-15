@@ -2,8 +2,7 @@
 
 ## Motivation
 
-Data transform is an important part in an end-to-end machine pipeline. It processes the raw data such as using standardize, bucketize and so on. The target is to make sure the data is in the right format and ready for the model training. SQLFlow extends the SQL syntax to define a ML pipeline. Naturally SQLFlow syntax should be able to describe the data transformation process.  
-In this doc, we are focusing on how to express data transformation using SQLFlow.
+Data transform is an important part in an end-to-end machine learning pipeline. It processes the raw data using standardize, bucketize and so on. The target is to make sure the data is in the right format and ready for the model training. SQLFlow extends the SQL syntax to define a ML pipeline. Naturally SQLFlow syntax should be able to describe the data transformation process. In this doc, we are focusing on how to do data transformation using SQLFlow.  
 
 Consistency between offline and online is the key point of data transformation. Users write the transform code only once. And then the same logic can run in batch mode offline and in real time mode online. In this way, we can prevent the training/serving skew.  
 
