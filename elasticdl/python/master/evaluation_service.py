@@ -145,7 +145,6 @@ class EvaluationService(object):
 
     def __init__(
         self,
-        checkpoint_service,
         tensorboard_service,
         task_d,
         start_delay_secs,
@@ -154,7 +153,6 @@ class EvaluationService(object):
         eval_only,
         eval_metrics_fn,
     ):
-        self._checkpoint_service = checkpoint_service
         self._tensorboard_service = tensorboard_service
         self._task_d = task_d
         self._lock = threading.Lock()
@@ -183,20 +181,21 @@ class EvaluationService(object):
     def init_eval_only_job(self, num_task):
         self._eval_job = _EvaluationJob(self._eval_metrics_fn(), -1, num_task)
 
-    def add_evaluation_task(self, is_time_based_eval, master_locking=True):
+    def add_evaluation_task(
+        self, is_time_based_eval, master_locking=True, model_version=None
+    ):
         """
         Add evaluation task with current model_version.
         """
         # Do not create time-based eval after all tasks are done
         if is_time_based_eval and self._task_d.finished():
             return
-        model_version = self._master_servicer.get_model_version()
+        if not model_version:
+            model_version = self._master_servicer.get_model_version()
         if model_version == self._last_eval_checkpoint_version:
             return
 
-        checkpoint_version = self._master_servicer._save_checkpoint(
-            locking=master_locking, is_eval_checkpoint=True
-        )
+        checkpoint_version = model_version
         with self._lock:
             self._eval_checkpoint_versions.append(checkpoint_version)
         self._last_eval_checkpoint_version = checkpoint_version
@@ -220,14 +219,17 @@ class EvaluationService(object):
                 return True
         return False
 
-    def add_evaluation_task_if_needed(self, master_locking):
+    def add_evaluation_task_if_needed(self, master_locking, model_version):
         """
         Add step-based evaluation task
         """
-        model_version = self._master_servicer.get_model_version()
+        if not model_version:
+            model_version = self._master_servicer.get_model_version()
         if self._eval_steps and model_version % self._eval_steps == 0:
             self.add_evaluation_task(
-                is_time_based_eval=False, master_locking=master_locking
+                is_time_based_eval=False,
+                master_locking=master_locking,
+                model_version=model_version,
             )
 
     def report_evaluation_metrics(
@@ -258,9 +260,6 @@ class EvaluationService(object):
             )
             if not self._eval_only:
                 # delete checkpoint file
-                self._checkpoint_service.remove_eval_checkpoint(
-                    self._eval_job.model_version
-                )
                 self._eval_job = None
                 # create new eval job if possible
                 self.try_to_create_new_job()

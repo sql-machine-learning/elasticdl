@@ -566,6 +566,7 @@ def parse_ps_args(ps_args=None):
     parser.add_argument(
         "--port", help="Port used by the PS pod", type=int, required=True
     )
+    parser.add_argument("--master_addr", help="Master ip:port")
 
     add_common_params(parser)
     add_train_params(parser)

@@ -5,6 +5,7 @@ import grpc
 
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
+from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
@@ -28,6 +29,10 @@ class ParameterServer(object):
         self.optimizer = model_module[args.optimizer]()
         # Create Parameters instance
         self.parameters = Parameters()
+        if args.master_addr is None:
+            raise ValueError("master_addr is missing for worker")
+        self.master_channel = build_channel(args.master_addr)
+        self.evaluation_steps = args.evaluation_steps
 
     def prepare(self):
         server = grpc.server(
@@ -46,6 +51,8 @@ class ParameterServer(object):
             self.optimizer,
             lr_staleness_modulation=self.lr_staleness_modulation,
             use_async=self.use_async,
+            evaluation_steps=self.evaluation_steps,
+            master_channel=self.master_channel,
         )
         elasticdl_pb2_grpc.add_PserverServicer_to_server(
             pserver_servicer, server

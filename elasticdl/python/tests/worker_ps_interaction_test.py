@@ -9,6 +9,7 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import GRPC
+from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.model_utils import get_model_spec
 from elasticdl.python.data.recordio_gen.frappe_recordio_gen import (
@@ -65,19 +66,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             pservers.append(pserver)
 
             addr = "localhost:%d" % port
-            channel = grpc.insecure_channel(
-                addr,
-                options=[
-                    (
-                        "grpc.max_send_message_length",
-                        GRPC.MAX_SEND_MESSAGE_LENGTH,
-                    ),
-                    (
-                        "grpc.max_receive_message_length",
-                        GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
-                    ),
-                ],
-            )
+            channel = build_channel(addr)
             channels.append(channel)
         return pservers, channels
 

@@ -119,14 +119,7 @@ class EvaluationServiceTest(unittest.TestCase):
 
             # Evaluation metrics will not be accepted if no evaluation ongoing
             evaluation_service = EvaluationService(
-                checkpoint_service,
-                None,
-                task_d,
-                10,
-                20,
-                0,
-                False,
-                _eval_metrics_fn,
+                None, task_d, 10, 20, 0, False, _eval_metrics_fn,
             )
             model_outputs = [
                 Tensor(
@@ -173,7 +166,7 @@ class EvaluationServiceTest(unittest.TestCase):
         task_d = _TaskDispatcher({}, {"f1": (0, 10), "f2": (0, 10)}, {}, 3, 1)
 
         evaluation_service = EvaluationService(
-            None, None, task_d, 0, 0, 0, True, _eval_metrics_fn
+            None, task_d, 0, 0, 0, True, _eval_metrics_fn
         )
         task_d.set_evaluation_service(evaluation_service)
 

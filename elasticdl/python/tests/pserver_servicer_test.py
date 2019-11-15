@@ -8,6 +8,7 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
+from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
@@ -30,16 +31,7 @@ class PserverServicerTest(unittest.TestCase):
     def setUp(self):
         self._port = 9999
         addr = "localhost:%d" % self._port
-        self._channel = grpc.insecure_channel(
-            addr,
-            options=[
-                ("grpc.max_send_message_length", GRPC.MAX_SEND_MESSAGE_LENGTH),
-                (
-                    "grpc.max_receive_message_length",
-                    GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
-                ),
-            ],
-        )
+        self._channel = build_channel(addr)
         embedding_info = elasticdl_pb2.EmbeddingTableInfo()
         embedding_info.name = "layer_a"
         embedding_info.dim = 32
