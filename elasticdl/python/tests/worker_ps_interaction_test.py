@@ -1,5 +1,6 @@
 import os
 import unittest
+from collections import namedtuple
 from pathlib import Path
 from threading import Thread
 
@@ -53,13 +54,8 @@ def get_mnist_dataset(batch_size):
 
 def get_frappe_dataset(batch_size):
     home = str(Path.home())
-
-    class TmpArgs(object):
-        def __init__(self, data):
-            self.data = data
-
-    args = TmpArgs(data=home + "/.keras/datasets/")
-
+    Args = namedtuple("Args", ["data"])
+    args = Args(data=os.path.join(home, ".keras/datasets"))
     x_train, y_train, x_val, y_val, x_test, y_test = load_raw_data(args)
     x_train = tf.convert_to_tensor(x_train, dtype=tf.int64)
     x_test = tf.convert_to_tensor(x_test, dtype=tf.int64)
