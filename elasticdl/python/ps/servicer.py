@@ -109,7 +109,10 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                     grad_vars.append((grad, var))
 
             self._optimizer.apply_gradients(grad_vars)
-            self._update_parameter_version()
+            with self._version_lock:
+                self._parameters.version += 1
+                version = self._parameters.version
+            self._report_version_if_needed(version)
 
             res.accepted = True
             res.model_version = self._parameters.version
@@ -151,10 +154,12 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                     self._optimizer.apply_gradients(grad_vars)
                     self._grads_n = 0
                     self._grads_buffer.clear()
-                    self._update_parameter_version()
+                    self._parameters.version += 1
+                    version = self._parameters.version
 
-                res.model_version = self._parameters.version
-                return res
+            self._report_version_if_needed(version)
+            res.model_version = version
+            return res
 
     def wrap_optimizer(self):
         # TODO(yunjian.lmh): refine these arguments when we don't need
@@ -191,16 +196,6 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             lookup_embedding_func,
             update_embedding_func,
         )
-
-    def _update_parameter_version(self):
-        if self._use_async:
-            with self._version_lock:
-                self._parameters.version += 1
-                self._report_version_if_needed(self._parameters.version)
-        else:
-            self._parameters.version += 1
-            # Do we need to move this report function out of lock?
-            self._report_version_if_needed(self._parameters.version)
 
     def _report_version_if_needed(self, version):
         if self._eval_steps and version % self._eval_steps == 0:
