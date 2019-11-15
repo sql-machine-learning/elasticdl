@@ -76,28 +76,8 @@ class WorkerPSInteractionTest(unittest.TestCase):
         )
         self._batch_size = 16
         self._ports = [12345, 12346]
-        self._pserver = []
-        self._channel = []
-        self._worker = []
-
-    def tearDown(self):
-        for pserver in self._pserver:
-            pserver.server.stop(0)
-
-    def _create_pserver_and_channel(self, model_def):
-        self._model_def = model_def
+        self._channels = []
         for port in self._ports:
-            args = PserverArgs(
-                grads_to_wait=1,
-                use_async=True,
-                port=port,
-                model_zoo=self._model_zoo_path,
-                model_def=self._model_def,
-            )
-            pserver = ParameterServer(args)
-            pserver.prepare()
-            self._pserver.append(pserver)
-
             addr = "localhost:%d" % port
             channel = grpc.insecure_channel(
                 addr,
@@ -112,7 +92,32 @@ class WorkerPSInteractionTest(unittest.TestCase):
                     ),
                 ],
             )
-            self._channel.append(channel)
+            self._channels.append(channel)
+
+        self._pservers = []
+        self._workers = []
+
+    def tearDown(self):
+        for pserver in self._pservers:
+            pserver.server.stop(0)
+
+    def _create_pserver(self, model_def):
+        self._model_def = model_def
+        for port in self._ports:
+            args = PserverArgs(
+                grads_to_wait=1,
+                use_async=True,
+                port=port,
+                model_zoo=self._model_zoo_path,
+                model_def=self._model_def,
+            )
+            pserver = ParameterServer(args)
+            pserver.prepare()
+            self._pservers.append(pserver)
+
+    def _reset_pserver(self):
+        for ps in self._pservers:
+            ps.parameters.reset()
 
     def _create_worker(self, worker_num):
         for i in range(worker_num):
@@ -133,11 +138,11 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 "ParameterServerStrategy",
             ]
             args = parse_worker_args(arguments)
-            worker = Worker(args, ps_channels=self._channel)
-            self._worker.append(worker)
+            worker = Worker(args, ps_channels=self._channels)
+            self._workers.append(worker)
 
     def _worker_train(self, worker_id, train_db, test_db, stop_step):
-        worker = self._worker[worker_id]
+        worker = self._workers[worker_id]
         acc_meter = tf.keras.metrics.Accuracy()
         worker_results = []
         for step, (x, y) in enumerate(train_db):
@@ -174,15 +179,9 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 break
         return worker_results
 
-    def _restart_pserver(self, model_def):
-        # Stop first
-        self.tearDown()
-        # Start again
-        self._create_pserver_and_channel(model_def)
-
     def test_worker_pull_embedding(self):
         model_def = "mnist_functional_api.mnist_functional_api.custom_model"
-        self._create_pserver_and_channel(model_def)
+        self._create_pserver(model_def)
         arguments = [
             "--worker_id",
             0,
@@ -198,7 +197,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             "ParameterServerStrategy",
         ]
         args = parse_worker_args(arguments)
-        worker = Worker(args, ps_channels=self._channel)
+        worker = Worker(args, ps_channels=self._channels)
 
         # Test lookup embedding vectors that do not exist
         layers = ["test-2", "test-2-slot"]
@@ -209,7 +208,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         ]
 
         # initialize embedding table object
-        for pserver in self._pserver:
+        for pserver in self._pservers:
             for layer, table_args in zip(layers, embedding_table_args):
                 pserver.parameters.embedding_params[layer] = EmbeddingTable(
                     *table_args
@@ -223,15 +222,17 @@ class WorkerPSInteractionTest(unittest.TestCase):
         for layer in layers:
             expected_result = []
             for embedding_id in ids:
-                ps_id = int_to_id(embedding_id, len(self._pserver))
-                table = self._pserver[ps_id].parameters.embedding_params[layer]
+                ps_id = int_to_id(embedding_id, len(self._pservers))
+                table = self._pservers[ps_id].parameters.embedding_params[
+                    layer
+                ]
                 expected_result.append(table.get([embedding_id]))
             expected_result = np.concatenate(expected_result)
             self.assertTrue(np.allclose(expected_result, result_dict[layer]))
 
     def test_compare_onebatch_train(self):
         model_def = "mnist_functional_api.mnist_functional_api.custom_model"
-        self._create_pserver_and_channel(model_def)
+        self._create_pserver(model_def)
         images, labels = get_random_batch(self._batch_size)
         # TODO(yunjian.lmh): test optimizer wrapper
         arguments = [
@@ -253,7 +254,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         tf.keras.backend.clear_session()
         tf.random.set_seed(22)
 
-        worker = Worker(args, ps_channels=self._channel)
+        worker = Worker(args, ps_channels=self._channels)
         worker._run_model_call_before_training(images)
         worker.get_model(0, elasticdl_pb2.MINIMUM)
         w_loss, w_grads = worker.training_process_eagerly(images, labels)
@@ -288,15 +289,15 @@ class WorkerPSInteractionTest(unittest.TestCase):
         opt_fn().apply_gradients(zip(grads, model.trainable_variables))
 
         for v in model.trainable_variables:
-            ps_id = string_to_id(v.name, len(self._channel))
-            ps_v = self._pserver[ps_id].parameters.get_non_embedding_param(
+            ps_id = string_to_id(v.name, len(self._channels))
+            ps_v = self._pservers[ps_id].parameters.get_non_embedding_param(
                 v.name
             )
             np.testing.assert_array_equal(ps_v.numpy(), v.numpy())
 
     def test_compare_mnist_train(self):
         model_def = "mnist_functional_api.mnist_functional_api.custom_model"
-        self._create_pserver_and_channel(model_def)
+        self._create_pserver(model_def)
         db, test_db = get_mnist_dataset(self._batch_size)
         stop_step = 20
 
@@ -353,7 +354,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
     def test_deepfm_train(self):
         model_def = "deepfm_functional_api.deepfm_functional_api.custom_model"
-        self._create_pserver_and_channel(model_def)
+        self._create_pserver(model_def)
         db, test_db = get_frappe_dataset(self._batch_size)
         self._create_worker(1)
         worker_results = self._worker_train(
@@ -364,7 +365,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
     def test_deepfm_two_worker_train(self):
         model_def = "deepfm_functional_api.deepfm_functional_api.custom_model"
-        self._create_pserver_and_channel(model_def)
+        self._create_pserver(model_def)
         db, test_db = get_frappe_dataset(self._batch_size)
 
         self._create_worker(2)
@@ -379,16 +380,14 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
     def test_restart_ps(self):
         model_def = "mnist_functional_api.mnist_functional_api.custom_model"
-        self._create_pserver_and_channel(model_def)
         num_data = 8
         training_data = [
             get_random_batch(self._batch_size) for _ in range(num_data)
         ]
         workers = []
+        self._create_pserver(model_def)
         for w in range(2):
-            self._restart_pserver(model_def)
-            tf.keras.backend.clear_session()
-            tf.random.set_seed(22)
+            self._reset_pserver()
             arguments = [
                 "--worker_id",
                 0,
@@ -404,8 +403,9 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 "ParameterServerStrategy",
             ]
             args = parse_worker_args(arguments)
-
-            worker = Worker(args, ps_channels=self._channel)
+            tf.keras.backend.clear_session()
+            tf.random.set_seed(22)
+            worker = Worker(args, ps_channels=self._channels)
             workers.append(worker)
             worker._run_model_call_before_training(training_data[0][0])
             for i in range(num_data):
@@ -416,7 +416,8 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 worker.report_gradient(w_grads)
                 if w == 1 and i == 3:
                     # Restart ps for the 2nd worker at i==3
-                    self._restart_pserver(model_def)
+                    # self._restart_pserver(model_def)
+                    self._reset_pserver()
                     # `report_variable` will be called in `get_model` to
                     # initialize variables on ps with worker variables
                     worker.get_model(0, elasticdl_pb2.MINIMUM)
