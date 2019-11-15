@@ -24,5 +24,10 @@ RUN pip install -r /requirements-dev.txt --extra-index-url=${EXTRA_PYPI_INDEX}
 # rest part of ElasticDL.  The generated data will be in /data.
 COPY elasticdl/python/data/recordio_gen/image_label.py /var/image_label.py
 RUN python /var/image_label.py --dataset mnist --fraction 0.25 \
-	--records_per_shard 4096 /data && \
-    rm -rf /root/.keras/datasets
+	--records_per_shard 4096 /data
+
+# Copy frappe dataset
+COPY elasticdl/python/data/recordio_gen/frappe_recordio_gen.py /var/frappe_recordio_gen.py
+RUN python /var/frappe_recordio_gen.py --data /root/.keras/datasets --output_dir /data/frappe \
+    --fraction 0.25
+RUN rm -rf /root/.keras/datasets
