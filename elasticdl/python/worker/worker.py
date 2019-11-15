@@ -438,7 +438,7 @@ class Worker(object):
                     req = reqs[ps_id]
                     gv, gi = results[ps_id]
                     emplace_tensor_pb_from_ndarray(
-                        req.gradients, values=gv, indices=gi, name=layer.name,
+                        req.gradients, values=gv, indices=gi, name=layer.name
                     )
 
         # TODO: call `push_gradient` in parallel

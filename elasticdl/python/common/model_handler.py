@@ -56,8 +56,12 @@ class ModelHandler(metaclass=abc.ABCMeta):
         """
         if distribution_strategy == DistributionStrategy.PARAMETER_SERVER:
             return ParameterServerModelHandler(stub=stub)
-        else:
-            return DefaultModelHandler()
+        elif distribution_strategy == DistributionStrategy.ALLREDUCE:
+            logger.warning(
+                "Allreduce distribution strategy is not supported yet. "
+                "Switching to use the default distribution strategy."
+            )
+        return DefaultModelHandler()
 
 
 class DefaultModelHandler(ModelHandler):
