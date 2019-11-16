@@ -33,6 +33,8 @@ class PserverArgs(object):
         optimizer="optimizer",
         port=9999,
         log_level="INFO",
+        job_name="test_pserver",
+        namespace="default",
     ):
         self.grads_to_wait = grads_to_wait
         self.lr_staleness_modulation = lr_staleness_modulation
@@ -42,6 +44,8 @@ class PserverArgs(object):
         self.optimizer = optimizer
         self.port = port
         self.log_level = log_level
+        self.job_name = job_name
+        self.namespace = namespace
 
 
 class DatasetName(object):
