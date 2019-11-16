@@ -6,6 +6,7 @@ from kubernetes import client, config
 
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
+from elasticdl.python.common.k8s_client import get_master_pod_name
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
@@ -30,7 +31,7 @@ class ParameterServer(object):
         # Create Parameters instance
         self.parameters = Parameters()
 
-        self.master_name = "elasticdl-%s-master" % args.job_name
+        self.master_name = get_master_pod_name(args.job_name)
         self.namespace = args.namespace
 
     def prepare(self):
@@ -62,17 +63,13 @@ class ParameterServer(object):
     def run(self):
         config.load_incluster_config()
         api = client.CoreV1Api()
-        master_pod = api.read_namespaced_pod(
-            namespace=self.namespace, name=self.master_name
-        )
-        self.logger.info(self.namespace)
-        self.logger.info(self.master_name)
         try:
             while True:
                 time.sleep(30)
-                self.logger.info(master_pod.status.phase)
-                self.logger.info(master_pod.status.to_str())
-                if master_pod.status.phase == "Completed":
+                master_pod = api.read_namespaced_pod(
+                    namespace=self.namespace, name=self.master_name
+                )
+                if master_pod.status.phase == "Succeeded":
                     break
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")
