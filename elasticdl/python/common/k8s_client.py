@@ -16,15 +16,15 @@ ELASTICDL_REPLICA_TYPE_KEY = "elasticdl-replica-type"
 ELASTICDL_REPLICA_INDEX_KEY = "elasticdl-replica-index"
 
 
-def get_master_pod_name(self, job_name):
+def get_master_pod_name(job_name):
     return "elasticdl-%s-master" % job_name
 
 
-def get_worker_pod_name(self, job_name, worker_id):
+def get_worker_pod_name(job_name, worker_id):
     return "elasticdl-%s-worker-%s" % (job_name, str(worker_id))
 
 
-def get_ps_pod_name(self, job_name, ps_id):
+def get_ps_pod_name(job_name, ps_id):
     return "elasticdl-%s-ps-%s" % (job_name, str(ps_id))
 
 
