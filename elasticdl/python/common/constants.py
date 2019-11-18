@@ -51,3 +51,8 @@ class SaveModelConfig(object):
 
 class TaskExecCounterKey(object):
     FAIL_COUNT = "fail_count"
+
+
+class CollectiveCommunicatorStatus(object):
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"

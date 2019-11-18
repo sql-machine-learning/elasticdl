@@ -65,15 +65,15 @@ The interface for allreduce would look like the following:
 num_epochs = 2
 num_batches = 10
 data_loader = DataLoader(num_batches)
-communicator = AllreduceCommunicator()
+communicator = CollectiveCommunicator()
 
 for _ in range(num_epochs):
     for features, labels in data_loader:
         outputs = model(features)
         loss = loss_fn(outputs, labels)
         grads = calculate_gradients(loss, model)
-        res, averaged_grads = communicator.allreduce_average(grads)
-        if res == SUCCESS:
+        status, averaged_grads = communicator.allreduce_average(grads)
+        if res == SUCCEEDED:
             update_model(averaged_grads)
         elif res == FAILED:
             continue
@@ -84,8 +84,8 @@ This would be useful to initialize the model parameters for a restarted or new j
 look like the following:
 
 ```python
-communicator = BroadcastCommunicator()
-res, model_params = communicator.broadcast(from=worker_0_ip)
+communicator = CollectiveCommunicator()
+status, model_params = communicator.broadcast(from=worker_0_ip)
 init_local_model(model_params)
 ```
 
@@ -94,8 +94,8 @@ to lock/unlock all the existing worker pods in order to pause allreduce operatio
 more details in the following section. The interface of this is simple:
 
 ```python
-communicator = BarrierCommunicator()
-res = communicator.barrier()
+communicator = CollectiveCommunicator()
+status = communicator.barrier()
 ```
 
 Though NCCL doesn't provide an implementation of barrier operation, it should be straightforward to do so, e.g. allreduce
@@ -105,7 +105,7 @@ There are a couple of implementation details for the proposed interfaces above t
 
 1. All NCCL API calls are asynchronous but our implementation of the communication collective primitives is synchronous
 so it's easier for other frameworks like ElasticDL to use without worrying about failure handling.
-1. It is not necessary to pass the list of IPs of the worker pods to either `AllreduceCommunicator` or `BroadcastCommunicator`
+1. It is not necessary to pass the list of IPs of the worker pods to `CollectiveCommunicator`.
 since the shared storage used in the implementation would keep track of the list of IPs.
 
 ### Allreduce-based Training in ElasticDL
@@ -119,7 +119,7 @@ For training based on parameter servers, gradients calculation and model updatin
 1. Update the model in parameter servers.
 
 On contrary, in allreduce-based training, each worker in ElasticDL calculates gradients locally and then calculates
-the average of gradients across all workers using collective communication via `AllreduceCommunicator.allreduce_average()`
+the average of gradients across all workers using collective communication via `CollectiveCommunicator.allreduce_average()`
 that we mentioned in the previous section. The main differences are the following:
 
 1. Gradients from each worker are not sent to master.
@@ -129,14 +129,14 @@ that we mentioned in the previous section. The main differences are the followin
 Below is the pseudo-code for this process on each worker:
 
 ```python
-communicator = AllreduceCommunicator()
+communicator = CollectiveCommunicator()
 
 with tf.GradientTape() as tape:
     outputs = model(features, training=True)
     loss = loss_fn(outputs, labels)
 local_grads = tape.gradient(loss, get_trainable_items())
-res, averaged_grads = communicator.allreduce_average(grads)
-if res == SUCCESS:
+status, averaged_grads = communicator.allreduce_average(grads)
+if res == SUCCEEDED:
     update_model(averaged_grads)
 else:
     report_failure()
@@ -165,10 +165,10 @@ failure and continue training on the next batch.
 If any of the workers fails, e.g. the pod is accidentally killed, the following steps will be performed:
 
 1. The task that the failed worker was handling will be added back to the task queue.
-1. Since the `AllreduceCommunicator` is aware of the failure. It will reconstruct the communicator and re-assign ranks among
+1. Since the `CollectiveCommunicator` is aware of the failure. It will reconstruct the communicator and re-assign ranks among
 the existing active workers. The existing workers will then continue to run on the tasks at hand.
 1. The master pod will try to create a new worker pod after a specified restart delay period.
-1. Once the worker pod becomes active and `AllreduceCommunicator` is aware of it, we perform the following steps:
+1. Once the worker pod becomes active and `CollectiveCommunicator` is aware of it, we perform the following steps:
     1. Lock all existing worker pods, which can be done via a barrier operation.
     1. Master pod selects one of the worker pods to broadcast the current model parameters to all worker pods.
     1. Release the lock that each worker pod holds.
@@ -185,8 +185,8 @@ ElasticDL is a task-based system where any worker may stop receiving tasks with 
 distributed to all the workers. As a result, some workers may have already exited and will not be able to generate gradients
 to continue perform allreduce operations with the rest of the workers.
 
-In this situation, if we treat the exited worker pods as succeeded, the `AllreduceCommunicator` will not be reconstructed
-and thus the training will be stuck. If we treat the exited worker pods as failed, the `AllreduceCommunicator` will be reconstructed
+In this situation, if we treat the exited worker pods as succeeded, the `CollectiveCommunicator` will not be reconstructed
+and thus the training will be stuck. If we treat the exited worker pods as failed, the `CollectiveCommunicator` will be reconstructed
 every time when a worker exits, which introduces a lot of unnecessary reconstructions.
 
 Alternative, we can perform the following steps to address this issue:
@@ -215,7 +215,7 @@ the model that must fit within each worker's specified resources. Any layers in 
 The following CLI arguments are relevant and their behaviors might be changed under allreduce-based training:
 
 * `--restart_policy`: The pod restart policy when pod crashed.
-the `AllreduceCommunicator` just reconstructed the communicator and we want to wait for a while before restarting the
+the `CollectiveCommunicator` just reconstructed the communicator and we want to wait for a while before restarting the
 failed worker pod which requires reconstruction of the communicator again once the pod becomes active. 
 * `--distribution_strategy`: In addition to the existing "ParameterServerStrategy" that we have, we add a new strategy
 called "AllreduceStrategy".
