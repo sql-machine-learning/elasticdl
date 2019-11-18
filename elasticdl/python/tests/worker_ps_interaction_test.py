@@ -167,6 +167,22 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 break
         return worker_results
 
+    def _test_deepfm_train(self, num_ps, num_worker, stop_step):
+        model_def = "deepfm_functional_api.deepfm_functional_api.custom_model"
+        self._create_pserver(model_def, num_ps)
+        db, test_db = get_frappe_dataset(self._batch_size)
+
+        self._create_worker(num_worker)
+        threads = []
+        for w in range(num_worker):
+            t = Thread(
+                target=self._worker_train, args=(w, db, test_db, stop_step)
+            )
+            t.start()
+            threads.append(t)
+        for t in threads:
+            t.join()
+
     def test_worker_pull_embedding(self):
         model_def = "mnist_functional_api.mnist_functional_api.custom_model"
         self._create_pserver(model_def, 2)
@@ -352,19 +368,16 @@ class WorkerPSInteractionTest(unittest.TestCase):
         self.assertLess(0.6, acc)
 
     def test_deepfm_two_worker_train(self):
-        model_def = "deepfm_functional_api.deepfm_functional_api.custom_model"
-        self._create_pserver(model_def, 2)
-        db, test_db = get_frappe_dataset(self._batch_size)
+        num_ps = 2
+        num_worker = 2
+        stop_step = 10
+        self._test_deepfm_train(num_ps, num_worker, stop_step)
 
-        self._create_worker(2)
-        t1 = Thread(target=self._worker_train, args=(0, db, test_db, 50))
-        t1.start()
-
-        t2 = Thread(target=self._worker_train, args=(1, db, test_db, 50))
-        t2.start()
-
-        t1.join()
-        t2.join()
+    def test_deepfm_four_worker_train(self):
+        num_ps = 4
+        num_worker = 1
+        stop_step = 10
+        self._test_deepfm_train(num_ps, num_worker, stop_step)
 
     def test_restart_ps(self):
         model_def = "mnist_functional_api.mnist_functional_api.custom_model"

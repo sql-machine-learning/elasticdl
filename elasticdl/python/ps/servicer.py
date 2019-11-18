@@ -37,6 +37,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._eval_steps = evaluation_steps
         self._version_lock = threading.Lock()
         self._lock = threading.Lock()
+        self._use_wrap_opt = False
 
         self._grads_n = 0
         self._grads_buffer = {}
@@ -79,11 +80,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         with self._lock:
             accepted = self._parameters.init_from_model_pb(request)
         if accepted and self._parameters.has_embedding_params():
-            self.wrap_optimizer()
-            self._parameters.create_slot_params(
-                self._optimizer.allowed_slot_names,
-                self._optimizer.slot_initial_value,
-            )
+            self.wrap_optimizer_and_set_slot()
         return empty_pb2.Empty()
 
     def push_embedding_info(self, request, _):
@@ -91,6 +88,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             self._parameters.init_embedding_params(
                 request.embedding_table_info
             )
+            self.wrap_optimizer_and_set_slot()
         return empty_pb2.Empty()
 
     def push_gradient(self, request, _):
@@ -209,3 +207,12 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         req = elasticdl_pb2.ReportVersionRequest()
         req.model_version = version
         self._master_stub.ReportVersion(req)
+
+    def wrap_optimizer_and_set_slot(self):
+        if not self._use_wrap_opt:
+            self.wrap_optimizer()
+            self._parameters.create_slot_params(
+                self._optimizer.allowed_slot_names,
+                self._optimizer.slot_initial_value,
+            )
+            self._use_wrap_opt = True
