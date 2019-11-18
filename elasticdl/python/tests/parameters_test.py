@@ -32,9 +32,11 @@ class ParametersTest(unittest.TestCase):
 
         embedding_vectors = np.random.uniform(size=(2, 10))
         embedding_indices = np.array([0, 8])
-        embedding_tensor = Tensor(embedding_vectors,
-                                  indices=embedding_indices,
-                                  name=self.embedding_table_name)
+        embedding_tensor = Tensor(
+            embedding_vectors,
+            indices=embedding_indices,
+            name=self.embedding_table_name,
+        )
         embedding_tensor_pb = embedding_tensor.to_tensor_pb()
         self.tensors_pb.append(embedding_tensor_pb)
 
@@ -170,11 +172,14 @@ class ParametersTest(unittest.TestCase):
 
         params = Parameters()
         params.init_from_model_pb(model_pb)
-        self.assertEqual(params.non_embedding_params.keys(),
-                         self.params.non_embedding_params.keys())
-        self.assertEquals(
-            params.embedding_params['embedding_1'].get([0]).tolist(),
-            self.params.embedding_params['embedding_1'].get([0]).tolist())
+        self.assertEqual(
+            params.non_embedding_params.keys(),
+            self.params.non_embedding_params.keys(),
+        )
+        self.assertEqual(
+            params.embedding_params["embedding_1"].get([0]).tolist(),
+            self.params.embedding_params["embedding_1"].get([0]).tolist(),
+        )
 
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
 import numpy as np
 import tensorflow as tf
-from elasticdl.python.common.tensor import Tensor
+
 from elasticdl.proto.elasticdl_pb2 import EmbeddingTableInfo
+from elasticdl.python.common.tensor import Tensor
 
 
 class EmbeddingTable(object):
@@ -66,9 +67,11 @@ class EmbeddingTable(object):
         for id, embedding_vector in self.embedding_vectors.items():
             indices.append(id)
             embedding_vectors.append(embedding_vector)
-        return Tensor(values=np.array(embedding_vectors),
-                      indices=np.array(indices),
-                      name=self.name)
+        return Tensor(
+            values=np.array(embedding_vectors),
+            indices=np.array(indices),
+            name=self.name,
+        )
 
     def to_embedding_table_info_pb(self):
         embedding_pb = EmbeddingTableInfo()

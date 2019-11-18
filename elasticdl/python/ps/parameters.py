@@ -1,17 +1,17 @@
 import tensorflow as tf
 
-from elasticdl.python.common.tensor import tensor_pb_to_ndarray
+from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.tensor import (
+    Tensor,
+    deserialize_tensor_pb,
+    emplace_tensor_pb_from_ndarray,
+    serialize_tensor,
+    tensor_pb_to_ndarray,
+)
 from elasticdl.python.ps.embedding_table import (
     EmbeddingTable,
     create_embedding_table,
     get_slot_table_name,
-)
-from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.tensor import (
-    Tensor,
-    emplace_tensor_pb_from_ndarray,
-    serialize_tensor,
-    deserialize_tensor_pb,
 )
 
 
