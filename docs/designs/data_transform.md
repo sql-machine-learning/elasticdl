@@ -8,11 +8,12 @@ Data transformation contains two key parts: analyzer and transformer. Analyzer s
 [TensorFlow Transform](https://www.tensorflow.org/tfx/transform/get_started) is the open source solution for data transformation in TFX. Users need write a python function preprocess_fn to define the preprocess logic. SQLFlow users prefer to write SQL instead of python. It's user unfriendly to SQLFlow users if we integrate TF Transform with SQLFlow directly.  
 From another point of view, SQL can naturally support statistical work just like analyzer. Feature column api can take charge of transform logic such as transformer. For dense column, we can use numeric_column and pass a user defined function *normalizer_fn* to convert the column value. For sparse column, we can use embedding_column to map the sparse value to embedding vector or use cross_column to do the feature crossing. We plan to use SQL and feature column together to do the data transformation work.  
 
-Consistency between offline and online is the key point of data transformation. Users write the transform code only once. And then the same logic can run in batch mode offline and in real time mode online. In this way, we can prevent the training/serving skew. Both TF Transform and feature column can keep the consistency. The data transform logic on the training stage is built into the inference graph as the SavedModel.  
+Consistency between offline and online is the key point of data transformation. Users write the transform code only once. And then the same logic can run in batch mode offline and in real time mode online. In this way, we can prevent the training/serving skew. Both TF Transform and feature column can keep the consistency. The data transform logic in the training stage is built into the inference graph as the SavedModel.  
 
-## Transform Expression in SQLFlow
+## Transform Syntax in SQLFlow
 
-We can extend the SQLFlow syntax and add **TO TRANSFORM** keyword to describe the transform process. Let's take the following SQL expression for example: **TO TRANSFORM NORMALIZE(age) as age_norm, STANDARDIZE(capital_gain) as capital_gain_std, BUCKETIZED(hours_per_week, bucket_num=10) as hours_per_week_bkt**. Normalize the column 'age' to the column 'age_norm', standardize the column 'capital_gain' to 'capital_gain_std', bucketize the column 'hours_per_week' to 10 buckets to the column 'hours_per_week_bkt'. The output of transform will be passed to the **COLUMN** expression.
+We can extend the SQLFlow syntax and add **TO TRANSFORM** keyword to describe the transform process. Let's take the following SQL expression for example: **TO TRANSFORM NORMALIZE(age) as age_norm, STANDARDIZE(capital_gain) as capital_gain_std, BUCKETIZED(hours_per_week, bucket_num=10) as hours_per_week_bkt**. Normalize the column *age* to the column *age_norm*, standardize the column *capital_gain* to *capital_gain_std*, bucketize the column *hours_per_week* to 10 buckets to the column *hours_per_week_bkt*. The output of transform will be passed to the **COLUMN** expression.  
+We add some builtin transform Api and users can use them directly in the TRANSFORM expression. The Api set contains NORMALIZE, STANDARDIZE, BUCKETIZED, LOG and more to be added in the future.  
 
 ```SQL
 SELECT *
@@ -26,3 +27,9 @@ LABEL label
 
 ## Design
 
+Data transformation contains two stages: analyze and transform. In our design, we will do the transform work using feature column along with the model training process. As a result, we will replace the transform stage with the feature column generation stage.  
+We choose to convert the **TRANSFORM** expression into two steps in couler work flow: analyze and feature column generation. Let's take STANDARDIZE for example, the following figure describe how the data transform pipeline works.  
+
+![transform_steps](../images/transform_steps.png)
+
+A transform api contains two members: analyzers and feature column template. Analyer is the statistical operation which needs run at first to complement the whole transform logic. After completing all the statistical operation, we will format based on the feature column template to get the integral feature column definition for the transform logic.  
