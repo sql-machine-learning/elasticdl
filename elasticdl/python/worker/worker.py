@@ -438,7 +438,7 @@ class Worker(object):
                     req = reqs[ps_id]
                     gv, gi = results[ps_id]
                     emplace_tensor_pb_from_ndarray(
-                        req.gradients, values=gv, indices=gi, name=layer.name,
+                        req.gradients, values=gv, indices=gi, name=layer.name
                     )
 
         # TODO: call `push_gradient` in parallel
@@ -469,7 +469,7 @@ class Worker(object):
         labels = np.concatenate(labels)
         tensor = Tensor(values=labels)
         serialize_tensor(tensor, req.labels)
-        req.model_version = self._model_version
+        req.model_version = self._model_version if self._use_multi_ps else -1
         res = self._stub.ReportEvaluationMetrics(req)
         return res.accepted, res.model_version
 

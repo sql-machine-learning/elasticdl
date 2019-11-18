@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
+from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.checkpoint_service import CheckpointService
@@ -127,7 +128,8 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
         )
         self.master._version = 1
         self.model_handler = ModelHandler.get_model_handler(
-            distribution_strategy="ParameterServerStrategy", stub=self.master
+            distribution_strategy=DistributionStrategy.PARAMETER_SERVER,
+            stub=self.master,
         )
 
     def test_get_model_to_train(self):

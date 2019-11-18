@@ -33,6 +33,8 @@ class PserverArgs(object):
         optimizer="optimizer",
         port=9999,
         log_level="INFO",
+        master_addr="test:1111",
+        evaluation_steps=0,
     ):
         self.grads_to_wait = grads_to_wait
         self.lr_staleness_modulation = lr_staleness_modulation
@@ -42,6 +44,8 @@ class PserverArgs(object):
         self.optimizer = optimizer
         self.port = port
         self.log_level = log_level
+        self.master_addr = master_addr
+        self.evaluation_steps = evaluation_steps
 
 
 class DatasetName(object):
@@ -215,25 +219,11 @@ def distributed_train_and_evaluate(
     checkpoint_service = CheckpointService("", 0, 0, True)
     if training:
         evaluation_service = EvaluationService(
-            checkpoint_service,
-            None,
-            task_d,
-            0,
-            0,
-            1,
-            False,
-            model_module[eval_metrics_fn],
+            None, task_d, 0, 0, 1, False, model_module[eval_metrics_fn],
         )
     else:
         evaluation_service = EvaluationService(
-            checkpoint_service,
-            None,
-            task_d,
-            0,
-            0,
-            0,
-            True,
-            model_module[eval_metrics_fn],
+            None, task_d, 0, 0, 0, True, model_module[eval_metrics_fn],
         )
     task_d.set_evaluation_service(evaluation_service)
     grads_to_wait = 1 if use_async else 2

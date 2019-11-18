@@ -1,6 +1,7 @@
 import argparse
 from itertools import chain
 
+from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.log_utils import default_logger as logger
 
 MODEL_SPEC_GROUP = [
@@ -491,9 +492,14 @@ def add_common_args_between_master_and_worker(parser):
     parser.add_argument(
         "--distribution_strategy",
         type=str,
+        choices=[
+            "",
+            DistributionStrategy.PARAMETER_SERVER,
+            DistributionStrategy.ALLREDUCE,
+        ],
         help="Master will use a distribution policy on a list of devices "
         "according to the distributed strategy, "
-        'e.g. "ParameterServerStrategy"',
+        'e.g. "ParameterServerStrategy" or "AllreduceStrategy"',
     )
 
 
@@ -566,6 +572,7 @@ def parse_ps_args(ps_args=None):
     parser.add_argument(
         "--port", help="Port used by the PS pod", type=int, required=True
     )
+    parser.add_argument("--master_addr", help="Master ip:port")
 
     add_common_params(parser)
     add_train_params(parser)

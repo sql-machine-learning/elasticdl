@@ -229,3 +229,7 @@ class InstanceManager(object):
         elif relaunch_ps:
             logger.info("Relaunching ps.")
             self._start_ps(ps_id)
+
+    @property
+    def ps_addrs(self):
+        return self._ps_addrs

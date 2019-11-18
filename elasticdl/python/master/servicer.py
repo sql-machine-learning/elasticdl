@@ -263,7 +263,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def _update_evaluation(self):
         if self._evaluation_service:
             self._evaluation_service.add_evaluation_task_if_needed(
-                master_locking=False
+                master_locking=False, model_version=self._version
             )
 
     def _update_checkpoint(self):
@@ -447,3 +447,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         res.model_version = self._version
         res.accepted = report_metrics
         return res
+
+    def ReportVersion(self, request, _):
+        if self._evaluation_service:
+            self._evaluation_service.add_evaluation_task_if_needed(
+                master_locking=False, model_version=request.model_version
+            )
+        return empty_pb2.Empty()

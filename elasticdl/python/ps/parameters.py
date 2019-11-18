@@ -27,6 +27,12 @@ class Parameters(object):
         self.non_embedding_params = {}
         self.embedding_params = {}
 
+    def reset(self):
+        self.version = 0
+        self.init_status = False
+        self.non_embedding_params.clear()
+        self.embedding_params.clear()
+
     def get_non_embedding_param(self, name, default_value=None):
         return self.non_embedding_params.get(name, default_value)
 
