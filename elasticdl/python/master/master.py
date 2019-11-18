@@ -146,6 +146,17 @@ class Master(object):
         # Initialize instance manager
         self.instance_manager = self._create_instance_manager(args)
 
+        self._should_stop = False
+        self._exit_code = 0
+
+    def request_stop(self, err_msg=None):
+        """Request master to quit"""
+        self._should_stop = True
+        if err_msg:
+            self.logger.error(err_msg)
+            # TODO (chengfu.wcy) create meaningful status codes
+            self._exit_code = -1
+
     def prepare(self):
         """
         Start the components one by one. Make sure that it is ready to run.
@@ -188,11 +199,14 @@ class Master(object):
                             InstanceManagerStatus.FINISHED
                         )
                     break
+                if self._should_stop:
+                    break
                 time.sleep(30)
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")
         finally:
             self._stop()
+        return self._exit_code
 
     def _stop(self):
         """
