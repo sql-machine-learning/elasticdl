@@ -28,7 +28,10 @@ LABEL label
 ## Design
 
 Data transformation contains two stages: analyze and transform. In our design, we will do the transform work using feature column along with the model training process. As a result, we will replace the transform stage with the feature column generation stage.  
-We choose to convert the **TRANSFORM** expression into two steps in couler work flow: analyze and feature column generation. Let's take STANDARDIZE(age) for example, the following figure describe how the data transform pipeline works.  
+We choose to convert the **TRANSFORM** expression into two steps in couler work flow: analyze and feature column generation. The output of feature column generation will be passed to the next model training step.  
+![data_transform_pipeline](../images/data_transform_pipeline.png)
+
+Let's take STANDARDIZE(age) for example, the following figure describe how the data transform pipeline works in detail.  
 
 ![transform_steps](../images/transform_steps.png)
 
