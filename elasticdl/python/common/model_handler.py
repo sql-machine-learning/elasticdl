@@ -56,8 +56,12 @@ class ModelHandler(metaclass=abc.ABCMeta):
         """
         if distribution_strategy == DistributionStrategy.PARAMETER_SERVER:
             return ParameterServerModelHandler(stub=stub)
-        else:
-            return DefaultModelHandler()
+        elif distribution_strategy == DistributionStrategy.ALLREDUCE:
+            logger.warning(
+                "Allreduce distribution strategy is not supported yet. "
+                "Switching to use the default distribution strategy."
+            )
+        return DefaultModelHandler()
 
 
 class DefaultModelHandler(ModelHandler):
@@ -140,8 +144,9 @@ class ParameterServerModelHandler(ModelHandler):
             )
         return model
 
+    @staticmethod
     def _replace_embedding_layer_to_clone_model(
-        self, model, src_embedding_class, dst_embedding_class
+        model, src_embedding_class, dst_embedding_class
     ):
         """Clone a new model by cloning model and replace the
         src_embedding_class layer with a dst_embedding_class.
@@ -177,8 +182,9 @@ class ParameterServerModelHandler(ModelHandler):
             model, clone_function=_clone_function
         )
 
+    @staticmethod
     def _replace_embedding_attributes_for_subclass(
-        self, model, src_embedding_class, dst_embedding_class
+        model, src_embedding_class, dst_embedding_class
     ):
         """Replace the keras embedding attribute with
         elasticdl.layers.Embedding layer.
@@ -205,12 +211,13 @@ class ParameterServerModelHandler(ModelHandler):
         trained_params.update(trained_embedding_params)
         return trained_params
 
-    def _get_trained_embedding_params(self, model):
+    @staticmethod
+    def _get_trained_embedding_params(model):
         """Get trained embedding table from PS
         """
         embedding_params = {}
         embedding_layers = model_utils.find_layer(model, Embedding)
-        for embedding_layer in embedding_layers:
+        for _ in embedding_layers:
             # TODO get all embedding vectors of the embedding layer from PS
             pass
         return embedding_params

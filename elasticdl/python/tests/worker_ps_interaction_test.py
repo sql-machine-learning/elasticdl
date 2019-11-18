@@ -4,13 +4,13 @@ from collections import namedtuple
 from pathlib import Path
 from threading import Thread
 
-import grpc
 import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
-from elasticdl.python.common.constants import GRPC
+from elasticdl.python.common.constants import DistributionStrategy
+from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.model_utils import get_model_spec
 from elasticdl.python.data.recordio_gen.frappe_recordio_gen import (
@@ -79,19 +79,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         self._channels = []
         for port in self._ports:
             addr = "localhost:%d" % port
-            channel = grpc.insecure_channel(
-                addr,
-                options=[
-                    (
-                        "grpc.max_send_message_length",
-                        GRPC.MAX_SEND_MESSAGE_LENGTH,
-                    ),
-                    (
-                        "grpc.max_receive_message_length",
-                        GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
-                    ),
-                ],
-            )
+            channel = build_channel(addr)
             self._channels.append(channel)
 
         self._pservers = []
@@ -135,7 +123,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 "--model_def",
                 self._model_def,
                 "--distribution_strategy",
-                "ParameterServerStrategy",
+                DistributionStrategy.PARAMETER_SERVER,
             ]
             args = parse_worker_args(arguments)
             worker = Worker(args, ps_channels=self._channels)
@@ -194,7 +182,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             "--model_def",
             model_def,
             "--distribution_strategy",
-            "ParameterServerStrategy",
+            DistributionStrategy.PARAMETER_SERVER,
         ]
         args = parse_worker_args(arguments)
         worker = Worker(args, ps_channels=self._channels)
@@ -247,7 +235,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             "--model_def",
             model_def,
             "--distribution_strategy",
-            "ParameterServerStrategy",
+            DistributionStrategy.PARAMETER_SERVER,
         ]
         args = parse_worker_args(arguments)
 
@@ -400,7 +388,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 "--model_def",
                 model_def,
                 "--distribution_strategy",
-                "ParameterServerStrategy",
+                DistributionStrategy.PARAMETER_SERVER,
             ]
             args = parse_worker_args(arguments)
             tf.keras.backend.clear_session()
