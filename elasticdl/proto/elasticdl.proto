@@ -140,6 +140,10 @@ message ReportEvaluationMetricsRequest {
     Tensor labels = 3;
 }
 
+message ReportVersionRequest {
+    int32 model_version = 1;
+}
+
 service Master {
     rpc GetTask(GetTaskRequest) returns (Task);
     rpc GetModel(GetModelRequest) returns (Model);
@@ -147,6 +151,7 @@ service Master {
     rpc ReportGradient(ReportGradientRequest) returns (ReportGradientResponse);
     rpc ReportEvaluationMetrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsResponse);
     rpc ReportTaskResult(ReportTaskResultRequest) returns (google.protobuf.Empty);
+    rpc ReportVersion(ReportVersionRequest) returns (google.protobuf.Empty);
 }
 
 message PullVariableResponse {
