@@ -30,7 +30,7 @@ class ParameterServer(object):
         # Create Parameters instance
         self.parameters = Parameters()
         if args.master_addr is None:
-            raise ValueError("master_addr is missing for worker")
+            raise ValueError("master_addr is missing for parameter servers")
         self.master_channel = build_channel(args.master_addr)
         self.evaluation_steps = args.evaluation_steps
 
