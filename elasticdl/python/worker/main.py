@@ -1,8 +1,12 @@
+import time
+
 import grpc
+from kubernetes import client, config
 
 from elasticdl.python.common import log_utils
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import GRPC
+from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.worker.worker import Worker
 
 
@@ -13,24 +17,13 @@ def main():
     if args.master_addr is None:
         raise ValueError("master_addr is missing for worker")
 
-    master_channel = grpc.insecure_channel(
-        args.master_addr,
-        options=[
-            ("grpc.max_send_message_length", GRPC.MAX_SEND_MESSAGE_LENGTH),
-            (
-                "grpc.max_receive_message_length",
-                GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
-            ),
-        ],
-    )
+    master_channel = build_channel(args.master_addr)
 
     ps_channels = []
     if args.ps_addrs:
         # TODO: use ps_addrs from master directly after ps service is working.
         #       Get ps pod ip for ps grpc connection for now.
         ps_addrs = args.ps_addrs.split(",")
-        from kubernetes import client, config
-        import time
 
         config.load_incluster_config()
         api = client.CoreV1Api()

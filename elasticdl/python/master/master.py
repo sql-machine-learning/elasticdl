@@ -124,7 +124,7 @@ class Master(object):
         #       will be redesigned after distributed PS is implemented
         if self.num_ps_pods:
             self.checkpoint_service = None
-            self.evaluation_service = None
+            self.evaluation_service = self._create_evaluation_service(args)
             self.embedding_service_endpoint = None
             self.embedding_dims = None
         else:
@@ -296,7 +296,6 @@ class Master(object):
                 args.evaluation_steps,
             )
             evaluation_service = EvaluationService(
-                self.checkpoint_service,
                 self.tb_service,
                 self.task_d,
                 args.evaluation_start_delay_secs,
@@ -416,6 +415,10 @@ class Master(object):
                 str(args.num_minibatches_per_task),
                 "--port",
                 "2222",
+                "--master_addr",
+                self.master_addr,
+                "--evaluation_steps",
+                str(args.evaluation_steps),
             ]
 
             env_dict = parse_envs(args.envs)
