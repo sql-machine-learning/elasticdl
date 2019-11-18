@@ -151,7 +151,7 @@ service Master {
     rpc ReportGradient(ReportGradientRequest) returns (ReportGradientResponse);
     rpc ReportEvaluationMetrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsResponse);
     rpc ReportTaskResult(ReportTaskResultRequest) returns (google.protobuf.Empty);
-    rpc report_version(ReportVersionRequest) returns (google.protobuf.Empty);
+    rpc ReportVersion(ReportVersionRequest) returns (google.protobuf.Empty);
 }
 
 message PullVariableResponse {

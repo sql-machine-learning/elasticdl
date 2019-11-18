@@ -448,7 +448,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         res.accepted = report_metrics
         return res
 
-    def report_version(self, request, _):
+    def ReportVersion(self, request, _):
         if self._evaluation_service:
             self._evaluation_service.add_evaluation_task_if_needed(
                 master_locking=False, model_version=request.model_version

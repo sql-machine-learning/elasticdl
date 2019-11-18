@@ -208,4 +208,4 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
     def _report_version(self, version):
         req = elasticdl_pb2.ReportVersionRequest()
         req.model_version = version
-        self._master_stub.report_version(req)
+        self._master_stub.ReportVersion(req)
