@@ -33,6 +33,8 @@ class PserverArgs(object):
         optimizer="optimizer",
         port=9999,
         log_level="INFO",
+        job_name="test_pserver",
+        namespace="default",
         master_addr="test:1111",
         evaluation_steps=0,
     ):
@@ -44,6 +46,8 @@ class PserverArgs(object):
         self.optimizer = optimizer
         self.port = port
         self.log_level = log_level
+        self.job_name = job_name
+        self.namespace = namespace
         self.master_addr = master_addr
         self.evaluation_steps = evaluation_steps
 
