@@ -7,6 +7,7 @@ import tensorflow as tf
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
 from elasticdl.python.common.constants import (
     CollectiveCommunicatorStatus,
     DistributionStrategy,
@@ -20,7 +21,6 @@ from elasticdl.python.common.hash_utils import (
     scatter_embedding_vector,
     string_to_id,
 )
-from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
