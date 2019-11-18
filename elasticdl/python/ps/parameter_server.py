@@ -2,10 +2,12 @@ import time
 from concurrent import futures
 
 import grpc
+from kubernetes import client, config
 
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC
 from elasticdl.python.common.grpc_utils import build_channel
+from elasticdl.python.common.k8s_client import get_master_pod_name
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
@@ -33,6 +35,9 @@ class ParameterServer(object):
             raise ValueError("master_addr is missing for parameter servers")
         self.master_channel = build_channel(args.master_addr)
         self.evaluation_steps = args.evaluation_steps
+
+        self.master_name = get_master_pod_name(args.job_name)
+        self.namespace = args.namespace
 
     def prepare(self):
         server = grpc.server(
@@ -63,10 +68,20 @@ class ParameterServer(object):
         self.logger.info("RPC Server started at port: %d", self.port)
 
     def run(self):
+        config.load_incluster_config()
+        api = client.CoreV1Api()
         try:
             while True:
-                # TODO: add loop break condition
                 time.sleep(30)
+                master_pod = api.read_namespaced_pod(
+                    namespace=self.namespace, name=self.master_name
+                )
+                if master_pod.status.phase == "Succeeded":
+                    self.logger.info("Master pod is Succeeded")
+                    break
+                elif master_pod.status.phase == "Failed":
+                    self.logger.info("Master pod is Failed")
+                    break
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")
 
