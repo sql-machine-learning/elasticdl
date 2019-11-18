@@ -42,6 +42,7 @@ class MetricsDictKey(object):
 
 class DistributionStrategy(object):
     PARAMETER_SERVER = "ParameterServerStrategy"
+    ALLREDUCE = "AllreduceStrategy"
 
 
 class SaveModelConfig(object):

@@ -1,4 +1,7 @@
+import time
+
 import grpc
+from kubernetes import client, config
 
 from elasticdl.python.common import log_utils
 from elasticdl.python.common.args import parse_worker_args
@@ -21,8 +24,6 @@ def main():
         # TODO: use ps_addrs from master directly after ps service is working.
         #       Get ps pod ip for ps grpc connection for now.
         ps_addrs = args.ps_addrs.split(",")
-        from kubernetes import client, config
-        import time
 
         config.load_incluster_config()
         api = client.CoreV1Api()
