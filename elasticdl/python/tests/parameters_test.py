@@ -30,6 +30,14 @@ class ParametersTest(unittest.TestCase):
         embedding_pb.dim = self.embedding_dim
         embedding_pb.initializer = "uniform"
 
+        embedding_vectors = np.random.uniform(size=(2, 10))
+        embedding_indices = np.array([0, 8])
+        embedding_tensor = Tensor(embedding_vectors,
+                                  indices=embedding_indices,
+                                  name=self.embedding_table_name)
+        embedding_tensor_pb = embedding_tensor.to_tensor_pb()
+        self.tensors_pb.append(embedding_tensor_pb)
+
         self.embeddings_pb.append(embedding_pb)
 
     def _clear_params(self):
@@ -155,6 +163,18 @@ class ParametersTest(unittest.TestCase):
         slot_init_value = {slot_names[0]: 3.5, slot_names[1]: 0.0}
         self.params.create_slot_params(slot_names, slot_init_value)
         self._test_get_embedding_param(slot_names, slot_init_value)
+
+    def test_export_to_model_pb(self):
+        self.params.init_from_model_pb(self.model_pb)
+        model_pb = self.params.export_to_model_pb()
+
+        params = Parameters()
+        params.init_from_model_pb(model_pb)
+        self.assertEqual(params.non_embedding_params.keys(),
+                         self.params.non_embedding_params.keys())
+        self.assertEquals(
+            params.embedding_params['embedding_1'].get([0]).tolist(),
+            self.params.embedding_params['embedding_1'].get([0]).tolist())
 
 
 if __name__ == "__main__":

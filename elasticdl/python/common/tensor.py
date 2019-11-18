@@ -179,7 +179,7 @@ def emplace_tensor_pb_from_ndarray(
         pb.name = "test"
         pb.dtype = DT_INT64
         pb.content = np.array([1, 2, 3]).tobytes()
-        tensor_pb_list.append(tensor_pb) # slow, because append copies pb
+        tensor_pb_list.append(pb) # slow, because append copies pb
         ```
     """
     tensor_pb = tensor_pb_list.add()
