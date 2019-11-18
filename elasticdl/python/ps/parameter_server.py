@@ -77,6 +77,10 @@ class ParameterServer(object):
                     namespace=self.namespace, name=self.master_name
                 )
                 if master_pod.status.phase == "Succeeded":
+                    self.logger.info("Master pod is Succeeded")
+                    break
+                elif master_pod.status.phase == "Failed":
+                    self.logger.info("Master pod is Failed")
                     break
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")
