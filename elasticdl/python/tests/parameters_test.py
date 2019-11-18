@@ -32,10 +32,6 @@ class ParametersTest(unittest.TestCase):
 
         self.embeddings_pb.append(embedding_pb)
 
-    def _clear_params(self):
-        self.params.non_embedding_params.clear()
-        self.params.embedding_params.clear()
-
     def _test_get_embedding_param(self, slot_names=[], slot_init_value={}):
         indices = [0, 3, 7]
 
@@ -56,7 +52,7 @@ class ParametersTest(unittest.TestCase):
             self.params.get_embedding_param("tom", indices)
 
     def test_init_from_model_pb(self):
-        self._clear_params()
+        self.params.reset()
         self.params.init_from_model_pb(self.model_pb)
 
         res = self.params.non_embedding_params
@@ -68,7 +64,7 @@ class ParametersTest(unittest.TestCase):
         self._test_get_embedding_param()
 
     def test_non_embedding_params(self):
-        self._clear_params()
+        self.params.reset()
 
         res = self.params.non_embedding_params
         self.assertFalse(any(res))
@@ -83,12 +79,12 @@ class ParametersTest(unittest.TestCase):
         self.assertTrue("y" in self.params.non_embedding_params)
 
     def test_get_embedding_param(self):
-        self._clear_params()
+        self.params.reset()
         self.params.init_embedding_params(self.embeddings_pb)
         self._test_get_embedding_param()
 
     def test_set_embedding_param(self):
-        self._clear_params()
+        self.params.reset()
         self.params.init_embedding_params(self.embeddings_pb)
         indices = [100, 34, 8]
         x = len(indices)
@@ -114,7 +110,7 @@ class ParametersTest(unittest.TestCase):
             self.params.set_embedding_param("tom", [0, 1, 2], values)
 
     def test_check_grad(self):
-        self._clear_params()
+        self.params.reset()
         self.params.init_from_model_pb(self.model_pb)
 
         grad0 = Tensor(name="z")
