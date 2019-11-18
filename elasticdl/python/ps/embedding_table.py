@@ -31,7 +31,7 @@ class EmbeddingTable(object):
         """
         self.name = name
         self.dim = dim
-        self.initializer_pb = initializer
+        self.initializer_value = initializer
         if is_slot:
             initializer = float(initializer)
             self.initializer = tf.keras.initializers.Constant(initializer)
@@ -62,6 +62,7 @@ class EmbeddingTable(object):
         self.embedding_vectors.clear()
 
     def to_tensor(self):
+        """Convert the embedding table to elasticDL Tensor"""
         indices = []
         embedding_vectors = []
         for id, embedding_vector in self.embedding_vectors.items():
@@ -74,10 +75,11 @@ class EmbeddingTable(object):
         )
 
     def to_embedding_table_info_pb(self):
+        """Convert the embedding table information to a protobuf"""
         embedding_pb = EmbeddingTableInfo()
         embedding_pb.name = self.name
         embedding_pb.dim = self.dim
-        embedding_pb.initializer = self.initializer_pb
+        embedding_pb.initializer = str(self.initializer_value)
         return embedding_pb
 
 
