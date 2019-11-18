@@ -28,7 +28,7 @@ LABEL label
 ## Design
 
 Data transform contains two stages: analyze and transform. In our design, we will do the analyze using SQL as the first step, and generate the feature column definition as the second step. The feature column contains the transform logic and execute along with the model training process.  
-We choose to convert the **TRANSFORM** expression into two steps in work flow described by [Couler](https://github.com/sql-machine-learning/sqlflow/blob/develop/python/couler/README.md): analyze and feature column generation. Couler is a programming language for describing workflows. Its compiler translates a workflow represented by a Python program into an [Argo](https://argoproj.github.io/) YAML file. Couler The output of feature column generation will be passed to the next model training step.  
+We choose to convert the **TRANSFORM** expression into two steps of the work flow described by [Couler](https://github.com/sql-machine-learning/sqlflow/blob/develop/python/couler/README.md): analyze and feature column generation. Couler is a programming language for describing workflows. Its compiler translates a workflow represented by a Python program into an [Argo](https://argoproj.github.io/) YAML file. The output of feature column generation will be passed to the next model training step.  
 ![data_transform_pipeline](../images/data_transform_pipeline.png)
 
 Let's take STANDARDIZE(age) for example, the following figure describe how the data transform pipeline works in detail.  
