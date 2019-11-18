@@ -166,7 +166,7 @@ class ParametersTest(unittest.TestCase):
 
     def test_export_to_model_pb(self):
         self.params.init_from_model_pb(self.model_pb)
-        model_pb = self.params.export_to_model_pb()
+        model_pb = self.params.to_model_pb()
 
         params = Parameters()
         params.init_from_model_pb(model_pb)

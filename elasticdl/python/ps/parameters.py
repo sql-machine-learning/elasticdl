@@ -171,8 +171,8 @@ class Parameters(object):
                     True,
                 )
 
-    def export_to_model_pb(self):
-        """ Export all parameters including embedding and non-embedding
+    def to_model_pb(self):
+        """ Convert all parameters including embedding and non-embedding
         parameters to `elasticdl_pb2.Model` which can be serialized.
         """
         pb_model = elasticdl_pb2.Model()
