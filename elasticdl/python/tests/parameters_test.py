@@ -168,10 +168,12 @@ class ParametersTest(unittest.TestCase):
 
     def test_export_to_model_pb(self):
         self.params.init_from_model_pb(self.model_pb)
+        self.params.version = 15
         model_pb = self.params.to_model_pb()
 
         params = Parameters()
         params.init_from_model_pb(model_pb)
+        self.assertEqual(params.version, self.params.version)
         self.assertEqual(
             params.non_embedding_params.keys(),
             self.params.non_embedding_params.keys(),

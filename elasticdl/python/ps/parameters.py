@@ -175,18 +175,19 @@ class Parameters(object):
         """ Convert all parameters including embedding and non-embedding
         parameters to `elasticdl_pb2.Model` which can be serialized.
         """
-        pb_model = elasticdl_pb2.Model()
+        model_pb = elasticdl_pb2.Model()
+        model_pb.version = self.version
         for name, var in self.non_embedding_params.items():
             emplace_tensor_pb_from_ndarray(
-                pb_model.param, var.numpy(), name=name
+                model_pb.param, var.numpy(), name=name
             )
 
         for name, embedding_table in self.embedding_params.items():
             embedding_table_tensor = embedding_table.to_tensor()
-            tensor_pb = pb_model.param.add()
+            tensor_pb = model_pb.param.add()
             serialize_tensor(embedding_table_tensor, tensor_pb)
 
             embedding_info = embedding_table.to_embedding_table_info_pb()
-            pb_model.embedding_table_info.append(embedding_info)
+            model_pb.embedding_table_info.append(embedding_info)
 
-        return pb_model
+        return model_pb
