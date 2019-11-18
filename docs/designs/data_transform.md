@@ -12,24 +12,27 @@ Consistency between offline and online is the key point of data transformation. 
 
 ## Transform Syntax in SQLFlow
 
-We can extend the SQLFlow syntax and add **TO TRANSFORM** keyword to describe the transform process. Let's take the following SQL expression for example: **TO TRANSFORM NORMALIZE(age) as age_norm, STANDARDIZE(capital_gain) as capital_gain_std, BUCKETIZED(hours_per_week, bucket_num=10) as hours_per_week_bkt**. Normalize the column *age* to the column *age_norm*, standardize the column *capital_gain* to *capital_gain_std*, bucketize the column *hours_per_week* to 10 buckets to the column *hours_per_week_bkt*. The output of transform will be passed to the **COLUMN** expression.  
+We can extend the SQLFlow syntax and add **TO TRANSFORM** keyword to describe the transform process. Let's take the following SQL expression for example: **TO TRANSFORM STANDARDIZE(age) as age_std, NORMALIZE(capital_gain) as capital_gain_norm, BUCKETIZED(hours_per_week, bucket_num=10) as hours_per_week_bkt**. Standardize the column *age* to the column *age_std*, normalize the column *capital_gain* to *capital_gain_norm*, bucketize the column *hours_per_week* to 10 buckets to the column *hours_per_week_bkt*. The output of transform will be passed to the **COLUMN** expression.  
 We add some builtin transform Api and users can use them directly in the TRANSFORM expression. The Api set contains NORMALIZE, STANDARDIZE, BUCKETIZED, LOG and more to be added in the future.  
 
 ```SQL
 SELECT *
 FROM census
-TO TRANSFORM NORMALIZE(age) as age_norm, STANDARDIZE(capital_gain) as capital_gain_std, BUCKETIZED(hours_per_week, bucket_num=10) as hours_per_week_bkt
+TO TRANSFORM STANDARDIZE(age) as age_std, NORMALIZE(capital_gain) as capital_gain_norm, BUCKETIZED(hours_per_week, bucket_num=10) as hours_per_week_bkt
 TO TRAIN DNNClassifier
 WITH model.hidden_units = [10, 20]
-COLUMNS NUMERIC(age_norm), NUMERIC(capital_gain_std), EMBEDDING(hours_per_week_bkt, dim=128)
+COLUMNS NUMERIC(age_std), NUMERIC(capital_gain_norm), EMBEDDING(hours_per_week_bkt, dim=128)
 LABEL label
 ```
 
 ## Design
 
 Data transformation contains two stages: analyze and transform. In our design, we will do the transform work using feature column along with the model training process. As a result, we will replace the transform stage with the feature column generation stage.  
-We choose to convert the **TRANSFORM** expression into two steps in couler work flow: analyze and feature column generation. Let's take STANDARDIZE for example, the following figure describe how the data transform pipeline works.  
+We choose to convert the **TRANSFORM** expression into two steps in couler work flow: analyze and feature column generation. Let's take STANDARDIZE(age) for example, the following figure describe how the data transform pipeline works.  
 
 ![transform_steps](../images/transform_steps.png)
 
-A transform api contains two members: analyzers and feature column template. Analyer is the statistical operation which needs run at first to complement the whole transform logic. After completing all the statistical operation, we will format based on the feature column template to get the integral feature column definition for the transform logic.  
+The **Analyze Stage** and **Feature Column Generation Stage** are two couler steps. Analyze Result and Generated Feature Column Definition Result are the output of the couler step.  
+
+A transform api contains two members: analyzers and feature column template. Analyer is the statistical operation which needs run at first to complement the whole transform logic. After completing all the statistical operation, we will format the feature column template with variable name and stastical values to get the integral feature column definition for the transform logic.  
+The generated feature column definitions will be passed to the next couler step: model training. We combines them with the COLUMN expression to generated the final feature column definitions and then pass to the model. Let's take **COLUMNS NUMERIC(age_std)** for example, the final definition will be **numeric_column('age', normalizer_fn=lambda x: x - 18.0 / 6.0)**  
