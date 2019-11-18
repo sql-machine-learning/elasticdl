@@ -75,13 +75,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             os.path.dirname(os.path.realpath(__file__)), "../../../model_zoo"
         )
         self._batch_size = 16
-        self._ports = [12345, 12346]
         self._channels = []
-        for port in self._ports:
-            addr = "localhost:%d" % port
-            channel = build_channel(addr)
-            self._channels.append(channel)
-
         self._pservers = []
         self._workers = []
 
@@ -89,7 +83,13 @@ class WorkerPSInteractionTest(unittest.TestCase):
         for pserver in self._pservers:
             pserver.server.stop(0)
 
-    def _create_pserver(self, model_def):
+    def _create_pserver(self, model_def, num):
+        self._ports = [i + 12345 for i in range(num)]
+        for port in self._ports:
+            addr = "localhost:%d" % port
+            channel = build_channel(addr)
+            self._channels.append(channel)
+
         self._model_def = model_def
         for port in self._ports:
             args = PserverArgs(
@@ -169,7 +169,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
     def test_worker_pull_embedding(self):
         model_def = "mnist_functional_api.mnist_functional_api.custom_model"
-        self._create_pserver(model_def)
+        self._create_pserver(model_def, 2)
         arguments = [
             "--worker_id",
             0,
@@ -220,7 +220,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
     def test_compare_onebatch_train(self):
         model_def = "mnist_functional_api.mnist_functional_api.custom_model"
-        self._create_pserver(model_def)
+        self._create_pserver(model_def, 2)
         images, labels = get_random_batch(self._batch_size)
         # TODO(yunjian.lmh): test optimizer wrapper
         arguments = [
@@ -285,7 +285,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
     def test_compare_mnist_train(self):
         model_def = "mnist_functional_api.mnist_functional_api.custom_model"
-        self._create_pserver(model_def)
+        self._create_pserver(model_def, 2)
         db, test_db = get_mnist_dataset(self._batch_size)
         stop_step = 20
 
@@ -342,7 +342,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
     def test_deepfm_train(self):
         model_def = "deepfm_functional_api.deepfm_functional_api.custom_model"
-        self._create_pserver(model_def)
+        self._create_pserver(model_def, 2)
         db, test_db = get_frappe_dataset(self._batch_size)
         self._create_worker(1)
         worker_results = self._worker_train(
@@ -353,7 +353,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
     def test_deepfm_two_worker_train(self):
         model_def = "deepfm_functional_api.deepfm_functional_api.custom_model"
-        self._create_pserver(model_def)
+        self._create_pserver(model_def, 2)
         db, test_db = get_frappe_dataset(self._batch_size)
 
         self._create_worker(2)
@@ -373,7 +373,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             get_random_batch(self._batch_size) for _ in range(num_data)
         ]
         workers = []
-        self._create_pserver(model_def)
+        self._create_pserver(model_def, 2)
         for w in range(2):
             self._reset_pserver()
             arguments = [
