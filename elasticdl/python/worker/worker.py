@@ -698,7 +698,12 @@ class Worker(object):
             dataset,
         ) = self._task_data_service.get_save_model_task_and_dataset()
         if task is not None and dataset is not None:
-            # TODO: Implement the save model execution process
+            dataset = self._dataset_fn(
+                dataset,
+                Mode.PREDICTION,
+                self._task_data_service.data_reader.metadata,
+            )
+            dataset = dataset.batch(self._minibatch_size)
             saved_model_path = task.extended_config.get(
                 SaveModelConfig.SAVED_MODEL_PATH
             )

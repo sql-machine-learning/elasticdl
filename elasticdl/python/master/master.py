@@ -417,6 +417,8 @@ class Master(object):
                 "2222",
                 "--master_addr",
                 self.master_addr,
+                "--namespace",
+                args.namespace,
                 "--evaluation_steps",
                 str(args.evaluation_steps),
             ]
