@@ -8,7 +8,7 @@ set +e
 JOB_TYPE=$1
 
 if [[ "$JOB_TYPE" == "train" ]]; then
-  bash validate_job_status_ps.sh ${JOB_TYPE}
+  bash scripts/validate_job_status_ps.sh ${JOB_TYPE}
 fi
 
 MASTER_POD_NAME=elasticdl-test-${JOB_TYPE}-master
