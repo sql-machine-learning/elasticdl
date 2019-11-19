@@ -82,6 +82,15 @@ class ParameterServer(object):
                 elif master_pod.status.phase == "Failed":
                     self.logger.info("Master pod is Failed")
                     break
+                elif (
+                    master_pod.status.phase == "Running"
+                    and master_pod.metadata.labels["status"] == "Finished"
+                ):
+                    self.logger.info(
+                        "Task is finished, "
+                        + "master pod is still running tensorboard service"
+                    )
+                    break
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")
 

@@ -9,7 +9,7 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --model_def=deepfm_functional_api.deepfm_functional_api.custom_model \
       --training_data=/data/frappe/train \
       --validation_data=/data/frappe/test \
-      --num_epochs=2 \
+      --num_epochs=1 \
       --master_resource_request="cpu=400m,memory=1024Mi" \
       --master_resource_limit="cpu=1,memory=2048Mi" \
       --worker_resource_request="cpu=400m,memory=2048Mi" \
@@ -20,8 +20,8 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --num_minibatches_per_task=2 \
       --num_workers=1 \
       --num_ps_pods=1 \
-      --checkpoint_steps=10 \
-      --evaluation_steps=50 \
+      --checkpoint_steps=200 \
+      --evaluation_steps=200 \
       --tensorboard_log_dir=/tmp/tensorboard-log \
       --grads_to_wait=1 \
       --use_async=True \

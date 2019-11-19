@@ -29,5 +29,5 @@ RUN python /var/image_label.py --dataset mnist --fraction 0.25 \
 # Copy frappe dataset
 COPY elasticdl/python/data/recordio_gen/frappe_recordio_gen.py /var/frappe_recordio_gen.py
 RUN python /var/frappe_recordio_gen.py --data /root/.keras/datasets --output_dir /data/frappe \
-    --fraction 0.25
+    --fraction 0.1
 RUN rm -rf /root/.keras/datasets
