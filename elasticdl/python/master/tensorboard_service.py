@@ -29,6 +29,8 @@ class TensorboardService(object):
             for k, v in dictionary.items():
                 if isinstance(v, np.ndarray) and len(v) == 1:
                     v = v[0]
+                elif isinstance(v, dict) and len(v):
+                    v = list(v.values())[0]
                 tf.summary.scalar(k, v, step=version)
 
     def start(self):
