@@ -670,7 +670,7 @@ class Worker(object):
                         max(self._model_version, min_model_version),
                         elasticdl_pb2.MINIMUM,
                     )
-                accepted, min_model_version, loss = self._run_training_task(
+                *accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )
                 if accepted:
