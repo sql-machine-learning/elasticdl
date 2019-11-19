@@ -1,6 +1,8 @@
 import os
 import tempfile
+from collections.__init__ import namedtuple
 from contextlib import closing
+from pathlib import Path
 
 import numpy as np
 import recordio
@@ -13,6 +15,9 @@ from elasticdl.python.common.constants import JobType, ODPSConfig
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
+)
+from elasticdl.python.data.recordio_gen.frappe_recordio_gen import (
+    load_raw_data,
 )
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import EvaluationService
@@ -420,3 +425,50 @@ def delete_iris_odps_table_from_env():
     get_odps_client_from_env().delete_table(
         table_name, project, if_exists=True
     )
+
+
+def get_random_batch(batch_size):
+    shape = (28, 28)
+    shape = (batch_size,) + shape
+    num_classes = 10
+    images = tf.random.uniform(shape)
+    labels = tf.random.uniform(
+        [batch_size], minval=0, maxval=num_classes, dtype=tf.int32
+    )
+    return images, labels
+
+
+def get_mnist_dataset(batch_size):
+    (
+        (x_train, y_train),
+        (x_test, y_test),
+    ) = tf.keras.datasets.mnist.load_data()
+    x_train = tf.convert_to_tensor(x_train, dtype=tf.float32) / 255.0
+    y_train = tf.convert_to_tensor(y_train, dtype=tf.int32)
+
+    x_test = tf.convert_to_tensor(x_test, dtype=tf.float32) / 255.0
+    y_test = tf.convert_to_tensor(y_test, dtype=tf.int32)
+
+    db = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+    db = db.batch(batch_size).repeat(2)
+    test_db = tf.data.Dataset.from_tensor_slices((x_test, y_test))
+    test_db = test_db.batch(batch_size)
+
+    return db, test_db
+
+
+def get_frappe_dataset(batch_size):
+    home = str(Path.home())
+    Args = namedtuple("Args", ["data"])
+    args = Args(data=os.path.join(home, ".keras/datasets"))
+    x_train, y_train, x_val, y_val, x_test, y_test = load_raw_data(args)
+    x_train = tf.convert_to_tensor(x_train, dtype=tf.int64)
+    x_test = tf.convert_to_tensor(x_test, dtype=tf.int64)
+    y_train = tf.convert_to_tensor(y_train, dtype=tf.int64)
+    y_test = tf.convert_to_tensor(y_test, dtype=tf.int64)
+
+    db = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+    db = db.batch(batch_size).repeat(2)
+    test_db = tf.data.Dataset.from_tensor_slices((x_test, y_test))
+    test_db = test_db.batch(batch_size)
+    return db, test_db

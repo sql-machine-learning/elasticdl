@@ -591,15 +591,14 @@ class Worker(object):
         return outputs
 
     def _collect_gradients_with_allreduce(self, grads):
-        (
-            status,
-            averaged_grads,
-        ) = self._collective_communicator.allreduce(grads)
+        (status, averaged_grads,) = self._collective_communicator.allreduce(
+            grads
+        )
         if status == CollectiveCommunicatorStatus.SUCCEEDED:
-            accepted, _ = self.report_gradient_locally(grads)
+            accepted, _ = self.report_gradient(grads)
         else:
             # TODO: Handle failure properly based on design doc
-            logger.warn("Allreduce average on grads failed")
+            logger.warning("Allreduce average on grads failed")
             accepted = False
         return accepted, None
 
