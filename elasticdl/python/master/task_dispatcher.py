@@ -31,10 +31,10 @@ class _Task(object):
         )
 
 
-class JobCounters(object):
+class JobCounter(object):
     """Counters for job"""
 
-    def __init__(self, total_records=None, failed_records=None):
+    def __init__(self, total_records=0, failed_records=0):
         self._total_records = total_records
         self._failed_records = failed_records
 
@@ -109,9 +109,7 @@ class _TaskDispatcher(object):
 
     def reset_job_counters(self, task_type):
         """Return record number in specific task_type"""
-        self._job_counters[task_type] = JobCounters(
-            total_records=0, failed_records=0
-        )
+        self._job_counters[task_type] = JobCounter()
 
     def create_tasks(self, task_type, model_version=-1):
         logger.info(
