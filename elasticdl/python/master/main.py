@@ -1,3 +1,5 @@
+import sys
+
 from elasticdl.python.common.args import parse_master_args
 from elasticdl.python.master.master import Master
 
@@ -10,4 +12,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
