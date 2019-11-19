@@ -23,6 +23,9 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         use_async=False,
         evaluation_steps=0,
         master_channel=None,
+        checkpoint_service=None,
+        ps_id=None,
+        num_ps_pods=None,
     ):
         if master_channel is None:
             self._master_stub = None
@@ -35,6 +38,9 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._lr_staleness_modulation = lr_staleness_modulation
         self._use_async = use_async
         self._eval_steps = evaluation_steps
+        self._checkpoint_service = checkpoint_service
+        self._ps_id = ps_id
+        self._num_ps_pods = num_ps_pods
         self._version_lock = threading.Lock()
         self._lock = threading.Lock()
         self._use_wrap_opt = False
@@ -110,6 +116,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             with self._version_lock:
                 self._parameters.version += 1
                 version = self._parameters.version
+                self.save_parameters_to_checkpoint_file()
             self._report_version_if_needed(version)
 
             res.accepted = True
@@ -157,6 +164,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                     self._parameters.version += 1
                     version = self._parameters.version
                     updated_version = True
+                    self.save_parameters_to_checkpoint_file()
 
             if updated_version:
                 self._report_version_if_needed(version)
@@ -216,3 +224,18 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                 self._optimizer.slot_initial_value,
             )
             self._use_wrap_opt = True
+
+    def save_parameters_to_checkpoint_file(self):
+        """Save a checkpoint of parameters to a protobuf file"""
+        if (self._checkpoint_service and
+            self._parameters.version %
+                self._checkpoint_service._steps == 0):
+            model_pb = self._parameters.to_model_pb()
+
+            self._checkpoint_service.save(
+                model_pb.version,
+                model_pb,
+                is_eval_checkpoint=False,
+                shard_index=self._ps_id,
+                shard_num=self._num_ps_pods
+            )

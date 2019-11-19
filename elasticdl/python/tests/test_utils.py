@@ -37,6 +37,11 @@ class PserverArgs(object):
         namespace="default",
         master_addr="test:1111",
         evaluation_steps=0,
+        checkpoint_dir=None,
+        checkpoint_steps=None,
+        keep_checkpoint_max=0,
+        ps_id=0,
+        num_ps_pods=1,
     ):
         self.grads_to_wait = grads_to_wait
         self.lr_staleness_modulation = lr_staleness_modulation
@@ -50,6 +55,11 @@ class PserverArgs(object):
         self.namespace = namespace
         self.master_addr = master_addr
         self.evaluation_steps = evaluation_steps
+        self.checkpoint_dir = checkpoint_dir
+        self.checkpoint_steps = checkpoint_steps
+        self.keep_checkpoint_max = keep_checkpoint_max
+        self.ps_id = ps_id
+        self.num_ps_pods = num_ps_pods
 
 
 class DatasetName(object):

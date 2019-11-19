@@ -108,17 +108,25 @@ class CheckpointTest(unittest.TestCase):
             worker.run()
 
             # We should have 5 checkpoints when the training finishes
-            checkpoint_files = sorted(os.listdir(checkpointer._directory))
+            checkpoint_folders = sorted(os.listdir(checkpointer._directory))
             self.assertEqual(
-                checkpoint_files,
+                checkpoint_folders,
                 [
-                    "model_v24.chkpt",
-                    "model_v26.chkpt",
-                    "model_v28.chkpt",
-                    "model_v30.chkpt",
-                    "model_v32.chkpt",
+                    "model_v24",
+                    "model_v26",
+                    "model_v28",
+                    "model_v30",
+                    "model_v32",
                 ],
             )
+            for checkpoint_folder in checkpoint_folders:
+                checkpoint_files = os.listdir(
+                    os.path.join(checkpointer._directory, checkpoint_folder)
+                )
+                self.assertEqual(
+                    checkpoint_files,
+                    ["variables-0-of-1.chkpt"])
+
             # Latest version should be 32
             self.assertEqual(32, checkpointer.get_latest_checkpoint_version())
             # Check all checkpoints

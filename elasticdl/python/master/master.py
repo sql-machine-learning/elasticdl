@@ -419,6 +419,14 @@ class Master(object):
                 self.master_addr,
                 "--evaluation_steps",
                 str(args.evaluation_steps),
+                "--checkpoint_dir",
+                str(args.checkpoint_dir),
+                "--checkpoint_steps",
+                str(args.checkpoint_steps),
+                "--keep_checkpoint_max",
+                str(args.keep_checkpoint_max),
+                "--num_ps_pods",
+                str(args.num_ps_pods),
             ]
 
             env_dict = parse_envs(args.envs)

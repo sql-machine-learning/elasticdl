@@ -44,12 +44,18 @@ class CheckpointService(object):
             tempfile.mkdtemp() if include_evaluation else ""
         )
 
-    def _get_checkpoint_file(self, version, is_eval_checkpoint=False):
-        return "%s/model_v%s.chkpt" % (
-            self._eval_checkpoint_dir
-            if is_eval_checkpoint
-            else self._directory,
-            str(version),
+    def _get_checkpoint_file(self, version, is_eval_checkpoint=False,
+                             shard_index=0, shard_num=1):
+        checkpoint_dir = (self._eval_checkpoint_dir
+                          if is_eval_checkpoint
+                          else self._directory)
+        checkpoint_version_dir = os.path.join(
+            checkpoint_dir, "model_v%s" % str(version))
+        os.makedirs(checkpoint_version_dir, exist_ok=True)
+        return "%s/variables-%s-of-%s.chkpt" % (
+            checkpoint_version_dir,
+            str(shard_index),
+            str(shard_num)
         )
 
     def is_enabled(self):
@@ -60,9 +66,24 @@ class CheckpointService(object):
         """Check if the given model version needs to be checkpointed"""
         return self.is_enabled() and version % self._steps == 0
 
-    def save(self, version, model, is_eval_checkpoint):
-        """Checkpoint the given model"""
-        file = self._get_checkpoint_file(version, is_eval_checkpoint)
+    def save(self, version, model, is_eval_checkpoint,
+             shard_index=0, shard_num=1):
+        """Checkpoint the given model
+
+        Args:
+            version (int): iteration steps
+            model: a pb_model
+            is_eval_checkpoint (bool): if True, the model will be saved to
+                a temporary directory.
+            shard_index (int): default 0. The index of the pb_model in whole
+                model files, e.g. the shard_index is PS instance index
+                using ParameterServerStrategy.
+            shard_number (int): default 1. The number of model shards,
+                e.g. shard_number is the number of PS instances using
+                ParameterServerStrategy.
+        """
+        file = self._get_checkpoint_file(
+            version, is_eval_checkpoint, shard_index, shard_num)
         save_checkpoint_to_file(model, file)
         if not is_eval_checkpoint:
             self._checkpoint_list.append(Checkpoint(version, file))
@@ -70,6 +91,9 @@ class CheckpointService(object):
                 while len(self._checkpoint_list) > self._max_versions:
                     file_to_delete = self._checkpoint_list.pop(0).file
                     os.remove(file_to_delete)
+                    delete_dir_name = os.path.dirname(file_to_delete)
+                    if not os.listdir(delete_dir_name):
+                        os.rmdir(delete_dir_name)
 
     def remove_eval_checkpoint(self, version):
         chkpt_file = self._get_checkpoint_file(

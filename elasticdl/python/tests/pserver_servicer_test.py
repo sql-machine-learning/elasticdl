@@ -17,6 +17,9 @@ from elasticdl.python.common.tensor import (
 )
 from elasticdl.python.ps.embedding_table import get_slot_table_name
 from elasticdl.python.ps.parameter_server import ParameterServer
+from elasticdl.python.ps.servicer import PserverServicer
+from elasticdl.python.ps.parameters import Parameters
+from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.tests.test_utils import PserverArgs
 
 _test_model_zoo_path = os.path.dirname(os.path.realpath(__file__))
@@ -413,6 +416,56 @@ class PserverServicerTest(unittest.TestCase):
         )
         self.assertTrue(np.allclose(expected_embed_table, actual_embed_table))
 
+    def test_save_parameters_to_checkpoint_file(self):
+        import tempfile
+        from elasticdl.python.ps.embedding_table import EmbeddingTable
+        with tempfile.TemporaryDirectory() as tempdir:
+            checkpoint_service = CheckpointService(
+                checkpoint_dir=os.path.join(tempdir, "ckpt/"),
+                checkpoint_steps=5,
+                keep_checkpoint_max=1,
+                include_evaluation=False
+            )
+            pserver_servicer = PserverServicer(
+                parameters=Parameters(),
+                grads_to_wait=0,
+                optimizer="optimizer",
+                checkpoint_service=checkpoint_service,
+                ps_id=0,
+                num_ps_pods=1
+            )
+            model_params = {
+                'v0': tf.Variable([[1, 1, 1], [1, 1, 1]]),
+                'v1': tf.Variable([[2, 2, 2], [2, 2, 2]]),
+            }
+
+            server_params = pserver_servicer._parameters
+            for var_name, var_value in model_params.items():
+                server_params.non_embedding_params[var_name] = var_value
+
+            embedding_table = EmbeddingTable(
+                name="embedding_0",
+                dim=3,
+                initializer="random_uniform"
+            )
+            server_params.embedding_params['embedding_0'] = embedding_table
+            server_params.set_embedding_param(
+                name='embedding_0',
+                indices=np.array([0, 1]),
+                values=np.array([[1, 1, 1], [2, 2, 2]])
+            )
+
+            for i in range(10):
+                pserver_servicer._parameters.version += 1
+                pserver_servicer.save_parameters_to_checkpoint_file()
+            self.assertEqual(
+                os.listdir(checkpoint_service._directory), ["model_v10"]
+            )
+            self.assertEqual(
+                os.listdir(checkpoint_service._directory + "/model_v10"),
+                ["variables-0-of-1.chkpt"]
+            )
+            
 
 if __name__ == "__main__":
     unittest.main()
