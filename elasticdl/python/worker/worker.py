@@ -203,16 +203,21 @@ class Worker(object):
 
     def get_model_from_ps(self, version, method):
         model_version = -1
+        variable_future_and_id_pairs = []
+        req = empty_pb2.Empty()
         for ps_id, stub in enumerate(self._ps_stubs):
             if ps_id not in self._ps_vars:
                 continue
-            req = empty_pb2.Empty()
-            res = stub.pull_variable(req)
+            # async grpc call
+            var_future = stub.pull_variable.future(req)
+            variable_future_and_id_pairs.append((var_future, ps_id))
 
+        for var_future, ps_id in variable_future_and_id_pairs:
+            res = var_future.result()
             if not res.model_init_status:
                 # push variable to ps for initialization
                 self.report_variable_to_ps(ps_id)
-                res = stub.pull_variable(req)
+                res = self._ps_stubs[ps_id].pull_variable(req)
                 if not res.model_init_status:
                     # TODO: support PS fault-tolerance
                     raise RuntimeError(
@@ -237,11 +242,15 @@ class Worker(object):
 
         embeddings = []
         index = []
+        pb_future_and_id_pairs = []
         for ps_id, embedding_ids in ps_ids.items():
             req = elasticdl_pb2.PullEmbeddingVectorRequest()
             req.name = layer_name
             req.ids.extend(embedding_ids)
-            pb = self._ps_stubs[ps_id].pull_embedding_vector(req)
+            pb_future = self._ps_stubs[ps_id].pull_embedding_vector.future(req)
+            pb_future_and_id_pairs.append((pb_future, ps_id))
+        for pb_future, ps_id in pb_future_and_id_pairs:
+            pb = pb_future.result()
             embeddings.append(tensor_pb_to_ndarray(pb))
             index.extend(ps_ids_index[ps_id])
         embeddings = np.concatenate(embeddings)
@@ -441,11 +450,15 @@ class Worker(object):
                         req.gradients, values=gv, indices=gi, name=layer.name
                     )
 
-        # TODO: call `push_gradient` in parallel
+        report_futures = []
         for ps_id in range(len(self._ps_stubs)):
             req = reqs[ps_id]
             req.model_version = self._model_version
-            res = self._ps_stubs[ps_id].push_gradient(req)
+            report_future = self._ps_stubs[ps_id].push_gradient.future(req)
+            report_futures.append(report_future)
+
+        for report_future in report_futures:
+            res = report_future.result()
         # TODO: choose the last response temporarily
         return res.accepted, res.model_version
 
