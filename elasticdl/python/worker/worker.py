@@ -613,9 +613,9 @@ class Worker(object):
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process(features, labels)
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            return self._collect_gradients_with_allreduce(grads), loss
+            return (*self._collect_gradients_with_allreduce(grads), loss)
         else:
-            return self._collect_gradients_without_allreduce(grads), loss
+            return (*self._collect_gradients_without_allreduce(grads), loss)
 
     def _collect_evaluation_result(self, outputs, labels):
         key = MetricsDictKey.MODEL_OUTPUT
