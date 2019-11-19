@@ -203,16 +203,16 @@ class Worker(object):
 
     def get_model_from_ps(self, version, method):
         model_version = -1
-        variable_future_and_id = []
+        variable_future_and_id_pairs = []
         req = empty_pb2.Empty()
         for ps_id, stub in enumerate(self._ps_stubs):
             if ps_id not in self._ps_vars:
                 continue
             # async grpc call
             var_future = stub.pull_variable.future(req)
-            variable_future_and_id.append((var_future, ps_id))
+            variable_future_and_id_pairs.append((var_future, ps_id))
 
-        for var_future, ps_id in variable_future_and_id:
+        for var_future, ps_id in variable_future_and_id_pairs:
             res = var_future.result()
             if not res.model_init_status:
                 # push variable to ps for initialization
@@ -242,14 +242,14 @@ class Worker(object):
 
         embeddings = []
         index = []
-        pb_future_and_id = []
+        pb_future_and_id_pairs = []
         for ps_id, embedding_ids in ps_ids.items():
             req = elasticdl_pb2.PullEmbeddingVectorRequest()
             req.name = layer_name
             req.ids.extend(embedding_ids)
             pb_future = self._ps_stubs[ps_id].pull_embedding_vector.future(req)
-            pb_future_and_id.append((pb_future, ps_id))
-        for pb_future, ps_id in pb_future_and_id:
+            pb_future_and_id_pairs.append((pb_future, ps_id))
+        for pb_future, ps_id in pb_future_and_id_pairs:
             pb = pb_future.result()
             embeddings.append(tensor_pb_to_ndarray(pb))
             index.extend(ps_ids_index[ps_id])
