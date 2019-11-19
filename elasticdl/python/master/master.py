@@ -220,7 +220,7 @@ class Master(object):
             self.evaluation_service.stop()
 
         self.logger.info("Stopping RPC server")
-        self.server.stop(0)
+        self.server.stop(None)  # grace = None
 
         # Keep TensorBoard running when all the tasks are finished
         if self.tb_service:
