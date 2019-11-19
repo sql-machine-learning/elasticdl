@@ -20,8 +20,8 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --num_minibatches_per_task=2 \
       --num_workers=1 \
       --num_ps_pods=1 \
-      --checkpoint_steps=200 \
-      --evaluation_steps=200 \
+      --checkpoint_steps=500 \
+      --evaluation_steps=500 \
       --tensorboard_log_dir=/tmp/tensorboard-log \
       --grads_to_wait=1 \
       --use_async=True \
