@@ -16,6 +16,18 @@ ELASTICDL_REPLICA_TYPE_KEY = "elasticdl-replica-type"
 ELASTICDL_REPLICA_INDEX_KEY = "elasticdl-replica-index"
 
 
+def get_master_pod_name(job_name):
+    return "elasticdl-%s-master" % job_name
+
+
+def get_worker_pod_name(job_name, worker_id):
+    return "elasticdl-%s-worker-%s" % (job_name, str(worker_id))
+
+
+def get_ps_pod_name(job_name, ps_id):
+    return "elasticdl-%s-ps-%s" % (job_name, str(ps_id))
+
+
 class Client(object):
     def __init__(
         self,
@@ -78,13 +90,13 @@ class Client(object):
                 traceback.print_exc()
 
     def get_master_pod_name(self):
-        return "elasticdl-%s-master" % self.job_name
+        return get_master_pod_name(self.job_name)
 
     def get_worker_pod_name(self, worker_id):
-        return "elasticdl-%s-worker-%s" % (self.job_name, str(worker_id))
+        return get_worker_pod_name(self.job_name, worker_id)
 
     def get_ps_pod_name(self, ps_id):
-        return "elasticdl-%s-ps-%s" % (self.job_name, str(ps_id))
+        return get_ps_pod_name(self.job_name, ps_id)
 
     def get_ps_service_name(self, ps_id):
         return self.get_ps_pod_name(ps_id)

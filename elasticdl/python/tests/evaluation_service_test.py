@@ -119,14 +119,7 @@ class EvaluationServiceTest(unittest.TestCase):
 
             # Evaluation metrics will not be accepted if no evaluation ongoing
             evaluation_service = EvaluationService(
-                checkpoint_service,
-                None,
-                task_d,
-                10,
-                20,
-                0,
-                False,
-                _eval_metrics_fn,
+                None, task_d, 10, 20, 0, False, _eval_metrics_fn,
             )
             model_outputs = [
                 Tensor(
@@ -173,7 +166,7 @@ class EvaluationServiceTest(unittest.TestCase):
         task_d = _TaskDispatcher({}, {"f1": (0, 10), "f2": (0, 10)}, {}, 3, 1)
 
         evaluation_service = EvaluationService(
-            None, None, task_d, 0, 0, 0, True, _eval_metrics_fn
+            None, task_d, 0, 0, 0, True, _eval_metrics_fn
         )
         task_d.set_evaluation_service(evaluation_service)
 
@@ -194,3 +187,49 @@ class EvaluationServiceTest(unittest.TestCase):
             self.assertFalse(evaluation_service._eval_job.finished())
             evaluation_service.complete_task()
         self.assertTrue(evaluation_service._eval_job.finished())
+
+    def testNeedEvaluation(self):
+        task_d = _TaskDispatcher(
+            {"f1": (0, 10), "f2": (0, 10)},
+            {"f1": (0, 10), "f2": (0, 10)},
+            {},
+            3,
+            1,
+        )
+
+        evaluation_service = EvaluationService(
+            None, task_d, 10, 0, 10, False, _eval_metrics_fn,
+        )
+
+        # Should add evaluation task and create eval job
+        evaluation_service.add_evaluation_task_if_needed(
+            master_locking=False, model_version=10
+        )
+        self.assertTrue(evaluation_service._eval_job is not None)
+        self.assertEqual(evaluation_service._eval_checkpoint_versions, [])
+
+        # Should ignore because version 10 is in the eval list
+        evaluation_service.add_evaluation_task_if_needed(
+            master_locking=False, model_version=10
+        )
+        self.assertEqual(evaluation_service._eval_checkpoint_versions, [])
+
+        # Should append version 20 to the eval list
+        evaluation_service.add_evaluation_task_if_needed(
+            master_locking=False, model_version=20
+        )
+        self.assertEqual(evaluation_service._eval_checkpoint_versions, [20])
+
+        # Should ignore version 10 because version 20 is already in eval list
+        evaluation_service.add_evaluation_task_if_needed(
+            master_locking=False, model_version=10
+        )
+        self.assertEqual(evaluation_service._eval_checkpoint_versions, [20])
+
+        # Should append version 30 to the eval list
+        evaluation_service.add_evaluation_task_if_needed(
+            master_locking=False, model_version=30
+        )
+        self.assertEqual(
+            evaluation_service._eval_checkpoint_versions, [20, 30]
+        )
