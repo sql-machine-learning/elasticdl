@@ -262,7 +262,6 @@ class _TaskDispatcher(object):
                 ].failed_records += request.exec_counters.get(
                     TaskExecCounterKey.FAIL_COUNT, 0
                 )
-                request
             if not task:
                 logger.warning("Unknown task_id: %d" % task_id)
             elif not success:
