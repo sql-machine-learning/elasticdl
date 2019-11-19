@@ -27,7 +27,7 @@ def _nested_list_size(l):
 
 
 def _configure_odps_options(endpoint, options=None):
-    if endpoint is not None:
+    if endpoint is not None and endpoint != "":
         odps.options.retry_times = options.get("odps.options.retry_times", 5)
         odps.options.read_timeout = options.get(
             "odps.options.read_timeout", 200
