@@ -6,21 +6,25 @@ if [[ "$JOB_TYPE" == "train" ]]; then
     elasticdl train \
       --image_base=elasticdl:ci \
       --model_zoo=model_zoo \
-      --model_def=mnist_functional_api.mnist_functional_api.custom_model \
-      --training_data=/data/mnist/train \
-      --validation_data=/data/mnist/test \
+      --model_def=deepfm_functional_api.deepfm_functional_api.custom_model \
+      --training_data=/data/frappe/train \
+      --validation_data=/data/frappe/test \
       --num_epochs=2 \
       --master_resource_request="cpu=400m,memory=1024Mi" \
       --master_resource_limit="cpu=1,memory=2048Mi" \
       --worker_resource_request="cpu=400m,memory=2048Mi" \
       --worker_resource_limit="cpu=1,memory=3072Mi" \
+      --ps_resource_request="cpu=400m,memory=1024Mi" \
+      --ps_resource_limit="cpu=1,memory=2048Mi" \
       --minibatch_size=64 \
       --num_minibatches_per_task=2 \
-      --num_workers=2 \
+      --num_workers=1 \
+      --num_ps_pods=1 \
       --checkpoint_steps=10 \
-      --evaluation_steps=15 \
+      --evaluation_steps=50 \
       --tensorboard_log_dir=/tmp/tensorboard-log \
-      --grads_to_wait=2 \
+      --grads_to_wait=1 \
+      --use_async=True \
       --job_name=test-train \
       --log_level=INFO \
       --image_pull_policy=Never \
