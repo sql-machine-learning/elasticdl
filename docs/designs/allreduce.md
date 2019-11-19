@@ -72,10 +72,10 @@ for _ in range(num_epochs):
         outputs = model(features)
         loss = loss_fn(outputs, labels)
         grads = calculate_gradients(loss, model)
-        status, averaged_grads = communicator.allreduce_average(grads)
-        if res == SUCCEEDED:
+        status, averaged_grads = communicator.allreduce(grads, op="MEAN")
+        if status == SUCCEEDED:
             update_model(averaged_grads)
-        elif res == FAILED:
+        elif status == FAILED:
             continue
 ```
 
@@ -135,8 +135,8 @@ with tf.GradientTape() as tape:
     outputs = model(features, training=True)
     loss = loss_fn(outputs, labels)
 local_grads = tape.gradient(loss, get_trainable_items())
-status, averaged_grads = communicator.allreduce_average(grads)
-if res == SUCCEEDED:
+status, averaged_grads = communicator.allreduce(grads, op="MEAN")
+if status == SUCCEEDED:
     update_model(averaged_grads)
 else:
     report_failure()

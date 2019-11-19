@@ -6,7 +6,7 @@ class CollectiveCommunicator(object):
     def __init__(self):
         pass
 
-    def allreduce_average(self, data):
+    def allreduce(self, data, op="MEAN"):
         return True, 1
 
     def broadcast(self, from_worker_ip):

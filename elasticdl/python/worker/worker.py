@@ -590,27 +590,33 @@ class Worker(object):
         outputs = self._model.call(features, training=False)
         return outputs
 
+    def _collect_gradients_with_allreduce(self, grads):
+        (
+            status,
+            averaged_grads,
+        ) = self._collective_communicator.allreduce(grads)
+        if status == CollectiveCommunicatorStatus.SUCCEEDED:
+            accepted, _ = self.report_gradient_locally(grads)
+        else:
+            # TODO: Handle failure properly based on design doc
+            logger.warn("Allreduce average on grads failed")
+            accepted = False
+        return accepted, None
+
+    def _collect_gradients_without_allreduce(self, grads):
+        accepted, min_model_version = self.report_gradient(grads)
+        if accepted and self._get_model_steps > 1:
+            non_embed_vars_n = len(self._non_embed_vars)
+            self._non_embed_grads = grads[:non_embed_vars_n]
+        self._reset_embedding()
+        return accepted, min_model_version
+
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process(features, labels)
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            (
-                status,
-                averaged_grads,
-            ) = self._collective_communicator.allreduce_average(grads)
-            if status == CollectiveCommunicatorStatus.SUCCEEDED:
-                accepted, _ = self.report_gradient_locally(grads)
-            else:
-                # TODO: Handle failure properly based on design doc
-                logger.warn("Allreduce average on grads failed")
-                accepted = False
-            return accepted, None, loss
+            return self._collect_gradients_with_allreduce(grads), loss
         else:
-            accepted, min_model_version = self.report_gradient(grads)
-            if accepted and self._get_model_steps > 1:
-                non_embed_vars_n = len(self._non_embed_vars)
-                self._non_embed_grads = grads[:non_embed_vars_n]
-            self._reset_embedding()
-            return accepted, min_model_version, loss
+            return self._collect_gradients_without_allreduce(grads), loss
 
     def _collect_evaluation_result(self, outputs, labels):
         key = MetricsDictKey.MODEL_OUTPUT
