@@ -1,21 +1,21 @@
 # ElasticDL Training Checkpoints Design
-This document describes the design of training checkpoints for ElasticDL
+This document describes the design of save checkpoints for ElasticDL training.
 
 ## Motivation
 Checkpoints capture the exact value of all parameters (tf.Variable objects and embedding vectors) used by a model. In ElasticDL, we need to save all parameters of the model to checkpoints during training for the following reasons:
-* We can export the model with the best evaluation metrics during training by checkpoints. Generally, we evaluate the model and monitor the evaluation metrics during training. We will stop training when we find the evaluation metrics don't go better or even go worse due to over-fitting. So, the final parameters may not be the best. With checkpoints, we can choose a checkpoint with the best evaluation metrics to export for serving.
-* We can restore the model parameters from a checkpoint to train or predict. Fault tolerance in ElasticDL can not resolve all unexpected error e.g. a power outage and OS fault in the master. We are going to have a bad time if we lose one or more of our experiments due to those errors. Other times, even if we don't experience an unforeseen error, we might just want just to resume a particular state of the training for a new experiment or try different things from a given state.
+* We can export the model with the best evaluation metrics during training from checkpoints. Generally, we evaluate the model and monitor the evaluation metrics during training. We will stop training when we find the evaluation metrics don't go better or even worse due to over-fitting. So, the final parameters may not be the best. With checkpoints, we can choose a checkpoint with the best evaluation metrics to export for serving.
+* We can restore the model parameters from a checkpoint to train or predict. Fault tolerance in ElasticDL can not resolve all unexpected error e.g. a power outage and OS fault in the master. We are going to have a bad time if we lose one or more of our experiments due to those errors. Other times, even if we don't experience an unforeseen error, we might just want to resume a particular state of the training for a new experiment or try different things from a given state.
 
 In the following sections, we will describe the design of how to make a checkpoint and restore model parameters from a checkpoint in ElasticDL.
 
 ## Design Components
-There are two design components: export and restore.
+This design contains two key parts: export and restore.
 
 ### Export Model Parameters to a Checkpoint
 
 **When to save a checkpoint during training.** 
 
-In ElasticDL, we will save all model parameters to a checkpoint directory every `checkpoint_steps`. Though, some frameworks support to save checkpoints every N steps or every N seconds, e.g. `tf.estimator`. Using ParameterServerStrategy in ElasticDL, PS instances are asynchronous and we cannot guarantee that the iteration steps of all PS instances are consistent at the same time. So, we don't support to save checkpoints every N seconds.
+In ElasticDL, we will save all model parameters to a checkpoint directory every `checkpoint_steps`. Though, some frameworks support to save checkpoints every N steps or every N seconds, e.g. [Estimator](https://www.tensorflow.org/api_docs/python/tf/estimator/RunConfig#__init__). Using ParameterServerStrategy in ElasticDL, Communication with PS is asynchronous and we cannot guarantee that the iteration steps of all PS instances are consistent at the same time. So, we don't support to save checkpoints every N seconds.
 
 
 **Where to save a checkpoint.** 
@@ -29,18 +29,18 @@ checkpoint_dir = os.path.join(
 ```
 ElasticDL is a Kubernetes-native framework and local directory in the pod will be lost if the pod exits in Kubernetes. So the `checkpoint_dir` should be a persistent directory which will not be lost after the pod exit. Now, we can utilize `hostPath` and `PersistentVolume` to get a persistent directory to save checkpoints in ElasticDL.
 
-**Save model parameters to a checkpoint directory.**
+**How to save model parameters to a checkpoint directory.**
 
 Using AllReduceStrategy in ElasticDL, each worker has all parameters and we can assign any worker to save all parameters to a checkpoint directory. Using ParameterServerStrategy, all model parameters are partitioned on all PS instances. They need to save their owner parameters to the same checkpoint directory at the same step. Saving checkpoints for AllReduceStrategy can be seen as a special case that there is only a PS instance using ParameterServerStrategy. So, we can adopt the same way to save checkpoints for AllReduceStrategy and ParameterServerStrategy.
 
 The parameters on each PS instance may contain non-embedding variables and a part of embedding vectors of each embedding table. We create a `Tensor` protobuf with values for each variable or with values and indices for embedding vectors. To save an embedding table, we also need to create `EmbeddingTableInfo` to save the meta information like `initializer` and `dim`. Then, we create a `Model` protobuf including those `Tensor`s and `EmbeddingTableInfo`s. Finally, we save the `Model` to a  file named `variables-{ps_id}-of-{ps_num}.chkpt` where `ps_id` is the index of a PS instance and `ps_num` is the total number of PS instances. The checkpoint file will be located in a subdirectory `model_v{version}` for each checkpoint version. After the iteration versions of all PS instances exceed the checkpoint version in `model_v{version}`,  the `model_v{version}` will contain files of the entire model parameters.
 
-**The maximum number of recent checkpoints to keep**
+**How many recent checkpoints to keep**
 
-We can set the `keep_checkpoint_max` in ElasticDL. After saving a checkpoint, each PS instance will check the number of checkpoints it saved and will remove its earliest checkpoint file in `model_v{version}` if the number exceeds the `keep_checkpoint_max`. Then, it will remove the `model_v{version}` subdirectory if it is empty.
+We can set the `keep_checkpoint_max` in ElasticDL to determine the maximum number of recent checkpoints. After saving a checkpoint, each PS instance will check the number of checkpoints it saved and will remove the checkpoint of its own shard in the folder 'model_v{version}' with the smallest version if the number exceeds the `keep_checkpoint_max`. Then, it will remove the `model_v{version}` subdirectory if it is empty.
 
 ### Restore Model Parameters from a Checkpoint
-The number of PS instances may vary when we restore model parameters to train or predict. So, we need to reassign variables and embedding vectors in checkpoint to new PS instances. For each new PS instance, it will traverse all protobuf files in the checkpoint directory and get variables and embedding vectors if `hash_utils.string_to_id(var.name)` or `hash_utils.int_to_id(embedding_id)` is equal to its index (`ps_id`). The pseudo-code is:
+The number of PS instances may vary when we restore model parameters to train or predict. So, we need to repartition variables and embedding vectors in checkpoint files to new PS instances. For each new PS instance, it will traverse all protobuf files in the checkpoint directory and get variables and embedding vectors if `hash_utils.string_to_id(var.name)` or `hash_utils.int_to_id(embedding_id)` is equal to its index (`ps_id`). The pseudo-code is:
 ```python
 non_embedding_vars = {}
 embedding_table_vectors = {}
