@@ -1,5 +1,6 @@
 #!/bin/bash
 
+sudo pip3 install kubernetes
 export MINIKUBE_WANTUPDATENOTIFICATION=false
 export MINIKUBE_WANTREPORTERRORPROMPT=false
 export MINIKUBE_HOME=$HOME
