@@ -181,6 +181,7 @@ class _TaskDispatcher(object):
         we include a shard of data in this task.
         """
 
+        self.reset_job_counters(task_type)
         shards = self._training_shards
         assert shards is not None
 
