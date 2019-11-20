@@ -6,15 +6,9 @@
 set +e
 
 JOB_TYPE=$1
-
-if [[ "$JOB_TYPE" == "train" ]]; then
-  bash scripts/validate_job_status_ps.sh ${JOB_TYPE}
-  exit 0
-fi
-
 MASTER_POD_NAME=elasticdl-test-${JOB_TYPE}-master
-WORKER_0_POD_NAME=elasticdl-test-${JOB_TYPE}-worker-0
-WORKER_1_POD_NAME=elasticdl-test-${JOB_TYPE}-worker-1
+PS_POD_NAME=elasticdl-test-${JOB_TYPE}-ps-0
+WORKER_POD_NAME=elasticdl-test-${JOB_TYPE}-worker-0
 CHECK_INTERVAL_SECS=10
 
 function get_pod_status {
@@ -34,37 +28,37 @@ function get_master_pod_label_status {
 for i in {1..200}; do
     MASTER_POD_STATUS=$(get_pod_status ${MASTER_POD_NAME})
     MASTER_POD_LABEL_STATUS=$(get_master_pod_label_status)
-    WORKER_0_POD_STATUS=$(get_pod_status ${WORKER_0_POD_NAME})
-    WORKER_1_POD_STATUS=$(get_pod_status ${WORKER_1_POD_NAME})
+    PS_POD_STATUS=$(get_pod_status ${PS_POD_NAME})
+    WORKER_POD_STATUS=$(get_pod_status ${WORKER_POD_NAME})
 
     if [[ "$MASTER_POD_STATUS" == "Succeeded" ]] &&
-     [[ "$WORKER_0_POD_STATUS" == "Succeeded" ]] &&
-     [[ "$WORKER_1_POD_STATUS" == "Succeeded" ]]; then
+     [[ "$PS_POD_STATUS" == "Succeeded" ]] &&
+     [[ "$WORKER_POD_STATUS" == "Succeeded" ]]; then
       echo "ElasticDL job succeeded."
       kubectl delete pod ${MASTER_POD_NAME}
       exit 0
     elif [[ "$MASTER_POD_STATUS" == "Running" ]] &&
      [[ "$MASTER_POD_LABEL_STATUS" == "Finished" ]] &&
-     [[ "$WORKER_0_POD_STATUS" == "Succeeded" ]] &&
-     [[ "$WORKER_1_POD_STATUS" == "Succeeded" ]]; then
+     [[ "$PS_POD_STATUS" == "Succeeded" ]] &&
+     [[ "$WORKER_POD_STATUS" == "Succeeded" ]]; then
       echo "ElasticDL job succeeded (master pod keeps running for TensorBoard service)."
       kubectl delete pod ${MASTER_POD_NAME}
       exit 0
     elif [[ "$MASTER_POD_STATUS" == "Failed" ]] ||
-       [[ "$WORKER_0_POD_STATUS" == "Failed" ]] ||
-       [[ "$WORKER_1_POD_STATUS" == "Failed" ]]; then
+       [[ "$PS_POD_STATUS" == "Failed" ]] ||
+       [[ "$WORKER_POD_STATUS" == "Failed" ]]; then
       echo "ElasticDL job failed."
       kubectl describe pod ${MASTER_POD_NAME}
       echo "\nMaster log:\n"
       kubectl logs ${MASTER_POD_NAME} | tail
-      echo "\nWorker0 log:\n"
-      kubectl logs ${WORKER_0_POD_NAME} | tail
-      echo "\nWorker1 log:\n"
-      kubectl logs ${WORKER_1_POD_NAME} | tail
+      echo "\nPS log:\n"
+      kubectl logs ${PS_POD_NAME} | tail
+      echo "\nWorker log:\n"
+      kubectl logs ${WORKER_POD_NAME} | tail
       kubectl delete pod ${MASTER_POD_NAME}
       exit 1
     else
-      echo "Master: ${MASTER_POD_STATUS}, Worker0: ${WORKER_0_POD_STATUS}, Worker1: ${WORKER_1_POD_STATUS}. Continue checking..."
+      echo "Master: ${MASTER_POD_STATUS}, PS: ${WORKER_POD_STATUS}, Worker: ${WORKER_POD_STATUS}. Continue checking..."
       sleep ${CHECK_INTERVAL_SECS}
     fi
     top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}'

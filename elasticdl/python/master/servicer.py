@@ -434,9 +434,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def ReportTaskResult(self, request, _):
         if request.err_message:
             logger.warning("Worker reported error: " + request.err_message)
-            self._task_d.report(request.task_id, False)
+            self._task_d.report(request, False)
         else:
-            self._task_d.report(request.task_id, True)
+            self._task_d.report(request, True)
         return empty_pb2.Empty()
 
     def ReportEvaluationMetrics(self, request, _):

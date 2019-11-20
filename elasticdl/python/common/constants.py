@@ -56,3 +56,10 @@ class TaskExecCounterKey(object):
 class CollectiveCommunicatorStatus(object):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
+
+
+class PodStatus(object):
+    SUCCEEDED = "Succeeded"
+    FAILED = "Failed"
+    RUNNING = "Running"
+    FINISHED = "Finished"

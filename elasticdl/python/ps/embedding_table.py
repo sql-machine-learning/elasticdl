@@ -1,6 +1,9 @@
 import numpy as np
 import tensorflow as tf
 
+from elasticdl.proto.elasticdl_pb2 import EmbeddingTableInfo
+from elasticdl.python.common.tensor import Tensor
+
 
 class EmbeddingTable(object):
     """
@@ -28,11 +31,15 @@ class EmbeddingTable(object):
         """
         self.name = name
         self.dim = dim
+        self.initializer_value = initializer
         if is_slot:
-            initializer = float(initializer)
-            self.initializer = tf.keras.initializers.Constant(initializer)
+            self.initializer = tf.keras.initializers.Constant(
+                float(self.initializer_value)
+            )
         else:
-            self.initializer = tf.keras.initializers.get(initializer)
+            self.initializer = tf.keras.initializers.get(
+                self.initializer_value
+            )
         self.is_slot = is_slot
         self.embedding_vectors = {}
 
@@ -56,6 +63,27 @@ class EmbeddingTable(object):
 
     def clear(self):
         self.embedding_vectors.clear()
+
+    def to_tensor(self):
+        """Convert the embedding table to elasticDL Tensor"""
+        indices = []
+        embedding_vectors = []
+        for id, embedding_vector in self.embedding_vectors.items():
+            indices.append(id)
+            embedding_vectors.append(embedding_vector)
+        return Tensor(
+            values=np.array(embedding_vectors),
+            indices=np.array(indices),
+            name=self.name,
+        )
+
+    def to_embedding_table_info_pb(self):
+        """Convert the embedding table information to a protobuf"""
+        embedding_pb = EmbeddingTableInfo()
+        embedding_pb.name = self.name
+        embedding_pb.dim = self.dim
+        embedding_pb.initializer = str(self.initializer_value)
+        return embedding_pb
 
 
 def create_embedding_table(embedding_table_info_pb):

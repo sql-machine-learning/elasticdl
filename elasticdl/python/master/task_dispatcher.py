@@ -4,6 +4,7 @@ import random
 import threading
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.constants import TaskExecCounterKey
 from elasticdl.python.common.log_utils import default_logger as logger
 
 
@@ -28,6 +29,30 @@ class _Task(object):
             self.type,
             self.model_version,
         )
+
+
+class JobCounter(object):
+    """Counters for job"""
+
+    def __init__(self, total_records=0, failed_records=0):
+        self._total_records = total_records
+        self._failed_records = failed_records
+
+    @property
+    def total_records(self):
+        return self._total_records
+
+    @total_records.setter
+    def total_records(self, total_records):
+        self._total_records = total_records
+
+    @property
+    def failed_records(self):
+        return self._failed_records
+
+    @failed_records.setter
+    def failed_records(self, failed_records):
+        self._failed_records = failed_records
 
 
 class _TaskDispatcher(object):
@@ -72,6 +97,8 @@ class _TaskDispatcher(object):
         # Callback list to invoke after all tasks complete.
         self._tasks_done_deferred_callbacks = []
 
+        self._job_counters = {}
+
         if self._training_shards:
             logger.info("Starting epoch %d", self._epoch)
             self.create_tasks(elasticdl_pb2.TRAINING)
@@ -80,12 +107,17 @@ class _TaskDispatcher(object):
         elif self._prediction_shards:
             self.create_tasks(elasticdl_pb2.PREDICTION)
 
+    def reset_job_counters(self, task_type):
+        """Return record number in specific task_type"""
+        self._job_counters[task_type] = JobCounter()
+
     def create_tasks(self, task_type, model_version=-1):
         logger.info(
             "Creating a new set of %s tasks for model version %d",
             elasticdl_pb2._TASKTYPE.values_by_number[task_type].name.lower(),
             model_version,
         )
+        self.reset_job_counters(task_type)
         if task_type == elasticdl_pb2.TRAINING:
             shards = self._training_shards
         elif task_type == elasticdl_pb2.EVALUATION:
@@ -99,6 +131,9 @@ class _TaskDispatcher(object):
             (start_ind_this_shard, num_records_this_shard),
         ) in shards.items():
             max_ind_this_shard = start_ind_this_shard + num_records_this_shard
+            self._job_counters[
+                task_type
+            ].total_records += num_records_this_shard
             for start_ind_this_task in range(
                 start_ind_this_shard,
                 max_ind_this_shard,
@@ -146,6 +181,7 @@ class _TaskDispatcher(object):
         we include a shard of data in this task.
         """
 
+        self.reset_job_counters(elasticdl_pb2.SAVE_MODEL)
         shards = self._training_shards
         assert shards is not None
 
@@ -212,12 +248,19 @@ class _TaskDispatcher(object):
 
             return self._task_id, task
 
-    def report(self, task_id, success):
+    def report(self, request, success):
         """Report if the task is successful or not"""
 
+        task_id = request.task_id
         evaluation_task_completed = False
         with self._lock:
             _, task = self._doing.pop(task_id, (-1, None))
+            if task:
+                self._job_counters[
+                    task.type
+                ].failed_records += request.exec_counters.get(
+                    TaskExecCounterKey.FAIL_COUNT, 0
+                )
             if not task:
                 logger.warning("Unknown task_id: %d" % task_id)
             elif not success:
@@ -251,8 +294,10 @@ class _TaskDispatcher(object):
             ids = [
                 id for id, (wid, _) in self._doing.items() if wid == worker_id
             ]
+        request = elasticdl_pb2.ReportTaskResultRequest()
         for id in ids:
-            self.report(id, False)
+            request.task_id = id
+            self.report(request, False)
 
     # TODO: need to re-check after refactoring servicer.py
     def set_evaluation_service(self, evaluation_service):
