@@ -1,6 +1,13 @@
 import tensorflow as tf
 
-from elasticdl.python.common.tensor import tensor_pb_to_ndarray
+from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.tensor import (
+    Tensor,
+    deserialize_tensor_pb,
+    emplace_tensor_pb_from_ndarray,
+    serialize_tensor,
+    tensor_pb_to_ndarray,
+)
 from elasticdl.python.ps.embedding_table import (
     EmbeddingTable,
     create_embedding_table,
@@ -122,23 +129,29 @@ class Parameters(object):
         if not self.init_status:
             tensors_pb = model_pb.param
             embeddings_pb = model_pb.embedding_table_info
-            self._init_non_embedding_params(tensors_pb)
             self.init_embedding_params(embeddings_pb)
+            self._restore_params_from_pb(tensors_pb)
             self.version = model_pb.version
             self.init_status = True
             return True
         return False
 
-    def _init_non_embedding_params(self, tensors_pb):
+    def _restore_params_from_pb(self, tensors_pb):
         for pb in tensors_pb:
             name = pb.name
-            arr = tensor_pb_to_ndarray(pb)
-            # Please note that `tf.Variable` will do something with magic.
-            # If you pass a name "somename" to a `tf.Variable`, the final
-            # variable name will be "somename:0". So the `tf.Variable.name`
-            # is meaningless, we must avoid use it in PS side.
-            var = tf.Variable(initial_value=arr, trainable=True)
-            self.non_embedding_params[name] = var
+            if not pb.indices:
+                # Please note that `tf.Variable` will do something with magic.
+                # If you pass a name "somename" to a `tf.Variable`, the final
+                # variable name will be "somename:0". So the `tf.Variable.name`
+                # is meaningless, we must avoid use it in PS side.
+                arr = tensor_pb_to_ndarray(pb)
+                var = tf.Variable(initial_value=arr, trainable=True)
+                self.non_embedding_params[name] = var
+            else:
+                # Only pb of embedding parameters has indices.
+                tensor = Tensor()
+                deserialize_tensor_pb(pb, tensor)
+                self.embedding_params[name].set(tensor.indices, tensor.values)
 
     def init_embedding_params(self, embeddings_pb):
         for pb in embeddings_pb:
@@ -163,3 +176,24 @@ class Parameters(object):
                     init_values[slot_name],
                     True,
                 )
+
+    def to_model_pb(self):
+        """ Convert all parameters including embedding and non-embedding
+        parameters to `elasticdl_pb2.Model` which can be serialized.
+        """
+        model_pb = elasticdl_pb2.Model()
+        model_pb.version = self.version
+        for name, var in self.non_embedding_params.items():
+            emplace_tensor_pb_from_ndarray(
+                model_pb.param, var.numpy(), name=name
+            )
+
+        for name, embedding_table in self.embedding_params.items():
+            embedding_table_tensor = embedding_table.to_tensor()
+            tensor_pb = model_pb.param.add()
+            serialize_tensor(embedding_table_tensor, tensor_pb)
+
+            embedding_info = embedding_table.to_embedding_table_info_pb()
+            model_pb.embedding_table_info.append(embedding_info)
+
+        return model_pb
