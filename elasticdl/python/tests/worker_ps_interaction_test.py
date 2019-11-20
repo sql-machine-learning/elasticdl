@@ -241,7 +241,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         with tf.GradientTape() as tape:
             output = model.call(images, training=True)
             labels = tf.reshape(labels, [-1])
-            loss = loss_fn(output, labels)
+            loss = loss_fn(labels, output)
         grads = tape.gradient(loss, model.trainable_variables)
         opt_fn().apply_gradients(zip(grads, model.trainable_variables))
 
@@ -289,7 +289,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         for step, (x, y) in enumerate(db):
             with tf.GradientTape() as tape:
                 out = model.call(x, training=True)
-                ll = loss_fn(out, y)
+                ll = loss_fn(y, out)
             grads = tape.gradient(ll, model.trainable_variables)
             opt_fn().apply_gradients(zip(grads, model.trainable_variables))
 
