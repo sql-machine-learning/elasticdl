@@ -51,3 +51,10 @@ class SaveModelConfig(object):
 
 class TaskExecCounterKey(object):
     FAIL_COUNT = "fail_count"
+
+
+class PodStatus(object):
+    SUCCEEDED = "Succeeded"
+    FAILED = "Failed"
+    RUNNING = "Running"
+    FINISHED = "Finished"
