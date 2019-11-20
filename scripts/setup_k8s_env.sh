@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# install Kuberneters Python client to validate job status
 sudo pip3 install kubernetes
 export MINIKUBE_WANTUPDATENOTIFICATION=false
 export MINIKUBE_WANTREPORTERRORPROMPT=false
