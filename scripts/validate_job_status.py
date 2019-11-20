@@ -127,7 +127,7 @@ def validate_job_status(client, job_type, ps_num, worker_num):
                 print("PS%d: %s" % (i, client.get_pod_phase(ps)))
             for i, worker in enumerate(worker_pod_names):
                 print("Worker%d: %s" % (i, client.get_pod_phase(worker)))
-                time.sleep(10)
+            time.sleep(10)
 
     print("ElasticDL job timed out.")
     client.delete_pod(master_pod_name)
