@@ -13,8 +13,12 @@ def custom_model():
     return Model(inputs, outputs)
 
 
-def loss(predictions, labels):
+def loss(labels, predictions):
     return tf.reduce_mean(tf.square(predictions - labels))
+
+
+def keras_loss(labels, predictions):
+    return tf.keras.losses.mean_squared_error(labels, predictions)
 
 
 def dataset_fn(dataset, mode, metadata):

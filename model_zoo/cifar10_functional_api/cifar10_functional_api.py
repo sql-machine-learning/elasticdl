@@ -101,11 +101,11 @@ def custom_model():
     return tf.keras.Model(inputs=inputs, outputs=outputs, name="cifar10_model")
 
 
-def loss(output, labels):
+def loss(labels, predictions):
     labels = tf.reshape(labels, [-1])
     return tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=output, labels=labels
+            logits=predictions, labels=labels
         )
     )
 
