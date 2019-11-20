@@ -15,7 +15,7 @@ There are two design components: export and restore.
 
 **When to save a checkpoint during training.** 
 
-In ElasticDL, we will save all model parameters to a checkpoint directory every `checkpoint_steps`. Though, some frameworks support to save checkpoints every  steps or every seconds, e.g. `tf.estimator`. Using ParameterServerStrategy in ElasticDL, PS instances are asynchronous and we cannot guarantee that the iteration steps of all PS instances are consistent at the same time. So, we don't support to save checkpoints every seconds.
+In ElasticDL, we will save all model parameters to a checkpoint directory every `checkpoint_steps`. Though, some frameworks support to save checkpoints every N steps or every N seconds, e.g. `tf.estimator`. Using ParameterServerStrategy in ElasticDL, PS instances are asynchronous and we cannot guarantee that the iteration steps of all PS instances are consistent at the same time. So, we don't support to save checkpoints every N seconds.
 
 
 **Where to save a checkpoint.** 
@@ -40,7 +40,7 @@ The parameters on each PS instance may contain non-embedding variables and a par
 We can set the `keep_checkpoint_max` in ElasticDL. After saving a checkpoint, each PS instance will check the number of checkpoints it saved and will remove its earliest checkpoint file in `model_v{version}` if the number exceeds the `keep_checkpoint_max`. Then, it will remove the `model_v{version}` subdirectory if it is empty.
 
 ### Restore Model Parameters from a Checkpoint
-The number of PS instances may be various when we restore model parameters to train or predict. So, we need to reassign variables and embedding vectors in checkpoint to new PS instances. For each new PS instance, it will traverse all protobuf files in the checkpoint directory and get variables and embedding vectors if `hash_utils.string_to_id(var.name)` or `hash_utils.int_to_id(embedding_id)` is equal to its index (`ps_id`). The pseudo-code is:
+The number of PS instances may vary when we restore model parameters to train or predict. So, we need to reassign variables and embedding vectors in checkpoint to new PS instances. For each new PS instance, it will traverse all protobuf files in the checkpoint directory and get variables and embedding vectors if `hash_utils.string_to_id(var.name)` or `hash_utils.int_to_id(embedding_id)` is equal to its index (`ps_id`). The pseudo-code is:
 ```python
 non_embedding_vars = {}
 embedding_table_vectors = {}
