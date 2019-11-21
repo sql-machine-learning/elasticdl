@@ -5,7 +5,7 @@ import grpc
 from kubernetes import client, config
 
 from elasticdl.proto import elasticdl_pb2_grpc
-from elasticdl.python.common.constants import GRPC
+from elasticdl.python.common.constants import GRPC, PodStatus
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.k8s_client import get_master_pod_name
 from elasticdl.python.common.log_utils import get_logger
@@ -88,11 +88,21 @@ class ParameterServer(object):
                 master_pod = api.read_namespaced_pod(
                     namespace=self.namespace, name=self.master_name
                 )
-                if master_pod.status.phase == "Succeeded":
+                if master_pod.status.phase == PodStatus.SUCCEEDED:
                     self.logger.info("Master pod is Succeeded")
                     break
-                elif master_pod.status.phase == "Failed":
+                elif master_pod.status.phase == PodStatus.FAILED:
                     self.logger.info("Master pod is Failed")
+                    break
+                elif (
+                    master_pod.status.phase == PodStatus.RUNNING
+                    and master_pod.metadata.labels["status"]
+                    == PodStatus.FINISHED
+                ):
+                    self.logger.info(
+                        "Task is finished, "
+                        "master pod is still running tensorboard service"
+                    )
                     break
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")

@@ -31,15 +31,18 @@ class TaskQueueTest(unittest.TestCase):
         # no todo tasks, should return None
         self.assertEqual((-1, None), task_d.get(10))
 
+        request = elasticdl_pb2.ReportTaskResultRequest()
         # report 6 task successes.
         for t in (1, 3, 5, 7, 2, 8):
-            task_d.report(t, True)
+            request.task_id = t
+            task_d.report(request, True)
 
         # there should be 2 doing tasks left.
         self.assertEqual(2, len(task_d._doing))
 
         # report a task failure
-        task_d.report(list(task_d._doing.items())[0][0], False)
+        request.task_id = list(task_d._doing.items())[0][0]
+        task_d.report(request, False)
         self.assertEqual(1, len(task_d._doing))
 
         # recover tasks from a dead worker
@@ -50,8 +53,10 @@ class TaskQueueTest(unittest.TestCase):
 
         id1, t1 = task_d.get(11)
         id2, t2 = task_d.get(12)
-        task_d.report(id1, True)
-        task_d.report(id2, True)
+        request.task_id = id1
+        task_d.report(request, True)
+        request.task_id = id2
+        task_d.report(request, True)
 
         self.assertTrue(task_d.finished())
 

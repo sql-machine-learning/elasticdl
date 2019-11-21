@@ -71,8 +71,8 @@ def custom_model(
     return m
 
 
-def loss(output, labels):
-    logits = output["logits"]
+def loss(labels, predictions):
+    logits = predictions["logits"]
     labels = tf.cast(tf.reshape(labels, [-1]), tf.dtypes.float32)
     logits = tf.reshape(logits, [-1])
     return tf.reduce_mean(

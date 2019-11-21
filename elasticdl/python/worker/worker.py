@@ -7,7 +7,10 @@ import tensorflow as tf
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
 from elasticdl.python.common.constants import (
+    CollectiveCommunicatorStatus,
+    DistributionStrategy,
     JobType,
     MetricsDictKey,
     Mode,
@@ -105,8 +108,14 @@ class Worker(object):
             args.embedding_service_endpoint
         )
 
+        self._distribution_strategy = args.distribution_strategy
+        self._collective_communicator = (
+            CollectiveCommunicator()
+            if self._distribution_strategy == DistributionStrategy.ALLREDUCE
+            else None
+        )
         self._model_handler = ModelHandler.get_model_handler(
-            args.distribution_strategy, stub=self._stub
+            self._distribution_strategy, stub=self._stub
         )
         model_inst = self._model_handler.get_model_to_train(model_inst)
         self.set_model(model_inst)
@@ -462,11 +471,19 @@ class Worker(object):
         # TODO: choose the last response temporarily
         return res.accepted, res.model_version
 
+    # TODO: Reuse common code in report_gradient_to_ps and
+    # report_gradient_to_master
+    def report_gradient_locally(self, grads):
+        return True, None
+
     def report_gradient(self, grads):
-        if self._use_multi_ps:
-            return self.report_gradient_to_ps(grads)
+        if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
+            return self.report_gradient_locally(grads)
         else:
-            return self.report_gradient_to_master(grads)
+            if self._use_multi_ps:
+                return self.report_gradient_to_ps(grads)
+            else:
+                return self.report_gradient_to_master(grads)
 
     def report_evaluation_metrics(self, model_outputs, labels):
         """
@@ -573,7 +590,7 @@ class Worker(object):
         with tf.GradientTape() as tape:
             self._set_tape_for_embedding(tape)
             outputs = self._model.call(features, training=True)
-            loss = self._loss(outputs, labels)
+            loss = self._loss(labels, outputs)
             # Add regularization loss if any
             if self._model.losses:
                 loss += tf.math.add_n(self._model.losses)
@@ -586,14 +603,32 @@ class Worker(object):
         outputs = self._model.call(features, training=False)
         return outputs
 
-    def _run_training_task(self, features, labels):
-        loss, grads = self.training_process(features, labels)
+    def _collect_gradients_with_allreduce(self, grads):
+        (status, averaged_grads,) = self._collective_communicator.allreduce(
+            grads
+        )
+        if status == CollectiveCommunicatorStatus.SUCCEEDED:
+            accepted, _ = self.report_gradient(grads)
+        else:
+            # TODO: Handle failure properly based on design doc
+            logger.warning("Allreduce average on grads failed")
+            accepted = False
+        return accepted, None
+
+    def _collect_gradients_without_allreduce(self, grads):
         accepted, min_model_version = self.report_gradient(grads)
         if accepted and self._get_model_steps > 1:
             non_embed_vars_n = len(self._non_embed_vars)
             self._non_embed_grads = grads[:non_embed_vars_n]
         self._reset_embedding()
-        return accepted, min_model_version, loss
+        return accepted, min_model_version
+
+    def _run_training_task(self, features, labels):
+        loss, grads = self.training_process(features, labels)
+        if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
+            return (*self._collect_gradients_with_allreduce(grads), loss)
+        else:
+            return (*self._collect_gradients_without_allreduce(grads), loss)
 
     def _collect_evaluation_result(self, outputs, labels):
         key = MetricsDictKey.MODEL_OUTPUT
@@ -648,11 +683,11 @@ class Worker(object):
                         max(self._model_version, min_model_version),
                         elasticdl_pb2.MINIMUM,
                     )
-                accepted, min_model_version, loss = self._run_training_task(
+                *accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )
                 if accepted:
-                    logger.info("Loss is %f" % loss.numpy())
+                    logger.info("Loss is {}" % loss.numpy())
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
                 if self._model_version != min_model_version:
