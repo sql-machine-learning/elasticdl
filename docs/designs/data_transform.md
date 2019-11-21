@@ -48,14 +48,16 @@ We plan to implement the following common used transform APIs at the first step.
 |       STANDARDIZE(x)        | numeric_column({var_name}, normalizer_fn=lambda x : x - {mean} / {std})        |    MEAN, STDDEV    |
 |        NORMALIZE(x)         | numeric_column({var_name}, normalizer_fn=lambda x : x - {min} / {max} - {min}) |      MAX, MIN      |
 |           LOG(x)            | numeric_column({var_name}, normalizer_fn=lambda x : tf.math.log(x))            |         N/A        |
-| BUCKETIZE(x, bucket_num=10) | bucketized_column({var_name}, boundaries={percentiles})                        |     PERCENTILE     |
+| BUCKETIZE(x, bucket_num=y) | bucketized_column({var_name}, boundaries={percentiles})                        |     PERCENTILE     |
 
 ## Further Consideration
 
-1. We can reuse the transformed data in the temporary table to complete mulitple model training run for different hyperparameter combinations and multiple epochs. The transformation only executed once.
-2. We can support more flexible transform logic such as inter column calculation.
+In the design above, we generated the concrete feature column definition for data transformation in the Transform stage. The actual transform logic on the raw data executes along with the model training process. Based on this design, we can further consider transforming the raw data and writing the transformed result into a new table in the stage.  
+After analyzing the data, we construct the TF graph for transform instead of feature column definition and export it to SavedModel. And then we submit a data processing job to Hive, MaxCompute to process the raw data using the SavedModel. The process is also matched with the TFX pipeline.  
+This solution can bring the following benifits:
+1. We can reuse the transformed data in the temporary table to execute multiple model training run for different hyperparameter combinations and multiple epochs. Data transformation is only executed once.
+2. We can support more flexible transform logic such as inter column calculation. Feature column has some limit on the inter column calculation. Please check the [Wiki](https://github.com/sql-machine-learning/elasticdl/wiki/ElasticDL-TF-Transform-Explore#inter-columns-calculation) for more details.
 
-We need figure out the following points:
-
+We need figure out the following points for this further solution:
 1. Model Export: Upgrade keras API to support export the transform logic and the model definition together to SavedModel for inference. [Issue](https://github.com/tensorflow/transform/issues/150)
 2. Transform Execution: We will transform the data records one by one using the transform logic as the SavedModel format and then write to the result table. We need write a Jar packaging the TensorFlow lib, it only loads the SavedModel into memory and process the input data. And then we register it as UDF in Hive or MaxCompute and use it transform the data.
