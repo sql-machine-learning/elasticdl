@@ -60,4 +60,4 @@ This solution can bring the following benifits:
 
 We need figure out the following points for this further solution:
 1. Model Export: Upgrade keras API to support export the transform logic and the model definition together to SavedModel for inference. [Issue](https://github.com/tensorflow/transform/issues/150)
-2. Transform Execution: We will transform the data records one by one using the transform logic as the SavedModel format and then write to the result table. We need write a Jar packaging the TensorFlow lib, it only loads the SavedModel into memory and process the input data. And then we register it as UDF in Hive or MaxCompute and use it transform the data.
+2. Transform Execution: We will transform the data records one by one using the transform logic in the SavedModel format and then write to a new table. We also need write a Jar, it packages the TensorFlow lib, loads the SavedModel into memory and process the input data. And then we register it as UDF in Hive or MaxCompute and use it to transform the data.
