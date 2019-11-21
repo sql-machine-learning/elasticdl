@@ -53,6 +53,13 @@ def main():
                     ),
                 ],
             )
+
+            # Wait the channel is ready by a Future object.
+            grpc.channel_ready_future(channel).result()
+            logger.info(
+                "grpc channel %s to connect pod %s is ready"
+                % (addr, pod.metadata.name)
+            )
             ps_channels.append(channel)
 
     worker = Worker(args, channel=master_channel, ps_channels=ps_channels)
