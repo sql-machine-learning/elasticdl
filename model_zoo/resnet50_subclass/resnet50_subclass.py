@@ -156,11 +156,11 @@ class CustomModel(tf.keras.Model):
         return self._activation_2(x)
 
 
-def loss(output, labels):
+def loss(labels, predictions):
     labels = tf.reshape(labels, [-1])
     return tf.reduce_mean(
         input_tensor=tf.keras.losses.sparse_categorical_crossentropy(
-            labels, output
+            labels, predictions
         )
     )
 

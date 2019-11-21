@@ -143,6 +143,7 @@ def distributed_train_and_evaluate(
     model_def,
     model_params="",
     eval_metrics_fn="eval_metrics_fn",
+    loss="loss",
     training=True,
     dataset_name=DatasetName.IMAGE_DEFAULT,
     callback_classes=[],
@@ -192,6 +193,8 @@ def distributed_train_and_evaluate(
         model_def,
         "--model_params",
         model_params,
+        "--loss",
+        loss,
         "--get_model_steps",
         get_model_steps,
     ]

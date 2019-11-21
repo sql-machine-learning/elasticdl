@@ -590,7 +590,7 @@ class Worker(object):
         with tf.GradientTape() as tape:
             self._set_tape_for_embedding(tape)
             outputs = self._model.call(features, training=True)
-            loss = self._loss(outputs, labels)
+            loss = self._loss(labels, outputs)
             # Add regularization loss if any
             if self._model.losses:
                 loss += tf.math.add_n(self._model.losses)
@@ -687,7 +687,7 @@ class Worker(object):
                     features, labels
                 )
                 if accepted:
-                    logger.info("Loss is %f" % loss.numpy())
+                    logger.info("Loss is {}" % loss.numpy())
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
                 if self._model_version != min_model_version:
