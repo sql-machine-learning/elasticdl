@@ -1,11 +1,11 @@
 import os
+import random
 import time
 import traceback
 
 import numpy as np
 import tensorflow as tf
 from google.protobuf import empty_pb2
-import random
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
