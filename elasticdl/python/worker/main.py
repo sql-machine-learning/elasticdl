@@ -55,8 +55,7 @@ def main():
             )
 
             # Wait the channel is ready by a Future object.
-            future = grpc.channel_ready_future(channel)
-            future.result()
+            grpc.channel_ready_future(channel).result()
             logger.info(
                 "grpc channel %s to connect pod %s is ready"
                 % (addr, pod.metadata.name)
