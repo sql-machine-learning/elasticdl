@@ -218,9 +218,11 @@ class Master(object):
         if self.evaluation_service:
             self.logger.info("Stopping evaluation service")
             self.evaluation_service.stop()
+            self.logger.info("Evaluation service stopped")
 
         self.logger.info("Stopping RPC server")
         self.server.stop(None)  # grace = None
+        self.logger.info("RPC server stopped")
 
         # Keep TensorBoard running when all the tasks are finished
         if self.tb_service:
