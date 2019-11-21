@@ -5,6 +5,7 @@ import traceback
 import numpy as np
 import tensorflow as tf
 from google.protobuf import empty_pb2
+import random
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
@@ -42,6 +43,10 @@ from elasticdl.python.worker.task_data_service import TaskDataService
 # (e.g. gradients) are not accepted by master.
 DEFAULT_MAX_MINIBATCH_RETRY_NUM = 64
 
+# The default maximum number of retries for allreduce operation
+# if allreduce-based distributed training strategy is used.
+DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
+
 
 class Worker(object):
     """ElasticDL worker"""
@@ -52,6 +57,7 @@ class Worker(object):
         channel=None,
         ps_channels=None,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
+        max_allreduce_retry_num=DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
     ):
         """
         Arguments:
@@ -59,7 +65,9 @@ class Worker(object):
             ps_channels: TODO
             max_minibatch_retry_num: The maximum number of a minibatch retry
                 as its results (e.g. gradients) are not accepted by master.
-
+            max_allreduce_retry_num: The maximum number of retries for
+                allreduce operation if allreduce-based distributed
+                training strategy is used.
         """
         self._args = args
         if channel is None:
@@ -76,6 +84,7 @@ class Worker(object):
                 ]
                 self._var_to_ps = {}
         self._max_minibatch_retry_num = max_minibatch_retry_num
+        self._max_allreduce_retry_num = max_allreduce_retry_num
         self._init_from_args(args)
 
     def _init_from_args(self, args):
@@ -546,17 +555,62 @@ class Worker(object):
         outputs = self._model.call(features, training=False)
         return outputs
 
-    def _collect_gradients_with_allreduce(self, grads):
-        (status, averaged_grads,) = self._collective_communicator.allreduce(
-            grads
+    # TODO: Reuse model handler to initialize the model parameters properly
+    def _update_local_model_params(self, model_params):
+        pass
+
+    def _get_local_model_params(self):
+        return {}
+
+    def _broadcast_model_params(self):
+        status = self._collective_communicator.barrier()
+        if status == CollectiveCommunicatorStatus.FAILED:
+            logger.warning("Failed to perform barrier operation")
+            return False
+        root_ip = random.choice(
+            self._collective_communicator.get_active_worker_ips()
         )
+        status, model_params = self._collective_communicator.broadcast(
+            self._get_local_model_params(), root_ip
+        )
+        if status == CollectiveCommunicatorStatus.FAILED:
+            logger.warning("Failed to broadcast model parameters")
+            return False
+        self._update_local_model_params(model_params)
+        status = self._collective_communicator.barrier()
+        if status == CollectiveCommunicatorStatus.FAILED:
+            logger.warning("Failed to perform barrier operation")
+            return False
+        return True
+
+    def _calculate_grads_and_report_with_allreduce(self, grads):
+        status, averaged_grads = self._collective_communicator.allreduce(grads)
+        accepted = False
         if status == CollectiveCommunicatorStatus.SUCCEEDED:
-            accepted, _ = self.report_gradient(grads)
+            accepted, _ = self.report_gradient(averaged_grads)
+            if not accepted:
+                logger.warning("Failed to report the averaged gradients")
+        return accepted
+
+    def _collect_gradients_with_allreduce_robust(self, grads):
+        accepted = self._calculate_grads_and_report_with_allreduce(grads)
+        if not accepted:
+            if self._collective_communicator.has_new_worker_joining():
+                succeeded = self._broadcast_model_params()
+                if succeeded:
+                    return (
+                        self._calculate_grads_and_report_with_allreduce(grads),
+                        None,
+                    )
+                else:
+                    return False, None
+            else:
+                logger.warning(
+                    "No new worker joining. Broadcast operation skipped"
+                )
+                return False, None
         else:
-            # TODO: Handle failure properly based on design doc
-            logger.warning("Allreduce average on grads failed")
-            accepted = False
-        return accepted, None
+            return True, None
 
     def _collect_gradients_without_allreduce(self, grads):
         accepted, min_model_version = self.report_gradient(grads)
@@ -569,7 +623,21 @@ class Worker(object):
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process(features, labels)
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            return (*self._collect_gradients_with_allreduce(grads), loss)
+            accepted = False
+            # TODO: Delay certain amount of time before retrying
+            for _ in range(self._max_allreduce_retry_num + 1):
+                if accepted:
+                    break
+                else:
+                    logger.warning(
+                        "Failed to perform allreduce operation on"
+                        "the gradients. Retrying..."
+                    )
+                    (
+                        accepted,
+                        _,
+                    ) = self._collect_gradients_with_allreduce_robust(grads)
+            return accepted, None, loss
         else:
             return (*self._collect_gradients_without_allreduce(grads), loss)
 
