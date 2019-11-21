@@ -7,7 +7,6 @@ from kubernetes import client, config
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC, PodStatus
 from elasticdl.python.common.grpc_utils import build_channel
-from elasticdl.python.common.k8s_client import get_master_pod_name
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
@@ -36,7 +35,7 @@ class ParameterServer(object):
         self.master_channel = build_channel(args.master_addr)
         self.evaluation_steps = args.evaluation_steps
 
-        self.master_name = get_master_pod_name(args.job_name)
+        self.master_name = None
         self.namespace = args.namespace
 
     def prepare(self):
