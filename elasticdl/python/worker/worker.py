@@ -623,21 +623,18 @@ class Worker(object):
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process(features, labels)
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            accepted = False
             # TODO: Delay certain amount of time before retrying
             for _ in range(self._max_allreduce_retry_num + 1):
+                accepted, loss = self._collect_gradients_with_allreduce_robust(
+                    grads
+                )
                 if accepted:
-                    break
+                    return accepted, None, loss
                 else:
                     logger.warning(
                         "Failed to perform allreduce operation on"
                         "the gradients. Retrying..."
                     )
-                    (
-                        accepted,
-                        _,
-                    ) = self._collect_gradients_with_allreduce_robust(grads)
-            return accepted, None, loss
         else:
             return (*self._collect_gradients_without_allreduce(grads), loss)
 
