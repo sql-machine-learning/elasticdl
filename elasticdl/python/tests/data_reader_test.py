@@ -149,7 +149,7 @@ class ODPSDataReaderTest(unittest.TestCase):
         for features, labels in dataset:
             with tf.GradientTape() as tape:
                 logits = model(features, training=True)
-                loss_value = loss(logits, labels)
+                loss_value = loss(labels, logits)
             loss_history.append(loss_value.numpy())
             grads = tape.gradient(loss_value, model.trainable_variables)
             optimizer.apply_gradients(zip(grads, model.trainable_variables))

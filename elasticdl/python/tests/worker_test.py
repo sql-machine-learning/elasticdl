@@ -112,6 +112,17 @@ class WorkerTest(unittest.TestCase):
             callback_classes=[CheckRetryCallback],
         )
 
+    def test_distributed_train_tf_example_with_keras_loss(self):
+        distributed_train_and_evaluate(
+            1,
+            _model_zoo_path,
+            "test_module.custom_model",
+            loss="keras_loss",
+            training=True,
+            dataset_name=DatasetName.TEST_MODULE,
+            callback_classes=[CheckRetryCallback],
+        )
+
     def test_distributed_evaluate_tf_example(self):
         distributed_train_and_evaluate(
             1,

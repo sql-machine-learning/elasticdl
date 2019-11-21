@@ -105,20 +105,19 @@ def dataset_fn(dataset, mode):
 
 ### loss
 ```
-loss(output, labels)
+loss(labels, output)
 ```
 `loss` is the loss function used in ElasticDL training.
 
 Arguments:
 
-- output:  [model](#model)'s output.
-
 - labels: `labels` from [`dataset_fn`](#dataset_fn).
+- output:  [model](#model)'s output.
 
 Example:
 
 ```
-def loss(output, labels):
+def loss(labels, output):
     return tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=output, labels=labels.flatten()
