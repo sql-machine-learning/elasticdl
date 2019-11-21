@@ -13,7 +13,7 @@ Consistency between offline and online is the key point of data transform. Users
 ## Transform Expression in SQLFlow
 
 We can extend the SQLFlow syntax and add **TO TRANSFORM** keyword to describe the transform process. Let's take the following SQL expression for example. It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is **TO TRANSFORM STANDARDIZE(age) as age_std, NORMALIZE(capital_gain) as capital_gain_norm, BUCKETIZED(hours_per_week, bucket_num=10) as hours_per_week_bkt**. It will standardize the column *age* to the column *age_std*, normalize the column *capital_gain* to *capital_gain_norm*, bucketize the column *hours_per_week* to 10 buckets to the column *hours_per_week_bkt*. The output of transform will be passed to the **COLUMN** expression.  
-We add some built-in transform API and users can use them directly in the TRANSFORM expression. The Api set contains NORMALIZE, STANDARDIZE, BUCKETIZED, LOG and more to be added in the future.  
+We add some built-in transform API and users can use them directly in the TRANSFORM expression. The API set contains NORMALIZE, STANDARDIZE, BUCKETIZED, LOG and more to be added in the future.  
 
 ```SQL
 SELECT *
@@ -27,7 +27,7 @@ LABEL label
 
 ## Design
 
-Data transform contains two stages: analyze and transform. In our design, we will do the analyze using SQL as the first step, and generate the feature column definition as the second step. The feature column contains the transform logic and execute along with the model training process.  
+Data transform contains two stages: analyze and transform. In our design, we will do the analysis using SQL as the first step, and generate the feature column definition as the second step. The feature column contains the transform logic and executes along with the model training process.  
 We choose to convert the **TRANSFORM** expression into two steps of the work flow described by [Couler](https://github.com/sql-machine-learning/sqlflow/blob/develop/python/couler/README.md): analyze and feature column generation. Couler is a programming language for describing workflows. Its compiler translates a workflow represented by a Python program into an [Argo](https://argoproj.github.io/) YAML file. The output of feature column generation will be passed to the next model training step.  
 ![data_transform_pipeline](../images/data_transform_pipeline.png)
 
