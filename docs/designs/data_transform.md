@@ -43,9 +43,9 @@ In the feature column generation step, we will format the feature column templat
 The generated feature column definitions will be passed to the next couler step: model training. We combine them with the COLUMN expression to generated the final feature column definitions and then pass to the model. Let's take **COLUMNS NUMERIC(age_std)** for example, the final definition will be **numeric_column('age', normalizer_fn=lambda x: x - 18.0 / 6.0)**  
 
 We plan to implement the following common used transform APIs at the first step. And we will add more according to further requirements.  
-|            Name             |                      Feature Column Template                                   |     Analyzers      |
+|            Name             |                      Feature Column Template                                   |      Analyzer      |
 |:---------------------------:|:------------------------------------------------------------------------------:|:------------------:|
 |       STANDARDIZE(x)        | numeric_column({var_name}, normalizer_fn=lambda x : x - {mean} / {std})        |    MEAN, STDDEV    |
 |        NORMALIZE(x)         | numeric_column({var_name}, normalizer_fn=lambda x : x - {min} / {max} - {min}) |      MAX, MIN      |
 |           LOG(x)            | numeric_column({var_name}, normalizer_fn=lambda x : tf.math.log(x))            |         N/A        |
-| BUCKETIZE(x, bucket_num=10) | bucketized_column({var_name}, boundaries={percentile})                         |     PERCENTILE     |
+| BUCKETIZE(x, bucket_num=10) | bucketized_column({var_name}, boundaries={percentiles})                        |     PERCENTILE     |
