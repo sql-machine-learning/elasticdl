@@ -91,7 +91,7 @@ def validate_job_status(client, job_type, ps_num, worker_num):
         ):
             print("ElasticDL job succeeded.")
             client.delete_pod(master_pod_name)
-            return
+            exit(0)
         elif (
             check_success(ps_pod_phases)
             and check_success(worker_pod_phases)
@@ -103,7 +103,7 @@ def validate_job_status(client, job_type, ps_num, worker_num):
                 "(master pod keeps running for TensorBoard service)."
             )
             client.delete_pod(master_pod_name)
-            return
+            exit(0)
         elif (
             check_failed(ps_pod_phases)
             or check_failed(worker_pod_phases)
@@ -120,7 +120,7 @@ def validate_job_status(client, job_type, ps_num, worker_num):
                 print("Worker%d log" % i)
                 print(client.get_pod_log(worker))
             client.delete_pod(master_pod_name)
-            return
+            exit(-1)
         else:
             print("Master: %s" % client.get_pod_phase(master_pod_name))
             for i, ps in enumerate(ps_pod_names):
@@ -131,6 +131,7 @@ def validate_job_status(client, job_type, ps_num, worker_num):
 
     print("ElasticDL job timed out.")
     client.delete_pod(master_pod_name)
+    exit(-1)
 
 
 if __name__ == "__main__":
