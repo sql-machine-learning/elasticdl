@@ -1,11 +1,12 @@
 language: minimal
 
-dist: xenial
+dist: bionic
 
 addons:
   apt:
     packages:
       - docker-ce
+      - python3-pip
 
 install:
   - docker version
@@ -66,12 +67,18 @@ jobs:
                     export ODPS_TABLE_NAME="odps_integration_build_${TRAVIS_BUILD_NUMBER}_$(date +%s)"
                     docker run --rm -it -e ODPS_TABLE_NAME=$ODPS_TABLE_NAME -e ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c 'python -c "from elasticdl.python.tests.test_utils import *; create_iris_odps_table_from_env()"'
                 fi
-                docker run --rm -it --net=host -e ODPS_TABLE_NAME=$ODPS_TABLE_NAME -e ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:ci bash -c "scripts/client_test.sh ${JOB_TYPE}"
-                bash scripts/validate_job_status.sh ${JOB_TYPE}
+                PS_NUM=0
+                WORKER_NUM=2
+                if [[ "$JOB_TYPE" == "train" ]]; then
+                    PS_NUM=2
+                    WORKER_NUM=1
+                fi
+                docker run --rm -it --net=host -e ODPS_TABLE_NAME=$ODPS_TABLE_NAME -e ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v /var/run/docker.sock:/var/run/docker.sock -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $(pwd):/work -w /work elasticdl:ci bash -c "scripts/client_test.sh ${JOB_TYPE} ${PS_NUM} ${WORKER_NUM}"
+                python3 scripts/validate_job_status.py ${JOB_TYPE} ${PS_NUM} ${WORKER_NUM}
                 if [[ "$JOB_TYPE" == "odps" ]]; then
                     docker run --rm -it -e ODPS_TABLE_NAME=$ODPS_TABLE_NAME -e ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME -e ODPS_ACCESS_ID=$ODPS_ACCESS_ID -e ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c 'python -c "from elasticdl.python.tests.test_utils import *; delete_iris_odps_table_from_env()"'
                 fi
-            fi
+              fi
           done
 
 # Only build on this list of branches
