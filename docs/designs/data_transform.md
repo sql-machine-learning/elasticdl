@@ -49,3 +49,13 @@ We plan to implement the following common used transform APIs at the first step.
 |        NORMALIZE(x)         | numeric_column({var_name}, normalizer_fn=lambda x : x - {min} / {max} - {min}) |      MAX, MIN      |
 |           LOG(x)            | numeric_column({var_name}, normalizer_fn=lambda x : tf.math.log(x))            |         N/A        |
 | BUCKETIZE(x, bucket_num=10) | bucketized_column({var_name}, boundaries={percentiles})                        |     PERCENTILE     |
+
+## Further Consideration
+
+1. We can reuse the transformed data in the temporary table to complete mulitple model training run for different hyperparameter combinations and multiple epochs. The transformation only executed once.
+2. We can support more flexible transform logic such as inter column calculation.
+
+We need figure out the following points:
+
+1. Model Export: Upgrade keras API to support export the transform logic and the model definition together to SavedModel for inference. [Issue](https://github.com/tensorflow/transform/issues/150)
+2. Transform Execution: We will transform the data records one by one using the transform logic as the SavedModel format and then write to the result table. We need write a Jar packaging the TensorFlow lib, it only loads the SavedModel into memory and process the input data. And then we register it as UDF in Hive or MaxCompute and use it transform the data.
