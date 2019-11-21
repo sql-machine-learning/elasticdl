@@ -40,7 +40,7 @@ elif [[ "$JOB_TYPE" == "evaluate" ]]; then
       --checkpoint_filename_for_init=elasticdl/python/tests/testdata/mnist_functional_api_model_v110.chkpt \
       --validation_data=/data/mnist/test \
       --num_epochs=1 \
-      --master_resource_request="cpu=0.2,memory=1024Mi" \
+      --master_resource_request="cpu=0.3,memory=1024Mi" \
       --master_resource_limit="cpu=1,memory=2048Mi" \
       --worker_resource_request="cpu=0.4,memory=2048Mi" \
       --worker_resource_limit="cpu=1,memory=3072Mi" \
