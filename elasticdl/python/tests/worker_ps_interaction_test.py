@@ -82,7 +82,9 @@ class WorkerPSInteractionTest(unittest.TestCase):
             worker = Worker(args, ps_channels=self._channels)
             self._workers.append(worker)
 
-    def _worker_train(self, worker_id, train_db, test_db, stop_step):
+    def _worker_train(
+        self, worker_id, train_db, test_db, stop_step, use_tf_function=False
+    ):
         worker = self._workers[worker_id]
         acc_meter = tf.keras.metrics.Accuracy()
         worker_results = []
@@ -91,8 +93,12 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 worker._run_model_call_before_training(x)
 
             worker.get_model(step, elasticdl_pb2.MINIMUM)
-
-            w_loss, w_grads = worker.training_process_eagerly(x, y)
+            if use_tf_function:
+                w_loss, w_grads = worker.training_process_with_acceleration(
+                    x, y
+                )
+            else:
+                w_loss, w_grads = worker.training_process_eagerly(x, y)
             worker.report_gradient(w_grads)
 
             if step % 20 == 0:
@@ -318,7 +324,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             0, train_db=db, test_db=test_db, stop_step=100
         )
         acc = max([r[1] for r in worker_results])
-        self.assertLess(0.6, acc)
+        self.assertLess(0.65, acc)
 
     def test_deepfm_two_worker_train(self):
         num_ps = 2
@@ -384,6 +390,21 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 workers[0]._non_embed_vars[var_name].numpy(),
                 workers[1]._non_embed_vars[var_name].numpy(),
             )
+
+    def test_train_acceleration_with_embedding(self):
+        model_def = "deepfm_functional_api.deepfm_functional_api.custom_model"
+        self._create_pserver(model_def, 2)
+        db, test_db = get_frappe_dataset(self._batch_size)
+        self._create_worker(1)
+        worker_results = self._worker_train(
+            0,
+            train_db=db,
+            test_db=test_db,
+            stop_step=100,
+            use_tf_function=True,
+        )
+        acc = max([r[1] for r in worker_results])
+        self.assertLess(0.65, acc)
 
 
 if __name__ == "__main__":

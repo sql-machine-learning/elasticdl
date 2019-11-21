@@ -147,6 +147,26 @@ def add_common_params(parser):
         "--worker_pod_priority", help="The requested priority of worker pod"
     )
     parser.add_argument(
+        "--num_ps_pods", type=int, help="Number of PS pods", default=1
+    )
+    parser.add_argument(
+        "--ps_resource_request",
+        default="cpu=1,memory=4096Mi",
+        type=str,
+        help="The minimal resource required by worker, "
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+    )
+    parser.add_argument(
+        "--ps_resource_limit",
+        type=str,
+        help="The maximal resource required by worker, "
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1,"
+        "default to worker_resource_request",
+    )
+    parser.add_argument(
+        "--ps_pod_priority", help="The requested priority of PS pod"
+    )
+    parser.add_argument(
         "--volume",
         help="The Kubernetes volume information, "
         "the supported volumes are `persistentVolumeClaim` and `hostPath`,"
@@ -211,26 +231,6 @@ def add_common_params(parser):
 
 
 def add_train_params(parser):
-    parser.add_argument(
-        "--num_ps_pods", type=int, help="Number of PS pods", default=0
-    )
-    parser.add_argument(
-        "--ps_resource_request",
-        default="cpu=1,memory=4096Mi",
-        type=str,
-        help="The minimal resource required by worker, "
-        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
-    )
-    parser.add_argument(
-        "--ps_resource_limit",
-        type=str,
-        help="The maximal resource required by worker, "
-        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1,"
-        "default to worker_resource_request",
-    )
-    parser.add_argument(
-        "--ps_pod_priority", help="The requested priority of PS pod"
-    )
     parser.add_argument(
         "--tensorboard_log_dir",
         default="",

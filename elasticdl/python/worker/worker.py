@@ -342,62 +342,6 @@ class Worker(object):
         else:
             self.report_variable_to_master()
 
-    def report_gradient_to_master(self, grads):
-        req = elasticdl_pb2.ReportGradientRequest()
-        non_embed_vars_n = len(self._non_embed_vars)
-        # The first `non_embed_vars_n` items in `grads` are gradients for
-        # `self._non_embed_vars`.
-        # Take care of the order of grads and vars if worker modifies
-        # `_non_embed_vars` during training.
-        for g, v in zip(
-            grads[:non_embed_vars_n], self._non_embed_vars.values()
-        ):
-            emplace_tensor_pb_from_ndarray(req.gradient, g, name=v.name)
-
-        # Accumulate gradients of ElasticDL embedding layer
-        if self._embedding_layers:
-            # The `edl_embedding_grads` are gradients for bets in
-            # `self._embedding_layers`
-            edl_embedding_grads = grads[non_embed_vars_n:]
-
-            # Check that the number of bet equal to the number of gradients.
-            # Please note that every embedding layer may have more than one
-            # `bet_id_pair`.
-            bet_number = 0
-            for layer in self._embedding_layers:
-                bet_number += len(layer.embedding_and_ids)
-            if len(edl_embedding_grads) != bet_number:
-                raise ValueError(
-                    "elasticdl.layers.embedding related gradient number %d "
-                    "does not match the number of its output tensor %d."
-                    % (len(edl_embedding_grads), bet_number)
-                )
-
-            grad_accum_iter = 0
-            for layer in self._embedding_layers:
-                g_values = None
-                g_indices = None
-                for _, ids in layer.embedding_and_ids:
-                    grad = edl_embedding_grads[grad_accum_iter]
-                    grad_accum_iter += 1
-                    # ElasticDL embedding layer with Sparse Gradients
-                    if isinstance(grad, tf.IndexedSlices):
-                        grad = grad.values
-                    if g_values is not None:
-                        g_values = tf.concat([g_values, grad], axis=0)
-                        g_indices = tf.concat([g_indices, ids], axis=0)
-                    else:
-                        g_values = grad
-                        g_indices = ids
-
-                emplace_tensor_pb_from_ndarray(
-                    req.gradient, g_values, indices=g_indices, name=layer.name
-                )
-
-        req.model_version = self._model_version
-        res = self._stub.ReportGradient(req)
-        return res.accepted, res.model_version
-
     def report_gradient_to_ps(self, grads):
         reqs = [
             elasticdl_pb2.PushGradientRequest()
@@ -482,8 +426,7 @@ class Worker(object):
         else:
             if self._use_multi_ps:
                 return self.report_gradient_to_ps(grads)
-            else:
-                return self.report_gradient_to_master(grads)
+            raise RuntimeError("Only support report gradients to PS")
 
     def report_evaluation_metrics(self, model_outputs, labels):
         """

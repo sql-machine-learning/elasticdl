@@ -8,10 +8,7 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.tensor import (
-    emplace_tensor_pb_from_ndarray,
-    tensor_pb_to_ndarray,
-)
+from elasticdl.python.common.tensor import tensor_pb_to_ndarray
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
@@ -147,99 +144,6 @@ class ServicerTest(unittest.TestCase):
             req.method = elasticdl_pb2.FIXED
             model = master.GetModel(req, None)
             self._check_get_model_response(1, expected_value, model)
-
-    def testReportGradient(self):
-        def makeGrad():
-            """ Make a ReportGradientRequest compatible with model"""
-            req = elasticdl_pb2.ReportGradientRequest()
-            emplace_tensor_pb_from_ndarray(
-                req.gradient, np.array([0.1], np.float32), name="x"
-            )
-            emplace_tensor_pb_from_ndarray(
-                req.gradient, np.array([0.03, 0.06], np.float32), name="y"
-            )
-            req.model_version = 1
-            return req
-
-        master = MasterServicer(
-            3,
-            3,
-            tf.optimizers.SGD(0.1),
-            None,
-            init_var=[],
-            checkpoint_filename_for_init="",
-            checkpoint_service=CheckpointService("", 0, 0, False),
-            evaluation_service=None,
-        )
-        master._version = 1
-        master.set_model_var("x", np.array([2.0], dtype=np.float32))
-        master.set_model_var("y", np.array([12.0, 13.0], dtype=np.float32))
-
-        # Report a future version, should raise exception
-        req = makeGrad()
-        req.model_version = 2
-        self.assertRaises(ValueError, master.ReportGradient, req, None)
-
-        # Report an old version, should not be accepted
-        req = makeGrad()
-        req.model_version = 0
-        res = master.ReportGradient(req, None)
-        self.assertFalse(res.accepted)
-        self.assertEqual(1, res.model_version)
-
-        # Report a unknown gradient, should raise.
-        req = makeGrad()
-        emplace_tensor_pb_from_ndarray(
-            req.gradient, np.array([0.1], np.float32), name="z"
-        )
-        self.assertRaises(ValueError, master.ReportGradient, req, None)
-
-        # Report an incompatible gradient, should raise.
-        req = makeGrad()
-        emplace_tensor_pb_from_ndarray(
-            req.gradient, np.array([0.1], np.float32), name="y"
-        )
-        self.assertRaises(ValueError, master.ReportGradient, req, None)
-
-        # Report a current version, should be accepted.
-        req = makeGrad()
-        res = master.ReportGradient(req, None)
-        self.assertTrue(res.accepted)
-        self.assertEqual(1, res.model_version)
-
-        # Report a current version with part of gradients, should be accepted.
-        req = makeGrad()
-        req.gradient.pop()
-        res = master.ReportGradient(req, None)
-        self.assertTrue(res.accepted)
-        self.assertEqual(1, res.model_version)
-        # Gradient should be accumulated.
-        np.testing.assert_array_equal(
-            np.array([0.2], dtype=np.float32), master._gradient_sum["x"]
-        )
-        np.testing.assert_array_equal(
-            np.array([0.03, 0.06], dtype=np.float32), master._gradient_sum["y"]
-        )
-        self.assertEqual(2, master._grad_n)
-
-        # Report a current version, should be accepted, and a new version
-        # created
-        req = makeGrad()
-        res = master.ReportGradient(req, None)
-        self.assertTrue(res.accepted)
-        self.assertEqual(2, res.model_version)
-        self.assertFalse(master._gradient_sum)
-        self.assertEqual(0, master._grad_n)
-        np.testing.assert_array_equal(
-            # [2] - 0.1 * [0.1]
-            np.array([1.99], dtype=np.float32),
-            master._model["x"].numpy(),
-        )
-        np.testing.assert_array_equal(
-            # [12, 13] - 0.1 * [0.02, 0.04]
-            np.array([11.998, 12.996], dtype=np.float32),
-            master._model["y"].numpy(),
-        )
 
     def testReportTaskResult(self):
         task_d = _TaskDispatcher(
