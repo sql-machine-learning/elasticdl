@@ -630,7 +630,7 @@ class Worker(object):
                     features, labels
                 )
                 if accepted:
-                    logger.info("Loss is {}" % loss.numpy())
+                    logger.info("Loss is {}".format(loss.numpy()))
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
                 if self._model_version != min_model_version:
