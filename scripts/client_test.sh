@@ -84,7 +84,7 @@ elif [[ "$JOB_TYPE" == "odps" ]]; then
       --data_reader_params='columns=["sepal_length", "sepal_width", "petal_length", "petal_width", "class"]' \
       --envs="ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME,ODPS_ACCESS_ID=$ODPS_ACCESS_ID,ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY,ODPS_ENDPOINT=" \
       --num_epochs=2 \
-      --master_resource_request="cpu=0.4,memory=1024Mi" \
+      --master_resource_request="cpu=0.2,memory=1024Mi" \
       --master_resource_limit="cpu=1,memory=2048Mi" \
       --worker_resource_request="cpu=0.4,memory=2048Mi" \
       --worker_resource_limit="cpu=1,memory=3072Mi" \
