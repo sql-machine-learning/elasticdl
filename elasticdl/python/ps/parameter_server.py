@@ -13,9 +13,9 @@ from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
 )
+from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.ps.parameters import Parameters
 from elasticdl.python.ps.servicer import PserverServicer
-from elasticdl.python.master.checkpoint_service import CheckpointService
 
 
 class ParameterServer(object):
@@ -30,12 +30,6 @@ class ParameterServer(object):
             get_module_file_path(args.model_zoo, args.model_def)
         ).__dict__
         self.optimizer = model_module[args.optimizer]()
-        self.checkpoint_service = CheckpointService(
-            args.checkpoint_dir,
-            args.checkpoint_steps,
-            args.keep_checkpoint_max,
-            include_evaluation=False
-        )
         self.ps_id = args.ps_id
         self.num_ps_pods = args.num_ps_pods
         # Create Parameters instance
@@ -47,6 +41,27 @@ class ParameterServer(object):
 
         self.master_name = get_master_pod_name(args.job_name)
         self.namespace = args.namespace
+        self._init_checkpoint_service(args)
+
+    def _init_checkpoint_service(self, args):
+        if all(
+            [
+                args.checkpoint_dir,
+                args.checkpoint_steps,
+                args.keep_checkpoint_max,
+            ]
+        ):
+            self.checkpoint_service = CheckpointService(
+                args.checkpoint_dir,
+                args.checkpoint_steps,
+                args.keep_checkpoint_max,
+                include_evaluation=False,
+            )
+        else:
+            self.checkpoint_service = None
+            self.logger.warning(
+                "Invalid checkpoint config and no model will be saved"
+            )
 
     def prepare(self):
         server = grpc.server(
@@ -69,7 +84,7 @@ class ParameterServer(object):
             master_channel=self.master_channel,
             checkpoint_service=self.checkpoint_service,
             ps_id=self.ps_id,
-            num_ps_pods=self.num_ps_pods
+            num_ps_pods=self.num_ps_pods,
         )
         elasticdl_pb2_grpc.add_PserverServicer_to_server(
             pserver_servicer, server

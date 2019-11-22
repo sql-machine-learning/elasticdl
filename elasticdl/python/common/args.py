@@ -593,6 +593,7 @@ def parse_ps_args(ps_args=None):
 def parse_worker_args(worker_args=None):
     parser = argparse.ArgumentParser(description="ElasticDL Worker")
     add_common_args_between_master_and_worker(parser)
+    add_train_params(parser)
     parser.add_argument(
         "--worker_id", help="ID unique to the worker", type=int, required=True
     )

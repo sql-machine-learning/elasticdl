@@ -6,6 +6,12 @@ from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
 )
 
+from elasticdl.python.common.tensor import Tensor
+from elasticdl.python.common.hash_utils import (
+    string_to_id,
+    int_to_id
+)
+
 
 def load_module(module_file):
     spec = importlib.util.spec_from_file_location(module_file, module_file)
@@ -181,3 +187,78 @@ def get_non_embedding_trainable_vars(model, embedding_layers):
         if not is_embedding_item:
             non_embedding_trainable_vars.append(var)
     return non_embedding_trainable_vars
+
+
+def restore_model_params_from_checkpoint(
+    checkpoint_dir, shard_index, shard_num
+):
+    """Restore a shard parameters from the checkpoint directory.
+    If shard_num=1, a entire model parameters will be restored.
+
+    Args:
+        checkpoint_dir: a directory with checkpoint files.
+        shard_index: Model shard index, e.g. the PS instance index
+            using ParameterServerStrategy with multiple PS instances.
+        shard_num: The total number of model shards, e.g. the total PS
+            instancecount using ParameterServerStrategy with multiple
+            PS instances.
+
+    Return:
+        non_embedding_vars: A Python dict in which the key is a variable
+            name and the value is a variable tensor.
+        embedding_tables: A Python dict in which the key is an embedding
+            table name and the value is a `EmbeddingTable` instance.
+    """
+    from elasticdl.python.ps.embedding_table import create_embedding_table
+
+    variable_shard_files = os.listdir(checkpoint_dir)
+    non_embedding_vars = {}
+    embedding_tables = {}
+    for shard_file in variable_shard_files:
+        shard_file_path = os.path.join(checkpoint_dir, shard_file)
+        model_pb = load_from_checkpoint_file(shard_file_path)
+
+        for embedding_info_pb in model_pb.embedding_table_info:
+            embedding_table = create_embedding_table(embedding_info_pb)
+            embedding_tables.setdefault(embedding_table.name, embedding_table)
+
+        shard_non_embedding_vars, shard_embedding_table_values = (
+            get_params_shard_from_pb(model_pb, shard_index, shard_num)
+        )
+        non_embedding_vars.update(shard_non_embedding_vars)
+        for name, pair in shard_embedding_table_values.items():
+            embedding_tables[name].set(pair[0], pair[1])
+    return non_embedding_vars, embedding_tables
+
+
+def get_params_shard_from_pb(model_pb, shard_index, shard_num):
+    """Get parameters including variables values and embedding table
+    from a model protobuf.
+
+    Args:
+        model_pb: A Model protobuf instance.
+        shard_index: Model shard index.
+        shard_num: The total number of model shards.
+
+    Return:
+        non_embedding_vars: A Python dict in which the key is a variable
+            name and the value is a variable tensor.
+        embedding_table_values: A Python dict in which the key is an embedding
+            table name and the value is a tuple with 2 elements. The value[0]
+            is indices and value[1] is the corresponding embedding vector.
+    """
+    non_embedding_vars = {}
+    embedding_table_values = {}
+
+    for tensor_pb in model_pb.param:
+        tensor = Tensor.from_tensor_pb(tensor_pb)
+        if tensor.indices is not None:
+            embedding_table_values.setdefault(tensor.name, ([], []))
+            for embedding_id, vector in zip(tensor.indices, tensor.values):
+                if int_to_id(embedding_id, shard_num) == shard_index:
+                    embedding_table_values[tensor.name][0].append(embedding_id)
+                    embedding_table_values[tensor.name][1].append(vector)
+        else:
+            if string_to_id(tensor.name, shard_num) == shard_index:
+                non_embedding_vars[tensor.name] = tensor.values
+    return non_embedding_vars, embedding_table_values

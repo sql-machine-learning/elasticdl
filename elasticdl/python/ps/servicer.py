@@ -3,6 +3,7 @@ import threading
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor import (
     Tensor,
     emplace_tensor_pb_from_ndarray,
@@ -26,6 +27,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         checkpoint_service=None,
         ps_id=None,
         num_ps_pods=None,
+        checkpoint_dir_for_init=None,
     ):
         if master_channel is None:
             self._master_stub = None
@@ -41,6 +43,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._checkpoint_service = checkpoint_service
         self._ps_id = ps_id
         self._num_ps_pods = num_ps_pods
+        self.checkpint_dir_for_init = checkpoint_dir_for_init
         self._version_lock = threading.Lock()
         self._lock = threading.Lock()
         self._use_wrap_opt = False
@@ -114,9 +117,8 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
             self._optimizer.apply_gradients(grad_vars)
             with self._version_lock:
-                self._parameters.version += 1
+                self._increment_params_version()
                 version = self._parameters.version
-                self.save_parameters_to_checkpoint_file()
             self._report_version_if_needed(version)
 
             res.accepted = True
@@ -161,10 +163,9 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                     self._optimizer.apply_gradients(grad_vars)
                     self._grads_n = 0
                     self._grads_buffer.clear()
-                    self._parameters.version += 1
+                    self._increment_params_version()
                     version = self._parameters.version
                     updated_version = True
-                    self.save_parameters_to_checkpoint_file()
 
             if updated_version:
                 self._report_version_if_needed(version)
@@ -225,17 +226,23 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             )
             self._use_wrap_opt = True
 
-    def save_parameters_to_checkpoint_file(self):
+    def _increment_params_version(self):
+        self._parameters.version += 1
+        self._save_params_to_checkpoint_file()
+
+    def _save_params_to_checkpoint_file(self):
         """Save a checkpoint of parameters to a protobuf file"""
-        if (self._checkpoint_service and
-            self._parameters.version %
-                self._checkpoint_service._steps == 0):
+        if (
+            self._checkpoint_service
+            and self._parameters.version % self._checkpoint_service._steps == 0
+        ):
             model_pb = self._parameters.to_model_pb()
 
+            logger.info("Save checkpoint for version %s" % model_pb.version)
             self._checkpoint_service.save(
                 model_pb.version,
                 model_pb,
                 is_eval_checkpoint=False,
                 shard_index=self._ps_id,
-                shard_num=self._num_ps_pods
+                shard_num=self._num_ps_pods,
             )
