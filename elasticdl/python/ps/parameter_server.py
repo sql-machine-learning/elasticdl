@@ -13,9 +13,9 @@ from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
 )
+from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.ps.parameters import Parameters
 from elasticdl.python.ps.servicer import PserverServicer
-from elasticdl.python.master.checkpoint_service import CheckpointService
 
 
 class ParameterServer(object):
@@ -45,15 +45,17 @@ class ParameterServer(object):
 
     def _init_checkpoint_service(self, args):
         if all(
-            [args.checkpoint_dir,
-             args.checkpoint_steps,
-             args.keep_checkpoint_max,
-             ]):
+            [
+                args.checkpoint_dir,
+                args.checkpoint_steps,
+                args.keep_checkpoint_max,
+            ]
+        ):
             self.checkpoint_service = CheckpointService(
                 args.checkpoint_dir,
                 args.checkpoint_steps,
                 args.keep_checkpoint_max,
-                include_evaluation=False
+                include_evaluation=False,
             )
         else:
             self.checkpoint_service = None
@@ -82,7 +84,7 @@ class ParameterServer(object):
             master_channel=self.master_channel,
             checkpoint_service=self.checkpoint_service,
             ps_id=self.ps_id,
-            num_ps_pods=self.num_ps_pods
+            num_ps_pods=self.num_ps_pods,
         )
         elasticdl_pb2_grpc.add_PserverServicer_to_server(
             pserver_servicer, server

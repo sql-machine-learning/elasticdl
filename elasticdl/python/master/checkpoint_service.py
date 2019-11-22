@@ -44,18 +44,22 @@ class CheckpointService(object):
             tempfile.mkdtemp() if include_evaluation else ""
         )
 
-    def _get_checkpoint_file(self, version, is_eval_checkpoint=False,
-                             shard_index=0, shard_num=1):
-        checkpoint_dir = (self._eval_checkpoint_dir
-                          if is_eval_checkpoint
-                          else self._directory)
+    def _get_checkpoint_file(
+        self, version, is_eval_checkpoint=False, shard_index=0, shard_num=1
+    ):
+        checkpoint_dir = (
+            self._eval_checkpoint_dir
+            if is_eval_checkpoint
+            else self._directory
+        )
         checkpoint_version_dir = os.path.join(
-            checkpoint_dir, "version-%s" % str(version))
+            checkpoint_dir, "version-%s" % str(version)
+        )
         os.makedirs(checkpoint_version_dir, exist_ok=True)
         return "%s/variables-%s-of-%s.chkpt" % (
             checkpoint_version_dir,
             str(shard_index),
-            str(shard_num)
+            str(shard_num),
         )
 
     def is_enabled(self):
@@ -66,8 +70,9 @@ class CheckpointService(object):
         """Check if the given model version needs to be checkpointed"""
         return self.is_enabled() and version % self._steps == 0
 
-    def save(self, version, model, is_eval_checkpoint,
-             shard_index=0, shard_num=1):
+    def save(
+        self, version, model, is_eval_checkpoint, shard_index=0, shard_num=1
+    ):
         """Checkpoint the given model
 
         Args:
@@ -83,7 +88,8 @@ class CheckpointService(object):
                 ParameterServerStrategy.
         """
         file = self._get_checkpoint_file(
-            version, is_eval_checkpoint, shard_index, shard_num)
+            version, is_eval_checkpoint, shard_index, shard_num
+        )
         save_checkpoint_to_file(model, file)
         if not is_eval_checkpoint:
             self._checkpoint_list.append(Checkpoint(version, file))
@@ -93,7 +99,7 @@ class CheckpointService(object):
                     os.remove(file_to_delete)
                     # Remove the directory if empty
                     delete_dir_name = os.path.dirname(file_to_delete)
-                    if (not os.listdir(delete_dir_name)):
+                    if not os.listdir(delete_dir_name):
                         try:
                             os.rmdir(delete_dir_name)
                         except Exception:

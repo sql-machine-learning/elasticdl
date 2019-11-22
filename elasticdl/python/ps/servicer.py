@@ -3,13 +3,13 @@ import threading
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor import (
     Tensor,
     emplace_tensor_pb_from_ndarray,
     serialize_tensor,
 )
 from elasticdl.python.master.optimizer_wrapper import OptimizerWrapper
-from elasticdl.python.common.log_utils import default_logger as logger
 
 
 class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
@@ -230,16 +230,17 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
     def _save_params_to_checkpoint_file(self):
         """Save a checkpoint of parameters to a protobuf file"""
-        if (self._checkpoint_service and
-            self._parameters.version %
-                self._checkpoint_service._steps == 0):
+        if (
+            self._checkpoint_service
+            and self._parameters.version % self._checkpoint_service._steps == 0
+        ):
             model_pb = self._parameters.to_model_pb()
 
             logger.info("Save checkpoint for version %s" % model_pb.version)
             self._checkpoint_service.save(
-                    model_pb.version,
-                    model_pb,
-                    is_eval_checkpoint=False,
-                    shard_index=self._ps_id,
-                    shard_num=self._num_ps_pods
-                )
+                model_pb.version,
+                model_pb,
+                is_eval_checkpoint=False,
+                shard_index=self._ps_id,
+                shard_num=self._num_ps_pods,
+            )
