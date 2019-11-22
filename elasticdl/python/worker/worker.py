@@ -598,19 +598,18 @@ class Worker(object):
             if self._collective_communicator.has_new_worker_joining():
                 succeeded = self._broadcast_model_params()
                 if succeeded:
-                    return (
-                        self._calculate_grads_and_report_with_allreduce(grads),
-                        None,
+                    return self._calculate_grads_and_report_with_allreduce(
+                        grads
                     )
                 else:
-                    return False, None
+                    return False
             else:
                 logger.warning(
                     "No new worker joining. Broadcast operation skipped"
                 )
-                return False, None
+                return False
         else:
-            return True, None
+            return True
 
     def _collect_gradients_without_allreduce(self, grads):
         accepted, min_model_version = self.report_gradient(grads)
@@ -625,9 +624,7 @@ class Worker(object):
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
             # TODO: Delay certain amount of time before retrying
             for _ in range(self._max_allreduce_retry_num + 1):
-                accepted, loss = self._collect_gradients_with_allreduce_robust(
-                    grads
-                )
+                accepted = self._collect_gradients_with_allreduce_robust(grads)
                 if accepted:
                     return accepted, None, loss
                 else:

@@ -53,8 +53,7 @@ class WorkerAllReduceStrategyTest(unittest.TestCase):
             if step == self._test_steps:
                 break
             self.assertEqual(
-                worker._collect_gradients_with_allreduce_robust(w_grads),
-                (True, None),
+                worker._collect_gradients_with_allreduce_robust(w_grads), True,
             )
 
     def test_collect_gradients_with_allreduce_failure_case(self):
@@ -72,7 +71,7 @@ class WorkerAllReduceStrategyTest(unittest.TestCase):
             )
             self.assertEqual(
                 worker._collect_gradients_with_allreduce_robust(None),
-                (False, None),
+                False,
                 "Should fail when no data is received and no retry is allowed",
             )
 
