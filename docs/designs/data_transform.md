@@ -48,7 +48,7 @@ We plan to implement the following common used transform APIs at the first step.
 |       STANDARDIZE(x)        | numeric_column({var_name}, normalizer_fn=lambda x : x - {mean} / {std})        |    MEAN, STDDEV    |
 |        NORMALIZE(x)         | numeric_column({var_name}, normalizer_fn=lambda x : x - {min} / {max} - {min}) |      MAX, MIN      |
 |           LOG(x)            | numeric_column({var_name}, normalizer_fn=lambda x : tf.math.log(x))            |         N/A        |
-| BUCKETIZE(x, bucket_num=y) | bucketized_column({var_name}, boundaries={percentiles})                        |     PERCENTILE     |
+| BUCKETIZE(x, bucket_num=y)  | bucketized_column({var_name}, boundaries={percentiles})                        |     PERCENTILE     |
 
 ## Further Consideration
 
