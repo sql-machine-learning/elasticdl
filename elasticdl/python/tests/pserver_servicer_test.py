@@ -1,4 +1,5 @@
 import os
+import tempfile
 import unittest
 
 import numpy as np
@@ -16,7 +17,10 @@ from elasticdl.python.common.tensor import (
     tensor_pb_to_ndarray,
 )
 from elasticdl.python.master.checkpoint_service import CheckpointService
-from elasticdl.python.ps.embedding_table import get_slot_table_name
+from elasticdl.python.ps.embedding_table import (
+    EmbeddingTable,
+    get_slot_table_name,
+)
 from elasticdl.python.ps.parameter_server import ParameterServer
 from elasticdl.python.ps.parameters import Parameters
 from elasticdl.python.ps.servicer import PserverServicer
@@ -417,9 +421,6 @@ class PserverServicerTest(unittest.TestCase):
         self.assertTrue(np.allclose(expected_embed_table, actual_embed_table))
 
     def test_save_parameters_to_checkpoint_file(self):
-        import tempfile
-        from elasticdl.python.ps.embedding_table import EmbeddingTable
-
         with tempfile.TemporaryDirectory() as tempdir:
             checkpoint_service = CheckpointService(
                 checkpoint_dir=os.path.join(tempdir, "ckpt/"),
