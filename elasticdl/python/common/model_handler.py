@@ -174,6 +174,7 @@ class ParameterServerModelHandler(ModelHandler):
                     embeddings_initializer=init,
                     mask_zero=layer.mask_zero,
                     input_length=layer.input_length,
+                    name=layer.name
                 )
                 return embedding_layer
             return layer

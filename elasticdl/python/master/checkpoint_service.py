@@ -50,7 +50,7 @@ class CheckpointService(object):
                           if is_eval_checkpoint
                           else self._directory)
         checkpoint_version_dir = os.path.join(
-            checkpoint_dir, "model_v%s" % str(version))
+            checkpoint_dir, "version-%s" % str(version))
         os.makedirs(checkpoint_version_dir, exist_ok=True)
         return "%s/variables-%s-of-%s.chkpt" % (
             checkpoint_version_dir,
@@ -92,8 +92,11 @@ class CheckpointService(object):
                     file_to_delete = self._checkpoint_list.pop(0).file
                     os.remove(file_to_delete)
                     delete_dir_name = os.path.dirname(file_to_delete)
-                    if not os.listdir(delete_dir_name):
-                        os.rmdir(delete_dir_name)
+                    if (not os.listdir(delete_dir_name)):
+                        try:
+                            os.rmdir(delete_dir_name)
+                        except Exception:
+                            pass
 
     def remove_eval_checkpoint(self, version):
         chkpt_file = self._get_checkpoint_file(

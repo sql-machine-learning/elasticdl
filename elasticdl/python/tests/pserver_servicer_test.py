@@ -423,7 +423,7 @@ class PserverServicerTest(unittest.TestCase):
             checkpoint_service = CheckpointService(
                 checkpoint_dir=os.path.join(tempdir, "ckpt/"),
                 checkpoint_steps=5,
-                keep_checkpoint_max=1,
+                keep_checkpoint_max=3,
                 include_evaluation=False
             )
             pserver_servicer = PserverServicer(
@@ -455,14 +455,16 @@ class PserverServicerTest(unittest.TestCase):
                 values=np.array([[1, 1, 1], [2, 2, 2]])
             )
 
-            for i in range(10):
-                pserver_servicer._parameters.version += 1
-                pserver_servicer.save_parameters_to_checkpoint_file()
+            for i in range(100):
+                pserver_servicer._increment_params_version()
+
+            self.assertEqual(len(os.listdir(checkpoint_service._directory)), 3)
             self.assertEqual(
-                os.listdir(checkpoint_service._directory), ["model_v10"]
+                sorted(os.listdir(checkpoint_service._directory)),
+                ['version-100', 'version-90', 'version-95']
             )
             self.assertEqual(
-                os.listdir(checkpoint_service._directory + "/model_v10"),
+                os.listdir(checkpoint_service._directory + "/version-100"),
                 ["variables-0-of-1.chkpt"]
             )
             

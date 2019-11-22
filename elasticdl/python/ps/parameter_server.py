@@ -30,12 +30,6 @@ class ParameterServer(object):
             get_module_file_path(args.model_zoo, args.model_def)
         ).__dict__
         self.optimizer = model_module[args.optimizer]()
-        self.checkpoint_service = CheckpointService(
-            args.checkpoint_dir,
-            args.checkpoint_steps,
-            args.keep_checkpoint_max,
-            include_evaluation=False
-        )
         self.ps_id = args.ps_id
         self.num_ps_pods = args.num_ps_pods
         # Create Parameters instance
@@ -47,6 +41,25 @@ class ParameterServer(object):
 
         self.master_name = get_master_pod_name(args.job_name)
         self.namespace = args.namespace
+        self._init_checkpoint_service(args)
+
+    def _init_checkpoint_service(self, args):
+        if all(
+            [args.checkpoint_dir,
+             args.checkpoint_steps,
+             args.keep_checkpoint_max,
+             ]):
+            self.checkpoint_service = CheckpointService(
+                args.checkpoint_dir,
+                args.checkpoint_steps,
+                args.keep_checkpoint_max,
+                include_evaluation=False
+            )
+        else:
+            self.checkpoint_service = None
+            self.logger.warning(
+                "Invalid checkpoint config and no model will be saved"
+            )
 
     def prepare(self):
         server = grpc.server(
