@@ -116,7 +116,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             res.model_version = self._parameters.version
             return res
         else:
-            if request.model_version != self._parameters.version:
+            if request.model_version < self._parameters.version:
                 res.accepted = False
                 res.model_version = self._parameters.version
                 return res
