@@ -1,7 +1,5 @@
 import os
 import unittest
-from collections import namedtuple
-from pathlib import Path
 from threading import Thread
 
 import numpy as np
@@ -13,60 +11,15 @@ from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.model_utils import get_model_spec
-from elasticdl.python.data.recordio_gen.frappe_recordio_gen import (
-    load_raw_data,
-)
 from elasticdl.python.ps.embedding_table import EmbeddingTable
 from elasticdl.python.ps.parameter_server import ParameterServer
-from elasticdl.python.tests.test_utils import PserverArgs
+from elasticdl.python.tests.test_utils import (
+    PserverArgs,
+    get_frappe_dataset,
+    get_mnist_dataset,
+    get_random_batch,
+)
 from elasticdl.python.worker.worker import Worker
-
-
-def get_random_batch(batch_size):
-    shape = (28, 28)
-    shape = (batch_size,) + shape
-    num_classes = 10
-    images = tf.random.uniform(shape)
-    labels = tf.random.uniform(
-        [batch_size], minval=0, maxval=num_classes, dtype=tf.int32
-    )
-    return images, labels
-
-
-def get_mnist_dataset(batch_size):
-    (
-        (x_train, y_train),
-        (x_test, y_test),
-    ) = tf.keras.datasets.mnist.load_data()
-    x_train = tf.convert_to_tensor(x_train, dtype=tf.float32) / 255.0
-    y_train = tf.convert_to_tensor(y_train, dtype=tf.int32)
-
-    x_test = tf.convert_to_tensor(x_test, dtype=tf.float32) / 255.0
-    y_test = tf.convert_to_tensor(y_test, dtype=tf.int32)
-
-    db = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-    db = db.batch(batch_size).repeat(2)
-    test_db = tf.data.Dataset.from_tensor_slices((x_test, y_test))
-    test_db = test_db.batch(batch_size)
-
-    return db, test_db
-
-
-def get_frappe_dataset(batch_size):
-    home = str(Path.home())
-    Args = namedtuple("Args", ["data"])
-    args = Args(data=os.path.join(home, ".keras/datasets"))
-    x_train, y_train, x_val, y_val, x_test, y_test = load_raw_data(args)
-    x_train = tf.convert_to_tensor(x_train, dtype=tf.int64)
-    x_test = tf.convert_to_tensor(x_test, dtype=tf.int64)
-    y_train = tf.convert_to_tensor(y_train, dtype=tf.int64)
-    y_test = tf.convert_to_tensor(y_test, dtype=tf.int64)
-
-    db = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-    db = db.batch(batch_size).repeat(2)
-    test_db = tf.data.Dataset.from_tensor_slices((x_test, y_test))
-    test_db = test_db.batch(batch_size)
-    return db, test_db
 
 
 class WorkerPSInteractionTest(unittest.TestCase):
@@ -129,7 +82,9 @@ class WorkerPSInteractionTest(unittest.TestCase):
             worker = Worker(args, ps_channels=self._channels)
             self._workers.append(worker)
 
-    def _worker_train(self, worker_id, train_db, test_db, stop_step):
+    def _worker_train(
+        self, worker_id, train_db, test_db, stop_step, use_tf_function=False
+    ):
         worker = self._workers[worker_id]
         acc_meter = tf.keras.metrics.Accuracy()
         worker_results = []
@@ -138,8 +93,12 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 worker._run_model_call_before_training(x)
 
             worker.get_model(step, elasticdl_pb2.MINIMUM)
-
-            w_loss, w_grads = worker.training_process_eagerly(x, y)
+            if use_tf_function:
+                w_loss, w_grads = worker.training_process_with_acceleration(
+                    x, y
+                )
+            else:
+                w_loss, w_grads = worker.training_process_eagerly(x, y)
             worker.report_gradient(w_grads)
 
             if step % 20 == 0:
@@ -288,7 +247,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         with tf.GradientTape() as tape:
             output = model.call(images, training=True)
             labels = tf.reshape(labels, [-1])
-            loss = loss_fn(output, labels)
+            loss = loss_fn(labels, output)
         grads = tape.gradient(loss, model.trainable_variables)
         opt_fn().apply_gradients(zip(grads, model.trainable_variables))
 
@@ -336,7 +295,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         for step, (x, y) in enumerate(db):
             with tf.GradientTape() as tape:
                 out = model.call(x, training=True)
-                ll = loss_fn(out, y)
+                ll = loss_fn(y, out)
             grads = tape.gradient(ll, model.trainable_variables)
             opt_fn().apply_gradients(zip(grads, model.trainable_variables))
 
@@ -365,7 +324,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             0, train_db=db, test_db=test_db, stop_step=100
         )
         acc = max([r[1] for r in worker_results])
-        self.assertLess(0.6, acc)
+        self.assertLess(0.65, acc)
 
     def test_deepfm_two_worker_train(self):
         num_ps = 2
@@ -431,6 +390,21 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 workers[0]._non_embed_vars[var_name].numpy(),
                 workers[1]._non_embed_vars[var_name].numpy(),
             )
+
+    def test_train_acceleration_with_embedding(self):
+        model_def = "deepfm_functional_api.deepfm_functional_api.custom_model"
+        self._create_pserver(model_def, 2)
+        db, test_db = get_frappe_dataset(self._batch_size)
+        self._create_worker(1)
+        worker_results = self._worker_train(
+            0,
+            train_db=db,
+            test_db=test_db,
+            stop_step=100,
+            use_tf_function=True,
+        )
+        acc = max([r[1] for r in worker_results])
+        self.assertLess(0.65, acc)
 
 
 if __name__ == "__main__":

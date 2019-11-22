@@ -85,7 +85,7 @@ class KerasEmbeddingModel(tf.keras.Model):
         return x
 
 
-def loss(predictions, labels):
+def loss(labels, predictions):
     return tf.reduce_mean(tf.square(predictions - labels))
 
 

@@ -7,7 +7,10 @@ import tensorflow as tf
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
 from elasticdl.python.common.constants import (
+    CollectiveCommunicatorStatus,
+    DistributionStrategy,
     JobType,
     MetricsDictKey,
     Mode,
@@ -105,8 +108,14 @@ class Worker(object):
             args.embedding_service_endpoint
         )
 
+        self._distribution_strategy = args.distribution_strategy
+        self._collective_communicator = (
+            CollectiveCommunicator()
+            if self._distribution_strategy == DistributionStrategy.ALLREDUCE
+            else None
+        )
         self._model_handler = ModelHandler.get_model_handler(
-            args.distribution_strategy, stub=self._stub
+            self._distribution_strategy, stub=self._stub
         )
         model_inst = self._model_handler.get_model_to_train(model_inst)
         self.set_model(model_inst)
@@ -203,16 +212,21 @@ class Worker(object):
 
     def get_model_from_ps(self, version, method):
         model_version = -1
+        variable_future_and_id_pairs = []
+        req = empty_pb2.Empty()
         for ps_id, stub in enumerate(self._ps_stubs):
             if ps_id not in self._ps_vars:
                 continue
-            req = empty_pb2.Empty()
-            res = stub.pull_variable(req)
+            # async grpc call
+            var_future = stub.pull_variable.future(req)
+            variable_future_and_id_pairs.append((var_future, ps_id))
 
+        for var_future, ps_id in variable_future_and_id_pairs:
+            res = var_future.result()
             if not res.model_init_status:
                 # push variable to ps for initialization
                 self.report_variable_to_ps(ps_id)
-                res = stub.pull_variable(req)
+                res = self._ps_stubs[ps_id].pull_variable(req)
                 if not res.model_init_status:
                     # TODO: support PS fault-tolerance
                     raise RuntimeError(
@@ -237,11 +251,15 @@ class Worker(object):
 
         embeddings = []
         index = []
+        pb_future_and_id_pairs = []
         for ps_id, embedding_ids in ps_ids.items():
             req = elasticdl_pb2.PullEmbeddingVectorRequest()
             req.name = layer_name
             req.ids.extend(embedding_ids)
-            pb = self._ps_stubs[ps_id].pull_embedding_vector(req)
+            pb_future = self._ps_stubs[ps_id].pull_embedding_vector.future(req)
+            pb_future_and_id_pairs.append((pb_future, ps_id))
+        for pb_future, ps_id in pb_future_and_id_pairs:
+            pb = pb_future.result()
             embeddings.append(tensor_pb_to_ndarray(pb))
             index.extend(ps_ids_index[ps_id])
         embeddings = np.concatenate(embeddings)
@@ -324,62 +342,6 @@ class Worker(object):
         else:
             self.report_variable_to_master()
 
-    def report_gradient_to_master(self, grads):
-        req = elasticdl_pb2.ReportGradientRequest()
-        non_embed_vars_n = len(self._non_embed_vars)
-        # The first `non_embed_vars_n` items in `grads` are gradients for
-        # `self._non_embed_vars`.
-        # Take care of the order of grads and vars if worker modifies
-        # `_non_embed_vars` during training.
-        for g, v in zip(
-            grads[:non_embed_vars_n], self._non_embed_vars.values()
-        ):
-            emplace_tensor_pb_from_ndarray(req.gradient, g, name=v.name)
-
-        # Accumulate gradients of ElasticDL embedding layer
-        if self._embedding_layers:
-            # The `edl_embedding_grads` are gradients for bets in
-            # `self._embedding_layers`
-            edl_embedding_grads = grads[non_embed_vars_n:]
-
-            # Check that the number of bet equal to the number of gradients.
-            # Please note that every embedding layer may have more than one
-            # `bet_id_pair`.
-            bet_number = 0
-            for layer in self._embedding_layers:
-                bet_number += len(layer.embedding_and_ids)
-            if len(edl_embedding_grads) != bet_number:
-                raise ValueError(
-                    "elasticdl.layers.embedding related gradient number %d "
-                    "does not match the number of its output tensor %d."
-                    % (len(edl_embedding_grads), bet_number)
-                )
-
-            grad_accum_iter = 0
-            for layer in self._embedding_layers:
-                g_values = None
-                g_indices = None
-                for _, ids in layer.embedding_and_ids:
-                    grad = edl_embedding_grads[grad_accum_iter]
-                    grad_accum_iter += 1
-                    # ElasticDL embedding layer with Sparse Gradients
-                    if isinstance(grad, tf.IndexedSlices):
-                        grad = grad.values
-                    if g_values is not None:
-                        g_values = tf.concat([g_values, grad], axis=0)
-                        g_indices = tf.concat([g_indices, ids], axis=0)
-                    else:
-                        g_values = grad
-                        g_indices = ids
-
-                emplace_tensor_pb_from_ndarray(
-                    req.gradient, g_values, indices=g_indices, name=layer.name
-                )
-
-        req.model_version = self._model_version
-        res = self._stub.ReportGradient(req)
-        return res.accepted, res.model_version
-
     def report_gradient_to_ps(self, grads):
         reqs = [
             elasticdl_pb2.PushGradientRequest()
@@ -441,19 +403,30 @@ class Worker(object):
                         req.gradients, values=gv, indices=gi, name=layer.name
                     )
 
-        # TODO: call `push_gradient` in parallel
+        report_futures = []
         for ps_id in range(len(self._ps_stubs)):
             req = reqs[ps_id]
             req.model_version = self._model_version
-            res = self._ps_stubs[ps_id].push_gradient(req)
+            report_future = self._ps_stubs[ps_id].push_gradient.future(req)
+            report_futures.append(report_future)
+
+        for report_future in report_futures:
+            res = report_future.result()
         # TODO: choose the last response temporarily
         return res.accepted, res.model_version
 
+    # TODO: Reuse common code in report_gradient_to_ps and
+    # report_gradient_to_master
+    def report_gradient_locally(self, grads):
+        return True, None
+
     def report_gradient(self, grads):
-        if self._use_multi_ps:
-            return self.report_gradient_to_ps(grads)
+        if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
+            return self.report_gradient_locally(grads)
         else:
-            return self.report_gradient_to_master(grads)
+            if self._use_multi_ps:
+                return self.report_gradient_to_ps(grads)
+            raise RuntimeError("Only support report gradients to PS")
 
     def report_evaluation_metrics(self, model_outputs, labels):
         """
@@ -560,7 +533,7 @@ class Worker(object):
         with tf.GradientTape() as tape:
             self._set_tape_for_embedding(tape)
             outputs = self._model.call(features, training=True)
-            loss = self._loss(outputs, labels)
+            loss = self._loss(labels, outputs)
             # Add regularization loss if any
             if self._model.losses:
                 loss += tf.math.add_n(self._model.losses)
@@ -573,14 +546,32 @@ class Worker(object):
         outputs = self._model.call(features, training=False)
         return outputs
 
-    def _run_training_task(self, features, labels):
-        loss, grads = self.training_process(features, labels)
+    def _collect_gradients_with_allreduce(self, grads):
+        (status, averaged_grads,) = self._collective_communicator.allreduce(
+            grads
+        )
+        if status == CollectiveCommunicatorStatus.SUCCEEDED:
+            accepted, _ = self.report_gradient(grads)
+        else:
+            # TODO: Handle failure properly based on design doc
+            logger.warning("Allreduce average on grads failed")
+            accepted = False
+        return accepted, None
+
+    def _collect_gradients_without_allreduce(self, grads):
         accepted, min_model_version = self.report_gradient(grads)
         if accepted and self._get_model_steps > 1:
             non_embed_vars_n = len(self._non_embed_vars)
             self._non_embed_grads = grads[:non_embed_vars_n]
         self._reset_embedding()
-        return accepted, min_model_version, loss
+        return accepted, min_model_version
+
+    def _run_training_task(self, features, labels):
+        loss, grads = self.training_process(features, labels)
+        if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
+            return (*self._collect_gradients_with_allreduce(grads), loss)
+        else:
+            return (*self._collect_gradients_without_allreduce(grads), loss)
 
     def _collect_evaluation_result(self, outputs, labels):
         key = MetricsDictKey.MODEL_OUTPUT
@@ -635,11 +626,11 @@ class Worker(object):
                         max(self._model_version, min_model_version),
                         elasticdl_pb2.MINIMUM,
                     )
-                accepted, min_model_version, loss = self._run_training_task(
+                *accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )
                 if accepted:
-                    logger.info("Loss is %f" % loss.numpy())
+                    logger.info("Loss is {}".format(loss.numpy()))
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
                 if self._model_version != min_model_version:
