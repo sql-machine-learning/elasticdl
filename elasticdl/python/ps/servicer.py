@@ -115,7 +115,8 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
             self._optimizer.apply_gradients(grad_vars)
             with self._version_lock:
-                self._increment_params_version()
+                self._parameters.version += 1
+                self._save_params_to_checkpoint_if_needed()
                 version = self._parameters.version
             self._report_version_if_needed(version)
 
@@ -161,7 +162,8 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                     self._optimizer.apply_gradients(grad_vars)
                     self._grads_n = 0
                     self._grads_buffer.clear()
-                    self._increment_params_version()
+                    self._parameters.version += 1
+                    self._save_params_to_checkpoint_if_needed()
                     version = self._parameters.version
                     updated_version = True
 
@@ -224,11 +226,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             )
             self._use_wrap_opt = True
 
-    def _increment_params_version(self):
-        self._parameters.version += 1
-        self._save_params_to_checkpoint_file()
-
-    def _save_params_to_checkpoint_file(self):
+    def _save_params_to_checkpoint_if_needed(self):
         """Save a checkpoint of parameters to a protobuf file"""
         if (
             self._checkpoint_service

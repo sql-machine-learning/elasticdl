@@ -456,7 +456,8 @@ class PserverServicerTest(unittest.TestCase):
             )
 
             for i in range(100):
-                pserver_servicer._increment_params_version()
+                pserver_servicer._parameters.version += 1
+                pserver_servicer._save_params_to_checkpoint_if_needed()
 
             self.assertEqual(len(os.listdir(checkpoint_service._directory)), 3)
             self.assertEqual(
