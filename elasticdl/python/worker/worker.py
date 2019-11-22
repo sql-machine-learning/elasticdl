@@ -1,5 +1,4 @@
 import os
-import random
 import time
 import traceback
 
@@ -562,16 +561,19 @@ class Worker(object):
     def _get_local_model_params(self):
         return {}
 
+    # TODO: Implement master gRPC service to select a worker
+    # to be used for broadcast model parameters from.
+    def _get_broadcast_root_worker_ip(self):
+        return 1
+
     def _broadcast_model_params(self):
         status = self._collective_communicator.barrier()
         if status == CollectiveCommunicatorStatus.FAILED:
             logger.warning("Failed to perform barrier operation")
             return False
-        root_ip = random.choice(
-            self._collective_communicator.get_active_worker_ips()
-        )
         status, model_params = self._collective_communicator.broadcast(
-            self._get_local_model_params(), root_ip
+            self._get_local_model_params(),
+            self._get_broadcast_root_worker_ip(),
         )
         if status == CollectiveCommunicatorStatus.FAILED:
             logger.warning("Failed to broadcast model parameters")

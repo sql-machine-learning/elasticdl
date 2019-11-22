@@ -23,6 +23,3 @@ class CollectiveCommunicator(object):
 
     def has_new_worker_joining(self):
         return True
-
-    def get_active_worker_ips(self):
-        return [0, 1, 2, 3]
