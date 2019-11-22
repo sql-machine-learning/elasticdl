@@ -75,8 +75,8 @@ class CheckpointService(object):
             model: a pb_model
             is_eval_checkpoint (bool): if True, the model will be saved to
                 a temporary directory.
-            shard_index (int): default 0. The index of the pb_model in whole
-                model files, e.g. the shard_index is PS instance index
+            shard_index (int): default 0. The shard index in all
+                model shard files, e.g. the shard_index is PS instance index
                 using ParameterServerStrategy.
             shard_number (int): default 1. The number of model shards,
                 e.g. shard_number is the number of PS instances using
@@ -91,6 +91,7 @@ class CheckpointService(object):
                 while len(self._checkpoint_list) > self._max_versions:
                     file_to_delete = self._checkpoint_list.pop(0).file
                     os.remove(file_to_delete)
+                    # Remove the directory if empty
                     delete_dir_name = os.path.dirname(file_to_delete)
                     if (not os.listdir(delete_dir_name)):
                         try:
