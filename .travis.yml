@@ -1,12 +1,13 @@
 language: minimal
 
-dist: bionic
+dist: xenial
 
 addons:
   apt:
     packages:
       - docker-ce
       - python3-pip
+      - python3-setuptools
 
 install:
   - docker version
@@ -69,7 +70,7 @@ jobs:
                 fi
                 PS_NUM=0
                 WORKER_NUM=2
-                if [[ "$JOB_TYPE" == "train" ]]; then
+                if [[ "$JOB_TYPE" == "train" || "$JOB_TYPE" == "odps" ]]; then
                     PS_NUM=2
                     WORKER_NUM=1
                 fi
