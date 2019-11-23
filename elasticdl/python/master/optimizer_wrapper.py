@@ -19,8 +19,14 @@ from tensorflow.keras.optimizers import (
 )
 
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.tensor import Tensor
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.embedding_service import EmbeddingService
+from elasticdl.python.ps.embedding_table import get_slot_table_name
+
+GradVarAndSlots = collections.namedtuple(
+    "GradVarAndSlots", ["grad", "var", "slots"]
+)
 
 
 def _parse_lookup_values(values, key_index):
@@ -199,9 +205,11 @@ class OptimizerWrapper(object):
     def apply_gradients(self, grads_and_vars):
         """Update variable values.
 
-        Arguments:
-            grads_and_vars: A list of (gradient, variable) pairs.
-
+        Args:
+            grads_and_vars: A list of (gradient, variable) pairs. If the
+                variable is from ElasticDL embedding layer, it should be a
+                ElasticDL `Tensor` object. Otherwise it is a TensorFlow
+                variable.
         """
         # TODO (#1255): Discuss whether `OptimizerWrapper` needs a lock after
         # implementing PS.
@@ -209,6 +217,7 @@ class OptimizerWrapper(object):
 
         grads_and_vars = list(grads_and_vars)
 
+        """
         # split `grads_and_vars` according to whether it is from
         # ElasticDL embedding layer
         grads_and_vars_local = []
@@ -220,11 +229,10 @@ class OptimizerWrapper(object):
             else:
                 grads_and_vars_local.append((grad, var))
 
-        # `_lookup_embeddings_and_slots` will raise Error if there are
-        # unknown embedding keys
-        embed_values, slot_values = self._lookup_embeddings_and_slots(
+        # `_lookup_slots` will raise Error if there are unknown embedding keys
+        embed_values, slot_values = self._lookup_slots(
             grads_and_vars_kv_store
-        )
+#         )
 
         self._set_embedding_values_to_variables(
             grads_and_vars_kv_store, embed_values
@@ -234,12 +242,50 @@ class OptimizerWrapper(object):
         self._opt.apply_gradients(
             grads_and_vars_local + grads_and_vars_kv_store
         )
+        """
+
+        grads_and_vars_new = []
+        for grad, var in grads_and_vars:
+            if not isinstance(var, Tensor):
+                grads_and_vars_new.append((grad, var))
+            else:
+                # TODO: refact these function
+                self._tls._unique_ids_all_layers[var.name] = var.indices
+                embed_var = self._create_embedding_variable(var)
+                self._get_slot_and_set_to_optimizer(var.name)
+                grads_and_vars_new.append((grad, embed_var))
+
+        self._opt.apply_gradients(
+            grads_and_vars_new
+        )
 
         self._report_to_kv_store()
 
         self._delete_variables()
 
-    def _lookup_embeddings_and_slots(self, grads_and_vars):
+    def _create_embedding_variable(self, tensor):
+        embed_var = tf.Variable(
+            tensor.values,
+            name=tensor.name + str(threading.get_ident()),
+            shape=tensor.values.shape,
+            dtype=tf.float32,
+            trainable=False,
+        )
+        self._tls._embed_variables[tensor.name] = embed_var
+        return embed_var
+
+    def _get_slot_and_set_to_optimizer(self, layer_name):
+        for slot_name in self._allowed_slot_names:
+            key = get_slot_table_name(layer_name, slot_name)
+            indices = self._unique_ids_all_layers[layer_name]
+            slot_value = self._lookup_parameters_func(key, indices)
+            # self._create_slot_variable creates a slot variable in tf
+            # optimizer and set slot_value to it.
+            self._create_slot_variable(layer_name, slot_name, slot_value)
+
+
+
+    def _lookup_slots(self, grads_and_vars):
         """Look up embedding vectors and slot values form kv store.
 
         This function looks up embedding vectors and slot values.
@@ -403,9 +449,11 @@ class OptimizerWrapper(object):
         """Get the variable for the specified ElasticDL embedding layer."""
         return self._tls._embed_variables.get(layer_name, None)
 
+
+
     # TODO: refactor _create_slot_variable and _create_embedding_variable
     # into one function
-    def _create_embedding_variable(self, layer_name, initial_value):
+    def _create_embedding_variable_old(self, layer_name, initial_value):
         """Create a variable for an ElasticDL embedding layer."""
         dim = self._embed_dims[layer_name]
         # Use shape `(None, dim)` for embedding variable because `shape[0]`
@@ -428,6 +476,23 @@ class OptimizerWrapper(object):
         )
         self._tls._embed_variables[layer_name] = embed_var
         return embed_var
+
+    def _create_slot_variable(self, layer_name, slot_name, tensor):
+        embed_var = self._get_embedding_variable(layer_name)
+        if embed_var is None:
+            raise RuntimeError(
+                "Embedding variable for layer %s should be already created."
+                % (layer_name)
+            )
+        slot_var = self._create_slot_variable_in_optimizer(
+            embed_var, slot_name, tensor.values.shape, tensor.values
+        )
+        slot_variables_dict = self._tls._slot_variables.setdefault(
+            layer_name, {}
+        )
+        slot_variables_dict[slot_name] = slot_var
+        return slot_var
+
 
     def _create_slot_variable(self, layer_name, slot_name, initial_value):
         """Create a variable for the specified slot."""

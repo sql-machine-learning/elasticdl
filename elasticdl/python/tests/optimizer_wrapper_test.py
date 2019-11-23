@@ -189,50 +189,6 @@ class OptimizerWrapperTest(unittest.TestCase):
         for opt, expected_slots in opt_and_slots_pairs:
             self._compare_slot_names(opt, expected_slots)
 
-    def _compare_initialize_values(self, opt, dim, slot, expected_init):
-        tmp = OptimizerWrapper(opt, None, {"test": dim})
-        self.assertTrue(
-            np.isclose(
-                tmp._initialize_unknown_slot("test", slot),
-                expected_init(dim).numpy(),
-            ).all()
-        )
-
-    def test_initialize(self):
-        self._compare_initialize_values(
-            Adam(), 4, "m", init_ops.constant_initializer(0.0)
-        )
-        self._compare_initialize_values(
-            Ftrl(initial_accumulator_value=0.5),
-            4,
-            "accumulator",
-            init_ops.constant_initializer(0.5),
-        )
-        self._compare_initialize_values(
-            Adagrad(initial_accumulator_value=0.5),
-            4,
-            "accumulator",
-            init_ops.constant_initializer(0.5),
-        )
-
-    def test_initialize_in_lookup(self):
-        opt = Adam()
-        opt_wrapper = OptimizerWrapper(opt, None, {"test_1": 4})
-        grads_and_vars = [(tf.IndexedSlices(None, tf.constant([0])), "test_1")]
-        mock_kv_store = MockKvStore({})
-        mock_kv_store.update(
-            [Embedding.get_key(["test_1", 0])],
-            [np.random.rand(4).astype(np.float32)],
-        )
-        with mock.patch.object(
-            EmbeddingService, "lookup_embedding", mock_kv_store.lookup
-        ):
-            embeddings, slot_values = opt_wrapper._lookup_embeddings_and_slots(
-                grads_and_vars
-            )
-        self.assertTrue(np.isclose(slot_values["test_1"]["m"], 0.0).all())
-        self.assertTrue(np.isclose(slot_values["test_1"]["v"], 0.0).all())
-
     def test_generate_lookup_keys(self):
         opt = Adam(amsgrad=True)
         opt_wrapper = OptimizerWrapper(opt, None, {})
