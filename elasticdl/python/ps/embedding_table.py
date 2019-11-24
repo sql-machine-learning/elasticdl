@@ -86,6 +86,8 @@ class EmbeddingTable(object):
         return embedding_pb
 
 
+# TODO(bug): create_embedding_table does not create EmbeddingTable correctly
+#     if it is a slot table.
 def create_embedding_table(embedding_table_info_pb):
     name = embedding_table_info_pb.name
     dim = embedding_table_info_pb.dim

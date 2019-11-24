@@ -5,7 +5,6 @@
 
 import threading
 
-import numpy as np
 import tensorflow as tf
 from tensorflow.keras.optimizers import (
     SGD,
@@ -19,9 +18,6 @@ from tensorflow.keras.optimizers import (
 )
 
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.common.tensor import Tensor
-from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.ps.embedding_table import get_slot_table_name
 
 
@@ -32,16 +28,6 @@ def _get_embedding_layer_name_from_var(var):
     if isinstance(var, str):
         return var
     return None
-
-
-def _get_embedding_layer_name_from_key(key):
-    """Get name for ElasticDL embedding layer from kv store key."""
-    return "-".join(key.split("-")[:-2])
-
-
-def _get_slot_name_from_key(key):
-    """Get slot name from kv store key."""
-    return key.split("-")[-2]
 
 
 # This function is taken from `tensorflow.keras.optimizers.Optimizer._var_key`.
@@ -83,8 +69,6 @@ class OptimizerWrapper(object):
     def __init__(
         self,
         opt,
-        kv_store_endpoint,
-        embedding_dims,
         use_async=False,
         lookup_embedding_func=None,
         update_embedding_func=None,
@@ -113,8 +97,6 @@ class OptimizerWrapper(object):
                 arguments of this function is a key list and a value list.
         """
         self._opt = opt
-        self._kv_store_endpoint = kv_store_endpoint
-        self._embed_dims = embedding_dims
         self._use_async = use_async
         self._lookup_embedding_func = lookup_embedding_func
         self._update_embedding_func = update_embedding_func
@@ -184,24 +166,36 @@ class OptimizerWrapper(object):
             if not layer_name:
                 grads_and_vars_new.append((grad, var))
             else:
-                unique_ids, indices = tf.unique(grad.indices)
-                unique_ids = unique_ids.numpy()
-                self._tls._unique_ids_all_layers[layer_name] = unique_ids
-                new_grad = tf.IndexedSlices(values=grad.values, indices=indices)
-                embed_value = self._lookup_embedding_func(layer_name, unique_ids)
-                embed_var = self._create_embedding_variable(layer_name, embed_value)
-                self._get_slot_and_set_to_optimizer(layer_name)
-                grads_and_vars_new.append((new_grad, embed_var))
+                grads_and_vars_new.append(
+                    self._handle_embedding_grad(grad, layer_name)
+                )
 
-        self._opt.apply_gradients(
-            grads_and_vars_new
-        )
-
+        self._opt.apply_gradients(grads_and_vars_new)
         self._report_to_kv_store()
-
         self._delete_variables()
 
+    def _handle_embedding_grad(self, grad, layer_name):
+        unique_ids, indices = tf.unique(grad.indices)
+        unique_ids = unique_ids.numpy()
+        if layer_name in self._tls._unique_ids_all_layers:
+            # TODO: support grads_and_vars with duplicated layer name
+            logger.warning(
+                "grads_and_vars has duplicated layer name %s." % layer_name
+            )
+        self._tls._unique_ids_all_layers[layer_name] = unique_ids
+        new_grad = tf.IndexedSlices(values=grad.values, indices=indices)
+
+        embed_value = self._lookup_embedding_func(layer_name, unique_ids)
+        embed_var = self._create_embedding_variable(layer_name, embed_value)
+        self._get_slot_and_set_to_optimizer(layer_name)
+        return new_grad, embed_var
+
     def _create_embedding_variable(self, name, initial_value):
+        """Creates a TensorFlow variable using given initial value.
+
+        Note that this function saves the created variable to
+        `self._tls._embed_variables`.
+        """
         embed_var = tf.Variable(
             initial_value,
             name=name + str(threading.get_ident()),
@@ -213,6 +207,7 @@ class OptimizerWrapper(object):
         return embed_var
 
     def _get_slot_and_set_to_optimizer(self, layer_name):
+        """Looks up slot value and set it to TensorFlow optimizer."""
         for slot_name in self._allowed_slot_names:
             param_name = get_slot_table_name(layer_name, slot_name)
             indices = self._tls._unique_ids_all_layers[layer_name]
@@ -232,6 +227,9 @@ class OptimizerWrapper(object):
         return self._tls._embed_variables.get(layer_name, None)
 
     def _create_slot_variable(self, layer_name, slot_name, initial_value):
+        """Creates a slot variable in TensorFlow optimizer using given
+        value.
+        """
         embed_var = self._get_embedding_variable(layer_name)
         if embed_var is None:
             raise RuntimeError(

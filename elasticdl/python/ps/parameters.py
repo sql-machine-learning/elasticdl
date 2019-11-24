@@ -28,7 +28,7 @@ class Parameters(object):
 
     """
 
-    def __init__(self, ut_mode=False):
+    def __init__(self):
         self.version = 0
         self.init_status = False
         self.non_embedding_params = {}
@@ -156,9 +156,6 @@ class Parameters(object):
     def init_embedding_params(self, embeddings_pb):
         for pb in embeddings_pb:
             if pb.name not in self.embedding_params:
-                # TODO(yunjian.lmh): there is a bug that pb can be a slot table,
-                #     but create_embedding_table function does not handle slot
-                #     table correctly.
                 self.embedding_params[pb.name] = create_embedding_table(pb)
 
     def has_embedding_params(self):
@@ -200,15 +197,7 @@ class Parameters(object):
             model_pb.embedding_table_info.append(embedding_info)
 
         return model_pb
-    
+
     def is_embedding_params(self, name):
         emb_table = self.embedding_params.get(name, None)
         return emb_table is not None and not emb_table.is_slot
-
-
-def update_embedding(keys, values):
-    for key, value in zip(keys, values):
-        arrs = key.split("-")
-        layer_name = "-".join(arrs[:-1])
-        id = int(arrs[-1])
-        self._parameters.set_embedding_param(layer_name, [id], [value])

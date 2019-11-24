@@ -164,36 +164,8 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             return res
 
     def wrap_optimizer(self):
-        # TODO(yunjian.lmh): refine these arguments when we don't need
-        # to support using Redis as distributed KV storage.
-        embedding_dims = {}
-        for table in self._parameters.embedding_params.values():
-            embedding_dims[table.name] = table.dim
-        embedding_service_endpoint = None
-
-        def lookup_embedding_func(keys):
-            embeddings = []
-            for key in keys:
-                arrs = key.split("-")
-                layer_name = "-".join(arrs[:-1])
-                id = int(arrs[-1])
-                embedding = self._parameters.get_embedding_param(
-                    layer_name, [id]
-                )
-                embeddings.append(embedding.flatten())
-            return embeddings, []
-
-        def update_embedding_func(keys, values):
-            for key, value in zip(keys, values):
-                arrs = key.split("-")
-                layer_name = "-".join(arrs[:-1])
-                id = int(arrs[-1])
-                self._parameters.set_embedding_param(layer_name, [id], [value])
-
         self._optimizer = OptimizerWrapper(
             self._optimizer,
-            embedding_service_endpoint,
-            embedding_dims,
             self._use_async,
             self._parameters.get_embedding_param,
             self._parameters.set_embedding_param,

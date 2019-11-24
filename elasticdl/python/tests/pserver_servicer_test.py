@@ -413,8 +413,6 @@ class PserverServicerTest(unittest.TestCase):
         )
         self.assertTrue(np.allclose(expected_embed_table, actual_embed_table))
 
-    # TODO: add test cases for the lookup_embedding_func and update_embedding_func used by optimizer_wrapper
-
 
 if __name__ == "__main__":
     unittest.main()
