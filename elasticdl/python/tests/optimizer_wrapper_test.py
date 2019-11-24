@@ -32,7 +32,6 @@ from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.optimizer_wrapper import (
     OptimizerWrapper,
-    _parse_lookup_values,
 )
 from elasticdl.python.ps.parameters import Parameters
 from elasticdl.python.ps.embedding_table import EmbeddingTable, get_slot_table_name
@@ -97,11 +96,7 @@ def _train(model, optimizer, X, Y, loss_fn, random_seed):
             outputs = model.call(features)
             loss = loss_fn(outputs, labels)
         grads = tape.gradient(loss, model.trainable_variables)
-        print("model trainable w", model.trainable_variables[0], model.trainable_variables[1])
-#         print("grads_0", grads[0])
-#         print("grads_1", grads[1])
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
-        break
 
 
 def _train_edl_embedding_with_optimizer_wrapper(
@@ -167,21 +162,24 @@ def _train_edl_embedding_with_optimizer_wrapper(
                     grad.values, ids
                 )
         
+        """
         non_embed_grad_vars = []
         for layer_name, grad in embed_grads_dict.items():
             embed_value = params.get_embedding_param(layer_name, grad.indices.numpy())
             embed_tensor = Tensor(values=embed_value, indices=grad.indices, name=layer_name)
             non_embed_grad_vars.append((grad.values, embed_tensor))
+        """
 
-#         print("non_embed_grad_vars", non_embed_grad_vars)
         opt_wrapper.apply_gradients(
             list(zip(non_embed_grads, non_embed_vars))
-            + non_embed_grad_vars
+            + [
+                (grad, layer_name)
+                for layer_name, grad in embed_grads_dict.items()
+            ]
         )
 
         for layer in embed_layers:
             layer.reset()
-        break
 
 
 class OptimizerWrapperTest(unittest.TestCase):
@@ -358,12 +356,6 @@ class OptimizerWrapperTest(unittest.TestCase):
             if "embedding" in layer2.name:
                 w1 = layer1.weights[0].numpy()
                 w2 = params.get_embedding_param(layer2.name, range(4))
-#                 print("w1", w1)
-#                 print("w2", w2)
-#                 keys = [Embedding.get_key([layer2.name, i]) for i in range(4)]
-#                 w2 = np.concatenate(mock_kv_store.lookup(keys)[0]).reshape(
-#                     4, -1
-#                 )
                 self.assertTrue(np.isclose(w1, w2).all(), msg=wrong_msg)
             else:
                 for w1, w2 in zip(layer1.weights, layer2.weights):
@@ -447,67 +439,57 @@ class OptimizerWrapperTest(unittest.TestCase):
         """
         thread_num = len(grads_and_vars_batches)
         embed_dims = {}
+        input_dims = {}
         embed_var_n = len(embed_values)
-        mock_kv_store = MockKvStore()
+        params = Parameters()
         for layer, values in embed_values.items():
             embed_dims[layer] = values.shape[1]
-            input_dim = values.shape[0]
-
-            keys = [
-                Embedding.get_key([layer, idx]) for idx in range(input_dim)
-            ]
-            mock_kv_store.update(keys, values)
+            input_dims[layer] = values.shape[0]
+            embed_table = EmbeddingTable(layer, embed_dims[layer])
+            embed_table.set(range(input_dims[layer]), values)
+            params.embedding_params[layer] = embed_table
 
         opt = SGD(0.1)
-        opt_wrapper = OptimizerWrapper(opt, None, embed_dims, True)
+        opt_wrapper = OptimizerWrapper(opt, None, embed_dims, True, lookup_embedding_func=params.get_embedding_param, update_embedding_func=params.set_embedding_param)
 
-        with mock.patch.object(
-            EmbeddingService, "lookup_embedding", mock_kv_store.lookup
-        ), mock.patch.object(
-            EmbeddingService, "update_embedding", mock_kv_store.update
+        # call optimizer_wrapper.apply_gradients asynchronously
+        def _apply_gradients(opt_wrapper, grads_and_vars):
+            # sleep 1s to wait that all threads are in this method call
+            time.sleep(1)
+            opt_wrapper.apply_gradients(grads_and_vars)
+
+        executor = ThreadPoolExecutor(max_workers=thread_num)
+        tasks = [
+            executor.submit(_apply_gradients, opt_wrapper, grads_and_vars)
+            for grads_and_vars in grads_and_vars_batches
+        ]
+        _ = [task.result() for task in tasks]
+
+        # check updated results of non-embedding variables
+        non_embed_vars = [
+            var for grad, var in grads_and_vars_batches[0][:-embed_var_n]
+        ]
+        for var, expected_value in zip(
+            non_embed_vars, expected_non_embed_values
         ):
-            # call optimizer_wrapper.apply_gradients asynchronously
-            def _apply_gradients(opt_wrapper, grads_and_vars):
-                # sleep 1s to wait that all threads are in this method call
-                time.sleep(1)
-                opt_wrapper.apply_gradients(grads_and_vars)
+            self.assertTrue(np.isclose(var.numpy(), expected_value).all())
 
-            executor = ThreadPoolExecutor(max_workers=thread_num)
-            tasks = [
-                executor.submit(_apply_gradients, opt_wrapper, grads_and_vars)
-                for grads_and_vars in grads_and_vars_batches
-            ]
-            _ = [task.result() for task in tasks]
+        # `expected_embed_values=None` means that no need to check
+        # embedding table
+        if not expected_embed_values:
+            return
+        # check updated results of embedding table
+        for layer, expected_values in expected_embed_values.items():
+            value = params.get_embedding_param(layer, range(input_dims[layer]))
 
-            # check updated results of non-embedding variables
-            non_embed_vars = [
-                var for grad, var in grads_and_vars_batches[0][:-embed_var_n]
-            ]
-            for var, expected_value in zip(
-                non_embed_vars, expected_non_embed_values
-            ):
-                self.assertTrue(np.isclose(var.numpy(), expected_value).all())
-
-            # `expected_embed_values=None` means that no need to check
-            # embedding table
-            if not expected_embed_values:
-                return
-            # check updated results of embedding table
-            for layer, expected_values in expected_embed_values.items():
-                keys = [
-                    Embedding.get_key([layer, idx]) for idx in range(input_dim)
-                ]
-                raw_value, _ = mock_kv_store.lookup(keys)
-                value = np.concatenate(raw_value).reshape(input_dim, -1)
-
-                self.assertTrue(
-                    any(
-                        [
-                            np.isclose(value, expected).all()
-                            for expected in expected_values
-                        ]
-                    )
+            self.assertTrue(
+                any(
+                    [
+                        np.isclose(value, expected).all()
+                        for expected in expected_values
+                    ]
                 )
+            )
 
     def test_async_correctness(self):
         """Tests the correctness of async updates in `OptimizerWrapper`.

@@ -195,8 +195,8 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             embedding_service_endpoint,
             embedding_dims,
             self._use_async,
-            lookup_embedding_func,
-            update_embedding_func,
+            self._parameters.get_embedding_param,
+            self._parameters.set_embedding_param,
         )
 
     def _report_version_if_needed(self, version):
