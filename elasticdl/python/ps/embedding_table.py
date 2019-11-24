@@ -33,6 +33,7 @@ class EmbeddingTable(object):
         self.dim = dim
         self.initializer_value = initializer
         if is_slot:
+            print("initial_value", self.initializer_value)
             self.initializer = tf.keras.initializers.Constant(
                 float(self.initializer_value)
             )

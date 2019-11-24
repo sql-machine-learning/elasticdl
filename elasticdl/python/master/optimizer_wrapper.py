@@ -24,10 +24,6 @@ from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.ps.embedding_table import get_slot_table_name
 
-GradVarAndSlots = collections.namedtuple(
-    "GradVarAndSlots", ["grad", "var", "slots"]
-)
-
 
 def _parse_lookup_values(values, key_index):
     """Parse looked up values recursively.
@@ -250,11 +246,16 @@ class OptimizerWrapper(object):
                 grads_and_vars_new.append((grad, var))
             else:
                 # TODO: refact these function
-                self._tls._unique_ids_all_layers[var.name] = var.indices
-                embed_var = self._create_embedding_variable(var)
+                var.indices = self._transform_indices(var.indices)
+#                 self._tls._unique_ids_all_layers[var.name] = var.indices
+                embed_var = self._create_embedding_variable(var.name, var.values)
                 self._get_slot_and_set_to_optimizer(var.name)
                 grads_and_vars_new.append((grad, embed_var))
+                print("name", var.name)
+                print("grad", grad)
+                print("embed_var", embed_var)
 
+        print("self.unique ids", self._tls._unique_ids_all_layers)
         self._opt.apply_gradients(
             grads_and_vars_new
         )
@@ -263,27 +264,25 @@ class OptimizerWrapper(object):
 
         self._delete_variables()
 
-    def _create_embedding_variable(self, tensor):
+    def _create_embedding_variable(self, name, initial_value):
         embed_var = tf.Variable(
-            tensor.values,
-            name=tensor.name + str(threading.get_ident()),
-            shape=tensor.values.shape,
+            initial_value,
+            name=name + str(threading.get_ident()),
+            shape=initial_value.shape,
             dtype=tf.float32,
             trainable=False,
         )
-        self._tls._embed_variables[tensor.name] = embed_var
+        self._tls._embed_variables[name] = embed_var
         return embed_var
 
     def _get_slot_and_set_to_optimizer(self, layer_name):
         for slot_name in self._allowed_slot_names:
-            key = get_slot_table_name(layer_name, slot_name)
-            indices = self._unique_ids_all_layers[layer_name]
-            slot_value = self._lookup_parameters_func(key, indices)
+            param_name = get_slot_table_name(layer_name, slot_name)
+            indices = self._tls._unique_ids_all_layers[layer_name]
+            slot_value = self._lookup_embedding_func(param_name, indices)
             # self._create_slot_variable creates a slot variable in tf
             # optimizer and set slot_value to it.
             self._create_slot_variable(layer_name, slot_name, slot_value)
-
-
 
     def _lookup_slots(self, grads_and_vars):
         """Look up embedding vectors and slot values form kv store.
@@ -477,7 +476,7 @@ class OptimizerWrapper(object):
         self._tls._embed_variables[layer_name] = embed_var
         return embed_var
 
-    def _create_slot_variable(self, layer_name, slot_name, tensor):
+    def _create_slot_variable(self, layer_name, slot_name, initial_value):
         embed_var = self._get_embedding_variable(layer_name)
         if embed_var is None:
             raise RuntimeError(
@@ -485,7 +484,7 @@ class OptimizerWrapper(object):
                 % (layer_name)
             )
         slot_var = self._create_slot_variable_in_optimizer(
-            embed_var, slot_name, tensor.values.shape, tensor.values
+            embed_var, slot_name, initial_value.shape, initial_value
         )
         slot_variables_dict = self._tls._slot_variables.setdefault(
             layer_name, {}
@@ -494,7 +493,7 @@ class OptimizerWrapper(object):
         return slot_var
 
 
-    def _create_slot_variable(self, layer_name, slot_name, initial_value):
+    def _create_slot_variable_old(self, layer_name, slot_name, initial_value):
         """Create a variable for the specified slot."""
         dim = self._embed_dims[layer_name]
         # Use shape `(None, dim)` for slot variable because `shape[0]`
@@ -556,26 +555,14 @@ class OptimizerWrapper(object):
 
     def _report_to_kv_store(self):
         """Report updated embedding vectors and slots to kv store."""
-        keys = []
-        values = []
         for layer, ids in self._tls._unique_ids_all_layers.items():
             value = self._get_embedding_variable(layer).numpy()
-            for id, v in zip(ids, value):
-                keys.append(Embedding.get_key([layer, id]))
-                values.append(v)
+            self._update_embedding_func(layer, ids, value)
 
             for slot in self._allowed_slot_names:
                 value = self._get_slot_variable(layer, slot).numpy()
-                for id, v in zip(ids, value):
-                    keys.append(Embedding.get_key([layer, slot, id]))
-                    values.append(v)
-
-        if self._update_embedding_func:
-            self._update_embedding_func(keys, values)
-        else:
-            EmbeddingService.update_embedding(
-                keys, values, self._kv_store_endpoint
-            )
+                slot_table_name = get_slot_table_name(layer, slot)
+                self._update_embedding_func(slot_table_name, ids, value)
 
     def _delete_variables(self):
         # Slot variable access in optimizer requires corresponding embedding

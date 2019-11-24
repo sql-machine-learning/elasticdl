@@ -26,12 +26,16 @@ from elasticdl.python.common.model_utils import (
     get_non_embedding_trainable_vars,
     load_module,
 )
+from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.tensor import Tensor
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.optimizer_wrapper import (
     OptimizerWrapper,
     _parse_lookup_values,
 )
+from elasticdl.python.ps.parameters import Parameters
+from elasticdl.python.ps.embedding_table import EmbeddingTable, get_slot_table_name
 from elasticdl.python.tests.mock_kv_store import MockKvStore
 
 
@@ -93,18 +97,28 @@ def _train(model, optimizer, X, Y, loss_fn, random_seed):
             outputs = model.call(features)
             loss = loss_fn(outputs, labels)
         grads = tape.gradient(loss, model.trainable_variables)
+        print("model trainable w", model.trainable_variables[0], model.trainable_variables[1])
+#         print("grads_0", grads[0])
+#         print("grads_1", grads[1])
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
+        break
 
 
 def _train_edl_embedding_with_optimizer_wrapper(
-    model, opt_keras, X, Y, loss_fn, embed_dims, random_seed
+    model, opt_keras, X, Y, loss_fn, embed_dims, params, random_seed
 ):
     """Train model with optimizer wrapper."""
     tf.random.set_seed(random_seed)
-    optimizer = OptimizerWrapper(opt_keras, None, embed_dims)
+    opt_wrapper = OptimizerWrapper(opt_keras, None, None, lookup_embedding_func=params.get_embedding_param, update_embedding_func=params.set_embedding_param)
 
-    # initialization process related to embedding layer and optimizer wrapper
     embed_layers = find_layer(model, Embedding)
+
+    # initialize slot params
+    params.create_slot_params(opt_wrapper.allowed_slot_names, opt_wrapper.slot_initial_value)
+
+    # initialize ElasticDL embedding layer
+    for layer in embed_layers:
+        layer.set_lookup_embedding_func(params.get_embedding_param)
 
     # training process
     for train_iter, (features, labels) in enumerate(zip(X, Y)):
@@ -152,17 +166,22 @@ def _train_edl_embedding_with_optimizer_wrapper(
                 embed_grads_dict[layer_name] = tf.IndexedSlices(
                     grad.values, ids
                 )
+        
+        non_embed_grad_vars = []
+        for layer_name, grad in embed_grads_dict.items():
+            embed_value = params.get_embedding_param(layer_name, grad.indices.numpy())
+            embed_tensor = Tensor(values=embed_value, indices=grad.indices, name=layer_name)
+            non_embed_grad_vars.append((grad.values, embed_tensor))
 
-        optimizer.apply_gradients(
+#         print("non_embed_grad_vars", non_embed_grad_vars)
+        opt_wrapper.apply_gradients(
             list(zip(non_embed_grads, non_embed_vars))
-            + [
-                (grad, layer_name)
-                for layer_name, grad in embed_grads_dict.items()
-            ]
+            + non_embed_grad_vars
         )
 
         for layer in embed_layers:
             layer.reset()
+        break
 
 
 class OptimizerWrapperTest(unittest.TestCase):
@@ -189,288 +208,112 @@ class OptimizerWrapperTest(unittest.TestCase):
         for opt, expected_slots in opt_and_slots_pairs:
             self._compare_slot_names(opt, expected_slots)
 
-    def test_generate_lookup_keys(self):
-        opt = Adam(amsgrad=True)
-        opt_wrapper = OptimizerWrapper(opt, None, {})
-        slots = ["m", "v", "vhat"]
-        layers = ["test_0", "test_1"]
-        grads = [
-            tf.IndexedSlices(None, tf.constant([2, 0, 2])),
-            tf.IndexedSlices(None, tf.constant([1, 2, 0, 2])),
-        ]
-        ids_list = [[2, 0], [1, 2, 0]]
-        grads_and_vars = list(zip(grads, layers))
-        arr = opt_wrapper._generate_lookup_keys(grads_and_vars)
-        embed_keys, slot_keys, embed_layer_index, slot_layer_index = arr
-
-        expected_embed_keys = [
-            Embedding.get_key([layer, id])
-            for layer, ids in zip(layers, ids_list)
-            for id in ids
-        ]
-        self.assertTrue(embed_keys == expected_embed_keys)
-        expected_slot_keys = [
-            Embedding.get_key([layer, slot, id])
-            for layer, ids in zip(layers, ids_list)
-            for slot in slots
-            for id in ids
-        ]
-        self.assertTrue(slot_keys == expected_slot_keys)
-
-        expected_embed_layer_index = {"test_0": (0, 2), "test_1": (2, 5)}
-        self.assertTrue(embed_layer_index == expected_embed_layer_index)
-        expected_slot_layer_index = {
-            "test_0": {"m": (0, 2), "v": (2, 4), "vhat": (4, 6)},
-            "test_1": {"m": (6, 9), "v": (9, 12), "vhat": (12, 15)},
+    def test_set_slot_to_optimizer(self):
+        embed_name = "test_emb"
+        indices = np.ndarray([2], dtype=np.int32)
+        embed_values = np.ndarray([2, 2], dtype=np.float32)
+        slot_values = {
+            "m": np.ndarray([2,2], dtype=np.float32),
+            "v": np.ndarray([2,2], dtype=np.float32),
         }
-        self.assertTrue(slot_layer_index == expected_slot_layer_index)
-
-        for layer, ids in zip(layers, ids_list):
-            self.assertTrue(
-                (opt_wrapper._tls._unique_ids_all_layers[layer] == ids).all()
-            )
-
-    def test_parse_lookup_values(self):
-        dim = 4
-        embed_table = [np.random.rand(dim) for i in range(20)]
-        key_index = {
-            "test_0": {"m": (3, 10), "v": (11, 20)},
-            "test_1": {"m": (0, 3), "v": (10, 11)},
-        }
-        values = _parse_lookup_values(embed_table, key_index)
-        expected_values = {
-            "test_0": {
-                "m": np.concatenate(embed_table[3:10]).reshape(7, dim),
-                "v": np.concatenate(embed_table[11:20]).reshape(9, dim),
-            },
-            "test_1": {
-                "m": np.concatenate(embed_table[0:3]).reshape(3, dim),
-                "v": np.concatenate(embed_table[10:11]).reshape(1, dim),
-            },
-        }
-        for layer in ["test_0", "test_1"]:
-            for slot in ["m", "v"]:
-                self.assertTrue(
-                    (values[layer][slot] == expected_values[layer][slot]).all()
-                )
-
-    def test_lookup(self):
-        opt = Adam()
-        opt_wrapper = OptimizerWrapper(opt, None, {})
-        embedding_dim = 4
-        layers = ["embedding_0", "embedding_1"]
-        grads = [
-            tf.IndexedSlices(None, tf.constant([2, 0, 2])),
-            tf.IndexedSlices(None, tf.constant([1, 2, 0, 2])),
-        ]
-        ids_list = [[2, 0], [1, 2, 0]]
-        grads_and_vars = list(zip(grads, layers))
-        mock_kv_store = MockKvStore({})
-        for layer in layers:
-            for id in range(3):
-                mock_kv_store.update(
-                    [Embedding.get_key([layer, id])],
-                    [np.random.rand(embedding_dim).astype(np.float32)],
-                )
-                for i, slot in enumerate(["m", "v"]):
-                    mock_kv_store.update(
-                        [Embedding.get_key([layer, slot, id])],
-                        [np.random.rand(embedding_dim).astype(np.float32)],
-                    )
-
-        with mock.patch.object(
-            EmbeddingService, "lookup_embedding", mock_kv_store.lookup
-        ):
-            embeddings, slot_values = opt_wrapper._lookup_embeddings_and_slots(
-                grads_and_vars
-            )
-
-        grad0 = grads_and_vars[0][0]
-        self.assertTrue((grad0.indices.numpy() == [0, 1, 0]).all())
-        grad1 = grads_and_vars[1][0]
-        self.assertTrue((grad1.indices.numpy() == [0, 1, 2, 1]).all())
-
-        for ids, layer in zip(ids_list, layers):
-            self.assertTrue(
-                (opt_wrapper._tls._unique_ids_all_layers[layer] == ids).all()
-            )
-
-            values, _ = mock_kv_store.lookup(
-                [Embedding.get_key([layer, id]) for id in ids]
-            )
-            values = np.concatenate(values).reshape(-1, embedding_dim)
-            self.assertTrue(np.isclose(embeddings[layer], values).all())
-
-            for slot in ["m", "v"]:
-                values, _ = mock_kv_store.lookup(
-                    [Embedding.get_key([layer, slot, id]) for id in ids]
-                )
-                values = np.concatenate(values).reshape(-1, embedding_dim)
-                self.assertTrue(
-                    np.isclose(slot_values[layer][slot], values).all()
-                )
-
-    def test_set_slot_values_to_variables(self):
-        layers = ["test-1", "test-2"]
-        slots = ["m", "v"]
-        id_num = 3
-        embedding_dims = {layer: 4 for layer in layers}
-        all_values = np.arange(48).reshape(12, 4).astype(np.float32)
-
-        slot_values = {}
-        offset = 0
-        for layer in layers:
-            for slot in slots:
-                start = offset
-                end = offset + id_num
-                slot_values.setdefault(layer, {}).setdefault(
-                    slot, all_values[start:end]
-                )
-                offset = end
+        # TODO: use parameters here
+        def mock_lookup_func(param_name, indices):
+            if param_name.endswith("m"):
+                return slot_values["m"]
+            return slot_values["v"]
 
         opt = Adam()
-        opt_wrapper = OptimizerWrapper(opt, None, embedding_dims)
-        for layer in layers:
-            opt_wrapper._create_embedding_variable(layer, tf.zeros((1, 4)))
-        opt_wrapper._set_slot_values_to_variables(slot_values)
-        self.assertTrue(len(opt.weights) == 4)
-        for layer in layers:
-            slots_dict = None
-            for k, v in opt._slots.items():
-                if k.startswith(layer):
-                    slots_dict = v
-                    break
+        opt_wrapper = OptimizerWrapper(opt, None, None, None, mock_lookup_func)
+        opt_wrapper._init_thread_local()
 
-            for slot in slots:
-                self.assertTrue(
-                    (
-                        slots_dict[slot].numpy() == slot_values[layer][slot]
-                    ).all()
-                )
-                self.assertTrue(
-                    (
-                        slots_dict[slot].numpy()
-                        == opt_wrapper._tls._slot_variables[layer][
-                            slot
-                        ].numpy()
-                    ).all()
-                )
+        opt_wrapper._tls._unique_ids_all_layers[embed_name] = indices
+        opt_wrapper._create_embedding_variable(embed_name, embed_values)
+        opt_wrapper._get_slot_and_set_to_optimizer(embed_name)
 
-                slots_dict[slot].assign(tf.ones((10, 4)))
-                self.assertTrue(
-                    np.isclose(
-                        opt_wrapper._tls._slot_variables[layer][slot].numpy(),
-                        1.0,
-                    ).all()
-                )
-                opt_wrapper._tls._slot_variables[layer][slot].assign(
-                    -tf.ones((10, 4))
-                )
-                self.assertTrue(
-                    np.isclose(slots_dict[slot].numpy(), -1.0).all()
-                )
-
-        slot_values_new = {"test-1": {"m": np.zeros((3, 4), np.float32)}}
-        opt_wrapper._set_slot_values_to_variables(slot_values_new)
-        self.assertTrue(
-            np.isclose(
-                opt_wrapper._tls._slot_variables["test-1"]["m"].numpy(), 0.0
-            ).all()
-        )
-
-    def test_set_embedding_values_to_variables(self):
-        layers = ["test-1", "test-2"]
-        id_num = 3
-        embedding_dims = {layer: 4 for layer in layers}
-        all_values = np.arange(16).reshape(4, 4)
-
-        embedding_values = {}
-        offset = 0
-        for layer in layers:
-            start = offset
-            end = offset + id_num
-            embedding_values.setdefault(layer, all_values[start:end])
-            offset = end
-
-        opt = SGD()
-        opt_wrapper = OptimizerWrapper(opt, None, embedding_dims)
-        grads_and_vars = [
-            ("test-1-grads", "test-1"),
-            ("test-2-grads", "test-2"),
-        ]
-        opt_wrapper._set_embedding_values_to_variables(
-            grads_and_vars, embedding_values
-        )
-        for i, layer in enumerate(layers):
-            self.assertTrue(
-                (
-                    opt_wrapper._tls._embed_variables[layer].numpy()
-                    == embedding_values[layer]
-                ).all()
-            )
-            self.assertTrue(
-                (
-                    grads_and_vars[i][1].numpy()
-                    == opt_wrapper._tls._embed_variables[layer].numpy()
-                ).all()
-            )
-
-        embedding_values_new = {"test-1": np.zeros((3, 4), np.float32)}
-        grads_and_vars = [("test-1-grads", "test-1")]
-        opt_wrapper._set_embedding_values_to_variables(
-            grads_and_vars, embedding_values_new
-        )
-        self.assertTrue(
-            np.isclose(
-                opt_wrapper._tls._embed_variables["test-1"].numpy(), 0.0
-            ).all()
-        )
+        self.assertEqual(len(opt._slots), 1)
+        opt_slots = list(opt._slots.values())[0]
+        self.assertEqual(sorted(opt_slots.keys()), ["m", "v"])
+        for name in ["m", "v"]:
+            self.assertTrue(np.allclose(opt_slots[name].numpy(), slot_values[name]))
 
     def test_report_to_kv_store(self):
+        params = Parameters()
+        for name in ["test_1", "test_2"]:
+            params.embedding_params[name] = EmbeddingTable(name, 8)
+            slot_key = get_slot_table_name(name, "momentum")
+            params.embedding_params[slot_key] = EmbeddingTable(slot_key, 8, "0.0", True)
+
+        indices = {
+            "test_1": np.array([1, 5]),
+            "test_2": np.array([10]),
+        }
+        embed_vars = {
+            "test_1": tf.Variable(np.random.rand(2, 8).astype(np.float32)),
+            "test_2": tf.Variable(np.random.rand(1, 8).astype(np.float32)),
+        }
+        slot_vars = {
+            "test_1": {"momentum": tf.Variable(np.random.rand(2, 8).astype(np.float32))},
+            "test_2": {"momentum": tf.Variable(np.random.rand(1, 8).astype(np.float32))},
+        }
+
         opt = SGD(momentum=0.1)
-        opt_wrapper = OptimizerWrapper(opt, None, {})
+        opt_wrapper = OptimizerWrapper(opt, None, None, None, None, params.set_embedding_param)
+        opt_wrapper._tls._unique_ids_all_layers = indices
+        opt_wrapper._tls._embed_variables = embed_vars
+        opt_wrapper._tls._slot_variables = slot_vars
+        opt_wrapper._report_to_kv_store()
 
-        ids_list = [[1, 5], [10]]
-        opt_wrapper._tls._unique_ids_all_layers = {
-            "test_1": np.array(ids_list[0]),
-            "test_2": np.array(ids_list[1]),
-        }
-        t = np.array([1.0, 1.0, 1.0])
-        opt_wrapper._tls._embed_variables = {
-            "test_1": tf.Variable([t, t * 5]),
-            "test_2": tf.Variable([t * 10]),
-        }
-        opt_wrapper._tls._slot_variables = {
-            "test_1": {"momentum": tf.Variable([t / 10.0, t / 2.0])},
-            "test_2": {"momentum": tf.Variable([t])},
-        }
+        for name in ["test_1", "test_2"]:
+            self.assertTrue(
+                np.allclose(
+                    embed_vars[name].numpy(),
+                    params.get_embedding_param(name, indices[name])
+                )
+            )
+            
+            slot = "momentum"
+            slot_table_name = get_slot_table_name(name, slot)
+            self.assertTrue(
+                np.allclose(
+                    slot_vars[name][slot].numpy(),
+                    params.get_embedding_param(slot_table_name, indices[name])
+                )
+            )
 
-        mock_kv_store = MockKvStore({})
-        with mock.patch.object(
-            EmbeddingService, "update_embedding", mock_kv_store.update
-        ):
-            opt_wrapper._report_to_kv_store()
+    def test_delete_variables(self):
+        params = Parameters()
+        embed_layers = ["test_1", "test_2"]
+        slot_names = ["m", "v"]
+        dim = 8
+        for layer in embed_layers:
+            params.embedding_params[layer] = EmbeddingTable(layer, dim)
+            for slot in slot_names:
+                slot_key = get_slot_table_name(layer, slot)
+                params.embedding_params[slot_key] = EmbeddingTable(slot_key, dim, "0.0", True)
 
-        expected_mock_kv_store = MockKvStore({})
-        expected_mock_kv_store.update(
-            ["test_1-1", "test_1-5", "test_2-10"], [t, t * 5.0, t * 10.0]
-        )
-        expected_mock_kv_store.update(
-            ["test_1-momentum-1", "test_1-momentum-5", "test_2-momentum-10"],
-            [t / 10.0, t / 2.0, t],
-        )
-        for k, ids in zip(["test_1", "test_2"], ids_list):
-            for id in ids:
-                key = Embedding.get_key([k, id])
-                v, _ = mock_kv_store.lookup([key])
-                expected_v, _ = expected_mock_kv_store.lookup([key])
-                self.assertTrue((v[0] == expected_v[0]).all())
+        opt = Adam()
+        opt_wrapper = OptimizerWrapper(opt, None, None, None, params.get_embedding_param, params.set_embedding_param)
+
+        opt_wrapper._init_thread_local()
+        for name in embed_layers:
+            opt_wrapper._tls._unique_ids_all_layers[name] = np.ndarray([2], np.int32)
+            opt_wrapper._create_embedding_variable(name, np.ndarray([2, dim], np.float32))
+            opt_wrapper._get_slot_and_set_to_optimizer(name)
+
+        self.assertTrue(len(opt._weights) == 4)
+        self.assertTrue(len(opt._slots) == 2)
+        for slot_dict in opt._slots.values():
+            self.assertTrue(len(slot_dict) == 2)
+
+        opt_wrapper._delete_variables()
+        self.assertTrue(len(opt._weights) == 0)
+        self.assertTrue(len(opt._slots) == 0)
 
     def _random_init_model_weight(self, shapes, random_seed):
         np.random.seed(random_seed)
         return [np.random.rand(*shape).astype(np.float32) for shape in shapes]
 
-    def _test_correctness(self, optimizer_class, X, Y, seed, **kwargs):
+    def _test_correctness(self, optimizer_class, X, Y, seed, **opt_kwargs):
         """Test the correctness of specific TensorFlow optimizer."""
         _model_file = get_module_file_path(
             os.path.dirname(os.path.realpath(__file__)),
@@ -479,35 +322,31 @@ class OptimizerWrapperTest(unittest.TestCase):
         model_module = load_module(_model_file).__dict__
 
         # train model with TensorFlow optimizer
+        dim = 4
         weights = self._random_init_model_weight(
-            [(4, 4), (4, 4), (72, 1), (1,)], seed
+            [(4, dim), (4, dim), (72, 1), (1,)], seed
         )
         loss_fn = model_module["loss"]
-        model1 = model_module["KerasEmbeddingModel"](4, 4, weights)
-        opt1 = optimizer_class(**kwargs)
+        model1 = model_module["KerasEmbeddingModel"](4, dim, weights)
+        opt1 = optimizer_class(**opt_kwargs)
         _train(model1, opt1, X, Y, loss_fn, random_seed=seed)
 
-        model2 = model_module["EdlEmbeddingModel"](4, weights[2:])
-        opt2 = optimizer_class(**kwargs)
+        model2 = model_module["EdlEmbeddingModel"](dim, weights[2:])
+        opt2 = optimizer_class(**opt_kwargs)
 
         layer_names = [layer.name for layer in find_layer(model2, Embedding)]
-        embed_dims = dict([(layer_name, 4) for layer_name in layer_names])
+        embed_dims = dict([(layer_name, dim) for layer_name in layer_names])
 
-        # intialize embedding vectors in kv store
-        mock_kv_store = MockKvStore({})
-        for layer, embed_table in zip(layer_names, weights[:2]):
-            for i, embed_vector in enumerate(embed_table):
-                mock_kv_store.update(["%s-%d" % (layer, i)], [embed_vector])
+        # create Parameters object and initialize embedding vectors
+        params = Parameters()
+        for layer_name, embed_value in zip(layer_names, weights[:2]):
+            embed_table = EmbeddingTable(layer_name, dim)
+            embed_table.set(range(len(embed_value)), embed_value)
+            params.embedding_params[layer_name] = embed_table
 
-        # train model with optimizer wrapper
-        with mock.patch.object(
-            EmbeddingService, "lookup_embedding", mock_kv_store.lookup
-        ), mock.patch.object(
-            EmbeddingService, "update_embedding", mock_kv_store.update
-        ):
-            _train_edl_embedding_with_optimizer_wrapper(
-                model2, opt2, X, Y, loss_fn, embed_dims, random_seed=seed
-            )
+        _train_edl_embedding_with_optimizer_wrapper(
+            model2, opt2, X, Y, loss_fn, embed_dims, params, random_seed=seed
+        )
 
         # compare trained parameters
         wrong_msg = (
@@ -518,10 +357,13 @@ class OptimizerWrapperTest(unittest.TestCase):
         for layer1, layer2 in zip(model1.layers, model2.layers):
             if "embedding" in layer2.name:
                 w1 = layer1.weights[0].numpy()
-                keys = [Embedding.get_key([layer2.name, i]) for i in range(4)]
-                w2 = np.concatenate(mock_kv_store.lookup(keys)[0]).reshape(
-                    4, -1
-                )
+                w2 = params.get_embedding_param(layer2.name, range(4))
+#                 print("w1", w1)
+#                 print("w2", w2)
+#                 keys = [Embedding.get_key([layer2.name, i]) for i in range(4)]
+#                 w2 = np.concatenate(mock_kv_store.lookup(keys)[0]).reshape(
+#                     4, -1
+#                 )
                 self.assertTrue(np.isclose(w1, w2).all(), msg=wrong_msg)
             else:
                 for w1, w2 in zip(layer1.weights, layer2.weights):
