@@ -197,7 +197,3 @@ class Parameters(object):
             model_pb.embedding_table_info.append(embedding_info)
 
         return model_pb
-
-    def is_embedding_params(self, name):
-        emb_table = self.embedding_params.get(name, None)
-        return emb_table is not None and not emb_table.is_slot
