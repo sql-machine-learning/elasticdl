@@ -16,12 +16,10 @@ from elasticdl.python.ps.embedding_table import EmbeddingTable
 
 
 def _get_trained_params_from_checkpoint(checkpoint_dir):
-    non_embed_vars, embed_tables = restore_model_params_from_checkpoint(
-        checkpoint_dir, 0, 1
-    )
+    parameters = restore_model_params_from_checkpoint(checkpoint_dir, 0, 1)
 
-    trained_params = non_embed_vars
-    for name, table in embed_tables.items():
+    trained_params = parameters.non_embedding_params
+    for name, table in parameters.embedding_params.items():
         # The name of variable in a tf.keras.layers.Embedding layer is
         # "{layer_name}/embeddings:0"
         var_name = name + "/embeddings:0"

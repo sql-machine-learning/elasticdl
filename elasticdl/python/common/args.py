@@ -285,25 +285,6 @@ def add_train_params(parser):
         default=0,
     )
     parser.add_argument(
-        "--checkpoint_steps",
-        type=int,
-        help="Save checkpoint every this many steps."
-        "If 0, no checkpoints to save.",
-        default=0,
-    )
-    parser.add_argument(
-        "--checkpoint_dir",
-        help="The directory to store the checkpoint files",
-        default="",
-    )
-    parser.add_argument(
-        "--keep_checkpoint_max",
-        type=int,
-        help="The maximum number of recent checkpoint files to keep."
-        "If 0, keep all.",
-        default=0,
-    )
-    parser.add_argument(
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",
         default="",
@@ -501,6 +482,25 @@ def add_common_args_between_master_and_worker(parser):
         "according to the distributed strategy, "
         'e.g. "ParameterServerStrategy" or "AllreduceStrategy"',
     )
+    parser.add_argument(
+        "--checkpoint_steps",
+        type=int,
+        help="Save checkpoint every this many steps."
+        "If 0, no checkpoints to save.",
+        default=0,
+    )
+    parser.add_argument(
+        "--checkpoint_dir",
+        help="The directory to store the checkpoint files",
+        default="",
+    )
+    parser.add_argument(
+        "--keep_checkpoint_max",
+        type=int,
+        help="The maximum number of recent checkpoint files to keep."
+        "If 0, keep all.",
+        default=0,
+    )
 
 
 def parse_master_args(master_args=None):
@@ -593,7 +593,6 @@ def parse_ps_args(ps_args=None):
 def parse_worker_args(worker_args=None):
     parser = argparse.ArgumentParser(description="ElasticDL Worker")
     add_common_args_between_master_and_worker(parser)
-    add_train_params(parser)
     parser.add_argument(
         "--worker_id", help="ID unique to the worker", type=int, required=True
     )

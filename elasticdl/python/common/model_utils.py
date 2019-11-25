@@ -4,6 +4,7 @@ import os
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor import Tensor
+from elasticdl.python.ps.parameters import Parameters
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
 )
@@ -200,19 +201,25 @@ def restore_model_params_from_checkpoint(
             PS instances.
 
     Return:
-        non_embedding_vars: A Python dict in which the key is a variable
-            name and the value is a variable tensor.
-        embedding_tables: A Python dict in which the key is an embedding
-            table name and the value is a `EmbeddingTable` instance.
+        parameters: A Parameter object which contains model version,
+            non-embedding parameters and embedding tables for the
+            PS instance with ps_id.
     """
     from elasticdl.python.ps.embedding_table import create_embedding_table
 
     variable_shard_files = os.listdir(checkpoint_dir)
     non_embedding_vars = {}
     embedding_tables = {}
+    version = None
     for shard_file in variable_shard_files:
         shard_file_path = os.path.join(checkpoint_dir, shard_file)
         model_pb = load_from_checkpoint_file(shard_file_path)
+        if version is None:
+            version = model_pb.version
+        elif version != model_pb.version:
+            raise ValueError(
+                "The versions in model shards are not consistency"
+            )
 
         for embedding_info_pb in model_pb.embedding_table_info:
             embedding_table = create_embedding_table(embedding_info_pb)
@@ -225,7 +232,11 @@ def restore_model_params_from_checkpoint(
         non_embedding_vars.update(shard_non_embedding_vars)
         for name, pair in shard_embedding_table_values.items():
             embedding_tables[name].set(pair[0], pair[1])
-    return non_embedding_vars, embedding_tables
+    parameters = Parameters()
+    parameters.non_embedding_params.update(non_embedding_vars)
+    parameters.embedding_params.update(embedding_tables)
+    parameters.version = version
+    return parameters
 
 
 def get_params_shard_from_pb(model_pb, shard_index, shard_num):

@@ -13,6 +13,8 @@ class Checkpoint(object):
         self.file = file
 
 
+# TODO Abstract checkpoint service to save_utils in common
+# @qinlong.wql
 class CheckpointService(object):
     """Checkpoint Service implementation"""
 
