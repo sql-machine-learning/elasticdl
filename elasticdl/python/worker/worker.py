@@ -418,10 +418,15 @@ class Worker(object):
             report_future = self._ps_stubs[ps_id].push_gradient.future(req)
             report_futures.append(report_future)
 
+        accepted = False
+        max_version = -1
         for report_future in report_futures:
             res = report_future.result()
-        # TODO: choose the last response temporarily
-        return res.accepted, res.model_version
+            if res.accepted:
+                accepted = True
+            if res.model_version > max_version:
+                max_version = res.model_version
+        return accepted, max_version
 
     # TODO: Reuse common code in report_gradient_to_ps and
     # report_gradient_to_master
