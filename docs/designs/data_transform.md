@@ -25,6 +25,18 @@ COLUMNS NUMERIC(age_std), NUMERIC(capital_gain_norm), EMBEDDING(hours_per_week_b
 LABEL label
 ```
 
+```SQL
+SELECT *
+FROM census_income
+TO TRAIN DNNClassifier
+WITH model.hidden_units = [10, 20]
+COLUMNS 
+NUMERIC(STANDARDIZE(age)),
+NUMERIC(NORMALIZE(capital_gain)),
+EMBEDDING(hours_per_week, bucket_num=10, dim=128)
+LABEL label
+```
+
 ## Design
 
 Data transform contains two stages: analyze and transform. In our design, we will do the analysis using SQL as the first step, and generate the feature column definition as the second step. The feature column contains the transform logic and executes along with the model training process.  
