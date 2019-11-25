@@ -43,7 +43,6 @@ class Embedding(tf.keras.layers.Layer):
         mask_zero=False,
         input_length=None,
         combiner=None,
-        embedding_service_endpoint=None,
         **kwargs
     ):
         if "input_shape" not in kwargs and input_length:
@@ -57,7 +56,6 @@ class Embedding(tf.keras.layers.Layer):
         self.supports_masking = mask_zero
         self.input_length = input_length
         self.combiner = combiner
-        self.embedding_service_endpoint = embedding_service_endpoint
         self.tape = None
         self._lookup_embedding_func = None
 
@@ -247,9 +245,6 @@ class Embedding(tf.keras.layers.Layer):
 
     def set_tape(self, tape):
         self.tape = tape
-
-    def set_endpoint(self, endpoint):
-        self.embedding_service_endpoint = endpoint
 
     def set_lookup_embedding_func(self, func):
         """Sets function for looking up embeddings in the PS.

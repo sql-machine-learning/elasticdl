@@ -161,7 +161,6 @@ class Worker(object):
         """
         self._embedding_layers = find_layer(self._model, Embedding)
         for layer in self._embedding_layers:
-            layer.set_endpoint(self._embedding_service_endpoint)
             if self._use_multi_ps:
                 layer.set_lookup_embedding_func(self.pull_embedding_vector)
                 self.report_embedding_info()
