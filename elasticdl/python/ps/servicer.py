@@ -43,10 +43,6 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._checkpoint_service = checkpoint_service
         self._ps_id = ps_id
         self._num_ps_pods = num_ps_pods
-<<<<<<< HEAD
-        self.checkpint_dir_for_init = checkpoint_dir_for_init
-=======
->>>>>>> develop
         self._version_lock = threading.Lock()
         self._lock = threading.Lock()
         self._use_wrap_opt = False
@@ -167,12 +163,8 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                     self._optimizer.apply_gradients(grad_vars)
                     self._grads_n = 0
                     self._grads_buffer.clear()
-<<<<<<< HEAD
-                    self._increment_params_version()
-=======
                     self._parameters.version += 1
                     self._save_params_to_checkpoint_if_needed()
->>>>>>> develop
                     version = self._parameters.version
                     updated_version = True
 
