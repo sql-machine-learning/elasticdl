@@ -46,7 +46,7 @@ class ParameterServer(object):
         self.master_name = get_master_pod_name(args.job_name)
         self.namespace = args.namespace
         self._init_checkpoint_service(args)
-        self._restore_params_from_checkpoint(args.checkpoint_filename_for_init)
+        self._restore_params_from_checkpoint(args.checkpoint_dir_for_init)
 
     def _restore_params_from_checkpoint(self, checkpoint_dir_for_init):
         """Restore parameters from a checkpint directory for the PS instance

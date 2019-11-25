@@ -29,7 +29,7 @@ WITH
     eval.steps = 0,
     eval.start_delay_secs = 100,
     eval.throttle_secs = 0,
-    eval.checkpoint_filename_for_init = "",
+    eval.checkpoint_dir_for_init = "",
     engine.master_resource_request = "cpu=400m,memory=1024Mi",
     engine.master_resource_limit = "cpu=1,memory=2048Mi",
     engine.worker_resource_request = "cpu=400m,memory=2048Mi",
@@ -65,7 +65,7 @@ PREDICT prediction_results_table
 WITH
     model.num_classes = 10,
     model.dataset_fn = "dataset_fn",
-    predict.checkpoint_filename_for_init = "modelv1.chkpt",
+    predict.checkpoint_dir_for_init = "v1/",
     engine.master_resource_request = "cpu=400m,memory=1024Mi",
     engine.master_resource_limit = "cpu=1,memory=2048Mi",
     engine.worker_resource_request = "cpu=400m,memory=2048Mi",

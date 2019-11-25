@@ -144,7 +144,6 @@ class EvaluationServiceTest(unittest.TestCase):
                 None,
                 task_d,
                 init_var=[],
-                checkpoint_filename_for_init="",
                 checkpoint_service=checkpoint_service,
                 evaluation_service=evaluation_service,
             )
@@ -176,7 +175,6 @@ class EvaluationServiceTest(unittest.TestCase):
             None,
             task_d,
             init_var=[],
-            checkpoint_filename_for_init="",
             checkpoint_service=None,
             evaluation_service=evaluation_service,
         )

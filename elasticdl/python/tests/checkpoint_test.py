@@ -43,7 +43,6 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 None,
                 init_var=init_var,
-                checkpoint_filename_for_init="",
                 checkpoint_service=checkpointer,
                 evaluation_service=None,
             )
@@ -69,7 +68,6 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 None,
                 init_var=init_var,
-                checkpoint_filename_for_init="",
                 checkpoint_service=CheckpointService(chkp_dir, 2, 3, False),
                 evaluation_service=None,
             )
@@ -89,7 +87,6 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 None,
                 init_var=init_var,
-                checkpoint_filename_for_init=chkp_file,
                 checkpoint_service=CheckpointService("", 0, 0, False),
                 evaluation_service=None,
             )
@@ -102,7 +99,6 @@ class CheckpointTest(unittest.TestCase):
                 None,
                 None,
                 init_var=[],
-                checkpoint_filename_for_init=chkp_file,
                 checkpoint_service=CheckpointService("", 0, 0, False),
                 evaluation_service=None,
             )

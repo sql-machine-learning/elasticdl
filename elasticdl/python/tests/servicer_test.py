@@ -49,7 +49,6 @@ class ServicerTest(unittest.TestCase):
             None,
             _TaskDispatcher({}, {}, {}, records_per_task=3, num_epochs=2),
             init_var=[],
-            checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0, False),
             evaluation_service=None,
         )
@@ -84,7 +83,6 @@ class ServicerTest(unittest.TestCase):
             None,
             None,
             init_var=[],
-            checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0, False),
             evaluation_service=None,
         )
@@ -159,7 +157,6 @@ class ServicerTest(unittest.TestCase):
             None,
             task_d,
             init_var=[],
-            checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0, False),
             evaluation_service=None,
         )
@@ -202,7 +199,6 @@ class ServicerTest(unittest.TestCase):
             None,
             None,
             init_var=[],
-            checkpoint_filename_for_init="",
             checkpoint_service=CheckpointService("", 0, 0, False),
             evaluation_service=None,
         )
