@@ -1,15 +1,11 @@
 import importlib.util
 import os
 
+from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.tensor import Tensor
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
-)
-
-from elasticdl.python.common.tensor import Tensor
-from elasticdl.python.common.hash_utils import (
-    string_to_id,
-    int_to_id
 )
 
 
@@ -222,9 +218,10 @@ def restore_model_params_from_checkpoint(
             embedding_table = create_embedding_table(embedding_info_pb)
             embedding_tables.setdefault(embedding_table.name, embedding_table)
 
-        shard_non_embedding_vars, shard_embedding_table_values = (
-            get_params_shard_from_pb(model_pb, shard_index, shard_num)
-        )
+        (
+            shard_non_embedding_vars,
+            shard_embedding_table_values,
+        ) = get_params_shard_from_pb(model_pb, shard_index, shard_num)
         non_embedding_vars.update(shard_non_embedding_vars)
         for name, pair in shard_embedding_table_values.items():
             embedding_tables[name].set(pair[0], pair[1])

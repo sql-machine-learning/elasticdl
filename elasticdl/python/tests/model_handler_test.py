@@ -6,8 +6,6 @@ import tensorflow as tf
 from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.master.checkpoint_service import CheckpointService
-from elasticdl.python.master.servicer import MasterServicer
 
 
 class CustomModel(tf.keras.models.Model):

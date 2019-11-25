@@ -1,24 +1,23 @@
 import abc
-import tensorflow as tf
+
 import numpy as np
+import tensorflow as tf
 
 from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.common.model_utils import (
-        restore_model_params_from_checkpoint
-    )
-from elasticdl.python.ps.embedding_table import EmbeddingTable
-from elasticdl.python.master.checkpoint_service import (
-    get_valid_lastest_version_dir
+    restore_model_params_from_checkpoint,
 )
+from elasticdl.python.elasticdl.layers.embedding import Embedding
+from elasticdl.python.master.checkpoint_service import (
+    get_valid_lastest_version_dir,
+)
+from elasticdl.python.ps.embedding_table import EmbeddingTable
 
 
 def _get_trained_params_from_checkpoint(checkpoint_dir):
-    non_embed_vars, embed_tables = (
-        restore_model_params_from_checkpoint(
-            checkpoint_dir, 0, 1
-        )
+    non_embed_vars, embed_tables = restore_model_params_from_checkpoint(
+        checkpoint_dir, 0, 1
     )
 
     trained_params = non_embed_vars
@@ -242,4 +241,3 @@ class ParameterServerModelHandler(ModelHandler):
                 )
                 setattr(model, name, embedding_layer)
         return model
-

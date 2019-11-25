@@ -149,7 +149,7 @@ def get_valid_lastest_version_dir(checkpoint_dir):
     version_folders = os.listdir(checkpoint_dir)
     if not version_folders:
         return None
-    version_num = [int(v.split('-')[-1]) for v in version_folders]
+    version_num = [int(v.split("-")[-1]) for v in version_folders]
     version_folder_pairs = sorted(
         zip(version_num, version_folders), reverse=True
     )
@@ -165,5 +165,5 @@ def check_checkpoint_valid(folder_dir):
     if not shard_files:
         return False
     shard_file_prefix = shard_files[0].split(".")[0]
-    expected_shard_num = int(shard_file_prefix.split('-')[-1])
+    expected_shard_num = int(shard_file_prefix.split("-")[-1])
     return expected_shard_num == len(shard_files)
