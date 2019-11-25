@@ -195,21 +195,6 @@ class Worker(object):
 
         return self._stub.GetTask(req)
 
-    def get_model_from_master(self, version, method):
-        """
-        get model from master, and update model_version
-        """
-        req = elasticdl_pb2.GetModelRequest()
-        req.version = version
-        req.method = method
-        model = self._stub.GetModel(req)
-
-        # Assumes all trainable variables exist in model.param.
-        for tensor_pb in model.param:
-            tensor = Tensor.from_tensor_pb(tensor_pb)
-            self._non_embed_vars[tensor.name].assign(tensor.to_ndarray())
-        self._model_version = model.version
-
     def get_model_from_ps(self, version, method):
         model_version = -1
         variable_future_and_id_pairs = []
@@ -272,8 +257,6 @@ class Worker(object):
     def get_model(self, version, method):
         if self._use_multi_ps:
             self.get_model_from_ps(version, method)
-        else:
-            self.get_model_from_master(version, method)
 
     def report_task_result(self, task_id, err_msg, exec_counters=None):
         """
@@ -285,14 +268,6 @@ class Worker(object):
         if isinstance(exec_counters, dict):
             report.exec_counters.update(exec_counters)
         return self._stub.ReportTaskResult(report)
-
-    def report_variable_to_master(self):
-        req = elasticdl_pb2.ReportVariableRequest()
-        for v in self._non_embed_vars.values():
-            emplace_tensor_pb_from_ndarray(
-                req.variable, v.numpy(), name=v.name
-            )
-        self._stub.ReportVariable(req)
 
     def init_ps_var_partition(self):
         ps_vars = {}
@@ -339,8 +314,6 @@ class Worker(object):
     def report_variable(self):
         if self._use_multi_ps:
             self.report_variable_to_all_ps()
-        else:
-            self.report_variable_to_master()
 
     def report_gradient_to_ps(self, grads):
         reqs = [

@@ -5,14 +5,9 @@ import tensorflow as tf
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.file_utils import copy_if_not_exists
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import load_from_checkpoint_file
-from elasticdl.python.common.tensor import (
-    emplace_tensor_pb_from_ndarray,
-    tensor_pb_to_ndarray,
-)
-from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.common.tensor import tensor_pb_to_ndarray
 from elasticdl.python.master.learning_rate_modulator import (
     add_lr_modulation_to_optimizer,
 )
@@ -33,8 +28,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         checkpoint_filename_for_init,
         checkpoint_service,
         evaluation_service,
-        embedding_service_endpoint=None,
-        embedding_dims={},
         lr_staleness_modulation=False,
         use_async=False,
     ):
@@ -55,11 +48,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # optimizer's apply_gradients() function.
         self._model = {}
         self._version = 0
-        self._embedding_service_endpoint = embedding_service_endpoint
         self._init_model(checkpoint_filename_for_init, init_var)
-        self._opt = self._init_optimizer(
-            optimizer, embedding_service_endpoint, embedding_dims, use_async
-        )
+        self._opt = self._init_optimizer(optimizer, use_async)
 
         self._checkpoint_service = checkpoint_service
         self._evaluation_service = evaluation_service
@@ -106,17 +96,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 "the worker."
             )
 
-    def _init_optimizer(
-        self, opt, embedding_service_endpoint, embedding_dims, use_async
-    ):
-        # `embedding_service_endpoint` is not None means ElasticDL embedding
-        # layers are used
+    def _init_optimizer(self, opt, use_async):
         self._modulate_lr_if_needed(opt)
-        if embedding_service_endpoint:
-            return OptimizerWrapper(
-                opt, embedding_service_endpoint, embedding_dims, use_async
-            )
-        return opt
+        return OptimizerWrapper(opt, None, None, use_async)
 
     @staticmethod
     def var_name_encode(name):
@@ -155,107 +137,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
         return res
 
-    def GetModel(self, request, _):
-        if not self._use_async:
-            self._validate_model_version(request.version)
-
-        if (
-            request.method == elasticdl_pb2.MINIMUM
-            or request.version == self._version
-        ):
-            if self._use_async:
-                res = self._get_model_no_lock()
-            else:
-                with self._lock:
-                    res = self._get_model_no_lock()
-            return res
-
-        # Read from checkpoint for the fixed version model
-        pb_model = elasticdl_pb2.Model()
-        try:
-            pb_model = self._checkpoint_service.get_checkpoint_model(
-                request.version
-            )
-        except Exception:
-            logger.error(
-                "Failed to fetch checkpoint model for "
-                "model version {}".format(request.version)
-            )
-        return pb_model
-
-    def get_model_version(self):
-        return self._version
-
-    def _save_checkpoint(self, locking, is_eval_checkpoint):
-        try:
-            logger.info(
-                "Saving checkpoint for model version %d" % self._version
-            )
-            if locking:
-                self._lock.acquire()
-            pb_model = self._get_model_no_lock()
-            self._checkpoint_service.save(
-                self._version, pb_model, is_eval_checkpoint
-            )
-            checkpoint_version = self._version
-            if locking:
-                self._lock.release()
-            return checkpoint_version
-        except Exception:
-            logger.error(
-                "Failed to save checkpoint file for model version %d"
-                % self._version
-            )
-
-    def save_latest_checkpoint(self, output_path):
-        if self._checkpoint_service is None:
-            self._checkpoint_service = CheckpointService(
-                checkpoint_dir="",
-                checkpoint_steps=1,
-                keep_checkpoint_max=1,
-                include_evaluation=False,
-            )
-        self._save_checkpoint(locking=False, is_eval_checkpoint=False)
-        checkpoint_path = self._checkpoint_service.get_checkpoint_path(
-            self._checkpoint_service.get_latest_checkpoint_version()
-        )
-        copy_if_not_exists(checkpoint_path, output_path, is_dir=False)
-
     def _update_evaluation(self):
         if self._evaluation_service:
             self._evaluation_service.add_evaluation_task_if_needed(
                 master_locking=False, model_version=self._version
             )
-
-    def _update_checkpoint(self):
-        if (
-            self._checkpoint_service
-            and self._checkpoint_service.need_to_checkpoint(self._version)
-        ):
-            self._save_checkpoint(locking=False, is_eval_checkpoint=False)
-
-    def _get_model_no_lock(self):
-        pb_model = elasticdl_pb2.Model()
-        pb_model.version = self._version
-        for k, v in self._model.items():
-            emplace_tensor_pb_from_ndarray(pb_model.param, v.numpy(), name=k)
-        return pb_model
-
-    def _validate_model_version(self, request_model_version):
-        if request_model_version > self._version:
-            err_msg = (
-                "Model version %d not available yet, "
-                "current version: %d" % (request_model_version, self._version)
-            )
-            logger.warning(err_msg)
-            raise ValueError(err_msg)
-        return request_model_version == self._version
-
-    def ReportVariable(self, request, _):
-        with self._lock:
-            if not self._model:
-                self._init_model_from_tensor_pb_list(request.variable)
-        return empty_pb2.Empty()
 
     def ReportTaskResult(self, request, _):
         if request.err_message:

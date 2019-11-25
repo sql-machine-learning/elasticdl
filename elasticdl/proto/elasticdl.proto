@@ -129,8 +129,6 @@ message ReportVersionRequest {
 
 service Master {
     rpc GetTask(GetTaskRequest) returns (Task);
-    rpc GetModel(GetModelRequest) returns (Model);
-    rpc ReportVariable(ReportVariableRequest) returns (google.protobuf.Empty);
     rpc ReportEvaluationMetrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsResponse);
     rpc ReportTaskResult(ReportTaskResultRequest) returns (google.protobuf.Empty);
     rpc ReportVersion(ReportVersionRequest) returns (google.protobuf.Empty);

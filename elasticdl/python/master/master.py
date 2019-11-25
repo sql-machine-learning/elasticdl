@@ -19,15 +19,11 @@ from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
-    find_layer,
     get_module_file_path,
     load_model_from_module,
     load_module,
 )
 from elasticdl.python.data.data_reader import create_data_reader
-from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.master.checkpoint_service import CheckpointService
-from elasticdl.python.master.embedding_service import EmbeddingService
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl.python.master.servicer import MasterServicer
@@ -120,25 +116,7 @@ class Master(object):
         self.model_inst = model_handler.get_model_to_train(self.model_inst)
         self.optimizer = self.model_module[args.optimizer]()
 
-        # TODO: checkpoint_service, evaluation_service and embedding_service
-        #       will be redesigned after distributed PS is implemented
-        if self.num_ps_pods:
-            self.checkpoint_service = None
-            self.evaluation_service = self._create_evaluation_service(args)
-            self.embedding_service_endpoint = None
-            self.embedding_dims = None
-        else:
-            # Initialize checkpoint service
-            self.checkpoint_service = self._create_checkpoint_service(args)
-
-            # Initialize evaluation service
-            self.evaluation_service = self._create_evaluation_service(args)
-
-            # Initialize embedding service
-            (
-                self.embedding_service_endpoint,
-                self.embedding_dims,
-            ) = self._create_embedding_service(args)
+        self.evaluation_service = self._create_evaluation_service(args)
 
         # Initialize master service
         self.master_servicer, self.server = self._create_master_service(args)
@@ -283,22 +261,6 @@ class Master(object):
 
         return tb_service
 
-    def _create_checkpoint_service(self, args):
-        checkpoint_service = None
-        if (
-            args.checkpoint_steps
-            or self.job_type == JobType.TRAINING_WITH_EVALUATION
-        ):
-            self.logger.info("Creating checkpoint service")
-            checkpoint_service = CheckpointService(
-                args.checkpoint_dir,
-                args.checkpoint_steps,
-                args.keep_checkpoint_max,
-                self.job_type == JobType.TRAINING_WITH_EVALUATION,
-            )
-
-        return checkpoint_service
-
     def _create_evaluation_service(self, args):
         evaluation_service = None
         if (
@@ -323,37 +285,6 @@ class Master(object):
             self.task_d.set_evaluation_service(evaluation_service)
 
         return evaluation_service
-
-    def _create_embedding_service(self, args):
-        endpoint = None
-        embedding_dims = {}
-
-        # Search for embedding layers in the model,
-        # if found, initialize embedding service
-        layers = find_layer(self.model_inst, Embedding)
-        if layers:
-            embedding_service = EmbeddingService()
-            endpoint = embedding_service.start_embedding_service(
-                job_name=args.job_name,
-                image_name=args.worker_image,
-                namespace=args.namespace,
-                resource_request=args.master_resource_request,
-                resource_limit=args.master_resource_limit,
-                pod_priority=args.worker_pod_priority,
-                volume=args.volume,
-                image_pull_policy=args.image_pull_policy,
-                restart_policy=args.restart_policy,
-                cluster_spec=args.cluster_spec,
-            )
-            self.logger.info(
-                "Embedding service start succeeded. The endpoint is %s."
-                % str(endpoint)
-            )
-            embedding_dims = dict(
-                [(layer.name, layer.output_dim) for layer in layers]
-            )
-
-        return endpoint, embedding_dims
 
     def _create_master_service(self, args):
         self.logger.info("Creating master service")
