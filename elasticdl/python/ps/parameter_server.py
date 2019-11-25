@@ -16,6 +16,10 @@ from elasticdl.python.common.model_utils import (
 from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.ps.parameters import Parameters
 from elasticdl.python.ps.servicer import PserverServicer
+from elasticdl.python.master.checkpoint_service import check_checkpoint_valid
+from elasticdl.python.common.model_utils import (
+    restore_model_params_from_checkpoint
+)
 
 
 class ParameterServer(object):
@@ -42,6 +46,28 @@ class ParameterServer(object):
         self.master_name = get_master_pod_name(args.job_name)
         self.namespace = args.namespace
         self._init_checkpoint_service(args)
+        self._restore_params_from_checkpoint(args.checkpoint_filename_for_init)
+
+    def _restore_params_from_checkpoint(self, checkpoint_dir_for_init):
+        """Restore parameters from a checkpint directory for the PS instance
+        """
+        if checkpoint_dir_for_init is None:
+            self.logger.info("checkpoint directory for init is None")
+            return
+
+        if not check_checkpoint_valid(checkpoint_dir_for_init):
+            raise ValueError("Invalid checkpoint directory")
+
+        self.parameters = restore_model_params_from_checkpoint(
+            checkpoint_dir_for_init,
+            self.ps_id,
+            self.num_ps_pods
+        )
+        self.parameters.init_status = True
+        self.logger.info(
+            "The version of restored parameters is %s"
+            % self.parameters.version
+        )
 
     def _init_checkpoint_service(self, args):
         if all(

@@ -469,6 +469,67 @@ class PserverServicerTest(unittest.TestCase):
                 ["variables-0-of-1.chkpt"],
             )
 
+    def test_restore_parameters_from_checkpoint(self):
+        checkpoint_dir_for_init = (
+            "elasticdl/python/tests/testdata/functional_ckpt/version-100"
+        )
+
+        args = PserverArgs(
+            ps_id=0,
+            num_ps_pods=2,
+            model_zoo=_test_model_zoo_path,
+            model_def="test_module.custom_model",
+            checkpoint_filename_for_init=checkpoint_dir_for_init
+        )
+        pserver_0 = ParameterServer(args)
+
+        embedding_table_0 = (
+            pserver_0.parameters.embedding_params['embedding']
+        )
+        self.assertEqual(
+            list(embedding_table_0.embedding_vectors.keys()),
+            [0, 2]
+        )
+        self.assertEqual(
+            list(pserver_0.parameters.non_embedding_params.keys()),
+            ["dense/kernel:0"]
+        )
+        self.assertTrue(
+            np.array_equal(
+                pserver_0.parameters.non_embedding_params["dense/kernel:0"],
+                np.array([[1], [1]], dtype=int)
+            )
+        )
+        self.assertEqual(pserver_0.parameters.version, 100)
+
+        args = PserverArgs(
+            ps_id=1,
+            num_ps_pods=2,
+            model_zoo=_test_model_zoo_path,
+            model_def="test_module.custom_model",
+            checkpoint_filename_for_init=checkpoint_dir_for_init
+        )
+        pserver_1 = ParameterServer(args)
+
+        embedding_table_1 = (
+            pserver_1.parameters.embedding_params['embedding']
+        )
+        self.assertEqual(
+            list(embedding_table_1.embedding_vectors.keys()),
+            [1, 3]
+        )
+        self.assertEqual(
+            list(pserver_1.parameters.non_embedding_params.keys()),
+            ["dense/bias:0"]
+        )
+        self.assertTrue(
+            np.array_equal(
+                pserver_1.parameters.non_embedding_params["dense/bias:0"],
+                np.array([1], dtype=int)
+            )
+        )
+        self.assertEqual(pserver_1.parameters.version, 100)
+
 
 if __name__ == "__main__":
     unittest.main()

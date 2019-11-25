@@ -47,6 +47,7 @@ class PserverArgs(object):
         keep_checkpoint_max=0,
         ps_id=0,
         num_ps_pods=1,
+        checkpoint_filename_for_init=None,
     ):
         self.grads_to_wait = grads_to_wait
         self.lr_staleness_modulation = lr_staleness_modulation
@@ -65,6 +66,7 @@ class PserverArgs(object):
         self.keep_checkpoint_max = keep_checkpoint_max
         self.ps_id = ps_id
         self.num_ps_pods = num_ps_pods
+        self.checkpoint_filename_for_init = checkpoint_filename_for_init
 
 
 class DatasetName(object):

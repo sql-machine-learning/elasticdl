@@ -375,7 +375,7 @@ class Master(object):
             init_var=self.model_inst.trainable_variables
             if self.model_inst.built
             else [],
-            checkpoint_filename_for_init=args.checkpoint_filename_for_init,
+            embedding_dims=self.embedding_dims,
             checkpoint_service=self.checkpoint_service,
             evaluation_service=self.evaluation_service,
             lr_staleness_modulation=args.lr_staleness_modulation,
@@ -443,6 +443,8 @@ class Master(object):
                 str(args.keep_checkpoint_max),
                 "--num_ps_pods",
                 str(args.num_ps_pods),
+                "--checkpoint_filename_for_init",
+                str(args.checkpoint_filename_for_init)
             ]
 
             env_dict = parse_envs(args.envs)

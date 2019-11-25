@@ -284,6 +284,8 @@ def add_train_params(parser):
         "If 0, time-based evaluation is disabled",
         default=0,
     )
+    # TODO rename checkpoint_filename_for_init to checkpoint_dir_for_init
+    # @qinlong.wql
     parser.add_argument(
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",
@@ -338,6 +340,8 @@ def add_predict_params(parser):
         "defined in the model definition file.",
         default="PredictionOutputsProcessor",
     )
+    # TODO rename checkpoint_filename_for_init to checkpoint_dir_for_init
+    # @qinlong.wql
     parser.add_argument(
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",

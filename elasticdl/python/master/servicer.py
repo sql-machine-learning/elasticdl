@@ -30,7 +30,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         task_d,
         *,
         init_var,
-        checkpoint_filename_for_init,
         checkpoint_service,
         evaluation_service,
         lr_staleness_modulation=False,
@@ -86,20 +85,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         assert tensor_pb_list
         for pb in tensor_pb_list:
             self.set_model_var(pb.name, tensor_pb_to_ndarray(pb))
-
-    def _init_model(self, checkpoint_filename_for_init, init_var):
-        if checkpoint_filename_for_init:
-            pb_model = load_from_checkpoint_file(checkpoint_filename_for_init)
-            self._version = pb_model.version
-            self._init_model_from_tensor_pb_list(pb_model.param)
-        elif init_var:
-            self._init_model_from_var_list(init_var)
-        else:
-            logger.info(
-                "Model is not intialized. It will be "
-                "initialized by the first update from "
-                "the worker."
-            )
 
     # TODO: remove this function
     def _init_optimizer(self, opt, use_async):
