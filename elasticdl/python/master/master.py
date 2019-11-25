@@ -444,7 +444,7 @@ class Master(object):
                 "--num_ps_pods",
                 str(args.num_ps_pods),
                 "--checkpoint_filename_for_init",
-                str(args.checkpoint_filename_for_init)
+                str(args.checkpoint_filename_for_init),
             ]
 
             env_dict = parse_envs(args.envs)

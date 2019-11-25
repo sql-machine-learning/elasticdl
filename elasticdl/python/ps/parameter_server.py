@@ -12,14 +12,14 @@ from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
+    restore_model_params_from_checkpoint,
 )
-from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.master.checkpoint_service import (
+    CheckpointService,
+    check_checkpoint_valid,
+)
 from elasticdl.python.ps.parameters import Parameters
 from elasticdl.python.ps.servicer import PserverServicer
-from elasticdl.python.master.checkpoint_service import check_checkpoint_valid
-from elasticdl.python.common.model_utils import (
-    restore_model_params_from_checkpoint
-)
 
 
 class ParameterServer(object):
@@ -59,9 +59,7 @@ class ParameterServer(object):
             raise ValueError("Invalid checkpoint directory")
 
         self.parameters = restore_model_params_from_checkpoint(
-            checkpoint_dir_for_init,
-            self.ps_id,
-            self.num_ps_pods
+            checkpoint_dir_for_init, self.ps_id, self.num_ps_pods
         )
         self.parameters.init_status = True
         self.logger.info(

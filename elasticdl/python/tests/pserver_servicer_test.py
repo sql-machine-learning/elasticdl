@@ -479,25 +479,22 @@ class PserverServicerTest(unittest.TestCase):
             num_ps_pods=2,
             model_zoo=_test_model_zoo_path,
             model_def="test_module.custom_model",
-            checkpoint_filename_for_init=checkpoint_dir_for_init
+            checkpoint_filename_for_init=checkpoint_dir_for_init,
         )
         pserver_0 = ParameterServer(args)
 
-        embedding_table_0 = (
-            pserver_0.parameters.embedding_params['embedding']
-        )
+        embedding_table_0 = pserver_0.parameters.embedding_params["embedding"]
         self.assertEqual(
-            list(embedding_table_0.embedding_vectors.keys()),
-            [0, 2]
+            list(embedding_table_0.embedding_vectors.keys()), [0, 2]
         )
         self.assertEqual(
             list(pserver_0.parameters.non_embedding_params.keys()),
-            ["dense/kernel:0"]
+            ["dense/kernel:0"],
         )
         self.assertTrue(
             np.array_equal(
                 pserver_0.parameters.non_embedding_params["dense/kernel:0"],
-                np.array([[1], [1]], dtype=int)
+                np.array([[1], [1]], dtype=int),
             )
         )
         self.assertEqual(pserver_0.parameters.version, 100)
@@ -507,25 +504,22 @@ class PserverServicerTest(unittest.TestCase):
             num_ps_pods=2,
             model_zoo=_test_model_zoo_path,
             model_def="test_module.custom_model",
-            checkpoint_filename_for_init=checkpoint_dir_for_init
+            checkpoint_filename_for_init=checkpoint_dir_for_init,
         )
         pserver_1 = ParameterServer(args)
 
-        embedding_table_1 = (
-            pserver_1.parameters.embedding_params['embedding']
-        )
+        embedding_table_1 = pserver_1.parameters.embedding_params["embedding"]
         self.assertEqual(
-            list(embedding_table_1.embedding_vectors.keys()),
-            [1, 3]
+            list(embedding_table_1.embedding_vectors.keys()), [1, 3]
         )
         self.assertEqual(
             list(pserver_1.parameters.non_embedding_params.keys()),
-            ["dense/bias:0"]
+            ["dense/bias:0"],
         )
         self.assertTrue(
             np.array_equal(
                 pserver_1.parameters.non_embedding_params["dense/bias:0"],
-                np.array([1], dtype=int)
+                np.array([1], dtype=int),
             )
         )
         self.assertEqual(pserver_1.parameters.version, 100)

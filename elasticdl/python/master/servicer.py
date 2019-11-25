@@ -7,7 +7,6 @@ from google.protobuf import empty_pb2
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.file_utils import copy_if_not_exists
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.common.model_utils import load_from_checkpoint_file
 from elasticdl.python.common.tensor import (
     emplace_tensor_pb_from_ndarray,
     tensor_pb_to_ndarray,
@@ -52,7 +51,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # optimizer's apply_gradients() function.
         self._model = {}
         self._version = 0
-        self._init_model(checkpoint_filename_for_init, init_var)
         self._opt = self._init_optimizer(optimizer, use_async)
 
         self._checkpoint_service = checkpoint_service
