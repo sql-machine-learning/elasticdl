@@ -207,3 +207,7 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertEqual(
             evaluation_service._eval_checkpoint_versions, [20, 30]
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

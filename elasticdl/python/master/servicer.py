@@ -16,11 +16,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._task_d = task_d
         self._lock = threading.Lock()
         self._minibatch_size = minibatch_size
-
-        # A <string, tf.ResourceVariable> map. We use tf.ResourceVariable
-        # instead of ndarray to avoid copying and conversion when calling
-        # optimizer's apply_gradients() function.
-        self._model = {}
+        self._version = 0
 
         self._evaluation_service = evaluation_service
         if evaluation_service:
@@ -29,6 +25,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     @staticmethod
     def var_name_encode(name):
         return name.replace(":", "-")
+
+    def get_model_version(self):
+        return self._version
 
     def GetTask(self, request, _):
         res = elasticdl_pb2.Task()
