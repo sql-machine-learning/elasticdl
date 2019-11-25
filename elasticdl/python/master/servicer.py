@@ -33,8 +33,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         checkpoint_filename_for_init,
         checkpoint_service,
         evaluation_service,
-        embedding_service_endpoint=None,
-        embedding_dims={},
         lr_staleness_modulation=False,
         use_async=False,
     ):
@@ -55,11 +53,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # optimizer's apply_gradients() function.
         self._model = {}
         self._version = 0
-        self._embedding_service_endpoint = embedding_service_endpoint
         self._init_model(checkpoint_filename_for_init, init_var)
-        self._opt = self._init_optimizer(
-            optimizer, embedding_service_endpoint, embedding_dims, use_async
-        )
+        self._opt = self._init_optimizer(optimizer, use_async)
 
         self._checkpoint_service = checkpoint_service
         self._evaluation_service = evaluation_service
@@ -106,16 +101,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 "the worker."
             )
 
-    def _init_optimizer(
-        self, opt, embedding_service_endpoint, embedding_dims, use_async
-    ):
-        # `embedding_service_endpoint` is not None means ElasticDL embedding
-        # layers are used
+    # TODO: remove this function
+    def _init_optimizer(self, opt, use_async):
         self._modulate_lr_if_needed(opt)
-        if embedding_service_endpoint:
-            return OptimizerWrapper(
-                opt, embedding_service_endpoint, embedding_dims, use_async
-            )
+        if opt:
+            return OptimizerWrapper(opt, use_async)
         return opt
 
     @staticmethod
