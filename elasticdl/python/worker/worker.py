@@ -112,10 +112,6 @@ class Worker(object):
             prediction_outputs_processor=args.prediction_outputs_processor,
         )
 
-        self._embedding_service_endpoint = eval(
-            args.embedding_service_endpoint
-        )
-
         self._distribution_strategy = args.distribution_strategy
         self._collective_communicator = (
             CollectiveCommunicator()

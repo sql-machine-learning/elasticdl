@@ -10,6 +10,7 @@ from elasticdl.python.master.evaluation_service import (
     EvaluationService,
     _EvaluationJob,
 )
+from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 
@@ -128,6 +129,8 @@ class EvaluationServiceTest(unittest.TestCase):
             )
         )
 
+        _ = MasterServicer(2, task_d, evaluation_service=evaluation_service,)
+
         # No checkpoint available
         self.assertFalse(evaluation_service.try_to_create_new_job())
 
@@ -150,6 +153,8 @@ class EvaluationServiceTest(unittest.TestCase):
             None, task_d, 0, 0, 0, True, _eval_metrics_fn
         )
         task_d.set_evaluation_service(evaluation_service)
+
+        _ = MasterServicer(2, task_d, evaluation_service=evaluation_service,)
 
         self.assertEqual(8, len(task_d._eval_todo))
         for i in range(8):
