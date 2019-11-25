@@ -9,10 +9,17 @@ class CollectiveCommunicator(object):
         pass
 
     def allreduce(self, data, op="MEAN"):
+        if data is None:
+            return CollectiveCommunicatorStatus.FAILED, data
         return CollectiveCommunicatorStatus.SUCCEEDED, data
 
-    def broadcast(self, from_worker_ip):
-        return CollectiveCommunicatorStatus.SUCCEEDED, {"param1": 1}
+    def broadcast(self, data, root_ip):
+        if data is None:
+            return CollectiveCommunicatorStatus.FAILED, data
+        return CollectiveCommunicatorStatus.SUCCEEDED, data
 
     def barrier(self):
         return CollectiveCommunicatorStatus.SUCCEEDED
+
+    def has_new_worker_joining(self):
+        return True

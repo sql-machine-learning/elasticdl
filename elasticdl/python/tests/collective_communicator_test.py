@@ -7,13 +7,23 @@ from elasticdl.python.common.constants import CollectiveCommunicatorStatus
 class CollectiveCommunicatorTest(unittest.TestCase):
     def test_collective_communicator(self):
         communicator = CollectiveCommunicator()
+        data = [1]
         self.assertEqual(
-            communicator.allreduce([1]),
-            (CollectiveCommunicatorStatus.SUCCEEDED, [1]),
+            communicator.allreduce(data),
+            (CollectiveCommunicatorStatus.SUCCEEDED, data),
         )
         self.assertEqual(
-            communicator.broadcast("worker_0_ip"),
-            (CollectiveCommunicatorStatus.SUCCEEDED, {"param1": 1}),
+            communicator.allreduce(None),
+            (CollectiveCommunicatorStatus.FAILED, None),
+        )
+        data = {"param1": 1}
+        self.assertEqual(
+            communicator.broadcast(data, "worker_0_ip"),
+            (CollectiveCommunicatorStatus.SUCCEEDED, data),
+        )
+        self.assertEqual(
+            communicator.broadcast(None, "worker_0_ip"),
+            (CollectiveCommunicatorStatus.FAILED, None),
         )
         self.assertEqual(
             communicator.barrier(), CollectiveCommunicatorStatus.SUCCEEDED
