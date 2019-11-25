@@ -162,19 +162,19 @@ class OptimizerWrapper(object):
 
         grads_and_vars_new = []
         for grad, var in grads_and_vars:
-            layer_name = _get_embedding_layer_name_from_var(var)
-            if not layer_name:
-                grads_and_vars_new.append((grad, var))
-            else:
+            # If var is a string, this grad var pair is for ElasticDL embedding
+            if isinstance(var, str):
                 grads_and_vars_new.append(
-                    self._handle_embedding_grad(grad, layer_name)
+                    self._get_embedding_var_and_grad(grad, var)
                 )
+            else:
+                grads_and_vars_new.append((grad, var))
 
         self._opt.apply_gradients(grads_and_vars_new)
-        self._report_to_kv_store()
+        self._update_embedding_param()
         self._delete_variables()
 
-    def _handle_embedding_grad(self, grad, layer_name):
+    def _get_embedding_var_and_grad(self, grad, layer_name):
         unique_ids, indices = tf.unique(grad.indices)
         unique_ids = unique_ids.numpy()
         if layer_name in self._tls._unique_ids_all_layers:
@@ -276,7 +276,7 @@ class OptimizerWrapper(object):
                 "be in self._opt." % (var_key, slot_name)
             )
 
-    def _report_to_kv_store(self):
+    def _update_embedding_param(self):
         """Report updated embedding vectors and slots to kv store."""
         for layer, ids in self._tls._unique_ids_all_layers.items():
             value = self._get_embedding_variable(layer).numpy()

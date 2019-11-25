@@ -231,7 +231,7 @@ class OptimizerWrapperTest(unittest.TestCase):
                 np.allclose(opt_slots[name].numpy(), slot_values[name])
             )
 
-    def test_report_to_kv_store(self):
+    def test_update_embedding_param(self):
         params = Parameters()
         for name in ["test_1", "test_2"]:
             params.embedding_params[name] = EmbeddingTable(name, 8)
@@ -268,7 +268,7 @@ class OptimizerWrapperTest(unittest.TestCase):
         opt_wrapper._tls._unique_ids_all_layers = indices
         opt_wrapper._tls._embed_variables = embed_vars
         opt_wrapper._tls._slot_variables = slot_vars
-        opt_wrapper._report_to_kv_store()
+        opt_wrapper._update_embedding_param()
 
         for name in ["test_1", "test_2"]:
             self.assertTrue(
