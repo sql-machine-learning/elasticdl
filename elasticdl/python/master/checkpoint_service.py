@@ -13,6 +13,8 @@ class Checkpoint(object):
         self.file = file
 
 
+# TODO Abstract checkpoint service to save_utils in common
+# @qinlong.wql
 class CheckpointService(object):
     """Checkpoint Service implementation"""
 
@@ -44,12 +46,22 @@ class CheckpointService(object):
             tempfile.mkdtemp() if include_evaluation else ""
         )
 
-    def _get_checkpoint_file(self, version, is_eval_checkpoint=False):
-        return "%s/model_v%s.chkpt" % (
+    def _get_checkpoint_file(
+        self, version, is_eval_checkpoint=False, shard_index=0, shard_num=1
+    ):
+        checkpoint_dir = (
             self._eval_checkpoint_dir
             if is_eval_checkpoint
-            else self._directory,
-            str(version),
+            else self._directory
+        )
+        checkpoint_version_dir = os.path.join(
+            checkpoint_dir, "version-%s" % str(version)
+        )
+        os.makedirs(checkpoint_version_dir, exist_ok=True)
+        return "%s/variables-%s-of-%s.chkpt" % (
+            checkpoint_version_dir,
+            str(shard_index),
+            str(shard_num),
         )
 
     def is_enabled(self):
@@ -60,9 +72,26 @@ class CheckpointService(object):
         """Check if the given model version needs to be checkpointed"""
         return self.is_enabled() and version % self._steps == 0
 
-    def save(self, version, model, is_eval_checkpoint):
-        """Checkpoint the given model"""
-        file = self._get_checkpoint_file(version, is_eval_checkpoint)
+    def save(
+        self, version, model, is_eval_checkpoint, shard_index=0, shard_num=1
+    ):
+        """Checkpoint the given model
+
+        Args:
+            version (int): iteration steps
+            model: a pb_model
+            is_eval_checkpoint (bool): if True, the model will be saved to
+                a temporary directory.
+            shard_index (int): default 0. The shard index in all
+                model shard files, e.g. the shard_index is PS instance index
+                using ParameterServerStrategy.
+            shard_number (int): default 1. The number of model shards,
+                e.g. shard_number is the number of PS instances using
+                ParameterServerStrategy.
+        """
+        file = self._get_checkpoint_file(
+            version, is_eval_checkpoint, shard_index, shard_num
+        )
         save_checkpoint_to_file(model, file)
         if not is_eval_checkpoint:
             self._checkpoint_list.append(Checkpoint(version, file))
@@ -70,6 +99,13 @@ class CheckpointService(object):
                 while len(self._checkpoint_list) > self._max_versions:
                     file_to_delete = self._checkpoint_list.pop(0).file
                     os.remove(file_to_delete)
+                    # Remove the directory if empty
+                    delete_dir_name = os.path.dirname(file_to_delete)
+                    if not os.listdir(delete_dir_name):
+                        try:
+                            os.rmdir(delete_dir_name)
+                        except Exception:
+                            pass
 
     def remove_eval_checkpoint(self, version):
         chkpt_file = self._get_checkpoint_file(
@@ -106,3 +142,30 @@ class CheckpointService(object):
         if not self._checkpoint_list:
             raise RuntimeError("No model checkpoint available")
         return self._checkpoint_list[-1].version
+
+
+def get_valid_lastest_version_dir(checkpoint_dir):
+    if not checkpoint_dir or not os.path.exists(checkpoint_dir):
+        return None
+
+    version_folders = os.listdir(checkpoint_dir)
+    if not version_folders:
+        return None
+    version_num = [int(v.split("-")[-1]) for v in version_folders]
+    version_folder_pairs = sorted(
+        zip(version_num, version_folders), reverse=True
+    )
+    for version, folder in version_folder_pairs:
+        folder_dir = os.path.join(checkpoint_dir, folder)
+        if check_checkpoint_valid(folder_dir):
+            return folder_dir
+    return None
+
+
+def check_checkpoint_valid(folder_dir):
+    shard_files = os.listdir(folder_dir)
+    if not shard_files:
+        return False
+    shard_file_prefix = shard_files[0].split(".")[0]
+    expected_shard_num = int(shard_file_prefix.split("-")[-1])
+    return expected_shard_num == len(shard_files)

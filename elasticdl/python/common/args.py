@@ -285,25 +285,6 @@ def add_train_params(parser):
         default=0,
     )
     parser.add_argument(
-        "--checkpoint_steps",
-        type=int,
-        help="Save checkpoint every this many steps."
-        "If 0, no checkpoints to save.",
-        default=0,
-    )
-    parser.add_argument(
-        "--checkpoint_dir",
-        help="The directory to store the checkpoint files",
-        default="",
-    )
-    parser.add_argument(
-        "--keep_checkpoint_max",
-        type=int,
-        help="The maximum number of recent checkpoint files to keep."
-        "If 0, keep all.",
-        default=0,
-    )
-    parser.add_argument(
         "--checkpoint_filename_for_init",
         help="The checkpoint file to initialize the training model",
         default="",
@@ -500,6 +481,25 @@ def add_common_args_between_master_and_worker(parser):
         help="Master will use a distribution policy on a list of devices "
         "according to the distributed strategy, "
         'e.g. "ParameterServerStrategy" or "AllreduceStrategy"',
+    )
+    parser.add_argument(
+        "--checkpoint_steps",
+        type=int,
+        help="Save checkpoint every this many steps."
+        "If 0, no checkpoints to save.",
+        default=0,
+    )
+    parser.add_argument(
+        "--checkpoint_dir",
+        help="The directory to store the checkpoint files",
+        default="",
+    )
+    parser.add_argument(
+        "--keep_checkpoint_max",
+        type=int,
+        help="The maximum number of recent checkpoint files to keep."
+        "If 0, keep all.",
+        default=0,
     )
 
 

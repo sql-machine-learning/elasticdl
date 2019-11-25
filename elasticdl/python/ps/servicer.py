@@ -3,6 +3,7 @@ import threading
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor import (
     Tensor,
     emplace_tensor_pb_from_ndarray,
@@ -23,6 +24,10 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         use_async=False,
         evaluation_steps=0,
         master_channel=None,
+        checkpoint_service=None,
+        ps_id=None,
+        num_ps_pods=None,
+        checkpoint_dir_for_init=None,
     ):
         if master_channel is None:
             self._master_stub = None
@@ -35,6 +40,9 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._lr_staleness_modulation = lr_staleness_modulation
         self._use_async = use_async
         self._eval_steps = evaluation_steps
+        self._checkpoint_service = checkpoint_service
+        self._ps_id = ps_id
+        self._num_ps_pods = num_ps_pods
         self._version_lock = threading.Lock()
         self._lock = threading.Lock()
         self._use_wrap_opt = False
@@ -109,6 +117,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             self._optimizer.apply_gradients(grad_vars)
             with self._version_lock:
                 self._parameters.version += 1
+                self._save_params_to_checkpoint_if_needed()
                 version = self._parameters.version
             self._report_version_if_needed(version)
 
@@ -155,6 +164,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                     self._grads_n = 0
                     self._grads_buffer.clear()
                     self._parameters.version += 1
+                    self._save_params_to_checkpoint_if_needed()
                     version = self._parameters.version
                     updated_version = True
 
@@ -164,39 +174,11 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             return res
 
     def wrap_optimizer(self):
-        # TODO(yunjian.lmh): refine these arguments when we don't need
-        # to support using Redis as distributed KV storage.
-        embedding_dims = {}
-        for table in self._parameters.embedding_params.values():
-            embedding_dims[table.name] = table.dim
-        embedding_service_endpoint = None
-
-        def lookup_embedding_func(keys):
-            embeddings = []
-            for key in keys:
-                arrs = key.split("-")
-                layer_name = "-".join(arrs[:-1])
-                id = int(arrs[-1])
-                embedding = self._parameters.get_embedding_param(
-                    layer_name, [id]
-                )
-                embeddings.append(embedding.flatten())
-            return embeddings, []
-
-        def update_embedding_func(keys, values):
-            for key, value in zip(keys, values):
-                arrs = key.split("-")
-                layer_name = "-".join(arrs[:-1])
-                id = int(arrs[-1])
-                self._parameters.set_embedding_param(layer_name, [id], [value])
-
         self._optimizer = OptimizerWrapper(
             self._optimizer,
-            embedding_service_endpoint,
-            embedding_dims,
             self._use_async,
-            lookup_embedding_func,
-            update_embedding_func,
+            self._parameters.get_embedding_param,
+            self._parameters.set_embedding_param,
         )
 
     def _report_version_if_needed(self, version):
@@ -216,3 +198,20 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                 self._optimizer.slot_initial_value,
             )
             self._use_wrap_opt = True
+
+    def _save_params_to_checkpoint_if_needed(self):
+        """Save a checkpoint of parameters to a protobuf file"""
+        if (
+            self._checkpoint_service
+            and self._parameters.version % self._checkpoint_service._steps == 0
+        ):
+            model_pb = self._parameters.to_model_pb()
+
+            logger.info("Save checkpoint for version %s" % model_pb.version)
+            self._checkpoint_service.save(
+                model_pb.version,
+                model_pb,
+                is_eval_checkpoint=False,
+                shard_index=self._ps_id,
+                shard_num=self._num_ps_pods,
+            )

@@ -115,7 +115,7 @@ class Master(object):
             args.model_def, self.model_module, args.model_params
         )
         model_handler = ModelHandler.get_model_handler(
-            args.distribution_strategy
+            args.distribution_strategy, checkpoint_dir=args.checkpoint_dir
         )
         self.model_inst = model_handler.get_model_to_train(self.model_inst)
         self.optimizer = self.model_module[args.optimizer]()
@@ -375,11 +375,9 @@ class Master(object):
             init_var=self.model_inst.trainable_variables
             if self.model_inst.built
             else [],
-            embedding_dims=self.embedding_dims,
             checkpoint_filename_for_init=args.checkpoint_filename_for_init,
             checkpoint_service=self.checkpoint_service,
             evaluation_service=self.evaluation_service,
-            embedding_service_endpoint=self.embedding_service_endpoint,
             lr_staleness_modulation=args.lr_staleness_modulation,
             use_async=args.use_async,
         )
@@ -437,6 +435,14 @@ class Master(object):
                 args.namespace,
                 "--evaluation_steps",
                 str(args.evaluation_steps),
+                "--checkpoint_dir",
+                str(args.checkpoint_dir),
+                "--checkpoint_steps",
+                str(args.checkpoint_steps),
+                "--keep_checkpoint_max",
+                str(args.keep_checkpoint_max),
+                "--num_ps_pods",
+                str(args.num_ps_pods),
             ]
 
             env_dict = parse_envs(args.envs)
