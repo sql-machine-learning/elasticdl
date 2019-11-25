@@ -1,5 +1,6 @@
 import importlib.util
 import os
+
 import tensorflow as tf
 
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
@@ -270,7 +271,6 @@ def get_params_shard_from_pb(model_pb, shard_index, shard_num):
         else:
             if string_to_id(tensor.name, shard_num) == shard_index:
                 non_embedding_vars[tensor.name] = tf.Variable(
-                    initial_value=tensor.values,
-                    trainable=True
+                    initial_value=tensor.values, trainable=True
                 )
     return non_embedding_vars, embedding_table_values
