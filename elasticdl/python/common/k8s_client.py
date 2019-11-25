@@ -1,4 +1,5 @@
 import os
+import pyaml
 import threading
 import traceback
 
@@ -276,8 +277,21 @@ class Client(object):
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "master"
         pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = "0"
-        self.client.create_namespaced_pod(self.namespace, pod)
+        pod.api_version = "v1"
+        pod.kind = "Pod"
+        # self.client.create_namespaced_pod(self.namespace, pod)
+        # api_client = client.api_client.ApiClient()
+        # obj = api_client.deserialize(response=resp_mock, response_type=klass)
+        # print(obj)
+        result = self.client.api_client.sanitize_for_serialization(pod)
+        print(type(result))
+        print(result)
+        # s = pod.to_dict()
+        print(pyaml.dump(result))
         logger.info("Master launched.")
+
+    # def _dump_pod_as_yaml(pod):
+    #     pod_yaml = {}
 
     def _create_ps_worker_pod(self, pod_name, type_key, index_key, **kargs):
         # Find that master pod that will be used as the owner reference
