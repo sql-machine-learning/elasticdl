@@ -85,7 +85,7 @@ look like the following:
 
 ```python
 communicator = CollectiveCommunicator()
-status, model_params = communicator.broadcast(from=worker_0_ip)
+status, model_params = communicator.broadcast(root_ip=worker_0_ip)
 init_local_model(model_params)
 ```
 

@@ -2,6 +2,8 @@
 import numpy as np
 
 
+# TODO(yunjian.lmh): MockKvStore can be removed when we do not support Redis.
+#     Use `Parameters` instead.
 class MockKvStore(object):
     """A Kv Store for unittest."""
 
