@@ -21,7 +21,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         # instead of ndarray to avoid copying and conversion when calling
         # optimizer's apply_gradients() function.
         self._model = {}
-        self._version = 0
 
         self._evaluation_service = evaluation_service
         if evaluation_service:
@@ -63,12 +62,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             res.type = elasticdl_pb2.WAIT
 
         return res
-
-    def _update_evaluation(self):
-        if self._evaluation_service:
-            self._evaluation_service.add_evaluation_task_if_needed(
-                master_locking=False, model_version=self._version
-            )
 
     def ReportTaskResult(self, request, _):
         if request.err_message:
