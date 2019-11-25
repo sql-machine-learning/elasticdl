@@ -280,18 +280,17 @@ class Client(object):
         pod.api_version = "v1"
         pod.kind = "Pod"
         # self.client.create_namespaced_pod(self.namespace, pod)
-        # api_client = client.api_client.ApiClient()
-        # obj = api_client.deserialize(response=resp_mock, response_type=klass)
-        # print(obj)
         result = self.client.api_client.sanitize_for_serialization(pod)
-        print(type(result))
-        print(result)
-        # s = pod.to_dict()
+
+        import yaml
+
+        def represent_none(self, _):
+            return self.represent_scalar('tag:yaml.org,2002:null', '')
+
+        yaml.add_representer(type(None), represent_none)
+
         print(pyaml.dump(result))
         logger.info("Master launched.")
-
-    # def _dump_pod_as_yaml(pod):
-    #     pod_yaml = {}
 
     def _create_ps_worker_pod(self, pod_name, type_key, index_key, **kargs):
         # Find that master pod that will be used as the owner reference
