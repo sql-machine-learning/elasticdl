@@ -424,7 +424,8 @@ class Worker(object):
         return res.accepted, res.model_version
 
     def report_gradient_locally(self, grads):
-        # TODO: Automatically replace EDL embedding layer to tf.keras embedding layer
+        # TODO: Automatically replace EDL embedding layer
+        # to tf.keras embedding layer
         if self._embedding_layers:
             raise ValueError(
                 "ElasticDL embedding layer is not supported when"
