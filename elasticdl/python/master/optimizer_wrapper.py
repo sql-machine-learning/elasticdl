@@ -20,7 +20,6 @@ from tensorflow.keras.optimizers import (
 
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.master.embedding_service import EmbeddingService
 
 
 def _parse_lookup_values(values, key_index):
@@ -266,10 +265,6 @@ class OptimizerWrapper(object):
         embed_keys_num = len(embed_keys)
         if self._lookup_embedding_func:
             values, unknown_keys = self._lookup_embedding_func(keys)
-        else:
-            values, unknown_keys = EmbeddingService.lookup_embedding(
-                keys=keys, embedding_service_endpoint=self._kv_store_endpoint
-            )
 
         if unknown_keys:
             # raise Error if an unknown embedding key exists
@@ -507,10 +502,6 @@ class OptimizerWrapper(object):
 
         if self._update_embedding_func:
             self._update_embedding_func(keys, values)
-        else:
-            EmbeddingService.update_embedding(
-                keys, values, self._kv_store_endpoint
-            )
 
     def _delete_variables(self):
         # Slot variable access in optimizer requires corresponding embedding
