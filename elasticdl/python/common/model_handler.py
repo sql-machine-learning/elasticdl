@@ -159,7 +159,7 @@ class ParameterServerModelHandler(ModelHandler):
                 )
                 var.assign(embedding_params)
             else:
-                var.assign(trained_params[var.name])
+                var.assign(trained_params[var.name].numpy())
         return model
 
     def _restore_keras_model_def(self, model):

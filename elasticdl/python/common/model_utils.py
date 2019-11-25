@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import tensorflow as tf
 
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -250,7 +251,7 @@ def get_params_shard_from_pb(model_pb, shard_index, shard_num):
 
     Return:
         non_embedding_vars: A Python dict in which the key is a variable
-            name and the value is a variable tensor.
+            name and the value is a `tf.Variable` object.
         embedding_table_values: A Python dict in which the key is an embedding
             table name and the value is a tuple with 2 elements. The value[0]
             is indices and value[1] is the corresponding embedding vector.
@@ -268,5 +269,8 @@ def get_params_shard_from_pb(model_pb, shard_index, shard_num):
                     embedding_table_values[tensor.name][1].append(vector)
         else:
             if string_to_id(tensor.name, shard_num) == shard_index:
-                non_embedding_vars[tensor.name] = tensor.values
+                non_embedding_vars[tensor.name] = tf.Variable(
+                    initial_value=tensor.values,
+                    trainable=True
+                )
     return non_embedding_vars, embedding_table_values
