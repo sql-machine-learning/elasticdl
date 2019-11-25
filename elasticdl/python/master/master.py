@@ -115,7 +115,7 @@ class Master(object):
             args.model_def, self.model_module, args.model_params
         )
         model_handler = ModelHandler.get_model_handler(
-            args.distribution_strategy
+            args.distribution_strategy, checkpoint_dir=args.checkpoint_dir
         )
         self.model_inst = model_handler.get_model_to_train(self.model_inst)
         self.optimizer = self.model_module[args.optimizer]()

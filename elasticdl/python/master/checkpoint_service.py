@@ -13,6 +13,8 @@ class Checkpoint(object):
         self.file = file
 
 
+# TODO Abstract checkpoint service to save_utils in common
+# @qinlong.wql
 class CheckpointService(object):
     """Checkpoint Service implementation"""
 
@@ -140,3 +142,30 @@ class CheckpointService(object):
         if not self._checkpoint_list:
             raise RuntimeError("No model checkpoint available")
         return self._checkpoint_list[-1].version
+
+
+def get_valid_lastest_version_dir(checkpoint_dir):
+    if not checkpoint_dir or not os.path.exists(checkpoint_dir):
+        return None
+
+    version_folders = os.listdir(checkpoint_dir)
+    if not version_folders:
+        return None
+    version_num = [int(v.split("-")[-1]) for v in version_folders]
+    version_folder_pairs = sorted(
+        zip(version_num, version_folders), reverse=True
+    )
+    for version, folder in version_folder_pairs:
+        folder_dir = os.path.join(checkpoint_dir, folder)
+        if check_checkpoint_valid(folder_dir):
+            return folder_dir
+    return None
+
+
+def check_checkpoint_valid(folder_dir):
+    shard_files = os.listdir(folder_dir)
+    if not shard_files:
+        return False
+    shard_file_prefix = shard_files[0].split(".")[0]
+    expected_shard_num = int(shard_file_prefix.split("-")[-1])
+    return expected_shard_num == len(shard_files)

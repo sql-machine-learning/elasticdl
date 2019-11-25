@@ -123,7 +123,7 @@ class Worker(object):
             else None
         )
         self._model_handler = ModelHandler.get_model_handler(
-            self._distribution_strategy, stub=self._stub
+            self._distribution_strategy, checkpoint_dir=args.checkpoint_dir
         )
         model_inst = self._model_handler.get_model_to_train(model_inst)
         self.set_model(model_inst)
