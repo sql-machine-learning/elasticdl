@@ -375,7 +375,6 @@ class Master(object):
             init_var=self.model_inst.trainable_variables
             if self.model_inst.built
             else [],
-            embedding_dims=self.embedding_dims,
             checkpoint_service=self.checkpoint_service,
             evaluation_service=self.evaluation_service,
             lr_staleness_modulation=args.lr_staleness_modulation,
