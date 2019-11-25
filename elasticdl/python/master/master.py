@@ -299,20 +299,9 @@ class Master(object):
             ],
         )
         master_servicer = MasterServicer(
-            args.grads_to_wait,
             args.minibatch_size,
-            self.optimizer,
             self.task_d,
-            init_var=self.model_inst.trainable_variables
-            if self.model_inst.built
-            else [],
-            embedding_dims=self.embedding_dims,
-            checkpoint_filename_for_init=args.checkpoint_filename_for_init,
-            checkpoint_service=self.checkpoint_service,
             evaluation_service=self.evaluation_service,
-            embedding_service_endpoint=self.embedding_service_endpoint,
-            lr_staleness_modulation=args.lr_staleness_modulation,
-            use_async=args.use_async,
         )
         elasticdl_pb2_grpc.add_MasterServicer_to_server(
             master_servicer, server
@@ -335,8 +324,6 @@ class Master(object):
                 self.master_addr,
                 "--job_type",
                 self.job_type,
-                "--embedding_service_endpoint",
-                str(self.embedding_service_endpoint),
             ]
             worker_args.extend(build_arguments_from_parsed_result(args))
 

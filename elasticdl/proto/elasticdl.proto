@@ -90,15 +90,6 @@ message GetTaskRequest {
     TaskType task_type = 2;
 }
 
-message GetModelRequest {
-    MethodType method = 1;
-    int32 version = 2;
-}
-
-message ReportVariableRequest {
-    repeated Tensor variable = 1;
-}
-
 message ReportTaskResultRequest {
     // Task id assigned by master.
     int32 task_id = 1;
