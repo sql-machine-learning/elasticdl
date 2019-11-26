@@ -179,7 +179,7 @@ class Client(object):
         try:
             return self.client.read_namespaced_service(
                 # PS service has the same name as pod name
-                name=self.get_ps_pod_name(ps_id),
+                name=self.get_ps_service_name(ps_id),
                 namespace=self.namespace,
             )
         except client.api_client.ApiException as e:
@@ -190,7 +190,7 @@ class Client(object):
         try:
             return self.client.read_namespaced_service(
                 # Worker service has the same name as pod name
-                name=self.get_worker_pod_name(worker_id),
+                name=self.get_worker_service_name(worker_id),
                 namespace=self.namespace,
             )
         except client.api_client.ApiException as e:
