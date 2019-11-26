@@ -95,7 +95,7 @@ class ServicerTest(unittest.TestCase):
             if task.start == 0 and tasks[task_key] == 1:
                 # Simulate error reports.
                 report.err_message = "Worker error"
-            master.ReportTaskResult(report, None)
+            master.report_task_result(report, None)
 
         self.assertDictEqual(
             {
