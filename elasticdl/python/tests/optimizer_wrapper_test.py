@@ -25,11 +25,11 @@ from elasticdl.python.common.model_utils import (
     load_module,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.master.optimizer_wrapper import OptimizerWrapper
 from elasticdl.python.ps.embedding_table import (
     EmbeddingTable,
     get_slot_table_name,
 )
+from elasticdl.python.ps.optimizer_wrapper import OptimizerWrapper
 from elasticdl.python.ps.parameters import Parameters
 
 

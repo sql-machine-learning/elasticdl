@@ -1,6 +1,4 @@
-import os
 import random
-import tempfile
 import unittest
 from collections import defaultdict
 
@@ -9,7 +7,6 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.tensor import tensor_pb_to_ndarray
-from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
@@ -44,12 +41,8 @@ class SimpleModel(tf.keras.Model):
 class ServicerTest(unittest.TestCase):
     def testGetEmptyTask(self):
         master = MasterServicer(
-            2,
             3,
-            None,
             _TaskDispatcher({}, {}, {}, records_per_task=3, num_epochs=2),
-            init_var=[],
-            checkpoint_service=CheckpointService("", 0, 0, False),
             evaluation_service=None,
         )
 
@@ -76,73 +69,6 @@ class ServicerTest(unittest.TestCase):
             exp_value = expected[var.name]
             np.testing.assert_array_equal(exp_value, tensor_pb_to_ndarray(var))
 
-    def testGetModel(self):
-        master = MasterServicer(
-            2,
-            3,
-            None,
-            None,
-            init_var=[],
-            checkpoint_service=CheckpointService("", 0, 0, False),
-            evaluation_service=None,
-        )
-        master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
-        # Now master model is version 0
-        self.assertEqual(0, master._version)
-
-        # Get version 0 with minimum method
-        req = elasticdl_pb2.GetModelRequest()
-        req.version = 0
-        req.method = elasticdl_pb2.MINIMUM
-        model = master.GetModel(req, None)
-        expected_value = {"x": np.array([1.0, 1.0])}
-        self._check_get_model_response(0, expected_value, model)
-
-        # Increase master model version to 1, but still request
-        # version 0 with minimum method, we should get version 1
-        master._version = 1
-        master.set_model_var("x", np.array([2.0, 2.0], dtype=np.float32))
-        master.set_model_var("y", np.array([12.0, 13.0], dtype=np.float32))
-        model = master.GetModel(req, None)
-        expected_value = {
-            "x": np.array([2.0, 2.0]),
-            "y": np.array([12.0, 13.0]),
-        }
-        self._check_get_model_response(1, expected_value, model)
-
-        # Try to get version 2, it should raise exception.
-        req.version = 2
-        self.assertRaises(ValueError, master.GetModel, req, None)
-
-        # Get fixed version 1
-        req.method = elasticdl_pb2.FIXED
-        req.version = 1
-        model = master.GetModel(req, None)
-        self._check_get_model_response(1, expected_value, model)
-
-        # Previous model unavailable due to no checkpoint
-        req.version = 0
-        model = master.GetModel(req, None)
-        self.assertFalse(model.param)
-
-        # Previous model available through checkpoint
-        with tempfile.TemporaryDirectory() as tempdir:
-            chk_dir = os.path.join(tempdir, "testGetModel")
-            os.makedirs(chk_dir)
-            req.version = master._version
-            req.method = elasticdl_pb2.MINIMUM
-            model = master.GetModel(req, None)
-            master._checkpoint_service = CheckpointService(
-                chk_dir, 2, 5, False
-            )
-            master._checkpoint_service.save(master._version, model, False)
-            master._version = 2
-            master.set_model_var("z", np.array([2.0, 2.0], dtype=np.float32))
-            req.version = 1
-            req.method = elasticdl_pb2.FIXED
-            model = master.GetModel(req, None)
-            self._check_get_model_response(1, expected_value, model)
-
     def testReportTaskResult(self):
         task_d = _TaskDispatcher(
             {"shard_1": (0, 10), "shard_2": (0, 9)},
@@ -151,15 +77,7 @@ class ServicerTest(unittest.TestCase):
             records_per_task=3,
             num_epochs=2,
         )
-        master = MasterServicer(
-            3,
-            3,
-            None,
-            task_d,
-            init_var=[],
-            checkpoint_service=CheckpointService("", 0, 0, False),
-            evaluation_service=None,
-        )
+        master = MasterServicer(3, task_d, evaluation_service=None,)
 
         # task to number of runs.
         tasks = defaultdict(int)
@@ -190,37 +108,6 @@ class ServicerTest(unittest.TestCase):
                 ("shard_2", 6, 9): 2,
             },
             tasks,
-        )
-
-    def testUserDefinedModel(self):
-        master = MasterServicer(
-            2,
-            3,
-            None,
-            None,
-            init_var=[],
-            checkpoint_service=CheckpointService("", 0, 0, False),
-            evaluation_service=None,
-        )
-        req = elasticdl_pb2.GetModelRequest()
-        req.method = elasticdl_pb2.MINIMUM
-        req.version = 0
-
-        model_inst = SimpleModel()
-        model_inst.build(SimpleModel.input_shapes())
-        for variable in model_inst.trainable_variables:
-            master.set_model_var(variable.name, variable.numpy())
-        # Get version 0
-        model = master.GetModel(req, None)
-        self.assertEqual(0, model.version)
-        self.assertEqual(
-            [
-                "dense_1/bias:0",
-                "dense_1/kernel:0",
-                "dense_2/bias:0",
-                "dense_2/kernel:0",
-            ],
-            sorted([v.name for v in model.param]),
         )
 
 

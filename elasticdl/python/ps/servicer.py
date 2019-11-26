@@ -9,7 +9,7 @@ from elasticdl.python.common.tensor import (
     emplace_tensor_pb_from_ndarray,
     serialize_tensor,
 )
-from elasticdl.python.master.optimizer_wrapper import OptimizerWrapper
+from elasticdl.python.ps.optimizer_wrapper import OptimizerWrapper
 
 
 class PserverServicer(elasticdl_pb2_grpc.PserverServicer):

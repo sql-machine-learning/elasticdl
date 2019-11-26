@@ -1,5 +1,3 @@
-import os
-import tempfile
 import unittest
 
 import numpy as np
@@ -8,7 +6,6 @@ from tensorflow.keras.metrics import Accuracy, MeanSquaredError
 
 from elasticdl.python.common.constants import MetricsDictKey
 from elasticdl.python.common.tensor import Tensor
-from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.master.evaluation_service import (
     EvaluationService,
     _EvaluationJob,
@@ -106,60 +103,48 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertAlmostEqual(10.125, evaluation_metrics.get("mse").numpy())
 
     def testEvaluationService(self):
-        with tempfile.TemporaryDirectory() as tempdir:
-            chkp_dir = os.path.join(tempdir, "testEvaluationService")
-            checkpoint_service = CheckpointService(chkp_dir, 5, 5, True)
-            task_d = _TaskDispatcher(
-                {"f1": (0, 10), "f2": (0, 10)},
-                {"f1": (0, 10), "f2": (0, 10)},
-                {},
-                3,
-                1,
+        task_d = _TaskDispatcher(
+            {"f1": (0, 10), "f2": (0, 10)},
+            {"f1": (0, 10), "f2": (0, 10)},
+            {},
+            3,
+            1,
+        )
+
+        # Evaluation metrics will not be accepted if no evaluation ongoing
+        evaluation_service = EvaluationService(
+            None, task_d, 10, 20, 0, False, _eval_metrics_fn,
+        )
+        model_outputs = [
+            Tensor(
+                np.array([1, 6, 3], np.float32),
+                name=MetricsDictKey.MODEL_OUTPUT,
+            ).to_tensor_pb()
+        ]
+        labels = Tensor(np.array([1, 0, 3], np.float32)).to_tensor_pb()
+
+        self.assertFalse(
+            evaluation_service.report_evaluation_metrics(
+                1, model_outputs, labels
             )
+        )
 
-            # Evaluation metrics will not be accepted if no evaluation ongoing
-            evaluation_service = EvaluationService(
-                None, task_d, 10, 20, 0, False, _eval_metrics_fn,
-            )
-            model_outputs = [
-                Tensor(
-                    np.array([1, 6, 3], np.float32),
-                    name=MetricsDictKey.MODEL_OUTPUT,
-                ).to_tensor_pb()
-            ]
-            labels = Tensor(np.array([1, 0, 3], np.float32)).to_tensor_pb()
+        _ = MasterServicer(2, task_d, evaluation_service=evaluation_service,)
 
-            self.assertFalse(
-                evaluation_service.report_evaluation_metrics(
-                    1, model_outputs, labels
-                )
-            )
+        # No checkpoint available
+        self.assertFalse(evaluation_service.try_to_create_new_job())
 
-            # No checkpoint available
-            self.assertFalse(evaluation_service.try_to_create_new_job())
+        # Add an evaluation task and we can start evaluation
+        self.assertEqual(8, len(task_d._todo))
+        evaluation_service.add_evaluation_task(False)
+        self.assertEqual(8, len(task_d._eval_todo))
+        self.assertFalse(evaluation_service._eval_job.finished())
 
-            master = MasterServicer(
-                2,
-                2,
-                None,
-                task_d,
-                init_var=[],
-                checkpoint_service=checkpoint_service,
-                evaluation_service=evaluation_service,
-            )
-            master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
-
-            # Add an evaluation task and we can start evaluation
-            self.assertEqual(8, len(task_d._todo))
-            evaluation_service.add_evaluation_task(False)
-            self.assertEqual(8, len(task_d._eval_todo))
+        for i in range(8):
             self.assertFalse(evaluation_service._eval_job.finished())
-
-            for i in range(8):
-                self.assertFalse(evaluation_service._eval_job.finished())
-                evaluation_service.complete_task()
-            self.assertTrue(evaluation_service._eval_job is None)
-            self.assertFalse(evaluation_service.try_to_create_new_job())
+            evaluation_service.complete_task()
+        self.assertTrue(evaluation_service._eval_job is None)
+        self.assertFalse(evaluation_service.try_to_create_new_job())
 
     def testEvaluationOnly(self):
         task_d = _TaskDispatcher({}, {"f1": (0, 10), "f2": (0, 10)}, {}, 3, 1)
@@ -169,6 +154,7 @@ class EvaluationServiceTest(unittest.TestCase):
         )
         task_d.set_evaluation_service(evaluation_service)
 
+<<<<<<< HEAD
         master = MasterServicer(
             2,
             2,
@@ -179,6 +165,9 @@ class EvaluationServiceTest(unittest.TestCase):
             evaluation_service=evaluation_service,
         )
         master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
+=======
+        _ = MasterServicer(2, task_d, evaluation_service=evaluation_service,)
+>>>>>>> develop
 
         self.assertEqual(8, len(task_d._eval_todo))
         for i in range(8):
@@ -231,3 +220,7 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertEqual(
             evaluation_service._eval_checkpoint_versions, [20, 30]
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

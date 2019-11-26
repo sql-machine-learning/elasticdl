@@ -599,13 +599,6 @@ def parse_worker_args(worker_args=None):
     parser.add_argument("--job_type", help="Job type", required=True)
     parser.add_argument("--master_addr", help="Master ip:port")
     parser.add_argument(
-        "--embedding_service_endpoint",
-        type=str,
-        default="{}",
-        help="The endpoint of embedding service, "
-        "e.g. \"{'ip_0': [port_0,port_1]}\"",
-    )
-    parser.add_argument(
         "--prediction_outputs_processor",
         help="The name of the prediction output processor class "
         "defined in the model definition file.",
