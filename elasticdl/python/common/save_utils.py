@@ -6,8 +6,8 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.tensor import Tensor
-from elasticdl.python.ps.parameters import Parameters
 from elasticdl.python.ps.embedding_table import create_embedding_table
+from elasticdl.python.ps.parameters import Parameters
 
 
 def save_pb_to_file(pb_obj, file_name):
@@ -237,8 +237,7 @@ class CheckpointSaver(object):
             for embedding_info_pb in model_pb.embedding_table_info:
                 embedding_table = create_embedding_table(embedding_info_pb)
                 embedding_tables.setdefault(
-                    embedding_table.name,
-                    embedding_table
+                    embedding_table.name, embedding_table
                 )
 
             (
