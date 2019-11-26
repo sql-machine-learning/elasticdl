@@ -243,7 +243,10 @@ def add_common_params(parser):
         "--yaml",
         type=str,
         default="",
-        help="File path for dumping ElasticDL job YAML specification. Note that, if users specify --yaml, the client wouldn't submit the job automatically, and users need to launch the job through command `kubectl create -f path_to_yaml_file`.",
+        help="File path for dumping ElasticDL job YAML specification. "
+        "Note that, if users specify --yaml, the client wouldn't submit "
+        "the job automatically, and users need to launch the job through "
+        "command `kubectl create -f path_to_yaml_file`.",
     )
 
 

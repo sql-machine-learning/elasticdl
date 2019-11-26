@@ -166,7 +166,8 @@ def _submit_job(image_name, client_args, container_args):
             envs=parse_envs(client_args.envs),
         )
         logger.info(
-            "ElasticDL job %s was successfully submitted. The master pod is: %s."
+            "ElasticDL job %s was successfully submitted. "
+            "The master pod is: %s."
             % (client_args.job_name, client.get_master_pod_name())
         )
 
