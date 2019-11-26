@@ -164,8 +164,8 @@ def add_common_params(parser):
     )
     parser.add_argument(
         "--ps_resource_limit",
-        type=str,
         default="",
+        type=str,
         help="The maximal resource required by worker, "
         "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1,"
         "default to worker_resource_request",
@@ -178,6 +178,7 @@ def add_common_params(parser):
     parser.add_argument(
         "--volume",
         default="",
+        type=str,
         help="The Kubernetes volume information, "
         "the supported volumes are `persistentVolumeClaim` and `hostPath`,"
         'e.g. "claim_name=c1,mount_path=/path1" for `persistentVolumeClaim`,'
