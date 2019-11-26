@@ -90,15 +90,6 @@ message GetTaskRequest {
     TaskType task_type = 2;
 }
 
-message GetModelRequest {
-    MethodType method = 1;
-    int32 version = 2;
-}
-
-message ReportVariableRequest {
-    repeated Tensor variable = 1;
-}
-
 message ReportTaskResultRequest {
     // Task id assigned by master.
     int32 task_id = 1;
@@ -129,8 +120,6 @@ message ReportVersionRequest {
 
 service Master {
     rpc GetTask(GetTaskRequest) returns (Task);
-    rpc GetModel(GetModelRequest) returns (Model);
-    rpc ReportVariable(ReportVariableRequest) returns (google.protobuf.Empty);
     rpc ReportEvaluationMetrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsResponse);
     rpc ReportTaskResult(ReportTaskResultRequest) returns (google.protobuf.Empty);
     rpc ReportVersion(ReportVersionRequest) returns (google.protobuf.Empty);
