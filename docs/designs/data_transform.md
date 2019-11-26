@@ -12,28 +12,16 @@ Consistency between offline and online is the key point of data transform. Users
 
 ## Transform Expression in SQLFlow
 
-We can extend the SQLFlow syntax and add **TO TRANSFORM** keyword to describe the transform process. Let's take the following SQL expression for example. It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is **TO TRANSFORM STANDARDIZE(age) as age_std, NORMALIZE(capital_gain) as capital_gain_norm, BUCKETIZED(hours_per_week, bucket_num=10) as hours_per_week_bkt**. It will standardize the column *age* to the column *age_std*, normalize the column *capital_gain* to *capital_gain_norm*, bucketize the column *hours_per_week* to 10 buckets to the column *hours_per_week_bkt*. The output of transform will be passed to the **COLUMN** expression.  
-We add some built-in transform API and users can use them directly in the TRANSFORM expression. The API set contains NORMALIZE, STANDARDIZE, BUCKETIZED, LOG and more to be added in the future.  
-
-```SQL
-SELECT *
-FROM census_income
-TO TRANSFORM STANDARDIZE(age) as age_std, NORMALIZE(capital_gain) as capital_gain_norm, BUCKETIZED(hours_per_week, bucket_num=10) as hours_per_week_bkt
-TO TRAIN DNNClassifier
-WITH model.hidden_units = [10, 20]
-COLUMNS NUMERIC(age_std), NUMERIC(capital_gain_norm), EMBEDDING(hours_per_week_bkt, dim=128)
-LABEL label
-```
+We can extend the SQLFlow syntax and add the built-in transform API in the COLUMN expression to describe the transform process. Let's take the following SQL expression for example. It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is **NUMERIC(STANDARDIZE(age)), NUMERIC(NORMALIZE(capital_gain)), EMBEDDING(hours_per_week, bucket_num=10, dim=128)**. It will standardize the column *age*, normalize the column *capital_gain*, bucketize the column *hours_per_week* to 10 buckets.  
+We will implement some built-in transform API. The API set contains NORMALIZE, STANDARDIZE, BUCKETIZED, LOG and more to be added in the future.  
 
 ```SQL
 SELECT *
 FROM census_income
 TO TRAIN DNNClassifier
 WITH model.hidden_units = [10, 20]
-COLUMNS 
-NUMERIC(STANDARDIZE(age)),
-NUMERIC(NORMALIZE(capital_gain)),
-EMBEDDING(hours_per_week, bucket_num=10, dim=128)
+COLUMNS
+NUMERIC(STANDARDIZE(age)), NUMERIC(NORMALIZE(capital_gain)), EMBEDDING(hours_per_week, bucket_num=10, dim=128)
 LABEL label
 ```
 
@@ -55,21 +43,23 @@ In the feature column generation step, we will format the feature column templat
 The generated feature column definitions will be passed to the next couler step: model training. We combine them with the COLUMN expression to generated the final feature column definitions and then pass to the model. Let's take **COLUMNS NUMERIC(age_std)** for example, the final definition will be **numeric_column('age', normalizer_fn=lambda x: x - 18.0 / 6.0)**  
 
 We plan to implement the following common used transform APIs at the first step. And we will add more according to further requirements.  
-|            Name             |                      Feature Column Template                                   |      Analyzer      |
-|:---------------------------:|:------------------------------------------------------------------------------:|:------------------:|
-|       STANDARDIZE(x)        | numeric_column({var_name}, normalizer_fn=lambda x : x - {mean} / {std})        |    MEAN, STDDEV    |
-|        NORMALIZE(x)         | numeric_column({var_name}, normalizer_fn=lambda x : x - {min} / {max} - {min}) |      MAX, MIN      |
-|           LOG(x)            | numeric_column({var_name}, normalizer_fn=lambda x : tf.math.log(x))            |         N/A        |
-| BUCKETIZE(x, bucket_num=y)  | bucketized_column({var_name}, boundaries={percentiles})                        |     PERCENTILE     |
+|            Name            |                      Feature Column Template                                   |      Analyzer      |
+|:--------------------------:|:------------------------------------------------------------------------------:|:------------------:|
+|       STANDARDIZE(x)       | numeric_column({var_name}, normalizer_fn=lambda x : x - {mean} / {std})        |    MEAN, STDDEV    |
+|        NORMALIZE(x)        | numeric_column({var_name}, normalizer_fn=lambda x : x - {min} / {max} - {min}) |      MAX, MIN      |
+|           LOG(x)           | numeric_column({var_name}, normalizer_fn=lambda x : tf.math.log(x))            |         N/A        |
+| BUCKETIZE(x, bucket_num=y) | bucketized_column({var_name}, boundaries={percentiles})                        |     PERCENTILE     |
 
 ## Further Consideration
 
 In the design above, we generated the concrete feature column definition for data transformation in the Transform stage. The actual transform logic on the raw data executes along with the model training process. Based on this design, we can further consider transforming the raw data and writing the transformed result into a new table in the stage.  
 After analyzing the data, we construct the TF graph for transform instead of feature column definition and export it to SavedModel. And then we submit a data processing job to transform the raw data by executing UDF with the SavedModel. The whole process is also matched with the TFX pipeline.  
 This solution can bring the following benifits:
+
 1. We can reuse the transformed data in the temporary table to execute multipe model training run for different hyperparameter combinations and all the epochs. Data transformation is only executed once.
 2. We can support more flexible transform logic such as inter column calculation. Feature column has some limit on the inter column calculation. Please check the [Wiki](https://github.com/sql-machine-learning/elasticdl/wiki/ElasticDL-TF-Transform-Explore#inter-columns-calculation) for more details.
 
 We need figure out the following points for this further solution:
-1. Model Export: Upgrade keras API to support export the transform logic and the model definition together to SavedModel for inference. [Issue](https://github.com/tensorflow/transform/issues/150)
-2. Transform Execution: We will transform the data records one by one using the transform logic in the SavedModel format and then write to a new table. We also need write a Jar, it packages the TensorFlow lib, loads the SavedModel into memory and process the input data. And then we register it as UDF in Hive or MaxCompute and use it to transform the data.
+
+1. Model Export: Upgrade keras API to support exporting the transform logic and the model definition together to SavedModel for inference. [Issue](https://github.com/tensorflow/transform/issues/150)
+2. Transform Execution: We will transform the data records one by one using the transform logic in the SavedModel format and then write to a new table. We also need write a Jar, it packages the TensorFlow library, loads the SavedModel into memory and processes the input data. And then we register it as UDF in Hive or MaxCompute and use it to transform the data.  
