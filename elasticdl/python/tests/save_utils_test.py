@@ -50,9 +50,9 @@ class SaveUtilsTest(unittest.TestCase):
 
             for var in init_var:
                 params.non_embedding_params[var.name] = var
-            pb_model = params.to_model_pb()
+            model_pb = params.to_model_pb()
 
-            checkpoint_saver.save(0, pb_model, False)
+            checkpoint_saver.save(0, model_pb, False)
 
             ckpt_version_dir = os.path.join(ckpt_dir, "version-0")
             restore_params = CheckpointSaver.restore_params_from_checkpoint(

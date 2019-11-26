@@ -9,17 +9,18 @@ from elasticdl.python.common.tensor import Tensor
 from elasticdl.python.ps.parameters import Parameters
 
 
-def save_pb_to_file(pb_model, file_name):
-    encoded_model = pb_model.SerializeToString()
+def save_pb_to_file(pb_obj, file_name):
+    """Save a protobuf object to file"""
+    encoded_model = pb_obj.SerializeToString()
     with open(file_name, "wb") as f:
         f.write(encoded_model)
 
 
-def load_pb_from_file(file_name):
-    pb_model = elasticdl_pb2.Model()
+def load_pb_from_file(pb_obj, file_name):
+    """Load a protobuf object from a file"""
     with open(file_name, "rb") as f:
-        pb_model.ParseFromString(f.read())
-    return pb_model
+        pb_obj.ParseFromString(f.read())
+    return pb_obj
 
 
 def _get_params_shard_from_pb(model_pb, shard_index, shard_num):
@@ -127,7 +128,7 @@ class CheckpointSaver(object):
 
         Args:
             version (int): iteration steps
-            model: a pb_model
+            model: a model protobuf instance
             is_eval_checkpoint (bool): if True, the model will be saved to
                 a temporary directory.
             shard_index (int): default 0. The shard index in all
@@ -218,7 +219,8 @@ class CheckpointSaver(object):
         version = None
         for shard_file in variable_shard_files:
             shard_file_path = os.path.join(checkpoint_dir, shard_file)
-            model_pb = load_pb_from_file(shard_file_path)
+            model_pb = elasticdl_pb2.Model()
+            model_pb = load_pb_from_file(model_pb, shard_file_path)
             if version is None:
                 version = model_pb.version
             elif version != model_pb.version:
