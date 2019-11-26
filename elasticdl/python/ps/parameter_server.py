@@ -59,7 +59,7 @@ class ParameterServer(object):
         )
         self.parameters.init_status = True
         self.logger.info(
-            "The version of restored parameters is %s"
+            "The version of restored parameters is %d"
             % self.parameters.version
         )
 
