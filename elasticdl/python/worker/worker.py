@@ -275,7 +275,7 @@ class Worker(object):
         report.err_message = err_msg
         if isinstance(exec_counters, dict):
             report.exec_counters.update(exec_counters)
-        return self._stub.ReportTaskResult(report)
+        return self._stub.report_task_result(report)
 
     def init_ps_var_partition(self):
         ps_vars = {}
@@ -432,7 +432,7 @@ class Worker(object):
         tensor = Tensor(values=labels)
         serialize_tensor(tensor, req.labels)
         req.model_version = self._model_version if self._use_multi_ps else -1
-        res = self._stub.ReportEvaluationMetrics(req)
+        res = self._stub.report_evaluation_metrics(req)
         return res.accepted, res.model_version
 
     def report_prediction_outputs(self, predictions):

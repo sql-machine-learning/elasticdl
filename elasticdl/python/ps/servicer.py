@@ -188,7 +188,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
     def _report_version(self, version):
         req = elasticdl_pb2.ReportVersionRequest()
         req.model_version = version
-        self._master_stub.ReportVersion(req)
+        self._master_stub.report_version(req)
 
     def wrap_optimizer_and_set_slot(self):
         if not self._use_wrap_opt:
