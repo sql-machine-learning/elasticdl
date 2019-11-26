@@ -1,13 +1,38 @@
 import abc
 
+import numpy as np
 import tensorflow as tf
 
-from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common import model_utils
 from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.common.tensor import Tensor
+from elasticdl.python.common.model_utils import (
+    restore_model_params_from_checkpoint,
+)
 from elasticdl.python.elasticdl.layers.embedding import Embedding
+from elasticdl.python.master.checkpoint_service import (
+    get_valid_lastest_version_dir,
+)
+from elasticdl.python.ps.embedding_table import EmbeddingTable
+
+
+def _get_trained_params_from_checkpoint(checkpoint_dir):
+    parameters = restore_model_params_from_checkpoint(checkpoint_dir, 0, 1)
+
+    trained_params = parameters.non_embedding_params
+    for name, table in parameters.embedding_params.items():
+        # The name of variable in a tf.keras.layers.Embedding layer is
+        # "{layer_name}/embeddings:0"
+        var_name = name + "/embeddings:0"
+        trained_params[var_name] = table
+    return trained_params
+
+
+def _convert_embedding_vector_to_variable(embedding_shape, embedding_table):
+    embedding_ids = list(embedding_table.embedding_vectors.keys())
+    embedding_values = list(embedding_table.embedding_vectors.values())
+    embedding_weights = np.zeros(embedding_shape)
+    embedding_weights[embedding_ids] = embedding_values
+    return embedding_weights
 
 
 class ModelHandler(metaclass=abc.ABCMeta):
@@ -42,20 +67,22 @@ class ModelHandler(metaclass=abc.ABCMeta):
         """
 
     @classmethod
-    def get_model_handler(cls, distribution_strategy=None, stub=None):
+    def get_model_handler(
+        cls, distribution_strategy=None, checkpoint_dir=None
+    ):
         """Create a model handler to process the model for the
         distributed strategy.
 
         Args:
             distribution_strategy (string): distribution strategy name
-            stub: A stub to communicate with parameter server(s) or the master,
-            e.g. `elasticdl_pb2_grpc.MasterStub`.
+            checkpoint_dir: Checkpoint directory to save model parametes
+                during training.
 
         Return:
             ModelHandler subclass instance.
         """
         if distribution_strategy == DistributionStrategy.PARAMETER_SERVER:
-            return ParameterServerModelHandler(stub=stub)
+            return ParameterServerModelHandler(checkpoint_dir=checkpoint_dir)
         elif distribution_strategy == DistributionStrategy.ALLREDUCE:
             logger.warning(
                 "Allreduce distribution strategy is not supported yet. "
@@ -87,13 +114,13 @@ class ParameterServerModelHandler(ModelHandler):
     pull trained parameters from parameter server(s) for the model.
     """
 
-    def __init__(self, stub=None):
+    def __init__(self, checkpoint_dir=None):
         """
         Arguments:
-            stub: A stub to get parameters from parameter server(s) or
-            the master,e.g. `elasticdl_pb2_grpc.MasterStub`
+            checkpoint_dir: A checkpoint directory to save all model
+                parameters during training.
         """
-        self._stub = stub
+        self._checkpoint_dir = checkpoint_dir
 
     def get_model_to_train(self, model):
         """Replace the tf.keras.layers.Embedding layer in the model with
@@ -119,9 +146,20 @@ class ParameterServerModelHandler(ModelHandler):
             # can be consumed by tf-serving
             model._build_model_with_inputs(inputs=dataset, targets=None)
 
-        trained_params = self._get_trained_params(model)
+        checkpoint_dir = get_valid_lastest_version_dir(self._checkpoint_dir)
+        if checkpoint_dir is None:
+            logger.warning("No available checkpoint to export model")
+            return model
+
+        trained_params = _get_trained_params_from_checkpoint(checkpoint_dir)
         for var in model.trainable_variables:
-            var.assign(trained_params[var.name])
+            if isinstance(trained_params[var.name], EmbeddingTable):
+                embedding_params = _convert_embedding_vector_to_variable(
+                    var.shape, trained_params[var.name]
+                )
+                var.assign(embedding_params)
+            else:
+                var.assign(trained_params[var.name].numpy())
         return model
 
     def _restore_keras_model_def(self, model):
@@ -201,39 +239,3 @@ class ParameterServerModelHandler(ModelHandler):
                 )
                 setattr(model, name, embedding_layer)
         return model
-
-    def _get_trained_params(self, model):
-        """Get all trained variable values of the model
-        """
-        trained_params = self._get_non_embedding_variables(
-            -1, elasticdl_pb2.MINIMUM
-        )
-        trained_embedding_params = self._get_trained_embedding_params(model)
-        trained_params.update(trained_embedding_params)
-        return trained_params
-
-    @staticmethod
-    def _get_trained_embedding_params(model):
-        """Get trained embedding table from PS
-        """
-        embedding_params = {}
-        embedding_layers = model_utils.find_layer(model, Embedding)
-        for _ in embedding_layers:
-            # TODO get all embedding vectors of the embedding layer from PS
-            pass
-        return embedding_params
-
-    # TODO: Get model from parameter servers not the master if
-    # parameter servers are ready.
-    def _get_non_embedding_variables(self, version, method):
-        """Get model from master, and update model_version
-        """
-        req = elasticdl_pb2.GetModelRequest()
-        req.version = version
-        req.method = method
-        model = self._stub.GetModel(req, None)
-        variables = {}
-        for tensor_pb in model.param:
-            tensor = Tensor.from_tensor_pb(tensor_pb)
-            variables[tensor.name] = tensor.to_ndarray()
-        return variables

@@ -6,7 +6,6 @@ import tensorflow as tf
 from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.master.servicer import MasterServicer
 
 
 class CustomModel(tf.keras.models.Model):
@@ -115,11 +114,9 @@ class DefaultModelHandlerTest(unittest.TestCase):
 class ParameterSeverModelHandlerTest(unittest.TestCase):
     def setUp(self):
         tf.keras.backend.clear_session()
-        self.master = MasterServicer(2, None, evaluation_service=None,)
-        self.master._version = 1
         self.model_handler = ModelHandler.get_model_handler(
             distribution_strategy=DistributionStrategy.PARAMETER_SERVER,
-            stub=self.master,
+            checkpoint_dir="elasticdl/python/tests/testdata/functional_ckpt/",
         )
 
     def test_get_model_to_train(self):
@@ -128,13 +125,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
         self.assertEqual(type(model_inst.layers[1]), Embedding)
 
     def test_get_model_to_export(self):
-        return
-        # TODO(qijun) export model from worker
         model_inst = custom_model_with_embedding()
-        trained_params = _mock_model_trained_params(model_inst)
-        for name, value in trained_params.items():
-            self.master.set_model_var(name, value)
-
         train_model = self.model_handler.get_model_to_train(model_inst)
         export_model = self.model_handler.get_model_to_export(
             train_model, dataset=None
@@ -145,8 +136,9 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
         self.assertEqual(result[0][0], 3.0)
 
     def test_get_subclass_model_to_export(self):
-        # TODO(qijun) export model from worker
-        return
+        self.model_handler._checkpoint_dir = (
+            "elasticdl/python/tests/testdata/subclass_ckpt/"
+        )
 
         def _get_dataset():
             dataset = tf.data.Dataset.from_tensor_slices(
@@ -157,17 +149,6 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
 
         model_inst = CustomModel()
         dataset = _get_dataset()
-
-        trained_params = {
-            "custom_model/embedding/embeddings:0": np.ones(
-                (4, 2), dtype="float32"
-            ),
-            "custom_model/dense/kernel:0": np.ones((2, 1), dtype="float32"),
-            "custom_model/dense/bias:0": np.ones((1), dtype="float32"),
-        }
-
-        for name, value in trained_params.items():
-            self.master.set_model_var(name, value)
 
         train_model = self.model_handler.get_model_to_train(model_inst)
         self.assertEqual(type(train_model.embedding), Embedding)

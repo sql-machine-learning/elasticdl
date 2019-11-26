@@ -119,7 +119,7 @@ class Worker(object):
             else None
         )
         self._model_handler = ModelHandler.get_model_handler(
-            self._distribution_strategy, stub=self._stub
+            self._distribution_strategy, checkpoint_dir=args.checkpoint_dir
         )
         model_inst = self._model_handler.get_model_to_train(model_inst)
         self.set_model(model_inst)
@@ -386,10 +386,15 @@ class Worker(object):
             report_future = self._ps_stubs[ps_id].push_gradient.future(req)
             report_futures.append(report_future)
 
+        accepted = False
+        max_version = -1
         for report_future in report_futures:
             res = report_future.result()
-        # TODO: choose the last response temporarily
-        return res.accepted, res.model_version
+            if res.accepted:
+                accepted = True
+            if res.model_version > max_version:
+                max_version = res.model_version
+        return accepted, max_version
 
     # TODO: Reuse common code in report_gradient_to_ps and
     # report_gradient_to_master

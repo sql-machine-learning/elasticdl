@@ -27,6 +27,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         checkpoint_service=None,
         ps_id=None,
         num_ps_pods=None,
+        checkpoint_dir_for_init=None,
     ):
         if master_channel is None:
             self._master_stub = None
