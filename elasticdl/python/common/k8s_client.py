@@ -14,6 +14,8 @@ ELASTICDL_APP_NAME = "elasticdl"
 ELASTICDL_JOB_KEY = "elasticdl-job-name"
 ELASTICDL_REPLICA_TYPE_KEY = "elasticdl-replica-type"
 ELASTICDL_REPLICA_INDEX_KEY = "elasticdl-replica-index"
+_PS_SERVICE_PORT = 2222
+_WORKER_SERVICE_PORT = 3333
 
 
 def get_master_pod_name(job_name):
@@ -89,11 +91,22 @@ class Client(object):
             except Exception:
                 traceback.print_exc()
 
+    def _get_service_address(self, service_name, port):
+        return "%s.%s.svc:%d" % (service_name, self.namespace, port)
+
     def get_master_pod_name(self):
         return get_master_pod_name(self.job_name)
 
     def get_worker_pod_name(self, worker_id):
         return get_worker_pod_name(self.job_name, worker_id)
+
+    def get_worker_service_name(self, worker_id):
+        return self.get_worker_pod_name(worker_id)
+
+    def get_worker_service_address(self, worker_id):
+        return self._get_service_address(
+            self.get_worker_service_name(worker_id), _WORKER_SERVICE_PORT
+        )
 
     def get_ps_pod_name(self, ps_id):
         return get_ps_pod_name(self.job_name, ps_id)
@@ -102,10 +115,8 @@ class Client(object):
         return self.get_ps_pod_name(ps_id)
 
     def get_ps_service_address(self, ps_id):
-        return "%s.%s.svc:%d" % (
-            self.get_ps_service_name(ps_id),
-            self.namespace,
-            2222,
+        return self._get_service_address(
+            self.get_ps_service_name(ps_id), _PS_SERVICE_PORT
         )
 
     def get_embedding_service_pod_name(self, embedding_service_id):
@@ -168,11 +179,22 @@ class Client(object):
         try:
             return self.client.read_namespaced_service(
                 # PS service has the same name as pod name
-                name=self.get_ps_pod_name(ps_id),
+                name=self.get_ps_service_name(ps_id),
                 namespace=self.namespace,
             )
         except client.api_client.ApiException as e:
             logger.warning("Exception when reading PS service: %s\n" % e)
+            return None
+
+    def get_worker_service(self, worker_id):
+        try:
+            return self.client.read_namespaced_service(
+                # Worker service has the same name as pod name
+                name=self.get_worker_service_name(worker_id),
+                namespace=self.namespace,
+            )
+        except client.api_client.ApiException as e:
+            logger.warning("Exception when reading worker service: %s\n" % e)
             return None
 
     @staticmethod
@@ -376,11 +398,21 @@ class Client(object):
     def create_ps_service(self, ps_id):
         return self._create_service(
             name=self.get_ps_service_name(ps_id),
-            port=2222,
-            target_port=2222,
+            port=_PS_SERVICE_PORT,
+            target_port=_PS_SERVICE_PORT,
             replica_type="ps",
             replica_index=ps_id,
             owner=self.get_ps_pod(ps_id),
+        )
+
+    def create_worker_service(self, worker_id):
+        return self._create_service(
+            name=self.get_worker_service_name(worker_id),
+            port=_WORKER_SERVICE_PORT,
+            target_port=_WORKER_SERVICE_PORT,
+            replica_type="worker",
+            replica_index=worker_id,
+            owner=self.get_worker_pod(worker_id),
         )
 
     def _create_service(self, **kargs):
