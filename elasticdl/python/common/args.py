@@ -119,6 +119,7 @@ def add_common_params(parser):
     parser.add_argument(
         "--master_resource_limit",
         type=str,
+        default="",
         help="The maximal resource required by master, "
         "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1, "
         "default to master_resource_request",
@@ -136,15 +137,16 @@ def add_common_params(parser):
     parser.add_argument(
         "--worker_resource_limit",
         type=str,
+        default="",
         help="The maximal resource required by worker, "
         "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1,"
         "default to worker_resource_request",
     )
     parser.add_argument(
-        "--master_pod_priority", help="The requested priority of master pod"
+        "--master_pod_priority", default="", help="The requested priority of master pod"
     )
     parser.add_argument(
-        "--worker_pod_priority", help="The requested priority of worker pod"
+        "--worker_pod_priority", default="", help="The requested priority of worker pod"
     )
     parser.add_argument(
         "--num_ps_pods", type=int, help="Number of PS pods", default=1
@@ -159,15 +161,17 @@ def add_common_params(parser):
     parser.add_argument(
         "--ps_resource_limit",
         type=str,
+        default="",
         help="The maximal resource required by worker, "
         "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1,"
         "default to worker_resource_request",
     )
     parser.add_argument(
-        "--ps_pod_priority", help="The requested priority of PS pod"
+        "--ps_pod_priority", default="", help="The requested priority of PS pod"
     )
     parser.add_argument(
         "--volume",
+        default="",
         help="The Kubernetes volume information, "
         "the supported volumes are `persistentVolumeClaim` and `hostPath`,"
         'e.g. "claim_name=c1,mount_path=/path1" for `persistentVolumeClaim`,'
@@ -191,6 +195,7 @@ def add_common_params(parser):
     parser.add_argument(
         "--envs",
         type=str,
+        default="",
         help="Runtime environment variables. (key1=value1,key2=value2), "
         "comma is supported in value field",
     )
@@ -227,6 +232,9 @@ def add_common_params(parser):
     )
     parser.add_argument(
         "--docker_tlskey", help="Path to Docker client key", default=""
+    )
+    parser.add_argument(
+        "--yaml", action="store_true", help="Dump master pod YAML instead of submitting to a Kubernetes cluster"
     )
 
 
@@ -478,6 +486,7 @@ def add_common_args_between_master_and_worker(parser):
             DistributionStrategy.PARAMETER_SERVER,
             DistributionStrategy.ALLREDUCE,
         ],
+        default="",
         help="Master will use a distribution policy on a list of devices "
         "according to the distributed strategy, "
         'e.g. "ParameterServerStrategy" or "AllreduceStrategy"',
