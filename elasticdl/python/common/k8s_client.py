@@ -1,8 +1,8 @@
 import os
 import threading
 import traceback
-import yaml
 
+import yaml
 from kubernetes import client, config, watch
 from kubernetes.client import V1EnvVar, V1EnvVarSource, V1ObjectFieldSelector
 
@@ -275,8 +275,9 @@ class Client(object):
 
     def dump_master_yaml(self, **kargs):
         pod = self._create_master_pod_obj(**kargs)
-        result = self.client.api_client.sanitize_for_serialization(pod)
-        print(yaml.safe_dump(result))
+        pod_dict = self.client.api_client.sanitize_for_serialization(pod)
+        with open(kargs["yaml"], "w") as f:
+            yaml.safe_dump(pod_dict, f)
 
     def _create_master_pod_obj(self, **kargs):
         env = [

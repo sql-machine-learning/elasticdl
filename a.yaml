@@ -1,0 +1,180 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: elasticdl
+    elasticdl-job-name: test-mnist-wy
+    elasticdl-replica-index: '0'
+    elasticdl-replica-type: master
+    meta.k8s.alipay.com/ignore-cmdb: 'true'
+    meta.k8s.alipay.com/ignore-naming: 'true'
+    sigma.ali/app-name: elasticdl
+    sigma.ali/deploy-unit: elasticdl
+    sigma.ali/instance-group: sigma-alipay-test
+    sigma.ali/site: eu95
+  name: elasticdl-test-mnist-wy-master
+  namespace: kubemaker
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: mandatory.k8s.alipay.com/app-logic-pool
+            operator: In
+            values:
+            - kubemaker
+          - key: mandatory.k8s.alipay.com/server-owner
+            operator: In
+            values:
+            - rdma
+  containers:
+  - args:
+    - -m
+    - elasticdl.python.master.main
+    - --worker_image
+    - reg.docker.alibaba-inc.com/weiyan/elasticdl:5b13ed5381094eb4bdb2b181f512bcf0
+    - --model_zoo
+    - /model_zoo/model_zoo
+    - --cluster_spec
+    - /cluster_spec/sigma.py
+    - --cmd
+    - train
+    - --minibatch_size
+    - '64'
+    - --log_level
+    - INFO
+    - --dataset_fn
+    - dataset_fn
+    - --loss
+    - loss
+    - --optimizer
+    - optimizer
+    - --eval_metrics_fn
+    - eval_metrics_fn
+    - --model_def
+    - mnist_functional_api.mnist_functional_api.custom_model
+    - --model_params
+    - ''
+    - --get_model_steps
+    - '1'
+    - --data_reader_params
+    - ''
+    - --distribution_strategy
+    - ''
+    - --checkpoint_steps
+    - '10'
+    - --checkpoint_dir
+    - ''
+    - --keep_checkpoint_max
+    - '0'
+    - --docker_image_repository
+    - reg.docker.alibaba-inc.com/weiyan/
+    - --image_base
+    - elasticdl:ci
+    - --job_name
+    - test-mnist-wy
+    - --master_resource_request
+    - cpu=1,memory=2048Mi,ephemeral-storage=5000Mi
+    - --master_resource_limit
+    - ''
+    - --num_workers
+    - '2'
+    - --worker_resource_request
+    - cpu=1,memory=4096Mi,ephemeral-storage=5000Mi
+    - --worker_resource_limit
+    - ''
+    - --master_pod_priority
+    - ''
+    - --worker_pod_priority
+    - ''
+    - --num_ps_pods
+    - '3'
+    - --ps_resource_request
+    - cpu=1,memory=4096Mi,ephemeral-storage=5000Mi
+    - --ps_resource_limit
+    - ''
+    - --ps_pod_priority
+    - ''
+    - --volume
+    - ''
+    - --image_pull_policy
+    - Always
+    - --restart_policy
+    - Never
+    - --envs
+    - ''
+    - --extra_pypi_index
+    - https://pypi.org/simple
+    - --namespace
+    - kubemaker
+    - --num_minibatches_per_task
+    - '10'
+    - --docker_base_url
+    - unix://var/run/docker.sock
+    - --docker_tlscert
+    - ''
+    - --docker_tlskey
+    - ''
+    - --yaml
+    - a.yaml
+    - --tensorboard_log_dir
+    - ''
+    - --num_epochs
+    - '2'
+    - --grads_to_wait
+    - '4'
+    - --training_data
+    - /data/mnist/train
+    - --validation_data
+    - ''
+    - --evaluation_steps
+    - '0'
+    - --evaluation_start_delay_secs
+    - '100'
+    - --evaluation_throttle_secs
+    - '0'
+    - --checkpoint_filename_for_init
+    - ''
+    - --output
+    - ''
+    - --use_async
+    - 'False'
+    - --lr_staleness_modulation
+    - 'False'
+    - --func
+    - <function train at 0x7fd9a019c730>
+    command:
+    - python
+    env:
+    - name: MY_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    - name: NVIDIA_VISIBLE_DEVICES
+      value: ''
+    - name: NVIDIA_DRIVER_CAPABILITIES
+      value: ''
+    image: reg.docker.alibaba-inc.com/weiyan/elasticdl:5b13ed5381094eb4bdb2b181f512bcf0
+    imagePullPolicy: Always
+    name: elasticdl-test-mnist-wy-master
+    resources:
+      limits:
+        cpu: '1'
+        ephemeral-storage: 5000Mi
+        memory: 2048Mi
+      requests:
+        cpu: '1'
+        ephemeral-storage: 5000Mi
+        memory: 2048Mi
+  priorityClassName: ''
+  restartPolicy: Never
+  tolerations:
+  - effect: NoSchedule
+    key: mandatory.k8s.alipay.com/app-logic-pool
+    operator: Equal
+    value: kubemaker
+  - effect: NoSchedule
+    key: mandatory.k8s.alipay.com/server-owner
+    operator: Equal
+    value: rdma

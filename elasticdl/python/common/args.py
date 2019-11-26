@@ -143,10 +143,14 @@ def add_common_params(parser):
         "default to worker_resource_request",
     )
     parser.add_argument(
-        "--master_pod_priority", default="", help="The requested priority of master pod"
+        "--master_pod_priority",
+        default="",
+        help="The requested priority of master pod",
     )
     parser.add_argument(
-        "--worker_pod_priority", default="", help="The requested priority of worker pod"
+        "--worker_pod_priority",
+        default="",
+        help="The requested priority of worker pod",
     )
     parser.add_argument(
         "--num_ps_pods", type=int, help="Number of PS pods", default=1
@@ -167,7 +171,9 @@ def add_common_params(parser):
         "default to worker_resource_request",
     )
     parser.add_argument(
-        "--ps_pod_priority", default="", help="The requested priority of PS pod"
+        "--ps_pod_priority",
+        default="",
+        help="The requested priority of PS pod",
     )
     parser.add_argument(
         "--volume",
@@ -234,7 +240,10 @@ def add_common_params(parser):
         "--docker_tlskey", help="Path to Docker client key", default=""
     )
     parser.add_argument(
-        "--yaml", action="store_true", help="Dump master pod YAML instead of submitting to a Kubernetes cluster"
+        "--yaml",
+        type=str,
+        default="",
+        help="File path for dumping ElasticDL job YAML specification. Note that, if users specify --yaml, the client wouldn't submit the job automatically, and users need to launch the job through command `kubectl create -f path_to_yaml_file`.",
     )
 
 
