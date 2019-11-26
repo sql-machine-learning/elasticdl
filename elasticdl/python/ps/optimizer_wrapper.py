@@ -1,7 +1,4 @@
 """Optimizer Wrapper for ElasticDL"""
-# TODO(yunjian.lmh): move this file to PS module after we don't need to
-#     support ps in master.
-
 
 import threading
 

@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import tensorflow as tf
 
-from elasticdl.python.master.learning_rate_modulator import (
+from elasticdl.python.ps.learning_rate_modulator import (
     add_lr_modulation_to_optimizer,
 )
 
