@@ -164,6 +164,7 @@ class CheckpointSaver(object):
 
     @staticmethod
     def get_valid_lastest_version_dir(checkpoint_dir):
+        """Get the valid and lastest version checkpoint directory"""
         if not checkpoint_dir or not os.path.exists(checkpoint_dir):
             return None
 
@@ -182,6 +183,11 @@ class CheckpointSaver(object):
 
     @staticmethod
     def check_checkpoint_valid(checkpoint_dir):
+        """Check whether the checkpoint directory is valid. The filename template
+        in the checkpoint directory like "variables-{i}-of-{N}.ckpt". We will
+        parse any filename to get N which is the total number of parameters
+        shards. It is valid if the number of files in the directory N.
+        """
         if not os.path.exists(checkpoint_dir):
             return False
 
