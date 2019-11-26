@@ -7,6 +7,7 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.tensor import Tensor
 from elasticdl.python.ps.parameters import Parameters
+from elasticdl.python.ps.embedding_table import create_embedding_table
 
 
 def save_pb_to_file(pb_obj, file_name):
@@ -217,7 +218,6 @@ class CheckpointSaver(object):
                 non-embedding parameters and embedding tables for the
                 PS instance with ps_id.
         """
-        from elasticdl.python.ps.embedding_table import create_embedding_table
 
         variable_shard_files = os.listdir(checkpoint_dir)
         non_embedding_vars = {}
@@ -234,17 +234,22 @@ class CheckpointSaver(object):
                     "The versions in model shards are not consistency"
                 )
 
-        for embedding_info_pb in model_pb.embedding_table_info:
-            embedding_table = create_embedding_table(embedding_info_pb)
-            embedding_tables.setdefault(embedding_table.name, embedding_table)
+            for embedding_info_pb in model_pb.embedding_table_info:
+                embedding_table = create_embedding_table(embedding_info_pb)
+                embedding_tables.setdefault(
+                    embedding_table.name,
+                    embedding_table
+                )
 
-        (
-            shard_non_embedding_vars,
-            shard_embedding_table_values,
-        ) = _get_params_shard_from_pb(model_pb, shard_index, shard_num)
-        non_embedding_vars.update(shard_non_embedding_vars)
-        for name, pair in shard_embedding_table_values.items():
-            embedding_tables[name].set(pair[0], pair[1])
+            (
+                shard_non_embedding_vars,
+                shard_embedding_table_values,
+            ) = _get_params_shard_from_pb(model_pb, shard_index, shard_num)
+
+            non_embedding_vars.update(shard_non_embedding_vars)
+            for name, pair in shard_embedding_table_values.items():
+                embedding_tables[name].set(pair[0], pair[1])
+
         parameters = Parameters()
         parameters.non_embedding_params.update(non_embedding_vars)
         parameters.embedding_params.update(embedding_tables)
