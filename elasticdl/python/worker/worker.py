@@ -205,7 +205,7 @@ class Worker(object):
         if task_type is not None:
             req.task_type = task_type
 
-        return self._stub.GetTask(req)
+        return self._stub.get_task(req)
 
     def get_model(self):
         model_version = -1
