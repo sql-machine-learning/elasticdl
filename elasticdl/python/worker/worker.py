@@ -135,7 +135,7 @@ class Worker(object):
         self._get_model_steps = args.get_model_steps
         if self._get_model_steps > 1:
             self._opt = self._opt_fn()
-            self._non_embed_grads = None
+        self._non_embed_grads = {}
         self._evaluation_result = {}
 
     # TODO: Multiple tests are currently using this function to initialize
@@ -396,9 +396,16 @@ class Worker(object):
                 max_version = res.model_version
         return accepted, max_version
 
-    # TODO: Reuse common code in report_gradient_to_ps and
-    # report_gradient_to_master
     def report_gradient_locally(self, grads):
+        if self._embedding_layers:
+            raise ValueError(
+                "ElasticDL embedding layer is not supported when"
+                "reporting gradients locally"
+            )
+        for g, v in zip(
+            grads[: len(self._non_embed_vars)], self._non_embed_vars.values()
+        ):
+            self._non_embed_grads[v.name] = v
         return True, None
 
     def report_gradient(self, grads):
