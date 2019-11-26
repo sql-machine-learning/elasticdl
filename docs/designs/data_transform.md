@@ -6,13 +6,13 @@ Data transform is an important part in an end-to-end machine learning pipeline. 
 
 Data transform contains two key parts: analyzer and transformer. Analyzer scans the entire data set and calculates the statistical values such as mean, min, variance and so on. Transformer combines the statistical value and the transform function to construct the concrete transform logic. And then it transforms the data records one by one.  
 [TensorFlow Transform](https://www.tensorflow.org/tfx/transform/get_started) is the open source solution for data transform in [TensorFlow Extended](https://www.tensorflow.org/tfx/guide). Users need write a python function 'preprocess_fn' to define the preprocess logic. SQLFlow users prefer to write SQL instead of python. It's user unfriendly to SQLFlow users if we integrate TF Transform with SQLFlow directly.  
-From another point of view, SQL can naturally support statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) can take charge of transform logic such as transformer. For dense column, we can use numeric_column and pass a user defined function *normalizer_fn* to convert the column value. For sparse column, we can use embedding_column to map the sparse value to embedding vector or use cross_column to do the feature crossing. We plan to use SQL and feature column together to do the data transform work.  
+From another point of view, SQL can naturally supports statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) can take charge of transform logic as transformer. For dense column, we can use numeric_column and pass a user defined function *normalizer_fn* to convert the column value. For sparse column, we can use embedding_column to map the sparse value to embedding vector or use cross_column to do the feature crossing. We plan to use SQL and feature column together to do the data transform work.  
 
 Consistency between offline and online is the key point of data transform. Users write the transform code only once. And then the same logic can run in batch mode for training and in real time mode for serving. In this way, we can prevent the training/serving skew. Both TF Transform and feature column can keep the consistency. The data transform logic in the training stage is built into the inference graph as the SavedModel.  
 
 ## Transform Expression in SQLFlow
 
-We can extend the SQLFlow syntax and add the built-in transform API in the COLUMN expression to describe the transform process. Let's take the following SQL expression for example. It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is **NUMERIC(STANDARDIZE(age)), NUMERIC(NORMALIZE(capital_gain)), EMBEDDING(hours_per_week, bucket_num=10, dim=128)**. It will standardize the column *age*, normalize the column *capital_gain*, bucketize the column *hours_per_week* to 10 buckets.  
+We can extend the SQLFlow syntax and enrich the COLUMN expression. We can add the built-in transform API call in it to describe the transform process. Let's take the following SQL expression for example. It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is **COLUMNS NUMERIC(STANDARDIZE(age)), NUMERIC(NORMALIZE(capital_gain)), EMBEDDING(BUCKETIZED(hours_per_week, bucket_num=10), dim=128)**. It will standardize the column *age*, normalize the column *capital_gain*, bucketize the column *hours_per_week* to 10 buckets and then map it to embedding value.  
 We will implement some built-in transform API. The API set contains NORMALIZE, STANDARDIZE, BUCKETIZED, LOG and more to be added in the future.  
 
 ```SQL
@@ -20,15 +20,14 @@ SELECT *
 FROM census_income
 TO TRAIN DNNClassifier
 WITH model.hidden_units = [10, 20]
-COLUMNS
-NUMERIC(STANDARDIZE(age)), NUMERIC(NORMALIZE(capital_gain)), EMBEDDING(hours_per_week, bucket_num=10, dim=128)
+COLUMNS NUMERIC(STANDARDIZE(age)), NUMERIC(NORMALIZE(capital_gain)), EMBEDDING(BUCKETIZED(hours_per_week, bucket_num=10), dim=128)
 LABEL label
 ```
 
 ## Design
 
 Data transform contains two stages: analyze and transform. In our design, we will do the analysis using SQL as the first step, and generate the feature column definition as the second step. The feature column contains the transform logic and executes along with the model training process.  
-We choose to convert the **TRANSFORM** expression into two steps of the work flow described by [Couler](https://github.com/sql-machine-learning/sqlflow/blob/develop/python/couler/README.md): analyze and feature column generation. Couler is a programming language for describing workflows. Its compiler translates a workflow represented by a Python program into an [Argo](https://argoproj.github.io/) YAML file. The output of feature column generation will be passed to the next model training step.  
+We choose to convert the transform expression into two steps of the work flow described by [Couler](https://github.com/sql-machine-learning/sqlflow/blob/develop/python/couler/README.md): analyze and feature column generation. Couler is a programming language for describing workflows. Its compiler translates a workflow represented by a Python program into an [Argo](https://argoproj.github.io/) YAML file. The output of feature column generation will be passed to the next model training step.  
 ![data_transform_pipeline](../images/data_transform_pipeline.png)
 
 Let's take STANDARDIZE(age) for example, the following figure describes how the data transform pipeline works in detail.  
