@@ -29,7 +29,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def get_model_version(self):
         return self._version
 
-    def GetTask(self, request, _):
+    def get_task(self, request, _):
         res = elasticdl_pb2.Task()
         res.model_version = self._version
         res.minibatch_size = self._minibatch_size
@@ -62,7 +62,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
         return res
 
-    def ReportTaskResult(self, request, _):
+    def report_task_result(self, request, _):
         if request.err_message:
             logger.warning("Worker reported error: " + request.err_message)
             self._task_d.report(request, False)
@@ -70,7 +70,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._task_d.report(request, True)
         return empty_pb2.Empty()
 
-    def ReportEvaluationMetrics(self, request, _):
+    def report_evaluation_metrics(self, request, _):
         report_metrics = self._evaluation_service.report_evaluation_metrics(
             request.model_version, request.model_outputs, request.labels
         )
@@ -79,7 +79,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         res.accepted = report_metrics
         return res
 
-    def ReportVersion(self, request, _):
+    def report_version(self, request, _):
         if self._evaluation_service:
             self._evaluation_service.add_evaluation_task_if_needed(
                 master_locking=False, model_version=request.model_version

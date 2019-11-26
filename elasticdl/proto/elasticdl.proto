@@ -13,11 +13,6 @@ enum TaskType {
     SAVE_MODEL = 4;
 }
 
-enum MethodType {
-    MINIMUM = 0;
-    FIXED = 1;
-}
-
 // A task is a unit of work for ElasticDL training workers, assigned by master.
 // Worker divides a task into multiple minibatches and compute a gradient for
 // each minibatch. For now, only RecordIO file format is supported.
@@ -119,10 +114,10 @@ message ReportVersionRequest {
 }
 
 service Master {
-    rpc GetTask(GetTaskRequest) returns (Task);
-    rpc ReportEvaluationMetrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsResponse);
-    rpc ReportTaskResult(ReportTaskResultRequest) returns (google.protobuf.Empty);
-    rpc ReportVersion(ReportVersionRequest) returns (google.protobuf.Empty);
+    rpc get_task(GetTaskRequest) returns (Task);
+    rpc report_evaluation_metrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsResponse);
+    rpc report_task_result(ReportTaskResultRequest) returns (google.protobuf.Empty);
+    rpc report_version(ReportVersionRequest) returns (google.protobuf.Empty);
 }
 
 message PullVariableResponse {
