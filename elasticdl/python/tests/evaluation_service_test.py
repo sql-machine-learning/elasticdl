@@ -154,20 +154,7 @@ class EvaluationServiceTest(unittest.TestCase):
         )
         task_d.set_evaluation_service(evaluation_service)
 
-<<<<<<< HEAD
-        master = MasterServicer(
-            2,
-            2,
-            None,
-            task_d,
-            init_var=[],
-            checkpoint_service=None,
-            evaluation_service=evaluation_service,
-        )
-        master.set_model_var("x", np.array([1.0, 1.0], dtype=np.float32))
-=======
         _ = MasterServicer(2, task_d, evaluation_service=evaluation_service,)
->>>>>>> develop
 
         self.assertEqual(8, len(task_d._eval_todo))
         for i in range(8):

@@ -547,8 +547,7 @@ def parse_master_args(master_args=None):
         )
     if args.prediction_data and not args.checkpoint_dir_for_init:
         raise ValueError(
-            "checkpoint_dir_for_init is required for running "
-            "prediction job"
+            "checkpoint_dir_for_init is required for running " "prediction job"
         )
     if not args.use_async and args.get_model_steps > 1:
         args.get_model_steps = 1

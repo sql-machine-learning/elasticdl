@@ -24,7 +24,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         use_async=False,
         evaluation_steps=0,
         master_channel=None,
-        checkpoint_service=None,
+        checkpoint_saver=None,
         ps_id=None,
         num_ps_pods=None,
     ):
@@ -39,7 +39,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._lr_staleness_modulation = lr_staleness_modulation
         self._use_async = use_async
         self._eval_steps = evaluation_steps
-        self._checkpoint_service = checkpoint_service
+        self._checkpoint_saver = checkpoint_saver
         self._ps_id = ps_id
         self._num_ps_pods = num_ps_pods
         self._version_lock = threading.Lock()
@@ -201,13 +201,13 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
     def _save_params_to_checkpoint_if_needed(self):
         """Save a checkpoint of parameters to a protobuf file"""
         if (
-            self._checkpoint_service
-            and self._parameters.version % self._checkpoint_service._steps == 0
+            self._checkpoint_saver
+            and self._parameters.version % self._checkpoint_saver._steps == 0
         ):
             model_pb = self._parameters.to_model_pb()
 
             logger.info("Save checkpoint for version %s" % model_pb.version)
-            self._checkpoint_service.save(
+            self._checkpoint_saver.save(
                 model_pb.version,
                 model_pb,
                 is_eval_checkpoint=False,

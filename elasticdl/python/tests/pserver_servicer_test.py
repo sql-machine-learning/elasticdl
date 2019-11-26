@@ -12,11 +12,11 @@ from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
 )
+from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.common.tensor import (
     emplace_tensor_pb_from_ndarray,
     tensor_pb_to_ndarray,
 )
-from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.ps.embedding_table import (
     EmbeddingTable,
     get_slot_table_name,
@@ -422,7 +422,7 @@ class PserverServicerTest(unittest.TestCase):
 
     def test_save_parameters_to_checkpoint_file(self):
         with tempfile.TemporaryDirectory() as tempdir:
-            checkpoint_service = CheckpointService(
+            checkpoint_saver = CheckpointSaver(
                 checkpoint_dir=os.path.join(tempdir, "ckpt/"),
                 checkpoint_steps=5,
                 keep_checkpoint_max=3,
@@ -432,7 +432,7 @@ class PserverServicerTest(unittest.TestCase):
                 parameters=Parameters(),
                 grads_to_wait=0,
                 optimizer="optimizer",
-                checkpoint_service=checkpoint_service,
+                checkpoint_saver=checkpoint_saver,
                 ps_id=0,
                 num_ps_pods=1,
             )
@@ -459,14 +459,14 @@ class PserverServicerTest(unittest.TestCase):
                 pserver_servicer._parameters.version += 1
                 pserver_servicer._save_params_to_checkpoint_if_needed()
 
-            self.assertEqual(len(os.listdir(checkpoint_service._directory)), 3)
+            self.assertEqual(len(os.listdir(checkpoint_saver._directory)), 3)
             self.assertEqual(
-                sorted(os.listdir(checkpoint_service._directory)),
+                sorted(os.listdir(checkpoint_saver._directory)),
                 ["version-100", "version-90", "version-95"],
             )
             self.assertEqual(
-                os.listdir(checkpoint_service._directory + "/version-100"),
-                ["variables-0-of-1.chkpt"],
+                os.listdir(checkpoint_saver._directory + "/version-100"),
+                ["variables-0-of-1.ckpt"],
             )
 
     def test_restore_parameters_from_checkpoint(self):
@@ -493,8 +493,9 @@ class PserverServicerTest(unittest.TestCase):
         )
         self.assertTrue(
             np.array_equal(
-                pserver_0.parameters.
-                non_embedding_params["dense/kernel:0"].numpy(),
+                pserver_0.parameters.non_embedding_params[
+                    "dense/kernel:0"
+                ].numpy(),
                 np.array([[1], [1]], dtype=int),
             )
         )
@@ -519,8 +520,9 @@ class PserverServicerTest(unittest.TestCase):
         )
         self.assertTrue(
             np.array_equal(
-                pserver_1.parameters.
-                non_embedding_params["dense/bias:0"].numpy(),
+                pserver_1.parameters.non_embedding_params[
+                    "dense/bias:0"
+                ].numpy(),
                 np.array([1], dtype=int),
             )
         )
