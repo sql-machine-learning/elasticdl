@@ -2,7 +2,6 @@ import grpc
 
 from elasticdl.python.common import log_utils
 from elasticdl.python.common.args import parse_worker_args
-from elasticdl.python.common.constants import GRPC
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.worker.worker import Worker
 
@@ -22,19 +21,7 @@ def main():
 
         for addr in ps_addrs:
             # addr is in the form as "ps-pod-name.namespace.svc:port"
-            channel = grpc.insecure_channel(
-                addr,
-                options=[
-                    (
-                        "grpc.max_send_message_length",
-                        GRPC.MAX_SEND_MESSAGE_LENGTH,
-                    ),
-                    (
-                        "grpc.max_receive_message_length",
-                        GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
-                    ),
-                ],
-            )
+            channel = build_channel(addr)
 
             # Wait the channel is ready by a Future object.
             grpc.channel_ready_future(channel).result()
