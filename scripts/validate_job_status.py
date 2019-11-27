@@ -122,7 +122,14 @@ def validate_job_status(client, job_type, ps_num, worker_num):
             client.delete_pod(master_pod_name)
             exit(-1)
         else:
-            print("Master: %s" % client.get_pod_phase(master_pod_name))
+            print(
+                "Master (status.phase): %s"
+                % client.get_pod_phase(master_pod_name)
+            )
+            print(
+                "Master (metadata.labels.status): %s"
+                % client.get_pod_label_status(master_pod_name)
+            )
             for i, ps in enumerate(ps_pod_names):
                 print("PS%d: %s" % (i, client.get_pod_phase(ps)))
             for i, worker in enumerate(worker_pod_names):
