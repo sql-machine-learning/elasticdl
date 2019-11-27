@@ -672,7 +672,7 @@ class Worker(object):
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
                 if self._model_version != min_model_version:
-                    self.get_model(min_model_version, elasticdl_pb2.FIXED)
+                    self.get_model()
                 accepted = self._run_prediction_task(features)
                 if accepted:
                     break
