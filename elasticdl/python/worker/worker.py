@@ -132,17 +132,18 @@ class Worker(object):
                 args.data_reader_params
             ),
         )
-        if self._dataset_fn is None and hasattr(
-            self._task_data_service.data_reader, "default_dataset_fn"
-        ):
-            self._dataset_fn = (
-                self._task_data_service.data_reader.default_dataset_fn()
-            )
-        else:
-            raise ValueError(
-                "dataset_fn is required if the data_reader used does "
-                "not provide default implementation of dataset_fn"
-            )
+        if self._dataset_fn is None:
+            if hasattr(
+                self._task_data_service.data_reader, "default_dataset_fn"
+            ):
+                self._dataset_fn = (
+                    self._task_data_service.data_reader.default_dataset_fn()
+                )
+            else:
+                raise ValueError(
+                    "dataset_fn is required if the data_reader used does "
+                    "not provide default implementation of dataset_fn"
+                )
         self._get_model_steps = args.get_model_steps
         if self._get_model_steps > 1:
             self._opt = self._opt_fn()
