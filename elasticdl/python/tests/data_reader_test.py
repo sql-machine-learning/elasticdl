@@ -132,7 +132,12 @@ class ODPSDataReaderTest(unittest.TestCase):
         model = model_spec["custom_model"]()
         optimizer = model_spec["optimizer"]()
         loss = model_spec["loss"]
-        dataset_fn = model_spec["dataset_fn"]
+        reader = create_data_reader(
+            data_origin="table",
+            records_per_task=10,
+            **{"columns": IRIS_TABLE_COLUMN_NAMES, "label_col": "class"}
+        )
+        dataset_fn = reader.default_dataset_fn()
 
         def _gen():
             for data in self.reader.read_records(
