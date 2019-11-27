@@ -418,8 +418,7 @@ class Worker(object):
 
     def report_evaluation_metrics(self, model_outputs, labels):
         """
-        report evaluation metrics to ps, return (accepted, model_version)
-        from rpc call.
+        report evaluation metrics to ps.
         """
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         for name, output in model_outputs.items():
@@ -430,9 +429,7 @@ class Worker(object):
         labels = np.concatenate(labels)
         tensor = Tensor(values=labels)
         serialize_tensor(tensor, req.labels)
-        req.model_version = self._model_version if self._use_multi_ps else -1
-        res = self._stub.ReportEvaluationMetrics(req)
-        return res.accepted, res.model_version
+        self._stub.ReportEvaluationMetrics(req)
 
     def report_prediction_outputs(self, predictions):
         if self._prediction_outputs_processor:
@@ -718,12 +715,10 @@ class Worker(object):
                 err_msg = data_err_msg
                 break
         del eval_dataset
-        accepted, _ = self.report_evaluation_metrics(
-            self._evaluation_result[MetricsDictKey.MODEL_OUTPUT],
-            self._evaluation_result[MetricsDictKey.LABEL],
+        self.report_evaluation_metrics(
+            model_outputs=self._evaluation_result[MetricsDictKey.MODEL_OUTPUT],
+            labels=self._evaluation_result[MetricsDictKey.LABEL],
         )
-        if not accepted:
-            raise RuntimeError("Report evaluation metric failed!")
         self.report_task_result(task_id, err_msg)
         self._evaluation_result = {}
 
