@@ -95,27 +95,17 @@ message ReportTaskResultRequest {
     map<string, int32> exec_counters = 3;
 }
 
-message ReportEvaluationMetricsResponse {
-    // If the evaluation metric is accepted.
-    bool accepted = 1;
-    // Current model version on master.
-    int32 model_version = 2;
-}
-
 message ReportEvaluationMetricsRequest {
-    // Model version used to compute evaluation metrics.
-    int32 model_version = 1;
-    repeated Tensor model_outputs = 2;
-    Tensor labels = 3;
+    repeated Tensor model_outputs = 1;
+    Tensor labels = 2;
 }
 
 message ReportVersionRequest {
     int32 model_version = 1;
 }
 
-service Master {
     rpc get_task(GetTaskRequest) returns (Task);
-    rpc report_evaluation_metrics(ReportEvaluationMetricsRequest) returns (ReportEvaluationMetricsResponse);
+    rpc report_evaluation_metrics(ReportEvaluationMetricsRequest) returns (google.protobuf.Empty);
     rpc report_task_result(ReportTaskResultRequest) returns (google.protobuf.Empty);
     rpc report_version(ReportVersionRequest) returns (google.protobuf.Empty);
 }

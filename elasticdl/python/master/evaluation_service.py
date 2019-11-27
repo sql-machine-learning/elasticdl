@@ -65,19 +65,7 @@ class _EvaluationJob(object):
     def finished(self):
         return self._completed_tasks >= self._total_tasks
 
-    def report_evaluation_metrics(
-        self, evaluation_version, model_outputs, labels
-    ):
-        if (
-            self.model_version >= 0
-            and evaluation_version >= 0
-            and evaluation_version != self.model_version
-        ):
-            logger.error(
-                "Drop a wrong version evaluation: request %d, receive %d"
-                % (self.model_version, evaluation_version)
-            )
-            return False
+    def report_evaluation_metrics(self, model_outputs, labels):
         labels = tensor_pb_to_ndarray(labels)
         for tensor_pb in model_outputs:
             key = tensor_pb.name
@@ -87,7 +75,6 @@ class _EvaluationJob(object):
             outputs = tensor_pb_to_ndarray(tensor_pb)
             for metric_inst in metrics.values():
                 metric_inst.update_state(labels, outputs)
-        return True
 
     def get_evaluation_summary(self):
         if self._model_have_multiple_outputs:
@@ -237,14 +224,10 @@ class EvaluationService(object):
                 model_version=model_version,
             )
 
-    def report_evaluation_metrics(
-        self, evaluation_version, model_outputs, labels
-    ):
+    def report_evaluation_metrics(self, model_outputs, labels):
         if self._eval_job is None:
             return False
-        return self._eval_job.report_evaluation_metrics(
-            evaluation_version, model_outputs, labels
-        )
+        return self._eval_job.report_evaluation_metrics(model_outputs, labels)
 
     def complete_task(self):
         self._eval_job.complete_task()
