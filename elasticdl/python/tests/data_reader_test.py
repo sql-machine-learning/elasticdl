@@ -109,9 +109,12 @@ class ODPSDataReaderTest(unittest.TestCase):
 
     def test_create_data_reader(self):
         reader = create_data_reader(
-            data_origin="table", records_per_task=10, **{"columns": ["a", "b"]}
+            data_origin="table",
+            records_per_task=10,
+            **{"columns": ["a", "b"], "label_col": "class"}
         )
         self.assertEqual(reader._kwargs["columns"], ["a", "b"])
+        self.assertEqual(reader._kwargs["label_col"], "class")
         self.assertEqual(reader._kwargs["records_per_task"], 10)
         reader = create_data_reader(data_origin="table", records_per_task=10)
         self.assertEqual(reader._kwargs["records_per_task"], 10)
