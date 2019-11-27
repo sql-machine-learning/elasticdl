@@ -104,6 +104,7 @@ message ReportVersionRequest {
     int32 model_version = 1;
 }
 
+service Master {
     rpc get_task(GetTaskRequest) returns (Task);
     rpc report_evaluation_metrics(ReportEvaluationMetricsRequest) returns (google.protobuf.Empty);
     rpc report_task_result(ReportTaskResultRequest) returns (google.protobuf.Empty);
