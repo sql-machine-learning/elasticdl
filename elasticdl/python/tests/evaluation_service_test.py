@@ -57,30 +57,9 @@ class EvaluationServiceTest(unittest.TestCase):
         latest_chkp_version = job.model_version + 1
         self.assertTrue(self.ok_to_new_job(job, latest_chkp_version))
 
-        # Start to report metrics
-        evaluation_version = job.model_version + 1
-        model_outputs = [
-            Tensor(
-                np.array([[1], [6], [3]], np.float32),
-                name=MetricsDictKey.MODEL_OUTPUT,
-            ).to_tensor_pb()
-        ]
-        labels = Tensor(np.array([[1], [0], [3]], np.float32)).to_tensor_pb()
-        self.assertFalse(
-            job.report_evaluation_metrics(
-                evaluation_version, model_outputs, labels
-            )
-        )
-        evaluation_version = job.model_version
-        self.assertTrue(
-            job.report_evaluation_metrics(
-                evaluation_version, model_outputs, labels
-            )
-        )
         # One more
         self.assertTrue(
             job.report_evaluation_metrics(
-                evaluation_version,
                 [
                     Tensor(
                         np.array([[4], [5], [6], [7], [8]], np.float32),
@@ -114,19 +93,6 @@ class EvaluationServiceTest(unittest.TestCase):
         # Evaluation metrics will not be accepted if no evaluation ongoing
         evaluation_service = EvaluationService(
             None, task_d, 10, 20, 0, False, _eval_metrics_fn,
-        )
-        model_outputs = [
-            Tensor(
-                np.array([1, 6, 3], np.float32),
-                name=MetricsDictKey.MODEL_OUTPUT,
-            ).to_tensor_pb()
-        ]
-        labels = Tensor(np.array([1, 0, 3], np.float32)).to_tensor_pb()
-
-        self.assertFalse(
-            evaluation_service.report_evaluation_metrics(
-                1, model_outputs, labels
-            )
         )
 
         _ = MasterServicer(2, task_d, evaluation_service=evaluation_service,)

@@ -77,6 +77,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return empty_pb2.Empty()
 
     def ReportVersion(self, request, _):
+        self._version = request.model_version
         if self._evaluation_service:
             self._evaluation_service.add_evaluation_task_if_needed(
                 master_locking=False, model_version=request.model_version
