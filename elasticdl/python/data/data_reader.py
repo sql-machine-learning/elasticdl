@@ -174,41 +174,42 @@ class ODPSDataReader(AbstractDataReader):
                 record = tf.strings.to_number(record, tf.float32)
 
                 def _get_features_without_labels(
-                    record, label_col_ind, features_shape
+                    record, label_col_idx, features_shape
                 ):
                     features = [
-                        record[:label_col_ind],
-                        record[label_col_ind + 1 :],  # noqa: E203
+                        record[:label_col_idx],
+                        record[label_col_idx + 1 :],  # noqa: E203
                     ]
                     features = tf.concat(features, -1)
                     return tf.reshape(features, features_shape)
 
                 features_shape = (len(metadata.column_names) - 1, 1)
                 labels_shape = (1,)
-                if mode != Mode.PREDICTION:
-                    if label_col_name not in metadata.column_names:
-                        raise ValueError(
-                            "Missing the label column '%s' in the retrieved "
-                            "ODPS table." % label_col_name
-                        )
-                    label_col_ind = metadata.column_names.index(label_col_name)
-                    labels = tf.reshape(record[label_col_ind], labels_shape)
-                    return (
-                        _get_features_without_labels(
-                            record, label_col_ind, features_shape
-                        ),
-                        labels,
-                    )
-                else:
+                if mode == Mode.PREDICTION:
                     if label_col_name in metadata.column_names:
-                        label_col_ind = metadata.column_names.index(
+                        label_col_idx = metadata.column_names.index(
                             label_col_name
                         )
                         return _get_features_without_labels(
-                            record, label_col_ind, features_shape
+                            record, label_col_idx, features_shape
                         )
                     else:
                         return tf.reshape(record, features_shape)
+                else:
+                    if label_col_name not in metadata.column_names:
+                        raise ValueError(
+                            "Missing the label column '%s' in the retrieved "
+                            "ODPS table during %s mode."
+                            % (label_col_name, mode)
+                        )
+                    label_col_idx = metadata.column_names.index(label_col_name)
+                    labels = tf.reshape(record[label_col_idx], labels_shape)
+                    return (
+                        _get_features_without_labels(
+                            record, label_col_idx, features_shape
+                        ),
+                        labels,
+                    )
 
             dataset = dataset.map(_parse_data)
 
