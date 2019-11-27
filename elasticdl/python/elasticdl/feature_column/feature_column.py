@@ -120,8 +120,8 @@ class EmbeddingColumn(
 
         # Look up the embedding from the sparse input
         sparse_ids = sparse_tensors.id_tensor
-        unique_ids, idx = tf.unique(sparse_ids.values)
 
+        unique_ids, idx = tf.unique(sparse_ids.values)
         batch_embedding = tf.py_function(
             self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
         )
