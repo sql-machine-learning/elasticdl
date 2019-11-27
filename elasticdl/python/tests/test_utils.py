@@ -158,7 +158,6 @@ def distributed_train_and_evaluate(
     training=True,
     dataset_name=DatasetName.IMAGE_DEFAULT,
     callback_classes=[],
-    use_async=False,
     get_model_steps=1,
 ):
     """Runs distributed training and evaluation with a local master. Grpc
@@ -172,12 +171,14 @@ def distributed_train_and_evaluate(
             the model zoo, e.g.  "cifar10_subclass.CustomModel".
         model_params: The dictionary of model parameters in a string that will
             be used to instantiate the model, e.g. "param1=1,param2=2".
+        eval_metrics_fn: The name of the evaluation metrics function defined
+            in the model file.
+        loss: The name of the loss function defined in the model file.
         training: True for job type `TRAIN_WITH_EVALUATION`, False for
             job type `EVALUATION`.
         dataset_name: A dataset name from `DatasetName`.
         callback_classes: A List of callbacks that will be called at given
             stages of the training procedure.
-        use_async: A python bool. True if using asynchronous updates.
         get_model_steps: Worker will perform `get_model` from the parameter
             server every this many steps.
 

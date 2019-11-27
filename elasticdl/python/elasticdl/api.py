@@ -138,20 +138,38 @@ def _submit_job(image_name, client_args, container_args):
         cluster_spec=client_args.cluster_spec,
     )
 
-    client.create_master(
-        resource_requests=client_args.master_resource_request,
-        resource_limits=client_args.master_resource_limit,
-        args=container_args,
-        pod_priority=client_args.master_pod_priority,
-        image_pull_policy=client_args.image_pull_policy,
-        restart_policy=client_args.restart_policy,
-        volume=client_args.volume,
-        envs=parse_envs(client_args.envs),
-    )
-    logger.info(
-        "ElasticDL job %s was successfully submitted. The master pod is: %s."
-        % (client_args.job_name, client.get_master_pod_name())
-    )
+    if client_args.yaml:
+        client.dump_master_yaml(
+            resource_requests=client_args.master_resource_request,
+            resource_limits=client_args.master_resource_limit,
+            args=container_args,
+            pod_priority=client_args.master_pod_priority,
+            image_pull_policy=client_args.image_pull_policy,
+            restart_policy=client_args.restart_policy,
+            volume=client_args.volume,
+            envs=parse_envs(client_args.envs),
+            yaml=client_args.yaml,
+        )
+        logger.info(
+            "ElasticDL job %s YAML has been dumped into file %s."
+            % (client_args.job_name, client_args.yaml)
+        )
+    else:
+        client.create_master(
+            resource_requests=client_args.master_resource_request,
+            resource_limits=client_args.master_resource_limit,
+            args=container_args,
+            pod_priority=client_args.master_pod_priority,
+            image_pull_policy=client_args.image_pull_policy,
+            restart_policy=client_args.restart_policy,
+            volume=client_args.volume,
+            envs=parse_envs(client_args.envs),
+        )
+        logger.info(
+            "ElasticDL job %s was successfully submitted. "
+            "The master pod is: %s."
+            % (client_args.job_name, client.get_master_pod_name())
+        )
 
 
 def _model_zoo_in_docker(model_zoo):

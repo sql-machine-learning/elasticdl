@@ -2,6 +2,7 @@ import os
 import threading
 import traceback
 
+import yaml
 from kubernetes import client, config, watch
 from kubernetes.client import V1EnvVar, V1EnvVarSource, V1ObjectFieldSelector
 
@@ -268,6 +269,17 @@ class Client(object):
         return pod
 
     def create_master(self, **kargs):
+        pod = self._create_master_pod_obj(**kargs)
+        self.client.create_namespaced_pod(self.namespace, pod)
+        logger.info("Master launched.")
+
+    def dump_master_yaml(self, **kargs):
+        pod = self._create_master_pod_obj(**kargs)
+        pod_dict = self.client.api_client.sanitize_for_serialization(pod)
+        with open(kargs["yaml"], "w") as f:
+            yaml.safe_dump(pod_dict, f)
+
+    def _create_master_pod_obj(self, **kargs):
         env = [
             V1EnvVar(
                 name="MY_POD_IP",
@@ -298,8 +310,9 @@ class Client(object):
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "master"
         pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = "0"
-        self.client.create_namespaced_pod(self.namespace, pod)
-        logger.info("Master launched.")
+        pod.api_version = "v1"
+        pod.kind = "Pod"
+        return pod
 
     def _create_ps_worker_pod(self, pod_name, type_key, index_key, **kargs):
         # Find that master pod that will be used as the owner reference
