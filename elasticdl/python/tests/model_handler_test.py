@@ -6,6 +6,7 @@ import tensorflow as tf
 from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.elasticdl.layers.embedding import Embedding
+from elasticdl.python.keras.layers import SparseEmbedding
 
 
 class CustomModel(tf.keras.models.Model):
@@ -25,6 +26,17 @@ def custom_model_with_embedding():
     embedding = tf.keras.layers.Embedding(4, 2)(inputs)
     outputs = tf.keras.layers.Dense(1)(embedding)
     return tf.keras.models.Model(inputs, outputs)
+
+
+def custom_model_with_sparse_embedding():
+    sparse_input = tf.keras.layers.Input(
+        shape=(4,), dtype="int64", sparse=True, name="sparse_feature"
+    )
+    embedding = SparseEmbedding(4, 2, combiner="sum", name="embedding")(
+        sparse_input
+    )
+    outputs = tf.keras.layers.Dense(1)(embedding)
+    return tf.keras.models.Model(sparse_input, outputs)
 
 
 def custom_sequential_model(feature_columns):
@@ -158,6 +170,23 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
         )
 
         test_data = tf.constant([0])
+        result = export_model.call(test_data).numpy()
+        self.assertEqual(result[0][0], 3.0)
+
+    def test_get_model_with_sparse_to_train(self):
+        model_inst = custom_model_with_sparse_embedding()
+        model_inst = self.model_handler.get_model_to_train(model_inst)
+        self.assertEqual(type(model_inst.layers[1]), Embedding)
+
+    def test_get_model_with_sparse_to_export(self):
+        model_inst = custom_model_with_sparse_embedding()
+        train_model = self.model_handler.get_model_to_train(model_inst)
+        export_model = self.model_handler.get_model_to_export(
+            train_model, dataset=None
+        )
+        test_data = tf.SparseTensor(
+            indices=[[0, 0]], values=[0], dense_shape=(1, 1)
+        )
         result = export_model.call(test_data).numpy()
         self.assertEqual(result[0][0], 3.0)
 

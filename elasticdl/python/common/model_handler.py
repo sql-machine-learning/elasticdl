@@ -11,6 +11,7 @@ from elasticdl.python.ps.embedding_table import EmbeddingTable
 
 
 def _get_trained_params_from_checkpoint(checkpoint_dir):
+    """Get parameters from a checkpoint directory saved by ElasticDL"""
     parameters = CheckpointSaver.restore_params_from_checkpoint(
         checkpoint_dir, 0, 1
     )
@@ -24,7 +25,17 @@ def _get_trained_params_from_checkpoint(checkpoint_dir):
     return trained_params
 
 
-def _convert_embedding_vector_to_variable(embedding_shape, embedding_table):
+def _convert_embedding_table_to_array(embedding_table, embedding_shape):
+    """Convert an embedding table to a np.ndarray which can be assigned
+    to trainable weights in keras embedding layers.
+
+    Args:
+        embedding_table: A `EmbeddingTable` instance.
+        embedding_shape: a tuple with two elements
+
+    Returns:
+        A np.ndarray
+    """
     embedding_ids = list(embedding_table.embedding_vectors.keys())
     embedding_values = list(embedding_table.embedding_vectors.values())
     embedding_weights = np.zeros(embedding_shape)
@@ -124,13 +135,9 @@ class ParameterServerModelHandler(ModelHandler):
         an elasticdl.layers.Embedding layer in ParameterServerStrategy.
         """
         if type(model) == tf.keras.Sequential or model._is_graph_network:
-            model = self._replace_embedding_layer_to_clone_model(
-                model, tf.keras.layers.Embedding, Embedding
-            )
+            model = self._clone_model_with_edl_embedding(model)
         else:
-            model = self._replace_embedding_attributes_for_subclass(
-                model, tf.keras.layers.Embedding, Embedding
-            )
+            model = self._replace_attr_with_edl_embedding(model)
         return model
 
     def get_model_to_export(self, model, dataset):
@@ -153,8 +160,8 @@ class ParameterServerModelHandler(ModelHandler):
         trained_params = _get_trained_params_from_checkpoint(checkpoint_dir)
         for var in model.trainable_variables:
             if isinstance(trained_params[var.name], EmbeddingTable):
-                embedding_params = _convert_embedding_vector_to_variable(
-                    var.shape, trained_params[var.name]
+                embedding_params = _convert_embedding_table_to_array(
+                    trained_params[var.name], var.shape
                 )
                 var.assign(embedding_params)
             else:
@@ -172,40 +179,29 @@ class ParameterServerModelHandler(ModelHandler):
             isinstance(model, tf.keras.models.Model)
             and not model._is_graph_network
         ):
-            model = self._replace_embedding_attributes_for_subclass(
-                model, Embedding, tf.keras.layers.Embedding
-            )
+            model = self._replace_attr_with_keras_embedding(model)
         else:
-            model = self._replace_embedding_layer_to_clone_model(
-                model, Embedding, tf.keras.layers.Embedding
-            )
+            model = self._clone_model_with_keras_embedding(model)
         return model
 
     @staticmethod
-    def _replace_embedding_layer_to_clone_model(
-        model, src_embedding_class, dst_embedding_class
-    ):
-        """Clone a new model by cloning model and replace the
-        src_embedding_class layer with a dst_embedding_class.
+    def _clone_model_with_edl_embedding(model):
+        """Clone a new model and replace keras embedding layers including
+        `tf.keras.layers.Embedding` and `SparseEmbedding` with
+        `elasticdl.layers.Embedding`
         """
 
         def _clone_function(layer):
-            if type(layer) == src_embedding_class:
+            if type(layer) in [tf.keras.layers.Embedding, SparseEmbedding]:
                 logger.debug(
-                    "Replace {} with {}".format(
-                        src_embedding_class, dst_embedding_class
-                    )
+                    "Replace {} with {}".format(layer.name, Embedding)
                 )
                 # ElasticDL embedding only accept a string type initializer
-                if src_embedding_class == Embedding:
-                    init = tf.keras.initializers.get(
-                        layer.embeddings_initializer
-                    )
-                if dst_embedding_class == Embedding:
-                    init = tf.keras.initializers.serialize(
-                        layer.embeddings_initializer
-                    )["class_name"]
-                embedding_layer = dst_embedding_class(
+                init = tf.keras.initializers.serialize(
+                    layer.embeddings_initializer
+                )["class_name"]
+
+                embedding_layer = Embedding(
                     output_dim=layer.output_dim,
                     input_dim=layer.input_dim,
                     embeddings_initializer=init,
@@ -213,6 +209,8 @@ class ParameterServerModelHandler(ModelHandler):
                     input_length=layer.input_length,
                     name=layer.name,
                 )
+                if type(layer) == SparseEmbedding:
+                    embedding_layer.combiner = layer.combiner
                 return embedding_layer
             return layer
 
@@ -221,20 +219,85 @@ class ParameterServerModelHandler(ModelHandler):
         )
 
     @staticmethod
-    def _replace_embedding_attributes_for_subclass(
-        model, src_embedding_class, dst_embedding_class
-    ):
-        """Replace the keras embedding attribute with
-        elasticdl.layers.Embedding layer.
+    def _clone_model_with_keras_embedding(model):
+        """Clone a new model and replace the `elasticdl.layers.Embedding`
+        layers with `tf.keras.layers.Embedding` or `SparseEmbedding` layers
+        """
+
+        def _clone_function(layer):
+            if type(layer) == Embedding:
+                # ElasticDL embedding only accept a string type initializer
+                if layer.combiner is not None:
+                    embedding_layer = SparseEmbedding(
+                        output_dim=layer.output_dim,
+                        input_dim=layer.input_dim,
+                        embeddings_initializer=layer.embeddings_initializer,
+                        mask_zero=layer.mask_zero,
+                        input_length=layer.input_length,
+                        name=layer.name,
+                        combiner=layer.combiner,
+                    )
+                else:
+                    embedding_layer = tf.keras.layers.Embedding(
+                        output_dim=layer.output_dim,
+                        input_dim=layer.input_dim,
+                        embeddings_initializer=layer.embeddings_initializer,
+                        mask_zero=layer.mask_zero,
+                        input_length=layer.input_length,
+                        name=layer.name,
+                    )
+                return embedding_layer
+            return layer
+
+        return tf.keras.models.clone_model(
+            model, clone_function=_clone_function
+        )
+
+    @staticmethod
+    def _replace_attr_with_edl_embedding(model):
+        """Replace the keras embedding attributes in the model with
+        `elasticdl.layers.Embedding` layers.
         """
         for name, value in model.__dict__.items():
-            if type(value) == src_embedding_class:
-                embedding_layer = dst_embedding_class(
+            if type(value) in [tf.keras.layers.Embedding, SparseEmbedding]:
+                init = tf.keras.initializers.serialize(
+                    value.embeddings_initializer
+                )["class_name"]
+                embedding_layer = Embedding(
                     output_dim=value.output_dim,
                     input_dim=value.input_dim,
-                    embeddings_initializer=value.embeddings_initializer,
+                    embeddings_initializer=init,
                     mask_zero=value.mask_zero,
                     input_length=value.input_length,
                 )
+                if type(value) == SparseEmbedding:
+                    embedding_layer.combiner = value.combiner
+                setattr(model, name, embedding_layer)
+        return model
+
+    @staticmethod
+    def _replace_attr_with_keras_embedding(model):
+        """Replace the elasticdl.layers.Embedding attributes in the model
+        with `tf.keras.layers.Embedding` or `SparseEmbedding` layers.
+        """
+        for name, value in model.__dict__.items():
+            if type(value) == Embedding:
+                if value.combiner is not None:
+                    embedding_layer = SparseEmbedding(
+                        output_dim=value.output_dim,
+                        input_dim=value.input_dim,
+                        embeddings_initializer=value.embeddings_initializer,
+                        mask_zero=value.mask_zero,
+                        input_length=value.input_length,
+                        combiner=value.combiner,
+                    )
+                else:
+                    embedding_layer = tf.keras.layers.Embedding(
+                        output_dim=value.output_dim,
+                        input_dim=value.input_dim,
+                        embeddings_initializer=value.embeddings_initializer,
+                        mask_zero=value.mask_zero,
+                        input_length=value.input_length,
+                    )
                 setattr(model, name, embedding_layer)
         return model

@@ -230,6 +230,7 @@ class Embedding(tf.keras.layers.Layer):
             batch_embedding = tf.sparse.segment_sqrt_n(
                 batch_embedding, idx, segment_ids
             )
+        batch_embedding.set_shape((None, self.output_dim))
         return batch_embedding
 
     def compute_mask(self, inputs, mask=None):
