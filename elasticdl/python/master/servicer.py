@@ -71,13 +71,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return empty_pb2.Empty()
 
     def ReportEvaluationMetrics(self, request, _):
-        report_metrics = self._evaluation_service.report_evaluation_metrics(
-            request.model_version, request.model_outputs, request.labels
+        self._evaluation_service.report_evaluation_metrics(
+            request.model_outputs, request.labels
         )
-        res = elasticdl_pb2.ReportEvaluationMetricsResponse()
-        res.model_version = self._version
-        res.accepted = report_metrics
-        return res
+        return empty_pb2.Empty()
 
     def ReportVersion(self, request, _):
         if self._evaluation_service:
