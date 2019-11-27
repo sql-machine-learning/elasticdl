@@ -29,7 +29,7 @@ EVALUATION_GROUP = [
 PREDICTION_GROUP = ["prediction_data", "prediction_outputs_processor"]
 
 CHECKPOINT_GROUP = [
-    "checkpoint_filename_for_init",
+    "checkpoint_dir_for_init",
     "checkpoint_steps",
     "keep_checkpoint_max",
     "checkpoint_dir",
@@ -294,8 +294,8 @@ def add_train_params(parser):
         default=0,
     )
     parser.add_argument(
-        "--checkpoint_filename_for_init",
-        help="The checkpoint file to initialize the training model",
+        "--checkpoint_dir_for_init",
+        help="The checkpoint directory to initialize the training model",
         default="",
     )
     parser.add_argument(
@@ -328,8 +328,8 @@ def add_evaluate_params(parser):
         required=True,
     )
     parser.add_argument(
-        "--checkpoint_filename_for_init",
-        help="The checkpoint file to initialize the training model",
+        "--checkpoint_dir_for_init",
+        help="The checkpoint directory to initialize the training model",
         required=True,
     )
 
@@ -348,8 +348,8 @@ def add_predict_params(parser):
         default="PredictionOutputsProcessor",
     )
     parser.add_argument(
-        "--checkpoint_filename_for_init",
-        help="The checkpoint file to initialize the training model",
+        "--checkpoint_dir_for_init",
+        help="The checkpoint directory to initialize the training model",
         required=True,
     )
 
@@ -555,10 +555,9 @@ def parse_master_args(master_args=None):
             "Running prediction together with training or evaluation "
             "is not supported"
         )
-    if args.prediction_data and not args.checkpoint_filename_for_init:
+    if args.prediction_data and not args.checkpoint_dir_for_init:
         raise ValueError(
-            "checkpoint_filename_for_init is required for running "
-            "prediction job"
+            "checkpoint_dir_for_init is required for running " "prediction job"
         )
     if not args.use_async and args.get_model_steps > 1:
         args.get_model_steps = 1

@@ -5,18 +5,15 @@ import tensorflow as tf
 
 from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.common.model_utils import (
-    restore_model_params_from_checkpoint,
-)
+from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.master.checkpoint_service import (
-    get_valid_lastest_version_dir,
-)
 from elasticdl.python.ps.embedding_table import EmbeddingTable
 
 
 def _get_trained_params_from_checkpoint(checkpoint_dir):
-    parameters = restore_model_params_from_checkpoint(checkpoint_dir, 0, 1)
+    parameters = CheckpointSaver.restore_params_from_checkpoint(
+        checkpoint_dir, 0, 1
+    )
 
     trained_params = parameters.non_embedding_params
     for name, table in parameters.embedding_params.items():
@@ -146,7 +143,9 @@ class ParameterServerModelHandler(ModelHandler):
             # can be consumed by tf-serving
             model._build_model_with_inputs(inputs=dataset, targets=None)
 
-        checkpoint_dir = get_valid_lastest_version_dir(self._checkpoint_dir)
+        checkpoint_dir = CheckpointSaver.get_valid_lastest_version_dir(
+            self._checkpoint_dir
+        )
         if checkpoint_dir is None:
             logger.warning("No available checkpoint to export model")
             return model
