@@ -13,7 +13,7 @@ from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
 )
-from elasticdl.python.master.checkpoint_service import CheckpointService
+from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.ps.parameters import Parameters
 from elasticdl.python.ps.servicer import PserverServicer
 
@@ -41,9 +41,29 @@ class ParameterServer(object):
 
         self.master_name = get_master_pod_name(args.job_name)
         self.namespace = args.namespace
-        self._init_checkpoint_service(args)
+        self._init_checkpoint_saver(args)
+        self._restore_params_from_checkpoint(args.checkpoint_dir_for_init)
 
-    def _init_checkpoint_service(self, args):
+    def _restore_params_from_checkpoint(self, checkpoint_dir_for_init):
+        """Restore parameters from a checkpint directory for the PS instance
+        """
+        if not checkpoint_dir_for_init:
+            self.logger.info("checkpoint directory for init is None")
+            return
+
+        if not CheckpointSaver.check_checkpoint_valid(checkpoint_dir_for_init):
+            raise ValueError("Invalid checkpoint directory")
+
+        self.parameters = CheckpointSaver.restore_params_from_checkpoint(
+            checkpoint_dir_for_init, self.ps_id, self.num_ps_pods
+        )
+        self.parameters.init_status = True
+        self.logger.info(
+            "The version of restored parameters is %d"
+            % self.parameters.version
+        )
+
+    def _init_checkpoint_saver(self, args):
         if all(
             [
                 args.checkpoint_dir,
@@ -51,14 +71,14 @@ class ParameterServer(object):
                 args.keep_checkpoint_max,
             ]
         ):
-            self.checkpoint_service = CheckpointService(
+            self.checkpoint_saver = CheckpointSaver(
                 args.checkpoint_dir,
                 args.checkpoint_steps,
                 args.keep_checkpoint_max,
                 include_evaluation=False,
             )
         else:
-            self.checkpoint_service = None
+            self.checkpoint_saver = None
             self.logger.warning(
                 "Invalid checkpoint config and no model will be saved"
             )
@@ -82,7 +102,7 @@ class ParameterServer(object):
             use_async=self.use_async,
             evaluation_steps=self.evaluation_steps,
             master_channel=self.master_channel,
-            checkpoint_service=self.checkpoint_service,
+            checkpoint_saver=self.checkpoint_saver,
             ps_id=self.ps_id,
             num_ps_pods=self.num_ps_pods,
         )

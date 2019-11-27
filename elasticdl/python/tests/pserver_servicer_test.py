@@ -12,11 +12,11 @@ from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
 )
+from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.common.tensor import (
     emplace_tensor_pb_from_ndarray,
     tensor_pb_to_ndarray,
 )
-from elasticdl.python.master.checkpoint_service import CheckpointService
 from elasticdl.python.ps.embedding_table import (
     EmbeddingTable,
     get_slot_table_name,
@@ -422,7 +422,7 @@ class PserverServicerTest(unittest.TestCase):
 
     def test_save_parameters_to_checkpoint_file(self):
         with tempfile.TemporaryDirectory() as tempdir:
-            checkpoint_service = CheckpointService(
+            checkpoint_saver = CheckpointSaver(
                 checkpoint_dir=os.path.join(tempdir, "ckpt/"),
                 checkpoint_steps=5,
                 keep_checkpoint_max=3,
@@ -432,7 +432,7 @@ class PserverServicerTest(unittest.TestCase):
                 parameters=Parameters(),
                 grads_to_wait=0,
                 optimizer="optimizer",
-                checkpoint_service=checkpoint_service,
+                checkpoint_saver=checkpoint_saver,
                 ps_id=0,
                 num_ps_pods=1,
             )
@@ -459,15 +459,74 @@ class PserverServicerTest(unittest.TestCase):
                 pserver_servicer._parameters.version += 1
                 pserver_servicer._save_params_to_checkpoint_if_needed()
 
-            self.assertEqual(len(os.listdir(checkpoint_service._directory)), 3)
+            self.assertEqual(len(os.listdir(checkpoint_saver._directory)), 3)
             self.assertEqual(
-                sorted(os.listdir(checkpoint_service._directory)),
+                sorted(os.listdir(checkpoint_saver._directory)),
                 ["version-100", "version-90", "version-95"],
             )
             self.assertEqual(
-                os.listdir(checkpoint_service._directory + "/version-100"),
-                ["variables-0-of-1.chkpt"],
+                os.listdir(checkpoint_saver._directory + "/version-100"),
+                ["variables-0-of-1.ckpt"],
             )
+
+    def test_restore_parameters_from_checkpoint(self):
+        checkpoint_dir_for_init = (
+            "elasticdl/python/tests/testdata/functional_ckpt/version-100"
+        )
+
+        args = PserverArgs(
+            ps_id=0,
+            num_ps_pods=2,
+            model_zoo=_test_model_zoo_path,
+            model_def="test_module.custom_model",
+            checkpoint_dir_for_init=checkpoint_dir_for_init,
+        )
+        pserver_0 = ParameterServer(args)
+
+        embedding_table = pserver_0.parameters.embedding_params["embedding"]
+        self.assertEqual(
+            list(embedding_table.embedding_vectors.keys()), [0, 2]
+        )
+        self.assertEqual(
+            list(pserver_0.parameters.non_embedding_params.keys()),
+            ["dense/kernel:0"],
+        )
+        self.assertTrue(
+            np.array_equal(
+                pserver_0.parameters.non_embedding_params[
+                    "dense/kernel:0"
+                ].numpy(),
+                np.array([[1], [1]], dtype=int),
+            )
+        )
+        self.assertEqual(pserver_0.parameters.version, 100)
+
+        args = PserverArgs(
+            ps_id=1,
+            num_ps_pods=2,
+            model_zoo=_test_model_zoo_path,
+            model_def="test_module.custom_model",
+            checkpoint_dir_for_init=checkpoint_dir_for_init,
+        )
+        pserver_1 = ParameterServer(args)
+
+        embedding_table = pserver_1.parameters.embedding_params["embedding"]
+        self.assertEqual(
+            list(embedding_table.embedding_vectors.keys()), [1, 3]
+        )
+        self.assertEqual(
+            list(pserver_1.parameters.non_embedding_params.keys()),
+            ["dense/bias:0"],
+        )
+        self.assertTrue(
+            np.array_equal(
+                pserver_1.parameters.non_embedding_params[
+                    "dense/bias:0"
+                ].numpy(),
+                np.array([1], dtype=int),
+            )
+        )
+        self.assertEqual(pserver_1.parameters.version, 100)
 
 
 if __name__ == "__main__":
