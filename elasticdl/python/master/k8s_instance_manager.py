@@ -72,6 +72,9 @@ class InstanceManager(object):
 
         self._k8s_client = k8s.Client(event_callback=self._event_cb, **kwargs)
         self._ps_addrs = self._get_ps_addrs()
+        # TODO: Select a worker address to be used for broadcasting model
+        # parameters under allreduce-strategy.
+        self._worker_addrs = self._get_worker_addrs()
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
@@ -94,6 +97,7 @@ class InstanceManager(object):
             name = pod.metadata.name
             self._worker_pod_name_to_id[name] = worker_id
             self._worker_pods_phase[worker_id] = (name, None)
+            self._k8s_client.create_worker_service(worker_id)
 
     def _start_ps(self, ps_id):
         logger.info("Starting PS: %d" % ps_id)
@@ -119,6 +123,14 @@ class InstanceManager(object):
         addrs = []
         for ps_id in range(self._num_ps):
             addrs.append(self._k8s_client.get_ps_service_address(ps_id))
+        return ",".join(addrs)
+
+    def _get_worker_addrs(self):
+        addrs = []
+        for worker_id in range(self._num_workers):
+            addrs.append(
+                self._k8s_client.get_worker_service_address(worker_id)
+            )
         return ",".join(addrs)
 
     def update_status(self, status):
