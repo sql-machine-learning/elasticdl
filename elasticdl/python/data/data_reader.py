@@ -157,6 +157,7 @@ class ODPSDataReader(AbstractDataReader):
             access_key=self._kwargs["access_key"],
             table=table_name,
             endpoint=self._kwargs.get("endpoint"),
+            partition=self._kwargs.get("partition", None),
             num_processes=self._kwargs.get("num_processes", 1),
         )
 
