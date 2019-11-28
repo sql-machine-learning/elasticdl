@@ -1,6 +1,5 @@
 import collections
 import math
-
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.feature_column import feature_column as fc_old
