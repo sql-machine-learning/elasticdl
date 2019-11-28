@@ -52,6 +52,11 @@ class SparseEmbedding(tf.keras.layers.Layer):
         self.input_length = input_length
         self.combiner = combiner
 
+        if self.combiner not in ["sum", "mean", "sqrtn"]:
+            raise ValueError(
+                "combiner must set sum, mean or sqrtn for sparse input"
+            )
+
     def build(self, input_shape):
         self.embeddings = self.add_weight(
             shape=(self.input_dim, self.output_dim),
@@ -62,10 +67,9 @@ class SparseEmbedding(tf.keras.layers.Layer):
         self.built = True
 
     def call(self, inputs):
-        if self.combiner not in ["sum", "mean", "sqrtn"]:
-            raise ValueError(
-                "combiner must set sum, mean or sqrtn for sparse input"
-            )
+        # When saving a model with the layer, `tf.saved_model.save` will
+        # feed the inputs with a Tensor not a SparseTensor, so we should
+        # convert Tensor to `SparseTensor`.
         if not isinstance(inputs, tf.SparseTensor):
             idx = tf.where(tf.not_equal(inputs, 0))
             inputs = tf.SparseTensor(

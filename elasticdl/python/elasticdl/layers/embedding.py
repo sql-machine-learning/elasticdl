@@ -138,7 +138,7 @@ class Embedding(tf.keras.layers.Layer):
         first_may_exceed_id = ids[np.argmax(ids >= self.input_dim)]
         if self.input_dim is not None and first_may_exceed_id > self.input_dim:
             raise ValueError(
-                " The embedding id cannot be bigger"
+                " The embedding id cannot be bigger "
                 "than input_dim. id = %d is not in [0, %d)"
                 % (first_may_exceed_id, self.input_dim)
             )

@@ -26,7 +26,7 @@ def _get_trained_params_from_checkpoint(checkpoint_dir):
     return trained_params
 
 
-def _convert_embedding_table_to_array(embedding_table, embedding_shape):
+def _convert_embedding_table_to_numpy_array(embedding_table, embedding_shape):
     """Convert an embedding table to a np.ndarray which can be assigned
     to trainable weights in keras embedding layers.
 
@@ -161,7 +161,7 @@ class ParameterServerModelHandler(ModelHandler):
         trained_params = _get_trained_params_from_checkpoint(checkpoint_dir)
         for var in model.trainable_variables:
             if isinstance(trained_params[var.name], EmbeddingTable):
-                embedding_params = _convert_embedding_table_to_array(
+                embedding_params = _convert_embedding_table_to_numpy_array(
                     trained_params[var.name], var.shape
                 )
                 var.assign(embedding_params)
@@ -227,7 +227,9 @@ class ParameterServerModelHandler(ModelHandler):
 
         def _clone_function(layer):
             if type(layer) == Embedding:
-                # ElasticDL embedding only accept a string type initializer
+                logger.info("Replace embedding layer with "
+                            "elasticdl.layers.Embedding")
+                # The combiner is not None only for SparseEmbedding,
                 if layer.combiner is not None:
                     embedding_layer = SparseEmbedding(
                         output_dim=layer.output_dim,
@@ -261,13 +263,15 @@ class ParameterServerModelHandler(ModelHandler):
         """
         for name, value in model.__dict__.items():
             if type(value) in [tf.keras.layers.Embedding, SparseEmbedding]:
-                init = tf.keras.initializers.serialize(
+                logger.info("Replace embedding layer with "
+                            "elasticdl.layers.Embedding")
+                initializer_name = tf.keras.initializers.serialize(
                     value.embeddings_initializer
                 )["class_name"]
                 embedding_layer = Embedding(
                     output_dim=value.output_dim,
                     input_dim=value.input_dim,
-                    embeddings_initializer=init,
+                    embeddings_initializer=initializer_name,
                     mask_zero=value.mask_zero,
                     input_length=value.input_length,
                 )
@@ -283,7 +287,9 @@ class ParameterServerModelHandler(ModelHandler):
         """
         for name, value in model.__dict__.items():
             if type(value) == Embedding:
+                # The combiner is not None only for SparseEmbedding,
                 if value.combiner is not None:
+                    logger.info("Replace elasticdl with SparseEmbedding")
                     embedding_layer = SparseEmbedding(
                         output_dim=value.output_dim,
                         input_dim=value.input_dim,
@@ -293,6 +299,9 @@ class ParameterServerModelHandler(ModelHandler):
                         combiner=value.combiner,
                     )
                 else:
+                    logger.info("Replace elasticdl with ",
+                                "tf.kerasl.layers.Embedding"
+                                )
                     embedding_layer = tf.keras.layers.Embedding(
                         output_dim=value.output_dim,
                         input_dim=value.input_dim,
