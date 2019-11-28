@@ -227,8 +227,10 @@ class ParameterServerModelHandler(ModelHandler):
 
         def _clone_function(layer):
             if type(layer) == Embedding:
-                logger.info("Replace embedding layer with "
-                            "elasticdl.layers.Embedding")
+                logger.info(
+                    "Replace embedding layer with "
+                    "elasticdl.layers.Embedding"
+                )
                 # The combiner is not None only for SparseEmbedding,
                 if layer.combiner is not None:
                     embedding_layer = SparseEmbedding(
@@ -263,8 +265,10 @@ class ParameterServerModelHandler(ModelHandler):
         """
         for name, value in model.__dict__.items():
             if type(value) in [tf.keras.layers.Embedding, SparseEmbedding]:
-                logger.info("Replace embedding layer with "
-                            "elasticdl.layers.Embedding")
+                logger.info(
+                    "Replace embedding layer with "
+                    "elasticdl.layers.Embedding"
+                )
                 initializer_name = tf.keras.initializers.serialize(
                     value.embeddings_initializer
                 )["class_name"]
@@ -299,9 +303,9 @@ class ParameterServerModelHandler(ModelHandler):
                         combiner=value.combiner,
                     )
                 else:
-                    logger.info("Replace elasticdl with ",
-                                "tf.kerasl.layers.Embedding"
-                                )
+                    logger.info(
+                        "Replace elasticdl with ", "tf.kerasl.layers.Embedding"
+                    )
                     embedding_layer = tf.keras.layers.Embedding(
                         output_dim=value.output_dim,
                         input_dim=value.input_dim,
