@@ -664,6 +664,7 @@ class Worker(object):
         for _ in range(self._max_minibatch_retry_num):
             if task_type == elasticdl_pb2.EVALUATION:
                 self._run_evaluation_task(features, labels)
+                break
             elif task_type == elasticdl_pb2.TRAINING:
                 # TODO: optimize the logic to avoid unnecessary
                 #       get_model call.
