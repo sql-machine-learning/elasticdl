@@ -92,7 +92,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             if step == 0:
                 worker._run_model_call_before_training(x)
 
-            worker.get_model(step, elasticdl_pb2.MINIMUM)
+            worker.get_model()
             if use_tf_function:
                 w_loss, w_grads = worker.training_process_with_acceleration(
                     x, y
@@ -102,7 +102,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             worker.report_gradient(w_grads)
 
             if step % 20 == 0:
-                worker.get_model(step, elasticdl_pb2.MINIMUM)
+                worker.get_model()
                 for (x, y) in test_db:
                     out = worker.forward_process(x)
                     if "mnist" in self._model_def:
@@ -219,7 +219,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
         worker = Worker(args, ps_channels=self._channels)
         worker._run_model_call_before_training(images)
-        worker.get_model(0, elasticdl_pb2.MINIMUM)
+        worker.get_model()
         w_loss, w_grads = worker.training_process_eagerly(images, labels)
         worker.report_gradient(w_grads)
 
@@ -369,7 +369,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             workers.append(worker)
             worker._run_model_call_before_training(training_data[0][0])
             for i in range(num_data):
-                worker.get_model(0, elasticdl_pb2.MINIMUM)
+                worker.get_model()
                 w_loss, w_grads = worker.training_process_eagerly(
                     training_data[i][0], training_data[i][1]
                 )
@@ -380,7 +380,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                     self._reset_pserver()
                     # `report_variable` will be called in `get_model` to
                     # initialize variables on ps with worker variables
-                    worker.get_model(0, elasticdl_pb2.MINIMUM)
+                    worker.get_model()
                     # send the grads again as these grads are not applied
                     # on worker variables
                     worker.report_gradient(w_grads)

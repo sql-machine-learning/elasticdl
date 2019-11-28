@@ -61,7 +61,7 @@ class Worker(object):
         """
         Arguments:
             channel: The channel for the gRPC master service.
-            ps_channels: TODO
+            ps_channels: The PS channels for PS service
             max_minibatch_retry_num: The maximum number of a minibatch retry
                 as its results (e.g. gradients) are not accepted by master.
             max_allreduce_retry_num: The maximum number of retries for
@@ -82,6 +82,16 @@ class Worker(object):
                     elasticdl_pb2_grpc.PserverStub(c) for c in ps_channels
                 ]
                 self._var_to_ps = {}
+        self._distribution_strategy = args.distribution_strategy
+        if (
+            self._distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
+            and self._use_multi_ps is False
+        ):
+            raise ValueError(
+                "PS channels are not set up under parameter server strategy"
+            )
+
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._max_allreduce_retry_num = max_allreduce_retry_num
         self._init_from_args(args)
@@ -112,7 +122,6 @@ class Worker(object):
             prediction_outputs_processor=args.prediction_outputs_processor,
         )
 
-        self._distribution_strategy = args.distribution_strategy
         self._collective_communicator = (
             CollectiveCommunicator()
             if self._distribution_strategy == DistributionStrategy.ALLREDUCE
@@ -208,9 +217,9 @@ class Worker(object):
         if task_type is not None:
             req.task_type = task_type
 
-        return self._stub.GetTask(req)
+        return self._stub.get_task(req)
 
-    def get_model_from_ps(self, version, method):
+    def get_model(self):
         model_version = -1
         variable_future_and_id_pairs = []
         req = empty_pb2.Empty()
@@ -269,10 +278,6 @@ class Worker(object):
         new_embeddings[index] = embeddings
         return new_embeddings
 
-    def get_model(self, version, method):
-        if self._use_multi_ps:
-            self.get_model_from_ps(version, method)
-
     def report_task_result(self, task_id, err_msg, exec_counters=None):
         """
         report task result to master
@@ -282,7 +287,7 @@ class Worker(object):
         report.err_message = err_msg
         if isinstance(exec_counters, dict):
             report.exec_counters.update(exec_counters)
-        return self._stub.ReportTaskResult(report)
+        return self._stub.report_task_result(report)
 
     def init_ps_var_partition(self):
         ps_vars = {}
@@ -321,14 +326,10 @@ class Worker(object):
                 )
         self._ps_stubs[ps_id].push_model(model)
 
-    def report_variable_to_all_ps(self):
+    def report_variable(self):
         # TODO: call `push_model` in parallel
         for ps_id in range(len(self._ps_stubs)):
             self.report_variable_to_ps(ps_id)
-
-    def report_variable(self):
-        if self._use_multi_ps:
-            self.report_variable_to_all_ps()
 
     def report_gradient_to_ps(self, grads):
         reqs = [
@@ -441,7 +442,7 @@ class Worker(object):
         labels = np.concatenate(labels)
         tensor = Tensor(values=labels)
         serialize_tensor(tensor, req.labels)
-        self._stub.ReportEvaluationMetrics(req)
+        self._stub.report_evaluation_metrics(req)
 
     def report_prediction_outputs(self, predictions):
         if self._prediction_outputs_processor:
@@ -645,7 +646,6 @@ class Worker(object):
         if not isinstance(outputs, dict):
             outputs = {MetricsDictKey.MODEL_OUTPUT: outputs}
         self._collect_evaluation_result(outputs, labels)
-        return True
 
     def _run_prediction_task(self, features):
         predictions = self.forward_process(features)
@@ -663,22 +663,13 @@ class Worker(object):
             self._run_model_call_before_training(features)
         for _ in range(self._max_minibatch_retry_num):
             if task_type == elasticdl_pb2.EVALUATION:
-                if min_model_version == -1:
-                    if self._model_version < 0:
-                        self.get_model(0, elasticdl_pb2.MINIMUM)
-                elif self._model_version != min_model_version:
-                    self.get_model(min_model_version, elasticdl_pb2.FIXED)
-                accepted = self._run_evaluation_task(features, labels)
-                if accepted:
-                    break
+                self._run_evaluation_task(features, labels)
+                break
             elif task_type == elasticdl_pb2.TRAINING:
                 # TODO: optimize the logic to avoid unnecessary
                 #       get_model call.
                 if not train_with_local_model:
-                    self.get_model(
-                        max(self._model_version, min_model_version),
-                        elasticdl_pb2.MINIMUM,
-                    )
+                    self.get_model()
                 *accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )
@@ -687,7 +678,7 @@ class Worker(object):
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
                 if self._model_version != min_model_version:
-                    self.get_model(min_model_version, elasticdl_pb2.FIXED)
+                    self.get_model()
                 accepted = self._run_prediction_task(features)
                 if accepted:
                     break
@@ -876,6 +867,8 @@ class Worker(object):
         Only evaluate the model on the worker.
         """
         evaluation_task_executed = False
+        # get the latest model before processing eval tasks
+        self.get_model()
         while True:
             task = self.get_task(elasticdl_pb2.EVALUATION)
             # no evaluation task in eval_todo of master
