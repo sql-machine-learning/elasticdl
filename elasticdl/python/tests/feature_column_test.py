@@ -3,9 +3,7 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from elasticdl.python.elasticdl.feature_column import (
-    feature_column as edl_feature_column,
-)
+from elasticdl.python.elasticdl.feature_column import feature_column
 
 
 def call_feature_columns(feature_columns, input):
@@ -23,7 +21,7 @@ class EmbeddingColumnTest(unittest.TestCase):
     def test_feature_column_call(self):
         dimension = 32
 
-        item_id_embedding = edl_feature_column.embedding_column(
+        item_id_embedding = feature_column.embedding_column(
             tf.feature_column.categorical_column_with_identity(
                 "item_id", num_buckets=128
             ),
