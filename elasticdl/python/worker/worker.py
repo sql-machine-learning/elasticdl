@@ -646,7 +646,6 @@ class Worker(object):
         if not isinstance(outputs, dict):
             outputs = {MetricsDictKey.MODEL_OUTPUT: outputs}
         self._collect_evaluation_result(outputs, labels)
-        return True
 
     def _run_prediction_task(self, features):
         predictions = self.forward_process(features)
@@ -664,10 +663,7 @@ class Worker(object):
             self._run_model_call_before_training(features)
         for _ in range(self._max_minibatch_retry_num):
             if task_type == elasticdl_pb2.EVALUATION:
-                self.get_model()
-                accepted = self._run_evaluation_task(features, labels)
-                if accepted:
-                    break
+                self._run_evaluation_task(features, labels)
             elif task_type == elasticdl_pb2.TRAINING:
                 # TODO: optimize the logic to avoid unnecessary
                 #       get_model call.
@@ -870,6 +866,8 @@ class Worker(object):
         Only evaluate the model on the worker.
         """
         evaluation_task_executed = False
+        # get the latest model before processing eval tasks
+        self.get_model()
         while True:
             task = self.get_task(elasticdl_pb2.EVALUATION)
             # no evaluation task in eval_todo of master
