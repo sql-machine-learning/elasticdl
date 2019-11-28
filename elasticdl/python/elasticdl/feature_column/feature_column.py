@@ -1,10 +1,10 @@
 import collections
 import math
-import numpy as np
+
 import tensorflow as tf
 from tensorflow.python.feature_column import feature_column as fc_old
 from tensorflow.python.feature_column import feature_column_v2 as fc_lib
-from tensorflow.python.framework import ops, tensor_shape
+from tensorflow.python.framework import tensor_shape
 from tensorflow.python.ops import init_ops
 
 
@@ -101,7 +101,8 @@ class EmbeddingColumn(
         ):
             raise ValueError(
                 "In embedding_column: {}. "
-                "categorical_column must not be of type SequenceCategoricalColumn. "
+                "categorical_column must not be of "
+                "type SequenceCategoricalColumn. "
                 "Suggested fix A: If you wish to use DenseFeatures, use a "
                 "non-sequence categorical_column_with_*. "
                 "Suggested fix B: If you wish to create sequence input, use "

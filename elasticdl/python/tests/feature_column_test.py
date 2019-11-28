@@ -29,8 +29,10 @@ class EmbeddingColumnTest(unittest.TestCase):
             ),
             dimension=dimension,
         )
-        item_id_embedding.lookup_embedding = lambda unique_ids: generate_mock_embedding_vectors(
-            unique_ids, item_id_embedding.dimension
+        item_id_embedding.lookup_embedding = lambda unique_ids: (
+            generate_mock_embedding_vectors(
+                unique_ids, item_id_embedding.dimension
+            )
         )
 
         output = call_feature_columns(
