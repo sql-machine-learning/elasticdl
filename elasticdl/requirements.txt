@@ -3,4 +3,3 @@ kubernetes
 docker
 pyrecordio>=0.0.6
 odps
-redis-py-cluster
