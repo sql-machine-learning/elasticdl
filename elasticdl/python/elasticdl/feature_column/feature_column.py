@@ -20,7 +20,7 @@ def embedding_column(
     Create a customized EmbeddingColumn for ElasticDL.
     The native EmbeddingColumn will create a variable to
     store the entire embedding table. It can't leverage the
-    benifit from the ElasticDL parameter server to partition
+    benefit from the ElasticDL parameter server to partition
     the embedding table. Create this ElasticDL EmbeddingColumn
     to interact with ElasticDL parameter server.
     The API signature is based on the native
