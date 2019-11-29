@@ -13,18 +13,48 @@ def embedding_column(
     dimension,
     combiner="mean",
     initializer=None,
-    ckpt_to_load_from=None,
-    tensor_name_in_ckpt=None,
     max_norm=None,
     trainable=True,
 ):
+    """
+    Create a customized EmbeddingColumn for ElasticDL.
+    The native EmbeddingColumn will create a variable to
+    store the entire embedding table. It can't leverage the
+    benifit from the ElasticDL parameter server to partition
+    the embedding table. Create this ElasticDL EmbeddingColumn
+    to interact with ElasticDL parameter server.
+    The API signature is based on the native
+    tf.feature_column.embedding_column and
+    remove some unused parameters.
+
+    Args:
+      categorical_column: A `CategoricalColumn` created by a
+        `categorical_column_with_*` function. This column produces
+        the sparse IDs that are inputs to the embedding lookup.
+      dimension: An integer specifying dimension of the embedding, must be > 0.
+      combiner: A string specifying how to reduce if there are multiple entries
+        in a single row. Currently 'mean', 'sqrtn' and 'sum' are supported,
+        with 'mean' the default. 'sqrtn' often achieves good accuracy, in
+        particular with bag-of-words columns. Each of this can be thought as
+        example level normalizations on the column. For more information, see
+        `tf.embedding_lookup_sparse`.
+      initializer: A variable initializer function to be used in embedding
+        variable initialization. If not specified, defaults to
+        `truncated_normal_initializer` with mean `0.0` and
+        standard deviation `1/sqrt(dimension)`.
+      max_norm: If not `None`, embedding values are l2-normalized
+        to this value.
+      trainable: Whether or not the embedding is trainable. Default is True.
+
+    Returns:
+        `DenseColumn` that converts from sparse input.
+
+    Raises:
+        ValueError: if `dimension` not > 0.
+        ValueError: if `initializer` is specified and is not callable.
+    """
     if (dimension is None) or (dimension < 1):
         raise ValueError("Invalid dimension {}.".format(dimension))
-    if (ckpt_to_load_from is None) != (tensor_name_in_ckpt is None):
-        raise ValueError(
-            "Must specify both `ckpt_to_load_from` and "
-            "`tensor_name_in_ckpt` or none of them."
-        )
 
     if (initializer is not None) and (not callable(initializer)):
         raise ValueError(
@@ -41,8 +71,6 @@ def embedding_column(
         dimension=dimension,
         combiner=combiner,
         initializer=initializer,
-        ckpt_to_load_from=ckpt_to_load_from,
-        tensor_name_in_ckpt=tensor_name_in_ckpt,
         max_norm=max_norm,
         trainable=trainable,
     )
@@ -60,8 +88,6 @@ class EmbeddingColumn(
             "dimension",
             "combiner",
             "initializer",
-            "ckpt_to_load_from",
-            "tensor_name_in_ckpt",
             "max_norm",
             "trainable",
         ),
@@ -91,9 +117,6 @@ class EmbeddingColumn(
     def variable_shape(self):
         """See `DenseColumn` base class."""
         return tensor_shape.TensorShape([self.dimension])
-
-    def create_state(self, state_manager):
-        pass
 
     def get_dense_tensor(self, transformation_cache, state_manager):
         if isinstance(
