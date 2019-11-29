@@ -37,7 +37,7 @@ class SparseEmbedding(tf.keras.layers.Layer):
         embeddings_initializer="uniform",
         mask_zero=False,
         input_length=None,
-        combiner=None,
+        combiner="mean",
         **kwargs
     ):
         if "input_shape" not in kwargs and input_length:
