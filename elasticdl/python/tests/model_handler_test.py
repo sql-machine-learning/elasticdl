@@ -181,6 +181,9 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
     def test_get_model_with_sparse_to_export(self):
         model_inst = custom_model_with_sparse_embedding()
         train_model = self.model_handler.get_model_to_train(model_inst)
+
+        # Model handler will restore model parameters from the checkpoint
+        # directory and assign parameters to train_model.
         export_model = self.model_handler.get_model_to_export(
             train_model, dataset=None
         )
@@ -188,6 +191,10 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
             indices=[[0, 0]], values=[0], dense_shape=(1, 1)
         )
         result = export_model.call(test_data).numpy()
+
+        # The embedding table in checkpoint file is
+        # [[1.0, 1.0], [1.0, 1.0], [1.0,1.0], [1.0, 1.0]], weights in the dense
+        # layer is [[1.0],[1].0], bias is [1.0]. So the result is 3.0.
         self.assertEqual(result[0][0], 3.0)
 
 
