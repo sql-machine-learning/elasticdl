@@ -202,16 +202,23 @@ class ParameterServerModelHandler(ModelHandler):
                     layer.embeddings_initializer
                 )["class_name"]
 
-                embedding_layer = Embedding(
-                    output_dim=layer.output_dim,
-                    input_dim=layer.input_dim,
-                    embeddings_initializer=init,
-                    mask_zero=layer.mask_zero,
-                    input_length=layer.input_length,
-                    name=layer.name,
-                )
-                if type(layer) == SparseEmbedding:
-                    embedding_layer.combiner = layer.combiner
+                if type(layer) == tf.keras.layers.Embedding:
+                    embedding_layer = Embedding(
+                        output_dim=layer.output_dim,
+                        input_dim=layer.input_dim,
+                        embeddings_initializer=init,
+                        mask_zero=layer.mask_zero,
+                        input_length=layer.input_length,
+                        name=layer.name,
+                    )
+                else:
+                    embedding_layer = Embedding(
+                        output_dim=layer.output_dim,
+                        input_dim=layer.input_dim,
+                        embeddings_initializer=init,
+                        name=layer.name,
+                        combiner=layer.combiner,
+                    )
                 return embedding_layer
             return layer
 
@@ -237,8 +244,6 @@ class ParameterServerModelHandler(ModelHandler):
                         output_dim=layer.output_dim,
                         input_dim=layer.input_dim,
                         embeddings_initializer=layer.embeddings_initializer,
-                        mask_zero=layer.mask_zero,
-                        input_length=layer.input_length,
                         name=layer.name,
                         combiner=layer.combiner,
                     )
@@ -264,10 +269,10 @@ class ParameterServerModelHandler(ModelHandler):
         `elasticdl.layers.Embedding` layers.
         """
         for name, value in model.__dict__.items():
-            if type(value) in [tf.keras.layers.Embedding, SparseEmbedding]:
+            if type(value) == tf.keras.layers.Embedding:
                 logger.info(
-                    "Replace embedding layer with "
-                    "elasticdl.layers.Embedding"
+                    "Replace {} layer with "
+                    "elasticdl.layers.Embedding".format(value)
                 )
                 initializer_name = tf.keras.initializers.serialize(
                     value.embeddings_initializer
@@ -279,8 +284,18 @@ class ParameterServerModelHandler(ModelHandler):
                     mask_zero=value.mask_zero,
                     input_length=value.input_length,
                 )
-                if type(value) == SparseEmbedding:
-                    embedding_layer.combiner = value.combiner
+                setattr(model, name, embedding_layer)
+            elif type(value) == SparseEmbedding:
+                logger.info(
+                    "Replace {} layer with "
+                    "elasticdl.layers.Embedding".format(value)
+                )
+                embedding_layer = Embedding(
+                    output_dim=value.output_dim,
+                    input_dim=value.input_dim,
+                    embeddings_initializer=initializer_name,
+                    combiner=value.combiner,
+                )
                 setattr(model, name, embedding_layer)
         return model
 
@@ -298,8 +313,6 @@ class ParameterServerModelHandler(ModelHandler):
                         output_dim=value.output_dim,
                         input_dim=value.input_dim,
                         embeddings_initializer=value.embeddings_initializer,
-                        mask_zero=value.mask_zero,
-                        input_length=value.input_length,
                         combiner=value.combiner,
                     )
                 else:
