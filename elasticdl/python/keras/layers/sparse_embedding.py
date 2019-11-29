@@ -80,9 +80,9 @@ class SparseEmbedding(tf.keras.layers.Layer):
         if dtype != "int32" and dtype != "int64":
             inputs = math_ops.cast(inputs, "int32")
         out = embedding_ops.safe_embedding_lookup_sparse(
-            params=self.embeddings,
-            sp_ids=inputs,
-            sp_weights=None,
+            embedding_weights=self.embeddings,
+            sparse_ids=inputs,
+            sparse_weights=None,
             combiner=self.combiner,
         )
         return out
