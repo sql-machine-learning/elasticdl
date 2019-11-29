@@ -5,7 +5,7 @@ import tensorflow as tf
 from tensorflow.python.feature_column import feature_column as fc_old
 from tensorflow.python.feature_column import feature_column_v2 as fc_lib
 from tensorflow.python.framework import tensor_shape
-from tensorflow.python.ops import init_ops
+from tensorflow.python.ops import array_ops, init_ops, math_ops
 
 
 def embedding_column(
@@ -143,6 +143,7 @@ class EmbeddingColumn(
 
         # Look up the embedding from the sparse input
         sparse_ids = sparse_tensors.id_tensor
+        sparse_weights = sparse_tensors.weight_tensor
 
         unique_ids, idx = tf.unique(sparse_ids.values)
         batch_embedding = tf.py_function(
@@ -153,19 +154,63 @@ class EmbeddingColumn(
         if segment_ids.dtype != tf.int32:
             segment_ids = tf.cast(segment_ids, tf.int32)
 
-        # TODO(brightcoder01): Add combine with sparse_weights
-        if self.combiner == "sum":
-            batch_embedding = tf.sparse.segment_sum(
-                batch_embedding, idx, segment_ids
+        if sparse_weights is not None:
+            weights = sparse_weights.values
+            if weights.dtype != batch_embedding.dtype:
+                weights = math_ops.cast(weights, batch_embedding.dtype)
+
+            batch_embedding = array_ops.gather(batch_embedding, idx)
+
+            # Reshape weights to allow broadcast
+            ones = array_ops.fill(
+                array_ops.expand_dims(array_ops.rank(batch_embedding) - 1, 0),
+                1,
             )
-        elif self.combiner == "mean":
-            batch_embedding = tf.sparse.segment_mean(
-                batch_embedding, idx, segment_ids
+            bcast_weights_shape = array_ops.concat(
+                [array_ops.shape(weights), ones], 0
             )
-        elif self.combiner == "sqrtn":
-            batch_embedding = tf.sparse.segment_sqrt_n(
-                batch_embedding, idx, segment_ids
-            )
+            weights = array_ops.reshape(weights, bcast_weights_shape)
+
+            batch_embedding *= weights
+
+            if self.combiner == "sum":
+                batch_embedding = math_ops.segment_sum(
+                    batch_embedding, segment_ids
+                )
+            elif self.combiner == "mean":
+                batch_embedding = math_ops.segment_sum(
+                    batch_embedding, segment_ids
+                )
+                weight_sum = math_ops.segment_sum(weights, segment_ids)
+                batch_embedding = math_ops.div(batch_embedding, weight_sum)
+            elif self.combiner == "sqrtn":
+                batch_embedding = math_ops.segment_sum(
+                    batch_embedding, segment_ids
+                )
+                weights_squared = math_ops.pow(weights, 2)
+                weight_sum = math_ops.segment_sum(weights_squared, segment_ids)
+                weight_sum_sqrt = math_ops.sqrt(weight_sum)
+                batch_embedding = math_ops.div(
+                    batch_embedding, weight_sum_sqrt
+                )
+            else:
+                assert False, "Unrecognized combiner"
+        else:
+            assert idx is not None
+            if self.combiner == "sum":
+                batch_embedding = tf.sparse.segment_sum(
+                    batch_embedding, idx, segment_ids
+                )
+            elif self.combiner == "mean":
+                batch_embedding = tf.sparse.segment_mean(
+                    batch_embedding, idx, segment_ids
+                )
+            elif self.combiner == "sqrtn":
+                batch_embedding = tf.sparse.segment_sqrt_n(
+                    batch_embedding, idx, segment_ids
+                )
+            else:
+                assert False, "Unrecognized combiner"
 
         return batch_embedding
 
