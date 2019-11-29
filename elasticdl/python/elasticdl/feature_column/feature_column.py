@@ -163,8 +163,12 @@ class EmbeddingColumn(
 
             # Reshape weights to allow broadcast
             ones = array_ops.fill(
-                array_ops.expand_dims(array_ops.rank(batch_embedding) - 1, 0), 1)
-            bcast_weights_shape = array_ops.concat([array_ops.shape(weights), ones], 0)
+                array_ops.expand_dims(array_ops.rank(batch_embedding) - 1, 0),
+                1,
+            )
+            bcast_weights_shape = array_ops.concat(
+                [array_ops.shape(weights), ones], 0
+            )
             weights = array_ops.reshape(weights, bcast_weights_shape)
 
             batch_embedding *= weights

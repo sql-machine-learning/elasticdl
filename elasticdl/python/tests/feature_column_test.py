@@ -14,9 +14,7 @@ def call_feature_columns(feature_columns, input):
 def generate_mock_embedding_vectors(ids, dimension):
     identity_matrix = np.identity(dimension)
 
-    return np.array(
-        [identity_matrix[id] for id in ids]
-    )
+    return np.array([identity_matrix[id] for id in ids])
 
 
 class EmbeddingColumnTest(unittest.TestCase):
@@ -50,8 +48,8 @@ class EmbeddingColumnTest(unittest.TestCase):
         dimension = 8
 
         item_id_embedding = feature_column.embedding_column(
-            categorical_column=tf.feature_column.weighted_categorical_column(
-                categorical_column=tf.feature_column.categorical_column_with_identity(
+            tf.feature_column.weighted_categorical_column(
+                tf.feature_column.categorical_column_with_identity(
                     "item_id", num_buckets=128
                 ),
                 weight_feature_key="frequency",
@@ -70,23 +68,19 @@ class EmbeddingColumnTest(unittest.TestCase):
             [item_id_embedding],
             {
                 "item_id": [[2, 6, 5], [3, 1, 1]],
-                "frequency": [
-                    [0.33, 5.0, 1.024],
-                    [2.048, 0.5, 1.0],
-                ],
+                "frequency": [[0.33, 5.0, 1.024], [2.048, 0.5, 1.0]],
             },
         )
 
-        expected_output = np.array([
-            [0., 0.,  0.33, 0.,    0., 1.024, 5.0, 0.0],
-            [0., 1.5, 0.,   2.048, 0., 0.,    0.0, 0.0]
-        ], dtype=np.float32)
-
-        self.assertTrue(
-            (
-                output.numpy() == expected_output
-            ).all()
+        expected_output = np.array(
+            [
+                [0.0, 0.0, 0.33, 0.0, 0.0, 1.024, 5.0, 0.0],
+                [0.0, 1.5, 0.0, 2.048, 0.0, 0.0, 0.0, 0.0],
+            ],
+            dtype=np.float32,
         )
+
+        self.assertTrue((output.numpy() == expected_output).all())
 
 
 if __name__ == "__main__":
