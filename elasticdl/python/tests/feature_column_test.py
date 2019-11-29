@@ -38,10 +38,10 @@ class EmbeddingColumnTest(unittest.TestCase):
         )
 
         self.assertTrue(
-            (
-                output.numpy()
-                == generate_mock_embedding_vectors([1, 2, 3], dimension)
-            ).all()
+            np.array_equal(
+                output.numpy(),
+                generate_mock_embedding_vectors([1, 2, 3], dimension),
+            )
         )
 
     def test_call_embedding_column_with_weights(self):
@@ -80,7 +80,7 @@ class EmbeddingColumnTest(unittest.TestCase):
             dtype=np.float32,
         )
 
-        self.assertTrue((output.numpy() == expected_output).all())
+        self.assertTrue(np.array_equal(output.numpy(), expected_output))
 
 
 if __name__ == "__main__":
