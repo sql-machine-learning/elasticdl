@@ -41,7 +41,8 @@ In the Analyze step, we will parse the TRANSFORM expression and collect the stat
 In the feature column generation step, we will format the feature column template with the variable name and the statistical values to get the integral feature column definition for the transform logic.  
 The generated feature column definitions will be passed to the next couler step: model training. We combine them with the COLUMN expression to generated the final feature column definitions and then pass to the model. Let's take **NUMERIC(STANDARDIZE(age))** for example, the final definition will be **numeric_column('age', normalizer_fn=lambda x: x - 18.0 / 6.0)**  
 
-We plan to implement the following common used transform APIs at the first step. And we will add more according to further requirements.  
+We plan to implement the following common used transform APIs at the first step. And we will add more according to further requirements.
+
 |            Name             |                      Feature Column Template                                   |      Analyzer      |
 |:---------------------------:|:------------------------------------------------------------------------------:|:------------------:|
 |       STANDARDIZE(x)        | numeric_column({var_name}, normalizer_fn=lambda x : x - {mean} / {std})        |    MEAN, STDDEV    |
