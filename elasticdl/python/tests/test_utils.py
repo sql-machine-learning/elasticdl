@@ -155,7 +155,7 @@ def create_recordio_file(size, dataset_name, shape, temp_dir=None):
     return temp_file.name
 
 
-def _create_pserver(model_zoo_path, model_def, grads_to_wait, use_async, num_ps_pods):
+def create_pserver(model_zoo_path, model_def, grads_to_wait, use_async, num_ps_pods):
     ports = [i + 12345 for i in range(num_ps_pods)]
     channels = []
     for port in ports:
@@ -166,7 +166,7 @@ def _create_pserver(model_zoo_path, model_def, grads_to_wait, use_async, num_ps_
     pservers = []
     for port in ports:
         args = PserverArgs(
-            grads_to_wait=1,
+            grads_to_wait=grads_to_wait,
             use_async=True,
             port=port,
             model_zoo=model_zoo_path,
@@ -190,7 +190,8 @@ def distributed_train_and_evaluate(
     callback_classes=[],
     use_async=False,
     get_model_steps=1,
-    num_ps_pods=2,
+    ps_channels=None,
+    pservers=None,
     distribution_strategy=DistributionStrategy.PARAMETER_SERVER,
 ):
     """Runs distributed training and evaluation with a local master. Grpc
@@ -232,16 +233,15 @@ def distributed_train_and_evaluate(
     )
     evaluation_steps = 1 if job_type == JobType.TRAINING_WITH_EVALUATION else 0
     batch_size = 8 if dataset_name == DatasetName.IMAGENET else 16
-    grads_to_wait = 1 if use_async else 2
+    pservers = pservers or []
+    ps_channels = ps_channels or []
 
     model_module = load_module(
         get_module_file_path(model_zoo_path, model_def)
     ).__dict__
 
-    ps_channels, pservers = _create_pserver(model_zoo_path, model_def, grads_to_wait, use_async, num_ps_pods)
     for channel in ps_channels:
         grpc.channel_ready_future(channel).result()
-
     worker_arguments = [
         "--worker_id",
         "1",
@@ -321,8 +321,6 @@ def distributed_train_and_evaluate(
         raise RuntimeError(
             "There are some tasks unfinished after worker exits."
         )
-    for pserver in pservers:
-        pserver.server.stop(0)
     return master._version
 
 
