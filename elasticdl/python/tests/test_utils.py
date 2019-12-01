@@ -3,8 +3,8 @@ import tempfile
 from collections.__init__ import namedtuple
 from contextlib import closing
 from pathlib import Path
-import grpc
 
+import grpc
 import numpy as np
 import recordio
 import tensorflow as tf
@@ -12,7 +12,12 @@ from odps import ODPS
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
-from elasticdl.python.common.constants import JobType, ODPSConfig
+from elasticdl.python.common.constants import (
+    DistributionStrategy,
+    JobType,
+    ODPSConfig,
+)
+from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
@@ -20,17 +25,12 @@ from elasticdl.python.common.model_utils import (
 from elasticdl.python.data.recordio_gen.frappe_recordio_gen import (
     load_raw_data,
 )
-from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.ps.parameter_server import ParameterServer
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
-from elasticdl.python.ps.servicer import PserverServicer
-from elasticdl.python.ps.parameter_server import ParameterServer
-from elasticdl.python.ps.parameters import Parameters
-from elasticdl.python.common.grpc_utils import build_channel
-
 
 
 class PserverArgs(object):
@@ -155,7 +155,9 @@ def create_recordio_file(size, dataset_name, shape, temp_dir=None):
     return temp_file.name
 
 
-def create_pserver(model_zoo_path, model_def, grads_to_wait, use_async, num_ps_pods):
+def create_pserver(
+    model_zoo_path, model_def, grads_to_wait, use_async, num_ps_pods
+):
     ports = [i + 12345 for i in range(num_ps_pods)]
     channels = []
     for port in ports:
@@ -175,7 +177,7 @@ def create_pserver(model_zoo_path, model_def, grads_to_wait, use_async, num_ps_p
         pserver = ParameterServer(args)
         pserver.prepare()
         pservers.append(pserver)
-    return channels, pservers
+    return ports, channels, pservers
 
 
 def distributed_train_and_evaluate(
@@ -216,8 +218,8 @@ def distributed_train_and_evaluate(
         use_async: A bool. True if using asynchronous updates.
         get_model_steps: Worker will perform `get_model` from the parameter
             server every this many steps.
-        num_ps_pods: A integer specifies the number of parameter server instance.
-            If 0, do not use parameter server.
+        ps_channels: A channel list to all parameter server pods.
+        pservers: A list of parameter server pods.
         distribution_strategy: The distribution startegy used by workers, e.g.
             DistributionStrategy.PARAMETER_SERVER or
             DistributionStrategy.AllreduceStrategy.
@@ -291,11 +293,23 @@ def distributed_train_and_evaluate(
 
     if training:
         evaluation_service = EvaluationService(
-            None, task_d, 0, 0, evaluation_steps, False, model_module[eval_metrics_fn],
+            None,
+            task_d,
+            0,
+            0,
+            evaluation_steps,
+            False,
+            model_module[eval_metrics_fn],
         )
     else:
         evaluation_service = EvaluationService(
-            None, task_d, 0, 0, evaluation_steps, True, model_module[eval_metrics_fn],
+            None,
+            task_d,
+            0,
+            0,
+            evaluation_steps,
+            True,
+            model_module[eval_metrics_fn],
         )
     task_d.set_evaluation_service(evaluation_service)
 
