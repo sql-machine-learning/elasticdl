@@ -96,9 +96,6 @@ class TaskDataService(object):
                     self._reported_record_count -= task.end - task.start
                     self._pending_tasks.popleft()
                     self._do_report_task(task, err_msg)
-                    # Since a single batch comes from multiple tasks,
-                    # we just report the number of failing records together
-                    # with the first task
                     self._failed_record_count = 0
                 if self._pending_tasks:
                     self._current_task = self._pending_tasks[0]
