@@ -181,10 +181,10 @@ class Worker(object):
         Init elasticdl.layers.embedding layer list and assign worker to them
         """
         self._embedding_layers = find_layer(self._model, Embedding)
-        for layer in self._embedding_layers:
-            if self._use_multi_ps:
+        if self._use_multi_ps:
+            self.report_embedding_info()
+            for layer in self._embedding_layers:
                 layer.set_lookup_embedding_func(self.pull_embedding_vector)
-                self.report_embedding_info()
 
         self._need_embedding_layer_check = (
             True if self._embedding_layers else False
