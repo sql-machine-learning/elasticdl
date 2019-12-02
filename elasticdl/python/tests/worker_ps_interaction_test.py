@@ -44,28 +44,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
         )
         self._model_def = model_def
 
-    """
-    def _create_pserver(self, model_def, num):
-        self._ports = [i + 12345 for i in range(num)]
-        for port in self._ports:
-            addr = "localhost:%d" % port
-            channel = build_channel(addr)
-            self._channels.append(channel)
-
-        self._model_def = model_def
-        for port in self._ports:
-            args = PserverArgs(
-                grads_to_wait=1,
-                use_async=True,
-                port=port,
-                model_zoo=self._model_zoo_path,
-                model_def=self._model_def,
-            )
-            pserver = ParameterServer(args)
-            pserver.prepare()
-            self._pservers.append(pserver)
-    """
-
     def _reset_pserver(self):
         for ps in self._pservers:
             ps.parameters.reset()
