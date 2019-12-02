@@ -167,8 +167,7 @@ class Worker(object):
         """Set model instance to worker."""
         self._model = model_inst
         self._train_eagerly = False
-        self._init_embedding_layer()
-        self._init_embedding_column()
+        self._init_embeddings()
         self._var_created = self._model.built
         self._non_embed_vars = {}
         if self._var_created:
@@ -185,13 +184,8 @@ class Worker(object):
         """
         self._embedding_layers = find_layer(self._model, Embedding)
         if self._use_multi_ps:
-            self.report_embedding_info()
             for layer in self._embedding_layers:
                 layer.set_lookup_embedding_func(self.pull_embedding_vector)
-
-        self._need_embedding_layer_check = (
-            True if self._embedding_layers else False
-        )
 
     def _init_embedding_column(self):
         self._embedding_columns = []
@@ -199,7 +193,22 @@ class Worker(object):
             if isinstance(layer, tf.keras.layers.DenseFeatures):
                 for column in layer._feature_columns:
                     if isinstance(column, feature_column.EmbeddingColumn):
-                        self._embedding_columns.append(column)        
+                        self._embedding_columns.append(column)
+        
+        if self._use_multi_ps:
+            for column in self._embedding_columns:
+                layer.set_lookup_embedding_func(self.pull_embedding_vector)
+
+    def _init_embeddings(self):
+        self._init_embedding_layer()
+        self._init_embedding_column()
+
+        if self._use_multi_ps:
+            self.report_embedding_info()
+
+        self._need_embedding_layer_check = (
+            True if self._embedding_layers or self._embedding_columns else False
+        )
 
     def _set_tape_for_embedding(self, tape):
         for layer in self._embedding_layers:
@@ -329,6 +338,14 @@ class Worker(object):
                 embedding_info.name = layer.name
                 embedding_info.dim = layer.output_dim
                 embedding_info.initializer = layer.embeddings_initializer
+
+        if self._embedding_columns:
+            embedding_infos = model.embedding_table_info
+            for column in self._embedding_columns:
+                embedding_info = embedding_infos.add()
+                embedding_info.name = column.name
+                embedding_info.dim = column.dimension
+                embedding_info.initializer = 'uniform'
 
         for ps_id in range(len(self._ps_stubs)):
             self._ps_stubs[ps_id].push_embedding_info(model)
