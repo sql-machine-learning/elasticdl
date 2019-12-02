@@ -35,6 +35,7 @@ from elasticdl.python.common.tensor import (
     serialize_tensor,
     tensor_pb_to_ndarray,
 )
+from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.worker.task_data_service import TaskDataService
 
@@ -166,6 +167,7 @@ class Worker(object):
         self._model = model_inst
         self._train_eagerly = False
         self._init_embedding_layer()
+        self._init_embedding_column()
         self._var_created = self._model.built
         self._non_embed_vars = {}
         if self._var_created:
@@ -190,13 +192,25 @@ class Worker(object):
             True if self._embedding_layers else False
         )
 
+    def _init_embedding_column(self):
+        self._embedding_columns = []
+        for layer in self._model.layers:
+            if isinstance(layer, tf.keras.layers.DenseFeatures):
+                for column in layer._feature_columns:
+                    if isinstance(column, feature_column.EmbeddingColumn):
+                        self._embedding_columns.append(column)        
+
     def _set_tape_for_embedding(self, tape):
         for layer in self._embedding_layers:
             layer.set_tape(tape)
+        for column in self._embedding_columns:
+            column.set_tape(tape)
 
     def _reset_embedding(self):
         for layer in self._embedding_layers:
             layer.reset()
+        for column in self._embedding_columns:
+            column.reset()
 
     def _update_local_model(self):
         if not self._non_embed_grads:

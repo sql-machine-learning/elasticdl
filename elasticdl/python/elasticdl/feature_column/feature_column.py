@@ -233,6 +233,14 @@ class EmbeddingColumn(
 
         return batch_embedding
 
+    def _record_gradients(self, batch_embedding, ids):
+        self.tape.watch(batch_embedding)
+        self._embedding_and_ids_eagerly.append(
+            EmbeddingAndIds(batch_embedding, ids)
+        )
+
+        return batch_embedding
+
     def lookup_embedding(self, unique_ids):
         ids = unique_ids.numpy()
         self._check_id_valid(ids)
@@ -250,14 +258,6 @@ class EmbeddingColumn(
                 "than num_buckets. id = %d is not in [0, %d)"
                 % (first_may_exceed_id, self.num_buckets)
             )
-
-    def _record_gradients(self, batch_embedding, ids):
-        self.tape.watch(batch_embedding)
-        self._embedding_and_ids_eagerly.append(
-            EmbeddingAndIds(batch_embedding, ids)
-        )
-
-        return batch_embedding
 
     def set_tape(self, tape):
         self.tape = tape
