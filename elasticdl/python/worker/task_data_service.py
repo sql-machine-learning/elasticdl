@@ -19,7 +19,6 @@ class TaskDataService(object):
         self._lock = threading.Lock()
         self._pending_dataset = True
         self._pending_save_model_task = None
-        self._reset()
         if data_reader_params:
             self.data_reader = create_data_reader(
                 data_origin=None, **data_reader_params
@@ -28,12 +27,15 @@ class TaskDataService(object):
             self.data_reader = create_data_reader(data_origin=None)
         self._warm_up_task = None
         self._has_warmed_up = False
+        self._failed_record_count = 0
+        self._reported_record_count = 0
+        self._current_task = None
+        self._pending_tasks = deque()
 
     def _reset(self):
         """
         Reset pending tasks and record counts
         """
-
         self._reported_record_count = 0
         self._failed_record_count = 0
         self._pending_tasks = deque()
@@ -83,9 +85,9 @@ class TaskDataService(object):
             if err_msg:
                 self._log_fail_records(task, err_msg)
 
-            # Keep poping: batch_size may be larger than
-            # task.end - task.start, so we keep poping task until
-            # reported count is less than current data size
+            # Keep popping tasks until the reported record count is less
+            # than the size of the current data since `batch_size` may be
+            # larger than `task.end - task.start`
             with self._lock:
                 while self._pending_tasks and self._reported_record_count >= (
                     self._pending_tasks[0].end - self._pending_tasks[0].start
@@ -94,8 +96,8 @@ class TaskDataService(object):
                     self._reported_record_count -= task.end - task.start
                     self._pending_tasks.popleft()
                     self._do_report_task(task, err_msg)
-                    # Becuase a single batch comes from multiple tasks,
-                    # We just report the number of failing records together
+                    # Since a single batch comes from multiple tasks,
+                    # we just report the number of failing records together
                     # with the first task
                     self._failed_record_count = 0
                 if self._pending_tasks:
@@ -121,7 +123,7 @@ class TaskDataService(object):
 
         task = self._pending_save_model_task
         self._pending_save_model_task = None
-        return (task, create_dataset_from_tasks([task], self.data_reader))
+        return task, create_dataset_from_tasks([task], self.data_reader)
 
     def get_dataset(self):
         """
