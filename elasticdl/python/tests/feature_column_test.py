@@ -15,7 +15,12 @@ def generate_mock_embedding_vectors(ids, dimension):
     if isinstance(ids, tf.Tensor):
         ids = ids.numpy()
 
-    return np.array([(np.arange(dimension) == id).astype(np.int) for id in ids])
+    return np.array(
+        [
+            (np.arange(dimension) == (id % dimension)).astype(np.int)
+            for id in ids
+        ]
+    )
 
 
 class EmbeddingColumnTest(unittest.TestCase):
