@@ -1,11 +1,14 @@
 import collections
 import math
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.feature_column import feature_column as fc_old
 from tensorflow.python.feature_column import feature_column_v2 as fc_lib
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.ops import array_ops, init_ops, math_ops
+
+from elasticdl.python.common.embedding import EmbeddingAndIds
 
 
 def embedding_column(
@@ -95,6 +98,17 @@ class EmbeddingColumn(
 ):
     def __init__(self, **kwargs):
         self.tape = None
+        self._lookup_embedding_func = None
+        self._embedding_and_ids_eagerly = []
+
+        default_num_buckets = (
+            self.categorical_column.num_buckets
+            if self._is_v2_column
+            else self.categorical_column._num_buckets
+        )  # pylint: disable=protected-access
+        self.num_buckets = getattr(
+            self.categorical_column, "num_buckets", default_num_buckets
+        )
 
     @property
     def _is_v2_column(self):
@@ -149,6 +163,11 @@ class EmbeddingColumn(
         batch_embedding = tf.py_function(
             self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
         )
+
+        if self.tape:
+            batch_embedding = self._record_gradients(
+                batch_embedding, unique_ids
+            )
 
         segment_ids = sparse_ids.indices[:, 0]
         if segment_ids.dtype != tf.int32:
@@ -215,10 +234,49 @@ class EmbeddingColumn(
         return batch_embedding
 
     def lookup_embedding(self, unique_ids):
-        raise Exception("Not implemented yet")
+        ids = unique_ids.numpy()
+        self._check_id_valid(ids)
+        if self._lookup_embedding_func:
+            embedding_vectors = self._lookup_embedding_func(self._name, ids)
+            return embedding_vectors
+
+    def _check_id_valid(self, ids):
+        if not self.num_buckets:
+            return
+        first_may_exceed_id = ids[np.argmax(ids >= self.num_buckets)]
+        if self.num_buckets is not None and first_may_exceed_id > self.num_buckets:
+            raise ValueError(
+                " The embedding id cannot be bigger "
+                "than num_buckets. id = %d is not in [0, %d)"
+                % (first_may_exceed_id, self.num_buckets)
+            )
+
+    def _record_gradients(self, batch_embedding, ids):
+        self.tape.watch(batch_embedding)
+        self._embedding_and_ids_eagerly.append(
+            EmbeddingAndIds(batch_embedding, ids)
+        )
+
+        return batch_embedding
 
     def set_tape(self, tape):
         self.tape = tape
 
+    def set_lookup_embedding_func(self, func):
+        """Sets function for looking up embeddings in the PS.
+
+        Args:
+            func: The function used to look up embeddings. The arguments of
+                are `(layer_name, embedding_id_list)`, where `layer_name` is
+                the name of embedding layer, and `embedding_id_list` is a list
+                of embedding ids to be looked up.
+        """
+        self._lookup_embedding_func = func
+
     def reset(self):
         self.tape = None
+        self._embedding_and_ids_eagerly = []
+
+    @property
+    def embedding_and_ids(self):
+        return self._embedding_and_ids_eagerly

@@ -4,9 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.utils import tf_utils
 
-EmbeddingAndIds = collections.namedtuple(
-    "EmbeddingAndIds", ["batch_embedding", "batch_ids"]
-)
+from elasticdl.python.common.embedding import EmbeddingAndIds
 
 
 class Embedding(tf.keras.layers.Layer):
