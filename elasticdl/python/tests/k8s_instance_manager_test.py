@@ -155,7 +155,7 @@ class InstanceManagerTest(unittest.TestCase):
             num_ps=num_ps,
         )
 
-        instance_manager.start_all_ps()
+        instance_manager.start_parameter_servers()
 
         # Check we also have ps services started
         for i in range(num_ps):

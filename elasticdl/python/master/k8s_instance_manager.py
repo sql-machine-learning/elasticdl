@@ -150,9 +150,9 @@ class InstanceManager(object):
         for _ in range(self._num_workers):
             self._start_worker(self._next_worker_id())
 
-    def start_all_ps(self):
+    def start_parameter_servers(self):
         for _ in range(self._num_ps):
-            self._start_ps(self._next_worker_id())
+            self._start_ps(self._next_ps_id())
 
     def _remove_worker(self, worker_id):
         logger.info("Removing worker: %d", worker_id)
