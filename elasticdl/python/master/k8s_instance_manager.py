@@ -49,8 +49,8 @@ class InstanceManager(object):
         self._image_pull_policy = image_pull_policy
         self._envs = envs
         self._task_d = task_d
-        self._next_worker_id = itertools.count(num_workers).__next__
-        self._next_ps_id = itertools.count(num_ps).__next__
+        self._next_worker_id = itertools.count().__next__
+        self._next_ps_id = itertools.count().__next__
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
@@ -151,8 +151,8 @@ class InstanceManager(object):
             self._start_worker(self._next_worker_id())
 
     def start_all_ps(self):
-        for i in range(self._num_ps):
-            self._start_ps(i)
+        for _ in range(self._num_ps):
+            self._start_ps(self._next_worker_id())
 
     def _remove_worker(self, worker_id):
         logger.info("Removing worker: %d", worker_id)
