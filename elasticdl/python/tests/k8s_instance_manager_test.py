@@ -90,6 +90,7 @@ class InstanceManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def testRelaunchWorkerPod(self):
+        num_workers = 3
         task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1)
         instance_manager = InstanceManager(
             task_d,
@@ -99,7 +100,7 @@ class InstanceManagerTest(unittest.TestCase):
             worker_command=["sleep 10"],
             worker_args=[],
             namespace="default",
-            num_workers=3,
+            num_workers=num_workers,
         )
 
         instance_manager.start_workers()
@@ -130,7 +131,7 @@ class InstanceManagerTest(unittest.TestCase):
             time.sleep(1)
             with instance_manager._lock:
                 for k in instance_manager._worker_pods_phase:
-                    if k not in current_workers:
+                    if k not in range(num_workers, num_workers * 2):
                         found = True
         else:
             self.fail("Failed to find newly launched worker.")
@@ -142,6 +143,7 @@ class InstanceManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def testRelaunchPsPod(self):
+        num_ps = 3
         instance_manager = InstanceManager(
             task_d=None,
             job_name="test-relaunch-ps-pod-%d-%d"
@@ -150,13 +152,13 @@ class InstanceManagerTest(unittest.TestCase):
             ps_command=["sleep 10"],
             ps_args=[],
             namespace="default",
-            num_ps=3,
+            num_ps=num_ps,
         )
 
         instance_manager.start_all_ps()
 
         # Check we also have ps services started
-        for i in range(3):
+        for i in range(num_ps):
             service = instance_manager._k8s_client.get_ps_service(i)
             self.assertTrue(service.metadata.owner_references)
             owner = service.metadata.owner_references[0]
@@ -193,7 +195,7 @@ class InstanceManagerTest(unittest.TestCase):
             time.sleep(1)
             with instance_manager._lock:
                 for k in instance_manager._ps_pods_phase:
-                    if k not in all_current_ps:
+                    if k not in range(num_ps, num_ps * 2):
                         found = True
         else:
             self.fail("Failed to find newly launched ps.")
