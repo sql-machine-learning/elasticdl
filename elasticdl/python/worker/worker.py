@@ -75,6 +75,7 @@ class Worker(object):
             self._stub = elasticdl_pb2_grpc.MasterStub(channel)
 
         self._use_multi_ps = False
+        self._ps_vars = {}
         if isinstance(ps_channels, list):
             if len(ps_channels) > 0:
                 self._use_multi_ps = True
@@ -223,6 +224,8 @@ class Worker(object):
         model_version = -1
         variable_future_and_id_pairs = []
         req = empty_pb2.Empty()
+        if self._use_multi_ps:
+            self.init_ps_var_partition()
         for ps_id, stub in enumerate(self._ps_stubs):
             if ps_id not in self._ps_vars:
                 continue
@@ -867,13 +870,18 @@ class Worker(object):
         Only evaluate the model on the worker.
         """
         evaluation_task_executed = False
-        # get the latest model before processing eval tasks
-        self.get_model()
+        # should not get model before finishing some training tasks, because
+        # variables of subclass models are not created.
+        is_model_got = False
         while True:
             task = self.get_task(elasticdl_pb2.EVALUATION)
             # no evaluation task in eval_todo of master
             if not task.shard_name:
                 break
+            # get the latest model before processing eval tasks
+            if not is_model_got:
+                self.get_model()
+                is_model_got = True
             self._process_eval_task(task)
             evaluation_task_executed = True
         return evaluation_task_executed

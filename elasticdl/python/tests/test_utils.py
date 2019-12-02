@@ -4,6 +4,7 @@ from collections.__init__ import namedtuple
 from contextlib import closing
 from pathlib import Path
 
+import grpc
 import numpy as np
 import recordio
 import tensorflow as tf
@@ -11,7 +12,12 @@ from odps import ODPS
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
-from elasticdl.python.common.constants import JobType, ODPSConfig
+from elasticdl.python.common.constants import (
+    DistributionStrategy,
+    JobType,
+    ODPSConfig,
+)
+from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
@@ -22,6 +28,7 @@ from elasticdl.python.data.recordio_gen.frappe_recordio_gen import (
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.ps.parameter_server import ParameterServer
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
 
@@ -148,6 +155,31 @@ def create_recordio_file(size, dataset_name, shape, temp_dir=None):
     return temp_file.name
 
 
+def create_pserver(
+    model_zoo_path, model_def, grads_to_wait, use_async, num_ps_pods
+):
+    ports = [i + 12345 for i in range(num_ps_pods)]
+    channels = []
+    for port in ports:
+        addr = "localhost:%d" % port
+        channel = build_channel(addr)
+        channels.append(channel)
+
+    pservers = []
+    for port in ports:
+        args = PserverArgs(
+            grads_to_wait=grads_to_wait,
+            use_async=True,
+            port=port,
+            model_zoo=model_zoo_path,
+            model_def=model_def,
+        )
+        pserver = ParameterServer(args)
+        pserver.prepare()
+        pservers.append(pserver)
+    return ports, channels, pservers
+
+
 def distributed_train_and_evaluate(
     feature_shape,
     model_zoo_path,
@@ -158,7 +190,11 @@ def distributed_train_and_evaluate(
     training=True,
     dataset_name=DatasetName.IMAGE_DEFAULT,
     callback_classes=[],
+    use_async=False,
     get_model_steps=1,
+    ps_channels=None,
+    pservers=None,
+    distribution_strategy=DistributionStrategy.PARAMETER_SERVER,
 ):
     """Runs distributed training and evaluation with a local master. Grpc
     calls are mocked by local master call.
@@ -179,8 +215,14 @@ def distributed_train_and_evaluate(
         dataset_name: A dataset name from `DatasetName`.
         callback_classes: A List of callbacks that will be called at given
             stages of the training procedure.
+        use_async: A bool. True if using asynchronous updates.
         get_model_steps: Worker will perform `get_model` from the parameter
             server every this many steps.
+        ps_channels: A channel list to all parameter server pods.
+        pservers: A list of parameter server pods.
+        distribution_strategy: The distribution startegy used by workers, e.g.
+            DistributionStrategy.PARAMETER_SERVER or
+            DistributionStrategy.AllreduceStrategy.
 
     Returns:
         An integer indicating the model version after the distributed training
@@ -191,8 +233,18 @@ def distributed_train_and_evaluate(
         if training
         else JobType.EVALUATION_ONLY
     )
+    evaluation_steps = 1 if job_type == JobType.TRAINING_WITH_EVALUATION else 0
     batch_size = 8 if dataset_name == DatasetName.IMAGENET else 16
-    arguments = [
+    pservers = pservers or []
+    ps_channels = ps_channels or []
+
+    model_module = load_module(
+        get_module_file_path(model_zoo_path, model_def)
+    ).__dict__
+
+    for channel in ps_channels:
+        grpc.channel_ready_future(channel).result()
+    worker_arguments = [
         "--worker_id",
         "1",
         "--job_type",
@@ -209,9 +261,11 @@ def distributed_train_and_evaluate(
         loss,
         "--get_model_steps",
         get_model_steps,
+        "--distribution_strategy",
+        distribution_strategy,
     ]
-    args = parse_worker_args(arguments)
-    worker = Worker(args)
+    args = parse_worker_args(worker_arguments)
+    worker = Worker(args, ps_channels=ps_channels)
 
     if dataset_name in [DatasetName.IMAGENET, DatasetName.FRAPPE]:
         record_num = batch_size
@@ -237,16 +291,25 @@ def distributed_train_and_evaluate(
         num_epochs=1,
     )
 
-    model_module = load_module(
-        get_module_file_path(model_zoo_path, model_def)
-    ).__dict__
     if training:
         evaluation_service = EvaluationService(
-            None, task_d, 0, 0, 1, False, model_module[eval_metrics_fn],
+            None,
+            task_d,
+            0,
+            0,
+            evaluation_steps,
+            False,
+            model_module[eval_metrics_fn],
         )
     else:
         evaluation_service = EvaluationService(
-            None, task_d, 0, 0, 0, True, model_module[eval_metrics_fn],
+            None,
+            task_d,
+            0,
+            0,
+            evaluation_steps,
+            True,
+            model_module[eval_metrics_fn],
         )
     task_d.set_evaluation_service(evaluation_service)
 
@@ -256,16 +319,17 @@ def distributed_train_and_evaluate(
     callbacks = [
         callback_class(master, worker) for callback_class in callback_classes
     ]
-    worker._stub = InProcessMaster(master, callbacks)
 
-    for var in worker._model.trainable_variables:
-        master.set_model_var(var.name, var.numpy())
+    in_process_master = InProcessMaster(master, callbacks)
+    worker._stub = in_process_master
+    for pservicer in pservers:
+        pservicer._master_stub = in_process_master
 
     worker.run()
 
     req = elasticdl_pb2.GetTaskRequest()
     req.worker_id = 1
-    task = master.GetTask(req, None)
+    task = master.get_task(req, None)
     # No more task.
     if task.shard_name:
         raise RuntimeError(

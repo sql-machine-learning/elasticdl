@@ -8,13 +8,11 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import DistributionStrategy
-from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.model_utils import get_model_spec
 from elasticdl.python.ps.embedding_table import EmbeddingTable
-from elasticdl.python.ps.parameter_server import ParameterServer
 from elasticdl.python.tests.test_utils import (
-    PserverArgs,
+    create_pserver,
     get_frappe_dataset,
     get_mnist_dataset,
     get_random_batch,
@@ -37,24 +35,14 @@ class WorkerPSInteractionTest(unittest.TestCase):
             pserver.server.stop(0)
 
     def _create_pserver(self, model_def, num):
-        self._ports = [i + 12345 for i in range(num)]
-        for port in self._ports:
-            addr = "localhost:%d" % port
-            channel = build_channel(addr)
-            self._channels.append(channel)
-
+        self._ports, self._channels, self._pservers = create_pserver(
+            self._model_zoo_path,
+            model_def,
+            grads_to_wait=1,
+            use_async=True,
+            num_ps_pods=num,
+        )
         self._model_def = model_def
-        for port in self._ports:
-            args = PserverArgs(
-                grads_to_wait=1,
-                use_async=True,
-                port=port,
-                model_zoo=self._model_zoo_path,
-                model_def=self._model_def,
-            )
-            pserver = ParameterServer(args)
-            pserver.prepare()
-            self._pservers.append(pserver)
 
     def _reset_pserver(self):
         for ps in self._pservers:
