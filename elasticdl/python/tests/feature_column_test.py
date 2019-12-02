@@ -12,9 +12,15 @@ def call_feature_columns(feature_columns, input):
 
 
 def generate_mock_embedding_vectors(ids, dimension):
-    identity_matrix = np.identity(dimension)
+    if isinstance(ids, tf.Tensor):
+        ids = ids.numpy()
 
-    return np.array([identity_matrix[id] for id in ids])
+    return np.array(
+        [
+            (np.arange(dimension) == (id % dimension)).astype(np.int)
+            for id in ids
+        ]
+    )
 
 
 class EmbeddingColumnTest(unittest.TestCase):
