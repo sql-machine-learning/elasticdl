@@ -1,4 +1,5 @@
 import os
+import socket
 import time
 import traceback
 
@@ -421,7 +422,7 @@ class Worker(object):
         for g, v in zip(
             grads[: len(self._non_embed_vars)], self._non_embed_vars.values()
         ):
-            self._non_embed_grads[v.name] = v
+            self._non_embed_grads[v.name] = g
         return True, None
 
     def report_gradient(self, grads):
@@ -547,31 +548,43 @@ class Worker(object):
         outputs = self._model.call(features, training=False)
         return outputs
 
-    # TODO: Reuse model handler to initialize the model parameters properly
     def _update_local_model_params(self, model_params):
-        pass
+        self._non_embed_vars = model_params
 
     def _get_local_model_params(self):
-        return {}
+        return self._non_embed_vars
 
     # TODO: Implement master gRPC service to select a worker
     # to be used for broadcast model parameters from.
     def _get_broadcast_root_worker_ip(self):
         return 1
 
+    @staticmethod
+    def _get_this_worker_ip():
+        return socket.gethostbyname(socket.gethostname())
+
     def _broadcast_model_params(self):
         status = self._collective_communicator.barrier()
         if status == CollectiveCommunicatorStatus.FAILED:
             logger.warning("Failed to perform barrier operation")
             return False
-        status, model_params = self._collective_communicator.broadcast(
-            self._get_local_model_params(),
-            self._get_broadcast_root_worker_ip(),
+        broadcast_root_worker_ip = self._get_broadcast_root_worker_ip()
+        this_worker_ip = self._get_this_worker_ip()
+        is_broadcast_root_worker = this_worker_ip == broadcast_root_worker_ip
+        model_params = (
+            self._get_local_model_params()
+            if is_broadcast_root_worker
+            else None
         )
-        if status == CollectiveCommunicatorStatus.FAILED:
-            logger.warning("Failed to broadcast model parameters")
-            return False
-        self._update_local_model_params(model_params)
+
+        if not is_broadcast_root_worker and model_params is not None:
+            status, model_params = self._collective_communicator.broadcast(
+                model_params, broadcast_root_worker_ip,
+            )
+            if status == CollectiveCommunicatorStatus.FAILED:
+                logger.warning("Failed to broadcast model parameters")
+                return False
+            self._update_local_model_params(model_params)
         status = self._collective_communicator.barrier()
         if status == CollectiveCommunicatorStatus.FAILED:
             logger.warning("Failed to perform barrier operation")
