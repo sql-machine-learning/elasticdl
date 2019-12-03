@@ -235,6 +235,7 @@ def create_data_reader(data_origin, records_per_task=None, **kwargs):
             access_key=os.environ[ODPSConfig.ACCESS_KEY],
             table=data_origin,
             endpoint=os.environ.get(ODPSConfig.ENDPOINT),
+            partition=os.environ.get(ODPSConfig.PARTITION),
             records_per_task=records_per_task,
             **kwargs,
         )
