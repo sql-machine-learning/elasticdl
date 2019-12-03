@@ -17,6 +17,7 @@ from elasticdl.python.data.data_reader import (
     RecordIODataReader,
     create_data_reader,
 )
+from elasticdl.python.data.odps_io import is_odps_configured
 from elasticdl.python.tests.test_utils import (
     IRIS_TABLE_COLUMN_NAMES,
     DatasetName,
@@ -58,8 +59,7 @@ class RecordIODataReaderTest(unittest.TestCase):
 
 
 @unittest.skipIf(
-    os.environ.get("ODPS_TESTS", "False") == "False",
-    "ODPS environment is not configured",
+    not is_odps_configured(), "ODPS environment is not configured",
 )
 class ODPSDataReaderTest(unittest.TestCase):
     def setUp(self):

@@ -1,3 +1,4 @@
+import os
 import random
 import sys
 import time
@@ -9,6 +10,7 @@ import odps
 from odps import ODPS
 from odps.models import Schema
 
+from elasticdl.python.common.constants import ODPSConfig
 from elasticdl.python.common.log_utils import default_logger as logger
 
 
@@ -43,6 +45,17 @@ def _configure_odps_options(endpoint, options=None):
             and "service.odps.aliyun-inc.com/api" in endpoint
         ):
             odps.options.tunnel.endpoint = "http://dt.odps.aliyun-inc.com"
+
+
+def is_odps_configured():
+    return all(
+        k in os.environ
+        for k in (
+            ODPSConfig.PROJECT_NAME,
+            ODPSConfig.ACCESS_ID,
+            ODPSConfig.ACCESS_KEY,
+        )
+    )
 
 
 class ODPSReader(object):

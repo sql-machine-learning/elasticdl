@@ -1,8 +1,8 @@
 import importlib.util
 import os
 
-from elasticdl.python.common.constants import ODPSConfig
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.data.odps_io import is_odps_configured
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
 )
@@ -126,14 +126,7 @@ def get_model_spec(
         )
 
     # If ODPS data source is used, dataset_fn is optional
-    dataset_fn_required = not all(
-        k in os.environ
-        for k in (
-            ODPSConfig.PROJECT_NAME,
-            ODPSConfig.ACCESS_ID,
-            ODPSConfig.ACCESS_KEY,
-        )
-    )
+    dataset_fn_required = not is_odps_configured()
 
     return (
         model,
