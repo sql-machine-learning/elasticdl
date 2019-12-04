@@ -556,20 +556,25 @@ class Worker(object):
 
     # TODO: Implement master gRPC service to select a worker
     # to be used for broadcast model parameters from.
-    def _get_broadcast_root_worker_ip(self):
+    @staticmethod
+    def _get_ip_of_broadcast_root_worker():
         return 1
 
     @staticmethod
-    def _get_this_worker_ip():
-        return socket.gethostbyname(socket.gethostname())
+    def _get_ip_of_this_worker():
+        hostname = socket.gethostname()
+        # Use localhost for testing locally on a laptop or inside a container
+        if ".local" in hostname or "." not in hostname:
+            hostname = "localhost"
+        return socket.gethostbyname(hostname)
 
     def _broadcast_model_params(self):
         status = self._collective_communicator.barrier()
         if status == CollectiveCommunicatorStatus.FAILED:
             logger.warning("Failed to perform barrier operation")
             return False
-        broadcast_root_worker_ip = self._get_broadcast_root_worker_ip()
-        this_worker_ip = self._get_this_worker_ip()
+        broadcast_root_worker_ip = self._get_ip_of_broadcast_root_worker()
+        this_worker_ip = self._get_ip_of_this_worker()
         is_broadcast_root_worker = this_worker_ip == broadcast_root_worker_ip
         model_params = (
             self._get_local_model_params()
