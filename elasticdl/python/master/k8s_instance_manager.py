@@ -5,6 +5,8 @@ from collections import Counter
 from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.common.log_utils import default_logger as logger
 
+_SERVICE_ADDR_SEP = ","
+
 
 class InstanceManager(object):
     def __init__(
@@ -48,6 +50,7 @@ class InstanceManager(object):
         self._envs = envs
         self._task_d = task_d
         self._next_worker_id = itertools.count().__next__
+        self._next_ps_id = itertools.count().__next__
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
@@ -71,10 +74,14 @@ class InstanceManager(object):
         self._relaunch_deleted_live_ps = True
 
         self._k8s_client = k8s.Client(event_callback=self._event_cb, **kwargs)
-        self._ps_addrs = self._get_ps_addrs()
+        self._ps_addrs = self._get_addrs(
+            self._num_ps, self._k8s_client.get_ps_service_address
+        )
         # TODO: Select a worker address to be used for broadcasting model
         # parameters under allreduce-strategy.
-        self._worker_addrs = self._get_worker_addrs()
+        self._worker_addrs = self._get_addrs(
+            self._num_workers, self._k8s_client.get_worker_service_address
+        )
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
@@ -119,19 +126,19 @@ class InstanceManager(object):
             self._ps_pods_phase[ps_id] = (name, None)
             self._k8s_client.create_ps_service(ps_id)
 
-    def _get_ps_addrs(self):
+    def _get_addrs(self, num_addrs, addr_get_fn):
         addrs = []
-        for ps_id in range(self._num_ps):
-            addrs.append(self._k8s_client.get_ps_service_address(ps_id))
-        return ",".join(addrs)
+        for addr_id in range(num_addrs):
+            addrs.append(addr_get_fn(addr_id))
+        return _SERVICE_ADDR_SEP.join(addrs)
 
-    def _get_worker_addrs(self):
-        addrs = []
-        for worker_id in range(self._num_workers):
-            addrs.append(
-                self._k8s_client.get_worker_service_address(worker_id)
-            )
-        return ",".join(addrs)
+    @staticmethod
+    def _update_addr(old_addr, new_addr, addrs, addr_get_fn):
+        addrs_list = addrs.split(_SERVICE_ADDR_SEP)
+        addrs_list[addrs_list.index(addr_get_fn(old_addr))] = addr_get_fn(
+            new_addr
+        )
+        return _SERVICE_ADDR_SEP.join(addrs_list)
 
     def update_status(self, status):
         master_name = self._k8s_client.get_master_pod_name()
@@ -143,9 +150,9 @@ class InstanceManager(object):
         for _ in range(self._num_workers):
             self._start_worker(self._next_worker_id())
 
-    def start_all_ps(self):
-        for i in range(self._num_ps):
-            self._start_ps(i)
+    def start_parameter_servers(self):
+        for _ in range(self._num_ps):
+            self._start_ps(self._next_ps_id())
 
     def _remove_worker(self, worker_id):
         logger.info("Removing worker: %d", worker_id)
@@ -208,7 +215,8 @@ class InstanceManager(object):
 
         relaunch_worker = False
         relaunch_ps = False
-        ps_id = -1
+        worker_id = None
+        ps_id = None
         with self._lock:
             if pod_name in self._worker_pod_name_to_id:
                 worker_id = self._worker_pod_name_to_id.get(pod_name)
@@ -232,15 +240,29 @@ class InstanceManager(object):
                     del self._ps_pod_name_to_id[pod_name]
                     relaunch_ps = self._relaunch_deleted_live_ps
             else:
-                logger.error("Unknown worker pod name: %s" % pod_name)
+                logger.error("Unknown pod name: %s" % pod_name)
                 return
 
-        if relaunch_worker:
+        if relaunch_worker and worker_id:
             logger.info("Relaunching worker.")
-            self._start_worker(self._next_worker_id())
-        elif relaunch_ps:
+            new_worker_id = self._next_worker_id()
+            self._start_worker(new_worker_id)
+            self._update_addr(
+                worker_id,
+                new_worker_id,
+                self._worker_addrs,
+                addr_get_fn=self._k8s_client.get_worker_service_address,
+            )
+        elif relaunch_ps and ps_id:
             logger.info("Relaunching ps.")
-            self._start_ps(ps_id)
+            new_ps_id = self._next_ps_id()
+            self._start_ps(new_ps_id)
+            self._update_addr(
+                ps_id,
+                new_ps_id,
+                self._ps_addrs,
+                addr_get_fn=self._k8s_client.get_ps_service_address,
+            )
 
     @property
     def ps_addrs(self):

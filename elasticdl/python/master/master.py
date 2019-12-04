@@ -153,7 +153,7 @@ class Master(object):
         # Start the worker manager if requested
         if self.instance_manager:
             self.instance_manager.update_status(InstanceManagerStatus.PENDING)
-            self.instance_manager.start_all_ps()
+            self.instance_manager.start_parameter_servers()
             self.instance_manager.start_workers()
             self.instance_manager.update_status(InstanceManagerStatus.RUNNING)
 
