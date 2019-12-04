@@ -6,7 +6,7 @@ import recordio
 import tensorflow as tf
 
 from elasticdl.python.common.constants import Mode, ODPSConfig
-from elasticdl.python.data.odps_io import ODPSReader
+from elasticdl.python.data.odps_io import ODPSReader, is_odps_configured
 
 
 class Metadata(object):
@@ -221,14 +221,7 @@ class ODPSDataReader(AbstractDataReader):
 
 
 def create_data_reader(data_origin, records_per_task=None, **kwargs):
-    if all(
-        k in os.environ
-        for k in (
-            ODPSConfig.PROJECT_NAME,
-            ODPSConfig.ACCESS_ID,
-            ODPSConfig.ACCESS_KEY,
-        )
-    ):
+    if is_odps_configured():
         return ODPSDataReader(
             project=os.environ[ODPSConfig.PROJECT_NAME],
             access_id=os.environ[ODPSConfig.ACCESS_ID],
