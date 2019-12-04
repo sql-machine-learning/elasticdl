@@ -56,6 +56,9 @@ def dataset_fn(dataset, mode, _):
         }
 
         parsed_record = tf.io.parse_single_example(record, feature_description)
+        label = parsed_record.pop('target')
+
+        return parsed_record, label
 
     dataset = dataset.map(_parse_data)
 
