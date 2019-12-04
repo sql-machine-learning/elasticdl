@@ -41,7 +41,7 @@ def get_dict_from_params_str(params_str):
             splitted = kv.strip().split("=")
             k = splitted[0]
             # if there is '=' in value, need to restore it.
-            v = '='.join(splitted[1:])
+            v = "=".join(splitted[1:])
             try:
                 params_dict[k] = eval(v)
             except Exception:
