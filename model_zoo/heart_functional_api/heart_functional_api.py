@@ -38,7 +38,24 @@ def optimizer(lr=0.1):
 
 def dataset_fn(dataset, mode, _):
     def _parse_data(record):
-        return None
+        feature_description = {
+            'age': tf.io.FixedLenFeature([], tf.int64),
+            'sex': tf.io.FixedLenFeature([], tf.int64),
+            'cp': tf.io.FixedLenFeature([], tf.int64),
+            'trestbps': tf.io.FixedLenFeature([], tf.int64),
+            'chol': tf.io.FixedLenFeature([], tf.int64),
+            'fbs': tf.io.FixedLenFeature([], tf.int64),
+            'restecg': tf.io.FixedLenFeature([], tf.int64),
+            'thalach': tf.io.FixedLenFeature([], tf.int64),
+            'exang': tf.io.FixedLenFeature([], tf.int64),
+            'oldpeak': tf.io.FixedLenFeature([], tf.float32),
+            'slope': tf.io.FixedLenFeature([], tf.int64),
+            'ca': tf.io.FixedLenFeature([], tf.int64),
+            'thal': tf.io.FixedLenFeature([], tf.string),
+            'target': tf.io.FixedLenFeature([], tf.int64)
+        }
+
+        parsed_record = tf.io.parse_single_example(record, feature_description)
 
     dataset = dataset.map(_parse_data)
 
