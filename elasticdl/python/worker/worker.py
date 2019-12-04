@@ -521,6 +521,9 @@ class Worker(object):
         training for models with elasticdl.layers.embedding does not
         support tf.function decorator
         """
+        logger.info('features: {}'.format(features))
+        logger.info('labels: {}'.format(labels))
+
         if self._train_eagerly:
             return self.training_process_eagerly(features, labels)
         else:
