@@ -19,6 +19,7 @@ from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
+    get_dict_from_params_str,
     get_module_file_path,
     load_model_from_module,
     load_module,
@@ -37,13 +38,21 @@ def _make_task_dispatcher(
     prediction_data,
     records_per_task,
     num_epochs,
+    data_reader_params,
 ):
     # TODO: Support any subclasses of `AbstractDataReader`
     # and support passing specified parameters to the constructor
     def _maybe_create_shards(data_origin):
+        wkargs = get_dict_from_params_str(data_reader_params)
+        if wkargs and "partition" in wkargs:
+            partition = wkargs["partition"]
+        else:
+            partition = ""
         return (
             create_data_reader(
-                data_origin=data_origin, records_per_task=records_per_task
+                data_origin=data_origin,
+                records_per_task=records_per_task,
+                partition=partition,
             ).create_shards()
             if data_origin
             else {}
@@ -92,6 +101,7 @@ class Master(object):
             args.prediction_data,
             records_per_task,
             args.num_epochs,
+            args.data_reader_params,
         )
 
         saved_model_path = args.output

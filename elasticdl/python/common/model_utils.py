@@ -38,8 +38,14 @@ def get_dict_from_params_str(params_str):
         kvs = params_str.split(";")
         params_dict = {}
         for kv in kvs:
-            k, v = kv.strip().split("=")
-            params_dict[k] = eval(v)
+            splitted = kv.strip().split("=")
+            k = splitted[0]
+            # if there is '=' in value, need to restore it.
+            v = '='.join(splitted[1:])
+            try:
+                params_dict[k] = eval(v)
+            except Exception:
+                params_dict[k] = v
         return params_dict
     else:
         return None
