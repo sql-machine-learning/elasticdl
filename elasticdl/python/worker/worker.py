@@ -581,14 +581,13 @@ class Worker(object):
             if is_broadcast_root_worker
             else None
         )
-
+        status, model_params = self._collective_communicator.broadcast(
+            model_params, broadcast_root_worker_ip,
+        )
+        if status == CollectiveCommunicatorStatus.FAILED:
+            logger.warning("Failed to broadcast model parameters")
+            return False
         if not is_broadcast_root_worker and model_params is not None:
-            status, model_params = self._collective_communicator.broadcast(
-                model_params, broadcast_root_worker_ip,
-            )
-            if status == CollectiveCommunicatorStatus.FAILED:
-                logger.warning("Failed to broadcast model parameters")
-                return False
             self._update_local_model_params(model_params)
         status = self._collective_communicator.barrier()
         if status == CollectiveCommunicatorStatus.FAILED:
