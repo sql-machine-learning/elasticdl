@@ -51,7 +51,6 @@ class InstanceManager(object):
         self._envs = envs
         self._task_d = task_d
         self._next_worker_id = itertools.count().__next__
-        self._next_ps_id = itertools.count().__next__
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
@@ -152,8 +151,8 @@ class InstanceManager(object):
             self._start_worker(self._next_worker_id())
 
     def start_parameter_servers(self):
-        for _ in range(self._num_ps):
-            self._start_ps(self._next_ps_id())
+        for i in range(self._num_ps):
+            self._start_ps(i)
 
     def _remove_worker(self, worker_id):
         logger.info("Removing worker: %d", worker_id)
@@ -256,14 +255,10 @@ class InstanceManager(object):
             )
         elif relaunch_ps and ps_id:
             logger.info("Relaunching ps.")
-            new_ps_id = self._next_ps_id()
-            self._start_ps(new_ps_id)
-            self._update_addr(
-                ps_id,
-                new_ps_id,
-                self._ps_addrs,
-                addr_get_fn=self._k8s_client.get_ps_service_address,
-            )
+            # Note: the ID and service address for relaunched parameter
+            # server are intentionally left unchanged to support fault
+            # tolerance.
+            self._start_ps(ps_id)
 
     @property
     def ps_addrs(self):

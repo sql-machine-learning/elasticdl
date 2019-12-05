@@ -195,7 +195,7 @@ class InstanceManagerTest(unittest.TestCase):
             time.sleep(1)
             with instance_manager._lock:
                 for k in instance_manager._ps_pods_phase:
-                    if k not in range(num_ps, num_ps * 2):
+                    if k not in all_current_ps:
                         found = True
         else:
             self.fail("Failed to find newly launched ps.")
