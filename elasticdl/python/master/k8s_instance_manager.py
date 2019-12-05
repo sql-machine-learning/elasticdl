@@ -216,7 +216,7 @@ class InstanceManager(object):
         relaunch_worker = False
         relaunch_ps = False
         worker_id = None
-        ps_id = None
+        ps_id = -1
         with self._lock:
             if pod_name in self._worker_pod_name_to_id:
                 worker_id = self._worker_pod_name_to_id.get(pod_name)
@@ -253,7 +253,7 @@ class InstanceManager(object):
                 self._worker_addrs,
                 addr_get_fn=self._k8s_client.get_worker_service_address,
             )
-        elif relaunch_ps and ps_id:
+        elif relaunch_ps:
             logger.info("Relaunching ps.")
             # Note: the ID and service address for relaunched parameter
             # server are intentionally left unchanged to support fault
