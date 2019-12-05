@@ -38,9 +38,7 @@ def custom_model():
     x = tf.keras.layers.Dense(16, activation="relu")(x)
     y = tf.keras.layers.Dense(1, activation="sigmoid")(x)
 
-    model = tf.keras.Model(
-        inputs=feature_inputs, outputs=y
-    )
+    model = tf.keras.Model(inputs=feature_inputs, outputs=y)
 
     return model
 
