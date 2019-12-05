@@ -27,11 +27,6 @@ def get_feature_columns_and_inputs():
         shape=(1,), name="thal", dtype=tf.string
     )
 
-    feature_columns = sorted(feature_columns, key=lambda x: x.name)
-    feature_input_layers = dict(
-        sorted(feature_input_layers.items(), key=lambda x: x[0])
-    )
-
     return feature_columns, feature_input_layers
 
 
@@ -44,7 +39,7 @@ def custom_model():
     y = tf.keras.layers.Dense(1, activation="sigmoid")(x)
 
     model = tf.keras.Model(
-        inputs=[v for v in feature_inputs.values()], outputs=y
+        inputs=feature_inputs, outputs=y
     )
 
     return model
