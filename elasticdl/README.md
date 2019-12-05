@@ -98,7 +98,7 @@ docker run --rm -it -v $PWD:/edl_dir -w /edl_dir \
     -e ODPS_ACCESS_ID=xxx \
     -e ODPS_ACCESS_KEY=xxx \
     -e ODPS_ENDPOINT=xxx \
-    elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False ODPS_TESTS=True pytest elasticdl/python/tests/odps_* elasticdl/python/tests/data_reader_test.py"
+    elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests/odps_* elasticdl/python/tests/data_reader_test.py"
 ```
 
 ### Test in Docker
