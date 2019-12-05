@@ -1,3 +1,4 @@
+import copy
 import itertools
 import threading
 from collections import Counter
@@ -99,7 +100,7 @@ class InstanceManager(object):
                 + ["--ps_addrs", self._ps_addrs],
                 restart_policy=self._restart_policy,
                 ps_addrs=self._ps_addrs,
-                envs=self._envs,
+                envs=copy.deepcopy(self._envs),
             )
             name = pod.metadata.name
             self._worker_pod_name_to_id[name] = worker_id
@@ -119,7 +120,7 @@ class InstanceManager(object):
                 command=self._ps_command,
                 args=self._ps_args + ["--ps_id", str(ps_id)],
                 restart_policy=self._restart_policy,
-                envs=self._envs,
+                envs=copy.deepcopy(self._envs),
             )
             name = pod.metadata.name
             self._ps_pod_name_to_id[name] = ps_id
