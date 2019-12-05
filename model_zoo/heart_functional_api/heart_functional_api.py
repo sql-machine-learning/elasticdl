@@ -34,8 +34,8 @@ def custom_model():
     feature_columns, feature_inputs = get_feature_columns_and_inputs()
     feature_layer = tf.keras.layers.DenseFeatures(feature_columns)
     x = feature_layer(feature_inputs)
-    x = tf.keras.layers.Dense(128, activation="relu")(x)
-    x = tf.keras.layers.Dense(128, activation="relu")(x)
+    x = tf.keras.layers.Dense(16, activation="relu")(x)
+    x = tf.keras.layers.Dense(16, activation="relu")(x)
     y = tf.keras.layers.Dense(1, activation="sigmoid")(x)
 
     model = tf.keras.Model(
@@ -51,7 +51,7 @@ def loss(labels, predictions):
     return tf.keras.losses.binary_crossentropy(labels, predictions)
 
 
-def optimizer(lr=0.1):
+def optimizer(lr=1e-6):
     return tf.optimizers.SGD(lr)
 
 
