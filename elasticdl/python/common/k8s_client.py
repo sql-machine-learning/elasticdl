@@ -1,5 +1,6 @@
 import os
 import threading
+import time
 import traceback
 
 import yaml
@@ -81,16 +82,20 @@ class Client(object):
             self.cluster = cluster_spec_module.cluster
 
     def _watch(self):
-        stream = watch.Watch().stream(
-            self.client.list_namespaced_pod,
-            self.namespace,
-            label_selector=ELASTICDL_JOB_KEY + "=" + self.job_name,
-        )
-        for event in stream:
-            try:
-                self._event_cb(event)
-            except Exception:
-                traceback.print_exc()
+        while True:
+            stream = watch.Watch().stream(
+                self.client.list_namespaced_pod,
+                self.namespace,
+                label_selector=ELASTICDL_JOB_KEY + "=" + self.job_name,
+            )
+            for event in stream:
+                try:
+                    self._event_cb(event)
+                except Exception:
+                    traceback.print_exc()
+            # In case of any flaky issue causing exceptions, we wait for little
+            # time and retry.
+            time.sleep(5)
 
     def _get_service_address(self, service_name, port):
         return "%s.%s.svc:%d" % (service_name, self.namespace, port)
