@@ -25,4 +25,8 @@ RUN python /var/image_label.py --dataset mnist --fraction 0.15 \
 COPY elasticdl/python/data/recordio_gen/frappe_recordio_gen.py /var/frappe_recordio_gen.py
 RUN python /var/frappe_recordio_gen.py --data /root/.keras/datasets --output_dir /data/frappe \
     --fraction 0.05
+# Copy heart dataset
+COPY elasticdl/python/data/recordio_gen/heart_recordio_gen.py /var/heart_recordio_gen.py
+RUN python /var/heart_recordio_gen.py --data_dir /root/.keras/datasets --output_dir /data/heart
+
 RUN rm -rf /root/.keras/datasets

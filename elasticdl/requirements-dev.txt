@@ -3,3 +3,5 @@ pytest-cov
 mock
 Pillow
 pre-commit
+pandas
+sklearn
