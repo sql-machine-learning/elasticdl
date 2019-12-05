@@ -1,6 +1,7 @@
 import collections
 import math
 
+import os
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.feature_column import feature_column as fc_old
@@ -164,6 +165,19 @@ class EmbeddingColumn(
             self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
         )
 
+        if isinstance(batch_embedding, tf.Tensor):
+            print('Get embedding values of Tensor Type inside embedding column.{}UniqueIds: {}{}Tensor: {}'.format(
+                os.linesep,
+                unique_ids,
+                os.linesep,
+                batch_embedding))
+        else:
+            print('Get embedding values of Non Tensor Type inside embedding column.{}UniqueIds: {}{}Tensor: {}'.format(
+                os.linesep,
+                unique_ids,
+                os.linesep,
+                batch_embedding))
+
         if self.tape:
             batch_embedding = self._record_gradients(
                 batch_embedding, unique_ids
@@ -245,7 +259,7 @@ class EmbeddingColumn(
         ids = unique_ids.numpy()
         self._check_id_valid(ids)
         if self._lookup_embedding_func:
-            embedding_vectors = self._lookup_embedding_func(self._name, ids)
+            embedding_vectors = self._lookup_embedding_func(self.name, ids)
             return embedding_vectors
 
     def _check_id_valid(self, ids):

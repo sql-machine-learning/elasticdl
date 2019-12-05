@@ -166,7 +166,7 @@ class Worker(object):
     def set_model(self, model_inst):
         """Set model instance to worker."""
         self._model = model_inst
-        self._train_eagerly = False
+        self._train_eagerly = True
         self._init_embeddings()
         self._var_created = self._model.built
         self._non_embed_vars = {}
@@ -194,10 +194,11 @@ class Worker(object):
                 for column in layer._feature_columns:
                     if isinstance(column, feature_column.EmbeddingColumn):
                         self._embedding_columns.append(column)
+                        logger.info('Initialize ElasticDL EmbeddingColumn:{}'.format(column.name))
         
         if self._use_multi_ps:
             for column in self._embedding_columns:
-                layer.set_lookup_embedding_func(self.pull_embedding_vector)
+                column.set_lookup_embedding_func(self.pull_embedding_vector)
 
     def _init_embeddings(self):
         self._init_embedding_layer()
@@ -349,6 +350,7 @@ class Worker(object):
 
         for ps_id in range(len(self._ps_stubs)):
             self._ps_stubs[ps_id].push_embedding_info(model)
+            logger.info('Push embedding info to PS {}. Model: {}'.format(ps_id, model))
 
     def report_variable_to_ps(self, ps_id):
         model = elasticdl_pb2.Model()
@@ -364,6 +366,15 @@ class Worker(object):
         # TODO: call `push_model` in parallel
         for ps_id in range(len(self._ps_stubs)):
             self.report_variable_to_ps(ps_id)
+
+    def collect_edl_embedding_name_values(self):
+        embedding_name_values = []
+        for layer in self._embedding_layers:
+            embedding_name_values.append((layer.name, layer.embedding_and_ids))
+        for column in self._embedding_columns:
+            embedding_name_values.append((column.name, column.embedding_and_ids))
+        
+        return embedding_name_values
 
     def report_gradient_to_ps(self, grads):
         reqs = [
@@ -386,23 +397,24 @@ class Worker(object):
             for g, name in ps_grads[ps_id]:
                 emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
 
-        if self._embedding_layers:
+        edl_embedding_name_values = self.collect_edl_embedding_name_values()
+        if edl_embedding_name_values:
             edl_embedding_grads = grads[non_embed_vars_n:]
             bet_number = 0
-            for layer in self._embedding_layers:
-                bet_number += len(layer.embedding_and_ids)
+            for embedding_name_value in edl_embedding_name_values:
+                bet_number += len(embedding_name_value.embedding_and_ids)
             if len(edl_embedding_grads) != bet_number:
                 raise ValueError(
                     "elasticdl.layers.embedding related gradient number %d "
                     "does not match the number of its output tensor %d."
                     % (len(edl_embedding_grads), bet_number)
                 )
-
+            
             grad_accum_iter = 0
-            for layer in self._embedding_layers:
+            for embedding_name_value in edl_embedding_name_values:
                 g_values = None
                 g_indices = None
-                for _, ids in layer.embedding_and_ids:
+                for _, ids in embedding_name_value.embedding_and_ids:
                     grad = edl_embedding_grads[grad_accum_iter]
                     grad_accum_iter += 1
                     # ElasticDL embedding layer with Sparse Gradients
@@ -423,7 +435,7 @@ class Worker(object):
                     req = reqs[ps_id]
                     gv, gi = results[ps_id]
                     emplace_tensor_pb_from_ndarray(
-                        req.gradients, values=gv, indices=gi, name=layer.name
+                        req.gradients, values=gv, indices=gi, name=embedding_name_value.name
                     )
 
         report_futures = []
@@ -444,7 +456,7 @@ class Worker(object):
         return accepted, max_version
 
     def report_gradient_locally(self, grads):
-        if self._embedding_layers:
+        if self._embedding_layers or self._embedding_columns:
             raise ValueError(
                 "ElasticDL embedding layer is not supported when"
                 "reporting gradients locally"
@@ -517,7 +529,7 @@ class Worker(object):
             self._var_created = True
 
         if self._need_embedding_layer_check:
-            self._train_eagerly = False
+            self._train_eagerly = True
             for layer in self._embedding_layers:
                 if len(layer.embedding_and_ids) > 1:
                     self._train_eagerly = True
@@ -545,6 +557,16 @@ class Worker(object):
                         for (batch_embedding, _) in layer.embedding_and_ids
                     ]
                 )
+
+        if self._embedding_columns:
+            for column in self._embedding_columns:
+                bets.extend(
+                    [
+                        batch_embedding
+                        for (batch_embedding, _) in column.embedding_and_ids
+                    ]
+                )
+
         return list(self._non_embed_vars.values()) + bets
 
     def training_process(self, features, labels):
@@ -570,6 +592,7 @@ class Worker(object):
             if self._model.losses:
                 loss += tf.math.add_n(self._model.losses)
         grads = tape.gradient(loss, self.get_trainable_items())
+        logger.info('Losses:{}, Loss:{}, Gradients: {}'.format(self._model.losses, loss, grads))
         return loss, grads
 
     @tf.function
