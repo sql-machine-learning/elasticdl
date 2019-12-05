@@ -401,8 +401,8 @@ class Worker(object):
         if edl_embedding_name_values:
             edl_embedding_grads = grads[non_embed_vars_n:]
             bet_number = 0
-            for embedding_name_value in edl_embedding_name_values:
-                bet_number += len(embedding_name_value.embedding_and_ids)
+            for name, embedding_and_ids in edl_embedding_name_values:
+                bet_number += len(embedding_and_ids)
             if len(edl_embedding_grads) != bet_number:
                 raise ValueError(
                     "elasticdl.layers.embedding related gradient number %d "
@@ -411,10 +411,10 @@ class Worker(object):
                 )
             
             grad_accum_iter = 0
-            for embedding_name_value in edl_embedding_name_values:
+            for name, embedding_and_ids in edl_embedding_name_values:
                 g_values = None
                 g_indices = None
-                for _, ids in embedding_name_value.embedding_and_ids:
+                for _, ids in embedding_and_ids:
                     grad = edl_embedding_grads[grad_accum_iter]
                     grad_accum_iter += 1
                     # ElasticDL embedding layer with Sparse Gradients
@@ -435,7 +435,7 @@ class Worker(object):
                     req = reqs[ps_id]
                     gv, gi = results[ps_id]
                     emplace_tensor_pb_from_ndarray(
-                        req.gradients, values=gv, indices=gi, name=embedding_name_value.name
+                        req.gradients, values=gv, indices=gi, name=name
                     )
 
         report_futures = []
