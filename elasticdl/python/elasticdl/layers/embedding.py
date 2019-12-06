@@ -1,4 +1,3 @@
-import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.utils import tf_utils
 
@@ -54,9 +53,7 @@ class Embedding(tf.keras.layers.Layer):
         self.combiner = combiner
         self.tape = None
         self._embedding_delegate = EmbeddingDelegate(
-            input_dim=input_dim,
-            output_dim=output_dim,
-            name=self.name
+            input_dim=input_dim, output_dim=output_dim, name=self.name
         )
 
     @tf_utils.shape_type_conversion
@@ -120,9 +117,8 @@ class Embedding(tf.keras.layers.Layer):
         # TODO: use tf.cond rather than python if statement
         if self.tape:
             batch_embedding = self._embedding_delegate.record_gradients(
-                self.tape,
-                batch_embedding,
-                flat_ids)
+                self.tape, batch_embedding, flat_ids
+            )
 
         outputs = tf.gather(batch_embedding, idx)
         # tf.reshape does not support shape with None. Replace None with -1.
@@ -151,9 +147,7 @@ class Embedding(tf.keras.layers.Layer):
         # TODO: use tf.cond rather than python if statement
         if self.tape:
             batch_embedding = self._embedding_delegate.record_gradients(
-                self.tape,
-                batch_embedding,
-                unique_ids
+                self.tape, batch_embedding, unique_ids
             )
 
         segment_ids = sparse_input.indices[:, 0]
