@@ -215,7 +215,7 @@ class InstanceManager(object):
 
         relaunch_worker = False
         relaunch_ps = False
-        worker_id = None
+        worker_id = -1
         ps_id = -1
         with self._lock:
             if pod_name in self._worker_pod_name_to_id:
@@ -243,7 +243,7 @@ class InstanceManager(object):
                 logger.error("Unknown pod name: %s" % pod_name)
                 return
 
-        if relaunch_worker and worker_id:
+        if relaunch_worker and worker_id >= 0:
             logger.info("Relaunching worker.")
             new_worker_id = self._next_worker_id()
             self._start_worker(new_worker_id)
