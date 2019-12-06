@@ -9,8 +9,10 @@ from tensorflow.python.feature_column import feature_column_v2 as fc_lib
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.ops import array_ops, init_ops, math_ops
 
-from elasticdl.python.common.embedding import EmbeddingAndIds
-from elasticdl.python.elasticdl.embedding_delegate import EmbeddingDelegate
+from elasticdl.python.elasticdl.embedding_delegate import (
+    EmbeddingAndIds,
+    EmbeddingDelegate
+)
 
 def embedding_column(
     categorical_column,
