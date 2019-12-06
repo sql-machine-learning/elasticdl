@@ -409,7 +409,11 @@ class Worker(object):
                 emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
 
         edl_embedding_name_values = self.collect_edl_embedding_name_values()
-        logger.info('ElasticDL embedding name values: {}'.format(edl_embedding_name_values))
+        logger.info(
+            "ElasticDL embedding name values: {}".format(
+                edl_embedding_name_values
+            )
+        )
 
         if edl_embedding_name_values:
             edl_embedding_grads = grads[non_embed_vars_n:]

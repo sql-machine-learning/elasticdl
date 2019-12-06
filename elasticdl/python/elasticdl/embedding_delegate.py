@@ -1,29 +1,30 @@
 import collections
-import numpy as np 
-import tensorflow as tf 
+
+import numpy as np
+import tensorflow as tf
 
 EmbeddingAndIds = collections.namedtuple(
     "EmbeddingAndIds", ["batch_embedding", "batch_ids"]
 )
 
+
 class EmbeddingDelegate(object):
-    def __init__(
-        self,
-        input_dim,
-        output_dim,
-        name
-    ):
+    def __init__(self, input_dim, output_dim, name):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.name = name
         self._lookup_embedding_func = None
         self._embedding_and_ids_eagerly = []
+        # BET's shape and ids' shape in `self._embedding_and_ids_graph` have
+        # `None` dimension. This is because they have different shapes in
+        # different iterations.
+        # `tf.Variable` requires initial value if shape has `None` dimension.
         self._embedding_and_ids_graph = []
 
     def init_for_graph_mode_if_necessary(self):
         if tf.executing_eagerly() or self._embedding_and_ids_graph:
             return
-        
+
         self._embedding_and_ids_graph = [
             EmbeddingAndIds(
                 batch_embedding=tf.Variable(
@@ -50,6 +51,18 @@ class EmbeddingDelegate(object):
             embedding_vectors = self._lookup_embedding_func(self.name, ids)
             return embedding_vectors
 
+    def _check_id_valid(self, ids):
+        if not self.input_dim:
+            return
+
+        first_may_exceed_id = ids[np.argmax(ids >= self.input_dim)]
+        if self.input_dim is not None and first_may_exceed_id > self.input_dim:
+            raise ValueError(
+                " The embedding id cannot be bigger "
+                "than input_dim. id = %d is not in [0, %d)"
+                % (first_may_exceed_id, self.input_dim)
+            )
+
     def record_gradients(self, tape, batch_embedding, ids):
         if tf.executing_eagerly():
             tape.watch(batch_embedding)
@@ -57,27 +70,15 @@ class EmbeddingDelegate(object):
                 EmbeddingAndIds(batch_embedding, ids)
             )
         else:
+            # In graph mode, assigning tensors to trainable variables is
+            # allowed and tape can record the gradients of trainable
+            # variables automatically.
             embedding_and_ids = self._embedding_and_ids_graph[0]
             embedding_and_ids.batch_embedding.assign(batch_embedding)
             embedding_and_ids.batch_ids.assign(ids)
             batch_embedding = embedding_and_ids.batch_embedding
 
         return batch_embedding
-
-    def _check_id_valid(self, ids):
-        if not self.input_dim:
-            return
-
-        first_may_exceed_id = ids[np.argmax(ids >= self.input_dim)]
-        if (
-            self.input_dim is not None
-            and first_may_exceed_id > self.input_dim
-        ):
-            raise ValueError(
-                " The embedding id cannot be bigger "
-                "than input_dim. id = %d is not in [0, %d)"
-                % (first_may_exceed_id, self.input_dim)
-            )
 
     def reset(self):
         self._embedding_and_ids_eagerly = []

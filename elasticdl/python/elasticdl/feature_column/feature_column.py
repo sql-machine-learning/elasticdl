@@ -2,17 +2,14 @@ import collections
 import math
 import os
 
-import numpy as np
 import tensorflow as tf
 from tensorflow.python.feature_column import feature_column as fc_old
 from tensorflow.python.feature_column import feature_column_v2 as fc_lib
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.ops import array_ops, init_ops, math_ops
 
-from elasticdl.python.elasticdl.embedding_delegate import (
-    EmbeddingAndIds,
-    EmbeddingDelegate
-)
+from elasticdl.python.elasticdl.embedding_delegate import EmbeddingDelegate
+
 
 def embedding_column(
     categorical_column,
@@ -112,9 +109,8 @@ class EmbeddingColumn(
         )
 
         self._embedding_delegate = EmbeddingDelegate(
-            input_dim=num_buckets,
-            output_dim=self.dimension,
-            name=self.name)
+            input_dim=num_buckets, output_dim=self.dimension, name=self.name
+        )
 
     @property
     def _is_v2_column(self):
@@ -191,9 +187,7 @@ class EmbeddingColumn(
 
         if self.tape:
             batch_embedding = self._embedding_delegate.record_gradients(
-                tape=self.tape,
-                batch_embedding=batch_embedding,
-                ids=unique_ids
+                tape=self.tape, batch_embedding=batch_embedding, ids=unique_ids
             )
 
         segment_ids = sparse_ids.indices[:, 0]
