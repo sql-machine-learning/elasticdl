@@ -14,8 +14,6 @@ class CollectiveCommunicator(object):
         return CollectiveCommunicatorStatus.SUCCEEDED, data
 
     def broadcast(self, data, root_ip):
-        if data is None:
-            return CollectiveCommunicatorStatus.FAILED, data
         return CollectiveCommunicatorStatus.SUCCEEDED, data
 
     def barrier(self):

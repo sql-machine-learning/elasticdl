@@ -4,7 +4,7 @@ import tensorflow as tf
 
 from elasticdl.python.common.constants import Mode, ODPSConfig
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.data.odps_io import ODPSWriter
+from elasticdl.python.data.odps_io import ODPSWriter, is_odps_configured
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
 )
@@ -152,15 +152,7 @@ def eval_metrics_fn():
 
 class PredictionOutputsProcessor(BasePredictionOutputsProcessor):
     def __init__(self):
-        if all(
-            k in os.environ
-            for k in (
-                ODPSConfig.PROJECT_NAME,
-                ODPSConfig.ACCESS_ID,
-                ODPSConfig.ACCESS_KEY,
-                ODPSConfig.ENDPOINT,
-            )
-        ):
+        if is_odps_configured():
             self.odps_writer = ODPSWriter(
                 os.environ[ODPSConfig.PROJECT_NAME],
                 os.environ[ODPSConfig.ACCESS_ID],

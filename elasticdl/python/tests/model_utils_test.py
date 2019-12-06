@@ -92,6 +92,10 @@ class ModelHelperTest(unittest.TestCase):
             get_dict_from_params_str('ls=["a", "b"]; d={"a": 3}'),
             {"ls": ["a", "b"], "d": {"a": 3}},
         )
+        self.assertEqual(
+            get_dict_from_params_str('ls=["a", "b"];partition=dt=20190011'),
+            {"ls": ["a", "b"], "partition": "dt=20190011"},
+        )
         self.assertEqual(get_dict_from_params_str(""), None)
 
 
