@@ -88,6 +88,9 @@ class EmbeddingDelegate(object):
 
     @property
     def embedding_and_ids(self):
+        """
+        Return bet and ids pairs.
+        """
         if self._embedding_and_ids_eagerly:
             return self._embedding_and_ids_eagerly
         return self._embedding_and_ids_graph
