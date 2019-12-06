@@ -167,7 +167,7 @@ class Worker(object):
     def set_model(self, model_inst):
         """Set model instance to worker."""
         self._model = model_inst
-        self._train_eagerly = True
+        self._train_eagerly = False
         self._init_embeddings()
         self._var_created = self._model.built
         self._non_embed_vars = {}
@@ -195,8 +195,12 @@ class Worker(object):
                 for column in layer._feature_columns:
                     if isinstance(column, feature_column.EmbeddingColumn):
                         self._embedding_columns.append(column)
-                        logger.info('Initialize ElasticDL EmbeddingColumn:{}'.format(column.name))
-        
+                        logger.info(
+                            "Initialize ElasticDL EmbeddingColumn:{}".format(
+                                column.name
+                            )
+                        )
+
         if self._use_multi_ps:
             for column in self._embedding_columns:
                 column.set_lookup_embedding_func(self.pull_embedding_vector)
@@ -209,7 +213,9 @@ class Worker(object):
             self.report_embedding_info()
 
         self._need_embedding_layer_check = (
-            True if self._embedding_layers or self._embedding_columns else False
+            True
+            if self._embedding_layers or self._embedding_columns
+            else False
         )
 
     def _set_tape_for_embedding(self, tape):
@@ -347,11 +353,13 @@ class Worker(object):
                 embedding_info = embedding_infos.add()
                 embedding_info.name = column.name
                 embedding_info.dim = column.dimension
-                embedding_info.initializer = 'uniform'
+                embedding_info.initializer = "uniform"
 
         for ps_id in range(len(self._ps_stubs)):
             self._ps_stubs[ps_id].push_embedding_info(model)
-            logger.info('Push embedding info to PS {}. Model: {}'.format(ps_id, model))
+            logger.info(
+                "Push embedding info to PS {}. Model: {}".format(ps_id, model)
+            )
 
     def report_variable_to_ps(self, ps_id):
         model = elasticdl_pb2.Model()
@@ -373,8 +381,10 @@ class Worker(object):
         for layer in self._embedding_layers:
             embedding_name_values.append((layer.name, layer.embedding_and_ids))
         for column in self._embedding_columns:
-            embedding_name_values.append((column.name, column.embedding_and_ids))
-        
+            embedding_name_values.append(
+                (column.name, column.embedding_and_ids)
+            )
+
         return embedding_name_values
 
     def report_gradient_to_ps(self, grads):
@@ -410,7 +420,7 @@ class Worker(object):
                     "does not match the number of its output tensor %d."
                     % (len(edl_embedding_grads), bet_number)
                 )
-            
+
             grad_accum_iter = 0
             for name, embedding_and_ids in edl_embedding_name_values:
                 g_values = None
@@ -530,7 +540,7 @@ class Worker(object):
             self._var_created = True
 
         if self._need_embedding_layer_check:
-            self._train_eagerly = True
+            self._train_eagerly = False
             for layer in self._embedding_layers:
                 if len(layer.embedding_and_ids) > 1:
                     self._train_eagerly = True
@@ -593,7 +603,6 @@ class Worker(object):
             if self._model.losses:
                 loss += tf.math.add_n(self._model.losses)
         grads = tape.gradient(loss, self.get_trainable_items())
-        logger.info('Losses:{}, Loss:{}, Gradients: {}'.format(self._model.losses, loss, grads))
         return loss, grads
 
     @tf.function
@@ -687,6 +696,10 @@ class Worker(object):
 
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process(features, labels)
+        logger.info(
+            "Loss:{}, Gradients: {}".format(loss, grads
+            )
+        )
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
             # TODO: Delay certain amount of time before retrying
             for _ in range(self._max_allreduce_retry_num + 1):

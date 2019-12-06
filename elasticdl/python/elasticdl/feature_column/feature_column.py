@@ -1,7 +1,7 @@
 import collections
 import math
-
 import os
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.feature_column import feature_column as fc_old
@@ -166,17 +166,19 @@ class EmbeddingColumn(
         )
 
         if isinstance(batch_embedding, tf.Tensor):
-            print('Get embedding values of Tensor Type inside embedding column.{}UniqueIds: {}{}Tensor: {}'.format(
-                os.linesep,
-                unique_ids,
-                os.linesep,
-                batch_embedding))
+            print(
+                "Embedding values of Tensor Type inside embedding column"
+                "UniqueIds: {}{}Tensor: {}".format(
+                    os.linesep, unique_ids, os.linesep, batch_embedding
+                )
+            )
         else:
-            print('Get embedding values of Non Tensor Type inside embedding column.{}UniqueIds: {}{}Tensor: {}'.format(
-                os.linesep,
-                unique_ids,
-                os.linesep,
-                batch_embedding))
+            print(
+                "Embedding values of Non Tensor Type inside embedding column"
+                "UniqueIds: {}{}Tensor: {}".format(
+                    os.linesep, unique_ids, os.linesep, batch_embedding
+                )
+            )
 
         if self.tape:
             batch_embedding = self._record_gradients(
@@ -266,7 +268,10 @@ class EmbeddingColumn(
         if not self.num_buckets:
             return
         first_may_exceed_id = ids[np.argmax(ids >= self.num_buckets)]
-        if self.num_buckets is not None and first_may_exceed_id > self.num_buckets:
+        if (
+            self.num_buckets is not None
+            and first_may_exceed_id > self.num_buckets
+        ):
             raise ValueError(
                 " The embedding id cannot be bigger "
                 "than num_buckets. id = %d is not in [0, %d)"

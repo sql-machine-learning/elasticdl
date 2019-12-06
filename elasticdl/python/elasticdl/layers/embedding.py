@@ -1,5 +1,3 @@
-import collections
-
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.utils import tf_utils
