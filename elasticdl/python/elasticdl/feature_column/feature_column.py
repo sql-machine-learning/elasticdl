@@ -10,7 +10,7 @@ from tensorflow.python.framework import tensor_shape
 from tensorflow.python.ops import array_ops, init_ops, math_ops
 
 from elasticdl.python.common.embedding import EmbeddingAndIds
-
+from elasticdl.python.elasticdl.embedding_delegate import EmbeddingDelegate
 
 def embedding_column(
     categorical_column,
@@ -99,18 +99,20 @@ class EmbeddingColumn(
 ):
     def __init__(self, **kwargs):
         self.tape = None
-        self._lookup_embedding_func = None
-        self._embedding_and_ids_eagerly = []
-        self._embedding_and_ids_graph = []
 
         default_num_buckets = (
             self.categorical_column.num_buckets
             if self._is_v2_column
             else self.categorical_column._num_buckets
         )  # pylint: disable=protected-access
-        self.num_buckets = getattr(
+        num_buckets = getattr(
             self.categorical_column, "num_buckets", default_num_buckets
         )
+
+        self._embedding_delegate = EmbeddingDelegate(
+            input_dim=num_buckets,
+            output_dim=self.dimension,
+            name=self.name)
 
     @property
     def _is_v2_column(self):
@@ -134,26 +136,6 @@ class EmbeddingColumn(
         """See `DenseColumn` base class."""
         return tensor_shape.TensorShape([self.dimension])
 
-    def _init_for_graph_mode(self):
-        self._embedding_and_ids_graph = [
-            EmbeddingAndIds(
-                batch_embedding=tf.Variable(
-                    # In some cases, `tf.Variable` requires that initial value
-                    # is callable.
-                    initial_value=lambda: tf.zeros((1, self.dimension)),
-                    shape=tf.TensorShape((None, self.dimension)),
-                    dtype=tf.float32,
-                    trainable=True,
-                ),
-                batch_ids=tf.Variable(
-                    initial_value=lambda: tf.zeros((1, 1), dtype=tf.int64),
-                    shape=tf.TensorShape(None),
-                    dtype=tf.int64,
-                    trainable=False,
-                ),
-            )
-        ]
-
     def get_dense_tensor(self, transformation_cache, state_manager):
         if isinstance(
             self.categorical_column, fc_lib.SequenceCategoricalColumn
@@ -173,12 +155,8 @@ class EmbeddingColumn(
                 )
             )
 
-        if (
-            self.tape
-            and not tf.executing_eagerly()
-            and not self._embedding_and_ids_graph
-        ):
-            self._init_for_graph_mode()
+        if self.tape:
+            self._embedding_delegate.init_for_graph_mode_if_necessary()
 
         # Get sparse IDs and weights.
         sparse_tensors = self.categorical_column.get_sparse_tensors(
@@ -210,8 +188,10 @@ class EmbeddingColumn(
             )
 
         if self.tape:
-            batch_embedding = self._record_gradients(
-                batch_embedding, unique_ids
+            batch_embedding = self._embedding_delegate.record_gradients(
+                tape=self.tape,
+                batch_embedding=batch_embedding,
+                ids=unique_ids
             )
 
         segment_ids = sparse_ids.indices[:, 0]
@@ -278,40 +258,8 @@ class EmbeddingColumn(
 
         return batch_embedding
 
-    def _record_gradients(self, batch_embedding, ids):
-        if tf.executing_eagerly():
-            self.tape.watch(batch_embedding)
-            self._embedding_and_ids_eagerly.append(
-                EmbeddingAndIds(batch_embedding, ids)
-            )
-        else:
-            embedding_and_ids = self._embedding_and_ids_graph[0]
-            embedding_and_ids.batch_embedding.assign(batch_embedding)
-            embedding_and_ids.batch_ids.assign(ids)
-            batch_embedding = embedding_and_ids.batch_embedding
-
-        return batch_embedding
-
     def lookup_embedding(self, unique_ids):
-        ids = unique_ids.numpy()
-        self._check_id_valid(ids)
-        if self._lookup_embedding_func:
-            embedding_vectors = self._lookup_embedding_func(self.name, ids)
-            return embedding_vectors
-
-    def _check_id_valid(self, ids):
-        if not self.num_buckets:
-            return
-        first_may_exceed_id = ids[np.argmax(ids >= self.num_buckets)]
-        if (
-            self.num_buckets is not None
-            and first_may_exceed_id > self.num_buckets
-        ):
-            raise ValueError(
-                " The embedding id cannot be bigger "
-                "than num_buckets. id = %d is not in [0, %d)"
-                % (first_may_exceed_id, self.num_buckets)
-            )
+        return self._embedding_delegate.lookup_embedding(unique_ids)
 
     def set_tape(self, tape):
         self.tape = tape
@@ -321,18 +269,16 @@ class EmbeddingColumn(
 
         Args:
             func: The function used to look up embeddings. The arguments of
-                are `(layer_name, embedding_id_list)`, where `layer_name` is
-                the name of embedding layer, and `embedding_id_list` is a list
+                are `(column_name, embedding_id_list)`, where `column_name` is
+                the name of embedding column, and `embedding_id_list` is a list
                 of embedding ids to be looked up.
         """
-        self._lookup_embedding_func = func
+        self._embedding_delegate.set_lookup_embedding_func(func)
 
     def reset(self):
         self.tape = None
-        self._embedding_and_ids_eagerly = []
+        self._embedding_delegate.reset()
 
     @property
     def embedding_and_ids(self):
-        if self._embedding_and_ids_eagerly:
-            return self._embedding_and_ids_eagerly
-        return self._embedding_and_ids_graph
+        return self._embedding_delegate.embedding_and_ids

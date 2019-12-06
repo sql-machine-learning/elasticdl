@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.keras.utils import tf_utils
 
-from elasticdl.python.common.embedding import EmbeddingAndIds
+from elasticdl.python.elasticdl.embedding_delegate import EmbeddingAndIds
 
 
 class Embedding(tf.keras.layers.Layer):
