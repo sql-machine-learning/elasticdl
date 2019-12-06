@@ -1,5 +1,5 @@
 import tensorflow as tf
-from elasticdl.python.elasticdl.feature_column import feature_column
+
 
 def get_feature_columns_and_inputs():
     feature_columns = []
@@ -17,9 +17,9 @@ def get_feature_columns_and_inputs():
     feature_input_layers["age"] = tf.keras.Input(shape=(1,), name="age")
 
     thal_hashed = tf.feature_column.categorical_column_with_hash_bucket(
-        "thal", hash_bucket_size=10
+        "thal", hash_bucket_size=100
     )
-    thal_embedding = feature_column.embedding_column(
+    thal_embedding = tf.feature_column.embedding_column(
         thal_hashed, dimension=8
     )
     feature_columns.append(thal_embedding)
@@ -34,13 +34,11 @@ def custom_model():
     feature_columns, feature_inputs = get_feature_columns_and_inputs()
     feature_layer = tf.keras.layers.DenseFeatures(feature_columns)
     x = feature_layer(feature_inputs)
-    x = tf.keras.layers.Dense(8, activation="relu")(x)
-    x = tf.keras.layers.Dense(8, activation="relu")(x)
+    x = tf.keras.layers.Dense(16, activation="relu")(x)
+    x = tf.keras.layers.Dense(16, activation="relu")(x)
     y = tf.keras.layers.Dense(1, activation="sigmoid")(x)
 
-    model = tf.keras.Model(
-        inputs=feature_inputs, outputs=y
-    )
+    model = tf.keras.Model(inputs=feature_inputs, outputs=y)
 
     return model
 
