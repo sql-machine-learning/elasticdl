@@ -23,7 +23,7 @@ class CollectiveCommunicatorTest(unittest.TestCase):
         )
         self.assertEqual(
             communicator.broadcast(None, "worker_0_ip"),
-            (CollectiveCommunicatorStatus.FAILED, None),
+            (CollectiveCommunicatorStatus.SUCCEEDED, None),
         )
         self.assertEqual(
             communicator.barrier(), CollectiveCommunicatorStatus.SUCCEEDED
