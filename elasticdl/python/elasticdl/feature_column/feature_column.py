@@ -101,6 +101,7 @@ class EmbeddingColumn(
         self.tape = None
         self._lookup_embedding_func = None
         self._embedding_and_ids_eagerly = []
+        self._embedding_and_ids_graph = []
 
         default_num_buckets = (
             self.categorical_column.num_buckets
@@ -133,6 +134,26 @@ class EmbeddingColumn(
         """See `DenseColumn` base class."""
         return tensor_shape.TensorShape([self.dimension])
 
+    def _init_for_graph_mode(self):
+        self._embedding_and_ids_graph = [
+            EmbeddingAndIds(
+                batch_embedding=tf.Variable(
+                    # In some cases, `tf.Variable` requires that initial value
+                    # is callable.
+                    initial_value=lambda: tf.zeros((1, self.dimension)),
+                    shape=tf.TensorShape((None, self.dimension)),
+                    dtype=tf.float32,
+                    trainable=True,
+                ),
+                batch_ids=tf.Variable(
+                    initial_value=lambda: tf.zeros((1, 1), dtype=tf.int64),
+                    shape=tf.TensorShape(None),
+                    dtype=tf.int64,
+                    trainable=False,
+                ),
+            )
+        ]
+
     def get_dense_tensor(self, transformation_cache, state_manager):
         if isinstance(
             self.categorical_column, fc_lib.SequenceCategoricalColumn
@@ -151,6 +172,14 @@ class EmbeddingColumn(
                     self.categorical_column,
                 )
             )
+
+        if (
+            self.tape
+            and not tf.executing_eagerly()
+            and not self._embedding_and_ids_graph
+        ):
+            self._init_for_graph_mode()
+
         # Get sparse IDs and weights.
         sparse_tensors = self.categorical_column.get_sparse_tensors(
             transformation_cache, state_manager
@@ -167,15 +196,15 @@ class EmbeddingColumn(
 
         if isinstance(batch_embedding, tf.Tensor):
             print(
-                "Embedding values of Tensor Type inside embedding column"
-                "UniqueIds: {}{}Tensor: {}".format(
+                "Embedding values of Tensor Type inside embedding column."
+                "{}UniqueIds: {}{}Tensor: {}".format(
                     os.linesep, unique_ids, os.linesep, batch_embedding
                 )
             )
         else:
             print(
-                "Embedding values of Non Tensor Type inside embedding column"
-                "UniqueIds: {}{}Tensor: {}".format(
+                "Embedding values of Non Tensor Type inside embedding column."
+                "{}UniqueIds: {}{}Tensor: {}".format(
                     os.linesep, unique_ids, os.linesep, batch_embedding
                 )
             )
@@ -250,10 +279,16 @@ class EmbeddingColumn(
         return batch_embedding
 
     def _record_gradients(self, batch_embedding, ids):
-        self.tape.watch(batch_embedding)
-        self._embedding_and_ids_eagerly.append(
-            EmbeddingAndIds(batch_embedding, ids)
-        )
+        if tf.executing_eagerly():
+            self.tape.watch(batch_embedding)
+            self._embedding_and_ids_eagerly.append(
+                EmbeddingAndIds(batch_embedding, ids)
+            )
+        else:
+            embedding_and_ids = self._embedding_and_ids_graph[0]
+            embedding_and_ids.batch_embedding.assign(batch_embedding)
+            embedding_and_ids.batch_ids.assign(ids)
+            batch_embedding = embedding_and_ids.batch_embedding
 
         return batch_embedding
 
@@ -298,4 +333,6 @@ class EmbeddingColumn(
 
     @property
     def embedding_and_ids(self):
-        return self._embedding_and_ids_eagerly
+        if self._embedding_and_ids_eagerly:
+            return self._embedding_and_ids_eagerly
+        return self._embedding_and_ids_graph

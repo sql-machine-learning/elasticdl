@@ -409,6 +409,8 @@ class Worker(object):
                 emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
 
         edl_embedding_name_values = self.collect_edl_embedding_name_values()
+        logger.info('ElasticDL embedding name values: {}'.format(edl_embedding_name_values))
+
         if edl_embedding_name_values:
             edl_embedding_grads = grads[non_embed_vars_n:]
             bet_number = 0
@@ -696,10 +698,7 @@ class Worker(object):
 
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process(features, labels)
-        logger.info(
-            "Loss:{}, Gradients: {}".format(loss, grads
-            )
-        )
+        # logger.info("Loss:{}, Gradients: {}".format(loss, grads))
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
             # TODO: Delay certain amount of time before retrying
             for _ in range(self._max_allreduce_retry_num + 1):

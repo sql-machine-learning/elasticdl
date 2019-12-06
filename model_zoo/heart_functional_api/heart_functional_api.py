@@ -1,5 +1,5 @@
 import tensorflow as tf
-
+from elasticdl.python.elasticdl.feature_column import feature_column
 
 def get_feature_columns_and_inputs():
     feature_columns = []
@@ -19,7 +19,7 @@ def get_feature_columns_and_inputs():
     thal_hashed = tf.feature_column.categorical_column_with_hash_bucket(
         "thal", hash_bucket_size=100
     )
-    thal_embedding = tf.feature_column.embedding_column(
+    thal_embedding = feature_column.embedding_column(
         thal_hashed, dimension=8
     )
     feature_columns.append(thal_embedding)
