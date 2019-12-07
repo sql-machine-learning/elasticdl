@@ -170,21 +170,6 @@ class EmbeddingColumn(
             self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
         )
 
-        if isinstance(batch_embedding, tf.Tensor):
-            print(
-                "Embedding values of Tensor Type inside embedding column."
-                "{}UniqueIds: {}{}Tensor: {}".format(
-                    os.linesep, unique_ids, os.linesep, batch_embedding
-                )
-            )
-        else:
-            print(
-                "Embedding values of Non Tensor Type inside embedding column."
-                "{}UniqueIds: {}{}Tensor: {}".format(
-                    os.linesep, unique_ids, os.linesep, batch_embedding
-                )
-            )
-
         if self.tape:
             batch_embedding = self._embedding_delegate.record_gradients(
                 tape=self.tape, batch_embedding=batch_embedding, ids=unique_ids

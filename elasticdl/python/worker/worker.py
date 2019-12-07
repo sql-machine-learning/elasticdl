@@ -705,7 +705,6 @@ class Worker(object):
 
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process(features, labels)
-        # logger.info("Loss:{}, Gradients: {}".format(loss, grads))
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
             # TODO: Delay certain amount of time before retrying
             for _ in range(self._max_allreduce_retry_num + 1):
