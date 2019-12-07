@@ -353,6 +353,9 @@ class Worker(object):
                 embedding_info = embedding_infos.add()
                 embedding_info.name = column.name
                 embedding_info.dim = column.dimension
+                # TODO(brightcoder): The initializer in embedding column is 
+                # a variable initializer function. For embedding layer, it's a 
+                # tf.keras.initializers. Keep aligned between these two.
                 embedding_info.initializer = "uniform"
 
         for ps_id in range(len(self._ps_stubs)):
