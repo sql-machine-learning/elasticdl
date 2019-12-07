@@ -360,9 +360,6 @@ class Worker(object):
 
         for ps_id in range(len(self._ps_stubs)):
             self._ps_stubs[ps_id].push_embedding_info(model)
-            logger.info(
-                "Push embedding info to PS {}. Model: {}".format(ps_id, model)
-            )
 
     def report_variable_to_ps(self, ps_id):
         model = elasticdl_pb2.Model()
@@ -412,11 +409,6 @@ class Worker(object):
                 emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
 
         edl_embedding_name_values = self.collect_edl_embedding_name_values()
-        logger.info(
-            "ElasticDL embedding name values: {}".format(
-                edl_embedding_name_values
-            )
-        )
 
         if edl_embedding_name_values:
             edl_embedding_grads = grads[non_embed_vars_n:]
