@@ -9,6 +9,12 @@ EmbeddingAndIds = collections.namedtuple(
 
 
 class EmbeddingDelegate(object):
+    '''
+    The common component to interact the external embedding
+    storage such as the parameter server.
+    Both ElasticDL Embedding Layer and Embedding Column will
+    use this component.
+    '''
     def __init__(self, input_dim, output_dim, name):
         self.input_dim = input_dim
         self.output_dim = output_dim
