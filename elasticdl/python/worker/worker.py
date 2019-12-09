@@ -380,10 +380,11 @@ class Worker(object):
         '''
         Collect the information of ElasticDL customized
         embeddings such as EDL embedding layer and EDL embedding column.
-        Return an array of key-value pair.
-        Key is embedding names, layer name for embedding layer
-        and column name for embedding column.
-        Value is the EmbeddingAndIds tuple.
+        Return:
+            An array of key-value pair.
+            Key is embedding names, layer name for embedding layer
+            and column name for embedding column.
+            Value is the EmbeddingAndIds tuple.
         '''
 
         embedding_name_values = []
