@@ -378,7 +378,7 @@ class Worker(object):
 
     def _collect_edl_embedding_name_values(self):
         '''
-        Collect the information for ElasticDL customized
+        Collect the information of ElasticDL customized
         embeddings such as EDL embedding layer and EDL embedding column.
         Return an array of key-value pair.
         Key is embedding names, layer name for embedding layer
