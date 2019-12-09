@@ -353,7 +353,7 @@ class Worker(object):
                 embedding_info = embedding_infos.add()
                 embedding_info.name = column.name
                 embedding_info.dim = column.dimension
-                # TODO(brightcoder): The initializer in embedding column is
+                # TODO(brightcoder01): The initializer in embedding column is
                 # a variable initializer function. For embedding layer, it's a
                 # tf.keras.initializers. Keep aligned between these two.
                 embedding_info.initializer = "uniform"
@@ -376,7 +376,15 @@ class Worker(object):
         for ps_id in range(len(self._ps_stubs)):
             self.report_variable_to_ps(ps_id)
 
-    def collect_edl_embedding_name_values(self):
+    def _collect_edl_embedding_name_values(self):
+        '''
+        Collect the embedding information for ElasticDL.
+        Return an array of key-value pair.
+        Key is embedding names, layer name for embedding layer
+        and column name for embedding column.
+        Value is the EmbeddingAndIds tuple.
+        '''
+
         embedding_name_values = []
         for layer in self._embedding_layers:
             embedding_name_values.append((layer.name, layer.embedding_and_ids))
@@ -408,7 +416,7 @@ class Worker(object):
             for g, name in ps_grads[ps_id]:
                 emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
 
-        edl_embedding_name_values = self.collect_edl_embedding_name_values()
+        edl_embedding_name_values = self._collect_edl_embedding_name_values()
 
         if edl_embedding_name_values:
             edl_embedding_grads = grads[non_embed_vars_n:]
