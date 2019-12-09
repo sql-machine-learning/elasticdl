@@ -20,4 +20,4 @@ repos:
     rev: v0.701
     hooks:
     - id: mypy
-      args: [-s]
+      args: [--ignore-missing-imports, --follow-imports=skip]
