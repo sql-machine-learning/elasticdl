@@ -377,7 +377,7 @@ class Worker(object):
             self.report_variable_to_ps(ps_id)
 
     def _collect_edl_embedding_name_values(self):
-        '''
+        """
         Collect the information of ElasticDL customized
         embeddings such as EDL embedding layer and EDL embedding column.
         Return:
@@ -385,7 +385,7 @@ class Worker(object):
             Key is embedding names, layer name for embedding layer
             and column name for embedding column.
             Value is the EmbeddingAndIds tuple.
-        '''
+        """
 
         embedding_name_values = []
         for layer in self._embedding_layers:
