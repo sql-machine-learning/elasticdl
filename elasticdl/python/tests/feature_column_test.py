@@ -11,7 +11,7 @@ def call_feature_columns(feature_columns, input):
     return dense_features(input)
 
 
-def generate_mock_embedding_vectors(ids, dimension):
+def generate_vectors_with_one_hot_value(ids, dimension):
     if isinstance(ids, tf.Tensor):
         ids = ids.numpy()
 
@@ -22,6 +22,16 @@ def generate_mock_embedding_vectors(ids, dimension):
         ]
     )
 
+def generate_vectors_fill_with_id_value(ids, dimension):
+    if isinstance(ids, tf.Tensor):
+        ids = ids.numpy()
+
+    return np.array(
+        [
+            np.full((1, dimension), id)
+            for id in ids
+        ]
+    )
 
 class EmbeddingColumnTest(unittest.TestCase):
     def test_call_embedding_column(self):
@@ -34,7 +44,7 @@ class EmbeddingColumnTest(unittest.TestCase):
             dimension=dimension,
         )
         item_id_embedding.lookup_embedding = lambda unique_ids: (
-            generate_mock_embedding_vectors(
+            generate_vectors_with_one_hot_value(
                 unique_ids, item_id_embedding.dimension
             )
         )
@@ -46,7 +56,7 @@ class EmbeddingColumnTest(unittest.TestCase):
         self.assertTrue(
             np.array_equal(
                 output.numpy(),
-                generate_mock_embedding_vectors([1, 2, 3], dimension),
+                generate_vectors_with_one_hot_value([1, 2, 3], dimension),
             )
         )
 
@@ -65,7 +75,7 @@ class EmbeddingColumnTest(unittest.TestCase):
             combiner="sum",
         )
         item_id_embedding.lookup_embedding = lambda unique_ids: (
-            generate_mock_embedding_vectors(
+            generate_vectors_with_one_hot_value(
                 unique_ids, item_id_embedding.dimension
             )
         )
@@ -87,6 +97,30 @@ class EmbeddingColumnTest(unittest.TestCase):
         )
 
         self.assertTrue(np.array_equal(output.numpy(), expected_output))
+    
+    def test_embedding_column_gradients(self):
+        dimension=8
+
+        item_id_embedding = feature_column.embedding_column(
+            tf.feature_column.categorical_column_with_identity(
+                'item_id', num_buckets=128
+            ),
+            dimension=dimension
+        )
+        item_id_embedding.lookup_embedding = lambda unique_ids: (
+            generate_vectors_fill_with_id_value(
+                unique_ids, item_id_embedding.dimension
+            )
+        )
+
+        output = call_feature_columns(
+            [item_id_embedding],
+            {
+                'item_id': [1, 10, 6]
+            }
+        )
+
+        print(output)
 
 
 if __name__ == "__main__":
