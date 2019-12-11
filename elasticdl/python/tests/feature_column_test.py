@@ -113,12 +113,18 @@ class EmbeddingColumnTest(unittest.TestCase):
             )
         )
 
-        output = call_feature_columns(
-            [item_id_embedding],
-            {
-                'item_id': [1, 10, 6]
-            }
-        )
+        with tf.GradientTape() as tape:
+            item_id_embedding.set_tape(tape)
+            output = call_feature_columns(
+                [item_id_embedding],
+                {
+                    'item_id': [1, 10, 6, 10]
+                }
+            )
+
+            grads = tape.gradient(output, item_id_embedding.embedding_and_ids)
+
+            print(grads)
 
         print(output)
 
