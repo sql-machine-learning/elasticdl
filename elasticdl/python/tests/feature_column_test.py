@@ -101,11 +101,16 @@ class EmbeddingColumnTest(unittest.TestCase):
     def test_embedding_column_gradients(self):
         dimension=8
 
+        inputs = {
+            'item_id': [[1, 2], [10, 10], [6, 3], [10, 2]]
+            }
+
         item_id_embedding = feature_column.embedding_column(
             tf.feature_column.categorical_column_with_identity(
                 'item_id', num_buckets=128
             ),
-            dimension=dimension
+            dimension=dimension,
+            combiner='mean'
         )
         item_id_embedding.lookup_embedding = lambda unique_ids: (
             generate_vectors_fill_with_id_value(
@@ -113,21 +118,23 @@ class EmbeddingColumnTest(unittest.TestCase):
             )
         )
 
-        with tf.GradientTape() as tape:
-            item_id_embedding.set_tape(tape)
-            output = call_feature_columns(
-                [item_id_embedding],
-                {
-                    'item_id': [1, 10, 6, 10]
-                }
-            )
+        dense_features = tf.keras.layers.DenseFeatures([item_id_embedding])
+        call_fns = [dense_features.call, tf.function(dense_features.call)]
 
-            grads = tape.gradient(output, item_id_embedding.embedding_and_ids)
+        for call_fn in call_fns:
+            with tf.GradientTape() as tape:
+                item_id_embedding.set_tape(tape)
+                output = call_fn(inputs)
+                grads = tape.gradient(output, item_id_embedding.embedding_and_ids)
+                print(output)
+                print(grads)
+                print('**********')
+            
+            item_id_embedding.reset()
 
-            print(grads)
 
-        print(output)
-
+    def test_embedding_column_gradients_with_weights(self):
+        pass
 
 if __name__ == "__main__":
     unittest.main()
