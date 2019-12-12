@@ -187,9 +187,7 @@ class EvaluationServiceTest(unittest.TestCase):
         auc_value_0 = auc.result()
 
         auc.reset_states()
-        _EvaluationJob._update_metric_by_small_chunk(
-            auc, labels, preds
-        )
+        _EvaluationJob._update_metric_by_small_chunk(auc, labels, preds)
         auc_value_1 = auc.result()
         self.assertEquals(auc_value_0, auc_value_1)
 
