@@ -78,7 +78,6 @@ class _EvaluationJob(object):
                 self._update_metric_by_small_chunk(
                     metric_inst, labels, outputs
                 )
-                # metric_inst.update_state(labels, outputs)
 
     def get_evaluation_summary(self):
         if self._model_have_multiple_outputs:
