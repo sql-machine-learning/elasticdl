@@ -111,9 +111,7 @@ class _EvaluationJob(object):
         with those small chunks. The [issue 35044](https://github.com/
         tensorflow/tensorflow/issues/35044) has been submitted to tensorflow.
         """
-        chunk_boundaries = np.asarray(
-            range(0, len(labels), chunk_length)
-        )
+        chunk_boundaries = np.asarray(range(0, len(labels), chunk_length))
         label_chunks = np.array_split(labels, chunk_boundaries)
         output_chunks = np.array_split(outputs, chunk_boundaries)
         for label, output in zip(label_chunks, output_chunks):
