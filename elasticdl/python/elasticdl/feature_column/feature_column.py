@@ -164,21 +164,23 @@ class EmbeddingColumn(
         sparse_ids = sparse_tensors.id_tensor
         sparse_weights = sparse_tensors.weight_tensor
 
-        unique_ids, idx = tf.unique(sparse_ids.values)
-        batch_embedding = tf.py_function(
-            self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
-        )
-
-        if self.tape:
-            batch_embedding = self._embedding_delegate.record_gradients(
-                tape=self.tape, batch_embedding=batch_embedding, ids=unique_ids
-            )
-
         segment_ids = sparse_ids.indices[:, 0]
         if segment_ids.dtype != tf.int32:
             segment_ids = tf.cast(segment_ids, tf.int32)
 
+        ids = sparse_ids.values
+        unique_ids, idx = tf.unique(ids)
+
+        batch_embedding = tf.py_function(
+            self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
+        )
+
         if sparse_weights is not None:
+            if self.tape:
+                batch_embedding = self._embedding_delegate.record_gradients(
+                    tape=self.tape, batch_embedding=batch_embedding, ids=ids
+                )
+
             weights = sparse_weights.values
             if weights.dtype != batch_embedding.dtype:
                 weights = math_ops.cast(weights, batch_embedding.dtype)
@@ -193,7 +195,23 @@ class EmbeddingColumn(
             bcast_weights_shape = array_ops.concat(
                 [array_ops.shape(weights), ones], 0
             )
+
+            orig_weights_shape = weights.get_shape()
             weights = array_ops.reshape(weights, bcast_weights_shape)
+
+            # Set the weight shape, since after reshaping to
+            # bcast_weights_shape, the shape becomes None.
+            if batch_embedding.get_shape().ndims is not None:
+                weights.set_shape(
+                    orig_weights_shape.concatenate(
+                        [
+                            1
+                            for _ in range(
+                                batch_embedding.get_shape().ndims - 1
+                            )
+                        ]
+                    )
+                )
 
             batch_embedding *= weights
 
@@ -220,17 +238,24 @@ class EmbeddingColumn(
             else:
                 assert False, "Unrecognized combiner"
         else:
+            if self.tape:
+                batch_embedding = self._embedding_delegate.record_gradients(
+                    tape=self.tape,
+                    batch_embedding=batch_embedding,
+                    ids=unique_ids,
+                )
+
             assert idx is not None
             if self.combiner == "sum":
-                batch_embedding = tf.sparse.segment_sum(
+                batch_embedding = math_ops.sparse_segment_sum(
                     batch_embedding, idx, segment_ids
                 )
             elif self.combiner == "mean":
-                batch_embedding = tf.sparse.segment_mean(
+                batch_embedding = math_ops.sparse_segment_mean(
                     batch_embedding, idx, segment_ids
                 )
             elif self.combiner == "sqrtn":
-                batch_embedding = tf.sparse.segment_sqrt_n(
+                batch_embedding = math_ops.sparse_segment_sqrt_n(
                     batch_embedding, idx, segment_ids
                 )
             else:
