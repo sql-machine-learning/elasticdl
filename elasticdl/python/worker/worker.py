@@ -205,9 +205,30 @@ class Worker(object):
             for column in self._embedding_columns:
                 column.set_lookup_embedding_func(self.pull_embedding_vector)
 
+    def _check_name_conflict_of_embedding_layer_and_column(self):
+        if not self._embedding_layers or not self._embedding_columns:
+            return
+
+        embedding_layer_name_set = set(
+            [layer.name for layer in self._embedding_layers]
+        )
+        embedding_column_name_set = set(
+            [column.name for column in self._embedding_columns]
+        )
+        conflict_name_set = embedding_column_name_set.union(
+            embedding_layer_name_set
+        )
+        if conflict_name_set:
+            raise Exception(
+                "Name conflict between embedding layer and column: {}".format(
+                    conflict_name_set
+                )
+            )
+
     def _init_embeddings(self):
         self._init_embedding_layer()
         self._init_embedding_column()
+        self._check_name_conflict_of_embedding_layer_and_column()
 
         if self._use_multi_ps:
             self.report_embedding_info()

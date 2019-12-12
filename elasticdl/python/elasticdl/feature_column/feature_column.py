@@ -121,7 +121,7 @@ class EmbeddingColumn(
     @property
     def name(self):
         """See `FeatureColumn` base class."""
-        return "{}_embedding_elasticdl".format(self.categorical_column.name)
+        return "{}_embedding".format(self.categorical_column.name)
 
     @property
     def parse_example_spec(self):
