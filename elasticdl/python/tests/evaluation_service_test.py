@@ -179,6 +179,20 @@ class EvaluationServiceTest(unittest.TestCase):
             evaluation_service._eval_checkpoint_versions, [20, 30]
         )
 
+    def test_update_metric_by_small_chunks(self):
+        labels = np.random.randint(0, 2, 1234)
+        preds = np.random.random(1234)
+        auc = tf.keras.metrics.AUC()
+        auc.update_state(labels, preds)
+        auc_value_0 = auc.result()
+
+        auc.reset_states()
+        _EvaluationJob._update_metric_by_small_chunk(
+            auc, labels, preds
+        )
+        auc_value_1 = auc.result()
+        self.assertEquals(auc_value_0, auc_value_1)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,6 +2,7 @@ import threading
 import time
 from threading import Thread
 
+import numpy as np
 from tensorflow.python.keras import metrics as metrics_module
 
 from elasticdl.proto import elasticdl_pb2
@@ -74,7 +75,10 @@ class _EvaluationJob(object):
                 continue
             outputs = tensor_pb_to_ndarray(tensor_pb)
             for metric_inst in metrics.values():
-                metric_inst.update_state(labels, outputs)
+                self._update_metric_by_small_chunk(
+                    metric_inst, labels, outputs
+                )
+                # metric_inst.update_state(labels, outputs)
 
     def get_evaluation_summary(self):
         if self._model_have_multiple_outputs:
@@ -91,6 +95,30 @@ class _EvaluationJob(object):
                 MetricsDictKey.MODEL_OUTPUT
             ].items()
         }
+
+    def reset_metric_states(self):
+        """Resets all of the metric state variables."""
+        for metrics in self._metrics_dict.values():
+            for metric_inst in metrics.values():
+                metric_inst.reset_states()
+
+    @staticmethod
+    def _update_metric_by_small_chunk(
+        metric, labels, outputs, chunk_length=500
+    ):
+        """The metric updates state in a thread launched grpc. The memory will
+        increase greatly if we update the metric with large size outputs. So
+        we split the outputs and labels to small chunks then update the metric
+        with those small chunks. The [issue 35044](https://github.com/
+        tensorflow/tensorflow/issues/35044) has been submitted to tensorflow.
+        """
+        chunk_boundaries = np.asarray(
+            range(0, len(labels), chunk_length)
+        )
+        label_chunks = np.array_split(labels, chunk_boundaries)
+        output_chunks = np.array_split(outputs, chunk_boundaries)
+        for label, output in zip(label_chunks, output_chunks):
+            metric.update_state(label, output)
 
 
 class _EvaluationTrigger(Thread):
@@ -201,9 +229,14 @@ class EvaluationService(object):
                     elasticdl_pb2.EVALUATION, checkpoint_version
                 )
                 task_count = len(self._task_d._eval_todo)
-                self._eval_job = _EvaluationJob(
-                    self._eval_metrics_fn(), checkpoint_version, task_count
-                )
+                if self._eval_job is None:
+                    self._eval_job = _EvaluationJob(
+                        self._eval_metrics_fn(), checkpoint_version, task_count
+                    )
+                else:
+                    self._eval_job.model_version = checkpoint_version
+                    self._eval_job._total_tasks = task_count
+                    self._eval_job.reset_metric_states()
                 return True
         return False
 
@@ -227,7 +260,10 @@ class EvaluationService(object):
     def report_evaluation_metrics(self, model_outputs, labels):
         if self._eval_job is None:
             return False
-        return self._eval_job.report_evaluation_metrics(model_outputs, labels)
+        with self._lock:
+            return self._eval_job.report_evaluation_metrics(
+                model_outputs, labels
+            )
 
     def complete_task(self):
         self._eval_job.complete_task()
