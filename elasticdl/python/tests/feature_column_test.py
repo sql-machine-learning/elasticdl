@@ -245,7 +245,9 @@ class EmbeddingColumnTest(unittest.TestCase):
                     grad_values = grads.values
 
                     self.assertTrue(
-                        np.array_equal(grad_indices.numpy(), item_id_idx.numpy())
+                        np.array_equal(
+                            grad_indices.numpy(), item_id_idx.numpy()
+                        )
                     )
                     self.assertTrue(
                         np.isclose(grad_values.numpy(), expected_grads).all()
