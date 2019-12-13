@@ -105,7 +105,7 @@ class _EvaluationJob(object):
     def _update_metric_by_small_chunk(
         metric, labels, outputs, chunk_length=500
     ):
-        """The metric updates state in a thread launched grpc. The memory will
+        """The metric updates state in a thread launched by grpc. The memory will
         increase greatly if we update the metric with large size outputs. So
         we split the outputs and labels to small chunks then update the metric
         with those small chunks. The [issue 35044](https://github.com/
