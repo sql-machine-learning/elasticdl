@@ -7,6 +7,8 @@ from tensorflow.python.feature_column import feature_column_v2 as fc_lib
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.ops import array_ops, init_ops, math_ops
 
+from elasticdl.python.elasticdl.embedding_delegate import EmbeddingDelegate
+
 
 def embedding_column(
     categorical_column,
@@ -96,6 +98,19 @@ class EmbeddingColumn(
     def __init__(self, **kwargs):
         self.tape = None
 
+        default_num_buckets = (
+            self.categorical_column.num_buckets
+            if self._is_v2_column
+            else self.categorical_column._num_buckets
+        )  # pylint: disable=protected-access
+        num_buckets = getattr(
+            self.categorical_column, "num_buckets", default_num_buckets
+        )
+
+        self._embedding_delegate = EmbeddingDelegate(
+            input_dim=num_buckets, output_dim=self.dimension, name=self.name
+        )
+
     @property
     def _is_v2_column(self):
         return (
@@ -106,7 +121,7 @@ class EmbeddingColumn(
     @property
     def name(self):
         """See `FeatureColumn` base class."""
-        return "{}_embedding_elasticdl".format(self.categorical_column.name)
+        return "{}_embedding".format(self.categorical_column.name)
 
     @property
     def parse_example_spec(self):
@@ -136,6 +151,10 @@ class EmbeddingColumn(
                     self.categorical_column,
                 )
             )
+
+        if self.tape:
+            self._embedding_delegate.init_for_graph_mode_if_necessary()
+
         # Get sparse IDs and weights.
         sparse_tensors = self.categorical_column.get_sparse_tensors(
             transformation_cache, state_manager
@@ -145,16 +164,23 @@ class EmbeddingColumn(
         sparse_ids = sparse_tensors.id_tensor
         sparse_weights = sparse_tensors.weight_tensor
 
-        unique_ids, idx = tf.unique(sparse_ids.values)
-        batch_embedding = tf.py_function(
-            self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
-        )
-
         segment_ids = sparse_ids.indices[:, 0]
         if segment_ids.dtype != tf.int32:
             segment_ids = tf.cast(segment_ids, tf.int32)
 
+        ids = sparse_ids.values
+        unique_ids, idx = tf.unique(ids)
+
+        batch_embedding = tf.py_function(
+            self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
+        )
+
         if sparse_weights is not None:
+            if self.tape:
+                batch_embedding = self._embedding_delegate.record_gradients(
+                    tape=self.tape, batch_embedding=batch_embedding, ids=ids
+                )
+
             weights = sparse_weights.values
             if weights.dtype != batch_embedding.dtype:
                 weights = math_ops.cast(weights, batch_embedding.dtype)
@@ -169,7 +195,23 @@ class EmbeddingColumn(
             bcast_weights_shape = array_ops.concat(
                 [array_ops.shape(weights), ones], 0
             )
+
+            orig_weights_shape = weights.get_shape()
             weights = array_ops.reshape(weights, bcast_weights_shape)
+
+            # Set the weight shape, since after reshaping to
+            # bcast_weights_shape, the shape becomes None.
+            if batch_embedding.get_shape().ndims is not None:
+                weights.set_shape(
+                    orig_weights_shape.concatenate(
+                        [
+                            1
+                            for _ in range(
+                                batch_embedding.get_shape().ndims - 1
+                            )
+                        ]
+                    )
+                )
 
             batch_embedding *= weights
 
@@ -196,17 +238,24 @@ class EmbeddingColumn(
             else:
                 assert False, "Unrecognized combiner"
         else:
+            if self.tape:
+                batch_embedding = self._embedding_delegate.record_gradients(
+                    tape=self.tape,
+                    batch_embedding=batch_embedding,
+                    ids=unique_ids,
+                )
+
             assert idx is not None
             if self.combiner == "sum":
-                batch_embedding = tf.sparse.segment_sum(
+                batch_embedding = math_ops.sparse_segment_sum(
                     batch_embedding, idx, segment_ids
                 )
             elif self.combiner == "mean":
-                batch_embedding = tf.sparse.segment_mean(
+                batch_embedding = math_ops.sparse_segment_mean(
                     batch_embedding, idx, segment_ids
                 )
             elif self.combiner == "sqrtn":
-                batch_embedding = tf.sparse.segment_sqrt_n(
+                batch_embedding = math_ops.sparse_segment_sqrt_n(
                     batch_embedding, idx, segment_ids
                 )
             else:
@@ -215,10 +264,26 @@ class EmbeddingColumn(
         return batch_embedding
 
     def lookup_embedding(self, unique_ids):
-        raise Exception("Not implemented yet")
+        return self._embedding_delegate.lookup_embedding(unique_ids)
 
     def set_tape(self, tape):
         self.tape = tape
 
+    def set_lookup_embedding_func(self, func):
+        """Sets function for looking up embeddings in the PS.
+
+        Args:
+            func: The function used to look up embeddings. The arguments of
+                are `(column_name, embedding_id_list)`, where `column_name` is
+                the name of embedding column, and `embedding_id_list` is a list
+                of embedding ids to be looked up.
+        """
+        self._embedding_delegate.set_lookup_embedding_func(func)
+
     def reset(self):
         self.tape = None
+        self._embedding_delegate.reset()
+
+    @property
+    def embedding_and_ids(self):
+        return self._embedding_delegate.embedding_and_ids
