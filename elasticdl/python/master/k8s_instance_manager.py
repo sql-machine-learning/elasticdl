@@ -73,6 +73,8 @@ class InstanceManager(object):
         self._ps_pod_name_to_id = {}
         self._relaunch_deleted_live_ps = True
 
+        self._failed_pods = []
+
         self._k8s_client = k8s.Client(event_callback=self._event_cb, **kwargs)
         self._ps_addrs = self._get_addrs(
             self._num_ps, self._k8s_client.get_ps_service_address
@@ -218,10 +220,18 @@ class InstanceManager(object):
         worker_id = -1
         ps_id = -1
         with self._lock:
+            if pod_name in self._failed_pods:
+                return
             if pod_name in self._worker_pod_name_to_id:
                 worker_id = self._worker_pod_name_to_id.get(pod_name)
                 self._worker_pods_phase[worker_id] = (pod_name, phase)
-                if evt_type == "DELETED":
+                # Workaround for memory leak issues in tf eager mode.
+                # A pod may fail due to OOM from tf eager mode memory leak.
+                failed_pod = False
+                if evt_type == "MODIFIED" and phase == "Failed":
+                    self._failed_pods.append(pod_name)
+                    failed_pod = True
+                if evt_type == "DELETED" or failed_pod:
                     del self._worker_pods_phase[worker_id]
                     del self._worker_pod_name_to_id[pod_name]
                     self._task_d.recover_tasks(worker_id)
@@ -235,7 +245,13 @@ class InstanceManager(object):
             elif pod_name in self._ps_pod_name_to_id:
                 ps_id = self._ps_pod_name_to_id.get(pod_name)
                 self._ps_pods_phase[ps_id] = (pod_name, phase)
-                if evt_type == "DELETED":
+                # Workaround for memory leak issues in tf eager mode.
+                # A pod may fail due to OOM from tf eager mode memory leak.
+                failed_pod = False
+                if evt_type == "MODIFIED" and phase == "Failed":
+                    self._failed_pods.append(pod_name)
+                    failed_pod = True
+                if evt_type == "DELETED" or failed_pod:
                     del self._ps_pods_phase[ps_id]
                     del self._ps_pod_name_to_id[pod_name]
                     relaunch_ps = self._relaunch_deleted_live_ps
