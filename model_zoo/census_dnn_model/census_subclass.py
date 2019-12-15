@@ -3,24 +3,6 @@ from tensorflow.python.keras.metrics import accuracy
 
 from model_zoo.census_dnn_model.census_feature_columns import get_feature_columns
 
-CATEGORICAL_FEATURE_KEYS = [
-    "workclass",
-    "education",
-    "marital-status",
-    "occupation",
-    "relationship",
-    "race",
-    "sex",
-    "native-country",
-]
-NUMERIC_FEATURE_KEYS = [
-    "age",
-    "capital-gain",
-    "capital-loss",
-    "hours-per-week",
-]
-LABEL_KEY = "label"
-
 class CustomModel(tf.keras.Model):
     def __init__(self, feature_columns):
         super(CustomModel, self).__init__(name="custom_model")
@@ -58,6 +40,23 @@ def eval_metrics_fn():
         )
     }
 
+CATEGORICAL_FEATURE_KEYS = [
+    "workclass",
+    "education",
+    "marital-status",
+    "occupation",
+    "relationship",
+    "race",
+    "sex",
+    "native-country",
+]
+NUMERIC_FEATURE_KEYS = [
+    "age",
+    "capital-gain",
+    "capital-loss",
+    "hours-per-week",
+]
+LABEL_KEY = "label"
 
 def dataset_fn(dataset, mode, _):
     def _parse_data(record):

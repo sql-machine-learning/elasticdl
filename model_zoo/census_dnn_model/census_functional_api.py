@@ -6,25 +6,6 @@ from model_zoo.census_dnn_model.census_feature_columns import (
     get_feature_input_layers,
 )
 
-CATEGORICAL_FEATURE_KEYS = [
-    "workclass",
-    "education",
-    "marital-status",
-    "occupation",
-    "relationship",
-    "race",
-    "sex",
-    "native-country",
-]
-NUMERIC_FEATURE_KEYS = [
-    "age",
-    "capital-gain",
-    "capital-loss",
-    "hours-per-week",
-]
-LABEL_KEY = "label"
-
-
 def custom_model_def(feature_columns, feature_input_layers):
     feature_layer = tf.keras.layers.DenseFeatures(feature_columns)
     x = feature_layer(feature_input_layers)
@@ -60,6 +41,29 @@ def eval_metrics_fn():
     }
 
 
+CATEGORICAL_FEATURE_KEYS = [
+    "workclass",
+    "education",
+    "marital-status",
+    "occupation",
+    "relationship",
+    "race",
+    "sex",
+    "native-country",
+]
+NUMERIC_FEATURE_KEYS = [
+    "age",
+    "capital-gain",
+    "capital-loss",
+    "hours-per-week",
+]
+LABEL_KEY = "label"
+
+
+# TODO: The dataset_fn and the column name above is bound with 
+# the input data source. We can consider move it out of the
+# model definition file. Currently ElasticDL framework has the
+# limitation that the dataset_fn is in the same file with model def.
 def dataset_fn(dataset, mode, _):
     def _parse_data(record):
 
