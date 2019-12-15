@@ -134,7 +134,9 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                     grad = Tensor.from_tensor_pb(pb)
                     self._parameters.check_grad(grad)
                     if grad.name in self._grads_buffer:
-                        self._grads_buffer[grad.name] += grad
+                        self._grads_buffer[grad.name] = (
+                            self._grads_buffer[grad.name] + grad
+                        )
                     else:
                         self._grads_buffer[grad.name] = grad
 
