@@ -9,9 +9,13 @@ import recordio
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
-URL = (
+TRAIN_DATA_URL = (
     "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/"
     "adult.data"
+)
+TEST_DATA_URL = (
+    "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/"
+    "adult.test"
 )
 
 __COLUMN_NAMES = [
@@ -63,6 +67,9 @@ def convert_series_to_tf_feature(data_series, columns, dtype_series):
     Return:
         A dict of feature name -> tf.train.Feature
     """
+    if data_series.hasnans:
+        return
+
     features = {}
     for numeric_feature_key in NUMERIC_FEATURE_KEYS:
         feature = tf.train.Feature(
@@ -125,13 +132,13 @@ def convert_to_recordio_files(data_frame, dir_name, records_per_shard):
     print("Finish data conversion in {}".format(dir_name))
 
 
-def load_raw_data(data_dir):
-    file_name = os.path.basename(URL)
+def load_raw_data(source_data_url, data_dir):
+    file_name = os.path.basename(source_data_url)
     file_path = os.path.join(data_dir, file_name)
     pathlib.Path(data_dir).mkdir(parents=True, exist_ok=True)
     if not os.path.exists(file_path):
-        urllib.request.urlretrieve(URL, file_path)
-    census = pd.read_csv(file_path, header=None, skipinitialspace=True)
+        urllib.request.urlretrieve(source_data_url, file_path)
+    census = pd.read_csv(file_path, skiprows=1, header=None, skipinitialspace=True)
     census.columns = __COLUMN_NAMES
 
     census[LABEL_KEY] = census[LABEL_KEY].apply(
@@ -148,33 +155,28 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_dir",
         help="The cache directory to put the data downloaded from the web",
-        default="/Users/bright/.keras/datasets",
+        required=True
     )
     parser.add_argument(
         "--records_per_shard",
         type=int,
-        default=10240,
+        default=1024 * 8,
         help="Record number per shard",
     )
     parser.add_argument(
         "--output_dir",
         help="The directory for the generated recordio files",
-        default="./result_data/census",
+        required=True
     )
 
     args = parser.parse_args(sys.argv[1:])
 
-    data_frame = load_raw_data(args.data_dir)
-
-    train, test = train_test_split(data_frame, test_size=0.000001)
-    train, val = train_test_split(train, test_size=0.25)
+    train_data_frame = load_raw_data(TRAIN_DATA_URL, args.data_dir)
+    test_data_frame = load_raw_data(TEST_DATA_URL, args.data_dir)
 
     convert_to_recordio_files(
-        train, os.path.join(args.output_dir, "train"), args.records_per_shard
+        train_data_frame, os.path.join(args.output_dir, "train"), args.records_per_shard
     )
     convert_to_recordio_files(
-        val, os.path.join(args.output_dir, "val"), args.records_per_shard
-    )
-    convert_to_recordio_files(
-        test, os.path.join(args.output_dir, "test"), args.records_per_shard
+        test_data_frame, os.path.join(args.output_dir, "test"), args.records_per_shard
     )

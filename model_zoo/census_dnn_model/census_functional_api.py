@@ -36,7 +36,7 @@ def custom_model_def(feature_columns, feature_input_layers):
 
     return model
 
-def custom_model(feature_columns, feature_input_layers):
+def custom_model():
     feature_columns = get_feature_columns()
     feature_input_layers = get_feature_input_layers()
 
