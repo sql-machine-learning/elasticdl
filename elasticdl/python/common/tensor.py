@@ -90,14 +90,13 @@ class Tensor(object):
         return self.values
 
     def __add__(self, other):
-        indices = None
         if self.is_indexed_slices() and other.is_indexed_slices():
-            values = np.concatenate((self.values, other.values), axis=0)
-            indices = np.concatenate(
+            self.values = np.concatenate((self.values, other.values), axis=0)
+            self.indices = np.concatenate(
                 (self.indices, other.indices), axis=0
             )
         elif not self.is_indexed_slices() and not other.is_indexed_slices():
-            values = self.values + other.values
+            self.values = self.values + other.values
         else:
             raise NotImplementedError(
                 "Only Tensor with the same type could be added"
