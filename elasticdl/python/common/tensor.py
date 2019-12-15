@@ -103,10 +103,11 @@ class Tensor(object):
                 "Only Tensor with the same type could be added"
             )
         return Tensor(values, indices)
-    
+
     def __radd__(self, other):
         return self + other
-    
+
+
 def serialize_tensor(tensor, tensor_pb):
     """Serialize ElasticDL Tensor to tensor protocol buffer."""
     dtype = dtype_numpy_to_tensor(tensor.values.dtype)
