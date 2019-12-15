@@ -7,7 +7,6 @@ import urllib
 import pandas as pd
 import recordio
 import tensorflow as tf
-from sklearn.model_selection import train_test_split
 
 TRAIN_DATA_URL = (
     "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/"
@@ -132,13 +131,15 @@ def convert_to_recordio_files(data_frame, dir_name, records_per_shard):
     print("Finish data conversion in {}".format(dir_name))
 
 
-def load_raw_data(source_data_url, data_dir):
+def load_raw_data(source_data_url, data_dir, skiprows=None):
     file_name = os.path.basename(source_data_url)
     file_path = os.path.join(data_dir, file_name)
     pathlib.Path(data_dir).mkdir(parents=True, exist_ok=True)
     if not os.path.exists(file_path):
         urllib.request.urlretrieve(source_data_url, file_path)
-    census = pd.read_csv(file_path, skiprows=1, header=None, skipinitialspace=True)
+    census = pd.read_csv(
+        file_path, skiprows=skiprows, header=None, skipinitialspace=True
+    )
     census.columns = __COLUMN_NAMES
 
     census[LABEL_KEY] = census[LABEL_KEY].apply(
@@ -155,7 +156,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_dir",
         help="The cache directory to put the data downloaded from the web",
-        required=True
+        required=True,
     )
     parser.add_argument(
         "--records_per_shard",
@@ -166,17 +167,21 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_dir",
         help="The directory for the generated recordio files",
-        required=True
+        required=True,
     )
 
     args = parser.parse_args(sys.argv[1:])
 
     train_data_frame = load_raw_data(TRAIN_DATA_URL, args.data_dir)
-    test_data_frame = load_raw_data(TEST_DATA_URL, args.data_dir)
+    test_data_frame = load_raw_data(TEST_DATA_URL, args.data_dir, skiprows=1)
 
     convert_to_recordio_files(
-        train_data_frame, os.path.join(args.output_dir, "train"), args.records_per_shard
+        train_data_frame,
+        os.path.join(args.output_dir, "train"),
+        args.records_per_shard,
     )
     convert_to_recordio_files(
-        test_data_frame, os.path.join(args.output_dir, "test"), args.records_per_shard
+        test_data_frame,
+        os.path.join(args.output_dir, "test"),
+        args.records_per_shard,
     )

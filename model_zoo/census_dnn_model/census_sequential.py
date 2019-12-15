@@ -1,22 +1,28 @@
 import tensorflow as tf
 from tensorflow.python.keras.metrics import accuracy
 
-from model_zoo.census_dnn_model.census_feature_columns import get_feature_columns
+from model_zoo.census_dnn_model.census_feature_columns import (
+    get_feature_columns,
+)
 
 
 def custom_model_def(feature_columns):
-    model = tf.keras.Sequential([
-        tf.keras.layers.DenseFeatures(feature_columns=feature_columns),
-        tf.keras.layers.Dense(16, activation='relu'),
-        tf.keras.layers.Dense(16, activation='relu'),
-        tf.keras.layers.Dense(1, activation='sigmoid')
-        ])
+    model = tf.keras.Sequential(
+        [
+            tf.keras.layers.DenseFeatures(feature_columns=feature_columns),
+            tf.keras.layers.Dense(16, activation="relu"),
+            tf.keras.layers.Dense(16, activation="relu"),
+            tf.keras.layers.Dense(1, activation="sigmoid"),
+        ]
+    )
 
     return model
+
 
 def custom_model():
     feature_columns = get_feature_columns()
     return custom_model_def(feature_columns=feature_columns)
+
 
 def loss(labels, predictions):
     labels = tf.expand_dims(labels, axis=1)
@@ -35,6 +41,7 @@ def eval_metrics_fn():
         )
     }
 
+
 CATEGORICAL_FEATURE_KEYS = [
     "workclass",
     "education",
@@ -52,6 +59,7 @@ NUMERIC_FEATURE_KEYS = [
     "hours-per-week",
 ]
 LABEL_KEY = "label"
+
 
 def dataset_fn(dataset, mode, _):
     def _parse_data(record):
