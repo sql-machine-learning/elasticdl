@@ -9,7 +9,10 @@ import recordio
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
-URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
+URL = (
+    "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/"
+    "adult.data"
+)
 
 __COLUMN_NAMES = [
     "age",

@@ -1,10 +1,7 @@
 import tensorflow as tf
 from tensorflow.python.keras.metrics import accuracy
 
-from model_zoo.census_dnn_model.census_feature_columns import (
-    get_feature_columns,
-    get_feature_input_layers,
-)
+from model_zoo.census_dnn_model.census_feature_columns import get_feature_columns
 
 CATEGORICAL_FEATURE_KEYS = [
     "workclass",
@@ -24,23 +21,19 @@ NUMERIC_FEATURE_KEYS = [
 ]
 LABEL_KEY = "label"
 
-
-def custom_model_def(feature_columns, feature_input_layers):
-    feature_layer = tf.keras.layers.DenseFeatures(feature_columns)
-    x = feature_layer(feature_input_layers)
-    x = tf.keras.layers.Dense(16, activation="relu")(x)
-    x = tf.keras.layers.Dense(16, activation="relu")(x)
-    y = tf.keras.layers.Dense(1, activation="sigmoid")(x)
-
-    model = tf.keras.Model(inputs=feature_input_layers, outputs=y)
+def custom_model_def(feature_columns):
+    model = tf.keras.Sequential([
+        tf.keras.layers.DenseFeatures(feature_columns=feature_columns),
+        tf.keras.layers.Dense(16, activation='relu'),
+        tf.keras.layers.Dense(16, activation='relu'),
+        tf.keras.layers.Dense(1, activation='sigmoid')
+        ])
 
     return model
 
-def custom_model(feature_columns, feature_input_layers):
+def custom_model():
     feature_columns = get_feature_columns()
-    feature_input_layers = get_feature_input_layers()
-
-    return custom_model_def(feature_columns=feature_columns, feature_input_layers=feature_input_layers)
+    return custom_model_def(feature_columns=feature_columns)
 
 def loss(labels, predictions):
     labels = tf.expand_dims(labels, axis=1)
