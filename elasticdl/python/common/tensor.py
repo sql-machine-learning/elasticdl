@@ -102,7 +102,7 @@ class Tensor(object):
             raise NotImplementedError(
                 "Only Tensor with the same type could be added"
             )
-        return Tensor(values, indices)
+        return self
 
     def __radd__(self, other):
         return self + other
