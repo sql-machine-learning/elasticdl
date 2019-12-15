@@ -7,14 +7,11 @@ import urllib
 import pandas as pd
 import recordio
 import tensorflow as tf
+from sklearn.model_selection import train_test_split
 
-TRAIN_DATA_URL = (
+DATA_URL = (
     "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/"
     "adult.data"
-)
-TEST_DATA_URL = (
-    "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/"
-    "adult.test"
 )
 
 __COLUMN_NAMES = [
@@ -172,8 +169,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args(sys.argv[1:])
 
-    train_data_frame = load_raw_data(TRAIN_DATA_URL, args.data_dir)
-    test_data_frame = load_raw_data(TEST_DATA_URL, args.data_dir, skiprows=1)
+    data_frame = load_raw_data(DATA_URL, args.data_dir)
+    train_data_frame, test_data_frame = train_test_split(
+        data_frame, test_size=0.25, shuffle=False
+    )
 
     convert_to_recordio_files(
         train_data_frame,
