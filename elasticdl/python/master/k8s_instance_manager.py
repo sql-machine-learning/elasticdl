@@ -222,15 +222,15 @@ class InstanceManager(object):
         with self._lock:
             if pod_name in self._failed_pods:
                 return
+            # Workaround for memory leak issues in tf eager mode.
+            # A pod may fail due to OOM from tf eager mode memory leak.
+            failed_pod = False
+            if evt_type == "MODIFIED" and phase == "Failed":
+                self._failed_pods.append(pod_name)
+                failed_pod = True
             if pod_name in self._worker_pod_name_to_id:
                 worker_id = self._worker_pod_name_to_id.get(pod_name)
                 self._worker_pods_phase[worker_id] = (pod_name, phase)
-                # Workaround for memory leak issues in tf eager mode.
-                # A pod may fail due to OOM from tf eager mode memory leak.
-                failed_pod = False
-                if evt_type == "MODIFIED" and phase == "Failed":
-                    self._failed_pods.append(pod_name)
-                    failed_pod = True
                 if evt_type == "DELETED" or failed_pod:
                     del self._worker_pods_phase[worker_id]
                     del self._worker_pod_name_to_id[pod_name]
@@ -245,12 +245,6 @@ class InstanceManager(object):
             elif pod_name in self._ps_pod_name_to_id:
                 ps_id = self._ps_pod_name_to_id.get(pod_name)
                 self._ps_pods_phase[ps_id] = (pod_name, phase)
-                # Workaround for memory leak issues in tf eager mode.
-                # A pod may fail due to OOM from tf eager mode memory leak.
-                failed_pod = False
-                if evt_type == "MODIFIED" and phase == "Failed":
-                    self._failed_pods.append(pod_name)
-                    failed_pod = True
                 if evt_type == "DELETED" or failed_pod:
                     del self._ps_pods_phase[ps_id]
                     del self._ps_pod_name_to_id[pod_name]
