@@ -832,7 +832,8 @@ class Worker(object):
             eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
             return eval_dataset
 
-        eval_dataset = create_dataset()
+        with tf.device("/device:cpu:0"):
+            eval_dataset = create_dataset()
         model_version = task.model_version
         task_id = task.task_id
         err_msg = ""
