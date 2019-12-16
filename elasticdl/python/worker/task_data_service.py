@@ -100,19 +100,22 @@ class TaskDataService(object):
                 if self._pending_tasks:
                     self._current_task = self._pending_tasks[0]
 
-    def get_validation_dataset(self, eval_task):
+    def get_validation_dataset_gen(self, eval_task):
         """
-        If an evaluation task exists, this creates a `tf.data.Dataset`
-        object as well as its corresponding model version and task_id.
-        Otherwise, this returns `None`.
+        If an evaluation task exists, this creates a generator for further
+        creating `tf.data.Dataset`
         """
         if not eval_task:
             return None
-        return (
-            create_dataset_from_tasks([eval_task], self.data_reader),
-            eval_task.model_version,
-            eval_task.task_id,
-        )
+        tasks = [eval_task]
+
+        def gen():
+            for task in tasks:
+                for data in self.data_reader.read_records(task):
+                    if data:
+                        yield data
+
+        return gen
 
     def get_save_model_task_and_dataset(self):
         if not self._pending_save_model_task:
