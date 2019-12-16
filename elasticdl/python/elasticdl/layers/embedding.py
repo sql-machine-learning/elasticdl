@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.framework import ops
 from tensorflow.python.keras.utils import tf_utils
 
 from elasticdl.python.elasticdl.embedding_delegate import EmbeddingAndIds
@@ -138,6 +139,11 @@ class Embedding(tf.keras.layers.Layer):
                 "than input_dim. id = %d is not in [0, %d)"
                 % (first_may_exceed_id, self.input_dim)
             )
+        if any(ids < 0):
+            raise ValueError(
+                "The embedding id cannot less than zero "
+                "and the invalid is %d" % ids[ids < 0][0]
+            )
 
     def _record_gradients(self, batch_embedding, ids):
         if tf.executing_eagerly():
@@ -170,12 +176,23 @@ class Embedding(tf.keras.layers.Layer):
         ids = tf.convert_to_tensor(input, name="embedding_ids")
         flat_ids = tf.reshape(ids, [-1])
         unique_ids, idx = tf.unique(flat_ids)
+
+        # There is a memory leak using `tf.py_function` with eager execution.
+        # So, we directly call `lookup_embedding` when inputs are EagerTensor.
+        # When keras initializes the model, the inputs is a tensor which can
+        # not be used to `lookup_embedding`. So, we need to use
+        # `tf.py_function`to convert the inputs to EagerTensor.
+        if isinstance(unique_ids, ops.EagerTensor):
+            batch_embedding = self.lookup_embedding(unique_ids)
+            batch_embedding = tf.constant(batch_embedding)
+        else:
+            batch_embedding = tf.py_function(
+                self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
+            )
+
         # Gradient for `batch_embedding` is SparseTensor here due to
         # `tf.gather` op. `tf.gather` accesses tensor slices, resulting in
         # sparse tensor gradient.
-        batch_embedding = tf.py_function(
-            self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
-        )
         # TODO: use tf.cond rather than python if statement
         if self.tape:
             batch_embedding = self._record_gradients(batch_embedding, flat_ids)
