@@ -177,11 +177,8 @@ class Embedding(tf.keras.layers.Layer):
         flat_ids = tf.reshape(ids, [-1])
         unique_ids, idx = tf.unique(flat_ids)
 
-        # There is a memory leak using `tf.py_function` with eager execution.
-        # So, we directly call `lookup_embedding` when inputs are EagerTensor.
-        # When keras initializes the model, the inputs is a tensor which can
-        # not be used to `lookup_embedding`. So, we need to use
-        # `tf.py_function`to convert the inputs to EagerTensor.
+        # There is a memory leak when using tf.py_function with eager
+        # execution. So, we only use tf.py_function in graph mode.
         if isinstance(unique_ids, ops.EagerTensor):
             batch_embedding = self.lookup_embedding(unique_ids)
             batch_embedding = tf.constant(batch_embedding)
