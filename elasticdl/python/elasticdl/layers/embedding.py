@@ -141,8 +141,8 @@ class Embedding(tf.keras.layers.Layer):
             )
         if any(ids < 0):
             raise ValueError(
-                "The embedding id cannot less than zero "
-                "and the invalid is %d" % ids[ids < 0][0]
+                "The embedding id cannot be less than zero. "
+                "Found invalid id %d" % ids[ids < 0][0]
             )
 
     def _record_gradients(self, batch_embedding, ids):
