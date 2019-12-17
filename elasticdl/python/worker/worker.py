@@ -815,7 +815,7 @@ class Worker(object):
         """
         logger.info("the evaluation task_id: %d" % task.task_id)
 
-        gen = self._task_data_service.get_validation_dataset_gen(task)
+        gen = self._task_data_service.get_dataset_gen(task)
         if not gen:
             return None
 
