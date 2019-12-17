@@ -225,9 +225,19 @@ class InstanceManager(object):
             # Workaround for memory leak issues in tf eager mode.
             # A pod may fail due to OOM from tf eager mode memory leak.
             failed_pod = False
-            if evt_type == "MODIFIED" and phase == "Failed":
+            if (
+                evt_type == "MODIFIED"
+                and phase == "Failed"
+                and evt_obj.status.container_statuses
+                and evt_obj.status.container_statuses[0].state.terminated
+                and evt_obj.status.container_statuses[
+                    0
+                ].state.terminated.reason
+                == "OOMKilled"
+            ):
                 self._failed_pods.append(pod_name)
                 failed_pod = True
+                logger.info("Pod %s is OOMKilled." % pod_name)
             if pod_name in self._worker_pod_name_to_id:
                 worker_id = self._worker_pod_name_to_id.get(pod_name)
                 self._worker_pods_phase[worker_id] = (pod_name, phase)
