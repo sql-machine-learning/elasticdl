@@ -25,4 +25,4 @@ docker build -t $dev_image -f elasticdl/docker/Dockerfile.dev --build-arg BASE_I
 
 docker build -t $image -f elasticdl/docker/Dockerfile --build-arg BASE_IMAGE=$base_img .
 
-docker build -t $ci_image -f elasticdl/docker/Dockerfile.ci --build-arg BASE_IMAGE=$dev_img .
+docker build -t $ci_image -f elasticdl/docker/Dockerfile.ci --build-arg BASE_IMAGE=$dev_image .
