@@ -125,7 +125,7 @@ class TaskDataService(object):
 
         gen = self.get_dataset_gen(task)
         dataset = tf.data.Dataset.from_generator(
-            gen, self._data_reader.records_output_types
+            gen, self.data_reader.records_output_types
         )
         return task, dataset
 
