@@ -251,9 +251,9 @@ class EmbeddingDelegate(object):
                 % (first_may_exceed_id, self.input_dim)
             )
 
-    def record_gradients(self, tape, batch_embedding, ids):
+    def record_gradients(self, batch_embedding, ids):
         if tf.executing_eagerly():
-            tape.watch(batch_embedding)
+            self.tape.watch(batch_embedding)
             self._embedding_and_ids_eagerly.append(
                 EmbeddingAndIds(batch_embedding, ids)
             )
