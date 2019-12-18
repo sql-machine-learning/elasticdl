@@ -3,6 +3,7 @@ import tensorflow as tf
 from tensorflow.python.framework import ops
 from tensorflow.python.keras.utils import tf_utils
 
+from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.embedding_delegate import EmbeddingAndIds
 
 
@@ -140,7 +141,7 @@ class Embedding(tf.keras.layers.Layer):
                 % (first_may_exceed_id, self.input_dim)
             )
         if any(ids < 0):
-            raise ValueError(
+            logger.warning(
                 "The embedding id cannot be less than zero. "
                 "Found invalid id %d" % ids[ids < 0][0]
             )
