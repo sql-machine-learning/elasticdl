@@ -62,7 +62,7 @@ class Embedding(tf.keras.layers.Layer):
         # `tf.Variable` requires initial value if shape has `None` dimension.
         self._embedding_and_ids_graph = []
         self.embedding_delegate = EmbeddingDelegate(
-            self.input_length, self.output_dim, self.name
+            self.input_dim, self.output_dim, self.name
         )
 
     @tf_utils.shape_type_conversion
