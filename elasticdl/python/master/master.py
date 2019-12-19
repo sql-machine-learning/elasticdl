@@ -90,6 +90,22 @@ class Master(object):
                 namespace=args.namespace,
             )
 
+        # Initialize the components from the model definition
+        self.model_module = load_module(
+            get_module_file_path(args.model_zoo, args.model_def)
+        ).__dict__
+        self.model_inst = load_model_from_module(
+            args.model_def, self.model_module, args.model_params
+        )
+        model_handler = ModelHandler.get_model_handler(
+            args.distribution_strategy, checkpoint_dir=args.checkpoint_dir
+        )
+        self.model_inst = model_handler.get_model_to_train(self.model_inst)
+        self.optimizer = self.model_module[args.optimizer]()
+        if args.custom_data_reader in self.model_module:
+            global create_data_reader
+            create_data_reader = self.model_module[args.custom_data_reader]
+
         # Start task queue
         records_per_task = args.minibatch_size * args.num_minibatches_per_task
         self.task_d = _make_task_dispatcher(
@@ -109,19 +125,6 @@ class Master(object):
             self.task_d.add_deferred_callback_create_save_model_task(
                 saved_model_path
             )
-
-        # Initialize the components from the model definition
-        self.model_module = load_module(
-            get_module_file_path(args.model_zoo, args.model_def)
-        ).__dict__
-        self.model_inst = load_model_from_module(
-            args.model_def, self.model_module, args.model_params
-        )
-        model_handler = ModelHandler.get_model_handler(
-            args.distribution_strategy, checkpoint_dir=args.checkpoint_dir
-        )
-        self.model_inst = model_handler.get_model_to_train(self.model_inst)
-        self.optimizer = self.model_module[args.optimizer]()
 
         self.evaluation_service = self._create_evaluation_service(args)
 
