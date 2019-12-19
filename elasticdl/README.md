@@ -53,7 +53,6 @@ docker build \
 
 ## Test and Debug
 
-
 ### Pre-commit Check
 
 We have set up pre-commit checks in the Github repo for pull requests, which can catch some Python style problems. However, to avoid waiting in the Travis CI queue, you can run the pre-commit checks locally:
