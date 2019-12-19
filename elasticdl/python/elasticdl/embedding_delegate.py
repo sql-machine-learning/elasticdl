@@ -34,7 +34,7 @@ class EmbeddingDelegate(object):
     def set_tape(self, tape):
         self.tape = tape
 
-    def init_for_graph_mode_if_necessary(self):
+    def _init_for_graph_mode_if_necessary(self):
         if (
             tf.executing_eagerly()
             or self._embedding_and_ids_graph
@@ -62,32 +62,25 @@ class EmbeddingDelegate(object):
         ]
 
     def embedding_lookup(self, ids):
-        self.init_for_graph_mode_if_necessary()
+        """Looks up `ids` in a list of embedding tensors. The result of this
+        function is the same as Tensorflow `embedding_ops.embedding_lookup`.
+        But, this function is implemented to support lookup embedding using
+        ParameterServer distribution strategy.
+        """
+        self._init_for_graph_mode_if_necessary()
 
         ids = tf.cast(ids, tf.int64)
-
         ids = tf.convert_to_tensor(ids, name=self.name + "_ids")
         flat_ids = tf.reshape(ids, [-1])
         unique_ids, idx = tf.unique(flat_ids)
-
-        # There is a memory leak when using tf.py_function with eager
-        # execution. So, we only use tf.py_function in graph mode.
-        if isinstance(unique_ids, ops.EagerTensor):
-            batch_embedding = self.gather_embedding_vectors(unique_ids)
-            batch_embedding = tf.constant(batch_embedding, dtype=tf.float32)
-        else:
-            batch_embedding = tf.py_function(
-                self.gather_embedding_vectors,
-                inp=[unique_ids],
-                Tout=tf.float32,
-            )
+        batch_embedding = self._get_embeddings_by_id(unique_ids)
 
         # Gradient for `batch_embedding` is SparseTensor here due to
         # `tf.gather` op. `tf.gather` accesses tensor slices, resulting in
         # sparse tensor gradient.
         # TODO: use tf.cond rather than python if statement
         if self.tape:
-            batch_embedding = self.record_gradients(batch_embedding, flat_ids)
+            batch_embedding = self._record_gradients(batch_embedding, flat_ids)
 
         result = tf.gather(batch_embedding, idx)
         # tf.reshape does not support shape with None. Replace None with -1.
@@ -105,7 +98,14 @@ class EmbeddingDelegate(object):
     def safe_embedding_lookup_sparse(
         self, sparse_ids, sparse_weights=None, combiner="mean", default_id=None
     ):
-
+        """Lookup embedding results, accounting for invalid IDs and empty
+        features. The result of this function is the same as
+        tf.nn.safe_embeddding_lookup_sparse`. But, this function is implemented
+        to support lookup embedding using ParameterServer distribution
+        strategy.
+        """
+        self._init_for_graph_mode_if_necessary()
+    
         sparse_ids = _prune_invalid_ids(sparse_ids)
         # Fill in dummy values for empty features, if necessary.
         sparse_ids, is_row_empty = sparse_ops.sparse_fill_empty_rows(
@@ -119,20 +119,11 @@ class EmbeddingDelegate(object):
 
         ids = sparse_ids.values
         unique_ids, idx = tf.unique(ids)
-
-        if isinstance(unique_ids, ops.EagerTensor):
-            batch_embedding = self.gather_embedding_vectors(unique_ids)
-            batch_embedding = tf.constant(batch_embedding, dtype=tf.float32)
-        else:
-            batch_embedding = tf.py_function(
-                self.gather_embedding_vectors,
-                inp=[unique_ids],
-                Tout=tf.float32,
-            )
+        batch_embedding = self._get_embeddings_by_id(unique_ids)
 
         if sparse_weights is not None:
             if self.tape:
-                batch_embedding = self.record_gradients(
+                batch_embedding = self._record_gradients(
                     tape=self.tape, batch_embedding=batch_embedding, ids=ids
                 )
 
@@ -141,7 +132,6 @@ class EmbeddingDelegate(object):
                 weights = math_ops.cast(weights, batch_embedding.dtype)
 
             batch_embedding = array_ops.gather(batch_embedding, idx)
-
             # Reshape weights to allow broadcast
             ones = array_ops.fill(
                 array_ops.expand_dims(array_ops.rank(batch_embedding) - 1, 0),
@@ -194,7 +184,7 @@ class EmbeddingDelegate(object):
                 assert False, "Unrecognized combiner"
         else:
             if self.tape:
-                batch_embedding = self.record_gradients(
+                batch_embedding = self._record_gradients(
                     tape=self.tape,
                     batch_embedding=batch_embedding,
                     ids=unique_ids,
@@ -232,7 +222,22 @@ class EmbeddingDelegate(object):
         batch_embedding.set_shape((None, self.output_dim))
         return batch_embedding
 
-    def gather_embedding_vectors(self, unique_ids):
+    def _get_embeddings_by_id(self, unique_ids):
+        """There is a memory leak when using tf.py_function with eager
+        execution. So, we only use tf.py_function in graph mode.
+        """
+        if isinstance(unique_ids, ops.EagerTensor):
+            batch_embedding = self._gather_embedding_vectors(unique_ids)
+            batch_embedding = tf.constant(batch_embedding, dtype=tf.float32)
+        else:
+            batch_embedding = tf.py_function(
+                self._gather_embedding_vectors,
+                inp=[unique_ids],
+                Tout=tf.float32,
+            )
+        return batch_embedding
+
+    def _gather_embedding_vectors(self, unique_ids):
         ids = unique_ids.numpy()
         self._check_id_valid(ids)
         if self._lookup_embedding_func:
@@ -251,7 +256,7 @@ class EmbeddingDelegate(object):
                 % (first_may_exceed_id, self.input_dim)
             )
 
-    def record_gradients(self, batch_embedding, ids):
+    def _record_gradients(self, batch_embedding, ids):
         if tf.executing_eagerly():
             self.tape.watch(batch_embedding)
             self._embedding_and_ids_eagerly.append(

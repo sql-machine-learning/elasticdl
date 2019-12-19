@@ -149,8 +149,6 @@ class EmbeddingColumn(
                 )
             )
 
-        self._embedding_delegate.init_for_graph_mode_if_necessary()
-
         # Get sparse IDs and weights.
         sparse_tensors = self.categorical_column.get_sparse_tensors(
             transformation_cache, state_manager
