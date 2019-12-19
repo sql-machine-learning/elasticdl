@@ -20,6 +20,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         parameters,
         grads_to_wait,
         optimizer,
+        lr_scheduler,
         lr_staleness_modulation=False,
         use_async=False,
         evaluation_steps=0,
@@ -36,6 +37,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._parameters = parameters
         self._grads_to_wait = grads_to_wait
         self._optimizer = optimizer
+        self._lr_scheduler = lr_scheduler
         self._lr_staleness_modulation = lr_staleness_modulation
         self._use_async = use_async
         self._eval_steps = evaluation_steps
@@ -113,6 +115,8 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                 else:
                     grad_vars.append((grad, var))
 
+            if self._lr_scheduler:
+                self._lr_scheduler.set_model_version(self._parameters.version)
             self._optimizer.apply_gradients(grad_vars)
             with self._version_lock:
                 self._parameters.version += 1
@@ -159,6 +163,10 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                         else:
                             grad_vars.append((grad, var))
 
+                    if self._lr_scheduler:
+                        self._lr_scheduler.set_model_version(
+                            self._parameters.version
+                        )
                     self._optimizer.apply_gradients(grad_vars)
                     self._grads_n = 0
                     self._grads_buffer.clear()
