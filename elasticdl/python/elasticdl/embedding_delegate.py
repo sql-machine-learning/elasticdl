@@ -105,7 +105,7 @@ class EmbeddingDelegate(object):
         strategy.
         """
         self._init_for_graph_mode_if_necessary()
-    
+
         sparse_ids = _prune_invalid_ids(sparse_ids)
         # Fill in dummy values for empty features, if necessary.
         sparse_ids, is_row_empty = sparse_ops.sparse_fill_empty_rows(
@@ -124,7 +124,7 @@ class EmbeddingDelegate(object):
         if sparse_weights is not None:
             if self.tape:
                 batch_embedding = self._record_gradients(
-                    tape=self.tape, batch_embedding=batch_embedding, ids=ids
+                    batch_embedding=batch_embedding, ids=ids
                 )
 
             weights = sparse_weights.values
@@ -185,9 +185,7 @@ class EmbeddingDelegate(object):
         else:
             if self.tape:
                 batch_embedding = self._record_gradients(
-                    tape=self.tape,
-                    batch_embedding=batch_embedding,
-                    ids=unique_ids,
+                    batch_embedding=batch_embedding, ids=unique_ids,
                 )
 
             assert idx is not None
