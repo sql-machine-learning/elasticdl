@@ -7,7 +7,6 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import TaskExecCounterKey
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.data.data_reader import create_data_reader
-from elasticdl.python.data.dataset_utils import create_dataset_from_tasks
 
 
 class TaskDataService(object):
@@ -100,19 +99,22 @@ class TaskDataService(object):
                 if self._pending_tasks:
                     self._current_task = self._pending_tasks[0]
 
-    def get_validation_dataset(self, eval_task):
+    def get_dataset_gen(self, task):
         """
-        If an evaluation task exists, this creates a `tf.data.Dataset`
-        object as well as its corresponding model version and task_id.
-        Otherwise, this returns `None`.
+        If a task exists, this creates a generator, which could be used to
+        creating a `tf.data.Dataset` object in further.
         """
-        if not eval_task:
+        if not task:
             return None
-        return (
-            create_dataset_from_tasks([eval_task], self.data_reader),
-            eval_task.model_version,
-            eval_task.task_id,
-        )
+        tasks = [task]
+
+        def gen():
+            for task in tasks:
+                for data in self.data_reader.read_records(task):
+                    if data:
+                        yield data
+
+        return gen
 
     def get_save_model_task_and_dataset(self):
         if not self._pending_save_model_task:
@@ -120,7 +122,12 @@ class TaskDataService(object):
 
         task = self._pending_save_model_task
         self._pending_save_model_task = None
-        return task, create_dataset_from_tasks([task], self.data_reader)
+
+        gen = self.get_dataset_gen(task)
+        dataset = tf.data.Dataset.from_generator(
+            gen, self.data_reader.records_output_types
+        )
+        return task, dataset
 
     def get_dataset(self):
         """

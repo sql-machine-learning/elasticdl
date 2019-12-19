@@ -814,16 +814,28 @@ class Worker(object):
             tasks.
         """
         logger.info("the evaluation task_id: %d" % task.task_id)
-        eval_info = self._task_data_service.get_validation_dataset(task)
-        if not eval_info:
-            return
-        (eval_dataset, model_version, task_id) = eval_info
-        eval_dataset = self._dataset_fn(
-            eval_dataset,
-            Mode.EVALUATION,
-            self._task_data_service.data_reader.metadata,
-        )
-        eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
+
+        gen = self._task_data_service.get_dataset_gen(task)
+        if not gen:
+            return None
+
+        @tf.function
+        def create_dataset():
+            eval_dataset = tf.data.Dataset.from_generator(
+                gen, self._task_data_service.data_reader.records_output_types
+            )
+            eval_dataset = self._dataset_fn(
+                eval_dataset,
+                Mode.EVALUATION,
+                self._task_data_service.data_reader.metadata,
+            )
+            eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
+            return eval_dataset
+
+        with tf.device("/device:cpu:0"):
+            eval_dataset = create_dataset()
+        model_version = task.model_version
+        task_id = task.task_id
         err_msg = ""
         for dataset_batch in eval_dataset:
             data_err_msg = self._process_minibatch_and_report(
