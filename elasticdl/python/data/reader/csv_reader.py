@@ -35,7 +35,7 @@ class CSVDataReader(AbstractDataReader):
                 if self.selected_columns is None
                 else self.selected_columns
             )
-            if not set(csv_columns) >= set(selected_columns):
+            if not set(selected_columns).issubset(set(csv_columns)):
                 raise ValueError(
                     "The first line in the csv file must be column names and"
                     "the selected columns is not in the file. The selected"
