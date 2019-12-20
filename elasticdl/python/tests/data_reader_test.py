@@ -11,8 +11,8 @@ from odps import ODPS
 
 from elasticdl.python.common.constants import ODPSConfig
 from elasticdl.python.common.model_utils import load_module
-from elasticdl.python.data.csv_reader import CSVDataReader
 from elasticdl.python.data.odps_io import is_odps_configured
+from elasticdl.python.data.reader.csv_reader import CSVDataReader
 from elasticdl.python.data.reader.data_reader import Metadata
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.data.reader.odps_reader import ODPSDataReader

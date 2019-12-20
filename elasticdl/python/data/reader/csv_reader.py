@@ -32,7 +32,8 @@ class CSVDataReader(AbstractDataReader):
             csv_columns = next(csv_reader)
             selected_columns = (
                 csv_columns
-                if self.selected_columns is None else self.selected_columns
+                if self.selected_columns is None
+                else self.selected_columns
             )
             if not set(csv_columns) >= set(selected_columns):
                 raise ValueError(
