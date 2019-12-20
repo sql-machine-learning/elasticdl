@@ -3,6 +3,19 @@ from multiprocessing import Process, Queue
 
 
 def worker_loop(records, index_q, result_q, transform_fn):
+    """
+    The worker loop gets a index from the index queue, and
+    transform the records[index], then the result is put to
+    the result queue.
+
+    If a None index is got, the loop finishes.
+
+    :param records: a list object contains many records waiting to
+                    be transformed
+    :param index_q: a queue which generates the record index in records
+    :param result_q: a queue which stores the transform results
+    :param transform_fn: the transform function
+    """
     while True:
         index = index_q.get()
         if index is None:
@@ -43,6 +56,7 @@ class ParallelTransform(object):
             p.start()
             self._workers.append(p)
 
+        # prime the prefetch loop
         for i in range(2 * self._num_workers):
             self._put_index()
 
@@ -54,12 +68,16 @@ class ParallelTransform(object):
             return None
 
     def _put_index(self):
+        # put index to the index queue of each worker
+        # with Round-Robin way
         worker_id = next(self._worker_id_cycle)
         idx = self._next_index()
         if idx is not None:
             self._index_queues[worker_id].put(idx)
 
     def next_data(self):
+        # get data one-by-one, and the output order is strictly
+        # the same with the input order.
         try:
             index = next(self._get_record_it)
         except StopIteration:
