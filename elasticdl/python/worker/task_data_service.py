@@ -6,6 +6,7 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import TaskExecCounterKey
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.data.data_reader import create_data_reader
 
 
 class TaskDataService(object):
@@ -13,20 +14,19 @@ class TaskDataService(object):
         self, worker, training_with_evaluation, data_reader_params=None
     ):
         self._worker = worker
-        if self._worker._custom_data_reader is None:
-            from elasticdl.python.data.data_reader import create_data_reader
-        else:
-            create_data_reader = self._worker._custom_data_reader
+        self._create_data_reader_fn = create_data_reader
+        if self._worker._custom_data_reader is not None:
+            self._create_data_reader_fn = self._worker._custom_data_reader
         self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
         self._pending_dataset = True
         self._pending_save_model_task = None
         if data_reader_params:
-            self.data_reader = create_data_reader(
+            self.data_reader = self._create_data_reader_fn(
                 data_origin=None, **data_reader_params
             )
         else:
-            self.data_reader = create_data_reader(data_origin=None)
+            self.data_reader = self._create_data_reader_fn(data_origin=None)
         self._warm_up_task = None
         self._has_warmed_up = False
         self._failed_record_count = 0
