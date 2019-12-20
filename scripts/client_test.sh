@@ -110,6 +110,7 @@ elif [[ "$JOB_TYPE" == "train" ]]; then
       --minibatch_size=64 \
       --num_minibatches_per_task=2 \
       --evaluation_steps=500 \
+      --job_name=test-local \
       --distribution_strategy=local \
 else
     echo "Unsupported job type specified: $JOB_TYPE"
