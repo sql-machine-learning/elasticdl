@@ -934,7 +934,6 @@ class Worker(object):
         local_update_count = self._get_model_steps
         last_training_minibatch_failed = False
         evaluation_task_executed = False
-
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
@@ -944,22 +943,8 @@ class Worker(object):
                 Mode.TRAINING,
                 self._task_data_service.data_reader.metadata,
             )
-            dataset = dataset.batch(self._minibatch_size)
-            # dataset = dataset.batch(self._minibatch_size).prefetch(1)
-            step = 0
-            start = time.process_time()
-            total_time = 0
+            dataset = dataset.batch(self._minibatch_size).prefetch(1)
             for dataset_batch in dataset:
-                end = time.process_time()
-                interval = end - start
-                total_time += interval
-                logger.info(
-                    "%d get batch time %s, %s"
-                    % (step, str(interval), str(total_time))
-                )
-                start = end
-                step += 1
-                continue
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                     # Give the worker a chance to process an evaluation task
                     # during training if the task exists

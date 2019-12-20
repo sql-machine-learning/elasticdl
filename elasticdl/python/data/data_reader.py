@@ -23,6 +23,7 @@ class AbstractDataReader(ABC):
         """This method will be used in `TaskDataService` to read the records
         based on the information provided for a given task into a Python
         generator/iterator.
+
         Arguments:
             task: The current `Task` object that provides information on where
                 to read the data for this task.
