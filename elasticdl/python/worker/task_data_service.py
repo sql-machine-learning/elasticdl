@@ -6,7 +6,7 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import TaskExecCounterKey
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.data.data_reader import create_data_reader
+from elasticdl.python.data.data_reader_factory import create_data_reader
 
 
 class TaskDataService(object):

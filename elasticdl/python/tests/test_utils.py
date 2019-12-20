@@ -1,3 +1,4 @@
+import csv
 import os
 import tempfile
 from collections.__init__ import namedtuple
@@ -153,6 +154,32 @@ def create_recordio_file(size, dataset_name, shape, temp_dir=None):
             )
             f.write(example.SerializeToString())
     return temp_file.name
+
+
+def create_iris_csv_file(size, columns, temp_dir=None):
+    """Creates a temporary file containing data of `recordio` format.
+
+    Args:
+        size: The number of records in the temporary file.
+        temp_dir: The storage path of the temporary file.
+
+    Returns:
+        A python string indicating the temporary file name.
+    """
+    temp_file = tempfile.NamedTemporaryFile(delete=False, dir=temp_dir)
+
+    features = np.random.random((size, 4))
+    features = np.round(features, 4)
+    labels = np.random.randint(0, 2, (size, 1))
+    value_data = np.concatenate((features, labels), axis=1)
+
+    csv_file_name = temp_file.name + ".csv"
+    with open(csv_file_name, "w", newline="") as csv_file:
+        csv_writer = csv.writer(csv_file)
+        csv_writer.writerow(columns)
+        csv_writer.writerows(value_data)
+
+    return csv_file_name
 
 
 def create_pserver(

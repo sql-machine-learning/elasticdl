@@ -11,16 +11,16 @@ from odps import ODPS
 
 from elasticdl.python.common.constants import ODPSConfig
 from elasticdl.python.common.model_utils import load_module
-from elasticdl.python.data.data_reader import (
-    Metadata,
-    ODPSDataReader,
-    RecordIODataReader,
-    create_data_reader,
-)
+from elasticdl.python.data.csv_reader import CSVDataReader
+from elasticdl.python.data.data_reader import Metadata
+from elasticdl.python.data.data_reader_factory import create_data_reader
 from elasticdl.python.data.odps_io import is_odps_configured
+from elasticdl.python.data.odps_reader import ODPSDataReader
+from elasticdl.python.data.recordio_reader import RecordIODataReader
 from elasticdl.python.tests.test_utils import (
     IRIS_TABLE_COLUMN_NAMES,
     DatasetName,
+    create_iris_csv_file,
     create_iris_odps_table,
     create_recordio_file,
 )
@@ -56,6 +56,31 @@ class RecordIODataReaderTest(unittest.TestCase):
                 )
                 for k, v in parsed_record.items():
                     self.assertEqual(len(v.numpy()), 1)
+
+
+class CSVDataReaderTest(unittest.TestCase):
+    def test_csv_data_reader(self):
+        with tempfile.TemporaryDirectory() as temp_dir_name:
+            num_records = 128
+            columns = [
+                "sepal_length",
+                "sepal_width",
+                "petal_length",
+                "petal_width",
+                "class",
+            ]
+            iris_file_name = create_iris_csv_file(
+                size=num_records, columns=columns, temp_dir=temp_dir_name
+            )
+            csv_data_reader = CSVDataReader(columns=columns)
+            task = _MockedTask(0, num_records, iris_file_name)
+            records_count = 0
+            last_record = None
+            for record in csv_data_reader.read_records(task):
+                records_count += 1
+                last_record = record
+            self.assertEquals(records_count, num_records)
+            self.assertEquals(len(last_record), 5)
 
 
 @unittest.skipIf(
