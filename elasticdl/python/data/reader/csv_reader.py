@@ -3,7 +3,10 @@ import csv
 import numpy as np
 import tensorflow as tf
 
-from elasticdl.python.data.data_reader import AbstractDataReader, Metadata
+from elasticdl.python.data.reader.data_reader import (
+    AbstractDataReader,
+    Metadata,
+)
 
 
 class CSVDataReader(AbstractDataReader):

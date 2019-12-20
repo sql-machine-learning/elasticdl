@@ -4,7 +4,7 @@ from contextlib import closing
 import recordio
 import tensorflow as tf
 
-from elasticdl.python.data.data_reader import (
+from elasticdl.python.data.reader.data_reader import (
     AbstractDataReader,
     Metadata,
     check_required_kwargs,

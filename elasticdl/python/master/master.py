@@ -24,7 +24,7 @@ from elasticdl.python.common.model_utils import (
     load_model_from_module,
     load_module,
 )
-from elasticdl.python.data.data_reader_factory import create_data_reader
+from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl.python.master.servicer import MasterServicer

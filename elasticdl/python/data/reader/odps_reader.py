@@ -1,12 +1,12 @@
 import tensorflow as tf
 
 from elasticdl.python.common.constants import Mode
-from elasticdl.python.data.data_reader import (
+from elasticdl.python.data.odps_io import ODPSReader
+from elasticdl.python.data.reader.data_reader import (
     AbstractDataReader,
     Metadata,
     check_required_kwargs,
 )
-from elasticdl.python.data.odps_io import ODPSReader
 
 
 class ODPSDataReader(AbstractDataReader):
