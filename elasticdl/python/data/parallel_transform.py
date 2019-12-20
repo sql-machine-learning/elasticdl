@@ -1,23 +1,12 @@
 import itertools
-import os
 from multiprocessing import Process, Queue
 
 
-class ManagerWatchdog(object):
-    def __init__(self):
-        self.manager_pid = os.getppid()
-        self.manager_dead = False
-
-    def is_alive(self):
-        if not self.manager_dead:
-            self.manager_dead = os.getppid() != self.manager_pid
-        return not self.manager_dead
-
-
 def worker_loop(records, index_q, result_q, transform_fn):
-    watchdog = ManagerWatchdog()
-    while watchdog.is_alive():
+    while True:
         index = index_q.get()
+        if index is None:
+            break
         record = records[index]
         res = transform_fn(record)
         result_q.put((index, res))
@@ -74,7 +63,8 @@ class ParallelTransform(object):
         try:
             index = next(self._get_record_it)
         except StopIteration:
-            for w in self._workers:
+            for i, w in enumerate(self._workers):
+                self._index_queues[i].put(None)
                 w.join()
             return None
         while True:

@@ -15,8 +15,11 @@ class ParallelTransformTest(unittest.TestCase):
             records=records, num_workers=2, transform_fn=transform
         )
         results = []
-        for i in range(len(records)):
-            results.append(pt.next_data())
+        while True:
+            data = pt.next_data()
+            if data is None:
+                break
+            results.append(data)
 
         expect_results = [k + 1 for k in range(100)]
         self.assertListEqual(results, expect_results)
@@ -30,8 +33,11 @@ class ParallelTransformTest(unittest.TestCase):
             pt = ParallelTransform(
                 records=records, num_workers=4, transform_fn=transform
             )
-            for i in range(100):
-                yield pt.next_data()
+            while True:
+                data = pt.next_data()
+                if data is None:
+                    break
+                yield data
 
         ds = tf.data.Dataset.from_generator(gen, tf.int64)
         ds = ds.batch(10).prefetch(1)
