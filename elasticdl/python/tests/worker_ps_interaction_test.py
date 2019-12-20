@@ -230,6 +230,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             optimizer="optimizer",
             eval_metrics_fn="eval_metrics_fn",
             prediction_outputs_processor="PredictionOutputsProcessor",
+            custom_data_reader="custom_data_reader",
         )
 
         with tf.GradientTape() as tape:
@@ -278,6 +279,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             optimizer="optimizer",
             eval_metrics_fn="eval_metrics_fn",
             prediction_outputs_processor="PredictionOutputsProcessor",
+            custom_data_reader="custom_data_reader",
         )
         local_results = []
         for step, (x, y) in enumerate(db):
