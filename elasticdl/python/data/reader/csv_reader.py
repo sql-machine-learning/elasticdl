@@ -43,9 +43,7 @@ class CSVDataReader(AbstractDataReader):
                         selected_columns, task.shard_name, csv_columns
                     )
                 )
-            column_indices = _get_elements_indices(
-                selected_columns, csv_columns
-            )
+            column_indices = [csv_columns.index(e) for e in selected_columns]
             for line in csv_reader:
                 line_elements = np.array(line, dtype=np.str)
                 records = line_elements[column_indices].tolist()
@@ -61,10 +59,3 @@ class CSVDataReader(AbstractDataReader):
     @property
     def metadata(self):
         return Metadata(column_names=self.selected_columns)
-
-
-def _get_elements_indices(elements, element_set):
-    indices = []
-    for element in elements:
-        indices.append(element_set.index(element))
-    return indices
