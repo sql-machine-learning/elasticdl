@@ -13,10 +13,10 @@ class TaskDataService(object):
         self, worker, training_with_evaluation, data_reader_params=None
     ):
         self._worker = worker
-        if self._worker._custom_data_reader is not None:
-            create_data_reader = self._worker._custom_data_reader
-        else:
+        if self._worker._custom_data_reader is None:
             from elasticdl.python.data.data_reader import create_data_reader
+        else:
+            create_data_reader = self._worker._custom_data_reader
         self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
         self._pending_dataset = True
