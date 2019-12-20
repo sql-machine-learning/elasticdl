@@ -113,6 +113,7 @@ def loss(labels, predictions):
 def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
+
 def learning_rate_scheduler(model_version):
     if model_version < 5000:
         return 0.1
