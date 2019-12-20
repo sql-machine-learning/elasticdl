@@ -102,6 +102,7 @@ def get_model_spec(
     optimizer,
     eval_metrics_fn,
     prediction_outputs_processor,
+    custom_data_reader,
 ):
     """Get the model spec items in a tuple.
 
@@ -145,6 +146,7 @@ def get_model_spec(
             eval_metrics_fn, model_zoo, default_module, required=True
         ),
         prediction_outputs_processor,
+        _get_spec_value(custom_data_reader, model_zoo, default_module),
     )
 
 

@@ -465,6 +465,12 @@ def add_common_args_between_master_and_worker(parser):
         "in the model file",
     )
     parser.add_argument(
+        "--custom_data_reader",
+        type=str,
+        default="custom_data_reader",
+        help="The custom data reader defined in the model file",
+    )
+    parser.add_argument(
         "--model_def",
         type=str,
         required=True,

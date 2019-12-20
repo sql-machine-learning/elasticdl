@@ -39,6 +39,7 @@ def _make_task_dispatcher(
     records_per_task,
     num_epochs,
     data_reader_params,
+    create_data_reader_fn,
 ):
     # TODO: Support any subclasses of `AbstractDataReader`
     # and support passing specified parameters to the constructor
@@ -46,7 +47,7 @@ def _make_task_dispatcher(
         wkargs = get_dict_from_params_str(data_reader_params)
         partition = wkargs.get("partition", None) if wkargs else None
         return (
-            create_data_reader(
+            create_data_reader_fn(
                 data_origin=data_origin,
                 records_per_task=records_per_task,
                 partition=partition,
@@ -90,26 +91,6 @@ class Master(object):
                 namespace=args.namespace,
             )
 
-        # Start task queue
-        records_per_task = args.minibatch_size * args.num_minibatches_per_task
-        self.task_d = _make_task_dispatcher(
-            args.training_data,
-            args.validation_data,
-            args.prediction_data,
-            records_per_task,
-            args.num_epochs,
-            args.data_reader_params,
-        )
-
-        saved_model_path = args.output
-        if saved_model_path is not None and self.job_type in [
-            JobType.TRAINING_ONLY,
-            JobType.TRAINING_WITH_EVALUATION,
-        ]:
-            self.task_d.add_deferred_callback_create_save_model_task(
-                saved_model_path
-            )
-
         # Initialize the components from the model definition
         self.model_module = load_module(
             get_module_file_path(args.model_zoo, args.model_def)
@@ -122,6 +103,32 @@ class Master(object):
         )
         self.model_inst = model_handler.get_model_to_train(self.model_inst)
         self.optimizer = self.model_module[args.optimizer]()
+        self._create_data_reader_fn = create_data_reader
+        if args.custom_data_reader in self.model_module:
+            self._create_data_reader_fn = self.model_module[
+                args.custom_data_reader
+            ]
+
+        # Start task queue
+        records_per_task = args.minibatch_size * args.num_minibatches_per_task
+        self.task_d = _make_task_dispatcher(
+            args.training_data,
+            args.validation_data,
+            args.prediction_data,
+            records_per_task,
+            args.num_epochs,
+            args.data_reader_params,
+            self._create_data_reader_fn,
+        )
+
+        saved_model_path = args.output
+        if saved_model_path is not None and self.job_type in [
+            JobType.TRAINING_ONLY,
+            JobType.TRAINING_WITH_EVALUATION,
+        ]:
+            self.task_d.add_deferred_callback_create_save_model_task(
+                saved_model_path
+            )
 
         self.evaluation_service = self._create_evaluation_service(args)
 
