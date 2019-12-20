@@ -18,7 +18,7 @@ def create_data_reader(data_origin, records_per_task=None, **kwargs):
             records_per_task=records_per_task,
             **kwargs,
         )
-    elif data_origin.endswith(".csv"):
+    elif data_origin and data_origin.endswith(".csv"):
         return CSVDataReader(data_dir=data_origin)
     else:
         return RecordIODataReader(data_dir=data_origin)
