@@ -100,6 +100,17 @@ elif [[ "$JOB_TYPE" == "odps" ]]; then
       --log_level=INFO \
       --image_pull_policy=Never \
       --output=model_output
+elif [[ "$JOB_TYPE" == "train" ]]; then
+    elasticdl train \
+      --model_zoo=model_zoo \
+      --model_def=deepfm_functional_api.deepfm_functional_api.custom_model \
+      --training_data=/data/frappe/train \
+      --validation_data=/data/frappe/test \
+      --num_epochs=1 \
+      --minibatch_size=64 \
+      --num_minibatches_per_task=2 \
+      --evaluation_steps=500 \
+      --distribution_strategy=local \
 else
     echo "Unsupported job type specified: $JOB_TYPE"
     exit 1

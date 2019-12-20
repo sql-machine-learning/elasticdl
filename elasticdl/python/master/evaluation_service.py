@@ -11,7 +11,7 @@ from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor import tensor_pb_to_ndarray
 
 
-class _EvaluationJob(object):
+class EvaluationJob(object):
     """Representation of an evaluation job"""
 
     def __init__(self, metrics_dict, model_version, total_tasks=-1):
@@ -66,14 +66,19 @@ class _EvaluationJob(object):
     def finished(self):
         return self._completed_tasks >= self._total_tasks
 
-    def report_evaluation_metrics(self, model_outputs, labels):
+    def report_evaluation_metrics(self, model_outputs_pb, labels):
         labels = tensor_pb_to_ndarray(labels)
+        model_outputs = {}
         for tensor_pb in model_outputs:
-            key = tensor_pb.name
+            model_outputs[tensor_pb.name] = tensor_pb_to_ndarray(tensor_pb)
+        self.update_evaluation_metrics(model_outputs, labels)
+
+    def update_evaluation_metrics(self, model_outputs, labels):
+        for key in model_outputs:
             metrics = self._metrics_dict.get(key, {})
             if not metrics:
                 continue
-            outputs = tensor_pb_to_ndarray(tensor_pb)
+            outputs = model_outputs.get(key)
             for metric_inst in metrics.values():
                 self._update_metric_by_small_chunk(
                     metric_inst, labels, outputs
@@ -192,7 +197,7 @@ class EvaluationService(object):
         self._master_servicer = master_servicer
 
     def init_eval_only_job(self, num_task):
-        self._eval_job = _EvaluationJob(self._eval_metrics_fn(), -1, num_task)
+        self._eval_job = EvaluationJob(self._eval_metrics_fn(), -1, num_task)
 
     def add_evaluation_task(
         self, is_time_based_eval, master_locking=True, model_version=None
@@ -227,7 +232,7 @@ class EvaluationService(object):
                 )
                 task_count = len(self._task_d._eval_todo)
                 if self._eval_job is None:
-                    self._eval_job = _EvaluationJob(
+                    self._eval_job = EvaluationJob(
                         self._eval_metrics_fn(), checkpoint_version, task_count
                     )
                 else:

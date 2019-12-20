@@ -41,6 +41,7 @@ class MetricsDictKey(object):
 
 
 class DistributionStrategy(object):
+    LOCAL = "local"
     PARAMETER_SERVER = "ParameterServerStrategy"
     ALLREDUCE = "AllreduceStrategy"
 
