@@ -20,7 +20,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         parameters,
         grads_to_wait,
         optimizer,
-        lr_scheduler,
+        lr_scheduler="",
         lr_staleness_modulation=False,
         use_async=False,
         evaluation_steps=0,
