@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, Input
 
+from elasticdl.python.data.data_reader import RecordIODataReader
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
 )
@@ -52,3 +53,15 @@ class PredictionOutputsProcessor(BasePredictionOutputsProcessor):
 
     def process(self, predictions, worker_id):
         pass
+
+
+class CustomDataReader(RecordIODataReader):
+    def __init__(self, **kwargs):
+        RecordIODataReader.__init__(self, **kwargs)
+
+    def custom_method(self):
+        return "custom_method"
+
+
+def custom_data_reader(data_origin, records_per_task=None, **kwargs):
+    return CustomDataReader(data_dir=data_origin)
