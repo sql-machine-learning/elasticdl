@@ -74,8 +74,6 @@ class CSVDataReaderTest(unittest.TestCase):
             )
             csv_data_reader = CSVDataReader(columns=columns)
             task = _MockedTask(0, num_records, iris_file_name)
-            records_count = 0
-            last_record = None
 
             def _gen():
                 for record in csv_data_reader.read_records(task):
@@ -92,8 +90,7 @@ class CSVDataReaderTest(unittest.TestCase):
                 return dataset
 
             dataset = tf.data.Dataset.from_generator(
-                _gen,
-                csv_data_reader.records_output_types
+                _gen, csv_data_reader.records_output_types
             )
             dataset = _dataset_fn(dataset, None, None)
             for features, labels in dataset:
