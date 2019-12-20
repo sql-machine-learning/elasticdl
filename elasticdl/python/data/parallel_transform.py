@@ -26,6 +26,30 @@ def worker_loop(records, index_q, result_q, transform_fn):
 
 
 class ParallelTransform(object):
+    """
+    The ParallelTransform applies transform_fn to records with a number
+    of workers with low latency.
+
+    Worker process side:
+    1. get index from index queue
+    2. transform_fn(records[index])
+    3. put result to result queue
+
+    Main process side:
+    1. put index to index queue of workers in round-robin way
+    2. get transformed data from result queue
+
+    We want to achieve two things:
+    1. Data samples in input records are transformed with low latency.
+       We transform the data samples one by one. Once we call `next_data`
+       method to get a transformed result, the next index is put to a
+       index queue and triggers a worker process.
+
+    2. The output order is strictly the same with the input order.
+       We use a `cache_dict` to adjust the order, since the result order
+       getting from result queue is sequential sometimes.
+    """
+
     def __init__(self, records, num_workers, transform_fn):
         self._records = records
         self._num_workers = num_workers
