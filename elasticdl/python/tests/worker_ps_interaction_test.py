@@ -221,6 +221,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             opt_fn,
             eval_metrics_fn,
             prediction_outputs_processor,
+            create_data_reader_fn,
         ) = get_model_spec(
             model_zoo=self._model_zoo_path,
             model_def=model_def,
@@ -270,6 +271,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             opt_fn,
             eval_metrics_fn,
             prediction_outputs_processor,
+            create_data_reader_fn,
         ) = get_model_spec(
             model_zoo=self._model_zoo_path,
             model_def=model_def,
