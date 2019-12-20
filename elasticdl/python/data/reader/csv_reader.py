@@ -17,17 +17,22 @@ class CSVDataReader(AbstractDataReader):
     """
 
     def __init__(self, **kwargs):
+        """
+        Args:
+            kwargs should contains "seq" and "columns" like
+            'seq=",",column=["sepal.length", "sepal.width", "variety"]'
+        """
         AbstractDataReader.__init__(self, **kwargs)
-        self._kwargs = kwargs
+        self.seq = kwargs.get("seq", ",")
+        self.selected_columns = kwargs.get("columns", None)
 
     def read_records(self, task):
-        seq = self._kwargs.get("seq", ",")
-        selected_columns = self._kwargs.get("columns")
         with open(task.shard_name, "r", encoding="utf-8") as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=seq)
+            csv_reader = csv.reader(csv_file, delimiter=self.seq)
             csv_columns = next(csv_reader)
             selected_columns = (
-                csv_columns if selected_columns is None else selected_columns
+                csv_columns
+                if self.selected_columns is None else self.selected_columns
             )
             if not set(csv_columns) >= set(selected_columns):
                 raise ValueError(
@@ -54,7 +59,7 @@ class CSVDataReader(AbstractDataReader):
 
     @property
     def metadata(self):
-        return Metadata(column_names=self._kwargs.get("columns"))
+        return Metadata(column_names=self.selected_columns)
 
 
 def _get_elements_indices(elements, element_set):
