@@ -157,11 +157,12 @@ def create_recordio_file(size, dataset_name, shape, temp_dir=None):
 
 
 def create_iris_csv_file(size, columns, temp_dir=None):
-    """Creates a temporary file containing data of `recordio` format.
+    """Creates a temporary CSV file.
 
     Args:
-        size: The number of records in the temporary file.
-        temp_dir: The storage path of the temporary file.
+        size: The number of records in the CSV file.
+        columns: The names of columns in the CSV file.
+        temp_dir: The storage path of the CSV file.
 
     Returns:
         A python string indicating the temporary file name.
