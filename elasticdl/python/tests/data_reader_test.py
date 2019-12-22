@@ -72,7 +72,7 @@ class CSVDataReaderTest(unittest.TestCase):
             iris_file_name = create_iris_csv_file(
                 size=num_records, columns=columns, temp_dir=temp_dir_name
             )
-            csv_data_reader = CSVDataReader(columns=columns)
+            csv_data_reader = CSVDataReader(columns=columns, seq=",")
             task = _MockedTask(0, num_records, iris_file_name)
 
             def _gen():
