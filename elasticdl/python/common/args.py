@@ -458,11 +458,25 @@ def add_common_args_between_master_and_worker(parser):
         help="The name of the optimizer defined in the model file",
     )
     parser.add_argument(
+        "--learning_rate_scheduler",
+        type=str,
+        default="learning_rate_scheduler",
+        help="Optional callable learning rate scheduler defined in"
+        "the model file, which takes model version as its input and"
+        "returns a learning rate value",
+    )
+    parser.add_argument(
         "--eval_metrics_fn",
         type=str,
         default="eval_metrics_fn",
         help="The name of the evaluation metrics function defined "
         "in the model file",
+    )
+    parser.add_argument(
+        "--custom_data_reader",
+        type=str,
+        default="custom_data_reader",
+        help="The custom data reader defined in the model file",
     )
     parser.add_argument(
         "--model_def",

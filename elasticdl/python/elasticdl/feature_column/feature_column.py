@@ -1,11 +1,10 @@
 import collections
 import math
 
-import tensorflow as tf
 from tensorflow.python.feature_column import feature_column as fc_old
 from tensorflow.python.feature_column import feature_column_v2 as fc_lib
 from tensorflow.python.framework import tensor_shape
-from tensorflow.python.ops import array_ops, init_ops, math_ops
+from tensorflow.python.ops import init_ops
 
 from elasticdl.python.elasticdl.embedding_delegate import EmbeddingDelegate
 
@@ -96,8 +95,6 @@ class EmbeddingColumn(
     ),
 ):
     def __init__(self, **kwargs):
-        self.tape = None
-
         default_num_buckets = (
             self.categorical_column.num_buckets
             if self._is_v2_column
@@ -152,9 +149,6 @@ class EmbeddingColumn(
                 )
             )
 
-        if self.tape:
-            self._embedding_delegate.init_for_graph_mode_if_necessary()
-
         # Get sparse IDs and weights.
         sparse_tensors = self.categorical_column.get_sparse_tensors(
             transformation_cache, state_manager
@@ -163,111 +157,16 @@ class EmbeddingColumn(
         # Look up the embedding from the sparse input
         sparse_ids = sparse_tensors.id_tensor
         sparse_weights = sparse_tensors.weight_tensor
-
-        segment_ids = sparse_ids.indices[:, 0]
-        if segment_ids.dtype != tf.int32:
-            segment_ids = tf.cast(segment_ids, tf.int32)
-
-        ids = sparse_ids.values
-        unique_ids, idx = tf.unique(ids)
-
-        batch_embedding = tf.py_function(
-            self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
+        result = self._embedding_delegate.safe_embedding_lookup_sparse(
+            sparse_ids, sparse_weights=sparse_weights, combiner=self.combiner
         )
-
-        if sparse_weights is not None:
-            if self.tape:
-                batch_embedding = self._embedding_delegate.record_gradients(
-                    tape=self.tape, batch_embedding=batch_embedding, ids=ids
-                )
-
-            weights = sparse_weights.values
-            if weights.dtype != batch_embedding.dtype:
-                weights = math_ops.cast(weights, batch_embedding.dtype)
-
-            batch_embedding = array_ops.gather(batch_embedding, idx)
-
-            # Reshape weights to allow broadcast
-            ones = array_ops.fill(
-                array_ops.expand_dims(array_ops.rank(batch_embedding) - 1, 0),
-                1,
-            )
-            bcast_weights_shape = array_ops.concat(
-                [array_ops.shape(weights), ones], 0
-            )
-
-            orig_weights_shape = weights.get_shape()
-            weights = array_ops.reshape(weights, bcast_weights_shape)
-
-            # Set the weight shape, since after reshaping to
-            # bcast_weights_shape, the shape becomes None.
-            if batch_embedding.get_shape().ndims is not None:
-                weights.set_shape(
-                    orig_weights_shape.concatenate(
-                        [
-                            1
-                            for _ in range(
-                                batch_embedding.get_shape().ndims - 1
-                            )
-                        ]
-                    )
-                )
-
-            batch_embedding *= weights
-
-            if self.combiner == "sum":
-                batch_embedding = math_ops.segment_sum(
-                    batch_embedding, segment_ids
-                )
-            elif self.combiner == "mean":
-                batch_embedding = math_ops.segment_sum(
-                    batch_embedding, segment_ids
-                )
-                weight_sum = math_ops.segment_sum(weights, segment_ids)
-                batch_embedding = math_ops.div(batch_embedding, weight_sum)
-            elif self.combiner == "sqrtn":
-                batch_embedding = math_ops.segment_sum(
-                    batch_embedding, segment_ids
-                )
-                weights_squared = math_ops.pow(weights, 2)
-                weight_sum = math_ops.segment_sum(weights_squared, segment_ids)
-                weight_sum_sqrt = math_ops.sqrt(weight_sum)
-                batch_embedding = math_ops.div(
-                    batch_embedding, weight_sum_sqrt
-                )
-            else:
-                assert False, "Unrecognized combiner"
-        else:
-            if self.tape:
-                batch_embedding = self._embedding_delegate.record_gradients(
-                    tape=self.tape,
-                    batch_embedding=batch_embedding,
-                    ids=unique_ids,
-                )
-
-            assert idx is not None
-            if self.combiner == "sum":
-                batch_embedding = math_ops.sparse_segment_sum(
-                    batch_embedding, idx, segment_ids
-                )
-            elif self.combiner == "mean":
-                batch_embedding = math_ops.sparse_segment_mean(
-                    batch_embedding, idx, segment_ids
-                )
-            elif self.combiner == "sqrtn":
-                batch_embedding = math_ops.sparse_segment_sqrt_n(
-                    batch_embedding, idx, segment_ids
-                )
-            else:
-                assert False, "Unrecognized combiner"
-
-        return batch_embedding
+        return result
 
     def lookup_embedding(self, unique_ids):
         return self._embedding_delegate.lookup_embedding(unique_ids)
 
     def set_tape(self, tape):
-        self.tape = tape
+        self._embedding_delegate.set_tape(tape)
 
     def set_lookup_embedding_func(self, func):
         """Sets function for looking up embeddings in the PS.
@@ -281,7 +180,6 @@ class EmbeddingColumn(
         self._embedding_delegate.set_lookup_embedding_func(func)
 
     def reset(self):
-        self.tape = None
         self._embedding_delegate.reset()
 
     @property

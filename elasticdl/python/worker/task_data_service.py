@@ -14,16 +14,19 @@ class TaskDataService(object):
         self, worker, training_with_evaluation, data_reader_params=None
     ):
         self._worker = worker
+        self._create_data_reader_fn = create_data_reader
+        if self._worker._custom_data_reader is not None:
+            self._create_data_reader_fn = self._worker._custom_data_reader
         self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
         self._pending_dataset = True
         self._pending_save_model_task = None
         if data_reader_params:
-            self.data_reader = create_data_reader(
+            self.data_reader = self._create_data_reader_fn(
                 data_origin=None, **data_reader_params
             )
         else:
-            self.data_reader = create_data_reader(data_origin=None)
+            self.data_reader = self._create_data_reader_fn(data_origin=None)
         self._warm_up_task = None
         self._has_warmed_up = False
         self._failed_record_count = 0

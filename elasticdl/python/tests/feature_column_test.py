@@ -40,11 +40,11 @@ class EmbeddingColumnTest(unittest.TestCase):
             ),
             dimension=dimension,
         )
-        item_id_embedding.lookup_embedding = lambda unique_ids: (
-            generate_vectors_with_one_hot_value(
-                unique_ids, item_id_embedding.dimension
-            )
-        )
+
+        def _mock_gather_embedding(name, ids):
+            return generate_vectors_with_one_hot_value(ids, dimension)
+
+        item_id_embedding.set_lookup_embedding_func(_mock_gather_embedding)
 
         output = call_feature_columns(
             [item_id_embedding], {"item_id": [1, 2, 3]}
@@ -71,11 +71,11 @@ class EmbeddingColumnTest(unittest.TestCase):
             initializer=tf.initializers.identity,
             combiner="sum",
         )
-        item_id_embedding.lookup_embedding = lambda unique_ids: (
-            generate_vectors_with_one_hot_value(
-                unique_ids, item_id_embedding.dimension
-            )
-        )
+
+        def _mock_gather_embedding(name, ids):
+            return generate_vectors_with_one_hot_value(ids, dimension)
+
+        item_id_embedding.set_lookup_embedding_func(_mock_gather_embedding)
 
         output = call_feature_columns(
             [item_id_embedding],
@@ -125,11 +125,11 @@ class EmbeddingColumnTest(unittest.TestCase):
                 dimension=dimension,
                 combiner=combiner,
             )
-            item_id_embedding.lookup_embedding = lambda unique_ids: (
-                generate_vectors_fill_with_id_value(
-                    unique_ids, item_id_embedding.dimension
-                )
-            )
+
+            def _mock_gather_embedding(name, ids):
+                return generate_vectors_fill_with_id_value(ids, dimension)
+
+            item_id_embedding.set_lookup_embedding_func(_mock_gather_embedding)
 
             dense_features = tf.keras.layers.DenseFeatures([item_id_embedding])
             call_fns = [dense_features.call, tf.function(dense_features.call)]
@@ -221,11 +221,11 @@ class EmbeddingColumnTest(unittest.TestCase):
                 initializer=tf.initializers.identity,
                 combiner=combiner,
             )
-            item_id_embedding.lookup_embedding = lambda unique_ids: (
-                generate_vectors_fill_with_id_value(
-                    unique_ids, item_id_embedding.dimension
-                )
-            )
+
+            def _mock_gather_embedding(name, ids):
+                return generate_vectors_fill_with_id_value(ids, dimension)
+
+            item_id_embedding.set_lookup_embedding_func(_mock_gather_embedding)
 
             dense_features = tf.keras.layers.DenseFeatures([item_id_embedding])
             call_fns = [dense_features.call, tf.function(dense_features.call)]

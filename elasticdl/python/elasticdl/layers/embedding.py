@@ -1,9 +1,7 @@
-import numpy as np
 import tensorflow as tf
-from tensorflow.python.framework import ops
 from tensorflow.python.keras.utils import tf_utils
 
-from elasticdl.python.elasticdl.embedding_delegate import EmbeddingAndIds
+from elasticdl.python.elasticdl.embedding_delegate import EmbeddingDelegate
 
 
 class Embedding(tf.keras.layers.Layer):
@@ -63,26 +61,9 @@ class Embedding(tf.keras.layers.Layer):
         # different iterations.
         # `tf.Variable` requires initial value if shape has `None` dimension.
         self._embedding_and_ids_graph = []
-
-    def _init_for_graph_mode(self):
-        self._embedding_and_ids_graph = [
-            EmbeddingAndIds(
-                batch_embedding=tf.Variable(
-                    # In some cases, `tf.Variable` requires that initial value
-                    # is callable.
-                    initial_value=lambda: tf.zeros((1, self.output_dim)),
-                    shape=tf.TensorShape((None, self.output_dim)),
-                    dtype=tf.float32,
-                    trainable=True,
-                ),
-                batch_ids=tf.Variable(
-                    initial_value=lambda: tf.zeros((1, 1), dtype=tf.int64),
-                    shape=tf.TensorShape(None),
-                    dtype=tf.int64,
-                    trainable=False,
-                ),
-            )
-        ]
+        self.embedding_delegate = EmbeddingDelegate(
+            self.input_dim, self.output_dim, self.name
+        )
 
     @tf_utils.shape_type_conversion
     def compute_output_shape(self, input_shape):
@@ -122,125 +103,21 @@ class Embedding(tf.keras.layers.Layer):
     def get_key(name_list):
         return "-".join(map(str, name_list))
 
-    def lookup_embedding(self, unique_ids):
-        ids = unique_ids.numpy()
-        self._check_id_valid(ids)
-        if self._lookup_embedding_func:
-            embedding_vectors = self._lookup_embedding_func(self._name, ids)
-            return embedding_vectors
-
-    def _check_id_valid(self, ids):
-        if not self.input_dim:
-            return
-        first_may_exceed_id = ids[np.argmax(ids >= self.input_dim)]
-        if self.input_dim is not None and first_may_exceed_id > self.input_dim:
-            raise ValueError(
-                " The embedding id cannot be bigger "
-                "than input_dim. id = %d is not in [0, %d)"
-                % (first_may_exceed_id, self.input_dim)
-            )
-        if any(ids < 0):
-            raise ValueError(
-                "The embedding id cannot be less than zero. "
-                "Found invalid id %d" % ids[ids < 0][0]
-            )
-
-    def _record_gradients(self, batch_embedding, ids):
-        if tf.executing_eagerly():
-            self.tape.watch(batch_embedding)
-            self._embedding_and_ids_eagerly.append(
-                EmbeddingAndIds(batch_embedding, ids)
-            )
-        else:
-            # In graph mode, assigning tensors to trainable variables is
-            # allowed and tape can record the gradients of trainable
-            # variables automatically.
-            embedding_and_ids = self._embedding_and_ids_graph[0]
-            embedding_and_ids.batch_embedding.assign(batch_embedding)
-            embedding_and_ids.batch_ids.assign(ids)
-            batch_embedding = embedding_and_ids.batch_embedding
-        return batch_embedding
-
     def call(self, input):
-        if (
-            self.tape
-            and not tf.executing_eagerly()
-            and not self._embedding_and_ids_graph
-        ):
-            self._init_for_graph_mode()
-
         input = tf.cast(input, tf.int64)
         if isinstance(input, tf.SparseTensor):
             return self._sparse_input_call(input)
-
-        ids = tf.convert_to_tensor(input, name="embedding_ids")
-        flat_ids = tf.reshape(ids, [-1])
-        unique_ids, idx = tf.unique(flat_ids)
-
-        # There is a memory leak when using tf.py_function with eager
-        # execution. So, we only use tf.py_function in graph mode.
-        if isinstance(unique_ids, ops.EagerTensor):
-            batch_embedding = self.lookup_embedding(unique_ids)
-            batch_embedding = tf.constant(batch_embedding)
         else:
-            batch_embedding = tf.py_function(
-                self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
-            )
-
-        # Gradient for `batch_embedding` is SparseTensor here due to
-        # `tf.gather` op. `tf.gather` accesses tensor slices, resulting in
-        # sparse tensor gradient.
-        # TODO: use tf.cond rather than python if statement
-        if self.tape:
-            batch_embedding = self._record_gradients(batch_embedding, flat_ids)
-
-        outputs = tf.gather(batch_embedding, idx)
-        # tf.reshape does not support shape with None. Replace None with -1.
-        if ids.get_shape().rank == 2:
-            input_length = ids.get_shape()[1]
-            if input_length is None:
-                outputs.set_shape(shape=(None, None, self.output_dim))
-                return outputs
-            output_shape = (-1, input_length, self.output_dim)
-        else:
-            output_shape = ids.get_shape().concatenate(self.output_dim)
-        outputs = tf.reshape(outputs, output_shape)
-        # TODO: support combiner for dense input
-        return outputs
+            return self.embedding_delegate.embedding_lookup(input)
 
     def _sparse_input_call(self, sparse_input):
         if self.combiner not in ["sum", "mean", "sqrtn"]:
             raise ValueError(
                 "combiner must set sum, mean or sqrtn for sparse input"
             )
-        unique_ids, idx = tf.unique(sparse_input.values)
-        # Gradient for `batch_embedding` is dense tensor.
-        batch_embedding = tf.py_function(
-            self.lookup_embedding, inp=[unique_ids], Tout=tf.float32
+        batch_embedding = self.embedding_delegate.safe_embedding_lookup_sparse(
+            sparse_input, combiner=self.combiner
         )
-        # TODO: use tf.cond rather than python if statement
-        if self.tape:
-            batch_embedding = self._record_gradients(
-                batch_embedding, unique_ids
-            )
-
-        segment_ids = sparse_input.indices[:, 0]
-        if segment_ids.dtype != tf.int32:
-            segment_ids = tf.cast(segment_ids, tf.int32)
-
-        if self.combiner == "sum":
-            batch_embedding = tf.sparse.segment_sum(
-                batch_embedding, idx, segment_ids
-            )
-        elif self.combiner == "mean":
-            batch_embedding = tf.sparse.segment_mean(
-                batch_embedding, idx, segment_ids
-            )
-        elif self.combiner == "sqrtn":
-            batch_embedding = tf.sparse.segment_sqrt_n(
-                batch_embedding, idx, segment_ids
-            )
-        batch_embedding.set_shape((None, self.output_dim))
         return batch_embedding
 
     def compute_mask(self, inputs, mask=None):
@@ -251,28 +128,21 @@ class Embedding(tf.keras.layers.Layer):
         return tf.math.not_equal(inputs, 0)
 
     def reset(self):
-        self._embedding_and_ids_eagerly = []
-        self.tape = None
+        self.embedding_delegate.reset()
 
     def set_tape(self, tape):
-        self.tape = tape
+        self.embedding_delegate.set_tape(tape)
 
     def set_lookup_embedding_func(self, func):
         """Sets function for looking up embeddings in the PS.
-
         Args:
             func: The function used to look up embeddings. The arguments of
                 are `(layer_name, embedding_id_list)`, where `layer_name` is
                 the name of embedding layer, and `embedding_id_list` is a list
                 of embedding ids to be looked up.
         """
-        self._lookup_embedding_func = func
+        self.embedding_delegate.set_lookup_embedding_func(func)
 
     @property
     def embedding_and_ids(self):
-        """
-        Return bet and ids pairs.
-        """
-        if self._embedding_and_ids_eagerly:
-            return self._embedding_and_ids_eagerly
-        return self._embedding_and_ids_graph
+        return self.embedding_delegate.embedding_and_ids

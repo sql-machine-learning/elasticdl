@@ -114,6 +114,7 @@ class Worker(object):
             self._opt_fn,
             self._eval_metrics_fn,
             self._prediction_outputs_processor,
+            self._custom_data_reader,
         ) = get_model_spec(
             model_zoo=args.model_zoo,
             model_def=args.model_def,
@@ -123,6 +124,7 @@ class Worker(object):
             eval_metrics_fn=args.eval_metrics_fn,
             model_params=args.model_params,
             prediction_outputs_processor=args.prediction_outputs_processor,
+            custom_data_reader=args.custom_data_reader,
         )
 
         self._collective_communicator = (

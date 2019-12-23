@@ -38,6 +38,7 @@ class PserverArgs(object):
     def __init__(
         self,
         grads_to_wait=8,
+        lr_scheduler="learning_rate_scheduler",
         lr_staleness_modulation=0,
         use_async=False,
         model_zoo=None,
@@ -57,6 +58,7 @@ class PserverArgs(object):
         checkpoint_dir_for_init=None,
     ):
         self.grads_to_wait = grads_to_wait
+        self.learning_rate_scheduler = lr_scheduler
         self.lr_staleness_modulation = lr_staleness_modulation
         self.use_async = use_async
         self.model_zoo = model_zoo
