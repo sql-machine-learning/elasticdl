@@ -16,7 +16,6 @@ from elasticdl.python.elasticdl.local_executor import LocalExecutor
 
 def train(args):
     model_zoo = os.path.normpath(args.model_zoo)
-    print(args.distribution_strategy)
 
     if args.distribution_strategy == DistributionStrategy.LOCAL:
         local_executor = LocalExecutor(args)

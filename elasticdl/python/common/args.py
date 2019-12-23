@@ -517,7 +517,7 @@ def add_common_args_between_master_and_worker(parser):
         default="",
         help="Master will use a distribution policy on a list of devices "
         "according to the distributed strategy, "
-        'e.g. "ParameterServerStrategy" or "AllreduceStrategy" or "local"',
+        'e.g. "ParameterServerStrategy" or "AllreduceStrategy" or "Local"',
     )
     parser.add_argument(
         "--checkpoint_steps",

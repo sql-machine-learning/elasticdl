@@ -75,7 +75,7 @@ elif [[ "$JOB_TYPE" == "predict" ]]; then
       --job_name=test-predict \
       --log_level=INFO \
       --image_pull_policy=Never
-elif [[ "$JOB_TYPE" == "local" ]]; then
+elif [[ "$JOB_TYPE" == "Local" ]]; then
     elasticdl train \
       --model_zoo=model_zoo \
       --model_def=deepfm_functional_api.deepfm_functional_api.custom_model \
@@ -86,7 +86,7 @@ elif [[ "$JOB_TYPE" == "local" ]]; then
       --num_minibatches_per_task=2 \
       --evaluation_steps=500 \
       --job_name=test-local \
-      --distribution_strategy=local \
+      --distribution_strategy=Local 
 elif [[ "$JOB_TYPE" == "odps" ]]; then
     elasticdl train \
       --image_base=elasticdl:ci \

@@ -20,17 +20,17 @@ class CSVDataReader(AbstractDataReader):
     def __init__(self, **kwargs):
         """
         Args:
-            kwargs should contains "seq" and "columns" like
-            'seq=",",column=["sepal.length", "sepal.width", "variety"]'
+            kwargs should contains "sep" and "columns" like
+            'sep=",",column=["sepal.length", "sepal.width", "variety"]'
         """
         AbstractDataReader.__init__(self, **kwargs)
-        check_required_kwargs(["seq", "columns"], kwargs)
-        self.seq = kwargs.get("seq", ",")
+        check_required_kwargs(["sep", "columns"], kwargs)
+        self.sep = kwargs.get("sep", ",")
         self.selected_columns = kwargs.get("columns", None)
 
     def read_records(self, task):
         with open(task.shard_name, "r", encoding="utf-8") as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=self.seq)
+            csv_reader = csv.reader(csv_file, delimiter=self.sep)
             csv_columns = next(csv_reader)
             selected_columns = (
                 csv_columns
