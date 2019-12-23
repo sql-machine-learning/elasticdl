@@ -57,6 +57,7 @@ jobs:
               train
               evaluate
               predict
+              local
           )
           for JOB_TYPE in "${JOB_TYPES[@]}"; do
               if [[ "$JOB_TYPE" == "odps" ]] && { [[ "$ODPS_ACCESS_ID" == "" ]] || [[ "$ODPS_ACCESS_KEY" == "" ]]; }; then
