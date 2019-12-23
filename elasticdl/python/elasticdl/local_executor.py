@@ -83,7 +83,7 @@ class LocalExecutor:
         while epoch < self.epoch:
             for features, labels in train_dataset:
                 loss = self._train(features, labels)
-                logger.info("Loss = {}".format(loss))
+                logger.info("step {}, Loss = {}".format(step, loss))
                 step += 1
                 if (
                     self.evaluation_steps > 0
