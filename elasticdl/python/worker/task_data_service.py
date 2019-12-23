@@ -76,6 +76,7 @@ class TaskDataService(object):
         Report the number of records in the latest processed batch,
         so TaskDataService knows if some pending tasks are finished
         and report_task_result to the master.
+        Return True if there are some finished tasks, False otherwise.
         """
         self._reported_record_count += count
         if err_msg:
@@ -101,6 +102,8 @@ class TaskDataService(object):
                     self._failed_record_count = 0
                 if self._pending_tasks:
                     self._current_task = self._pending_tasks[0]
+            return True
+        return False
 
     def get_dataset_gen(self, task):
         """

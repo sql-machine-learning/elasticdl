@@ -125,6 +125,7 @@ class _TaskDispatcher(object):
         else:
             shards = self._prediction_shards
         tasks = []
+        num_records_before_create = self._job_counters[task_type].total_records
         # Note that a shard may contain records for multiple tasks.
         for (
             shard_name,
@@ -163,6 +164,14 @@ class _TaskDispatcher(object):
             self._eval_todo.extend(tasks)
         else:
             self._todo.extend(tasks)
+        logger.info(
+            "%d tasks created with total of %d records."
+            % (
+                len(tasks),
+                self._job_counters[task_type].total_records
+                - num_records_before_create,
+            )
+        )
 
     def get_eval_task(self, worker_id):
         """Return next evaluation (task_id, Task) tuple"""

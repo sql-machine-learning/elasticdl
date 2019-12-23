@@ -22,7 +22,7 @@ from elasticdl.python.common.hash_utils import (
     scatter_embedding_vector,
     string_to_id,
 )
-from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
     find_layer,
@@ -71,6 +71,7 @@ class Worker(object):
                 training strategy is used.
         """
         self._args = args
+        self.logger = get_logger("Worker", level=args.log_level.upper())
         if channel is None:
             self._stub = None
         else:
@@ -197,7 +198,7 @@ class Worker(object):
                 for column in layer._feature_columns:
                     if isinstance(column, feature_column.EmbeddingColumn):
                         self._embedding_columns.append(column)
-                        logger.info(
+                        self.logger.info(
                             "Initialize ElasticDL EmbeddingColumn:{}".format(
                                 column.name
                             )
@@ -253,6 +254,28 @@ class Worker(object):
         for column in self._embedding_columns:
             column.reset()
 
+    def _reset_task_timing(self):
+        self._task_start_time = time.time()
+        self._batch_process_time = 0
+        self._get_model_time = 0
+        self._report_gradient_time = 0
+
+    def _report_task_timing(self, reset=False):
+        cur_time = time.time()
+        self.logger.debug(
+            "%.6g seconds for current task with batch_process_time="
+            "%.6g s (including get_model_time=%.6g, report_gradient_time="
+            "%.6g)"
+            % (
+                cur_time - self._task_start_time,
+                self._batch_process_time,
+                self._get_model_time,
+                self._report_gradient_time,
+            )
+        )
+        if reset:
+            self._reset_task_timing()
+
     def _update_local_model(self):
         if not self._non_embed_grads:
             return
@@ -275,6 +298,7 @@ class Worker(object):
         return self._stub.get_task(req)
 
     def get_model(self):
+        start_time = time.time()
         model_version = -1
         variable_future_and_id_pairs = []
         req = empty_pb2.Empty()
@@ -305,6 +329,7 @@ class Worker(object):
 
             model_version = max(model_version, res.model.version)
         self._model_version = model_version
+        self._get_model_time += time.time() - start_time
 
     def pull_embedding_vector(self, layer_name, embedding_ids):
         """Pulls and returns embedding vectors ordered by the embedding ids."""
@@ -421,6 +446,7 @@ class Worker(object):
         return embedding_name_values
 
     def report_gradient_to_ps(self, grads):
+        start_time = time.time()
         reqs = [
             elasticdl_pb2.PushGradientRequest()
             for i in range(len(self._ps_stubs))
@@ -498,6 +524,7 @@ class Worker(object):
                 accepted = True
             if res.model_version > max_version:
                 max_version = res.model_version
+        self._report_gradient_time += time.time() - start_time
         return accepted, max_version
 
     def report_gradient_locally(self, grads):
@@ -541,7 +568,7 @@ class Worker(object):
                 predictions, self._worker_id
             )
         else:
-            logger.warning(
+            self.logger.warning(
                 "prediction_outputs_processor is not "
                 "defined in the model definition. Prediction outputs "
                 "are not processed."
@@ -578,7 +605,7 @@ class Worker(object):
             for layer in self._embedding_layers:
                 if len(layer.embedding_and_ids) > 1:
                     self._train_eagerly = True
-                    logger.warning(
+                    self.logger.warning(
                         "ElasticDL embedding layer %s is called more than "
                         "once, this will make the training process unable "
                         "to accelerate with tf.function." % (layer.name)
@@ -668,7 +695,7 @@ class Worker(object):
     def _broadcast_model_params(self):
         status = self._collective_communicator.barrier()
         if status == CollectiveCommunicatorStatus.FAILED:
-            logger.warning("Failed to perform barrier operation")
+            self.logger.warning("Failed to perform barrier operation")
             return False
         broadcast_root_worker_ip = self._get_ip_of_broadcast_root_worker()
         this_worker_ip = self._get_ip_of_this_worker()
@@ -679,16 +706,16 @@ class Worker(object):
             else None
         )
         status, model_params = self._collective_communicator.broadcast(
-            model_params, broadcast_root_worker_ip,
+            model_params, broadcast_root_worker_ip
         )
         if status == CollectiveCommunicatorStatus.FAILED:
-            logger.warning("Failed to broadcast model parameters")
+            self.logger.warning("Failed to broadcast model parameters")
             return False
         if not is_broadcast_root_worker and model_params is not None:
             self._update_local_model_params(model_params)
         status = self._collective_communicator.barrier()
         if status == CollectiveCommunicatorStatus.FAILED:
-            logger.warning("Failed to perform barrier operation")
+            self.logger.warning("Failed to perform barrier operation")
             return False
         return True
 
@@ -698,7 +725,7 @@ class Worker(object):
         if status == CollectiveCommunicatorStatus.SUCCEEDED:
             accepted, _ = self.report_gradient(averaged_grads)
             if not accepted:
-                logger.warning("Failed to report the averaged gradients")
+                self.logger.warning("Failed to report the averaged gradients")
         return accepted
 
     def _collect_gradients_with_allreduce_robust(self, grads):
@@ -713,7 +740,7 @@ class Worker(object):
                 else:
                     return False
             else:
-                logger.warning(
+                self.logger.warning(
                     "No new worker joining. Broadcast operation skipped"
                 )
                 return False
@@ -737,7 +764,7 @@ class Worker(object):
                 if accepted:
                     return accepted, None, loss
                 else:
-                    logger.warning(
+                    self.logger.warning(
                         "Failed to perform allreduce operation on"
                         "the gradients. Retrying..."
                     )
@@ -778,6 +805,7 @@ class Worker(object):
     ):
         if self._need_embedding_layer_check or not self._var_created:
             self._run_model_call_before_training(features)
+        start_time = time.time()
         for _ in range(self._max_minibatch_retry_num):
             if task_type == elasticdl_pb2.EVALUATION:
                 self._run_evaluation_task(features, labels)
@@ -791,7 +819,7 @@ class Worker(object):
                     features, labels
                 )
                 if accepted:
-                    logger.info("Loss is {}".format(loss.numpy()))
+                    self.logger.info("Loss is {}".format(loss.numpy()))
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
                 if self._model_version != min_model_version:
@@ -806,6 +834,7 @@ class Worker(object):
             # TODO: stop the worker if it fails to make any
             #       progress for some time.
             raise RuntimeError("Worker got stuck")
+        self._batch_process_time += time.time() - start_time
         return min_model_version
 
     def _process_eval_task(self, task):
@@ -815,7 +844,7 @@ class Worker(object):
             A python bool indicating whether worker processed some evaluation
             tasks.
         """
-        logger.info("the evaluation task_id: %d" % task.task_id)
+        self.logger.info("the evaluation task_id: %d" % task.task_id)
 
         gen = self._task_data_service.get_dataset_gen(task)
         if not gen:
@@ -872,7 +901,7 @@ class Worker(object):
             saved_model_path = os.path.join(
                 saved_model_path, str(int(time.time()))
             )
-            logger.info(
+            self.logger.info(
                 "The path to export model is {}".format(saved_model_path)
             )
             model = self._model_handler.get_model_to_export(
@@ -944,6 +973,7 @@ class Worker(object):
                 self._task_data_service.data_reader.metadata,
             )
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
+            self._reset_task_timing()
             for dataset_batch in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                     # Give the worker a chance to process an evaluation task
@@ -979,9 +1009,10 @@ class Worker(object):
                     last_training_minibatch_failed = False
                     if local_update_count < self._get_model_steps:
                         self._update_local_model()
-                self._task_data_service.report_record_done(
+                if self._task_data_service.report_record_done(
                     self._minibatch_size, err_msg
-                )
+                ):
+                    self._report_task_timing(reset=True)
             del dataset
             # New evaluation tasks may be created after this worker's
             # training tasks are done, as other workers' may still
