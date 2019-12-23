@@ -64,3 +64,9 @@ class PodStatus(object):
     FAILED = "Failed"
     RUNNING = "Running"
     FINISHED = "Finished"
+
+
+class ReaderType(object):
+    CSV_READER = "CSV"
+    ODPS_READER = "ODPS"
+    RECORDIO_READER = "RecordIO"
