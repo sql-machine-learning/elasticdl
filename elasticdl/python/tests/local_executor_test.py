@@ -4,6 +4,7 @@ import unittest
 from collections import namedtuple
 
 import numpy as np
+
 from elasticdl.python.elasticdl.local_executor import LocalExecutor
 from elasticdl.python.tests.test_utils import create_iris_csv_file
 
@@ -108,5 +109,4 @@ class LocalExectorTest(unittest.TestCase):
 
             validation_dataset = local_executor._get_dataset(validation_tasks)
             metrics = local_executor._evaluate(validation_dataset)
-            self.assertEqual(list(metrics.keys()), ['accuracy'])
-
+            self.assertEqual(list(metrics.keys()), ["accuracy"])

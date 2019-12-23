@@ -1,19 +1,21 @@
-from collections import namedtuple
-
 import os
 import sys
+from collections import namedtuple
+
 import tensorflow as tf
 
+from elasticdl.python.common.args import parse_envs
 from elasticdl.python.common.constants import MetricsDictKey
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.common.model_utils import get_model_spec
-from elasticdl.python.data.reader.data_reader_factory import create_data_reader
+from elasticdl.python.common.model_utils import (
+    get_dict_from_params_str,
+    get_model_spec,
+)
 from elasticdl.python.data.reader.csv_reader import CSVDataReader
+from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.data.reader.odps_reader import ODPSDataReader
 from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
 from elasticdl.python.master.evaluation_service import EvaluationJob
-from elasticdl.python.common.model_utils import get_dict_from_params_str
-from elasticdl.python.common.args import parse_envs
 
 _MockedTask = namedtuple("Task", ["shard_name", "start", "end"])
 
@@ -34,7 +36,7 @@ class LocalExecutor:
             self.opt_fn,
             self.eval_metrics_fn,
             self.prediction_outputs_processor,
-            self.custom_data_reader
+            self.custom_data_reader,
         ) = get_model_spec(
             model_zoo=args.model_zoo,
             model_def=args.model_def,
@@ -44,7 +46,7 @@ class LocalExecutor:
             eval_metrics_fn=args.eval_metrics_fn,
             model_params=args.model_params,
             prediction_outputs_processor="",
-            custom_data_reader=""
+            custom_data_reader="",
         )
         self.opt = self.opt_fn()
         self.epoch = args.num_epochs
@@ -84,8 +86,8 @@ class LocalExecutor:
                 logger.info("Loss = {}".format(loss))
                 step += 1
                 if (
-                    self.evaluation_steps > 0 and
-                    step % self.evaluation_steps == 0
+                    self.evaluation_steps > 0
+                    and step % self.evaluation_steps == 0
                 ):
                     self._evaluate(validation_dataset)
             self._evaluate(validation_dataset)
@@ -120,6 +122,7 @@ class LocalExecutor:
         Utilize tasks to creates a generator, which could be used to
         creating a `tf.data.Dataset` object in further.
         """
+
         def gen():
             for task in tasks:
                 for data in self.data_reader.read_records(task):
@@ -127,8 +130,7 @@ class LocalExecutor:
                         yield data
 
         dataset = tf.data.Dataset.from_generator(
-            gen,
-            self.data_reader.records_output_types
+            gen, self.data_reader.records_output_types
         )
         dataset = self.dataset_fn(dataset, None, None)
         dataset = dataset.batch(self.batch_size)
@@ -164,7 +166,7 @@ class LocalExecutor:
     def _create_shards(self, data_origin):
         """Create shards
         Args:
-            data_origin: A recordIO directory or a csv file path 
+            data_origin: A recordIO directory or a csv file path
             or an ODPS table name.
         """
         partition = self.data_reader_params.get("partition", None)
