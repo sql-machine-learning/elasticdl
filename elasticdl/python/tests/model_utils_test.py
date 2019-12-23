@@ -100,7 +100,7 @@ class ModelHelperTest(unittest.TestCase):
             get_dict_from_params_str('ls=["a", "b"];partition=dt=20190011'),
             {"ls": ["a", "b"], "partition": "dt=20190011"},
         )
-        self.assertEqual(get_dict_from_params_str(""), None)
+        self.assertEqual(get_dict_from_params_str(""), {})
 
 
 if __name__ == "__main__":
