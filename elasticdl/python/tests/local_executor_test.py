@@ -75,7 +75,7 @@ class LocalExectorTest(unittest.TestCase):
 
             data_reader_params = (
                 'columns=["sepal_length", "sepal_width", "petal_length",'
-                '"petal_width", "class"]; seq=","'
+                '"petal_width", "class"]; sep=","'
             )
             args = LocalExecutorArgs(
                 num_epochs=1,
