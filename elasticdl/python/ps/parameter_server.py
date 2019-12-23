@@ -9,6 +9,7 @@ from elasticdl.python.common.constants import GRPC, PodStatus
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.k8s_client import get_master_pod_name
 from elasticdl.python.common.log_utils import get_logger
+from elasticdl.python.common.lr_scheduler import add_lr_scheduler_to_optimizer
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
@@ -30,6 +31,7 @@ class ParameterServer(object):
             get_module_file_path(args.model_zoo, args.model_def)
         ).__dict__
         self.optimizer = model_module[args.optimizer]()
+        self._set_lr_scheduler(model_module, args.learning_rate_scheduler)
         self.ps_id = args.ps_id
         self.num_ps_pods = args.num_ps_pods
         # Create Parameters instance
@@ -43,6 +45,14 @@ class ParameterServer(object):
         self.namespace = args.namespace
         self._init_checkpoint_saver(args)
         self._restore_params_from_checkpoint(args.checkpoint_dir_for_init)
+
+    def _set_lr_scheduler(self, model_module, learning_rate_scheduler_arg):
+        if learning_rate_scheduler_arg in model_module:
+            self.lr_scheduler = add_lr_scheduler_to_optimizer(
+                self.optimizer, model_module[learning_rate_scheduler_arg]
+            )
+        else:
+            self.lr_scheduler = None
 
     def _restore_params_from_checkpoint(self, checkpoint_dir_for_init):
         """Restore parameters from a checkpint directory for the PS instance
@@ -98,6 +108,7 @@ class ParameterServer(object):
             self.parameters,
             self.grads_to_wait,
             self.optimizer,
+            self.lr_scheduler,
             lr_staleness_modulation=self.lr_staleness_modulation,
             use_async=self.use_async,
             evaluation_steps=self.evaluation_steps,

@@ -72,15 +72,31 @@ class CSVDataReaderTest(unittest.TestCase):
             iris_file_name = create_iris_csv_file(
                 size=num_records, columns=columns, temp_dir=temp_dir_name
             )
-            csv_data_reader = CSVDataReader(columns=columns)
+            csv_data_reader = CSVDataReader(columns=columns, seq=",")
             task = _MockedTask(0, num_records, iris_file_name)
-            records_count = 0
-            last_record = None
-            for record in csv_data_reader.read_records(task):
-                records_count += 1
-                last_record = record
-            self.assertEquals(records_count, num_records)
-            self.assertEquals(len(last_record), 5)
+
+            def _gen():
+                for record in csv_data_reader.read_records(task):
+                    yield record
+
+            def _dataset_fn(dataset, mode, metadata):
+                def _parse_data(record):
+                    features = tf.strings.to_number(record[0:-1], tf.float32)
+                    label = tf.strings.to_number(record[-1], tf.float32)
+                    return features, label
+
+                dataset = dataset.map(_parse_data)
+                dataset = dataset.batch(10)
+                return dataset
+
+            dataset = tf.data.Dataset.from_generator(
+                _gen, csv_data_reader.records_output_types
+            )
+            dataset = _dataset_fn(dataset, None, None)
+            for features, labels in dataset:
+                self.assertEquals(features.shape.as_list(), [10, 4])
+                self.assertEquals(labels.shape.as_list(), [10])
+                break
 
 
 @unittest.skipIf(

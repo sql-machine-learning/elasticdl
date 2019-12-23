@@ -38,6 +38,7 @@ class PserverArgs(object):
     def __init__(
         self,
         grads_to_wait=8,
+        lr_scheduler="learning_rate_scheduler",
         lr_staleness_modulation=0,
         use_async=False,
         model_zoo=None,
@@ -57,6 +58,7 @@ class PserverArgs(object):
         checkpoint_dir_for_init=None,
     ):
         self.grads_to_wait = grads_to_wait
+        self.learning_rate_scheduler = lr_scheduler
         self.lr_staleness_modulation = lr_staleness_modulation
         self.use_async = use_async
         self.model_zoo = model_zoo
@@ -157,11 +159,12 @@ def create_recordio_file(size, dataset_name, shape, temp_dir=None):
 
 
 def create_iris_csv_file(size, columns, temp_dir=None):
-    """Creates a temporary file containing data of `recordio` format.
+    """Creates a temporary CSV file.
 
     Args:
-        size: The number of records in the temporary file.
-        temp_dir: The storage path of the temporary file.
+        size: The number of records in the CSV file.
+        columns: The names of columns in the CSV file.
+        temp_dir: The storage path of the CSV file.
 
     Returns:
         A python string indicating the temporary file name.

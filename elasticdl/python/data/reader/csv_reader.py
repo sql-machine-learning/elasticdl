@@ -6,13 +6,14 @@ import tensorflow as tf
 from elasticdl.python.data.reader.data_reader import (
     AbstractDataReader,
     Metadata,
+    check_required_kwargs,
 )
 
 
 class CSVDataReader(AbstractDataReader):
     """This reader is used to read data from a csv file. It is convenient for
     user to locally run and debug a Keras model by using this reader.
-    However, it can not be used with distribution strategy because it can not
+    However, it cannot be used with distribution strategy because it cannot
     read data by line indices.
     """
 
@@ -23,6 +24,7 @@ class CSVDataReader(AbstractDataReader):
             'seq=",",column=["sepal.length", "sepal.width", "variety"]'
         """
         AbstractDataReader.__init__(self, **kwargs)
+        check_required_kwargs(["seq", "columns"], kwargs)
         self.seq = kwargs.get("seq", ",")
         self.selected_columns = kwargs.get("columns", None)
 
@@ -35,21 +37,18 @@ class CSVDataReader(AbstractDataReader):
                 if self.selected_columns is None
                 else self.selected_columns
             )
-            if not set(csv_columns) >= set(selected_columns):
+            if not set(selected_columns).issubset(set(csv_columns)):
                 raise ValueError(
-                    "The first line in the csv file must be column names and"
-                    "the selected columns is not in the file. The selected"
+                    "The first line in the csv file must be column names and "
+                    "the selected columns are not in the file. The selected "
                     "columns are {} and the columns in {} are {}".format(
                         selected_columns, task.shard_name, csv_columns
                     )
                 )
-            column_indices = _get_elements_indices(
-                selected_columns, csv_columns
-            )
+            column_indices = [csv_columns.index(e) for e in selected_columns]
             for line in csv_reader:
                 line_elements = np.array(line, dtype=np.str)
-                records = line_elements[column_indices].tolist()
-                yield records
+                yield line_elements[column_indices].tolist()
 
     def create_shards(self):
         pass
@@ -61,10 +60,3 @@ class CSVDataReader(AbstractDataReader):
     @property
     def metadata(self):
         return Metadata(column_names=self.selected_columns)
-
-
-def _get_elements_indices(elements, element_set):
-    indices = []
-    for element in elements:
-        indices.append(element_set.index(element))
-    return indices

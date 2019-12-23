@@ -10,6 +10,7 @@ from tensorflow.keras.layers import (
 )
 
 from elasticdl.python.common.constants import Mode
+from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
 
 AUC_metric = None
 
@@ -120,3 +121,10 @@ def eval_metrics_fn():
         },
         "probs": {"auc": tf.keras.metrics.AUC()},
     }
+
+
+CustomDataReader = RecordIODataReader
+
+
+def custom_data_reader(data_origin, records_per_task=None, **kwargs):
+    return CustomDataReader(data_dir=data_origin)
