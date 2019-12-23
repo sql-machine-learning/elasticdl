@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, Input
 
-from elasticdl.python.data.data_reader import RecordIODataReader
+from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
 )
