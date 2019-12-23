@@ -12,7 +12,7 @@ class ParallelTransformTest(unittest.TestCase):
 
         records = [k for k in range(100)]
         pt = ParallelTransform(
-            records=records, num_workers=2, transform_fn=transform
+            records=records, num_parallel_processes=2, transform_fn=transform
         )
         results = []
         while True:
@@ -31,7 +31,9 @@ class ParallelTransformTest(unittest.TestCase):
         def gen():
             records = [k for k in range(100)]
             pt = ParallelTransform(
-                records=records, num_workers=4, transform_fn=transform
+                records=records,
+                num_parallel_processes=4,
+                transform_fn=transform,
             )
             while True:
                 data = pt.next_data()

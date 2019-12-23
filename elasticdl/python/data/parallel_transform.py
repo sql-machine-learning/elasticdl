@@ -28,14 +28,14 @@ def worker_loop(records, index_q, result_q, transform_fn):
 class ParallelTransform(object):
     """
     The ParallelTransform applies transform_fn to records with a number
-    of workers with low latency.
+    of worker processes with low latency.
 
-    Worker process side:
+    Worker process:
     1. get index from index queue
     2. transform_fn(records[index])
     3. put result to result queue
 
-    Main process side:
+    Main process:
     1. put index to index queue of workers in round-robin way
     2. get transformed data from result queue
 
@@ -47,24 +47,26 @@ class ParallelTransform(object):
 
     2. The output order is strictly the same with the input order.
        We use a `cache_dict` to adjust the order, since the result order
-       getting from result queue is sequential sometimes.
+       getting from result queue is not sequential sometimes.
     """
 
-    def __init__(self, records, num_workers, transform_fn):
+    def __init__(self, records, num_parallel_processes, transform_fn):
         self._records = records
-        self._num_workers = num_workers
+        self._num_parallel_processes = num_parallel_processes
         self._transform_fn = transform_fn
 
         self._result_queue = Queue()
         self._index_queues = []
         self._workers = []
 
-        self._worker_id_cycle = itertools.cycle(range(self._num_workers))
+        self._worker_id_cycle = itertools.cycle(
+            range(self._num_parallel_processes)
+        )
         self._put_record_it = iter(range(len(self._records)))
         self._get_record_it = iter(range(len(self._records)))
         self._cache_dict = {}
 
-        for i in range(self._num_workers):
+        for i in range(self._num_parallel_processes):
             index_queue = Queue()
             self._index_queues.append(index_queue)
             p = Process(
@@ -81,7 +83,7 @@ class ParallelTransform(object):
             self._workers.append(p)
 
         # prime the prefetch loop
-        for i in range(2 * self._num_workers):
+        for i in range(2 * self._num_parallel_processes):
             self._put_index()
 
     def _next_index(self):
