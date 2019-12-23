@@ -8,7 +8,9 @@ from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
 
 
 def create_data_reader(data_origin, records_per_task=None, **kwargs):
-    if is_odps_configured():
+    if data_origin and data_origin.endswith(".csv"):
+        return CSVDataReader(data_dir=data_origin, **kwargs)
+    elif is_odps_configured():
         return ODPSDataReader(
             project=os.environ[ODPSConfig.PROJECT_NAME],
             access_id=os.environ[ODPSConfig.ACCESS_ID],
@@ -18,7 +20,5 @@ def create_data_reader(data_origin, records_per_task=None, **kwargs):
             records_per_task=records_per_task,
             **kwargs,
         )
-    elif data_origin and data_origin.endswith(".csv"):
-        return CSVDataReader(data_dir=data_origin, **kwargs)
     else:
         return RecordIODataReader(data_dir=data_origin)
