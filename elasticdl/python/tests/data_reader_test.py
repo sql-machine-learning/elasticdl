@@ -11,16 +11,16 @@ from odps import ODPS
 
 from elasticdl.python.common.constants import ODPSConfig
 from elasticdl.python.common.model_utils import load_module
-from elasticdl.python.data.data_reader import (
-    Metadata,
-    ODPSDataReader,
-    RecordIODataReader,
-    create_data_reader,
-)
 from elasticdl.python.data.odps_io import is_odps_configured
+from elasticdl.python.data.reader.csv_reader import CSVDataReader
+from elasticdl.python.data.reader.data_reader import Metadata
+from elasticdl.python.data.reader.data_reader_factory import create_data_reader
+from elasticdl.python.data.reader.odps_reader import ODPSDataReader
+from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
 from elasticdl.python.tests.test_utils import (
     IRIS_TABLE_COLUMN_NAMES,
     DatasetName,
+    create_iris_csv_file,
     create_iris_odps_table,
     create_recordio_file,
 )
@@ -56,6 +56,47 @@ class RecordIODataReaderTest(unittest.TestCase):
                 )
                 for k, v in parsed_record.items():
                     self.assertEqual(len(v.numpy()), 1)
+
+
+class CSVDataReaderTest(unittest.TestCase):
+    def test_csv_data_reader(self):
+        with tempfile.TemporaryDirectory() as temp_dir_name:
+            num_records = 128
+            columns = [
+                "sepal_length",
+                "sepal_width",
+                "petal_length",
+                "petal_width",
+                "class",
+            ]
+            iris_file_name = create_iris_csv_file(
+                size=num_records, columns=columns, temp_dir=temp_dir_name
+            )
+            csv_data_reader = CSVDataReader(columns=columns, seq=",")
+            task = _MockedTask(0, num_records, iris_file_name)
+
+            def _gen():
+                for record in csv_data_reader.read_records(task):
+                    yield record
+
+            def _dataset_fn(dataset, mode, metadata):
+                def _parse_data(record):
+                    features = tf.strings.to_number(record[0:-1], tf.float32)
+                    label = tf.strings.to_number(record[-1], tf.float32)
+                    return features, label
+
+                dataset = dataset.map(_parse_data)
+                dataset = dataset.batch(10)
+                return dataset
+
+            dataset = tf.data.Dataset.from_generator(
+                _gen, csv_data_reader.records_output_types
+            )
+            dataset = _dataset_fn(dataset, None, None)
+            for features, labels in dataset:
+                self.assertEquals(features.shape.as_list(), [10, 4])
+                self.assertEquals(labels.shape.as_list(), [10])
+                break
 
 
 @unittest.skipIf(
