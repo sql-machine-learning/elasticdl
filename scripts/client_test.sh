@@ -75,7 +75,7 @@ elif [[ "$JOB_TYPE" == "predict" ]]; then
       --job_name=test-predict \
       --log_level=INFO \
       --image_pull_policy=Never
-elif [[ "$JOB_TYPE" == "Local" ]]; then
+elif [[ "$JOB_TYPE" == "local" ]]; then
     elasticdl train \
       --model_zoo=model_zoo \
       --model_def=deepfm_functional_api.deepfm_functional_api.custom_model \
