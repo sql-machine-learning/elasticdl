@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from collections import namedtuple
 
+import numpy as np
 from elasticdl.python.elasticdl.local_executor import LocalExecutor
 from elasticdl.python.tests.test_utils import create_iris_csv_file
 
@@ -31,6 +32,9 @@ class LocalExecutorArgs(object):
         eval_metrics_fn,
         model_params=None,
         prediction_outputs_processor=None,
+        envs=None,
+        data_reader_params=None,
+        num_minibatches_per_task=None,
     ):
         self.num_epochs = num_epochs
         self.minibatch_size = minibatch_size
@@ -45,6 +49,9 @@ class LocalExecutorArgs(object):
         self.eval_metrics_fn = eval_metrics_fn
         self.model_params = model_params
         self.prediction_outputs_processor = prediction_outputs_processor
+        self.envs = envs
+        self.data_reader_params = data_reader_params
+        self.num_minibatches_per_task = num_minibatches_per_task
 
 
 class LocalExectorTest(unittest.TestCase):
@@ -65,6 +72,10 @@ class LocalExectorTest(unittest.TestCase):
                 size=num_records, columns=columns, temp_dir=temp_dir_name
             )
 
+            data_reader_params = (
+                'columns=["sepal_length", "sepal_width", "petal_length",'
+                '"petal_width", "class"]; seq=","'
+            )
             args = LocalExecutorArgs(
                 num_epochs=1,
                 minibatch_size=32,
@@ -79,6 +90,23 @@ class LocalExectorTest(unittest.TestCase):
                 eval_metrics_fn="eval_metrics_fn",
                 model_params="",
                 prediction_outputs_processor="PredictionOutputsProcessor",
+                data_reader_params=data_reader_params,
+                num_minibatches_per_task=5,
             )
             local_executor = LocalExecutor(args)
-            local_executor.run()
+            train_tasks = local_executor._gen_tasks(
+                local_executor.training_data
+            )
+            validation_tasks = local_executor._gen_tasks(
+                local_executor.validation_data
+            )
+
+            train_dataset = local_executor._get_dataset(train_tasks)
+            for features, labels in train_dataset.take(1):
+                loss = local_executor._train(features, labels)
+                self.assertEqual(type(loss.numpy()), np.float32)
+
+            validation_dataset = local_executor._get_dataset(validation_tasks)
+            metrics = local_executor._evaluate(validation_dataset)
+            self.assertEqual(list(metrics.keys()), ['accuracy'])
+

@@ -19,7 +19,8 @@ _MockedTask = namedtuple("Task", ["shard_name", "start", "end"])
 
 
 class LocalExecutor:
-    """Run locally to debug keras model
+    """Train the Keras model defined in ElasticDL model zoo locally
+    using the custom training loop with Tensorflow native low-level API.
     """
 
     def __init__(self, args):
@@ -33,6 +34,7 @@ class LocalExecutor:
             self.opt_fn,
             self.eval_metrics_fn,
             self.prediction_outputs_processor,
+            self.custom_data_reader
         ) = get_model_spec(
             model_zoo=args.model_zoo,
             model_def=args.model_def,
@@ -41,7 +43,8 @@ class LocalExecutor:
             optimizer=args.optimizer,
             eval_metrics_fn=args.eval_metrics_fn,
             model_params=args.model_params,
-            prediction_outputs_processor=""
+            prediction_outputs_processor="",
+            custom_data_reader=""
         )
         self.opt = self.opt_fn()
         self.epoch = args.num_epochs
@@ -66,6 +69,7 @@ class LocalExecutor:
             os.environ[key] = value
 
     def run(self):
+        """Execute the training loop"""
         epoch = 0
         step = 0
 
@@ -109,10 +113,11 @@ class LocalExecutor:
             eval_job.update_evaluation_metrics(outputs, labels)
         metrics = eval_job.get_evaluation_summary()
         logger.info("Evaluation metrics : {}".format(metrics))
+        return metrics
 
     def _get_dataset(self, tasks):
         """
-        If a task exists, this creates a generator, which could be used to
+        Utilize tasks to creates a generator, which could be used to
         creating a `tf.data.Dataset` object in further.
         """
         def gen():
@@ -130,6 +135,11 @@ class LocalExecutor:
         return dataset
 
     def _gen_tasks(self, data_dir):
+        """Generate tasks to create a dataset.
+        For CSVDataReader, a task will contains all records in a file.
+        For RecordIODataReader, a task contains all records in a shard file.
+        For ODPSDataReader, a task contains a portion of records in the table.
+        """
         tasks = []
         if isinstance(self.data_reader, CSVDataReader):
             if os.path.exists(data_dir):
@@ -152,6 +162,11 @@ class LocalExecutor:
         return tasks
 
     def _create_shards(self, data_origin):
+        """Create shards
+        Args:
+            data_origin: A recordIO directory or a csv file path 
+            or an ODPS table name.
+        """
         partition = self.data_reader_params.get("partition", None)
         return (
             create_data_reader(
