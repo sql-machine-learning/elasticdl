@@ -81,7 +81,7 @@ elif [[ "$JOB_TYPE" == "local" ]]; then
       --model_def=deepfm_functional_api.deepfm_functional_api.custom_model \
       --training_data=/data/frappe/train \
       --validation_data=/data/frappe/test \
-      --data_reader_params="reader_type=RecordIO"
+      --data_reader_params="reader_type=RecordIO" \
       --num_epochs=1 \
       --minibatch_size=64 \
       --num_minibatches_per_task=2 \
