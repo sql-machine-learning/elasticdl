@@ -7,8 +7,8 @@ from tensorflow.keras.metrics import Accuracy, MeanSquaredError
 from elasticdl.python.common.constants import MetricsDictKey
 from elasticdl.python.common.tensor import Tensor
 from elasticdl.python.master.evaluation_service import (
+    EvaluationJob,
     EvaluationService,
-    _EvaluationJob,
 )
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
@@ -33,7 +33,7 @@ class EvaluationServiceTest(unittest.TestCase):
         model_version = 1
         total_tasks = 5
         latest_chkp_version = 2
-        job = _EvaluationJob(_eval_metrics_fn(), model_version, total_tasks)
+        job = EvaluationJob(_eval_metrics_fn(), model_version, total_tasks)
         self.assertEqual(0, job._completed_tasks)
         self.assertFalse(job.finished())
         self.assertFalse(self.ok_to_new_job(job, latest_chkp_version))
@@ -187,7 +187,7 @@ class EvaluationServiceTest(unittest.TestCase):
         auc_value_0 = auc.result()
 
         auc.reset_states()
-        _EvaluationJob._update_metric_by_small_chunk(auc, labels, preds)
+        EvaluationJob._update_metric_by_small_chunk(auc, labels, preds)
         auc_value_1 = auc.result()
         self.assertEquals(auc_value_0, auc_value_1)
 

@@ -27,3 +27,13 @@ def eval_metrics_fn():
             tf.cast(tf.reshape(labels, [-1]), tf.int32),
         )
     }
+
+
+def dataset_fn(dataset, mode, metadata):
+    def _parse_data(record):
+        features = tf.strings.to_number(record[0:-1], tf.float32)
+        label = tf.strings.to_number(record[-1], tf.float32)
+        return features, label
+
+    dataset = dataset.map(_parse_data)
+    return dataset

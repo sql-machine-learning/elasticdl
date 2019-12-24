@@ -75,6 +75,19 @@ elif [[ "$JOB_TYPE" == "predict" ]]; then
       --job_name=test-predict \
       --log_level=INFO \
       --image_pull_policy=Never
+elif [[ "$JOB_TYPE" == "local" ]]; then
+    elasticdl train \
+      --model_zoo=model_zoo \
+      --model_def=deepfm_functional_api.deepfm_functional_api.custom_model \
+      --training_data=/data/frappe/train \
+      --validation_data=/data/frappe/test \
+      --data_reader_params="reader_type=RecordIO" \
+      --num_epochs=1 \
+      --minibatch_size=64 \
+      --num_minibatches_per_task=2 \
+      --evaluation_steps=500 \
+      --job_name=test-local \
+      --distribution_strategy=Local 
 elif [[ "$JOB_TYPE" == "odps" ]]; then
     elasticdl train \
       --image_base=elasticdl:ci \

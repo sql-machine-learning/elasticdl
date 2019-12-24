@@ -5,45 +5,51 @@ from elasticdl.python.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
 )
+from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
     remove_images,
 )
+from elasticdl.python.elasticdl.local_executor import LocalExecutor
 
 
 def train(args):
     model_zoo = os.path.normpath(args.model_zoo)
 
-    image_name = build_and_push_docker_image(
-        model_zoo=model_zoo,
-        base_image=args.image_base,
-        docker_image_repository=args.docker_image_repository,
-        extra_pypi=args.extra_pypi_index,
-        cluster_spec=args.cluster_spec,
-        docker_base_url=args.docker_base_url,
-        docker_tlscert=args.docker_tlscert,
-        docker_tlskey=args.docker_tlskey,
-    )
-
-    container_args = [
-        "-m",
-        "elasticdl.python.master.main",
-        "--worker_image",
-        image_name,
-        "--model_zoo",
-        _model_zoo_in_docker(model_zoo),
-        "--cluster_spec",
-        _cluster_spec_def_in_docker(args.cluster_spec),
-    ]
-    container_args.extend(
-        build_arguments_from_parsed_result(
-            args, filter_args=["model_zoo", "cluster_spec", "worker_image"]
+    if args.distribution_strategy == DistributionStrategy.LOCAL:
+        local_executor = LocalExecutor(args)
+        local_executor.run()
+    else:
+        image_name = build_and_push_docker_image(
+            model_zoo=model_zoo,
+            base_image=args.image_base,
+            docker_image_repository=args.docker_image_repository,
+            extra_pypi=args.extra_pypi_index,
+            cluster_spec=args.cluster_spec,
+            docker_base_url=args.docker_base_url,
+            docker_tlscert=args.docker_tlscert,
+            docker_tlskey=args.docker_tlskey,
         )
-    )
 
-    _submit_job(image_name, args, container_args)
-    # TODO: print dashboard url after launching the master pod
+        container_args = [
+            "-m",
+            "elasticdl.python.master.main",
+            "--worker_image",
+            image_name,
+            "--model_zoo",
+            _model_zoo_in_docker(model_zoo),
+            "--cluster_spec",
+            _cluster_spec_def_in_docker(args.cluster_spec),
+        ]
+        container_args.extend(
+            build_arguments_from_parsed_result(
+                args, filter_args=["model_zoo", "cluster_spec", "worker_image"]
+            )
+        )
+
+        _submit_job(image_name, args, container_args)
+        # TODO: print dashboard url after launching the master pod
 
 
 def evaluate(args):
