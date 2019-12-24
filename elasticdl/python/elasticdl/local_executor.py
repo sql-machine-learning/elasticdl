@@ -175,6 +175,7 @@ class LocalExecutor:
                 data_origin=data_origin,
                 records_per_task=self.records_per_task,
                 partition=partition,
+                **self.data_reader_params
             ).create_shards()
             if data_origin
             else {}
