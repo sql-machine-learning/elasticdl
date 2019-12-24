@@ -36,6 +36,7 @@ from elasticdl.python.common.tensor import (
     serialize_tensor,
     tensor_pb_to_ndarray,
 )
+from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.worker.task_data_service import TaskDataService
@@ -99,7 +100,7 @@ class Worker(object):
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._max_allreduce_retry_num = max_allreduce_retry_num
         self._init_from_args(args)
-        self._reset_task_timing()
+        self._timing = Timing(args.log_level.upper() == "DEBUG", self.logger)
 
     def _init_from_args(self, args):
         """
@@ -255,29 +256,6 @@ class Worker(object):
         for column in self._embedding_columns:
             column.reset()
 
-    def _reset_task_timing(self, set_task_start_time=False):
-        if set_task_start_time:
-            self._task_start_time = time.time()
-        self._batch_process_time = 0
-        self._get_model_time = 0
-        self._report_gradient_time = 0
-
-    def _report_task_timing(self, reset=False):
-        cur_time = time.time()
-        self.logger.debug(
-            "%.6g seconds for current task with batch_process_time="
-            "%.6g s (including get_model_time=%.6g, report_gradient_time="
-            "%.6g)"
-            % (
-                cur_time - self._task_start_time,
-                self._batch_process_time,
-                self._get_model_time,
-                self._report_gradient_time,
-            )
-        )
-        if reset:
-            self._reset_task_timing(set_task_start_time=True)
-
     def _update_local_model(self):
         if not self._non_embed_grads:
             return
@@ -300,7 +278,7 @@ class Worker(object):
         return self._stub.get_task(req)
 
     def get_model(self):
-        start_time = time.time()
+        self._timing.start_record_time("get_model")
         model_version = -1
         variable_future_and_id_pairs = []
         req = empty_pb2.Empty()
@@ -331,7 +309,7 @@ class Worker(object):
 
             model_version = max(model_version, res.model.version)
         self._model_version = model_version
-        self._get_model_time += time.time() - start_time
+        self._timing.end_record_time("get_model")
 
     def pull_embedding_vector(self, layer_name, embedding_ids):
         """Pulls and returns embedding vectors ordered by the embedding ids."""
@@ -448,7 +426,7 @@ class Worker(object):
         return embedding_name_values
 
     def report_gradient_to_ps(self, grads):
-        start_time = time.time()
+        self._timing.start_record_time("report_gradient")
         reqs = [
             elasticdl_pb2.PushGradientRequest()
             for i in range(len(self._ps_stubs))
@@ -526,7 +504,7 @@ class Worker(object):
                 accepted = True
             if res.model_version > max_version:
                 max_version = res.model_version
-        self._report_gradient_time += time.time() - start_time
+        self._timing.end_record_time("report_gradient")
         return accepted, max_version
 
     def report_gradient_locally(self, grads):
@@ -807,7 +785,7 @@ class Worker(object):
     ):
         if self._need_embedding_layer_check or not self._var_created:
             self._run_model_call_before_training(features)
-        start_time = time.time()
+        self._timing.start_record_time("batch_process")
         for _ in range(self._max_minibatch_retry_num):
             if task_type == elasticdl_pb2.EVALUATION:
                 self._run_evaluation_task(features, labels)
@@ -836,7 +814,7 @@ class Worker(object):
             # TODO: stop the worker if it fails to make any
             #       progress for some time.
             raise RuntimeError("Worker got stuck")
-        self._batch_process_time += time.time() - start_time
+        self._timing.end_record_time("batch_process")
         return min_model_version
 
     def _process_eval_task(self, task):
@@ -975,7 +953,7 @@ class Worker(object):
                 self._task_data_service.data_reader.metadata,
             )
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
-            self._reset_task_timing(set_task_start_time=True)
+            self._timing.start_record_time("task_process")
             for dataset_batch in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                     # Give the worker a chance to process an evaluation task
@@ -1014,7 +992,8 @@ class Worker(object):
                 if self._task_data_service.report_record_done(
                     self._minibatch_size, err_msg
                 ):
-                    self._report_task_timing(reset=True)
+                    self._timing.end_record_time("task_process")
+                    self._timing.report_timing(reset=True)
             del dataset
             # New evaluation tasks may be created after this worker's
             # training tasks are done, as other workers' may still
