@@ -103,9 +103,9 @@ class LocalExectorTest(unittest.TestCase):
             )
 
             train_dataset = local_executor._get_dataset(train_tasks)
-            for features, labels in train_dataset.take(1):
-                loss = local_executor._train(features, labels)
-                self.assertEqual(type(loss.numpy()), np.float32)
+            features, labels = next(iter(train_dataset))
+            loss = local_executor._train(features, labels)
+            self.assertEqual(type(loss.numpy()), np.float32)
 
             validation_dataset = local_executor._get_dataset(validation_tasks)
             metrics = local_executor._evaluate(validation_dataset)
