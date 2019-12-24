@@ -99,6 +99,7 @@ class Worker(object):
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._max_allreduce_retry_num = max_allreduce_retry_num
         self._init_from_args(args)
+        self._reset_task_timing()
 
     def _init_from_args(self, args):
         """
@@ -254,8 +255,9 @@ class Worker(object):
         for column in self._embedding_columns:
             column.reset()
 
-    def _reset_task_timing(self):
-        self._task_start_time = time.time()
+    def _reset_task_timing(self, set_task_start_time=False):
+        if set_task_start_time:
+            self._task_start_time = time.time()
         self._batch_process_time = 0
         self._get_model_time = 0
         self._report_gradient_time = 0
@@ -274,7 +276,7 @@ class Worker(object):
             )
         )
         if reset:
-            self._reset_task_timing()
+            self._reset_task_timing(set_task_start_time=True)
 
     def _update_local_model(self):
         if not self._non_embed_grads:
@@ -973,7 +975,7 @@ class Worker(object):
                 self._task_data_service.data_reader.metadata,
             )
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
-            self._reset_task_timing()
+            self._reset_task_timing(set_task_start_time=True)
             for dataset_batch in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                     # Give the worker a chance to process an evaluation task
