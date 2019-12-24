@@ -994,6 +994,7 @@ class Worker(object):
                 ):
                     self._timing.end_record_time("task_process")
                     self._timing.report_timing(reset=True)
+                    self._timing.start_record_time("task_process")
             del dataset
             # New evaluation tasks may be created after this worker's
             # training tasks are done, as other workers' may still
