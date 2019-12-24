@@ -98,6 +98,8 @@ class LocalExecutor:
         with tf.GradientTape() as tape:
             outputs = self.model_inst.call(features, training=True)
             loss = self.loss_fn(labels, outputs)
+            if self.model_inst.losses:
+                loss += tf.math.add_n(self.model_inst.losses)
         grads = tape.gradient(loss, self.model_inst.trainable_variables)
         grads_and_vars = zip(grads, self.model_inst.trainable_variables)
         self.opt.apply_gradients(grads_and_vars, name=None)
