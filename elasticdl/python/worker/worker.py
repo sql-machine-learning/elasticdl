@@ -1025,26 +1025,24 @@ class Worker(object):
         """
         Only predict outputs of the model with data in tasks on the worker.
         """
-        while True:
-            dataset = self._task_data_service.get_dataset()
-            if not dataset:
-                break
-            dataset = self._dataset_fn(
-                dataset,
-                Mode.PREDICTION,
-                self._task_data_service.data_reader.metadata,
-            )
-            dataset = dataset.batch(self._minibatch_size).prefetch(1)
-            for dataset_batch in dataset:
-                task = self._task_data_service.get_current_task()
+        dataset = self._task_data_service.get_dataset()
+        dataset = self._dataset_fn(
+            dataset,
+            Mode.PREDICTION,
+            self._task_data_service.data_reader.metadata,
+        )
+        dataset = dataset.batch(self._minibatch_size).prefetch(1)
+        for dataset_batch in dataset:
+            task = self._task_data_service.get_current_task()
 
-                err_msg = self._process_minibatch_and_report(
-                    dataset_batch, task.type, task.model_version
-                )
-                self._task_data_service.report_record_done(
-                    self._minibatch_size, err_msg
-                )
-            del dataset
+            err_msg = self._process_minibatch_and_report(
+                dataset_batch, task.type, task.model_version
+            )
+            self._task_data_service.report_record_done(
+                self._minibatch_size, err_msg
+            )
+        del dataset
+        self._task_data_service.finish()
 
     def run(self):
         """
