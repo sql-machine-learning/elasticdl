@@ -33,34 +33,31 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         res = elasticdl_pb2.Task()
         res.model_version = self._version
         res.minibatch_size = self._minibatch_size
-        if request.task_type == elasticdl_pb2.EVALUATION:
-            task_id, task = self._task_d.get_eval_task(request.worker_id)
-        else:
-            task_id, task = self._task_d.get(request.worker_id)
 
-        if task:
-            res.task_id = task_id
-            res.shard_name = task.shard_name
-            res.start = task.start
-            res.end = task.end
-            res.type = task.type
-            for k, v in task.extended_config.items():
-                res.extended_config[k] = v
+        while True:
+            if request.task_type == elasticdl_pb2.EVALUATION:
+                task_id, task = self._task_d.get_eval_task(request.worker_id)
+            else:
+                task_id, task = self._task_d.get(request.worker_id)
 
-            # For evaluation task, it will use the fixed version model
-            if task.type == elasticdl_pb2.EVALUATION:
-                res.model_version = task.model_version
-        elif (not self._task_d.finished()) or (
-            self._task_d.invoke_deferred_callback()
-        ):
-            # If the todo and doing tasks are not empty,
-            # Otherwise if the callback list is not empty,
-            # we are trying to pop and invoke the callback.
-            # Then the master tells the worker to wait
-            # in case of new tasks later.
-            res.type = elasticdl_pb2.WAIT
+            if task:
+                res.task_id = task_id
+                res.shard_name = task.shard_name
+                res.start = task.start
+                res.end = task.end
+                res.type = task.type
+                for k, v in task.extended_config.items():
+                    res.extended_config[k] = v
 
-        return res
+                # For evaluation task, it will use the fixed version model
+                if task.type == elasticdl_pb2.EVALUATION:
+                    res.model_version = task.model_version
+                return res
+            elif self._task_d.invoke_deferred_callback():
+                continue
+            else:
+                res.type = elasticdl_pb2.END
+                return res
 
     def report_task_result(self, request, _):
         if request.err_message:

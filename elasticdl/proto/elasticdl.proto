@@ -9,7 +9,7 @@ enum TaskType {
     TRAINING = 0;
     EVALUATION = 1;
     PREDICTION = 2;
-    WAIT = 3;
+    END = 3;
     SAVE_MODEL = 4;
 }
 
