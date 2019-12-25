@@ -12,9 +12,10 @@ def deduplicate_indexed_slices(values, indices):
     """
     Sum up the values associated with duplicated indices in the IndexedSlices.
     Args:
-        values: A Tensor with rank >= 1. Particularly IndexedSlices.values.
-        indices: A one-dimension integer of Tensor. Particularly 
-        IndexedSlices.indices.
+        values: A Tensor with rank >= 1.
+            Such as IndexedSlices.values particularly.
+        indices: A one-dimension integer of Tensor.
+            Such as IndexedSlices.indices particularly.
     Returns:
         A tuple of (`sum_combined_values`, `unique_indices`).
         `sum_combined_values` contains the sum of `values` associated
