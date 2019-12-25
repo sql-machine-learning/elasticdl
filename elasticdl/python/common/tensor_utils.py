@@ -20,7 +20,7 @@ def deduplicate_indexed_slices(values, indices):
         the sum of `values` slices associated with each unique index.
     """
     unique_indices, new_index_positions = tf.unique(indices)
-    summed_values = tf.unsorted_segment_sum(
+    summed_values = tf.math.unsorted_segment_sum(
         values, new_index_positions, tf.shape(unique_indices)[0]
     )
     return (summed_values, unique_indices)
