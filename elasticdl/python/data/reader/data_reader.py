@@ -22,6 +22,9 @@ class AbstractDataReader(ABC):
         """
         pass
 
+    def preprocess_records(self, records):
+        return records
+
     @abstractmethod
     def create_shards(self):
         """This method creates the dictionary of shards where the keys

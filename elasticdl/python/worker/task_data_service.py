@@ -1,3 +1,4 @@
+import queue
 import threading
 from collections import deque
 
@@ -33,6 +34,7 @@ class TaskDataService(object):
         self._reported_record_count = 0
         self._current_task = None
         self._pending_tasks = deque()
+        self._records_queue = queue.Queue(maxsize=2)
 
     def _reset(self):
         """
@@ -158,6 +160,11 @@ class TaskDataService(object):
                 for _ in self.data_reader.read_records(task):
                     break
                 self._has_warmed_up = True
+
+            t = threading.Thread(target=self._get_records_fn)
+            t.daemon = True
+            t.start()
+
             ds = tf.data.Dataset.from_generator(
                 self._gen, self.data_reader.records_output_types
             )
@@ -166,11 +173,7 @@ class TaskDataService(object):
         else:
             return None
 
-    def _gen(self):
-        """
-        A generator supports the iter() protocol (e.g. a generator function),
-        used to create a `tf.data.Dataset` object from a list of tasks.
-        """
+    def _get_records_fn(self):
         while True:
             # Make sure we also generate data from the warm-up task.
             if self._warm_up_task is not None and self._has_warmed_up:
@@ -195,6 +198,16 @@ class TaskDataService(object):
                 self._pending_tasks.append(task)
                 if len(self._pending_tasks) == 1:
                     self._current_task = task
-            for data in self.data_reader.read_records(task):
-                if data:
-                    yield data
+
+            records = self.data_reader.read_records(task)
+            self._records_queue.put(records)
+
+    def _gen(self):
+        """
+        A generator supports the iter() protocol (e.g. a generator function),
+        used to create a `tf.data.Dataset` object from a list of tasks.
+        """
+        while True:
+            records = self._records_queue.get()
+            for data in self.data_reader.preprocess_records(records):
+                yield data
