@@ -991,8 +991,7 @@ class Worker(object):
                 self._timing.report_timing(reset=True)
                 self._timing.start_record_time("task_process")
         del dataset
-        self._task_data_service._get_records_thread.join()
-        self._task_data_service._get_records_thread = None
+        self._task_data_service.finish()
         # New evaluation tasks may be created after this worker's
         # training tasks are done, as other workers' may still
         # have pending training tasks.

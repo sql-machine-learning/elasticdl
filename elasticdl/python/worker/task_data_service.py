@@ -164,6 +164,10 @@ class TaskDataService(object):
         )
         return ds
 
+    def finish(self):
+        self._get_records_thread.join()
+        self._get_records_thread = None
+
     def _get_records_fn(self):
         while True:
             # Make sure we also generate data from the warm-up task.

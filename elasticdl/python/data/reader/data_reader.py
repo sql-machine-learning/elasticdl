@@ -23,6 +23,10 @@ class AbstractDataReader(ABC):
         pass
 
     def preprocess_records(self, records):
+        """This method does transformation to the input records. We could implement
+        some customized data preprocessing logic here. Then, the output records
+        will be used to create a `tf.data.Dataset` instance in further.
+        """
         return records
 
     @abstractmethod
