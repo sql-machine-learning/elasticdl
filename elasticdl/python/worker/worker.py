@@ -36,6 +36,7 @@ from elasticdl.python.common.tensor import (
     serialize_tensor,
     tensor_pb_to_ndarray,
 )
+from elasticdl.python.common.tensor_utils import deduplicate_indexed_slices
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
@@ -477,6 +478,13 @@ class Worker(object):
                     else:
                         g_values = grad
                         g_indices = ids
+
+                # Sum up the values of the duplicated indices in the
+                # gradients. It can reduce the gradient payload of the
+                # dense embedding.
+                g_values, g_indices = deduplicate_indexed_slices(
+                    values=g_values, indices=g_indices
+                )
 
                 results = scatter_embedding_vector(
                     g_values.numpy(), g_indices.numpy(), len(self._ps_stubs)
