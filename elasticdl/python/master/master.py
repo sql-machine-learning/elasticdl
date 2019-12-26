@@ -379,6 +379,8 @@ class Master(object):
                 str(args.num_ps_pods),
                 "--checkpoint_dir_for_init",
                 str(args.checkpoint_dir_for_init),
+                "--num_workers",
+                str(args.num_workers),
             ]
 
             env_dict = parse_envs(args.envs)
