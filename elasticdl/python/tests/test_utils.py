@@ -55,6 +55,7 @@ class PserverArgs(object):
         keep_checkpoint_max=0,
         ps_id=0,
         num_ps_pods=1,
+        num_workers=2,
         checkpoint_dir_for_init=None,
     ):
         self.grads_to_wait = grads_to_wait
