@@ -117,7 +117,6 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
             if self._lr_scheduler:
                 self._lr_scheduler.set_model_version(self._parameters.version)
-
             self._optimizer.apply_gradients(grad_vars)
             with self._version_lock:
                 self._parameters.version += 1
