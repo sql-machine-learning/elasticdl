@@ -76,6 +76,7 @@ class PserverArgs(object):
         self.keep_checkpoint_max = keep_checkpoint_max
         self.ps_id = ps_id
         self.num_ps_pods = num_ps_pods
+        self.num_workers = num_workers
         self.checkpoint_dir_for_init = checkpoint_dir_for_init
 
 
