@@ -45,8 +45,8 @@ def _convert_embedding_table_to_numpy_array(embedding_table, embedding_shape):
 
 
 def _is_big_embedding(layer):
-    """Determine whether the embedding is small by the condition that
-    the memory of the layer.train_weights is less than 2MB.
+    """Determine whether the embedding is big by the condition that
+    the memory of the layer.train_weights is bigger than 2MB.
     """
     max_memory = 2 * 1024 * 1024  # 2MB
     weights_memory = layer.input_dim * layer.output_dim * 8
