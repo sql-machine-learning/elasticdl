@@ -102,6 +102,7 @@ class OptimizerWrapper(object):
         self._update_gradient_lock = threading.Lock()
         self._tls = threading.local()
         self._init_thread_local()
+        self._has_embedding = False
 
         # "-" in slot name is not supported
         if isinstance(opt, SGD):
@@ -155,21 +156,28 @@ class OptimizerWrapper(object):
         """
         self._init_thread_local()
 
-        with self._update_gradient_lock:
-            grads_and_vars_new = []
-            for grad, var in grads_and_vars:
-                # If var is a string, create the grad var pair for
-                # ElasticDL embedding
-                if isinstance(var, str):
-                    grads_and_vars_new.append(
-                        self._get_embedding_var_and_grad(grad, var)
-                    )
-                else:
-                    grads_and_vars_new.append((grad, var))
+        if self._has_embedding:
+            with self._update_gradient_lock:
+                self._update_parameters_by_gradients(grads_and_vars)
+        else:
+            self._update_parameters_by_gradients(grads_and_vars)
 
-            self._opt.apply_gradients(grads_and_vars_new)
-            self._update_embedding_param()
-            self._delete_variables()
+    def _update_parameters_by_gradients(self, grads_and_vars):
+        """Update parameters by gradients received by GRPC"""
+        grads_and_vars_new = []
+        for grad, var in grads_and_vars:
+            # If var is a string, create the grad var pair for
+            # ElasticDL embedding
+            if isinstance(var, str):
+                grads_and_vars_new.append(
+                    self._get_embedding_var_and_grad(grad, var)
+                )
+                self._has_embedding = True
+            else:
+                grads_and_vars_new.append((grad, var))
+        self._opt.apply_gradients(grads_and_vars_new)
+        self._update_embedding_param()
+        self._delete_variables()
 
     def _get_embedding_var_and_grad(self, grad, layer_name):
         unique_ids, indices = tf.unique(grad.indices)
