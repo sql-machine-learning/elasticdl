@@ -50,7 +50,7 @@ def _need_partition_embedding(layer):
     bigger than 2MB.
     """
     EMBEDDING_SIZE_THRESHOLD_FOR_PARTITION = 2 * 1024 * 1024  # 2MB
-    weights_memory = layer.input_dim * layer.output_dim * 8
+    weights_memory = layer.input_dim * layer.output_dim * 4
     return weights_memory > EMBEDDING_SIZE_THRESHOLD_FOR_PARTITION
 
 
