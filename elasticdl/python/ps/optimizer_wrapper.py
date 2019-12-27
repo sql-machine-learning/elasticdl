@@ -99,7 +99,7 @@ class OptimizerWrapper(object):
         self._update_embedding_func = update_embedding_func
         self._slot_initial_value = {}
 
-        self._opt_weights_delete_lock = threading.Lock()
+        self._update_gradient_lock = threading.Lock()
         self._tls = threading.local()
         self._init_thread_local()
 
@@ -153,23 +153,23 @@ class OptimizerWrapper(object):
                 ElasticDL `Tensor` object. Otherwise it is a TensorFlow
                 variable.
         """
-        # TODO (#1255): Discuss whether `OptimizerWrapper` needs a lock after
-        # implementing PS.
         self._init_thread_local()
 
-        grads_and_vars_new = []
-        for grad, var in grads_and_vars:
-            # If var is a string, this grad var pair is for ElasticDL embedding
-            if isinstance(var, str):
-                grads_and_vars_new.append(
-                    self._get_embedding_var_and_grad(grad, var)
-                )
-            else:
-                grads_and_vars_new.append((grad, var))
+        with self._update_gradient_lock:
+            grads_and_vars_new = []
+            for grad, var in grads_and_vars:
+                # If var is a string, create the grad var pair for
+                # ElasticDL embedding
+                if isinstance(var, str):
+                    grads_and_vars_new.append(
+                        self._get_embedding_var_and_grad(grad, var)
+                    )
+                else:
+                    grads_and_vars_new.append((grad, var))
 
-        self._opt.apply_gradients(grads_and_vars_new)
-        self._update_embedding_param()
-        self._delete_variables()
+            self._opt.apply_gradients(grads_and_vars_new)
+            self._update_embedding_param()
+            self._delete_variables()
 
     def _get_embedding_var_and_grad(self, grad, layer_name):
         unique_ids, indices = tf.unique(grad.indices)
@@ -293,13 +293,12 @@ class OptimizerWrapper(object):
             del self._opt._slots[embed_var_key]
             for _, var in slots.items():
                 opt_weight_iter = 0
-                with self._opt_weights_delete_lock:
-                    while opt_weight_iter < len(self._opt._weights):
-                        if var is self._opt._weights[opt_weight_iter]:
-                            self._opt._weights.pop(opt_weight_iter)
-                            break
-                        else:
-                            opt_weight_iter += 1
+                while opt_weight_iter < len(self._opt._weights):
+                    if var is self._opt._weights[opt_weight_iter]:
+                        self._opt._weights.pop(opt_weight_iter)
+                        break
+                    else:
+                        opt_weight_iter += 1
         for key in list(self._tls._slot_variables.keys()):
             del self._tls._slot_variables[key]
 
