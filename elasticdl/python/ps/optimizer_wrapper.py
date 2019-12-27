@@ -177,8 +177,7 @@ class OptimizerWrapper(object):
                 grads_and_vars_new.append((grad, var))
         self._opt.apply_gradients(grads_and_vars_new)
         self._update_embedding_param()
-        with self._update_gradient_lock:
-            self._delete_variables()
+        self._delete_variables()
 
     def _get_embedding_var_and_grad(self, grad, layer_name):
         unique_ids, indices = tf.unique(grad.indices)
