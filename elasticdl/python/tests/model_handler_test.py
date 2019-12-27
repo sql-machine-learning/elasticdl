@@ -8,11 +8,13 @@ from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.keras.layers import SparseEmbedding
 
+EMBEDDING_INPUT_DIM = 200000
+
 
 class CustomModel(tf.keras.models.Model):
     def __init__(self):
         super(CustomModel, self).__init__()
-        self.embedding = tf.keras.layers.Embedding(4, 2)
+        self.embedding = tf.keras.layers.Embedding(EMBEDDING_INPUT_DIM, 2)
         self.dense = tf.keras.layers.Dense(1)
 
     def call(self, inputs):
@@ -23,7 +25,7 @@ class CustomModel(tf.keras.models.Model):
 
 def custom_model_with_embedding():
     inputs = tf.keras.layers.Input(shape=(4,), name="x")
-    embedding = tf.keras.layers.Embedding(4, 2)(inputs)
+    embedding = tf.keras.layers.Embedding(EMBEDDING_INPUT_DIM, 2)(inputs)
     outputs = tf.keras.layers.Dense(1)(embedding)
     return tf.keras.models.Model(inputs, outputs)
 
@@ -32,9 +34,9 @@ def custom_model_with_sparse_embedding():
     sparse_input = tf.keras.layers.Input(
         shape=(4,), dtype="int64", sparse=True, name="sparse_feature"
     )
-    embedding = SparseEmbedding(4, 2, combiner="sum", name="embedding")(
-        sparse_input
-    )
+    embedding = SparseEmbedding(
+        EMBEDDING_INPUT_DIM, 2, combiner="sum", name="embedding"
+    )(sparse_input)
     outputs = tf.keras.layers.Dense(1)(embedding)
     return tf.keras.models.Model(sparse_input, outputs)
 

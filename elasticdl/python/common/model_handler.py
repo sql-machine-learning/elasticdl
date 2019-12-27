@@ -49,8 +49,7 @@ def _is_big_embedding(layer):
     the memory of the layer.train_weights is less than 2MB.
     """
     max_memory = 2 * 1024 * 1024  # 2MB
-    layer_weight_shape = layer.train_weights[0].shape()
-    weights_memory = layer_weight_shape[0] * layer_weight_shape[1] * 8
+    weights_memory = layer.input_dim * layer.output_dim * 8
     return weights_memory > max_memory
 
 
@@ -203,10 +202,10 @@ class ParameterServerModelHandler(ModelHandler):
         """
 
         def _clone_function(layer):
-            if (
-                type(layer) in [tf.keras.layers.Embedding, SparseEmbedding] and
-                _is_big_embedding(layer)
-            ):
+            if type(layer) in [
+                tf.keras.layers.Embedding,
+                SparseEmbedding,
+            ] and _is_big_embedding(layer):
                 logger.debug(
                     "Replace {} with {}".format(layer.name, Embedding)
                 )
@@ -282,9 +281,8 @@ class ParameterServerModelHandler(ModelHandler):
         `elasticdl.layers.Embedding` layers.
         """
         for name, value in model.__dict__.items():
-            if (
-                type(value) == tf.keras.layers.Embedding and
-                _is_big_embedding(value)
+            if type(value) == tf.keras.layers.Embedding and _is_big_embedding(
+                value
             ):
                 logger.info(
                     "Replace {} layer with "
@@ -301,9 +299,7 @@ class ParameterServerModelHandler(ModelHandler):
                     input_length=value.input_length,
                 )
                 setattr(model, name, embedding_layer)
-            elif (
-                type(value) == SparseEmbedding and _is_big_embedding(value)
-            ):
+            elif type(value) == SparseEmbedding and _is_big_embedding(value):
                 logger.info(
                     "Replace {} layer with "
                     "elasticdl.layers.Embedding".format(value)
