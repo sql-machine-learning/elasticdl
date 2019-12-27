@@ -44,13 +44,14 @@ def _convert_embedding_table_to_numpy_array(embedding_table, embedding_shape):
     return embedding_weights
 
 
-def _is_big_embedding(layer):
-    """Determine whether the embedding is big by the condition that
-    the memory of the layer.train_weights is bigger than 2MB.
+def _need_partition_embedding(layer):
+    """The embedding layer will be partitioned on multiple
+    PS instances if the memory of the layer.train_weights is
+    bigger than 2MB.
     """
-    max_memory = 2 * 1024 * 1024  # 2MB
+    EMBEDDING_SIZE_THRESHOLD_FOR_PARTITION = 2 * 1024 * 1024  # 2MB
     weights_memory = layer.input_dim * layer.output_dim * 8
-    return weights_memory > max_memory
+    return weights_memory > EMBEDDING_SIZE_THRESHOLD_FOR_PARTITION
 
 
 class ModelHandler(metaclass=abc.ABCMeta):
@@ -205,7 +206,7 @@ class ParameterServerModelHandler(ModelHandler):
             if type(layer) in [
                 tf.keras.layers.Embedding,
                 SparseEmbedding,
-            ] and _is_big_embedding(layer):
+            ] and _need_partition_embedding(layer):
                 logger.debug(
                     "Replace {} with {}".format(layer.name, Embedding)
                 )
@@ -281,7 +282,9 @@ class ParameterServerModelHandler(ModelHandler):
         `elasticdl.layers.Embedding` layers.
         """
         for name, value in model.__dict__.items():
-            if type(value) == tf.keras.layers.Embedding and _is_big_embedding(
+            if type(
+                value
+            ) == tf.keras.layers.Embedding and _need_partition_embedding(
                 value
             ):
                 logger.info(
@@ -299,7 +302,9 @@ class ParameterServerModelHandler(ModelHandler):
                     input_length=value.input_length,
                 )
                 setattr(model, name, embedding_layer)
-            elif type(value) == SparseEmbedding and _is_big_embedding(value):
+            elif type(value) == SparseEmbedding and _need_partition_embedding(
+                value
+            ):
                 logger.info(
                     "Replace {} layer with "
                     "elasticdl.layers.Embedding".format(value)
