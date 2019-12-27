@@ -234,8 +234,6 @@ class InstanceManager(object):
             # No need to care about master pod
             return
 
-        relaunch_worker = False
-        relaunch_ps = False
         with self._lock:
             if pod_name in self._failed_pods:
                 return
@@ -272,11 +270,6 @@ class InstanceManager(object):
                 pods_phase[pod_name][1] = phase
                 if self._relaunch_deleted_live_worker and phase != "Succeeded":
                     relaunch_fn(pod_name)
-
-        if relaunch_worker:
-            self.relaunch_worker(pod_name)
-        elif relaunch_ps:
-            self.relaunch_ps(pod_name)
 
     @property
     def ps_addrs(self):
