@@ -54,7 +54,7 @@ class InstanceManager(object):
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
-        # worker id to (pod name, phase) mapping
+        # worker pod name to (id, phase) mapping
         # phase: None/Pending/Running/Succeeded/Failed/Unknown
         #   None: worker was just launched, haven't received event yet.
         #   Pending: worker pod not started yet
@@ -64,13 +64,9 @@ class InstanceManager(object):
         #   Failed: worker pod is killed for some reason
         #   Unknown: unknown
         self._worker_pods_phase = {}
-        # pod name to worker id mapping
-        self._worker_pod_name_to_id = {}
-
         self._relaunch_deleted_live_worker = True
 
         self._ps_pods_phase = {}
-        self._ps_pod_name_to_id = {}
         self._relaunch_deleted_live_ps = True
 
         self._failed_pods = []
@@ -104,8 +100,7 @@ class InstanceManager(object):
                 envs=copy.deepcopy(self._envs),
             )
             name = pod.metadata.name
-            self._worker_pod_name_to_id[name] = worker_id
-            self._worker_pods_phase[worker_id] = (name, None)
+            self._worker_pods_phase[name] = [worker_id, None]
             self._k8s_client.create_worker_service(worker_id)
 
     def _start_ps(self, ps_id):
@@ -124,8 +119,7 @@ class InstanceManager(object):
                 envs=copy.deepcopy(self._envs),
             )
             name = pod.metadata.name
-            self._ps_pod_name_to_id[name] = ps_id
-            self._ps_pods_phase[ps_id] = (name, None)
+            self._ps_pods_phase[name] = [ps_id, None]
             self._k8s_client.create_ps_service(ps_id)
 
     def _get_addrs(self, num_addrs, addr_get_fn):
@@ -178,22 +172,41 @@ class InstanceManager(object):
     def stop_relaunch_and_remove_workers(self):
         with self._lock:
             self._relaunch_deleted_live_worker = False
-            for worker_id in self._worker_pods_phase:
+            for (worker_id, _) in self._worker_pods_phase.values():
                 self._k8s_client.delete_worker(worker_id)
 
     def stop_relaunch_and_remove_all_ps(self):
         with self._lock:
             self._relaunch_deleted_live_ps = False
-            for ps_id in self._ps_pods_phase:
+            for (ps_id, _) in self._ps_pods_phase.values():
                 self._k8s_client.delete_ps(ps_id)
 
     def get_worker_counter(self):
         with self._lock:
-            return Counter([v for _, v in self._worker_pods_phase.values()])
+            return Counter([v for (_, v) in self._worker_pods_phase.values()])
 
     def get_ps_counter(self):
         with self._lock:
-            return Counter([v for _, v in self._ps_pods_phase.values()])
+            return Counter([v for (_, v) in self._ps_pods_phase.values()])
+
+    def relaunch_worker(self, worker_id):
+        logger.info("Relaunching worker.")
+
+        new_worker_id = self._next_worker_id()
+        self._start_worker(new_worker_id)
+        self._update_addr(
+            worker_id,
+            new_worker_id,
+            self._worker_addrs,
+            addr_get_fn=self._k8s_client.get_worker_service_address,
+        )
+
+    def relaunch_ps(self, ps_id):
+        logger.info("Relaunching ps.")
+        # Note: the ID and service address for relaunched parameter
+        # server are intentionally left unchanged to support fault
+        # tolerance.
+        self._start_ps(ps_id)
 
     def _event_cb(self, event):
         evt_obj = event.get("object")
@@ -215,16 +228,34 @@ class InstanceManager(object):
             # No need to care about master pod
             return
 
-        relaunch_worker = False
-        relaunch_ps = False
-        worker_id = -1
-        ps_id = -1
         with self._lock:
             if pod_name in self._failed_pods:
                 return
+            if pod_name in self._worker_pods_phase:
+                pods_phase = self._worker_pods_phase
+                relaunch_fn = self.relaunch_worker
+                remove_fn = self._remove_worker
+                relaunch_flag = (
+                    self._relaunch_deleted_live_worker and phase != "Succeeded"
+                )
+
+                def recover_fn(worker_id):
+                    self._task_d.recover_tasks(worker_id)
+
+            elif pod_name in self._ps_pods_phase:
+                pods_phase = self._ps_pods_phase
+                relaunch_fn = self.relaunch_ps
+                remove_fn = self._remove_ps
+                relaunch_flag = self._relaunch_deleted_live_ps
+                recover_fn = None
+            else:
+                logger.error("Unknown pod name: %s" % pod_name)
+                return
+
+            pods_phase[pod_name][1] = phase
+            pod_id = pods_phase[pod_name][0]
             # Workaround for memory leak issues in tf eager mode.
             # A pod may fail due to OOM from tf eager mode memory leak.
-            failed_pod = False
             if (
                 evt_type == "MODIFIED"
                 and phase == "Failed"
@@ -236,49 +267,18 @@ class InstanceManager(object):
                 == "OOMKilled"
             ):
                 self._failed_pods.append(pod_name)
-                failed_pod = True
-                logger.info("Pod %s is OOMKilled." % pod_name)
-            if pod_name in self._worker_pod_name_to_id:
-                worker_id = self._worker_pod_name_to_id.get(pod_name)
-                self._worker_pods_phase[worker_id] = (pod_name, phase)
-                if evt_type == "DELETED" or failed_pod:
-                    del self._worker_pods_phase[worker_id]
-                    del self._worker_pod_name_to_id[pod_name]
-                    self._task_d.recover_tasks(worker_id)
-
-                    # If a deleted pod was not "Succeeded", relaunch a worker.
-                    relaunch_worker = (
-                        self._relaunch_deleted_live_worker
-                        and phase != "Succeeded"
-                    )
-
-            elif pod_name in self._ps_pod_name_to_id:
-                ps_id = self._ps_pod_name_to_id.get(pod_name)
-                self._ps_pods_phase[ps_id] = (pod_name, phase)
-                if evt_type == "DELETED" or failed_pod:
-                    del self._ps_pods_phase[ps_id]
-                    del self._ps_pod_name_to_id[pod_name]
-                    relaunch_ps = self._relaunch_deleted_live_ps
-            else:
-                logger.error("Unknown pod name: %s" % pod_name)
-                return
-
-        if relaunch_worker and worker_id >= 0:
-            logger.info("Relaunching worker.")
-            new_worker_id = self._next_worker_id()
-            self._start_worker(new_worker_id)
-            self._update_addr(
-                worker_id,
-                new_worker_id,
-                self._worker_addrs,
-                addr_get_fn=self._k8s_client.get_worker_service_address,
-            )
-        elif relaunch_ps:
-            logger.info("Relaunching ps.")
-            # Note: the ID and service address for relaunched parameter
-            # server are intentionally left unchanged to support fault
-            # tolerance.
-            self._start_ps(ps_id)
+                del pods_phase[pod_name]
+                if recover_fn:
+                    recover_fn(pod_id)
+                if relaunch_flag:
+                    remove_fn(pod_id)
+                    relaunch_fn(pod_id)
+            elif evt_type == "DELETED":
+                del pods_phase[pod_name]
+                if recover_fn:
+                    recover_fn(pod_id)
+                if relaunch_flag:
+                    relaunch_fn(pod_id)
 
     @property
     def ps_addrs(self):
