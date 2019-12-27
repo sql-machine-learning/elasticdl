@@ -172,13 +172,13 @@ class InstanceManager(object):
     def stop_relaunch_and_remove_workers(self):
         with self._lock:
             self._relaunch_deleted_live_worker = False
-            for worker_id in self._worker_pods_phase:
+            for _, (worker_id, _) in self._worker_pods_phase.items():
                 self._k8s_client.delete_worker(worker_id)
 
     def stop_relaunch_and_remove_all_ps(self):
         with self._lock:
             self._relaunch_deleted_live_ps = False
-            for ps_id in self._ps_pods_phase:
+            for _, (ps_id, _) in self._ps_pods_phase.items():
                 self._k8s_client.delete_ps(ps_id)
 
     def get_worker_counter(self):
