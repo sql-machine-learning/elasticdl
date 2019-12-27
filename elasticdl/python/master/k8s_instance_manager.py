@@ -13,7 +13,6 @@ class InstanceManager(object):
     def __init__(
         self,
         task_d,
-        job_name,
         num_workers=1,
         worker_command=None,
         worker_args=None,
@@ -32,7 +31,6 @@ class InstanceManager(object):
         envs=None,
         **kwargs
     ):
-        self._job_name = job_name
         self._num_workers = num_workers
         self._worker_command = worker_command
         self._worker_args = worker_args
