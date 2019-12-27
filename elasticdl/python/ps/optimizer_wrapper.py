@@ -162,7 +162,7 @@ class OptimizerWrapper(object):
         else:
             self._update_parameter_by_gradients(grads_and_vars)
 
-    def _update_parameter_by_gradients(self, grads_and_vars):
+    def _update_parameters_by_gradients(self, grads_and_vars):
         """Update parameters by gradients received by GRPC"""
         grads_and_vars_new = []
         for grad, var in grads_and_vars:
