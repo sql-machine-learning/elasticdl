@@ -207,11 +207,11 @@ class InstanceManager(object):
 
     def relaunch_ps(self, pod_name):
         logger.info("Relaunching ps.")
+        ps_id = self._ps_pods_phase[pod_name][0]
         del self._ps_pods_phase[pod_name]
         # Note: the ID and service address for relaunched parameter
         # server are intentionally left unchanged to support fault
         # tolerance.
-        ps_id = self._ps_pods_phase[pod_name][0]
         self._start_ps(ps_id)
 
     def _event_cb(self, event):
