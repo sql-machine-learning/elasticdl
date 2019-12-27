@@ -172,22 +172,22 @@ class InstanceManager(object):
     def stop_relaunch_and_remove_workers(self):
         with self._lock:
             self._relaunch_deleted_live_worker = False
-            for _, (worker_id, _) in self._worker_pods_phase.items():
+            for (worker_id, _) in self._worker_pods_phase.values():
                 self._k8s_client.delete_worker(worker_id)
 
     def stop_relaunch_and_remove_all_ps(self):
         with self._lock:
             self._relaunch_deleted_live_ps = False
-            for _, (ps_id, _) in self._ps_pods_phase.items():
+            for (ps_id, _) in self._ps_pods_phase.values():
                 self._k8s_client.delete_ps(ps_id)
 
     def get_worker_counter(self):
         with self._lock:
-            return Counter([v for _, v in self._worker_pods_phase.values()])
+            return Counter([v for (_, v) in self._worker_pods_phase.values()])
 
     def get_ps_counter(self):
         with self._lock:
-            return Counter([v for _, v in self._ps_pods_phase.values()])
+            return Counter([v for (_, v) in self._ps_pods_phase.values()])
 
     def relaunch_worker(self, pod_name):
         logger.info("Relaunching worker.")
@@ -239,7 +239,9 @@ class InstanceManager(object):
                 pods_phase = self._worker_pods_phase
                 relaunch_fn = self.relaunch_worker
                 remove_fn = self._remove_worker
-                relaunch_flag = self._relaunch_deleted_live_worker
+                relaunch_flag = (
+                    self._relaunch_deleted_live_worker and phase != "Succeeded"
+                )
             elif pod_name in self._ps_pods_phase:
                 pods_phase = self._ps_pods_phase
                 relaunch_fn = self._relaunch_ps
@@ -268,7 +270,7 @@ class InstanceManager(object):
                     relaunch_fn(pod_name)
             elif evt_type == "DELETED":
                 pods_phase[pod_name][1] = phase
-                if relaunch_flag and phase != "Succeeded":
+                if relaunch_flag:
                     relaunch_fn(pod_name)
 
     @property

@@ -9,10 +9,10 @@ from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 
 class InstanceManagerTest(unittest.TestCase):
-    @unittest.skipIf(
-        os.environ.get("K8S_TESTS", "True") == "False",
-        "No Kubernetes cluster available",
-    )
+    # @unittest.skipIf(
+    #     os.environ.get("K8S_TESTS", "True") == "False",
+    #     "No Kubernetes cluster available",
+    # )
     def testCreateDeleteWorkerPod(self):
         task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1)
         task_d.recover_tasks = MagicMock()
