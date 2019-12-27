@@ -241,10 +241,12 @@ class InstanceManager(object):
                 pods_phase = self._worker_pods_phase
                 relaunch_fn = self.relaunch_worker
                 remove_fn = self._remove_worker
+                relaunch_flag = self._relaunch_deleted_live_worker
             elif pod_name in self._ps_pods_phase:
                 pods_phase = self._ps_pods_phase
                 relaunch_fn = self._relaunch_ps
                 remove_fn = self._remove_ps
+                relaunch_flag = self._relaunch_deleted_live_ps
             else:
                 logger.error("Unknown pod name: %s" % pod_name)
                 return
@@ -263,12 +265,12 @@ class InstanceManager(object):
             ):
                 self._failed_pods.append(pod_name)
                 pods_phase[pod_name][1] = phase
-                if self._relaunch_deleted_live_worker:
+                if relaunch_flag:
                     remove_fn(pods_phase[pod_name][0])
                     relaunch_fn(pod_name)
             elif evt_type == "DELETED":
                 pods_phase[pod_name][1] = phase
-                if self._relaunch_deleted_live_worker and phase != "Succeeded":
+                if relaunch_flag and phase != "Succeeded":
                     relaunch_fn(pod_name)
 
     @property
