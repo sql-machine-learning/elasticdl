@@ -270,7 +270,6 @@ class InstanceManager(object):
                 del pods_phase[pod_name]
                 if recover_fn:
                     recover_fn(pod_id)
-                self._task_d.recover_tasks(pod_id)
                 if relaunch_flag:
                     remove_fn(pod_id)
                     relaunch_fn(pod_id)
