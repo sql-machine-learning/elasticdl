@@ -116,7 +116,7 @@ class InstanceManagerTest(unittest.TestCase):
         current_workers = set()
         live_workers = set()
         with instance_manager._lock:
-            for k, (_, phase) in instance_manager._worker_pods_phase.items():
+            for _, (k, phase) in instance_manager._worker_pods_phase.items():
                 current_workers.add(k)
                 if phase in ["Running", "Pending"]:
                     live_workers.add(k)
@@ -130,7 +130,7 @@ class InstanceManagerTest(unittest.TestCase):
                 break
             time.sleep(1)
             with instance_manager._lock:
-                for k in instance_manager._worker_pods_phase:
+                for _, (k, _) in instance_manager._worker_pods_phase.items():
                     if k not in range(num_workers, num_workers * 2):
                         found = True
         else:
@@ -178,7 +178,7 @@ class InstanceManagerTest(unittest.TestCase):
         all_current_ps = set()
         all_live_ps = set()
         with instance_manager._lock:
-            for k, (_, phase) in instance_manager._ps_pods_phase.items():
+            for _, (k, phase) in instance_manager._ps_pods_phase.items():
                 all_current_ps.add(k)
                 if phase in ["Running", "Pending"]:
                     all_live_ps.add(k)
@@ -194,7 +194,7 @@ class InstanceManagerTest(unittest.TestCase):
                 break
             time.sleep(1)
             with instance_manager._lock:
-                for k in instance_manager._ps_pods_phase:
+                for _, (k, _) in instance_manager._ps_pods_phase.items():
                     if k not in all_current_ps:
                         found = True
         else:
