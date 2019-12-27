@@ -34,6 +34,7 @@ class ParameterServer(object):
         self._set_lr_scheduler(model_module, args.learning_rate_scheduler)
         self.ps_id = args.ps_id
         self.num_ps_pods = args.num_ps_pods
+        self.num_workers = args.num_workers
         # Create Parameters instance
         self.parameters = Parameters()
         if args.master_addr is None:
@@ -94,8 +95,10 @@ class ParameterServer(object):
             )
 
     def prepare(self):
+        max_workers = min(self.num_workers, 64)
+        self.logger.info("The max threads in PS servers is %d" % max_workers)
         server = grpc.server(
-            futures.ThreadPoolExecutor(max_workers=64),
+            futures.ThreadPoolExecutor(max_workers=max_workers),
             options=[
                 ("grpc.max_send_message_length", GRPC.MAX_SEND_MESSAGE_LENGTH),
                 (
