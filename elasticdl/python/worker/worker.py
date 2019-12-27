@@ -838,7 +838,6 @@ class Worker(object):
         if not gen:
             return None
 
-        @tf.function
         def create_dataset():
             eval_dataset = tf.data.Dataset.from_generator(
                 gen, self._task_data_service.data_reader.records_output_types
