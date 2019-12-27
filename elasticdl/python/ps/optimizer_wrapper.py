@@ -158,9 +158,9 @@ class OptimizerWrapper(object):
 
         if self._has_embedding:
             with self._update_gradient_lock:
-                self._update_parameter_by_gradients(grads_and_vars)
+                self._update_parameters_by_gradients(grads_and_vars)
         else:
-            self._update_parameter_by_gradients(grads_and_vars)
+            self._update_parameters_by_gradients(grads_and_vars)
 
     def _update_parameters_by_gradients(self, grads_and_vars):
         """Update parameters by gradients received by GRPC"""
