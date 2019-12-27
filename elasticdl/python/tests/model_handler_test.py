@@ -8,7 +8,7 @@ from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.keras.layers import SparseEmbedding
 
-EMBEDDING_INPUT_DIM = 200000
+EMBEDDING_INPUT_DIM = 300000
 
 
 class CustomModel(tf.keras.models.Model):
