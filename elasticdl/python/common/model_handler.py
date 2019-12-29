@@ -44,6 +44,17 @@ def _convert_embedding_table_to_numpy_array(embedding_table, embedding_shape):
     return embedding_weights
 
 
+def _need_partition_embedding(layer):
+    """The embedding layer will be partitioned on multiple
+    PS instances if the memory of the layer.train_weights is
+    bigger than 2MB.
+    """
+    EMBEDDING_SIZE_THRESHOLD_FOR_PARTITION = 2 * 1024 * 1024  # 2MB
+    FLOAT32_BYTES = 4
+    weights_memory = layer.input_dim * layer.output_dim * FLOAT32_BYTES
+    return weights_memory > EMBEDDING_SIZE_THRESHOLD_FOR_PARTITION
+
+
 class ModelHandler(metaclass=abc.ABCMeta):
     """Generate the model to train in ElasticDL for different distributed
     strategies and export trained model in ElasticDL to SavedModel.
@@ -193,7 +204,10 @@ class ParameterServerModelHandler(ModelHandler):
         """
 
         def _clone_function(layer):
-            if type(layer) in [tf.keras.layers.Embedding, SparseEmbedding]:
+            if type(layer) in [
+                tf.keras.layers.Embedding,
+                SparseEmbedding,
+            ] and _need_partition_embedding(layer):
                 logger.debug(
                     "Replace {} with {}".format(layer.name, Embedding)
                 )
@@ -269,7 +283,11 @@ class ParameterServerModelHandler(ModelHandler):
         `elasticdl.layers.Embedding` layers.
         """
         for name, value in model.__dict__.items():
-            if type(value) == tf.keras.layers.Embedding:
+            if type(
+                value
+            ) == tf.keras.layers.Embedding and _need_partition_embedding(
+                value
+            ):
                 logger.info(
                     "Replace {} layer with "
                     "elasticdl.layers.Embedding".format(value)
@@ -285,7 +303,9 @@ class ParameterServerModelHandler(ModelHandler):
                     input_length=value.input_length,
                 )
                 setattr(model, name, embedding_layer)
-            elif type(value) == SparseEmbedding:
+            elif type(value) == SparseEmbedding and _need_partition_embedding(
+                value
+            ):
                 logger.info(
                     "Replace {} layer with "
                     "elasticdl.layers.Embedding".format(value)
