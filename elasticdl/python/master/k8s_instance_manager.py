@@ -231,7 +231,7 @@ class InstanceManager(object):
         if pod_name == self._k8s_client.get_master_pod_name():
             # No need to care about master pod
             return
-
+        relaunch_ps = False
         with self._lock:
             if pod_name in self._failed_pods:
                 return
@@ -252,7 +252,9 @@ class InstanceManager(object):
                     self._failed_pods.append(pod_name)
                     del self._ps_pods_phase[pod_name]
                     if self._relaunch_deleted_live_ps:
-                        self.relaunch_ps(pod_id)
+                        relaunch_ps = True
+        if relaunch_ps:
+            self.relaunch_ps(pod_id)
 
     @property
     def ps_addrs(self):
