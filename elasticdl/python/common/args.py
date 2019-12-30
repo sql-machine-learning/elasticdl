@@ -538,6 +538,13 @@ def add_common_args_between_master_and_worker(parser):
         "If 0, keep all.",
         default=0,
     )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        help="If a task reaches timeout value, the master will"
+        "move the task from doing to todo, and relaunch the worker",
+        default=300,
+    )
 
 
 def parse_master_args(master_args=None):

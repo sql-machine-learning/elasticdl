@@ -29,6 +29,7 @@ class InstanceManager(object):
         image_pull_policy=None,
         restart_policy="Never",
         envs=None,
+        job_name=None,
         **kwargs
     ):
         self._num_workers = num_workers
@@ -71,7 +72,9 @@ class InstanceManager(object):
 
         self._failed_pods = []
 
-        self._k8s_client = k8s.Client(event_callback=self._event_cb, **kwargs)
+        self._k8s_client = k8s.Client(
+            event_callback=self._event_cb, job_name=job_name, **kwargs
+        )
         self._ps_addrs = self._get_addrs(
             self._num_ps, self._k8s_client.get_ps_service_address
         )
@@ -153,7 +156,8 @@ class InstanceManager(object):
     def _remove_worker(self, worker_id):
         logger.info("Removing worker: %d", worker_id)
         with self._lock:
-            if worker_id not in self._worker_pods_phase:
+            name = self._k8s_client.get_worker_pod_name(worker_id)
+            if name not in self._worker_pods_phase:
                 logger.error("Unknown worker id: %s" % worker_id)
                 return
 
@@ -163,7 +167,8 @@ class InstanceManager(object):
     def _remove_ps(self, ps_id):
         logger.info("Removing PS: %d", ps_id)
         with self._lock:
-            if ps_id not in self._ps_pods_phase:
+            name = self._k8s_client.get_ps_pod_name(ps_id)
+            if name not in self._ps_pods_phase:
                 logger.error("Unknown PS id: %s" % ps_id)
                 return
 
@@ -191,10 +196,9 @@ class InstanceManager(object):
 
     def relaunch_worker(self, worker_id):
         logger.info("Relaunching worker.")
-
         new_worker_id = self._next_worker_id()
         self._start_worker(new_worker_id)
-        self._update_addr(
+        self._worker_addrs = self._update_addr(
             worker_id,
             new_worker_id,
             self._worker_addrs,
@@ -231,54 +235,24 @@ class InstanceManager(object):
         with self._lock:
             if pod_name in self._failed_pods:
                 return
-            if pod_name in self._worker_pods_phase:
-                pods_phase = self._worker_pods_phase
-                relaunch_fn = self.relaunch_worker
-                remove_fn = self._remove_worker
-                relaunch_flag = (
-                    self._relaunch_deleted_live_worker and phase != "Succeeded"
-                )
 
-                def recover_fn(worker_id):
-                    self._task_d.recover_tasks(worker_id)
-
-            elif pod_name in self._ps_pods_phase:
-                pods_phase = self._ps_pods_phase
-                relaunch_fn = self.relaunch_ps
-                remove_fn = self._remove_ps
-                relaunch_flag = self._relaunch_deleted_live_ps
-                recover_fn = None
-            else:
-                logger.error("Unknown pod name: %s" % pod_name)
-                return
-
-            pods_phase[pod_name][1] = phase
-            pod_id = pods_phase[pod_name][0]
-            # Workaround for memory leak issues in tf eager mode.
-            # A pod may fail due to OOM from tf eager mode memory leak.
-            if (
-                evt_type == "MODIFIED"
-                and phase == "Failed"
-                and evt_obj.status.container_statuses
-                and evt_obj.status.container_statuses[0].state.terminated
-                and evt_obj.status.container_statuses[
-                    0
-                ].state.terminated.reason
-                == "OOMKilled"
-            ):
-                self._failed_pods.append(pod_name)
-                del pods_phase[pod_name]
-                if recover_fn:
-                    recover_fn(pod_id)
-                if relaunch_flag:
-                    remove_fn(pod_id)
-                    relaunch_fn(pod_id)
-            elif evt_type == "DELETED":
-                del pods_phase[pod_name]
-                if recover_fn:
-                    recover_fn(pod_id)
-                if relaunch_flag:
-                    relaunch_fn(pod_id)
+            if pod_name in self._ps_pods_phase:
+                self._ps_pods_phase[pod_name][1] = phase
+                pod_id = self._ps_pods_phase[pod_name][0]
+                if (
+                    evt_type == "MODIFIED"
+                    and phase == "Failed"
+                    and evt_obj.status.container_statuses
+                    and evt_obj.status.container_statuses[0].state.terminated
+                    and evt_obj.status.container_statuses[
+                        0
+                    ].state.terminated.reason
+                    == "OOMKilled"
+                ) or (evt_type == "DELETED"):
+                    self._failed_pods.append(pod_name)
+                    del self._ps_pods_phase[pod_name]
+                    if self._relaunch_deleted_live_ps:
+                        self.relaunch_ps(pod_id)
 
     @property
     def ps_addrs(self):
