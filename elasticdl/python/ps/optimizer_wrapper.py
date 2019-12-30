@@ -32,14 +32,11 @@ def _get_embedding_layer_name_from_var(var):
 # 594f8c54e/tensorflow/python/keras/optimizer_v2/optimizer_v2.py#L1033
 def _var_key(var):
     """Key for representing a primary variable, for looking up slots.
-
     In graph mode the name is derived from the var shared name.
     In eager mode the name is derived from the var unique id.
     If distribution strategy exists, get the primary variable first.
-
     Arguments:
         var: the variable.
-
     Returns:
         the unique name of the variable.
     """
@@ -55,7 +52,6 @@ def _var_key(var):
 
 class OptimizerWrapper(object):
     """ ElasticDL optimizer wrapper.
-
     If model does not use ElasticDL embedding layer, `OptimizerWrapper`
     does nothing but calls `apply_gradients` function of TensorFlow optimizer.
     Otherwise, `OptimizerWrapper` looks up embedding vectors and slot values
@@ -76,7 +72,6 @@ class OptimizerWrapper(object):
             same time. If `lookup_embedding_func`/`update_embedding_func`
             is not None, use parameter server to lookup/update embedding.
             Otherwise use Redis.
-
         Arguments:
             opt: A TensorFlow optimizer instance.
             kv_store_endpoint: The endpoint to kv store.
@@ -147,7 +142,6 @@ class OptimizerWrapper(object):
 
     def apply_gradients(self, grads_and_vars):
         """Update variable values.
-
         Args:
             grads_and_vars: A list of (gradient, variable) pairs. If the
                 variable is from ElasticDL embedding layer, it should be a
@@ -197,7 +191,6 @@ class OptimizerWrapper(object):
 
     def _create_embedding_variable(self, name, initial_value):
         """Creates a TensorFlow variable using given initial value.
-
         Note that this function saves the created variable to
         `self._tls._embed_variables`.
         """
