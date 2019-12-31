@@ -21,9 +21,7 @@ class ODPSDataReader(AbstractDataReader):
         )
 
         for record in reader.read_batch(
-            start=task.start,
-            end=task.end,
-            columns=self._metadata.column_names
+            start=task.start, end=task.end, columns=self._metadata.column_names
         ):
             yield record
 
