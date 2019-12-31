@@ -77,9 +77,9 @@ class Worker(object):
         self.logger = get_logger("Worker", level=args.log_level.upper())
 
         if set_parallelism:
-            # Explicitly set the parallelism will avoid multi-process hang.
+            # Explicitly setting the parallelism will avoid multi-process hangs
             # Maybe due to an unknown bug in Tensorflow?
-            # Must called before any TensorFlow is initialized, so by default
+            # Must called before TensorFlow is initialized. So by default
             # do not set_parallelism to make unittests happy.
             num_threads = os.cpu_count()
             tf.config.threading.set_inter_op_parallelism_threads(num_threads)
