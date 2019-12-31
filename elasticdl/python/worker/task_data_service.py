@@ -113,13 +113,12 @@ class TaskDataService(object):
         """
         if not task:
             return None
-        tasks = [task]
 
         def gen():
-            for task in tasks:
-                for data in self.data_reader.read_records(task):
-                    if data:
-                        yield data
+            records = self.data_reader.read_records(task)
+            for data in self.data_reader.preprocess_records(records):
+                if data:
+                    yield data
 
         return gen
 
