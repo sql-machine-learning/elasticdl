@@ -61,6 +61,7 @@ class Worker(object):
         ps_channels=None,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
         max_allreduce_retry_num=DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
+        set_parallelism=False,
     ):
         """
         Arguments:
