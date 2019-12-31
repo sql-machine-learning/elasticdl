@@ -226,17 +226,14 @@ class ODPSReader(object):
             columns = self._odps_table.schema.names
         while retry_count < max_retries:
             try:
-                batch_record = []
                 with self._odps_table.open_reader(
-                    partition=self._partition, reopen=True
+                    partition=self._partition, reopen=False
                 ) as reader:
                     for record in reader.read(
                         start=start, count=end - start, columns=columns
                     ):
-                        batch_record.append(
-                            [str(record[column]) for column in columns]
-                        )
-                return batch_record
+                        yield [str(record[column]) for column in columns]
+                    return
             except Exception as e:
                 if retry_count >= max_retries:
                     raise Exception("Exceeded maximum number of retries")
