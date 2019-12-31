@@ -319,6 +319,14 @@ def add_train_params(parser):
 
     add_bool_param(
         parser=parser,
+        name="--sync_version_tolerance",
+        type=int,
+        help="The maximum model version difference between reported gradients "
+        "and PS that synchronous SGD can accepts.",
+        default=0,
+    )
+    add_bool_param(
+        parser=parser,
         name="--use_async",
         default=False,
         help="True for asynchronous SGD, False for synchronous SGD",

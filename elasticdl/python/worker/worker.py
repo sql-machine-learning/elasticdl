@@ -5,7 +5,6 @@ import traceback
 
 import numpy as np
 import tensorflow as tf
-from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
@@ -99,6 +98,7 @@ class Worker(object):
                     elasticdl_pb2_grpc.PserverStub(c) for c in ps_channels
                 ]
                 self._var_to_ps = {}
+                self._ps_num = len(self._ps_stubs)
         self._distribution_strategy = args.distribution_strategy
         if (
             self._distribution_strategy
@@ -154,6 +154,7 @@ class Worker(object):
         self.set_model(model_inst)
 
         self._model_version = -1
+        self._model_versions_from_ps = [-1 for _ in range(self._ps_num)]
         self._task_data_service = TaskDataService(
             self,
             self._job_type == JobType.TRAINING_WITH_EVALUATION,
@@ -291,15 +292,15 @@ class Worker(object):
 
     def get_model(self):
         self._timing.start_record_time("get_model")
-        model_version = -1
         variable_future_and_id_pairs = []
-        req = empty_pb2.Empty()
         if self._use_multi_ps:
             self.init_ps_var_partition()
         for ps_id, stub in enumerate(self._ps_stubs):
             if ps_id not in self._ps_vars:
                 continue
             # async grpc call
+            req = elasticdl_pb2.PullVariableRequest()
+            req.current_model_version = self._model_versions_from_ps[ps_id]
             var_future = stub.pull_variable.future(req)
             variable_future_and_id_pairs.append((var_future, ps_id))
 
@@ -308,6 +309,8 @@ class Worker(object):
             if not res.model_init_status:
                 # push variable to ps for initialization
                 self.report_variable_to_ps(ps_id)
+                req = elasticdl_pb2.PullVariableRequest()
+                req.current_model_version = self._model_versions_from_ps[ps_id]
                 res = self._ps_stubs[ps_id].pull_variable(req)
                 if not res.model_init_status:
                     # TODO: support PS fault-tolerance
@@ -315,12 +318,15 @@ class Worker(object):
                         "PS pod %d cannot be initialized" % ps_id
                     )
 
-            for tensor_pb in res.model.param:
-                tensor = Tensor.from_tensor_pb(tensor_pb)
-                self._non_embed_vars[tensor.name].assign(tensor.to_ndarray())
+            if res.model.version > self._model_versions_from_ps[ps_id]:
+                for tensor_pb in res.model.param:
+                    tensor = Tensor.from_tensor_pb(tensor_pb)
+                    self._non_embed_vars[tensor.name].assign(
+                        tensor.to_ndarray()
+                    )
+                self._model_versions_from_ps[ps_id] = res.model.version
 
-            model_version = max(model_version, res.model.version)
-        self._model_version = model_version
+        self._model_version = max(self._model_versions_from_ps)
         self._timing.end_record_time("get_model")
 
     def pull_embedding_vector(self, layer_name, embedding_ids):
@@ -328,7 +334,7 @@ class Worker(object):
         ps_ids = {}
         ps_ids_index = {}
         for idx, embedding_id in enumerate(embedding_ids):
-            ps_id = int_to_id(embedding_id, len(self._ps_stubs))
+            ps_id = int_to_id(embedding_id, self._ps_num)
             ps_ids.setdefault(ps_id, []).append(embedding_id)
             ps_ids_index.setdefault(ps_id, []).append(idx)
 
@@ -367,9 +373,7 @@ class Worker(object):
         ps_vars = {}
         for v in self._non_embed_vars.values():
             if v.name not in self._var_to_ps:
-                self._var_to_ps[v.name] = string_to_id(
-                    v.name, len(self._ps_stubs)
-                )
+                self._var_to_ps[v.name] = string_to_id(v.name, self._ps_num)
             ps_id = self._var_to_ps[v.name]
             if ps_id not in ps_vars:
                 ps_vars[ps_id] = [v]
@@ -398,7 +402,7 @@ class Worker(object):
                 # tf.keras.initializers. Keep aligned between these two.
                 embedding_info.initializer = "uniform"
 
-        for ps_id in range(len(self._ps_stubs)):
+        for ps_id in range(self._ps_num):
             self._ps_stubs[ps_id].push_embedding_info(model)
 
     def report_variable_to_ps(self, ps_id):
@@ -413,7 +417,7 @@ class Worker(object):
 
     def report_variable(self):
         # TODO: call `push_model` in parallel
-        for ps_id in range(len(self._ps_stubs)):
+        for ps_id in range(self._ps_num):
             self.report_variable_to_ps(ps_id)
 
     def _collect_edl_embedding_name_values(self):
@@ -440,8 +444,7 @@ class Worker(object):
     def report_gradient_to_ps(self, grads):
         self._timing.start_record_time("report_gradient")
         reqs = [
-            elasticdl_pb2.PushGradientRequest()
-            for i in range(len(self._ps_stubs))
+            elasticdl_pb2.PushGradientRequest() for i in range(self._ps_num)
         ]
         ps_grads = {}
         non_embed_vars_n = len(self._non_embed_vars)
@@ -498,7 +501,7 @@ class Worker(object):
                 )
 
                 results = scatter_embedding_vector(
-                    g_values.numpy(), g_indices.numpy(), len(self._ps_stubs)
+                    g_values.numpy(), g_indices.numpy(), self._ps_num
                 )
 
                 for ps_id in results:
@@ -509,9 +512,9 @@ class Worker(object):
                     )
 
         report_futures = []
-        for ps_id in range(len(self._ps_stubs)):
+        for ps_id in range(self._ps_num):
             req = reqs[ps_id]
-            req.model_version = self._model_version
+            req.model_version = self._model_versions_from_ps[ps_id]
             report_future = self._ps_stubs[ps_id].push_gradient.future(req)
             report_futures.append(report_future)
 

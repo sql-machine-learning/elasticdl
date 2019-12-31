@@ -22,6 +22,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         optimizer,
         lr_scheduler="",
         lr_staleness_modulation=False,
+        sync_version_tolerance=0,
         use_async=False,
         evaluation_steps=0,
         master_channel=None,
@@ -39,6 +40,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._optimizer = optimizer
         self._lr_scheduler = lr_scheduler
         self._lr_staleness_modulation = lr_staleness_modulation
+        self._sync_version_tolerance = sync_version_tolerance
         self._use_async = use_async
         self._eval_steps = evaluation_steps
         self._checkpoint_saver = checkpoint_saver
@@ -65,10 +67,12 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         if not self._use_async:
             self._lock.acquire()
         res.model.version = self._parameters.version
-        for name, var in self._parameters.non_embedding_params.items():
-            emplace_tensor_pb_from_ndarray(
-                res.model.param, var.numpy(), name=name
-            )
+        # No need to send variables if the requester has the latest version.
+        if self._parameters.version > request.current_model_version:
+            for name, var in self._parameters.non_embedding_params.items():
+                emplace_tensor_pb_from_ndarray(
+                    res.model.param, var.numpy(), name=name
+                )
         if not self._use_async:
             self._lock.release()
         res.model_init_status = True
@@ -128,7 +132,10 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             res.model_version = self._parameters.version
             return res
         else:
-            if request.model_version < self._parameters.version:
+            if (
+                request.model_version
+                < self._parameters.version - self._sync_version_tolerance
+            ):
                 res.accepted = False
                 res.model_version = self._parameters.version
                 return res
