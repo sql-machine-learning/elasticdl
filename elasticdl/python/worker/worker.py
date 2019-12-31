@@ -409,6 +409,7 @@ class Worker(object):
 
     def report_variable_to_ps(self, ps_id):
         model = elasticdl_pb2.Model()
+        model.version = self._model_versions_from_ps[ps_id]
         if ps_id in self._ps_vars:
             vars = self._ps_vars[ps_id]
             for var in vars:

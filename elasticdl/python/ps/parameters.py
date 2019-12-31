@@ -131,7 +131,7 @@ class Parameters(object):
             embeddings_pb = model_pb.embedding_table_info
             self.init_embedding_params(embeddings_pb)
             self._restore_params_from_pb(tensors_pb)
-            self.version = model_pb.version
+            self.version = max(0, model_pb.version)
             self.init_status = True
             return True
         return False
