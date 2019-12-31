@@ -19,16 +19,11 @@ class ODPSDataReader(AbstractDataReader):
         reader = self._get_reader(
             table_name=self._get_odps_table_name(task.shard_name)
         )
-        if self._metadata.column_names is None:
-            columns = self._kwargs.get("columns")
-            self._metadata.column_names = (
-                reader._odps_table.schema.names if columns is None else columns
-            )
-        records = reader.read_batch(
+
+        for record in reader.read_batch(
             start=task.start, end=task.end, columns=self._metadata.column_names
-        )
-        for batch in records:
-            yield batch
+        ):
+            yield record
 
     def create_shards(self):
         check_required_kwargs(["table", "records_per_task"], self._kwargs)
