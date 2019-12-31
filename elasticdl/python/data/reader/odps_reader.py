@@ -19,7 +19,6 @@ class ODPSDataReader(AbstractDataReader):
         reader = self._get_reader(
             table_name=self._get_odps_table_name(task.shard_name)
         )
-        self._init_odps_config_if_needed(reader)
 
         for record in reader.read_batch(
             start=task.start,
