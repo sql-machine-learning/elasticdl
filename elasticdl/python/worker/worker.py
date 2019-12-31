@@ -74,6 +74,13 @@ class Worker(object):
         """
         self._args = args
         self.logger = get_logger("Worker", level=args.log_level.upper())
+
+        # Explicitly set the parallelism will avoid multi-process hang.
+        # Maybe due to an unknown bug in Tensorflow?
+        num_threads = os.cpu_count()
+        tf.config.threading.set_inter_op_parallelism_threads(num_threads)
+        tf.config.threading.set_intra_op_parallelism_threads(num_threads)
+
         if channel is None:
             self._stub = None
         else:
