@@ -241,6 +241,8 @@ class ODPSReader(object):
                 retry_count += 1
 
     def record_generator(self, start, end, columns=None):
+        """Generate records from an ODPS table
+        """
         if columns is None:
             columns = self._odps_table.schema.names
         with self._odps_table.open_reader(
