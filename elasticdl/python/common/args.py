@@ -316,10 +316,8 @@ def add_train_params(parser):
         default="",
         help="The path to save the final trained model",
     )
-
-    add_bool_param(
-        parser=parser,
-        name="--sync_version_tolerance",
+    parser.add_argument(
+        "--sync_version_tolerance",
         type=int,
         help="The maximum model version difference between reported gradients "
         "and PS that synchronous SGD can accepts.",

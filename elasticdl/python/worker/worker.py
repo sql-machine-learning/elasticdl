@@ -99,6 +99,8 @@ class Worker(object):
                 ]
                 self._var_to_ps = {}
                 self._ps_num = len(self._ps_stubs)
+        else:
+            self._ps_num = 0
         self._distribution_strategy = args.distribution_strategy
         if (
             self._distribution_strategy
