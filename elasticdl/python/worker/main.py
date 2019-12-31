@@ -31,7 +31,12 @@ def main():
             )
             ps_channels.append(channel)
 
-    worker = Worker(args, channel=master_channel, ps_channels=ps_channels)
+    worker = Worker(
+        args,
+        channel=master_channel,
+        ps_channels=ps_channels,
+        set_parallelism=True,
+    )
     worker.run()
 
 
