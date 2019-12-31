@@ -14,6 +14,9 @@ from elasticdl.python.common.constants import ODPSConfig
 from elasticdl.python.common.log_utils import default_logger as logger
 
 
+MAX_DOWNLOAD_SIZE = 20 * 1024 * 1024  # 20MB
+
+
 def _nested_list_size(l):
     """
     Obtains the memory size for the nested list.
@@ -266,21 +269,40 @@ class ODPSReader(object):
 
         sample_size = 10
         max_cache_batch_count = 50
-        upper_bound = 20 * 1000000
 
         if table_size < sample_size:
             return 1
 
-        batch = self.read_batch(start=0, end=sample_size, columns=columns)
-
-        size_sample = _nested_list_size(batch)
-        size_per_batch = size_sample * batch_size / sample_size
+        record_size = self._estimate_record_size(columns)
+        size_per_batch = record_size * batch_size
 
         # `size_per_batch * cache_batch_count` will
         # not exceed upper bound but will always greater than 0
-        cache_batch_count_estimate = max(int(upper_bound / size_per_batch), 1)
+        cache_batch_count_estimate = max(
+            int(MAX_DOWNLOAD_SIZE / size_per_batch), 1
+        )
 
         return min(cache_batch_count_estimate, max_cache_batch_count)
+
+    def estimate_record_count_each_download(self, columns):
+        """Estimate the count of records with 20MB to download
+        """
+        record_size = self._estimate_record_size(columns)
+        max_count = int(MAX_DOWNLOAD_SIZE / record_size)
+        return max_count
+
+    def _estimate_record_size(self, columns):
+        """Estimate the average size of each record in the ODPS table.
+        """
+        sample_count = 10
+        columns = self._odps_table.schema.names if columns is None else columns
+        sample_records = self.read_batch(
+            start=0, end=sample_count, columns=columns
+        )
+        sample_size = _nested_list_size(sample_records)
+        record_size = sample_size / sample_count
+
+        return record_size
 
 
 class ODPSWriter(object):

@@ -13,22 +13,41 @@ class ODPSDataReader(AbstractDataReader):
     def __init__(self, **kwargs):
         AbstractDataReader.__init__(self, **kwargs)
         self._kwargs = kwargs
-        self._metadata = Metadata(column_names=None)
+        self._metadata = Metadata(column_names=kwargs.get("columns", None))
+        self._max_download_record_count = None
 
     def read_records(self, task):
         reader = self._get_reader(
             table_name=self._get_odps_table_name(task.shard_name)
         )
+        self._init_odps_config_if_needed(reader)
+        download_chunk_start_indices = list(
+            range(task.start, task.end, self._max_download_record_count)
+        )
+        for chunk_start in download_chunk_start_indices:
+            chunk_end = min(
+                task.end, chunk_start + self._max_download_record_count
+            )
+            records = reader.read_batch(
+                start=chunk_start,
+                end=chunk_end,
+                columns=self._metadata.column_names
+            )
+            for batch in records:
+                yield batch
+
+    def _init_odps_config_if_needed(self, reader):
         if self._metadata.column_names is None:
             columns = self._kwargs.get("columns")
             self._metadata.column_names = (
                 reader._odps_table.schema.names if columns is None else columns
             )
-        records = reader.read_batch(
-            start=task.start, end=task.end, columns=self._metadata.column_names
-        )
-        for batch in records:
-            yield batch
+        if self._max_download_record_count is None:
+            self._max_download_record_count = (
+                reader.estimate_record_count_each_download(
+                    self._metadata.column_names
+                )
+            )
 
     def create_shards(self):
         check_required_kwargs(["table", "records_per_task"], self._kwargs)
