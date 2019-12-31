@@ -226,14 +226,8 @@ class ODPSReader(object):
             columns = self._odps_table.schema.names
         while retry_count < max_retries:
             try:
-                with self._odps_table.open_reader(
-                    partition=self._partition, reopen=False
-                ) as reader:
-                    for record in reader.read(
-                        start=start, count=end - start, columns=columns
-                    ):
-                        yield [str(record[column]) for column in columns]
-                    return
+                record_gen = self.record_generator(start, end, columns)
+                return [record for record in record_gen]
             except Exception as e:
                 if retry_count >= max_retries:
                     raise Exception("Exceeded maximum number of retries")
@@ -245,6 +239,19 @@ class ODPSReader(object):
                 )
                 time.sleep(5)
                 retry_count += 1
+
+    def record_generator(self, start, end, columns=None):
+        """Generate records from an ODPS table
+        """
+        if columns is None:
+            columns = self._odps_table.schema.names
+        with self._odps_table.open_reader(
+            partition=self._partition, reopen=False
+        ) as reader:
+            for record in reader.read(
+                start=start, count=end - start, columns=columns
+            ):
+                yield [str(record[column]) for column in columns]
 
     def get_table_size(self):
         with self._odps_table.open_reader(partition=self._partition) as reader:
