@@ -61,6 +61,7 @@ class Worker(object):
         ps_channels=None,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
         max_allreduce_retry_num=DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
+        set_parallelism=False,
     ):
         """
         Arguments:
@@ -74,6 +75,16 @@ class Worker(object):
         """
         self._args = args
         self.logger = get_logger("Worker", level=args.log_level.upper())
+
+        if set_parallelism:
+            # Explicitly setting the parallelism will avoid multi-process hangs
+            # Maybe due to an unknown bug in Tensorflow?
+            # Must called before TensorFlow is initialized.
+            # Not set_parallelism by default to make unittests happy.
+            num_threads = os.cpu_count()
+            tf.config.threading.set_inter_op_parallelism_threads(num_threads)
+            tf.config.threading.set_intra_op_parallelism_threads(num_threads)
+
         if channel is None:
             self._stub = None
         else:
