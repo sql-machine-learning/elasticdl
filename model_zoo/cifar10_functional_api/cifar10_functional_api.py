@@ -2,7 +2,7 @@ import os
 
 import tensorflow as tf
 
-from elasticdl.python.common.constants import Mode, ODPSConfig
+from elasticdl.python.common.constants import MaxComputeConfig, Mode
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.data.odps_io import ODPSWriter, is_odps_configured
 from elasticdl.python.worker.prediction_outputs_processor import (
@@ -163,10 +163,10 @@ class PredictionOutputsProcessor(BasePredictionOutputsProcessor):
     def __init__(self):
         if is_odps_configured():
             self.odps_writer = ODPSWriter(
-                os.environ[ODPSConfig.PROJECT_NAME],
-                os.environ[ODPSConfig.ACCESS_ID],
-                os.environ[ODPSConfig.ACCESS_KEY],
-                os.environ[ODPSConfig.ENDPOINT],
+                os.environ[MaxComputeConfig.PROJECT_NAME],
+                os.environ[MaxComputeConfig.ACCESS_ID],
+                os.environ[MaxComputeConfig.ACCESS_KEY],
+                os.environ[MaxComputeConfig.ENDPOINT],
                 "cifar10_prediction_outputs",
                 # TODO: Print out helpful error message if the columns and
                 # column_types do not match with the prediction outputs

@@ -16,7 +16,7 @@ from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import (
     DistributionStrategy,
     JobType,
-    ODPSConfig,
+    MaxComputeConfig,
 )
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.model_utils import (
@@ -508,21 +508,21 @@ def create_iris_odps_table(odps_client, project_name, table_name):
 
 
 def get_odps_client_from_env():
-    project = os.environ[ODPSConfig.PROJECT_NAME]
-    access_id = os.environ[ODPSConfig.ACCESS_ID]
-    access_key = os.environ[ODPSConfig.ACCESS_KEY]
-    endpoint = os.environ.get(ODPSConfig.ENDPOINT)
+    project = os.environ[MaxComputeConfig.PROJECT_NAME]
+    access_id = os.environ[MaxComputeConfig.ACCESS_ID]
+    access_key = os.environ[MaxComputeConfig.ACCESS_KEY]
+    endpoint = os.environ.get(MaxComputeConfig.ENDPOINT)
     return ODPS(access_id, access_key, project, endpoint)
 
 
 def create_iris_odps_table_from_env():
-    project = os.environ[ODPSConfig.PROJECT_NAME]
+    project = os.environ[MaxComputeConfig.PROJECT_NAME]
     table_name = os.environ["ODPS_TABLE_NAME"]
     create_iris_odps_table(get_odps_client_from_env(), project, table_name)
 
 
 def delete_iris_odps_table_from_env():
-    project = os.environ[ODPSConfig.PROJECT_NAME]
+    project = os.environ[MaxComputeConfig.PROJECT_NAME]
     table_name = os.environ["ODPS_TABLE_NAME"]
     get_odps_client_from_env().delete_table(
         table_name, project, if_exists=True

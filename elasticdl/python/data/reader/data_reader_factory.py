@@ -1,6 +1,6 @@
 import os
 
-from elasticdl.python.common.constants import ODPSConfig, ReaderType
+from elasticdl.python.common.constants import MaxComputeConfig, ReaderType
 from elasticdl.python.data.odps_io import is_odps_configured
 from elasticdl.python.data.reader.csv_reader import CSVDataReader
 from elasticdl.python.data.reader.odps_reader import ODPSDataReader
@@ -17,11 +17,11 @@ def create_data_reader(data_origin, records_per_task=None, **kwargs):
     if reader_type is None:
         if is_odps_configured():
             return ODPSDataReader(
-                project=os.environ[ODPSConfig.PROJECT_NAME],
-                access_id=os.environ[ODPSConfig.ACCESS_ID],
-                access_key=os.environ[ODPSConfig.ACCESS_KEY],
+                project=os.environ[MaxComputeConfig.PROJECT_NAME],
+                access_id=os.environ[MaxComputeConfig.ACCESS_ID],
+                access_key=os.environ[MaxComputeConfig.ACCESS_KEY],
                 table=data_origin,
-                endpoint=os.environ.get(ODPSConfig.ENDPOINT),
+                endpoint=os.environ.get(MaxComputeConfig.ENDPOINT),
                 records_per_task=records_per_task,
                 **kwargs,
             )
@@ -34,15 +34,15 @@ def create_data_reader(data_origin, records_per_task=None, **kwargs):
     elif reader_type == ReaderType.ODPS_READER:
         if not is_odps_configured:
             raise ValueError(
-                "ODPS_ACCESS_ID, ODPS_ACCESS_KEY and ODPS_PROJECT_NAME ",
+                "MAXCOMPUTE_AK, MAXCOMPUTE_SK and MAXCOMPUTE_PROJECT ",
                 "must be configured in envs",
             )
         return ODPSDataReader(
-            project=os.environ[ODPSConfig.PROJECT_NAME],
-            access_id=os.environ[ODPSConfig.ACCESS_ID],
-            access_key=os.environ[ODPSConfig.ACCESS_KEY],
+            project=os.environ[MaxComputeConfig.PROJECT_NAME],
+            access_id=os.environ[MaxComputeConfig.ACCESS_ID],
+            access_key=os.environ[MaxComputeConfig.ACCESS_KEY],
             table=data_origin,
-            endpoint=os.environ.get(ODPSConfig.ENDPOINT),
+            endpoint=os.environ.get(MaxComputeConfig.ENDPOINT),
             records_per_task=records_per_task,
             **kwargs,
         )

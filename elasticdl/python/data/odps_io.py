@@ -10,7 +10,7 @@ import odps
 from odps import ODPS
 from odps.models import Schema
 
-from elasticdl.python.common.constants import ODPSConfig
+from elasticdl.python.common.constants import MaxComputeConfig
 from elasticdl.python.common.log_utils import default_logger as logger
 
 
@@ -51,9 +51,9 @@ def is_odps_configured():
     return all(
         k in os.environ
         for k in (
-            ODPSConfig.PROJECT_NAME,
-            ODPSConfig.ACCESS_ID,
-            ODPSConfig.ACCESS_KEY,
+            MaxComputeConfig.PROJECT_NAME,
+            MaxComputeConfig.ACCESS_ID,
+            MaxComputeConfig.ACCESS_KEY,
         )
     )
 
