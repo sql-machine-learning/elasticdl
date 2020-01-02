@@ -94,8 +94,8 @@ class CSVDataReaderTest(unittest.TestCase):
             )
             dataset = _dataset_fn(dataset, None, None)
             for features, labels in dataset:
-                self.assertEquals(features.shape.as_list(), [10, 4])
-                self.assertEquals(labels.shape.as_list(), [10])
+                self.assertEqual(features.shape.as_list(), [10, 4])
+                self.assertEqual(labels.shape.as_list(), [10])
                 break
 
 
