@@ -197,3 +197,24 @@ class Parameters(object):
             model_pb.embedding_table_info.append(embedding_info)
 
         return model_pb
+
+    def debug_info(self):
+        info = ""
+        total_size = 0
+        for e in self.embedding_params:
+            info += self.embedding_params[e].debug_info()
+            total_size += self.embedding_params[e].table_size()
+        for n in self.non_embedding_params:
+            tmp = ""
+            tmp += "non-embedding param name: %s\n" % n
+            shape = self.non_embedding_params[n].get_shape().as_list()
+            size = (
+                tf.size(self.non_embedding_params[n])
+                * self.non_embedding_params[n].dtype.size
+            )
+            tmp += "  shape: %s\n" % str(shape)
+            tmp += "  size: %d bytes\n" % size
+            info += tmp
+            total_size += size
+        info += "total parameters size: %d bytes" % total_size
+        return info
