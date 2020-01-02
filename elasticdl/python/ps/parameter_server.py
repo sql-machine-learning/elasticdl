@@ -153,7 +153,7 @@ class ParameterServer(object):
                     )
                     break
                 self.logger.debug(
-                    "Parameters info:\n %s" % self.parameters.debug_info()
+                    "Parameters info:\n%s" % self.parameters.debug_info()
                 )
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")
