@@ -85,7 +85,7 @@ class EmbeddingTable(object):
         embedding_pb.initializer = str(self.initializer_value)
         return embedding_pb
 
-    def table_size(self):
+    def get_table_size(self):
         if len(self.embedding_vectors) > 0:
             element_size = list(self.embedding_vectors.values())[0].itemsize
             size = self.dim * len(self.embedding_vectors) * element_size
@@ -93,11 +93,15 @@ class EmbeddingTable(object):
         return 0
 
     def debug_info(self):
-        info = ""
-        info += "embedding param name: %s\n" % self.name
-        info += "  shape: [%d, %d]\n" % (len(self.embedding_vectors), self.dim)
-        info += "  size: %d bytes\n" % self.table_size()
-        return info
+        return (
+            "embedding param name: %s\n  shape: [%d, %d]\n  size: %d bytes\n"
+            % (
+                self.name,
+                len(self.embedding_vectors),
+                self.dim,
+                self.get_table_size(),
+            )
+        )
 
 
 # TODO(bug): create_embedding_table does not create EmbeddingTable correctly

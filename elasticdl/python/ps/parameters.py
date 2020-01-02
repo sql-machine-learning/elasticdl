@@ -203,18 +203,17 @@ class Parameters(object):
         total_size = 0
         for e in self.embedding_params:
             info += self.embedding_params[e].debug_info()
-            total_size += self.embedding_params[e].table_size()
+            total_size += self.embedding_params[e].get_table_size()
         for n in self.non_embedding_params:
-            tmp = ""
-            tmp += "non-embedding param name: %s\n" % n
             shape = self.non_embedding_params[n].get_shape().as_list()
             size = (
                 tf.size(self.non_embedding_params[n])
                 * self.non_embedding_params[n].dtype.size
             )
-            tmp += "  shape: %s\n" % str(shape)
-            tmp += "  size: %d bytes\n" % size
-            info += tmp
+            info += (
+                "non-embedding param name: %s\n  shape: %s\n  size: %d\n"
+                % (n, str(shape), size)
+            )
             total_size += size
         info += "total parameters size: %d bytes" % total_size
         return info
