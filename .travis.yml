@@ -66,7 +66,7 @@ jobs:
               else
                 echo "Running ElasticDL job: ${JOB_TYPE}"
                 if [[ "$JOB_TYPE" == "odps" ]]; then
-                    export ODPS_TABLE_NAME="odps_integration_build_${TRAVIS_BUILD_NUMBER}_$(date +%s)"
+                    export MAXCOMPUTE_TABLE="odps_integration_build_${TRAVIS_BUILD_NUMBER}_$(date +%s)"
                     docker run --rm -it -e MAXCOMPUTE_TABLE=$MAXCOMPUTE_TABLE -e MAXCOMPUTE_PROJECT=$MAXCOMPUTE_PROJECT -e MAXCOMPUTE_AK=$ODPS_ACCESS_ID -e MAXCOMPUTE_SK=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c 'python -c "from elasticdl.python.tests.test_utils import *; create_iris_odps_table_from_env()"'
                 fi
                 PS_NUM=2
