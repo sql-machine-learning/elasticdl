@@ -517,13 +517,13 @@ def get_odps_client_from_env():
 
 def create_iris_odps_table_from_env():
     project = os.environ[MaxComputeConfig.PROJECT_NAME]
-    table_name = os.environ["ODPS_TABLE_NAME"]
+    table_name = os.environ["MAXCOMPUTE_TABLE"]
     create_iris_odps_table(get_odps_client_from_env(), project, table_name)
 
 
 def delete_iris_odps_table_from_env():
     project = os.environ[MaxComputeConfig.PROJECT_NAME]
-    table_name = os.environ["ODPS_TABLE_NAME"]
+    table_name = os.environ["MAXCOMPUTE_TABLE"]
     get_odps_client_from_env().delete_table(
         table_name, project, if_exists=True
     )
