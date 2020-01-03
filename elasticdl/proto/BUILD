@@ -18,8 +18,3 @@ cc_grpc_library(
     grpc_only = True,
     deps = [":elasticdl_cc_proto"],
 )
-
-
-
-
-

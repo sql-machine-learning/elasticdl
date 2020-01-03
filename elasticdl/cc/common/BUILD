@@ -21,4 +21,3 @@ cc_test (
         "//elasticdl/cc/common:tensor",
     ],
 )
-
