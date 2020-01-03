@@ -6,7 +6,7 @@ import unittest
 
 from odps import ODPS
 
-from elasticdl.python.common.constants import ODPSConfig
+from elasticdl.python.common.constants import MaxComputeConfig
 from elasticdl.python.data.odps_io import (
     ODPSReader,
     ODPSWriter,
@@ -23,10 +23,10 @@ from elasticdl.python.tests.test_utils import create_iris_odps_table
 )
 class ODPSIOTest(unittest.TestCase):
     def setUp(self):
-        self._project = os.environ[ODPSConfig.PROJECT_NAME]
-        self._access_id = os.environ[ODPSConfig.ACCESS_ID]
-        self._access_key = os.environ[ODPSConfig.ACCESS_KEY]
-        self._endpoint = os.environ.get(ODPSConfig.ENDPOINT)
+        self._project = os.environ[MaxComputeConfig.PROJECT_NAME]
+        self._access_id = os.environ[MaxComputeConfig.ACCESS_ID]
+        self._access_key = os.environ[MaxComputeConfig.ACCESS_KEY]
+        self._endpoint = os.environ.get(MaxComputeConfig.ENDPOINT)
         self._test_read_table = "test_odps_reader_%d_%d" % (
             int(time.time()),
             random.randint(1, 101),

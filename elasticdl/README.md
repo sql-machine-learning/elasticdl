@@ -89,14 +89,14 @@ the following:
 make -f elasticdl/Makefile && pytest elasticdl/python/tests
 ```
 
-[ODPS](https://www.alibabacloud.com/product/maxcompute)-related tests require additional environment variables. To run those tests, execute the following:
+[MaxCompute](https://www.alibabacloud.com/product/maxcompute)-related tests require additional environment variables. To run those tests, execute the following:
 
 ```bash
 docker run --rm -it -v $PWD:/edl_dir -w /edl_dir \
-    -e ODPS_PROJECT_NAME=xxx \
-    -e ODPS_ACCESS_ID=xxx \
-    -e ODPS_ACCESS_KEY=xxx \
-    -e ODPS_ENDPOINT=xxx \
+    -e MAXCOMPUTE_PROJECT=xxx \
+    -e MAXCOMPUTE_AK=xxx \
+    -e MAXCOMPUTE_SK=xxx \
+    -e MAXCOMPUTE_ENDPOINT=xxx \
     elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests/odps_* elasticdl/python/tests/data_reader_test.py"
 ```
 
@@ -171,16 +171,16 @@ All tests will be executed on [Travis CI](https://travis-ci.org/sql-machine-lear
 * Integration tests
 
 The unit tests and integration tests also contain tests running on a local Kubernetes cluster via [Minikube](https://kubernetes.io/docs/setup/learning-environment/minikube/) and tests that
-require data sources from [ODPS](https://www.alibabacloud.com/product/maxcompute). Please refer to [Travis configuration file](../.travis.yml) for more details.
+require data sources from [MaxCompute](https://www.alibabacloud.com/product/maxcompute). Please refer to [Travis configuration file](../.travis.yml) for more details.
 
-Note that tests related to ODPS will not be executed on pull requests created from forks since
-the ODPS access information has been secured on Travis and only those who have write access can retrieve it. Developers who
-have write access to this repo are encouraged to submit pull requests from branches instead of forks if any code related to ODPS
+Note that tests related to MaxCompute will not be executed on pull requests created from forks since
+the MaxCompute access information has been secured on Travis and only those who have write access can retrieve it. Developers who
+have write access to this repo are encouraged to submit pull requests from branches instead of forks if any code related to MaxCompute
 has been modified.
 
 Also note that two test cases of integration tests involve loading checkpoint. It is not easy to automatically generate checkpoints when doing integration tests. Currently we save a checkpoint file in the [test data folder](python/tests/testdata) of the ElasticDL Github repository and use this checkpoint file for integration tests. Thus you need to re-generate a new checkpoint file if your PR modifies the definition of Model protocol buffer.
 
 If you want to trigger Travis builds without submitting a pull request, you can do so by developing on a branch and add this
 branch name to the list in `branches` section in [Travis configuration file](../.travis.yml). Note that you can also trigger
-Travis builds from forks but it requires additional work such as activating Travis for the forked repo and ODPS related tests
+Travis builds from forks but it requires additional work such as activating Travis for the forked repo and MaxCompute related tests
 will be skipped as mentioned earlier.

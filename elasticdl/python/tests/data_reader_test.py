@@ -9,7 +9,7 @@ import numpy as np
 import tensorflow as tf
 from odps import ODPS
 
-from elasticdl.python.common.constants import ODPSConfig
+from elasticdl.python.common.constants import MaxComputeConfig
 from elasticdl.python.common.model_utils import load_module
 from elasticdl.python.data.odps_io import is_odps_configured
 from elasticdl.python.data.reader.csv_reader import CSVDataReader
@@ -94,8 +94,8 @@ class CSVDataReaderTest(unittest.TestCase):
             )
             dataset = _dataset_fn(dataset, None, None)
             for features, labels in dataset:
-                self.assertEquals(features.shape.as_list(), [10, 4])
-                self.assertEquals(labels.shape.as_list(), [10])
+                self.assertEqual(features.shape.as_list(), [10, 4])
+                self.assertEqual(labels.shape.as_list(), [10])
                 break
 
 
@@ -104,10 +104,10 @@ class CSVDataReaderTest(unittest.TestCase):
 )
 class ODPSDataReaderTest(unittest.TestCase):
     def setUp(self):
-        self.project = os.environ[ODPSConfig.PROJECT_NAME]
-        access_id = os.environ[ODPSConfig.ACCESS_ID]
-        access_key = os.environ[ODPSConfig.ACCESS_KEY]
-        endpoint = os.environ.get(ODPSConfig.ENDPOINT)
+        self.project = os.environ[MaxComputeConfig.PROJECT_NAME]
+        access_id = os.environ[MaxComputeConfig.ACCESS_ID]
+        access_key = os.environ[MaxComputeConfig.ACCESS_KEY]
+        endpoint = os.environ.get(MaxComputeConfig.ENDPOINT)
         self.test_table = "test_odps_data_reader_%d_%d" % (
             int(time.time()),
             random.randint(1, 101),

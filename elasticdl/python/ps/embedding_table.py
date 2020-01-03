@@ -85,6 +85,25 @@ class EmbeddingTable(object):
         embedding_pb.initializer = str(self.initializer_value)
         return embedding_pb
 
+    def get_table_size(self):
+        """Get the element count of an embedding table"""
+        if len(self.embedding_vectors) > 0:
+            element_size = list(self.embedding_vectors.values())[0].itemsize
+            size = self.dim * len(self.embedding_vectors) * element_size
+            return size
+        return 0
+
+    def debug_info(self):
+        return (
+            "Embedding param name: %s\n  shape: [%d, %d]\n  size: %d bytes\n"
+            % (
+                self.name,
+                len(self.embedding_vectors),
+                self.dim,
+                self.get_table_size(),
+            )
+        )
+
 
 # TODO(bug): create_embedding_table does not create EmbeddingTable correctly
 #     if it is a slot table.

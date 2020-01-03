@@ -16,7 +16,7 @@ from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import (
     DistributionStrategy,
     JobType,
-    ODPSConfig,
+    MaxComputeConfig,
 )
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.model_utils import (
@@ -40,6 +40,7 @@ class PserverArgs(object):
         grads_to_wait=8,
         lr_scheduler="learning_rate_scheduler",
         lr_staleness_modulation=0,
+        sync_version_tolerance=0,
         use_async=False,
         model_zoo=None,
         model_def=None,
@@ -61,6 +62,7 @@ class PserverArgs(object):
         self.grads_to_wait = grads_to_wait
         self.learning_rate_scheduler = lr_scheduler
         self.lr_staleness_modulation = lr_staleness_modulation
+        self.sync_version_tolerance = sync_version_tolerance
         self.use_async = use_async
         self.model_zoo = model_zoo
         self.model_def = model_def
@@ -508,22 +510,22 @@ def create_iris_odps_table(odps_client, project_name, table_name):
 
 
 def get_odps_client_from_env():
-    project = os.environ[ODPSConfig.PROJECT_NAME]
-    access_id = os.environ[ODPSConfig.ACCESS_ID]
-    access_key = os.environ[ODPSConfig.ACCESS_KEY]
-    endpoint = os.environ.get(ODPSConfig.ENDPOINT)
+    project = os.environ[MaxComputeConfig.PROJECT_NAME]
+    access_id = os.environ[MaxComputeConfig.ACCESS_ID]
+    access_key = os.environ[MaxComputeConfig.ACCESS_KEY]
+    endpoint = os.environ.get(MaxComputeConfig.ENDPOINT)
     return ODPS(access_id, access_key, project, endpoint)
 
 
 def create_iris_odps_table_from_env():
-    project = os.environ[ODPSConfig.PROJECT_NAME]
-    table_name = os.environ["ODPS_TABLE_NAME"]
+    project = os.environ[MaxComputeConfig.PROJECT_NAME]
+    table_name = os.environ["MAXCOMPUTE_TABLE"]
     create_iris_odps_table(get_odps_client_from_env(), project, table_name)
 
 
 def delete_iris_odps_table_from_env():
-    project = os.environ[ODPSConfig.PROJECT_NAME]
-    table_name = os.environ["ODPS_TABLE_NAME"]
+    project = os.environ[MaxComputeConfig.PROJECT_NAME]
+    table_name = os.environ["MAXCOMPUTE_TABLE"]
     get_odps_client_from_env().delete_table(
         table_name, project, if_exists=True
     )
