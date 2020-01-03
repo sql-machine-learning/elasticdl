@@ -28,7 +28,7 @@ repos:
       description: Format files with ClangFormat.
       entry: bash ./scripts/codestyle/clang_format.hook -i
       language: system
-      files: \.(c|cc|cxx|cpp|cu|h|hpp|hxx|proto)$
+      files: \.(c|cc|cxx|cpp|cu|h|hpp|hxx)$
 -   repo: local
     hooks:
     - id: cpplint-cpp-source

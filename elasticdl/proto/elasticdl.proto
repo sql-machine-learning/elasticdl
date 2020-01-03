@@ -1,9 +1,23 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
-import "elasticdl/proto/tensor_dtype.proto";
 
 package master;
+
+enum TensorDtype{
+    // Not a legal value for DataType. Used to indicate a DataType field
+    // has not been set.
+    DT_INVALID = 0;
+
+    DT_INT8 = 1;
+    DT_INT16 = 2;
+    DT_INT32 = 3;
+    DT_INT64 = 4;
+    DT_FLOAT16 = 5;
+    DT_FLOAT32 = 6;
+    DT_FLOAT64 = 7;
+    DT_BOOL = 8;
+}
 
 enum TaskType {
     TRAINING = 0;

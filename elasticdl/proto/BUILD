@@ -3,7 +3,7 @@ load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 
 proto_library(
     name = "elasticdl_proto",
-	srcs = ["elasticdl.proto", "tensor_dtype.proto"],
+	srcs = ["elasticdl.proto"],
 	deps = ["@com_google_protobuf//:empty_proto"],
 )
 
