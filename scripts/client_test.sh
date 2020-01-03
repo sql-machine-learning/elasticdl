@@ -93,9 +93,9 @@ elif [[ "$JOB_TYPE" == "odps" ]]; then
       --image_base=elasticdl:ci \
       --model_zoo=model_zoo \
       --model_def=odps_iris_dnn_model.odps_iris_dnn_model.custom_model \
-      --training_data=$ODPS_TABLE_NAME \
+      --training_data=$MAXCOMPUTE_TABLE \
       --data_reader_params='columns=["sepal_length", "sepal_width", "petal_length", "petal_width", "class"]; label_col="class"' \
-      --envs="ODPS_PROJECT_NAME=$ODPS_PROJECT_NAME,ODPS_ACCESS_ID=$ODPS_ACCESS_ID,ODPS_ACCESS_KEY=$ODPS_ACCESS_KEY,ODPS_ENDPOINT=" \
+      --envs="MAXCOMPUTE_PROJECT=$MAXCOMPUTE_PROJECT,MAXCOMPUTE_AK=$MAXCOMPUTE_AK,MAXCOMPUTE_SK=$MAXCOMPUTE_SK,MAXCOMPUTE_ENDPOINT=" \
       --num_epochs=2 \
       --master_resource_request="cpu=0.2,memory=1024Mi" \
       --master_resource_limit="cpu=1,memory=2048Mi" \
