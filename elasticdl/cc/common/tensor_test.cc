@@ -1,4 +1,4 @@
-#include "elasticdl/cpp/common/tensor.h"
+#include "elasticdl/cc/common/tensor.h"
 
 #include <iostream>
 

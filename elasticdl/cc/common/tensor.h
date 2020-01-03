@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "glog/logging.h"
+
 namespace elasticdl {
 namespace common {
 
@@ -34,8 +36,7 @@ static bool IsType(ElemType e) {
     case ElemType::INT32:
       return std::is_same<T, int32_t>::value;
   }
-  // TODO, use LOG instead
-  std::cout << "invalid type" << std::endl;
+  LOG(FATAL) << "Invalid Type";
 }
 
 class Tensor {

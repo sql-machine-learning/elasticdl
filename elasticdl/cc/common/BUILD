@@ -9,6 +9,7 @@ cc_library(
     name = "tensor",
     srcs = ["tensor.cc"],
     hdrs = ["tensor.h"],
+    deps = ["@glog//:glog"],
 )
 
 
@@ -17,7 +18,7 @@ cc_test (
     srcs = ["tensor_test.cc"],
     copts = ["-Iexternal/gtest/include"],
     deps = unittest_deps + [
-        "//elasticdl/cpp/common:tensor",
+        "//elasticdl/cc/common:tensor",
     ],
 )
 
