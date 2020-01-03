@@ -193,9 +193,7 @@ class TaskDataService(object):
             if not task.shard_name:
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True
-                    logger.info(
-                        "No tasks for now, maybe more later"
-                    )
+                    logger.info("No tasks for now, maybe more later")
                 else:
                     logger.info("No more task, stopping")
                 break
