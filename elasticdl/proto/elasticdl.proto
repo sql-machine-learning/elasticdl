@@ -4,152 +4,154 @@ import "google/protobuf/empty.proto";
 
 package master;
 
-enum TensorDtype{
-    // Not a legal value for DataType. Used to indicate a DataType field
-    // has not been set.
-    DT_INVALID = 0;
+enum TensorDtype {
+  // Not a legal value for DataType. Used to indicate a DataType field
+  // has not been set.
+  DT_INVALID = 0;
 
-    DT_INT8 = 1;
-    DT_INT16 = 2;
-    DT_INT32 = 3;
-    DT_INT64 = 4;
-    DT_FLOAT16 = 5;
-    DT_FLOAT32 = 6;
-    DT_FLOAT64 = 7;
-    DT_BOOL = 8;
+  DT_INT8 = 1;
+  DT_INT16 = 2;
+  DT_INT32 = 3;
+  DT_INT64 = 4;
+  DT_FLOAT16 = 5;
+  DT_FLOAT32 = 6;
+  DT_FLOAT64 = 7;
+  DT_BOOL = 8;
 }
 
 enum TaskType {
-    TRAINING = 0;
-    EVALUATION = 1;
-    PREDICTION = 2;
-    WAIT = 3;
-    SAVE_MODEL = 4;
+  TRAINING = 0;
+  EVALUATION = 1;
+  PREDICTION = 2;
+  WAIT = 3;
+  SAVE_MODEL = 4;
 }
 
 // A task is a unit of work for ElasticDL training workers, assigned by master.
 // Worker divides a task into multiple minibatches and compute a gradient for
 // each minibatch. For now, only RecordIO file format is supported.
 message Task {
-    // Unique id assigned by master.
-    int32 task_id = 1;
+  // Unique id assigned by master.
+  int32 task_id = 1;
 
-    int32 minibatch_size = 2;
+  int32 minibatch_size = 2;
 
-    // Name for the shard. If RecordIO file format is used, this should be the
-    // filename for a RecordIO shard. An empty shard name signifies that the
-    // master has no pending tasks to assign to the requesting worker.
-    string shard_name = 3;
+  // Name for the shard. If RecordIO file format is used, this should be the
+  // filename for a RecordIO shard. An empty shard name signifies that the
+  // master has no pending tasks to assign to the requesting worker.
+  string shard_name = 3;
 
-    // Starting and ending (non-inclusive) record number.
-    int64 start = 4;
-    int64 end = 5;
+  // Starting and ending (non-inclusive) record number.
+  int64 start = 4;
+  int64 end = 5;
 
-    // Current model version on master
-    int32 model_version = 6;
+  // Current model version on master
+  int32 model_version = 6;
 
-    // Whether this is training or evaluation task.
-    TaskType type = 7;
+  // Whether this is training or evaluation task.
+  TaskType type = 7;
 
-    // Extended task configuration as a list of key-value pair.
-    // The task message is mainly targeted to data and model.
-    // What's more, we also leverage task mechanism to complete
-    // some work such as saving the model. To keep the message
-    // fields clean, we put the additional configurations of these
-    // task type into this field.
-    // For example:
-    // SAVE_MODEL task: saved_model_path
-    map<string, string> extended_config = 8;
+  // Extended task configuration as a list of key-value pair.
+  // The task message is mainly targeted to data and model.
+  // What's more, we also leverage task mechanism to complete
+  // some work such as saving the model. To keep the message
+  // fields clean, we put the additional configurations of these
+  // task type into this field.
+  // For example:
+  // SAVE_MODEL task: saved_model_path
+  map<string, string> extended_config = 8;
 }
 
 message Tensor {
-    // Tensor name
-    string name = 1;
+  // Tensor name
+  string name = 1;
 
-    // Dimensions of the tensor. The first entry in "dim" is the outermost
-    // dimension used to layout the values, the last entry is the innermost
-    // dimension.
-    repeated int32 dim = 2;
+  // Dimensions of the tensor. The first entry in "dim" is the outermost
+  // dimension used to layout the values, the last entry is the innermost
+  // dimension.
+  repeated int32 dim = 2;
 
-    // ndarray's buffer dump. Each element must be a 32 bit float value.
-    bytes content = 3;
+  // ndarray's buffer dump. Each element must be a 32 bit float value.
+  bytes content = 3;
 
-    // Indices will be tf.IndexedSlices.indices if the tensor is in the form
-    // of tf.IndexedSlices. Otherwise indices will be None.
-    repeated int32 indices = 4;
+  // Indices will be tf.IndexedSlices.indices if the tensor is in the form
+  // of tf.IndexedSlices. Otherwise indices will be None.
+  repeated int32 indices = 4;
 
-    // Dtype of the tensor, e.g. "int64", "float32".
-    TensorDtype dtype = 5;
+  // Dtype of the tensor, e.g. "int64", "float32".
+  TensorDtype dtype = 5;
 }
 
 message EmbeddingTableInfo {
-    string name = 1;
-    int64 dim = 2;
-    string initializer = 3;
+  string name = 1;
+  int64 dim = 2;
+  string initializer = 3;
 }
 
 message Model {
-    int32 version = 1;
-    repeated Tensor param = 2;
-    repeated EmbeddingTableInfo embedding_table_info = 3;
+  int32 version = 1;
+  repeated Tensor param = 2;
+  repeated EmbeddingTableInfo embedding_table_info = 3;
 }
 
 message GetTaskRequest {
-    int32 worker_id = 1;
-    TaskType task_type = 2;
+  int32 worker_id = 1;
+  TaskType task_type = 2;
 }
 
 message ReportTaskResultRequest {
-    // Task id assigned by master.
-    int32 task_id = 1;
+  // Task id assigned by master.
+  int32 task_id = 1;
 
-    // When error occurred, err_message contains error message in plain text.
-    string err_message = 2;
-    // statistics of the task being executed.
-    map<string, int32> exec_counters = 3;
+  // When error occurred, err_message contains error message in plain text.
+  string err_message = 2;
+  // statistics of the task being executed.
+  map<string, int32> exec_counters = 3;
 }
 
 message ReportEvaluationMetricsRequest {
-    repeated Tensor model_outputs = 1;
-    Tensor labels = 2;
+  repeated Tensor model_outputs = 1;
+  Tensor labels = 2;
 }
 
 message ReportVersionRequest {
-    int32 model_version = 1;
+  int32 model_version = 1;
 }
 
 service Master {
-    rpc get_task(GetTaskRequest) returns (Task);
-    rpc report_evaluation_metrics(ReportEvaluationMetricsRequest) returns (google.protobuf.Empty);
-    rpc report_task_result(ReportTaskResultRequest) returns (google.protobuf.Empty);
-    rpc report_version(ReportVersionRequest) returns (google.protobuf.Empty);
+  rpc get_task(GetTaskRequest) returns (Task);
+  rpc report_evaluation_metrics(ReportEvaluationMetricsRequest)
+      returns (google.protobuf.Empty);
+  rpc report_task_result(ReportTaskResultRequest)
+      returns (google.protobuf.Empty);
+  rpc report_version(ReportVersionRequest) returns (google.protobuf.Empty);
 }
 
 message PullVariableResponse {
-    bool model_init_status = 1;
-    Model model = 2;
+  bool model_init_status = 1;
+  Model model = 2;
 }
 
 message PullEmbeddingVectorRequest {
-    string name = 1;
-    repeated int64 ids = 2;
+  string name = 1;
+  repeated int64 ids = 2;
 }
 
 message PushGradientRequest {
-    int32 model_version = 1;
-    repeated Tensor gradients = 2;
+  int32 model_version = 1;
+  repeated Tensor gradients = 2;
 }
 
 message PushGradientResponse {
-    bool accepted = 1;
-    int32 model_version = 2;
+  bool accepted = 1;
+  int32 model_version = 2;
 }
 
 // PS service
 service Pserver {
-    rpc pull_variable(google.protobuf.Empty) returns (PullVariableResponse);
-    rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
-    rpc push_model(Model) returns (google.protobuf.Empty);
-    rpc push_embedding_info(Model) returns (google.protobuf.Empty);
-    rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
+  rpc pull_variable(google.protobuf.Empty) returns (PullVariableResponse);
+  rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
+  rpc push_model(Model) returns (google.protobuf.Empty);
+  rpc push_embedding_info(Model) returns (google.protobuf.Empty);
+  rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
 }

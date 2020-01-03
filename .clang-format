@@ -1,3 +1,4 @@
+---
 Language:        Cpp
 BasedOnStyle:  Google
 IndentWidth:     2
@@ -8,3 +9,10 @@ Standard:  Cpp11
 AllowAllParametersOfDeclarationOnNextLine: true
 BinPackParameters: false
 BinPackArguments: false
+---
+Language: Proto
+BasedOnStyle:  Google
+IndentWidth:     2
+TabWidth:        2
+ContinuationIndentWidth: 4
+...
