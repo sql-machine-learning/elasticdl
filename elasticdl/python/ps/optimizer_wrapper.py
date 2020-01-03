@@ -166,7 +166,6 @@ class OptimizerWrapper(object):
     def _update_parameters_by_gradients(self, grads_and_vars):
         """Update parameters by gradients received by GRPC"""
         grads_and_vars_new = []
-        t0 = time.time()
         for grad, var in grads_and_vars:
             # If var is a string, create the grad var pair for
             # ElasticDL embedding
@@ -177,14 +176,8 @@ class OptimizerWrapper(object):
                 self._has_embedding = True
             else:
                 grads_and_vars_new.append((grad, var))
-        t1 = time.time()
         self._opt.apply_gradients(grads_and_vars_new)
-        t2 = time.time()
         self._update_embedding_param()
-        t3 = time.time()
-        logger.info(
-            "update time t0:%.6gs t1:%.6gs, t2:%.6gs" % (t1-t0, t2-t1, t3-t2)
-        )
         self._delete_variables()
 
     def _get_embedding_var_and_grad(self, grad, layer_name):
@@ -219,8 +212,9 @@ class OptimizerWrapper(object):
             )
             self._tls._embed_variables[name] = embed_var
         else:
-            self._tls._embed_variables[name].assign(initial_value)
-        return self._tls._embed_variables[name]
+            embed_var = self._tls._embed_variables[name]
+            embed_var.assign(initial_value)
+        return embed_var
 
     def _get_slot_and_set_to_optimizer(self, layer_name):
         """Looks up slot value and set it to TensorFlow optimizer."""
@@ -255,16 +249,14 @@ class OptimizerWrapper(object):
         slot_var = self._init_slot_variable(
             layer_name, embed_var, slot_name, initial_value
         )
-        self._insert_slot_variable_to_optimizer(
-            slot_name, embed_var, slot_var
-        )
+        self._insert_slot_variable_to_optimizer(slot_name, embed_var, slot_var)
 
         return slot_var
 
     def _init_slot_variable(
         self, layer_name, embed_var, slot_name, initial_value
     ):
-        """Create variable for a slot"""
+        """Initialize a variable for a slot"""
         if (
             layer_name not in self._tls._slot_variables
             or slot_name not in self._tls._slot_variables[layer_name]
