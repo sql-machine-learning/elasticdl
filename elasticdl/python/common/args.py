@@ -316,7 +316,13 @@ def add_train_params(parser):
         default="",
         help="The path to save the final trained model",
     )
-
+    parser.add_argument(
+        "--sync_version_tolerance",
+        type=int,
+        help="The maximum model version difference between reported gradients "
+        "and PS that synchronous SGD can accepts.",
+        default=0,
+    )
     add_bool_param(
         parser=parser,
         name="--use_async",

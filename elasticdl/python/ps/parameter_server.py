@@ -24,6 +24,7 @@ class ParameterServer(object):
         self.logger = get_logger("PS", level=args.log_level.upper())
         self.grads_to_wait = args.grads_to_wait
         self.lr_staleness_modulation = args.lr_staleness_modulation
+        self.sync_version_tolerance = args.sync_version_tolerance
         self.use_async = args.use_async
         self.port = args.port
         model_module = load_module(
@@ -113,6 +114,7 @@ class ParameterServer(object):
             self.optimizer,
             self.lr_scheduler,
             lr_staleness_modulation=self.lr_staleness_modulation,
+            sync_version_tolerance=self.sync_version_tolerance,
             use_async=self.use_async,
             evaluation_steps=self.evaluation_steps,
             master_channel=self.master_channel,
