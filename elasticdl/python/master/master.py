@@ -381,6 +381,8 @@ class Master(object):
                 str(args.checkpoint_dir_for_init),
                 "--num_workers",
                 str(args.num_workers),
+                "--log_level",
+                str(args.log_level),
             ]
 
             env_dict = parse_envs(args.envs)
