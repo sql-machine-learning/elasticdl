@@ -1,7 +1,5 @@
 #include "elasticdl/cc/common/tensor.h"
 
-#include <iostream>
-
 #include "gtest/gtest.h"
 
 using namespace elasticdl::common;
