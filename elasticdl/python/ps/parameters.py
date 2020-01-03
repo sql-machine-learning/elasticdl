@@ -211,9 +211,9 @@ class Parameters(object):
                 * self.non_embedding_params[param].dtype.size
             )
             info += (
-                "non-embedding param name: %s\n  shape: %s\n  size: %d\n"
+                "Non-embedding param name: %s\n  shape: %s\n  size: %d\n"
                 % (param, str(shape), size)
             )
             total_size += size
-        info += "total parameters size: %d bytes" % total_size
+        info += "Total parameters size: %d bytes" % total_size
         return info

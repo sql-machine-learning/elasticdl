@@ -45,6 +45,7 @@ class ParameterServer(object):
         self.namespace = args.namespace
         self._init_checkpoint_saver(args)
         self._restore_params_from_checkpoint(args.checkpoint_dir_for_init)
+        self._debug_info_needed = args.log_level.upper() == "DEBUG"
 
     def _set_lr_scheduler(self, model_module, learning_rate_scheduler_arg):
         if learning_rate_scheduler_arg in model_module:
@@ -152,9 +153,11 @@ class ParameterServer(object):
                         "master pod is still running tensorboard service"
                     )
                     break
-                self.logger.debug(
-                    "Parameters info:\n%s" % self.parameters.debug_info()
-                )
+
+                if self._debug_info_needed:
+                    self.logger.debug(
+                        "Parameters info:\n%s" % self.parameters.debug_info()
+                    )
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")
 
