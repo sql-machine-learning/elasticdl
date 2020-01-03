@@ -24,6 +24,7 @@ static size_t GetElementSize(ElemType i) {
     case ElemType::INT32:
       return sizeof(int32_t);
   }
+  LOG(FATAL) << "Invalid Type";
 }
 
 template <class T>
