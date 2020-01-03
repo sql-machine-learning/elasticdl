@@ -320,13 +320,10 @@ class Worker(object):
                         "PS pod %d cannot be initialized" % ps_id
                     )
 
-            if res.model.version > self._model_versions_from_ps[ps_id]:
-                for tensor_pb in res.model.param:
-                    tensor = Tensor.from_tensor_pb(tensor_pb)
-                    self._non_embed_vars[tensor.name].assign(
-                        tensor.to_ndarray()
-                    )
-                self._model_versions_from_ps[ps_id] = res.model.version
+            for tensor_pb in res.model.param:
+                tensor = Tensor.from_tensor_pb(tensor_pb)
+                self._non_embed_vars[tensor.name].assign(tensor.to_ndarray())
+            self._model_versions_from_ps[ps_id] = res.model.version
 
         self._model_version = max(self._model_versions_from_ps)
         self._timing.end_record_time("get_model")
