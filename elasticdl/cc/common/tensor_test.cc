@@ -1,4 +1,7 @@
 #include "elasticdl/cpp/common/tensor.h"
+
+#include <iostream>
+
 #include "gtest/gtest.h"
 
 using namespace elasticdl::common;
@@ -13,6 +16,5 @@ TEST(Tensor, init) {
       data[i * 10 + j] = i * 10 + j;
     }
   }
-
   EXPECT_EQ(t1.at<float>(10), 10);
 }

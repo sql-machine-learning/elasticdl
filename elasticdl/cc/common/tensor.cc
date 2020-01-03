@@ -1,6 +1,5 @@
 #include "elasticdl/cpp/common/tensor.h"
 
-
 namespace elasticdl {
 namespace common {
 
@@ -12,9 +11,7 @@ Tensor::Tensor(const std::vector<size_t>& dim, ElemType type) {
   data_ = new char[size];
 }
 
-Tensor::~Tensor() {
-  delete data_;
-}
+Tensor::~Tensor() { delete data_; }
 
 size_t Tensor::GetSize() {
   size_t size = 1;
@@ -23,9 +20,5 @@ size_t Tensor::GetSize() {
   }
   return size;
 }
-} // namespace common
-} // namespace elasticdl
-
-
-
-
+}  // namespace common
+}  // namespace elasticdl
