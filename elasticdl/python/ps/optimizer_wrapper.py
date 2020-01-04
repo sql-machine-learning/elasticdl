@@ -72,10 +72,8 @@ class OptimizerWrapper(object):
     ):
         """
         Note:
-            We need to support Redis and ElasticDL parameter server at the
-            same time. If `lookup_embedding_func`/`update_embedding_func`
+            If `lookup_embedding_func`/`update_embedding_func`
             is not None, use parameter server to lookup/update embedding.
-            Otherwise use Redis.
 
         Arguments:
             opt: A TensorFlow optimizer instance.
@@ -178,7 +176,7 @@ class OptimizerWrapper(object):
                 grads_and_vars_new.append((grad, var))
         self._opt.apply_gradients(grads_and_vars_new)
         self._update_embedding_param()
-        self._delete_variables()
+        self._delete_slots_and_weights_in_optimizer()
 
     def _get_embedding_var_and_grad(self, grad, layer_name):
         unique_ids, indices = tf.unique(grad.indices)
@@ -249,7 +247,7 @@ class OptimizerWrapper(object):
         slot_var = self._init_slot_variable(
             layer_name, embed_var, slot_name, initial_value
         )
-        self._insert_slot_variable_to_optimizer(slot_name, embed_var, slot_var)
+        self._update_slot_variable_to_optimizer(slot_name, embed_var, slot_var)
 
         return slot_var
 
@@ -282,7 +280,7 @@ class OptimizerWrapper(object):
     # https://github.com/tensorflow/tensorflow/blob/
     # 69b1feac62276edcc509ac88af229c6236e645fe/tensorflow/python
     # /keras/optimizer_v2/optimizer_v2.py#L567
-    def _insert_slot_variable_to_optimizer(
+    def _update_slot_variable_to_optimizer(
         self, slot_name, embed_var, slot_var
     ):
         if slot_name not in self._opt._slot_names:
@@ -309,9 +307,10 @@ class OptimizerWrapper(object):
                 slot_table_name = get_slot_table_name(layer, slot)
                 self._update_embedding_func(slot_table_name, ids, value)
 
-    def _delete_variables(self):
-        # Slot variable access in optimizer requires corresponding embedding
-        # variable information. Delete slot variables first.
+    def _delete_slots_and_weights_in_optimizer(self):
+        """Delete the slots and weights in the optimizer according
+        to Embedding layers.
+        """
         for layer_name, slots in self._tls._slot_variables.items():
             embed_var = self._get_embedding_variable(layer_name)
             embed_var_key = _var_key(embed_var)
@@ -333,8 +332,6 @@ class OptimizerWrapper(object):
     def allowed_slot_names(self):
         return self._allowed_slot_names
 
-    # TODO(yunjian.lmh): Do not need to save slot_initial_value in
-    #     optimizer wrapper after we do not need to support Redis.
     @property
     def slot_initial_value(self):
         return self._slot_initial_value

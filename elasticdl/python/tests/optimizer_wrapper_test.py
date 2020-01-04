@@ -320,7 +320,7 @@ class OptimizerWrapperTest(unittest.TestCase):
         for slot_dict in opt._slots.values():
             self.assertTrue(len(slot_dict) == 2)
 
-        opt_wrapper._delete_variables()
+        opt_wrapper._delete_slots_and_weights_in_optimizer()
         self.assertTrue(len(opt._weights) == 0)
         self.assertTrue(len(opt._slots) == 0)
 
