@@ -155,7 +155,7 @@ class OptimizerWrapper(object):
         if not hasattr(self._tls, "_embed_variables"):
             self._init_thread_local()
 
-        if self._has_embedding:
+        if True or self._has_embedding:
             with self._update_gradient_lock:
                 self._update_parameters_by_gradients(grads_and_vars)
         else:
@@ -308,13 +308,14 @@ class OptimizerWrapper(object):
                 self._update_embedding_func(slot_table_name, ids, value)
 
     def _delete_slots_and_weights_in_optimizer(self):
-        """Delete the slots and weights in the optimizer according
+        """Clear the slots and weights in the optimizer according
         to Embedding layers.
         """
         for layer_name, slots in self._tls._slot_variables.items():
             embed_var = self._get_embedding_variable(layer_name)
             embed_var_key = _var_key(embed_var)
-            del self._opt._slots[embed_var_key]
+            if embed_var_key in self._opt.slots:
+                del self._opt._slots[embed_var_key]
             for _, var in slots.items():
                 opt_weight_iter = 0
                 while opt_weight_iter < len(self._opt._weights):
