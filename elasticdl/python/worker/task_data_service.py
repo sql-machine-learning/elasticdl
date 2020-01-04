@@ -1,4 +1,5 @@
 import threading
+import time
 from collections import deque
 
 import tensorflow as tf
@@ -153,11 +154,22 @@ class TaskDataService(object):
             # sure `read_records()` is executed without iterating all the
             # records so this should not be time consuming.
             if self._warm_up_task is None and not self._has_warmed_up:
-                task = self._worker.get_task()
-                self._warm_up_task = task
-                for _ in self.data_reader.read_records(task):
-                    break
-                self._has_warmed_up = True
+                while True:
+                    task = self._worker.get_task()
+                    if task.type != elasticdl_pb2.WAIT:
+                        break
+                    time.sleep(2)
+                if task.type == elasticdl_pb2.SAVE_MODEL:
+                    self._pending_save_model_task = task
+                    return None
+                elif not task.shard_name:
+                    logger.info("No more task, stopping")
+                    return None
+                else:
+                    self._warm_up_task = task
+                    for _ in self.data_reader.read_records(task):
+                        break
+                    self._has_warmed_up = True
             ds = tf.data.Dataset.from_generator(
                 self._gen, self.data_reader.records_output_types
             )
@@ -181,9 +193,7 @@ class TaskDataService(object):
             if not task.shard_name:
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True
-                    logger.info(
-                        "Finish current dataset, maybe more data later"
-                    )
+                    logger.info("No tasks for now, maybe more later")
                 else:
                     logger.info("No more task, stopping")
                 break
