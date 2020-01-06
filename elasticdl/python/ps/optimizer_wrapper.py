@@ -71,10 +71,6 @@ class OptimizerWrapper(object):
         update_embedding_func=None,
     ):
         """
-        Note:
-            If `lookup_embedding_func`/`update_embedding_func`
-            is not None, use parameter server to lookup/update embedding.
-
         Arguments:
             opt: A TensorFlow optimizer instance.
             kv_store_endpoint: The endpoint to kv store.
@@ -83,7 +79,7 @@ class OptimizerWrapper(object):
                 name of ElasticDL embedding layer and `embedding_dim`
                 is the output dimension of corresponding embedding layer.
             use_async: A python bool. True if using asynchronous updates. When
-                using asynchronoues updates, `OptimizerWrapper` is thread-safe
+                using asynchronous updates, `OptimizerWrapper` is thread-safe
                 for non-embedding variables and is not thread-safe for
                 embedding table.
             lookup_embedding_func: The function to lookup embeddings. The
