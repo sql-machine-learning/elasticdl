@@ -76,12 +76,7 @@ class ParameterServer(object):
         )
 
     def _init_checkpoint_saver(self, args):
-        if all(
-            [
-                args.checkpoint_dir,
-                args.checkpoint_steps,
-            ]
-        ):
+        if all([args.checkpoint_dir, args.checkpoint_steps]):
             self.checkpoint_saver = CheckpointSaver(
                 args.checkpoint_dir,
                 args.checkpoint_steps,
