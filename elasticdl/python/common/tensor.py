@@ -75,7 +75,9 @@ class Tensor(object):
 
     def to_tf_tensor(self):
         if self.is_indexed_slices():
-            return tf.IndexedSlices(self.values, self.indices)
+            return tf.IndexedSlices(
+                tf.constant(self.values), tf.constant(self.indices)
+            )
         else:
             return tf.constant(self.values)
 
