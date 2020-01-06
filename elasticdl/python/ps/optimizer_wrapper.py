@@ -159,20 +159,37 @@ class OptimizerWrapper(object):
 
     def _update_parameters_by_gradients(self, grads_and_vars):
         """Update parameters by gradients received by GRPC"""
-        grads_and_vars_new = []
+        embed_grads_and_vars = []
+        non_embed_gradients = []
+        non_embed_variables = []
+
         for grad, var in grads_and_vars:
             # If var is a string, create the grad var pair for
             # ElasticDL embedding
             if isinstance(var, str):
-                grads_and_vars_new.append(
+                embed_grads_and_vars.append(
                     self._get_embedding_var_and_grad(grad, var)
                 )
                 self._has_embedding = True
             else:
-                grads_and_vars_new.append((grad, var))
-        self._opt.apply_gradients(grads_and_vars_new)
+                non_embed_gradients.append(grad)
+                non_embed_variables.append(var)
+
+        # We can not use `tf.function` to `apply_gradient` for ElasticDL
+        # embedding variables because the shape of embedding variables
+        # is not fixed.
+        self._opt.apply_gradients(embed_grads_and_vars)
+
+        self._apply_gradient_using_graph(
+            non_embed_gradients, non_embed_variables
+        )
         self._update_embedding_param()
         self._delete_slots_and_weights_in_optimizer()
+
+    @tf.function
+    def _apply_gradient_using_graph(self, gradients, variables):
+        grads_and_vars = zip(gradients, variables)
+        self._opt.apply_gradients(grads_and_vars)
 
     def _get_embedding_var_and_grad(self, grad, layer_name):
         unique_ids, indices = tf.unique(grad.indices)
