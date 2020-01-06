@@ -151,7 +151,7 @@ class OptimizerWrapper(object):
         if not hasattr(self._tls, "_embed_variables"):
             self._init_thread_local()
 
-        if True or self._has_embedding:
+        if self._has_embedding:
             with self._update_gradient_lock:
                 self._update_parameters_by_gradients(grads_and_vars)
         else:
