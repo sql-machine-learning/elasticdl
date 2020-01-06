@@ -80,7 +80,6 @@ class ParameterServer(object):
             [
                 args.checkpoint_dir,
                 args.checkpoint_steps,
-                args.keep_checkpoint_max,
             ]
         ):
             self.checkpoint_saver = CheckpointSaver(
