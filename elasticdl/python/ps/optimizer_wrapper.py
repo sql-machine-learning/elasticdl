@@ -314,7 +314,7 @@ class OptimizerWrapper(object):
         for layer_name, slots in self._tls._slot_variables.items():
             embed_var = self._get_embedding_variable(layer_name)
             embed_var_key = _var_key(embed_var)
-            if embed_var_key in self._opt.slots:
+            if embed_var_key in self._opt._slots:
                 del self._opt._slots[embed_var_key]
             for _, var in slots.items():
                 opt_weight_iter = 0
