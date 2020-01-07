@@ -5,20 +5,20 @@
 
 This design doc focus on implementing a high performance parameter server(short for PS). For the functionality of the PS, please refer to this [design doc](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/parameter_server.md)
 
-PS receives gradients from workers, applies gradients to parameters, and sends the latest parameters to workers. Receiving gradients and sending parameters bring IO workload to PS, and applying gradients to parameters brings CPU workload to PS. Both IO workload and CPU workload could be very high.
+PS receives gradients from workers, applies gradients to parameters, and sends the latest parameters to workers. Receiving gradients and sending parameters bring IO workload to PS, and applying gradients to parameters brings CPU workload to PS. Since one PS could receive gradients from mant workers, both IO workload and CPU workload would be very high.
 
-The current PS is implemented with Python. Because of `GIL` of Python, gradients are applied to parameters sequentially with only one CPU core. As a result, the receiving gradients service is also blocked, and waiting for current gradients to be consumed. To resolve this bottleneck, we have to fully use multi CPU cores on PS.
+The current PS is implemented with Python. Because of `GIL` of Python, gradients are applied to parameters sequentially with only one CPU core. As a result, the receiving gradients service is also blocked, and waiting for current gradients to be consumed. To resolve this bottleneck, we have to fully use multi CPU cores capability of PS.
 
-Usually, the first thing that comes to mind is using C++ to re-implement such a high performance parameter server. But we have some concerns on the development efficiency of C++. Golang is another potential choice. In this doc, we will go through the key points of implementing a high performance parameter server to see if Golang is competent for the job and substitute C++.
+Usually, the first thing that comes to mind is using C++ to re-implement such a high performance parameter server. But we have some concerns on the development efficiency of C++. Golang is another potential choice. In this doc, we will go through the key points of implementing a high performance parameter server to see if Golang is competent for the job and could substitute C++.
 
 
 ## Communication
 
-The PS provides services to workers with gRPC library. Both C++ and Go are well supported. The development efficiency of C++ could be some less than Go.
+The PS provides services to workers with gRPC library. Both C++ and Go are well supported in gRPC. The development efficiency of C++ could be some less than Go.
 
 ## Computation
 
-The gradients and parameters on PS are represented by tensors. And applying gradients to parameters, which is also called optimization, is acutally an operation to tensors.
+The gradients and parameters on PS are represented by tensors. And applying gradients to parameters, which is also called optimization, is acutally an operation of tensors.
 
 ### Tensor
 
