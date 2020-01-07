@@ -10,6 +10,8 @@ from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
 def create_data_reader(data_origin, records_per_task=None, **kwargs):
     """Create a data reader to read records
     Args:
+        data_origin: The origin of the data, e.g. location to files,
+            table name in the database, etc.
         records_per_task: The number of records to create a task
         kwargs: data reader params
     """

@@ -41,11 +41,9 @@ def _make_task_dispatcher(
     data_reader_params,
     create_data_reader_fn,
 ):
-    # TODO: Support any subclasses of `AbstractDataReader`
-    # and support passing specified parameters to the constructor
     def _maybe_create_shards(data_origin):
-        wkargs = get_dict_from_params_str(data_reader_params)
-        partition = wkargs.get("partition", None) if wkargs else None
+        kwargs = get_dict_from_params_str(data_reader_params)
+        partition = kwargs.get("partition", None) if kwargs else None
         return (
             create_data_reader_fn(
                 data_origin=data_origin,
