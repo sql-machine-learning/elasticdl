@@ -44,14 +44,16 @@ In Go, there is no concept of thread, we use goroutine instead. Goroutines are s
 
 The Go scheduler requires well-defined user-space events that occur at safe points in the code to context-switch from.  These events and safe points manifest themselves within function calls. If any tight loops are running without making function calls, it will cause latencies within the scheduler and garbage collection. It’s critically important that function calls happen within reasonable timeframes.
 
-There are also discussions on Go community:
+There are also some discussions on Go community:
 
 - [issue 10958, runtime: tight loops should be preemptible](https://github.com/golang/go/issues/10958)
 - [issue 36365, runtime: clean up async preemption loose ends](https://github.com/golang/go/issues/36365)
 
-It seems that the problems is addressed in Go 1.14 and Go 1.15. But the stable versions are not released yet.
+It seems that this problem is addressed in Go 1.14 and Go 1.15. But the stable versions are not released yet.
 
-The optimization in deep learning is actually a tight loop. A gradient tensor with 10000 elements has to be applied to a parameter tensor with 10000 elements. Optimization usually involes a lot of element-wise operations. There is a possibility that IO goroutines could not be scheduled for a while if all the CPU cores are occpuied by computation goroutines. We will do some experiments to check this.
+The optimization in deep learning is actually a tight loop. For example, a gradient tensor with 10000 elements has to be applied to a parameter tensor with 10000 elements. Optimization usually involes a lot of element-wise operations.
+
+There is a possibility that IO goroutines could not be scheduled for a while if all the CPU cores are occpuied by computation goroutines. We will do some experiments to check this.
 
 ## Reference
 
