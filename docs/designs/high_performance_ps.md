@@ -49,7 +49,7 @@ There are also some discussions on Go community:
 - [issue 10958, runtime: tight loops should be preemptible](https://github.com/golang/go/issues/10958)
 - [issue 36365, runtime: clean up async preemption loose ends](https://github.com/golang/go/issues/36365)
 
-It seems that this problem is addressed in Go 1.14 and Go 1.15. But the stable versions are not released yet.
+It seems that this problem is addressed in Go 1.14, and there are still some issues to do in Go 1.15. But the stable version of Go 1.14 is not released yet.
 
 The optimization in deep learning is actually a tight loop. For example, a gradient tensor with 10000 elements has to be applied to a parameter tensor with 10000 elements. Optimization usually involes a lot of element-wise operations.
 
