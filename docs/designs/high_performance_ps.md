@@ -6,7 +6,7 @@ This design doc focus on implementing a high performance parameter server(short 
 
 PS receives gradients from workers, applies gradients to parameters, and sends the latest parameters to workers. Receiving gradients and sending parameters bring IO workload to PS, and applying gradients to parameters brings CPU workload to PS. Since one PS could receive gradients from many workers, both IO workload and CPU workload would be very heavy.
 
-The current PS is implemented with Python. Because of `GIL` of Python, gradients are applied to parameters sequentially with only one CPU core. As a result, the receiving gradients service is also blocked, and waiting for current gradients to be consumed. To resolve this bottleneck, we have to fully use multi CPU cores of PS.
+The current PS is implemented with Python. Because of [GIL](https://wiki.python.org/moin/GlobalInterpreterLock) of Python, gradients are applied to parameters sequentially with only one CPU core. As a result, the receiving gradients service is also blocked, and waiting for current gradients to be consumed. To resolve this bottleneck, we have to fully use multi CPU cores of PS.
 
 Usually, the first thing that comes to mind is using C++ to reimplement a high performance parameter server. But we have some concerns on the development efficiency of C++. Go is another potential choice. In this doc, we will go through the key points of implementing a high performance parameter server to see if Go is competent for the job and could substitute C++.
 
