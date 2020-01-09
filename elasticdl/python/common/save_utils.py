@@ -1,5 +1,6 @@
 import os
 import tempfile
+import contextlib
 
 import tensorflow as tf
 
@@ -146,20 +147,21 @@ class CheckpointSaver(object):
         if not is_eval_checkpoint:
             self._checkpoint_list.append(Checkpoint(version, file))
             if self._max_versions:
-                while len(self._checkpoint_list) > self._max_versions:
-                    file_to_delete = self._checkpoint_list.pop(0).file
-                    if os.path.exists(file_to_delete):
-                        os.remove(file_to_delete)
+                self._delete_old_checkpoints_if_needed()
 
-                    # Remove the directory if empty
-                    delete_dir_name = os.path.dirname(file_to_delete)
-                    if os.path.exists(delete_dir_name) and not os.listdir(
-                        delete_dir_name
-                    ):
-                        try:
-                            os.rmdir(delete_dir_name)
-                        except Exception:
-                            pass
+    def _delete_old_checkpoints_if_needed(self):
+        """Delete the oldest checkpoint files and keep the number of
+        checkpoints is not beyond max_version.
+        """
+        while len(self._checkpoint_list) > self._max_versions:
+            checkpoint_file = self._checkpoint_list.pop(0).file
+            self._delete_checkoint(checkpoint_file)
+            checkpoint_version_dir = os.path.dirname(checkpoint_file)
+            with contextlib.suppress(FileNotFoundError):
+                os.remove(checkpoint_file)
+                # Remove the directory if empty
+                if not os.listdir(checkpoint_version_dir):
+                    os.rmdir(checkpoint_version_dir)
 
     def get_latest_checkpoint_version(self):
         """Get the latest checkpointed model version"""
