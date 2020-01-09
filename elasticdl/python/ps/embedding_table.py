@@ -83,6 +83,7 @@ class EmbeddingTable(object):
         embedding_pb.name = self.name
         embedding_pb.dim = self.dim
         embedding_pb.initializer = str(self.initializer_value)
+        embedding_pb.is_slot = self.is_slot
         return embedding_pb
 
     def get_table_size(self):
@@ -111,7 +112,8 @@ def create_embedding_table(embedding_table_info_pb):
     name = embedding_table_info_pb.name
     dim = embedding_table_info_pb.dim
     initializer = embedding_table_info_pb.initializer
-    return EmbeddingTable(name, dim, initializer)
+    is_slot = embedding_table_info_pb.is_slot
+    return EmbeddingTable(name, dim, initializer, is_slot)
 
 
 def get_slot_table_name(embedding_name, slot_name):
