@@ -389,6 +389,7 @@ class Worker(object):
                 embedding_info.name = layer.name
                 embedding_info.dim = layer.output_dim
                 embedding_info.initializer = layer.embeddings_initializer
+                embedding_info.is_slot = False
 
         if self._embedding_columns:
             embedding_infos = model.embedding_table_info
@@ -400,6 +401,7 @@ class Worker(object):
                 # a variable initializer function. For embedding layer, it's a
                 # tf.keras.initializers. Keep aligned between these two.
                 embedding_info.initializer = "uniform"
+                embedding_info.is_slot = False
 
         for ps_id in range(self._ps_num):
             self._ps_stubs[ps_id].push_embedding_info(model)
