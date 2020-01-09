@@ -106,12 +106,13 @@ class EmbeddingTable(object):
         )
 
 
+# TODO(bug): create_embedding_table does not create EmbeddingTable correctly
+#     if it is a slot table.
 def create_embedding_table(embedding_table_info_pb):
     name = embedding_table_info_pb.name
     dim = embedding_table_info_pb.dim
     initializer = embedding_table_info_pb.initializer
-    is_slot = embedding_table_info_pb.is_slot
-    return EmbeddingTable(name, dim, initializer, is_slot)
+    return EmbeddingTable(name, dim, initializer)
 
 
 def get_slot_table_name(embedding_name, slot_name):

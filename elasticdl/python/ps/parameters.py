@@ -189,12 +189,15 @@ class Parameters(object):
             )
 
         for name, embedding_table in self.embedding_params.items():
-            embedding_table_tensor = embedding_table.to_tensor()
-            tensor_pb = model_pb.param.add()
-            serialize_tensor(embedding_table_tensor, tensor_pb)
+            # Slot embedding table is not weights in the model, so we don't
+            # save it to checkpoint.
+            if not embedding_table.is_slot:
+                embedding_table_tensor = embedding_table.to_tensor()
+                tensor_pb = model_pb.param.add()
+                serialize_tensor(embedding_table_tensor, tensor_pb)
 
-            embedding_info = embedding_table.to_embedding_table_info_pb()
-            model_pb.embedding_table_info.append(embedding_info)
+                embedding_info = embedding_table.to_embedding_table_info_pb()
+                model_pb.embedding_table_info.append(embedding_info)
 
         return model_pb
 
