@@ -153,9 +153,8 @@ class CheckpointSaver(object):
 
                     # Remove the directory if empty
                     delete_dir_name = os.path.dirname(file_to_delete)
-                    if (
-                        os.path.exists(delete_dir_name) and
-                        not os.listdir(delete_dir_name)
+                    if os.path.exists(delete_dir_name) and not os.listdir(
+                        delete_dir_name
                     ):
                         try:
                             os.rmdir(delete_dir_name)
