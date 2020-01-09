@@ -148,10 +148,15 @@ class CheckpointSaver(object):
             if self._max_versions:
                 while len(self._checkpoint_list) > self._max_versions:
                     file_to_delete = self._checkpoint_list.pop(0).file
-                    os.remove(file_to_delete)
+                    if os.path.exists(file_to_delete):
+                        os.remove(file_to_delete)
+
                     # Remove the directory if empty
                     delete_dir_name = os.path.dirname(file_to_delete)
-                    if not os.listdir(delete_dir_name):
+                    if (
+                        os.path.exists(delete_dir_name) and
+                        not os.listdir(delete_dir_name)
+                    ):
                         try:
                             os.rmdir(delete_dir_name)
                         except Exception:
