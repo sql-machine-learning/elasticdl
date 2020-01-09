@@ -155,7 +155,6 @@ class CheckpointSaver(object):
         """
         while len(self._checkpoint_list) > self._max_versions:
             checkpoint_file = self._checkpoint_list.pop(0).file
-            self._delete_checkoint(checkpoint_file)
             checkpoint_version_dir = os.path.dirname(checkpoint_file)
             with contextlib.suppress(FileNotFoundError):
                 os.remove(checkpoint_file)
