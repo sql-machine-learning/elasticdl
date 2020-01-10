@@ -1,6 +1,8 @@
-#pragma once
+#ifndef ELASTICDL_CC_COMMON_TENSOR_H_
+#define ELASTICDL_CC_COMMON_TENSOR_H_
 
 #include <cassert>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -10,18 +12,18 @@ namespace elasticdl {
 namespace common {
 
 enum class ElemType {
-  FP32,
-  FP64,
-  INT32,
+  Float32,
+  Float64,
+  Int32,
 };
 
 static size_t GetElementSize(ElemType i) {
   switch (i) {
-    case ElemType::FP32:
+    case ElemType::Float32:
       return sizeof(float);
-    case ElemType::FP64:
+    case ElemType::Float64:
       return sizeof(double);
-    case ElemType::INT32:
+    case ElemType::Int32:
       return sizeof(int32_t);
   }
   LOG(FATAL) << "Invalid Type";
@@ -30,11 +32,11 @@ static size_t GetElementSize(ElemType i) {
 template <class T>
 static bool IsType(ElemType e) {
   switch (e) {
-    case ElemType::FP32:
+    case ElemType::Float32:
       return std::is_same<T, float>::value;
-    case ElemType::FP64:
+    case ElemType::Float64:
       return std::is_same<T, double>::value;
-    case ElemType::INT32:
+    case ElemType::Int32:
       return std::is_same<T, int32_t>::value;
   }
   LOG(FATAL) << "Invalid Type";
@@ -42,9 +44,34 @@ static bool IsType(ElemType e) {
 
 class Tensor {
  public:
-  Tensor(const std::vector<size_t>& dim, ElemType type);
+  Tensor(const std::string& name,
+         const std::vector<int64_t>& dim,
+         const ElemType& type)
+      : name_(name), dim_(dim), element_type_(type) {
+    int64_t size = GetSize() * GetElementSize(element_type_);
+    data_ = new char[size];
+  }
+  Tensor(const std::string& name,
+         const std::vector<int64_t>& dim,
+         const ElemType& type,
+         void* data,
+         void* indices)
+      : name_(name),
+        dim_(dim),
+        element_type_(type),
+        data_(reinterpret_cast<char*>(data)),
+        indices_(reinterpret_cast<int64_t*>(indices)) {
+    is_unowned_ = true;
+  }
 
-  ~Tensor();
+  ~Tensor() {
+    if (!is_unowned()) {
+      delete[] data_;
+      delete[] indices_;
+    }
+  }
+
+  bool is_unowned() { return is_unowned_; }
 
   template <class T>
   T* GetRawDataPointer() {
@@ -52,7 +79,17 @@ class Tensor {
     return reinterpret_cast<T*>(data_);
   }
 
-  size_t GetSize();
+  int64_t* indices() { return indices_; }
+
+  std::vector<int64_t>& dim() { return dim_; }
+
+  std::string& name() { return name_; }
+
+  int64_t GetHeight();
+
+  int64_t GetWidth();
+
+  int64_t GetSize();
 
   template <class T>
   T& at(size_t index) {
@@ -62,11 +99,14 @@ class Tensor {
 
  private:
   std::string name_;
-  char* data_{nullptr};
+  std::vector<int64_t> dim_;
   ElemType element_type_;
-  // TODO(qijun) use small vector instead
-  std::vector<size_t> dim_;
+  char* data_{nullptr};
+  int64_t* indices_{nullptr};
+  bool is_unowned_{false};
 };
 
 }  // namespace common
 }  // namespace elasticdl
+
+#endif

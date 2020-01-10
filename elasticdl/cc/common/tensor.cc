@@ -3,22 +3,25 @@
 namespace elasticdl {
 namespace common {
 
-Tensor::Tensor(const std::vector<size_t>& dim, ElemType type) {
-  element_type_ = type;
-  dim_ = dim;
-
-  size_t size = GetSize() * GetElementSize(element_type_);
-  data_ = new char[size];
-}
-
-Tensor::~Tensor() { delete data_; }
-
-size_t Tensor::GetSize() {
-  size_t size = 1;
+int64_t Tensor::GetSize() {
+  int64_t size = 1;
   for (auto d : dim_) {
     size *= d;
   }
   return size;
 }
+
+int64_t Tensor::GetHeight() {
+  CHECK(indices_) << "GetHeight is used in Row Sparse Tensor";
+  CHECK_EQ(dim_.size(), 2) << "Row Sparse Tensor must has two dimensions";
+  return dim_[0];
+}
+
+int64_t Tensor::GetWidth() {
+  CHECK(indices_) << "GetHeight is used in Row Sparse Tensor";
+  CHECK_EQ(dim_.size(), 2) << "Row Sparse Tensor must has two dimensions";
+  return dim_[1];
+}
+
 }  // namespace common
 }  // namespace elasticdl
