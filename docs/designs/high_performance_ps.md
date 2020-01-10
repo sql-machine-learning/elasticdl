@@ -49,7 +49,7 @@ Considering the tradeoff between development efficiency and program peformance, 
 
 [Cgo](https://golang.org/cmd/cgo/) enables the creation of Go packages that call C code. And the overhead of cgo is slight. The optimization operators will be implemented in C++, wrappered with C interface, and exposed to Go.
 
-The receiving gradients and sending parameters service are implemented in Go. Once receving gradients from a worker, a gouroutine will be launched to do optimization.
+The receiving gradients and sending parameters service are implemented in Go. Once receving gradients from a worker, a goroutine will be launched to do optimization.
 
 ## Reference
 
