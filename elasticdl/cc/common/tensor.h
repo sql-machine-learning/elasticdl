@@ -1,7 +1,6 @@
 #ifndef ELASTICDL_CC_COMMON_TENSOR_H_
 #define ELASTICDL_CC_COMMON_TENSOR_H_
 
-#include <cassert>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -75,7 +74,7 @@ class Tensor {
 
   template <class T>
   T* GetRawDataPointer() {
-    assert(IsType<T>(element_type_));
+    CHECK(IsType<T>(element_type_));
     return reinterpret_cast<T*>(data_);
   }
 
