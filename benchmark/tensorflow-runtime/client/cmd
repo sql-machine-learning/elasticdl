@@ -1,0 +1,6 @@
+python client.py --master "http://192.168.64.5:31898" \
+ --strategy AllReduce \
+ --ps-num 0 \
+ --worker-num 4 \
+ --image allreduce\
+ --task test

@@ -1,0 +1,54 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ss-create
+rules:
+- apiGroups: ["", "apps"]
+  resources: ["pods", "statefulsets"]
+  verbs: ["create", "list"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ss-create
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: ss-create
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: ReplicationController
+apiVersion: v1
+metadata:
+  name: master-rc
+spec:
+  replicas: 1
+  selector:
+    app: master
+  template:
+    metadata:
+      labels:
+        app: master
+    spec:
+      containers:
+      - name: master-pod
+        image: master-tf-dist
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 7897
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: master-svc
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 7897
+    nodePort: 31898
+  selector:
+    app: master

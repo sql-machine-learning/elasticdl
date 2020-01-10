@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ToFill
+spec:
+  serviceName: ToFill
+  replicas: ToFill
+  selector:
+    matchLabels:
+      type: ToFill
+      app: ToFill
+  template:
+    metadata:
+      labels:
+        type: ToFill
+        app: ToFill
+    spec:
+      containers:
+      - name: ToFill
+        image: ToFill
+        imagePullPolicy: Never
+        ports:
+        - name: http
+          containerPort: 7896
