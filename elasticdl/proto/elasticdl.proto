@@ -4,6 +4,7 @@ import "google/protobuf/empty.proto";
 import "elasticdl/proto/tensor_dtype.proto";
 
 package master;
+option go_package = "elasticdl/pkg/proto";
 
 enum TaskType {
     TRAINING = 0;

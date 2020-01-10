@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package master;
+option go_package = "elasticdl/pkg/proto";
 
 enum TensorDtype{
     // Not a legal value for DataType. Used to indicate a DataType field
