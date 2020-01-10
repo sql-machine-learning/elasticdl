@@ -1,9 +1,11 @@
 This is a demo of tensorflow distribute training on K8s
 
 Requirements:
+
     1. minikube, docker installed
 
 Usage:
+
     1. start the Minikube
         minikube start --vm-driver=hyperkit --memory="6144MB"
 
@@ -11,7 +13,7 @@ Usage:
         source env.sh
 
     3. build training image
-        cd allreduce
+        cd allreduce_keras_example
         sh build_image.sh
 
     4. build master pod image and create master pod

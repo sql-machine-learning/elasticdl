@@ -1,0 +1,6 @@
+python client.py --master "http://192.168.64.5:31898" \
+ --strategy ParameterServer \
+ --ps-num 1 \
+ --worker-num 2 \
+ --image psestimator\
+ --task test

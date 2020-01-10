@@ -11,7 +11,6 @@ tf.compat.v1.disable_eager_execution()
 BUFFER_SIZE = 10000
 BATCH_SIZE = 64
 
-# 将 MNIST 数据从 (0, 255] 缩放到 (0., 1.]
 def scale(image, label):
   image = tf.cast(image, tf.float32)
   image /= 255

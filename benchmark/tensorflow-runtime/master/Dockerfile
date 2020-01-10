@@ -6,4 +6,4 @@ RUN pip install atomiclong
 RUN pip install kubernetes
 ADD ./master.py /master.py
 ADD ./template.yaml /template.yaml
-ENTRYPOINT ["sleep","9999999"]
+ENTRYPOINT ["python","master.py"]

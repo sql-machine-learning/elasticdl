@@ -45,7 +45,7 @@ class SetMeta:
 
         if len(self.ps_ip)>0:
             self.basic_json["TF_CONFIG"]["cluster"]["ps"] = []
-            for i_ps_ip in self.worker_ip:
+            for i_ps_ip in self.ps_ip:
                 self.basic_json["TF_CONFIG"]["cluster"]["ps"].append(i_ps_ip+":1234")
 
         for i, i_worker_ip in enumerate(self.worker_ip):
@@ -61,7 +61,7 @@ class SetMeta:
             requests.post("http://"+i_ps_ip+":7896/config", json=cur_json)
 
     def start(self):
-        for i_ps_ip in self.worker_ip:
+        for i_ps_ip in self.ps_ip:
             requests.get("http://"+i_ps_ip+":7896/run")
 
         for i_worker_ip in self.worker_ip:
@@ -146,6 +146,7 @@ def apply_task(strategy, worker_num, ps_num, img, taskname):
         create_statefulset(ps_num, img, taskname, "ps", current_id)
         #TODO: use readiness probe
         selector = "type=ps,app="+taskname+"-"+str(current_id)
+        time.sleep(15)
         current_meta.ps_ip = list_pods_ip(selector)
         current_meta.ps_stateful_state = taskname+"-ps-"+str(current_id)
     else:
