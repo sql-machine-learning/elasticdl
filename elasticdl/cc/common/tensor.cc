@@ -12,13 +12,13 @@ int64_t Tensor::GetSize() {
 }
 
 int64_t Tensor::GetHeight() {
-  CHECK(indices_) << "GetHeight is used in Row Sparse Tensor";
+  CHECK(indices_.size()) << "GetHeight is used in Row Sparse Tensor";
   CHECK_EQ(dim_.size(), 2) << "Row Sparse Tensor must has two dimensions";
   return dim_[0];
 }
 
 int64_t Tensor::GetWidth() {
-  CHECK(indices_) << "GetHeight is used in Row Sparse Tensor";
+  CHECK(indices_.size()) << "GetHeight is used in Row Sparse Tensor";
   CHECK_EQ(dim_.size(), 2) << "Row Sparse Tensor must has two dimensions";
   return dim_[1];
 }

@@ -20,11 +20,11 @@ TEST(Tensor, RowSparseTensor) {
   std::vector<int64_t> indices = {0, 1, 3, 5, 7};
   std::vector<int64_t> dim = {5, 2};
   std::vector<float> data = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
-  Tensor t("t", dim, ElemType::Float32, data.data(), indices.data());
+  Tensor t("t", dim, ElemType::Float32, data.data(), indices);
 
   EXPECT_EQ("t", t.name());
   EXPECT_EQ(t.GetHeight(), 5);
   EXPECT_EQ(t.GetWidth(), 2);
-  EXPECT_EQ(*(t.indices() + 3), 5);
+  EXPECT_EQ(t.indices()[3], 5);
   EXPECT_FLOAT_EQ(t.at<float>(2), 0.3);
 }
