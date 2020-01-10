@@ -30,9 +30,6 @@ There are different kinds of optimizers, which need some tensor operations. Ther
 
 It seems that there are few math libraries in Go. [gosl](https://github.com/cpmech/gosl) is no longer active, and [gonum](https://github.com/gonum/gonum) does not support MKL. Generally, the math library ecology of Go is far from competing to C++. And we also has some faint worry with the performance of math libraries in Go.
 
-[Cgo](https://golang.org/cmd/cgo/) enables the creation of Go packages that call C code.
-
-
 ## Scheduling
 
 In C++, we use thread based scheduling. Threads are scheduled by the operating system. Usually, we will implement a thread pool for computation, and another thread pool for IO. The parameter optimzation will be processed by the computation thread pool in parallel. In further, to reduce the overhead of context switching, we could bind a thread to a certain CPU core by setting CPU affinity to the thread. It will increase the cache hit rate of a CPU core.
@@ -48,10 +45,11 @@ Go supports concurrent programming well with first-class concepts, goroutine and
 
 ## Conclusion
 
-
 Considering the tradeoff between development efficiency and program peformance, we plan to put communication and scheduling parts in Go, and computation in C++.
 
-The optimization operators will be implemented in C++, wrappered with C interface and exposed to Go. The receiving gradients and sending parameters service are implemented in Go. Once receving gradients from a worker, a gouroutine will be launched to do optimization.
+[Cgo](https://golang.org/cmd/cgo/) enables the creation of Go packages that call C code. And the overhead of cgo is slight. The optimization operators will be implemented in C++, wrappered with C interface, and exposed to Go.
+
+The receiving gradients and sending parameters service are implemented in Go. Once receving gradients from a worker, a gouroutine will be launched to do optimization.
 
 ## Reference
 
