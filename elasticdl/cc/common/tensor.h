@@ -28,7 +28,6 @@ class Tensor {
       : name_(name),
         element_type_(type),
         dim_(dim),
-
         data_(reinterpret_cast<char*>(data)),
         indices_(indices) {
     is_unowned_ = true;
