@@ -19,10 +19,12 @@ class CollectiveCommunicator(object):
     def __init__(self):
         if _FTLIB_INSTALLED:
             self._ftlib = BasicFTLib()
-            self._ftlib.init(
-                consensus="shared_storage", framework="dummy_NCCL"
-            )
+            self._ftlib.init(consensus="gossip", commlib="pytorch")
         else:
+            logger.warning(
+                "FTLib is not installed. The CollectiveCommunicator "
+                "may not work as expected"
+            )
             self._ftlib = None
 
     def allreduce(self, data, op="MEAN"):
@@ -49,7 +51,18 @@ class CollectiveCommunicator(object):
             return CollectiveCommunicatorStatus.SUCCEEDED, data
 
     def broadcast(self, data, root_ip):
-        return CollectiveCommunicatorStatus.SUCCEEDED, data
+        if self._ftlib is not None:
+            res = self._ftlib.broadcast(data, root_ip)
+            if res == FTAllReduceStatus.SUCCESS:
+                return CollectiveCommunicatorStatus.SUCCEEDED, data
+            else:
+                return CollectiveCommunicatorStatus.FAILED, data
+        else:
+            logger.warning(
+                "FTLib is not installed. "
+                "Default to succeeded for testing purposes"
+            )
+            return CollectiveCommunicatorStatus.SUCCEEDED, data
 
     def barrier(self):
         return CollectiveCommunicatorStatus.SUCCEEDED

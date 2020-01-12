@@ -967,6 +967,7 @@ class Worker(object):
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
+                self._process_save_model_task_if_needed()
                 break
             dataset = self._dataset_fn(
                 dataset,

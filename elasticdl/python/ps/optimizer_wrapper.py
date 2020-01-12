@@ -71,12 +71,6 @@ class OptimizerWrapper(object):
         update_embedding_func=None,
     ):
         """
-        Note:
-            We need to support Redis and ElasticDL parameter server at the
-            same time. If `lookup_embedding_func`/`update_embedding_func`
-            is not None, use parameter server to lookup/update embedding.
-            Otherwise use Redis.
-
         Arguments:
             opt: A TensorFlow optimizer instance.
             kv_store_endpoint: The endpoint to kv store.
@@ -85,7 +79,7 @@ class OptimizerWrapper(object):
                 name of ElasticDL embedding layer and `embedding_dim`
                 is the output dimension of corresponding embedding layer.
             use_async: A python bool. True if using asynchronous updates. When
-                using asynchronoues updates, `OptimizerWrapper` is thread-safe
+                using asynchronous updates, `OptimizerWrapper` is thread-safe
                 for non-embedding variables and is not thread-safe for
                 embedding table.
             lookup_embedding_func: The function to lookup embeddings. The
@@ -154,7 +148,8 @@ class OptimizerWrapper(object):
                 ElasticDL `Tensor` object. Otherwise it is a TensorFlow
                 variable.
         """
-        self._init_thread_local()
+        if not hasattr(self._tls, "_embed_variables"):
+            self._init_thread_local()
 
         if self._has_embedding:
             with self._update_gradient_lock:
@@ -177,7 +172,7 @@ class OptimizerWrapper(object):
                 grads_and_vars_new.append((grad, var))
         self._opt.apply_gradients(grads_and_vars_new)
         self._update_embedding_param()
-        self._delete_variables()
+        self._delete_slots_and_weights_in_optimizer()
 
     def _get_embedding_var_and_grad(self, grad, layer_name):
         unique_ids, indices = tf.unique(grad.indices)
@@ -201,14 +196,18 @@ class OptimizerWrapper(object):
         Note that this function saves the created variable to
         `self._tls._embed_variables`.
         """
-        embed_var = tf.Variable(
-            initial_value,
-            name=name + str(threading.get_ident()),
-            shape=initial_value.shape,
-            dtype=tf.float32,
-            trainable=False,
-        )
-        self._tls._embed_variables[name] = embed_var
+        if name not in self._tls._embed_variables:
+            embed_var = tf.Variable(
+                initial_value,
+                name=name + str(threading.get_ident()),
+                shape=(None, None),
+                dtype=tf.float32,
+                trainable=False,
+            )
+            self._tls._embed_variables[name] = embed_var
+        else:
+            embed_var = self._tls._embed_variables[name]
+            embed_var.assign(initial_value)
         return embed_var
 
     def _get_slot_and_set_to_optimizer(self, layer_name):
@@ -241,40 +240,52 @@ class OptimizerWrapper(object):
                 "Embedding variable for layer %s should be already created."
                 % (layer_name)
             )
-        slot_var = self._create_slot_variable_in_optimizer(
-            embed_var, slot_name, initial_value.shape, initial_value
+        slot_var = self._init_slot_variable(
+            layer_name, embed_var, slot_name, initial_value
         )
-        slot_variables_dict = self._tls._slot_variables.setdefault(
-            layer_name, {}
-        )
-        slot_variables_dict[slot_name] = slot_var
+        self._update_slot_variable_to_optimizer(slot_name, embed_var, slot_var)
+
+        return slot_var
+
+    def _init_slot_variable(
+        self, layer_name, embed_var, slot_name, initial_value
+    ):
+        """Initialize a variable for a slot"""
+        if (
+            layer_name not in self._tls._slot_variables
+            or slot_name not in self._tls._slot_variables[layer_name]
+        ):
+            slot_var_name = "%s/%s" % (embed_var._shared_name, slot_name)
+            slot_var = self._opt.add_weight(
+                name=slot_var_name,
+                shape=(None, None),
+                dtype=embed_var.dtype,
+                initializer=initial_value,
+                trainable=False,
+            )
+            slot_variables_dict = self._tls._slot_variables.setdefault(
+                layer_name, {}
+            )
+            slot_variables_dict[slot_name] = slot_var
+        else:
+            slot_var = self._tls._slot_variables[layer_name][slot_name]
+            slot_var.assign(initial_value)
         return slot_var
 
     # This is a function modified from TensorFlow optimizers.
     # https://github.com/tensorflow/tensorflow/blob/
     # 69b1feac62276edcc509ac88af229c6236e645fe/tensorflow/python
     # /keras/optimizer_v2/optimizer_v2.py#L567
-    def _create_slot_variable_in_optimizer(
-        self, embed_var, slot_name, shape, initial_value
+    def _update_slot_variable_to_optimizer(
+        self, slot_name, embed_var, slot_var
     ):
-        """Create variable for a slot and save it in TensorFlow optimizer."""
         if slot_name not in self._opt._slot_names:
             self._opt._slot_names.append(slot_name)
         var_key = _var_key(embed_var)
         slot_dict = self._opt._slots.setdefault(var_key, {})
-        slot_var = slot_dict.get(slot_name, None)
-        if slot_var is None:
-            slot_var_name = "%s/%s" % (embed_var._shared_name, slot_name)
-            slot_var = self._opt.add_weight(
-                name=slot_var_name,
-                shape=shape,
-                dtype=embed_var.dtype,
-                initializer=initial_value,
-                trainable=False,
-            )
+        if slot_name not in slot_dict:
             slot_dict[slot_name] = slot_var
             self._opt._weights.append(slot_var)
-            return slot_var
         else:
             raise RuntimeError(
                 "Variable with var_key %s and slot_name %s is not expected to "
@@ -292,13 +303,15 @@ class OptimizerWrapper(object):
                 slot_table_name = get_slot_table_name(layer, slot)
                 self._update_embedding_func(slot_table_name, ids, value)
 
-    def _delete_variables(self):
-        # Slot variable access in optimizer requires corresponding embedding
-        # variable information. Delete slot variables first.
+    def _delete_slots_and_weights_in_optimizer(self):
+        """Clear the slots and weights in the optimizer according
+        to Embedding layers.
+        """
         for layer_name, slots in self._tls._slot_variables.items():
             embed_var = self._get_embedding_variable(layer_name)
             embed_var_key = _var_key(embed_var)
-            del self._opt._slots[embed_var_key]
+            if embed_var_key in self._opt._slots:
+                del self._opt._slots[embed_var_key]
             for _, var in slots.items():
                 opt_weight_iter = 0
                 while opt_weight_iter < len(self._opt._weights):
@@ -307,12 +320,6 @@ class OptimizerWrapper(object):
                         break
                     else:
                         opt_weight_iter += 1
-        for key in list(self._tls._slot_variables.keys()):
-            del self._tls._slot_variables[key]
-
-        # Delete variables in embed_variables.
-        for key in list(self._tls._embed_variables.keys()):
-            del self._tls._embed_variables[key]
 
         # Delete variables in unique_ids_all_layers.
         for key in list(self._tls._unique_ids_all_layers.keys()):
@@ -322,8 +329,6 @@ class OptimizerWrapper(object):
     def allowed_slot_names(self):
         return self._allowed_slot_names
 
-    # TODO(yunjian.lmh): Do not need to save slot_initial_value in
-    #     optimizer wrapper after we do not need to support Redis.
     @property
     def slot_initial_value(self):
         return self._slot_initial_value

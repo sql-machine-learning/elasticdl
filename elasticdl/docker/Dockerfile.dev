@@ -7,7 +7,7 @@ COPY elasticdl/docker/bashrc /etc/bash.bashrc
 RUN chmod a+rwx /etc/bash.bashrc
 
 RUN apt update && \
-    apt install -y unzip curl git software-properties-common g++
+    apt install -y unzip curl git software-properties-common g++ wget
 
 RUN curl https://bazel.build/bazel-release.pub.gpg | apt-key add -
 RUN echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | \
@@ -19,6 +19,16 @@ COPY elasticdl/requirements-dev.txt /requirements-dev.txt
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 RUN pip install -r /requirements.txt --extra-index-url=${EXTRA_PYPI_INDEX}
 RUN pip install -r /requirements-dev.txt --extra-index-url=${EXTRA_PYPI_INDEX}
+
+# Install Go and related tools
+ENV GOPATH /root/go
+ENV PATH /usr/local/go/bin:$GOPATH/bin:$PATH
+COPY elasticdl/docker/scripts/install-go.bash /
+RUN /install-go.bash && rm /install-go.bash
+
+# Install protobuf and protoc
+COPY elasticdl/docker/scripts/install-protobuf.bash /
+RUN /install-protobuf.bash && rm /install-protobuf.bash
 
 # Copy the data generation package to /var and run them from there.
 # This assumes that the data generation package is independent with the
