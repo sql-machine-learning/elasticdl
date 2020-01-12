@@ -6,10 +6,19 @@ unittest_deps = [
 ]
 
 cc_library(
+    name = "type",
+    srcs = ["type.cc"],
+    hdrs = ["type.h"],
+    deps = ["@glog//:glog"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
     name = "tensor",
     srcs = ["tensor.cc"],
     hdrs = ["tensor.h"],
-    deps = ["@glog//:glog"],
+    deps = ["//elasticdl/cc/common:type"],
+    visibility = ["//visibility:public"],
 )
 
 

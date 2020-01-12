@@ -5,60 +5,30 @@
 #include <string>
 #include <vector>
 
-#include "glog/logging.h"
+#include "elasticdl/cc/common/type.h"
 
 namespace elasticdl {
 namespace common {
 
-enum class ElemType {
-  Float32,
-  Float64,
-  Int32,
-};
-
-static size_t GetElementSize(ElemType i) {
-  switch (i) {
-    case ElemType::Float32:
-      return sizeof(float);
-    case ElemType::Float64:
-      return sizeof(double);
-    case ElemType::Int32:
-      return sizeof(int32_t);
-  }
-  LOG(FATAL) << "Invalid Type";
-}
-
-template <class T>
-static bool IsType(ElemType e) {
-  switch (e) {
-    case ElemType::Float32:
-      return std::is_same<T, float>::value;
-    case ElemType::Float64:
-      return std::is_same<T, double>::value;
-    case ElemType::Int32:
-      return std::is_same<T, int32_t>::value;
-  }
-  LOG(FATAL) << "Invalid Type";
-}
-
 class Tensor {
  public:
   Tensor(const std::string& name,
-         const std::vector<int64_t>& dim,
          const ElemType& type,
+         const std::vector<int64_t>& dim,
          const std::vector<int64_t>& indices = std::vector<int64_t>())
-      : name_(name), dim_(dim), element_type_(type), indices_(indices) {
+      : name_(name), element_type_(type), dim_(dim), indices_(indices) {
     int64_t size = GetSize() * GetElementSize(element_type_);
     data_ = new char[size];
   }
   Tensor(const std::string& name,
-         const std::vector<int64_t>& dim,
          const ElemType& type,
+         const std::vector<int64_t>& dim,
          void* data,
          const std::vector<int64_t>& indices = std::vector<int64_t>())
       : name_(name),
-        dim_(dim),
         element_type_(type),
+        dim_(dim),
+
         data_(reinterpret_cast<char*>(data)),
         indices_(indices) {
     is_unowned_ = true;
@@ -72,34 +42,40 @@ class Tensor {
 
   bool is_unowned() { return is_unowned_; }
 
-  template <class T>
-  T* GetRawDataPointer() {
+  template <typename T>
+  T* mutable_data() {
     CHECK(IsType<T>(element_type_));
     return reinterpret_cast<T*>(data_);
   }
 
-  std::vector<int64_t>& indices() { return indices_; }
+  template <typename T>
+  const T* data() const {
+    CHECK(IsType<T>(element_type_));
+    return reinterpret_cast<T*>(data_);
+  }
 
-  std::vector<int64_t>& dim() { return dim_; }
+  const std::vector<int64_t>& indices() const { return indices_; }
 
-  std::string& name() { return name_; }
+  const std::vector<int64_t>& dim() const { return dim_; }
 
-  int64_t GetHeight();
+  const std::string& name() { return name_; }
 
-  int64_t GetWidth();
+  const int64_t GetHeight() const;
 
-  int64_t GetSize();
+  const int64_t GetWidth() const;
+
+  const int64_t GetSize() const;
 
   template <class T>
   T& at(size_t index) {
-    auto* data = GetRawDataPointer<T>();
-    return data[index];
+    T* d = mutable_data<T>();
+    return d[index];
   }
 
  private:
   std::string name_;
-  std::vector<int64_t> dim_;
   ElemType element_type_;
+  std::vector<int64_t> dim_;
   char* data_{nullptr};
   std::vector<int64_t> indices_;
   bool is_unowned_{false};

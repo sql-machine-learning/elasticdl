@@ -1,0 +1,1 @@
+#include "elasticdl/cc/common/type.h"
