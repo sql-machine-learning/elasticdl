@@ -12,20 +12,10 @@ enum class ElemType {
   Int32,
 };
 
-static size_t GetElementSize(ElemType i) {
-  switch (i) {
-    case ElemType::Float32:
-      return sizeof(float);
-    case ElemType::Float64:
-      return sizeof(double);
-    case ElemType::Int32:
-      return sizeof(int32_t);
-  }
-  LOG(FATAL) << "Invalid Type";
-}
+size_t GetElementSize(ElemType i);
 
-template <class T>
-static bool IsType(ElemType e) {
+template <typename T>
+bool IsType(ElemType e) {
   switch (e) {
     case ElemType::Float32:
       return std::is_same<T, float>::value;

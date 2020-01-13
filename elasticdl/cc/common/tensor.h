@@ -33,6 +33,28 @@ class Tensor {
     is_unowned_ = true;
   }
 
+  Tensor(const Tensor& other) = delete;
+  Tensor& operator=(const Tensor& other) = delete;
+
+  Tensor(Tensor&& other) noexcept {
+    std::swap(name_, other.name_);
+    std::swap(element_type_, other.element_type_);
+    std::swap(dim_, other.dim_);
+    std::swap(data_, other.data_);
+    std::swap(indices_, other.indices_);
+    std::swap(is_unowned_, other.is_unowned_);
+  }
+
+  Tensor& operator=(Tensor&& other) noexcept {
+    std::swap(name_, other.name_);
+    std::swap(element_type_, other.element_type_);
+    std::swap(dim_, other.dim_);
+    std::swap(data_, other.data_);
+    std::swap(indices_, other.indices_);
+    std::swap(is_unowned_, other.is_unowned_);
+    return *this;
+  }
+
   ~Tensor() {
     if (!is_unowned()) {
       delete[] data_;
@@ -53,11 +75,17 @@ class Tensor {
     return reinterpret_cast<T*>(data_);
   }
 
+  char* GetRawDataPointer() { return data_; }
+
   const std::vector<int64_t>& indices() const { return indices_; }
 
   const std::vector<int64_t>& dim() const { return dim_; }
 
-  const std::string& name() { return name_; }
+  const std::string& name() const { return name_; }
+
+  bool IsSparse() const { return !indices_.empty(); }
+
+  ElemType element_type() const { return element_type_; }
 
   const int64_t GetHeight() const;
 
