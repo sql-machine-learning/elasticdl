@@ -4,7 +4,7 @@
 
 This design doc focuses on implementing a high performance parameter server (PS). For the functionality of the PS, please refer to this [design doc](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/parameter_server.md)
 
-The PS receives gradients from workers, applies gradients to parameters, and sends the latest parameters to workers. Receiving gradients and sending parameters are primary I/O workloads of the PS, and parameters updating cost CPU resource. Since one PS could receive gradients from more than one worker, both I/O workload and CPU workload could be heavy.
+The PS receives gradients from workers, applies gradients to parameters, and sends the latest parameters to workers. Receiving gradients and sending parameters are primary I/O workloads of the PS, and updating parameters cost CPU resource. Since one PS could receive gradients from more than one worker, both I/O workload and CPU workload could be heavy.
 
 The current PS is in Python. Due to the existence of [GIL](https://wiki.python.org/moin/GlobalInterpreterLock) of Python, gradients are applied to parameters sequentially with only one CPU core. As a result, the receiving gradients service is also blocked, and waiting for current gradients to be consumed. We want to remove this bottleneck and make full utilization of multiple CPU cores.
 
@@ -34,7 +34,7 @@ It seems that there are few math libraries in Go. [Gosl](https://github.com/cpme
 
 In C++, we use thread based scheduling. Threads are scheduled by the operating system. Usually, we will implement a thread pool for computation, and another thread pool for IO. The parameter optimization will be processed by the computation thread pool in parallel. In further, to reduce the overhead of context switching, we could bind a thread to a certain CPU core by setting CPU affinity to the thread. It will increase the cache hit rate of a CPU core.
 
-In Go, there is no concept of thread, we use goroutine instead. Goroutines are scheduled by Go runtime. Goroutine is not preemptive. There are four classes of events that occur in Go programs that allow the scheduler to make scheduling decisions. This does not mean it will always happen in one of these events. It means the scheduler gets the opportunity.
+In Go, there is no concept of thread, we use goroutine instead. Goroutines are scheduled by Go runtime. Goroutine is not preemptive. There are four classes of events that occur in Go programs and allow the scheduler to make scheduling decisions. This does not mean it will always happen in one of these events. It means the scheduler gets the opportunity.
 
 - The use of the keyword `go`
 - Garbage collection
@@ -49,7 +49,7 @@ Considering the tradeoff between development efficiency and program performance,
 
 [Cgo](https://golang.org/cmd/cgo/) enables the creation of Go packages that call C code. And the overhead of cgo is slight. The optimization operators will be implemented in C++, wrapped with C interface, and exposed to Go.
 
-The receiving gradients and sending parameters service are implemented in Go. Once receiving gradients from a worker, a goroutine will be launched to do optimization.
+The receiving gradients and sending parameters services are implemented in Go. Once receiving gradients from a worker, a goroutine will be launched to do optimization.
 
 ## Reference
 
