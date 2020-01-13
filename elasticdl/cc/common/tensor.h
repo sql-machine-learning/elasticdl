@@ -93,7 +93,7 @@ class Tensor {
 
   const int64_t GetSize() const;
 
-  template <class T>
+  template <typename T>
   T& at(size_t index) {
     T* d = mutable_data<T>();
     return d[index];
