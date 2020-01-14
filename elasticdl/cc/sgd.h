@@ -5,5 +5,5 @@
 
 namespace elasticdl {
 void SGD(const float* grad, float* param, double lr, int64_t size);
-}
+}  // namespace elasticdl
 #endif
