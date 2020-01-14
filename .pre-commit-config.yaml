@@ -21,3 +21,11 @@ repos:
     hooks:
     - id: mypy
       args: [--ignore-missing-imports, --follow-imports=skip]
+- repo: git://github.com/dnephin/pre-commit-golang
+  rev: v0.3.3
+  hooks:
+    - id: go-fmt
+    - id: go-lint
+    - id: validate-toml
+    - id: no-go-testing
+
