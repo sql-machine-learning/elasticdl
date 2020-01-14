@@ -1,0 +1,18 @@
+---
+Language:        Cpp
+BasedOnStyle:  Google
+IndentWidth:     2
+TabWidth:        2
+ContinuationIndentWidth: 4
+AccessModifierOffset: -1  # The private/protected/public has no indent in class
+Standard:  Cpp11
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackParameters: false
+BinPackArguments: false
+---
+Language: Proto
+BasedOnStyle:  Google
+IndentWidth:     2
+TabWidth:        2
+ContinuationIndentWidth: 4
+---
