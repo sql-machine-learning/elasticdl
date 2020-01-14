@@ -1,5 +1,5 @@
 from flask import Flask, request
-import json, requests, os, sys
+import json, requests, os, sys, subprocess
 
 app = Flask(__name__)
 
@@ -21,7 +21,7 @@ def run():
     os.environ["TF_CONFIG"] = json.dumps(tf_config_json)
     print(os.environ["NUM_WORKERS"], file=sys.stdout)
     print(os.environ["TF_CONFIG"], file=sys.stdout)
-    os.popen("python exec.py > outputs.log")
+    subprocess.Popen("python exec.py > outputs.log", env=os.environ, shell=True)
     return "OK", 200
 
 app.run(host="0.0.0.0", port=7896)
