@@ -1,5 +1,5 @@
-#ifndef ELASTICDL_KERNEL_H_
-#define ELASTICDL_KERNEL_H_
+#ifndef ELASTICDL_CKERNEL_H_
+#define ELASTICDL_CKERNEL_H_
 
 #include <stdint.h>
 

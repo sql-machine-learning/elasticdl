@@ -1,8 +1,8 @@
 package kernel
 
 // #cgo CFLAGS: -I/usr/local/include/eigen3
-// #cgo LDFLAGS: -L . -lkernel
-// #include "kernel.h"
+// #cgo LDFLAGS: -L./capi -lkernel_api
+// #include "capi/kernel_api.h"
 import "C"
 import "unsafe"
 

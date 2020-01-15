@@ -6,6 +6,7 @@ GO_FILE_DIR = elasticdl/pkg/proto
 GO_PB_FILE = $(GO_FILE_DIR)/elasticdl.pb.go
 
 CXX = g++
+CAPI_DIR = elasticdl/pkg/kernel/capi
 
 all: python_pb $(GO_PB_FILE) kernel
 
@@ -17,8 +18,8 @@ $(GO_PB_FILE): $(EDL_PROTO_FILE)
 	protoc -I . $< --go_out=plugins=grpc:.
 
 kernel:
-	${CXX} -O3 -std=c++11 elasticdl/go/kernel/kernel.cc -I/usr/local/include/eigen3 \
-	    -c -o elasticdl/go/kernel/kernel.o
-	ar crv elasticdl/go/kernel/libkernel.a elasticdl/go/kernel/kernel.o
+	${CXX} -O3 -std=c++11 ${CAPI_DIR}/kernel_api.cc -I/usr/local/include/eigen3 \
+	    -c -o ${CAPI_DIR}/libkernel_api.o
+	ar crv ${CAPI_DIR}/libkernel_api.a ${CAPI_DIR}/libkernel_api.o
 clean:
-	rm -rf elasticdl/go/kernel/*.o elasticdl/go/kernel/*.a
+	rm -rf ${CAPI_DIR}/*.o ${CAPI_DIR}/*.a

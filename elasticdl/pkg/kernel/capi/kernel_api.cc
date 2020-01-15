@@ -1,5 +1,5 @@
 extern "C" {
-#include "kernel.h"
+#include "kernel_api.h"
 }
 
 #include <Eigen/Dense>
