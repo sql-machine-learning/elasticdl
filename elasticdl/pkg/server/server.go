@@ -19,7 +19,7 @@ type psServer struct {
 
 var (
 	// TODO: parse more args
-	port = flag.Int("port", 10000, "The server port")
+	port = flag.Int("port", 2222, "The server port")
 )
 
 func (s *psServer) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (*pb.PullVariableResponse, error) {
@@ -63,9 +63,9 @@ func main() {
 	}
 	grpcServer := grpc.NewServer()
 	pb.RegisterMasterServer(grpcServer, &psServer{})
-	log.Println("PS service started.")
 	serverFailed := make(chan bool)
 	go StartServe(grpcServer, lis, serverFailed)
+	log.Println("PS service started.")
 	for {
 		select {
 		case failed := <-serverFailed:
