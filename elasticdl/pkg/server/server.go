@@ -47,12 +47,13 @@ func (s *psServer) PushGradient(ctx context.Context, in *pb.PushGradientRequest)
 	return &pb.PushGradientResponse{}, nil
 }
 
-func StartServe(server *grpc.Server, lis net.Listener, serverFailed chan bool) {
+// StartServe starts server serving, and set serverDone when finishes.
+func StartServe(server *grpc.Server, lis net.Listener, serverDone chan bool) {
 	err := server.Serve(lis)
 	if err != nil {
 		log.Fatalf("GRPC failed to serve: %v", err)
 	}
-	serverFailed <- true
+	serverDone <- true
 }
 
 func main() {
@@ -61,15 +62,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to start PS: %v", err)
 	}
+	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
 	grpcServer := grpc.NewServer()
 	pb.RegisterMasterServer(grpcServer, &psServer{})
-	serverFailed := make(chan bool)
-	go StartServe(grpcServer, lis, serverFailed)
+	serverDone := make(chan bool)
+	go StartServe(grpcServer, lis, serverDone)
 	log.Println("PS service started.")
 	for {
 		select {
-		case failed := <-serverFailed:
-			_ = failed
+		case done := <-serverDone:
+			_ = done
 			break
 		default:
 			// TODO: check master pod status and break loop if needed
