@@ -14,7 +14,7 @@ import (
 )
 
 type psServer struct {
-	pb.MasterServer
+	pb.PserverServer
 }
 
 var (
@@ -47,8 +47,19 @@ func (s *psServer) PushGradient(ctx context.Context, in *pb.PushGradientRequest)
 	return &pb.PushGradientResponse{}, nil
 }
 
-// StartServe starts server serving, and set serverDone when finishes.
-func StartServe(server *grpc.Server, lis net.Listener, serverDone chan bool) {
+// CreateServer creates a PS server and starts the serving. Set serverDone when finishes.
+func CreateServer(address string, serverDone chan bool) {
+	lis, err := net.Listen("tcp", address)
+	if err != nil {
+		log.Fatalf("failed to start PS: %v", err)
+	}
+	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
+	grpcServer := grpc.NewServer()
+	pb.RegisterPserverServer(grpcServer, &psServer{})
+	go startServe(grpcServer, lis, serverDone)
+}
+
+func startServe(server *grpc.Server, lis net.Listener, serverDone chan bool) {
 	err := server.Serve(lis)
 	if err != nil {
 		log.Fatalf("GRPC failed to serve: %v", err)
@@ -58,15 +69,9 @@ func StartServe(server *grpc.Server, lis net.Listener, serverDone chan bool) {
 
 func main() {
 	flag.Parse()
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
-	if err != nil {
-		log.Fatalf("failed to start PS: %v", err)
-	}
-	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
-	grpcServer := grpc.NewServer()
-	pb.RegisterMasterServer(grpcServer, &psServer{})
+	address := fmt.Sprintf("localhost:%d", *port)
 	serverDone := make(chan bool)
-	go StartServe(grpcServer, lis, serverDone)
+	CreateServer(address, serverDone)
 	log.Println("PS service started.")
 	for {
 		select {
