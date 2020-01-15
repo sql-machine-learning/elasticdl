@@ -18,8 +18,7 @@ $(GO_PB_FILE): $(EDL_PROTO_FILE)
 	protoc -I . $< --go_out=plugins=grpc:.
 
 kernel:
-	${CXX} -O3 -std=c++11 ${CAPI_DIR}/kernel_api.cc -I/usr/local/include/eigen3 \
-	    -c -o ${CAPI_DIR}/libkernel_api.o
+	${CXX} -O3 -std=c++11 ${CAPI_DIR}/kernel_api.cc -c -o ${CAPI_DIR}/libkernel_api.o
 	ar crv ${CAPI_DIR}/libkernel_api.a ${CAPI_DIR}/libkernel_api.o
 clean:
 	rm -rf ${CAPI_DIR}/*.o ${CAPI_DIR}/*.a
