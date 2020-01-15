@@ -1,3 +1,6 @@
+#!/bin/bash
+set -e
+
 make -f elasticdl/Makefile
 
 # Go unittests

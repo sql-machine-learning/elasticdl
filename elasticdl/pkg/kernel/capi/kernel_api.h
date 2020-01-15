@@ -1,7 +1,5 @@
-#ifndef ELASTICDL_CKERNEL_H_
-#define ELASTICDL_CKERNEL_H_
+#ifndef ELASTICDL_KERNEL_API_H_
+#define ELASTICDL_KERNEL_API_H_
 
-#include <stdint.h>
-
-void SGD(float* grad, float* param, double lr, int64_t size);
+void SGD(float* grad, float* param, double lr, long long size);
 #endif
