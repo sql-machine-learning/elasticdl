@@ -8,17 +8,16 @@ import "time"
 import "google.golang.org/grpc"
 import pb "elasticdl/pkg/proto"
 
-
 const (
 	ADDR string = "localhost:12345"
 )
 
 func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, context.CancelFunc) {
 	conn, err := grpc.Dial(ADDR, grpc.WithInsecure(), grpc.WithBlock())
-        if err != nil {
-                log.Fatalf("did not connect: %v", err)
-        }
-        c := pb.NewPserverClient(conn)
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	c := pb.NewPserverClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	return c, ctx, conn, cancel
 }
@@ -56,34 +55,34 @@ func TestPullEmbeddingVector(t *testing.T) {
 }
 
 func TestPushModel(t *testing.T) {
-        client, ctx, conn, cancel := createClient()
-        defer conn.Close()
-        defer cancel()
-        request := pb.Model{}
-        _, err := client.PushModel(ctx, &request)
-        if err != nil {
-                t.Errorf("Failed to push model")
-        }
+	client, ctx, conn, cancel := createClient()
+	defer conn.Close()
+	defer cancel()
+	request := pb.Model{}
+	_, err := client.PushModel(ctx, &request)
+	if err != nil {
+		t.Errorf("Failed to push model")
+	}
 }
 
 func TestPushEmbeddingInfo(t *testing.T) {
-        client, ctx, conn, cancel := createClient()
-        defer conn.Close()
-        defer cancel()
-        request := pb.Model{}
-        _, err := client.PushEmbeddingInfo(ctx, &request)
-        if err != nil {
-                t.Errorf("Failed to pull embedding vector")
-        }
+	client, ctx, conn, cancel := createClient()
+	defer conn.Close()
+	defer cancel()
+	request := pb.Model{}
+	_, err := client.PushEmbeddingInfo(ctx, &request)
+	if err != nil {
+		t.Errorf("Failed to pull embedding vector")
+	}
 }
 
 func TestPushGradient(t *testing.T) {
-        client, ctx, conn, cancel := createClient()
-        defer conn.Close()
-        defer cancel()
-        request := pb.PushGradientRequest{}
-        _, err := client.PushGradient(ctx, &request)
-        if err != nil {
-                t.Errorf("Failed to pull embedding vector")
-        }
+	client, ctx, conn, cancel := createClient()
+	defer conn.Close()
+	defer cancel()
+	request := pb.PushGradientRequest{}
+	_, err := client.PushGradient(ctx, &request)
+	if err != nil {
+		t.Errorf("Failed to pull embedding vector")
+	}
 }
