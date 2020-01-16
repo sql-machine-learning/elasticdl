@@ -8,7 +8,7 @@ This model file contains a [model](#model) built with TensorFlow Keras API and o
 ### model
 `model` is a Keras model built using either TensorFlow Keras [functional API](https://www.tensorflow.org/guide/keras#functional_api) or [model subclassing](https://www.tensorflow.org/guide/keras#model_subclassing).
 
-The following example shows a `model` using functional API, which has one input with shape (28, 28), and one putput with shape (10,):
+The following example shows a `model` using functional API, which has one input with shape (28, 28), and one output with shape (10,):
 
 ```
 inputs = tf.keras.Input(shape=(28, 28), name='image')
@@ -198,3 +198,76 @@ def prepare_data_for_a_single_file(filename):
 ### [MNIST model using Keras model subclassing](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist_subclass/mnist_subclass.py)
 ### [CIFAR10 model using Keras functional API](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/cifar10_functional_api/cifar10_functional_api.py)
 ### [CIFAR10 model using Keras model subclassing](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/cifar10_subclass/cifar10_subclass.py)
+
+
+## Run and Debug Locally in VS Code
+It is more convenient to locally run and debug the defined model than submitting a job with the model to k8s cluster. The following example shows how to run and debug
+the DNN model using iris dataset.
+
+
+### Locally Run 
+The command to locally run the DNN model using iris dataset saved in a CSV file.
+```shell
+python -m elasticdl.python.elasticdl.client train \
+  --model_zoo=/{REPO_DIR}/elasticdl/model_zoo \
+  --model_def=odps_iris_dnn_model.odps_iris_dnn_model.custom_model \
+  --training_data=/{DATA_DIR}/iris.csv \
+  --validation_data=/{DATA_DIR}/iris.csv \
+  --data_reader_params="columns=['sepal.length', 'sepal.width', 'petal.length', 'petal.width', 'variety']; sep=','" \
+  --num_epochs=2 \
+  --minibatch_size=64 \
+  --num_minibatches_per_task=20 \
+  --distribution_strategy=Local \
+  --job_name=test-odps-iris \
+  --evaluation_steps=20 \
+  --output=iris_dnn_model
+```
+
+### Debug Model in VS Code
+
+We can add the command to the configurations in the `launch.json` file to debug the model in VS Code. The [tutorial](https://code.visualstudio.com/docs/python/debugging) show how to configure the `launch.json` file. For example, the configuration to debug the DNN model is
+
+```json
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "module": "elasticdl.python.elasticdl.client",
+            "args": ["train",
+                "--model_zoo", 
+                "/{REPO_DIR}/elasticdl/model_zoo",
+                "--model_def",
+                "odps_iris_dnn_model.odps_iris_dnn_model.custom_model",
+                "--training_data",
+                "/{DATA_DIR}/iris.csv",
+                "--num_epochs",
+                "2",
+                "--minibatch_size",
+                "64",
+                "--num_minibatches_per_task",
+                "20",
+                "--distribution_strategy",
+                "Local",
+                "--num_workers",
+                "2",
+                "--checkpoint_steps",
+                "10",
+                "--evaluation_steps",
+                "20",
+                "--job_name",
+                "test-odps-iris",
+                "--data_reader_params",
+                "columns=['sepal.length', 'sepal.width', 'petal.length', 'petal.width', 'variety']; sep=','"
+            ]
+        }
+    ]
+}
+```
