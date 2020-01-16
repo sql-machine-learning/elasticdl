@@ -1,6 +1,4 @@
-extern "C" {
 #include "kernel_api.h"
-}
 
 #include <eigen3/Eigen/Dense>
 
