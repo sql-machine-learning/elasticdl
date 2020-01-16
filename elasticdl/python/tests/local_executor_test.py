@@ -36,6 +36,8 @@ class LocalExecutorArgs(object):
         envs=None,
         data_reader_params=None,
         num_minibatches_per_task=None,
+        custom_data_reader="",
+        output="",
     ):
         self.num_epochs = num_epochs
         self.minibatch_size = minibatch_size
@@ -53,6 +55,8 @@ class LocalExecutorArgs(object):
         self.envs = envs
         self.data_reader_params = data_reader_params
         self.num_minibatches_per_task = num_minibatches_per_task
+        self.custom_data_reader = custom_data_reader
+        self.output = output
 
 
 class LocalExectorTest(unittest.TestCase):
