@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TF_VERSION=2.0.0
+TF_VERSION=2.1.0
 
 if [[ ! -d .git ]]; then
     echo "We must run this script at the root of the source tree."
