@@ -1,5 +1,5 @@
-ARG BASE_IMAGE=tensorflow/tensorflow:2.0.0-py3
-# Use tensorflow/tensorflow:2.0.0-gpu-py3 if you want GPU-support.
+ARG BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
+# Use tensorflow/tensorflow:2.1.0-gpu-py3 if you want GPU-support.
 FROM ${BASE_IMAGE}
 
 # Replace the Splash screen from TensorFlow image.
@@ -25,6 +25,17 @@ RUN /install-go.bash && rm /install-go.bash
 # Install protobuf and protoc
 COPY elasticdl/docker/scripts/install-protobuf.bash /
 RUN /install-protobuf.bash && rm /install-protobuf.bash
+
+# Install elasticdl.org/elasticdl Go package
+ENV ELASTICDLPATH $GOPATH/src/elasticdl.org/elasticdl
+COPY . /tmp/elasticdl
+RUN cd /tmp/elasticdl && make -f elasticdl/Makefile && \
+    mkdir -p $ELASTICDLPATH && \
+    cp -r /tmp/elasticdl/elasticdl/pkg $ELASTICDLPATH && \
+    cd $GOPATH/src/elasticdl.org/elasticdl && \
+    export GO111MODULE=on && \
+    go mod init elasticdl.org/elasticdl && \
+    go install ./... && cd / && rm -rf /tmp/elasticdl
 
 # Copy the data generation package to /var and run them from there.
 # This assumes that the data generation package is independent with the

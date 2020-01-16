@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 
-package master;
+package proto;
 option go_package = "elasticdl/pkg/proto";
 
 enum TensorDtype {

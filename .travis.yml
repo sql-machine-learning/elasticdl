@@ -28,7 +28,7 @@ jobs:
       name: "Pre-commit Check"
       script:
         - docker build -t elasticdl:dev -f elasticdl/docker/Dockerfile.dev .
-        - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python model_zoo setup.py scripts/ -name '*.py' -print0 | tr '\0' ' ')"
+        - docker run --rm -it -v $PWD:/work -w /work elasticdl:dev bash -c "pre-commit run --files $(find elasticdl/python model_zoo setup.py scripts/ -name '*.py' -print0 | tr '\0' ' ') $(find elasticdl/pkg -name '*.go' -print0 | tr '\0' ' ')"
     - stage: tests
       name: "Tests"
       script:
