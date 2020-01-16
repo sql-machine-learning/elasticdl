@@ -39,7 +39,7 @@ jobs:
         # Create shared folder to store coverage report
         - mkdir shared
         # Run unit tests not related to ODPS
-        - docker run --rm -it --net=host -v $HOME/.keras/datasets:/root/.keras/datasets -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $PWD/shared:/shared -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=True pytest elasticdl/python/tests --cov=elasticdl/python --cov-report=xml && mv coverage.xml shared"
+        - docker run --rm -it --net=host -v $HOME/.keras/datasets:/root/.keras/datasets -v $HOME/.kube:/root/.kube -v /home/$USER/.minikube/:/home/$USER/.minikube/ -v $PWD/shared:/shared -v $PWD:/work -w /work elasticdl:dev bash -c "scripts/unittest.sh"
         # Report code coverage to https://codecov.io
         - bash <(curl -s https://codecov.io/bash)
         # Run unit tests related to ODPS (skipped for pull requests from forks)
