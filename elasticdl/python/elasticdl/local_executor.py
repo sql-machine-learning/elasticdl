@@ -61,7 +61,8 @@ class LocalExecutor:
         )
 
         create_data_reader_fn = (
-            create_data_reader if self.custom_data_reader is None
+            create_data_reader
+            if self.custom_data_reader is None
             else self.custom_data_reader
         )
         self.data_reader = create_data_reader_fn(
