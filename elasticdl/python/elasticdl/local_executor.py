@@ -48,7 +48,6 @@ class LocalExecutor:
             prediction_outputs_processor="",
             custom_data_reader=args.custom_data_reader,
         )
-        print(args.custom_data_reader)
         self.opt = self.opt_fn()
         self.epoch = args.num_epochs
         self.evaluation_steps = args.evaluation_steps
