@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	pb "elasticdl/pkg/proto"
+	pb "elasticdl.org/elasticdl/pkg/proto"
 	"flag"
 	"fmt"
 	"log"

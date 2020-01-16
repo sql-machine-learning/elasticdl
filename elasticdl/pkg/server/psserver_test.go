@@ -6,7 +6,7 @@ import "context"
 import "log"
 import "time"
 import "google.golang.org/grpc"
-import pb "elasticdl/pkg/proto"
+import pb "elasticdl.org/elasticdl/pkg/proto"
 
 const (
 	ADDR string = "localhost:12345"
