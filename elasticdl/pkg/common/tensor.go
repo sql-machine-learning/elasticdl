@@ -1,6 +1,7 @@
 package common
 
-import "elasticdl/proto"
+import "elasticdl.org/elasticdl/pkg/proto"
+import "fmt"
 
 type Tensor struct {
 	name    string
@@ -9,6 +10,6 @@ type Tensor struct {
 	indices []int64
 }
 
-
-func deserializeTensorPB(proto.Tensor* pb, Tensor* tensor) {
+func DeserializeTensorPB(pb *proto.Tensor, t *Tensor) {
+	fmt.Println("hello world")
 }
