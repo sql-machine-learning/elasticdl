@@ -36,7 +36,7 @@ RUN cd /tmp && make -f elasticdl/Makefile && \
     cd $GOPATH/src/elasticdl.org/elasticdl && \
     export GO111MODULE=on && \
     go mod init elasticdl.org/elasticdl && \
-    go install ./... && cd /
+    go install ./... && cd / && rm -rf /tmp
 
 # Copy the data generation package to /var and run them from there.
 # This assumes that the data generation package is independent with the
