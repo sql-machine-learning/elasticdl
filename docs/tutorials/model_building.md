@@ -200,7 +200,7 @@ def prepare_data_for_a_single_file(filename):
 ### [CIFAR10 model using Keras model subclassing](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/cifar10_subclass/cifar10_subclass.py)
 
 
-## Locally Run and Debug in VSCode
+## Run and Debug Locally in VS Code
 It is more convenient to locally run and debug the defined model than submitting a job with the model to k8s cluster. The following example shows how to run and debug
 the DNN model using iris dataset.
 
@@ -209,10 +209,10 @@ the DNN model using iris dataset.
 The command to locally run the DNN model using iris dataset saved in a CSV file.
 ```shell
 python -m elasticdl.python.elasticdl.client train \
-  --model_zoo=/Users/wangqinlong/workspace/elasticdl/model_zoo \
+  --model_zoo=/{REPO_DIR}/elasticdl/model_zoo \
   --model_def=odps_iris_dnn_model.odps_iris_dnn_model.custom_model \
-  --training_data=/Users/wangqinlong/Desktop/iris.csv \
-  --validation_data=/Users/wangqinlong/Desktop/iris.csv \
+  --training_data=/{DATA_DIR}/iris.csv \
+  --validation_data=/{DATA_DIR}/iris.csv \
   --data_reader_params="columns=['sepal.length', 'sepal.width', 'petal.length', 'petal.width', 'variety']; sep=','" \
   --num_epochs=2 \
   --minibatch_size=64 \
@@ -225,7 +225,7 @@ python -m elasticdl.python.elasticdl.client train \
 
 ### Debug Model in VS Code
 
-We can add the command to the configurations in the `launch.json` file to debug the model in VS Code. The [tutorial](https://code.visualstudio.com/docs/python/debugging) show how to config the `launch.json` file. For example, the configuration to debug the DNN model is
+We can add the command to the configurations in the `launch.json` file to debug the model in VS Code. The [tutorial](https://code.visualstudio.com/docs/python/debugging) show how to configure the `launch.json` file. For example, the configuration to debug the DNN model is
 
 ```json
 {
@@ -235,7 +235,7 @@ We can add the command to the configurations in the `launch.json` file to debug 
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: 当前文件",
+            "name": "Python: Current File",
             "type": "python",
             "request": "launch",
             "program": "${file}",
@@ -243,11 +243,11 @@ We can add the command to the configurations in the `launch.json` file to debug 
             "module": "elasticdl.python.elasticdl.client",
             "args": ["train",
                 "--model_zoo", 
-                "/Users/wangqinlong/workspace/elasticdl/model_zoo",
+                "/{REPO_DIR}/elasticdl/model_zoo",
                 "--model_def",
                 "odps_iris_dnn_model.odps_iris_dnn_model.custom_model",
                 "--training_data",
-                "/Users/wangqinlong/Desktop/iris.csv",
+                "/{DATA_DIR}/iris.csv",
                 "--num_epochs",
                 "2",
                 "--minibatch_size",
