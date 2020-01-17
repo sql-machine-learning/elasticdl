@@ -8,6 +8,7 @@ import (
 )
 
 // Tensor tensor struct
+// TODO(qijun): handle different tensor dtype
 type Tensor struct {
 	Name    string
 	Value   []float32
@@ -17,7 +18,6 @@ type Tensor struct {
 
 // DeserializeTensorPB pb to tensor
 func DeserializeTensorPB(pb *proto.Tensor, t *Tensor) {
-	// TODO(qijun): handle different tensor dtype
 	t.Name = pb.GetName()
 	t.Dim = pb.GetDim()
 	t.Indices = pb.GetIndices()
