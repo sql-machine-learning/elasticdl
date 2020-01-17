@@ -14,3 +14,6 @@ func TestTensorInit(t *testing.T) {
 	assert.Equal(t, t1.dim, d1)
 	assert.Equal(t, t1.indices, i1)
 }
+
+func TestTensorSerialization(t *testing.T) {
+}
