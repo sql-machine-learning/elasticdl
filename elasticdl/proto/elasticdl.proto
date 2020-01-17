@@ -70,14 +70,14 @@ message Tensor {
   // Dimensions of the tensor. The first entry in "dim" is the outermost
   // dimension used to layout the values, the last entry is the innermost
   // dimension.
-  repeated int32 dim = 2;
+  repeated int64 dim = 2;
 
   // ndarray's buffer dump. Each element must be a 32 bit float value.
   bytes content = 3;
 
   // Indices will be tf.IndexedSlices.indices if the tensor is in the form
   // of tf.IndexedSlices. Otherwise indices will be None.
-  repeated int32 indices = 4;
+  repeated int64 indices = 4;
 
   // Dtype of the tensor, e.g. "int64", "float32".
   TensorDtype dtype = 5;
