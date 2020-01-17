@@ -15,4 +15,4 @@ RUN pip install -r /requirements.txt --extra-index-url=${EXTRA_PYPI_INDEX}
 WORKDIR /
 ENV PYTHONPATH=/
 COPY elasticdl /elasticdl
-RUN make -f elasticdl/Makefile
+RUN make -f elasticdl/Makefile python_pb
