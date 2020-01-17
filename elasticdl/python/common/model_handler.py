@@ -50,7 +50,7 @@ def _convert_embedding_table_to_numpy_array(embedding_table, embedding_shape):
 
 def _get_embedding_column_input_dim(embedding_column):
     if type(embedding_column) != fc_lib.EmbeddingColumn:
-        raise Exception("")
+        raise Exception("The input should be EmbeddingColumn type.")
 
     default_num_buckets = (
         embedding_column.categorical_column.num_buckets
