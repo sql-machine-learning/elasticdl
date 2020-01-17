@@ -2,9 +2,13 @@ import unittest
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.feature_column import feature_column_v2 as fc_lib
 
 from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.model_handler import ModelHandler
+from elasticdl.python.elasticdl.feature_column.feature_column import (
+    EmbeddingColumn,
+)
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.keras.layers import SparseEmbedding
 
@@ -23,11 +27,22 @@ class CustomModel(tf.keras.models.Model):
         return output
 
 
-def custom_model_with_embedding():
+def custom_model_with_embedding_layer():
     inputs = tf.keras.layers.Input(shape=(4,), name="x")
     embedding = tf.keras.layers.Embedding(EMBEDDING_INPUT_DIM, 2)(inputs)
     outputs = tf.keras.layers.Dense(1)(embedding)
     return tf.keras.models.Model(inputs, outputs)
+
+
+def custom_model_with_embedding_column():
+    age = tf.feature_column.numeric_column("age", dtype=tf.int64)
+    user_id_embedding = tf.feature_column.embedding_column(
+        tf.feature_column.categorical_column_with_hash_bucket(
+            "user_id", hash_bucket_size=EMBEDDING_INPUT_DIM
+        ),
+        dimension=8,
+    )
+    return custom_sequential_model([age, user_id_embedding])
 
 
 def custom_model_with_sparse_embedding():
@@ -92,7 +107,7 @@ class DefaultModelHandlerTest(unittest.TestCase):
         self.model_handler = ModelHandler.get_model_handler()
 
     def test_get_model_to_ps(self):
-        model_inst = custom_model_with_embedding()
+        model_inst = custom_model_with_embedding_layer()
         model_inst = self.model_handler.get_model_to_train(model_inst)
         self.assertEqual(type(model_inst.layers[1]), tf.keras.layers.Embedding)
 
@@ -133,13 +148,24 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
             checkpoint_dir="elasticdl/python/tests/testdata/functional_ckpt/",
         )
 
-    def test_get_model_to_train(self):
-        model_inst = custom_model_with_embedding()
+    def test_get_model_with_embedding_layer_to_train(self):
+        model_inst = custom_model_with_embedding_layer()
         model_inst = self.model_handler.get_model_to_train(model_inst)
         self.assertEqual(type(model_inst.layers[1]), Embedding)
 
+    def test_get_model_with_embedding_column_to_train(self):
+        model_inst = custom_model_with_embedding_column()
+        self.assertEqual(
+            type(model_inst.layers[0]._feature_columns[1]),
+            fc_lib.EmbeddingColumn,
+        )
+        model_inst = self.model_handler.get_model_to_train(model_inst)
+        self.assertEqual(
+            type(model_inst.layers[0]._feature_columns[1]), EmbeddingColumn
+        )
+
     def test_get_model_to_export(self):
-        model_inst = custom_model_with_embedding()
+        model_inst = custom_model_with_embedding_layer()
         train_model = self.model_handler.get_model_to_train(model_inst)
         export_model = self.model_handler.get_model_to_export(
             train_model, dataset=None
