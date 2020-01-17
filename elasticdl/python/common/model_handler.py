@@ -91,6 +91,26 @@ def _need_partition_embedding_from_shape_info(input_dim, output_dim):
     return weights_memory > EMBEDDING_SIZE_THRESHOLD_FOR_PARTITION
 
 
+def _replace_tf_embedding_column_with_edl(dense_features_layer):
+    new_feature_columns = []
+    for column in dense_features_layer._feature_columns:
+        if isinstance(
+            column, fc_lib.EmbeddingColumn
+        ) and _need_partition_embedding(column):
+            logger.info(
+                "Replace embedding_column {} from TensorFlow "
+                "version to ElasticDL version".format(column.name)
+            )
+            new_column = embedding_column(
+                column.categorical_column, dimension=column.dimension
+            )
+            new_feature_columns.append(new_column)
+        else:
+            new_feature_columns.append(column)
+
+    return tf.keras.layers.DenseFeatures(new_feature_columns)
+
+
 class ModelHandler(metaclass=abc.ABCMeta):
     """Generate the model to train in ElasticDL for different distributed
     strategies and export trained model in ElasticDL to SavedModel.
@@ -239,27 +259,6 @@ class ParameterServerModelHandler(ModelHandler):
         `elasticdl.layers.Embedding`
         """
 
-        def _replace_embedding_column_with_edl_embedding_column(
-            dense_features_layer,
-        ):
-            new_feature_columns = []
-            for column in dense_features_layer._feature_columns:
-                if isinstance(
-                    column, fc_lib.EmbeddingColumn
-                ) and _need_partition_embedding(column):
-                    logger.info(
-                        "Replace embedding_column {} from TensorFlow"
-                        "version to ElasticDL version".format(column.name)
-                    )
-                    new_column = embedding_column(
-                        column.categorical_column, dimension=column.dimension
-                    )
-                    new_feature_columns.append(new_column)
-                else:
-                    new_feature_columns.append(column)
-
-            return tf.keras.layers.DenseFeatures(new_feature_columns)
-
         def _clone_function(layer):
             if type(layer) in [
                 tf.keras.layers.Embedding,
@@ -292,9 +291,7 @@ class ParameterServerModelHandler(ModelHandler):
                     )
                 return embedding_layer
             elif type(layer) == tf.keras.layers.DenseFeatures:
-                return _replace_embedding_column_with_edl_embedding_column(
-                    layer
-                )
+                return _replace_tf_embedding_column_with_edl(layer)
             return layer
 
         return tf.keras.models.clone_model(
@@ -378,6 +375,9 @@ class ParameterServerModelHandler(ModelHandler):
                     combiner=value.combiner,
                 )
                 setattr(model, name, embedding_layer)
+            elif type(value) == tf.keras.layers.DenseFeatures:
+                feature_layer = _replace_tf_embedding_column_with_edl(value)
+                setattr(model, name, feature_layer)
         return model
 
     @staticmethod
