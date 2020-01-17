@@ -6,7 +6,7 @@ FROM ${BASE_IMAGE}
 COPY elasticdl/docker/bashrc /etc/bash.bashrc
 RUN chmod a+rwx /etc/bash.bashrc
 
-RUN apt-get update && apt-get install -y unzip curl git software-properties-common
+RUN apt-get update && apt-get install -y unzip curl git software-properties-common libeigen3-dev
 
 COPY elasticdl/requirements.txt /requirements.txt
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
@@ -15,4 +15,4 @@ RUN pip install -r /requirements.txt --extra-index-url=${EXTRA_PYPI_INDEX}
 WORKDIR /
 ENV PYTHONPATH=/
 COPY elasticdl /elasticdl
-RUN make -f elasticdl/Makefile
+RUN make -f elasticdl/Makefile python_pb

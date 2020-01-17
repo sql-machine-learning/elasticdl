@@ -21,6 +21,22 @@ repos:
     hooks:
     - id: mypy
       args: [--ignore-missing-imports, --follow-imports=skip]
+-   repo: local
+    hooks:
+    - id: clang-format
+      name: clang-format
+      description: Format files with ClangFormat.
+      entry: bash ./scripts/codestyle/clang_format.hook -i
+      language: system
+      files: \.(c|cc|cxx|cpp|cu|h|hpp|hxx|proto)$
+-   repo: local
+    hooks:
+    - id: cpplint-cpp-source
+      name: cpplint
+      description: Check C++ code style using cpplint.py.
+      entry: bash ./scripts/codestyle/cpplint_precommit.hook
+      language: system
+      files: \.(c|cc|cxx|cpp|cu|h|hpp|hxx)$
 - repo: git://github.com/dnephin/pre-commit-golang
   rev: v0.3.3
   hooks:
@@ -28,4 +44,3 @@ repos:
     - id: go-lint
     - id: validate-toml
     - id: no-go-testing
-
