@@ -16,6 +16,14 @@ type Tensor struct {
 	Indices []int64
 }
 
+func GetTensorSize(t* Tensor) int64 {
+    var size int64 = 1
+    for _, d := range t.Dim {
+        size *= d
+    }
+    return size
+}
+
 // DeserializeTensorPB pb to tensor
 func DeserializeTensorPB(pb *proto.Tensor, t *Tensor) {
 	t.Name = pb.GetName()
@@ -31,8 +39,11 @@ func SerializeTensor(t *Tensor, pb *proto.Tensor) {
 	pb.Name = t.Name
 	pb.Dim = t.Dim
 	pb.Indices = t.Indices
-	bits := math.Float32bits(t.Value)
-	binary.LittleEndian.PutUint32(pb.bytes, bits)
+	pb.Content = make([]bytes, GetTensorSize(t) * 4)
+	for i, num := range t.Value {
+	    bits := math.Float64bits(num)
+	    binary.LittleEndian.PutUint64(pb.Content[i:], bits)
+	}
 	// set dtype to float32
 	pb.Dtype = 6
 }
