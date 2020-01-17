@@ -46,7 +46,7 @@ class LocalExecutor:
             eval_metrics_fn=args.eval_metrics_fn,
             model_params=args.model_params,
             prediction_outputs_processor="",
-            custom_data_reader="",
+            custom_data_reader=args.custom_data_reader,
         )
         self.opt = self.opt_fn()
         self.epoch = args.num_epochs
@@ -58,13 +58,20 @@ class LocalExecutor:
         self.records_per_task = (
             args.minibatch_size * args.num_minibatches_per_task
         )
-        self.data_reader = create_data_reader(
+
+        create_data_reader_fn = (
+            create_data_reader
+            if self.custom_data_reader is None
+            else self.custom_data_reader
+        )
+        self.data_reader = create_data_reader_fn(
             data_origin=args.training_data,
             records_per_task=self.records_per_task,
             **self.data_reader_params
         )
         self.training_data = args.training_data
         self.validation_data = args.validation_data
+        self.save_model_dir = args.output
 
     def _init_environment(self, envs):
         for key, value in envs.items():
@@ -93,6 +100,8 @@ class LocalExecutor:
             self._evaluate(validation_dataset)
             logger.info("Epoch {} end".format(epoch))
             epoch += 1
+        if self.save_model_dir != "":
+            tf.saved_model.save(self.model_inst, self.save_model_dir)
 
     def _train(self, features, labels):
         with tf.GradientTape() as tape:

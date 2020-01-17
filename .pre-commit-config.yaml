@@ -37,3 +37,10 @@ repos:
       entry: bash ./scripts/codestyle/cpplint_precommit.hook
       language: system
       files: \.(c|cc|cxx|cpp|cu|h|hpp|hxx)$
+- repo: git://github.com/dnephin/pre-commit-golang
+  rev: v0.3.3
+  hooks:
+    - id: go-fmt
+    - id: go-lint
+    - id: validate-toml
+    - id: no-go-testing
