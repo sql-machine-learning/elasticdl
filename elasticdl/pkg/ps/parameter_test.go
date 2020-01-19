@@ -25,7 +25,7 @@ func TestParameterInit(t *testing.T) {
 	assert.Contains(t, p.NonEmbeddingParam, "t1")
 	assert.Contains(t, p.NonEmbeddingParam, "t2")
 
-	assert.Equal(t, GetNonEmbeddingParam(&p, "t1").Dim, d1)
-	assert.Equal(t, GetNonEmbeddingParam(&p, "t2").Dim, d2)
-	assert.Nil(t, GetNonEmbeddingParam(&p, "t3"))
+	assert.Equal(t, (&p).GetNonEmbeddingParam("t1").Dim, d1)
+	assert.Equal(t, (&p).GetNonEmbeddingParam("t2").Dim, d2)
+	assert.Nil(t, (&p).GetNonEmbeddingParam("t3"))
 }

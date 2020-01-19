@@ -8,7 +8,7 @@ type Parameter struct {
 }
 
 // GetNonEmbeddingParam returns non-embedding tensor pointer
-func GetNonEmbeddingParam(p *Parameter, name string) *common.Tensor {
+func (p *Parameter) GetNonEmbeddingParam(name string) *common.Tensor {
 	if value, ok := p.NonEmbeddingParam[name]; ok {
 		return &value
 	}
