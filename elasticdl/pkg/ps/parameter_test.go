@@ -1,6 +1,7 @@
 package ps
 
 import (
+	"elasticdl.org/elasticdl/pkg/common"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -8,11 +9,11 @@ import (
 func TestParameterInit(t *testing.T) {
 	d1 := []int64{2, 3}
 	v1 := []float32{1.0, 2.0, 3.0, 4.0, 5.0, 6.0}
-	t1 := Tensor{"t1", v1, d1}
+	t1 := common.Tensor{"t1", v1, d1, nil}
 
 	d2 := []int64{2, 2}
 	v2 := []float32{1.0, 2.0, 1.1, 2.2}
-	t2 := Tensor{"t2", v2, d2}
+	t2 := common.Tensor{"t2", v2, d2, nil}
 
 	var p Parameter
 	p.NonEmbeddingParam = make(map[string]common.Tensor)
