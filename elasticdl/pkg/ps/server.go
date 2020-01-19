@@ -1,26 +1,17 @@
-package main
+package ps
 
 import (
 	"context"
 	pb "elasticdl.org/elasticdl/pkg/proto"
-	"flag"
-	"fmt"
-	"log"
-	"net"
-	"time"
-
 	empty "github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
+	"log"
+	"net"
 )
 
 type psServer struct {
 	pb.PserverServer
 }
-
-var (
-	// TODO: parse more args
-	port = flag.Int("port", 2222, "The server port")
-)
 
 func (s *psServer) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (*pb.PullVariableResponse, error) {
 	// TODO: implement the service.
@@ -65,22 +56,4 @@ func startServe(server *grpc.Server, lis net.Listener, serverDone chan bool) {
 		log.Fatalf("GRPC failed to serve: %v", err)
 	}
 	serverDone <- true
-}
-
-func main() {
-	flag.Parse()
-	address := fmt.Sprintf("localhost:%d", *port)
-	serverDone := make(chan bool)
-	CreateServer(address, serverDone)
-	log.Println("PS service started.")
-	for {
-		select {
-		case done := <-serverDone:
-			_ = done
-			break
-		default:
-			// TODO: check master pod status and break loop if needed
-			time.Sleep(time.Second * 30)
-		}
-	}
 }
