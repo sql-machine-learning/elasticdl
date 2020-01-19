@@ -6,3 +6,11 @@ import "elasticdl.org/elasticdl/pkg/common"
 type Parameter struct {
 	NonEmbeddingParam map[string]common.Tensor
 }
+
+// GetNonEmbeddingParam returns non-embedding tensor pointer
+func GetNonEmbeddingParam(p *Parameter, name string) *common.Tensor {
+	if value, ok := p.NonEmbeddingParam[name]; ok {
+		return &value
+	}
+	return nil
+}
