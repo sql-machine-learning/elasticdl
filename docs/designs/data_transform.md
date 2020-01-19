@@ -3,13 +3,14 @@
 ## Backgroud
 
 Data transform is an important part in an end-to-end machine learning pipeline. It processes the raw data using operations such as standardization, bucketization and so on. The target is to make sure the data is in the right format and ready for the model training and inference. Data transform contains two key parts: analyzer and transformer. Analyzer scans the entire data set and calculates the statistical values such as mean, min, variance and so on. Transformer combines the statistical value and the transform function to construct the concrete transform logic. And then it transforms the data records one by one. The transform logic is consistent between training and inference.  
-![transform_training_inference](../images/transform_training_inference.png)  
-[SQLFlow](https://github.com/sql-machine-learning/sqlflow) is a bridge that connects a SQL engine and machine learning toolkits. It extends the SQL syntax to define a ML pipeline. Naturally SQLFlow should be able to describe the data transform process. In this doc, we are focusing on how to do data transform using SQLFlow.  
+![transform_training_inference](../images/transform_training_inference.png)
+
+[SQLFlow](https://github.com/sql-machine-learning/sqlflow) is a bridge that connects a SQL engine and machine learning toolkits. It extends the SQL syntax to define a machine learning pipeline. Naturally SQLFlow should be able to describe the data transform process. In this doc, we are focusing on how to do data transform using SQLFlow.  
 
 ## Challenge
 
 1. Consistency between offline and online is the key point of data transform. Users write the transform code only once. And then the same logic can run in batch mode for training and in real time mode for serving.  
-2. Transform logic is incomplete. Analysis on the entire dataset is necessary to make it concrete.
+2. Transform logic is incomplete. Analysis on the entire dataset is necessary to make it concrete.  
 
 ## Related Work
 
