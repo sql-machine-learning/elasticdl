@@ -16,8 +16,8 @@ Data transform is an important part in an end-to-end machine learning pipeline. 
 
 ### TensorFlow Transform
 
-[TensorFlow Transform](https://www.tensorflow.org/tfx/transform/get_started) is the open source solution for data transform in [TensorFlow Extended](https://www.tensorflow.org/tfx/guide). Users need write a python function 'preprocess_fn' to define the preprocess logic. The preprocessing function contains two group of API calls: TensorFlow Ops and TensorFlow Transform Analyzers.  
-SQLFlow users prefer to write SQL instead of python. It's user unfriendly to SQLFlow users if we integrate TF Transform with SQLFlow directly.  
+[TensorFlow Transform](https://www.tensorflow.org/tfx/transform/get_started) is the open source solution for data transform in [TensorFlow Extended](https://www.tensorflow.org/tfx/guide). Users need write a python function 'preprocess_fn' to define the preprocess logic. The preprocessing function contains two group of API calls: TensorFlow Transform Analyzers and TensorFlow Ops. Analyzer will do the statistical work on the training dataset once and convert to constant tensor. And then the statistical value and TensorFlow Ops will make the concrete transform logic as the TensorFlow Graph to convert the record one by one. The graph will be used both for training and serving.  
+From users perspective, SQLFlow users prefer to write SQL instead of python. It's user unfriendly to SQLFlow users if we integrate TF Transform with SQLFlow directly.  
 
 ### SQL
 
