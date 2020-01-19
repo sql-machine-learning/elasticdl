@@ -333,7 +333,7 @@ def add_train_params(parser):
         parser=parser,
         name="--lr_staleness_modulation",
         default=False,
-        help="If True, master will modulate the learning rate with staleness "
+        help="If True, PS will modulate the learning rate with staleness "
         "in asynchronous SGD",
     )
 
