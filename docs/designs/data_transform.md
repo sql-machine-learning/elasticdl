@@ -19,9 +19,13 @@ Data transform is an important part in an end-to-end machine learning pipeline. 
 [TensorFlow Transform](https://www.tensorflow.org/tfx/transform/get_started) is the open source solution for data transform in [TensorFlow Extended](https://www.tensorflow.org/tfx/guide). Users need write a python function 'preprocess_fn' to define the preprocess logic. The preprocessing function contains two group of API calls: TensorFlow Ops and TensorFlow Transform Analyzers.  
 SQLFlow users prefer to write SQL instead of python. It's user unfriendly to SQLFlow users if we integrate TF Transform with SQLFlow directly.  
 
+### SQL
+
+User can write SQL to do the analysis and transform work with [built-in functions](https://www.alibabacloud.com/help/doc-detail/96342.htm?spm=a2c63.p38356.b99.111.27e27309rgC5m1) or [UDF(User Defined Function)](https://www.alibabacloud.com/blog/udf-development-guide-with-maxcompute-studio_594738). But we can't use SQL to transform the data for serving. We need implement the transform code again using C++ or other high performance language. It may bright the training/serving skew.  
+
 ### Internal System
 
-The library in the internal system is configure driven.
+The library in the internal system is configure driven. It contains some primitive transform ops and user compose the transform logic with configuration file. The inference engine is compiled with the internal library. User need both feature engineering configuration files and SavedModel to deploy the model for serving.  
 
 ## Our Approach
 
