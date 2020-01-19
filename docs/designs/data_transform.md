@@ -9,14 +9,14 @@ Data transform is an important part in an end-to-end machine learning pipeline. 
 
 ## Challenge
 
-1. If we implement the transform logic separately for training and serving, it may bring the training/serving skew. Consistency between training and serving is the key point of data transform. Users write the transform code only once. And then the same logic can run in batch mode for training and in real time mode for serving.  
-2. The transform logic is incomplete at the time when user develops the pipeline. The statistical value on the entire dataset at runtime is necessary to make the transform logic concrete.  
+* In some systems, user implement the transform code separately for training and serving, it may bring the training/serving skew. Consistency between training and serving is the key point of data transform. Users write the transform code only once. And then the same logic can run in batch mode for training and in real time mode for serving.  
+* The transform logic is incomplete at the time when user develops the pipeline. The statistical value on the entire dataset at runtime is necessary to make the transform logic concrete.  
 
 ## Related Work
 
 ### TensorFlow Transform
 
-[TensorFlow Transform](https://www.tensorflow.org/tfx/transform/get_started) is the open source solution for data transform in [TensorFlow Extended](https://www.tensorflow.org/tfx/guide). Users need write a python function 'preprocess_fn' to define the preprocess logic.  
+[TensorFlow Transform](https://www.tensorflow.org/tfx/transform/get_started) is the open source solution for data transform in [TensorFlow Extended](https://www.tensorflow.org/tfx/guide). Users need write a python function 'preprocess_fn' to define the preprocess logic. The preprocessing function contains two group of API calls: TensorFlow Ops and TensorFlow Transform Analyzers.  
 SQLFlow users prefer to write SQL instead of python. It's user unfriendly to SQLFlow users if we integrate TF Transform with SQLFlow directly.  
 
 ### Internal System
@@ -25,9 +25,8 @@ The library in the internal system is configure driven.
 
 ## Our Approach
 
-From another point of view, SQL can naturally support statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) can take charge of transform logic as transformer. For dense column, we can use numeric_column and pass a user defined function *normalizer_fn* to convert the column value. For sparse column, we can use embedding_column to map the sparse value to embedding vector or use cross_column to do the feature crossing. We plan to use SQL and feature column together to do the data transform work.  
-
-Consistency between offline and online is the key point of data transform. Users write the transform code only once. And then the same logic can run in batch mode for training and in real time mode for serving. In this way, we can prevent the training/serving skew. Both TF Transform and feature column can keep the consistency. The data transform logic in the training stage is built into the inference graph as the SavedModel.  
+From the point of view from SQLFlow, SQL can naturally support statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) and [keras preprocessing layer](https://github.com/tensorflow/community/pull/188) can take charge of transform logic as transformer. For dense column, we can use numeric_column and pass a user defined function *normalizer_fn* to convert the column value. For sparse column, we can use embedding_column to map the sparse value to embedding vector or use cross_column to do the feature crossing. We plan to use SQL and feature column/keras preprocessing layer together to do the data transform work.  
+For the consistency between training and serving, both feature column and keras preprocessing layer can make it. The data transform logic in the training stage is built into the inference graph as the SavedModel.  
 
 ### Transform Expression in SQLFlow
 
