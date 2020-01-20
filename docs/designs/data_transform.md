@@ -17,12 +17,38 @@ Data transform is an important part in an end-to-end machine learning pipeline. 
 
 ### TensorFlow Transform
 
-[TensorFlow Transform](https://www.tensorflow.org/tfx/transform/get_started) is the open source solution for data transform in [TensorFlow Extended](https://www.tensorflow.org/tfx/guide). Users need write a python function 'preprocess_fn' to define the preprocess logic. The preprocessing function contains two group of API calls: TensorFlow Transform Analyzers and TensorFlow Ops. Analyzer will do the statistical work on the training dataset once and convert to constant tensor. And then the statistical value and TensorFlow Ops will make the concrete transform logic as the TensorFlow Graph to convert the record one by one. The graph will be used both for training and serving.  
-From users perspective, SQLFlow users prefer to write SQL instead of python. It's user unfriendly to SQLFlow users if we integrate TF Transform with SQLFlow directly.  
+[TensorFlow Transform](https://www.tensorflow.org/tfx/transform/get_started) is the open source solution for data transform in [TensorFlow Extended](https://www.tensorflow.org/tfx/guide). Users need write a python function 'preprocess_fn' to define the preprocess logic. The preprocessing function contains two group of API calls: TensorFlow Transform Analyzers and TensorFlow Ops. Analyzer will do the statistical work on the training dataset once and convert to constant tensors. And then the statistical value and TensorFlow Ops will make the concrete transform logic as a TensorFlow graph to convert the record one by one. The graph will be used for both training and serving.  
+Let's take [normalizing(min-max normalization)](https://en.wikipedia.org/wiki/Feature_scaling) the column value `capital_gain` in [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income) for example. The following is the `preprocess_fn` function with TensorFlow Transform:
+
+```python
+import tensorflow_transform as tft
+
+def preprocess_fn(inputs):
+    outputs = inputs.copy()
+    outputs["capital_gain"] = tft.scale_to_0_1(inputs["capital_gain"])
+    return outputs
+```
+
+From users' perspective, SQLFlow users prefer to write SQL instead of python. It's user unfriendly if we integrate TF Transform with SQLFlow directly.  
 
 ### SQL
 
-User can write SQL to do the analysis and transform work with [built-in functions](https://www.alibabacloud.com/help/doc-detail/96342.htm?spm=a2c63.p38356.b99.111.27e27309rgC5m1) or [UDF(User Defined Function)](https://www.alibabacloud.com/blog/udf-development-guide-with-maxcompute-studio_594738). But SQL and UDF are only suitable for batch processing, we can't use SQL to transform the data for serving. We need reimplement the transform logic with other programming languages in the model serving engine. It may bring the training/serving skew.  
+User can write SQL to do the analysis and transform work with [built-in functions](https://www.alibabacloud.com/help/doc-detail/96342.htm?spm=a2c63.p38356.b99.111.27e27309rgC5m1) or [UDF(User Defined Function)](https://www.alibabacloud.com/blog/udf-development-guide-with-maxcompute-studio_594738). The following is the SQL expression to normalize the column `capital_gain`.  
+
+```SQL
+SELECT 1.00 * (t1.capital_gain - t2.capital_gain_min) / t2.capital_gain_range
+FROM census_income t1
+JOIN
+(
+    SELECT
+        MIN(capital_gain) AS capital_gain_min,
+        MAX(capital_gain) - MIN(capital_gain) AS capital_gain_range
+    FROM census_income
+) t2
+ON 1 = 1
+```
+
+But SQL and UDF are only suitable for batch processing, we can't use SQL to transform the data for serving. We need reimplement the transform logic with other programming languages in the model serving engine. It may bring the training/serving skew.  
 
 ### Internal System
 
@@ -35,7 +61,7 @@ For the consistency between training and serving, both feature column and keras 
 
 ### Transform Expression in SQLFlow
 
-We can extend the SQLFlow syntax and enrich the COLUMN expression. We can add the built-in transform API call in it to describe the transform process. Let's take the following SQL expression for example. It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is **COLUMNS NUMERIC(STANDARDIZE(age)), NUMERIC(NORMALIZE(capital_gain)), EMBEDDING(BUCKETIZED(hours_per_week, bucket_num=10), dim=128)**. It will standardize the column *age*, normalize the column *capital_gain*, bucketize the column *hours_per_week* to 10 buckets and then map it to embedding value.  
+We can extend the SQLFlow syntax and enrich the COLUMN expression. We can add the built-in transform API call in it to describe the transform process. Let's take the following SQL expression for example. It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is **COLUMNS NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZED(hours_per_week, bucket_num=10), dim=128)**. It will normalize the column *capital_gain*, standardize the column *age*, bucketize the column *hours_per_week* to 10 buckets and then map it to an embedding value.  
 We will implement some built-in transform API. The API set contains [NORMALIZE, STANDARDIZE](https://en.wikipedia.org/wiki/Feature_scaling), [BUCKETIZED](https://en.wikipedia.org/wiki/Data_binning), LOG and more to be added in the future.  
 
 ```SQL
@@ -43,7 +69,7 @@ SELECT *
 FROM census_income
 TO TRAIN DNNClassifier
 WITH model.hidden_units = [10, 20]
-COLUMNS NUMERIC(STANDARDIZE(age)), NUMERIC(NORMALIZE(capital_gain)), EMBEDDING(BUCKETIZED(hours_per_week, bucket_num=10), dim=128)
+COLUMNS NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZED(hours_per_week, bucket_num=10), dim=128)
 LABEL label
 ```
 
