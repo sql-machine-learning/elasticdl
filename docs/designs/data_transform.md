@@ -30,8 +30,8 @@ The feature engineering library in the internal system is configuration driven. 
 
 ## Our Approach
 
-From the point of view from SQLFlow, SQL can naturally support statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) and [keras preprocessing layer](https://github.com/tensorflow/community/pull/188) can take charge of transform logic as transformer. For dense column, we can use numeric_column and pass a user defined function *normalizer_fn* to convert the column value. For sparse column, we can use embedding_column to map the sparse value to embedding vector or use cross_column to do the feature crossing. We plan to use SQL and feature column/keras preprocessing layer together to do the data transform work.  
-For the consistency between training and serving, both feature column and keras preprocessing layer can make it. The data transform logic in the training stage is built into the inference graph as the SavedModel.  
+From the point of view from SQLFlow, SQL can naturally support statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) and [keras preprocessing layer](https://github.com/tensorflow/community/pull/188) can take charge of transform work as transformer. For dense column, we can use numeric_column and pass a user defined function *normalizer_fn* to convert the column value. For sparse column, we can use embedding_column to map the sparse value to embedding vector or use cross_column to do the feature crossing. We plan to use SQL and feature column/keras preprocessing layer together to do the data transform work.  
+For the consistency between training and serving, both feature column and keras preprocessing layer can make it. The data transform logic in the training stage is built into the inference graph using the SavedModel format.  
 
 ### Transform Expression in SQLFlow
 
