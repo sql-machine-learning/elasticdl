@@ -46,38 +46,38 @@ func TestAdam(t *testing.T) {
 		v[i] = rand.Float32()
 	}
 
-	expected_param := make([]float32, size)
-	expected_m := make([]float32, size)
-	expected_v := make([]float32, size)
+	expectedParam := make([]float32, size)
+	expectedM := make([]float32, size)
+	expectedV := make([]float32, size)
 
 	for i := 0; i < size; i++ {
-		expected_m[i] = float32(beta1) * m[i] + (1 - float32(beta1)) * grad[i]
-		expected_v[i] = float32(beta2) * v[i] + (1 - float32(beta2)) * grad[i] * grad[i]
+		expectedM[i] = float32(beta1)*m[i] + (1-float32(beta1))*grad[i]
+		expectedV[i] = float32(beta2)*v[i] + (1-float32(beta2))*grad[i]*grad[i]
 	}
 
 	for i := 0; i < size; i++ {
-		expected_param[i] = param[i] - float32(lr) * expected_m[i] / (1 - float32(math.Pow(beta1, float64(step)))) / (float32(math.Sqrt(float64(expected_v[i] / (1 - float32(math.Pow(beta2, float64(step)))))) + epsilon))
+		expectedParam[i] = param[i] - float32(lr)*expectedM[i]/(1-float32(math.Pow(beta1, float64(step))))/(float32(math.Sqrt(float64(expectedV[i]/(1-float32(math.Pow(beta2, float64(step))))))+epsilon))
 	}
 
 	Adam(grad, param, m, v, lr, int64(size), step, beta1, beta2, epsilon)
 
-	diff_param := 0
-	diff_m := 0
-	diff_v := 0
+	diffParam := 0
+	diffM := 0
+	diffV := 0
 
 	for i := 0; i < size; i++ {
-		if math.Abs(float64(expected_m[i]-m[i])) > 1e-6 {
-			diff_m ++
+		if math.Abs(float64(expectedM[i]-m[i])) > 1e-6 {
+			diffM++
 		}
-		if math.Abs(float64(expected_v[i]-v[i])) > 1e-6 {
-			diff_v ++
+		if math.Abs(float64(expectedV[i]-v[i])) > 1e-6 {
+			diffV++
 		}
-		if math.Abs(float64(expected_param[i]-param[i])) > 1e-6 {
-			diff_param ++
+		if math.Abs(float64(expectedParam[i]-param[i])) > 1e-6 {
+			diffParam++
 		}
 	}
 
-	assert.Equal(t, diff_m, 0)
-	assert.Equal(t, diff_v, 0)
-	assert.Equal(t, diff_param, 0)
+	assert.Equal(t, diffM, 0)
+	assert.Equal(t, diffV, 0)
+	assert.Equal(t, diffParam, 0)
 }
