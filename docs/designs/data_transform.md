@@ -11,13 +11,12 @@ Data transform is an important part in an end-to-end machine learning pipeline. 
 
 * In some systems, users implement the transform code separately for both training and serving, it may bring the training/serving skew. Consistency between training and serving is the key point of data transform. Users write the transform code only once. And then the same logic can run in batch mode for training and in real time mode for serving.  
 * The transform logic is incomplete when users develop the pipeline. The statistical value calculated from the entire dataset at runtime is necessary to make the transform logic concrete.  
-* Express the feature engineering operations with SQL extended statement.
 
 ## Related Work
 
 ### TensorFlow Transform
 
-[TensorFlow Transform](https://www.tensorflow.org/tfx/transform/get_started) is the open source solution for data transform in [TensorFlow Extended](https://www.tensorflow.org/tfx/guide). Users need write a python function 'preprocess_fn' to define the preprocess logic. The preprocessing function contains two group of API calls: TensorFlow Transform Analyzers and TensorFlow Ops. Analyzer will do the statistical work on the training dataset once and convert to constant tensors. And then the statistical value and TensorFlow Ops will make the concrete transform logic as a TensorFlow graph to convert the record one by one. The graph will be used for both training and serving.  
+[TensorFlow Transform](https://www.tensorflow.org/tfx/transform/get_started) is the open source solution for data transform in [TensorFlow Extended](https://www.tensorflow.org/tfx/guide). Users need write a python function `preprocess_fn` to define the preprocess logic. The preprocessing function contains two group of API calls: TensorFlow Transform Analyzers and TensorFlow Ops. Analyzer will do the statistical work on the training dataset once and convert to constant tensors. And then the statistical value and TensorFlow Ops will make the concrete transform logic as a TensorFlow graph to convert the record one by one. The graph will be used for both training and serving.  
 Let's take [normalizing(min-max normalization)](https://en.wikipedia.org/wiki/Feature_scaling) the column value `capital_gain` in [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income) for example. The following is the `preprocess_fn` function with TensorFlow Transform:
 
 ```python
