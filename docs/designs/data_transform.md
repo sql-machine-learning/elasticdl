@@ -22,7 +22,7 @@ From users perspective, SQLFlow users prefer to write SQL instead of python. It'
 
 ### SQL
 
-User can write SQL to do the analysis and transform work with [built-in functions](https://www.alibabacloud.com/help/doc-detail/96342.htm?spm=a2c63.p38356.b99.111.27e27309rgC5m1) or [UDF(User Defined Function)](https://www.alibabacloud.com/blog/udf-development-guide-with-maxcompute-studio_594738). But we can't use SQL to transform the data for serving. We need reimplement the transform logic in the model serving engine. It may bring the training/serving skew.  
+User can write SQL to do the analysis and transform work with [built-in functions](https://www.alibabacloud.com/help/doc-detail/96342.htm?spm=a2c63.p38356.b99.111.27e27309rgC5m1) or [UDF(User Defined Function)](https://www.alibabacloud.com/blog/udf-development-guide-with-maxcompute-studio_594738). But SQL and UDF are only suitable for batch processing, we can't use SQL to transform the data for serving. We need reimplement the transform logic with other programming languages in the model serving engine. It may bring the training/serving skew.  
 
 ### Internal System
 
