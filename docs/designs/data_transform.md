@@ -9,8 +9,9 @@ Data transform is an important part in an end-to-end machine learning pipeline. 
 
 ## Challenge
 
-* In some systems, user implement the transform code separately for training and serving, it may bring the training/serving skew. Consistency between training and serving is the key point of data transform. Users write the transform code only once. And then the same logic can run in batch mode for training and in real time mode for serving.  
-* The transform logic is incomplete at the time when user develops the pipeline. The statistical value on the entire dataset at runtime is necessary to make the transform logic concrete.  
+* In some systems, users implement the transform code separately for both training and serving, it may bring the training/serving skew. Consistency between training and serving is the key point of data transform. Users write the transform code only once. And then the same logic can run in batch mode for training and in real time mode for serving.  
+* The transform logic is incomplete when users develop the pipeline. The statistical value calculated from the entire dataset at runtime is necessary to make the transform logic concrete.  
+* Express the feature engineering operations with SQL extended statement.
 
 ## Related Work
 
@@ -21,11 +22,11 @@ From users perspective, SQLFlow users prefer to write SQL instead of python. It'
 
 ### SQL
 
-User can write SQL to do the analysis and transform work with [built-in functions](https://www.alibabacloud.com/help/doc-detail/96342.htm?spm=a2c63.p38356.b99.111.27e27309rgC5m1) or [UDF(User Defined Function)](https://www.alibabacloud.com/blog/udf-development-guide-with-maxcompute-studio_594738). But we can't use SQL to transform the data for serving. We need implement the transform code again using C++ or other high performance language. It may bright the training/serving skew.  
+User can write SQL to do the analysis and transform work with [built-in functions](https://www.alibabacloud.com/help/doc-detail/96342.htm?spm=a2c63.p38356.b99.111.27e27309rgC5m1) or [UDF(User Defined Function)](https://www.alibabacloud.com/blog/udf-development-guide-with-maxcompute-studio_594738). But we can't use SQL to transform the data for serving. We need reimplement the transform logic in the model serving engine. It may bring the training/serving skew.  
 
 ### Internal System
 
-The library in the internal system is configure driven. It contains some primitive transform ops and user compose the transform logic with configuration file. The inference engine is compiled with the internal library. User need both feature engineering configuration files and SavedModel to deploy the model for serving.  
+The feature engineering library in the internal system is configuration driven. It contains some primitive transform ops and users compose the transform logic with configuration file. The inference engine is compiled with the internal library. User need both feature engineering configuration files and SavedModel to deploy the model for serving.  
 
 ## Our Approach
 
