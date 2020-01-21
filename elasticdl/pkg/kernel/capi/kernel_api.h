@@ -16,7 +16,8 @@ void Adam(float* grad,
           long long step,
           double beta1,
           double beta2,
-          double epsilon);
+          double epsilon,
+          float* max_square);
 
 #ifdef __cplusplus
 }

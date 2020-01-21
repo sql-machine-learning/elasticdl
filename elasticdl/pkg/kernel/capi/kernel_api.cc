@@ -22,7 +22,8 @@ void Adam(float* grad,
           long long step,
           double beta1,
           double beta2,
-          double epsilon) {
+          double epsilon,
+          float* max_square) {
   Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> eg{
       grad, static_cast<Eigen::Index>(size)};
 
@@ -39,6 +40,14 @@ void Adam(float* grad,
 
   ev = beta2 * ev + (1.0 - beta2) * eg.square();
 
-  ep -= lr * em / (1.0 - pow(beta1, step)) /
-        ((ev / (1.0 - pow(beta2, step))).sqrt() + epsilon);
+  if (max_square != NULL) {
+    Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> ems{
+        max_square, static_cast<Eigen::Index>(size)};
+    ems = ems.cwiseMax(ev);
+    ep -= lr * em / (1.0 - pow(beta1, step)) /
+          ((ems / (1.0 - pow(beta2, step))).sqrt() + epsilon);
+  } else {
+    ep -= lr * em / (1.0 - pow(beta1, step)) /
+          ((ev / (1.0 - pow(beta2, step))).sqrt() + epsilon);
+  }
 }
