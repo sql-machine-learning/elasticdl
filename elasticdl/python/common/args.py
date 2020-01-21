@@ -249,6 +249,13 @@ def add_common_params(parser):
         "the job automatically, and users need to launch the job through "
         "command `kubectl create -f path_to_yaml_file`.",
     )
+    # delete this argument after finishing Go-based PS implementation
+    add_bool_param(
+        parser=parser,
+        name="--use_go_ps",
+        default=False,
+        help="True for Go-based PS, False for Python-based PS",
+    )
 
 
 def add_train_params(parser):
