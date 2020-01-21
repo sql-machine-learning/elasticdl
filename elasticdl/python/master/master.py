@@ -340,7 +340,7 @@ class Master(object):
             worker_args.extend(build_arguments_from_parsed_result(args))
 
             if args.use_go_ps:
-                # TODO: rename the executable from Go PS to a meaningful file.
+                # TODO: rename the Go PS executable using a meaningful filename
                 ps_command = ["main"]
                 ps_args = [
                     "-job_name=" + args.job_name,
