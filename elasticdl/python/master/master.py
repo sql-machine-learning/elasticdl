@@ -403,6 +403,10 @@ class Master(object):
                     str(args.num_workers),
                     "--log_level",
                     str(args.log_level),
+                    "--minibatch_size",
+                    str(args.minibatch_size),
+                    "--num_minibatches_per_task",
+                    str(args.num_minibatches_per_task),
                 ]
 
             env_dict = parse_envs(args.envs)
