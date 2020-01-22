@@ -2,7 +2,7 @@
 
 #include <eigen3/Eigen/Dense>
 
-void SGD(float* grad, float* param, double lr, long long size) {
+void SGD(float* grad, float* param, float lr, long long size) {
   Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> eg{
       grad, static_cast<Eigen::Index>(size)};
 
