@@ -39,8 +39,8 @@ func TestSGDOptimizer(t *testing.T) {
 	ev1 := []float32{0.9, 1.9, 2.9, 3.9, 4.9, 5.9}
 	ev2 := []float32{0.9, 1.9, 1.0, 2.1}
 
-	assert.Equal(t, p.NonEmbeddingParam["t1"].Value, ev1)
-	assert.Equal(t, p.NonEmbeddingParam["t2"].Value, ev2)
+	assert.True(t, common.CompareFloatArray(p.NonEmbeddingParam["t1"].Value, ev1, 0.0001))
+	assert.True(t, common.CompareFloatArray(p.NonEmbeddingParam["t2"].Value, ev2, 0.0001))
 
 	grad3 := common.Tensor{"t3", gv2, d2, nil}
 	grads = append(grads, grad3)
