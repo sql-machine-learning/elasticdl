@@ -36,17 +36,17 @@ func TestSparseSGD(t *testing.T) {
 	indices := []int64{1, 3, 3}
 	grad := common.Tensor{"t", a, d, indices}
 
-	table := common.NewEmbeddingTable{"t", 2, "zero"}
+	table := common.NewEmbeddingTable("t", 2, "zero")
 
-	err := SparseSGD(&grad, &table, 0.1)
+	err := SparseSGD(&grad, table, 0.1)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(table.EmbeddingVector))
 
-	v1 := (&table).GetEmbeddingVector(1)
+	v1 := table.GetEmbeddingVector(1)
 	assert.Equal(t, 2, len(v1))
 	assert.Equal(t, float32(0.1), v1[0])
 
-	v3 := (&table).GetEmbeddingVector(3)
+	v3 := table.GetEmbeddingVector(3)
 	assert.Equal(t, 2, len(v3))
 	assert.Equal(t, float32(0.2), v3[0])
 }
