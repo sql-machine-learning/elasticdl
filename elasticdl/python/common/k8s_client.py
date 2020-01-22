@@ -300,7 +300,7 @@ class Client(object):
             yaml.safe_dump(pod_dict, f)
 
     def _create_master_pod_obj(self, **kargs):
-        env = get_env_with_ip(kargs)
+        env = get_env_with_ip(**kargs)
 
         pod = self._create_pod(
             pod_name=self.get_master_pod_name(),
@@ -328,7 +328,7 @@ class Client(object):
         # Find that master pod that will be used as the owner reference
         # for the ps or worker pod.
         master_pod = self.get_master_pod()
-        env = get_env_with_ip(kargs)
+        env = get_env_with_ip(**kargs)
         pod = self._create_pod(
             pod_name=pod_name,
             job_name=self.job_name,
