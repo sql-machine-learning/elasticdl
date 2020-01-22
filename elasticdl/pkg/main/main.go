@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
 )
 
@@ -29,10 +30,10 @@ var (
 
 func main() {
 	flag.Parse()
-	address := fmt.Sprintf("localhost:%d", *port)
+	address := fmt.Sprintf("%s:%d", os.Getenv("MY_POD_IP"), *port)
 	serverDone := make(chan bool)
 	ps.CreateServer(address, serverDone)
-	log.Println("PS service started.")
+	log.Println("PS service started at ", address)
 	for {
 		select {
 		case done := <-serverDone:
