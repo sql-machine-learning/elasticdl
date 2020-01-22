@@ -15,8 +15,7 @@ func TestSGDOptimizer(t *testing.T) {
 	v2 := []float32{1.0, 2.0, 1.1, 2.2}
 	t2 := common.Tensor{"t2", v2, d2, nil}
 
-	var p Parameter
-	p.NonEmbeddingParam = make(map[string]common.Tensor)
+	p := NewParameter()
 	p.NonEmbeddingParam["t1"] = t1
 	p.NonEmbeddingParam["t2"] = t2
 
@@ -32,7 +31,7 @@ func TestSGDOptimizer(t *testing.T) {
 	sgdOpt := SGDOptimizer{lr}
 	opt = &sgdOpt
 
-	err1 := opt.ApplyGradients(grads, &p)
+	err1 := opt.ApplyGradients(grads, p)
 	assert.Equal(t, opt.GetLR(), lr)
 	assert.Nil(t, err1)
 
@@ -44,6 +43,6 @@ func TestSGDOptimizer(t *testing.T) {
 
 	grad3 := common.Tensor{"t3", gv2, d2, nil}
 	grads = append(grads, grad3)
-	err2 := opt.ApplyGradients(grads, &p)
+	err2 := opt.ApplyGradients(grads, p)
 	assert.NotNil(t, err2)
 }
