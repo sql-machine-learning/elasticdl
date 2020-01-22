@@ -6,10 +6,7 @@ import (
 )
 
 func TestEmbeddingTableInit(t *testing.T) {
-	var e1 EmbeddingTable
-	e1.Name = "e1"
-	e1.Dim = 2
-
+	e1 := NewEmbeddingTable("e1", 2, "zero")
 	v1 := e1.GetEmbeddingVector(10)
 	assert.Contains(t, e1.EmbeddingVector, int64(10))
 	assert.Equal(t, len(v1), 2)
@@ -17,9 +14,7 @@ func TestEmbeddingTableInit(t *testing.T) {
 }
 
 func TestEmbeddingGet(t *testing.T) {
-	var e1 EmbeddingTable
-	e1.Name = "e1"
-	e1.Dim = 2
+	e1 := NewEmbeddingTable("e1", 2, "zero")
 	v1 := e1.GetEmbeddingVector(1)
 	assert.Equal(t, len(v1), 2)
 	v1[0] = 1.0
