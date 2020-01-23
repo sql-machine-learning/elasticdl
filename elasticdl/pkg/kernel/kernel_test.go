@@ -1,10 +1,11 @@
 package kernel
 
 import (
-    import "elasticdl.org/elasticdl/pkg/common"
-    import "github.com/stretchr/testify/assert"
-    import "math/rand"
-    import "testing"
+	"elasticdl.org/elasticdl/pkg/common"
+	"github.com/stretchr/testify/assert"
+	"math"
+	"math/rand"
+	"testing"
 )
 
 func TestSGD(t *testing.T) {
@@ -58,12 +59,18 @@ func TestAdam(t *testing.T) {
 	}
 
 	for i := 0; i < size; i++ {
-		expectedParam[i] = param[i] - float32(lr)*expectedM[i]/(1-float32(math.Pow(beta1, float64(step))))/(float32(math.Sqrt(float64(expectedV[i]/(1-float32(math.Pow(beta2, float64(step))))))+epsilon))
+		expectedParam[i] = param[i] -
+			float32(lr)*expectedM[i]/
+				(1-float32(math.Pow(beta1, float64(step))))/
+				(float32(math.Sqrt(float64(expectedV[i]/
+					(1-float32(math.Pow(beta2, float64(step))))))+
+					epsilon))
 	}
 
-	Adam(grad, param, m, v, lr, int64(size), step, beta1, beta2, epsilon, false, nil)
+	Adam(grad, param, m, v, lr, int64(size), step, beta1, beta2,
+		epsilon, false, nil)
 
-	assert.True(t,  common.CompareFloatArray(expectedM, m))
-	assert.True(t, common.CompareFloatArray(expectedV, v))
-	assert.True(t, common.CompareFloatArray(expectedParam, param))
+	assert.True(t, common.CompareFloatArray(expectedM, m, 0.0001))
+	assert.True(t, common.CompareFloatArray(expectedV, v, 0.0001))
+	assert.True(t, common.CompareFloatArray(expectedParam, param, 0.0001))
 }
