@@ -23,11 +23,25 @@ func (opt *SGDOptimizer) GetLR() float32 {
 // ApplyGradients applies gradients to parameters
 func (opt *SGDOptimizer) ApplyGradients(grads []common.Tensor, p *Parameter) error {
 	for _, grad := range grads {
-		t := p.GetNonEmbeddingParam(grad.Name)
-		if t == nil {
-			return fmt.Errorf("grad %s not in Parameter", grad.Name)
+		if grad.Indices == nil {
+			t := p.GetNonEmbeddingParam(grad.Name)
+			if t == nil {
+				return fmt.Errorf("grad %s not in Parameter", grad.Name)
+			}
+			kernel.SGD(&grad, t, opt.GetLR())
+		} else {
+			t := p.GetEmbeddingParam(grad.Name)
+			if t == nil {
+				return fmt.Errorf("grad %s not in Parameter", grad.Name)
+			}
+			kernel.SparseSGD(&grad, t, opt.GetLR())
 		}
-		kernel.SGD(&grad, t, opt.GetLR())
 	}
 	return nil
+}
+
+// NewSGDOptimizer creates a SGD optimizer instance
+func NewSGDOptimizer(lr float32) *SGDOptimizer {
+	opt := SGDOptimizer{lr}
+	return &opt
 }

@@ -16,8 +16,8 @@ func TestParameterInit(t *testing.T) {
 	t2 := common.Tensor{"t2", v2, d2, nil}
 
 	p := NewParameter()
-	p.NonEmbeddingParam["t1"] = t1
-	p.NonEmbeddingParam["t2"] = t2
+	p.NonEmbeddingParam["t1"] = &t1
+	p.NonEmbeddingParam["t2"] = &t2
 
 	assert.Len(t, p.NonEmbeddingParam, 2)
 	assert.Contains(t, p.NonEmbeddingParam, "t1")
