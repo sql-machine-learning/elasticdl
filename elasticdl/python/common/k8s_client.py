@@ -41,7 +41,7 @@ def get_env_with_ip(**kargs):
             ),
         )
     ]
-    if "envs" in kargs:
+    if "envs" in kargs and kargs["envs"]:
         for key in kargs["envs"]:
             env.append(V1EnvVar(name=key, value=kargs["envs"][key]))
     return env
