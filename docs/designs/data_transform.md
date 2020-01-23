@@ -9,7 +9,7 @@ Data transform is an important part in an end-to-end machine learning pipeline. 
 
 ## Challenge
 
-* In some ML systems, users use different transform codes for training and serving. It may bring the training/serving skew. Consistency between training and serving is the key point of data transform. Users write the transform code only once. And then the same logic can run in batch mode for training and in real time mode for serving.  
+* In some ML systems, users use different transform code for training and serving. It may cause inconsistency between these two stages. Consistency between training and serving is the key point of data transform. Users write the transform code only once. And then the same logic can run in batch mode for training and in real time mode for serving.  
 * The transform logic is incomplete when users develop the pipeline. The statistical value calculated from the entire dataset at runtime is necessary to make the transform logic concrete.  
 * The transform logic is very flexible. How do we design a SQL extended syntax to fully express the logic elegantly?  
 
