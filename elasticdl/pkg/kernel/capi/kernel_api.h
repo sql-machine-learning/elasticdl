@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-void SGD(float* grad, float* param, double lr, long long size);
+void SGD(float* grad, float* param, float lr, long long size);
 
 void Adam(float* grad,
           float* param,

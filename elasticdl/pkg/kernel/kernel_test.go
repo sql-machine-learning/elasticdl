@@ -19,15 +19,39 @@ func TestSGD(t *testing.T) {
 		b[i] = rand.Float32()
 	}
 
-	expected := make([]float32, size)
+	d := []int64{2, 5}
+	grad := common.Tensor{"t", a, d, nil}
+	param := common.Tensor{"t", b, d, nil}
 
+	expected := make([]float32, size)
 	for i := 0; i < size; i++ {
 		expected[i] = b[i] - lr*a[i]
 	}
 
-	SGD(a, b, float64(lr), int64(size))
+	err := SGD(&grad, &param, lr)
+	assert.Nil(t, err)
+	assert.Equal(t, expected, b)
+}
 
-	assert.Equal(t, b, expected)
+func TestSparseSGD(t *testing.T) {
+	a := []float32{-1.0, -1.0, -1.0, -1.0, -1.0, -1.0}
+	d := []int64{3, 2}
+	indices := []int64{1, 3, 3}
+	grad := common.Tensor{"t", a, d, indices}
+
+	table := common.NewEmbeddingTable("t", 2, "zero")
+
+	err := SparseSGD(&grad, table, 0.1)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(table.EmbeddingVector))
+
+	v1 := table.GetEmbeddingVector(1)
+	assert.Equal(t, 2, len(v1))
+	assert.Equal(t, float32(0.1), v1[0])
+
+	v3 := table.GetEmbeddingVector(3)
+	assert.Equal(t, 2, len(v3))
+	assert.Equal(t, float32(0.2), v3[0])
 }
 
 func TestAdam(t *testing.T) {
