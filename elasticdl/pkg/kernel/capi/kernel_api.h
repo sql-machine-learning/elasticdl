@@ -7,6 +7,18 @@ extern "C" {
 
 void SGD(float* grad, float* param, float lr, long long size);
 
+void Adam(float* grad,
+          float* param,
+          float* m,
+          float* v,
+          double lr,
+          long long size,
+          long long step,
+          double beta1,
+          double beta2,
+          double epsilon,
+          float* max_square);
+
 #ifdef __cplusplus
 }
 #endif
