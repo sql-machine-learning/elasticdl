@@ -1,10 +1,12 @@
 package kernel
 
-import "testing"
-import "math/rand"
-import "math"
-import "github.com/stretchr/testify/assert"
-import "github.com/google/go-cmp/cmp"
+import (
+	"elasticdl.org/elasticdl/pkg/common"
+	"github.com/stretchr/testify/assert"
+	"math"
+	"math/rand"
+	"testing"
+)
 
 func TestSGD(t *testing.T) {
 	const size int = 10
@@ -40,16 +42,6 @@ func TestAdam(t *testing.T) {
 	var beta2 float64 = 0.999
 	var epsilon float64 = 1e-8
 
-	const tolerance = .00001
-	opt := cmp.Comparer(func(x, y float32) bool {
-		diff := math.Abs(float64(x - y))
-		mean := math.Abs(float64(x+y)) / 2.0
-		if math.IsNaN(diff / mean) {
-			return true
-		}
-		return (diff / mean) < tolerance
-	})
-
 	for i := 0; i < size; i++ {
 		grad[i] = rand.Float32()
 		param[i] = rand.Float32()
@@ -67,28 +59,18 @@ func TestAdam(t *testing.T) {
 	}
 
 	for i := 0; i < size; i++ {
-		expectedParam[i] = param[i] - float32(lr)*expectedM[i]/(1-float32(math.Pow(beta1, float64(step))))/(float32(math.Sqrt(float64(expectedV[i]/(1-float32(math.Pow(beta2, float64(step))))))+epsilon))
+		expectedParam[i] = param[i] -
+			float32(lr)*expectedM[i]/
+				(1-float32(math.Pow(beta1, float64(step))))/
+				(float32(math.Sqrt(float64(expectedV[i]/
+					(1-float32(math.Pow(beta2, float64(step))))))+
+					epsilon))
 	}
 
-	Adam(grad, param, m, v, lr, int64(size), step, beta1, beta2, epsilon, false, nil)
+	Adam(grad, param, m, v, lr, int64(size), step, beta1, beta2,
+		epsilon, false, nil)
 
-	diffParam := 0
-	diffM := 0
-	diffV := 0
-
-	for i := 0; i < size; i++ {
-		if !cmp.Equal(expectedM[i], m[i], opt) {
-			diffM++
-		}
-		if !cmp.Equal(expectedV[i], v[i], opt) {
-			diffV++
-		}
-		if !cmp.Equal(expectedParam[i], param[i], opt) {
-			diffParam++
-		}
-	}
-
-	assert.Equal(t, diffM, 0)
-	assert.Equal(t, diffV, 0)
-	assert.Equal(t, diffParam, 0)
+	assert.True(t, common.CompareFloatArray(expectedM, m, 0.0001))
+	assert.True(t, common.CompareFloatArray(expectedV, v, 0.0001))
+	assert.True(t, common.CompareFloatArray(expectedParam, param, 0.0001))
 }
