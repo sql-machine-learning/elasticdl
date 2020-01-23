@@ -32,18 +32,17 @@ def get_ps_pod_name(job_name, ps_id):
     return "elasticdl-%s-ps-%s" % (job_name, str(ps_id))
 
 
-def get_env_with_ip(**kargs):
-    env = [
-        V1EnvVar(
-            name="MY_POD_IP",
-            value_from=V1EnvVarSource(
-                field_ref=V1ObjectFieldSelector(field_path="status.podIP")
-            ),
-        )
-    ]
-    if "envs" in kargs and kargs["envs"]:
-        for key in kargs["envs"]:
-            env.append(V1EnvVar(name=key, value=kargs["envs"][key]))
+def append_pod_ip_to_env(env):
+    pod_ip_var = V1EnvVar(
+        name="MY_POD_IP",
+        value_from=V1EnvVarSource(
+            field_ref=V1ObjectFieldSelector(field_path="status.podIP")
+        ),
+    )
+    if env:
+        env.append(pod_ip_var)
+    else:
+        env = [pod_ip_var]
     return env
 
 
@@ -300,7 +299,11 @@ class Client(object):
             yaml.safe_dump(pod_dict, f)
 
     def _create_master_pod_obj(self, **kargs):
-        env = get_env_with_ip(**kargs)
+        env = []
+        if "envs" in kargs:
+            for key in kargs["envs"]:
+                env.append(V1EnvVar(name=key, value=kargs["envs"][key]))
+        env = append_pod_ip_to_env(env)
 
         pod = self._create_pod(
             pod_name=self.get_master_pod_name(),
@@ -328,7 +331,8 @@ class Client(object):
         # Find that master pod that will be used as the owner reference
         # for the ps or worker pod.
         master_pod = self.get_master_pod()
-        env = get_env_with_ip(**kargs)
+        env = kargs["envs"] if "envs" in kargs else None
+        env = append_pod_ip_to_env(env)
         pod = self._create_pod(
             pod_name=pod_name,
             job_name=self.job_name,
