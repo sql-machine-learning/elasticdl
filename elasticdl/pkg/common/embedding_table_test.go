@@ -25,8 +25,8 @@ func TestEmbeddingGet(t *testing.T) {
 
 	indices := []int64{1, 3, 5, 7, 9}
 	vectors := e1.GetEmbeddingVectors(indices)
-	assert.Equal(t, len(vectors), len(indices))
-	assert.Equal(t, vectors[0][0], float32(1.0))
-	assert.Equal(t, vectors[0][1], float32(2.0))
-	assert.Equal(t, vectors[1][0], float32(0.0))
+	assert.Equal(t, len(vectors), len(indices)*2)
+	assert.Equal(t, vectors[0], float32(1.0))
+	assert.Equal(t, vectors[1], float32(2.0))
+	assert.Equal(t, vectors[2], float32(0.0))
 }

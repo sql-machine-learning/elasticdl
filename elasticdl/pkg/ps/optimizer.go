@@ -7,7 +7,7 @@ import "fmt"
 // Optimizer interface
 type Optimizer interface {
 	GetLR() float32
-	ApplyGradients([]common.Tensor, *Parameter) error
+	ApplyGradients([]*common.Tensor, *Parameter) error
 }
 
 // SGDOptimizer struct
@@ -21,20 +21,20 @@ func (opt *SGDOptimizer) GetLR() float32 {
 }
 
 // ApplyGradients applies gradients to parameters
-func (opt *SGDOptimizer) ApplyGradients(grads []common.Tensor, p *Parameter) error {
+func (opt *SGDOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) error {
 	for _, grad := range grads {
 		if grad.Indices == nil {
 			t := p.GetNonEmbeddingParam(grad.Name)
 			if t == nil {
 				return fmt.Errorf("grad %s not in Parameter", grad.Name)
 			}
-			kernel.SGD(&grad, t, opt.GetLR())
+			kernel.SGD(grad, t, opt.GetLR())
 		} else {
 			t := p.GetEmbeddingParam(grad.Name)
 			if t == nil {
 				return fmt.Errorf("grad %s not in Parameter", grad.Name)
 			}
-			kernel.SparseSGD(&grad, t, opt.GetLR())
+			kernel.SparseSGD(grad, t, opt.GetLR())
 		}
 	}
 	return nil

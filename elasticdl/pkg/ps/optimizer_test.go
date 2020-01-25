@@ -23,7 +23,7 @@ func TestSGDOptimizer(t *testing.T) {
 	gv2 := []float32{1.0, 1.0, 1.0, 1.0}
 	grad1 := common.Tensor{"t1", gv1, d1, nil}
 	grad2 := common.Tensor{"t2", gv2, d2, nil}
-	grads := []common.Tensor{grad1, grad2}
+	grads := []*common.Tensor{&grad1, &grad2}
 
 	opt := NewSGDOptimizer(0.1)
 
@@ -40,7 +40,7 @@ func TestSGDOptimizer(t *testing.T) {
 
 	// test grad name error
 	grad3 := common.Tensor{"t3", gv2, d2, nil}
-	grads = []common.Tensor{grad3}
+	grads = []*common.Tensor{&grad3}
 	err2 := opt.ApplyGradients(grads, p)
 	assert.NotNil(t, err2)
 
@@ -51,7 +51,7 @@ func TestSGDOptimizer(t *testing.T) {
 	v3 := []float32{1.0, 1.0, 1.0, 1.0}
 	i3 := []int64{1, 3}
 	grad3 = common.Tensor{"t3", v3, d3, i3}
-	grads = []common.Tensor{grad1, grad2, grad3}
+	grads = []*common.Tensor{&grad1, &grad2, &grad3}
 
 	err3 := opt.ApplyGradients(grads, p)
 	assert.Nil(t, err3)
@@ -62,23 +62,23 @@ func TestSGDOptimizer(t *testing.T) {
 	assert.True(t, common.CompareFloatArray(p.NonEmbeddingParam["t2"].Value, ev2, 0.0001))
 
 	vectors := p.GetEmbeddingParam("t3").GetEmbeddingVectors(i3)
-	assert.Equal(t, 2, len(vectors))
-	assert.True(t, common.CompareFloat(-0.1, vectors[0][0], 0.0001))
-	assert.True(t, common.CompareFloat(-0.1, vectors[1][0], 0.0001))
+	assert.Equal(t, 4, len(vectors))
+	assert.True(t, common.CompareFloat(-0.1, vectors[0], 0.0001))
+	assert.True(t, common.CompareFloat(-0.1, vectors[3], 0.0001))
 
 	// more test for sparse parameter update
 	d3 = []int64{4, 2}
 	v3 = []float32{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
 	i3 = []int64{1, 3, 3, 5}
 	grad3 = common.Tensor{"t3", v3, d3, i3}
-	grads = []common.Tensor{grad3}
+	grads = []*common.Tensor{&grad3}
 
 	err4 := opt.ApplyGradients(grads, p)
 	assert.Nil(t, err4)
 
-	vectors = p.GetEmbeddingParam("t3").GetEmbeddingVectors(i3)
-	assert.Equal(t, 4, len(vectors))
-	assert.True(t, common.CompareFloat(-0.2, vectors[0][0], 0.0001))
-	assert.True(t, common.CompareFloat(-0.3, vectors[1][0], 0.0001))
-	assert.True(t, common.CompareFloat(-0.1, vectors[3][0], 0.0001))
+	vectors = p.GetEmbeddingParam("t3").GetEmbeddingVectors([]int64{1, 3, 5})
+	assert.Equal(t, 6, len(vectors))
+	assert.True(t, common.CompareFloat(-0.2, vectors[0], 0.0001))
+	assert.True(t, common.CompareFloat(-0.3, vectors[3], 0.0001))
+	assert.True(t, common.CompareFloat(-0.1, vectors[5], 0.0001))
 }
