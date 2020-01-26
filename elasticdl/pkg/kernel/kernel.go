@@ -36,21 +36,22 @@ func SparseSGD(grad *common.Tensor, param *common.EmbeddingTable, lr float32) er
 }
 
 // Adam kernel
-func Adam(grad []float32, param []float32, m []float32, v []float32,
-	lr float64, size int64, step int64, beta1 float64, beta2 float64,
-	epsilon float64, amsgrad bool, maxSquare []float32) {
-	gradPtr := (*C.float)(unsafe.Pointer(&grad[0]))
-	paramPtr := (*C.float)(unsafe.Pointer(&param[0]))
-	mPtr := (*C.float)(unsafe.Pointer(&m[0]))
-	vPtr := (*C.float)(unsafe.Pointer(&v[0]))
+func Adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common.Tensor,
+	lr float32, step int64, beta1 float32, beta2 float32,
+	epsilon float32, amsgrad bool, maxSquare *common.Tensor) {
+	gradPtr := (*C.float)(unsafe.Pointer(&grad.Value[0]))
+	paramPtr := (*C.float)(unsafe.Pointer(&param.Value[0]))
+	mPtr := (*C.float)(unsafe.Pointer(&m.Value[0]))
+	vPtr := (*C.float)(unsafe.Pointer(&v.Value[0]))
+	size := C.longlong(len(grad.Value))
 	if amsgrad {
-		maxSquarePtr := (*C.float)(unsafe.Pointer(&maxSquare[0]))
-		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.double(lr), C.longlong(size),
-			C.longlong(step), C.double(beta1), C.double(beta2), C.double(epsilon),
+		maxSquarePtr := (*C.float)(unsafe.Pointer(&maxSquare.Value[0]))
+		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.float(lr), C.longlong(size),
+			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon),
 			maxSquarePtr)
 	} else {
-		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.double(lr), C.longlong(size),
-			C.longlong(step), C.double(beta1), C.double(beta2), C.double(epsilon), nil)
+		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.float(lr), C.longlong(size),
+			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon), nil)
 	}
 
 }
