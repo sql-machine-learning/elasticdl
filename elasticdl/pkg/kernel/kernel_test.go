@@ -90,11 +90,11 @@ func TestAdam(t *testing.T) {
 	}
 
 	for i := 0; i < size; i++ {
-		expectedParam[i] = rawParam[i] - lr * expectedM[i]/
-				(1-float32(math.Pow(float64(beta1), float64(step))))/
-				(float32(math.Sqrt(float64(expectedV[i]/
-					(1-float32(math.Pow(float64(beta2), float64(step)))))))+
-					epsilon)
+		expectedParam[i] = rawParam[i] - lr*expectedM[i]/
+			(1-float32(math.Pow(float64(beta1), float64(step))))/
+			(float32(math.Sqrt(float64(expectedV[i]/
+				(1-float32(math.Pow(float64(beta2), float64(step)))))))+
+				epsilon)
 	}
 
 	Adam(&grad, &param, &m, &v, lr, step, beta1, beta2,
@@ -142,20 +142,20 @@ func TestAdamWithAmsgrad(t *testing.T) {
 	for i := 0; i < size; i++ {
 		expectedM[i] = beta1*rawM[i] + (1-beta1)*rawGrad[i]
 		expectedV[i] = beta2*rawV[i] + (1-beta2)*rawGrad[i]*rawGrad[i]
-		if rawMaxSquare[i] < expectedV[i]{
+		if rawMaxSquare[i] < expectedV[i] {
 			expectedMaxSquare[i] = expectedV[i]
 		} else {
 			expectedMaxSquare[i] = rawMaxSquare[i]
 		}
-		
+
 	}
 
 	for i := 0; i < size; i++ {
-		expectedParam[i] = rawParam[i] - lr * expectedM[i]/
-				(1-float32(math.Pow(float64(beta1), float64(step))))/
-				(float32(math.Sqrt(float64(expectedMaxSquare[i]/
-					(1-float32(math.Pow(float64(beta2), float64(step)))))))+
-					epsilon)
+		expectedParam[i] = rawParam[i] - lr*expectedM[i]/
+			(1-float32(math.Pow(float64(beta1), float64(step))))/
+			(float32(math.Sqrt(float64(expectedMaxSquare[i]/
+				(1-float32(math.Pow(float64(beta2), float64(step)))))))+
+				epsilon)
 	}
 
 	Adam(&grad, &param, &m, &v, lr, step, beta1, beta2,

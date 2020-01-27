@@ -53,5 +53,4 @@ func Adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common
 		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.float(lr), C.longlong(size),
 			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon), nil)
 	}
-
 }
