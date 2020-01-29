@@ -27,16 +27,24 @@ In the terminology of TFX Transform, the word *analysis* refers to data statisti
 
 ## The Syntax Extension
 
-We can ask users to write SQL statements for data analysis.  For example, we might want to assume that the following code snippet trains a model to predict the plate price from its size.
+Without any syntax extension, users can write SQL statements for data analysis.  For example, the following SQL statement works with MySQL and can normalize the field size of table plates.
 
 ```sql
-min, max = SELECT min(age), max(age) FROM plates;
-SELECT * FROM plates TO TRAIN DNNRegressor COLUMN normalize(size, min, max) LABEL price;
+SELECT 1.00 * (t1.size - t2.size_min) / t2.size_range
+FROM plates t1
+JOIN
+(
+    SELECT
+        MIN(size) AS size_min,
+        MAX(size) - MIN(size) AS size_range
+    FROM plates
+) t2
+ON 1 = 1
 ```
 
-Unfortunately, SQL doesn't provide variables. The above example changes so much to the syntax and semantics that most SQL users cannot accept it.
+Unfortunately, the above code is tricky and hard to read.  And users might have to write it multiples time -- one before training and one before the prediction -- thus doubles the source code complexity.
 
-Also, to fulfill the goal of making deep learning more straightforward, we hope our users can write the following statement.
+For the goal of making deep learning more straightforward, we hope our users can write the following statement.
 
 ```sql
 SELECT * FROM plates TO TRAIN DNNRegressor COLUMN normalize(size) LABEL price INTO a_model;
