@@ -5,7 +5,6 @@ from model_zoo.census_wide_deep_model.feature_config import (
     FEATURE_GROUPS,
     MODEL_INPUTS,
     TransformOp,
-    get_id_boundaries,
 )
 from model_zoo.census_wide_deep_model.keras_process_layer import (
     AddIdOffset,
@@ -13,9 +12,13 @@ from model_zoo.census_wide_deep_model.keras_process_layer import (
     CategoryLookup,
     NumericBucket,
 )
+from model_zoo.census_wide_deep_model.feature_info_util import (
+    get_id_boundaries
+)
 
 
 def custom_model():
+    # The codes in the method can all be auto-generated
     input_layers = get_input_layers(FEATURE_GROUPS)
     transform_results = transform(input_layers, FEATURE_GROUPS)
 
@@ -104,7 +107,7 @@ def transform_group(inputs, feature_group):
     id_offsets = get_id_boundaries(feature_group)
 
     if id_offsets is not None:
-        group_items = AddIdOffset(id_offsets)(group_items)
+        group_items = AddIdOffset(id_offsets[0:-1])(group_items)
     group_stack = tf.keras.layers.concatenate(group_items, axis=-1)
     return group_stack
 

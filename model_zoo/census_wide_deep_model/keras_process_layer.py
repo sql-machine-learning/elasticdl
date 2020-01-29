@@ -39,13 +39,13 @@ class CategoryLookup(tf.keras.layers.Layer):
     https://github.com/tensorflow/community/pull/188/files?short_path=0657914#diff-0657914a8dc40e5fbca67680bf3fc45f
     """
 
-    def __init__(self, vocabulary, num_oov_buckets=1, default_value=-1):
+    def __init__(self, vocabulary_list, num_oov_buckets=1, default_value=-1):
         super(CategoryLookup, self).__init__()
-        self.vocabulary = vocabulary
+        self.vocabulary_list = vocabulary_list
 
     def call(self, inputs):
         table = lookup_ops.index_table_from_tensor(
-            vocabulary_list=self.vocabulary,
+            vocabulary_list=self.vocabulary_list,
             num_oov_buckets=1,
             default_value=-1,
         )
@@ -59,6 +59,10 @@ class AddIdOffset(tf.keras.layers.Layer):
 
     def call(self, inputs):
         ids_with_offset = []
+        if len(self.offsets) != len(inputs):
+            raise ValueError(
+                "The number of elements in offsets is not equal to inputs"
+            )
         for i, value in enumerate(inputs):
             ids_with_offset.append(value + self.offsets[i])
         return ids_with_offset
