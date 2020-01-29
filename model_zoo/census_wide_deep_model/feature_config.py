@@ -1,7 +1,8 @@
 import tensorflow as tf
+
 from model_zoo.census_wide_deep_model.feature_info_util import (
     FeatureInfo,
-    TransformOp
+    TransformOp,
 )
 
 WORK_CLASS_VOCABULARY = [

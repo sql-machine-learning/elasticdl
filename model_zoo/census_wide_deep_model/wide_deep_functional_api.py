@@ -6,14 +6,14 @@ from model_zoo.census_wide_deep_model.feature_config import (
     MODEL_INPUTS,
     TransformOp,
 )
+from model_zoo.census_wide_deep_model.feature_info_util import (
+    get_id_boundaries,
+)
 from model_zoo.census_wide_deep_model.keras_process_layer import (
     AddIdOffset,
     CategoryHash,
     CategoryLookup,
     NumericBucket,
-)
-from model_zoo.census_wide_deep_model.feature_info_util import (
-    get_id_boundaries
 )
 
 
