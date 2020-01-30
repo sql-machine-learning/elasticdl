@@ -27,20 +27,20 @@ func (opt *SGDOptimizer) GetLR() float32 {
 }
 
 // ApplyGradients applies gradients to parameters
-func (opt *SGDOptimizer) ApplyGradients(grads []common.Tensor, p *Parameter) error {
+func (opt *SGDOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) error {
 	for _, grad := range grads {
 		if grad.Indices == nil {
 			t := p.GetNonEmbeddingParam(grad.Name)
 			if t == nil {
 				return fmt.Errorf("grad %s not in Parameter", grad.Name)
 			}
-			kernel.SGD(&grad, t, opt.GetLR())
+			kernel.SGD(grad, t, opt.GetLR())
 		} else {
 			t := p.GetEmbeddingParam(grad.Name)
 			if t == nil {
 				return fmt.Errorf("grad %s not in Parameter", grad.Name)
 			}
-			kernel.SparseSGD(&grad, t, opt.GetLR())
+			kernel.SparseSGD(grad, t, opt.GetLR())
 		}
 	}
 	return nil
@@ -66,7 +66,7 @@ type AdamOptimizer struct {
 }
 
 // ApplyGradients applies gradients to parameters
-func (opt *AdamOptimizer) ApplyGradients(grads []common.Tensor, p *Parameter) error {
+func (opt *AdamOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) error {
 	opt.step++
 	for _, grad := range grads {
 		if grad.Indices == nil {
@@ -78,13 +78,23 @@ func (opt *AdamOptimizer) ApplyGradients(grads []common.Tensor, p *Parameter) er
 			}
 			if opt.amsgrad {
 				ms := opt.maxSquare.GetNonEmbeddingParam(grad.Name)
-				kernel.Adam(&grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, true, ms)
+				kernel.Adam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, true, ms)
 			} else {
-				kernel.Adam(&grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, false, nil)
+				kernel.Adam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, false, nil)
 			}
 		} else {
-			// TODO(liwen)
-			return fmt.Errorf("Sparse Adam not implemented")
+			t := p.GetEmbeddingParam(grad.Name)
+			m := opt.m.GetEmbeddingParam(grad.Name)
+			v := opt.v.GetEmbeddingParam(grad.Name)
+			if t == nil || m == nil || v == nil {
+				return fmt.Errorf("grad %s not in Parameter", grad.Name)
+			}
+			if opt.amsgrad {
+				ms := opt.maxSquare.GetEmbeddingParam(grad.Name)
+				kernel.SparseAdam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, true, ms)
+			} else {
+				kernel.SparseAdam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, false, nil)
+			}
 		}
 	}
 	return nil
@@ -105,17 +115,16 @@ func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32,
 	return &opt
 }
 
-// InitEmbedding set m,v,maxSquare embedding of AdamOptimizer (TODO)
-func (opt *AdamOptimizer) InitEmbedding(name string, embedding *common.EmbeddingTable) {
-	fmt.Println("unimplemented")
+// InitEmbeddingParam set m,v,maxSquare embedding of AdamOptimizer (TODO)
+func (opt *AdamOptimizer) InitEmbeddingParam(name string, dim int64) {
+	opt.m.SetEmbeddingParamInfo(name, dim, "zero")
+	opt.v.SetEmbeddingParamInfo(name, dim, "zero")
+	opt.maxSquare.SetEmbeddingParamInfo(name, dim, "zero")
 }
 
-// InitNonEmbedding set m,v,maxSquare non-embedding of AdamOptimizer
-func (opt *AdamOptimizer) InitNonEmbedding(name string, dim []int64) {
-	var size int64 = 1
-	for _, d := range dim {
-		size *= d
-	}
+// InitNonEmbeddingParam set m,v,maxSquare non-embedding of AdamOptimizer
+func (opt *AdamOptimizer) InitNonEmbeddingParam(name string, dim []int64) {
+	size := common.GetDimProduct(dim)
 	opt.m.NonEmbeddingParam[name] = &common.Tensor{name, make([]float32, size, size), dim, nil}
 	opt.v.NonEmbeddingParam[name] = &common.Tensor{name, make([]float32, size, size), dim, nil}
 	opt.maxSquare.NonEmbeddingParam[name] = &common.Tensor{name, make([]float32, size, size), dim, nil}
