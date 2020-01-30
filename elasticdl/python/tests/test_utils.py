@@ -156,28 +156,44 @@ def create_recordio_file(size, dataset_name, shape, temp_dir=None):
             elif dataset_name == DatasetName.CENSUS:
                 example_dict = {
                     "workclass": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(value=["A1", "A2", "A3"])
+                        bytes_list=tf.train.BytesList(
+                            value=[b"A1", b"A2", b"A3"]
+                        )
                     ),
                     "education": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(value=["B1", "B2", "B3"])
+                        bytes_list=tf.train.BytesList(
+                            value=[b"B1", b"B2", b"B3"]
+                        )
                     ),
                     "marital-status": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(value=["C1", "C2", "C3"])
+                        bytes_list=tf.train.BytesList(
+                            value=[b"C1", b"C2", b"C3"]
+                        )
                     ),
                     "occupation": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(value=["D1", "D2", "D3"])
+                        bytes_list=tf.train.BytesList(
+                            value=[b"D1", b"D2", b"D3"]
+                        )
                     ),
                     "relationship": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(value=["E1", "E2", "E3"])
+                        bytes_list=tf.train.BytesList(
+                            value=[b"E1", b"E2", b"E3"]
+                        )
                     ),
                     "race": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(value=["F1", "F2", "f3"])
+                        bytes_list=tf.train.BytesList(
+                            value=[b"F1", b"F2", b"F3"]
+                        )
                     ),
                     "sex": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(value=["H1", "H2", "H3"])
+                        bytes_list=tf.train.BytesList(
+                            value=[b"H1", b"H2", b"H3"]
+                        )
                     ),
                     "native-country": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(value=["I1", "I2", "I3"])
+                        bytes_list=tf.train.BytesList(
+                            value=[b"I1", b"I2", b"I3"]
+                        )
                     ),
                     "age": tf.train.Feature(
                         float_list=tf.train.FloatList(value=[19, 59, 34])
