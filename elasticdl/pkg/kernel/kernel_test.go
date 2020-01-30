@@ -46,12 +46,12 @@ func TestSparseSGD(t *testing.T) {
 	assert.Equal(t, 2, len(table.EmbeddingVector))
 
 	v1 := table.GetEmbeddingVector(1)
-	assert.Equal(t, 2, len(v1))
-	assert.Equal(t, float32(0.1), v1[0])
+	assert.Equal(t, 2, len(v1.Value))
+	assert.Equal(t, float32(0.1), v1.Value[0])
 
 	v3 := table.GetEmbeddingVector(3)
-	assert.Equal(t, 2, len(v3))
-	assert.Equal(t, float32(0.2), v3[0])
+	assert.Equal(t, 2, len(v3.Value))
+	assert.Equal(t, float32(0.2), v3.Value[0])
 }
 
 func TestAdam(t *testing.T) {
