@@ -2,10 +2,10 @@ import tensorflow as tf
 
 from model_zoo.census_wide_deep_model.feature_config import (
     CATEGORICAL_FEATURE_KEYS,
-    NUMERIC_FEATURE_KEYS,
-    LABEL_KEY,
     FEATURE_GROUPS,
+    LABEL_KEY,
     MODEL_INPUTS,
+    NUMERIC_FEATURE_KEYS,
     TransformOp,
 )
 from model_zoo.census_wide_deep_model.feature_info_util import (
