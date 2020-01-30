@@ -51,5 +51,8 @@ RUN python /var/frappe_recordio_gen.py --data /root/.keras/datasets --output_dir
 # Copy heart dataset
 COPY elasticdl/python/data/recordio_gen/heart_recordio_gen.py /var/heart_recordio_gen.py
 RUN python /var/heart_recordio_gen.py --data_dir /root/.keras/datasets --output_dir /data/heart
+# Copy heart dataset
+COPY elasticdl/python/data/recordio_gen/census_recordio_gen.py /var/census_recordio_gen.py
+RUN python /var/census_recordio_gen.py --data_dir /root/.keras/datasets --output_dir /data/census
 
 RUN rm -rf /root/.keras/datasets

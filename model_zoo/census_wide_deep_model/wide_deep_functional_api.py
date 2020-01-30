@@ -1,7 +1,9 @@
 import tensorflow as tf
 
 from model_zoo.census_wide_deep_model.feature_config import (
-    FEATURE_COLUMNS,
+    CATEGORICAL_FEATURE_KEYS,
+    NUMERIC_FEATURE_KEYS,
+    LABEL_KEY,
     FEATURE_GROUPS,
     MODEL_INPUTS,
     TransformOp,
@@ -64,16 +66,27 @@ def learning_rate_scheduler(model_version):
         return 0.0001
 
 
-def dataset_fn(dataset, mode, metadata):
+def dataset_fn(dataset, mode, _):
     def _parse_data(record):
-        features = {}
-        for i, feature_name in enumerate(FEATURE_COLUMNS):
-            features[feature_name] = [record[i]]
-        label = tf.strings.to_number(record[-1], tf.int64)
+        feature_description = dict(
+            [
+                (name, tf.io.FixedLenFeature((1,), tf.string))
+                for name in CATEGORICAL_FEATURE_KEYS
+            ]
+            + [
+                (name, tf.io.FixedLenFeature((1,), tf.float32))
+                for name in NUMERIC_FEATURE_KEYS
+            ]
+            + [(LABEL_KEY, tf.io.FixedLenFeature([], tf.int64))]
+        )
 
-        return features, label
+        parsed_record = tf.io.parse_single_example(record, feature_description)
+        label = parsed_record.pop(LABEL_KEY)
+
+        return parsed_record, label
 
     dataset = dataset.map(_parse_data)
+
     return dataset
 
 

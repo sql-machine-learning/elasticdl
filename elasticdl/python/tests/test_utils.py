@@ -87,6 +87,7 @@ class DatasetName(object):
     FRAPPE = "frappe1"
     TEST_MODULE = "test_module1"
     IMAGE_DEFAULT = "image_default1"
+    CENSUS = "census1"
 
 
 def create_recordio_file(size, dataset_name, shape, temp_dir=None):
@@ -150,6 +151,48 @@ def create_recordio_file(size, dataset_name, shape, temp_dir=None):
                     ),
                     "label": tf.train.Feature(
                         int64_list=tf.train.Int64List(value=[label])
+                    ),
+                }
+            elif dataset_name == DatasetName.CENSUS:
+                example_dict = {
+                    "workclass": tf.train.Feature(
+                        bytes_list=tf.train.BytesList(value=["A1", "A2", "A3"])
+                    ),
+                    "education": tf.train.Feature(
+                        bytes_list=tf.train.BytesList(value=["B1", "B2", "B3"])
+                    ),
+                    "marital-status": tf.train.Feature(
+                        bytes_list=tf.train.BytesList(value=["C1", "C2", "C3"])
+                    ),
+                    "occupation": tf.train.Feature(
+                        bytes_list=tf.train.BytesList(value=["D1", "D2", "D3"])
+                    ),
+                    "relationship": tf.train.Feature(
+                        bytes_list=tf.train.BytesList(value=["E1", "E2", "E3"])
+                    ),
+                    "race": tf.train.Feature(
+                        bytes_list=tf.train.BytesList(value=["F1", "F2", "f3"])
+                    ),
+                    "sex": tf.train.Feature(
+                        bytes_list=tf.train.BytesList(value=["H1", "H2", "H3"])
+                    ),
+                    "native-country": tf.train.Feature(
+                        bytes_list=tf.train.BytesList(value=["I1", "I2", "I3"])
+                    ),
+                    "age": tf.train.Feature(
+                        float_list=tf.train.FloatList(value=[19, 59, 34])
+                    ),
+                    "capital-gain": tf.train.Feature(
+                        float_list=tf.train.FloatList(value=[100, 450, 789])
+                    ),
+                    "capital-loss": tf.train.Feature(
+                        float_list=tf.train.FloatList(value=[100, 567, 901])
+                    ),
+                    "hours-per-week": tf.train.Feature(
+                        float_list=tf.train.FloatList(value=[45, 56, 34])
+                    ),
+                    "label": tf.train.Feature(
+                        int64_list=tf.train.Int64List(value=[1, 0, 1])
                     ),
                 }
             else:

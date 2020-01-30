@@ -90,8 +90,7 @@ MODEL_INPUTS = {
     "deep": ["group1", "group2", "group3"],
 }
 
-FEATURE_COLUMNS = [
-    "age",
+CATEGORICAL_FEATURE_KEYS = [
     "workclass",
     "education",
     "marital-status",
@@ -99,9 +98,12 @@ FEATURE_COLUMNS = [
     "relationship",
     "race",
     "sex",
+    "native-country",
+]
+NUMERIC_FEATURE_KEYS = [
+    "age",
     "capital-gain",
     "capital-loss",
     "hours-per-week",
-    "native-country",
-    "income",
 ]
+LABEL_KEY = "label"
