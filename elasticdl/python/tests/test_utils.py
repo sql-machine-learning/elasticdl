@@ -156,59 +156,55 @@ def create_recordio_file(size, dataset_name, shape, temp_dir=None):
             elif dataset_name == DatasetName.CENSUS:
                 example_dict = {
                     "workclass": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(
-                            value=[b"A1", b"A2", b"A3"]
-                        )
+                        bytes_list=tf.train.BytesList(value=[b"Private"])
                     ),
                     "education": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(
-                            value=[b"B1", b"B2", b"B3"]
-                        )
+                        bytes_list=tf.train.BytesList(value=[b"HS-grad"])
                     ),
                     "marital-status": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(
-                            value=[b"C1", b"C2", b"C3"]
-                        )
+                        bytes_list=tf.train.BytesList(value=[b"Widowed"])
                     ),
                     "occupation": tf.train.Feature(
                         bytes_list=tf.train.BytesList(
-                            value=[b"D1", b"D2", b"D3"]
+                            value=[b"Exec-managerial"]
                         )
                     ),
                     "relationship": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(
-                            value=[b"E1", b"E2", b"E3"]
-                        )
+                        bytes_list=tf.train.BytesList(value=[b"Not-in-family"])
                     ),
                     "race": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(
-                            value=[b"F1", b"F2", b"F3"]
-                        )
+                        bytes_list=tf.train.BytesList(value=[b"White"])
                     ),
                     "sex": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(
-                            value=[b"H1", b"H2", b"H3"]
-                        )
+                        bytes_list=tf.train.BytesList(value=[b"Female"])
                     ),
                     "native-country": tf.train.Feature(
-                        bytes_list=tf.train.BytesList(
-                            value=[b"I1", b"I2", b"I3"]
-                        )
+                        bytes_list=tf.train.BytesList(value=[b"United-States"])
                     ),
                     "age": tf.train.Feature(
-                        float_list=tf.train.FloatList(value=[19, 59, 34])
+                        float_list=tf.train.FloatList(
+                            value=[np.random.randint(10, 100)]
+                        )
                     ),
                     "capital-gain": tf.train.Feature(
-                        float_list=tf.train.FloatList(value=[100, 450, 789])
+                        float_list=tf.train.FloatList(
+                            value=[np.random.randint(100, 4000)]
+                        )
                     ),
                     "capital-loss": tf.train.Feature(
-                        float_list=tf.train.FloatList(value=[100, 567, 901])
+                        float_list=tf.train.FloatList(
+                            value=[np.random.randint(2000, 7000)]
+                        )
                     ),
                     "hours-per-week": tf.train.Feature(
-                        float_list=tf.train.FloatList(value=[45, 56, 34])
+                        float_list=tf.train.FloatList(
+                            value=[np.random.randint(10, 70)]
+                        )
                     ),
                     "label": tf.train.Feature(
-                        int64_list=tf.train.Int64List(value=[1, 0, 1])
+                        int64_list=tf.train.Int64List(
+                            value=[np.random.randint(0, 2)]
+                        )
                     ),
                 }
             else:

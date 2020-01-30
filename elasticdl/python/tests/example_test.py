@@ -165,6 +165,13 @@ class ExampleTest(unittest.TestCase):
             dataset_name=DatasetName.CENSUS,
         )
 
+    def test_wide_deep_evaluate(self):
+        self._test_evaluate(
+            10,
+            "census_wide_deep_model.wide_deep_functional_api.custom_model",
+            dataset_name=DatasetName.CENSUS,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
