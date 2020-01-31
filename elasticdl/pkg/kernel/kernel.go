@@ -28,29 +28,52 @@ func SparseSGD(grad *common.Tensor, param *common.EmbeddingTable, lr float32) er
 	}
 	for i, index := range grad.Indices {
 		vector := param.GetEmbeddingVector(index)
-		for j := range vector {
-			vector[j] -= lr * grad.Value[j+i*int(param.Dim)]
-		}
+		subgrad := grad.AtRow(int64(i))
+		SGD(subgrad, vector, lr)
 	}
 	return nil
 }
 
 // Adam kernel
-func Adam(grad []float32, param []float32, m []float32, v []float32,
-	lr float64, size int64, step int64, beta1 float64, beta2 float64,
-	epsilon float64, amsgrad bool, maxSquare []float32) {
-	gradPtr := (*C.float)(unsafe.Pointer(&grad[0]))
-	paramPtr := (*C.float)(unsafe.Pointer(&param[0]))
-	mPtr := (*C.float)(unsafe.Pointer(&m[0]))
-	vPtr := (*C.float)(unsafe.Pointer(&v[0]))
+func Adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common.Tensor,
+	lr float32, step int64, beta1 float32, beta2 float32,
+	epsilon float32, amsgrad bool, maxSquare *common.Tensor) {
+	gradPtr := (*C.float)(unsafe.Pointer(&grad.Value[0]))
+	paramPtr := (*C.float)(unsafe.Pointer(&param.Value[0]))
+	mPtr := (*C.float)(unsafe.Pointer(&m.Value[0]))
+	vPtr := (*C.float)(unsafe.Pointer(&v.Value[0]))
+	size := C.longlong(len(grad.Value))
 	if amsgrad {
-		maxSquarePtr := (*C.float)(unsafe.Pointer(&maxSquare[0]))
-		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.double(lr), C.longlong(size),
-			C.longlong(step), C.double(beta1), C.double(beta2), C.double(epsilon),
+		maxSquarePtr := (*C.float)(unsafe.Pointer(&maxSquare.Value[0]))
+		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.float(lr), C.longlong(size),
+			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon),
 			maxSquarePtr)
 	} else {
-		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.double(lr), C.longlong(size),
-			C.longlong(step), C.double(beta1), C.double(beta2), C.double(epsilon), nil)
+		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.float(lr), C.longlong(size),
+			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon), nil)
 	}
+}
 
+// SparseAdam kernel
+func SparseAdam(grad *common.Tensor, param *common.EmbeddingTable, m *common.EmbeddingTable,
+	v *common.EmbeddingTable, lr float32, step int64, beta1 float32, beta2 float32,
+	epsilon float32, amsgrad bool, maxSquare *common.EmbeddingTable) error {
+	if grad.Indices == nil || len(grad.Dim) != 2 {
+		return fmt.Errorf("grad %s is not row sparse tensor", grad.Name)
+	}
+	if grad.Dim[1] != param.Dim {
+		return fmt.Errorf("grad %s width is not equal to embedding dim", grad.Name)
+	}
+	for i, index := range grad.Indices {
+		subgrad := grad.AtRow(int64(i))
+		subparam := param.GetEmbeddingVector(index)
+		subm := m.GetEmbeddingVector(index)
+		subv := v.GetEmbeddingVector(index)
+		var submaxs *common.Tensor = nil
+		if amsgrad {
+			submaxs = maxSquare.GetEmbeddingVector(index)
+		}
+		Adam(subgrad, subparam, subm, subv, lr, step, beta1, beta2, epsilon, amsgrad, submaxs)
+	}
+	return nil
 }

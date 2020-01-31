@@ -17,12 +17,12 @@ void Adam(float* grad,
           float* param,
           float* m,
           float* v,
-          double lr,
+          float lr,
           long long size,
           long long step,
-          double beta1,
-          double beta2,
-          double epsilon,
+          float beta1,
+          float beta2,
+          float epsilon,
           float* max_square) {
   Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> eg{
       grad, static_cast<Eigen::Index>(size)};
