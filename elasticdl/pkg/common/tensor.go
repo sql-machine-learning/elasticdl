@@ -16,20 +16,19 @@ type Tensor struct {
 	Indices []int64
 }
 
-// NewTensor create a new tensor with name and dim
-func NewTensor(name string, dim []int64) *Tensor {
+// NewTensor create a new n-dim tensor
+func NewTensor(dim []int64) *Tensor {
 	var t Tensor
-	t.Name = name
 	t.Value = make([]float32, GetDimProduct(dim))
 	t.Dim = dim
 	return &t
 }
 
-// NewEmbeddingVector create a new tensor with dim
-func NewEmbeddingVector(dim int64) *Tensor {
+// NewVector create a new 1-dim tensor
+func NewVector(dim int64) *Tensor {
 	var t Tensor
 	t.Value = make([]float32, dim)
-	t.Dim = []int64{1, dim}
+	t.Dim = []int64{dim}
 	return &t
 }
 
@@ -49,7 +48,7 @@ func (t *Tensor) Subtensor(begin int64, len int64) *Tensor {
 	}
 	var subt Tensor
 	subt.Value = t.Value[begin : begin+len]
-	subt.Dim = []int64{1, len}
+	subt.Dim = []int64{len}
 	return &subt
 }
 

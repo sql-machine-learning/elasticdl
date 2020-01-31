@@ -166,3 +166,75 @@ func TestAdamWithAmsgrad(t *testing.T) {
 	assert.True(t, common.CompareFloatArray(expectedParam, param.Value, 0.00001))
 	assert.True(t, common.CompareFloatArray(expectedMaxSquare, maxSquare.Value, 0.00001))
 }
+
+func TestSparseAdam(t *testing.T) {
+	const size int = 10
+	rawGrad := make([]float32, size)
+	rawParam := make([]float32, size)
+	rawM := make([]float32, size)
+	rawV := make([]float32, size)
+	rawMaxSquare := make([]float32, size)
+	dim := []int64{1, 10}
+
+	ptable := common.NewEmbeddingTable("t", 10, "zero")
+	mtable := common.NewEmbeddingTable("t", 10, "zero")
+	vtable := common.NewEmbeddingTable("t", 10, "zero")
+	mstable := common.NewEmbeddingTable("t", 10, "zero")
+
+	for i := 0; i < size; i++ {
+		rawGrad[i] = rand.Float32()
+		rawParam[i] = rand.Float32()
+		rawM[i] = rand.Float32()
+		rawV[i] = rand.Float32()
+		rawMaxSquare[i] = rand.Float32()
+	}
+
+	grad := &common.Tensor{"t", rawGrad, dim, []int64{1}}
+	param := &common.Tensor{"", rawParam, dim, nil}
+	m := &common.Tensor{"", rawM, dim, nil}
+	v := &common.Tensor{"", rawV, dim, nil}
+	maxSquare := &common.Tensor{"", rawMaxSquare, dim, nil}
+
+	ptable.SetEmbeddingVector(1, param)
+	mtable.SetEmbeddingVector(1, m)
+	vtable.SetEmbeddingVector(1, v)
+	mstable.SetEmbeddingVector(1, maxSquare)
+
+	var lr float32 = 0.1
+	var step int64 = 5
+	var beta1 float32 = 0.9
+	var beta2 float32 = 0.999
+	var epsilon float32 = 1e-8
+
+	expectedParam := make([]float32, size)
+	expectedM := make([]float32, size)
+	expectedV := make([]float32, size)
+	expectedMaxSquare := make([]float32, size)
+
+	for i := 0; i < size; i++ {
+		expectedM[i] = beta1*rawM[i] + (1-beta1)*rawGrad[i]
+		expectedV[i] = beta2*rawV[i] + (1-beta2)*rawGrad[i]*rawGrad[i]
+		if rawMaxSquare[i] < expectedV[i] {
+			expectedMaxSquare[i] = expectedV[i]
+		} else {
+			expectedMaxSquare[i] = rawMaxSquare[i]
+		}
+
+	}
+
+	for i := 0; i < size; i++ {
+		expectedParam[i] = rawParam[i] - lr*expectedM[i]/
+			(1-float32(math.Pow(float64(beta1), float64(step))))/
+			(float32(math.Sqrt(float64(expectedMaxSquare[i]/
+				(1-float32(math.Pow(float64(beta2), float64(step)))))))+
+				epsilon)
+	}
+
+	SparseAdam(grad, ptable, mtable, vtable, lr, step, beta1, beta2,
+		epsilon, true, mstable)
+
+	assert.True(t, common.CompareFloatArray(expectedM, m.Value, 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedV, v.Value, 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedParam, param.Value, 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedMaxSquare, maxSquare.Value, 0.00001))
+}
