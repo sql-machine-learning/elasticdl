@@ -13,14 +13,20 @@ SELECT * FROM welfare TO TRAIN DNNRegressor COLUMN hash_bucket(address, 1000) LA
 ```
 
 However, data transform often requires parameters. The above example requires the bucket size, 1000. Other examples include
+
+```SQL
 standardize(age, mean, stdev)
 normalize(size, min, max)
 categorize(city, city_name_list)
+```
 
-The challenge is -- users don't want to specify these parameters; instead, they want SQLFlow does the data statistics and derives these parameters from data automatically.  So, the above examples become
+The challenge is -- users don't want to specify these parameters; instead, they want SQLFlow to do the data statistics and derives these parameters from data automatically. So, the above examples become
+
+```SQL
 standardize(age)
 normalize(size)
 categorize(city)
+```
 
 In the terminology of TFX Transform, the word *analysis* refers to data statistics that derives the above parameters, given which, the *transforming* refers to the conversion of raw data into model inputs.  This design document is about making SQLFlow support data analysis, in addition to transformation.
 
@@ -69,7 +75,7 @@ Or, if she wants standardization instead of normalization, she could write the f
 SELECT * FROM new_plate TO PREDICT price USING a_model COLUMN standardize(size)
 ```
 
-How if the table new_plate doesn't have the field used to train the model? How if there is no field named `size`, but a field `diameter`. We should allow users to use later as well.
+How if the table new_plate doesn't have the field used to train the model? How if there is no field named `size`, but a field `diameter`. We should allow users to use the latter as well.
 
 ```sql
 SELECT * FROM new_plates TO PREDICT price USING a_model COLUM normalize(diameter)
@@ -84,19 +90,6 @@ SELECT * FROM new_plates TO PREDICT price USING a_model COLUMN diameter
 ## The Challenge
 
 From the above examples, we see that a challenge is that the `TO TRAIN` clause must be able to save the input field names and the data analysis results and transformation steps together with the model, so to make sure that the predictions using the same data transformation as the training.
-
-## Background
-
-Data transform is an important part in an end-to-end machine learning pipeline. It processes the raw data using operations such as [standardization, normalization](https://en.wikipedia.org/wiki/Feature_scaling), [bucketization](https://en.wikipedia.org/wiki/Data_binning), etc. After transformation, the data is in the right format and ready for both model training and inference. Data transform contains two key parts: analyzer and transformer. Analyzer scans the entire data set and calculates the statistical values such as mean, min, variance, etc. Transformer combines the statistical values if any and the transform function to construct the concrete transform logic. And then it transforms the data records one by one. The transform logic should be consistent between training and inference.  
-![transform_training_inference](../images/transform_training_inference.png)
-
-[SQLFlow](https://github.com/sql-machine-learning/sqlflow) is a bridge that connects a SQL engine and machine learning toolkits. It extends the SQL syntax to define a machine learning pipeline. Naturally SQLFlow should be able to describe the data transform process. In this doc, we are focusing on how to do data transform using SQLFlow.  
-
-## Challenge
-
-* In some ML systems, users use different transform code for training and serving. It may cause inconsistency between these two stages. Consistency between training and serving is the key point of data transform. Users write the transform code only once. And then the same logic can run in batch mode for training and in real time mode for serving.  
-* We can not execute the transform code directly to transform the data records. The statistical values are required for some transform functions such as mean and variance for standardization. They need be analyzed from the entire dataset at runtime to make the transform logic concrete.  
-* The transform logic is very flexible. How do we design a SQL extended syntax to fully express the logic elegantly?  
 
 ## Related Work
 
@@ -116,32 +109,52 @@ def preprocess_fn(inputs):
 
 From users' perspective, SQLFlow users prefer to write SQL instead of python. It's not user-friendly if we integrate TF Transform with SQLFlow directly.  
 
-### SQL
-
-User can write SQL to do the analysis and transform work with [built-in functions](https://www.alibabacloud.com/help/doc-detail/96342.htm?spm=a2c63.p38356.b99.111.27e27309rgC5m1) or [UDF (User Defined Function)](https://www.alibabacloud.com/blog/udf-development-guide-with-maxcompute-studio_594738). The following is the SQL expression to normalize the column `capital_gain`.  
-
-```SQL
-SELECT 1.00 * (t1.capital_gain - t2.capital_gain_min) / t2.capital_gain_range
-FROM census_income t1
-JOIN
-(
-    SELECT
-        MIN(capital_gain) AS capital_gain_min,
-        MAX(capital_gain) - MIN(capital_gain) AS capital_gain_range
-    FROM census_income
-) t2
-ON 1 = 1
-```
-
-But SQL and UDF are only suitable for batch processing, we can't use SQL to transform the data at real time for serving. We need reimplement the same transform logic with other programming languages in the model serving engine. It may bring the training/serving skew.  
-
 ### Internal System
 
-The feature engineering library in the internal system is configuration driven. It contains some primitive transform ops and users compose the transform logic with configuration file. The inference engine is compiled with the internal library. Users need both feature engineering configuration files and SavedModel to deploy the model for serving.  
+The feature engineering library in the internal system is configuration driven. It contains some primitive transform ops and users compose the transform logic with configuration file. A part of the parameters in the configuration is the statistical value. Users need to do analysis work on the dataset at first and then complete the configuration. What's more, the development work of auto analysis is also on-going.  
 
 ## Our Approach
 
-From the perspective of SQLFLow, SQL can naturally support statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) and [keras preprocessing layer](https://github.com/tensorflow/community/pull/188) can take charge of the transform work as transformer. For dense column, we can use [numeric_column](https://www.tensorflow.org/api_docs/python/tf/feature_column/numeric_column) and pass a user defined function *normalizer_fn* to convert the column value. For sparse column, we can use [embedding_column](https://www.tensorflow.org/api_docs/python/tf/feature_column/embedding_column) to map the sparse value to an embedding vector or use [cross_column](https://www.tensorflow.org/api_docs/python/tf/feature_column/crossed_column) to do the feature crossing. We plan to use SQL and feature column/keras preprocessing layer together to do the data transform work.  
+From the perspective of SQLFLow, SQL can naturally support statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) and [keras preprocessing layer](https://github.com/tensorflow/community/pull/188) can take charge of the transform work as transformer. We plan to use SQL and feature column/keras preprocessing layer together to do the data transform and analysis work.  
+
+Since we use SQL to do the analysis work, SQL requires the table schema to be wide - one column one feature.
+
+### Normalize Table Schema to Be Wide
+
+Let's take the analysis work for example: calculate the max of `age` and mean of `education_num`.  
+If it's a wide table as follows:  
+
+|  age | education_num |  income_category  |
+|:----:|:------------:|:-----------------:|
+|  39  |     10       |       0           |
+|  52  |     9        |       1           |
+|  28  |     13       |       0           |
+
+The SQL statement for analysis is simple:
+
+```SQL
+SELECT
+    MAX(age) AS age_max,
+    AVG(education_num) AS education_num_mean
+FROM census_income
+```
+
+Sometimes users may store multiple feature values as KV string in one table column.  
+
+|            features       |  income_category  |
+|:-------------------------:|:-----------------:|
+|  age:39;education_num:10  |        0          |
+|  age:52;education_num:9   |        1          |
+|  age:28;education_num:13  |        0          |
+
+We can't use SQL directly to do the same analysis work as above.
+
+### SQLFlow Syntax Extension
+
+### Generate Analysis SQL from SQLFlow Statement
+
+### Generate Transform Code From SQLFlow Statement
+
 Both feature column and keras preprocessing layer can guarantee the consistency between training and serving. The data transform logic in the training stage is built into the inference graph using the SavedModel format.  
 
 ### Transform Expression in SQLFlow
@@ -197,3 +210,16 @@ We need figure out the following points for this further solution:
 
 1. Model Export: Upgrade keras API to support exporting the transform logic and the model definition together to SavedModel for inference. [Issue](https://github.com/tensorflow/tensorflow/issues/34618)
 2. Transform Execution: We will transform the data records one by one using the transform logic in the SavedModel format and then write to a new table. We also need write a Jar, it packages the TensorFlow library, loads the SavedModel into memory and processes the input data. And then we register it as UDF in Hive or MaxCompute and use it to transform the data.  
+
+## Background
+
+Data transform is an important part in an end-to-end machine learning pipeline. It processes the raw data using operations such as [standardization, normalization](https://en.wikipedia.org/wiki/Feature_scaling), [bucketization](https://en.wikipedia.org/wiki/Data_binning), etc. After transformation, the data is in the right format and ready for both model training and inference. Data transform contains two key parts: analyzer and transformer. Analyzer scans the entire data set and calculates the statistical values such as mean, min, variance, etc. Transformer combines the statistical values if any and the transform function to construct the concrete transform logic. And then it transforms the data records one by one. The transform logic should be consistent between training and inference.  
+![transform_training_inference](../images/transform_training_inference.png)
+
+[SQLFlow](https://github.com/sql-machine-learning/sqlflow) is a bridge that connects a SQL engine and machine learning toolkits. It extends the SQL syntax to define a machine learning pipeline. Naturally SQLFlow should be able to describe the data transform process. In this doc, we are focusing on how to do data transform using SQLFlow.  
+
+## Challenge
+
+* In some ML systems, users use different transform code for training and serving. It may cause inconsistency between these two stages. Consistency between training and serving is the key point of data transform. Users write the transform code only once. And then the same logic can run in batch mode for training and in real time mode for serving.  
+* We can not execute the transform code directly to transform the data records. The statistical values are required for some transform functions such as mean and variance for standardization. They need be analyzed from the entire dataset at runtime to make the transform logic concrete.  
+* The transform logic is very flexible. How do we design a SQL extended syntax to fully express the logic elegantly?  
