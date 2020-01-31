@@ -153,15 +153,17 @@ Sometimes users may encode multiple feature values as a key-value string and sto
 
 We can't use SQL directly to do the same analysis work as above.
 
-#### Solution
+#### Proposal
 
-We can provide common tools to normalize the table schema. If the data is stored in Odps table, we can use [PyOdps](https://pyodps.readthedocs.io/en/latest/) + [UDF](https://www.alibabacloud.com/help/doc-detail/73359.htm) to complete the task.
+We can provide common tools to normalize the table schema. If the data is stored in Odps table, we can use [PyOdps](https://pyodps.readthedocs.io/en/latest/) + [UDF](https://www.alibabacloud.com/help/doc-detail/73359.htm) to complete the task.  
+
+*Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1648).*
 
 After normalizing the table schema, we can do data analysis and transformation based on this normalized table. The preprocess pipeline is described using SQLFlow statement and the logic can be very flexible. We want to design SQLFlow syntax extension to full express the transform logic elegantly.  
 
 ### SQLFlow Syntax Extension
 
-We can extend the SQLFlow syntax and enrich the COLUMN expression. We can add the built-in transform API call in it to describe the transform process. Let's take the following SQL expression for example. 
+We can extend the SQLFlow syntax and enrich the COLUMN expression. We can add some built-in transform functions to describe the transform process. Let's take the following SQL expression for example.  
 
 ```SQL
 SELECT *
@@ -175,15 +177,21 @@ LABEL label
 It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is **COLUMNS NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, bucket_num=10), dim=128)**. It will normalize the column *capital_gain*, standardize the column *age*, bucketize the column *hours_per_week* to 10 buckets and then map it to an embedding value.  
 We will implement some built-in transform API. The API set contains NORMALIZE, STANDARDIZE, BUCKETIZE, LOG and more to be added in the future.  
 
+*Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1664).*
+
 SQLFlow will convert the `COLUMN` expression to Python code of data transformation. But it requires some parameters which are derived from the data. SQLFlow will generate the analysis SQL to calculate the statistical value at first.  
 
 ### Generate Analysis SQL From SQLFlow Statement
 
-After calculating the statistical data, SQLFlow will then generate the concrete transform Python code.  
+*Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1667).*
+
+After calculating the statistical data, SQLFlow will then generate the concrete Python code for data transform.  
 
 ### Generate Transform Code From SQLFlow Statement
 
 ### Combine Transform Code And Model Definition
+
+The model definition in model zoo is a Python class. It defines the neural network structure and is compatible with various feature input. Please check the [sample model](https://github.com/sql-machine-learning/models/blob/1b6f5eaabd57b8ca682e60c1dde4cd4ec1053bf9/sqlflow_models/dnnclassifier.py#L3).  
 
 ### Consistency Between Training And Serving
 
