@@ -155,13 +155,13 @@ We can't use SQL directly to do the same analysis work as above.
 
 #### Solution
 
-We can provide common tools to normalize the table schema. If the data is stored in Odps table, we can use [PyOdps](https://pyodps.readthedocs.io/en/latest/) + [UDF](https://www.alibabacloud.com/help/doc-detail/73359.htm) to complete the task.
+We can provide some common tools to normalize the table schema. If the data is stored in Odps table, we can use [PyOdps](https://pyodps.readthedocs.io/en/latest/) + [UDF](https://www.alibabacloud.com/help/doc-detail/73359.htm) to complete the task.
 
 As the data source is ready, we can
 
 ### SQLFlow Syntax Extension
 
-### Generate Analysis SQL from SQLFlow Statement
+### Generate Analysis SQL From SQLFlow Statement
 
 ### Generate Transform Code From SQLFlow Statement
 
