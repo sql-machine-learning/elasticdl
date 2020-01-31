@@ -157,13 +157,15 @@ We can't use SQL directly to do the same analysis work as above.
 
 We can provide common tools to normalize the table schema. If the data is stored in Odps table, we can use [PyOdps](https://pyodps.readthedocs.io/en/latest/) + [UDF](https://www.alibabacloud.com/help/doc-detail/73359.htm) to complete the task.
 
-After normalizing the table schema, we can do data analysis and transformation based on this normalized table. The preprocess pipeline is described using SQLFlow statement and the logic is very flexible. We want to design SQLFlow syntax extension to full express the transform logic elegantly.  
+After normalizing the table schema, we can do data analysis and transformation based on this normalized table. The preprocess pipeline is described using SQLFlow statement and the logic can be very flexible. We want to design SQLFlow syntax extension to full express the transform logic elegantly.  
 
 ### SQLFlow Syntax Extension
 
 ### Generate Analysis SQL From SQLFlow Statement
 
 ### Generate Transform Code From SQLFlow Statement
+
+### Combine Transform Code And Model Definition
 
 Both feature column and keras preprocessing layer can guarantee the consistency between training and serving. The data transform logic in the training stage is built into the inference graph using the SavedModel format.  
 
