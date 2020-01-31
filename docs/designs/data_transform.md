@@ -189,6 +189,8 @@ After calculating the statistical data, SQLFlow is able to generate the concrete
 
 ### Generate Transform Code From SQLFlow Statement
 
+*Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1686).*
+
 At this moment, we have gotten the full transform code and prepare for model training. For the clause `TO TRAIN DNNClassifier`, we will combine the transform code and `DNNClassifier` from model zoo to the final submitter code.
 
 ### Combine Transform Code And Model Definition
