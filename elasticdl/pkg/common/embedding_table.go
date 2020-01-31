@@ -46,7 +46,9 @@ func (table *EmbeddingTable) SetEmbeddingVectors(indices []int64, value []float3
 		return fmt.Errorf("Embedding vectors dim not match")
 	}
 	for i, index := range indices {
-		copy(table.EmbeddingVector[index], value[int64(i):int64(i)+table.Dim])
+		table.EmbeddingVector[index] = NewVector(table.Dim)
+		start := int64(i) * table.Dim
+		copy(table.EmbeddingVector[index].Value, value[start:start+table.Dim])
 	}
 	return nil
 }

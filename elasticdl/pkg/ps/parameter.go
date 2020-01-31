@@ -1,7 +1,10 @@
 package ps
 
-import "elasticdl.org/elasticdl/pkg/common"
-import "elasticdl.org/elasticdl/pkg/proto"
+import (
+	"elasticdl.org/elasticdl/pkg/common"
+	"elasticdl.org/elasticdl/pkg/proto"
+	"fmt"
+)
 
 // Parameter contains non-embedding param and embedding param
 type Parameter struct {
@@ -58,7 +61,14 @@ func DeserializeModelPB(pb *proto.Model) (*Parameter, error) {
 		if t.Indices == nil {
 			param.NonEmbeddingParam[t.Name] = t
 		} else {
+			table := param.GetEmbeddingParam(t.Name)
+			if table == nil {
+				return nil, fmt.Errorf("Embedding table %s is not created", t.Name)
+			}
 			err = param.EmbeddingParam[t.Name].SetEmbeddingVectors(t.Indices, t.Value)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	return param, err
