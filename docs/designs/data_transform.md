@@ -117,11 +117,11 @@ The feature engineering library in the internal system is configuration driven. 
 
 From the perspective of SQLFLow, SQL can naturally support statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) and [keras preprocessing layer](https://github.com/tensorflow/community/pull/188) can take charge of the transform work as transformer. We plan to use SQL and feature column/keras preprocessing layer together to do the data transform and analysis work.  
 
-Since we use SQL to do the analysis work, SQL requires the table schema to be wide - one column one feature.
+Since we use SQL to do the analysis work, SQL requires the table schema to be wide - one column one feature.  
 
 ### Normalize Table Schema to Be Wide
 
-Let's take the analysis work for example: calculate the max of `age` and mean of `education_num`.  
+Let's take this analysis work for example: calculate the max of `age` and mean of `education_num`.  
 If it's a wide table as follows:  
 
 |  age | education_num |  income_category  |
@@ -130,7 +130,7 @@ If it's a wide table as follows:
 |  52  |     9        |       1           |
 |  28  |     13       |       0           |
 
-The SQL statement for analysis is simple:
+The SQL statement for analysis is straightforward:
 
 ```SQL
 SELECT
@@ -139,7 +139,7 @@ SELECT
 FROM census_income
 ```
 
-Sometimes users may store multiple feature values as KV string in one table column.  
+Sometimes users may encode multiple feature values as a KV string and store it in one column of the table.  
 
 |            features       |  income_category  |
 |:-------------------------:|:-----------------:|
