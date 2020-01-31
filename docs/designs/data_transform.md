@@ -115,6 +115,9 @@ The feature engineering library in the internal system is configuration driven. 
 
 ## Our Approach
 
+Data transform contains two key parts: analyzer and transformer. Analyzer scans the entire data set and calculates the statistical values such as mean, min, variance, etc. Transformer combines the statistical values if any and the transform function to construct the concrete transform logic. And then it transforms the data records one by one. The transform logic should be consistent between training and inference.  
+![transform_training_inference](../images/transform_training_inference.png)
+
 From the perspective of SQLFLow, SQL can naturally support statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) and [keras preprocessing layer](https://github.com/tensorflow/community/pull/188) can take charge of the transform work as transformer. We plan to use SQL and feature column/keras preprocessing layer together to do the data transform and analysis work.  
 
 Since we use SQL to do the analysis work, SQL requires the table schema to be wide - one column one feature.  
@@ -240,16 +243,3 @@ We need figure out the following points for this further solution:
 
 1. Model Export: Upgrade keras API to support exporting the transform logic and the model definition together to SavedModel for inference. [Issue](https://github.com/tensorflow/tensorflow/issues/34618)
 2. Transform Execution: We will transform the data records one by one using the transform logic in the SavedModel format and then write to a new table. We also need write a Jar, it packages the TensorFlow library, loads the SavedModel into memory and processes the input data. And then we register it as UDF in Hive or MaxCompute and use it to transform the data.  
-
-## Background
-
-Data transform is an important part in an end-to-end machine learning pipeline. It processes the raw data using operations such as [standardization, normalization](https://en.wikipedia.org/wiki/Feature_scaling), [bucketization](https://en.wikipedia.org/wiki/Data_binning), etc. After transformation, the data is in the right format and ready for both model training and inference. Data transform contains two key parts: analyzer and transformer. Analyzer scans the entire data set and calculates the statistical values such as mean, min, variance, etc. Transformer combines the statistical values if any and the transform function to construct the concrete transform logic. And then it transforms the data records one by one. The transform logic should be consistent between training and inference.  
-![transform_training_inference](../images/transform_training_inference.png)
-
-[SQLFlow](https://github.com/sql-machine-learning/sqlflow) is a bridge that connects a SQL engine and machine learning toolkits. It extends the SQL syntax to define a machine learning pipeline. Naturally SQLFlow should be able to describe the data transform process. In this doc, we are focusing on how to do data transform using SQLFlow.  
-
-## Challenge
-
-* In some ML systems, users use different transform code for training and serving. It may cause inconsistency between these two stages. Consistency between training and serving is the key point of data transform. Users write the transform code only once. And then the same logic can run in batch mode for training and in real time mode for serving.  
-* We can not execute the transform code directly to transform the data records. The statistical values are required for some transform functions such as mean and variance for standardization. They need be analyzed from the entire dataset at runtime to make the transform logic concrete.  
-* The transform logic is very flexible. How do we design a SQL extended syntax to fully express the logic elegantly?  
