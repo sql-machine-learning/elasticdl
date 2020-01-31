@@ -7,7 +7,7 @@ import "fmt"
 // Optimizer interface
 type Optimizer interface {
 	GetLR() float32
-	ApplyGradients([]common.Tensor, *Parameter) error
+	ApplyGradients([]*common.Tensor, *Parameter) error
 }
 
 // BaseOptimizer struct

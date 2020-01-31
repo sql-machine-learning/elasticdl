@@ -62,9 +62,8 @@ func TestSGDOptimizer(t *testing.T) {
 	assert.True(t, common.CompareFloatArray(p.NonEmbeddingParam["t2"].Value, ev2, 0.0001))
 
 	vectors := p.GetEmbeddingParam("t3").GetEmbeddingVectors(i3)
-	assert.Equal(t, 2, len(vectors))
-	assert.True(t, common.CompareFloat(-0.1, vectors[0].Value[0], 0.0001))
-	assert.True(t, common.CompareFloat(-0.1, vectors[1].Value[0], 0.0001))
+	expV := []float32{-0.1, -0.1, -0.1, -0.1}
+	assert.True(t, common.CompareFloatArray(expV, vectors.Value, 0.0001))
 
 	// more test for sparse parameter update
 	d3 = []int64{4, 2}
@@ -77,10 +76,8 @@ func TestSGDOptimizer(t *testing.T) {
 	assert.Nil(t, err4)
 
 	vectors = p.GetEmbeddingParam("t3").GetEmbeddingVectors(i3)
-	assert.Equal(t, 4, len(vectors))
-	assert.True(t, common.CompareFloat(-0.2, vectors[0].Value[0], 0.0001))
-	assert.True(t, common.CompareFloat(-0.3, vectors[1].Value[0], 0.0001))
-	assert.True(t, common.CompareFloat(-0.1, vectors[3].Value[0], 0.0001))
+	expV = []float32{-0.2, -0.2, -0.3, -0.3, -0.1, -0.1}
+	assert.True(t, common.CompareFloatArray(expV, vectors.Value, 0.0001))
 }
 
 func TestAdamOptimizer(t *testing.T) {
@@ -144,9 +141,8 @@ func TestAdamOptimizer(t *testing.T) {
 	assert.True(t, common.CompareFloatArray(p.NonEmbeddingParam["t2"].Value, ev2, 0.0001))
 
 	vectors := p.GetEmbeddingParam("t3").GetEmbeddingVectors(i3)
-	assert.Equal(t, 2, len(vectors))
-	assert.True(t, common.CompareFloatArray([]float32{-0.058112835, -0.058112835}, vectors[0].Value, 0.0001))
-	assert.True(t, common.CompareFloatArray([]float32{-0.058112835, -0.058112835}, vectors[1].Value, 0.0001))
+	expV := []float32{-0.058112835, -0.058112835, -0.058112835, -0.058112835}
+	assert.True(t, common.CompareFloatArray(expV, vectors.Value, 0.0001))
 
 	// more test for sparse parameter update
 	d3 = []int64{4, 2}
@@ -159,8 +155,6 @@ func TestAdamOptimizer(t *testing.T) {
 	assert.Nil(t, err4)
 
 	vectors = p.GetEmbeddingParam("t3").GetEmbeddingVectors(i3)
-	assert.Equal(t, 4, len(vectors))
-	assert.True(t, common.CompareFloatArray([]float32{-0.1314178004, -0.1314178004}, vectors[0].Value, 0.0001))
-	assert.True(t, common.CompareFloatArray([]float32{-0.2168087883, -0.2168087883}, vectors[1].Value, 0.0001))
-	assert.True(t, common.CompareFloatArray([]float32{-0.0545489238, -0.0545489238}, vectors[3].Value, 0.0001))
+	expV = []float32{-0.1314178004, -0.1314178004, -0.2168087883, -0.2168087883, -0.0545489238, -0.0545489238}
+	assert.True(t, common.CompareFloatArray(expV, vectors.Value, 0.0001))
 }
