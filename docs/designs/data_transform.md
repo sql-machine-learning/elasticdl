@@ -195,10 +195,6 @@ At this moment, we have gotten the full transform code and prepare for model tra
 
 The model definition in model zoo is a Python class. It defines the neural network structure and is compatible with various feature input. Please check the [sample model](https://github.com/sql-machine-learning/models/blob/1b6f5eaabd57b8ca682e60c1dde4cd4ec1053bf9/sqlflow_models/dnnclassifier.py#L3).  
 
-### Consistency Between Training And Serving
-
-Both feature column and keras preprocessing layer can guarantee the consistency between training and serving. The data transform logic in the training stage is built into the inference graph using the SavedModel format.  
-
 ### Implementation
 
 Data transform contains two stages: analyze and transform. In our design, we will do the analysis using SQL as the first step, and generate the feature column definition as the second step. The feature column contains the transform logic and executes along with the model training process.  
@@ -224,6 +220,10 @@ We plan to implement the following common used transform APIs at the first step.
 |        NORMALIZE(x)         | numeric_column({var_name}, normalizer_fn=lambda x : x - {min} / {max} - {min}) |      MAX, MIN      |
 |           LOG(x)            | numeric_column({var_name}, normalizer_fn=lambda x : tf.math.log(x))            |         N/A        |
 |  BUCKETIZE(x, bucket_num=y) | bucketized_column({var_name}, boundaries={percentiles})                        |     PERCENTILE     |
+
+### Consistency Between Training And Serving
+
+Both feature column and keras preprocessing layer can guarantee the consistency between training and serving. The data transform logic in the training stage is built into the inference graph using the SavedModel format.  
 
 ## Further Consideration
 
