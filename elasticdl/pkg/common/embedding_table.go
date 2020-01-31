@@ -32,12 +32,15 @@ func (table *EmbeddingTable) GetEmbeddingVector(index int64) *Tensor {
 }
 
 // GetEmbeddingVectors returns embedding vectors giving an array of indices
-func (table *EmbeddingTable) GetEmbeddingVectors(indices []int64) []float32 {
+func (table *EmbeddingTable) GetEmbeddingVectors(indices []int64) *common.Tensor {
 	var vectors []float32
-	for _, index := range indices {
-		vectors = append(vectors, table.GetEmbeddingVector(index)...)
+	d := []int64{int64(len(in.Ids)), table.Dim}
+	t := common.NewTensor(d)
+	t.Indices = indices
+	for i, index := range indices {
+		copy(t.Value[int64(i):int64(i)+table.Dim], table.GetEmbeddingVector(index))
 	}
-	return vectors
+	return t
 }
 
 // SetEmbeddingVectors sets (indices, value) pair to embedding vector
