@@ -12,15 +12,26 @@ import (
 	"sync"
 )
 
-type psServer struct {
+type server struct {
 	pb.PserverServer
 	Param *Parameter
 	Opt   Optimizer
-	PsID  int32
-	lock  sync.Mutex
+	PSID  int32
+	lock  *sync.Mutex
 }
 
-func (s *psServer) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (*pb.PullVariableResponse, error) {
+func newServer(PSID int32, opt string, lr float32) *server {
+	var ps server
+	ps.Param = NewParameter()
+	if opt == "SGD" {
+		ps.Opt = *NewSGDOptimizer(lr)
+	}
+	ps.PSID = PSID
+	ps.lock = &sync.Mutex{}
+	return &ps
+}
+
+func (s *server) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (*pb.PullVariableResponse, error) {
 	var res pb.PullVariableResponse
 	if !s.Param.InitStatus {
 		res.ModelInitStatus = false
@@ -36,7 +47,7 @@ func (s *psServer) PullVariable(ctx context.Context, in *pb.PullVariableRequest)
 	return &res, nil
 }
 
-func (s *psServer) PullEmbeddingVector(ctx context.Context, in *pb.PullEmbeddingVectorRequest) (*pb.Tensor, error) {
+func (s *server) PullEmbeddingVector(ctx context.Context, in *pb.PullEmbeddingVectorRequest) (*pb.Tensor, error) {
 	if in.Ids == nil {
 		return &pb.Tensor{}, nil
 	}
@@ -51,7 +62,7 @@ func (s *psServer) PullEmbeddingVector(ctx context.Context, in *pb.PullEmbedding
 	return common.SerializeTensor(&t), nil
 }
 
-func (s *psServer) PushModel(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
+func (s *server) PushModel(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
 	s.lock.Lock()
 	var err error
 	s.Param, err = DeserializeModelPB(in)
@@ -59,7 +70,7 @@ func (s *psServer) PushModel(ctx context.Context, in *pb.Model) (*empty.Empty, e
 	return &empty.Empty{}, err
 }
 
-func (s *psServer) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
+func (s *server) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
 	s.lock.Lock()
 	var err error
 	s.Param, err = DeserializeModelPB(in)
@@ -67,7 +78,7 @@ func (s *psServer) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.
 	return &empty.Empty{}, err
 }
 
-func (s *psServer) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (*pb.PushGradientResponse, error) {
+func (s *server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (*pb.PushGradientResponse, error) {
 	// TODO(qijun) only support async now
 	var res pb.PushGradientResponse
 	var grads []*common.Tensor
@@ -89,7 +100,7 @@ func CreateServer(address string, serverDone chan bool) {
 	}
 	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
 	grpcServer := grpc.NewServer()
-	pb.RegisterPserverServer(grpcServer, &psServer{})
+	pb.RegisterPserverServer(grpcServer, &server{})
 	go startServe(grpcServer, lis, serverDone)
 }
 
