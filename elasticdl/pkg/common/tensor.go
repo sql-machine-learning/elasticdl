@@ -52,6 +52,15 @@ func (t *Tensor) Subtensor(begin int64, len int64) *Tensor {
 	return &subt
 }
 
+// AtRow get the row reference of a 2-dim tensor
+func (t *Tensor) AtRow(idx int64) *Tensor {
+	if len(t.Dim) != 2 || idx >= t.Dim[0] {
+		return nil
+	}
+	begin := t.Dim[1] * idx
+	return t.Subtensor(begin, t.Dim[1])
+}
+
 // DeserializeTensorPB transforms pb to tensor
 func DeserializeTensorPB(pb *proto.Tensor) *Tensor {
 	var t Tensor
