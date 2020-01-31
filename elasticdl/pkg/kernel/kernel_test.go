@@ -195,10 +195,10 @@ func TestSparseAdam(t *testing.T) {
 	v := &common.Tensor{"", rawV, dim, nil}
 	maxSquare := &common.Tensor{"", rawMaxSquare, dim, nil}
 
-	ptable.SetEmbeddingVector(1, param)
-	mtable.SetEmbeddingVector(1, m)
-	vtable.SetEmbeddingVector(1, v)
-	mstable.SetEmbeddingVector(1, maxSquare)
+	ptable.EmbeddingVector[1] = param
+	mtable.EmbeddingVector[1] = m
+	vtable.EmbeddingVector[1] = v
+	mstable.EmbeddingVector[1] = maxSquare
 
 	var lr float32 = 0.1
 	var step int64 = 5

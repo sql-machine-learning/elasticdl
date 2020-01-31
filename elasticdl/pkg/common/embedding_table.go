@@ -29,13 +29,6 @@ func (table *EmbeddingTable) GetEmbeddingVector(index int64) *Tensor {
 	return newVector
 }
 
-// SetEmbeddingVector sets an embedding vector to an index
-func (table *EmbeddingTable) SetEmbeddingVector(index int64, t *Tensor) bool {
-	_, ok := table.EmbeddingVector[index]
-	table.EmbeddingVector[index] = t
-	return ok
-}
-
 // GetEmbeddingVectors returns embedding vectors giving an array of indices
 func (table *EmbeddingTable) GetEmbeddingVectors(indices []int64) []*Tensor {
 	var vectors []*Tensor
