@@ -42,7 +42,7 @@ func GetDimProduct(dim []int64) int64 {
 }
 
 // Subtensor get the part reference of the tensor
-func (t *Tensor) Subtensor(begin int64, len int64) *Tensor {
+func (t *Tensor) subTensor(begin int64, len int64) *Tensor {
 	if begin+len > GetDimProduct(t.Dim) {
 		return nil
 	}
@@ -58,7 +58,7 @@ func (t *Tensor) AtRow(idx int64) *Tensor {
 		return nil
 	}
 	begin := t.Dim[1] * idx
-	return t.Subtensor(begin, t.Dim[1])
+	return t.subTensor(begin, t.Dim[1])
 }
 
 // DeserializeTensorPB transforms pb to tensor
