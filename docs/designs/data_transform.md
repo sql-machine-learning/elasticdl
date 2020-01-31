@@ -121,14 +121,18 @@ Since we use SQL to do the analysis work, SQL requires the table schema to be wi
 
 ### Normalize Table Schema to Be Wide
 
+Wide table means that it only store one feature or label in one column. It's friendly to SQL for data analysis.  
+
+#### Why
+
 Let's take this analysis work for example: calculate the max of `age` and mean of `education_num`.  
 If it's a wide table as follows:  
 
 |  age | education_num |  income_category  |
-|:----:|:------------:|:-----------------:|
-|  39  |     10       |       0           |
-|  52  |     9        |       1           |
-|  28  |     13       |       0           |
+|:----:|:-------------:|:-----------------:|
+|  39  |      10       |         0         |
+|  52  |      9        |         1         |
+|  28  |      13       |         0         |
 
 The SQL statement for analysis is straightforward:
 
@@ -139,7 +143,7 @@ SELECT
 FROM census_income
 ```
 
-Sometimes users may encode multiple feature values as a KV string and store it in one column of the table.  
+Sometimes users may encode multiple feature values as a key-value string and store it in one column of the table, just like the following table:  
 
 |            features       |  income_category  |
 |:-------------------------:|:-----------------:|
@@ -148,6 +152,12 @@ Sometimes users may encode multiple feature values as a KV string and store it i
 |  age:28;education_num:13  |        0          |
 
 We can't use SQL directly to do the same analysis work as above.
+
+#### Solution
+
+We can provide common tools to normalize the table schema. If the data is stored in Odps table, we can use [PyOdps](https://pyodps.readthedocs.io/en/latest/) + [UDF](https://www.alibabacloud.com/help/doc-detail/73359.htm) to complete the task.
+
+As the data source is ready, we can
 
 ### SQLFlow Syntax Extension
 
