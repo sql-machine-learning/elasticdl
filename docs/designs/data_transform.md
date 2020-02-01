@@ -197,7 +197,7 @@ SQLFlow will convert the `COLUMN` expression to Python code of data transformati
 
 ### Generate Analysis SQL From SQLFlow Statement
 
-SQLFlow will generate the analysis SQL to calculate the statistical value. For this clause `COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age))`, the analysis SQL is as follows:
+SQLFlow will generate the analysis SQL to calculate the statistical value. For this clause `COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age))`, the corresponding analysis SQL is as follows:
 
 ```SQL
 SELECT
@@ -224,7 +224,9 @@ The model definition in model zoo is a Python class derived from `tf.keras.Model
 
 The transform code generated from `COLUMN` clause specifies how to convert the SELECT result into model inputs in the form of tensors.
 
-### Implementation
+The [submitter pragram](https://github.com/sql-machine-learning/sqlflow/blob/develop/doc/design/model_zoo.md#submitter-programs) will combine these two and feed the output tensor of transform code into the model definition.  
+
+### Implementation (To Be Improved)
 
 Data transform contains two stages: analyze and transform. In our design, we will do the analysis using SQL as the first step, and generate the feature column definition as the second step. The feature column contains the transform logic and executes along with the model training process.  
 We choose to convert the transform expression into two steps of the work flow described by [Couler](https://github.com/sql-machine-learning/sqlflow/blob/develop/python/couler/README.md): analyze and feature column generation. Couler is a programming language for describing workflows. Its compiler translates a workflow represented by a Python program into an [Argo](https://argoproj.github.io/) YAML file. The output of feature column generation will be passed to the next model training step.  
