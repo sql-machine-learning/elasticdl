@@ -1,7 +1,5 @@
 package common
 
-import "fmt"
-
 // EmbeddingTable struct
 type EmbeddingTable struct {
 	Name            string
@@ -32,26 +30,13 @@ func (table *EmbeddingTable) GetEmbeddingVector(index int64) *Tensor {
 }
 
 // GetEmbeddingVectors returns embedding vectors giving an array of indices
-func (table *EmbeddingTable) GetEmbeddingVectors(indices []int64) *common.Tensor {
-	var vectors []float32
-	d := []int64{int64(len(in.Ids)), table.Dim}
-	t := common.NewTensor(d)
+func (table *EmbeddingTable) GetEmbeddingVectors(indices []int64) *Tensor {
+	d := []int64{int64(len(indices)), table.Dim}
+	t := NewTensor(d)
 	t.Indices = indices
 	for i, index := range indices {
-		copy(t.Value[int64(i):int64(i)+table.Dim], table.GetEmbeddingVector(index))
+		start := int64(i) * table.Dim
+		copy(t.Value[start:start+table.Dim], table.GetEmbeddingVector(index).Value)
 	}
 	return t
-}
-
-// SetEmbeddingVectors sets (indices, value) pair to embedding vector
-func (table *EmbeddingTable) SetEmbeddingVectors(indices []int64, value []float32) error {
-	if int64(len(indices))*table.Dim != int64(len(value)) {
-		return fmt.Errorf("Embedding vectors dim not match")
-	}
-	for i, index := range indices {
-		table.EmbeddingVector[index] = NewVector(table.Dim)
-		start := int64(i) * table.Dim
-		copy(table.EmbeddingVector[index].Value, value[start:start+table.Dim])
-	}
-	return nil
 }

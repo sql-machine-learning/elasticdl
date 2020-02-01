@@ -75,9 +75,8 @@ func TestSGDOptimizer(t *testing.T) {
 	err4 := opt.ApplyGradients(grads, p)
 	assert.Nil(t, err4)
 
-	vectors = p.GetEmbeddingParam("t3").GetEmbeddingVectors(i3)
+	vectors = p.GetEmbeddingParam("t3").GetEmbeddingVectors([]int64{1, 3, 5})
 	expV = []float32{-0.2, -0.2, -0.3, -0.3, -0.1, -0.1}
-
 	assert.True(t, common.CompareFloatArray(expV, vectors.Value, 0.0001))
 }
 
@@ -143,7 +142,7 @@ func TestAdamOptimizer(t *testing.T) {
 
 	vectors := p.GetEmbeddingParam("t3").GetEmbeddingVectors(i3)
 	expV := []float32{-0.058112835, -0.058112835, -0.058112835, -0.058112835}
-	assert.True(t, common.CompareFloatArray(expV, vectors.Value, 0.0001)
+	assert.True(t, common.CompareFloatArray(expV, vectors.Value, 0.0001))
 
 	// more test for sparse parameter update
 	d3 = []int64{4, 2}
@@ -155,7 +154,7 @@ func TestAdamOptimizer(t *testing.T) {
 	err4 := opt.ApplyGradients(grads, p)
 	assert.Nil(t, err4)
 
-	vectors = p.GetEmbeddingParam("t3").GetEmbeddingVectors(i3)
+	vectors = p.GetEmbeddingParam("t3").GetEmbeddingVectors([]int64{1, 3, 5})
 	expV = []float32{-0.1314178004, -0.1314178004, -0.2168087883, -0.2168087883, -0.0545489238, -0.0545489238}
 	assert.True(t, common.CompareFloatArray(expV, vectors.Value, 0.0001))
 }
