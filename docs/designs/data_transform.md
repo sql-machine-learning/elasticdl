@@ -168,15 +168,15 @@ After normalizing the table schema, we can do data analysis and transformation o
 
 We can extend the SQLFlow syntax and enrich the `COLUMN` expression. We propose to add some built-in functions to describe the transform process. We will implement common used functions at the first stage.  
 
-| Name          |    Internal Implementation                            |
-|:-------------:|:-----------------------------------------------------:|
-| NORMALIZE     | x - x_min / (x_max - x_min)                           |
-| STANDARDIZE   | x - x_mean / x_stddev                                 |
-| LOG_ROUND     | tf.round(tf.log(x))                                   |
-| BUCKETIZE     | tf.feature_column.bucketized_column                   |
-| HASH          | tf.feature_column.categorical_column_with_hash_bucket |
-| CROSS         | tf.feature_column.crossed_column                      |
-| EMBEDDING     | tf.feature_column.embedding_column                    |
+| Name          |    Transformation                                     | Statitical Parameter |
+|:-------------:|:-----------------------------------------------------:|:--------------------:|
+| NORMALIZE     | x - x_min / (x_max - x_min)                           |     x_min, x_max     |
+| STANDARDIZE   | x - x_mean / x_stddev                                 |    x_mean, x_stddev  |
+| LOG_ROUND     | tf.round(tf.log(x))                                   |          N/A         |
+| BUCKETIZE     | tf.feature_column.bucketized_column                   |    bucket boundary   |
+| HASH          | tf.feature_column.categorical_column_with_hash_bucket |      bucket size     |
+| CROSS         | tf.feature_column.crossed_column                      |          N/A         |
+| EMBEDDING     | tf.feature_column.embedding_column                    |          N/A         |
 
 Let's take the following SQLFlow statement for example.  
 
