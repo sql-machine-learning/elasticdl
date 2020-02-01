@@ -95,7 +95,7 @@ From the above examples, we see that a challenge is that the `TO TRAIN` clause m
 
 ### TensorFlow Transform
 
-[TensorFlow Transform](https://www.tensorflow.org/tfx/transform/get_started) is the open source solution for data transform in [TensorFlow Extended](https://www.tensorflow.org/tfx/guide). Users need write a Python function `preprocess_fn` to define the preprocess logic. The preprocessing function contains two group of API calls: TensorFlow Transform Analyzers and TensorFlow Ops. Analyzer will do the statistical work on the training dataset once and convert to constant tensors. And then the statistical value and TensorFlow Ops will make the concrete transform logic as a TensorFlow graph to convert the record one by one. The graph will be used for both training and serving.  
+[TensorFlow Transform](https://www.tensorflow.org/tfx/transform/get_started) is the open source solution for data transform in [TensorFlow Extended](https://www.tensorflow.org/tfx/guide). Users need write a Python function `preprocess_fn` to define the preprocess logic. The preprocessing function contains two groups of API calls: TensorFlow Transform Analyzers and TensorFlow Ops. Analyzer will do the statistical work on the training dataset once and convert to constant tensors. And then the statistical value and TensorFlow Ops will make the concrete transform logic as a TensorFlow graph and then convert the data record one by one. The graph will be used for both training and serving.  
 Let's take [normalizing (min-max normalization)](https://en.wikipedia.org/wiki/Feature_scaling) the column value `capital_gain` in [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income) for example. The following is the `preprocess_fn` definition with TensorFlow Transform:
 
 ```python
@@ -111,16 +111,16 @@ From users' perspective, SQLFlow users prefer to write SQL instead of python. It
 
 ### Internal System
 
-The feature engineering library in the internal system is configuration driven. It contains some primitive transform ops and users compose the transform logic with configuration file. A part of the parameters in the configuration is the statistical value. Users need to do manual analysis work on the dataset using SQL at first and then complete the configuration. What's more, the development work of auto analysis is also on-going.  
+The feature engineering library in the internal system is configuration driven. It contains some primitive transform ops and users compose the transform logic with configuration file. A part of the parameters in the configuration is the statistical value. Users need to do analysis work on the dataset manually using SQL at first and then complete the configuration. What's more, the development work of auto analysis is also on-going.  
 
 ## Our Approach
 
-Data transform contains two key parts: analyzer and transformer. Analyzer scans the entire data set and calculates the statistical values such as mean, max, min, etc. Transformer combines the statistical values if any and the transform function to construct the concrete transform logic. And then it transforms the data records one by one. The transform logic should be consistent between training and inference.  
+Data transform contains two key parts: analyzer and transformer. Analyzer scans the entire data set and calculates the statistical values such as mean, max, min, etc. Transformer refers the statistical values if any as parameters to build the concrete transform logic. And then it transforms the data records one by one. The transform logic should be consistent between training and inference.  
 ![transform_training_inference](../images/transform_training_inference.png)
 
 From the perspective of SQLFLow, SQL can naturally support statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) and [keras preprocessing layer](https://github.com/tensorflow/community/pull/188) can take charge of the transform work as transformer. We plan to use SQL and feature column/keras preprocessing layer together to do the data analysis and transform work.  
 
-Since we use SQL to do the analysis work, SQL requires the table schema to be wide - one column one feature. We will normalize the schema at first.  
+Since we use SQL to do the analysis work, SQL requires the table schema to be wide - one column one feature. So, we will normalize the table schema at first.  
 
 ### Normalize Table Schema to Be Wide
 
@@ -189,7 +189,7 @@ COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BU
 LABEL label
 ```
 
-It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is `COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, bucket_num=10), dim=32)`. It will normalize the column *capital_gain*, standardize the column *age*, bucketize the column *hours_per_week* to 5 buckets and then map it to an embedding value.  
+It trains a DNN model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is `COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, bucket_num=10), dim=32)`. It will normalize the column *capital_gain*, standardize the column *age*, bucketize the column *hours_per_week* to 5 buckets and then map it to an embedding value.  
 
 *Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1664).*
 
