@@ -118,7 +118,7 @@ The feature engineering library in the internal system is configuration driven. 
 Data transform contains two key parts: analyzer and transformer. Analyzer scans the entire data set and calculates the statistical values such as mean, min, variance, etc. Transformer combines the statistical values if any and the transform function to construct the concrete transform logic. And then it transforms the data records one by one. The transform logic should be consistent between training and inference.  
 ![transform_training_inference](../images/transform_training_inference.png)
 
-From the perspective of SQLFLow, SQL can naturally support statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) and [keras preprocessing layer](https://github.com/tensorflow/community/pull/188) can take charge of the transform work as transformer. We plan to use SQL and feature column/keras preprocessing layer together to do the data transform and analysis work.  
+From the perspective of SQLFLow, SQL can naturally support statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) and [keras preprocessing layer](https://github.com/tensorflow/community/pull/188) can take charge of the transform work as transformer. We plan to use SQL and feature column/keras preprocessing layer together to do the data analysis and transform work.  
 
 Since we use SQL to do the analysis work, SQL requires the table schema to be wide - one column one feature. We will normalize the schema at first.  
 
