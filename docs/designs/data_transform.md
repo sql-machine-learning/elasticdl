@@ -166,7 +166,18 @@ After normalizing the table schema, we can do data analysis and transformation o
 
 ### SQLFlow Syntax Extension
 
-We can extend the SQLFlow syntax and enrich the `COLUMN` expression. We propose to add some built-in functions to describe the transform process. Let's take the following SQLFlow statement for example.  
+We can extend the SQLFlow syntax and enrich the `COLUMN` expression. We propose to add some built-in functions to describe the transform process. We will implement common used functions at the first stage.  
+| Name               |    Internal Implementation                            |
+|:------------------:|:-----------------------------------------------------:|
+| NORMALIZE          | x - x_min / (x_max - x_min)                           |
+| STANDARDIZE        | x - x_mean / x_stddev                                 |
+| LOG_ROUND          | tf.round(tf.log(x))                                   |
+| BUCKETIZE          | tf.feature_column.bucketized_column                   |
+| HASH               | tf.feature_column.categorical_column_with_hash_bucket |
+| CROSS              | tf.feature_column.crossed_column                      |
+| EMBEDDING          | tf.feature_column.embedding_column                    |
+
+Let's take the following SQLFlow statement for example.  
 
 ```SQL
 SELECT *
@@ -178,17 +189,16 @@ LABEL label
 ```
 
 It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is **COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, bucket_num=10), dim=128)**. It will normalize the column *capital_gain*, standardize the column *age*, bucketize the column *hours_per_week* to 10 buckets and then map it to an embedding value.  
-We will implement some built-in transform functions. The function set contains NORMALIZE, STANDARDIZE, BUCKETIZE, LOG and more to be added in the future.  
 
 *Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1664).*
 
-SQLFlow will convert the `COLUMN` expression to Python code of data transformation. But it requires some parameters which are derived from the data. SQLFlow will generate the analysis SQL to calculate the statistical value at first.  
+SQLFlow will convert the `COLUMN` expression to Python code of data transformation. But it requires some parameters which are derived from the data. For example, `STANDARDIZE(age)` requires the mean and standard deviation of age. SQLFlow will generate the analysis SQL to calculate the statistical value.  
 
 ### Generate Analysis SQL From SQLFlow Statement
 
 *Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1667).*
 
-After calculating the statistical data, SQLFlow is able to generate the concrete Python code for data transform.  
+After calculating the statistical data, SQLFlow is able to generate the concrete Python source code for data transform.  
 
 ### Generate Transform Code From SQLFlow Statement
 
