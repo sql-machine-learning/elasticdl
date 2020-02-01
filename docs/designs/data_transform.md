@@ -167,6 +167,7 @@ After normalizing the table schema, we can do data analysis and transformation o
 ### SQLFlow Syntax Extension
 
 We can extend the SQLFlow syntax and enrich the `COLUMN` expression. We propose to add some built-in functions to describe the transform process. We will implement common used functions at the first stage.  
+
 | Name          |    Internal Implementation                            |
 |:-------------:|:-----------------------------------------------------:|
 | NORMALIZE     | x - x_min / (x_max - x_min)                           |
