@@ -15,7 +15,7 @@ import (
 type server struct {
 	pb.PserverServer
 	Param *Parameter
-	Opt   *Optimizer
+	Opt   Optimizer
 	PSID  int32
 	lock  *sync.Mutex
 }
@@ -24,7 +24,7 @@ func newServer(PSID int32, opt string, lr float32) *server {
 	var ps server
 	ps.Param = NewParameter()
 	if opt == "SGD" {
-		ps.Opt = NewSGDOptimizer(lr)
+		ps.Opt = &NewSGDOptimizer(lr)
 	}
 	ps.PSID = PSID
 	ps.lock = &sync.Mutex{}
