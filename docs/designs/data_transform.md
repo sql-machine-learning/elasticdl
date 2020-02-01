@@ -189,11 +189,11 @@ COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BU
 LABEL label
 ```
 
-It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is **COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, bucket_num=10), dim=128)**. It will normalize the column *capital_gain*, standardize the column *age*, bucketize the column *hours_per_week* to 5 buckets and then map it to an embedding value.  
+It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is `COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, bucket_num=10), dim=128)`. It will normalize the column *capital_gain*, standardize the column *age*, bucketize the column *hours_per_week* to 5 buckets and then map it to an embedding value.  
 
 *Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1664).*
 
-SQLFlow will convert the `COLUMN` expression to Python code of data transformation. But it requires some parameters which are derived from the data. Next we will do the analysis work.  
+SQLFlow will convert the `COLUMN` expression to Python code of data transformation. But it requires some parameters which are derived from the data. So next we will do the analysis work.  
 
 ### Generate Analysis SQL From SQLFlow Statement
 
