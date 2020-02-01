@@ -173,8 +173,8 @@ We can extend the SQLFlow syntax and enrich the `COLUMN` expression. We propose 
 | NORMALIZE     | x - x_min / (x_max - x_min)                           |     x_min, x_max     |
 | STANDARDIZE   | x - x_mean / x_stddev                                 |    x_mean, x_stddev  |
 | LOG_ROUND     | tf.round(tf.log(x))                                   |          N/A         |
-| BUCKETIZE     | tf.feature_column.bucketized_column                   |    bucket boundary   |
-| HASH          | tf.feature_column.categorical_column_with_hash_bucket |      bucket size     |
+| BUCKETIZE     | tf.feature_column.bucketized_column                   |    bucket_boundary   |
+| HASH          | tf.feature_column.categorical_column_with_hash_bucket |   hash_bucket_size   |
 | CROSS         | tf.feature_column.crossed_column                      |          N/A         |
 | EMBEDDING     | tf.feature_column.embedding_column                    |          N/A         |
 
@@ -185,17 +185,28 @@ SELECT *
 FROM census_income
 TO TRAIN DNNClassifier
 WITH model.hidden_units = [10, 20]
-COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, bucket_num=10), dim=128)
+COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, bucket_num=5), dim=128)
 LABEL label
 ```
 
-It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is **COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, bucket_num=10), dim=128)**. It will normalize the column *capital_gain*, standardize the column *age*, bucketize the column *hours_per_week* to 10 buckets and then map it to an embedding value.  
+It trains a model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is **COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, bucket_num=10), dim=128)**. It will normalize the column *capital_gain*, standardize the column *age*, bucketize the column *hours_per_week* to 5 buckets and then map it to an embedding value.  
 
 *Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1664).*
 
-SQLFlow will convert the `COLUMN` expression to Python code of data transformation. But it requires some parameters which are derived from the data. For example, `STANDARDIZE(age)` requires the mean and standard deviation of age. SQLFlow will generate the analysis SQL to calculate the statistical value.  
+SQLFlow will convert the `COLUMN` expression to Python code of data transformation. But it requires some parameters which are derived from the data. Next we will do the analysis work.  
 
 ### Generate Analysis SQL From SQLFlow Statement
+
+SQLFlow will generate the analysis SQL to calculate the statistical value. For this clause `COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age))`, the analysis SQL is as follows:
+
+```SQL
+SELECT
+    MIN(capital_gain) AS capital_gain_min,
+    MAX(capital_gain) AS capital_gain_max,
+    AVG(age) AS age_mean,
+    STDDEV(age) AS age_stddev
+FROM census_income;
+```
 
 *Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1667).*
 
