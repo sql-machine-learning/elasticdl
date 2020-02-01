@@ -250,10 +250,6 @@ We plan to implement the following common used transform APIs at the first step.
 |           LOG(x)            | numeric_column({var_name}, normalizer_fn=lambda x : tf.math.log(x))            |         N/A        |
 |  BUCKETIZE(x, bucket_num=y) | bucketized_column({var_name}, boundaries={percentiles})                        |     PERCENTILE     |
 
-### Consistency Between Training And Serving
-
-Both feature column and keras preprocessing layer can guarantee the consistency between training and serving. The data transform logic in the training stage is built into the inference graph using the SavedModel format.  
-
 ## Further Consideration
 
 In the design above, we generated the concrete feature column definition for data transformation in the Transform stage. The actual transform logic on the raw data executes along with the model training process. Based on this design, we can further consider transforming the raw data and writing the transformed result into a new table in the stage.  
