@@ -167,15 +167,15 @@ After normalizing the table schema, we can do data analysis and transformation o
 ### SQLFlow Syntax Extension
 
 We can extend the SQLFlow syntax and enrich the `COLUMN` expression. We propose to add some built-in functions to describe the transform process. We will implement common used functions at the first stage.  
-| Name               |    Internal Implementation                            |
-|:------------------:|:-----------------------------------------------------:|
-| NORMALIZE          | x - x_min / (x_max - x_min)                           |
-| STANDARDIZE        | x - x_mean / x_stddev                                 |
-| LOG_ROUND          | tf.round(tf.log(x))                                   |
-| BUCKETIZE          | tf.feature_column.bucketized_column                   |
-| HASH               | tf.feature_column.categorical_column_with_hash_bucket |
-| CROSS              | tf.feature_column.crossed_column                      |
-| EMBEDDING          | tf.feature_column.embedding_column                    |
+| Name          |    Internal Implementation                            |
+|:-------------:|:-----------------------------------------------------:|
+| NORMALIZE     | x - x_min / (x_max - x_min)                           |
+| STANDARDIZE   | x - x_mean / x_stddev                                 |
+| LOG_ROUND     | tf.round(tf.log(x))                                   |
+| BUCKETIZE     | tf.feature_column.bucketized_column                   |
+| HASH          | tf.feature_column.categorical_column_with_hash_bucket |
+| CROSS         | tf.feature_column.crossed_column                      |
+| EMBEDDING     | tf.feature_column.embedding_column                    |
 
 Let's take the following SQLFlow statement for example.  
 
@@ -204,11 +204,13 @@ After calculating the statistical data, SQLFlow is able to generate the concrete
 
 *Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1686).*
 
-At this moment, we have gotten the full transform code and prepare for model training. For the clause `TO TRAIN DNNClassifier`, we will combine the transform code and `DNNClassifier` from model zoo to the final submitter code.
+At this moment, we have gotten the full transform code and can prepare for model training. For the clause `TO TRAIN DNNClassifier`, we will combine the transform code and `DNNClassifier` from model zoo to the final submitter program.
 
 ### Combine Transform Code And Model Definition
 
-The model definition in model zoo is a Python class. It defines the neural network structure and is compatible with various feature input. Please check the [sample model](https://github.com/sql-machine-learning/models/blob/1b6f5eaabd57b8ca682e60c1dde4cd4ec1053bf9/sqlflow_models/dnnclassifier.py#L3).  
+The model definition in model zoo is a Python class derived from `tf.keras.Model`. It is compatible with various feature input. Please check the [sample model](https://github.com/sql-machine-learning/models/blob/1b6f5eaabd57b8ca682e60c1dde4cd4ec1053bf9/sqlflow_models/dnnclassifier.py#L3).  
+
+The transform code generated from `COLUMN` clause specifies how to convert the SELECT result into model inputs in the form of tensors.
 
 ### Implementation
 
