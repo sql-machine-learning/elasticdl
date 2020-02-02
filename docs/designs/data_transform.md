@@ -32,7 +32,7 @@ In the terminology of TFX Transform, the word *analysis* refers to data statisti
 
 ## The Syntax Extension
 
-Without any syntax extension, users can write SQL statements for data analysis. For example, the following SQL statement works with MySQL and can normalize the field `size` of table `plates`.
+Without any syntax extension, users can write SQL statements for data analysis.  For example, the following SQL statement works with MySQL and can normalize the field `size` of table `plates`.
 
 ```sql
 SELECT 1.00 * (t1.size - t2.size_min) / t2.size_range
