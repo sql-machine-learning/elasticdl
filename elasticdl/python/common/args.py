@@ -486,6 +486,12 @@ def add_common_args_between_master_and_worker(parser):
         "in the model file",
     )
     parser.add_argument(
+        "--callbacks",
+        type=str,
+        default="callbacks",
+        help="The name of the callbacks function defined in the model file",
+    )
+    parser.add_argument(
         "--custom_data_reader",
         type=str,
         default="custom_data_reader",

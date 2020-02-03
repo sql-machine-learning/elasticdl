@@ -23,6 +23,7 @@ from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_model_from_module,
     load_module,
+    load_callbacks_from_module,
 )
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.master.evaluation_service import EvaluationService
@@ -95,6 +96,9 @@ class Master(object):
         ).__dict__
         self.model_inst = load_model_from_module(
             args.model_def, self.model_module, args.model_params
+        )
+        self.callbacks = load_callbacks_from_module(
+            args.callbacks, self.model_module
         )
         model_handler = ModelHandler.get_model_handler(
             args.distribution_strategy, checkpoint_dir=args.checkpoint_dir
@@ -184,6 +188,8 @@ class Master(object):
         try:
             while True:
                 if self.task_d.finished():
+                    for callback in self.callbacks:
+                        callback.on_train_end()
                     if self.instance_manager:
                         self.instance_manager.update_status(
                             InstanceManagerStatus.FINISHED
@@ -229,6 +235,7 @@ class Master(object):
                     )
                     break
         self.logger.info("Master stopped")
+
 
     @staticmethod
     def _get_job_type(args):

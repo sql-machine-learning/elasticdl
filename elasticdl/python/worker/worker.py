@@ -132,6 +132,7 @@ class Worker(object):
             self._eval_metrics_fn,
             self._prediction_outputs_processor,
             self._custom_data_reader,
+            self._callbacks_fn,
         ) = get_model_spec(
             model_zoo=args.model_zoo,
             model_def=args.model_def,

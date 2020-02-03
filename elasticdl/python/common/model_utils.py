@@ -31,6 +31,14 @@ def load_model_from_module(model_def, model_module, model_params):
         return model_module[custom_model_name]()
 
 
+def load_callbacks_from_module(callbacks_def, model_module):
+    callbacks_def_name = callbacks_def.split(".")[-1]
+    callbacks_fn = _get_spec_value(callbacks_def_name, None, model_module)
+    if callbacks_fn is not None:
+        return callbacks_fn()
+    return []
+
+
 def get_dict_from_params_str(params_str):
     """Get the dictionary of kv pairs in a string separated
     by semi-colon."""
@@ -101,6 +109,7 @@ def get_model_spec(
     eval_metrics_fn,
     prediction_outputs_processor,
     custom_data_reader,
+    callbacks,
 ):
     """Get the model spec items in a tuple.
 
@@ -114,6 +123,8 @@ def get_model_spec(
     * The `eval_metrics_fn`,
     * The `prediction_outputs_processor`. Note that it will print
       warning if it's not inherited from `BasePredictionOutputsProcessor`.
+    * The `custom_data_reader`
+    * The `callbacks`
     """
     model_def_module_file = get_module_file_path(model_zoo, model_def)
     default_module = load_module(model_def_module_file).__dict__
@@ -145,6 +156,7 @@ def get_model_spec(
         ),
         prediction_outputs_processor,
         _get_spec_value(custom_data_reader, model_zoo, default_module),
+        _get_spec_value(callbacks, model_zoo, default_module)
     )
 
 

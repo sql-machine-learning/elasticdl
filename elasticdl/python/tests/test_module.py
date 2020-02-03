@@ -1,3 +1,4 @@
+import datetime
 import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, Input
@@ -65,3 +66,15 @@ class CustomDataReader(RecordIODataReader):
 
 def custom_data_reader(data_origin, records_per_task=None, **kwargs):
     return CustomDataReader(data_dir=data_origin)
+
+
+class MyCustomCallback(tf.keras.callbacks.Callback):
+    def on_train_begin(self, logs=None):
+        return True
+
+    def on_train_end(self, logs=None):
+        return True
+
+
+def callbacks():
+    return [MyCustomCallback()]
