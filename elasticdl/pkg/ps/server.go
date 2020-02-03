@@ -22,8 +22,8 @@ type Server struct {
 }
 
 // NewServer creates a Server instance
-func NewServer(PSID int32, opt string, lr float32) *server {
-	var ps server
+func NewServer(PSID int32, opt string, lr float32) *Server {
+	var ps Server
 	ps.Param = NewParameter()
 	if opt == "SGD" {
 		ps.Opt = NewSGDOptimizer(lr)
@@ -97,7 +97,7 @@ func (s *Server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (
 }
 
 // CreateServer creates a PS server and starts the serving. Set serverDone when finishes.
-func CreateServer(address string, PSID int32, opt string, lr float32, serverDone chan bool) *server {
+func CreateServer(address string, PSID int32, opt string, lr float32, serverDone chan bool) *Server {
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("failed to start PS: %v", err)
