@@ -40,10 +40,12 @@ func (s *Server) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (
 		res.ModelInitStatus = false
 		return &res, nil
 	}
+	res.ModelInitStatus = true
 	res.Model = &pb.Model{}
 	res.Model.Version = s.Param.Version
 	if s.Param.Version > in.CurrentModelVersion {
 		for _, v := range s.Param.NonEmbeddingParam {
+			fmt.Println(v.Value)
 			res.Model.Param = append(res.Model.Param, common.SerializeTensor(v))
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"elasticdl.org/elasticdl/pkg/common"
 	pb "elasticdl.org/elasticdl/pkg/proto"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"log"
@@ -102,15 +103,18 @@ func TestPullVariable(t *testing.T) {
 
 	var request1 pb.Model
 	// non embedding param
-	a := make([]float32, 10)
-	b := make([]float32, 10)
-	for i := 0; i < 10; i++ {
+	a := make([]float32, 6)
+	b := make([]float32, 6)
+	for i := 0; i < 6; i++ {
 		a[i] = rand.Float32()
 		b[i] = rand.Float32()
 	}
-	d := []int64{2, 5}
+	d := []int64{2, 3}
 	t1 := common.Tensor{"t1", a, d, nil}
 	t2 := common.Tensor{"t2", b, d, nil}
+
+	fmt.Println(a)
+	fmt.Println(b)
 
 	request1.Param = append(request1.Param, common.SerializeTensor(&t1))
 	request1.Param = append(request1.Param, common.SerializeTensor(&t2))
@@ -130,11 +134,14 @@ func TestPullVariable(t *testing.T) {
 	}
 
 	assert.True(t, res.ModelInitStatus)
-	assert.Equal(t, int32(0), res.Model.Version)
 
 	p := NewParameter()
 	p.InitFromModelPB(res.Model)
+
+	assert.Equal(t, int32(0), p.Version)
 	assert.Equal(t, 2, len(p.NonEmbeddingParam))
+	assert.Contains(t, p.NonEmbeddingParam, "t1")
+	assert.Contains(t, p.NonEmbeddingParam, "t2")
 	assert.True(t, common.CompareFloatArray(p.GetNonEmbeddingParam("t1").Value, a, 0.0001))
 	assert.True(t, common.CompareFloatArray(p.GetNonEmbeddingParam("t2").Value, b, 0.0001))
 }
