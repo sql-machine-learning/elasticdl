@@ -31,14 +31,6 @@ def load_model_from_module(model_def, model_module, model_params):
         return model_module[custom_model_name]()
 
 
-def load_callbacks_from_module(callbacks_def, model_module):
-    callbacks_def_name = callbacks_def.split(".")[-1]
-    callbacks_fn = _get_spec_value(callbacks_def_name, None, model_module)
-    if callbacks_fn is not None:
-        return callbacks_fn()
-    return []
-
-
 def get_dict_from_params_str(params_str):
     """Get the dictionary of kv pairs in a string separated
     by semi-colon."""

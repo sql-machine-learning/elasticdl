@@ -21,7 +21,6 @@ from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
     get_module_file_path,
-    load_callbacks_from_module,
     load_model_from_module,
     load_module,
 )
@@ -97,11 +96,6 @@ class Master(object):
         self.model_inst = load_model_from_module(
             args.model_def, self.model_module, args.model_params
         )
-        self.callbacks = load_callbacks_from_module(
-            args.callbacks, self.model_module
-        )
-        for callback in self.callbacks:
-            callback.set_model(self.model_inst)
         model_handler = ModelHandler.get_model_handler(
             args.distribution_strategy, checkpoint_dir=args.checkpoint_dir
         )
@@ -190,8 +184,6 @@ class Master(object):
         try:
             while True:
                 if self.task_d.finished():
-                    for callback in self.callbacks:
-                        callback.on_train_end()
                     if self.instance_manager:
                         self.instance_manager.update_status(
                             InstanceManagerStatus.FINISHED
