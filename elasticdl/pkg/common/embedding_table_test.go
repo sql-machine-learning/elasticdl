@@ -24,11 +24,10 @@ func TestEmbeddingTableGet(t *testing.T) {
 	assert.Equal(t, e1.EmbeddingVector[1].Value[1], float32(2.0))
 
 	indices := []int64{1, 3, 5, 7, 9}
-	vectors := e1.GetEmbeddingVectors(indices)
-	assert.Equal(t, len(vectors), len(indices))
-	assert.Equal(t, vectors[0].Value[0], float32(1.0))
-	assert.Equal(t, vectors[0].Value[1], float32(2.0))
-	assert.Equal(t, vectors[1].Value[0], float32(0.0))
+	v := e1.GetEmbeddingVectors(indices)
+	assert.Equal(t, v.Value[0], float32(1.0))
+	assert.Equal(t, v.Value[1], float32(2.0))
+	assert.Equal(t, v.Value[2], float32(0.0))
 }
 
 func TestEmbeddingTableSet(t *testing.T) {
