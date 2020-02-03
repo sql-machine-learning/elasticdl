@@ -30,10 +30,13 @@ func (table *EmbeddingTable) GetEmbeddingVector(index int64) *Tensor {
 }
 
 // GetEmbeddingVectors returns embedding vectors giving an array of indices
-func (table *EmbeddingTable) GetEmbeddingVectors(indices []int64) []*Tensor {
-	var vectors []*Tensor
-	for _, index := range indices {
-		vectors = append(vectors, table.GetEmbeddingVector(index))
+func (table *EmbeddingTable) GetEmbeddingVectors(indices []int64) *Tensor {
+	d := []int64{int64(len(indices)), table.Dim}
+	t := NewTensor(d)
+	t.Indices = indices
+	for i, index := range indices {
+		start := int64(i) * table.Dim
+		copy(t.Value[start:start+table.Dim], table.GetEmbeddingVector(index).Value)
 	}
-	return vectors
+	return t
 }
