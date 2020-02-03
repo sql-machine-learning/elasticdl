@@ -1,12 +1,17 @@
 package ps
 
-import "testing"
-import "os"
-import "context"
-import "log"
-import "time"
-import "google.golang.org/grpc"
-import pb "elasticdl.org/elasticdl/pkg/proto"
+import (
+	"context"
+	"elasticdl.org/elasticdl/pkg/common"
+	pb "elasticdl.org/elasticdl/pkg/proto"
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
+	"log"
+	"math.rand"
+	"os"
+	"testing"
+	"time"
+)
 
 const (
 	ADDR string = "localhost:12345"
@@ -25,7 +30,7 @@ func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, contex
 func TestMain(m *testing.M) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 
 	result := m.Run()
 
@@ -58,11 +63,27 @@ func TestPushModel(t *testing.T) {
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
+
 	request := pb.Model{}
+	a := make([]float32, 10)
+	b := make([]float32, 10)
+	for i := 0; i < size; i++ {
+		a[i] = rand.Float32()
+		b[i] = rand.Float32()
+	}
+	d := []int64{2, 5}
+	t1 := common.Tensor{"t1", a, d, nil}
+	t2 := common.Tensor{"t2", b, d, nil}
+	request.Param = append(request.Param, common.SerializeTensor(&t1))
+	request.Param = append(request.Param, common.SerializeTensor(&t2))
+
 	_, err := client.PushModel(ctx, &request)
+
+	assert.True(t, s.Param.InitStatus)
 	if err != nil {
 		t.Errorf("Failed to push model")
 	}
+
 }
 
 func TestPushEmbeddingInfo(t *testing.T) {

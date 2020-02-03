@@ -12,7 +12,8 @@ import (
 	"sync"
 )
 
-type server struct {
+// Server defines servicer of ps
+type Server struct {
 	pb.PserverServer
 	Param *Parameter
 	Opt   Optimizer
@@ -20,7 +21,8 @@ type server struct {
 	lock  *sync.Mutex
 }
 
-func newServer(PSID int32, opt string, lr float32) *server {
+// NewServer creates a Server instance
+func NewServer(PSID int32, opt string, lr float32) *server {
 	var ps server
 	ps.Param = NewParameter()
 	if opt == "SGD" {
@@ -31,7 +33,8 @@ func newServer(PSID int32, opt string, lr float32) *server {
 	return &ps
 }
 
-func (s *server) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (*pb.PullVariableResponse, error) {
+// PullVariable pulls variable from server
+func (s *Server) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (*pb.PullVariableResponse, error) {
 	var res pb.PullVariableResponse
 	if !s.Param.InitStatus {
 		res.ModelInitStatus = false
@@ -47,7 +50,8 @@ func (s *server) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (
 	return &res, nil
 }
 
-func (s *server) PullEmbeddingVector(ctx context.Context, in *pb.PullEmbeddingVectorRequest) (*pb.Tensor, error) {
+// PullEmbeddingVector pulls embedding vector from server
+func (s *Server) PullEmbeddingVector(ctx context.Context, in *pb.PullEmbeddingVectorRequest) (*pb.Tensor, error) {
 	if in.Ids == nil {
 		return &pb.Tensor{}, nil
 	}
@@ -59,7 +63,8 @@ func (s *server) PullEmbeddingVector(ctx context.Context, in *pb.PullEmbeddingVe
 	return common.SerializeTensor(t), nil
 }
 
-func (s *server) PushModel(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
+// PushModel pushes model to server
+func (s *Server) PushModel(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
 	s.lock.Lock()
 	var err error
 	s.Param, err = DeserializeModelPB(in)
@@ -67,7 +72,8 @@ func (s *server) PushModel(ctx context.Context, in *pb.Model) (*empty.Empty, err
 	return &empty.Empty{}, err
 }
 
-func (s *server) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
+// PushEmbeddingInfo pushes embedding info to server
+func (s *Server) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
 	s.lock.Lock()
 	var err error
 	s.Param, err = DeserializeModelPB(in)
@@ -75,7 +81,8 @@ func (s *server) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.Em
 	return &empty.Empty{}, err
 }
 
-func (s *server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (*pb.PushGradientResponse, error) {
+// PushGradient pushes gradient to server
+func (s *Server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (*pb.PushGradientResponse, error) {
 	// TODO(qijun) only support async now
 	var res pb.PushGradientResponse
 	var grads []*common.Tensor
@@ -90,16 +97,17 @@ func (s *server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (
 }
 
 // CreateServer creates a PS server and starts the serving. Set serverDone when finishes.
-func CreateServer(address string, PSID int32, opt string, lr float32, serverDone chan bool) {
+func CreateServer(address string, PSID int32, opt string, lr float32, serverDone chan bool) *server {
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("failed to start PS: %v", err)
 	}
 	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
 	grpcServer := grpc.NewServer()
-	s := newServer(PSID, opt, lr)
+	s := NewServer(PSID, opt, lr)
 	pb.RegisterPserverServer(grpcServer, s)
 	go startServe(grpcServer, lis, serverDone)
+	return s
 }
 
 func startServe(server *grpc.Server, lis net.Listener, serverDone chan bool) {
