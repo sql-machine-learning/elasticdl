@@ -25,7 +25,7 @@ func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, contex
 func TestMain(m *testing.M) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	CreateServer(ADDR, serverDone)
+	CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 
 	result := m.Run()
 

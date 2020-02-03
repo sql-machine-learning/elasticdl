@@ -2,51 +2,103 @@ package ps
 
 import (
 	"context"
+	"elasticdl.org/elasticdl/pkg/common"
 	pb "elasticdl.org/elasticdl/pkg/proto"
+	"fmt"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"sync"
 )
 
-type psServer struct {
+type server struct {
 	pb.PserverServer
+	Param *Parameter
+	Opt   Optimizer
+	PSID  int32
+	lock  *sync.Mutex
 }
 
-func (s *psServer) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (*pb.PullVariableResponse, error) {
-	// TODO: implement the service.
-	return &pb.PullVariableResponse{}, nil
+func newServer(PSID int32, opt string, lr float32) *server {
+	var ps server
+	ps.Param = NewParameter()
+	if opt == "SGD" {
+		ps.Opt = NewSGDOptimizer(lr)
+	}
+	ps.PSID = PSID
+	ps.lock = &sync.Mutex{}
+	return &ps
 }
 
-func (s *psServer) PullEmbeddingVector(ctx context.Context, in *pb.PullEmbeddingVectorRequest) (*pb.Tensor, error) {
-	// TODO: implement the service.
-	return &pb.Tensor{}, nil
+func (s *server) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (*pb.PullVariableResponse, error) {
+	var res pb.PullVariableResponse
+	if !s.Param.InitStatus {
+		res.ModelInitStatus = false
+		return &res, nil
+	}
+	res.Model.Version = s.Param.Version
+	if s.Param.Version > in.CurrentModelVersion {
+		for _, v := range s.Param.NonEmbeddingParam {
+			res.Model.Param = append(res.Model.Param, common.SerializeTensor(v))
+		}
+	}
+	s.Param.InitStatus = true
+	return &res, nil
 }
 
-func (s *psServer) PushModel(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
-	// TODO: implement the service.
-	return &empty.Empty{}, nil
+func (s *server) PullEmbeddingVector(ctx context.Context, in *pb.PullEmbeddingVectorRequest) (*pb.Tensor, error) {
+	if in.Ids == nil {
+		return &pb.Tensor{}, nil
+	}
+	table := s.Param.GetEmbeddingParam(in.Name)
+	if table == nil {
+		return &pb.Tensor{}, fmt.Errorf("Request embedding Table %s not found in Param", in.Name)
+	}
+	t := table.GetEmbeddingVectors(in.Ids)
+	return common.SerializeTensor(t), nil
 }
 
-func (s *psServer) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
-	// TODO: implement the service.
-	return &empty.Empty{}, nil
+func (s *server) PushModel(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
+	s.lock.Lock()
+	var err error
+	s.Param, err = DeserializeModelPB(in)
+	s.lock.Unlock()
+	return &empty.Empty{}, err
 }
 
-func (s *psServer) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (*pb.PushGradientResponse, error) {
-	// TODO: implement the service.
-	return &pb.PushGradientResponse{}, nil
+func (s *server) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
+	s.lock.Lock()
+	var err error
+	s.Param, err = DeserializeModelPB(in)
+	s.lock.Unlock()
+	return &empty.Empty{}, err
+}
+
+func (s *server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (*pb.PushGradientResponse, error) {
+	// TODO(qijun) only support async now
+	var res pb.PushGradientResponse
+	var grads []*common.Tensor
+	for _, gradPB := range in.Gradients {
+		grad := common.DeserializeTensorPB(gradPB)
+		grads = append(grads, grad)
+	}
+	err := s.Opt.ApplyGradients(grads, s.Param)
+	res.Accepted = true
+	res.ModelVersion = s.Param.Version
+	return &res, err
 }
 
 // CreateServer creates a PS server and starts the serving. Set serverDone when finishes.
-func CreateServer(address string, serverDone chan bool) {
+func CreateServer(address string, PSID int32, opt string, lr float32, serverDone chan bool) {
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("failed to start PS: %v", err)
 	}
 	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
 	grpcServer := grpc.NewServer()
-	pb.RegisterPserverServer(grpcServer, &psServer{})
+	s := newServer(PSID, opt, lr)
+	pb.RegisterPserverServer(grpcServer, s)
 	go startServe(grpcServer, lis, serverDone)
 }
 
