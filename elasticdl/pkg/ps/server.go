@@ -93,14 +93,15 @@ func (s *server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (
 }
 
 // CreateServer creates a PS server and starts the serving. Set serverDone when finishes.
-func CreateServer(address string, serverDone chan bool) {
+func CreateServer(address string, PSID int32, opt string, lr float32, serverDone chan bool) {
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("failed to start PS: %v", err)
 	}
 	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
 	grpcServer := grpc.NewServer()
-	pb.RegisterPserverServer(grpcServer, &server{})
+	s := newServer(PSID, opt, lr)
+	pb.RegisterPserverServer(grpcServer, s)
 	go startServe(grpcServer, lis, serverDone)
 }
 
