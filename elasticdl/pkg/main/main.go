@@ -26,7 +26,7 @@ var (
 	checkpointSteps       = flag.Int("checkpoint_steps", 0, "Save checkpoint every this many steps. If 0, no checkpoints to save")
 	keepCheckpointMax     = flag.Int("keep_checkpoint_max", 3, "The maximum number of recent checkpoint files to keep. If 0, keep all")
 	opt_type              = flag.String("opt_type", "unknown", "optimizer type")
-	jobName               = flag.String("opt_args", "", "optimizer arguments")
+	opt_args              = flag.String("opt_args", "", "optimizer arguments")
 )
 
 func main() {
