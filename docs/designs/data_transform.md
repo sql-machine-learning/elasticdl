@@ -111,7 +111,7 @@ From users' perspective, SQLFlow users prefer to write SQL instead of python. It
 
 ### Internal System
 
-The feature engineering library in the internal system is configuration driven. It contains some primitive transform ops and users compose the transform logic with configuration file. A part of the parameters in the configuration is the statistical value. Users need to do analysis work on the dataset manually using SQL at first and then complete the configuration. What's more, the development work of auto analysis is also on-going.  
+The feature engineering library in the internal system is configuration driven. It contains some primitive transform ops and users compose the transform logic with a configuration file. A part of the parameters in the configuration are the statistical values. Users need to do analysis work on the dataset manually using SQL at first and then complete the configuration. What's more, the development work of auto analysis is also on-going.  
 
 ## Our Approach
 
@@ -120,11 +120,11 @@ Data transform contains two key parts: analyzer and transformer. Analyzer scans 
 
 From the perspective of SQLFLow, SQL can naturally support statistical work just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column) and [keras preprocessing layer](https://github.com/tensorflow/community/pull/188) can take charge of the transform work as transformer. We plan to use SQL and feature column/keras preprocessing layer together to do the data analysis and transform work.  
 
-Since we use SQL to do the analysis work, SQL requires the table schema to be wide - one column one feature. So, we will normalize the table schema at first.  
+Since we use SQL to do the analysis work, SQL requires the table schema to be wide - one feature per column. So, we will normalize the table schema at first.  
 
 ### Normalize Table Schema to Be Wide
 
-Wide table means that it only store one feature or label in one column. It's more friendly to SQL for data analysis.  
+Wide table means that it only stores one feature or label in one column. It's more friendly to SQL for data analysis.  
 
 #### Why
 
