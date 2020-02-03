@@ -29,7 +29,7 @@ func TestParameterInit(t *testing.T) {
 	assert.Nil(t, p.GetNonEmbeddingParam("t3"))
 }
 
-func TestParameterDeserialize(t *testing.T) {
+func TestParameterInitFrom(t *testing.T) {
 	var modelPB proto.Model
 	modelPB.Version = int32(1)
 
@@ -46,7 +46,8 @@ func TestParameterDeserialize(t *testing.T) {
 	epb.Initializer = "zero"
 	modelPB.EmbeddingTableInfo = append(modelPB.EmbeddingTableInfo, &epb)
 
-	p, err := DeserializeModelPB(&modelPB)
+	p := NewParameter()
+	err := p.InitFromModelPB(&modelPB)
 
 	assert.Nil(t, err)
 	assert.Contains(t, p.EmbeddingParam, "e1")
