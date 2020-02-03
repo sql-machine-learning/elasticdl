@@ -81,13 +81,6 @@ func TestPushModel(t *testing.T) {
 	request.Param = append(request.Param, common.SerializeTensor(&t1))
 	request.Param = append(request.Param, common.SerializeTensor(&t2))
 
-	// embedding table info
-	var epb pb.EmbeddingTableInfo
-	epb.Name = "e1"
-	epb.Dim = 2
-	epb.Initializer = "zero"
-	request.EmbeddingTableInfo = append(request.EmbeddingTableInfo, &epb)
-
 	_, err := client.PushModel(ctx, &request)
 
 	if err != nil {
@@ -95,26 +88,33 @@ func TestPushModel(t *testing.T) {
 	}
 
 	assert.True(t, s.Param.InitStatus)
-
 	assert.Len(t, s.Param.NonEmbeddingParam, 2)
 	assert.Contains(t, s.Param.NonEmbeddingParam, "t1")
 	assert.Contains(t, s.Param.NonEmbeddingParam, "t2")
 	assert.True(t, common.CompareFloatArray(a, s.Param.GetNonEmbeddingParam("t1").Value, 0.001))
 	assert.True(t, common.CompareFloatArray(b, s.Param.GetNonEmbeddingParam("t2").Value, 0.001))
-
-	assert.Contains(t, s.Param.EmbeddingParam, "e1")
-	assert.Equal(t, int64(2), s.Param.GetEmbeddingParam("e1").Dim)
 }
 
 func TestPushEmbeddingInfo(t *testing.T) {
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
-	request := pb.Model{}
+
+	var request pb.Model
+	// embedding table info
+	var epb pb.EmbeddingTableInfo
+	epb.Name = "e1"
+	epb.Dim = 2
+	epb.Initializer = "zero"
+	request.EmbeddingTableInfo = append(request.EmbeddingTableInfo, &epb)
+
 	_, err := client.PushEmbeddingInfo(ctx, &request)
 	if err != nil {
 		t.Errorf("Failed to pull embedding vector")
 	}
+
+	assert.Contains(t, s.Param.EmbeddingParam, "e1")
+	assert.Equal(t, int64(2), s.Param.GetEmbeddingParam("e1").Dim)
 }
 
 func TestPushGradient(t *testing.T) {

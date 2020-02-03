@@ -59,8 +59,10 @@ func (s *Server) PushModel(ctx context.Context, in *pb.Model) (*empty.Empty, err
 
 // PushEmbeddingInfo pushes embedding info to server
 func (s *Server) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
-	// TODO: implement the service.
-	return &empty.Empty{}, nil
+	s.lock.Lock()
+	err := s.Param.InitFromModelPB(in)
+	s.lock.Unlock()
+	return &empty.Empty{}, err
 }
 
 // PushGradient pushes gradient to server
