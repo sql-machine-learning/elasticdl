@@ -143,6 +143,7 @@ class Worker(object):
             model_params=args.model_params,
             prediction_outputs_processor=args.prediction_outputs_processor,
             custom_data_reader=args.custom_data_reader,
+            callbacks=args.callbacks,
         )
 
         self._collective_communicator = (
