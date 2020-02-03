@@ -156,7 +156,7 @@ def get_model_spec(
         ),
         prediction_outputs_processor,
         _get_spec_value(custom_data_reader, model_zoo, default_module),
-        _get_spec_value(callbacks, model_zoo, default_module)
+        _get_spec_value(callbacks, model_zoo, default_module),
     )
 
 

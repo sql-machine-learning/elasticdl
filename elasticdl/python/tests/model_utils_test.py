@@ -34,7 +34,7 @@ class ModelHelperTest(unittest.TestCase):
             model_params="",
             prediction_outputs_processor="PredictionOutputsProcessor",
             custom_data_reader="custom_data_reader",
-            callbacks="callbacks"
+            callbacks="callbacks",
         )
 
         self.assertTrue(model is not None)
@@ -59,7 +59,7 @@ class ModelHelperTest(unittest.TestCase):
             model_params="",
             prediction_outputs_processor="PredictionOutputsProcessor",
             custom_data_reader="custom_data_reader",
-            callbacks="callbacks"
+            callbacks="callbacks",
         )
 
     def test_get_module_file_path(self):

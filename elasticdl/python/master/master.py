@@ -21,9 +21,9 @@ from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
     get_module_file_path,
+    load_callbacks_from_module,
     load_model_from_module,
     load_module,
-    load_callbacks_from_module,
 )
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.master.evaluation_service import EvaluationService
@@ -235,7 +235,6 @@ class Master(object):
                     )
                     break
         self.logger.info("Master stopped")
-
 
     @staticmethod
     def _get_job_type(args):
