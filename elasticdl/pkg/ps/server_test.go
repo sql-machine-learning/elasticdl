@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"log"
-	"math.rand"
+	"math/rand"
 	"os"
 	"testing"
 	"time"
