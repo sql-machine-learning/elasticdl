@@ -39,28 +39,6 @@ func TestMain(m *testing.M) {
 	os.Exit(result)
 }
 
-func TestPullVariable(t *testing.T) {
-	client, ctx, conn, cancel := createClient()
-	defer conn.Close()
-	defer cancel()
-	request := pb.PullVariableRequest{}
-	_, err := client.PullVariable(ctx, &request)
-	if err != nil {
-		t.Errorf("Failed to pull variable")
-	}
-}
-
-func TestPullEmbeddingVector(t *testing.T) {
-	client, ctx, conn, cancel := createClient()
-	defer conn.Close()
-	defer cancel()
-	request := pb.PullEmbeddingVectorRequest{}
-	_, err := client.PullEmbeddingVector(ctx, &request)
-	if err != nil {
-		t.Errorf("Failed to pull embedding vector")
-	}
-}
-
 func TestPushModel(t *testing.T) {
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
@@ -93,6 +71,56 @@ func TestPushModel(t *testing.T) {
 	assert.Contains(t, s.Param.NonEmbeddingParam, "t2")
 	assert.True(t, common.CompareFloatArray(a, s.Param.GetNonEmbeddingParam("t1").Value, 0.001))
 	assert.True(t, common.CompareFloatArray(b, s.Param.GetNonEmbeddingParam("t2").Value, 0.001))
+}
+
+func TestPullVariable(t *testing.T) {
+	client, ctx, conn, cancel := createClient()
+	defer conn.Close()
+	defer cancel()
+
+	var request1 pb.Model
+	// non embedding param
+	a := make([]float32, 10)
+	b := make([]float32, 10)
+	for i := 0; i < 10; i++ {
+		a[i] = rand.Float32()
+		b[i] = rand.Float32()
+	}
+	d := []int64{2, 5}
+	t1 := common.Tensor{"t1", a, d, nil}
+	t2 := common.Tensor{"t2", b, d, nil}
+
+	request1.Param = append(request1.Param, common.SerializeTensor(&t1))
+	request1.Param = append(request1.Param, common.SerializeTensor(&t2))
+
+	_, err1 := client.PushModel(ctx, &request1)
+
+	if err != nil {
+		t.Errorf("Failed to push model")
+	}
+
+	var request2 pb.PullVariableRequest
+	request2.CurrentModelVersion = 0
+
+	res, err2 := client.PullVariable(ctx, &request2)
+	if err2 != nil {
+		t.Errorf("Failed to pull variable")
+	}
+
+	assert.True(t, res.ModelInitStatus)
+	assert.Equal(t, 0, res.Model.Version)
+	assert.Equal(t, 2, len(res.Model.Param))
+}
+
+func TestPullEmbeddingVector(t *testing.T) {
+	client, ctx, conn, cancel := createClient()
+	defer conn.Close()
+	defer cancel()
+	request := pb.PullEmbeddingVectorRequest{}
+	_, err := client.PullEmbeddingVector(ctx, &request)
+	if err != nil {
+		t.Errorf("Failed to pull embedding vector")
+	}
 }
 
 func TestPushEmbeddingInfo(t *testing.T) {

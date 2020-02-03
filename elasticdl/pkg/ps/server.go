@@ -33,14 +33,32 @@ func NewServer(PSID int32, opt string, lr float32) *Server {
 
 // PullVariable pulls variable from server
 func (s *Server) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (*pb.PullVariableResponse, error) {
-	// TODO: implement the service.
+	var res pb.PullVariableResponse
+	if !s.Param.InitStatus {
+		res.ModelInitStatus = false
+		return &res, nil
+	}
+	res.Model.Version = s.Param.Version
+	if s.Param.Version > in.CurrentModelVersion {
+		for _, v := range s.Param.NonEmbeddingParam {
+			res.Model.Param = append(res.Model.Param, common.SerializeTensor(v))
+		}
+	}
+	s.Param.InitStatus = true
 	return &pb.PullVariableResponse{}, nil
 }
 
 // PullEmbeddingVector pulls embedding vector from server
 func (s *Server) PullEmbeddingVector(ctx context.Context, in *pb.PullEmbeddingVectorRequest) (*pb.Tensor, error) {
-	// TODO: implement the service.
-	return &pb.Tensor{}, nil
+	if in.Ids == nil {
+		return &pb.Tensor{}, nil
+	}
+	table := s.Param.GetEmbeddingParam(in.Name)
+	if table == nil {
+		return &pb.Tensor{}, fmt.Errorf("Request embedding Table %s not found in Param", in.Name)
+	}
+	t := table.GetEmbeddingVectors(in.Ids)
+	return common.SerializeTensor(t), nil
 }
 
 // PushModel pushes model to server
