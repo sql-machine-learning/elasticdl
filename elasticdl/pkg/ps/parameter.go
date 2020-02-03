@@ -1,6 +1,10 @@
 package ps
 
-import "elasticdl.org/elasticdl/pkg/common"
+import (
+	"elasticdl.org/elasticdl/pkg/common"
+	"elasticdl.org/elasticdl/pkg/proto"
+	"fmt"
+)
 
 // Parameter contains non-embedding param and embedding param
 type Parameter struct {
@@ -41,4 +45,29 @@ func (p *Parameter) SetEmbeddingParamInfo(name string, dim int64,
 	t := common.NewEmbeddingTable(name, dim, initializer)
 	p.EmbeddingParam[name] = t
 	return t
+}
+
+// DeserializeModelPB deserializes model PB to Parameter
+func DeserializeModelPB(pb *proto.Model) (*Parameter, error) {
+	param := NewParameter()
+	var err error
+	for _, v := range pb.EmbeddingTableInfo {
+		param.SetEmbeddingParamInfo(v.Name, v.Dim, v.Initializer)
+	}
+	for _, v := range pb.Param {
+		t := common.DeserializeTensorPB(v)
+		if t.Indices == nil {
+			param.NonEmbeddingParam[t.Name] = t
+		} else {
+			table := param.GetEmbeddingParam(t.Name)
+			if table == nil {
+				return nil, fmt.Errorf("Embedding table %s is not created", t.Name)
+			}
+			err = param.EmbeddingParam[t.Name].SetEmbeddingVectors(t.Indices, t.Value)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return param, err
 }

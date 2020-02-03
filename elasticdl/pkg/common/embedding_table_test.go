@@ -29,3 +29,21 @@ func TestEmbeddingTableGet(t *testing.T) {
 	assert.Equal(t, v.Value[1], float32(2.0))
 	assert.Equal(t, v.Value[2], float32(0.0))
 }
+
+func TestEmbeddingTableSet(t *testing.T) {
+	e := NewEmbeddingTable("e1", 2, "zero")
+	i := []int64{1, 3, 5}
+	v := []float32{1.0, 2.0, 3.0, 4.0, 5.0, 6.0}
+
+	err := e.SetEmbeddingVectors(i, v)
+	assert.Nil(t, err)
+
+	v1 := e.GetEmbeddingVector(1)
+	assert.True(t, CompareFloatArray([]float32{1.0, 2.0}, v1.Value, 0.0001))
+
+	v3 := e.GetEmbeddingVector(3)
+	assert.True(t, CompareFloatArray([]float32{3.0, 4.0}, v3.Value, 0.0001))
+
+	v5 := e.GetEmbeddingVector(5)
+	assert.True(t, CompareFloatArray([]float32{5.0, 6.0}, v5.Value, 0.0001))
+}

@@ -1,5 +1,7 @@
 package common
 
+import "fmt"
+
 // EmbeddingTable struct
 type EmbeddingTable struct {
 	Name            string
@@ -39,4 +41,17 @@ func (table *EmbeddingTable) GetEmbeddingVectors(indices []int64) *Tensor {
 		copy(t.Value[start:start+table.Dim], table.GetEmbeddingVector(index).Value)
 	}
 	return t
+}
+
+// SetEmbeddingVectors sets (indices, value) pair to embedding vector
+func (table *EmbeddingTable) SetEmbeddingVectors(indices []int64, value []float32) error {
+	if int64(len(indices))*table.Dim != int64(len(value)) {
+		return fmt.Errorf("Embedding vectors dim not match")
+	}
+	for i, index := range indices {
+		table.EmbeddingVector[index] = NewVector(table.Dim)
+		start := int64(i) * table.Dim
+		copy(table.EmbeddingVector[index].Value, value[start:start+table.Dim])
+	}
+	return nil
 }
