@@ -1,6 +1,8 @@
 import importlib.util
 import os
 
+import tensorflow as tf
+
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.data.odps_io import is_odps_configured
 from elasticdl.python.worker.prediction_outputs_processor import (
@@ -179,3 +181,29 @@ def get_non_embedding_trainable_vars(model, embedding_layers):
         if not is_embedding_item:
             non_embedding_trainable_vars.append(var)
     return non_embedding_trainable_vars
+
+
+def get_optimizer_info(optimizer):
+    """
+    Get optimizer type and its argument values
+    """
+    OPT_ARGUMENTS = {
+        "SGD": ["learning_rate", "momentum", "nesterov"],
+        "Adam": ["learning_rate", "beta_1", "beta_2", "epsilon", "amsgrad"],
+        "unkown": [],
+    }
+    opt_type = "unknown"
+    opt_argument = ""
+
+    if isinstance(optimizer, tf.keras.optimizers.SGD):
+        opt_type = "SGD"
+    elif isinstance(optimizer, tf.keras.optimizers.Adam):
+        opt_type = "Adam"
+    opt_config = optimizer.get_config()
+    for arg_name in OPT_ARGUMENTS[opt_type]:
+        arg_value = opt_config[arg_name]
+        # For callable, only get the value from 1st call
+        if callable(arg_value):
+            arg_value = arg_value()
+        opt_argument += arg_name + "=" + str(arg_value) + ";"
+    return opt_type, opt_argument
