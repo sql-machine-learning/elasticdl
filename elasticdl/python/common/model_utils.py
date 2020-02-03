@@ -187,6 +187,7 @@ def get_optimizer_info(optimizer):
     """
     Get optimizer type and its argument values
     """
+    # TODO: add more supported optimizers
     OPT_ARGUMENTS = {
         "SGD": ["learning_rate", "momentum", "nesterov"],
         "Adam": ["learning_rate", "beta_1", "beta_2", "epsilon", "amsgrad"],
