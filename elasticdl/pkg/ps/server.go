@@ -2,7 +2,9 @@ package ps
 
 import (
 	"context"
+	"elasticdl.org/elasticdl/pkg/common"
 	pb "elasticdl.org/elasticdl/pkg/proto"
+	"fmt"
 	empty "github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
 	"log"
@@ -38,14 +40,17 @@ func (s *Server) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (
 		res.ModelInitStatus = false
 		return &res, nil
 	}
+	res.ModelInitStatus = true
+	res.Model = &pb.Model{}
 	res.Model.Version = s.Param.Version
 	if s.Param.Version > in.CurrentModelVersion {
 		for _, v := range s.Param.NonEmbeddingParam {
+			fmt.Println(v.Value)
 			res.Model.Param = append(res.Model.Param, common.SerializeTensor(v))
 		}
 	}
 	s.Param.InitStatus = true
-	return &pb.PullVariableResponse{}, nil
+	return &res, nil
 }
 
 // PullEmbeddingVector pulls embedding vector from server

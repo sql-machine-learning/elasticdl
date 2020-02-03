@@ -27,6 +27,7 @@ func (table *EmbeddingTable) GetEmbeddingVector(index int64) *Tensor {
 	}
 	// TODO(qijun) only support zero initializer now
 	newVector := NewVector(table.Dim)
+	newVector.Name = table.Name
 	table.EmbeddingVector[index] = newVector
 	return newVector
 }
@@ -35,6 +36,7 @@ func (table *EmbeddingTable) GetEmbeddingVector(index int64) *Tensor {
 func (table *EmbeddingTable) GetEmbeddingVectors(indices []int64) *Tensor {
 	d := []int64{int64(len(indices)), table.Dim}
 	t := NewTensor(d)
+	t.Name = table.Name
 	t.Indices = indices
 	for i, index := range indices {
 		start := int64(i) * table.Dim
