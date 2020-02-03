@@ -10,6 +10,8 @@ import (
 type Parameter struct {
 	NonEmbeddingParam map[string]*common.Tensor
 	EmbeddingParam    map[string]*common.EmbeddingTable
+	Version           int32
+	InitStatus        bool
 }
 
 // NewParameter creates a parameter instance
