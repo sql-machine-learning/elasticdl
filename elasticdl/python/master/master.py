@@ -100,6 +100,8 @@ class Master(object):
         self.callbacks = load_callbacks_from_module(
             args.callbacks, self.model_module
         )
+        for callback in self.callbacks:
+            callback.set_model(self.model_inst)
         model_handler = ModelHandler.get_model_handler(
             args.distribution_strategy, checkpoint_dir=args.checkpoint_dir
         )
