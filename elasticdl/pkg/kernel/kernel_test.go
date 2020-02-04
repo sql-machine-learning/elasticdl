@@ -141,7 +141,7 @@ func TestAdamWithAmsgrad(t *testing.T) {
 	Adam(grad.Data, param.Data, m.Data, v.Data, lr, step, beta1, beta2,
 		epsilon, true, maxSquare.Data)
 
-	assert.True(t, common.CompareFloatArray(expectedM, m.InplaceSlice().([]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(expectedM, m.InplaceSlice().([]float32), 0.00001))
 	assert.True(t, common.CompareFloatArray(expectedV, v.InplaceSlice().([]float32), 0.00001))
 	assert.True(t, common.CompareFloatArray(expectedParam, param.InplaceSlice().([]float32), 0.00001))
 	assert.True(t, common.CompareFloatArray(expectedMaxSquare, maxSquare.InplaceSlice().([]float32), 0.00001))

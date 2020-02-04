@@ -37,11 +37,11 @@ func TestEmbeddingTableSet(t *testing.T) {
 	e.SetEmbeddingVectors(tensor)
 
 	v1 := e.GetEmbeddingVector(1)
-	assert.True(t, CompareFloatArray([]float32{1.0, 2.0}, []float32{float32(v1.At(0)), float32(v1.At(1))}, 0.0001))
+	assert.True(t, CompareFloatArray([]float32{1.0, 2.0}, v1.InplaceSlice().([]float32), 0.0001))
 
 	v3 := e.GetEmbeddingVector(3)
-	assert.True(t, CompareFloatArray([]float32{3.0, 4.0}, []float32{float32(v3.At(0)), float32(v3.At(1))}, 0.0001))
+	assert.True(t, CompareFloatArray([]float32{3.0, 4.0}, v3.InplaceSlice().([]float32), 0.0001))
 
 	v5 := e.GetEmbeddingVector(5)
-	assert.True(t, CompareFloatArray([]float32{5.0, 6.0}, []float32{float32(v5.At(0)), float32(v5.At(1))}, 0.0001))
+	assert.True(t, CompareFloatArray([]float32{5.0, 6.0}, v5.InplaceSlice().([]float32), 0.0001))
 }
