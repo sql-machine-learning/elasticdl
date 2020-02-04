@@ -16,6 +16,7 @@ from model_zoo.census_model_sqlflow.wide_and_deep.keras_process_layer import (
     CategoryHash,
     CategoryLookup,
     NumericBucket,
+    Group
 )
 
 
@@ -119,10 +120,8 @@ def transform_group(inputs, feature_group):
 
     id_offsets = get_id_boundaries(feature_group)
 
-    if id_offsets is not None:
-        group_items = AddIdOffset(id_offsets[0:-1])(group_items)
-    group_stack = tf.keras.layers.concatenate(group_items, axis=-1)
-    return group_stack
+    group_layer = Group(id_offsets)
+    return group_layer(group_items)
 
 
 def get_transform_layer(feature_info):
