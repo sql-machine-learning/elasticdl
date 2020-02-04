@@ -4,7 +4,6 @@ import (
 	"context"
 	"elasticdl.org/elasticdl/pkg/common"
 	pb "elasticdl.org/elasticdl/pkg/proto"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"log"
@@ -110,9 +109,6 @@ func TestPullVariable(t *testing.T) {
 	d := []int64{2, 3}
 	t1 := common.Tensor{"t1", a, d, nil}
 	t2 := common.Tensor{"t2", b, d, nil}
-
-	fmt.Println(a)
-	fmt.Println(b)
 
 	request1.Param = append(request1.Param, common.SerializeTensor(&t1))
 	request1.Param = append(request1.Param, common.SerializeTensor(&t2))
