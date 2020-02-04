@@ -121,6 +121,9 @@ func TestPullVariable(t *testing.T) {
 		t.Errorf("Failed to push model")
 	}
 
+	assert.Contains(t, s.Param.NonEmbeddingParam, "t1")
+	assert.Contains(t, s.Param.NonEmbeddingParam, "t2")
+
 	var request2 pb.PullVariableRequest
 	request2.CurrentModelVersion = -1
 
