@@ -30,7 +30,7 @@ func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, contex
 func TestPushModel(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	s, gs := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -62,12 +62,13 @@ func TestPushModel(t *testing.T) {
 	assert.Contains(t, s.Param.NonEmbeddingParam, "t2")
 	assert.True(t, common.CompareFloatArray(a, s.Param.GetNonEmbeddingParam("t1").Value, 0.001))
 	assert.True(t, common.CompareFloatArray(b, s.Param.GetNonEmbeddingParam("t2").Value, 0.001))
+	gs.Stop()
 }
 
 func TestPushEmbeddingInfo(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	s, gs := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -87,12 +88,13 @@ func TestPushEmbeddingInfo(t *testing.T) {
 
 	assert.Contains(t, s.Param.EmbeddingParam, "e1")
 	assert.Equal(t, int64(2), s.Param.GetEmbeddingParam("e1").Dim)
+	gs.Stop()
 }
 
 func TestPullVariable(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	s, gs := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -143,12 +145,13 @@ func TestPullVariable(t *testing.T) {
 	assert.Contains(t, p.NonEmbeddingParam, "t2")
 	assert.True(t, common.CompareFloatArray(p.GetNonEmbeddingParam("t1").Value, a, 0.0001))
 	assert.True(t, common.CompareFloatArray(p.GetNonEmbeddingParam("t2").Value, b, 0.0001))
+	gs.Stop()
 }
 
 func TestPullEmbeddingVector(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	s, gs := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -181,12 +184,13 @@ func TestPullEmbeddingVector(t *testing.T) {
 	assert.Equal(t, "e1", tensor.Name)
 	assert.Equal(t, ids, tensor.Indices)
 	assert.Equal(t, 6, len(tensor.Value))
+	gs.Stop()
 }
 
 func TestPushGradient(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	s, gs := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	assert.NotNil(t, s)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
@@ -196,4 +200,5 @@ func TestPushGradient(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to pull embedding vector")
 	}
+	gs.Stop()
 }
