@@ -23,7 +23,7 @@ And we need to transform it to
 ## Design Components
 
 ### ODPS UDF to Transform Key-value Pairs String to Multiple Values
-ODPS provides UDF for users to define transformation using Python. We choose the UDTF in UDF to implement the transformation because it can 
+ODPS provides [UDF](https://help.aliyun.com/document_detail/73359.html?spm=5176.10695662.1996646101.searchclickresult.759c46d7SD5Hmr#title-mty-z7z-s1j) for users to define transformation using Python. We choose the [UDTF](https://help.aliyun.com/document_detail/73359.html?spm=5176.10695662.1996646101.searchclickresult.759c46d7SD5Hmr#title-d80-lvi-uc7) in UDF to implement the transformation because it can 
 match any input parameters in SQL. The UDTF demo is
 
 ```python
