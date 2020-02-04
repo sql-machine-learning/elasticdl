@@ -228,7 +228,7 @@ func TestPushGradient(t *testing.T) {
 
 	egv1 := []float32{1.0, 1.0, 1.0, 2.0, 2.0, 2.0}
 	egd1 := []int64{3, 2}
-	egi1 := []int64{2, 3, 4}
+	egi1 := []int64{3, 1, 3}
 	eg1 := common.Tensor{"e1", egv1, egd1, egi1}
 
 	var request2 pb.PushGradientRequest
@@ -241,4 +241,19 @@ func TestPushGradient(t *testing.T) {
 	if err2 != nil {
 		t.Errorf("Failed to pull gradients")
 	}
+
+	assert.True(t, res1.Accepted)
+	assert.Equal(t, int32(1), res1.ModelVersion)
+
+	assert.Contains(t, s.Param.NonEmbeddingParam, "t1")
+	assert.Contains(t, s.Param.NonEmbeddingParam, "t2")
+	assert.Contains(t, s.Param.EmbeddingParam, "e1")
+	exptV1 := []float32{9.9, 19.8, 29.7}
+	exptV2 := []float32{19.8, 39.6, 59.4}
+	assert.True(t, common.CompareFloatArray(s.Param.GetNonEmbeddingParam("t1").Value, exptV1))
+	assert.True(t, common.CompareFloatArray(s.Param.GetNonEmbeddingParam("t2").Value, exptV2))
+
+	expGV1 := []float32{1.0, 2.0, 2.9, 3.8, 5.0, 6.0, 6.7, 7.7}
+	actGV1 := s.Param.GetEmbeddingParam("e1").GetEmbeddingVectors(ei)
+	assert.True(t, common.CompareFloatArray(actGV1.Value, expGV1.Value))
 }
