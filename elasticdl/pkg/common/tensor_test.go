@@ -13,7 +13,7 @@ func TestTensorInit(t *testing.T) {
 	t1 := NewTensor("t1", v1, d1, i1)
 
 	assert.Equal(t, t1.Name, "t1")
-	assert.Equal(t, *t1.InplaceSlice().(*[]float32), v1)
+	assert.Equal(t, t1.InplaceSlice().([]float32), v1)
 	assert.Equal(t, []int64(t1.Dim), d1)
 	assert.Equal(t, []int64(t1.Indices), i1)
 }
@@ -29,5 +29,5 @@ func TestTensorSerialization(t *testing.T) {
 
 	var t2 *Tensor = DeserializeTensorPB(p)
 
-	assert.Equal(t, *t1.InplaceSlice().(*[]float32), *t2.InplaceSlice().(*[]float32))
+	assert.Equal(t, t1.InplaceSlice().([]float32), t2.InplaceSlice().([]float32))
 }

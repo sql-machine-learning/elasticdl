@@ -122,7 +122,7 @@ func (v *Vector) InplaceSlice() interface{} {
 		Cap:  int(v.Length),
 		Len:  int(v.Length),
 	}
-	val := reflect.NewAt(FlagToDataType[int64(v.Dtype)].Type, unsafe.Pointer(&sliceHeader))
+	val := reflect.NewAt(FlagToDataType[int64(v.Dtype)].Type, unsafe.Pointer(&sliceHeader)).Elem()
 	return val.Interface()
 }
 
@@ -279,7 +279,7 @@ func (t *Tensor) InplaceSlice() interface{} {
 		Cap:  int(t.Data.Length),
 		Len:  int(t.Data.Length),
 	}
-	val := reflect.NewAt(t.Dtype.Type, unsafe.Pointer(&sliceHeader))
+	val := reflect.NewAt(t.Dtype.Type, unsafe.Pointer(&sliceHeader)).Elem()
 	return val.Interface()
 }
 

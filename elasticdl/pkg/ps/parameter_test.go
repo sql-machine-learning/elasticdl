@@ -56,11 +56,11 @@ func TestParameterDeserialize(t *testing.T) {
 	assert.Equal(t, 3, len(e1.EmbeddingVector))
 
 	ev1 := e1.GetEmbeddingVector(1)
-	assert.True(t, common.CompareFloatArray([]float32{1.0, 2.0}, *ev1.InplaceSlice().(*[]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray([]float32{1.0, 2.0}, ev1.InplaceSlice().([]float32), 0.0001))
 
 	ev3 := e1.GetEmbeddingVector(3)
-	assert.True(t, common.CompareFloatArray([]float32{3.0, 4.0}, *ev3.InplaceSlice().(*[]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray([]float32{3.0, 4.0}, ev3.InplaceSlice().([]float32), 0.0001))
 
 	ev5 := e1.GetEmbeddingVector(5)
-	assert.True(t, common.CompareFloatArray([]float32{5.0, 6.0}, *ev5.InplaceSlice().(*[]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray([]float32{5.0, 6.0}, ev5.InplaceSlice().([]float32), 0.0001))
 }

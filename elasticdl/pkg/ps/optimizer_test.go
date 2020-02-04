@@ -2,7 +2,6 @@ package ps
 
 import (
 	"elasticdl.org/elasticdl/pkg/common"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -46,8 +45,8 @@ func TestSGDOptimizer(t *testing.T) {
 	ev1 := []float32{0.9, 1.9, 2.9, 3.9, 4.9, 5.9}
 	ev2 := []float32{0.9, 1.9, 1.0, 2.1}
 
-	assert.True(t, common.CompareFloatArray(*p.NonEmbeddingParam["t1"].InplaceSlice().(*[]float32), ev1, 0.0001))
-	assert.True(t, common.CompareFloatArray(*p.NonEmbeddingParam["t2"].InplaceSlice().(*[]float32), ev2, 0.0001))
+	assert.True(t, common.CompareFloatArray(p.NonEmbeddingParam["t1"].InplaceSlice().([]float32), ev1, 0.0001))
+	assert.True(t, common.CompareFloatArray(p.NonEmbeddingParam["t2"].InplaceSlice().([]float32), ev2, 0.0001))
 
 	// test grad name error
 	grads = []*common.Tensor{grad3}
@@ -64,12 +63,12 @@ func TestSGDOptimizer(t *testing.T) {
 
 	ev1 = []float32{0.8, 1.8, 2.8, 3.8, 4.8, 5.8}
 	ev2 = []float32{0.8, 1.8, 0.9, 2.0}
-	assert.True(t, common.CompareFloatArray(*p.NonEmbeddingParam["t1"].InplaceSlice().(*[]float32), ev1, 0.0001))
-	assert.True(t, common.CompareFloatArray(*p.NonEmbeddingParam["t2"].InplaceSlice().(*[]float32), ev2, 0.0001))
+	assert.True(t, common.CompareFloatArray(p.NonEmbeddingParam["t1"].InplaceSlice().([]float32), ev1, 0.0001))
+	assert.True(t, common.CompareFloatArray(p.NonEmbeddingParam["t2"].InplaceSlice().([]float32), ev2, 0.0001))
 
 	vectors := p.GetEmbeddingParam("t3").GetEmbeddingVectors(i3...)
 	expV := []float32{-0.1, -0.1, -0.1, -0.1}
-	assert.True(t, common.CompareFloatArray(expV, *vectors.InplaceSlice().(*[]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(expV, vectors.InplaceSlice().([]float32), 0.0001))
 
 	// more test for sparse parameter update
 	grads = []*common.Tensor{grad5}
@@ -79,7 +78,7 @@ func TestSGDOptimizer(t *testing.T) {
 
 	vectors = p.GetEmbeddingParam("t3").GetEmbeddingVectors(1, 3, 5)
 	expV = []float32{-0.2, -0.2, -0.3, -0.3, -0.1, -0.1}
-	assert.True(t, common.CompareFloatArray(expV, *vectors.InplaceSlice().(*[]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(expV, vectors.InplaceSlice().([]float32), 0.0001))
 }
 
 func TestAdamOptimizer(t *testing.T) {
@@ -106,8 +105,8 @@ func TestAdamOptimizer(t *testing.T) {
 	ev1 := []float32{0.9255863187, 1.9255863187, 2.9255863187, 3.9255863187, 4.9255863187, 5.9255863187}
 	ev2 := []float32{0.9255863187, 1.9255863187, 1.0255863187, 2.1255863187}
 
-	assert.True(t, common.CompareFloatArray(*p.NonEmbeddingParam["t1"].InplaceSlice().(*[]float32), ev1, 0.0001))
-	assert.True(t, common.CompareFloatArray(*p.NonEmbeddingParam["t2"].InplaceSlice().(*[]float32), ev2, 0.0001))
+	assert.True(t, common.CompareFloatArray(p.NonEmbeddingParam["t1"].InplaceSlice().([]float32), ev1, 0.0001))
+	assert.True(t, common.CompareFloatArray(p.NonEmbeddingParam["t2"].InplaceSlice().([]float32), ev2, 0.0001))
 
 	// test grad name error
 	grads = []*common.Tensor{grad3}
@@ -125,13 +124,12 @@ func TestAdamOptimizer(t *testing.T) {
 
 	ev1 = []float32{0.8474920307, 1.8474920307, 2.8474920307, 3.8474920307, 4.8474920307, 5.8474920307}
 	ev2 = []float32{0.8474920307, 1.8474920307, 0.9474920307, 2.0474920307}
-	assert.True(t, common.CompareFloatArray(*p.NonEmbeddingParam["t1"].InplaceSlice().(*[]float32), ev1, 0.0001))
-	assert.True(t, common.CompareFloatArray(*p.NonEmbeddingParam["t2"].InplaceSlice().(*[]float32), ev2, 0.0001))
+	assert.True(t, common.CompareFloatArray(p.NonEmbeddingParam["t1"].InplaceSlice().([]float32), ev1, 0.0001))
+	assert.True(t, common.CompareFloatArray(p.NonEmbeddingParam["t2"].InplaceSlice().([]float32), ev2, 0.0001))
 
 	vectors := p.GetEmbeddingParam("t3").GetEmbeddingVectors(i3...)
 	expV := []float32{-0.058112835, -0.058112835, -0.058112835, -0.058112835}
-	fmt.Println(*vectors.InplaceSlice().(*[]float32))
-	assert.True(t, common.CompareFloatArray(expV, *vectors.InplaceSlice().(*[]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(expV, vectors.InplaceSlice().([]float32), 0.0001))
 
 	// more test for sparse parameter update
 	grads = []*common.Tensor{grad5}
@@ -141,5 +139,5 @@ func TestAdamOptimizer(t *testing.T) {
 
 	vectors = p.GetEmbeddingParam("t3").GetEmbeddingVectors(1, 3, 5)
 	expV = []float32{-0.1314178004, -0.1314178004, -0.2168087883, -0.2168087883, -0.0545489238, -0.0545489238}
-	assert.True(t, common.CompareFloatArray(expV, *vectors.InplaceSlice().(*[]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(expV, vectors.InplaceSlice().([]float32), 0.0001))
 }

@@ -29,7 +29,7 @@ func TestSGD(t *testing.T) {
 	}
 	ok := SGD(grad.Data, param.Data, lr)
 	assert.Equal(t, 0, ok)
-	assert.Equal(t, expected, *param.InplaceSlice().(*[]float32))
+	assert.Equal(t, expected, param.InplaceSlice().([]float32))
 }
 
 var a = []float32{-1.0, -1.0, -1.0, -1.0, -1.0, -1.0}
@@ -102,9 +102,9 @@ func TestAdam(t *testing.T) {
 	Adam(grad.Data, param.Data, m.Data, v.Data, lr, step, beta1, beta2,
 		epsilon, false, nil)
 
-	assert.True(t, common.CompareFloatArray(expectedM, *m.InplaceSlice().(*[]float32), 0.0001))
-	assert.True(t, common.CompareFloatArray(expectedV, *v.InplaceSlice().(*[]float32), 0.00001))
-	assert.True(t, common.CompareFloatArray(expectedParam, *param.InplaceSlice().(*[]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedM, m.InplaceSlice().([]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(expectedV, v.InplaceSlice().([]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedParam, param.InplaceSlice().([]float32), 0.00001))
 }
 
 func TestAdamWithAmsgrad(t *testing.T) {
@@ -141,10 +141,10 @@ func TestAdamWithAmsgrad(t *testing.T) {
 	Adam(grad.Data, param.Data, m.Data, v.Data, lr, step, beta1, beta2,
 		epsilon, true, maxSquare.Data)
 
-	assert.True(t, common.CompareFloatArray(expectedM, *m.InplaceSlice().(*[]float32), 0.0001))
-	assert.True(t, common.CompareFloatArray(expectedV, *v.InplaceSlice().(*[]float32), 0.00001))
-	assert.True(t, common.CompareFloatArray(expectedParam, *param.InplaceSlice().(*[]float32), 0.00001))
-	assert.True(t, common.CompareFloatArray(expectedMaxSquare, *maxSquare.InplaceSlice().(*[]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedM, m.InplaceSlice().([]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(expectedV, v.InplaceSlice().([]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedParam, param.InplaceSlice().([]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedMaxSquare, maxSquare.InplaceSlice().([]float32), 0.00001))
 }
 
 func TestSparseAdam(t *testing.T) {
@@ -190,8 +190,8 @@ func TestSparseAdam(t *testing.T) {
 
 	SparseAdam(grad, ptable, mtable, vtable, lr, step, beta1, beta2,
 		epsilon, true, mstable)
-	assert.True(t, common.CompareFloatArray(expectedM, *m.InplaceSlice().(*[]float32), 0.00001))
-	assert.True(t, common.CompareFloatArray(expectedV, *v.InplaceSlice().(*[]float32), 0.00001))
-	assert.True(t, common.CompareFloatArray(expectedParam, *param.InplaceSlice().(*[]float32), 0.00001))
-	assert.True(t, common.CompareFloatArray(expectedMaxSquare, *maxSquare.InplaceSlice().(*[]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedM, m.InplaceSlice().([]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedV, v.InplaceSlice().([]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedParam, param.InplaceSlice().([]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedMaxSquare, maxSquare.InplaceSlice().([]float32), 0.00001))
 }
