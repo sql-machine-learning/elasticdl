@@ -15,7 +15,7 @@ from model_zoo.census_model_sqlflow.wide_and_deep.keras_process_layers import (
     CategoryHash,
     CategoryLookup,
     Group,
-    NumericBucket
+    NumericBucket,
 )
 
 

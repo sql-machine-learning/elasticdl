@@ -86,4 +86,3 @@ class Group(tf.keras.layers.Layer):
             ids_with_offset.append(value + self.offsets[i])
 
         return tf.keras.layers.concatenate(ids_with_offset, axis=-1)
-
