@@ -12,8 +12,9 @@ type Optimizer interface {
 
 // BaseOptimizer struct
 type BaseOptimizer struct {
-	lr   float32
-	step int64
+	lr    float32
+	step  int64
+	dtype common.DataType
 }
 
 // SGDOptimizer struct
@@ -65,7 +66,7 @@ type AdamOptimizer struct {
 	maxSquare *Parameter
 }
 
-// GetLR returns learning rate SGD
+// GetLR returns learning rate Adam
 func (opt *AdamOptimizer) GetLR() float32 {
 	return opt.lr
 }
@@ -107,20 +108,24 @@ func (opt *AdamOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) e
 
 // NewAdamOptimizer creates a Adam optimizer instance
 func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32, amsgrad bool, dtype common.DataType) *AdamOptimizer {
-	var opt AdamOptimizer
-	opt.lr = lr
-	opt.step = 0
-	opt.beta1 = beta1
-	opt.beta2 = beta2
-	opt.epsilon = epsilon
-	opt.amsgrad = amsgrad
-	opt.m = NewParameter(dtype)
-	opt.v = NewParameter(dtype)
-	opt.maxSquare = NewParameter(dtype)
+	var opt = AdamOptimizer{
+		BaseOptimizer: BaseOptimizer{
+			lr:    lr,
+			step:  0,
+			dtype: dtype,
+		},
+		beta1:     beta1,
+		beta2:     beta2,
+		epsilon:   epsilon,
+		amsgrad:   amsgrad,
+		m:         NewParameter(dtype),
+		v:         NewParameter(dtype),
+		maxSquare: NewParameter(dtype),
+	}
 	return &opt
 }
 
-// InitEmbeddingParam set m,v,maxSquare embedding of AdamOptimizer (TODO)
+// InitEmbeddingParam set m,v,maxSquare embedding of AdamOptimizer
 func (opt *AdamOptimizer) InitEmbeddingParam(name string, dim int64) {
 	opt.m.SetEmbeddingParamInfo(name, dim, "zero")
 	opt.v.SetEmbeddingParamInfo(name, dim, "zero")
@@ -129,8 +134,7 @@ func (opt *AdamOptimizer) InitEmbeddingParam(name string, dim int64) {
 
 // InitNonEmbeddingParam set m,v,maxSquare non-embedding of AdamOptimizer
 func (opt *AdamOptimizer) InitNonEmbeddingParam(name string, dim []int64) {
-	size := common.Dim(dim).Product()
-	opt.m.NonEmbeddingParam[name] = common.NewTensor(name, make([]float32, size, size), dim, nil)
-	opt.v.NonEmbeddingParam[name] = common.NewTensor(name, make([]float32, size, size), dim, nil)
-	opt.maxSquare.NonEmbeddingParam[name] = common.NewTensor(name, make([]float32, size, size), dim, nil)
+	opt.m.NonEmbeddingParam[name] = common.NewEmptyTensor(name, opt.dtype, dim...)
+	opt.v.NonEmbeddingParam[name] = common.NewEmptyTensor(name, common.Float32Dtype, dim...)
+	opt.maxSquare.NonEmbeddingParam[name] = common.NewEmptyTensor(name, common.Float32Dtype, dim...)
 }

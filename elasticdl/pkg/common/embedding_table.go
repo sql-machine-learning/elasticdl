@@ -38,7 +38,7 @@ func (e *EmbeddingTable) GetEmbeddingVector(index int64) *Vector {
 
 // GetEmbeddingVectors returns embedding vectors giving an array of indices
 func (e *EmbeddingTable) GetEmbeddingVectors(indices ...int64) *Tensor {
-	t := NewEmptyTensor(e.Dtype, int64(len(indices)), e.Dim)
+	t := NewEmptyTensor(e.Name, e.Dtype, int64(len(indices)), e.Dim)
 	t.Indices = indices
 	for i, index := range indices {
 		t.SetRow(i, e.GetEmbeddingVector(index))

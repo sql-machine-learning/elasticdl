@@ -173,8 +173,9 @@ type Tensor struct {
 }
 
 // NewEmptyTensor create an uninitialized tensor
-func NewEmptyTensor(dtype DataType, dim ...int64) *Tensor {
+func NewEmptyTensor(name string, dtype DataType, dim ...int64) *Tensor {
 	var t = new(Tensor)
+	t.Name = name
 	t.Dim = dim
 	t.Data = NewEmptyVector(int(t.Dim.Product()), dtype, nil)
 	t.Dtype = dtype
@@ -294,8 +295,7 @@ func DeserializeTensorPB(pb *proto.Tensor) *Tensor {
 	if Dim(pb.Dim).Product()*FlagToDataType[int64(pb.Dtype)].Size != int64(len(pb.Content)) {
 		return nil
 	}
-	var t = NewEmptyTensor(FlagToDataType[int64(pb.Dtype)], pb.Dim...)
-	t.Name = pb.Name
+	var t = NewEmptyTensor(pb.Name, FlagToDataType[int64(pb.Dtype)], pb.Dim...)
 	t.Indices = make([]int64, len(pb.Indices))
 	copy(t.Indices, pb.Indices)
 	C.memcpy(t.Data.Data, unsafe.Pointer(&pb.Content[0]), C.ulong(len(pb.Content)))
