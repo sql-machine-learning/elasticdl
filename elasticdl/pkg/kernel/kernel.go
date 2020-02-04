@@ -1,79 +1,77 @@
 package kernel
 
-// #cgo LDFLAGS: -L./capi -lkernel_api -lm
-// #include "capi/kernel_api.h"
+// #cgo LDFLAGS: -L../c -lkernel -lvector -lm
+// #include "../c/kernel.h"
 import "C"
 import "unsafe"
 import "elasticdl.org/elasticdl/pkg/common"
-import "fmt"
+
+// Vector alias
+type Vector = common.Vector
+
+// Tensor alias
+type Tensor = common.Tensor
+
+// EmbeddingTable alias
+type EmbeddingTable = common.EmbeddingTable
 
 // SGD kernel
-func SGD(grad *common.Tensor, param *common.Tensor, lr float32) error {
-	if len(grad.Value) != len(param.Value) {
-		return fmt.Errorf("grad %s Value size not equal to param", grad.Name)
+func SGD(grad *Vector, param *Vector, lr float32) int {
+	if grad.Length != param.Length {
+		return 1
 	}
-	gradPtr := (*C.float)(unsafe.Pointer(&grad.Value[0]))
-	paramPtr := (*C.float)(unsafe.Pointer(&param.Value[0]))
-	C.SGD(gradPtr, paramPtr, C.float(lr), C.longlong(len(grad.Value)))
-	return nil
+	C.SGD(unsafe.Pointer(grad), unsafe.Pointer(param), C.float(lr))
+	return 0
 }
 
 // SparseSGD kernel
-func SparseSGD(grad *common.Tensor, param *common.EmbeddingTable, lr float32) error {
+func SparseSGD(grad *Tensor, param *EmbeddingTable, lr float32) int {
 	if grad.Indices == nil || len(grad.Dim) != 2 {
-		return fmt.Errorf("grad %s is not row sparse tensor", grad.Name)
+		return 1
 	}
 	if grad.Dim[1] != param.Dim {
-		return fmt.Errorf("grad %s width is not equal to embedding dim", grad.Name)
+		return 2
 	}
 	for i, index := range grad.Indices {
 		vector := param.GetEmbeddingVector(index)
-		subgrad := grad.AtRow(int64(i))
+		subgrad := grad.RowRef(i)
 		SGD(subgrad, vector, lr)
 	}
-	return nil
+	return 0
 }
 
 // Adam kernel
-func Adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common.Tensor,
+func Adam(grad *Vector, param *Vector, m *Vector, v *Vector,
 	lr float32, step int64, beta1 float32, beta2 float32,
-	epsilon float32, amsgrad bool, maxSquare *common.Tensor) {
-	gradPtr := (*C.float)(unsafe.Pointer(&grad.Value[0]))
-	paramPtr := (*C.float)(unsafe.Pointer(&param.Value[0]))
-	mPtr := (*C.float)(unsafe.Pointer(&m.Value[0]))
-	vPtr := (*C.float)(unsafe.Pointer(&v.Value[0]))
-	size := C.longlong(len(grad.Value))
+	epsilon float32, amsgrad bool, maxSquare *Vector) int {
 	if amsgrad {
-		maxSquarePtr := (*C.float)(unsafe.Pointer(&maxSquare.Value[0]))
-		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.float(lr), C.longlong(size),
-			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon),
-			maxSquarePtr)
+		C.Adam(unsafe.Pointer(grad), unsafe.Pointer(param), unsafe.Pointer(m), unsafe.Pointer(v), C.float(lr), C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon), unsafe.Pointer(maxSquare))
 	} else {
-		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.float(lr), C.longlong(size),
-			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon), nil)
+		C.Adam(unsafe.Pointer(grad), unsafe.Pointer(param), unsafe.Pointer(m), unsafe.Pointer(v), C.float(lr), C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon), nil)
 	}
+	return 0
 }
 
 // SparseAdam kernel
 func SparseAdam(grad *common.Tensor, param *common.EmbeddingTable, m *common.EmbeddingTable,
 	v *common.EmbeddingTable, lr float32, step int64, beta1 float32, beta2 float32,
-	epsilon float32, amsgrad bool, maxSquare *common.EmbeddingTable) error {
+	epsilon float32, amsgrad bool, maxSquare *common.EmbeddingTable) int {
 	if grad.Indices == nil || len(grad.Dim) != 2 {
-		return fmt.Errorf("grad %s is not row sparse tensor", grad.Name)
+		return 1
 	}
 	if grad.Dim[1] != param.Dim {
-		return fmt.Errorf("grad %s width is not equal to embedding dim", grad.Name)
+		return 2
 	}
 	for i, index := range grad.Indices {
-		subgrad := grad.AtRow(int64(i))
+		subgrad := grad.RowRef(i)
 		subparam := param.GetEmbeddingVector(index)
 		subm := m.GetEmbeddingVector(index)
 		subv := v.GetEmbeddingVector(index)
-		var submaxs *common.Tensor = nil
+		var submaxs *Vector = nil
 		if amsgrad {
 			submaxs = maxSquare.GetEmbeddingVector(index)
 		}
 		Adam(subgrad, subparam, subm, subv, lr, step, beta1, beta2, epsilon, amsgrad, submaxs)
 	}
-	return nil
+	return 0
 }

@@ -34,7 +34,7 @@ func (opt *SGDOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) er
 			if t == nil {
 				return fmt.Errorf("grad %s not in Parameter", grad.Name)
 			}
-			kernel.SGD(grad, t, opt.GetLR())
+			kernel.SGD(grad.Data, t.Data, opt.GetLR())
 		} else {
 			t := p.GetEmbeddingParam(grad.Name)
 			if t == nil {
@@ -65,6 +65,11 @@ type AdamOptimizer struct {
 	maxSquare *Parameter
 }
 
+// GetLR returns learning rate SGD
+func (opt *AdamOptimizer) GetLR() float32 {
+	return opt.lr
+}
+
 // ApplyGradients applies gradients to parameters
 func (opt *AdamOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) error {
 	opt.step++
@@ -78,9 +83,9 @@ func (opt *AdamOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) e
 			}
 			if opt.amsgrad {
 				ms := opt.maxSquare.GetNonEmbeddingParam(grad.Name)
-				kernel.Adam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, true, ms)
+				kernel.Adam(grad.Data, t.Data, m.Data, v.Data, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, true, ms.Data)
 			} else {
-				kernel.Adam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, false, nil)
+				kernel.Adam(grad.Data, t.Data, m.Data, v.Data, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, false, nil)
 			}
 		} else {
 			t := p.GetEmbeddingParam(grad.Name)
@@ -101,7 +106,7 @@ func (opt *AdamOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) e
 }
 
 // NewAdamOptimizer creates a Adam optimizer instance
-func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32, amsgrad bool) *AdamOptimizer {
+func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32, amsgrad bool, dtype common.DataType) *AdamOptimizer {
 	var opt AdamOptimizer
 	opt.lr = lr
 	opt.step = 0
@@ -109,9 +114,9 @@ func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32,
 	opt.beta2 = beta2
 	opt.epsilon = epsilon
 	opt.amsgrad = amsgrad
-	opt.m = NewParameter()
-	opt.v = NewParameter()
-	opt.maxSquare = NewParameter()
+	opt.m = NewParameter(dtype)
+	opt.v = NewParameter(dtype)
+	opt.maxSquare = NewParameter(dtype)
 	return &opt
 }
 
@@ -124,8 +129,8 @@ func (opt *AdamOptimizer) InitEmbeddingParam(name string, dim int64) {
 
 // InitNonEmbeddingParam set m,v,maxSquare non-embedding of AdamOptimizer
 func (opt *AdamOptimizer) InitNonEmbeddingParam(name string, dim []int64) {
-	size := common.GetDimProduct(dim)
-	opt.m.NonEmbeddingParam[name] = &common.Tensor{name, make([]float32, size, size), dim, nil}
-	opt.v.NonEmbeddingParam[name] = &common.Tensor{name, make([]float32, size, size), dim, nil}
-	opt.maxSquare.NonEmbeddingParam[name] = &common.Tensor{name, make([]float32, size, size), dim, nil}
+	size := common.Dim(dim).Product()
+	opt.m.NonEmbeddingParam[name] = common.NewTensor(name, make([]float32, size, size), dim, nil)
+	opt.v.NonEmbeddingParam[name] = common.NewTensor(name, make([]float32, size, size), dim, nil)
+	opt.maxSquare.NonEmbeddingParam[name] = common.NewTensor(name, make([]float32, size, size), dim, nil)
 }
