@@ -13,6 +13,7 @@ RUN apt update && \
 COPY elasticdl/requirements.txt /requirements.txt
 COPY elasticdl/requirements-dev.txt /requirements-dev.txt
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
+ARG GO_MIRROR_URL=https://dl.google.com/go
 RUN pip install -r /requirements.txt --extra-index-url=${EXTRA_PYPI_INDEX}
 RUN pip install -r /requirements-dev.txt --extra-index-url=${EXTRA_PYPI_INDEX}
 
@@ -20,7 +21,7 @@ RUN pip install -r /requirements-dev.txt --extra-index-url=${EXTRA_PYPI_INDEX}
 ENV GOPATH /root/go
 ENV PATH /usr/local/go/bin:$GOPATH/bin:$PATH
 COPY elasticdl/docker/scripts/install-go.bash /
-RUN /install-go.bash && rm /install-go.bash
+RUN /install-go.bash ${GO_MIRROR_URL} && rm /install-go.bash
 
 # Install protobuf and protoc
 COPY elasticdl/docker/scripts/install-protobuf.bash /
