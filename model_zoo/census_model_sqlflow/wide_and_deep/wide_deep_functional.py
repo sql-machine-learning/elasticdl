@@ -12,7 +12,6 @@ from model_zoo.census_model_sqlflow.wide_and_deep.feature_info_util import (
     get_id_boundaries,
 )
 from model_zoo.census_model_sqlflow.wide_and_deep.keras_process_layer import (
-    AddIdOffset,
     CategoryHash,
     CategoryLookup,
     NumericBucket,
