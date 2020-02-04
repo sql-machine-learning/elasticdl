@@ -30,7 +30,7 @@ func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, contex
 func TestPushModel(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	s, gs := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -62,6 +62,33 @@ func TestPushModel(t *testing.T) {
 	assert.Contains(t, s.Param.NonEmbeddingParam, "t2")
 	assert.True(t, common.CompareFloatArray(a, s.Param.GetNonEmbeddingParam("t1").Value, 0.001))
 	assert.True(t, common.CompareFloatArray(b, s.Param.GetNonEmbeddingParam("t2").Value, 0.001))
+	gs.Stop()
+}
+
+func TestPushEmbeddingInfo(t *testing.T) {
+	// Create a PS server
+	serverDone := make(chan bool)
+	s, gs := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	client, ctx, conn, cancel := createClient()
+	defer conn.Close()
+	defer cancel()
+
+	var request pb.Model
+	// embedding table info
+	var epb pb.EmbeddingTableInfo
+	epb.Name = "e1"
+	epb.Dim = 2
+	epb.Initializer = "zero"
+	request.EmbeddingTableInfo = append(request.EmbeddingTableInfo, &epb)
+
+	_, err := client.PushEmbeddingInfo(ctx, &request)
+	if err != nil {
+		t.Errorf("Failed to push embedding vector info")
+	}
+
+	assert.Contains(t, s.Param.EmbeddingParam, "e1")
+	assert.Equal(t, int64(2), s.Param.GetEmbeddingParam("e1").Dim)
+	gs.Stop()
 }
 
 func TestPushEmbeddingInfo(t *testing.T) {
@@ -92,7 +119,7 @@ func TestPushEmbeddingInfo(t *testing.T) {
 func TestPullVariable(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	s, gs := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -143,12 +170,13 @@ func TestPullVariable(t *testing.T) {
 	assert.Contains(t, p.NonEmbeddingParam, "t2")
 	assert.True(t, common.CompareFloatArray(p.GetNonEmbeddingParam("t1").Value, a, 0.0001))
 	assert.True(t, common.CompareFloatArray(p.GetNonEmbeddingParam("t2").Value, b, 0.0001))
+	gs.Stop()
 }
 
 func TestPullEmbeddingVector(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	s, gs := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -181,12 +209,13 @@ func TestPullEmbeddingVector(t *testing.T) {
 	assert.Equal(t, "e1", tensor.Name)
 	assert.Equal(t, ids, tensor.Indices)
 	assert.Equal(t, 6, len(tensor.Value))
+	gs.Stop()
 }
 
 func TestPushGradient(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	s, gs := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -256,4 +285,5 @@ func TestPushGradient(t *testing.T) {
 	expGV1 := []float32{1.0, 2.0, 2.9, 3.8, 5.0, 6.0, 6.7, 7.7}
 	actGV1 := s.Param.GetEmbeddingParam("e1").GetEmbeddingVectors(ei)
 	assert.True(t, common.CompareFloatArray(actGV1.Value, expGV1.Value))
+	gs.Stop()
 }

@@ -105,7 +105,7 @@ func (s *Server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (
 }
 
 // CreateServer creates a PS server and starts the serving. Set serverDone when finishes.
-func CreateServer(address string, PSID int32, opt string, lr float32, serverDone chan bool) *Server {
+func CreateServer(address string, PSID int32, opt string, lr float32, serverDone chan bool) (*Server, *grpc.Server) {
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("failed to start PS: %v", err)
@@ -115,7 +115,7 @@ func CreateServer(address string, PSID int32, opt string, lr float32, serverDone
 	s := NewServer(PSID, opt, lr)
 	pb.RegisterPserverServer(grpcServer, s)
 	go startServe(grpcServer, lis, serverDone)
-	return s
+	return s, grpcServer
 }
 
 func startServe(server *grpc.Server, lis net.Listener, serverDone chan bool) {
