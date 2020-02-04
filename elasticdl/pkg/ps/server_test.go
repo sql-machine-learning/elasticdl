@@ -18,8 +18,6 @@ const (
 	ADDR string = "localhost:12345"
 )
 
-var s *Server
-
 func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, context.CancelFunc) {
 	conn, err := grpc.Dial(ADDR, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
@@ -30,17 +28,10 @@ func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, contex
 	return c, ctx, conn, cancel
 }
 
-func TestMain(m *testing.M) {
+func TestPushModel(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s = CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
-
-	result := m.Run()
-
-	os.Exit(result)
-}
-
-func TestPushModel(t *testing.T) {
+	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -75,6 +66,9 @@ func TestPushModel(t *testing.T) {
 }
 
 func TestPushEmbeddingInfo(t *testing.T) {
+	// Create a PS server
+	serverDone := make(chan bool)
+	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -97,6 +91,9 @@ func TestPushEmbeddingInfo(t *testing.T) {
 }
 
 func TestPullVariable(t *testing.T) {
+	// Create a PS server
+	serverDone := make(chan bool)
+	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -147,6 +144,9 @@ func TestPullVariable(t *testing.T) {
 }
 
 func TestPullEmbeddingVector(t *testing.T) {
+	// Create a PS server
+	serverDone := make(chan bool)
+	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -182,6 +182,9 @@ func TestPullEmbeddingVector(t *testing.T) {
 }
 
 func TestPushGradient(t *testing.T) {
+	// Create a PS server
+	serverDone := make(chan bool)
+	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
