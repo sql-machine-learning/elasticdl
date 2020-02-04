@@ -91,32 +91,6 @@ func TestPushEmbeddingInfo(t *testing.T) {
 	gs.Stop()
 }
 
-func TestPushEmbeddingInfo(t *testing.T) {
-	// Create a PS server
-	serverDone := make(chan bool)
-	s, gs := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
-	client, ctx, conn, cancel := createClient()
-	defer conn.Close()
-	defer cancel()
-
-	var request pb.Model
-	// embedding table info
-	var epb pb.EmbeddingTableInfo
-	epb.Name = "e1"
-	epb.Dim = 2
-	epb.Initializer = "zero"
-	request.EmbeddingTableInfo = append(request.EmbeddingTableInfo, &epb)
-
-	_, err := client.PushEmbeddingInfo(ctx, &request)
-	if err != nil {
-		t.Errorf("Failed to push embedding vector info")
-	}
-
-	assert.Contains(t, s.Param.EmbeddingParam, "e1")
-	assert.Equal(t, int64(2), s.Param.GetEmbeddingParam("e1").Dim)
-	gs.Stop()
-}
-
 func TestPullVariable(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
