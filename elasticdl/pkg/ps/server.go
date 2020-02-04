@@ -90,8 +90,18 @@ func (s *Server) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.Em
 
 // PushGradient pushes gradient to server
 func (s *Server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (*pb.PushGradientResponse, error) {
-	// TODO: implement the service.
-	return &pb.PushGradientResponse{}, nil
+	// TODO(qijun) only support async now
+	var res pb.PushGradientResponse
+	var grads []*common.Tensor
+	for _, gradPB := range in.Gradients {
+		grad := common.DeserializeTensorPB(gradPB)
+		grads = append(grads, grad)
+	}
+	err := s.Opt.ApplyGradients(grads, s.Param)
+	s.Param.Version += int32(1)
+	res.Accepted = true
+	res.ModelVersion = s.Param.Version
+	return &res, err
 }
 
 // CreateServer creates a PS server and starts the serving. Set serverDone when finishes.

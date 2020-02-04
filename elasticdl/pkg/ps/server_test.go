@@ -187,6 +187,33 @@ func TestPushGradient(t *testing.T) {
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
+
+	// non embedding param
+	a := []float32{10.0, 20.0, 30.0}
+	b := []float32{20.0, 40.0, 60.0}
+	d := []int64{1, 3}
+	t1 := common.Tensor{"t1", a, d, nil}
+	t2 := common.Tensor{"t2", b, d, nil}
+
+	// embedding param info
+	var epb pb.EmbeddingTableInfo
+	epb.Name = "e1"
+	epb.Dim = 2
+	epb.Initializer = "zero"
+
+	// push model request
+	var request1 pb.Model
+	request1.EmbeddingTableInfo = append(request1.EmbeddingTableInfo, &epb)
+	request1.Param = append(request1.Param, common.SerializeTensor(&t1))
+	request1.Param = append(request1.Param, common.SerializeTensor(&t2))
+
+	_, err1 := client.PushModel(ctx, &request1)
+	if err1 != nil {
+		t.Errorf("Failed to push model")
+	}
+
+	g1 := []float32{}
+
 	request := pb.PushGradientRequest{}
 	_, err := client.PushGradient(ctx, &request)
 	if err != nil {
