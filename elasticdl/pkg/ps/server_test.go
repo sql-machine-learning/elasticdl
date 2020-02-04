@@ -9,7 +9,6 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"math/rand"
-	"os"
 	"testing"
 	"time"
 )
