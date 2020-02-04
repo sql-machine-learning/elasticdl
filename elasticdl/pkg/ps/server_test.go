@@ -92,7 +92,7 @@ func TestPushEmbeddingInfo(t *testing.T) {
 func TestPullVariable(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	_ := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -145,7 +145,7 @@ func TestPullVariable(t *testing.T) {
 func TestPullEmbeddingVector(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	_ := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
