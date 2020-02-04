@@ -3,10 +3,10 @@ FROM census_income
 TO TRAIN DNNClassifier
 WITH model.hidden_units = [10, 20]
 COLUMN (
-    NUMERIC(age), 
-    NUMERIC(capital_gain), 
-    NUMERIC(capital_loss), 
-    NUMERIC(hours_per_week), 
+    age, 
+    capital_gain, 
+    capital_loss, 
+    hours_per_week, 
     EMBEDDING(HASH(workclass, 64), 16),
     EMBEDDING(HASH(education, 64), 16),
     EMBEDDING(HASH(martial_status, 64), 16),
