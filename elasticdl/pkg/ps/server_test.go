@@ -4,7 +4,6 @@ import (
 	"context"
 	"elasticdl.org/elasticdl/pkg/common"
 	pb "elasticdl.org/elasticdl/pkg/proto"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"log"
@@ -256,7 +255,6 @@ func TestPushGradient(t *testing.T) {
 
 	expGV1 := []float32{1.0, 2.0, 2.9, 3.8, 5.0, 6.0, 6.7, 7.7}
 	actGV1 := s.Param.GetEmbeddingParam("e1").GetEmbeddingVectors(ei)
-	fmt.Println(actGV1.Value)
 	assert.True(t, common.CompareFloatArray(actGV1.Value, expGV1, 0.0001))
 	gs.Stop()
 }
