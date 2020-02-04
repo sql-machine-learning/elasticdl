@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from model_zoo.census_model_sqlflow.wide_and_deep.feature_config import (
+from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
     CATEGORICAL_FEATURE_KEYS,
     FEATURE_GROUPS,
     LABEL_KEY,
@@ -8,10 +8,10 @@ from model_zoo.census_model_sqlflow.wide_and_deep.feature_config import (
     NUMERIC_FEATURE_KEYS,
     TransformOp,
 )
-from model_zoo.census_model_sqlflow.wide_and_deep.feature_info_util import (
+from model_zoo.census_model_sqlflow.wide_and_deep.feature_info_utils import (
     get_id_boundaries,
 )
-from model_zoo.census_model_sqlflow.wide_and_deep.keras_process_layer import (
+from model_zoo.census_model_sqlflow.wide_and_deep.keras_process_layers import (
     CategoryHash,
     CategoryLookup,
     NumericBucket,

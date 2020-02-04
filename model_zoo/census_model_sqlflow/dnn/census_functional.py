@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.python.keras.metrics import accuracy
 
-from model_zoo.census_model_sqlflow.dnn.census_feature_columns import (
+from model_zoo.census_model_sqlflow.dnn.census_feature_column import (
     get_feature_columns,
     get_feature_input_layers,
 )
