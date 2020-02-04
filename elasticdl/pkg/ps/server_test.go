@@ -94,7 +94,7 @@ func TestPushEmbeddingInfo(t *testing.T) {
 func TestPushEmbeddingInfo(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
+	s, gs := CreateServer(ADDR, 0, "SGD", 0.1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -114,6 +114,7 @@ func TestPushEmbeddingInfo(t *testing.T) {
 
 	assert.Contains(t, s.Param.EmbeddingParam, "e1")
 	assert.Equal(t, int64(2), s.Param.GetEmbeddingParam("e1").Dim)
+	gs.Stop()
 }
 
 func TestPullVariable(t *testing.T) {
@@ -266,7 +267,7 @@ func TestPushGradient(t *testing.T) {
 	request2.Gradients = append(request2.Gradients, common.SerializeTensor(&g2))
 	request2.Gradients = append(request2.Gradients, common.SerializeTensor(&eg1))
 
-	res1, err2 := client.PushGradient(ctx, &request)
+	res1, err2 := client.PushGradient(ctx, &request2)
 	if err2 != nil {
 		t.Errorf("Failed to pull gradients")
 	}
@@ -279,11 +280,11 @@ func TestPushGradient(t *testing.T) {
 	assert.Contains(t, s.Param.EmbeddingParam, "e1")
 	exptV1 := []float32{9.9, 19.8, 29.7}
 	exptV2 := []float32{19.8, 39.6, 59.4}
-	assert.True(t, common.CompareFloatArray(s.Param.GetNonEmbeddingParam("t1").Value, exptV1))
-	assert.True(t, common.CompareFloatArray(s.Param.GetNonEmbeddingParam("t2").Value, exptV2))
+	assert.True(t, common.CompareFloatArray(s.Param.GetNonEmbeddingParam("t1").Value, exptV1, 0.0001))
+	assert.True(t, common.CompareFloatArray(s.Param.GetNonEmbeddingParam("t2").Value, exptV2, 0.0001))
 
 	expGV1 := []float32{1.0, 2.0, 2.9, 3.8, 5.0, 6.0, 6.7, 7.7}
 	actGV1 := s.Param.GetEmbeddingParam("e1").GetEmbeddingVectors(ei)
-	assert.True(t, common.CompareFloatArray(actGV1.Value, expGV1.Value))
+	assert.True(t, common.CompareFloatArray(actGV1.Value, expGV1, 0.0001))
 	gs.Stop()
 }
