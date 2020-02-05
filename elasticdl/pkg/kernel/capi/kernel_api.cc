@@ -73,7 +73,9 @@ void (*AddToFunc[])(void*, void*, long long) = {NULL,
                                                 AddToFloat64,
                                                 NULL};
 
-void AddTo(void* a, void* b, long long size, int dtypeFlag) {}
+void AddTo(void* a, void* b, long long size, int dtypeFlag) {
+  AddToFunc[dtypeFlag](a, b, size);
+}
 
 void SGDFloat32(void* grad, void* param, float lr, long long size) {
   Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> eg{
