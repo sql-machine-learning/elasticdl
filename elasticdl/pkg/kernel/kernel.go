@@ -66,14 +66,50 @@ func adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common
 	}
 }
 
+func addTo(a *common.Tensor, b *common.Tensor) {
+    aPtr := (*C.float)(unsafe.Pointer(&a.Value[0]))
+    bPtr := (*C.float)(unsafe.Pointer(&b.Value[0]))
+    size := C.longlong(len(a.Value))
+    C.AddTo(aPtr, bPtr, size)
+}
+
+func removeDuplicateElement(indices []int64) map[int64]int {
+    result := make(map[int64]int)
+    row := make([]int64, 0, len(indices))
+    i := 0
+    temp := map[int64]struct{}{}
+    for _, item := range indices {
+        if _, ok := temp[item]; !ok {
+            temp[item] = struct{}{}
+            result[item] = i
+            i += 1
+        }
+    }
+    return result
+}
+
+func mergeIndexedSlices(grad *common.Tensor) *common.Tensor {
+    uniqueIndices, row = removeDuplicateElement(grad.Indices)
+    newD := {int64(len(uniqueIndices), grad.Dim[1]}
+    t := NewTensor(newD)
+    t.Indices = uniqueIndices
+    for i, index := range grad.Indices {
+        subA := t.AtRow(row[index])
+        subB := grad.AtRow(i)
+        addTo(subA, subB)
+    }
+    return t
+}
+
 // Adam kernel
 func Adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common.Tensor,
 	lr float32, step int64, beta1 float32, beta2 float32,
 	epsilon float32, amsgrad bool, maxSquare *common.Tensor) {
 	// support tf.IndexedSlices gradient for dense param
 	if grad.Indices != nil {
-		for i, index := range grad.Indices {
-			subGrad := grad.AtRow(int64(i))
+        newGrad := mergeIndexedSlices(grad)
+		for i, index := range newGrad.Indices {
+			subGrad := newGrad.AtRow(int64(i))
 			subParam := param.AtRow(index)
 			subM := m.AtRow(index)
 			subV := v.AtRow(index)
