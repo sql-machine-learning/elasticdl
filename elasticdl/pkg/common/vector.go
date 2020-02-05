@@ -6,7 +6,6 @@ import (
 	"math"
 	"reflect"
 	"unsafe"
-	//"fmt"
 )
 
 // DataType definition

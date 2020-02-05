@@ -79,7 +79,7 @@ func TestVector(t *testing.T) {
 	oriVecInplcaeSlice := oriVec.InplaceSlice().([]float64)
 	assert.True(t, CompareFloatArray(oriVecInplcaeSlice, oriExpected, 0.00001), "SubVectorRef Fail")
 
-	// test SubVectorRef
+	// test SubVector
 	oriVecSub := oriVec.SubVector(2, 3)
 	oriVecSubInplceSlice := oriVecSub.InplaceSlice().([]float64)
 	subExpected := []float64{3, 9.9, 5}
