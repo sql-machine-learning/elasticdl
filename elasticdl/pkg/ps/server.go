@@ -15,20 +15,16 @@ type Server struct {
 	pb.PserverServer
 	Param *Parameter
 	Opt   Optimizer
-	PSID  int32
-	lock  *sync.Mutex
+	ID    int
+	lock  sync.Mutex
 }
 
 // NewServer creates a Server instance
-func NewServer(PSID int32, opt string, lr float32) *Server {
-	var ps Server
-	ps.Param = NewParameter()
-	if opt == "SGD" {
-		ps.Opt = NewSGDOptimizer(lr)
-	}
-	ps.PSID = PSID
-	ps.lock = &sync.Mutex{}
-	return &ps
+func NewServer(ID int, opt string, lr float32) *Server {
+	return &Server{
+		Param: NewParameter(),
+		Opt:   NewOptimizer(opt, lr),
+		ID:    ID}
 }
 
 // PullVariable pulls variable from server
@@ -72,14 +68,14 @@ func (s *Server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (
 }
 
 // CreateServer creates a PS server and starts the serving. Set serverDone when finishes.
-func CreateServer(address string, PSID int32, opt string, lr float32, serverDone chan bool) *Server {
+func CreateServer(address string, ID int, opt string, lr float32, serverDone chan bool) *Server {
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("failed to start PS: %v", err)
 	}
 	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
 	grpcServer := grpc.NewServer()
-	s := NewServer(PSID, opt, lr)
+	s := NewServer(ID, opt, lr)
 	pb.RegisterPserverServer(grpcServer, s)
 	go startServe(grpcServer, lis, serverDone)
 	return s

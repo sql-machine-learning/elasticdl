@@ -129,3 +129,12 @@ func (opt *AdamOptimizer) InitNonEmbeddingParam(name string, dim []int64) {
 	opt.v.NonEmbeddingParam[name] = &common.Tensor{name, make([]float32, size, size), dim, nil}
 	opt.maxSquare.NonEmbeddingParam[name] = &common.Tensor{name, make([]float32, size, size), dim, nil}
 }
+
+// NewOptimizer creates an optimizer instance
+func NewOptimizer(opt string, lr float32) Optimizer {
+	// TODO(qijun) only support SGD now
+	if opt == "SGD" {
+		return NewSGDOptimizer(lr)
+	}
+	return nil
+}
