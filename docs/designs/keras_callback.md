@@ -35,6 +35,7 @@ Some use cases we observed that we want to support are:
 * Callback to modulate learning rate as we are currently doing in `LearningRateScheduler`.
 * Callback for logic to be executed before training starts such as starting embedding service.
 * Callback to perform early stopping when certain conditions are met.
+* Callback to upload model to remote storage after completing training.
 
 
 To implement callbacks, we need to solve the following problems:
