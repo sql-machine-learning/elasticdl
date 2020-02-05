@@ -30,18 +30,16 @@ func (opt *SGDOptimizer) GetLR() float32 {
 // ApplyGradients applies gradients to parameters
 func (opt *SGDOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) error {
 	for _, grad := range grads {
-		if grad.Indices == nil {
-			t := p.GetNonEmbeddingParam(grad.Name)
-			if t == nil {
-				return fmt.Errorf("grad %s not in Parameter", grad.Name)
-			}
-			kernel.SGD(grad, t, opt.GetLR())
+		nonEmbeddingT := p.GetNonEmbeddingParam(grad.Name)
+		if nonEmbeddingT != nil {
+			kernel.SGD(grad, nonEmbeddingT, opt.GetLR())
 		} else {
-			t := p.GetEmbeddingParam(grad.Name)
-			if t == nil {
+			embeddingT := p.GetEmbeddingParam(grad.Name)
+			if embeddingT != nil {
+				kernel.SparseSGD(grad, embeddingT, opt.GetLR())
+			} else {
 				return fmt.Errorf("grad %s not in Parameter", grad.Name)
 			}
-			kernel.SparseSGD(grad, t, opt.GetLR())
 		}
 	}
 	return nil
@@ -75,31 +73,33 @@ func (opt *AdamOptimizer) GetLR() float32 {
 func (opt *AdamOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) error {
 	opt.step++
 	for _, grad := range grads {
-		if grad.Indices == nil {
-			t := p.GetNonEmbeddingParam(grad.Name)
+		nonEmbeddingT := p.GetNonEmbeddingParam(grad.Name)
+		if nonEmbeddingT != nil {
 			m := opt.m.GetNonEmbeddingParam(grad.Name)
 			v := opt.v.GetNonEmbeddingParam(grad.Name)
-			if t == nil || m == nil || v == nil {
-				return fmt.Errorf("grad %s not in Parameter", grad.Name)
-			}
 			if opt.amsgrad {
 				ms := opt.maxSquare.GetNonEmbeddingParam(grad.Name)
-				kernel.Adam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, true, ms)
+				kernel.Adam(grad, nonEmbeddingT, m, v, opt.lr, opt.step,
+					opt.beta1, opt.beta2, opt.epsilon, true, ms)
 			} else {
-				kernel.Adam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, false, nil)
+				kernel.Adam(grad, nonEmbeddingT, m, v, opt.lr, opt.step,
+					opt.beta1, opt.beta2, opt.epsilon, false, nil)
 			}
 		} else {
-			t := p.GetEmbeddingParam(grad.Name)
-			m := opt.m.GetEmbeddingParam(grad.Name)
-			v := opt.v.GetEmbeddingParam(grad.Name)
-			if t == nil || m == nil || v == nil {
-				return fmt.Errorf("grad %s not in Parameter", grad.Name)
-			}
-			if opt.amsgrad {
-				ms := opt.maxSquare.GetEmbeddingParam(grad.Name)
-				kernel.SparseAdam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, true, ms)
+			embeddingT := p.GetEmbeddingParam(grad.Name)
+			if embeddingT != nil {
+				m := opt.m.GetEmbeddingParam(grad.Name)
+				v := opt.v.GetEmbeddingParam(grad.Name)
+				if opt.amsgrad {
+					ms := opt.maxSquare.GetEmbeddingParam(grad.Name)
+					kernel.SparseAdam(grad, embeddingT, m, v, opt.lr, opt.step,
+						opt.beta1, opt.beta2, opt.epsilon, true, ms)
+				} else {
+					kernel.SparseAdam(grad, embeddingT, m, v, opt.lr, opt.step,
+						opt.beta1, opt.beta2, opt.epsilon, false, nil)
+				}
 			} else {
-				kernel.SparseAdam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, false, nil)
+				return fmt.Errorf("grad %s not in Parameter", grad.Name)
 			}
 		}
 	}
