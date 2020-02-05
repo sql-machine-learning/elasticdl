@@ -7,7 +7,7 @@ from model_zoo.census_model_sqlflow.dnn.census_feature_column import (
 )
 
 # The model definition from model zoo
-# Inputs:
+# Input Params:
 #   feature_columns: The feature column array. It can be  generated from `COLUMN` clause.
 #   feature_input_layers: The input layers specify the feature inputs.
 def custom_model_def(feature_columns, feature_input_layers):

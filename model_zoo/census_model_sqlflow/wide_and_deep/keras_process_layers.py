@@ -52,22 +52,6 @@ class CategoryLookup(tf.keras.layers.Layer):
         return tf.cast(table.lookup(inputs), tf.int64)
 
 
-class AddIdOffset(tf.keras.layers.Layer):
-    def __init__(self, offsets):
-        super(AddIdOffset, self).__init__()
-        self.offsets = offsets
-
-    def call(self, inputs):
-        ids_with_offset = []
-        if len(self.offsets) != len(inputs):
-            raise ValueError(
-                "The number of elements in offsets is not equal to inputs"
-            )
-        for i, value in enumerate(inputs):
-            ids_with_offset.append(value + self.offsets[i])
-        return ids_with_offset
-
-
 class Group(tf.keras.layers.Layer):
     def __init__(self, offsets):
         super(Group, self).__init__()
@@ -75,7 +59,7 @@ class Group(tf.keras.layers.Layer):
 
     def call(self, inputs):
         if self.offsets is None:
-            return tf.keras.layers.concatenate(inputs, axis=-1)
+            return tf.keras.backend.stack(inputs, axis=1)
 
         ids_with_offset = []
         if len(self.offsets) != len(inputs):
@@ -85,4 +69,4 @@ class Group(tf.keras.layers.Layer):
         for i, value in enumerate(inputs):
             ids_with_offset.append(value + self.offsets[i])
 
-        return tf.keras.layers.concatenate(ids_with_offset, axis=-1)
+        return tf.keras.backend.stack(ids_with_offset, axis=1)
