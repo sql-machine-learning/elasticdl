@@ -7,14 +7,27 @@ import "unsafe"
 import "elasticdl.org/elasticdl/pkg/common"
 import "fmt"
 
-// SGD kernel
-func SGD(grad *common.Vector, param *common.Vector, lr float32) error {
+func sgd(grad *common.Vector, param *common.Vector, lr float32) error {
 	if grad.Length != param.Length {
 		return fmt.Errorf("grad Value size not equal to param")
 	}
 	gradPtr := unsafe.Pointer(&grad.Data[0])
 	paramPtr := unsafe.Pointer(&param.Data[0])
 	C.SGD(gradPtr, paramPtr, C.float(lr), C.longlong(grad.Length), C.int(grad.Dtype.Flag))
+	return nil
+}
+
+// SGD kernel
+func SGD(grad *common.Tensor, param *common.Tensor, lr float32) error {
+	if grad.Indices != nil {
+		for i, index := range grad.Indices {
+			subParam := param.RowRef(int(index))
+			subGrad := grad.RowRef(i)
+			sgd(subParam, subGrad, lr)
+		}
+		return nil
+	}
+	sgd(grad.Data, param.Data, lr)
 	return nil
 }
 
@@ -29,20 +42,19 @@ func SparseSGD(grad *common.Tensor, param *common.EmbeddingTable, lr float32) er
 	for i, index := range grad.Indices {
 		vector := param.GetEmbeddingVector(index)
 		subgrad := grad.RowRef(i)
-		SGD(subgrad, vector, lr)
+		sgd(subgrad, vector, lr)
 	}
 	return nil
 }
 
-// Adam kernel
-func Adam(grad *common.Vector, param *common.Vector, m *common.Vector, v *common.Vector,
+func adam(grad *common.Vector, param *common.Vector, m *common.Vector, v *common.Vector,
 	lr float32, step int64, beta1 float32, beta2 float32,
-	epsilon float32, amsgrad bool, maxSquare *common.Vector) {
+	epsilon float32, maxSquare *common.Vector) error {
 	gradPtr := unsafe.Pointer(&grad.Data[0])
 	paramPtr := unsafe.Pointer(&param.Data[0])
 	mPtr := unsafe.Pointer(&m.Data[0])
 	vPtr := unsafe.Pointer(&v.Data[0])
-	if amsgrad {
+	if maxSquare != nil {
 		maxSquarePtr := unsafe.Pointer(&maxSquare.Data[0])
 		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.float(lr), C.longlong(grad.Length),
 			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon),
@@ -52,6 +64,33 @@ func Adam(grad *common.Vector, param *common.Vector, m *common.Vector, v *common
 			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon), nil,
 			C.int(grad.Dtype.Flag))
 	}
+	return nil
+}
+
+// Adam kernel
+func Adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common.Tensor,
+	lr float32, step int64, beta1 float32, beta2 float32,
+	epsilon float32, amsgrad bool, maxSquare *common.Tensor) error {
+	if grad.Indices != nil {
+		for i, index := range grad.Indices {
+			subGrad := grad.RowRef(i)
+			subParam := param.RowRef(int(index))
+			subM := m.RowRef(int(index))
+			subV := v.RowRef(int(index))
+			var subMs *common.Vector = nil
+			if amsgrad {
+				subMs = maxSquare.RowRef(int(index))
+			}
+			adam(subGrad, subParam, subM, subV, lr, step, beta1, beta2, epsilon, subMs)
+		}
+		return nil
+	}
+	if amsgrad {
+		adam(grad.Data, param.Data, m.Data, v.Data, lr, step, beta1, beta2, epsilon, maxSquare.Data)
+	} else {
+		adam(grad.Data, param.Data, m.Data, v.Data, lr, step, beta1, beta2, epsilon, nil)
+	}
+	return nil
 }
 
 // SparseAdam kernel
@@ -73,7 +112,7 @@ func SparseAdam(grad *common.Tensor, param *common.EmbeddingTable, m *common.Emb
 		if amsgrad {
 			submaxs = maxSquare.GetEmbeddingVector(index)
 		}
-		Adam(subgrad, subparam, subm, subv, lr, step, beta1, beta2, epsilon, amsgrad, submaxs)
+		adam(subgrad, subparam, subm, subv, lr, step, beta1, beta2, epsilon, submaxs)
 	}
 	return nil
 }

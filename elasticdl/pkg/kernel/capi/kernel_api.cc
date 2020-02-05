@@ -3,6 +3,78 @@
 #include <cmath>
 #include <eigen3/Eigen/Dense>
 
+void AddToInt8(void* a, void* b, long long size) {
+  Eigen::Map<Eigen::Array<char, 1, Eigen::Dynamic>> ea{
+      (char*)a, static_cast<Eigen::Index>(size)};
+
+  Eigen::Map<Eigen::Array<char, 1, Eigen::Dynamic>> eb{
+      (char*)b, static_cast<Eigen::Index>(size)};
+
+  ea += eb;
+}
+
+void AddToInt16(void* a, void* b, long long size) {
+  Eigen::Map<Eigen::Array<short, 1, Eigen::Dynamic>> ea{
+      (short*)a, static_cast<Eigen::Index>(size)};
+
+  Eigen::Map<Eigen::Array<short, 1, Eigen::Dynamic>> eb{
+      (short*)b, static_cast<Eigen::Index>(size)};
+
+  ea += eb;
+}
+
+void AddToInt32(void* a, void* b, long long size) {
+  Eigen::Map<Eigen::Array<int, 1, Eigen::Dynamic>> ea{
+      (int*)a, static_cast<Eigen::Index>(size)};
+
+  Eigen::Map<Eigen::Array<int, 1, Eigen::Dynamic>> eb{
+      (int*)b, static_cast<Eigen::Index>(size)};
+
+  ea += eb;
+}
+
+void AddToInt64(void* a, void* b, long long size) {
+  Eigen::Map<Eigen::Array<long long, 1, Eigen::Dynamic>> ea{
+      (long long*)a, static_cast<Eigen::Index>(size)};
+
+  Eigen::Map<Eigen::Array<long long, 1, Eigen::Dynamic>> eb{
+      (long long*)b, static_cast<Eigen::Index>(size)};
+
+  ea += eb;
+}
+
+void AddToFloat32(void* a, void* b, long long size) {
+  Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> ea{
+      (float*)a, static_cast<Eigen::Index>(size)};
+
+  Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> eb{
+      (float*)b, static_cast<Eigen::Index>(size)};
+
+  ea += eb;
+}
+
+void AddToFloat64(void* a, void* b, long long size) {
+  Eigen::Map<Eigen::Array<double, 1, Eigen::Dynamic>> ea{
+      (double*)a, static_cast<Eigen::Index>(size)};
+
+  Eigen::Map<Eigen::Array<double, 1, Eigen::Dynamic>> eb{
+      (double*)b, static_cast<Eigen::Index>(size)};
+
+  ea += eb;
+}
+
+void (*AddToFunc[])(void*, void*, long long) = {NULL,
+                                                AddToInt8,
+                                                AddToInt16,
+                                                AddToInt32,
+                                                AddToInt64,
+                                                NULL,
+                                                AddToFloat32,
+                                                AddToFloat64,
+                                                NULL};
+
+void AddTo(void* a, void* b, long long size, int dtypeFlag) {}
+
 void SGDFloat32(void* grad, void* param, float lr, long long size) {
   Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> eg{
       (float*)grad, static_cast<Eigen::Index>(size)};

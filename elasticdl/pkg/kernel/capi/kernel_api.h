@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+void AddTo(void* a, void* b, long long size, int dtypeFlag);
+
 void SGD(void* grad, void* param, float lr, long long size, int dtypeFlag);
 
 void Adam(void* grad,

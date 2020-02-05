@@ -28,7 +28,7 @@ func TestSGD(t *testing.T) {
 		expected[i] = b[i] - lr*a[i]
 	}
 
-	err := SGD(grad.Data, param.Data, lr)
+	err := SGD(grad, param, lr)
 	assert.Nil(t, err)
 	assert.Equal(t, expected, b)
 }
@@ -101,7 +101,7 @@ func TestAdam(t *testing.T) {
 				epsilon)
 	}
 
-	Adam(grad.Data, param.Data, m.Data, v.Data, lr, step, beta1, beta2,
+	Adam(grad, param, m, v, lr, step, beta1, beta2,
 		epsilon, false, nil)
 
 	assert.True(t, common.CompareFloatArray(expectedM, m.InplaceSlice().([]float32), 0.0001))
@@ -140,8 +140,8 @@ func TestAdamWithAmsgrad(t *testing.T) {
 				epsilon)
 	}
 
-	Adam(grad.Data, param.Data, m.Data, v.Data, lr, step, beta1, beta2,
-		epsilon, true, maxSquare.Data)
+	Adam(grad, param, m, v, lr, step, beta1, beta2,
+		epsilon, true, maxSquare)
 
 	assert.True(t, common.CompareFloatArray(expectedM, m.InplaceSlice().([]float32), 0.00001))
 	assert.True(t, common.CompareFloatArray(expectedV, v.InplaceSlice().([]float32), 0.00001))

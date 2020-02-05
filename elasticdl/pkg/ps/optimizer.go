@@ -35,7 +35,7 @@ func (opt *SGDOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) er
 			if t == nil {
 				return fmt.Errorf("grad %s not in Parameter", grad.Name)
 			}
-			kernel.SGD(grad.Data, t.Data, opt.GetLR())
+			kernel.SGD(grad, t, opt.GetLR())
 		} else {
 			t := p.GetEmbeddingParam(grad.Name)
 			if t == nil {
@@ -84,9 +84,9 @@ func (opt *AdamOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) e
 			}
 			if opt.amsgrad {
 				ms := opt.maxSquare.GetNonEmbeddingParam(grad.Name)
-				kernel.Adam(grad.Data, t.Data, m.Data, v.Data, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, true, ms.Data)
+				kernel.Adam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, true, ms)
 			} else {
-				kernel.Adam(grad.Data, t.Data, m.Data, v.Data, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, false, nil)
+				kernel.Adam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, false, nil)
 			}
 		} else {
 			t := p.GetEmbeddingParam(grad.Name)
