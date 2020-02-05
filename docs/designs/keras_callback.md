@@ -114,10 +114,25 @@ The parameter server only updates the gradients for each batch during training, 
 call the methods per batch for test and prediction. 
 ```python
 def update_parameter_for_batch(gradients, model_version):
-    callback_list.on_train_begin(self, batch=model_version) # model_version is the iteration number during training.
+    callback_list.on_train_batch_begin(self, batch=model_version) # model_version is the iteration number during training.
     update_gradient(gradients)
-    callback_list.on_train_end(self, batch=model_vesion)
+    callback_list.on_train_batch_end(self, batch=model_vesion)
 ```
+
+The worker and parameter server will both call the `on_train_batch_begin|end` and per batch. So, the 2 methods will be called twice and can be called by either worker or parameter server. For example, the `on_train_batch_begin` of `LearningRateScheduler` can only be called by parameter server to adjust the learning rate for each batch. There are 2 proposals to solve the problem.
+
+1. Only the parameter server calls `on_train_batch_begin|end` and the worker doesn't. Because, we 
+have not observed a use case for callback to execute per batch by the worker.
+
+2. ElasticDL sets an argmuent `instance_role` in `params` of each callback and users get the `instance_role` in `on_train_batch_begin|end`. It may need users to understand why to get the `instance_role`.
+```python
+class LearningRateScheduler(tf.keras.callbacks.Callback):
+    def on_train_batch_begin(self, batch, logs=None):
+        instance_role = self.params.get("instance_role", None)
+        if instance_role != "ParameterServer":
+            return
+```
+
 
 ### Call Methods of Callback Per Epoch
 
