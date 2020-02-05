@@ -236,7 +236,7 @@ wide_embeddings = FeatureTransformInfo(
     "wide_embeddings",
     TransformOp.ARRAY,
     None,
-    None
+    None,
 )
 
 deep_embeddings = FeatureTransformInfo(
@@ -249,7 +249,7 @@ deep_embeddings = FeatureTransformInfo(
     "deep_embeddings",
     TransformOp.ARRAY,
     None,
-    None
+    None,
 )
 
 TRANSFORM_OUTPUTS = ["wide_embeddings", "deep_embeddings"]
@@ -277,12 +277,12 @@ FEATURE_TRANSFORM_INFO_EXECUTE_ARRAY = [
     group2_embedding_deep,
     group3_embedding_deep,
     wide_embeddings,
-    deep_embeddings
+    deep_embeddings,
 ]
 
-# The schema information can be gotten from the 
+# The schema information can be gotten from the
 # source table in SQLFlow statement
-# For example, {table_name} from 
+# For example, {table_name} from
 # SELECT * FROM {table_name}
 INPUT_SCHEMAS = [
     SchemaInfo("education", tf.string),
@@ -296,5 +296,5 @@ INPUT_SCHEMAS = [
     SchemaInfo("age", tf.float32),
     SchemaInfo("capital_gain", tf.float32),
     SchemaInfo("capital_loss", tf.float32),
-    SchemaInfo("hours_per_week", tf.float32)
+    SchemaInfo("hours_per_week", tf.float32),
 ]

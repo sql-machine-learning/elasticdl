@@ -6,11 +6,12 @@ from model_zoo.census_model_sqlflow.dnn.census_feature_column import (
     get_feature_input_layers,
 )
 
+
 # The model definition from model zoo
 # Input Params:
 #   feature_columns: The feature column array. It can be  generated from `COLUMN` clause.
 #   feature_input_layers: The input layers specify the feature inputs.
-def custom_model_def(feature_columns, feature_input_layers):
+def dnn_classifier(feature_columns, feature_input_layers):
     feature_layer = tf.keras.layers.DenseFeatures(feature_columns)
     x = feature_layer(feature_input_layers)
     x = tf.keras.layers.Dense(16, activation="relu")(x)
@@ -27,7 +28,7 @@ def custom_model():
     feature_columns = get_feature_columns()
     feature_input_layers = get_feature_input_layers()
 
-    return custom_model_def(
+    return dnn_classifier(
         feature_columns=feature_columns,
         feature_input_layers=feature_input_layers,
     )

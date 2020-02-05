@@ -1,32 +1,33 @@
 import itertools
+
 import tensorflow as tf
 
 from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
-    education_hash,
-    occupation_hash,
-    native_country_hash,
-    workclass_lookup,
-    marital_status_lookup,
-    relationship_lookup,
-    race_lookup,
-    sex_lookup,
-    age_bucketize,
-    capital_gain_bucketize,
-    capital_loss_bucketize,
-    hours_per_week_bucketize,
-    group1,
-    group2,
-    group3,
-    group1_embedding_wide,
-    group2_embedding_wide,
-    group1_embedding_deep,
-    group2_embedding_deep,
-    group3_embedding_deep,
-    wide_embeddings,
-    deep_embeddings,
     FEATURE_TRANSFORM_INFO_EXECUTE_ARRAY,
     INPUT_SCHEMAS,
     TRANSFORM_OUTPUTS,
+    age_bucketize,
+    capital_gain_bucketize,
+    capital_loss_bucketize,
+    deep_embeddings,
+    education_hash,
+    group1,
+    group1_embedding_deep,
+    group1_embedding_wide,
+    group2,
+    group2_embedding_deep,
+    group2_embedding_wide,
+    group3,
+    group3_embedding_deep,
+    hours_per_week_bucketize,
+    marital_status_lookup,
+    native_country_hash,
+    occupation_hash,
+    race_lookup,
+    relationship_lookup,
+    sex_lookup,
+    wide_embeddings,
+    workclass_lookup,
 )
 from model_zoo.census_model_sqlflow.wide_and_deep.feature_info_utils import (
     FeatureTransformInfo,
@@ -40,12 +41,13 @@ from model_zoo.census_model_sqlflow.wide_and_deep.keras_process_layers import (
     NumericBucket,
 )
 
+
 # The model definition from model zoo. It's functional style.
 # Input Params:
 #   input_layers: The input layers dict of feature inputs
 #   wide_embeddings: The embedding list for the wide part
 #   deep_embeddings: The embedding list for the deep part
-def wide_deep_model(input_layers, wide_embeddings, deep_embeddings):
+def wide_and_deep_classifier(input_layers, wide_embeddings, deep_embeddings):
     # Wide Part
     wide = tf.keras.layers.Concatenate()(wide_embeddings)  # shape = (None, 3)
 
@@ -66,14 +68,15 @@ def wide_deep_model(input_layers, wide_embeddings, deep_embeddings):
         name="wide_deep",
     )
 
+
 # Build the input layers from the schema of the input features
 def get_input_layers(input_schemas):
     input_layers = {}
 
     for schema_info in input_schemas:
         input_layers[schema_info.name] = tf.keras.layers.Input(
-                name=schema_info.name, shape=(1,), dtype=schema_info.dtype
-            )
+            name=schema_info.name, shape=(1,), dtype=schema_info.dtype
+        )
 
     return input_layers
 
@@ -99,7 +102,9 @@ def transform(inputs):
             group_inputs = [
                 transformed[name] for name in feature_transform_info.input_name
             ]
-            offsets = list(itertools.accumulate([0] + feature_transform_info.param[:-1]))
+            offsets = list(
+                itertools.accumulate([0] + feature_transform_info.param[:-1])
+            )
             transformed[feature_transform_info.output_name] = Group(None)(
                 group_inputs
             )
@@ -107,17 +112,20 @@ def transform(inputs):
             # The num_buckets should be calcualte from the group items
             group_identity = tf.feature_column.categorical_column_with_identity(
                 feature_transform_info.input_name,
-                num_buckets=feature_transform_info.param[0]
+                num_buckets=feature_transform_info.param[0],
             )
             group_embedding = tf.feature_column.embedding_column(
-                group_identity,
-                dimension=feature_transform_info.param[1]
+                group_identity, dimension=feature_transform_info.param[1]
             )
-            transformed[feature_transform_info.output_name] = tf.keras.layers.DenseFeatures(
-                [group_embedding]
-            )({
-                feature_transform_info.input_name: transformed[feature_transform_info.input_name]
-            })
+            transformed[
+                feature_transform_info.output_name
+            ] = tf.keras.layers.DenseFeatures([group_embedding])(
+                {
+                    feature_transform_info.input_name: transformed[
+                        feature_transform_info.input_name
+                    ]
+                }
+            )
         elif feature_transform_info.op_name == TransformOp.ARRAY:
             transformed[feature_transform_info.output_name] = [
                 transformed[name] for name in feature_transform_info.input_name
@@ -131,67 +139,118 @@ def transform(inputs):
 def transform_from_code_gen(source_inputs):
     inputs = source_inputs.copy()
 
-    education_hash_out = CategoryHash(education_hash.param)(inputs["education"])
-    occupation_hash_out = CategoryHash(occupation_hash.param)(inputs["occupation"])
-    native_country_hash_out = CategoryHash(native_country_hash.param)(inputs["native_country"])
-    workclass_lookup_out = CategoryLookup(workclass_lookup.param)(inputs["workclass"])
-    marital_status_lookup_out = CategoryLookup(marital_status_lookup.param)(inputs["marital_status"])
-    relationship_lookup_out = CategoryLookup(relationship_lookup.param)(inputs["relationship"])
+    education_hash_out = CategoryHash(education_hash.param)(
+        inputs["education"]
+    )
+    occupation_hash_out = CategoryHash(occupation_hash.param)(
+        inputs["occupation"]
+    )
+    native_country_hash_out = CategoryHash(native_country_hash.param)(
+        inputs["native_country"]
+    )
+    workclass_lookup_out = CategoryLookup(workclass_lookup.param)(
+        inputs["workclass"]
+    )
+    marital_status_lookup_out = CategoryLookup(marital_status_lookup.param)(
+        inputs["marital_status"]
+    )
+    relationship_lookup_out = CategoryLookup(relationship_lookup.param)(
+        inputs["relationship"]
+    )
     race_lookup_out = CategoryLookup(race_lookup.param)(inputs["race"])
     sex_lookup_out = CategoryLookup(sex_lookup.param)(inputs["sex"])
     age_bucketize_out = NumericBucket(age_bucketize.param)(inputs["age"])
-    capital_gain_bucketize_out = NumericBucket(capital_gain_bucketize.param)(inputs["capital_gain"])
-    capital_loss_bucketize_out = NumericBucket(capital_loss_bucketize.param)(inputs["capital_loss"])
-    hours_per_week_bucketize_out = NumericBucket(hours_per_week_bucketize.param)(inputs["hours_per_week"])
+    capital_gain_bucketize_out = NumericBucket(capital_gain_bucketize.param)(
+        inputs["capital_gain"]
+    )
+    capital_loss_bucketize_out = NumericBucket(capital_loss_bucketize.param)(
+        inputs["capital_loss"]
+    )
+    hours_per_week_bucketize_out = NumericBucket(
+        hours_per_week_bucketize.param
+    )(inputs["hours_per_week"])
 
-    group1_out = Group(group1.param)([workclass_lookup_out, hours_per_week_bucketize_out, capital_gain_bucketize_out, capital_loss_bucketize_out])
-    group2_out = Group(group2.param)([education_hash_out, marital_status_lookup_out, relationship_lookup_out, occupation_hash_out])
-    group3_out = Group(group3.param)([age_bucketize_out, sex_lookup_out, race_lookup_out, native_country_hash_out])
+    group1_out = Group(group1.param)(
+        [
+            workclass_lookup_out,
+            hours_per_week_bucketize_out,
+            capital_gain_bucketize_out,
+            capital_loss_bucketize_out,
+        ]
+    )
+    group2_out = Group(group2.param)(
+        [
+            education_hash_out,
+            marital_status_lookup_out,
+            relationship_lookup_out,
+            occupation_hash_out,
+        ]
+    )
+    group3_out = Group(group3.param)(
+        [
+            age_bucketize_out,
+            sex_lookup_out,
+            race_lookup_out,
+            native_country_hash_out,
+        ]
+    )
 
     group1_wide_embedding_column = tf.feature_column.embedding_column(
         tf.feature_column.categorical_column_with_identity(
-                "group1",
-                num_buckets=group1_embedding_wide.param[0]
-            ),
-        dimension=group1_embedding_wide.param[1])
-    group1_embedding_wide_out = tf.keras.layers.DenseFeatures([group1_wide_embedding_column])({"group1": group1_out})
+            "group1", num_buckets=group1_embedding_wide.param[0]
+        ),
+        dimension=group1_embedding_wide.param[1],
+    )
+    group1_embedding_wide_out = tf.keras.layers.DenseFeatures(
+        [group1_wide_embedding_column]
+    )({"group1": group1_out})
 
     group2_wide_embedding_column = tf.feature_column.embedding_column(
         tf.feature_column.categorical_column_with_identity(
-                "group2",
-                num_buckets=group2_embedding_wide.param[0]
-            ),
-        dimension=group2_embedding_wide.param[1])
-    group2_embedding_wide_out = tf.keras.layers.DenseFeatures([group2_wide_embedding_column])({"group2": group2_out})
+            "group2", num_buckets=group2_embedding_wide.param[0]
+        ),
+        dimension=group2_embedding_wide.param[1],
+    )
+    group2_embedding_wide_out = tf.keras.layers.DenseFeatures(
+        [group2_wide_embedding_column]
+    )({"group2": group2_out})
 
     group1_deep_embedding_column = tf.feature_column.embedding_column(
         tf.feature_column.categorical_column_with_identity(
-                "group1",
-                num_buckets=group1_embedding_deep.param[0]
-            ),
-        dimension=group1_embedding_deep.param[1])
-    group1_embedding_deep_out = tf.keras.layers.DenseFeatures([group1_deep_embedding_column])({"group1": group1_out})
+            "group1", num_buckets=group1_embedding_deep.param[0]
+        ),
+        dimension=group1_embedding_deep.param[1],
+    )
+    group1_embedding_deep_out = tf.keras.layers.DenseFeatures(
+        [group1_deep_embedding_column]
+    )({"group1": group1_out})
 
     group2_deep_embedding_column = tf.feature_column.embedding_column(
         tf.feature_column.categorical_column_with_identity(
-                "group2",
-                num_buckets=group2_embedding_deep.param[0]
-            ),
-        dimension=group2_embedding_deep.param[1]
+            "group2", num_buckets=group2_embedding_deep.param[0]
+        ),
+        dimension=group2_embedding_deep.param[1],
     )
-    group2_embedding_deep_out = tf.keras.layers.DenseFeatures([group2_deep_embedding_column])({"group2": group2_out})
+    group2_embedding_deep_out = tf.keras.layers.DenseFeatures(
+        [group2_deep_embedding_column]
+    )({"group2": group2_out})
 
     group3_deep_embedding_column = tf.feature_column.embedding_column(
         tf.feature_column.categorical_column_with_identity(
-                "group3",
-                num_buckets=group3_embedding_deep.param[0]
-            ),
-        dimension=group3_embedding_deep.param[1]
+            "group3", num_buckets=group3_embedding_deep.param[0]
+        ),
+        dimension=group3_embedding_deep.param[1],
     )
-    group3_embedding_deep_out = tf.keras.layers.DenseFeatures([group3_deep_embedding_column])({"group3": group3_out})
+    group3_embedding_deep_out = tf.keras.layers.DenseFeatures(
+        [group3_deep_embedding_column]
+    )({"group3": group3_out})
 
     wide_embeddings = [group1_embedding_wide_out, group2_embedding_wide_out]
-    deep_embeddings = [group1_embedding_deep_out, group2_embedding_deep_out, group3_embedding_deep_out]
+    deep_embeddings = [
+        group1_embedding_deep_out,
+        group2_embedding_deep_out,
+        group3_embedding_deep_out,
+    ]
 
     return wide_embeddings, deep_embeddings
 
@@ -199,11 +258,9 @@ def transform_from_code_gen(source_inputs):
 # The entry point of the submitter program
 def custom_model():
     input_layers = get_input_layers(input_schemas=INPUT_SCHEMAS)
-    wide_embeddings, deep_embeddings = transform(
-        input_layers
-    )
+    wide_embeddings, deep_embeddings = transform(input_layers)
 
-    return wide_deep_model(input_layers, wide_embeddings, deep_embeddings)
+    return wide_and_deep_classifier(input_layers, wide_embeddings, deep_embeddings)
 
 
 def loss(labels, predictions):
@@ -239,27 +296,3 @@ def learning_rate_scheduler(model_version):
         return 0.0002
     else:
         return 0.0001
-
-
-def dataset_fn(dataset, mode, _):
-    def _parse_data(record):
-        feature_description = dict(
-            [
-                (name, tf.io.FixedLenFeature((1,), tf.string))
-                for name in CATEGORICAL_FEATURE_KEYS
-            ]
-            + [
-                (name, tf.io.FixedLenFeature((1,), tf.float32))
-                for name in NUMERIC_FEATURE_KEYS
-            ]
-            + [(LABEL_KEY, tf.io.FixedLenFeature([], tf.int64))]
-        )
-
-        parsed_record = tf.io.parse_single_example(record, feature_description)
-        label = parsed_record.pop(LABEL_KEY)
-
-        return parsed_record, label
-
-    dataset = dataset.map(_parse_data)
-
-    return dataset
