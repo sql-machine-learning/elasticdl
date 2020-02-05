@@ -67,38 +67,39 @@ func adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common
 }
 
 func addTo(a *common.Tensor, b *common.Tensor) {
-    aPtr := (*C.float)(unsafe.Pointer(&a.Value[0]))
-    bPtr := (*C.float)(unsafe.Pointer(&b.Value[0]))
-    size := C.longlong(len(a.Value))
-    C.AddTo(aPtr, bPtr, size)
+	aPtr := (*C.float)(unsafe.Pointer(&a.Value[0]))
+	bPtr := (*C.float)(unsafe.Pointer(&b.Value[0]))
+	size := C.longlong(len(a.Value))
+	C.AddTo(aPtr, bPtr, size)
 }
 
-func removeDuplicateElement(indices []int64) map[int64]int {
-    result := make(map[int64]int)
-    row := make([]int64, 0, len(indices))
-    i := 0
-    temp := map[int64]struct{}{}
-    for _, item := range indices {
-        if _, ok := temp[item]; !ok {
-            temp[item] = struct{}{}
-            result[item] = i
-            i += 1
-        }
-    }
-    return result
+func removeDuplicateElement(indices []int64) (map[int64]int64, []int64) {
+	result := make(map[int64]int64)
+	newIndices := make([]int64, 0, len(indices))
+	i := 0
+	temp := map[int64]struct{}{}
+	for _, item := range indices {
+		if _, ok := temp[item]; !ok {
+			temp[item] = struct{}{}
+			result[item] = int64(i)
+			newIndices = append(newIndices, item)
+			i++
+		}
+	}
+	return result, newIndices
 }
 
 func mergeIndexedSlices(grad *common.Tensor) *common.Tensor {
-    uniqueIndices, row = removeDuplicateElement(grad.Indices)
-    newD := {int64(len(uniqueIndices), grad.Dim[1]}
-    t := NewTensor(newD)
-    t.Indices = uniqueIndices
-    for i, index := range grad.Indices {
-        subA := t.AtRow(row[index])
-        subB := grad.AtRow(i)
-        addTo(subA, subB)
-    }
-    return t
+	result, newIndices := removeDuplicateElement(grad.Indices)
+	newD := []int64{int64(len(newIndices)), grad.Dim[1]}
+	t := common.NewTensor(newD)
+	t.Indices = newIndices
+	for i, index := range grad.Indices {
+		subA := t.AtRow(result[index])
+		subB := grad.AtRow(int64(i))
+		addTo(subA, subB)
+	}
+	return t
 }
 
 // Adam kernel
@@ -107,7 +108,7 @@ func Adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common
 	epsilon float32, amsgrad bool, maxSquare *common.Tensor) {
 	// support tf.IndexedSlices gradient for dense param
 	if grad.Indices != nil {
-        newGrad := mergeIndexedSlices(grad)
+		newGrad := mergeIndexedSlices(grad)
 		for i, index := range newGrad.Indices {
 			subGrad := newGrad.AtRow(int64(i))
 			subParam := param.AtRow(index)

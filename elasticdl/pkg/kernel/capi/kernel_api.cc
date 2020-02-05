@@ -10,7 +10,7 @@ void AddTo(float* a, float* b, long long size) {
   Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> eb{
       b, static_cast<Eigen::Index>(size)};
 
-  a += b
+  ea += eb;
 }
 
 void SGD(float* grad, float* param, float lr, long long size) {
