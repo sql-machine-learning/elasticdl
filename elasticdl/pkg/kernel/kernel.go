@@ -7,8 +7,7 @@ import "unsafe"
 import "elasticdl.org/elasticdl/pkg/common"
 import "fmt"
 
-// SGD kernel
-func SGD(grad *common.Tensor, param *common.Tensor, lr float32) error {
+func sgd(grad *common.Tensor, param *common.Tensor, lr float32) error {
 	if len(grad.Value) != len(param.Value) {
 		return fmt.Errorf("grad %s Value size not equal to param", grad.Name)
 	}
@@ -16,6 +15,20 @@ func SGD(grad *common.Tensor, param *common.Tensor, lr float32) error {
 	paramPtr := (*C.float)(unsafe.Pointer(&param.Value[0]))
 	C.SGD(gradPtr, paramPtr, C.float(lr), C.longlong(len(grad.Value)))
 	return nil
+}
+
+// SGD kernel
+func SGD(grad *common.Tensor, param *common.Tensor, lr float32) error {
+	// support tf.IndexedSlices gradient for dense param
+	if grad.Indices != nil {
+		for i, index := range grad.Indices {
+			subVector := param.AtRow(index)
+			subGrad := grad.AtRow(int64(i))
+			sgd(subVector, subGrad, lr)
+		}
+		return nil
+	}
+	return sgd(grad, param, lr)
 }
 
 // SparseSGD kernel
@@ -28,14 +41,13 @@ func SparseSGD(grad *common.Tensor, param *common.EmbeddingTable, lr float32) er
 	}
 	for i, index := range grad.Indices {
 		vector := param.GetEmbeddingVector(index)
-		subgrad := grad.AtRow(int64(i))
-		SGD(subgrad, vector, lr)
+		subGrad := grad.AtRow(int64(i))
+		sgd(subGrad, vector, lr)
 	}
 	return nil
 }
 
-// Adam kernel
-func Adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common.Tensor,
+func adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common.Tensor,
 	lr float32, step int64, beta1 float32, beta2 float32,
 	epsilon float32, amsgrad bool, maxSquare *common.Tensor) {
 	gradPtr := (*C.float)(unsafe.Pointer(&grad.Value[0]))
@@ -52,6 +64,28 @@ func Adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common
 		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.float(lr), C.longlong(size),
 			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon), nil)
 	}
+}
+
+// Adam kernel
+func Adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common.Tensor,
+	lr float32, step int64, beta1 float32, beta2 float32,
+	epsilon float32, amsgrad bool, maxSquare *common.Tensor) {
+	// support tf.IndexedSlices gradient for dense param
+	if grad.Indices != nil {
+		for i, index := range grad.Indices {
+			subGrad := grad.AtRow(int64(i))
+			subParam := param.AtRow(index)
+			subM := m.AtRow(index)
+			subV := v.AtRow(index)
+			var subMaxs *common.Tensor = nil
+			if amsgrad {
+				subMaxs = maxSquare.AtRow(index)
+			}
+			adam(subGrad, subParam, subM, subV, lr, step, beta1, beta2, epsilon, amsgrad, subMaxs)
+		}
+		return
+	}
+	adam(grad, param, m, v, lr, step, beta1, beta2, epsilon, amsgrad, maxSquare)
 }
 
 // SparseAdam kernel
