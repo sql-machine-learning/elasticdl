@@ -7,13 +7,13 @@ COLUMN (
     capital_gain, 
     capital_loss, 
     hours_per_week, 
-    EMBEDDING(HASH(workclass, 64), 16),
-    EMBEDDING(HASH(education, 64), 16),
-    EMBEDDING(HASH(martial_status, 64), 16),
-    EMBEDDING(HASH(occupation, 64), 16),
-    EMBEDDING(HASH(relationship, 64), 16),
-    EMBEDDING(HASH(race, 64), 16),
-    EMBEDDING(HASH(sex, 64), 16),
-    EMBEDDING(HASH(native_country, 64), 16)
+    EMBEDDING(workclass, 16),
+    EMBEDDING(education, 16),
+    EMBEDDING(martial_status, 16),
+    EMBEDDING(occupation, 16),
+    EMBEDDING(relationship, 16),
+    EMBEDDING(race, 16),
+    EMBEDDING(sex, 16),
+    EMBEDDING(native_country, 16)
 )
 LABEL label
