@@ -32,7 +32,7 @@ const (
 )
 
 // InvalidDtype predefined DataType for []int16
-var InvalidDtype = DataType{nil, 0, 0}
+var InvalidDtype = DataType{reflect.TypeOf([]byte{0}), 1, 0}
 
 // Int8Dtype predefined DataType for []int16
 var Int8Dtype = DataType{reflect.TypeOf([]int8{0}), 1, 1}
@@ -58,16 +58,28 @@ var Float64Dtype = DataType{reflect.TypeOf([]float64{0}), 8, 7}
 // BoolDtype predefined DataType for Bool
 var BoolDtype = DataType{nil, 0, 8}
 
-// TypeToDataType golang reflect.Type -> DataType
+// TypeToDataType reflect.Type -> DataType
 var TypeToDataType = make(map[reflect.Type]DataType)
 
+// FlagToDataType reflect.Flag -> DataType
+var FlagToDataType = make(map[int]DataType)
+
 func init() {
+	TypeToDataType[InvalidDtype.Type] = InvalidDtype
 	TypeToDataType[Int8Dtype.Type] = Int8Dtype
 	TypeToDataType[Int16Dtype.Type] = Int16Dtype
 	TypeToDataType[Int32Dtype.Type] = Int32Dtype
 	TypeToDataType[Int64Dtype.Type] = Int64Dtype
 	TypeToDataType[Float32Dtype.Type] = Float32Dtype
 	TypeToDataType[Float64Dtype.Type] = Float64Dtype
+
+	FlagToDataType[InvalidDtype.Flag] = InvalidDtype
+	FlagToDataType[Int8Dtype.Flag] = Int8Dtype
+	FlagToDataType[Int16Dtype.Flag] = Int16Dtype
+	FlagToDataType[Int32Dtype.Flag] = Int32Dtype
+	FlagToDataType[Int64Dtype.Flag] = Int64Dtype
+	FlagToDataType[Float32Dtype.Flag] = Float32Dtype
+	FlagToDataType[Float64Dtype.Flag] = Float64Dtype
 }
 
 // Vector definition
@@ -77,11 +89,11 @@ type Vector struct {
 	Dtype  DataType
 }
 
-// InitialzeFunc func
-type InitialzeFunc func([]byte) error
+// InitializeFunc func
+type InitializeFunc func([]byte) error
 
 // ZeroInit return a zero initializer
-func ZeroInit() InitialzeFunc {
+func ZeroInit() InitializeFunc {
 	return func(buffer []byte) error {
 		// do nothing since golang has already zero init
 		return nil
@@ -106,7 +118,7 @@ func byteSet(buffer []byte, idx int, size int, val interface{}) {
 }
 
 // ConstantInit return a constant iniitializer
-func ConstantInit(val interface{}) InitialzeFunc {
+func ConstantInit(val interface{}) InitializeFunc {
 	return func(buffer []byte) error {
 		size := int(reflect.ValueOf(val).Type().Size())
 		length := len(buffer) / size
@@ -118,7 +130,7 @@ func ConstantInit(val interface{}) InitialzeFunc {
 }
 
 // CopyInit return a copy initializer
-func CopyInit(slice interface{}) InitialzeFunc {
+func CopyInit(slice interface{}) InitializeFunc {
 	return func(b []byte) error {
 		buffer := bytes.NewBuffer(b)
 		buffer.Reset()
@@ -137,8 +149,8 @@ func NewEmptyVector(length int, dtype DataType) *Vector {
 	return &vec
 }
 
-// NewInitializerVector create an initialized vector
-func NewInitializerVector(length int, dtype DataType, initializer InitialzeFunc) *Vector {
+// NewInitializedVector create an initialized vector
+func NewInitializedVector(length int, dtype DataType, initializer InitializeFunc) *Vector {
 	bytelen := int(dtype.Size) * length
 	data := make([]byte, bytelen, bytelen)
 	initializer(data)
@@ -150,13 +162,32 @@ func NewInitializerVector(length int, dtype DataType, initializer InitialzeFunc)
 	return &vec
 }
 
-// NewVectorFrom create a vector using a slice to initialize
-func NewVectorFrom(slice interface{}) *Vector {
+// NewVector create a vector using a slice to initialize
+func NewVector(slice interface{}) *Vector {
 	v := reflect.ValueOf(slice)
 	dtype := TypeToDataType[v.Type()]
 	length := v.Len()
 	initializer := CopyInit(slice)
-	return NewInitializerVector(length, dtype, initializer)
+	return NewInitializedVector(length, dtype, initializer)
+}
+
+// NewVectorInplace create a vector using a slice to initialize
+func NewVectorInplace(slice interface{}) *Vector {
+	v := reflect.ValueOf(slice)
+	dtype := TypeToDataType[v.Type()]
+	length := v.Len()
+	bytelen := int(dtype.Size) * length
+	sliceHeader := reflect.SliceHeader{
+		Data: uintptr(unsafe.Pointer(v.Pointer())),
+		Cap:  int(bytelen),
+		Len:  int(bytelen),
+	}
+	var vec = Vector{
+		Data:   *(*[]byte)(unsafe.Pointer(&sliceHeader)),
+		Dtype:  dtype,
+		Length: length,
+	}
+	return &vec
 }
 
 // At get the element at an index

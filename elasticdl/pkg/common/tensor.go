@@ -4,36 +4,19 @@ import (
 	"bytes"
 	"elasticdl.org/elasticdl/pkg/proto"
 	"encoding/binary"
-	"math"
+	"fmt"
 )
 
 // Tensor defines tensor struct
-// TODO(qijun): handle different tensor dtype
 type Tensor struct {
 	Name    string
-	Value   []float32
+	Data    *Vector
 	Dim     []int64
 	Indices []int64
 }
 
-// NewTensor create a new n-dim tensor
-func NewTensor(dim []int64) *Tensor {
-	var t Tensor
-	t.Value = make([]float32, GetDimProduct(dim))
-	t.Dim = dim
-	return &t
-}
-
-// NewVector create a new 1-dim tensor
-func NewVector(dim int64) *Tensor {
-	var t Tensor
-	t.Value = make([]float32, dim)
-	t.Dim = []int64{dim}
-	return &t
-}
-
-// GetDimProduct get the number of the elements of a tensor of this dim
-func GetDimProduct(dim []int64) int64 {
+// ProductInt64 get the number of the elements of a tensor of this dim
+func ProductInt64(dim []int64) int64 {
 	var size int64 = 1
 	for _, d := range dim {
 		size *= d
@@ -41,60 +24,150 @@ func GetDimProduct(dim []int64) int64 {
 	return size
 }
 
-// Subtensor get the part reference of the tensor
-func (t *Tensor) subTensor(begin int64, len int64) *Tensor {
-	if begin+len > GetDimProduct(t.Dim) {
-		return nil
+// NewEmptyTensor create a new n-dim tensor
+func NewEmptyTensor(name string, dim []int64, dtype DataType) *Tensor {
+	var t = Tensor{
+		Name: name,
+		Data: NewEmptyVector(int(ProductInt64(dim)), dtype),
+		Dim:  dim,
 	}
-	var subt Tensor
-	subt.Value = t.Value[begin : begin+len]
-	subt.Dim = []int64{len}
-	return &subt
+	return &t
 }
 
-// AtRow get the row reference of a 2-dim tensor
-func (t *Tensor) AtRow(idx int64) *Tensor {
-	if len(t.Dim) != 2 || idx >= t.Dim[0] {
+// NewInitializedTensor create an initialized vector
+func NewInitializedTensor(name string, dim []int64, indices []int64, dtype DataType, initializer InitializeFunc) *Tensor {
+	var t = Tensor{
+		Name: name,
+		Data: NewInitializedVector(int(ProductInt64(dim)), dtype, initializer),
+		Dim:  dim,
+	}
+	return &t
+}
+
+// NewTensor create tensor from slice
+func NewTensor(name string, data interface{}, dim []int64, indices []int64) *Tensor {
+	var t = Tensor{
+		Name:    name,
+		Data:    NewVector(data),
+		Dim:     dim,
+		Indices: indices,
+	}
+	return &t
+}
+
+// NewTensorInplace create tensor from slice inplace
+func NewTensorInplace(name string, data interface{}, dim []int64, indices []int64) *Tensor {
+	var t = Tensor{
+		Name:    name,
+		Data:    NewVectorInplace(data),
+		Dim:     dim,
+		Indices: indices,
+	}
+	return &t
+}
+
+// At get the element at an index, regardless of the dimension
+func (t *Tensor) At(idx int) float64 {
+	return t.Data.At(idx)
+}
+
+// Set set the value to an index, regardless of the dimension
+func (t *Tensor) Set(idx int, val interface{}) {
+	t.Data.Set(idx, val)
+}
+
+// IndexAt get the element at a n-dim index
+func (t *Tensor) IndexAt(indices ...int) float64 {
+	if len(indices) != len(t.Dim) {
+		return 0
+	}
+	index := 0
+	for i, v := range t.Dim {
+		index = (index*int(v) + indices[i])
+	}
+	return t.Data.At(index)
+}
+
+// IndexSet set the value to a n-dim index
+func (t *Tensor) IndexSet(val interface{}, indices ...int) error {
+	if len(indices) != len(t.Dim) {
+		return fmt.Errorf("dim unmatched")
+	}
+	index := 0
+	for i, v := range t.Dim {
+		index = (index*int(v) + indices[i])
+	}
+	t.Data.Set(index, val)
+	return nil
+}
+
+// RowRef return a vector reference to a part of a 2-dim Tensor
+func (t *Tensor) RowRef(idx int) *Vector {
+	if len(t.Dim) != 2 || idx >= int(t.Dim[0]) {
 		return nil
 	}
-	begin := t.Dim[1] * idx
-	return t.subTensor(begin, t.Dim[1])
+	return t.Data.SubVectorRef(idx*int(t.Dim[1]), int(t.Dim[1]))
+}
+
+// Row return a row copy of a 2-dim Tensor
+func (t *Tensor) Row(idx int) *Vector {
+	if len(t.Dim) != 2 || idx >= int(t.Dim[0]) {
+		return nil
+	}
+	return t.Data.SubVector(idx*int(t.Dim[1]), int(t.Dim[1]))
+}
+
+// SetRow set a row with a vector
+func (t *Tensor) SetRow(idx int, vec *Vector) error {
+	if len(t.Dim) != 2 || idx >= int(t.Dim[0]) || t.Dim[1] != int64(vec.Length) {
+		return fmt.Errorf("SETROW FAIL")
+	}
+	start := int(idx) * int(vec.Length) * int(t.Data.Dtype.Size)
+	buffer := bytes.NewBuffer(t.Data.Data[start:])
+	buffer.Reset()
+	binary.Write(buffer, binary.LittleEndian, vec.Data)
+	return nil
+}
+
+// InplaceSlice gives a Slice interface to the Tensor data
+func (t *Tensor) InplaceSlice() interface{} {
+	return t.Data.InplaceSlice()
+}
+
+// MakeSlice gives a slice copy of the Tensor data
+func (t *Tensor) MakeSlice() interface{} {
+	return t.Data.MakeSlice()
+}
+
+// VectorToTensor form a 1-dim tensor
+func (v *Vector) VectorToTensor() *Tensor {
+	var t = Tensor{
+		Data: v,
+		Dim:  []int64{1, int64(v.Length)},
+	}
+	return &t
 }
 
 // DeserializeTensorPB transforms pb to tensor
 func DeserializeTensorPB(pb *proto.Tensor) *Tensor {
-	var t Tensor
-	if pb.Dtype != proto.TensorDtype_DT_FLOAT32 {
+	dtype := FlagToDataType[int(pb.Dtype)]
+	if int(ProductInt64(pb.Dim))*dtype.Size != len(pb.Content) {
 		return nil
 	}
-	if GetDimProduct(pb.Dim)*4 != int64(len(pb.Content)) {
-		return nil
-	}
-	t.Name = pb.Name
-	t.Dim = make([]int64, len(pb.Dim))
-	copy(t.Dim, pb.Dim)
-	t.Indices = make([]int64, len(pb.Indices))
-	copy(t.Indices, pb.Indices)
-	t.Value = make([]float32, len(pb.Content)/4)
-	br := bytes.NewReader(pb.GetContent())
-	binary.Read(br, binary.LittleEndian, &t.Value)
-	return &t
+	var t = NewTensorInplace(pb.Name, pb.Content, pb.Dim, pb.Indices)
+	t.Data.Length /= dtype.Size
+	t.Data.Dtype = dtype
+	return t
 }
 
 // SerializeTensor transforms tensor to pb
 func SerializeTensor(t *Tensor) *proto.Tensor {
-	var pb proto.Tensor
-	pb.Name = t.Name
-	pb.Dim = make([]int64, len(t.Dim))
-	copy(pb.Dim, t.Dim)
-	pb.Indices = make([]int64, len(t.Indices))
-	copy(pb.Indices, t.Indices)
-	pb.Content = make([]byte, GetDimProduct(t.Dim)*4)
-	for i, num := range t.Value {
-		bits := math.Float32bits(num)
-		binary.LittleEndian.PutUint32(pb.Content[(i*4):], bits)
+	var pb = proto.Tensor{
+		Name:    t.Name,
+		Dim:     t.Dim,
+		Indices: t.Indices,
+		Content: t.Data.Data,
+		Dtype:   proto.TensorDtype(t.Data.Dtype.Flag),
 	}
-	// set dtype to float32
-	pb.Dtype = proto.TensorDtype_DT_FLOAT32
 	return &pb
 }

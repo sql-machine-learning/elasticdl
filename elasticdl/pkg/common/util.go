@@ -27,10 +27,13 @@ func CompareFloatArray(a interface{}, b interface{}, tolerance float64) bool {
 	return true
 }
 
-// CompareIntArray compares two float32/64 array
+// CompareIntArray compares two int8/16/32/64 array
 func CompareIntArray(a interface{}, b interface{}) bool {
 	vala := reflect.ValueOf(a)
 	valb := reflect.ValueOf(b)
+	if vala.Len() != valb.Len() {
+		return false
+	}
 	for i := 0; i < vala.Len(); i++ {
 		if vala.Index(i).Int() != valb.Index(i).Int() {
 			return false

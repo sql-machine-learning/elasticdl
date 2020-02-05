@@ -5,19 +5,20 @@
 extern "C" {
 #endif
 
-void SGD(float* grad, float* param, float lr, long long size);
+void SGD(void* grad, void* param, float lr, long long size, int dtypeFlag);
 
-void Adam(float* grad,
-          float* param,
-          float* m,
-          float* v,
+void Adam(void* grad,
+          void* param,
+          void* m,
+          void* v,
           float lr,
           long long size,
           long long step,
           float beta1,
           float beta2,
           float epsilon,
-          float* max_square);
+          void* maxSquare,
+          int dtypeFlag);
 
 #ifdef __cplusplus
 }

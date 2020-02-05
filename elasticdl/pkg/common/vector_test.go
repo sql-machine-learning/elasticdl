@@ -13,8 +13,7 @@ func TestVector(t *testing.T) {
 
 	// test create constant init vector
 	constinit := ConstantInit(float64(12.5))
-	ciVec := NewInitializerVector(5, Float64Dtype, constinit)
-	// test inplace slice
+	ciVec := NewInitializedVector(5, Float64Dtype, constinit)
 	ciVecSlice := ciVec.InplaceSlice().([]float64)
 	ciExpected := []float64{12.5, 12.5, 12.5, 12.5, 12.5}
 	assert.True(t, CompareFloatArray(ciExpected, ciVecSlice, 0.00001), "constant-init-vector Fail")
@@ -26,6 +25,15 @@ func TestVector(t *testing.T) {
 	ciVec.Set(2, float64(31.2))
 	assert.Equal(t, 31.2, ciVec.At(2), "Vector.Set Fail")
 
+	// test create inplace
+	raw := []int32{1, 2, 3, 4, 5}
+	rawCopy := NewVector(raw)
+	rawInplace := NewVectorInplace(raw)
+	rawCopy.Set(2, int32(30))
+	assert.Equal(t, int32(3), raw[2], "NewVector Fail")
+	rawInplace.Set(2, int32(30))
+	assert.Equal(t, int32(30), raw[2], "NewVectorInplace Fail")
+
 	i8 := []int8{1, 2, 3}
 	i16 := []int16{1, 2, 3}
 	i32 := []int32{1, 2, 3}
@@ -34,12 +42,12 @@ func TestVector(t *testing.T) {
 	f64 := []float64{1, 2, 3}
 
 	// test create vector from slice of different data type
-	i8Vec := NewVectorFrom(i8)
-	i16Vec := NewVectorFrom(i16)
-	i32Vec := NewVectorFrom(i32)
-	i64Vec := NewVectorFrom(i64)
-	f32Vec := NewVectorFrom(f32)
-	f64Vec := NewVectorFrom(f64)
+	i8Vec := NewVector(i8)
+	i16Vec := NewVector(i16)
+	i32Vec := NewVector(i32)
+	i64Vec := NewVector(i64)
+	f32Vec := NewVector(f32)
+	f64Vec := NewVector(f64)
 
 	iExpected := []int{1, 2, 3}
 	i8VecSlice := i8Vec.InplaceSlice().([]int8)
@@ -67,7 +75,7 @@ func TestVector(t *testing.T) {
 	assert.NotEqual(t, int8(i8Vec.At(0)), i8VecMakeSlice[0], "MakeSlice Fail")
 
 	ori := []float64{1, 2, 3, 4, 5, 6, 7, 8}
-	oriVec := NewVectorFrom(ori)
+	oriVec := NewVector(ori)
 
 	// test SubVectorRef
 	oriVecSubRef := oriVec.SubVectorRef(2, 3)
