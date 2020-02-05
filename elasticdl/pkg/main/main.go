@@ -26,6 +26,8 @@ var (
 	checkpointDir         = flag.String("checkpoint_dir", "", "The directory to store the checkpoint file")
 	checkpointSteps       = flag.Int("checkpoint_steps", 0, "Save checkpoint every this many steps. If 0, no checkpoints to save")
 	keepCheckpointMax     = flag.Int("keep_checkpoint_max", 3, "The maximum number of recent checkpoint files to keep. If 0, keep all")
+	optType               = flag.String("opt_type", "unknown", "optimizer type")
+	optArgs               = flag.String("opt_args", "", "optimizer arguments")
 )
 
 func main() {
