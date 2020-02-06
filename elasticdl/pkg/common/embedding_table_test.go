@@ -6,7 +6,7 @@ import (
 )
 
 func TestEmbeddingTableInit(t *testing.T) {
-	e1 := NewEmbeddingTable("e1", 2, "zero", Float32Dtype)
+	e1 := NewEmbeddingTable("e1", 2, "zero", Float32)
 	v1 := e1.GetEmbeddingVector(10)
 	assert.Contains(t, e1.EmbeddingVector, int64(10))
 	assert.Equal(t, v1.Length, 2)
@@ -14,7 +14,7 @@ func TestEmbeddingTableInit(t *testing.T) {
 }
 
 func TestEmbeddingTableGet(t *testing.T) {
-	e1 := NewEmbeddingTable("e1", 2, "zero", Float32Dtype)
+	e1 := NewEmbeddingTable("e1", 2, "zero", Float32)
 	v1 := e1.GetEmbeddingVector(1)
 	assert.Equal(t, v1.Length, 2)
 	v1.Set(0, float32(1))
@@ -30,7 +30,7 @@ func TestEmbeddingTableGet(t *testing.T) {
 }
 
 func TestEmbeddingTableSet(t *testing.T) {
-	e := NewEmbeddingTable("e1", 2, "zero", Float32Dtype)
+	e := NewEmbeddingTable("e1", 2, "zero", Float32)
 	i := []int64{1, 3, 5}
 	v := []float32{1.0, 2.0, 3.0, 4.0, 5.0, 6.0}
 

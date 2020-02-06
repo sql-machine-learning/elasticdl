@@ -8,17 +8,17 @@ type EmbeddingTable struct {
 	Dim             int64
 	Initializer     string
 	EmbeddingVector map[int64]*Vector
-	Dtype           DataType
+	Dtype           Flag
 }
 
 // NewEmbeddingTable creates an embedding table instance
-func NewEmbeddingTable(name string, dim int64, initializer string, dtype DataType) *EmbeddingTable {
+func NewEmbeddingTable(name string, dim int64, initializer string, flag Flag) *EmbeddingTable {
 	var e EmbeddingTable
 	e.Name = name
 	e.Dim = dim
 	e.Initializer = initializer
 	e.EmbeddingVector = make(map[int64]*Vector)
-	e.Dtype = dtype
+	e.Dtype = flag
 	return &e
 }
 

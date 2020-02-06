@@ -8,85 +8,11 @@ import (
 	"unsafe"
 )
 
-// DataType definition
-type DataType struct {
-	Type reflect.Type
-	Size int
-	Flag Flag
-}
-
-// Flag DataType.Flag
-type Flag = int
-
-// DataType Flag Enum
-const (
-	Invalid Flag = iota
-	Int8
-	Int16
-	Int32
-	Int64
-	Float16
-	Float32
-	Float64
-	Bool
-)
-
-// InvalidDtype predefined DataType for []int16
-var InvalidDtype = DataType{reflect.TypeOf([]byte{0}), 1, 0}
-
-// Int8Dtype predefined DataType for []int16
-var Int8Dtype = DataType{reflect.TypeOf([]int8{0}), 1, 1}
-
-// Int16Dtype predefined DataType for []int16
-var Int16Dtype = DataType{reflect.TypeOf([]int16{0}), 2, 2}
-
-// Int32Dtype predefined DataType for []int32
-var Int32Dtype = DataType{reflect.TypeOf([]int32{0}), 4, 3}
-
-// Int64Dtype predefined DataType for []int64
-var Int64Dtype = DataType{reflect.TypeOf([]int64{0}), 8, 4}
-
-// Float16Dtype predefined DataType for []float16
-var Float16Dtype = DataType{nil, 0, 5}
-
-// Float32Dtype predefined DataType for []float32
-var Float32Dtype = DataType{reflect.TypeOf([]float32{0}), 4, 6}
-
-// Float64Dtype predefined DataType for []float64
-var Float64Dtype = DataType{reflect.TypeOf([]float64{0}), 8, 7}
-
-// BoolDtype predefined DataType for Bool
-var BoolDtype = DataType{nil, 0, 8}
-
-// TypeToDataType reflect.Type -> DataType
-var TypeToDataType = make(map[reflect.Type]DataType)
-
-// FlagToDataType reflect.Flag -> DataType
-var FlagToDataType = make(map[int]DataType)
-
-func init() {
-	TypeToDataType[InvalidDtype.Type] = InvalidDtype
-	TypeToDataType[Int8Dtype.Type] = Int8Dtype
-	TypeToDataType[Int16Dtype.Type] = Int16Dtype
-	TypeToDataType[Int32Dtype.Type] = Int32Dtype
-	TypeToDataType[Int64Dtype.Type] = Int64Dtype
-	TypeToDataType[Float32Dtype.Type] = Float32Dtype
-	TypeToDataType[Float64Dtype.Type] = Float64Dtype
-
-	FlagToDataType[InvalidDtype.Flag] = InvalidDtype
-	FlagToDataType[Int8Dtype.Flag] = Int8Dtype
-	FlagToDataType[Int16Dtype.Flag] = Int16Dtype
-	FlagToDataType[Int32Dtype.Flag] = Int32Dtype
-	FlagToDataType[Int64Dtype.Flag] = Int64Dtype
-	FlagToDataType[Float32Dtype.Flag] = Float32Dtype
-	FlagToDataType[Float64Dtype.Flag] = Float64Dtype
-}
-
 // Vector definition
 type Vector struct {
 	Data   []byte
 	Length int
-	Dtype  DataType
+	Dtype  Flag
 }
 
 // InitializeFunc func
@@ -139,24 +65,26 @@ func CopyInit(slice interface{}) InitializeFunc {
 }
 
 // NewEmptyVector create an zero-initialized vector
-func NewEmptyVector(length int, dtype DataType) *Vector {
+func NewEmptyVector(length int, flag Flag) *Vector {
+	dtype := FlagToDataType[flag]
 	bytelen := int(dtype.Size) * length
 	var vec = Vector{
 		Data:   make([]byte, bytelen, bytelen),
-		Dtype:  dtype,
+		Dtype:  flag,
 		Length: length,
 	}
 	return &vec
 }
 
 // NewInitializedVector create an initialized vector
-func NewInitializedVector(length int, dtype DataType, initializer InitializeFunc) *Vector {
+func NewInitializedVector(length int, flag Flag, initializer InitializeFunc) *Vector {
+	dtype := FlagToDataType[flag]
 	bytelen := int(dtype.Size) * length
 	data := make([]byte, bytelen, bytelen)
 	initializer(data)
 	var vec = Vector{
 		Data:   data,
-		Dtype:  dtype,
+		Dtype:  flag,
 		Length: length,
 	}
 	return &vec
@@ -168,7 +96,7 @@ func NewVector(slice interface{}) *Vector {
 	dtype := TypeToDataType[v.Type()]
 	length := v.Len()
 	initializer := CopyInit(slice)
-	return NewInitializedVector(length, dtype, initializer)
+	return NewInitializedVector(length, dtype.Flag, initializer)
 }
 
 // NewVectorInplace create a vector using a slice to initialize
@@ -184,7 +112,7 @@ func NewVectorInplace(slice interface{}) *Vector {
 	}
 	var vec = Vector{
 		Data:   *(*[]byte)(unsafe.Pointer(&sliceHeader)),
-		Dtype:  dtype,
+		Dtype:  dtype.Flag,
 		Length: length,
 	}
 	return &vec
@@ -192,8 +120,9 @@ func NewVectorInplace(slice interface{}) *Vector {
 
 // At get the element at an index
 func (v *Vector) At(idx int) float64 {
-	size := v.Dtype.Size
-	switch v.Dtype.Flag {
+	dtype := FlagToDataType[v.Dtype]
+	size := dtype.Size
+	switch dtype.Flag {
 	case Int8:
 		return float64(int8(v.Data[idx]))
 	case Int16:
@@ -213,37 +142,41 @@ func (v *Vector) At(idx int) float64 {
 
 // Set set the value to an index
 func (v *Vector) Set(idx int, val interface{}) {
-	size := v.Dtype.Size
+	dtype := FlagToDataType[v.Dtype]
+	size := dtype.Size
 	byteSet(v.Data, idx, size, val)
 }
 
 // InplaceSlice gives a Slice interface to the Vector data
 func (v *Vector) InplaceSlice() interface{} {
+	dtype := FlagToDataType[v.Dtype]
 	sliceHeader := reflect.SliceHeader{
 		Data: uintptr(unsafe.Pointer(&v.Data[0])),
 		Cap:  int(v.Length),
 		Len:  int(v.Length),
 	}
-	val := reflect.NewAt(v.Dtype.Type, unsafe.Pointer(&sliceHeader)).Elem()
+	val := reflect.NewAt(dtype.Type, unsafe.Pointer(&sliceHeader)).Elem()
 	return val.Interface()
 }
 
 // MakeSlice gives a slice copy of the Vector data
 func (v *Vector) MakeSlice() interface{} {
-	newslice := make([]byte, int(v.Length*v.Dtype.Size))
+	dtype := FlagToDataType[v.Dtype]
+	newslice := make([]byte, int(dtype.Size))
 	copy(newslice, v.Data)
 	sliceHeader := reflect.SliceHeader{
 		Data: uintptr(unsafe.Pointer(&newslice[0])),
 		Cap:  int(v.Length),
 		Len:  int(v.Length),
 	}
-	val := reflect.NewAt(v.Dtype.Type, unsafe.Pointer(&sliceHeader)).Elem()
+	val := reflect.NewAt(dtype.Type, unsafe.Pointer(&sliceHeader)).Elem()
 	return val.Interface()
 }
 
 // SubVectorRef return a reference to a part of the Vector
 func (v *Vector) SubVectorRef(begin int, length int) *Vector {
-	slice := v.Data[begin*v.Dtype.Size : begin*v.Dtype.Size+length*v.Dtype.Size]
+	dtype := FlagToDataType[v.Dtype]
+	slice := v.Data[begin*dtype.Size : begin*dtype.Size+length*dtype.Size]
 	var vec = Vector{
 		Data:   slice,
 		Length: length,
@@ -254,8 +187,9 @@ func (v *Vector) SubVectorRef(begin int, length int) *Vector {
 
 // SubVector return a part copy of the Vector
 func (v *Vector) SubVector(begin int, length int) *Vector {
-	slice := v.Data[begin*v.Dtype.Size : begin*v.Dtype.Size+length*v.Dtype.Size]
-	newslice := make([]byte, length*v.Dtype.Size, length*v.Dtype.Size)
+	dtype := FlagToDataType[v.Dtype]
+	slice := v.Data[begin*dtype.Size : begin*dtype.Size+length*dtype.Size]
+	newslice := make([]byte, length*dtype.Size, length*dtype.Size)
 	copy(newslice, slice)
 	var vec = Vector{
 		Data:   newslice,

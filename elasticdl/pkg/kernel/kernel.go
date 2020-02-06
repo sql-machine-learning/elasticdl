@@ -13,7 +13,7 @@ func sgd(grad *common.Vector, param *common.Vector, lr float32) error {
 	}
 	gradPtr := unsafe.Pointer(&grad.Data[0])
 	paramPtr := unsafe.Pointer(&param.Data[0])
-	C.SGD(gradPtr, paramPtr, C.float(lr), C.longlong(grad.Length), C.int(grad.Dtype.Flag))
+	C.SGD(gradPtr, paramPtr, C.float(lr), C.longlong(grad.Length), C.int(grad.Dtype))
 	return nil
 }
 
@@ -27,7 +27,7 @@ func SGD(grad *common.Tensor, param *common.Tensor, lr float32) error {
 		}
 		return nil
 	}
-	sgd(grad.Data, param.Data, lr)
+	sgd(grad.Content, param.Content, lr)
 	return nil
 }
 
@@ -58,11 +58,11 @@ func adam(grad *common.Vector, param *common.Vector, m *common.Vector, v *common
 		maxSquarePtr := unsafe.Pointer(&maxSquare.Data[0])
 		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.float(lr), C.longlong(grad.Length),
 			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon),
-			maxSquarePtr, C.int(grad.Dtype.Flag))
+			maxSquarePtr, C.int(grad.Dtype))
 	} else {
 		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.float(lr), C.longlong(grad.Length),
 			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon), nil,
-			C.int(grad.Dtype.Flag))
+			C.int(grad.Dtype))
 	}
 	return nil
 }
@@ -86,9 +86,9 @@ func Adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common
 		return nil
 	}
 	if amsgrad {
-		adam(grad.Data, param.Data, m.Data, v.Data, lr, step, beta1, beta2, epsilon, maxSquare.Data)
+		adam(grad.Content, param.Content, m.Content, v.Content, lr, step, beta1, beta2, epsilon, maxSquare.Content)
 	} else {
-		adam(grad.Data, param.Data, m.Data, v.Data, lr, step, beta1, beta2, epsilon, nil)
+		adam(grad.Content, param.Content, m.Content, v.Content, lr, step, beta1, beta2, epsilon, nil)
 	}
 	return nil
 }

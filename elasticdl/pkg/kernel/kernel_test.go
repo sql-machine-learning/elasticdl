@@ -37,7 +37,7 @@ var a = []float32{-1.0, -1.0, -1.0, -1.0, -1.0, -1.0}
 var d = []int64{3, 2}
 var indices = []int64{1, 3, 3}
 var grad = common.NewTensor("t", a, d, indices)
-var table = common.NewEmbeddingTable("t", 2, "zero", common.Float32Dtype)
+var table = common.NewEmbeddingTable("t", 2, "zero", common.Float32)
 
 func TestSparseSGD(t *testing.T) {
 
@@ -150,10 +150,10 @@ func TestAdamWithAmsgrad(t *testing.T) {
 }
 
 func TestSparseAdam(t *testing.T) {
-	ptable := common.NewEmbeddingTable("t", 10, "zero", common.Float32Dtype)
-	mtable := common.NewEmbeddingTable("t", 10, "zero", common.Float32Dtype)
-	vtable := common.NewEmbeddingTable("t", 10, "zero", common.Float32Dtype)
-	mstable := common.NewEmbeddingTable("t", 10, "zero", common.Float32Dtype)
+	ptable := common.NewEmbeddingTable("t", 10, "zero", common.Float32)
+	mtable := common.NewEmbeddingTable("t", 10, "zero", common.Float32)
+	vtable := common.NewEmbeddingTable("t", 10, "zero", common.Float32)
+	mstable := common.NewEmbeddingTable("t", 10, "zero", common.Float32)
 
 	grad := common.NewTensor("t", rawGrad, []int64{1, 10}, []int64{1})
 	param := common.NewVector(rawParam)

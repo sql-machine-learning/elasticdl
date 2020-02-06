@@ -10,11 +10,11 @@ import (
 type Parameter struct {
 	NonEmbeddingParam map[string]*common.Tensor
 	EmbeddingParam    map[string]*common.EmbeddingTable
-	Dtype             common.DataType
+	Dtype             common.Flag
 }
 
 // NewParameter creates a parameter instance
-func NewParameter(dtype common.DataType) *Parameter {
+func NewParameter(dtype common.Flag) *Parameter {
 	var p = Parameter{
 		NonEmbeddingParam: make(map[string]*common.Tensor),
 		EmbeddingParam:    make(map[string]*common.EmbeddingTable),
@@ -55,7 +55,7 @@ func DeserializeModelPB(pb *proto.Model) (*Parameter, error) {
 	if len(pb.Param) == 0 {
 		return nil, fmt.Errorf("None Parameter")
 	}
-	param := NewParameter(common.FlagToDataType[int(pb.Param[0].Dtype)])
+	param := NewParameter(int(pb.Param[0].Dtype))
 	var err error
 	for _, v := range pb.EmbeddingTableInfo {
 		param.SetEmbeddingParamInfo(v.Name, v.Dim, v.Initializer)

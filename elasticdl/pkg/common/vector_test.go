@@ -7,13 +7,13 @@ import (
 
 func TestVector(t *testing.T) {
 	// test create empty vector
-	emptyVec := NewEmptyVector(5, Float32Dtype)
+	emptyVec := NewEmptyVector(5, Float32)
 	EvDataExpected := make([]byte, 20)
 	assert.Equal(t, EvDataExpected, emptyVec.Data, "empty vector Fail")
 
 	// test create constant init vector
 	constinit := ConstantInit(float64(12.5))
-	ciVec := NewInitializedVector(5, Float64Dtype, constinit)
+	ciVec := NewInitializedVector(5, Float64, constinit)
 	ciVecSlice := ciVec.InplaceSlice().([]float64)
 	ciExpected := []float64{12.5, 12.5, 12.5, 12.5, 12.5}
 	assert.True(t, CompareFloatArray(ciExpected, ciVecSlice, 0.00001), "constant-init-vector Fail")

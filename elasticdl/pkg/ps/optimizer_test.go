@@ -29,7 +29,7 @@ func TestSGDOptimizer(t *testing.T) {
 	t1 := common.NewTensor("t1", v1, d1, nil)
 	t2 := common.NewTensor("t2", v2, d2, nil)
 
-	p := NewParameter(common.Float64Dtype)
+	p := NewParameter(common.Float64)
 	p.NonEmbeddingParam["t1"] = t1
 	p.NonEmbeddingParam["t2"] = t2
 
@@ -85,13 +85,13 @@ func TestAdamOptimizer(t *testing.T) {
 	t1 := common.NewTensor("t1", v1, d1, nil)
 	t2 := common.NewTensor("t2", v2, d2, nil)
 
-	p := NewParameter(common.Float64Dtype)
+	p := NewParameter(common.Float64)
 	p.NonEmbeddingParam["t1"] = t1
 	p.NonEmbeddingParam["t2"] = t2
 
 	grads := []*common.Tensor{grad1, grad2}
 
-	opt := NewAdamOptimizer(0.1, 0.9, 0.999, 1e-8, false, common.Float64Dtype)
+	opt := NewAdamOptimizer(0.1, 0.9, 0.999, 1e-8, false, common.Float64)
 	opt.step = 1
 
 	opt.InitNonEmbeddingParam("t1", d1)

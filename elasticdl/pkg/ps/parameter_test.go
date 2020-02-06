@@ -16,7 +16,7 @@ func TestParameterInit(t *testing.T) {
 	v2 := []float32{1.0, 2.0, 1.1, 2.2}
 	t2 := common.NewTensor("t2", v2, d2, nil)
 
-	p := NewParameter(common.Float32Dtype)
+	p := NewParameter(common.Float32)
 	p.NonEmbeddingParam["t1"] = t1
 	p.NonEmbeddingParam["t2"] = t2
 

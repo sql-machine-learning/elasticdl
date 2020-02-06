@@ -10,7 +10,7 @@ import (
 // Tensor defines tensor struct
 type Tensor struct {
 	Name    string
-	Data    *Vector
+	Content *Vector
 	Dim     []int64
 	Indices []int64
 }
@@ -25,20 +25,20 @@ func ProductInt64(dim []int64) int64 {
 }
 
 // NewEmptyTensor create a new n-dim tensor
-func NewEmptyTensor(name string, dim []int64, dtype DataType) *Tensor {
+func NewEmptyTensor(name string, dim []int64, flag Flag) *Tensor {
 	var t = Tensor{
 		Name: name,
-		Data: NewEmptyVector(int(ProductInt64(dim)), dtype),
+		Content: NewEmptyVector(int(ProductInt64(dim)), flag),
 		Dim:  dim,
 	}
 	return &t
 }
 
 // NewInitializedTensor create an initialized vector
-func NewInitializedTensor(name string, dim []int64, indices []int64, dtype DataType, initializer InitializeFunc) *Tensor {
+func NewInitializedTensor(name string, dim []int64, indices []int64, flag Flag, initializer InitializeFunc) *Tensor {
 	var t = Tensor{
 		Name: name,
-		Data: NewInitializedVector(int(ProductInt64(dim)), dtype, initializer),
+		Content: NewInitializedVector(int(ProductInt64(dim)), flag, initializer),
 		Dim:  dim,
 	}
 	return &t
@@ -48,7 +48,7 @@ func NewInitializedTensor(name string, dim []int64, indices []int64, dtype DataT
 func NewTensor(name string, data interface{}, dim []int64, indices []int64) *Tensor {
 	var t = Tensor{
 		Name:    name,
-		Data:    NewVector(data),
+		Content:    NewVector(data),
 		Dim:     dim,
 		Indices: indices,
 	}
@@ -59,7 +59,7 @@ func NewTensor(name string, data interface{}, dim []int64, indices []int64) *Ten
 func NewTensorInplace(name string, data interface{}, dim []int64, indices []int64) *Tensor {
 	var t = Tensor{
 		Name:    name,
-		Data:    NewVectorInplace(data),
+		Content:    NewVectorInplace(data),
 		Dim:     dim,
 		Indices: indices,
 	}
@@ -68,12 +68,12 @@ func NewTensorInplace(name string, data interface{}, dim []int64, indices []int6
 
 // At get the element at an index, regardless of the dimension
 func (t *Tensor) At(idx int) float64 {
-	return t.Data.At(idx)
+	return t.Content.At(idx)
 }
 
 // Set set the value to an index, regardless of the dimension
 func (t *Tensor) Set(idx int, val interface{}) {
-	t.Data.Set(idx, val)
+	t.Content.Set(idx, val)
 }
 
 // IndexAt get the element at a n-dim index
@@ -85,7 +85,7 @@ func (t *Tensor) IndexAt(indices ...int) float64 {
 	for i, v := range t.Dim {
 		index = (index*int(v) + indices[i])
 	}
-	return t.Data.At(index)
+	return t.Content.At(index)
 }
 
 // IndexSet set the value to a n-dim index
@@ -97,7 +97,7 @@ func (t *Tensor) IndexSet(val interface{}, indices ...int) error {
 	for i, v := range t.Dim {
 		index = (index*int(v) + indices[i])
 	}
-	t.Data.Set(index, val)
+	t.Content.Set(index, val)
 	return nil
 }
 
@@ -106,7 +106,7 @@ func (t *Tensor) RowRef(idx int) *Vector {
 	if len(t.Dim) != 2 || idx >= int(t.Dim[0]) {
 		return nil
 	}
-	return t.Data.SubVectorRef(idx*int(t.Dim[1]), int(t.Dim[1]))
+	return t.Content.SubVectorRef(idx*int(t.Dim[1]), int(t.Dim[1]))
 }
 
 // Row return a row copy of a 2-dim Tensor
@@ -114,7 +114,7 @@ func (t *Tensor) Row(idx int) *Vector {
 	if len(t.Dim) != 2 || idx >= int(t.Dim[0]) {
 		return nil
 	}
-	return t.Data.SubVector(idx*int(t.Dim[1]), int(t.Dim[1]))
+	return t.Content.SubVector(idx*int(t.Dim[1]), int(t.Dim[1]))
 }
 
 // SetRow set a row with a vector
@@ -122,8 +122,8 @@ func (t *Tensor) SetRow(idx int, vec *Vector) error {
 	if len(t.Dim) != 2 || idx >= int(t.Dim[0]) || t.Dim[1] != int64(vec.Length) {
 		return fmt.Errorf("SETROW FAIL")
 	}
-	start := int(idx) * int(vec.Length) * int(t.Data.Dtype.Size)
-	buffer := bytes.NewBuffer(t.Data.Data[start:])
+	start := int(idx) * int(vec.Length) * int(FlagToDataType[t.Content.Dtype].Size)
+	buffer := bytes.NewBuffer(t.Content.Data[start:])
 	buffer.Reset()
 	binary.Write(buffer, binary.LittleEndian, vec.Data)
 	return nil
@@ -131,18 +131,18 @@ func (t *Tensor) SetRow(idx int, vec *Vector) error {
 
 // InplaceSlice gives a Slice interface to the Tensor data
 func (t *Tensor) InplaceSlice() interface{} {
-	return t.Data.InplaceSlice()
+	return t.Content.InplaceSlice()
 }
 
 // MakeSlice gives a slice copy of the Tensor data
 func (t *Tensor) MakeSlice() interface{} {
-	return t.Data.MakeSlice()
+	return t.Content.MakeSlice()
 }
 
 // VectorToTensor form a 1-dim tensor
 func (v *Vector) VectorToTensor() *Tensor {
 	var t = Tensor{
-		Data: v,
+		Content: v,
 		Dim:  []int64{1, int64(v.Length)},
 	}
 	return &t
@@ -155,8 +155,8 @@ func DeserializeTensorPB(pb *proto.Tensor) *Tensor {
 		return nil
 	}
 	var t = NewTensorInplace(pb.Name, pb.Content, pb.Dim, pb.Indices)
-	t.Data.Length /= dtype.Size
-	t.Data.Dtype = dtype
+	t.Content.Length /= dtype.Size
+	t.Content.Dtype = dtype.Flag
 	return t
 }
 
@@ -166,8 +166,8 @@ func SerializeTensor(t *Tensor) *proto.Tensor {
 		Name:    t.Name,
 		Dim:     t.Dim,
 		Indices: t.Indices,
-		Content: t.Data.Data,
-		Dtype:   proto.TensorDtype(t.Data.Dtype.Flag),
+		Content: t.Content.Data,
+		Dtype:   proto.TensorDtype(FlagToDataType[t.Content.Dtype].Flag),
 	}
 	return &pb
 }

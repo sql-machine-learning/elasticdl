@@ -14,7 +14,7 @@ type Optimizer interface {
 type BaseOptimizer struct {
 	lr    float32
 	step  int64
-	Dtype common.DataType
+	Dtype common.Flag
 }
 
 // SGDOptimizer struct
@@ -107,7 +107,7 @@ func (opt *AdamOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) e
 }
 
 // NewAdamOptimizer creates a Adam optimizer instance
-func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32, amsgrad bool, dtype common.DataType) *AdamOptimizer {
+func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32, amsgrad bool, dtype common.Flag) *AdamOptimizer {
 	var opt AdamOptimizer
 	opt.lr = lr
 	opt.step = 0
