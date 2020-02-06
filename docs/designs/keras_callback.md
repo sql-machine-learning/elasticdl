@@ -155,7 +155,7 @@ def update_parameter_for_batch(gradients, model_version):
         if callback.hasattr("on_update_batch_end")
             callback.on_update_batch_end(self, batch=model_vesion)
 ```
-However, we will implement a high performance parameter server using golang. And there is a question how golang can call the callbacks defined by users using Python.
+However, we will implement a high performance parameter server using Golang. And there is a question how Golang can call the callbacks defined by users using Python. There is another way, we don't use `tf.keras.callbacks.Callback` to support calling the method on the PS and provide users with some premade using Golang.
 
 ### Call Methods of Callback Per Epoch on Master
 
