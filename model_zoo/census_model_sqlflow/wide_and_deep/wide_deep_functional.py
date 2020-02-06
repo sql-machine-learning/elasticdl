@@ -1,6 +1,7 @@
 import itertools
 
 import tensorflow as tf
+from tensorflow import feature_column as fc
 
 from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
     FEATURE_TRANSFORM_INFO_EXECUTE_ARRAY,
@@ -9,7 +10,6 @@ from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
     age_bucketize,
     capital_gain_bucketize,
     capital_loss_bucketize,
-    deep_embeddings,
     education_hash,
     group1,
     group1_embedding_deep,
@@ -26,12 +26,9 @@ from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
     race_lookup,
     relationship_lookup,
     sex_lookup,
-    wide_embeddings,
     workclass_lookup,
 )
 from model_zoo.census_model_sqlflow.wide_and_deep.feature_info_utils import (
-    FeatureTransformInfo,
-    SchemaInfo,
     TransformOp,
 )
 from model_zoo.census_model_sqlflow.wide_and_deep.keras_process_layers import (
@@ -105,16 +102,16 @@ def transform(inputs):
             offsets = list(
                 itertools.accumulate([0] + feature_transform_info.param[:-1])
             )
-            transformed[feature_transform_info.output_name] = Group(None)(
+            transformed[feature_transform_info.output_name] = Group(offsets)(
                 group_inputs
             )
         elif feature_transform_info.op_name == TransformOp.EMBEDDING:
             # The num_buckets should be calcualte from the group items
-            group_identity = tf.feature_column.categorical_column_with_identity(
+            group_identity = fc.categorical_column_with_identity(
                 feature_transform_info.input_name,
                 num_buckets=feature_transform_info.param[0],
             )
-            group_embedding = tf.feature_column.embedding_column(
+            group_embedding = fc.embedding_column(
                 group_identity, dimension=feature_transform_info.param[1]
             )
             transformed[
@@ -135,7 +132,7 @@ def transform(inputs):
 
 
 # The following code has the same logic with the `transform` function above.
-# It can be generated from the parsed meta in feature_configs.py using code_gen.
+# It can be generated from the parsed meta in feature_configs using code_gen.
 def transform_from_code_gen(source_inputs):
     inputs = source_inputs.copy()
 
@@ -195,8 +192,8 @@ def transform_from_code_gen(source_inputs):
         ]
     )
 
-    group1_wide_embedding_column = tf.feature_column.embedding_column(
-        tf.feature_column.categorical_column_with_identity(
+    group1_wide_embedding_column = fc.embedding_column(
+        fc.categorical_column_with_identity(
             "group1", num_buckets=group1_embedding_wide.param[0]
         ),
         dimension=group1_embedding_wide.param[1],
@@ -205,8 +202,8 @@ def transform_from_code_gen(source_inputs):
         [group1_wide_embedding_column]
     )({"group1": group1_out})
 
-    group2_wide_embedding_column = tf.feature_column.embedding_column(
-        tf.feature_column.categorical_column_with_identity(
+    group2_wide_embedding_column = fc.embedding_column(
+        fc.categorical_column_with_identity(
             "group2", num_buckets=group2_embedding_wide.param[0]
         ),
         dimension=group2_embedding_wide.param[1],
@@ -215,8 +212,8 @@ def transform_from_code_gen(source_inputs):
         [group2_wide_embedding_column]
     )({"group2": group2_out})
 
-    group1_deep_embedding_column = tf.feature_column.embedding_column(
-        tf.feature_column.categorical_column_with_identity(
+    group1_deep_embedding_column = fc.embedding_column(
+        fc.categorical_column_with_identity(
             "group1", num_buckets=group1_embedding_deep.param[0]
         ),
         dimension=group1_embedding_deep.param[1],
@@ -225,8 +222,8 @@ def transform_from_code_gen(source_inputs):
         [group1_deep_embedding_column]
     )({"group1": group1_out})
 
-    group2_deep_embedding_column = tf.feature_column.embedding_column(
-        tf.feature_column.categorical_column_with_identity(
+    group2_deep_embedding_column = fc.embedding_column(
+        fc.categorical_column_with_identity(
             "group2", num_buckets=group2_embedding_deep.param[0]
         ),
         dimension=group2_embedding_deep.param[1],
@@ -235,8 +232,8 @@ def transform_from_code_gen(source_inputs):
         [group2_deep_embedding_column]
     )({"group2": group2_out})
 
-    group3_deep_embedding_column = tf.feature_column.embedding_column(
-        tf.feature_column.categorical_column_with_identity(
+    group3_deep_embedding_column = fc.embedding_column(
+        fc.categorical_column_with_identity(
             "group3", num_buckets=group3_embedding_deep.param[0]
         ),
         dimension=group3_embedding_deep.param[1],
@@ -245,14 +242,14 @@ def transform_from_code_gen(source_inputs):
         [group3_deep_embedding_column]
     )({"group3": group3_out})
 
-    wide_embeddings = [group1_embedding_wide_out, group2_embedding_wide_out]
-    deep_embeddings = [
+    wide_embeddings_out = [group1_embedding_wide_out, group2_embedding_wide_out]
+    deep_embeddings_out = [
         group1_embedding_deep_out,
         group2_embedding_deep_out,
         group3_embedding_deep_out,
     ]
 
-    return wide_embeddings, deep_embeddings
+    return wide_embeddings_out, deep_embeddings_out
 
 
 # The entry point of the submitter program
