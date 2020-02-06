@@ -4,7 +4,9 @@ This document describes core concepts used in ElasticDL, and discusses their rep
 
 ## Core Concepts
 
-There are usually two kinds of parameters in a deep learning model, one is dense parameter, the other is sparse parameter. The sparse parameter is used by the embedding layer, which is also called embedding table. The embedding table maps discrete ID *i* to embedding vector *vᵢ*.
+Machine learning algorithms build a mathematical model based on sample data, known as "training data", in order to make predictions or decisions without being explicitly programmed to perform the task.
+
+There are usually two kinds of parameters in a model, one is dense parameter, the other is sparse parameter. The sparse parameter is used by the embedding layer, which is also called embedding table. The embedding table maps discrete ID *i* to embedding vector *vᵢ*.
 
 Both dense parameter and embedding table includes a tensor data field, and some other auxiliary fields, like name. Embedding table has an extra auxiliary field called indices.
 
