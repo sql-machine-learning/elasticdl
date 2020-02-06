@@ -61,7 +61,7 @@ type Emdedding = Buffer // alias for better understanding
 
 type EmbeddingTable struct {
     Name       string
-    Embeddings map[string]*Emdedding
+    Embeddings map[int64]*Emdedding
     Dtype      TensorDtype
 }
 
