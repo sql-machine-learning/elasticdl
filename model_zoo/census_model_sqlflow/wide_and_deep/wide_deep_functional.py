@@ -260,7 +260,9 @@ def custom_model():
     input_layers = get_input_layers(input_schemas=INPUT_SCHEMAS)
     wide_embeddings, deep_embeddings = transform(input_layers)
 
-    return wide_and_deep_classifier(input_layers, wide_embeddings, deep_embeddings)
+    return wide_and_deep_classifier(
+        input_layers, wide_embeddings, deep_embeddings
+    )
 
 
 def loss(labels, predictions):
