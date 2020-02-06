@@ -1,6 +1,7 @@
 import itertools
 
 import tensorflow as tf
+from tensorflow import feature_column as fc
 
 from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
     FEATURE_TRANSFORM_INFO_EXECUTE_ARRAY,
@@ -36,7 +37,6 @@ from model_zoo.census_model_sqlflow.wide_and_deep.keras_process_layers import (
     Group,
     NumericBucket,
 )
-from tensorflow import feature_column as fc
 
 
 # The model definition from model zoo. It's functional style.
@@ -242,7 +242,10 @@ def transform_from_code_gen(source_inputs):
         [group3_deep_embedding_column]
     )({"group3": group3_out})
 
-    wide_embeddings_out = [group1_embedding_wide_out, group2_embedding_wide_out]
+    wide_embeddings_out = [
+        group1_embedding_wide_out,
+        group2_embedding_wide_out,
+    ]
     deep_embeddings_out = [
         group1_embedding_deep_out,
         group2_embedding_deep_out,
