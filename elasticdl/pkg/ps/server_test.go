@@ -16,6 +16,8 @@ const (
 	ADDR string = "localhost:12345"
 )
 
+var s *Server
+
 func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, context.CancelFunc) {
 	conn, err := grpc.Dial(ADDR, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {

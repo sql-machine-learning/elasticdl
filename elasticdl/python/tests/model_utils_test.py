@@ -1,11 +1,14 @@
 import os
 import unittest
 
+import tensorflow as tf
+
 from elasticdl.python.common.model_utils import (
     _get_spec_value,
     get_dict_from_params_str,
     get_model_spec,
     get_module_file_path,
+    get_optimizer_info,
 )
 
 _model_zoo_path = os.path.dirname(os.path.realpath(__file__))
@@ -101,6 +104,50 @@ class ModelHelperTest(unittest.TestCase):
             {"ls": ["a", "b"], "partition": "dt=20190011"},
         )
         self.assertEqual(get_dict_from_params_str(""), {})
+
+    def test_get_optimizer_info(self):
+        learning_rate = 0.1
+        momentum = 0.0
+        nesterov = False
+        expected_args = (
+            "learning_rate="
+            + str(learning_rate)
+            + ";momentum="
+            + str(momentum)
+            + ";nesterov=False;"
+        )
+        opt = tf.keras.optimizers.SGD(
+            learning_rate=learning_rate, momentum=momentum, nesterov=nesterov
+        )
+        opt_type, opt_args = get_optimizer_info(opt)
+        self.assertEqual(opt_type, "SGD")
+        self.assertEqual(opt_args, expected_args)
+
+        beta_1 = 0.8
+        beta_2 = 0.6
+        epsilon = 1e-08
+        amsgrad = False
+        expected_args = (
+            "learning_rate="
+            + str(learning_rate)
+            + ";beta_1="
+            + str(beta_1)
+            + ";beta_2="
+            + str(beta_2)
+            + ";epsilon="
+            + str(epsilon)
+            + ";amsgrad=False;"
+        )
+        opt = tf.keras.optimizers.Adam(
+            learning_rate=learning_rate,
+            beta_1=beta_1,
+            beta_2=beta_2,
+            epsilon=epsilon,
+            amsgrad=amsgrad,
+        )
+        opt_type, opt_args = get_optimizer_info(opt)
+        self.assertEqual(opt_type, "Adam")
+        self.assertEqual(opt_args, expected_args)
 
 
 if __name__ == "__main__":

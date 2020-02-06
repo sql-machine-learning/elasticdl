@@ -21,6 +21,7 @@ from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
     get_module_file_path,
+    get_optimizer_info,
     load_model_from_module,
     load_module,
 )
@@ -340,6 +341,7 @@ class Master(object):
             worker_args.extend(build_arguments_from_parsed_result(args))
 
             if args.use_go_ps:
+                opt_type, opt_args = get_optimizer_info(self.optimizer)
                 # TODO: rename the Go PS executable using a meaningful filename
                 ps_command = ["main"]
                 ps_args = [
@@ -361,6 +363,8 @@ class Master(object):
                     "-keep_checkpoint_max=" + str(args.keep_checkpoint_max),
                     "-checkpoint_dir_for_init="
                     + str(args.checkpoint_dir_for_init),
+                    "-opt_type=" + opt_type,
+                    "-opt_args=" + opt_args,
                 ]
             else:
                 ps_command = ["python"]
