@@ -4,17 +4,15 @@ This document describes core concepts used in ElasticDL, and discusses their rep
 
 ## Core Concepts
 
-Fundamentally, machine learning is using algorithms to extract information from raw data and represent it in some type of model.
-
-There are two kinds of parameters in a model, one is dense parameter, the other is sparse parameter. The sparse parameter is used by the embedding layer, so it is also called embedding table. The embedding table maps discrete ID *i* to embedding vector *vᵢ*.
+There are usually two kinds of parameters in a deep learning model, one is dense parameter, the other is sparse parameter. The sparse parameter is used by the embedding layer, which is also called embedding table. The embedding table maps discrete ID *i* to embedding vector *vᵢ*.
 
 Both dense parameter and embedding table includes a tensor data field, and some other auxiliary fields, like name. Embedding table has an extra auxiliary field called indices.
 
-Tensor is used to represented a n-dim data. We support several data types, such as int8/int32/float32/float64.
+Tensor is used to represented a n-dim data. We support several data types, such as int8/int32/int64/float32/float64.
 
-Besides, we have two kinds of gradients, dense gradient and embedding table gradient. The components of dense gradient is the same with dense parameter, and the components of embedding table gradient is also the same with embedding table.
+Besides, we have two kinds of gradients, dense gradient and embedding table gradient. The data structure of dense gradient is the same with dense parameter, and so is the embedding table gradient.
 
-In ElasticDL, only a large embedding layer is represented by an embedding table. For small embedding layer, a dense parameter is used, but its gradient is sparse. It has indices, which is actually an embedding table gradient.
+In ElasticDL, only the parameter of large embedding layer is represented by an embedding table. For small embedding layer, a dense parameter is used, and its gradient also has an indices field. In this case, the data structure of gradient is not dense param, but an embedding table.
 
 Let's make a short summary, following is all the core concepts used in ElasticDL:
 
@@ -25,7 +23,7 @@ Let's make a short summary, following is all the core concepts used in ElasticDL
 
 ## In-Memory Representation
 
-EmbeddingTable is initialized lazily in PS. Worker sends item ids to request embedding vectors from PS. If the ID is not found in PS, the corresponding embedding vector will be initialized and send back to the worker. For better query and increasing embedding vectors, we use a map data structure to represent EmbeddingTable.
+EmbeddingTable is initialized lazily in PS. Worker sends item ids to request embedding vectors from PS. If the ID is not found in PS, the corresponding embedding vector will be initialized and sent back to the worker. In order to query and insert embedding vectors efficiently, we use a map data structure to represent EmbeddingTable.
 
 ```go
 type TensorDtype = int64
@@ -62,9 +60,11 @@ type DenseParam struct {
 type Emdedding = Buffer // alias for better understanding
 
 type EmbeddingTable struct {
-    Name       string
-    Embeddings map[int64]*Emdedding
-    Dtype      TensorDtype
+    Name        string
+    Dim         int64
+    Dtype       TensorDtype
+    Initializer string
+    Embeddings  map[int64]*Emdedding
 }
 
 type Model struct {
@@ -113,10 +113,9 @@ message EmbeddingTable {
 }
 
 message Model {
-  bool initialized = 1;
-  int32 version = 2;
-  repeated DenseParam dense_params = 3;
-  repeated EmbeddingTable embedding_tables = 4;
+  int32 version = 1; // model updated times
+  repeated DenseParam dense_params = 2;
+  repeated EmbeddingTable embedding_tables = 3;
 }
 ```
 
