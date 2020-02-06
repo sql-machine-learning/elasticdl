@@ -95,9 +95,9 @@ func (s *Server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (
 		grads = append(grads, grad)
 	}
 	err := s.Opt.ApplyGradients(grads, s.Param)
-	versionLock.Lock()
+	s.versionLock.Lock()
 	s.Param.Version += int32(1)
-	versionLock.Unlock()
+	s.versionLock.Unlock()
 	res.Accepted = true
 	res.ModelVersion = s.Param.Version
 	return &res, err
