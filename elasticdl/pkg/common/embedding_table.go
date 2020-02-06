@@ -13,12 +13,13 @@ type EmbeddingTable struct {
 
 // NewEmbeddingTable creates an embedding table instance
 func NewEmbeddingTable(name string, dim int64, initializer string, flag Flag) *EmbeddingTable {
-	var e EmbeddingTable
-	e.Name = name
-	e.Dim = dim
-	e.Initializer = initializer
-	e.EmbeddingVector = make(map[int64]*Vector)
-	e.Dtype = flag
+	var e = EmbeddingTable{
+		Name:            name,
+		Dim:             dim,
+		Initializer:     initializer,
+		EmbeddingVector: make(map[int64]*Vector),
+		Dtype:           flag,
+	}
 	return &e
 }
 
