@@ -15,8 +15,8 @@ type Tensor struct {
 	Indices []int64
 }
 
-// ProductInt64 get the number of the elements of a tensor of this dim
-func ProductInt64(dim []int64) int64 {
+// DimSize get the number of the elements of a tensor of this dim
+func DimSize(dim []int64) int64 {
 	var size int64 = 1
 	for _, d := range dim {
 		size *= d
@@ -27,9 +27,9 @@ func ProductInt64(dim []int64) int64 {
 // NewEmptyTensor create a new n-dim tensor
 func NewEmptyTensor(name string, dim []int64, flag Flag) *Tensor {
 	var t = Tensor{
-		Name: name,
-		Content: NewEmptyVector(int(ProductInt64(dim)), flag),
-		Dim:  dim,
+		Name:    name,
+		Content: NewEmptyVector(int(DimSize(dim)), flag),
+		Dim:     dim,
 	}
 	return &t
 }
@@ -37,9 +37,9 @@ func NewEmptyTensor(name string, dim []int64, flag Flag) *Tensor {
 // NewInitializedTensor create an initialized vector
 func NewInitializedTensor(name string, dim []int64, indices []int64, flag Flag, initializer InitializeFunc) *Tensor {
 	var t = Tensor{
-		Name: name,
-		Content: NewInitializedVector(int(ProductInt64(dim)), flag, initializer),
-		Dim:  dim,
+		Name:    name,
+		Content: NewInitializedVector(int(DimSize(dim)), flag, initializer),
+		Dim:     dim,
 	}
 	return &t
 }
@@ -48,7 +48,7 @@ func NewInitializedTensor(name string, dim []int64, indices []int64, flag Flag, 
 func NewTensor(name string, data interface{}, dim []int64, indices []int64) *Tensor {
 	var t = Tensor{
 		Name:    name,
-		Content:    NewVector(data),
+		Content: NewVector(data),
 		Dim:     dim,
 		Indices: indices,
 	}
@@ -59,7 +59,7 @@ func NewTensor(name string, data interface{}, dim []int64, indices []int64) *Ten
 func NewTensorInplace(name string, data interface{}, dim []int64, indices []int64) *Tensor {
 	var t = Tensor{
 		Name:    name,
-		Content:    NewVectorInplace(data),
+		Content: NewVectorInplace(data),
 		Dim:     dim,
 		Indices: indices,
 	}
@@ -143,7 +143,7 @@ func (t *Tensor) MakeSlice() interface{} {
 func (v *Vector) VectorToTensor() *Tensor {
 	var t = Tensor{
 		Content: v,
-		Dim:  []int64{1, int64(v.Length)},
+		Dim:     []int64{1, int64(v.Length)},
 	}
 	return &t
 }
@@ -151,7 +151,7 @@ func (v *Vector) VectorToTensor() *Tensor {
 // DeserializeTensorPB transforms pb to tensor
 func DeserializeTensorPB(pb *proto.Tensor) *Tensor {
 	dtype := FlagToDataType[int(pb.Dtype)]
-	if int(ProductInt64(pb.Dim))*dtype.Size != len(pb.Content) {
+	if int(DimSize(pb.Dim))*dtype.Size != len(pb.Content) {
 		return nil
 	}
 	var t = NewTensorInplace(pb.Name, pb.Content, pb.Dim, pb.Indices)
