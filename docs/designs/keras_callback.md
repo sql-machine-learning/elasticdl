@@ -1,6 +1,6 @@
 # Design to Support Keras Callback
 
-This document describes the design for supporting callback to customize the behavior of model in ElasticDL.
+This document describes the design for supporting callback to customize the behavior of model during training, evaluation and inference in ElasticDL.
 
 ## Motivation
 
@@ -29,13 +29,12 @@ class PredictionOutputsProcessor(BasePredictionOutputsProcessor):
 There will be multiple definition APIs for users to define different behaviors of model and the interfaces of APIs may be different. It is more convenient for users to define those behaviors using `tf.keras.callbacks.Callback`. 
 
 Some use cases we observed that we want to support are:
-* Callbacks used in testing that checks retry times and model parameter updates,
-* Callback similar to `PredictionOutputsProcessor` that is executed after prediction outputs are made.
-* Callback to write additional summaries to TensorBoard after each evaluation job completes.
-* Callback to modulate learning rate as we are currently doing in `LearningRateScheduler`.
-* Callback for logic to be executed before training starts such as starting embedding service.
-* Callback to perform early stopping when certain conditions are met.
-* Callback to upload model to remote storage after completing training.
+* Case 1: Callback similar to `PredictionOutputsProcessor` that is executed after prediction outputs are made.
+* Case 2: Callback to modulate learning rate as we are currently doing in `LearningRateScheduler`.
+* Case 3: Callback to checkpoint model weights during training.
+* Case 4: Callback to write additional summaries to TensorBoard after each evaluation job completes.
+* Case 5: Callback to perform early stopping when certain conditions are met. For example, the metrics are met after an evaluation job.
+* Case 6: Callback to upload model to remote storage after completing training.
 
 
 To implement callbacks, we need to solve the following problems:
@@ -88,108 +87,121 @@ callback_list.on_batch_end(batch)
 ### Call the Methods of Callback using ParameterServerStrategy
 
 Using ParameterServerStrategy in ElasticDL, we will launch instances as master, worker and parameter server. 
-The master controls the start and end of job and epoch. The worker and parameter server is responsible to process each batch. So we need to call different methods on different instance according the call frequency.
+The master controls the start and end of job and epoch, the worker processes each batch and the parameter server update model weights with batch gradients. So we need to call different methods on different instance according the call frequency. Due to there are many methods in `tf.keras.callbacks.Callback` and we don't have use case for each method, so we only design to support calling methods which the use cases listed in the motivation section need. And we will design to support other methods if there is a use case.
 
 
-### Call Methods of Callback Per Batch
+### Call Methods of Callback Per Batch on Worker
 
-The methods should be called per batch in `tf.keras.callbacks.Callback` is
+The methods should be called per batch in `tf.keras.callbacks.Callback` are
 ```python
 on_(train|test|predict)_batch_begin(self, batch, logs=None)
 on_(train|test|predict)_batch_end(self, batch, logs=None)
 ```
-Each batch needs worker to calculate loss and gradient and parameter server to update gradients. So the worker and parameter server should call those methods per batch.
 
-For worker:
+"Case 1" needs to customize behavior by calling `on_predict_batch_end`. 
 ```python
-batch_index = 0
-for batch in dataset:
-    callback_list.on_(train|test|predict)_batch_begin(self, batch=batch_index, logs=None)
-    process(batch)
-    callback_list.on_(train|test|predict)_batch_end(self, batch=batch_index, logs=None)
-    batch_index += 1
+def on_predict_batch_end(self, batch, logs=None):
+    """Call on the prediction end of each batch
+    Args:
+        batch: integer, index of batch in the current worker
+        logs: dict. Has keys batch, size and predictions representing
+            the current batch number in the worker,
+            the size of the batch,
+            the prediction outputs of the batch.
+    """
 ```
 
-The parameter server only updates the gradients for each batch during training, so it doesn't need to 
-call the methods per batch for test and prediction. 
+On the worker, we can call `on_predict_batch_end` after forward processing with batch features:
+```python
+def _process_minibatch(self, task_type, features, batch_index):
+    ...
+    if task_type == elasticdl_pb2.PREDICTION:
+        predictions = self.forward_process(features)
+        prediction_logs = {
+            "batch": batch_index,
+            "size": len(predictions)
+            "predictions": predictions
+        }
+        self.callbacks_list.on_predict_batch_end(
+            batch=batch_index, logs=prediction_logs
+        )
+```
+
+### Call Methods of Callback Per Updating Batch Gradients on PS
+
+"Case 2" and "Case 3" needs to customize behaviors After updating model weights using batch gradients on the PS. So, we add `on_update_batch_end` method, though it is not in `tf.keras.callbacks.Callback`.
+```python
+def on_update_batch_end(self, version, logs=None):
+    """
+    Args:
+        version: integer, the model version in PS.
+        logs: dict. Has keys batch and size representing the current batch number and the size of the batch.
+    """
+```
+ 
 ```python
 def update_parameter_for_batch(gradients, model_version):
-    callback_list.on_train_batch_begin(self, batch=model_version) # model_version is the iteration number during training.
     update_gradient(gradients)
-    callback_list.on_train_batch_end(self, batch=model_vesion)
+    for callback in callbacks_list.callbacks:
+        if callback.hasattr("on_update_batch_end")
+            callback.on_update_batch_end(self, batch=model_vesion)
 ```
+However, we will implement a high performance parameter server using golang. And there is a question how golang can call the callbacks defined by users using Python.
 
-The worker and parameter server will both call the `on_train_batch_begin|end` and per batch. So, the 2 methods will be called twice and can be called by either worker or parameter server. For example, the `on_train_batch_begin` of `LearningRateScheduler` can only be called by parameter server to adjust the learning rate for each batch. There are 2 proposals to solve the problem.
+### Call Methods of Callback Per Epoch on Master
 
-1. Only the parameter server calls `on_train_batch_begin|end` and the worker doesn't. Because, we 
-have not observed a use case for callback to execute per batch by the worker.
-
-2. ElasticDL sets an argmuent `instance_role` in `params` of each callback and users get the `instance_role` in `on_train_batch_begin|end`. It may need users to understand why to get the `instance_role`.
-```python
-class LearningRateScheduler(tf.keras.callbacks.Callback):
-    def on_train_batch_begin(self, batch, logs=None):
-        instance_role = self.params.get("instance_role", None)
-        if instance_role != "ParameterServer":
-            return
-```
-
-
-### Call Methods of Callback Per Epoch
-
-The methods should be called per epoch in `tf.keras.callbacks.Callback` is
+The methods should be called per epoch in `tf.keras.callbacks.Callback` are
 ```python
 on_epoch_begin(self, epoch, logs=None)
 on_epoch_end(self, epoch, logs=None)
 ```
-Only the master knows when an epoch begins and ends because the master creates tasks for each epoch using `_TaskDispatcher`. So, we can call those methods in the `get` and `report` of `_TaskDispatcher`.
-```python
-def get(self, worker_id):
-    if not self._todo and self._epoch < self._num_epochs - 1:
-        # Start a new epoch
-        self._epoch += 1
-        self.create_tasks(elasticdl_pb2.TRAINING)
-        logger.info("Starting epoch %d", self._epoch)
-        self.callback_list.on_epoch_begin(self._epoch, logs)
-        
-        task = self._todo.pop()
-        if not self._todo:
-            self._epoch_end_task = task
+
+Only the master knows when an epoch begins and ends because the master creates tasks for each epoch using `_TaskDispatcher`. So, we can call those methods in the `get` and `report` of `_TaskDispatcher`. Due to there is no use case which needs to call `on_epoch_begin|end`, so we will design the support calling those methods in the future when we have the case.
 
 
-def report(self, request, success):
-    task_id = request.task_id
-    if task_id == self._epoch_end_task and success:
-        self.callback_list.on_epoch_end(self._epoch, logs)
-```
-
-
-### Call Methods of Callback When the Job Begins and Ends
+### Call Methods of Callback When the Job Begins and Ends On Master
 
 The methods should be called when the job begins and ends in `tf.keras.callbacks.Callback`
 ```python
 on_(train|test|predict)_begin(self, logs=None)
 on_(train|test|predict)_end(self, logs=None)
 ```
-The master starts and finishes a job, so it calls those methods. 
 
+"Case 6" listed in the motivation section needs to customize behavior by calling `on_train_end` after a train job completes by calling `on_train_end`.
 ```python
-def run(self):
+def on_train_end(self, logs=None):
+    """Call on the train job end
+    Args:
+        logs: dict. Currently no data is passed to this argument for this method but that may change in the future.
     """
-    The main loop of master.
-    Dispatch the tasks to the workers until all the tasks are completed.
-    """
-    try:
-        self.callback_list.on_(train|test|predict)_begin(self, logs=None)
-        while True: 
-            ...
-    except KeyboardInterrupt:
-        self.logger.warning("Server stopping")
-    finally:
-        self.callback_list.on_(train|test|predict)_end(self, logs=None)
-        self._stop()
-    return self._exit_code
+```
+The master determine whether or not the job is completed by `finished` method in `_TaskDispatcher`, so we can call `on_train_end` in the `finished` method if finished.
+```python
+def finished(self):
+    """Return if all tasks are done"""
+    finished = all([not self._todo, not self._eval_todo, not self._doing])
+    if finished:
+        self._callbacks_list.on_train_end()
+    return finished
 ```
 
+"Case 4" and "Case 5" listed in the motivation section need to customize behavior by calling `on_test_end` after a test job completes. 
+```python
+def on_test_end(self, logs):
+    """Call on the test job end
+    Args:
+        logs: dict. Has key metrics representing the evaluation metrics on the validation data.
+    """
+```
+
+The master determine whether or not the evaluation job is completed by `EvaluationService.complete_task()`. So, we can call `on_test_end` After `EvaluationService.complete_task()` returns evaluation metrics.
+```python
+if evaluation_task_completed:
+    eval_metrics = self._evaluation_service.complete_task()
+    if eval_metrics is not None:
+        logs = {"metrics": eval_metrics}
+        self._callbacks_list.on_test_end(logs)
+```
 
 ### Call the Methods of Callback using AllReduceStrategy
 
