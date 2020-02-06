@@ -103,18 +103,17 @@ func (s *Server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (
 	return &res, err
 }
 
-// CreateServer creates a PS server and starts the serving. Set serverDone when finishes.
-func CreateServer(address string, ID int, opt string, lr float32, serverDone chan bool) (*Server, *grpc.Server) {
+// Run creates a grpc server and starts the serving. Set serverDone when finishes.
+func (s *Server) Run(address string, serverDone chan bool) *grpc.Server {
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("failed to start PS: %v", err)
 	}
 	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
 	grpcServer := grpc.NewServer()
-	s := NewServer(ID, opt, lr)
 	pb.RegisterPserverServer(grpcServer, s)
 	go startServe(grpcServer, lis, serverDone)
-	return s, grpcServer
+	return grpcServer
 }
 
 func startServe(server *grpc.Server, lis net.Listener, serverDone chan bool) {
