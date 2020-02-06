@@ -49,18 +49,27 @@ def custom_model():
     ...
 
 def callbacks():
-    early_stop_callback = EarlyStopCallback()
+    prediction_output_processor = PredictionOutputsProcessor()
     learning_rate_scheduler = LearningRateScheduler()
-    return [early_stop_callback, learning_rate_scheduler]
+    return [prediction_output_processor, learning_rate_scheduler]
 
 
-class EarlyStopCallback(tf.keras.callbacks.Callback):
-    def on_batch_end(self, batch, logs=None):
-        ...
+class PredictionOutputsProcessor(tf.keras.callbacks.Callback):
+    def on_predict_batch_end(self, batch, logs=None):
+        predictions = logs["predictions"]
+        process(predictions)
+
 
 class LearningRateScheduler(tf.keras.callbacks.Callback):
-    def on_batch_start(self, batch, logs=None):
-        ...
+    def __init__(self, schedule):
+        super(LearningRateScheduler, self).__init__()
+        self.schedule = schedule
+
+    def on_train_batch_begin(self, model_version, logs=None):
+        if not hasattr(self.model.optimizer, 'lr'):
+            raise ValueError('Optimizer must have a "lr" attribute.')
+        lr = self.schedule(model_version)
+        K.set_value(self.model.optimizer.lr, lr)
 ```
 
 ## Call the Methods of Callback in ElasticDL
