@@ -17,18 +17,20 @@ type Tensor struct {
 }
 
 // NewTensor create a new n-dim tensor
-func NewTensor(dim []int64) *Tensor {
+func NewTensor(dim []int64, name string) *Tensor {
 	var t Tensor
+	t.Name = name
 	t.Value = make([]float32, GetDimProduct(dim))
 	t.Dim = dim
 	return &t
 }
 
 // NewVector create a new 1-dim tensor
-func NewVector(dim int64) *Tensor {
+func NewVector(dim int64, name string) *Tensor {
 	var t Tensor
 	t.Value = make([]float32, dim)
 	t.Dim = []int64{dim}
+	t.Name = name
 	return &t
 }
 
