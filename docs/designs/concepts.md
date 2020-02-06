@@ -25,6 +25,54 @@ Let's make a short summary, following is all the core concepts used in ElasticDL
 
 ## In-Memory Representation
 
+```go
+type TensorDtype = int64
+
+const (
+    Invalid TensorDtype = iota
+    Int8 
+    Int16
+    Int32
+    Int64
+    Float16
+    Float32
+    Float64
+    Bool
+)
+
+type Buffer struct {
+    Data   []byte
+    Length int64
+    Dtype  TensorDtype
+}
+
+type Tensor struct {
+    Content *Buffer
+    Dims    []int64
+    Indices []int64
+}
+
+type DenseParam struct {
+    Name   string
+    Tensor Tensor
+}
+
+type Emdedding = Buffer // alias for better understanding
+
+type EmbeddingTable struct {
+    Name       string
+    Embeddings map[string]*Emdedding
+    Dtype      TensorDtype
+}
+
+type Model struct {
+    Initialized     bool
+    Version         int32
+    DenseParams     map[string]*DenseParam
+    EmbeddingTables map[string]*EmbeddingTable
+}
+```
+
 
 ## Message Representation
 
