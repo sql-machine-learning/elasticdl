@@ -156,6 +156,7 @@ var optArgumentsMap = map[string][]string{
 	"Adam": []string{optArgLR, optArgBeta1, optArgBeta2, optArgEpsilon, optArgAmsgrad},
 }
 
+// parseOptArgs parses optimizer arguments according to optimizer type
 func parseOptArgs(optType string, optArgs string) (map[string]string, error) {
 	// parse arguments to map
 	argsMap := make(map[string]string)
@@ -180,7 +181,7 @@ func parseOptArgs(optType string, optArgs string) (map[string]string, error) {
 	return argsMap, nil
 }
 
-// NewOptimizer creates Optimizer according to optimizer type and arguments
+// NewOptimizer creates optimizer according to optimizer type and arguments
 func NewOptimizer(optType string, optArgs string) (Optimizer, error) {
 	argsMap, err := parseOptArgs(optType, optArgs)
 	if err != nil {
