@@ -92,7 +92,7 @@ func removeDuplicateElement(indices []int64) (map[int64]int64, []int64) {
 func mergeIndexedSlices(grad *common.Tensor) *common.Tensor {
 	result, newIndices := removeDuplicateElement(grad.Indices)
 	newD := []int64{int64(len(newIndices)), grad.Dim[1]}
-	t := common.NewTensor(newD)
+	t := common.NewTensor(newD, grad.Name)
 	t.Indices = newIndices
 	for i, index := range grad.Indices {
 		subA := t.AtRow(result[index])

@@ -17,7 +17,7 @@ type Server struct {
 	pb.PserverServer
 	Param *Parameter
 	Opt   Optimizer
-	ID    int
+	ID    int // a zero-based successive integer number
 	lock  sync.Mutex
 }
 
@@ -63,13 +63,13 @@ func (s *Server) PullEmbeddingVector(ctx context.Context, in *pb.PullEmbeddingVe
 
 // PushModel pushes model to server
 func (s *Server) PushModel(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
-	if s.Param.InitStatus {
-		return &empty.Empty{}, nil
-	}
 	s.lock.Lock()
-	err := s.Param.InitFromModelPB(in)
-	if err == nil {
-		s.Param.InitStatus = true
+	var err error
+	if !s.Param.InitStatus {
+		err = s.Param.InitFromModelPB(in)
+		if err == nil {
+			s.Param.InitStatus = true
+		}
 	}
 	s.lock.Unlock()
 	return &empty.Empty{}, err
