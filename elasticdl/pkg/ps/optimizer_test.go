@@ -158,3 +158,59 @@ func TestAdamOptimizer(t *testing.T) {
 	expV = []float32{-0.1314178004, -0.1314178004, -0.2168087883, -0.2168087883, -0.0545489238, -0.0545489238}
 	assert.True(t, common.CompareFloatArray(expV, vectors.Value, 0.0001))
 }
+
+func TestParseOptArgs(t *testing.T) {
+	// parse SGD optimizer arguments
+	optType := "SGD"
+	optArgs := "learning_rate=0.1;momentum=0.0;nesterov=true;"
+	argsMap, err := parseOptArgs(optType, optArgs)
+	assert.Nil(t, err)
+	assert.True(t, len(argsMap) == 3)
+	assert.Equal(t, argsMap["learning_rate"], "0.1")
+	assert.Equal(t, argsMap["momentum"], "0.0")
+	assert.Equal(t, argsMap["nesterov"], "true")
+
+	// should return error for redundant arguments
+	optType = "SGD"
+	optArgs = "learning_rate=0.1;momentum=0.0;nesterov=true;redundant_arg=1;"
+	argsMap, err = parseOptArgs(optType, optArgs)
+	assert.NotNil(t, err)
+
+	// should return error for the learning rate
+	optType = "SGD"
+	optArgs = "momentum=0.0;nesterov=true;redundant_arg=1;"
+	argsMap, err = parseOptArgs(optType, optArgs)
+	assert.NotNil(t, err)
+
+	// parse Adam optimizer arguments
+	optType = "Adam"
+	optArgs = "learning_rate=0.2;beta_1=0.5;beta_2=0.3;epsilon=0.005;amsgrad=false;"
+	argsMap, err = parseOptArgs(optType, optArgs)
+	assert.Nil(t, err)
+	assert.True(t, len(argsMap) == 5)
+	assert.Equal(t, argsMap["learning_rate"], "0.2")
+	assert.Equal(t, argsMap["beta_1"], "0.5")
+	assert.Equal(t, argsMap["beta_2"], "0.3")
+	assert.Equal(t, argsMap["epsilon"], "0.005")
+	assert.Equal(t, argsMap["amsgrad"], "false")
+}
+
+func TestNewOptimizer(t *testing.T) {
+	optType := "SGD"
+	optArgs := "learning_rate=0.1;momentum=0.0;nesterov=False;"
+	opt, err := NewOptimizer(optType, optArgs)
+	assert.Nil(t, err)
+	assert.Equal(t, opt.GetLR(), float32(0.1))
+
+	optType = "Adam"
+	optArgs = "learning_rate=0.2;beta_1=0.5;beta_2=0.3;epsilon=0.005;amsgrad=false;"
+	opt, err = NewOptimizer(optType, optArgs)
+	assert.Nil(t, err)
+	adamOpt, ok := opt.(*AdamOptimizer)
+	assert.True(t, ok)
+	assert.Equal(t, adamOpt.GetLR(), float32(0.2))
+	assert.Equal(t, adamOpt.beta1, float32(0.5))
+	assert.Equal(t, adamOpt.beta2, float32(0.3))
+	assert.Equal(t, adamOpt.epsilon, float32(0.005))
+	assert.False(t, adamOpt.amsgrad)
+}

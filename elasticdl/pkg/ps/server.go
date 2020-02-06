@@ -22,11 +22,17 @@ type Server struct {
 }
 
 // NewServer creates a Server instance
-func NewServer(ID int, opt string, lr float32) *Server {
-	return &Server{
-		Param: NewParameter(),
-		Opt:   NewOptimizer(opt, lr),
-		ID:    ID}
+func NewServer(ID int, optType string, optArgs string) (*Server, error) {
+	var ps Server
+	ps.Param = NewParameter()
+	var err error
+	ps.Opt, err = NewOptimizer(optType, optArgs)
+	if err != nil {
+		return nil, err
+	}
+	ps.ID = ID
+	ps.lock = sync.Mutex{}
+	return &ps, nil
 }
 
 // PullVariable pulls variable from server
@@ -90,14 +96,17 @@ func (s *Server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (
 }
 
 // CreateServer creates a PS server and starts the serving. Set serverDone when finishes.
-func CreateServer(address string, ID int, opt string, lr float32, serverDone chan bool) (*Server, *grpc.Server) {
+func CreateServer(address string, ID int, optType string, optArgs string, serverDone chan bool) (*Server, *grpc.Server) {
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("failed to start PS: %v", err)
 	}
 	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
 	grpcServer := grpc.NewServer()
-	s := NewServer(ID, opt, lr)
+	s, err := NewServer(ID, optType, optArgs)
+	if err != nil {
+		log.Fatalf("failed to create PS server: %v", err)
+	}
 	pb.RegisterPserverServer(grpcServer, s)
 	go startServe(grpcServer, lis, serverDone)
 	return s, grpcServer
