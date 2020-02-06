@@ -3,6 +3,16 @@
 #include <cmath>
 #include <eigen3/Eigen/Dense>
 
+void AddTo(float* a, float* b, long long size) {
+  Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> ea{
+      a, static_cast<Eigen::Index>(size)};
+
+  Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> eb{
+      b, static_cast<Eigen::Index>(size)};
+
+  ea += eb;
+}
+
 void SGD(float* grad, float* param, float lr, long long size) {
   Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> eg{
       grad, static_cast<Eigen::Index>(size)};

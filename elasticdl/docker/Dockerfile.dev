@@ -13,29 +13,9 @@ RUN apt update && \
 COPY elasticdl/requirements.txt /requirements.txt
 COPY elasticdl/requirements-dev.txt /requirements-dev.txt
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
+ARG GO_MIRROR_URL=https://dl.google.com/go
 RUN pip install -r /requirements.txt --extra-index-url=${EXTRA_PYPI_INDEX}
 RUN pip install -r /requirements-dev.txt --extra-index-url=${EXTRA_PYPI_INDEX}
-
-# Install Go and related tools
-ENV GOPATH /root/go
-ENV PATH /usr/local/go/bin:$GOPATH/bin:$PATH
-COPY elasticdl/docker/scripts/install-go.bash /
-RUN /install-go.bash && rm /install-go.bash
-
-# Install protobuf and protoc
-COPY elasticdl/docker/scripts/install-protobuf.bash /
-RUN /install-protobuf.bash && rm /install-protobuf.bash
-
-# Install elasticdl.org/elasticdl Go package
-ENV ELASTICDLPATH $GOPATH/src/elasticdl.org/elasticdl
-COPY . /tmp/elasticdl
-RUN cd /tmp/elasticdl && make -f elasticdl/Makefile && \
-    mkdir -p $ELASTICDLPATH && \
-    cp -r /tmp/elasticdl/elasticdl/pkg $ELASTICDLPATH && \
-    cd $GOPATH/src/elasticdl.org/elasticdl && \
-    export GO111MODULE=on && \
-    go mod init elasticdl.org/elasticdl && \
-    go install ./... && cd / && rm -rf /tmp/elasticdl
 
 # Copy the data generation package to /var and run them from there.
 # This assumes that the data generation package is independent with the
@@ -56,3 +36,24 @@ COPY elasticdl/python/data/recordio_gen/census_recordio_gen.py /var/census_recor
 RUN python /var/census_recordio_gen.py --data_dir /root/.keras/datasets --output_dir /data/census
 
 RUN rm -rf /root/.keras/datasets
+
+# Install Go and related tools
+ENV GOPATH /root/go
+ENV PATH /usr/local/go/bin:$GOPATH/bin:$PATH
+COPY elasticdl/docker/scripts/install-go.bash /
+RUN /install-go.bash ${GO_MIRROR_URL} && rm /install-go.bash
+
+# Install protobuf and protoc
+COPY elasticdl/docker/scripts/install-protobuf.bash /
+RUN /install-protobuf.bash && rm /install-protobuf.bash
+
+# Install elasticdl.org/elasticdl Go package
+ENV ELASTICDLPATH $GOPATH/src/elasticdl.org/elasticdl
+COPY . /tmp/elasticdl
+RUN cd /tmp/elasticdl && make -f elasticdl/Makefile && \
+    mkdir -p $ELASTICDLPATH && \
+    cp -r /tmp/elasticdl/elasticdl/pkg $ELASTICDLPATH && \
+    cd $GOPATH/src/elasticdl.org/elasticdl && \
+    export GO111MODULE=on && \
+    go mod init elasticdl.org/elasticdl && \
+    go install ./... && cd / && rm -rf /tmp/elasticdl
