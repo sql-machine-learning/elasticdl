@@ -15,10 +15,11 @@ import (
 // Server defines servicer of ps
 type Server struct {
 	pb.PserverServer
-	Param *Parameter
-	Opt   Optimizer
-	ID    int // a zero-based successive integer number
-	lock  sync.Mutex
+	Param       *Parameter
+	Opt         Optimizer
+	ID          int // a zero-based successive integer number
+	lock        sync.Mutex
+	versionLock sync.Mutex
 }
 
 // NewServer creates a Server instance
@@ -31,6 +32,7 @@ func NewServer(ID int, opt string, lr float32) *Server {
 
 // PullVariable pulls variable from server
 func (s *Server) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (*pb.PullVariableResponse, error) {
+	// TODO(qijun) only support async now
 	var res pb.PullVariableResponse
 	if !s.Param.InitStatus {
 		res.ModelInitStatus = false
@@ -93,7 +95,9 @@ func (s *Server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (
 		grads = append(grads, grad)
 	}
 	err := s.Opt.ApplyGradients(grads, s.Param)
+	versionLock.Lock()
 	s.Param.Version += int32(1)
+	versionLock.Unlock()
 	res.Accepted = true
 	res.ModelVersion = s.Param.Version
 	return &res, err
