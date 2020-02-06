@@ -65,6 +65,7 @@ class _TaskDispatcher(object):
         prediction_shards,
         records_per_task,
         num_epochs,
+        callbacks_list,
     ):
         """
         Arguments:
@@ -77,6 +78,7 @@ class _TaskDispatcher(object):
             records_per_task: The number of records per task.
             num_epochs: The total number of epochs for the tasks where
                 an epoch is a complete iteration over the shards.
+            callback_lists: CallbackList instance which contains callbacks.
         """
         self._lock = threading.Lock()
 
@@ -86,6 +88,7 @@ class _TaskDispatcher(object):
         self._evaluation_shards = evaluation_shards
         self._prediction_shards = prediction_shards
         self._records_per_task = records_per_task
+        self._callbacks_list = callbacks_list
 
         self._todo = []
         # dictionary from task id to Task.
@@ -290,11 +293,18 @@ class _TaskDispatcher(object):
                     len(self._todo) + len(self._doing),
                 )
         if evaluation_task_completed:
-            self._evaluation_service.complete_task()
+            eval_metrics = self._evaluation_service.complete_task()
+            if eval_metrics is not None:
+                logs = {"metrics": eval_metrics}
+                self._callbacks_list.on_test_end(logs)
 
     def finished(self):
         """Return if all tasks are done"""
-        return all([not self._todo, not self._eval_todo, not self._doing])
+        finished = all([not self._todo, not self._eval_todo, not self._doing])
+        if finished:
+            self._callbacks_list.on_train_end()
+
+        return finished
 
     def recover_tasks(self, worker_id):
         """Recover doing tasks for a dead worker"""

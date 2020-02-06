@@ -28,6 +28,7 @@ from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
     get_model_spec,
     get_non_embedding_trainable_vars,
+    set_callback_parameters,
 )
 from elasticdl.python.common.tensor import (
     Tensor,
@@ -132,6 +133,7 @@ class Worker(object):
             self._eval_metrics_fn,
             self._prediction_outputs_processor,
             self._custom_data_reader,
+            self._callbacks_list,
         ) = get_model_spec(
             model_zoo=args.model_zoo,
             model_def=args.model_def,
@@ -142,6 +144,15 @@ class Worker(object):
             model_params=args.model_params,
             prediction_outputs_processor=args.prediction_outputs_processor,
             custom_data_reader=args.custom_data_reader,
+            callbacks=args.callbacks,
+        )
+        set_callback_parameters(
+            self._callbacks_list,
+            batch_size=args.minibatch_size,
+            epochs=args.num_epochs,
+            metric=self._eval_metrics_fn(),
+            saved_model_path=args.output,
+            checkpoint_path=args.checkpoint_dir
         )
 
         self._collective_communicator = (
@@ -154,6 +165,7 @@ class Worker(object):
         )
         model_inst = self._model_handler.get_model_to_train(model_inst)
         self.set_model(model_inst)
+        self._callbacks_list.set_model(model_inst)
 
         self._model_version = -1
         self._model_versions_from_ps = [-1 for _ in range(self._ps_num)]
@@ -795,6 +807,11 @@ class Worker(object):
 
     def _run_prediction_task(self, features):
         predictions = self.forward_process(features)
+        logs = {
+            "size": len(predictions),
+            "predictions": predictions
+        }
+        self.callbacks_list.on_predict_batch_end(batch=-1, logs=logs)
         return self.report_prediction_outputs(predictions)
 
     def _process_minibatch(
