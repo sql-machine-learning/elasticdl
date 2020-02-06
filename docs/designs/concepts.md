@@ -68,6 +68,7 @@ type EmbeddingTable struct {
 type Model struct {
     Initialized     bool
     Version         int32
+    Dtype           TensorDtype
     DenseParams     map[string]*DenseParam
     EmbeddingTables map[string]*EmbeddingTable
 }
