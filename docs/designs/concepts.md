@@ -26,9 +26,6 @@ Let's make a short summary, following is all the core concepts used in ElasticDL
 ## In-Memory Representation
 
 
-
-
-
 ## Message Representation
 
 ```proto
@@ -77,6 +74,8 @@ Please note that the components of dense parameter gradient is the same with den
 
 ## RPC Service
 
+Following is some auxiliary messages needed by RPC services.
+
 ```proto
 message PullDenseParamsRequest {
   int32 version = 1;
@@ -104,6 +103,8 @@ message PushGradientResponse {
 }
 ```
 
+Following is RPC services between PS and worker.
+
 ```proto
 service Pserver {
   rpc pull_dense_params(PullDenseParamsRequest) returns (PullDenseParamsResponse);
@@ -113,5 +114,3 @@ service Pserver {
   rpc push_gradient(Model) returns (PushGradientResponse);
 }
 ```
-
-
