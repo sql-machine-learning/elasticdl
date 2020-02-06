@@ -7,47 +7,78 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"sync"
 )
 
-type psServer struct {
+// Server defines servicer of ps
+type Server struct {
 	pb.PserverServer
+	Param *Parameter
+	Opt   Optimizer
+	ID    int
+	lock  sync.Mutex
 }
 
-func (s *psServer) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (*pb.PullVariableResponse, error) {
+// NewServer creates a Server instance
+func NewServer(ID int, opt string, lr float32) *Server {
+	return &Server{
+		Param: NewParameter(),
+		Opt:   NewOptimizer(opt, lr),
+		ID:    ID}
+}
+
+// PullVariable pulls variable from server
+func (s *Server) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (*pb.PullVariableResponse, error) {
 	// TODO: implement the service.
 	return &pb.PullVariableResponse{}, nil
 }
 
-func (s *psServer) PullEmbeddingVector(ctx context.Context, in *pb.PullEmbeddingVectorRequest) (*pb.Tensor, error) {
+// PullEmbeddingVector pulls embedding vector from server
+func (s *Server) PullEmbeddingVector(ctx context.Context, in *pb.PullEmbeddingVectorRequest) (*pb.Tensor, error) {
 	// TODO: implement the service.
 	return &pb.Tensor{}, nil
 }
 
-func (s *psServer) PushModel(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
-	// TODO: implement the service.
-	return &empty.Empty{}, nil
+// PushModel pushes model to server
+func (s *Server) PushModel(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
+	if s.Param.InitStatus {
+		return &empty.Empty{}, nil
+	}
+	s.lock.Lock()
+	err := s.Param.InitFromModelPB(in)
+	if err == nil {
+		s.Param.InitStatus = true
+	}
+	s.lock.Unlock()
+	return &empty.Empty{}, err
 }
 
-func (s *psServer) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
-	// TODO: implement the service.
-	return &empty.Empty{}, nil
+// PushEmbeddingInfo pushes embedding info to server
+func (s *Server) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
+	s.lock.Lock()
+	err := s.Param.InitFromModelPB(in)
+	s.lock.Unlock()
+	return &empty.Empty{}, err
 }
 
-func (s *psServer) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (*pb.PushGradientResponse, error) {
+// PushGradient pushes gradient to server
+func (s *Server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (*pb.PushGradientResponse, error) {
 	// TODO: implement the service.
 	return &pb.PushGradientResponse{}, nil
 }
 
 // CreateServer creates a PS server and starts the serving. Set serverDone when finishes.
-func CreateServer(address string, serverDone chan bool) {
+func CreateServer(address string, ID int, opt string, lr float32, serverDone chan bool) *Server {
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("failed to start PS: %v", err)
 	}
 	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
 	grpcServer := grpc.NewServer()
-	pb.RegisterPserverServer(grpcServer, &psServer{})
+	s := NewServer(ID, opt, lr)
+	pb.RegisterPserverServer(grpcServer, s)
 	go startServe(grpcServer, lis, serverDone)
+	return s
 }
 
 func startServe(server *grpc.Server, lis net.Listener, serverDone chan bool) {
