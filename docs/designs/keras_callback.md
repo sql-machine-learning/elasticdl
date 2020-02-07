@@ -121,7 +121,6 @@ class SaveModelExporter(tf.keras.callbacks.Callback):
         self._model_handler = model_handler
         self._task_data_service
         self._dataset_fn = dataset_fn
-        
 
     def on_train_end(self, logs=None):
         """Call on the train job end
