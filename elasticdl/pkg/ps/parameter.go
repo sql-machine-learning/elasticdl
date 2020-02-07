@@ -19,8 +19,6 @@ func NewParameter() *Parameter {
 	var p Parameter
 	p.NonEmbeddingParam = make(map[string]*common.Tensor)
 	p.EmbeddingParam = make(map[string]*common.EmbeddingTable)
-	p.Version = 0
-	p.InitStatus = false
 	return &p
 }
 

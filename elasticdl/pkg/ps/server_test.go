@@ -29,7 +29,8 @@ func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, contex
 func TestPushModel(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s, gs := CreateServer(ADDR, 0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", serverDone)
+	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;")
+	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -67,7 +68,8 @@ func TestPushModel(t *testing.T) {
 func TestPushEmbeddingInfo(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s, gs := CreateServer(ADDR, 0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", serverDone)
+	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;")
+	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -93,7 +95,8 @@ func TestPushEmbeddingInfo(t *testing.T) {
 func TestPullVariable(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s, gs := CreateServer(ADDR, 0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", serverDone)
+	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;")
+	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -147,7 +150,8 @@ func TestPullVariable(t *testing.T) {
 func TestPullEmbeddingVector(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s, gs := CreateServer(ADDR, 0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", serverDone)
+	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;")
+	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
@@ -186,15 +190,76 @@ func TestPullEmbeddingVector(t *testing.T) {
 func TestPushGradient(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s, gs := CreateServer(ADDR, 0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", serverDone)
-	assert.NotNil(t, s)
+	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;")
+	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
-	request := pb.PushGradientRequest{}
-	_, err := client.PushGradient(ctx, &request)
-	if err != nil {
-		t.Errorf("Failed to pull embedding vector")
+
+	// non embedding param
+	v1 := []float32{10.0, 20.0, 30.0}
+	v2 := []float32{20.0, 40.0, 60.0}
+	d := []int64{1, 3}
+	t1 := common.Tensor{"t1", v1, d, nil}
+	t2 := common.Tensor{"t2", v2, d, nil}
+
+	// embedding param info
+	var epb pb.EmbeddingTableInfo
+	epb.Name = "e1"
+	epb.Dim = 2
+	epb.Initializer = "zero"
+
+	ev := []float32{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0}
+	ed := []int64{4, 2}
+	ei := []int64{0, 1, 2, 3}
+	e1 := common.Tensor{"e1", ev, ed, ei}
+
+	// push model request
+	var request1 pb.Model
+	request1.EmbeddingTableInfo = append(request1.EmbeddingTableInfo, &epb)
+	request1.Param = append(request1.Param, common.SerializeTensor(&t1))
+	request1.Param = append(request1.Param, common.SerializeTensor(&t2))
+	request1.Param = append(request1.Param, common.SerializeTensor(&e1))
+
+	_, err1 := client.PushModel(ctx, &request1)
+	if err1 != nil {
+		t.Errorf("Failed to push model")
 	}
+
+	gv1 := []float32{1.0, 2.0, 3.0}
+	gv2 := []float32{2.0, 4.0, 6.0}
+	g1 := common.Tensor{"t1", gv1, d, nil}
+	g2 := common.Tensor{"t2", gv2, d, nil}
+
+	egv1 := []float32{1.0, 1.0, 1.0, 2.0, 2.0, 2.0}
+	egd1 := []int64{3, 2}
+	egi1 := []int64{3, 1, 3}
+	eg1 := common.Tensor{"e1", egv1, egd1, egi1}
+
+	var request2 pb.PushGradientRequest
+	request2.ModelVersion = 0
+	request2.Gradients = append(request2.Gradients, common.SerializeTensor(&g1))
+	request2.Gradients = append(request2.Gradients, common.SerializeTensor(&g2))
+	request2.Gradients = append(request2.Gradients, common.SerializeTensor(&eg1))
+
+	res1, err2 := client.PushGradient(ctx, &request2)
+	if err2 != nil {
+		t.Errorf("Failed to pull gradients")
+	}
+
+	assert.True(t, res1.Accepted)
+	assert.Equal(t, int32(1), res1.ModelVersion)
+
+	assert.Contains(t, s.Param.NonEmbeddingParam, "t1")
+	assert.Contains(t, s.Param.NonEmbeddingParam, "t2")
+	assert.Contains(t, s.Param.EmbeddingParam, "e1")
+	exptV1 := []float32{9.9, 19.8, 29.7}
+	exptV2 := []float32{19.8, 39.6, 59.4}
+	assert.True(t, common.CompareFloatArray(s.Param.GetNonEmbeddingParam("t1").Value, exptV1, 0.0001))
+	assert.True(t, common.CompareFloatArray(s.Param.GetNonEmbeddingParam("t2").Value, exptV2, 0.0001))
+
+	expGV1 := []float32{1.0, 2.0, 2.9, 3.8, 5.0, 6.0, 6.7, 7.7}
+	actGV1 := s.Param.GetEmbeddingParam("e1").GetEmbeddingVectors(ei)
+	assert.True(t, common.CompareFloatArray(actGV1.Value, expGV1, 0.0001))
 	gs.Stop()
 }
