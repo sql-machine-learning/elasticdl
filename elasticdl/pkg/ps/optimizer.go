@@ -25,7 +25,7 @@ type SGDOptimizer struct {
 	BaseOptimizer
 }
 
-// GetLR returns learning rate SGD
+// GetLR returns learning rate
 func (opt *SGDOptimizer) GetLR() float32 {
 	return opt.lr
 }
@@ -67,7 +67,7 @@ type AdamOptimizer struct {
 	maxSquare *Parameter
 }
 
-// GetLR returns learning rate Adam
+// GetLR returns learning rate
 func (opt *AdamOptimizer) GetLR() float32 {
 	return opt.lr
 }
