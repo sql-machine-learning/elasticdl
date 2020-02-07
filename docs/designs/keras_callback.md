@@ -72,7 +72,7 @@ class LearningRateScheduler(tf.keras.callbacks.Callback):
         K.set_value(self.model.optimizer.lr, lr)
 ```
 
-## Initialize Callbacks and Set Attributes in ElasticDL
+## Initialize Callbacks and Set Callback Attributes in ElasticDL
 
 ### Use a Container for Callbacks Defined in the Model
 We may define several callbacks for the model in a job. Tensorflow creates a container `CallbackList` to wrap the callbacks to conveniently call the methods in callbacks. We can call the methods in callbacks by calling the methods in `CallbackList`. For example:
