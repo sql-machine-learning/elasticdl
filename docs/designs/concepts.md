@@ -1,27 +1,42 @@
 # Concepts Design Doc
 
-This document describes core concepts used in ElasticDL, and discusses their representations.
+This document describes core concepts of ElasticDL.
 
-## Core Concepts
+An ElasticDL model consists of two kinds of parameters:
 
-Machine learning algorithms build a mathematical model based on sample data, known as "training data", in order to make predictions or decisions without being explicitly programmed to perform the task.
+1. dense parameters, and
+1. embedding tables.
 
-There are usually two kinds of parameters in a model, one is dense parameter, the other is sparse parameter. The sparse parameter is used by the embedding layer, which is also called embedding table. The embedding table maps discrete ID *i* to embedding vector *vᵢ*.
+A dense parameter is a dense tensor with a name.  An embedding table is a map from some ID to embedding vectors.  An embedding table also has a name.  Formalizing the concepts, we have
 
-Both dense parameter and embedding table includes a tensor data field, and some other auxiliary fields, like name. Embedding table has an extra auxiliary field called indices.
+- model = {dense parameter} + {embedding table}
+- dense parameter = tensor + name
+- embedding table = {id, tensor} + name
 
-Tensor is used to represented a n-dim data. We support several data types, such as int8/int32/int64/float32/float64.
+where the curly braces denote zero or more.
 
-Besides, we have two kinds of gradients, dense gradient and embedding table gradient. The data structure of dense gradient is the same with dense parameter, and so is the embedding table gradient.
+It is notable that in practice, we use the rule
 
-In ElasticDL, only the parameter of large embedding layer is represented by an embedding table. For small embedding layer, a dense parameter is used, and its gradient also has an indices field. In this case, the data structure of gradient is not dense param, but an embedding table.
+- embedding table = tensor + index + name
+- index = map[ID]address
 
-Let's make a short summary, following is all the core concepts used in ElasticDL:
+because we append all embedding vectors into the tensor and use index, which is a map from ID to the starting address of the embedding vector in the tensor.
 
-- Model
-- DenseParam
-- EmbeddingTable
-- Tensor
+To update the model, workers compute and report gradients.  Accordingly, we have two kinds of gradients:
+
+1. dense gradient, and
+1. embedding table gradient
+
+The content of dense gradient is the same as that of the dense parameter.  The content of embedding table gradient is the same as that of the embedding table.
+
+Please be aware that if some embedding table maps zero-based successive ID values to embedding vectors.  Such kind of embedding table, if not too large, could be represented by a dense parameters.  In the rest of the design, the concept embedding table refers to a sparse/general embedding table, where the ID might not be zero-based successive values, and even not an numerical value.
+
+Let's make a short summary, following is all the core concepts of ElasticDL include:
+
+- model = {dense parameter} + {embedding table}
+- dense parameter = tensor + name
+- embedding table = tensor + index + name
+- index = map[ID]address
 
 ## In-Memory Representation
 
