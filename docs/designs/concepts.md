@@ -15,13 +15,6 @@ A dense parameter is a dense tensor with a name.  An embedding table is a map fr
 
 where the curly braces denote zero or more.
 
-It is notable that in practice, we use the rule
-
-- embedding table = tensor + index + name
-- index = map[ID]address
-
-because we append all embedding vectors into the tensor and use index, which is a map from ID to the starting address of the embedding vector in the tensor.
-
 To update the model, workers compute and report gradients.  Accordingly, we have two kinds of gradients:
 
 1. dense gradient, and
@@ -29,75 +22,20 @@ To update the model, workers compute and report gradients.  Accordingly, we have
 
 The content of dense gradient is the same as that of the dense parameter.  The content of embedding table gradient is the same as that of the embedding table.
 
-Please be aware that if some embedding table maps zero-based successive ID values to embedding vectors.  Such kind of embedding table, if not too large, could be represented by a dense parameters.  In the rest of the design, the concept embedding table refers to a sparse/general embedding table, where the ID might not be zero-based successive values, and even not an numerical value.
+On the parameter server, we'd prefer to maintain each embedding table as a map from ID to embedding vectors. With such a data structure, it is efficient to allocate memory for new embedding vectors. On the contrary, we'd concatenate embedding vectors into protobuf messages for parameter pulling and gradient pushing. We cannot use concatenated embedding vectors as the in-memory data structure on the PS, because allocating new embedding vectors involves resize the space of concatenated embedding vectors.
 
 Let's make a short summary, following is all the core concepts of ElasticDL include:
 
 - model = {dense parameter} + {embedding table}
 - dense parameter = tensor + name
-- embedding table = tensor + index + name
-- index = map[ID]address
-
-## In-Memory Representation
-
-EmbeddingTable is initialized lazily in PS. Worker sends item ids to request embedding vectors from PS. If the ID is not found in PS, the corresponding embedding vector will be initialized and sent back to the worker. In order to query and insert embedding vectors efficiently, we use a map data structure to represent EmbeddingTable.
-
-```go
-type TensorDtype = int64
-
-const (
-    Invalid TensorDtype = iota
-    Int8 
-    Int16
-    Int32
-    Int64
-    Float16
-    Float32
-    Float64
-    Bool
-)
-
-type Buffer struct {
-    Data   []byte
-    Length int64
-    Dtype  TensorDtype
-}
-
-type Tensor struct {
-    Content *Buffer
-    Dims    []int64
-    Indices []int64
-}
-
-type DenseParam struct {
-    Name   string
-    Tensor Tensor
-}
-
-type Emdedding = Buffer // alias for better understanding
-
-type EmbeddingTable struct {
-    Name        string
-    Dim         int64
-    Dtype       TensorDtype
-    Initializer string
-    Embeddings  map[int64]*Emdedding
-}
-
-type Model struct {
-    Initialized     bool
-    Version         int32
-    Dtype           TensorDtype
-    DenseParams     map[string]*DenseParam
-    EmbeddingTables map[string]*EmbeddingTable
-}
-```
-
+- embedding table = tensor + ID + name
 
 ## Message Representation
 
+The definition of `elasticdl.proto`:
+
 ```proto
-enum TensorDtype {
+enum TensorElementType {
   // Not a legal value for DataType. Used to indicate a DataType field
   // has not been set.
   DT_INVALID = 0;
@@ -115,24 +53,38 @@ enum TensorDtype {
 message Tensor {
   repeated int64 dims = 1;
   bytes content = 2;
-  TensorDtype dtype = 3;
+  TensorElementType dtype = 3;
 }
 
-message DenseParam {
-  string name = 1;
-  Tensor tensor = 2;
-}
-
-message EmbeddingTable {
-  string name = 1;
-  Tensor tensor = 2;
-  repeated int64 indices = 3;
+message IndexedSlices {
+  Tensor concat_embedding_vecs = 1;
+  repeated int64 ids = 2;
 }
 
 message Model {
   int32 version = 1; // model updated times
-  repeated DenseParam dense_params = 2;
-  repeated EmbeddingTable embedding_tables = 3;
+  map<string, Tensor> dense_parameters = 2;
+  map<string, IndexedSlices> indexed_slices = 3;
+}
+```
+
+In memory data structure:
+
+```go
+import "elasticdl.org/elasticdl/pkg/proto"
+
+type EmbeddingTable struct {
+    Name            string
+    Dim             int64
+    Initializer     string
+    EmbeddingVector map[int64]*proto.Tensor
+}
+
+type Model struct {
+    Version           int32
+    InitStatus        bool
+    DenseParameters   map[string]*proto.Tensor
+    EmbeddingTables   map[string]*EmbeddingTable
 }
 ```
 
@@ -141,13 +93,13 @@ message Model {
 Following is some auxiliary messages needed by RPC services.
 
 ```proto
-message PullDenseParamsRequest {
+message PullDenseParametersRequest {
   int32 version = 1;
 }
 
-message PullDenseParamsResponse {
+message PullDenseParametersResponse {
   bool initialized = 1;
-  repeated DenseParam dense_params = 2;
+  map<string, Tensor> = 2;
 }
 
 message PullEmbeddingTableRequest {
@@ -161,6 +113,10 @@ message EmbeddingTableInfo {
   string initializer = 3;
 }
 
+message EmbeddingTableInfos {
+  repeated EmbeddingTableInfo embedding_table_infos = 1
+}
+
 message PushGradientResponse {
   bool accepted = 1;
   int32 version = 2;
@@ -171,10 +127,10 @@ Following is RPC services between PS and worker.
 
 ```proto
 service Pserver {
-  rpc pull_dense_params(PullDenseParamsRequest) returns (PullDenseParamsResponse);
-  rpc pull_embedding_table(PullEmbeddingTableRequest) returns (EmbeddingTable);
+  rpc pull_dense_params(PullDenseParametersRequest) returns (PullDenseParametersResponse);
+  rpc pull_embedding_table(PullEmbeddingTableRequest) returns (IndexedSlices);
   rpc push_dense_params(Model) returns (google.protobuf.Empty);
-  rpc push_embedding_table_infos(EmbeddingTableInfo) returns (google.protobuf.Empty);
+  rpc push_embedding_table_infos(EmbeddingTableInfos) returns (google.protobuf.Empty);
   rpc push_gradient(Model) returns (PushGradientResponse);
 }
 ```
