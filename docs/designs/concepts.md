@@ -32,10 +32,12 @@ Let's make a short summary, following is all the core concepts of ElasticDL incl
 
 ## Message Representation
 
+We introduce an `IndexedSlices` proto message to represent the concatenated embedding vectors pulled from PS, and the concatenated embedding vectors of gradient waiting to be pushed to PS.
+
 The definition of `elasticdl.proto`:
 
 ```proto
-enum TensorElementType {
+enum ElementType {
   // Not a legal value for DataType. Used to indicate a DataType field
   // has not been set.
   DT_INVALID = 0;
@@ -53,7 +55,7 @@ enum TensorElementType {
 message Tensor {
   repeated int64 dims = 1;
   bytes content = 2;
-  TensorElementType dtype = 3;
+  ElementType dtype = 3;
 }
 
 message IndexedSlices {
@@ -68,7 +70,7 @@ message Model {
 }
 ```
 
-In memory data structure:
+For in-memory part, we introduce an `EmbeddingTable` data structure.
 
 ```go
 import "elasticdl.org/elasticdl/pkg/proto"
