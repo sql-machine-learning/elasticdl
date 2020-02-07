@@ -1,4 +1,4 @@
-# Design to Support Custom Callback Function Using Keras
+# Design to Support Custom Callback Using Keras API
 
 This document describes the design for supporting callback to customize the behavior of model during training, evaluation and inference in ElasticDL.
 
