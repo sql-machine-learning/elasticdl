@@ -12,19 +12,20 @@ import (
 	"sync"
 )
 
+// MasterClient contains attributes to call master GRPC services
 type MasterClient struct {
 	client     pb.MasterClient
 	context    context.Context
 	clientConn *grpc.ClientConn
 }
 
-func (c *MasterClient) ReportVersion(modelVersion int32) {
+func (c *MasterClient) reportVersion(modelVersion int32) {
 	var request pb.ReportVersionRequest
 	request.ModelVersion = modelVersion
 	c.client.ReportVersion(c.context, &request)
 }
 
-func (c *MasterClient) Close() {
+func (c *MasterClient) closeConn() {
 	c.clientConn.Close()
 }
 
@@ -69,7 +70,7 @@ func NewServer(ID int, opt string, lr float32, masterAddr string, evaluationStep
 
 func (s *Server) reportModelVersionIfNeeded(modelVersion int32) {
 	if s.evaluationSteps > 0 && modelVersion%s.evaluationSteps == 0 {
-		s.masterClient.ReportVersion(modelVersion)
+		s.masterClient.reportVersion(modelVersion)
 	}
 }
 
@@ -161,7 +162,7 @@ func (s *Server) Run(address string, serverDone chan bool) *grpc.Server {
 }
 
 func startServe(server *grpc.Server, lis net.Listener, serverDone chan bool, masterClient *MasterClient) {
-	defer masterClient.Close()
+	defer masterClient.closeConn()
 	err := server.Serve(lis)
 	if err != nil {
 		log.Fatalf("GRPC failed to serve: %v", err)
