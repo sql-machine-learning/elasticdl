@@ -1,6 +1,5 @@
 # Transform the Column with Key-value Pairs String to Wide Table
-This document describes the design to transform the column with key-value pairs string to a wide ODPS table where
-the values of each key is in a each column. The transformation is a part of [data analysis and transform](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/data_transform.md#normalize-table-schema-to-be-wide)
+This document describes the design to normalize (or transform) the table schema to be wide, aka one feature per column. The transformation is a part of [data analysis and transform](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/data_transform.md#normalize-table-schema-to-be-wide)
 
 ## Motivation
 Generally, the data developers parse logs to features and the number of features may vary. It is convenient to save features using
