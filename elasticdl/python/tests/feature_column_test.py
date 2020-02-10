@@ -254,7 +254,34 @@ class EmbeddingColumnTest(unittest.TestCase):
                     )
 
     def test_concat_column(self):
-        pass
+        user_id = tf.feature_column.categorical_column_with_identity(
+            "user_id", num_buckets=32
+        )
+
+        item_id = tf.feature_column.categorical_column_with_identity(
+            "item_id", num_buckets=128
+        )
+
+        item_id_user_id_concat = feature_column.concat_column(
+            [user_id, item_id]
+        )
+
+        concat_indicator = tf.feature_column.indicator_column(
+            item_id_user_id_concat
+        )
+
+        output = call_feature_columns(
+            [concat_indicator], {"user_id": [10, 20], "item_id": [1, 120]},
+        )
+
+        expected_output = tf.one_hot(indices=[10, 20], depth=160) + tf.one_hot(
+            indices=[1 + 32, 120 + 32], depth=160
+        )
+
+        self.assertTrue(
+            np.array_equal(output.numpy(), expected_output.numpy())
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
