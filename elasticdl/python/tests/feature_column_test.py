@@ -253,6 +253,8 @@ class EmbeddingColumnTest(unittest.TestCase):
                         np.isclose(grad_values.numpy(), expected_grads).all()
                     )
 
+    def test_concat_column(self):
+        pass
 
 if __name__ == "__main__":
     unittest.main()
