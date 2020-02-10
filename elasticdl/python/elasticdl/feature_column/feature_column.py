@@ -261,7 +261,7 @@ class ConcatColumn(
             feature_tensor_with_offset = tf.SparseTensor(
                 indices=feature_tensor.indices,
                 values=tf.cast(
-                    tf.add(feature_tensor.values, offset), tf.int32
+                    tf.add(feature_tensor.values, offset), tf.int64
                 ),
                 dense_shape=feature_tensor.dense_shape,
             )
