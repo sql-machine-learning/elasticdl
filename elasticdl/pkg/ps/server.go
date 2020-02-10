@@ -23,11 +23,16 @@ type Server struct {
 }
 
 // NewServer creates a Server instance
-func NewServer(ID int, opt string, lr float32) *Server {
-	return &Server{
-		Param: NewParameter(),
-		Opt:   NewOptimizer(opt, lr),
-		ID:    ID}
+func NewServer(ID int, optType string, optArgs string) *Server {
+	var ps Server
+	ps.Param = NewParameter()
+	var err error
+	ps.Opt, err = NewOptimizer(optType, optArgs)
+	if err != nil {
+		log.Fatalf("failed to create PS server: %v", err)
+	}
+	ps.ID = ID
+	return &ps
 }
 
 // PullVariable pulls variable from server

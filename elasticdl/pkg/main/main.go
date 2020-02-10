@@ -34,7 +34,7 @@ func main() {
 	flag.Parse()
 	address := fmt.Sprintf("%s:%d", os.Getenv("MY_POD_IP"), *port)
 	serverDone := make(chan bool)
-	ps.NewServer(*psID, "SGD", 0.1).Run(address, serverDone)
+	ps.NewServer(*psID, *optType, *optArgs).Run(address, serverDone)
 	log.Println("PS service started at ", address)
 	for {
 		select {

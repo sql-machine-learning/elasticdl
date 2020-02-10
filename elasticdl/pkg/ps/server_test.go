@@ -29,7 +29,7 @@ func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, contex
 func TestPushModel(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := NewServer(0, "SGD", 0.1)
+	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;")
 	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
@@ -68,7 +68,7 @@ func TestPushModel(t *testing.T) {
 func TestPushEmbeddingInfo(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := NewServer(0, "SGD", 0.1)
+	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;")
 	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
@@ -95,7 +95,7 @@ func TestPushEmbeddingInfo(t *testing.T) {
 func TestPullVariable(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := NewServer(0, "SGD", 0.1)
+	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;")
 	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
@@ -150,7 +150,7 @@ func TestPullVariable(t *testing.T) {
 func TestPullEmbeddingVector(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := NewServer(0, "SGD", 0.1)
+	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;")
 	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
@@ -190,7 +190,7 @@ func TestPullEmbeddingVector(t *testing.T) {
 func TestPushGradient(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := NewServer(0, "SGD", 0.1)
+	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;")
 	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
