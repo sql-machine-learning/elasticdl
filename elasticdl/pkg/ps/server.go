@@ -32,7 +32,6 @@ func NewServer(ID int, optType string, optArgs string) *Server {
 		log.Fatalf("failed to create PS server: %v", err)
 	}
 	ps.ID = ID
-	ps.lock = sync.Mutex{}
 	return &ps
 }
 
