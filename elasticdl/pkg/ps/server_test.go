@@ -4,10 +4,12 @@ import (
 	"context"
 	"elasticdl.org/elasticdl/pkg/common"
 	pb "elasticdl.org/elasticdl/pkg/proto"
+	empty "github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"log"
 	"math/rand"
+	"net"
 	"testing"
 	"time"
 )
@@ -15,6 +17,45 @@ import (
 const (
 	ADDR string = "localhost:12345"
 )
+
+type masterServer struct {
+	pb.MasterServer
+	address      string
+	modelVersion int32
+	server       *grpc.Server
+}
+
+func (s *masterServer) run() {
+	lis, err := net.Listen("tcp", s.address)
+	if err != nil {
+		log.Fatalf("failed to start Master: %v", err)
+	}
+	s.server = grpc.NewServer()
+	pb.RegisterMasterServer(s.server, s)
+	go s.startServe(lis)
+}
+
+func (s *masterServer) startServe(lis net.Listener) {
+	s.server.Serve(lis)
+}
+
+func (s *masterServer) stop() {
+	s.server.Stop()
+}
+
+// ReportVersion grpc service
+func (s *masterServer) ReportVersion(ctx context.Context, in *pb.ReportVersionRequest) (*empty.Empty, error) {
+	var res empty.Empty
+	if in.ModelVersion > s.modelVersion {
+		s.modelVersion = in.ModelVersion
+	}
+	return &res, nil
+}
+
+func newMasterServer(addr string) *masterServer {
+	server := masterServer{modelVersion: int32(0), address: addr}
+	return &server
+}
 
 func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, context.CancelFunc) {
 	conn, err := grpc.Dial(ADDR, grpc.WithInsecure(), grpc.WithBlock())
@@ -26,10 +67,30 @@ func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, contex
 	return c, ctx, conn, cancel
 }
 
+func TestMasterClient(t *testing.T) {
+	masterAddr := "localhost:12368"
+	masterServer := newMasterServer(masterAddr)
+	masterServer.run()
+
+	// Create a PS server
+	s := NewServer(0, "SGD", 0.1, masterAddr, 0)
+	log.Print(s.masterClient)
+	version := int32(2)
+	s.masterClient.reportVersion(version)
+	assert.Equal(t, masterServer.modelVersion, version)
+	s.masterClient.reportVersion(int32(1))
+	assert.Equal(t, masterServer.modelVersion, version)
+	version = int32(22)
+	s.masterClient.reportVersion(version)
+	assert.Equal(t, masterServer.modelVersion, version)
+	masterServer.stop()
+	s.masterClient.closeConn()
+}
+
 func TestPushModel(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := NewServer(0, "SGD", 0.1, "localhost:202020", 0)
+	s := NewServer(0, "SGD", 0.1, "", 0)
 	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
@@ -68,7 +129,7 @@ func TestPushModel(t *testing.T) {
 func TestPushEmbeddingInfo(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := NewServer(0, "SGD", 0.1, "localhost:202020", 0)
+	s := NewServer(0, "SGD", 0.1, "", 0)
 	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
@@ -95,7 +156,7 @@ func TestPushEmbeddingInfo(t *testing.T) {
 func TestPullVariable(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := NewServer(0, "SGD", 0.1, "localhost:202020", 0)
+	s := NewServer(0, "SGD", 0.1, "", 0)
 	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
@@ -150,7 +211,7 @@ func TestPullVariable(t *testing.T) {
 func TestPullEmbeddingVector(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := NewServer(0, "SGD", 0.1, "localhost:202020", 0)
+	s := NewServer(0, "SGD", 0.1, "", 0)
 	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
@@ -190,7 +251,7 @@ func TestPullEmbeddingVector(t *testing.T) {
 func TestPushGradient(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
-	s := NewServer(0, "SGD", 0.1, "localhost:202020", 0)
+	s := NewServer(0, "SGD", 0.1, "", 0)
 	gs := s.Run(ADDR, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()

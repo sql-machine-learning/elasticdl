@@ -42,9 +42,12 @@ type Server struct {
 }
 
 func createMasterClient(masterAddr string) *MasterClient {
+	if masterAddr == "" {
+		return nil
+	}
 	conn, err := grpc.Dial(masterAddr, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
-		return nil
+		log.Fatalf("failed to connect to master: %v", err)
 	}
 	client := pb.NewMasterClient(conn)
 	return &MasterClient{
@@ -57,9 +60,6 @@ func createMasterClient(masterAddr string) *MasterClient {
 // NewServer creates a Server instance
 func NewServer(ID int, opt string, lr float32, masterAddr string, evaluationSteps int32) *Server {
 	client := createMasterClient(masterAddr)
-	if client == nil {
-		return nil
-	}
 	return &Server{
 		Param:           NewParameter(),
 		Opt:             NewOptimizer(opt, lr),
@@ -69,7 +69,7 @@ func NewServer(ID int, opt string, lr float32, masterAddr string, evaluationStep
 }
 
 func (s *Server) reportModelVersionIfNeeded(modelVersion int32) {
-	if s.evaluationSteps > 0 && modelVersion%s.evaluationSteps == 0 {
+	if s.evaluationSteps > 0 && modelVersion%s.evaluationSteps == 0 && s.masterClient != nil {
 		s.masterClient.reportVersion(modelVersion)
 	}
 }
