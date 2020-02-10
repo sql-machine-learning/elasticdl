@@ -68,13 +68,13 @@ func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, contex
 }
 
 func TestMasterClient(t *testing.T) {
+	// Create a Master server
 	masterAddr := "localhost:12368"
 	masterServer := newMasterServer(masterAddr)
 	masterServer.run()
-
-	// Create a PS server
+	// New a PS server
 	s := NewServer(0, "SGD", 0.1, masterAddr, 0)
-	log.Print(s.masterClient)
+
 	version := int32(2)
 	s.masterClient.reportVersion(version)
 	assert.Equal(t, masterServer.modelVersion, version)
@@ -83,6 +83,7 @@ func TestMasterClient(t *testing.T) {
 	version = int32(22)
 	s.masterClient.reportVersion(version)
 	assert.Equal(t, masterServer.modelVersion, version)
+
 	masterServer.stop()
 	s.masterClient.closeConn()
 }
