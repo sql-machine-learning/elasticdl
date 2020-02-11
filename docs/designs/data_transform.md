@@ -191,6 +191,24 @@ LABEL label
 
 It trains a DNN model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is `COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, bucket_num=5), dim=32)`. It will normalize the column *capital_gain*, standardize the column *age*, bucketize the column *hours_per_week* to 5 buckets and then map it to an embedding vector.  
 
+Next, Let's see a more complicated scenario. The following SQL statment trains a [wide and deep model](https://ai.googleblog.com/2016/06/wide-deep-learning-better-together-with.html) using the same dataset.
+
+```SQL
+SELECT *
+FROM census_income
+TO TRAIN WideAndDeepClassifier
+COLUMN
+    EMBEDDING(CONCAT(VOCABULARIZE(workclass), BUCKETIZE(capital_gain, bucket_num=5), BUCKETIZE(capital_loss, bucket_num=5), BUCKTIZE(hours_per_week, bucket_num=6)) AS group_1, 8),
+    EMBEDDING(CONCAT(HASH(education), HASH(occupation), VOCABULARIZE(martial_status), VOCABULARIZE(relationship)) AS group_2, 8),
+    EMBEDDING(CONCAT(BUCKETIZE(age, bucket_num=5), HASH(native_country), VOCABULARIZE(race), VOCABULARIZE(sex)) AS group_3, 8)
+    FOR deep_embeddings
+COLUMN
+    EMBEDDING(group1, 1),
+    EMBEDDING(group2, 1)
+    FOR wide_embeddings
+LABEL label
+```
+
 *Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1664).*
 
 SQLFlow will convert the `COLUMN` expression to Python code of data transformation. But it requires some parameters which are derived from the data. So next we will do the analysis work.  
