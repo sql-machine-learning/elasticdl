@@ -104,14 +104,15 @@ class CustomCallback(tf.keras.callbacks.Callback):
 
 
 ## Implement Callbacks to Support the Cases in the Motivation
-We split the callbacks to two parts. One is the pre-configured callback which is automatically configured in ElasticDL and users don't need to define it in the model definition. And another is pre-made callback which users can configure in the model definition if needed.
+We split the callbacks to two parts. One is the callbacks which is automatically configured in ElasticDL. And another is pre-made callback which users can configure in the model definition if needed.
 
-### Pre-configured Callback in ElasticDL
+### Callbacks Configured by ElasticDL
+Those callbacks is automatically configured for each job by ElasticDL. 
 
 * Case 5: Callback to export model using SavedModel after the training is completed.
 ```python
-class SaveModelExporter(tf.keras.callbacks.Callback):
-    """Export model using SavedModel after training
+class SavedModelExporter(tf.keras.callbacks.Callback):
+    """Export model using SavedModel after training.
     Args:
         task_data_service: TaskDataService to process data according the task
         dataset_fn: function to process dataset
@@ -155,7 +156,8 @@ train_end_callback_task = _Task(
 ```
 
 ### Pre-made Callbacks for Users to Configure in Model Definition
-In the model definition, users can import pre-made callback class and configure them for the model. For example:
+We provide users with pre-made callbacks to define the process logic in pre-made callbacks. And users need to define the callback in the model definition. For example:
+
 ```python
 from elasticdl.python.callbacks import (
     LearningRateScheduler,
