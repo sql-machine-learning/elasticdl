@@ -58,14 +58,18 @@ func createMasterClient(masterAddr string) *MasterClient {
 }
 
 // NewServer creates a Server instance
-func NewServer(ID int, opt string, lr float32, masterAddr string, evaluationSteps int32) *Server {
-	client := createMasterClient(masterAddr)
-	return &Server{
-		Param:           NewParameter(),
-		Opt:             NewOptimizer(opt, lr),
-		ID:              ID,
-		masterClient:    client,
-		evaluationSteps: evaluationSteps}
+func NewServer(ID int, opt string, optArgs string, masterAddr string, evaluationSteps int32) *Server {
+  var ps Server
+  ps.Param = NewParameter()
+  var err error
+  ps.Opt, err = NewOptimizer(optType, optArgs)
+	if err != nil {
+		log.Fatalf("failed to create PS server: %v", err)
+	}
+	ps.ID = ID
+  ps.masterClient = createMasterClient(masterAddr)
+  ps.evaluationSteps = evaluationSteps
+	return &ps
 }
 
 func (s *Server) reportModelVersionIfNeeded(modelVersion int32) {
