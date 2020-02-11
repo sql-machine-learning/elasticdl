@@ -83,6 +83,11 @@ message Tensor {
   TensorDtype dtype = 5;
 }
 
+message IndexedSlices {
+  Tensor concat_vectors = 1;
+  repeated int64 ids = 2;
+}
+
 message EmbeddingTableInfo {
   string name = 1;
   int64 dim = 2;
@@ -93,6 +98,8 @@ message Model {
   int32 version = 1;
   repeated Tensor param = 2;
   repeated EmbeddingTableInfo embedding_table_info = 3;
+  map<string, Tensor> dense_parameters = 4;
+  map<string, IndexedSlices> indexed_slices = 5;
 }
 
 message GetTaskRequest {
@@ -159,4 +166,34 @@ service Pserver {
   rpc push_model(Model) returns (google.protobuf.Empty);
   rpc push_embedding_info(Model) returns (google.protobuf.Empty);
   rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
+}
+
+message PullDenseParametersRequest {
+  int32 version = 1;
+}
+
+message PullDenseParametersResponse {
+  bool initialized = 1;
+  int32 version = 2;
+  map<string, Tensor> dense_parameters = 3;
+}
+
+message PullEmbeddingTableRequest {
+  string name = 1;
+  repeated int64 ids = 2;
+}
+
+message PushGradientsResponse {
+  bool accepted = 1;
+  int32 version = 2;
+}
+
+// GoPS service
+service GoPserver {
+  rpc pull_dense_parameters(PullDenseParametersRequest)
+      returns (PullDenseParametersResponse);
+  rpc push_dense_parameters(Model) returns (google.protobuf.Empty);
+  rpc pull_embedding_table(PullEmbeddingTableRequest) returns (Tensor);
+  rpc push_embedding_table_infos(Model) returns (google.protobuf.Empty);
+  rpc push_gradients(Model) returns (PushGradientsResponse);
 }
