@@ -25,7 +25,7 @@ def learning_rate_scheduler(model_version):
 class PredictionOutputsProcessor(BasePredictionOutputsProcessor):
     ...
 ```
-There will be different interface definitions for users to define different behaviors of model. The interfaces of APIs may be different. It is more convenient for users to define those behaviors using `tf.keras.callbacks.Callback`. 
+There will be different interface definitions for users to define different behaviors of model. The interfaces may be different. It is more convenient for users to define those behaviors using `tf.keras.callbacks.Callback`. 
 
 Some use cases we observed that we want to support are:
 * Case 1: Callback similar to `PredictionOutputsProcessor` that is executed after prediction outputs are made.
@@ -35,7 +35,7 @@ Some use cases we observed that we want to support are:
 * Case 5: Callback to export model using SavedModel after the training is completed.
 * Case 6: Callback to upload model to remote storage after the training is completed.
 
-The following, we will design how to define and implement callbacks to support those cases.
+Next we will design how to define and implement callbacks to support those cases above.
 
 ## Define Callbacks for the Model in ElasticDL
 
@@ -102,6 +102,16 @@ class CustomCallback(tf.keras.callbacks.Callback):
         saved_model_path = self.params.get("save_model_path")
 ```
 
+## The Execution of Supported Methods in ElasticDL Using ParameterServerStrategy
+Now, we only support 4 methods  of `tf.keras.callbacks.Callback`to implement those cases above.
+1. `on_train_batch_begin`
+2. `on_predict_batch_end`
+3. `on_train_end`
+4. `on_test_end`
+
+The worker will execute `on_train_batch_begin` and `on_predict_batch_end`, because the worker processes each batch. Then, the worker also will execute `on_train_end` because the worker will exports model using SavedModel after training. The details is in [Model Serving Design](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/model_serving.md#export-the-model-with-elasticdllayersembedding-to-savedmodel). However, only the master knows when the training is completed. So, the master can create a training end task for the worker. The worker call `on_train_end` in callbacks after receiving the task.
+
+The master will execute `on_test_end` because the master receives all evaluation metrics from the worker.
 
 ## Implement Callbacks to Support the Cases in the Motivation
 We split the callbacks to two parts. One is the callbacks which is automatically configured in ElasticDL. And another is pre-made callback which users can configure in the model definition if needed.
@@ -143,16 +153,6 @@ class SavedModelExporter(tf.keras.callbacks.Callback):
                 self.model, dataset
             )
             tf.saved_model.save(model, saved_model_path)
-```
-
-We have designed that the worker exports model using SavedModel in [Model Serving Design](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/model_serving.md#export-the-model-with-elasticdllayersembedding-to-savedmodel) because the memory of the master may not be enough to load a model but the worker can. However, only the master knows when the training is completed. So, the master can create a training end task for the worker. The worker call `on_train_end` in callbacks after receiving the task. The task example is:
-```python
-train_end_callback_task = _Task(
-    shard_name=shard_name,
-    start=start_ind_this_task,
-    end=end_ind_this_task,
-    type=elasticdl_pb2.TRAIN_END_CALLBACK
-)
 ```
 
 ### Pre-made Callbacks for Users to Configure in Model Definition
@@ -241,7 +241,7 @@ class SummaryWriter(tf.keras.callbacks.Callback):
             return
         write(metrics)
 ```
-The master determine whether or not the evaluation job is completed by `EvaluationService.complete_task()`. So, we can call `on_test_end` After `EvaluationService.complete_task()` returns evaluation metrics.
+The master determine whether or not the evaluation job is completed by `EvaluationService.complete_task()`. So, the master call `on_test_end` After `EvaluationService.complete_task()` returns evaluation metrics.
 ```python
 if evaluation_task_completed:
     eval_metrics = self._evaluation_service.complete_task()
