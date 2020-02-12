@@ -60,13 +60,13 @@ type EmbeddingTable struct {
     Name            string
     Dim             int64
     Initializer     string
-    EmbeddingVector map[int64]*Tensor
+    EmbeddingVector map[int64]*tensorflow.Tensor
 }
 
 type Model struct {
     Version           int32
     InitStatus        bool
-    DenseParameters   map[string]*Tensor
+    DenseParameters   map[string]*tensorflow.Tensor
     EmbeddingTables   map[string]*EmbeddingTable
 }
 ```
