@@ -25,7 +25,7 @@ def learning_rate_scheduler(model_version):
 class PredictionOutputsProcessor(BasePredictionOutputsProcessor):
     ...
 ```
-There will be multiple definition APIs for users to define different behaviors of model. The interfaces of APIs may be different. It is more convenient for users to define those behaviors using `tf.keras.callbacks.Callback`. 
+There will be different interface definitions for users to define different behaviors of model. The interfaces of APIs may be different. It is more convenient for users to define those behaviors using `tf.keras.callbacks.Callback`. 
 
 Some use cases we observed that we want to support are:
 * Case 1: Callback similar to `PredictionOutputsProcessor` that is executed after prediction outputs are made.
