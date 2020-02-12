@@ -7,7 +7,7 @@ This document describes the design for supporting callback to customize the beha
 In deep learning, we generally need to customize the behavior of model during training, evaluation or
 inference, including reading/changing the model. We may perform the behavior per batch, per epoch or at the start and end of job. `tf.keras.callbacks.Callback` is an abstract base class and has methods to perform the behavior at different call frequency, such as `on_bath_end`, `on_epoch_end` and so on. So, we adopt the interfaces of `tf.keras.callbacks.Callback` to customize the behavior of model in ElasticDL. 
 
-Now we have implemented some modules similar to callback in ElasticDL, such as `LearingRateScheduler` and `PredictionOutputsProcessor`. And users should write definitions in the model definition file for each module like:
+Now we have implemented some modules similar to callback in ElasticDL, such as `LearningRateScheduler` and `PredictionOutputsProcessor`. And users should write definitions in the model definition file for each module like:
 ```python
 def custom_model():
     ...
@@ -58,7 +58,7 @@ def callbacks():
 ## Initialize Callbacks and Set Callback Attributes in ElasticDL
 
 ### Use a Container for Callbacks Defined in the Model
-We may define several callbacks for the model in a job. Tensorflow creates a container `CallbackList` to wrap the callbacks to conveniently call the methods in callbacks. For example:
+We may define several callbacks for the model in a job. TensorFlow creates a container `CallbackList` to wrap the callbacks to conveniently call the methods in callbacks. For example:
 ```python
 class CallbackList():
     def on_batch_end(self, batch, logs=None):
@@ -66,7 +66,7 @@ class CallbackList():
             callback.on_batch_end(bach, logs)
 ```
 For detail, we can view the [source code](https://github.com/tensorflow/tensorflow/blob/cf7fcf164c9846502b21cebb7d3d5ccf6cb626e8/tensorflow/python/keras/callbacks.py#L189-L196
-) of `CallbackList` in Tensorflow.
+) of `CallbackList` in TensorFlow.
 
 So, we can also use CallbackList to wrap the callbacks in ElasticDL.
 ```python
