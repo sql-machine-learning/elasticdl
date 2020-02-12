@@ -84,7 +84,7 @@ message Tensor {
 }
 
 message IndexedSlices {
-  Tensor concat_vectors = 1;
+  Tensor concat_tensors = 1;
   repeated int64 ids = 2;
 }
 
@@ -160,15 +160,6 @@ message PushGradientResponse {
   int32 model_version = 2;
 }
 
-// PS service
-service Pserver {
-  rpc pull_variable(PullVariableRequest) returns (PullVariableResponse);
-  rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
-  rpc push_model(Model) returns (google.protobuf.Empty);
-  rpc push_embedding_info(Model) returns (google.protobuf.Empty);
-  rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
-}
-
 message PullDenseParametersRequest {
   int32 version = 1;
 }
@@ -189,11 +180,17 @@ message PushGradientsResponse {
   int32 version = 2;
 }
 
-// GoPS service
-service GoPserver {
+// PS service
+service Pserver {
+  rpc pull_variable(PullVariableRequest) returns (PullVariableResponse);
+  rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
+  rpc push_model(Model) returns (google.protobuf.Empty);
+  rpc push_embedding_info(Model) returns (google.protobuf.Empty);
+  rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
+  // Following is the new rpc service described in concepts doc, after the
+  // refactoring work old rpc service will be removed safely.
   rpc pull_dense_parameters(PullDenseParametersRequest)
       returns (PullDenseParametersResponse);
   rpc pull_embedding_table(PullEmbeddingTableRequest) returns (Tensor);
-  rpc push_model(Model) returns (google.protobuf.Empty);
   rpc push_gradients(Model) returns (PushGradientsResponse);
 }
