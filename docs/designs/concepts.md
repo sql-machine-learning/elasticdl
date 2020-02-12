@@ -32,6 +32,8 @@ Let's make a short summary, following is all the core concepts of ElasticDL incl
 
 ## Message Representation
 
+There is a [tensor](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) proto message defined in TensorFlow, which meets our needs. We could reuse
+
 We introduce an `IndexedSlices` proto message to represent the concatenated embedding vectors pulled from PS, and the concatenated embedding vectors of gradient waiting to be pushed to PS.
 
 The definition of `elasticdl.proto`:
@@ -59,14 +61,14 @@ message Tensor {
 }
 
 message IndexedSlices {
-  Tensor concat_embedding_vecs = 1;
+  Tensor concat_tensors = 1;
   repeated int64 ids = 2;
 }
 
 message Model {
   int32 version = 1; // model updated times
   map<string, Tensor> dense_parameters = 2;
-  map<string, IndexedSlices> indexed_slices = 3;
+  map<string, IndexedSlices> embedding_tables = 3;
 }
 ```
 
