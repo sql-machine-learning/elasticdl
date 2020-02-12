@@ -84,6 +84,7 @@ model = custom_model()
 callbacks = callbacks()
 callback_list = CallbackList(callbacks)
 callback_list.set_model(model)
+callback_list.model.stop_training = False # used for early stop callback
 
 params = {
     'batch_size': batch_size,
@@ -277,7 +278,7 @@ class EarlyStopper(tf.keras.callbacks.Callback):
         if metrics is None:
             return
         self.metrics_list.append(metrics)
-        self.model.stop = stop_train(self.metrics_list)
+        self.model.stop_training = stop_train(self.metrics_list)
 ```
 The same as `SummaryWriter`, the master call `on_test_end` of `EarlyStopper` After an evaluation job is completed.
 
