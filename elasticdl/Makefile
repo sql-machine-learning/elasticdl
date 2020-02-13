@@ -7,8 +7,8 @@ CAPI_DIR = elasticdl/pkg/kernel/capi
 all: python_pb go_pb kernel
 
 python_pb:
-	$(PYTHON) -m grpc_tools.protoc -I${TF_PATH} -I${PROTO_PATH} \
-	    ${PROTO_PATH}/elasticdl.proto --python_out=${PROTO_PATH} --grpc_python_out=${PROTO_PATH}
+	$(PYTHON) -m grpc_tools.protoc -I${TF_PATH} -I. \
+	    ${PROTO_PATH}/elasticdl.proto --python_out=. --grpc_python_out=.
 
 go_pb:
 	mkdir -p $(GO_FILE_DIR)
