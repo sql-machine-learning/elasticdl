@@ -50,10 +50,8 @@ RUN /install-protobuf.bash && rm /install-protobuf.bash
 # Install elasticdl.org/elasticdl Go package
 ENV ELASTICDLPATH $GOPATH/src/elasticdl.org/elasticdl
 ENV TF_PATH /tmp/tensorflow
-RUN mkdir -p $TF_PATH/tensorflow/core/framework && \
-    curl -OL https://raw.githubusercontent.com/tensorflow/tensorflow/master/tensorflow/core/framework/tensor.proto && \
-    curl -OL https://raw.githubusercontent.com/tensorflow/tensorflow/master/tensorflow/core/framework/tensor_shape.proto && \
-    curl -OL https://raw.githubusercontent.com/tensorflow/tensorflow/master/tensorflow/core/framework/resource_handle.proto
+RUN cd /tmp && git clone --depth=1 https://github.com/tensorflow/tensorflow.git
+RUN mkdir -p ${GOPATH}/src
 COPY . /tmp/elasticdl
 RUN cd /tmp/elasticdl && make -f elasticdl/Makefile && \
     mkdir -p $ELASTICDLPATH && \
@@ -61,4 +59,4 @@ RUN cd /tmp/elasticdl && make -f elasticdl/Makefile && \
     cd $GOPATH/src/elasticdl.org/elasticdl && \
     export GO111MODULE=on && \
     go mod init elasticdl.org/elasticdl && \
-    go install ./... && cd / && rm -rf /tmp/elasticdl
+    go install ./... && cd / && rm -rf /tmp/elasticdl && rm -rf /tmp/tensorflow
