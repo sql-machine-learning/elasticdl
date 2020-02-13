@@ -116,7 +116,7 @@ def serialize_tensor(tensor, tensor_pb):
         )
     tensor_pb.dtype = dtype
     tensor_pb.dim.extend(tensor.values.shape)
-    shape_dim = tensor_pb.shape.add()
+    shape_dim = tensor_pb.shape.dim.add()
     shape_dim.name = "nihao"
     shape_dim.size = 2
 
