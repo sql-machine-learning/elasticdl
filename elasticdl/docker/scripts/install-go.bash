@@ -6,7 +6,6 @@ GO_MIRROR_URL=$1
 
 curl --silent ${GO_MIRROR_URL}/go1.13.4.linux-amd64.tar.gz | tar -C /usr/local -xzf -
 
-go env -w GO111MODULE=on
 go env -w GOPROXY=https://goproxy.io,direct
 
 go get github.com/golang/protobuf/protoc-gen-go

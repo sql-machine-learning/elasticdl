@@ -10,8 +10,9 @@ python_pb:
 	$(PYTHON) -m grpc_tools.protoc -I${TF_PATH} -I${PROTO_PATH} \
 	    ${PROTO_PATH}/elasticdl.proto --python_out=${PROTO_PATH} --grpc_python_out=${PROTO_PATH}
 
-go_pb: $(EDL_PROTO_FILE)
+go_pb:
 	mkdir -p $(GO_FILE_DIR)
+	protoc -I${TF_PATH} ${TF_PATH}/tensorflow/core/framework/types.proto --go_out=${GOPATH}/src
 	protoc -I${TF_PATH} ${TF_PATH}/tensorflow/core/framework/resource_handle.proto --go_out=${GOPATH}/src
 	protoc -I${TF_PATH} ${TF_PATH}/tensorflow/core/framework/tensor_shape.proto --go_out=${GOPATH}/src
 	protoc -I${TF_PATH} ${TF_PATH}/tensorflow/core/framework/tensor.proto --go_out=${GOPATH}/src
