@@ -1,23 +1,25 @@
 PYTHON = python
 
-TF_TENSOR_SHAPE_FILE = elasticdl/proto/tensor_shape.proto
-EDL_PROTO_FILE = elasticdl/proto/elasticdl.proto
+TF_PATH = /Users/qijun/tensorflow
+PROTO_PATH=elasticdl/proto
 
 GO_FILE_DIR = elasticdl/pkg/proto
-GO_PB_FILE = $(GO_FILE_DIR)/elasticdl.pb.go
 
 CXX = g++
 CAPI_DIR = elasticdl/pkg/kernel/capi
 
-all: python_pb $(GO_PB_FILE) kernel
+all: python_pb go_pb kernel
 
 python_pb:
-	$(PYTHON) -m grpc_tools.protoc -I . $(TF_TENSOR_SHAPE_FILE) --python_out=.
-	$(PYTHON) -m grpc_tools.protoc -I . $(EDL_PROTO_FILE) --python_out=. --grpc_python_out=.
+	$(PYTHON) -m grpc_tools.protoc -I${TF_PATH} -I${PROTO_PATH} \
+	    ${PROTO_PATH}/elasticdl.proto --python_out=${PROTO_PATH} --grpc_python_out=${PROTO_PATH}
 
-$(GO_PB_FILE): $(EDL_PROTO_FILE)
+go_pb: $(EDL_PROTO_FILE)
 	mkdir -p $(GO_FILE_DIR)
-	protoc -I . $< --go_out=plugins=grpc:.
+	protoc -I${TF_PATH} ${TF_PATH}/tensorflow/core/framework/resource_handle.proto
+	protoc -I${TF_PATH} ${TF_PATH}/tensorflow/core/framework/tensor_shape.proto --go_out=${GOPATH}/src
+	protoc -I${TF_PATH} ${TF_PATH}/tensorflow/core/framework/tensor.proto --go_out=${GOPATH}/src
+	protoc -I${TF_PATH} -I${PROTO_PATH} ${PROTO_PATH}/elasticdl.proto --go_out=plugins=grpc:.
 
 kernel:
 	${CXX} -O3 -std=c++11 ${CAPI_DIR}/kernel_api.cc -c -o ${CAPI_DIR}/libkernel_api.o

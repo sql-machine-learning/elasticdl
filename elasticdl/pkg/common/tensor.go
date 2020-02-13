@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"elasticdl.org/elasticdl/pkg/proto"
 	"encoding/binary"
+	tensor_shape_go_proto "github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_shape_go_proto"
 	"math"
 )
 
@@ -94,6 +95,10 @@ func SerializeTensor(t *Tensor) *proto.Tensor {
 	if t.Dim != nil {
 		pb.Dim = make([]int64, len(t.Dim))
 		copy(pb.Dim, t.Dim)
+		pb.Shape.Dim = make([]*tensor_shape_go_proto.TensorShapeProto_Dim, len(t.Dim))
+		for i, size := range t.Dim {
+			pb.Shape.Dim[0].Size = size
+		}
 	}
 	if t.Indices != nil {
 		pb.Indices = make([]int64, len(t.Indices))

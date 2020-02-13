@@ -1,7 +1,8 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
-import "elasticdl/proto/tensor_shape.proto";
+import "tensorflow/core/framework/tensor_shape.proto";
+import "tensorflow/core/framework/tensor.proto";
 
 package proto;
 option go_package = "elasticdl/pkg/proto";
@@ -82,8 +83,6 @@ message Tensor {
 
   // Dtype of the tensor, e.g. "int64", "float32".
   TensorDtype dtype = 5;
-
-  tensorflow.TensorShapeProto shape = 6;
 }
 
 message EmbeddingTableInfo {
