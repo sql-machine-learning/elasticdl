@@ -188,11 +188,11 @@ SELECT *
 FROM census_income
 TO TRAIN DNNClassifier
 WITH model.hidden_units = [10, 20]
-COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, num_buckets=5), dimension=32)
+COLUMN NORMALIZE(capital_gain), STANDARDIZE(age), EMBEDDING(hours_per_week, dimension=32)
 LABEL label
 ```
 
-It trains a DNN model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is `COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, num_buckets=5), dimension=32)`. It will normalize the column *capital_gain*, standardize the column *age*, bucketize the column *hours_per_week* to 5 buckets and then map it to an embedding vector.  
+It trains a DNN model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is `COLUMN NORMALIZE(capital_gain), STANDARDIZE(age), EMBEDDING(hours_per_week, dimension=32)`. It will normalize the column *capital_gain*, standardize the column *age*, and then map *hours_per_week* to an embedding vector.  
 
 Next, Let's see a more complicated scenario. The following SQL statment trains a [wide and deep model](https://ai.googleblog.com/2016/06/wide-deep-learning-better-together-with.html) using the same dataset.
 
@@ -216,7 +216,7 @@ SQLFlow will convert the `COLUMN` expression to Python code of data transformati
 
 ### Generate Analysis SQL From SQLFlow Statement
 
-SQLFlow will generate the analysis SQL to calculate the statistical value. For this clause `COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age))`, the corresponding analysis SQL is as follows:
+SQLFlow will generate the analysis SQL to calculate the statistical value. For this clause `COLUMN NORMALIZE(capital_gain), STANDARDIZE(age)`, the corresponding analysis SQL is as follows:
 
 ```SQL
 SELECT
