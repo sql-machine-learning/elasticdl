@@ -51,10 +51,9 @@ RUN /install-protobuf.bash && rm /install-protobuf.bash
 ENV ELASTICDLPATH $GOPATH/src/elasticdl.org/elasticdl
 ENV TF_PATH /tmp/tensorflow
 RUN cd /tmp && git clone --depth=1 https://github.com/tensorflow/tensorflow.git
-RUN mkdir -p ${GOPATH}/src
 COPY . /tmp/elasticdl
-RUN cd /tmp/elasticdl && make -f elasticdl/Makefile && \
-    mkdir -p $ELASTICDLPATH && \
+RUN cd /tmp/elasticdl && mkdir -p $ELASTICDLPATH && \
+    make -f elasticdl/Makefile && \
     cp -r /tmp/elasticdl/elasticdl/pkg $ELASTICDLPATH && \
     cd $GOPATH/src/elasticdl.org/elasticdl && \
     export GO111MODULE=on && \
