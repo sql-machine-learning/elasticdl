@@ -56,4 +56,4 @@ RUN cd /tmp/elasticdl && mkdir -p $ELASTICDLPATH && \
     make -f elasticdl/Makefile && \
     cp -r /tmp/elasticdl/elasticdl/pkg $ELASTICDLPATH && \
     cd $GOPATH/src/elasticdl.org/elasticdl && \
-    go install ./... && cd / && rm -rf /tmp/elasticdl && rm -rf /tmp/tensorflow
+    go install ./... && cd / && rm -rf /tmp/elasticdl
