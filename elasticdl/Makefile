@@ -1,6 +1,6 @@
 PYTHON = python
 
-TF_TENSOR_SHAPE_FILE = tensorflow/tensorflow/core/framework/tensor_shape.proto
+TF_TENSOR_SHAPE_FILE = elasticdl/proto/tensor_shape.proto
 EDL_PROTO_FILE = elasticdl/proto/elasticdl.proto
 
 GO_FILE_DIR = elasticdl/pkg/proto

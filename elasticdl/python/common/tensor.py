@@ -1,6 +1,6 @@
 import numpy as np
-import tensorflow as tf
 
+import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.dtypes import (
     dtype_numpy_to_tensor,
@@ -116,6 +116,10 @@ def serialize_tensor(tensor, tensor_pb):
         )
     tensor_pb.dtype = dtype
     tensor_pb.dim.extend(tensor.values.shape)
+    shape_dim = tensor_pb.shape.add()
+    shape_dim.name = "nihao"
+    shape_dim.size = 2
+
     tensor_pb.content = tensor.values.tobytes()
     if tensor.is_indexed_slices():
         tensor_pb.indices.extend(tuple(tensor.indices))

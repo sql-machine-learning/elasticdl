@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
-import "tensorflow/tensorflow/core/framework/tensor_shape.proto";
+import "elasticdl/proto/tensor_shape.proto";
 
 package proto;
 option go_package = "elasticdl/pkg/proto";
@@ -71,8 +71,7 @@ message Tensor {
   // Dimensions of the tensor. The first entry in "dim" is the outermost
   // dimension used to layout the values, the last entry is the innermost
   // dimension.
-  // repeated int64 dim = 2;
-  tensorflow.TensorShapeProto shape = 2;
+  repeated int64 dim = 2;
 
   // ndarray's buffer dump. Each element must be a 32 bit float value.
   bytes content = 3;
@@ -83,6 +82,8 @@ message Tensor {
 
   // Dtype of the tensor, e.g. "int64", "float32".
   TensorDtype dtype = 5;
+
+  tensorflow.TensorShapeProto shape = 6;
 }
 
 message EmbeddingTableInfo {
