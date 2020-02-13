@@ -170,9 +170,9 @@ We can extend the SQLFlow syntax and enrich the `COLUMN` expression. We propose 
 
 | Name             |    Transformation                                     | Statitical Parameter | Input Type | Output Type |
 |:----------------:|:-----------------------------------------------------:|:--------------------:|:-------------------:|:---------------------:|
-| NORMALIZE(x)     | Scale the inputs to the range [0, 1]. `out = x - x_min / (x_max - x_min)` |     x_min, x_max     | number | float64 |
+| NORMALIZE(x)     | Scale the inputs to the range [0, 1]. `out = x - x_min / (x_max - x_min)` |     x_min, x_max     | number (int, float) | float64 |
 | STANDARDIZE(x)   | Scale the inputs to z-score subtracts out the mean and divides by standard deviation. `out = x - x_mean / x_stddev` |    x_mean, x_stddev  | number | float64 |
-| BUCKETIZE(x, num_buckets, boundaries) | Transform the numeric features into categorical ids using a set of thresholds. |   boundaries  | Number | int64 |
+| BUCKETIZE(x, num_buckets, boundaries) | Transform the numeric features into categorical ids using a set of thresholds. |   boundaries  | number | int64 |
 | HASH_BUCKET(x, hash_bucket_size) | Map the inputs into a finite number of buckets by hashing. `out_id = Hash(input_feature) % bucket_size` |   hash_bucket_size   | string, int32, int64 | int64 |
 | VOCABULARIZE(x)  | Map the inputs to integer ids by looking up the vocabulary | vocabulary_list | string, int32, int64 | int64 |
 | EMBEDDING(x, dimension) | Map the inputs to embedding vectors             |          N/A         | int32, int64 | float32 |
