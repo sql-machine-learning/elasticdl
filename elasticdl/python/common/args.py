@@ -318,12 +318,6 @@ def add_train_params(parser):
         default="",
     )
     parser.add_argument(
-        "--output",
-        type=str,
-        default="",
-        help="The path to save the final trained model",
-    )
-    parser.add_argument(
         "--sync_version_tolerance",
         type=int,
         help="The maximum model version difference between reported gradients "
@@ -557,6 +551,12 @@ def add_common_args_between_master_and_worker(parser):
         help="The maximum number of recent checkpoint files to keep."
         "If 0, keep all.",
         default=0,
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="",
+        help="The path to save the final trained model",
     )
 
 

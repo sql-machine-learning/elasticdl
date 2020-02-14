@@ -24,6 +24,8 @@ class SavedModelExporter(tf.keras.callbacks.Callback):
                 method but that may change in the future.
         """
         saved_model_path = self.params.get("saved_model_path", None)
+        if saved_model_path is None or saved_model_path == "":
+            return
         batch_size = self.params.get("batch_size")
         task = self._task_data_service.get_train_end_callback_task()
         dataset = self._task_data_service.get_dataset_by_task(task)
