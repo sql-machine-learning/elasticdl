@@ -1,8 +1,12 @@
 package ps
 
-import "elasticdl.org/elasticdl/pkg/common"
-import "elasticdl.org/elasticdl/pkg/kernel"
-import "fmt"
+import (
+	"elasticdl.org/elasticdl/pkg/common"
+	"elasticdl.org/elasticdl/pkg/kernel"
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 // Optimizer interface
 type Optimizer interface {
@@ -21,7 +25,7 @@ type SGDOptimizer struct {
 	BaseOptimizer
 }
 
-// GetLR returns learning rate SGD
+// GetLR returns learning rate
 func (opt *SGDOptimizer) GetLR() float32 {
 	return opt.lr
 }
@@ -29,18 +33,16 @@ func (opt *SGDOptimizer) GetLR() float32 {
 // ApplyGradients applies gradients to parameters
 func (opt *SGDOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) error {
 	for _, grad := range grads {
-		if grad.Indices == nil {
-			t := p.GetNonEmbeddingParam(grad.Name)
-			if t == nil {
-				return fmt.Errorf("grad %s not in Parameter", grad.Name)
-			}
-			kernel.SGD(grad, t, opt.GetLR())
+		nonEmbeddingT := p.GetNonEmbeddingParam(grad.Name)
+		if nonEmbeddingT != nil {
+			kernel.SGD(grad, nonEmbeddingT, opt.GetLR())
 		} else {
-			t := p.GetEmbeddingParam(grad.Name)
-			if t == nil {
+			embeddingT := p.GetEmbeddingParam(grad.Name)
+			if embeddingT != nil {
+				kernel.SparseSGD(grad, embeddingT, opt.GetLR())
+			} else {
 				return fmt.Errorf("grad %s not in Parameter", grad.Name)
 			}
-			kernel.SparseSGD(grad, t, opt.GetLR())
 		}
 	}
 	return nil
@@ -65,35 +67,42 @@ type AdamOptimizer struct {
 	maxSquare *Parameter
 }
 
+// GetLR returns learning rate
+func (opt *AdamOptimizer) GetLR() float32 {
+	return opt.lr
+}
+
 // ApplyGradients applies gradients to parameters
 func (opt *AdamOptimizer) ApplyGradients(grads []*common.Tensor, p *Parameter) error {
 	opt.step++
 	for _, grad := range grads {
-		if grad.Indices == nil {
-			t := p.GetNonEmbeddingParam(grad.Name)
+		nonEmbeddingT := p.GetNonEmbeddingParam(grad.Name)
+		if nonEmbeddingT != nil {
 			m := opt.m.GetNonEmbeddingParam(grad.Name)
 			v := opt.v.GetNonEmbeddingParam(grad.Name)
-			if t == nil || m == nil || v == nil {
-				return fmt.Errorf("grad %s not in Parameter", grad.Name)
-			}
 			if opt.amsgrad {
 				ms := opt.maxSquare.GetNonEmbeddingParam(grad.Name)
-				kernel.Adam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, true, ms)
+				kernel.Adam(grad, nonEmbeddingT, m, v, opt.lr, opt.step,
+					opt.beta1, opt.beta2, opt.epsilon, true, ms)
 			} else {
-				kernel.Adam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, false, nil)
+				kernel.Adam(grad, nonEmbeddingT, m, v, opt.lr, opt.step,
+					opt.beta1, opt.beta2, opt.epsilon, false, nil)
 			}
 		} else {
-			t := p.GetEmbeddingParam(grad.Name)
-			m := opt.m.GetEmbeddingParam(grad.Name)
-			v := opt.v.GetEmbeddingParam(grad.Name)
-			if t == nil || m == nil || v == nil {
-				return fmt.Errorf("grad %s not in Parameter", grad.Name)
-			}
-			if opt.amsgrad {
-				ms := opt.maxSquare.GetEmbeddingParam(grad.Name)
-				kernel.SparseAdam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, true, ms)
+			embeddingT := p.GetEmbeddingParam(grad.Name)
+			if embeddingT != nil {
+				m := opt.m.GetEmbeddingParam(grad.Name)
+				v := opt.v.GetEmbeddingParam(grad.Name)
+				if opt.amsgrad {
+					ms := opt.maxSquare.GetEmbeddingParam(grad.Name)
+					kernel.SparseAdam(grad, embeddingT, m, v, opt.lr, opt.step,
+						opt.beta1, opt.beta2, opt.epsilon, true, ms)
+				} else {
+					kernel.SparseAdam(grad, embeddingT, m, v, opt.lr, opt.step,
+						opt.beta1, opt.beta2, opt.epsilon, false, nil)
+				}
 			} else {
-				kernel.SparseAdam(grad, t, m, v, opt.lr, opt.step, opt.beta1, opt.beta2, opt.epsilon, false, nil)
+				return fmt.Errorf("grad %s not in Parameter", grad.Name)
 			}
 		}
 	}
@@ -128,4 +137,108 @@ func (opt *AdamOptimizer) InitNonEmbeddingParam(name string, dim []int64) {
 	opt.m.NonEmbeddingParam[name] = &common.Tensor{name, make([]float32, size, size), dim, nil}
 	opt.v.NonEmbeddingParam[name] = &common.Tensor{name, make([]float32, size, size), dim, nil}
 	opt.maxSquare.NonEmbeddingParam[name] = &common.Tensor{name, make([]float32, size, size), dim, nil}
+}
+
+const (
+	optTypeSGD     = "SGD"
+	optTypeAdam    = "Adam"
+	optArgLR       = "learning_rate"
+	optArgMomentum = "momentum"
+	optArgNesterov = "nesterov"
+	optArgBeta1    = "beta_1"
+	optArgBeta2    = "beta_2"
+	optArgEpsilon  = "epsilon"
+	optArgAmsgrad  = "amsgrad"
+)
+
+var optArgumentsMap = map[string][]string{
+	"SGD":  []string{optArgLR, optArgMomentum, optArgNesterov},
+	"Adam": []string{optArgLR, optArgBeta1, optArgBeta2, optArgEpsilon, optArgAmsgrad},
+}
+
+// parseOptArgs parses optimizer arguments according to optimizer type
+func parseOptArgs(optType string, optArgs string) (map[string]string, error) {
+	// parse arguments to map
+	argsMap := make(map[string]string)
+	for _, args := range strings.Split(optArgs, ";") {
+		if args == "" {
+			continue
+		} else {
+			arr := strings.Split(args, "=")
+			argsMap[arr[0]] = arr[1]
+		}
+	}
+
+	// check argument names
+	for _, argName := range optArgumentsMap[optType] {
+		if _, ok := argsMap[argName]; !ok {
+			return nil, fmt.Errorf("Args passed to ps should contain %s", argName)
+		}
+	}
+	if len(argsMap) != len(optArgumentsMap[optType]) {
+		return nil, fmt.Errorf("Args passed to ps contain redundant items: %v", argsMap)
+	}
+	return argsMap, nil
+}
+
+// NewOptimizer creates optimizer according to optimizer type and arguments
+func NewOptimizer(optType string, optArgs string) (Optimizer, error) {
+	argsMap, err := parseOptArgs(optType, optArgs)
+	if err != nil {
+		return nil, err
+	}
+
+	lr64, err := strconv.ParseFloat(argsMap[optArgLR], 32)
+	if err != nil {
+		return nil, fmt.Errorf("Having error converting learning rate to number: %v", err)
+	}
+	lr := float32(lr64)
+	if optType == optTypeSGD {
+		var (
+			momentum float64
+			nesterov bool
+		)
+		momentum, err = strconv.ParseFloat(argsMap[optArgMomentum], 32)
+		if err != nil {
+			return nil, err
+		}
+		nesterov, err = strconv.ParseBool(argsMap[optArgNesterov])
+		if err != nil {
+			return nil, err
+		}
+
+		if momentum > float64(0.0) {
+			return nil, fmt.Errorf("SGD optimizer with momentum has not been implemented")
+		}
+		if !nesterov {
+			return NewSGDOptimizer(lr), nil
+		}
+		return nil, fmt.Errorf("SGD optimizer with nesterov=true has not been implemented")
+	} else if optType == optTypeAdam {
+		var (
+			beta1   float64
+			beta2   float64
+			epsilon float64
+			amsgrad bool
+		)
+		beta1, err = strconv.ParseFloat(argsMap[optArgBeta1], 32)
+		if err != nil {
+			return nil, err
+		}
+		beta2, err = strconv.ParseFloat(argsMap[optArgBeta2], 32)
+		if err != nil {
+			return nil, err
+		}
+		epsilon, err = strconv.ParseFloat(argsMap[optArgEpsilon], 32)
+		if err != nil {
+			return nil, err
+		}
+		amsgrad, err = strconv.ParseBool(argsMap[optArgAmsgrad])
+		if err != nil {
+			return nil, err
+		}
+		return NewAdamOptimizer(lr, float32(beta1), float32(beta2), float32(epsilon), amsgrad), nil
+	} else {
+		return nil, fmt.Errorf("Unknown optimizer type %s", optType)
+	}
 }

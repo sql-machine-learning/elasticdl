@@ -1,6 +1,5 @@
 import os
 import socket
-import time
 import traceback
 
 import numpy as np
@@ -14,7 +13,6 @@ from elasticdl.python.common.constants import (
     JobType,
     MetricsDictKey,
     Mode,
-    SaveModelConfig,
 )
 from elasticdl.python.common.hash_utils import (
     int_to_id,
@@ -41,6 +39,9 @@ from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.worker.task_data_service import TaskDataService
+from elasticdl.python.keras.callbacks.saved_model_exporter import (
+    SavedModelExporter
+)
 
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.
@@ -146,14 +147,6 @@ class Worker(object):
             custom_data_reader=args.custom_data_reader,
             callbacks=args.callbacks,
         )
-        set_callback_parameters(
-            self._callbacks_list,
-            batch_size=args.minibatch_size,
-            epochs=args.num_epochs,
-            metric=self._eval_metrics_fn(),
-            saved_model_path=args.output,
-            checkpoint_path=args.checkpoint_dir
-        )
 
         self._collective_communicator = (
             CollectiveCommunicator()
@@ -165,7 +158,6 @@ class Worker(object):
         )
         model_inst = self._model_handler.get_model_to_train(model_inst)
         self.set_model(model_inst)
-        self._callbacks_list.set_model(model_inst)
 
         self._model_version = -1
         self._model_versions_from_ps = [-1 for _ in range(self._ps_num)]
@@ -193,6 +185,24 @@ class Worker(object):
             self._opt = self._opt_fn()
         self._non_embed_grads = {}
         self._evaluation_result = {}
+
+        saved_model_exporter = SavedModelExporter(
+            self._task_data_service,
+            self._dataset_fn,
+            self._model_handler
+        )
+        # Place default callbacks at the head to execute them firstly
+        self.callbacks_list.callbacks.insert(0, saved_model_exporter)
+
+        self._callbacks_list.set_model(model_inst)
+        set_callback_parameters(
+            self._callbacks_list,
+            batch_size=args.minibatch_size,
+            epochs=args.num_epochs,
+            metric=self._eval_metrics_fn(),
+            saved_model_path=args.output,
+            checkpoint_path=args.checkpoint_dir
+        )
 
     # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
@@ -901,32 +911,12 @@ class Worker(object):
         self.report_task_result(task_id, err_msg)
         self._evaluation_result = {}
 
-    def _process_save_model_task_if_needed(self):
-        (
-            task,
-            dataset,
-        ) = self._task_data_service.get_save_model_task_and_dataset()
-        if task is not None and dataset is not None:
-            dataset = self._dataset_fn(
-                dataset,
-                Mode.PREDICTION,
-                self._task_data_service.data_reader.metadata,
-            )
-            dataset = dataset.batch(self._minibatch_size)
-            saved_model_path = task.extended_config.get(
-                SaveModelConfig.SAVED_MODEL_PATH
-            )
-            saved_model_path = os.path.join(
-                saved_model_path, str(int(time.time()))
-            )
-            self.logger.info(
-                "The path to export model is {}".format(saved_model_path)
-            )
-            model = self._model_handler.get_model_to_export(
-                self._model, dataset
-            )
-            tf.saved_model.save(model, saved_model_path)
-            self.report_task_result(task_id=task.task_id, err_msg="")
+    def _process_train_end_callback_task_if_needed(self):
+        train_end_task = self._task_data_service.get_train_end_callback_task()
+        if train_end_task:
+            self._callbacks_list.on_train_end()
+            self.report_task_result(task_id=train_end_task.task_id, err_msg="")
+        self._task_data_service.clear_train_end_callback_task()
 
     def _process_minibatch_and_report(
         self,
@@ -984,7 +974,7 @@ class Worker(object):
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
-                self._process_save_model_task_if_needed()
+                self._process_train_end_callback_task_if_needed()
                 break
             dataset = self._dataset_fn(
                 dataset,
@@ -1041,7 +1031,7 @@ class Worker(object):
             if self._job_type == JobType.TRAINING_WITH_EVALUATION:
                 evaluation_task_executed = self._evaluate_only()
 
-            self._process_save_model_task_if_needed()
+            self._process_train_end_callback_task_if_needed()
 
     def _evaluate_only(self):
         """

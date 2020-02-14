@@ -21,11 +21,12 @@ docker build \
 
 Note that since ElasticDL depends on TensorFlow, the base image must have TensorFlow installed.
 
-When having difficulties downloading from the main PyPI site, you could pass an extra PyPI index url to `docker build`, such as:
+When having difficulties downloading from the main PyPI site or Golang site, you could pass some extra build arguments to `docker build`, `EXTRA_PYPI_INDEX` for PyPI site and `GO_MIRROR_URL` for the mirror of Golang installation package:
 
 ```bash
 docker build \
     --build-arg EXTRA_PYPI_INDEX=https://mirrors.aliyun.com/pypi/simple \
+    --build-arg GO_MIRROR_URL=http://mirrors.ustc.edu.cn/golang \
     -t elasticdl:dev \
     -f elasticdl/docker/Dockerfile.dev .
 ```
@@ -61,7 +62,7 @@ We have set up pre-commit checks in the Github repo for pull requests, which can
 docker run --rm -it -v $EDL_REPO:/edl_dir -w /edl_dir \
     elasticdl:dev \
     bash -c \
-    "pre-commit run --files $(find elasticdl/python model_zoo -name '*.py' -print0 | tr '\0' ' ')"
+    "pre-commit run --files $(find elasticdl/python model_zoo setup.py scripts/ -name '*.py' -print0 | tr '\0' ' ') $(find elasticdl/pkg -name '*.go' -print0 | tr '\0' ' ')"
 ```
 
 ### Unit Tests

@@ -26,13 +26,15 @@ var (
 	checkpointDir         = flag.String("checkpoint_dir", "", "The directory to store the checkpoint file")
 	checkpointSteps       = flag.Int("checkpoint_steps", 0, "Save checkpoint every this many steps. If 0, no checkpoints to save")
 	keepCheckpointMax     = flag.Int("keep_checkpoint_max", 3, "The maximum number of recent checkpoint files to keep. If 0, keep all")
+	optType               = flag.String("opt_type", "unknown", "optimizer type")
+	optArgs               = flag.String("opt_args", "", "optimizer arguments")
 )
 
 func main() {
 	flag.Parse()
 	address := fmt.Sprintf("%s:%d", os.Getenv("MY_POD_IP"), *port)
 	serverDone := make(chan bool)
-	ps.CreateServer(address, serverDone)
+	ps.NewServer(*psID, *optType, *optArgs).Run(address, serverDone)
 	log.Println("PS service started at ", address)
 	for {
 		select {

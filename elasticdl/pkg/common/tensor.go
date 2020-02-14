@@ -17,18 +17,20 @@ type Tensor struct {
 }
 
 // NewTensor create a new n-dim tensor
-func NewTensor(dim []int64) *Tensor {
+func NewTensor(dim []int64, name string) *Tensor {
 	var t Tensor
+	t.Name = name
 	t.Value = make([]float32, GetDimProduct(dim))
 	t.Dim = dim
 	return &t
 }
 
 // NewVector create a new 1-dim tensor
-func NewVector(dim int64) *Tensor {
+func NewVector(dim int64, name string) *Tensor {
 	var t Tensor
 	t.Value = make([]float32, dim)
 	t.Dim = []int64{dim}
+	t.Name = name
 	return &t
 }
 
@@ -71,10 +73,14 @@ func DeserializeTensorPB(pb *proto.Tensor) *Tensor {
 		return nil
 	}
 	t.Name = pb.Name
-	t.Dim = make([]int64, len(pb.Dim))
-	copy(t.Dim, pb.Dim)
-	t.Indices = make([]int64, len(pb.Indices))
-	copy(t.Indices, pb.Indices)
+	if pb.Dim != nil {
+		t.Dim = make([]int64, len(pb.Dim))
+		copy(t.Dim, pb.Dim)
+	}
+	if pb.Indices != nil {
+		t.Indices = make([]int64, len(pb.Indices))
+		copy(t.Indices, pb.Indices)
+	}
 	t.Value = make([]float32, len(pb.Content)/4)
 	br := bytes.NewReader(pb.GetContent())
 	binary.Read(br, binary.LittleEndian, &t.Value)
@@ -85,14 +91,20 @@ func DeserializeTensorPB(pb *proto.Tensor) *Tensor {
 func SerializeTensor(t *Tensor) *proto.Tensor {
 	var pb proto.Tensor
 	pb.Name = t.Name
-	pb.Dim = make([]int64, len(t.Dim))
-	copy(pb.Dim, t.Dim)
-	pb.Indices = make([]int64, len(t.Indices))
-	copy(pb.Indices, t.Indices)
-	pb.Content = make([]byte, GetDimProduct(t.Dim)*4)
-	for i, num := range t.Value {
-		bits := math.Float32bits(num)
-		binary.LittleEndian.PutUint32(pb.Content[(i*4):], bits)
+	if t.Dim != nil {
+		pb.Dim = make([]int64, len(t.Dim))
+		copy(pb.Dim, t.Dim)
+	}
+	if t.Indices != nil {
+		pb.Indices = make([]int64, len(t.Indices))
+		copy(pb.Indices, t.Indices)
+	}
+	if t.Value != nil {
+		pb.Content = make([]byte, GetDimProduct(t.Dim)*4)
+		for i, num := range t.Value {
+			bits := math.Float32bits(num)
+			binary.LittleEndian.PutUint32(pb.Content[(i*4):], bits)
+		}
 	}
 	// set dtype to float32
 	pb.Dtype = proto.TensorDtype_DT_FLOAT32

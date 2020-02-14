@@ -10,6 +10,8 @@ import (
 type Parameter struct {
 	NonEmbeddingParam map[string]*common.Tensor
 	EmbeddingParam    map[string]*common.EmbeddingTable
+	Version           int32
+	InitStatus        bool
 }
 
 // NewParameter creates a parameter instance
@@ -47,27 +49,28 @@ func (p *Parameter) SetEmbeddingParamInfo(name string, dim int64,
 	return t
 }
 
-// DeserializeModelPB deserializes model PB to Parameter
-func DeserializeModelPB(pb *proto.Model) (*Parameter, error) {
-	param := NewParameter()
-	var err error
+// InitFromModelPB inits a Parameter instance from model PB to Parameter
+func (p *Parameter) InitFromModelPB(pb *proto.Model) error {
 	for _, v := range pb.EmbeddingTableInfo {
-		param.SetEmbeddingParamInfo(v.Name, v.Dim, v.Initializer)
+		p.SetEmbeddingParamInfo(v.Name, v.Dim, v.Initializer)
 	}
 	for _, v := range pb.Param {
 		t := common.DeserializeTensorPB(v)
 		if t.Indices == nil {
-			param.NonEmbeddingParam[t.Name] = t
+			p.NonEmbeddingParam[t.Name] = t
 		} else {
-			table := param.GetEmbeddingParam(t.Name)
+			table := p.GetEmbeddingParam(t.Name)
 			if table == nil {
-				return nil, fmt.Errorf("Embedding table %s is not created", t.Name)
+				return fmt.Errorf("Embedding table %s is not created", t.Name)
 			}
-			err = param.EmbeddingParam[t.Name].SetEmbeddingVectors(t.Indices, t.Value)
+			err := p.EmbeddingParam[t.Name].SetEmbeddingVectors(t.Indices, t.Value)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
-	return param, err
+	if pb.Version >= 0 {
+		p.Version = pb.Version
+	}
+	return nil
 }

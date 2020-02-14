@@ -20,6 +20,7 @@ from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
     get_module_file_path,
+    get_optimizer_info,
     load_model_from_module,
     load_callbacks_from_module,
     set_callback_parameters,
@@ -127,15 +128,7 @@ class Master(object):
             self._create_data_reader_fn,
         )
 
-        saved_model_path = args.output
-        if saved_model_path is not None and self.job_type in [
-            JobType.TRAINING_ONLY,
-            JobType.TRAINING_WITH_EVALUATION,
-        ]:
-            self.task_d.add_deferred_callback_create_save_model_task(
-                saved_model_path
-            )
-
+        self.task_d.add_deferred_callback_create_train_end_task()
         self.evaluation_service = self._create_evaluation_service(args)
 
         # Initialize master service
@@ -348,6 +341,7 @@ class Master(object):
             worker_args.extend(build_arguments_from_parsed_result(args))
 
             if args.use_go_ps:
+                opt_type, opt_args = get_optimizer_info(self.optimizer)
                 # TODO: rename the Go PS executable using a meaningful filename
                 ps_command = ["main"]
                 ps_args = [
@@ -369,6 +363,8 @@ class Master(object):
                     "-keep_checkpoint_max=" + str(args.keep_checkpoint_max),
                     "-checkpoint_dir_for_init="
                     + str(args.checkpoint_dir_for_init),
+                    "-opt_type=" + opt_type,
+                    "-opt_args=" + opt_args,
                 ]
             else:
                 ps_command = ["python"]
