@@ -36,11 +36,11 @@ from elasticdl.python.common.tensor import (
 )
 from elasticdl.python.common.tensor_utils import deduplicate_indexed_slices
 from elasticdl.python.common.timing_utils import Timing
-from elasticdl.python.elasticdl.feature_column import feature_column
-from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.elasticdl.callbacks.saved_model_exporter import (
     SavedModelExporter,
 )
+from elasticdl.python.elasticdl.feature_column import feature_column
+from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.worker.task_data_service import TaskDataService
 
 # The default maximum number of a minibatch retry as its results

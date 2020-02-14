@@ -1,19 +1,18 @@
 import os
-import unittest
 import tempfile
+import unittest
 from unittest import mock
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 
-from elasticdl.python.common.constants import DistributionStrategy
+from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.constants import DistributionStrategy, JobType
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.elasticdl.callbacks.saved_model_exporter import (
-    SavedModelExporter
+    SavedModelExporter,
 )
 from elasticdl.python.worker.task_data_service import TaskDataService
-
-from elasticdl.python.common.constants import JobType
 
 EMBEDDING_INPUT_DIM = 300000
 
@@ -41,18 +40,16 @@ class SavedModelExporterTest(unittest.TestCase):
     def test_on_train_end(self):
         worker = MockWorker()
         task_data_service = TaskDataService(
-            worker,
-            JobType.TRAINING_WITH_EVALUATION
+            worker, JobType.TRAINING_WITH_EVALUATION
         )
         dataset = tf.data.Dataset.from_tensor_slices(
-            np.array([
-                [1.0, 2.0, 3.0, 4.0],
-                [1.0, 2.0, 3.0, 4.0],
-                [1.0, 2.0, 3.0, 4.0],
-            ])
+            np.array([[1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 4.0]])
         )
         task_data_service._pending_train_end_callback_task = (
-            "", 0, 1, 4
+            "",
+            0,
+            1,
+            elasticdl_pb2.TRAIN_END_CALLBACK,
         )
         task_data_service.get_dataset_by_task = mock.Mock(return_value=dataset)
         model_handler = ModelHandler.get_model_handler(
@@ -60,17 +57,11 @@ class SavedModelExporterTest(unittest.TestCase):
             checkpoint_dir="elasticdl/python/tests/testdata/functional_ckpt/",
         )
         saved_model_exporter = SavedModelExporter(
-            task_data_service,
-            dataset_fn,
-            model_handler
+            task_data_service, dataset_fn, model_handler
         )
         with tempfile.TemporaryDirectory() as temp_dir_name:
-            print(temp_dir_name)
             saved_model_path = os.path.join(temp_dir_name, "test_exporter")
-            params = {
-                "batch_size": 10,
-                'saved_model_path': saved_model_path
-            }
+            params = {"batch_size": 10, "saved_model_path": saved_model_path}
             model = custom_model_with_embedding_layer()
             saved_model_exporter.set_params(params)
             saved_model_exporter.set_model(model)
