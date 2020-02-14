@@ -32,60 +32,41 @@ Let's make a short summary, following is all the core concepts of ElasticDL incl
 
 ## Message Representation
 
+There is a [tensor](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto) proto message defined in TensorFlow, which meets our needs. We could reuse it directly.
+
 We introduce an `IndexedSlices` proto message to represent the concatenated embedding vectors pulled from PS, and the concatenated embedding vectors of gradient waiting to be pushed to PS.
 
 The definition of `elasticdl.proto`:
 
 ```proto
-enum ElementType {
-  // Not a legal value for DataType. Used to indicate a DataType field
-  // has not been set.
-  DT_INVALID = 0;
-
-  DT_INT8 = 1;
-  DT_INT16 = 2;
-  DT_INT32 = 3;
-  DT_INT64 = 4;
-  DT_FLOAT16 = 5;
-  DT_FLOAT32 = 6;
-  DT_FLOAT64 = 7;
-  DT_BOOL = 8;
-}
-
-message Tensor {
-  repeated int64 dims = 1;
-  bytes content = 2;
-  ElementType dtype = 3;
-}
+import "tensorflow/tensorflow/core/framework/tensor.proto"
 
 message IndexedSlices {
-  Tensor concat_embedding_vecs = 1;
+  tensorflow.Tensor concat_tensors = 1;
   repeated int64 ids = 2;
 }
 
 message Model {
   int32 version = 1; // model updated times
-  map<string, Tensor> dense_parameters = 2;
-  map<string, IndexedSlices> indexed_slices = 3;
+  map<string, tensorflow.Tensor> dense_parameters = 2;
+  map<string, IndexedSlices> embedding_tables = 3;
 }
 ```
 
 For in-memory part, we introduce an `EmbeddingTable` data structure.
 
 ```go
-import "elasticdl.org/elasticdl/pkg/proto"
-
 type EmbeddingTable struct {
     Name            string
     Dim             int64
     Initializer     string
-    EmbeddingVector map[int64]*proto.Tensor
+    EmbeddingVector map[int64]*tensorflow.Tensor
 }
 
 type Model struct {
     Version           int32
     InitStatus        bool
-    DenseParameters   map[string]*proto.Tensor
+    DenseParameters   map[string]*tensorflow.Tensor
     EmbeddingTables   map[string]*EmbeddingTable
 }
 ```
@@ -101,7 +82,7 @@ message PullDenseParametersRequest {
 
 message PullDenseParametersResponse {
   bool initialized = 1;
-  map<string, Tensor> = 2;
+  map<string, tensorflow.Tensor> = 2;
 }
 
 message PullEmbeddingTableRequest {
@@ -119,7 +100,7 @@ message EmbeddingTableInfos {
   repeated EmbeddingTableInfo embedding_table_infos = 1
 }
 
-message PushGradientResponse {
+message PushGradientsResponse {
   bool accepted = 1;
   int32 version = 2;
 }
@@ -129,10 +110,10 @@ Following is RPC services between PS and worker.
 
 ```proto
 service Pserver {
-  rpc pull_dense_params(PullDenseParametersRequest) returns (PullDenseParametersResponse);
+  rpc pull_dense_parameters(PullDenseParametersRequest) returns (PullDenseParametersResponse);
   rpc pull_embedding_table(PullEmbeddingTableRequest) returns (IndexedSlices);
-  rpc push_dense_params(Model) returns (google.protobuf.Empty);
+  rpc push_dense_paramters(Model) returns (google.protobuf.Empty);
   rpc push_embedding_table_infos(EmbeddingTableInfos) returns (google.protobuf.Empty);
-  rpc push_gradient(Model) returns (PushGradientResponse);
+  rpc push_gradients(Model) returns (PushGradientsResponse);
 }
 ```

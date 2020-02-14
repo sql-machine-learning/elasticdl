@@ -89,13 +89,13 @@ class EvaluationJob(object):
         if self._model_have_multiple_outputs:
             return {
                 output_name: {
-                    metric_name: metric_inst.result()
+                    metric_name: metric_inst.result().numpy()
                     for metric_name, metric_inst in metrics.items()
                 }
                 for output_name, metrics in self._metrics_dict.items()
             }
         return {
-            metric_name: metric_inst.result()
+            metric_name: metric_inst.result().numpy()
             for metric_name, metric_inst in self._metrics_dict[
                 MetricsDictKey.MODEL_OUTPUT
             ].items()
