@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
+import "tensorflow/core/framework/tensor.proto";
 
 package proto;
 option go_package = "elasticdl/pkg/proto";
