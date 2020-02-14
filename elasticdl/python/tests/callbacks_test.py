@@ -17,7 +17,7 @@ from elasticdl.python.worker.task_data_service import TaskDataService
 
 def custom_model_with_embedding_layer():
     inputs = tf.keras.layers.Input(shape=(4,), name="x")
-    embedding = tf.keras.layers.Embedding(4, 2)(inputs)
+    embedding = tf.keras.layers.Embedding(300000, 2)(inputs)
     outputs = tf.keras.layers.Dense(1)(embedding)
     return tf.keras.models.Model(inputs, outputs)
 
