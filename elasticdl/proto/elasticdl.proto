@@ -25,7 +25,7 @@ enum TaskType {
   EVALUATION = 1;
   PREDICTION = 2;
   WAIT = 3;
-  SAVE_MODEL = 4;
+  TRAIN_END_CALLBACK = 4;
 }
 
 // A task is a unit of work for ElasticDL training workers, assigned by master.

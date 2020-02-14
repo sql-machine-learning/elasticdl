@@ -1,6 +1,7 @@
 import importlib.util
 import os
 
+from tensorflow.python.keras.callbacks import CallbackList
 import tensorflow as tf
 
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -31,6 +32,41 @@ def load_model_from_module(model_def, model_module, model_params):
         return model_module[custom_model_name](**model_params_dict)
     else:
         return model_module[custom_model_name]()
+
+
+def load_callbacks_from_module(callbacks_def, model_module):
+    callbacks_def_name = callbacks_def.split(".")[-1]
+    callbacks_fn = _get_spec_value(callbacks_def_name, None, model_module)
+    callbacks = [] if callbacks_fn is None else callbacks_fn()
+    return CallbackList(callbacks)
+
+
+def set_callback_parameters(
+    callback_list,
+    batch_size=None,
+    epochs=None,
+    metric=None,
+    saved_model_path=None,
+    checkpoint_path=None,
+):
+    """Sets callback parameters.
+
+    Arguments:
+        callback_list: CallbackList instance.
+        batch_size: Number of samples per batch
+        epochs: Number of epoch to train
+        metrics: Evaluation metrics
+        saved_model_path: Path to export SavedModel
+        checkpoint_path: Path to save checkpoint
+    """
+    callback_params = {
+        'batch_size': batch_size,
+        'epochs': epochs,
+        'metric': metric,
+        'saved_model_path': saved_model_path,
+        'checkpoint_path': checkpoint_path
+    }
+    callback_list.set_params(callback_params)
 
 
 def get_dict_from_params_str(params_str):
@@ -103,6 +139,7 @@ def get_model_spec(
     eval_metrics_fn,
     prediction_outputs_processor,
     custom_data_reader,
+    callbacks,
 ):
     """Get the model spec items in a tuple.
 
@@ -116,6 +153,8 @@ def get_model_spec(
     * The `eval_metrics_fn`,
     * The `prediction_outputs_processor`. Note that it will print
       warning if it's not inherited from `BasePredictionOutputsProcessor`.
+    * The `custom_data_reader`
+    * The `callbacks`
     """
     model_def_module_file = get_module_file_path(model_zoo, model_def)
     default_module = load_module(model_def_module_file).__dict__
@@ -134,6 +173,7 @@ def get_model_spec(
 
     # If ODPS data source is used, dataset_fn is optional
     dataset_fn_required = not is_odps_configured()
+    callbacks_list = load_callbacks_from_module(callbacks, default_module)
 
     return (
         model,
@@ -147,6 +187,7 @@ def get_model_spec(
         ),
         prediction_outputs_processor,
         _get_spec_value(custom_data_reader, model_zoo, default_module),
+        callbacks_list,
     )
 
 

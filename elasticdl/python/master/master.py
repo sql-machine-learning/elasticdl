@@ -17,12 +17,13 @@ from elasticdl.python.common.constants import (
 )
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_utils import get_logger
-from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
     get_module_file_path,
     get_optimizer_info,
     load_model_from_module,
+    load_callbacks_from_module,
+    set_callback_parameters,
     load_module,
 )
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
@@ -97,10 +98,17 @@ class Master(object):
         self.model_inst = load_model_from_module(
             args.model_def, self.model_module, args.model_params
         )
-        model_handler = ModelHandler.get_model_handler(
-            args.distribution_strategy, checkpoint_dir=args.checkpoint_dir
+        self.callbacks_list = load_callbacks_from_module(
+            args.callbacks, self.model_module
         )
-        self.model_inst = model_handler.get_model_to_train(self.model_inst)
+        self.callbacks_list.set_model(self.model_inst)
+        set_callback_parameters(
+            self._callbacks_list,
+            batch_size=args.minibatch_size,
+            epochs=args.num_epochs,
+            saved_model_path=args.output,
+            checkpoint_path=args.checkpoint_dir
+        )
         self.optimizer = self.model_module[args.optimizer]()
         self._create_data_reader_fn = create_data_reader
         if args.custom_data_reader in self.model_module:
@@ -120,15 +128,7 @@ class Master(object):
             self._create_data_reader_fn,
         )
 
-        saved_model_path = args.output
-        if saved_model_path is not None and self.job_type in [
-            JobType.TRAINING_ONLY,
-            JobType.TRAINING_WITH_EVALUATION,
-        ]:
-            self.task_d.add_deferred_callback_create_save_model_task(
-                saved_model_path
-            )
-
+        self.task_d.add_deferred_callback_create_train_end_task()
         self.evaluation_service = self._create_evaluation_service(args)
 
         # Initialize master service
