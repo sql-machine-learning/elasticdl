@@ -38,7 +38,7 @@ from elasticdl.python.common.tensor_utils import deduplicate_indexed_slices
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.keras.callbacks.saved_model_exporter import (
+from elasticdl.python.elasticdl.callbacks.saved_model_exporter import (
     SavedModelExporter,
 )
 from elasticdl.python.worker.task_data_service import TaskDataService
@@ -190,14 +190,11 @@ class Worker(object):
             self._task_data_service, self._dataset_fn, self._model_handler
         )
         # Place default callbacks at the head to execute them firstly
-        self.callbacks_list.callbacks.insert(0, saved_model_exporter)
-
+        self._callbacks_list.callbacks.insert(0, saved_model_exporter)
         self._callbacks_list.set_model(model_inst)
         set_callback_parameters(
             self._callbacks_list,
             batch_size=args.minibatch_size,
-            epochs=args.num_epochs,
-            metric=self._eval_metrics_fn(),
             saved_model_path=args.output,
             checkpoint_path=args.checkpoint_dir,
         )

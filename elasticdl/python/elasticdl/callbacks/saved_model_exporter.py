@@ -14,7 +14,7 @@ class SavedModelExporter(tf.keras.callbacks.Callback):
 
     def __init__(self, task_data_service, dataset_fn, model_handler):
         self._model_handler = model_handler
-        self._task_data_service
+        self._task_data_service = task_data_service
         self._dataset_fn = dataset_fn
 
     def on_train_end(self, logs=None):

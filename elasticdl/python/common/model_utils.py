@@ -44,8 +44,6 @@ def load_callbacks_from_module(callbacks_def, model_module):
 def set_callback_parameters(
     callback_list,
     batch_size=None,
-    epochs=None,
-    metric=None,
     saved_model_path=None,
     checkpoint_path=None,
 ):
@@ -54,15 +52,11 @@ def set_callback_parameters(
     Arguments:
         callback_list: CallbackList instance.
         batch_size: Number of samples per batch
-        epochs: Number of epoch to train
-        metrics: Evaluation metrics
         saved_model_path: Path to export SavedModel
         checkpoint_path: Path to save checkpoint
     """
     callback_params = {
         "batch_size": batch_size,
-        "epochs": epochs,
-        "metric": metric,
         "saved_model_path": saved_model_path,
         "checkpoint_path": checkpoint_path,
     }
