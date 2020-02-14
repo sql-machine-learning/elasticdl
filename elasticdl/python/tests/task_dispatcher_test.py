@@ -109,13 +109,15 @@ class TaskQueueTest(unittest.TestCase):
             sorted([v._info() for _, v in got_tasks]), epoch_tasks
         )
 
-    def test_invoke_save_model_callback(self):
+    def test_invoke_train_end_callback(self):
         task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1)
-        task_d.add_deferred_callback_create_save_model_task("/saved_models/")
+        task_d.add_deferred_callback_create_train_end_task()
         task_d._todo.clear()
         task_d.invoke_deferred_callback()
         self.assertEqual(len(task_d._todo), 1)
-        self.assertEqual(task_d._todo[0].type, elasticdl_pb2.SAVE_MODEL)
+        self.assertEqual(
+            task_d._todo[0].type, elasticdl_pb2.TRAIN_END_CALLBACK
+        )
 
 
 if __name__ == "__main__":

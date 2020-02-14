@@ -183,14 +183,15 @@ class _TaskDispatcher(object):
             self._doing[self._task_id] = (worker_id, task)
             return self._task_id, task
 
-    def _create_save_model_task(self, saved_model_path):
+    def _create_train_end_callback_task(self):
         """
-        Build one instance of SaveModel task and add it to todo list.
-        Because we need create a dataset to build the model,
-        we include a shard of data in this task.
+        Build one instance of training end task and add it to todo list.
+        Because we need create a dataset to build the model for
+        SavedModelExporter to execute on_train_end,we include
+        a shard of data in this task.
         """
 
-        self.reset_job_counters(elasticdl_pb2.SAVE_MODEL)
+        self.reset_job_counters(elasticdl_pb2.TRAIN_END_CALLBACK)
         shards = self._training_shards
         assert shards is not None
 
@@ -203,19 +204,18 @@ class _TaskDispatcher(object):
         )
 
         # Use the first shard of data to do the SavedModel work
-        save_model_task = _Task(
+        train_end_callback_task = _Task(
             shard_name=shard_name,
             start=start_ind_this_task,
             end=end_ind_this_task,
-            type=elasticdl_pb2.SAVE_MODEL,
-            saved_model_path=saved_model_path,
+            type=elasticdl_pb2.TRAIN_END_CALLBACK,
         )
 
-        self._todo.append(save_model_task)
+        self._todo.append(train_end_callback_task)
 
-    def add_deferred_callback_create_save_model_task(self, saved_model_path):
+    def add_deferred_callback_create_train_end_task(self):
         self._tasks_done_deferred_callbacks.append(
-            lambda: self._create_save_model_task(saved_model_path)
+            lambda: self._create_train_end_callback_task()
         )
 
     def invoke_deferred_callback(self):
