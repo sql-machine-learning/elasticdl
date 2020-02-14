@@ -1,11 +1,8 @@
 import argparse
+
 import tensorflow as tf
 
-from elasticdl.python.common.save_utils import CheckpointSaver
-from elasticdl.python.ps.parameter_server import Parameters
-from elasticdl.python.tests.test_utils import (
-    save_checkpoint_without_embedding
-)
+from elasticdl.python.tests.test_utils import save_checkpoint_without_embedding
 
 
 def mnist_custom_model():
@@ -31,7 +28,7 @@ def add_params(parser):
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     add_params(parser)
     args, _ = parser.parse_known_args()
