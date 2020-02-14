@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"elasticdl.org/elasticdl/pkg/proto"
 	"encoding/binary"
+	types_go_proto "github.com/tensorflow/tensorflow/tensorflow/go/core/framework/types_go_proto"
 	"math"
 )
 
@@ -66,7 +67,7 @@ func (t *Tensor) AtRow(idx int64) *Tensor {
 // DeserializeTensorPB transforms pb to tensor
 func DeserializeTensorPB(pb *proto.Tensor) *Tensor {
 	var t Tensor
-	if pb.Dtype != proto.TensorDtype_DT_FLOAT32 {
+	if pb.Dtype != types_go_proto.DataType_DT_FLOAT {
 		return nil
 	}
 	if GetDimProduct(pb.Dim)*4 != int64(len(pb.Content)) {
@@ -107,6 +108,6 @@ func SerializeTensor(t *Tensor) *proto.Tensor {
 		}
 	}
 	// set dtype to float32
-	pb.Dtype = proto.TensorDtype_DT_FLOAT32
+	pb.Dtype = types_go_proto.DataType_DT_FLOAT
 	return &pb
 }

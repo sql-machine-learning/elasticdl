@@ -6,11 +6,13 @@ from tensorflow.python.feature_column import feature_column_v2 as fc_lib
 
 from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.model_handler import ModelHandler
+from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.elasticdl.feature_column.feature_column import (
     EmbeddingColumn,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.keras.layers import SparseEmbedding
+from elasticdl.python.ps.parameters import Parameters
 
 EMBEDDING_INPUT_DIM = 300000
 
@@ -148,6 +150,24 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
             checkpoint_dir="elasticdl/python/tests/testdata/functional_ckpt/",
         )
 
+    def _save_model(self, is_subclass):
+        prefix = "custom_model/" if is_subclass else ""
+        ckpt_dir = self.model_handler._checkpoint_dir
+        checkpoint_saver = CheckpointSaver(ckpt_dir, 0, 0, False)
+        params = Parameters()
+        params.non_embedding_params[
+            prefix + "embedding/embeddings:0"
+        ] = tf.Variable(tf.ones([EMBEDDING_INPUT_DIM, 2]), dtype=tf.float32)
+        params.non_embedding_params[prefix + "dense/kernel:0"] = tf.Variable(
+            [[1.0], [1.0]]
+        )
+        params.non_embedding_params[prefix + "dense/bias:0"] = tf.Variable(
+            [1.0]
+        )
+        params.version = 100
+        model_pb = params.to_model_pb()
+        checkpoint_saver.save(100, model_pb, False)
+
     def test_get_model_with_embedding_layer_to_train(self):
         model_inst = custom_model_with_embedding_layer()
         model_inst = self.model_handler.get_model_to_train(model_inst)
@@ -165,6 +185,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
         )
 
     def test_get_model_to_export(self):
+        self._save_model(False)
         model_inst = custom_model_with_embedding_layer()
         train_model = self.model_handler.get_model_to_train(model_inst)
         export_model = self.model_handler.get_model_to_export(
@@ -179,6 +200,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
         self.model_handler._checkpoint_dir = (
             "elasticdl/python/tests/testdata/subclass_ckpt/"
         )
+        self._save_model(True)
 
         def _get_dataset():
             dataset = tf.data.Dataset.from_tensor_slices(
@@ -207,6 +229,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
         self.assertEqual(type(model_inst.layers[1]), Embedding)
 
     def test_get_model_with_sparse_to_export(self):
+        self._save_model(False)
         model_inst = custom_model_with_sparse_embedding()
         train_model = self.model_handler.get_model_to_train(model_inst)
 
@@ -222,7 +245,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
 
         # The embedding table in checkpoint file is
         # [[1.0, 1.0], [1.0, 1.0], [1.0,1.0], [1.0, 1.0]], weights in the dense
-        # layer is [[1.0],[1].0], bias is [1.0]. So the result is 3.0.
+        # layer is [[1.0],[1.0]], bias is [1.0]. So the result is 3.0.
         self.assertEqual(result[0][0], 3.0)
 
 

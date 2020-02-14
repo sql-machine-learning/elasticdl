@@ -2,6 +2,7 @@
 import unittest
 
 import numpy as np
+from tensorflow.core.framework import types_pb2
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
@@ -39,7 +40,7 @@ class TensorTest(unittest.TestCase):
         pb = tensor.to_tensor_pb()
         self.assertEqual(pb.name, "test")
         self.assertEqual(pb.dim, [3, 1, 2, 4])
-        self.assertEqual(pb.dtype, elasticdl_pb2.DT_INT32)
+        self.assertEqual(pb.dtype, types_pb2.DT_INT32)
         np.testing.assert_array_equal(pb.indices, indices)
 
         # tensor PB to tensor
@@ -115,7 +116,7 @@ class TensorTest(unittest.TestCase):
         # Empty array, should be ok.
         pb.dim.append(0)
         pb.content = b""
-        pb.dtype = elasticdl_pb2.DT_FLOAT32
+        pb.dtype = types_pb2.DT_FLOAT
         deserialize_tensor_pb(pb, tensor)
         np.testing.assert_array_equal(
             np.array([], dtype=np.float32), tensor.values
@@ -125,14 +126,14 @@ class TensorTest(unittest.TestCase):
         del pb.dim[:]
         pb.dim.append(0)
         pb.content = b""
-        pb.dtype = elasticdl_pb2.DT_INVALID
+        pb.dtype = types_pb2.DT_INVALID
         self.assertRaises(ValueError, deserialize_tensor_pb, pb, tensor)
 
         # Pathological case, one of the dimensions is 0.
         del pb.dim[:]
         pb.dim.extend([2, 0, 1, 9])
         pb.content = b""
-        pb.dtype = elasticdl_pb2.DT_FLOAT32
+        pb.dtype = types_pb2.DT_FLOAT
         deserialize_tensor_pb(pb, tensor)
         np.testing.assert_array_equal(
             np.ndarray(shape=[2, 0, 1, 9], dtype=np.float32), tensor.values
@@ -142,7 +143,7 @@ class TensorTest(unittest.TestCase):
         del pb.dim[:]
         pb.dim.append(11)
         pb.content = b"\0" * (4 * 12)
-        pb.dtype = elasticdl_pb2.DT_FLOAT32
+        pb.dtype = types_pb2.DT_FLOAT
         self.assertRaises(ValueError, deserialize_tensor_pb, pb, tensor)
 
         # Compatible dimensions, should be ok.
@@ -153,7 +154,7 @@ class TensorTest(unittest.TestCase):
                 pb.dim.extend([m, 12 // m])
                 if with_inidices:
                     pb.indices.extend([0] * m)
-                pb.dtype = elasticdl_pb2.DT_FLOAT32
+                pb.dtype = types_pb2.DT_FLOAT
                 deserialize_tensor_pb(pb, tensor)
                 self.assertEqual((m, 12 // m), tensor.values.shape)
                 self.assertTrue(isinstance(tensor.values, np.ndarray))
@@ -235,7 +236,6 @@ class TensorTest(unittest.TestCase):
         model = elasticdl_pb2.Model()
         emplace_tensor_pb_from_ndarray(model.param, values, indices, name)
         pb = model.param[-1]
-        print("pb", pb)
 
         expected_pb = Tensor(values, indices, name).to_tensor_pb()
         self.assertEqual(pb.name, expected_pb.name)
