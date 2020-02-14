@@ -1,25 +1,11 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
+import "tensorflow/core/framework/types.proto";
 import "tensorflow/core/framework/tensor.proto";
 
 package proto;
 option go_package = "elasticdl/pkg/proto";
-
-enum TensorDtype {
-  // Not a legal value for DataType. Used to indicate a DataType field
-  // has not been set.
-  DT_INVALID = 0;
-
-  DT_INT8 = 1;
-  DT_INT16 = 2;
-  DT_INT32 = 3;
-  DT_INT64 = 4;
-  DT_FLOAT16 = 5;
-  DT_FLOAT32 = 6;
-  DT_FLOAT64 = 7;
-  DT_BOOL = 8;
-}
 
 enum TaskType {
   TRAINING = 0;
@@ -81,7 +67,7 @@ message Tensor {
   repeated int64 indices = 4;
 
   // Dtype of the tensor, e.g. "int64", "float32".
-  TensorDtype dtype = 5;
+  tensorflow.DataType dtype = 5;
 }
 
 message IndexedSlices {
@@ -93,7 +79,7 @@ message EmbeddingTableInfo {
   string name = 1;
   int64 dim = 2;
   string initializer = 3;
-  TensorDtype dtype = 4;
+  tensorflow.DataType dtype = 4;
 }
 
 message Model {

@@ -479,10 +479,21 @@ class PserverServicerTest(unittest.TestCase):
             )
 
     def test_restore_parameters_from_checkpoint(self):
-        checkpoint_dir_for_init = (
-            "elasticdl/python/tests/testdata/functional_ckpt/version-100"
+        checkpoint_dir = "elasticdl/python/tests/testdata/ps_ckpt"
+        checkpoint_saver = CheckpointSaver(checkpoint_dir, 0, 0, False)
+        params = Parameters()
+        table = EmbeddingTable("embedding", 2, "random_uniform")
+        table.set([0, 1, 2, 3], np.ones((4, 2), dtype=np.float32))
+        params.embedding_params["embedding"] = table
+        params.non_embedding_params["dense/kernel:0"] = tf.Variable(
+            [[1.0], [1.0]]
         )
+        params.non_embedding_params["dense/bias:0"] = tf.Variable([1.0])
+        params.version = 100
+        model_pb = params.to_model_pb()
+        checkpoint_saver.save(100, model_pb, False)
 
+        checkpoint_dir_for_init = checkpoint_dir + "/version-100"
         args = PserverArgs(
             ps_id=0,
             num_ps_pods=2,
