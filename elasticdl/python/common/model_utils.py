@@ -1,8 +1,8 @@
 import importlib.util
 import os
 
-from tensorflow.python.keras.callbacks import CallbackList
 import tensorflow as tf
+from tensorflow.python.keras.callbacks import CallbackList
 
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.data.odps_io import is_odps_configured
@@ -60,11 +60,11 @@ def set_callback_parameters(
         checkpoint_path: Path to save checkpoint
     """
     callback_params = {
-        'batch_size': batch_size,
-        'epochs': epochs,
-        'metric': metric,
-        'saved_model_path': saved_model_path,
-        'checkpoint_path': checkpoint_path
+        "batch_size": batch_size,
+        "epochs": epochs,
+        "metric": metric,
+        "saved_model_path": saved_model_path,
+        "checkpoint_path": checkpoint_path,
     }
     callback_list.set_params(callback_params)
 

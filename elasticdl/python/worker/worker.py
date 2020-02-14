@@ -38,10 +38,10 @@ from elasticdl.python.common.tensor_utils import deduplicate_indexed_slices
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.worker.task_data_service import TaskDataService
 from elasticdl.python.keras.callbacks.saved_model_exporter import (
-    SavedModelExporter
+    SavedModelExporter,
 )
+from elasticdl.python.worker.task_data_service import TaskDataService
 
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.
@@ -187,9 +187,7 @@ class Worker(object):
         self._evaluation_result = {}
 
         saved_model_exporter = SavedModelExporter(
-            self._task_data_service,
-            self._dataset_fn,
-            self._model_handler
+            self._task_data_service, self._dataset_fn, self._model_handler
         )
         # Place default callbacks at the head to execute them firstly
         self.callbacks_list.callbacks.insert(0, saved_model_exporter)
@@ -201,7 +199,7 @@ class Worker(object):
             epochs=args.num_epochs,
             metric=self._eval_metrics_fn(),
             saved_model_path=args.output,
-            checkpoint_path=args.checkpoint_dir
+            checkpoint_path=args.checkpoint_dir,
         )
 
     # TODO: Multiple tests are currently using this function to initialize
@@ -911,7 +909,7 @@ class Worker(object):
         if train_end_task:
             self._callbacks_list.on_train_end()
             self._task_data_service.clear_train_end_callback_task()
-            self.report_task_result(task_id=train_end_task.task_id, err_msg="")        
+            self.report_task_result(task_id=train_end_task.task_id, err_msg="")
 
     def _process_minibatch_and_report(
         self,

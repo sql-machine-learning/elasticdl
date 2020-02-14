@@ -1,4 +1,5 @@
 import tensorflow as tf
+
 from elasticdl.python.common.constants import Mode
 
 
@@ -10,6 +11,7 @@ class SavedModelExporter(tf.keras.callbacks.Callback):
         model_handler: to transform the trained model with ElasticDL embedding
             layer to Keras native model.
     """
+
     def __init__(self, task_data_service, dataset_fn, model_handler):
         self._model_handler = model_handler
         self._task_data_service

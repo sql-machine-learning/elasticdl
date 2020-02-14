@@ -46,6 +46,7 @@ class ModelHelperTest(unittest.TestCase):
         self.assertTrue(prediction_outputs_processor is not None)
         self.assertTrue(custom_data_reader is not None)
         self.assertTrue(callback_list is not None)
+        self.assertEqual(len(callback_list.callbacks), 1)
         self.assertRaisesRegex(
             Exception,
             "Cannot find the custom model function/class "
