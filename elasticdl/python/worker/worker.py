@@ -817,11 +817,6 @@ class Worker(object):
 
     def _run_prediction_task(self, features):
         predictions = self.forward_process(features)
-        logs = {
-            "size": len(predictions),
-            "predictions": predictions
-        }
-        self.callbacks_list.on_predict_batch_end(batch=-1, logs=logs)
         return self.report_prediction_outputs(predictions)
 
     def _process_minibatch(
@@ -915,8 +910,8 @@ class Worker(object):
         train_end_task = self._task_data_service.get_train_end_callback_task()
         if train_end_task:
             self._callbacks_list.on_train_end()
-            self.report_task_result(task_id=train_end_task.task_id, err_msg="")
-        self._task_data_service.clear_train_end_callback_task()
+            self._task_data_service.clear_train_end_callback_task()
+            self.report_task_result(task_id=train_end_task.task_id, err_msg="")        
 
     def _process_minibatch_and_report(
         self,
