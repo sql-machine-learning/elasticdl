@@ -107,9 +107,10 @@ def add_common_params(parser):
         help="The repository for generated Docker images, if set, the image "
         "is also pushed to the repository",
     )
-    parser.add_argument("--image_base", help="Base Docker image.")
+    parser.add_argument("--image_base", default="", help="Base Docker image.")
     parser.add_argument(
         "--image_name",
+        default="",
         help="The image for this job. If set, "
         "this image is used instead of building a new one.")
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
