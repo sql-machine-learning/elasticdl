@@ -318,12 +318,6 @@ def add_train_params(parser):
         default="",
     )
     parser.add_argument(
-        "--output",
-        type=str,
-        default="",
-        help="The path to save the final trained model",
-    )
-    parser.add_argument(
         "--sync_version_tolerance",
         type=int,
         help="The maximum model version difference between reported gradients "
@@ -471,6 +465,13 @@ def add_common_args_between_master_and_worker(parser):
         help="The name of the optimizer defined in the model file",
     )
     parser.add_argument(
+        "--callbacks",
+        type=str,
+        default="callbacks",
+        help="Optional function to add callbacks to behavior during"
+        "training, evaluation and inference.",
+    )
+    parser.add_argument(
         "--learning_rate_scheduler",
         type=str,
         default="learning_rate_scheduler",
@@ -550,6 +551,12 @@ def add_common_args_between_master_and_worker(parser):
         help="The maximum number of recent checkpoint files to keep."
         "If 0, keep all.",
         default=0,
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="",
+        help="The path to save the final trained model",
     )
 
 

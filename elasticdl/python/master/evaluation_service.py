@@ -290,3 +290,4 @@ class EvaluationService(object):
                 self._eval_job = None
                 # create new eval job if possible
                 self.try_to_create_new_job()
+            return evaluation_metrics

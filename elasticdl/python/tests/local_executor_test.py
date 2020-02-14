@@ -38,6 +38,7 @@ class LocalExecutorArgs(object):
         num_minibatches_per_task=None,
         custom_data_reader="",
         output="",
+        callbacks="",
     ):
         self.num_epochs = num_epochs
         self.minibatch_size = minibatch_size
@@ -57,6 +58,7 @@ class LocalExecutorArgs(object):
         self.num_minibatches_per_task = num_minibatches_per_task
         self.custom_data_reader = custom_data_reader
         self.output = output
+        self.callbacks = callbacks
 
 
 class LocalExectorTest(unittest.TestCase):
@@ -97,6 +99,7 @@ class LocalExectorTest(unittest.TestCase):
                 prediction_outputs_processor="PredictionOutputsProcessor",
                 data_reader_params=data_reader_params,
                 num_minibatches_per_task=5,
+                callbacks="callbacks",
             )
             local_executor = LocalExecutor(args)
             train_tasks = local_executor._gen_tasks(
