@@ -55,9 +55,7 @@ jobs:
         - |
           JOB_TYPES=(
               odps
-              train
-              evaluate
-              predict
+              train # TODO: disable evaluate/predict temporarily
               local
           )
           for JOB_TYPE in "${JOB_TYPES[@]}"; do
