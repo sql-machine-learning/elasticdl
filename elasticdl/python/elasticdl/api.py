@@ -22,9 +22,11 @@ def train(args):
         local_executor.run()
         return
 
+    image_pre_built = bool(args.image_name)
+
     image_name = (
         args.image_name
-        if args.image_name
+        if image_pre_built
         else build_and_push_docker_image(
             model_zoo=model_zoo,
             base_image=args.image_base,
@@ -43,9 +45,9 @@ def train(args):
         "--worker_image",
         image_name,
         "--model_zoo",
-        _model_zoo_in_docker(model_zoo),
+        _model_zoo_in_docker(model_zoo, image_pre_built),
         "--cluster_spec",
-        _cluster_spec_def_in_docker(args.cluster_spec),
+        _cluster_spec_def_in_docker(args.cluster_spec, image_pre_built),
     ]
     container_args.extend(
         build_arguments_from_parsed_result(
@@ -60,9 +62,11 @@ def train(args):
 def evaluate(args):
     model_zoo = os.path.normpath(args.model_zoo)
 
+    image_pre_built = bool(args.image_name)
+
     image_name = (
         args.image_name
-        if args.image_name
+        if image_pre_built
         else build_and_push_docker_image(
             model_zoo=model_zoo,
             base_image=args.image_base,
@@ -80,9 +84,9 @@ def evaluate(args):
         "--worker_image",
         image_name,
         "--model_zoo",
-        _model_zoo_in_docker(model_zoo),
+        _model_zoo_in_docker(model_zoo, image_pre_built),
         "--cluster_spec",
-        _cluster_spec_def_in_docker(args.cluster_spec),
+        _cluster_spec_def_in_docker(args.cluster_spec, image_pre_built),
     ]
     container_args.extend(
         build_arguments_from_parsed_result(
@@ -96,9 +100,11 @@ def evaluate(args):
 def predict(args):
     model_zoo = os.path.normpath(args.model_zoo)
 
+    image_pre_built = bool(args.image_name)
+
     image_name = (
         args.image_name
-        if args.image_name
+        if image_pre_built
         else build_and_push_docker_image(
             model_zoo=model_zoo,
             base_image=args.image_base,
@@ -116,9 +122,9 @@ def predict(args):
         "--worker_image",
         image_name,
         "--model_zoo",
-        _model_zoo_in_docker(model_zoo),
+        _model_zoo_in_docker(model_zoo, image_pre_built),
         "--cluster_spec",
-        _cluster_spec_def_in_docker(args.cluster_spec),
+        _cluster_spec_def_in_docker(args.cluster_spec, image_pre_built),
     ]
     container_args.extend(
         build_arguments_from_parsed_result(
@@ -191,12 +197,18 @@ def _submit_job(image_name, client_args, container_args):
         )
 
 
-def _model_zoo_in_docker(model_zoo):
+def _model_zoo_in_docker(model_zoo, image_pre_built):
+    if image_pre_built:
+        return model_zoo
+
     MODEL_ROOT_PATH = "/model_zoo"
     return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_zoo))
 
 
-def _cluster_spec_def_in_docker(cluster_spec):
+def _cluster_spec_def_in_docker(cluster_spec, image_pre_built):
+    if image_pre_built:
+        return cluster_spec
+
     CLUSTER_SPEC_ROOT_PATH = "/cluster_spec"
     return (
         os.path.join(CLUSTER_SPEC_ROOT_PATH, os.path.basename(cluster_spec))
