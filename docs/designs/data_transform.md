@@ -168,15 +168,18 @@ After normalizing the table schema, we can do data analysis and transformation o
 
 We can extend the SQLFlow syntax and enrich the `COLUMN` expression. We propose to add some built-in functions to describe the transform process. We will implement common used functions at the first stage.  
 
-| Name          |    Transformation                                     | Statitical Parameter |
-|:-------------:|:-----------------------------------------------------:|:--------------------:|
-| NORMALIZE     | x - x_min / (x_max - x_min)                           |     x_min, x_max     |
-| STANDARDIZE   | x - x_mean / x_stddev                                 |    x_mean, x_stddev  |
-| LOG_ROUND     | tf.round(tf.log(x))                                   |          N/A         |
-| BUCKETIZE     | tf.feature_column.bucketized_column                   |    bucket_boundary   |
-| HASH          | tf.feature_column.categorical_column_with_hash_bucket |   hash_bucket_size   |
-| CROSS         | tf.feature_column.crossed_column                      |          N/A         |
-| EMBEDDING     | tf.feature_column.embedding_column                    |          N/A         |
+| Name             |    Transformation                                     | Statitical Parameter | Input Type | Output Type |
+|:----------------:|:-----------------------------------------------------:|:--------------------:|:-------------------:|:---------------------:|
+| NORMALIZE(x)     | Scale the inputs to the range [0, 1]. `out = x - x_min / (x_max - x_min)` |     x_min, x_max     | number (int, float) | float64 |
+| STANDARDIZE(x)   | Scale the inputs to z-score subtracts out the mean and divides by standard deviation. `out = x - x_mean / x_stddev` |    x_mean, x_stddev  | number | float64 |
+| BUCKETIZE(x, num_buckets, boundaries) | Transform the numeric features into categorical ids using a set of thresholds. |   boundaries  | number | int64 |
+| HASH_BUCKET(x, hash_bucket_size) | Map the inputs into a finite number of buckets by hashing. `out_id = Hash(input_feature) % bucket_size` |   hash_bucket_size   | string, int32, int64 | int64 |
+| VOCABULARIZE(x)  | Map the inputs to integer ids by looking up the vocabulary | vocabulary_list | string, int32, int64 | int64 |
+| EMBEDDING(x, dimension) | Map the inputs to embedding vectors             |          N/A         | int32, int64 | float32 |
+| CROSS(x1, x2, ..., xn, hash_bucket_size)  | Hash(cartesian product of features) % hash_bucket_size |          N/A         | string, number   | int64 |
+| CONCAT(x1, x2, ..., xn)   | Concatenate multiple tensors representing categorical ids into one tensor. | N/A | int32, int64 | int64 |
+
+*Please check more [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1723) about `CONCAT` transform function*
 
 Let's take the following SQLFlow statement for example.  
 
@@ -185,11 +188,11 @@ SELECT *
 FROM census_income
 TO TRAIN DNNClassifier
 WITH model.hidden_units = [10, 20]
-COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, bucket_num=5), dim=32)
+COLUMN NORMALIZE(capital_gain), STANDARDIZE(age), EMBEDDING(hours_per_week, dimension=32)
 LABEL label
 ```
 
-It trains a DNN model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is `COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age)), EMBEDDING(BUCKETIZE(hours_per_week, bucket_num=5), dim=32)`. It will normalize the column *capital_gain*, standardize the column *age*, bucketize the column *hours_per_week* to 5 buckets and then map it to an embedding vector.  
+It trains a DNN model to classify someone's income level using the [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income). The transform expression is `COLUMN NORMALIZE(capital_gain), STANDARDIZE(age), EMBEDDING(hours_per_week, dimension=32)`. It will normalize the column *capital_gain*, standardize the column *age*, and then map *hours_per_week* to an embedding vector.  
 
 Next, Let's see a more complicated scenario. The following SQL statment trains a [wide and deep model](https://ai.googleblog.com/2016/06/wide-deep-learning-better-together-with.html) using the same dataset.
 
@@ -198,9 +201,9 @@ SELECT *
 FROM census_income
 TO TRAIN WideAndDeepClassifier
 COLUMN
-    EMBEDDING(CONCAT(VOCABULARIZE(workclass), BUCKETIZE(capital_gain, bucket_num=5), BUCKETIZE(capital_loss, bucket_num=5), BUCKTIZE(hours_per_week, bucket_num=6)) AS group_1, 8),
+    EMBEDDING(CONCAT(VOCABULARIZE(workclass), BUCKETIZE(capital_gain, num_buckets=5), BUCKETIZE(capital_loss, num_buckets=5), BUCKTIZE(hours_per_week, num_buckets=6)) AS group_1, 8),
     EMBEDDING(CONCAT(HASH(education), HASH(occupation), VOCABULARIZE(martial_status), VOCABULARIZE(relationship)) AS group_2, 8),
-    EMBEDDING(CONCAT(BUCKETIZE(age, bucket_num=5), HASH(native_country), VOCABULARIZE(race), VOCABULARIZE(sex)) AS group_3, 8)
+    EMBEDDING(CONCAT(BUCKETIZE(age, num_buckets=5), HASH(native_country), VOCABULARIZE(race), VOCABULARIZE(sex)) AS group_3, 8)
     FOR deep_embeddings
 COLUMN
     EMBEDDING(group1, 1),
@@ -209,13 +212,11 @@ COLUMN
 LABEL label
 ```
 
-*Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1664).*
-
 SQLFlow will convert the `COLUMN` expression to Python code of data transformation. But it requires some parameters which are derived from the data. So next we will do the analysis work.  
 
 ### Generate Analysis SQL From SQLFlow Statement
 
-SQLFlow will generate the analysis SQL to calculate the statistical value. For this clause `COLUMN NUMERIC(NORMALIZE(capital_gain)), NUMERIC(STANDARDIZE(age))`, the corresponding analysis SQL is as follows:
+SQLFlow will generate the analysis SQL to calculate the statistical value. For this clause `COLUMN NORMALIZE(capital_gain), STANDARDIZE(age)`, the corresponding analysis SQL is as follows:
 
 ```SQL
 SELECT
@@ -268,7 +269,7 @@ We plan to implement the following common used transform APIs at the first step.
 |       STANDARDIZE(x)        | numeric_column({var_name}, normalizer_fn=lambda x : x - {mean} / {std})        |    MEAN, STDDEV    |
 |        NORMALIZE(x)         | numeric_column({var_name}, normalizer_fn=lambda x : x - {min} / {max} - {min}) |      MAX, MIN      |
 |           LOG(x)            | numeric_column({var_name}, normalizer_fn=lambda x : tf.math.log(x))            |         N/A        |
-|  BUCKETIZE(x, bucket_num=y) | bucketized_column({var_name}, boundaries={percentiles})                        |     PERCENTILE     |
+| BUCKETIZE(x, num_buckets=y) | bucketized_column({var_name}, boundaries={percentiles})                        |     PERCENTILE     |
 
 ## Further Consideration
 

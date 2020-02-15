@@ -21,7 +21,7 @@ class TaskDataService(object):
         self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
         self._pending_dataset = True
-        self._pending_save_model_task = None
+        self._pending_train_end_callback_task = None
         if data_reader_params:
             self.data_reader = self._create_data_reader_fn(
                 data_origin=None, **data_reader_params
@@ -123,18 +123,20 @@ class TaskDataService(object):
 
         return gen
 
-    def get_save_model_task_and_dataset(self):
-        if not self._pending_save_model_task:
-            return None, None
-
-        task = self._pending_save_model_task
-        self._pending_save_model_task = None
-
+    def get_dataset_by_task(self, task):
+        if task is None:
+            return None
         gen = self.get_dataset_gen(task)
         dataset = tf.data.Dataset.from_generator(
             gen, self.data_reader.records_output_types
         )
-        return task, dataset
+        return dataset
+
+    def get_train_end_callback_task(self):
+        return self._pending_train_end_callback_task
+
+    def clear_train_end_callback_task(self):
+        self._pending_train_end_callback_task = None
 
     def get_dataset(self):
         """
@@ -159,8 +161,8 @@ class TaskDataService(object):
                     if task.type != elasticdl_pb2.WAIT:
                         break
                     time.sleep(2)
-                if task.type == elasticdl_pb2.SAVE_MODEL:
-                    self._pending_save_model_task = task
+                if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
+                    self._pending_train_end_callback_task = task
                     return None
                 elif not task.shard_name:
                     logger.info("No more task, stopping")
@@ -198,8 +200,8 @@ class TaskDataService(object):
                     logger.info("No more task, stopping")
                 break
             with self._lock:
-                if task.type == elasticdl_pb2.SAVE_MODEL:
-                    self._pending_save_model_task = task
+                if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
+                    self._pending_train_end_callback_task = task
                     continue
 
                 self._pending_tasks.append(task)

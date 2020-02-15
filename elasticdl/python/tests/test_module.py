@@ -47,6 +47,10 @@ def eval_metrics_fn():
     return {"mse": lambda labels, outputs: tf.square(outputs - labels)}
 
 
+def callbacks():
+    return [tf.keras.callbacks.Callback()]
+
+
 class PredictionOutputsProcessor(BasePredictionOutputsProcessor):
     def __init__(self):
         pass

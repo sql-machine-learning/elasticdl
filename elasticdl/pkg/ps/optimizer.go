@@ -1,8 +1,12 @@
 package ps
 
-import "elasticdl.org/elasticdl/pkg/common"
-import "elasticdl.org/elasticdl/pkg/kernel"
-import "fmt"
+import (
+	"elasticdl.org/elasticdl/pkg/common"
+	"elasticdl.org/elasticdl/pkg/kernel"
+	"fmt"
+	"strconv"
+	"strings"
+)
 
 // Optimizer interface
 type Optimizer interface {
@@ -21,7 +25,7 @@ type SGDOptimizer struct {
 	BaseOptimizer
 }
 
-// GetLR returns learning rate SGD
+// GetLR returns learning rate
 func (opt *SGDOptimizer) GetLR() float32 {
 	return opt.lr
 }
@@ -61,6 +65,11 @@ type AdamOptimizer struct {
 	m         *Parameter
 	v         *Parameter
 	maxSquare *Parameter
+}
+
+// GetLR returns learning rate
+func (opt *AdamOptimizer) GetLR() float32 {
+	return opt.lr
 }
 
 // ApplyGradients applies gradients to parameters
@@ -130,11 +139,106 @@ func (opt *AdamOptimizer) InitNonEmbeddingParam(name string, dim []int64) {
 	opt.maxSquare.NonEmbeddingParam[name] = &common.Tensor{name, make([]float32, size, size), dim, nil}
 }
 
-// NewOptimizer creates an optimizer instance
-func NewOptimizer(opt string, lr float32) Optimizer {
-	// TODO(qijun) only support SGD now
-	if opt == "SGD" {
-		return NewSGDOptimizer(lr)
+const (
+	optTypeSGD     = "SGD"
+	optTypeAdam    = "Adam"
+	optArgLR       = "learning_rate"
+	optArgMomentum = "momentum"
+	optArgNesterov = "nesterov"
+	optArgBeta1    = "beta_1"
+	optArgBeta2    = "beta_2"
+	optArgEpsilon  = "epsilon"
+	optArgAmsgrad  = "amsgrad"
+)
+
+var optArgumentsMap = map[string][]string{
+	"SGD":  []string{optArgLR, optArgMomentum, optArgNesterov},
+	"Adam": []string{optArgLR, optArgBeta1, optArgBeta2, optArgEpsilon, optArgAmsgrad},
+}
+
+// parseOptArgs parses optimizer arguments according to optimizer type
+func parseOptArgs(optType string, optArgs string) (map[string]string, error) {
+	// parse arguments to map
+	argsMap := make(map[string]string)
+	for _, args := range strings.Split(optArgs, ";") {
+		if args == "" {
+			continue
+		} else {
+			arr := strings.Split(args, "=")
+			argsMap[arr[0]] = arr[1]
+		}
 	}
-	return nil
+
+	// check argument names
+	for _, argName := range optArgumentsMap[optType] {
+		if _, ok := argsMap[argName]; !ok {
+			return nil, fmt.Errorf("Args passed to ps should contain %s", argName)
+		}
+	}
+	if len(argsMap) != len(optArgumentsMap[optType]) {
+		return nil, fmt.Errorf("Args passed to ps contain redundant items: %v", argsMap)
+	}
+	return argsMap, nil
+}
+
+// NewOptimizer creates optimizer according to optimizer type and arguments
+func NewOptimizer(optType string, optArgs string) (Optimizer, error) {
+	argsMap, err := parseOptArgs(optType, optArgs)
+	if err != nil {
+		return nil, err
+	}
+
+	lr64, err := strconv.ParseFloat(argsMap[optArgLR], 32)
+	if err != nil {
+		return nil, fmt.Errorf("Having error converting learning rate to number: %v", err)
+	}
+	lr := float32(lr64)
+	if optType == optTypeSGD {
+		var (
+			momentum float64
+			nesterov bool
+		)
+		momentum, err = strconv.ParseFloat(argsMap[optArgMomentum], 32)
+		if err != nil {
+			return nil, err
+		}
+		nesterov, err = strconv.ParseBool(argsMap[optArgNesterov])
+		if err != nil {
+			return nil, err
+		}
+
+		if momentum > float64(0.0) {
+			return nil, fmt.Errorf("SGD optimizer with momentum has not been implemented")
+		}
+		if !nesterov {
+			return NewSGDOptimizer(lr), nil
+		}
+		return nil, fmt.Errorf("SGD optimizer with nesterov=true has not been implemented")
+	} else if optType == optTypeAdam {
+		var (
+			beta1   float64
+			beta2   float64
+			epsilon float64
+			amsgrad bool
+		)
+		beta1, err = strconv.ParseFloat(argsMap[optArgBeta1], 32)
+		if err != nil {
+			return nil, err
+		}
+		beta2, err = strconv.ParseFloat(argsMap[optArgBeta2], 32)
+		if err != nil {
+			return nil, err
+		}
+		epsilon, err = strconv.ParseFloat(argsMap[optArgEpsilon], 32)
+		if err != nil {
+			return nil, err
+		}
+		amsgrad, err = strconv.ParseBool(argsMap[optArgAmsgrad])
+		if err != nil {
+			return nil, err
+		}
+		return NewAdamOptimizer(lr, float32(beta1), float32(beta2), float32(epsilon), amsgrad), nil
+	} else {
+		return nil, fmt.Errorf("Unknown optimizer type %s", optType)
+	}
 }

@@ -78,13 +78,9 @@ class EvaluationServiceTest(unittest.TestCase):
         )
         expected_acc = 0.25
         evaluation_metrics = job.get_evaluation_summary()
-        self.assertAlmostEqual(
-            expected_acc, evaluation_metrics.get("acc").numpy()
-        )
-        self.assertAlmostEqual(
-            expected_acc, evaluation_metrics.get("acc_fn").numpy()
-        )
-        self.assertAlmostEqual(10.125, evaluation_metrics.get("mse").numpy())
+        self.assertAlmostEqual(expected_acc, evaluation_metrics.get("acc"))
+        self.assertAlmostEqual(expected_acc, evaluation_metrics.get("acc_fn"))
+        self.assertAlmostEqual(10.125, evaluation_metrics.get("mse"))
 
     def testEvaluationService(self):
         task_d = _TaskDispatcher(
