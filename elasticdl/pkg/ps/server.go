@@ -58,7 +58,7 @@ func createMasterClient(masterAddr string) *MasterClient {
 }
 
 // NewServer creates a Server instance
-func NewServer(ID int, optType string, optArgs string, masterAddr string, evaluationSteps int32) *Server {
+func NewServer(ID int, optType string, optArgs string, masterAddr string, evaluationSteps int) *Server {
 	var ps Server
 	ps.Param = NewParameter()
 	var err error
@@ -68,7 +68,7 @@ func NewServer(ID int, optType string, optArgs string, masterAddr string, evalua
 	}
 	ps.ID = ID
 	ps.masterClient = createMasterClient(masterAddr)
-	ps.evaluationSteps = evaluationSteps
+	ps.evaluationSteps = int32(evaluationSteps)
 	return &ps
 }
 
