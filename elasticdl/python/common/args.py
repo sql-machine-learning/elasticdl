@@ -112,7 +112,7 @@ def add_common_params(parser):
         "--image_name",
         default="",
         help="The image for this job. If set, "
-        "this image is used instead of building a new one.",
+        "use this image instead of building a new one.",
     )
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
