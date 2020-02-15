@@ -1,5 +1,3 @@
-# coding:utf-8
-# qinlong.wql
 from odps.udf import BaseUDTF
 
 
