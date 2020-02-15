@@ -20,12 +20,11 @@ Following is an exmaple:
 export DOCKER_HUB_REPO=reg.docker.com/user/
 ```
 
-
 ```bash
 elasticdl train \
  --image_base=elasticdl:ci \
- --model_zoo=./model_zoo \
  --docker_image_prefix=$DOCKER_HUB_REPO \
+ --model_zoo=./model_zoo \
  --model_def=mnist_functional_api.mnist_functional_api.custom_model \
  --training_data=/data/mnist/train \
  --validation_data=/data/mnist/test \
@@ -44,3 +43,26 @@ elasticdl train \
 ```
 
 Then the job will be launched on the cluster.
+
+By the way, we can also use the pre-built image to submit the ElasticDL job.
+
+```bash
+elasticdl train \
+ --image_base=reg.docker.com/user/elasticdl:mnist \
+ --model_zoo=/model_zoo \
+ --model_def=mnist_functional_api.mnist_functional_api.custom_model \
+ --training_data=/data/mnist/train \
+ --validation_data=/data/mnist/test \
+ --num_epochs=2 \
+ --master_resource_request="cpu=1,memory=2048Mi,ephemeral-storage=5000Mi" \
+ --worker_resource_request="cpu=1,memory=2048Mi,ephemeral-storage=5000Mi" \
+ --minibatch_size=64 \
+ --num_minibatches_per_task=2 \
+ --num_workers=2 \
+ --checkpoint_steps=10 \
+ --grads_to_wait=2 \
+ --job_name=test-mnist \
+ --log_level=INFO \
+ --image_pull_policy=Always \
+ --namespace=kubemaker
+```
