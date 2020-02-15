@@ -71,7 +71,7 @@ elasticdl train \
 ```
 
 We can also use the pre-built docker image to run the ElasticDL job.
-In the following command, the pre-built image name is `elasticdl:mnist`, the absolute model zoo path inside the docker is `/model_zoo`.
+In the following command, the pre-built image name is `elasticdl:mnist`, the absolute model zoo path inside the docker is `/model_zoo/model_zoo`.
 
 ```bash
 elasticdl train \
@@ -79,7 +79,7 @@ elasticdl train \
   --docker_base_url=${DOCKER_BASE_URL} \
   --docker_tlscert=${DOCKER_TLSCERT} \
   --docker_tlskey=${DOCKER_TLSKEY} \
-  --model_zoo=/model_zoo \
+  --model_zoo=/model_zoo/model_zoo \
   --model_def=mnist_functional_api.mnist_functional_api.custom_model \
   --training_data=/data/mnist/train \
   --validation_data=/data/mnist/test \
