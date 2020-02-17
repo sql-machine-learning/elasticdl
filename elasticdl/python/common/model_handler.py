@@ -202,6 +202,8 @@ class ParameterServerModelHandler(ModelHandler):
         """Replace the tf.keras.layers.Embedding layer in the model with
         an elasticdl.layers.Embedding layer in ParameterServerStrategy.
         """
+        # clear keras model session to avoid clutter from old models/layers.
+        tf.keras.backend.clear_session()
         if type(model) == tf.keras.Sequential or model._is_graph_network:
             model = self._clone_model_with_edl_embedding(model)
         else:
