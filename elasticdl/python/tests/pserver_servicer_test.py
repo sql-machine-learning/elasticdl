@@ -13,10 +13,7 @@ from elasticdl.python.common.model_utils import (
     load_module,
 )
 from elasticdl.python.common.save_utils import CheckpointSaver
-from elasticdl.python.common.tensor import (
-    emplace_tensor_pb_from_ndarray,
-    tensor_pb_to_ndarray,
-)
+from elasticdl.python.common.tensor import emplace_tensor_pb_from_ndarray
 from elasticdl.python.common.tensor_utils import pb_to_ndarray
 from elasticdl.python.ps.embedding_table import (
     EmbeddingTable,
@@ -164,18 +161,18 @@ class PserverServicerTest(unittest.TestCase):
                     (embedding - slot_init_value[slot_name] < 0.0001).all()
                 )
 
-    def test_pull_variable(self):
+    def test_pull_dense_parameters(self):
         self.create_default_server_and_stub()
         param0 = {
             "v0": np.random.rand(3, 2).astype(np.float32),
             "v1": np.random.rand(10, 32).astype(np.float32),
         }
-        pull_req = elasticdl_pb2.PullVariableRequest()
-        pull_req.current_model_version = -1
+        pull_req = elasticdl_pb2.PullDenseParametersRequest()
+        pull_req.version = -1
         # try to pull variable
-        res = self._stub.pull_variable(pull_req)
+        res = self._stub.pull_dense_parameters(pull_req)
         # not initialized
-        self.assertFalse(res.model_init_status)
+        self.assertFalse(res.initialized)
 
         # init variable
         req = elasticdl_pb2.Model()
@@ -186,20 +183,19 @@ class PserverServicerTest(unittest.TestCase):
         self.assertEqual(res, empty_pb2.Empty())
 
         # pull variable back
-        res = self._stub.pull_variable(pull_req)
-        self.assertTrue(res.model_init_status)
-        self.assertEqual(res.model.version, req.version)
-        for param in res.model.param:
-            name = param.name
-            tensor = tensor_pb_to_ndarray(param)
+        res = self._stub.pull_dense_parameters(pull_req)
+        self.assertTrue(res.initialized)
+        self.assertEqual(res.version, req.version)
+        for name, pb in res.dense_parameters.items():
+            tensor = pb_to_ndarray(pb)
             self.assertTrue(np.allclose(param0[name], tensor))
 
         # pull variable again, no param as no updated version
-        pull_req.current_model_version = res.model.version
-        res = self._stub.pull_variable(pull_req)
-        self.assertTrue(res.model_init_status)
-        self.assertEqual(res.model.version, pull_req.current_model_version)
-        self.assertTrue(not res.model.param)
+        pull_req.version = res.version
+        res = self._stub.pull_dense_parameters(pull_req)
+        self.assertTrue(res.initialized)
+        self.assertEqual(res.version, pull_req.version)
+        self.assertTrue(not res.dense_parameters)
 
     def test_pull_embedding_table(self):
         self.create_default_server_and_stub()

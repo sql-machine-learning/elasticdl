@@ -320,29 +320,28 @@ class Worker(object):
             if ps_id not in self._ps_vars:
                 continue
             # async grpc call
-            req = elasticdl_pb2.PullVariableRequest()
-            req.current_model_version = self._model_versions_from_ps[ps_id]
-            var_future = stub.pull_variable.future(req)
+            req = elasticdl_pb2.PullDenseParametersRequest()
+            req.version = self._model_versions_from_ps[ps_id]
+            var_future = stub.pull_dense_parameters.future(req)
             variable_future_and_id_pairs.append((var_future, ps_id))
 
         for var_future, ps_id in variable_future_and_id_pairs:
             res = var_future.result()
-            if not res.model_init_status:
+            if not res.initialized:
                 # push variable to ps for initialization
                 self.report_variable_to_ps(ps_id)
-                req = elasticdl_pb2.PullVariableRequest()
-                req.current_model_version = self._model_versions_from_ps[ps_id]
-                res = self._ps_stubs[ps_id].pull_variable(req)
-                if not res.model_init_status:
+                req = elasticdl_pb2.PullDenseParametersRequest()
+                req.version = self._model_versions_from_ps[ps_id]
+                res = self._ps_stubs[ps_id].pull_dense_parameters(req)
+                if not res.initialized:
                     # TODO: support PS fault-tolerance
                     raise RuntimeError(
                         "PS pod %d cannot be initialized" % ps_id
                     )
 
-            for tensor_pb in res.model.param:
-                tensor = Tensor.from_tensor_pb(tensor_pb)
-                self._non_embed_vars[tensor.name].assign(tensor.to_ndarray())
-            self._model_versions_from_ps[ps_id] = res.model.version
+            for name, pb in res.dense_parameters.items():
+                self._non_embed_vars[name].assign(pb_to_ndarray(pb))
+            self._model_versions_from_ps[ps_id] = res.version
 
         self._model_version = max(self._model_versions_from_ps)
         self._timing.end_record_time("get_model")
