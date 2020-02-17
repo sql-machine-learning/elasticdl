@@ -20,8 +20,14 @@ def train(args):
     if args.distribution_strategy == DistributionStrategy.LOCAL:
         local_executor = LocalExecutor(args)
         local_executor.run()
-    else:
-        image_name = build_and_push_docker_image(
+        return
+
+    image_pre_built = bool(args.image_name)
+
+    image_name = (
+        args.image_name
+        if image_pre_built
+        else build_and_push_docker_image(
             model_zoo=model_zoo,
             base_image=args.image_base,
             docker_image_repository=args.docker_image_repository,
@@ -31,39 +37,46 @@ def train(args):
             docker_tlscert=args.docker_tlscert,
             docker_tlskey=args.docker_tlskey,
         )
+    )
 
-        container_args = [
-            "-m",
-            "elasticdl.python.master.main",
-            "--worker_image",
-            image_name,
-            "--model_zoo",
-            _model_zoo_in_docker(model_zoo),
-            "--cluster_spec",
-            _cluster_spec_def_in_docker(args.cluster_spec),
-        ]
-        container_args.extend(
-            build_arguments_from_parsed_result(
-                args, filter_args=["model_zoo", "cluster_spec", "worker_image"]
-            )
+    container_args = [
+        "-m",
+        "elasticdl.python.master.main",
+        "--worker_image",
+        image_name,
+        "--model_zoo",
+        _model_zoo_in_docker(model_zoo, image_pre_built),
+        "--cluster_spec",
+        _cluster_spec_def_in_docker(args.cluster_spec),
+    ]
+    container_args.extend(
+        build_arguments_from_parsed_result(
+            args, filter_args=["model_zoo", "cluster_spec", "worker_image"]
         )
+    )
 
-        _submit_job(image_name, args, container_args)
-        # TODO: print dashboard url after launching the master pod
+    _submit_job(image_name, args, container_args)
+    # TODO: print dashboard url after launching the master pod
 
 
 def evaluate(args):
     model_zoo = os.path.normpath(args.model_zoo)
 
-    image_name = build_and_push_docker_image(
-        model_zoo=model_zoo,
-        base_image=args.image_base,
-        docker_image_repository=args.docker_image_repository,
-        extra_pypi=args.extra_pypi_index,
-        cluster_spec=args.cluster_spec,
-        docker_base_url=args.docker_base_url,
-        docker_tlscert=args.docker_tlscert,
-        docker_tlskey=args.docker_tlskey,
+    image_pre_built = bool(args.image_name)
+
+    image_name = (
+        args.image_name
+        if image_pre_built
+        else build_and_push_docker_image(
+            model_zoo=model_zoo,
+            base_image=args.image_base,
+            docker_image_repository=args.docker_image_repository,
+            extra_pypi=args.extra_pypi_index,
+            cluster_spec=args.cluster_spec,
+            docker_base_url=args.docker_base_url,
+            docker_tlscert=args.docker_tlscert,
+            docker_tlskey=args.docker_tlskey,
+        )
     )
     container_args = [
         "-m",
@@ -71,7 +84,7 @@ def evaluate(args):
         "--worker_image",
         image_name,
         "--model_zoo",
-        _model_zoo_in_docker(model_zoo),
+        _model_zoo_in_docker(model_zoo, image_pre_built),
         "--cluster_spec",
         _cluster_spec_def_in_docker(args.cluster_spec),
     ]
@@ -87,15 +100,21 @@ def evaluate(args):
 def predict(args):
     model_zoo = os.path.normpath(args.model_zoo)
 
-    image_name = build_and_push_docker_image(
-        model_zoo=model_zoo,
-        base_image=args.image_base,
-        docker_image_repository=args.docker_image_repository,
-        extra_pypi=args.extra_pypi_index,
-        cluster_spec=args.cluster_spec,
-        docker_base_url=args.docker_base_url,
-        docker_tlscert=args.docker_tlscert,
-        docker_tlskey=args.docker_tlskey,
+    image_pre_built = bool(args.image_name)
+
+    image_name = (
+        args.image_name
+        if image_pre_built
+        else build_and_push_docker_image(
+            model_zoo=model_zoo,
+            base_image=args.image_base,
+            docker_image_repository=args.docker_image_repository,
+            extra_pypi=args.extra_pypi_index,
+            cluster_spec=args.cluster_spec,
+            docker_base_url=args.docker_base_url,
+            docker_tlscert=args.docker_tlscert,
+            docker_tlskey=args.docker_tlskey,
+        )
     )
     container_args = [
         "-m",
@@ -103,7 +122,7 @@ def predict(args):
         "--worker_image",
         image_name,
         "--model_zoo",
-        _model_zoo_in_docker(model_zoo),
+        _model_zoo_in_docker(model_zoo, image_pre_built),
         "--cluster_spec",
         _cluster_spec_def_in_docker(args.cluster_spec),
     ]
@@ -178,7 +197,10 @@ def _submit_job(image_name, client_args, container_args):
         )
 
 
-def _model_zoo_in_docker(model_zoo):
+def _model_zoo_in_docker(model_zoo, image_pre_built):
+    if image_pre_built:
+        return model_zoo
+
     MODEL_ROOT_PATH = "/model_zoo"
     return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_zoo))
 
