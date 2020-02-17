@@ -17,12 +17,11 @@ type Tensor struct {
 
 // NewEmptyTensor create an empty n-dim tensor
 func NewEmptyTensor(dim []int64, dtype types_go_proto.DataType) *Tensor {
-	var t = Tensor{
+	return &Tensor{
 		Buffer: make([]byte, DimProduct(dim)*int64(DtypeSize[dtype])),
 		Dims:   dim,
 		Dtype:  dtype,
 	}
-	return &t
 }
 
 // NewTensor create a n-dim tensor using exsiting slice
@@ -39,22 +38,20 @@ func NewTensor(slice interface{}, dim []int64) *Tensor {
 		Cap:  int(bytelen),
 		Len:  int(bytelen),
 	}
-	var t = Tensor{
+	return &Tensor{
 		Buffer: *(*[]byte)(unsafe.Pointer(&sliceHeader)),
 		Dims:   dim,
 		Dtype:  dtype,
 	}
-	return &t
 }
 
 // NewEmptyVector create an empty 1-dim tensor
 func NewEmptyVector(dim int64, dtype types_go_proto.DataType) *Tensor {
-	var t = Tensor{
+	return &Tensor{
 		Buffer: make([]byte, dim*int64(DtypeSize[dtype])),
 		Dims:   []int64{dim},
 		Dtype:  dtype,
 	}
-	return &t
 }
 
 // NewVector create an empty 1-dim tensor
@@ -71,12 +68,11 @@ func NewVector(slice interface{}) *Tensor {
 		Cap:  int(bytelen),
 		Len:  int(bytelen),
 	}
-	var t = Tensor{
+	return &Tensor{
 		Buffer: *(*[]byte)(unsafe.Pointer(&sliceHeader)),
 		Dims:   []int64{int64(length)},
 		Dtype:  dtype,
 	}
-	return &t
 }
 
 // DimProduct get the number of the elements of a tensor of this dim
@@ -88,42 +84,41 @@ func DimProduct(dim []int64) int64 {
 	return size
 }
 
-// SubTensor get the part reference of the tensor
-func SubTensor(t *Tensor, begin int64, length int64) *Tensor {
+// GetSubTensor get the part reference of the tensor
+func (t *Tensor) GetSubTensor(begin int64, length int64) *Tensor {
 	dsize := int64(DtypeSize[t.Dtype])
 	begin *= dsize
-	var subt = Tensor{
+	return &Tensor{
 		Buffer: t.Buffer[begin : begin+length*dsize],
 		Dims:   []int64{length},
 		Dtype:  t.Dtype,
 	}
-	return &subt
 }
 
-// RowOfTensor get the row reference of a 2-dim tensor
-func RowOfTensor(t *Tensor, idx int64) *Tensor {
+// GetRow get the row reference of a 2-dim tensor
+func (t *Tensor) GetRow(idx int64) *Tensor {
 	if len(t.Dims) != 2 || idx >= t.Dims[0] {
 		return nil
 	}
 	begin := t.Dims[1] * idx
-	return SubTensor(t, begin, t.Dims[1])
+	return t.GetSubTensor(begin, t.Dims[1])
 }
 
 // SetSubTensor set a vector to an index of tensor
-func SetSubTensor(t *Tensor, begin int64, length int64, val *Tensor) {
+func (t *Tensor) SetSubTensor(begin int64, length int64, val *Tensor) {
 	dsize := int64(DtypeSize[t.Dtype])
 	begin *= dsize
 	length *= dsize
 	copy(t.Buffer[begin:begin+length], val.Buffer)
 }
 
-// SetTensorRow set a vector to an index of tensor
-func SetTensorRow(t *Tensor, idx int64, vec *Tensor) {
+// SetRow set a vector to an index of tensor
+func (t *Tensor) SetRow(idx int64, vec *Tensor) {
 	if len(t.Dims) != 2 || idx >= t.Dims[0] {
 		return
 	}
 	begin := t.Dims[1] * idx
-	SetSubTensor(t, begin, t.Dims[1], vec)
+	t.SetSubTensor(begin, t.Dims[1], vec)
 }
 
 // Slice gives a Slice interface to the Tensor data
@@ -149,12 +144,11 @@ func DeserializeTensorPB(pb *tensor_go_proto.TensorProto) *Tensor {
 		return nil
 	}
 
-	var t = Tensor{
+	return &Tensor{
 		Buffer: pb.GetTensorContent(),
 		Dims:   dims,
 		Dtype:  pb.GetDtype(),
 	}
-	return &t
 }
 
 // SerializeTensor transforms tensor to pb
@@ -168,10 +162,9 @@ func (t *Tensor) SerializeTensor() *tensor_go_proto.TensorProto {
 	pbDim := tensor_shape_go_proto.TensorShapeProto{
 		Dim: shapeDim,
 	}
-	var pb = tensor_go_proto.TensorProto{
+	return &tensor_go_proto.TensorProto{
 		TensorContent: t.Buffer,
 		TensorShape:   &pbDim,
 		Dtype:         t.Dtype,
 	}
-	return &pb
 }

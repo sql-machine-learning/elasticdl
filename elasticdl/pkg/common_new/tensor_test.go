@@ -27,12 +27,12 @@ func TestTensor(t *testing.T) {
 	assert.Equal(t, Slice(v1).([]float32), slice, "NewVector FAIL")
 	assert.Equal(t, []int64{6}, v1.Dims, "NewVector FAIL")
 
-	r1 := RowOfTensor(t1, 1)
+	r1 := t1.GetRow(1)
 	assert.Equal(t, Slice(r1).([]float32), slice[3:6], "RowOfTensor FAIL")
 	assert.Equal(t, []int64{3}, r1.Dims, "RowOfTensor FAIL")
 
 	val := NewVector([]float32{30, 40, 50})
-	SetTensorRow(t1, 1, val)
+	t1.SetRow(1, val)
 	assert.Equal(t, Slice(t1).([]float32), []float32{1.0, 2.0, 3.0, 30, 40, 50}, "SetTensorRow FAIL")
 }
 
