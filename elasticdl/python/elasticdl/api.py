@@ -47,7 +47,7 @@ def train(args):
         "--model_zoo",
         _model_zoo_in_docker(model_zoo, image_pre_built),
         "--cluster_spec",
-        _cluster_spec_def_in_docker(args.cluster_spec, image_pre_built),
+        _cluster_spec_def_in_docker(args.cluster_spec),
     ]
     container_args.extend(
         build_arguments_from_parsed_result(
@@ -86,7 +86,7 @@ def evaluate(args):
         "--model_zoo",
         _model_zoo_in_docker(model_zoo, image_pre_built),
         "--cluster_spec",
-        _cluster_spec_def_in_docker(args.cluster_spec, image_pre_built),
+        _cluster_spec_def_in_docker(args.cluster_spec),
     ]
     container_args.extend(
         build_arguments_from_parsed_result(
@@ -124,7 +124,7 @@ def predict(args):
         "--model_zoo",
         _model_zoo_in_docker(model_zoo, image_pre_built),
         "--cluster_spec",
-        _cluster_spec_def_in_docker(args.cluster_spec, image_pre_built),
+        _cluster_spec_def_in_docker(args.cluster_spec),
     ]
     container_args.extend(
         build_arguments_from_parsed_result(
@@ -205,10 +205,7 @@ def _model_zoo_in_docker(model_zoo, image_pre_built):
     return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_zoo))
 
 
-def _cluster_spec_def_in_docker(cluster_spec, image_pre_built):
-    if image_pre_built:
-        return cluster_spec
-
+def _cluster_spec_def_in_docker(cluster_spec):
     CLUSTER_SPEC_ROOT_PATH = "/cluster_spec"
     return (
         os.path.join(CLUSTER_SPEC_ROOT_PATH, os.path.basename(cluster_spec))
