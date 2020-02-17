@@ -133,12 +133,12 @@ func (s *Server) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.Em
 	return &empty.Empty{}, err
 }
 
-// PushGradient pushes gradient to server
-func (s *Server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (*pb.PushGradientResponse, error) {
+// PushGradients pushes gradient to server
+func (s *Server) PushGradients(ctx context.Context, in *pb.Model) (*pb.PushGradientsResponse, error) {
 	// TODO(qijun) only support async now
-	var res pb.PushGradientResponse
+	var res pb.PushGradientsResponse
 	var grads []*common.Tensor
-	for _, gradPB := range in.Gradients {
+	for _, gradPB := range in.Param {
 		grad := common.DeserializeTensorPB(gradPB)
 		grads = append(grads, grad)
 	}
@@ -148,7 +148,7 @@ func (s *Server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (
 	s.versionLock.Unlock()
 	s.reportModelVersionIfNeeded(s.Param.Version)
 	res.Accepted = true
-	res.ModelVersion = s.Param.Version
+	res.Version = s.Param.Version
 	return &res, err
 }
 

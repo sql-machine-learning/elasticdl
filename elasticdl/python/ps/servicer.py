@@ -104,11 +104,11 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             self.wrap_optimizer_and_set_slot()
         return empty_pb2.Empty()
 
-    def push_gradient(self, request, _):
-        res = elasticdl_pb2.PushGradientResponse()
+    def push_gradients(self, request, _):
+        res = elasticdl_pb2.PushGradientsResponse()
         if self._use_async:
             grad_vars = []
-            for pb in request.gradients:
+            for pb in request.param:
                 grad = Tensor.from_tensor_pb(pb)
                 self._parameters.check_grad(grad)
                 name = grad.name
@@ -129,19 +129,19 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             self._report_version_if_needed(version)
 
             res.accepted = True
-            res.model_version = self._parameters.version
+            res.version = self._parameters.version
             return res
         else:
             if (
-                request.model_version
+                request.version
                 < self._parameters.version - self._sync_version_tolerance
             ):
                 res.accepted = False
-                res.model_version = self._parameters.version
+                res.version = self._parameters.version
                 return res
 
             with self._lock:
-                for pb in request.gradients:
+                for pb in request.param:
                     grad = Tensor.from_tensor_pb(pb)
                     self._parameters.check_grad(grad)
                     if grad.name in self._grads_buffer:
@@ -184,7 +184,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
             if updated_version:
                 self._report_version_if_needed(version)
-            res.model_version = version
+            res.version = version
             return res
 
     def wrap_optimizer(self):
