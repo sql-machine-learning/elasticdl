@@ -194,10 +194,6 @@ class CheckpointSaver(object):
         parse any filename to get N which is the total number of parameters
         shards. It is valid if the number of files in the directory N.
         """
-        print("checkpiont_dir : ", checkpoint_dir)
-        print(os.popen("ls /mnist_ckpt").readlines())
-        print(os.popen("ls {}".format(checkpoint_dir)).readlines())
-        print(os.popen("ls /").readlines())
         if not os.path.exists(checkpoint_dir):
             return False
 

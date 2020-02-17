@@ -5,7 +5,7 @@ PS_NUM=$2
 WORKER_NUM=$3
 
 # Generate checkpoint for mnist to test evaluation and prediction
-MNIST_CKPT_DIR=${PWD}/mnist/
+MNIST_CKPT_DIR=model_zoo/test_data/mnist_ckpt/
 python -m scripts.gen_mnist_checkpoint --checkpoint_dir=${MNIST_CKPT_DIR}
 
 
@@ -38,12 +38,11 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --output=/saved_model/model_output \
       --volume="host_path=${PWD},mount_path=/saved_model"
 elif [[ "$JOB_TYPE" == "evaluate" ]]; then
-    ls -lisa ${PWD}/mnist && \
     elasticdl evaluate \
       --image_base=elasticdl:ci \
       --model_zoo=model_zoo \
       --model_def=mnist_functional_api.mnist_functional_api.custom_model \
-      --checkpoint_dir_for_init=/mnist_ckpt/version-100  \
+      --checkpoint_dir_for_init=model_zoo/${MNIST_CKPT_DIR}/version-100  \
       --validation_data=/data/mnist/test \
       --num_epochs=1 \
       --master_resource_request="cpu=0.3,memory=1024Mi" \
@@ -61,13 +60,12 @@ elif [[ "$JOB_TYPE" == "evaluate" ]]; then
       --job_name=test-evaluate \
       --log_level=INFO \
       --image_pull_policy=Never \
-      --volume="host_path=${PWD}/mnist,mount_path=/mnist_ckpt"
 elif [[ "$JOB_TYPE" == "predict" ]]; then
     elasticdl predict \
       --image_base=elasticdl:ci \
       --model_zoo=model_zoo \
       --model_def=mnist_functional_api.mnist_functional_api.custom_model \
-      --checkpoint_dir_for_init=/mnist_ckpt/version-100 \
+      --checkpoint_dir_for_init=model_zoo/${MNIST_CKPT_DIR}/version-100 \
       --prediction_data=/data/mnist/test \
       --master_resource_request="cpu=0.2,memory=1024Mi" \
       --master_resource_limit="cpu=1,memory=2048Mi" \
@@ -81,8 +79,7 @@ elif [[ "$JOB_TYPE" == "predict" ]]; then
       --num_ps_pods=$PS_NUM \
       --job_name=test-predict \
       --log_level=INFO \
-      --image_pull_policy=Never \
-      --volume="host_path=${PWD}/mnist,mount_path=/mnist_ckpt"
+      --image_pull_policy=Never 
 elif [[ "$JOB_TYPE" == "local" ]]; then
     elasticdl train \
       --model_zoo=model_zoo \
