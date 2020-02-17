@@ -107,7 +107,18 @@ def add_common_params(parser):
         help="The repository for generated Docker images, if set, the image "
         "is also pushed to the repository",
     )
-    parser.add_argument("--image_base", help="Base Docker image.")
+    parser.add_argument(
+        "--image_base",
+        default="",
+        help="Base Docker image. If set, a new image will be built each time"
+        "while submitting the Elastic job.",
+    )
+    parser.add_argument(
+        "--image_name",
+        default="",
+        help="The pre-built image for this job. If set, "
+        "use this image instead of building a new one.",
+    )
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
         "--master_resource_request",
@@ -226,7 +237,8 @@ def add_common_params(parser):
     )
     parser.add_argument(
         "--cluster_spec",
-        help="The file that contains user-defined cluster specification",
+        help="The file that contains user-defined cluster specification,"
+        "the file path can be accessed by ElasticDL client.",
         default="",
     )
     parser.add_argument(
@@ -436,7 +448,9 @@ def add_common_args_between_master_and_worker(parser):
     parser.add_argument(
         "--model_zoo",
         help="The directory that contains user-defined model files "
-        "or a specific model file",
+        "or a specific model file. If set `image_base`, the path should"
+        "be accessed by ElasticDL client. If set `image_name`, it is"
+        "the path inside this pre-built image.",
         required=True,
     )
     parser.add_argument(
