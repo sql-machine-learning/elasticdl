@@ -2,25 +2,25 @@ package common
 
 import (
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"
-	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/types_go_proto"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_shape_go_proto"
+	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/types_go_proto"
 	"reflect"
 	"unsafe"
 )
 
 // Tensor definition
 type Tensor struct {
-	Buffer   []byte
-	Dims     []int64
-	Dtype    types_go_proto.DataType
+	Buffer []byte
+	Dims   []int64
+	Dtype  types_go_proto.DataType
 }
 
 // NewEmptyTensor create an empty n-dim tensor
 func NewEmptyTensor(dim []int64, dtype types_go_proto.DataType) *Tensor {
 	var t = Tensor{
 		Buffer: make([]byte, DimProduct(dim)*int64(DtypeSize[dtype])),
-		Dims:    dim,
-		Dtype:   dtype,
+		Dims:   dim,
+		Dtype:  dtype,
 	}
 	return &t
 }
@@ -41,8 +41,8 @@ func NewTensor(slice interface{}, dim []int64) *Tensor {
 	}
 	var t = Tensor{
 		Buffer: *(*[]byte)(unsafe.Pointer(&sliceHeader)),
-		Dims:    dim,
-		Dtype:   dtype,
+		Dims:   dim,
+		Dtype:  dtype,
 	}
 	return &t
 }
@@ -51,8 +51,8 @@ func NewTensor(slice interface{}, dim []int64) *Tensor {
 func NewEmptyVector(dim int64, dtype types_go_proto.DataType) *Tensor {
 	var t = Tensor{
 		Buffer: make([]byte, dim*int64(DtypeSize[dtype])),
-		Dims:    []int64{dim},
-		Dtype:   dtype,
+		Dims:   []int64{dim},
+		Dtype:  dtype,
 	}
 	return &t
 }
@@ -73,8 +73,8 @@ func NewVector(slice interface{}) *Tensor {
 	}
 	var t = Tensor{
 		Buffer: *(*[]byte)(unsafe.Pointer(&sliceHeader)),
-		Dims:    []int64{int64(length)},
-		Dtype:   dtype,
+		Dims:   []int64{int64(length)},
+		Dtype:  dtype,
 	}
 	return &t
 }
@@ -93,9 +93,9 @@ func SubTensor(t *Tensor, begin int64, length int64) *Tensor {
 	dsize := int64(DtypeSize[t.Dtype])
 	begin *= dsize
 	var subt = Tensor{
-		Buffer:  t.Buffer[begin : begin+length*dsize],
-		Dims:    []int64{length},
-		Dtype:   t.Dtype,
+		Buffer: t.Buffer[begin : begin+length*dsize],
+		Dims:   []int64{length},
+		Dtype:  t.Dtype,
 	}
 	return &subt
 }
@@ -145,14 +145,14 @@ func DeserializeTensorPB(pb *tensor_go_proto.TensorProto) *Tensor {
 	for i, iDim := range pbDim {
 		dims[i] = iDim.GetSize()
 	}
-	if int(DimProduct(dims))*int(DtypeSize[pb.GetDtype()]) != len(pb.GetTensorContent()){
+	if int(DimProduct(dims))*int(DtypeSize[pb.GetDtype()]) != len(pb.GetTensorContent()) {
 		return nil
 	}
 
 	var t = Tensor{
-		Buffer : pb.GetTensorContent(),
-		Dims   : dims,
-		Dtype  : pb.GetDtype(),
+		Buffer: pb.GetTensorContent(),
+		Dims:   dims,
+		Dtype:  pb.GetDtype(),
 	}
 	return &t
 }
@@ -165,13 +165,13 @@ func (t *Tensor) SerializeTensor() *tensor_go_proto.TensorProto {
 			Size: dim,
 		}
 	}
-	pbDim := tensor_shape_go_proto.TensorShapeProto {
-		Dim : shapeDim,
+	pbDim := tensor_shape_go_proto.TensorShapeProto{
+		Dim: shapeDim,
 	}
-	var pb = tensor_go_proto.TensorProto {
+	var pb = tensor_go_proto.TensorProto{
 		TensorContent: t.Buffer,
-		TensorShape: &pbDim,
-		Dtype: t.Dtype,
+		TensorShape:   &pbDim,
+		Dtype:         t.Dtype,
 	}
 	return &pb
 }

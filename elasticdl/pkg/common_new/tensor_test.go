@@ -1,12 +1,12 @@
 package common
 
 import (
+	"encoding/binary"
 	"github.com/stretchr/testify/assert"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_shape_go_proto"
-	"encoding/binary"
-	"testing"
 	"math"
+	"testing"
 )
 
 func TestTensor(t *testing.T) {
@@ -37,30 +37,30 @@ func TestTensor(t *testing.T) {
 }
 
 func TestPbTransform(t *testing.T) {
-	val := []float32{1,2,3,4,5}
+	val := []float32{1, 2, 3, 4, 5}
 	bval := make([]byte, 20, 20)
 	for i, num := range val {
 		bits := math.Float32bits(num)
 		binary.LittleEndian.PutUint32(bval[(i*4):], bits)
 	}
 	//dim := []int64{2,5}
-	
+
 	dim1 := tensor_shape_go_proto.TensorShapeProto_Dim{
-		Size : 1,
+		Size: 1,
 	}
 	dim2 := tensor_shape_go_proto.TensorShapeProto_Dim{
-		Size : 5,
+		Size: 5,
 	}
 
 	shapeDim := []*tensor_shape_go_proto.TensorShapeProto_Dim{&dim1, &dim2}
 
-	var pbDim = tensor_shape_go_proto.TensorShapeProto {
-		Dim : shapeDim,
+	var pbDim = tensor_shape_go_proto.TensorShapeProto{
+		Dim: shapeDim,
 	}
 	pb := tensor_go_proto.TensorProto{
 		TensorContent: bval,
-		TensorShape: &pbDim,
-		Dtype: Float32,
+		TensorShape:   &pbDim,
+		Dtype:         Float32,
 	}
 
 	t1 := DeserializeTensorPB(&pb)
