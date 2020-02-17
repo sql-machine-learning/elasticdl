@@ -462,9 +462,7 @@ class Worker(object):
 
     def report_gradient_to_ps(self, grads):
         self._timing.start_record_time("report_gradient")
-        reqs = [
-            elasticdl_pb2.PushGradientRequest() for i in range(self._ps_num)
-        ]
+        reqs = [elasticdl_pb2.Model() for i in range(self._ps_num)]
         ps_grads = {}
         non_embed_vars_n = len(self._non_embed_vars)
         for g, v in zip(
@@ -479,7 +477,7 @@ class Worker(object):
         for ps_id in ps_grads:
             req = reqs[ps_id]
             for g, name in ps_grads[ps_id]:
-                emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
+                emplace_tensor_pb_from_ndarray(req.param, g, name=name)
 
         edl_embedding_name_values = self._collect_edl_embedding_name_values()
 
@@ -527,14 +525,14 @@ class Worker(object):
                     req = reqs[ps_id]
                     gv, gi = results[ps_id]
                     emplace_tensor_pb_from_ndarray(
-                        req.gradients, values=gv, indices=gi, name=name
+                        req.param, values=gv, indices=gi, name=name
                     )
 
         report_futures = []
         for ps_id in range(self._ps_num):
             req = reqs[ps_id]
-            req.model_version = self._model_versions_from_ps[ps_id]
-            report_future = self._ps_stubs[ps_id].push_gradient.future(req)
+            req.version = self._model_versions_from_ps[ps_id]
+            report_future = self._ps_stubs[ps_id].push_gradients.future(req)
             report_futures.append(report_future)
 
         accepted = False
@@ -543,8 +541,8 @@ class Worker(object):
             res = report_future.result()
             if res.accepted:
                 accepted = True
-            if res.model_version > max_version:
-                max_version = res.model_version
+            if res.version > max_version:
+                max_version = res.version
         self._timing.end_record_time("report_gradient")
         return accepted, max_version
 

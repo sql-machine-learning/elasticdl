@@ -249,7 +249,7 @@ func TestPullEmbeddingVector(t *testing.T) {
 	gs.Stop()
 }
 
-func TestPushGradient(t *testing.T) {
+func TestPushGradients(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
 	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", "", 0)
@@ -298,19 +298,19 @@ func TestPushGradient(t *testing.T) {
 	egi1 := []int64{3, 1, 3}
 	eg1 := common.Tensor{"e1", egv1, egd1, egi1}
 
-	var request2 pb.PushGradientRequest
-	request2.ModelVersion = 0
-	request2.Gradients = append(request2.Gradients, common.SerializeTensor(&g1))
-	request2.Gradients = append(request2.Gradients, common.SerializeTensor(&g2))
-	request2.Gradients = append(request2.Gradients, common.SerializeTensor(&eg1))
+	var request2 pb.Model
+	request2.Version = 0
+	request2.Param = append(request2.Param, common.SerializeTensor(&g1))
+	request2.Param = append(request2.Param, common.SerializeTensor(&g2))
+	request2.Param = append(request2.Param, common.SerializeTensor(&eg1))
 
-	res1, err2 := client.PushGradient(ctx, &request2)
+	res1, err2 := client.PushGradients(ctx, &request2)
 	if err2 != nil {
 		t.Errorf("Failed to pull gradients")
 	}
 
 	assert.True(t, res1.Accepted)
-	assert.Equal(t, int32(1), res1.ModelVersion)
+	assert.Equal(t, int32(1), res1.Version)
 
 	assert.Contains(t, s.Param.NonEmbeddingParam, "t1")
 	assert.Contains(t, s.Param.NonEmbeddingParam, "t2")
