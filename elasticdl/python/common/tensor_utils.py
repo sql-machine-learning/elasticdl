@@ -1,4 +1,12 @@
+import numpy as np
 import tensorflow as tf
+from tensorflow.core.framework import tensor_pb2
+
+from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.dtypes import (
+    dtype_numpy_to_tensor,
+    dtype_tensor_to_numpy,
+)
 
 
 def merge_indexed_slices(*args):
@@ -27,3 +35,59 @@ def deduplicate_indexed_slices(values, indices):
     )
 
     return (sum_combined_values, unique_indices)
+
+
+def serialize_ndarray(array, pb):
+    dtype = dtype_numpy_to_tensor(array.dtype)
+    if not dtype:
+        raise ValueError("Dtype of ndarray %s is not supported", array.dtype)
+    pb.dtype = dtype
+    pb.tensor_content = array.tobytes()
+    for d in array.shape:
+        pb_d = pb.tensor_shape.dim.add()
+        pb_d.size = d
+
+
+def ndarray_to_pb(array):
+    pb = tensor_pb2.TensorProto()
+    serialize_ndarray(array, pb)
+    return pb
+
+
+def pb_to_ndarray(pb):
+    if not pb.tensor_shape:
+        raise ValueError("PB has no dim defined")
+    dtype = dtype_tensor_to_numpy(pb.dtype)
+    size = dtype.itemsize
+    shape = [d.size for d in pb.tensor_shape.dim]
+    for d in shape:
+        size *= d
+    if size != len(pb.tensor_content):
+        raise ValueError(
+            "PB size mismatch, dim: %s, len(content): %d",
+            str(shape),
+            len(pb.tensor_content),
+        )
+    array = np.ndarray(shape=shape, dtype=dtype, buffer=pb.tensor_content)
+    return array
+
+
+def pb_to_indexed_slices(pb):
+    concat_tensors = pb_to_ndarray(pb.concat_tensors)
+    ids = np.array([int(i) for i in pb.ids])
+    return tf.IndexedSlices(concat_tensors, ids)
+
+
+def indexed_slices_to_pb(slices):
+    pb = elasticdl_pb2.IndexedSlices()
+    serialize_ndarray(slices.values, pb.concat_tensors)
+    if (
+        isinstance(slices.indices, np.ndarray)
+        and len(slices.indices.shape) > 1
+    ):
+        raise ValueError(
+            "IndexedSlices pb only accepts indices with one dimension, got %d",
+            len(slices.indices.shape),
+        )
+    pb.ids.extend(slices.indices)
+    return pb
