@@ -12,18 +12,53 @@ import (
 	"sync"
 )
 
+// MasterClient contains attributes to call master GRPC services
+type MasterClient struct {
+	client     pb.MasterClient
+	context    context.Context
+	clientConn *grpc.ClientConn
+}
+
+func (c *MasterClient) reportVersion(modelVersion int32) {
+	var request pb.ReportVersionRequest
+	request.ModelVersion = modelVersion
+	c.client.ReportVersion(c.context, &request)
+}
+
+func (c *MasterClient) closeConn() {
+	c.clientConn.Close()
+}
+
 // Server defines servicer of ps
 type Server struct {
 	pb.PserverServer
-	Param       *Parameter
-	Opt         Optimizer
-	ID          int // a zero-based successive integer number
-	lock        sync.Mutex
-	versionLock sync.Mutex
+	Param           *Parameter
+	Opt             Optimizer
+	masterClient    *MasterClient
+	evaluationSteps int32
+	ID              int // a zero-based successive integer number
+	lock            sync.Mutex
+	versionLock     sync.Mutex
+}
+
+func createMasterClient(masterAddr string) *MasterClient {
+	if masterAddr == "" {
+		return nil
+	}
+	conn, err := grpc.Dial(masterAddr, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("failed to connect to master: %v", err)
+	}
+	client := pb.NewMasterClient(conn)
+	return &MasterClient{
+		client:     client,
+		context:    context.Background(),
+		clientConn: conn,
+	}
 }
 
 // NewServer creates a Server instance
-func NewServer(ID int, optType string, optArgs string) *Server {
+func NewServer(ID int, optType string, optArgs string, masterAddr string, evaluationSteps int) *Server {
 	var ps Server
 	ps.Param = NewParameter()
 	var err error
@@ -32,7 +67,15 @@ func NewServer(ID int, optType string, optArgs string) *Server {
 		log.Fatalf("failed to create PS server: %v", err)
 	}
 	ps.ID = ID
+	ps.masterClient = createMasterClient(masterAddr)
+	ps.evaluationSteps = int32(evaluationSteps)
 	return &ps
+}
+
+func (s *Server) reportModelVersionIfNeeded(modelVersion int32) {
+	if s.evaluationSteps > 0 && modelVersion%s.evaluationSteps == 0 && s.masterClient != nil {
+		s.masterClient.reportVersion(modelVersion)
+	}
 }
 
 // PullVariable pulls variable from server
@@ -103,6 +146,7 @@ func (s *Server) PushGradient(ctx context.Context, in *pb.PushGradientRequest) (
 	s.versionLock.Lock()
 	s.Param.Version += int32(1)
 	s.versionLock.Unlock()
+	s.reportModelVersionIfNeeded(s.Param.Version)
 	res.Accepted = true
 	res.ModelVersion = s.Param.Version
 	return &res, err
@@ -117,11 +161,12 @@ func (s *Server) Run(address string, serverDone chan bool) *grpc.Server {
 	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
 	grpcServer := grpc.NewServer()
 	pb.RegisterPserverServer(grpcServer, s)
-	go startServe(grpcServer, lis, serverDone)
+	go startServe(grpcServer, lis, serverDone, s.masterClient)
 	return grpcServer
 }
 
-func startServe(server *grpc.Server, lis net.Listener, serverDone chan bool) {
+func startServe(server *grpc.Server, lis net.Listener, serverDone chan bool, masterClient *MasterClient) {
+	defer masterClient.closeConn()
 	err := server.Serve(lis)
 	if err != nil {
 		log.Fatalf("GRPC failed to serve: %v", err)
