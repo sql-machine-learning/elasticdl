@@ -8,6 +8,8 @@ WORKER_NUM=$3
 MNIST_CKPT_DIR=${PWD}/mnist/
 python -m scripts.gen_mnist_checkpoint --checkpoint_dir=${MNIST_CKPT_DIR}
 
+ls -lisa ${PWD}/mnist/version-100
+
 if [[ "$JOB_TYPE" == "train" ]]; then
     elasticdl train \
       --image_base=elasticdl:ci \
