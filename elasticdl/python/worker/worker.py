@@ -32,9 +32,11 @@ from elasticdl.python.common.tensor import (
     Tensor,
     emplace_tensor_pb_from_ndarray,
     serialize_tensor,
-    tensor_pb_to_ndarray,
 )
-from elasticdl.python.common.tensor_utils import deduplicate_indexed_slices
+from elasticdl.python.common.tensor_utils import (
+    deduplicate_indexed_slices,
+    pb_to_ndarray,
+)
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks.saved_model_exporter import (
     SavedModelExporter,
@@ -223,7 +225,7 @@ class Worker(object):
         self._embedding_layers = find_layer(self._model, Embedding)
         if self._use_multi_ps:
             for layer in self._embedding_layers:
-                layer.set_lookup_embedding_func(self.pull_embedding_vector)
+                layer.set_lookup_embedding_func(self.pull_embedding_table)
 
     def _init_embedding_column(self):
         self._embedding_columns = []
@@ -240,7 +242,7 @@ class Worker(object):
 
         if self._use_multi_ps:
             for column in self._embedding_columns:
-                column.set_lookup_embedding_func(self.pull_embedding_vector)
+                column.set_lookup_embedding_func(self.pull_embedding_table)
 
     def _check_name_conflict_of_embedding_layer_and_column(self):
         if not self._embedding_layers or not self._embedding_columns:
@@ -345,7 +347,7 @@ class Worker(object):
         self._model_version = max(self._model_versions_from_ps)
         self._timing.end_record_time("get_model")
 
-    def pull_embedding_vector(self, layer_name, embedding_ids):
+    def pull_embedding_table(self, layer_name, embedding_ids):
         """Pulls and returns embedding vectors ordered by the embedding ids."""
         ps_ids = {}
         ps_ids_index = {}
@@ -361,11 +363,11 @@ class Worker(object):
             req = elasticdl_pb2.PullEmbeddingVectorRequest()
             req.name = layer_name
             req.ids.extend(embedding_ids)
-            pb_future = self._ps_stubs[ps_id].pull_embedding_vector.future(req)
+            pb_future = self._ps_stubs[ps_id].pull_embedding_table.future(req)
             pb_future_and_id_pairs.append((pb_future, ps_id))
         for pb_future, ps_id in pb_future_and_id_pairs:
             pb = pb_future.result()
-            embeddings.append(tensor_pb_to_ndarray(pb))
+            embeddings.append(pb_to_ndarray(pb))
             index.extend(ps_ids_index[ps_id])
         embeddings = np.concatenate(embeddings)
 

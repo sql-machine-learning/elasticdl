@@ -17,6 +17,7 @@ from elasticdl.python.common.tensor import (
     emplace_tensor_pb_from_ndarray,
     tensor_pb_to_ndarray,
 )
+from elasticdl.python.common.tensor_utils import pb_to_ndarray
 from elasticdl.python.ps.embedding_table import (
     EmbeddingTable,
     get_slot_table_name,
@@ -82,9 +83,9 @@ class PserverServicerTest(unittest.TestCase):
         pull_req = elasticdl_pb2.PullEmbeddingVectorRequest()
         pull_req.name = name
         pull_req.ids.extend(ids)
-        res = self._stub.pull_embedding_vector(pull_req)
-        if res.content:
-            return tensor_pb_to_ndarray(res)
+        res = self._stub.pull_embedding_table(pull_req)
+        if res.tensor_content:
+            return pb_to_ndarray(res)
         else:
             return None
 
@@ -200,7 +201,7 @@ class PserverServicerTest(unittest.TestCase):
         self.assertEqual(res.model.version, pull_req.current_model_version)
         self.assertTrue(not res.model.param)
 
-    def test_pull_embedding_vector(self):
+    def test_pull_embedding_table(self):
         self.create_default_server_and_stub()
 
         id_list_0 = [1, 3, 9, 6]
