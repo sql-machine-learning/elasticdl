@@ -147,7 +147,7 @@ message PullDenseParametersResponse {
   map<string, tensorflow.TensorProto> dense_parameters = 3;
 }
 
-message PullEmbeddingTableRequest {
+message PullEmbeddingVectorsRequest {
   string name = 1;
   repeated int64 ids = 2;
 }
@@ -167,7 +167,7 @@ service Pserver {
   // refactoring work old rpc service will be removed safely.
   rpc pull_dense_parameters(PullDenseParametersRequest)
       returns (PullDenseParametersResponse);
-  rpc pull_embedding_table(PullEmbeddingTableRequest)
+  rpc pull_embedding_vectors(PullEmbeddingVectorsRequest)
       returns (tensorflow.TensorProto);
   rpc push_gradients(Model) returns (PushGradientsResponse);
 }
