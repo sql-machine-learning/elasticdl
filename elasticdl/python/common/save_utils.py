@@ -195,8 +195,9 @@ class CheckpointSaver(object):
         shards. It is valid if the number of files in the directory N.
         """
         print("checkpiont_dir : ", checkpoint_dir)
-        print(os.popen("ls /saved_model").readlines())
-        print(os.popen("ls /saved_model/mnist").readlines())
+        print(os.popen("ls /mnist_ckpt").readlines())
+        print(os.popen("ls {}".format(checkpoint_dir)).readlines())
+        print(os.popen("ls /").readlines())
         if not os.path.exists(checkpoint_dir):
             return False
 
