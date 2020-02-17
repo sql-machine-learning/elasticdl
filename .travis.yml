@@ -56,7 +56,7 @@ jobs:
           JOB_TYPES=(
               odps
               train
-              evaluation
+              evaluate
               predict
               local
           )

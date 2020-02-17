@@ -6,7 +6,7 @@ WORKER_NUM=$3
 
 # Generate checkpoint for mnist to test evaluation and prediction
 MNIST_CKPT_DIR=${PWD}/mnist/
-python gen_mnist_checkpoint.py --checkpoint_dir=${MNIST_CKPT_DIR}
+python scripts/gen_mnist_checkpoint.py --checkpoint_dir=${MNIST_CKPT_DIR}
 
 if [[ "$JOB_TYPE" == "train" ]]; then
     elasticdl train \
