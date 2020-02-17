@@ -38,6 +38,7 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --output=/saved_model/model_output \
       --volume="host_path=${PWD},mount_path=/saved_model"
 elif [[ "$JOB_TYPE" == "evaluate" ]]; then
+    ls -lisa ${PWD}/mnist && \
     elasticdl evaluate \
       --image_base=elasticdl:ci \
       --model_zoo=model_zoo \
