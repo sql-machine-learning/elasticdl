@@ -83,7 +83,7 @@ class PserverServicerTest(unittest.TestCase):
         pull_req = elasticdl_pb2.PullEmbeddingVectorRequest()
         pull_req.name = name
         pull_req.ids.extend(ids)
-        res = self._stub.pull_embedding_table(pull_req)
+        res = self._stub.pull_embedding_vectors(pull_req)
         if res.tensor_content:
             return pb_to_ndarray(res)
         else:
@@ -201,7 +201,7 @@ class PserverServicerTest(unittest.TestCase):
         self.assertEqual(res.model.version, pull_req.current_model_version)
         self.assertTrue(not res.model.param)
 
-    def test_pull_embedding_table(self):
+    def test_pull_embedding_vectors(self):
         self.create_default_server_and_stub()
 
         id_list_0 = [1, 3, 9, 6]

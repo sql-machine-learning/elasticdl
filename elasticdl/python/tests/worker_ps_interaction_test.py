@@ -167,7 +167,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
         result_dict = {}
         for layer in layers:
-            embedding = worker.pull_embedding_table(layer, ids)
+            embedding = worker.pull_embedding_vectors(layer, ids)
             result_dict[layer] = embedding
 
         for layer in layers:

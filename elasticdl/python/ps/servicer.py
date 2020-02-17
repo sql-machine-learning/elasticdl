@@ -79,15 +79,15 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         res.model_init_status = True
         return res
 
-    def pull_embedding_table(self, request, _):
-        res = tensor_pb2.TensorProto()
+    def pull_embedding_vectors(self, request, _):
+        result = tensor_pb2.TensorProto()
         if not request.ids:
-            return res
+            return result
         embedding_vectors = self._parameters.get_embedding_param(
             request.name, request.ids
         )
-        serialize_ndarray(embedding_vectors, res)
-        return res
+        serialize_ndarray(embedding_vectors, result)
+        return result
 
     def push_model(self, request, _):
         with self._lock:
