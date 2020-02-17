@@ -59,7 +59,7 @@ elif [[ "$JOB_TYPE" == "evaluate" ]]; then
       --tensorboard_log_dir=/tmp/tensorboard-log \
       --job_name=test-evaluate \
       --log_level=INFO \
-      --image_pull_policy=Never \
+      --image_pull_policy=Never
 elif [[ "$JOB_TYPE" == "predict" ]]; then
     elasticdl predict \
       --image_base=elasticdl:ci \
