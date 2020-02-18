@@ -355,8 +355,6 @@ class PserverServicerTest(unittest.TestCase):
             )
 
     def test_push_gradient_sync_update(self):
-        # FIXME(qijun) disable sync unit test
-        return
         self.create_server_and_stub(
             grads_to_wait=2, lr_staleness_modulation=False, use_async=False
         )
@@ -365,13 +363,11 @@ class PserverServicerTest(unittest.TestCase):
         req = elasticdl_pb2.Model()
         req.version = 0
         for g, name in zip(self.grad_values0, self.var_names):
-            emplace_tensor_pb_from_ndarray(req.param, g, name=name)
-        emplace_tensor_pb_from_ndarray(
-            req.param,
-            values=self.embedding_grads0.values,
-            indices=self.embedding_grads0.indices,
-            name=self._embedding_info.name,
+            req.dense_parameters[name].CopyFrom(ndarray_to_pb(g))
+        req.embedding_tables[self._embedding_info.name].CopyFrom(
+            indexed_slices_to_pb(self.embedding_grads0)
         )
+
         res = self._stub.push_gradients(req)
         self.assertEqual(res.accepted, True)
         self.assertEqual(res.version, 0)
@@ -379,12 +375,9 @@ class PserverServicerTest(unittest.TestCase):
         req = elasticdl_pb2.Model()
         req.version = 0
         for g, name in zip(self.grad_values1, self.var_names):
-            emplace_tensor_pb_from_ndarray(req.param, g, name=name)
-        emplace_tensor_pb_from_ndarray(
-            req.param,
-            values=self.embedding_grads1.values,
-            indices=self.embedding_grads1.indices,
-            name=self._embedding_info.name,
+            req.dense_parameters[name].CopyFrom(ndarray_to_pb(g))
+        req.embedding_tables[self._embedding_info.name].CopyFrom(
+            indexed_slices_to_pb(self.embedding_grads1)
         )
         res = self._stub.push_gradients(req)
         self.assertEqual(res.accepted, True)
@@ -393,7 +386,7 @@ class PserverServicerTest(unittest.TestCase):
         req = elasticdl_pb2.Model()
         req.version = 0
         for g, name in zip(self.grad_values1, self.var_names):
-            emplace_tensor_pb_from_ndarray(req.param, g, name=name)
+            req.dense_parameters[name].CopyFrom(ndarray_to_pb(g))
         res = self._stub.push_gradients(req)
         self.assertEqual(res.accepted, False)
         self.assertEqual(res.version, 1)
