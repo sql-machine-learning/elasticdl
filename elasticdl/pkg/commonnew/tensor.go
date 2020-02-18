@@ -1,4 +1,4 @@
-package common
+package commonnew
 
 import (
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"

@@ -1,4 +1,4 @@
-package common
+package commonnew
 
 import (
 	"encoding/binary"
