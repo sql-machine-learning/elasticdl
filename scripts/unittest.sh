@@ -4,7 +4,7 @@ set -e
 make -f elasticdl/Makefile
 
 # Go unittests
-pushd root/elasticdl
+pushd /root/elasticdl
 go install ./...
 go test -v -cover ./...
 popd

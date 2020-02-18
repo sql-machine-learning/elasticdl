@@ -10,7 +10,7 @@ python_pb: elasticdl/proto/elasticdl.proto
 	    elasticdl/proto/elasticdl.proto --python_out=. --grpc_python_out=.
 
 go_pb: elasticdl/proto/elasticdl.proto
-	mkdir -p $(GO_FILE_DIR)
+	mkdir -p $(GO_FILE_DIR) && mkdir -p $GOPATH/pkg/mod
 	protoc -I${TF_PATH} ${TF_PATH}/tensorflow/core/framework/types.proto --go_out=${GOPATH}/pkg/mod
 	protoc -I${TF_PATH} ${TF_PATH}/tensorflow/core/framework/resource_handle.proto --go_out=${GOPATH}/pkg/mod
 	protoc -I${TF_PATH} ${TF_PATH}/tensorflow/core/framework/tensor_shape.proto --go_out=${GOPATH}/pkg/mod
