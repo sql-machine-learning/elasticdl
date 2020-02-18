@@ -201,7 +201,7 @@ def _model_zoo_in_docker(model_zoo, image_pre_built):
     if image_pre_built:
         return model_zoo
 
-    MODEL_ROOT_PATH = "/model_zoo"
+    MODEL_ROOT_PATH = "/"
     return os.path.join(MODEL_ROOT_PATH, os.path.basename(model_zoo))
 
 
