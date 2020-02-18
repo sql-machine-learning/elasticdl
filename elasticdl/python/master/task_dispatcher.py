@@ -195,6 +195,8 @@ class _TaskDispatcher(object):
         SavedModelExporter to execute on_train_end,we include
         a shard of data in this task.
         """
+        if not self._training_shards:
+            return
 
         self.reset_job_counters(elasticdl_pb2.TRAIN_END_CALLBACK)
         shards = self._training_shards

@@ -13,10 +13,8 @@ from elasticdl.python.common.model_utils import (
     load_module,
 )
 from elasticdl.python.common.save_utils import CheckpointSaver
-from elasticdl.python.common.tensor import (
-    emplace_tensor_pb_from_ndarray,
-    tensor_pb_to_ndarray,
-)
+from elasticdl.python.common.tensor import emplace_tensor_pb_from_ndarray
+from elasticdl.python.common.tensor_utils import pb_to_ndarray
 from elasticdl.python.ps.embedding_table import (
     EmbeddingTable,
     get_slot_table_name,
@@ -82,9 +80,9 @@ class PserverServicerTest(unittest.TestCase):
         pull_req = elasticdl_pb2.PullEmbeddingVectorRequest()
         pull_req.name = name
         pull_req.ids.extend(ids)
-        res = self._stub.pull_embedding_vector(pull_req)
-        if res.content:
-            return tensor_pb_to_ndarray(res)
+        res = self._stub.pull_embedding_vectors(pull_req)
+        if res.tensor_content:
+            return pb_to_ndarray(res)
         else:
             return None
 
@@ -163,18 +161,18 @@ class PserverServicerTest(unittest.TestCase):
                     (embedding - slot_init_value[slot_name] < 0.0001).all()
                 )
 
-    def test_pull_variable(self):
+    def test_pull_dense_parameters(self):
         self.create_default_server_and_stub()
         param0 = {
             "v0": np.random.rand(3, 2).astype(np.float32),
             "v1": np.random.rand(10, 32).astype(np.float32),
         }
-        pull_req = elasticdl_pb2.PullVariableRequest()
-        pull_req.current_model_version = -1
+        pull_req = elasticdl_pb2.PullDenseParametersRequest()
+        pull_req.version = -1
         # try to pull variable
-        res = self._stub.pull_variable(pull_req)
+        res = self._stub.pull_dense_parameters(pull_req)
         # not initialized
-        self.assertFalse(res.model_init_status)
+        self.assertFalse(res.initialized)
 
         # init variable
         req = elasticdl_pb2.Model()
@@ -185,22 +183,21 @@ class PserverServicerTest(unittest.TestCase):
         self.assertEqual(res, empty_pb2.Empty())
 
         # pull variable back
-        res = self._stub.pull_variable(pull_req)
-        self.assertTrue(res.model_init_status)
-        self.assertEqual(res.model.version, req.version)
-        for param in res.model.param:
-            name = param.name
-            tensor = tensor_pb_to_ndarray(param)
+        res = self._stub.pull_dense_parameters(pull_req)
+        self.assertTrue(res.initialized)
+        self.assertEqual(res.version, req.version)
+        for name, pb in res.dense_parameters.items():
+            tensor = pb_to_ndarray(pb)
             self.assertTrue(np.allclose(param0[name], tensor))
 
         # pull variable again, no param as no updated version
-        pull_req.current_model_version = res.model.version
-        res = self._stub.pull_variable(pull_req)
-        self.assertTrue(res.model_init_status)
-        self.assertEqual(res.model.version, pull_req.current_model_version)
-        self.assertTrue(not res.model.param)
+        pull_req.version = res.version
+        res = self._stub.pull_dense_parameters(pull_req)
+        self.assertTrue(res.initialized)
+        self.assertEqual(res.version, pull_req.version)
+        self.assertTrue(not res.dense_parameters)
 
-    def test_pull_embedding_vector(self):
+    def test_pull_embedding_vectors(self):
         self.create_default_server_and_stub()
 
         id_list_0 = [1, 3, 9, 6]
@@ -298,18 +295,18 @@ class PserverServicerTest(unittest.TestCase):
         self.push_gradient_test_setup()
 
         # Test applying gradients to embedding and non-embedding parameters
-        req = elasticdl_pb2.PushGradientRequest()
+        req = elasticdl_pb2.Model()
         for g, name in zip(self.grad_values0, self.var_names):
-            emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
+            emplace_tensor_pb_from_ndarray(req.param, g, name=name)
         emplace_tensor_pb_from_ndarray(
-            req.gradients,
+            req.param,
             values=self.embedding_grads0.values,
             indices=self.embedding_grads0.indices,
             name=self._embedding_info.name,
         )
-        res = self._stub.push_gradient(req)
+        res = self._stub.push_gradients(req)
         self.assertEqual(res.accepted, True)
-        self.assertEqual(res.model_version, 1)
+        self.assertEqual(res.version, 1)
         expected_values = [
             v - self._lr * g
             for v, g in zip(self.var_values, self.grad_values0)
@@ -336,14 +333,14 @@ class PserverServicerTest(unittest.TestCase):
         # Test applying gradients with same name
         for name, var in zip(self.var_names, self.var_values):
             self._parameters.non_embedding_params[name] = tf.Variable(var)
-        req = elasticdl_pb2.PushGradientRequest()
+        req = elasticdl_pb2.Model()
         for g in self.grad_values1:
             emplace_tensor_pb_from_ndarray(
-                req.gradients, g, name=self.var_names[0]
+                req.param, g, name=self.var_names[0]
             )
-        res = self._stub.push_gradient(req)
+        res = self._stub.push_gradients(req)
         self.assertEqual(res.accepted, True)
-        self.assertEqual(res.model_version, 2)
+        self.assertEqual(res.version, 2)
         expected_values = [
             self.var_values[0]
             - self._lr * self.grad_values1[0]
@@ -364,41 +361,41 @@ class PserverServicerTest(unittest.TestCase):
         )
         self.push_gradient_test_setup()
 
-        req = elasticdl_pb2.PushGradientRequest()
-        req.model_version = 0
+        req = elasticdl_pb2.Model()
+        req.version = 0
         for g, name in zip(self.grad_values0, self.var_names):
-            emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
+            emplace_tensor_pb_from_ndarray(req.param, g, name=name)
         emplace_tensor_pb_from_ndarray(
-            req.gradients,
+            req.param,
             values=self.embedding_grads0.values,
             indices=self.embedding_grads0.indices,
             name=self._embedding_info.name,
         )
-        res = self._stub.push_gradient(req)
+        res = self._stub.push_gradients(req)
         self.assertEqual(res.accepted, True)
-        self.assertEqual(res.model_version, 0)
+        self.assertEqual(res.version, 0)
 
-        req = elasticdl_pb2.PushGradientRequest()
-        req.model_version = 0
+        req = elasticdl_pb2.Model()
+        req.version = 0
         for g, name in zip(self.grad_values1, self.var_names):
-            emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
+            emplace_tensor_pb_from_ndarray(req.param, g, name=name)
         emplace_tensor_pb_from_ndarray(
-            req.gradients,
+            req.param,
             values=self.embedding_grads1.values,
             indices=self.embedding_grads1.indices,
             name=self._embedding_info.name,
         )
-        res = self._stub.push_gradient(req)
+        res = self._stub.push_gradients(req)
         self.assertEqual(res.accepted, True)
-        self.assertEqual(res.model_version, 1)
+        self.assertEqual(res.version, 1)
 
-        req = elasticdl_pb2.PushGradientRequest()
-        req.model_version = 0
+        req = elasticdl_pb2.Model()
+        req.version = 0
         for g, name in zip(self.grad_values1, self.var_names):
-            emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
-        res = self._stub.push_gradient(req)
+            emplace_tensor_pb_from_ndarray(req.param, g, name=name)
+        res = self._stub.push_gradients(req)
         self.assertEqual(res.accepted, False)
-        self.assertEqual(res.model_version, 1)
+        self.assertEqual(res.version, 1)
 
         expected_values = [
             self.var_values[0]

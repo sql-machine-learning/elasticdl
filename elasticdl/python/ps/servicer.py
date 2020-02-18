@@ -1,13 +1,14 @@
 import threading
 
 from google.protobuf import empty_pb2
+from tensorflow.core.framework import tensor_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.common.tensor import (
-    Tensor,
-    emplace_tensor_pb_from_ndarray,
-    serialize_tensor,
+from elasticdl.python.common.tensor import Tensor
+from elasticdl.python.common.tensor_utils import (
+    ndarray_to_pb,
+    serialize_ndarray,
 )
 from elasticdl.python.ps.optimizer_wrapper import OptimizerWrapper
 
@@ -53,41 +54,38 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._grads_n = 0
         self._grads_buffer = {}
 
-    def pull_variable(self, request, _):
+    def pull_dense_parameters(self, request, _):
         """
         Response with all non-embedding parameters if initialized.
         """
-        res = elasticdl_pb2.PullVariableResponse()
+        res = elasticdl_pb2.PullDenseParametersResponse()
         if not self._parameters.init_status:
-            res.model_init_status = False
+            res.initialized = False
             return res
 
         # Only sync-SGD needs lock
         # TODO: use a read-write lock to support multiple concurrent reads
         if not self._use_async:
             self._lock.acquire()
-        res.model.version = self._parameters.version
+        res.version = self._parameters.version
         # No need to send variables if the requester has the latest version.
-        if self._parameters.version > request.current_model_version:
+        if self._parameters.version > request.version:
             for name, var in self._parameters.non_embedding_params.items():
-                emplace_tensor_pb_from_ndarray(
-                    res.model.param, var.numpy(), name=name
-                )
+                res.dense_parameters[name].CopyFrom(ndarray_to_pb(var.numpy()))
         if not self._use_async:
             self._lock.release()
-        res.model_init_status = True
+        res.initialized = True
         return res
 
-    def pull_embedding_vector(self, request, _):
-        ret = elasticdl_pb2.Tensor()
+    def pull_embedding_vectors(self, request, _):
+        result = tensor_pb2.TensorProto()
         if not request.ids:
-            return ret
+            return result
         embedding_vectors = self._parameters.get_embedding_param(
             request.name, request.ids
         )
-        tensor = Tensor(values=embedding_vectors)
-        serialize_tensor(tensor, ret)
-        return ret
+        serialize_ndarray(embedding_vectors, result)
+        return result
 
     def push_model(self, request, _):
         with self._lock:
@@ -104,11 +102,11 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             self.wrap_optimizer_and_set_slot()
         return empty_pb2.Empty()
 
-    def push_gradient(self, request, _):
-        res = elasticdl_pb2.PushGradientResponse()
+    def push_gradients(self, request, _):
+        res = elasticdl_pb2.PushGradientsResponse()
         if self._use_async:
             grad_vars = []
-            for pb in request.gradients:
+            for pb in request.param:
                 grad = Tensor.from_tensor_pb(pb)
                 self._parameters.check_grad(grad)
                 name = grad.name
@@ -129,19 +127,19 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             self._report_version_if_needed(version)
 
             res.accepted = True
-            res.model_version = self._parameters.version
+            res.version = self._parameters.version
             return res
         else:
             if (
-                request.model_version
+                request.version
                 < self._parameters.version - self._sync_version_tolerance
             ):
                 res.accepted = False
-                res.model_version = self._parameters.version
+                res.version = self._parameters.version
                 return res
 
             with self._lock:
-                for pb in request.gradients:
+                for pb in request.param:
                     grad = Tensor.from_tensor_pb(pb)
                     self._parameters.check_grad(grad)
                     if grad.name in self._grads_buffer:
@@ -184,7 +182,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
             if updated_version:
                 self._report_version_if_needed(version)
-            res.model_version = version
+            res.version = version
             return res
 
     def wrap_optimizer(self):

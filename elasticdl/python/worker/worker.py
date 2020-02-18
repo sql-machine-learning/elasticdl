@@ -32,9 +32,11 @@ from elasticdl.python.common.tensor import (
     Tensor,
     emplace_tensor_pb_from_ndarray,
     serialize_tensor,
-    tensor_pb_to_ndarray,
 )
-from elasticdl.python.common.tensor_utils import deduplicate_indexed_slices
+from elasticdl.python.common.tensor_utils import (
+    deduplicate_indexed_slices,
+    pb_to_ndarray,
+)
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks.saved_model_exporter import (
     SavedModelExporter,
@@ -223,7 +225,7 @@ class Worker(object):
         self._embedding_layers = find_layer(self._model, Embedding)
         if self._use_multi_ps:
             for layer in self._embedding_layers:
-                layer.set_lookup_embedding_func(self.pull_embedding_vector)
+                layer.set_lookup_embedding_func(self.pull_embedding_vectors)
 
     def _init_embedding_column(self):
         self._embedding_columns = []
@@ -240,7 +242,7 @@ class Worker(object):
 
         if self._use_multi_ps:
             for column in self._embedding_columns:
-                column.set_lookup_embedding_func(self.pull_embedding_vector)
+                column.set_lookup_embedding_func(self.pull_embedding_vectors)
 
     def _check_name_conflict_of_embedding_layer_and_column(self):
         if not self._embedding_layers or not self._embedding_columns:
@@ -318,34 +320,33 @@ class Worker(object):
             if ps_id not in self._ps_vars:
                 continue
             # async grpc call
-            req = elasticdl_pb2.PullVariableRequest()
-            req.current_model_version = self._model_versions_from_ps[ps_id]
-            var_future = stub.pull_variable.future(req)
+            req = elasticdl_pb2.PullDenseParametersRequest()
+            req.version = self._model_versions_from_ps[ps_id]
+            var_future = stub.pull_dense_parameters.future(req)
             variable_future_and_id_pairs.append((var_future, ps_id))
 
         for var_future, ps_id in variable_future_and_id_pairs:
             res = var_future.result()
-            if not res.model_init_status:
+            if not res.initialized:
                 # push variable to ps for initialization
                 self.report_variable_to_ps(ps_id)
-                req = elasticdl_pb2.PullVariableRequest()
-                req.current_model_version = self._model_versions_from_ps[ps_id]
-                res = self._ps_stubs[ps_id].pull_variable(req)
-                if not res.model_init_status:
+                req = elasticdl_pb2.PullDenseParametersRequest()
+                req.version = self._model_versions_from_ps[ps_id]
+                res = self._ps_stubs[ps_id].pull_dense_parameters(req)
+                if not res.initialized:
                     # TODO: support PS fault-tolerance
                     raise RuntimeError(
                         "PS pod %d cannot be initialized" % ps_id
                     )
 
-            for tensor_pb in res.model.param:
-                tensor = Tensor.from_tensor_pb(tensor_pb)
-                self._non_embed_vars[tensor.name].assign(tensor.to_ndarray())
-            self._model_versions_from_ps[ps_id] = res.model.version
+            for name, pb in res.dense_parameters.items():
+                self._non_embed_vars[name].assign(pb_to_ndarray(pb))
+            self._model_versions_from_ps[ps_id] = res.version
 
         self._model_version = max(self._model_versions_from_ps)
         self._timing.end_record_time("get_model")
 
-    def pull_embedding_vector(self, layer_name, embedding_ids):
+    def pull_embedding_vectors(self, layer_name, embedding_ids):
         """Pulls and returns embedding vectors ordered by the embedding ids."""
         ps_ids = {}
         ps_ids_index = {}
@@ -361,11 +362,13 @@ class Worker(object):
             req = elasticdl_pb2.PullEmbeddingVectorRequest()
             req.name = layer_name
             req.ids.extend(embedding_ids)
-            pb_future = self._ps_stubs[ps_id].pull_embedding_vector.future(req)
+            pb_future = self._ps_stubs[ps_id].pull_embedding_vectors.future(
+                req
+            )
             pb_future_and_id_pairs.append((pb_future, ps_id))
         for pb_future, ps_id in pb_future_and_id_pairs:
             pb = pb_future.result()
-            embeddings.append(tensor_pb_to_ndarray(pb))
+            embeddings.append(pb_to_ndarray(pb))
             index.extend(ps_ids_index[ps_id])
         embeddings = np.concatenate(embeddings)
 
@@ -460,9 +463,7 @@ class Worker(object):
 
     def report_gradient_to_ps(self, grads):
         self._timing.start_record_time("report_gradient")
-        reqs = [
-            elasticdl_pb2.PushGradientRequest() for i in range(self._ps_num)
-        ]
+        reqs = [elasticdl_pb2.Model() for i in range(self._ps_num)]
         ps_grads = {}
         non_embed_vars_n = len(self._non_embed_vars)
         for g, v in zip(
@@ -477,7 +478,7 @@ class Worker(object):
         for ps_id in ps_grads:
             req = reqs[ps_id]
             for g, name in ps_grads[ps_id]:
-                emplace_tensor_pb_from_ndarray(req.gradients, g, name=name)
+                emplace_tensor_pb_from_ndarray(req.param, g, name=name)
 
         edl_embedding_name_values = self._collect_edl_embedding_name_values()
 
@@ -525,14 +526,14 @@ class Worker(object):
                     req = reqs[ps_id]
                     gv, gi = results[ps_id]
                     emplace_tensor_pb_from_ndarray(
-                        req.gradients, values=gv, indices=gi, name=name
+                        req.param, values=gv, indices=gi, name=name
                     )
 
         report_futures = []
         for ps_id in range(self._ps_num):
             req = reqs[ps_id]
-            req.model_version = self._model_versions_from_ps[ps_id]
-            report_future = self._ps_stubs[ps_id].push_gradient.future(req)
+            req.version = self._model_versions_from_ps[ps_id]
+            report_future = self._ps_stubs[ps_id].push_gradients.future(req)
             report_futures.append(report_future)
 
         accepted = False
@@ -541,8 +542,8 @@ class Worker(object):
             res = report_future.result()
             if res.accepted:
                 accepted = True
-            if res.model_version > max_version:
-                max_version = res.model_version
+            if res.version > max_version:
+                max_version = res.version
         self._timing.end_record_time("report_gradient")
         return accepted, max_version
 
