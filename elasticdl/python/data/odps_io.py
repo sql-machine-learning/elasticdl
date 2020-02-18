@@ -240,6 +240,29 @@ class ODPSReader(object):
                 time.sleep(5)
                 retry_count += 1
 
+    def record_generator_with_retry(
+        self, start, end, columns=None, max_retries=3
+    ):
+        """Wrap record_generator with retry to avoid ODPS table read failure
+        due to network instability.
+        """
+        retry_count = 0
+        while retry_count < max_retries:
+            try:
+                for record in self.record_generator(start, end, columns):
+                    yield record
+            except Exception as e:
+                if retry_count >= max_retries:
+                    raise Exception("Exceeded maximum number of retries")
+                logger.warning(
+                    "ODPS read exception {} for {} in {}."
+                    "Retrying time: {}".format(
+                        e, columns, self._table, retry_count
+                    )
+                )
+                time.sleep(5)
+                retry_count += 1
+
     def record_generator(self, start, end, columns=None):
         """Generate records from an ODPS table
         """
