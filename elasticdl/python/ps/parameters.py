@@ -63,7 +63,7 @@ class Parameters(object):
             param_shape = tuple(
                 self.non_embedding_params[name].get_shape().as_list()
             )
-            if grad.is_indexed_slices():
+            if grad.indices is not None:
                 dim0 = tf.math.reduce_max(grad.indices).numpy()
                 dim1 = grad.values.shape[1]
                 if dim0 > param_shape[0] or dim1 != param_shape[1]:

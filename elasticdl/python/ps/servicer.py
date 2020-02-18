@@ -113,7 +113,9 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
             for name, pb in request.dense_parameters.items():
                 grad = pb_to_ndarray(pb)
-                self._parameters.check_grad(Tensor(name, grad, None))
+                self._parameters.check_grad(
+                    tensor_utils.Tensor(name, grad, None)
+                )
                 grad = tf.constant(grad)
                 var = self._parameters.get_non_embedding_param(name)
                 grad_vars.append((grad, var))
