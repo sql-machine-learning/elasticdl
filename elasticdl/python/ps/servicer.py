@@ -5,11 +5,11 @@ from tensorflow.core.framework import tensor_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.common.tensor import (
-    Tensor,
-    emplace_tensor_pb_from_ndarray,
+from elasticdl.python.common.tensor import Tensor
+from elasticdl.python.common.tensor_utils import (
+    ndarray_to_pb,
+    serialize_ndarray,
 )
-from elasticdl.python.common.tensor_utils import serialize_ndarray
 from elasticdl.python.ps.optimizer_wrapper import OptimizerWrapper
 
 
@@ -54,29 +54,27 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._grads_n = 0
         self._grads_buffer = {}
 
-    def pull_variable(self, request, _):
+    def pull_dense_parameters(self, request, _):
         """
         Response with all non-embedding parameters if initialized.
         """
-        res = elasticdl_pb2.PullVariableResponse()
+        res = elasticdl_pb2.PullDenseParametersResponse()
         if not self._parameters.init_status:
-            res.model_init_status = False
+            res.initialized = False
             return res
 
         # Only sync-SGD needs lock
         # TODO: use a read-write lock to support multiple concurrent reads
         if not self._use_async:
             self._lock.acquire()
-        res.model.version = self._parameters.version
+        res.version = self._parameters.version
         # No need to send variables if the requester has the latest version.
-        if self._parameters.version > request.current_model_version:
+        if self._parameters.version > request.version:
             for name, var in self._parameters.non_embedding_params.items():
-                emplace_tensor_pb_from_ndarray(
-                    res.model.param, var.numpy(), name=name
-                )
+                res.dense_parameters[name].CopyFrom(ndarray_to_pb(var.numpy()))
         if not self._use_async:
             self._lock.release()
-        res.model_init_status = True
+        res.initialized = True
         return res
 
     def pull_embedding_vectors(self, request, _):
