@@ -18,4 +18,3 @@ go get github.com/rakyll/gotest
 go get github.com/wangkuiyi/goyaccfmt
 
 cp $GOPATH/bin/* /usr/local/bin/
-
