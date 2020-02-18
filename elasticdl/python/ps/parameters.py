@@ -1,12 +1,11 @@
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.tensor import (
-    Tensor,
-    deserialize_tensor_pb,
-    emplace_tensor_pb_from_ndarray,
-    serialize_tensor,
-    tensor_pb_to_ndarray,
+from elasticdl.python.common.tensor_utils import (
+    indexed_slices_to_pb,
+    ndarray_to_pb,
+    pb_to_indexed_slices,
+    pb_to_ndarray,
 )
 from elasticdl.python.ps.embedding_table import (
     EmbeddingTable,
@@ -30,13 +29,13 @@ class Parameters(object):
 
     def __init__(self):
         self.version = 0
-        self.init_status = False
+        self.initialized = False
         self.non_embedding_params = {}
         self.embedding_params = {}
 
     def reset(self):
         self.version = 0
-        self.init_status = False
+        self.initialized = False
         self.non_embedding_params.clear()
         self.embedding_params.clear()
 
@@ -126,32 +125,25 @@ class Parameters(object):
         Returns:
             A bool indicates whether `Parameters` accepts this model pb or not.
         """
-        if not self.init_status:
-            tensors_pb = model_pb.param
-            embeddings_pb = model_pb.embedding_table_info
-            self.init_embedding_params(embeddings_pb)
-            self._restore_params_from_pb(tensors_pb)
-            self.version = max(0, model_pb.version)
-            self.init_status = True
-            return True
-        return False
-
-    def _restore_params_from_pb(self, tensors_pb):
-        for pb in tensors_pb:
-            name = pb.name
-            if not pb.indices:
+        if not self.initialized:
+            infos = model_pb.embedding_table_info
+            self.init_embedding_params(infos)
+            for name, pb in model_pb.dense_parameters.items():
                 # Please note that `tf.Variable` will do something with magic.
                 # If you pass a name "somename" to a `tf.Variable`, the final
                 # variable name will be "somename:0". So the `tf.Variable.name`
                 # is meaningless, we must avoid use it in PS side.
-                arr = tensor_pb_to_ndarray(pb)
+                arr = pb_to_ndarray(pb)
                 var = tf.Variable(initial_value=arr, trainable=True)
                 self.non_embedding_params[name] = var
-            else:
-                # Only pb of embedding parameters has indices.
-                tensor = Tensor()
-                deserialize_tensor_pb(pb, tensor)
-                self.embedding_params[name].set(tensor.indices, tensor.values)
+
+            for name, pb in model_pb.embedding_tables.items():
+                s = pb_to_indexed_slices(pb)
+                self.embedding_params[name].set(s.indices, s.values)
+            self.version = max(0, model_pb.version)
+            self.initialized = True
+            return True
+        return False
 
     def init_embedding_params(self, embeddings_pb):
         for pb in embeddings_pb:
@@ -184,21 +176,19 @@ class Parameters(object):
         model_pb = elasticdl_pb2.Model()
         model_pb.version = self.version
         for name, var in self.non_embedding_params.items():
-            emplace_tensor_pb_from_ndarray(
-                model_pb.param, var.numpy(), name=name
+            model_pb.dense_parameters[name].CopyFrom(
+                ndarray_to_pb(var.numpy())
             )
 
         for name, embedding_table in self.embedding_params.items():
             # Slot embedding table is not weights in the model, so we don't
             # save it to checkpoint.
             if not embedding_table.is_slot:
-                embedding_table_tensor = embedding_table.to_tensor()
-                tensor_pb = model_pb.param.add()
-                serialize_tensor(embedding_table_tensor, tensor_pb)
-
+                model_pb.embedding_tables[name].CopyFrom(
+                    indexed_slices_to_pb(embedding_table.to_indexed_slices())
+                )
                 embedding_info = embedding_table.to_embedding_table_info_pb()
                 model_pb.embedding_table_info.append(embedding_info)
-
         return model_pb
 
     def debug_info(self):

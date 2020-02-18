@@ -14,7 +14,7 @@ from elasticdl.python.ps.embedding_table import (
 class EmbeddingTableTest(unittest.TestCase):
     def setUp(self):
         self.name = "embedding_1"
-        self.dim = 10
+        self.dim = 1
         self.initializer = "uniform"
         self.table = EmbeddingTable(self.name, self.dim, self.initializer)
 

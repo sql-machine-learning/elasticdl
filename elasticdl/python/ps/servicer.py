@@ -63,7 +63,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         Response with all non-embedding parameters if initialized.
         """
         res = elasticdl_pb2.PullDenseParametersResponse()
-        if not self._parameters.init_status:
+        if not self._parameters.initialized:
             res.initialized = False
             return res
 
