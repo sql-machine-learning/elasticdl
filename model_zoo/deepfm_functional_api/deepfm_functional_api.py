@@ -11,6 +11,9 @@ from tensorflow.keras.layers import (
 
 from elasticdl.python.common.constants import Mode
 from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
+from elasticdl.python.elasticdl.callbacks.max_steps_stopping import (
+    MaxStepsStopping
+)
 
 AUC_metric = None
 
@@ -121,6 +124,11 @@ def eval_metrics_fn():
         },
         "probs": {"auc": tf.keras.metrics.AUC()},
     }
+
+
+def callbacks():
+    max_steps_stopping = MaxStepsStopping(max_steps=200)
+    return [max_steps_stopping]
 
 
 CustomDataReader = RecordIODataReader

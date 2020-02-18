@@ -21,8 +21,10 @@ from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
     get_module_file_path,
     get_optimizer_info,
+    load_callbacks_from_module,
     load_model_from_module,
     load_module,
+    set_callback_parameters,
 )
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.master.evaluation_service import EvaluationService
@@ -40,6 +42,7 @@ def _make_task_dispatcher(
     num_epochs,
     data_reader_params,
     create_data_reader_fn,
+    callbacks_list,
 ):
     def _maybe_create_shards(data_origin):
         kwargs = get_dict_from_params_str(data_reader_params)
@@ -63,6 +66,7 @@ def _make_task_dispatcher(
         records_per_task,
         # Only generate prediction tasks for 1 epoch
         1 if prediction_f_records else num_epochs,
+        callbacks_list,
     )
 
 
@@ -96,6 +100,16 @@ class Master(object):
         self.model_inst = load_model_from_module(
             args.model_def, self.model_module, args.model_params
         )
+        self.callbacks_list = load_callbacks_from_module(
+            args.callbacks, self.model_module
+        )
+        self.callbacks_list.set_model(self.model_inst)
+        set_callback_parameters(
+            self.callbacks_list,
+            batch_size=args.minibatch_size,
+            saved_model_path=args.output,
+            checkpoint_path=args.checkpoint_dir,
+        )
         self.optimizer = self.model_module[args.optimizer]()
         self._create_data_reader_fn = create_data_reader
         if args.custom_data_reader in self.model_module:
@@ -113,6 +127,7 @@ class Master(object):
             args.num_epochs,
             args.data_reader_params,
             self._create_data_reader_fn,
+            self.callbacks_list,
         )
 
         self.task_d.add_deferred_callback_create_train_end_task()
