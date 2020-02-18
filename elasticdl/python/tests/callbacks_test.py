@@ -12,6 +12,7 @@ from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.elasticdl.callbacks.saved_model_exporter import (
     SavedModelExporter,
 )
+from elasticdl.python.tests.test_utils import save_checkpoint_without_embedding
 from elasticdl.python.worker.task_data_service import TaskDataService
 
 
@@ -50,17 +51,20 @@ class SavedModelExporterTest(unittest.TestCase):
             elasticdl_pb2.TRAIN_END_CALLBACK,
         )
         task_data_service.get_dataset_by_task = mock.Mock(return_value=dataset)
-        model_handler = ModelHandler.get_model_handler(
-            distribution_strategy=DistributionStrategy.PARAMETER_SERVER,
-            checkpoint_dir="elasticdl/python/tests/testdata/functional_ckpt/",
-        )
-        saved_model_exporter = SavedModelExporter(
-            task_data_service, dataset_fn, model_handler
-        )
+
         with tempfile.TemporaryDirectory() as temp_dir_name:
+            checkpoint_dir = os.path.join(temp_dir_name, "checkpoint")
+            model = custom_model_with_embedding_layer()
+            save_checkpoint_without_embedding(model, checkpoint_dir)
+            model_handler = ModelHandler.get_model_handler(
+                distribution_strategy=DistributionStrategy.PARAMETER_SERVER,
+                checkpoint_dir=checkpoint_dir,
+            )
+            saved_model_exporter = SavedModelExporter(
+                task_data_service, dataset_fn, model_handler
+            )
             saved_model_path = os.path.join(temp_dir_name, "test_exporter")
             params = {"batch_size": 10, "saved_model_path": saved_model_path}
-            model = custom_model_with_embedding_layer()
             saved_model_exporter.set_params(params)
             saved_model_exporter.set_model(model)
             saved_model_exporter.on_train_end()

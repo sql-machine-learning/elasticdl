@@ -4,6 +4,11 @@ JOB_TYPE=$1
 PS_NUM=$2
 WORKER_NUM=$3
 
+# Generate checkpoint for mnist to test evaluation and prediction
+MNIST_CKPT_DIR=model_zoo/test_data/mnist_ckpt/
+python -m scripts.gen_mnist_checkpoint --checkpoint_dir=${MNIST_CKPT_DIR}
+
+
 if [[ "$JOB_TYPE" == "train" ]]; then
     elasticdl train \
       --image_base=elasticdl:ci \
@@ -37,7 +42,7 @@ elif [[ "$JOB_TYPE" == "evaluate" ]]; then
       --image_base=elasticdl:ci \
       --model_zoo=model_zoo \
       --model_def=mnist_functional_api.mnist_functional_api.custom_model \
-      --checkpoint_dir_for_init=elasticdl/python/tests/testdata/mnist_functional_api_model/version-110  \
+      --checkpoint_dir_for_init=model_zoo/${MNIST_CKPT_DIR}/version-100  \
       --validation_data=/data/mnist/test \
       --num_epochs=1 \
       --master_resource_request="cpu=0.3,memory=1024Mi" \
@@ -60,7 +65,7 @@ elif [[ "$JOB_TYPE" == "predict" ]]; then
       --image_base=elasticdl:ci \
       --model_zoo=model_zoo \
       --model_def=mnist_functional_api.mnist_functional_api.custom_model \
-      --checkpoint_dir_for_init=elasticdl/python/tests/testdata/mnist_functional_api_model/version-110 \
+      --checkpoint_dir_for_init=model_zoo/${MNIST_CKPT_DIR}/version-100 \
       --prediction_data=/data/mnist/test \
       --master_resource_request="cpu=0.2,memory=1024Mi" \
       --master_resource_limit="cpu=1,memory=2048Mi" \
