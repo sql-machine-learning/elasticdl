@@ -1,13 +1,17 @@
 import threading
 
+import tensorflow as tf
 from google.protobuf import empty_pb2
 from tensorflow.core.framework import tensor_pb2
 
+import elasticdl.python.common.tensor_utils as tensor_utils
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor import Tensor
 from elasticdl.python.common.tensor_utils import (
     ndarray_to_pb,
+    pb_to_indexed_slices,
+    pb_to_ndarray,
     serialize_ndarray,
 )
 from elasticdl.python.ps.optimizer_wrapper import OptimizerWrapper
@@ -106,17 +110,24 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         res = elasticdl_pb2.PushGradientsResponse()
         if self._use_async:
             grad_vars = []
-            for pb in request.param:
-                grad = Tensor.from_tensor_pb(pb)
-                self._parameters.check_grad(grad)
-                name = grad.name
-                var = self._parameters.get_non_embedding_param(name)
-                grad = grad.to_tf_tensor()
-                if var is None:
-                    grad_vars.append((grad, name))
-                else:
-                    grad_vars.append((grad, var))
 
+            for name, pb in request.dense_parameters.items():
+                grad = pb_to_ndarray(pb)
+                self._parameters.check_grad(Tensor(name, grad, None))
+                grad = tf.constant(grad)
+                var = self._parameters.get_non_embedding_param(name)
+                grad_vars.append((grad, var))
+
+            for name, pb in request.embedding_tables.items():
+                grad = pb_to_indexed_slices(pb)
+                self._parameters.check_grad(
+                    tensor_utils.Tensor(name, grad.values, grad.indices)
+                )
+                if name in self._parameters.non_embedding_params:
+                    var = self._parameters.get_non_embedding_param(name)
+                    grad_vars.append((grad, var))
+                else:
+                    grad_vars.append((grad, name))
             if self._lr_scheduler:
                 self._lr_scheduler.set_model_version(self._parameters.version)
             self._optimizer.apply_gradients(grad_vars)

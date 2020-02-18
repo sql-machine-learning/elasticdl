@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.core.framework import tensor_pb2
@@ -7,6 +9,8 @@ from elasticdl.python.common.dtypes import (
     dtype_numpy_to_tensor,
     dtype_tensor_to_numpy,
 )
+
+Tensor = namedtuple("Tensor", ("name", "values", "indices"))
 
 
 def merge_indexed_slices(*args):

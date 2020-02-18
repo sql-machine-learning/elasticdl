@@ -35,6 +35,9 @@ from elasticdl.python.common.tensor import (
 )
 from elasticdl.python.common.tensor_utils import (
     deduplicate_indexed_slices,
+    indexed_slices_to_pb,
+    merge_indexed_slices,
+    ndarray_to_pb,
     pb_to_ndarray,
 )
 from elasticdl.python.common.timing_utils import Timing
@@ -471,14 +474,36 @@ class Worker(object):
         ):
             ps_id = self._var_to_ps[v.name]
             if ps_id not in ps_grads:
-                ps_grads[ps_id] = [(g, v.name)]
+                ps_grads[ps_id] = {v.name: g}
             else:
-                ps_grads[ps_id].append((g, v.name))
+                if v.name not in ps_grads[ps_id]:
+                    ps_grads[ps_id][v.name] = g
+                else:
+                    if g.indices is not None:
+                        ps_grads[ps_id][v.name] = merge_indexed_slices(
+                            ps_grads[ps_id][v.name], g
+                        )
+                    else:
+                        ps_grads[ps_id][v.name] += g
+
+        for ps_id, pair in ps_grads.items():
+            for name, g in pair.items():
+                if g.indices is not None:
+                    ps_grads[ps_id][name] = tf.IndexedSlices(
+                        deduplicate_indexed_slices(g.values, g.indices)
+                    )
 
         for ps_id in ps_grads:
             req = reqs[ps_id]
-            for g, name in ps_grads[ps_id]:
-                emplace_tensor_pb_from_ndarray(req.param, g, name=name)
+            for name, g in ps_grads[ps_id].items():
+                # Keras embedding layer has a dense parameter,
+                # but an indexed slices type gradient
+                if g.indices is not None:
+                    req.embedding_tables[name].CopyFrom(
+                        indexed_slices_to_pb(g)
+                    )
+                else:
+                    req.dense_parameters[name].CopyFrom(ndarray_to_pb(g))
 
         edl_embedding_name_values = self._collect_edl_embedding_name_values()
 
@@ -525,8 +550,8 @@ class Worker(object):
                 for ps_id in results:
                     req = reqs[ps_id]
                     gv, gi = results[ps_id]
-                    emplace_tensor_pb_from_ndarray(
-                        req.param, values=gv, indices=gi, name=name
+                    req.embedding_tables[name].CopyFrom(
+                        indexed_slices_to_pb(tf.IndexedSlices(gv, gi))
                     )
 
         report_futures = []
