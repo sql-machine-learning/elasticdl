@@ -48,12 +48,15 @@ COPY elasticdl/docker/scripts/install-protobuf.bash /
 RUN /install-protobuf.bash && rm /install-protobuf.bash
 
 # Install elasticdl.org/elasticdl Go package
-ENV ELASTICDLPATH $GOPATH/src/elasticdl.org/elasticdl
+ENV ELASTICDLPATH /root/elasticdl
 ENV TF_PATH /tmp/tensorflow
 RUN cd /tmp && git clone --depth=1 https://github.com/tensorflow/tensorflow.git
 COPY . /tmp/elasticdl
 RUN cd /tmp/elasticdl && mkdir -p $ELASTICDLPATH && \
     make -f elasticdl/Makefile && \
     cp -r /tmp/elasticdl/elasticdl/pkg $ELASTICDLPATH && \
-    cd $GOPATH/src/elasticdl.org/elasticdl && \
+    cd $ELASTICDLPATH && \
+    go mod init elasticdl.org\
+    go mod edit -replace github.com/tensorflow=${GOPATH}/pkg/mod/github.com/tensorflow
+    go mod tidy
     go install ./... && cd / && rm -rf /tmp/elasticdl
