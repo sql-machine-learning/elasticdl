@@ -268,10 +268,6 @@ class _TaskDispatcher(object):
                 self.create_tasks(elasticdl_pb2.TRAINING)
                 logger.info("Starting epoch %d", self._epoch)
 
-            if self._callbacks_list.model.stop_training:
-                # Clear todo list to stop training
-                self._todo = []
-
             if not self._todo:
                 # No more tasks
                 return -1, None
@@ -318,6 +314,10 @@ class _TaskDispatcher(object):
                 )
         if evaluation_task_completed:
             self._evaluation_service.complete_task()
+
+        if self._callbacks_list.model.stop_training:
+            # Clear todo list to stop training
+            self._todo = []
 
     def finished(self):
         """Return if all tasks are done"""
