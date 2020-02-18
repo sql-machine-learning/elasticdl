@@ -2,6 +2,8 @@
 
 import random
 import threading
+import tensorflow as tf
+from tensorflow.python.keras.callbacks import CallbackList
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import TaskExecCounterKey
@@ -65,7 +67,7 @@ class _TaskDispatcher(object):
         prediction_shards,
         records_per_task,
         num_epochs,
-        callbacks_list,
+        callbacks_list=None,
     ):
         """
         Arguments:
@@ -89,8 +91,7 @@ class _TaskDispatcher(object):
         self._evaluation_shards = evaluation_shards
         self._prediction_shards = prediction_shards
         self._records_per_task = records_per_task
-        self._callbacks_list = callbacks_list
-        self._callbacks_list.model.stop_training = False
+        self._init_callbacks(callbacks_list)
 
         self._todo = []
         # dictionary from task id to Task.
@@ -111,6 +112,15 @@ class _TaskDispatcher(object):
             self.create_tasks(elasticdl_pb2.EVALUATION)
         elif self._prediction_shards:
             self.create_tasks(elasticdl_pb2.PREDICTION)
+
+    def _init_callbacks(self, callbacks_list):
+        if callbacks_list is None:
+            self._callbacks_list = CallbackList([])
+            self._callbacks_list.set_model(tf.keras.Model())
+        else:
+            self._callbacks_list = callbacks_list
+
+        self._callbacks_list.model.stop_training = False
 
     def reset_job_counters(self, task_type):
         """Return record number in specific task_type"""
