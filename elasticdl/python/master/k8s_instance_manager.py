@@ -142,6 +142,15 @@ class InstanceManager(object):
         )
         return _SERVICE_ADDR_SEP.join(addrs_list)
 
+    def _update_worker_addr(self, old_worker_id, new_worker_id):
+        new_addr = self._update_addr(
+            old_worker_id,
+            new_worker_id,
+            self._worker_addrs,
+            addr_get_fn=self._k8s_client.get_worker_service_address,
+        )
+        self._worker_addrs = new_addr
+
     def update_status(self, status):
         master_name = self._k8s_client.get_master_pod_name()
         self._k8s_client.patch_labels_to_pod(
@@ -222,8 +231,10 @@ class InstanceManager(object):
         with self._lock:
             if pod_name in self._failed_pods:
                 return
-            # Workaround for memory leak issues in tf eager mode.
-            # A pod may fail due to OOM from tf eager mode memory leak.
+            # When a pod fails with exit_code == 137, it may be deleted,
+            # preempted, or OOMkilled. Master will try to relaunch it.
+            # For OOMkilled, the relaunch is a workaround for memory leak
+            # issues in tf eager mode.
             failed_pod = False
             if (
                 evt_type == "MODIFIED"
@@ -232,12 +243,20 @@ class InstanceManager(object):
                 and evt_obj.status.container_statuses[0].state.terminated
                 and evt_obj.status.container_statuses[
                     0
-                ].state.terminated.reason
-                == "OOMKilled"
+                ].state.terminated.exit_code
+                == 137
             ):
                 self._failed_pods.append(pod_name)
                 failed_pod = True
-                logger.info("Pod %s is OOMKilled." % pod_name)
+                logger.info(
+                    "Pod %s is killed with reason %s."
+                    % (
+                        pod_name,
+                        evt_obj.status.container_statuses[
+                            0
+                        ].state.terminated.reason,
+                    )
+                )
             if pod_name in self._worker_pod_name_to_id:
                 worker_id = self._worker_pod_name_to_id.get(pod_name)
                 self._worker_pods_phase[worker_id] = (pod_name, phase)
@@ -267,12 +286,8 @@ class InstanceManager(object):
             logger.info("Relaunching worker.")
             new_worker_id = self._next_worker_id()
             self._start_worker(new_worker_id)
-            self._update_addr(
-                worker_id,
-                new_worker_id,
-                self._worker_addrs,
-                addr_get_fn=self._k8s_client.get_worker_service_address,
-            )
+            with self._lock:
+                self._update_worker_addr(worker_id, new_worker_id)
         elif relaunch_ps:
             logger.info("Relaunching ps.")
             # Note: the ID and service address for relaunched parameter
