@@ -79,7 +79,7 @@ elif [[ "$JOB_TYPE" == "predict" ]]; then
       --num_ps_pods=$PS_NUM \
       --job_name=test-predict \
       --log_level=INFO \
-      --image_pull_policy=Never 
+      --image_pull_policy=Never
 elif [[ "$JOB_TYPE" == "local" ]]; then
     elasticdl train \
       --model_zoo=model_zoo \
