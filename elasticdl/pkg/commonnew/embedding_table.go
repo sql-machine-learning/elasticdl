@@ -24,13 +24,12 @@ func NewIndexedSlices(t *Tensor, indices []int64) *proto.IndexedSlices {
 
 // NewEmbeddingTable creates an embedding table instance
 func NewEmbeddingTable(dim int64, initializer string, dtype types_go_proto.DataType) *EmbeddingTable {
-	var e = EmbeddingTable{
+	return &EmbeddingTable{
 		Dim:              dim,
 		Initializer:      initializer,
 		EmbeddingVectors: make(map[int64]*Tensor),
 		Dtype:            dtype,
 	}
-	return &e
 }
 
 // GetEmbeddingVector returns an REFERENCE of embedding vector giving an index
