@@ -47,9 +47,6 @@ func (e *EmbeddingTable) GetEmbeddingVectors(indices []int64) *Tensor {
 func (e *EmbeddingTable) SetEmbeddingVectors(idxslice *proto.IndexedSlices) error {
 	idxsliceTensor := DeserializeFromTensorPB(idxslice.ConcatTensors)
 	for i, index := range idxslice.Ids {
-		if index == -1 {
-			continue
-		}
 		value := e.GetEmbeddingVector(index)
 		copy(value.Buffer, idxsliceTensor.GetRow(int64(i)).Buffer)
 	}
