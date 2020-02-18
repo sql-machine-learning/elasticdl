@@ -65,6 +65,12 @@ class MaxStepsStopping(tf.keras.callbacks.Callback):
         self._max_steps = max_steps
         self._completed_steps = 0
 
+    def set_completed_steps(self, completed_steps):
+        """We need to set completed steps if we load the model from
+        a checkpoint where the model has been trained.
+        """
+        self._completed_steps = completed_steps
+
     def on_task_end(self, task, logs=None):
         """Call on the task end
         Args:

@@ -26,7 +26,9 @@ from elasticdl.python.common.model_utils import (
     load_module,
     set_callback_parameters,
 )
+from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
+from elasticdl.python.elasticdl.callbacks import MaxStepsStopping
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl.python.master.servicer import MasterServicer
@@ -141,6 +143,18 @@ class Master(object):
 
         self._should_stop = False
         self._exit_code = 0
+
+    def _set_completed_steps_by_checkpoint(self, checkpoint_dir_for_init):
+        if not checkpoint_dir_for_init:
+            return
+
+        CheckpointSaver.check_checkpoint_valid(checkpoint_dir_for_init)
+        model_verion = CheckpointSaver.get_version_from_checkpoint(
+            checkpoint_dir_for_init
+        )
+        for callback in self.callbacks_list.callbacks:
+            if isinstance(callback, MaxStepsStopping):
+                callback.set_completed_steps(model_verion)
 
     def request_stop(self, err_msg=None):
         """Request master to quit"""

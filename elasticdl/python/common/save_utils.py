@@ -259,3 +259,11 @@ class CheckpointSaver(object):
         parameters.embedding_params.update(embedding_tables)
         parameters.version = version
         return parameters
+
+    @staticmethod
+    def get_version_from_checkpoint(checkpoint_dir):
+        variable_shard_files = os.listdir(checkpoint_dir)
+        shard_file_path = os.path.join(checkpoint_dir, variable_shard_files[0])
+        model_pb = elasticdl_pb2.Model()
+        model_pb = load_pb_from_file(model_pb, shard_file_path)
+        return model_pb.version
