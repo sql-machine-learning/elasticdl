@@ -4,6 +4,7 @@ import (
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_shape_go_proto"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/types_go_proto"
+	"elasticdl.org/elasticdl/pkg/proto"
 	"reflect"
 	"unsafe"
 )
@@ -133,8 +134,8 @@ func Slice(t *Tensor) interface{} {
 	return val.Interface()
 }
 
-// DeserializeTensorPB transforms pb to tensor
-func DeserializeTensorPB(pb *tensor_go_proto.TensorProto) *Tensor {
+// DeserializeFromTensorPB transforms pb to tensor
+func DeserializeFromTensorPB(pb *tensor_go_proto.TensorProto) *Tensor {
 	pbDim := pb.GetTensorShape().GetDim()
 	dims := make([]int64, len(pbDim), len(pbDim))
 	for i, iDim := range pbDim {
@@ -151,8 +152,8 @@ func DeserializeTensorPB(pb *tensor_go_proto.TensorProto) *Tensor {
 	}
 }
 
-// SerializeTensor transforms tensor to pb
-func (t *Tensor) SerializeTensor() *tensor_go_proto.TensorProto {
+// SerializeToTensor transforms tensor to pb
+func (t *Tensor) SerializeToTensor() *tensor_go_proto.TensorProto {
 	shapeDim := make([]*tensor_shape_go_proto.TensorShapeProto_Dim, len(t.Dims), len(t.Dims))
 	for i, dim := range t.Dims {
 		shapeDim[i] = &tensor_shape_go_proto.TensorShapeProto_Dim{
@@ -167,4 +168,13 @@ func (t *Tensor) SerializeTensor() *tensor_go_proto.TensorProto {
 		TensorShape:   &pbDim,
 		Dtype:         t.Dtype,
 	}
+}
+
+// SerializeToIndexedSlices return proto.IndexedSlices
+func (t *Tensor) SerializeToIndexedSlices(indices []int64) *proto.IndexedSlices {
+	var i = proto.IndexedSlices{
+		ConcatTensors: t.SerializeToTensor(),
+		Ids:           indices,
+	}
+	return &i
 }

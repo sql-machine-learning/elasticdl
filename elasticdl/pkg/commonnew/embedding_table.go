@@ -13,15 +13,6 @@ type EmbeddingTable struct {
 	Dtype            types_go_proto.DataType
 }
 
-// NewIndexedSlices return proto.IndexedSlices
-func NewIndexedSlices(t *Tensor, indices []int64) *proto.IndexedSlices {
-	var i = proto.IndexedSlices{
-		ConcatTensors: t.SerializeTensor(),
-		Ids:           indices,
-	}
-	return &i
-}
-
 // NewEmbeddingTable creates an embedding table instance
 func NewEmbeddingTable(dim int64, initializer string, dtype types_go_proto.DataType) *EmbeddingTable {
 	return &EmbeddingTable{
@@ -57,7 +48,7 @@ func (e *EmbeddingTable) GetEmbeddingVectors(indices []int64) *Tensor {
 
 // SetEmbeddingVectors sets (indices, value) pair to embedding vector
 func (e *EmbeddingTable) SetEmbeddingVectors(idxslice *proto.IndexedSlices) error {
-	idxsliceTensor := DeserializeTensorPB(idxslice.ConcatTensors)
+	idxsliceTensor := DeserializeFromTensorPB(idxslice.ConcatTensors)
 	for i, index := range idxslice.Ids {
 		if index == -1 {
 			continue
