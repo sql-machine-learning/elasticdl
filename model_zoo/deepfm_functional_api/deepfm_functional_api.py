@@ -11,9 +11,7 @@ from tensorflow.keras.layers import (
 
 from elasticdl.python.common.constants import Mode
 from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
-from elasticdl.python.elasticdl.callbacks.max_steps_stopping import (
-    MaxStepsStopping
-)
+from elasticdl.python.elasticdl.callbacks import MaxStepsStopping
 
 AUC_metric = None
 

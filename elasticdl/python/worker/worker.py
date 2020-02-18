@@ -38,9 +38,7 @@ from elasticdl.python.common.tensor_utils import (
     pb_to_ndarray,
 )
 from elasticdl.python.common.timing_utils import Timing
-from elasticdl.python.elasticdl.callbacks.saved_model_exporter import (
-    SavedModelExporter,
-)
+from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.worker.task_data_service import TaskDataService

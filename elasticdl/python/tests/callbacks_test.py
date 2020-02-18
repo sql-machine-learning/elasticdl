@@ -9,9 +9,11 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import DistributionStrategy, JobType
 from elasticdl.python.common.model_handler import ModelHandler
-from elasticdl.python.elasticdl.callbacks.saved_model_exporter import (
+from elasticdl.python.elasticdl.callbacks import (
+    MaxStepsStopping,
     SavedModelExporter,
 )
+from elasticdl.python.master.task_dispatcher import _Task
 from elasticdl.python.tests.test_utils import save_checkpoint_without_embedding
 from elasticdl.python.worker.task_data_service import TaskDataService
 
