@@ -1,14 +1,15 @@
 import threading
 
 from google.protobuf import empty_pb2
+from tensorflow.core.framework import tensor_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor import (
     Tensor,
     emplace_tensor_pb_from_ndarray,
-    serialize_tensor,
 )
+from elasticdl.python.common.tensor_utils import serialize_ndarray
 from elasticdl.python.ps.optimizer_wrapper import OptimizerWrapper
 
 
@@ -78,16 +79,15 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         res.model_init_status = True
         return res
 
-    def pull_embedding_vector(self, request, _):
-        ret = elasticdl_pb2.Tensor()
+    def pull_embedding_vectors(self, request, _):
+        result = tensor_pb2.TensorProto()
         if not request.ids:
-            return ret
+            return result
         embedding_vectors = self._parameters.get_embedding_param(
             request.name, request.ids
         )
-        tensor = Tensor(values=embedding_vectors)
-        serialize_tensor(tensor, ret)
-        return ret
+        serialize_ndarray(embedding_vectors, result)
+        return result
 
     def push_model(self, request, _):
         with self._lock:
