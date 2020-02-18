@@ -434,8 +434,8 @@ class Worker(object):
         if ps_id in self._ps_vars:
             vars = self._ps_vars[ps_id]
             for var in vars:
-                emplace_tensor_pb_from_ndarray(
-                    model.param, var.numpy(), name=var.name
+                model.dense_parameters[var.name].CopyFrom(
+                    ndarray_to_pb(var.numpy())
                 )
         self._ps_stubs[ps_id].push_model(model)
 
