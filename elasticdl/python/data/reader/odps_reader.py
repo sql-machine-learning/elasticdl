@@ -25,7 +25,7 @@ class ODPSDataReader(AbstractDataReader):
                 reader._odps_table.schema.names if columns is None else columns
             )
 
-        for record in reader.record_generator(
+        for record in reader.record_generator_with_retry(
             start=task.start, end=task.end, columns=self._metadata.column_names
         ):
             yield record
