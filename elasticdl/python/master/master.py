@@ -108,7 +108,7 @@ class Master(object):
             self._create_data_reader_fn = self.model_module[
                 args.custom_data_reader
             ]
-        
+
         # Initialize the callbacks
         self.callbacks_list = load_callbacks_from_module(
             args.callbacks, self.model_module
