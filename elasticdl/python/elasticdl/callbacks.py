@@ -1,3 +1,5 @@
+import os
+import shutil
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
@@ -40,6 +42,8 @@ class SavedModelExporter(tf.keras.callbacks.Callback):
             model = self._model_handler.get_model_to_export(
                 self.model, dataset
             )
+            if os.path.exists(saved_model_path):
+                shutil.rmtree(saved_model_path)
             tf.saved_model.save(model, saved_model_path)
 
 
