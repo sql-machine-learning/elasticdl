@@ -294,7 +294,7 @@ class _TaskDispatcher(object):
                 )
         if evaluation_task_completed:
             self._evaluation_service.complete_task()
-        return time.time() - start_time
+        return (time.time() - start_time), task
 
     def finished(self):
         """Return if all tasks are done"""

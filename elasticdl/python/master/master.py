@@ -6,7 +6,7 @@ from concurrent import futures
 import grpc
 from kubernetes.client import V1EnvVar
 
-from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
@@ -441,16 +441,18 @@ class Master(object):
         while True:
             doing_tasks = self.task_d._doing.copy()
             cur_time = time.time()
-            threshold = (
-                3 * self.master_servicer.get_average_task_complete_time()
-            )
+            avg_time = self.master_servicer.get_average_task_complete_time()
             for task_id, (worker_id, task, start_time) in doing_tasks.items():
-                if (cur_time - start_time) > threshold:
-                    self.logger.info(
-                        "worker %d timeout, relaunch it" % worker_id
-                    )
-                    self.task_d.recover_tasks(worker_id)
-                    # TODO: save worker logs before remove it
-                    self.instance_manager._remove_worker(worker_id)
-                    break
+                if task.type in [
+                    elasticdl_pb2.TRAINING,
+                    elasticdl_pb2.EVALUATION,
+                ]:
+                    if (cur_time - start_time) > 3 * avg_time[task.type]:
+                        self.logger.info(
+                            "worker %d timeout, relaunch it" % worker_id
+                        )
+                        self.task_d.recover_tasks(worker_id)
+                        # TODO: save worker logs before remove it
+                        self.instance_manager._remove_worker(worker_id)
+                        break
             time.sleep(30)
