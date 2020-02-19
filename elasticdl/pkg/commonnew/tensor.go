@@ -134,6 +134,14 @@ func Slice(t *Tensor) interface{} {
 	return val.Interface()
 }
 
+// IsValid check tensor validity
+func (t *Tensor) IsValid() bool {
+	if DimProduct(t.Dims) != int64(len(t.Buffer)/int(DtypeSize[t.Dtype])) {
+		return false
+	}
+	return true
+}
+
 // DeserializeFromTensorPB transforms pb to tensor
 func DeserializeFromTensorPB(pb *tensor_go_proto.TensorProto) *Tensor {
 	pbDim := pb.GetTensorShape().GetDim()
@@ -150,14 +158,6 @@ func DeserializeFromTensorPB(pb *tensor_go_proto.TensorProto) *Tensor {
 		Dims:   dims,
 		Dtype:  pb.GetDtype(),
 	}
-}
-
-// IsValid check tensor validity
-func (t *Tensor) IsValid() bool {
-	if DimProduct(t.Dims) != int64(len(t.Buffer)/int(DtypeSize[t.Dtype])) {
-		return false
-	}
-	return true
 }
 
 // SerializeToTensor transforms tensor to pb
@@ -178,13 +178,35 @@ func (t *Tensor) SerializeToTensor() *tensor_go_proto.TensorProto {
 	}
 }
 
+// IndexedTensor : IndexedSlice in memory representation
+type IndexedTensor struct {
+	Tensor
+	Indices []int64
+}
+
+// NewIndexedTensor return a IndexedTensor instance
+func NewIndexedTensor(t *Tensor, indices []int64) *IndexedTensor {
+	return &IndexedTensor{
+		Tensor:  *t,
+		Indices: indices,
+	}
+}
+
 // SerializeToIndexedSlices return proto.IndexedSlices
-func (t *Tensor) SerializeToIndexedSlices(indices []int64) *proto.IndexedSlices {
-	if t.Dims[0] != int64(len(indices)) || len(t.Dims) != 2 {
+func (t *IndexedTensor) SerializeToIndexedSlices() *proto.IndexedSlices {
+	if t.Dims[0] != int64(len(t.Indices)) || len(t.Dims) != 2 {
 		return nil
 	}
 	return &proto.IndexedSlices{
 		ConcatTensors: t.SerializeToTensor(),
-		Ids:           indices,
+		Ids:           t.Indices,
+	}
+}
+
+// DeserializeFromIndexedSlicePB return common.IndexedTensor
+func DeserializeFromIndexedSlicePB(pb *proto.IndexedSlices) *IndexedTensor {
+	return &IndexedTensor{
+		Tensor:  *DeserializeFromTensorPB(pb.ConcatTensors),
+		Indices: pb.Ids,
 	}
 }
