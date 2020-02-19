@@ -139,7 +139,7 @@ def _create_dockerfile(
 ):
     HEAD = """
 FROM {BASE_IMAGE} as base
-ENV PYTHONPATH=/:/model_zoo
+ENV PYTHONPATH=/
 """
     if elasticdl:
         HEAD = """
@@ -154,14 +154,14 @@ COPY %s/elasticdl /elasticdl
 RUN pip install -r /elasticdl/requirements.txt \
   --extra-index-url="${EXTRA_PYPI_INDEX}"
 RUN make -f /elasticdl/Makefile
-COPY {MODEL_ZOO} /model_zoo/{MODEL_ZOO}
+COPY {MODEL_ZOO} /{MODEL_ZOO}
 """
     REMOTE_ZOO = """
 RUN pip install -r /elasticdl/requirements.txt \
   --extra-index-url="${EXTRA_PYPI_INDEX}"
 RUN make -f /elasticdl/Makefile
 RUN apt-get update && apt-get install -y git
-RUN git clone --recursive {MODEL_ZOO} /model_zoo
+RUN git clone --recursive {MODEL_ZOO} /
 """
     pr = urlparse(model_zoo)
     if not pr.path:
@@ -187,7 +187,7 @@ COPY %s /cluster_spec/%s
     tmpl = (
         """
 %s
-ARG REQS=/model_zoo/{MODEL_ZOO}/requirements.txt
+ARG REQS=/{MODEL_ZOO}/requirements.txt
 RUN if [ -f $REQS ]; then \
       pip install -r $REQS --extra-index-url="${EXTRA_PYPI_INDEX}"; \
     fi
