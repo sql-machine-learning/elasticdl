@@ -154,6 +154,9 @@ func DeserializeFromTensorPB(pb *tensor_go_proto.TensorProto) *Tensor {
 
 // SerializeToTensor transforms tensor to pb
 func (t *Tensor) SerializeToTensor() *tensor_go_proto.TensorProto {
+	if DimProduct(t.Dims) != int64(len(t.Buffer)/int(DtypeSize[t.Dtype])) {
+		return nil
+	}
 	shapeDim := make([]*tensor_shape_go_proto.TensorShapeProto_Dim, len(t.Dims), len(t.Dims))
 	for i, dim := range t.Dims {
 		shapeDim[i] = &tensor_shape_go_proto.TensorShapeProto_Dim{
@@ -172,9 +175,8 @@ func (t *Tensor) SerializeToTensor() *tensor_go_proto.TensorProto {
 
 // SerializeToIndexedSlices return proto.IndexedSlices
 func (t *Tensor) SerializeToIndexedSlices(indices []int64) *proto.IndexedSlices {
-	var i = proto.IndexedSlices{
+	return &proto.IndexedSlices{
 		ConcatTensors: t.SerializeToTensor(),
 		Ids:           indices,
 	}
-	return &i
 }

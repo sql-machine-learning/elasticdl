@@ -2,6 +2,7 @@ package commonnew
 
 import (
 	"elasticdl.org/elasticdl/pkg/proto"
+	"fmt"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/types_go_proto"
 )
 
@@ -45,6 +46,9 @@ func (e *EmbeddingTable) GetEmbeddingVectors(indices []int64) *Tensor {
 
 // SetEmbeddingVectors sets (indices, value) pair to embedding vector
 func (e *EmbeddingTable) SetEmbeddingVectors(idxslice *proto.IndexedSlices) error {
+	if idxslice == nil {
+		return fmt.Errorf("Embedding vectors dim not match")
+	}
 	idxsliceTensor := DeserializeFromTensorPB(idxslice.ConcatTensors)
 	for i, index := range idxslice.Ids {
 		value := e.GetEmbeddingVector(index)
