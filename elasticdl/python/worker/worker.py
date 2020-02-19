@@ -36,10 +36,10 @@ from elasticdl.python.common.tensor import (
 )
 from elasticdl.python.common.tensor_utils import (
     deduplicate_indexed_slices,
-    indexed_slices_to_pb,
     merge_indexed_slices,
-    ndarray_to_pb,
     pb_to_ndarray,
+    serialize_indexed_slices,
+    serialize_ndarray,
 )
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks.saved_model_exporter import (
@@ -499,17 +499,14 @@ class Worker(object):
                 # Keras embedding layer has a dense parameter,
                 # but an indexed slices type gradient
                 if isinstance(g, tf.IndexedSlices):
-                    req.embedding_tables[name].CopyFrom(
-                        indexed_slices_to_pb(
-                            tensor_utils.Tensor(
-                                None, g.values.numpy(), g.indices.numpy()
-                            )
-                        )
+                    serialize_indexed_slices(
+                        tensor_utils.Tensor(
+                            None, g.values.numpy(), g.indices.numpy()
+                        ),
+                        req.embedding_tables[name],
                     )
                 else:
-                    req.dense_parameters[name].CopyFrom(
-                        ndarray_to_pb(g.numpy())
-                    )
+                    serialize_ndarray(g.numpy(), req.dense_parameters[name])
 
         edl_embedding_name_values = self._collect_edl_embedding_name_values()
 
@@ -556,8 +553,9 @@ class Worker(object):
                 for ps_id in results:
                     req = reqs[ps_id]
                     gv, gi = results[ps_id]
-                    req.embedding_tables[name].CopyFrom(
-                        indexed_slices_to_pb(tensor_utils.Tensor(None, gv, gi))
+                    serialize_indexed_slices(
+                        tensor_utils.Tensor(None, gv, gi),
+                        req.embedding_tables[name],
                     )
 
         report_futures = []
