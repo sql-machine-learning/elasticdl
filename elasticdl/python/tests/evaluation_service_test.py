@@ -5,7 +5,7 @@ import tensorflow as tf
 from tensorflow.keras.metrics import Accuracy, MeanSquaredError
 
 from elasticdl.python.common.constants import MetricsDictKey
-from elasticdl.python.common.tensor import Tensor
+from elasticdl.python.common.tensor_utils import ndarray_to_pb
 from elasticdl.python.master.evaluation_service import (
     EvaluationJob,
     EvaluationService,
@@ -57,24 +57,19 @@ class EvaluationServiceTest(unittest.TestCase):
         latest_chkp_version = job.model_version + 1
         self.assertTrue(self.ok_to_new_job(job, latest_chkp_version))
 
-        model_outputs = [
-            Tensor(
-                np.array([[1], [6], [3]], np.float32),
-                name=MetricsDictKey.MODEL_OUTPUT,
-            ).to_tensor_pb()
-        ]
-        labels = Tensor(np.array([[1], [0], [3]], np.float32)).to_tensor_pb()
+        model_outputs = {}
+        model_outputs[MetricsDictKey.MODEL_OUTPUT] = ndarray_to_pb(
+            np.array([[1], [6], [3]], np.float32)
+        )
+        labels = ndarray_to_pb(np.array([[1], [0], [3]], np.float32))
         job.report_evaluation_metrics(model_outputs, labels)
         job.report_evaluation_metrics(
-            [
-                Tensor(
-                    np.array([[4], [5], [6], [7], [8]], np.float32),
-                    name=MetricsDictKey.MODEL_OUTPUT,
-                ).to_tensor_pb()
-            ],
-            Tensor(
-                np.array([[7], [8], [9], [10], [11]], np.float32)
-            ).to_tensor_pb(),
+            {
+                MetricsDictKey.MODEL_OUTPUT: ndarray_to_pb(
+                    np.array([[4], [5], [6], [7], [8]], np.float32)
+                )
+            },
+            ndarray_to_pb(np.array([[7], [8], [9], [10], [11]], np.float32)),
         )
         expected_acc = 0.25
         evaluation_metrics = job.get_evaluation_summary()
