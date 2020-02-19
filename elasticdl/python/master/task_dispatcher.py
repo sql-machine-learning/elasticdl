@@ -2,6 +2,7 @@
 
 import random
 import threading
+import time
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import TaskExecCounterKey
@@ -180,7 +181,7 @@ class _TaskDispatcher(object):
                 return -1, None
             self._task_id += 1
             task = self._eval_todo.pop()
-            self._doing[self._task_id] = (worker_id, task)
+            self._doing[self._task_id] = (worker_id, task, time.time())
             return self._task_id, task
 
     def _create_train_end_callback_task(self):
@@ -255,7 +256,7 @@ class _TaskDispatcher(object):
             self._task_id += 1
             task = self._todo.pop()
             # TODO: Handle timeout of tasks.
-            self._doing[self._task_id] = (worker_id, task)
+            self._doing[self._task_id] = (worker_id, task, time.time())
 
             return self._task_id, task
 
@@ -265,7 +266,7 @@ class _TaskDispatcher(object):
         task_id = request.task_id
         evaluation_task_completed = False
         with self._lock:
-            _, task = self._doing.pop(task_id, (-1, None))
+            _, task, get_time = self._doing.pop(task_id, (-1, None, -1))
             if task:
                 self._job_counters[
                     task.type
@@ -293,6 +294,7 @@ class _TaskDispatcher(object):
                 )
         if evaluation_task_completed:
             self._evaluation_service.complete_task()
+        return time.time() - get_time
 
     def finished(self):
         """Return if all tasks are done"""
@@ -303,7 +305,9 @@ class _TaskDispatcher(object):
 
         with self._lock:
             ids = [
-                id for id, (wid, _) in self._doing.items() if wid == worker_id
+                id
+                for id, (wid, _, _) in self._doing.items()
+                if wid == worker_id
             ]
         request = elasticdl_pb2.ReportTaskResultRequest()
         for id in ids:

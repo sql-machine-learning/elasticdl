@@ -1,3 +1,4 @@
+import statistics
 import threading
 
 from google.protobuf import empty_pb2
@@ -19,6 +20,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version = 0
 
         self._evaluation_service = evaluation_service
+        self._task_complete_times = []
         if evaluation_service:
             evaluation_service.set_master_servicer(self)
 
@@ -67,7 +69,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             logger.warning("Worker reported error: " + request.err_message)
             self._task_d.report(request, False)
         else:
-            self._task_d.report(request, True)
+            complete_time = self._task_d.report(request, True)
+            self._task_complete_times.append(complete_time)
         return empty_pb2.Empty()
 
     def report_evaluation_metrics(self, request, _):
@@ -83,3 +86,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 master_locking=False, model_version=request.model_version
             )
         return empty_pb2.Empty()
+
+    def get_average_task_complete_time(self):
+        if len(self._task_complete_times) < 20:
+            return 36000
+        else:
+            return statistics.mean(self._task_complete_times)
