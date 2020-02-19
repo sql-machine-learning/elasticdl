@@ -9,7 +9,6 @@ from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor_utils import (
     merge_indexed_slices,
-    ndarray_to_pb,
     pb_to_indexed_slices,
     pb_to_ndarray,
     serialize_ndarray,
@@ -75,7 +74,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         # No need to send variables if the requester has the latest version.
         if self._parameters.version > request.version:
             for name, var in self._parameters.non_embedding_params.items():
-                res.dense_parameters[name].CopyFrom(ndarray_to_pb(var.numpy()))
+                serialize_ndarray(var.numpy(), res.dense_parameters[name])
         if not self._use_async:
             self._lock.release()
         res.initialized = True
