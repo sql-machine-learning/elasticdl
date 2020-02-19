@@ -251,6 +251,7 @@ class ODPSReader(object):
             try:
                 for record in self.record_generator(start, end, columns):
                     yield record
+                break
             except Exception as e:
                 if retry_count >= max_retries:
                     raise Exception("Exceeded maximum number of retries")
