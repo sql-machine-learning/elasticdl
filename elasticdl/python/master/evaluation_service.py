@@ -8,7 +8,7 @@ from tensorflow.python.keras import metrics as metrics_module
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import MetricsDictKey
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.common.tensor import tensor_pb_to_ndarray
+from elasticdl.python.common.tensor_utils import pb_to_ndarray
 
 
 class EvaluationJob(object):
@@ -67,11 +67,10 @@ class EvaluationJob(object):
         return self._completed_tasks >= self._total_tasks
 
     def report_evaluation_metrics(self, model_outputs_pb, labels):
-        labels = tensor_pb_to_ndarray(labels)
+        labels = pb_to_ndarray(labels)
         model_outputs = {}
-        for tensor_pb in model_outputs_pb:
-            key = tensor_pb.name
-            model_outputs[key] = tensor_pb_to_ndarray(tensor_pb)
+        for name, tensor_pb in model_outputs_pb.items():
+            model_outputs[name] = pb_to_ndarray(tensor_pb)
         self.update_evaluation_metrics(model_outputs, labels)
 
     def update_evaluation_metrics(self, model_outputs, labels):

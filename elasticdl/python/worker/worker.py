@@ -28,14 +28,11 @@ from elasticdl.python.common.model_utils import (
     get_non_embedding_trainable_vars,
     set_callback_parameters,
 )
-from elasticdl.python.common.tensor import (
-    Tensor,
-    emplace_tensor_pb_from_ndarray,
-    serialize_tensor,
-)
+from elasticdl.python.common.tensor import emplace_tensor_pb_from_ndarray
 from elasticdl.python.common.tensor_utils import (
     deduplicate_indexed_slices,
     pb_to_ndarray,
+    serialize_ndarray,
 )
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks.saved_model_exporter import (
@@ -574,12 +571,9 @@ class Worker(object):
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         for name, output in model_outputs.items():
             output = np.concatenate(output)
-            emplace_tensor_pb_from_ndarray(
-                req.model_outputs, output, name=name
-            )
+            serialize_ndarray(output, req.model_outputs[name])
         labels = np.concatenate(labels)
-        tensor = Tensor(values=labels)
-        serialize_tensor(tensor, req.labels)
+        serialize_ndarray(labels, req.labels)
         self._stub.report_evaluation_metrics(req)
 
     def report_prediction_outputs(self, predictions):

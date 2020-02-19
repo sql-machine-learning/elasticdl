@@ -106,8 +106,8 @@ message ReportTaskResultRequest {
 }
 
 message ReportEvaluationMetricsRequest {
-  repeated Tensor model_outputs = 1;
-  Tensor labels = 2;
+  map<string, tensorflow.TensorProto> model_outputs = 1;
+  tensorflow.TensorProto labels = 2;
 }
 
 message ReportVersionRequest {
