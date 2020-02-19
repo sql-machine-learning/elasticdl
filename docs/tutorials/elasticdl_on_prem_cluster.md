@@ -49,7 +49,7 @@ By the way, we can also use the pre-built image to submit the ElasticDL job.
 ```bash
 elasticdl train \
  --image_base=reg.docker.com/user/elasticdl:mnist \
- --model_zoo=/model_zoo/model_zoo \
+ --model_zoo=/model_zoo \
  --model_def=mnist_functional_api.mnist_functional_api.custom_model \
  --training_data=/data/mnist/train \
  --validation_data=/data/mnist/test \
