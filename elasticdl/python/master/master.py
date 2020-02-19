@@ -102,6 +102,14 @@ class Master(object):
         self.model_inst = load_model_from_module(
             args.model_def, self.model_module, args.model_params
         )
+        self.optimizer = self.model_module[args.optimizer]()
+        self._create_data_reader_fn = create_data_reader
+        if args.custom_data_reader in self.model_module:
+            self._create_data_reader_fn = self.model_module[
+                args.custom_data_reader
+            ]
+        
+        # Initialize the callbacks
         self.callbacks_list = load_callbacks_from_module(
             args.callbacks, self.model_module
         )
@@ -112,12 +120,7 @@ class Master(object):
             saved_model_path=args.output,
             checkpoint_path=args.checkpoint_dir,
         )
-        self.optimizer = self.model_module[args.optimizer]()
-        self._create_data_reader_fn = create_data_reader
-        if args.custom_data_reader in self.model_module:
-            self._create_data_reader_fn = self.model_module[
-                args.custom_data_reader
-            ]
+        self._set_completed_steps_by_checkpoint(args.checkpoint_dir_for_init)
 
         # Start task queue
         records_per_task = args.minibatch_size * args.num_minibatches_per_task
