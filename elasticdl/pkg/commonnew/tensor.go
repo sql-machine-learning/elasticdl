@@ -162,9 +162,6 @@ func (t *Tensor) IsValid() bool {
 
 // SerializeToTensor transforms tensor to pb
 func (t *Tensor) SerializeToTensor() *tensor_go_proto.TensorProto {
-	if !t.IsValid() {
-		return nil
-	}
 	shapeDim := make([]*tensor_shape_go_proto.TensorShapeProto_Dim, len(t.Dims), len(t.Dims))
 	for i, dim := range t.Dims {
 		shapeDim[i] = &tensor_shape_go_proto.TensorShapeProto_Dim{
@@ -183,7 +180,7 @@ func (t *Tensor) SerializeToTensor() *tensor_go_proto.TensorProto {
 
 // SerializeToIndexedSlices return proto.IndexedSlices
 func (t *Tensor) SerializeToIndexedSlices(indices []int64) *proto.IndexedSlices {
-	if !t.IsValid() {
+	if t.Dims[0] != int64(len(indices)) || len(t.Dims) != 2 {
 		return nil
 	}
 	return &proto.IndexedSlices{
