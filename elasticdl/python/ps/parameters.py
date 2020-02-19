@@ -2,10 +2,10 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.tensor_utils import (
-    indexed_slices_to_pb,
-    ndarray_to_pb,
     pb_to_indexed_slices,
     pb_to_ndarray,
+    serialize_indexed_slices,
+    serialize_ndarray,
 )
 from elasticdl.python.ps.embedding_table import (
     EmbeddingTable,
@@ -176,16 +176,15 @@ class Parameters(object):
         model_pb = elasticdl_pb2.Model()
         model_pb.version = self.version
         for name, var in self.non_embedding_params.items():
-            model_pb.dense_parameters[name].CopyFrom(
-                ndarray_to_pb(var.numpy())
-            )
+            serialize_ndarray(var.numpy(), model_pb.dense_parameters[name])
 
         for name, embedding_table in self.embedding_params.items():
             # Slot embedding table is not weights in the model, so we don't
             # save it to checkpoint.
             if not embedding_table.is_slot:
-                model_pb.embedding_tables[name].CopyFrom(
-                    indexed_slices_to_pb(embedding_table.to_indexed_slices())
+                serialize_indexed_slices(
+                    embedding_table.to_indexed_slices(),
+                    model_pb.embedding_tables[name],
                 )
                 embedding_info = embedding_table.to_embedding_table_info_pb()
                 model_pb.embedding_table_info.append(embedding_info)

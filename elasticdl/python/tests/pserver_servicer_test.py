@@ -116,7 +116,7 @@ class PserverServicerTest(unittest.TestCase):
             req = elasticdl_pb2.Model()
             req.version = idx + 1
             for name in model:
-                req.dense_parameters[name].CopyFrom(ndarray_to_pb(model[name]))
+                serialize_ndarray(model[name], req.dense_parameters[name])
             req.embedding_table_info.append(self._embedding_info)
             res = self._stub.push_model(req)
             self.assertEqual(res, empty_pb2.Empty())

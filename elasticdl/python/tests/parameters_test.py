@@ -6,8 +6,8 @@ import tensorflow as tf
 from elasticdl.proto.elasticdl_pb2 import Model
 from elasticdl.python.common.tensor_utils import (
     Tensor,
-    indexed_slices_to_pb,
-    ndarray_to_pb,
+    serialize_indexed_slices,
+    serialize_ndarray,
 )
 from elasticdl.python.ps.embedding_table import get_slot_table_name
 from elasticdl.python.ps.parameters import Parameters
@@ -30,16 +30,15 @@ class ParametersTest(unittest.TestCase):
         embedding_pb.initializer = "uniform"
 
         arr1 = np.random.uniform(size=(3, 4))
-        self.tensors_pb["x"].CopyFrom(ndarray_to_pb(arr1))
+        serialize_ndarray(arr1, self.tensors_pb["x"])
         arr2 = np.random.uniform(size=(4, 5))
-        self.tensors_pb["y"].CopyFrom(ndarray_to_pb(arr2))
+        serialize_ndarray(arr2, self.tensors_pb["y"])
 
         embedding_vectors = np.random.uniform(size=(2, 10))
         embedding_indices = np.array([0, 8])
-        self.embedding_tables_pb[self.embedding_table_name].CopyFrom(
-            indexed_slices_to_pb(
-                Tensor(None, embedding_vectors, embedding_indices)
-            )
+        serialize_indexed_slices(
+            Tensor(None, embedding_vectors, embedding_indices),
+            self.embedding_tables_pb[self.embedding_table_name],
         )
 
     def _test_get_embedding_param(self, slot_names=[], slot_init_value={}):

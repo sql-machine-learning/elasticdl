@@ -434,8 +434,8 @@ class Worker(object):
         if ps_id in self._ps_vars:
             vars = self._ps_vars[ps_id]
             for var in vars:
-                model.dense_parameters[var.name].CopyFrom(
-                    ndarray_to_pb(var.numpy())
+                serialize_ndarray(
+                    var.numpy(), model.dense_parameters[var.name]
                 )
         self._ps_stubs[ps_id].push_model(model)
 
