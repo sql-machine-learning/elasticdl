@@ -152,9 +152,17 @@ func DeserializeFromTensorPB(pb *tensor_go_proto.TensorProto) *Tensor {
 	}
 }
 
+// IsValid check tensor validity
+func (t *Tensor) IsValid() bool {
+	if DimProduct(t.Dims) != int64(len(t.Buffer)/int(DtypeSize[t.Dtype])) {
+		return false
+	}
+	return true
+}
+
 // SerializeToTensor transforms tensor to pb
 func (t *Tensor) SerializeToTensor() *tensor_go_proto.TensorProto {
-	if DimProduct(t.Dims) != int64(len(t.Buffer)/int(DtypeSize[t.Dtype])) {
+	if !t.IsValid() {
 		return nil
 	}
 	shapeDim := make([]*tensor_shape_go_proto.TensorShapeProto_Dim, len(t.Dims), len(t.Dims))
@@ -175,6 +183,9 @@ func (t *Tensor) SerializeToTensor() *tensor_go_proto.TensorProto {
 
 // SerializeToIndexedSlices return proto.IndexedSlices
 func (t *Tensor) SerializeToIndexedSlices(indices []int64) *proto.IndexedSlices {
+	if !t.IsValid() {
+		return nil
+	}
 	return &proto.IndexedSlices{
 		ConcatTensors: t.SerializeToTensor(),
 		Ids:           indices,
