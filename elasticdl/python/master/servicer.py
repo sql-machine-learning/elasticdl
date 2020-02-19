@@ -6,6 +6,8 @@ from google.protobuf import empty_pb2
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.log_utils import default_logger as logger
 
+STATISTICS_TASK_QUEUE_SIZE = 20
+
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     """Master service implementation"""
@@ -20,7 +22,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version = 0
 
         self._evaluation_service = evaluation_service
-        self._task_complete_times = [36000] * 20
+        self._task_complete_times = [36000] * STATISTICS_TASK_QUEUE_SIZE
         if evaluation_service:
             evaluation_service.set_master_servicer(self)
 

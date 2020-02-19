@@ -444,8 +444,8 @@ class Master(object):
             threshold = (
                 2 * self.master_servicer.get_average_task_complete_time()
             )
-            for task_id, (worker_id, task, get_time) in doing_tasks.items():
-                if (cur_time - get_time) > threshold:
+            for task_id, (worker_id, task, start_time) in doing_tasks.items():
+                if (cur_time - start_time) > threshold:
                     self.logger.info(
                         "worker %d timeout, relaunch it" % worker_id
                     )
