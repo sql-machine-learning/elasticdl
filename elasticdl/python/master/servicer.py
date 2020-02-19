@@ -6,8 +6,6 @@ from google.protobuf import empty_pb2
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.log_utils import default_logger as logger
 
-STATISTICS_TASK_QUEUE_SIZE = 20
-
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     """Master service implementation"""
@@ -22,7 +20,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version = 0
 
         self._evaluation_service = evaluation_service
-        self._task_complete_times = [36000] * STATISTICS_TASK_QUEUE_SIZE
+        self._task_complete_times = []
         if evaluation_service:
             evaluation_service.set_master_servicer(self)
 
@@ -72,7 +70,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             self._task_d.report(request, False)
         else:
             complete_time = self._task_d.report(request, True)
-            self._task_complete_times.pop(0)
             self._task_complete_times.append(complete_time)
         return empty_pb2.Empty()
 
@@ -91,4 +88,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return empty_pb2.Empty()
 
     def get_average_task_complete_time(self):
-        return statistics.mean(self._task_complete_times)
+        if len(self._task_complete_times) < 20:
+            return 36000
+        else:
+            return statistics.mean(self._task_complete_times)

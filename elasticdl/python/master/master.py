@@ -442,7 +442,7 @@ class Master(object):
             doing_tasks = self.task_d._doing.copy()
             cur_time = time.time()
             threshold = (
-                2 * self.master_servicer.get_average_task_complete_time()
+                3 * self.master_servicer.get_average_task_complete_time()
             )
             for task_id, (worker_id, task, start_time) in doing_tasks.items():
                 if (cur_time - start_time) > threshold:
