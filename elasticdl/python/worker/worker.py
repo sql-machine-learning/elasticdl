@@ -31,7 +31,6 @@ from elasticdl.python.common.model_utils import (
 from elasticdl.python.common.tensor import emplace_tensor_pb_from_ndarray
 from elasticdl.python.common.tensor_utils import (
     deduplicate_indexed_slices,
-    ndarray_to_pb,
     pb_to_ndarray,
     serialize_ndarray,
 )
@@ -572,7 +571,7 @@ class Worker(object):
         req = elasticdl_pb2.ReportEvaluationMetricsRequest()
         for name, output in model_outputs.items():
             output = np.concatenate(output)
-            req.model_outputs[name].CopyFrom(ndarray_to_pb(output))
+            serialize_ndarray(output, req.model_outputs[name])
         labels = np.concatenate(labels)
         serialize_ndarray(labels, req.labels)
         self._stub.report_evaluation_metrics(req)
