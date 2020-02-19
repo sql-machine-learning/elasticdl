@@ -231,32 +231,33 @@ class InstanceManager(object):
         with self._lock:
             if pod_name in self._failed_pods:
                 return
-            # When a pod fails with exit_code == 137, it may be deleted,
-            # preempted, or OOMkilled. Master will try to relaunch it.
-            # For OOMkilled, the relaunch is a workaround for memory leak
-            # issues in tf eager mode.
             failed_pod = False
-            if (
-                evt_type == "MODIFIED"
-                and phase == "Failed"
-                and evt_obj.status.container_statuses
-                and evt_obj.status.container_statuses[0].state.terminated
-                and evt_obj.status.container_statuses[
-                    0
-                ].state.terminated.exit_code
-                == 137
-            ):
+            is_killed = False
+            if evt_type == "MODIFIED" and phase == "Failed":
                 self._failed_pods.append(pod_name)
                 failed_pod = True
-                logger.info(
-                    "Pod %s is killed with reason %s."
-                    % (
-                        pod_name,
-                        evt_obj.status.container_statuses[
-                            0
-                        ].state.terminated.reason,
+                # When a pod fails with exit_code == 137, it may be deleted,
+                # preempted, or OOMkilled. Master will try to relaunch it.
+                # For OOMkilled, the relaunch is a workaround for memory leak
+                # issues in tf eager mode.
+                if (
+                    evt_obj.status.container_statuses
+                    and evt_obj.status.container_statuses[0].state.terminated
+                    and evt_obj.status.container_statuses[
+                        0
+                    ].state.terminated.exit_code
+                    == 137
+                ):
+                    is_killed = True
+                    logger.info(
+                        "Pod %s is killed with reason %s."
+                        % (
+                            pod_name,
+                            evt_obj.status.container_statuses[
+                                0
+                            ].state.terminated.reason,
+                        )
                     )
-                )
             if pod_name in self._worker_pod_name_to_id:
                 worker_id = self._worker_pod_name_to_id.get(pod_name)
                 self._worker_pods_phase[worker_id] = (pod_name, phase)
@@ -265,10 +266,11 @@ class InstanceManager(object):
                     del self._worker_pod_name_to_id[pod_name]
                     self._task_d.recover_tasks(worker_id)
 
-                    # If a deleted pod was not "Succeeded", relaunch a worker.
-                    relaunch_worker = (
-                        self._relaunch_deleted_live_worker
-                        and phase != "Succeeded"
+                    # If a deleted pod was not "Succeeded", or a pod is killed,
+                    # relaunch a worker.
+                    relaunch_worker = self._relaunch_deleted_live_worker and (
+                        (evt_type == "DELETED" and phase != "Succeeded")
+                        or is_killed
                     )
 
             elif pod_name in self._ps_pod_name_to_id:
@@ -283,8 +285,11 @@ class InstanceManager(object):
                 return
 
         if relaunch_worker and worker_id >= 0:
-            logger.info("Relaunching worker.")
             new_worker_id = self._next_worker_id()
+            logger.info(
+                "Launching worker %d to replace worker %d."
+                % (new_worker_id, worker_id)
+            )
             self._start_worker(new_worker_id)
             with self._lock:
                 self._update_worker_addr(worker_id, new_worker_id)
