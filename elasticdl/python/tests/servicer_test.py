@@ -2,11 +2,9 @@ import random
 import unittest
 from collections import defaultdict
 
-import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.tensor import tensor_pb_to_ndarray
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
@@ -58,16 +56,6 @@ class ServicerTest(unittest.TestCase):
         task = master.get_task(req, None)
         self.assertEqual("", task.shard_name)
         self.assertEqual(1, task.model_version)
-
-    def _check_get_model_response(self, version, expected, response):
-        self.assertEqual(version, response.version)
-        self.assertEqual(
-            list(sorted(expected.keys())),
-            sorted([v.name for v in response.param]),
-        )
-        for var in response.param:
-            exp_value = expected[var.name]
-            np.testing.assert_array_equal(exp_value, tensor_pb_to_ndarray(var))
 
     def testReportTaskResult(self):
         task_d = _TaskDispatcher(
