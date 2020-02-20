@@ -574,6 +574,7 @@ class Worker(object):
             serialize_ndarray(output, req.model_outputs[name])
         labels = np.concatenate(labels)
         serialize_ndarray(labels, req.labels)
+        req.worker_id = self._worker_id
         self._stub.report_evaluation_metrics(req)
 
     def report_prediction_outputs(self, predictions):

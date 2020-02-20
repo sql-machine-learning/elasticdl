@@ -266,7 +266,9 @@ class _TaskDispatcher(object):
         task_id = request.task_id
         evaluation_task_completed = False
         with self._lock:
-            _, task, start_time = self._doing.pop(task_id, (-1, None, -1))
+            worker_id, task, start_time = self._doing.pop(
+                task_id, (-1, None, -1)
+            )
             if task:
                 self._job_counters[
                     task.type
@@ -294,7 +296,7 @@ class _TaskDispatcher(object):
                 )
         if evaluation_task_completed:
             self._evaluation_service.complete_task()
-        return (time.time() - start_time), task
+        return (time.time() - start_time), task, worker_id
 
     def finished(self):
         """Return if all tasks are done"""

@@ -1,5 +1,6 @@
 import statistics
 import threading
+import time
 
 from google.protobuf import empty_pb2
 
@@ -24,6 +25,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             elasticdl_pb2.EVALUATION: [],
             elasticdl_pb2.TRAINING: [],
         }
+        self._worker_liveness_time = {}
         if evaluation_service:
             evaluation_service.set_master_servicer(self)
 
@@ -72,8 +74,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             logger.warning("Worker reported error: " + request.err_message)
             self._task_d.report(request, False)
         else:
-            complete_time, task = self._task_d.report(request, True)
+            complete_time, task, worker_id = self._task_d.report(request, True)
             if task:
+                self._worker_liveness_time[worker_id] = time.time()
                 if task.type in [
                     elasticdl_pb2.TRAINING,
                     elasticdl_pb2.EVALUATION,
@@ -82,6 +85,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return empty_pb2.Empty()
 
     def report_evaluation_metrics(self, request, _):
+        self._worker_liveness_time[request.worker_id] = time.time()
         self._evaluation_service.report_evaluation_metrics(
             request.model_outputs, request.labels
         )
@@ -110,3 +114,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                     self._task_complete_times[elasticdl_pb2.EVALUATION]
                 ),
             }
+
+    def get_worker_liveness_time(self, worker_id):
+        return self._worker_liveness_time[worker_id]

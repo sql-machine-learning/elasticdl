@@ -443,6 +443,10 @@ class Master(object):
             cur_time = time.time()
             avg_time = self.master_servicer.get_average_task_complete_time()
             for task_id, (worker_id, task, start_time) in doing_tasks.items():
+                if task.type == elasticdl_pb2.TRAINING:
+                    start_time = self.master_servicer.get_worker_liveness_time(
+                        worker_id
+                    )
                 if task.type in [
                     elasticdl_pb2.TRAINING,
                     elasticdl_pb2.EVALUATION,
