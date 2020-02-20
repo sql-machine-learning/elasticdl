@@ -37,6 +37,9 @@ RUN python /var/census_recordio_gen.py --data_dir /root/.keras/datasets --output
 
 RUN rm -rf /root/.keras/datasets
 
+ENV TF_PATH /tmp/tensorflow
+RUN cd /tmp && git clone --depth=1 https://github.com/tensorflow/tensorflow.git
+
 # Install Go and related tools
 ENV GOPATH /root/go
 ENV PATH /usr/local/go/bin:$GOPATH/bin:$PATH
@@ -48,12 +51,15 @@ COPY elasticdl/docker/scripts/install-protobuf.bash /
 RUN /install-protobuf.bash && rm /install-protobuf.bash
 
 # Install elasticdl.org/elasticdl Go package
-ENV ELASTICDLPATH $GOPATH/src/elasticdl.org/elasticdl
-ENV TF_PATH /tmp/tensorflow
-RUN cd /tmp && git clone --depth=1 https://github.com/tensorflow/tensorflow.git
+ENV ELASTICDLPATH /root/elasticdl.org/elasticdl
 COPY . /tmp/elasticdl
 RUN cd /tmp/elasticdl && mkdir -p $ELASTICDLPATH && \
     make -f elasticdl/Makefile && \
     cp -r /tmp/elasticdl/elasticdl/pkg $ELASTICDLPATH && \
-    cd $GOPATH/src/elasticdl.org/elasticdl && \
+    cd $GOPATH/pkg/mod/github.com/tensorflow && \
+    go mod init github.com/tensorflow &&\
+    cd $ELASTICDLPATH && \
+    go mod init elasticdl.org/elasticdl && \
+    go mod edit -replace github.com/tensorflow=${GOPATH}/pkg/mod/github.com/tensorflow && \
+    go mod tidy && \
     go install ./... && cd / && rm -rf /tmp/elasticdl

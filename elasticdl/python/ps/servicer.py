@@ -4,10 +4,10 @@ import tensorflow as tf
 from google.protobuf import empty_pb2
 from tensorflow.core.framework import tensor_pb2
 
-import elasticdl.python.common.tensor_utils as tensor_utils
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor_utils import (
+    Tensor,
     merge_indexed_slices,
     pb_to_indexed_slices,
     pb_to_ndarray,
@@ -112,9 +112,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
 
             for name, pb in request.dense_parameters.items():
                 grad = pb_to_ndarray(pb)
-                self._parameters.check_grad(
-                    tensor_utils.Tensor(name, grad, None)
-                )
+                self._parameters.check_grad(Tensor(name, grad, None))
                 grad = tf.constant(grad)
                 var = self._parameters.get_non_embedding_param(name)
                 grad_vars.append((grad, var))
@@ -122,7 +120,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             for name, pb in request.embedding_tables.items():
                 grad = pb_to_indexed_slices(pb)
                 self._parameters.check_grad(
-                    tensor_utils.Tensor(name, grad.values, grad.indices)
+                    Tensor(name, grad.values, grad.indices)
                 )
                 if name in self._parameters.non_embedding_params:
                     var = self._parameters.get_non_embedding_param(name)
@@ -153,9 +151,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             with self._lock:
                 for name, pb in request.dense_parameters.items():
                     grad = pb_to_ndarray(pb)
-                    self._parameters.check_grad(
-                        tensor_utils.Tensor(name, grad, None)
-                    )
+                    self._parameters.check_grad(Tensor(name, grad, None))
                     if name in self._grads_buffer:
                         self._grads_buffer[name] = (
                             self._grads_buffer[name] + grad
@@ -166,7 +162,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                 for name, pb in request.embedding_tables.items():
                     grad = pb_to_indexed_slices(pb)
                     self._parameters.check_grad(
-                        tensor_utils.Tensor(name, grad.values, grad.indices)
+                        Tensor(name, grad.values, grad.indices)
                     )
                     if name in self._grads_buffer:
                         self._grads_buffer[name] = merge_indexed_slices(

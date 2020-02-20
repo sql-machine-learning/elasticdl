@@ -23,13 +23,14 @@ from elasticdl.python.common.model_utils import (
     get_module_file_path,
     load_module,
 )
+from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.data.recordio_gen.frappe_recordio_gen import (
     load_raw_data,
 )
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
-from elasticdl.python.ps.parameter_server import ParameterServer
+from elasticdl.python.ps.parameter_server import Parameters, ParameterServer
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
 
@@ -631,3 +632,13 @@ def get_frappe_dataset(batch_size):
     test_db = tf.data.Dataset.from_tensor_slices((x_test, y_test))
     test_db = test_db.batch(batch_size)
     return db, test_db
+
+
+def save_checkpoint_without_embedding(model, checkpoint_dir, version=100):
+    checkpoint_saver = CheckpointSaver(checkpoint_dir, 0, 0, False)
+    params = Parameters()
+    for var in model.trainable_variables:
+        params.non_embedding_params[var.name] = var
+    params.version = version
+    model_pb = params.to_model_pb()
+    checkpoint_saver.save(version, model_pb, False)

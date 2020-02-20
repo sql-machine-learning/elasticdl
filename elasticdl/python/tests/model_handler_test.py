@@ -1,3 +1,5 @@
+import os
+import tempfile
 import unittest
 
 import numpy as np
@@ -147,7 +149,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
         tf.keras.backend.clear_session()
         self.model_handler = ModelHandler.get_model_handler(
             distribution_strategy=DistributionStrategy.PARAMETER_SERVER,
-            checkpoint_dir="elasticdl/python/tests/testdata/functional_ckpt/",
+            checkpoint_dir="",
         )
 
     def _save_model(self, is_subclass):
@@ -185,43 +187,48 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
         )
 
     def test_get_model_to_export(self):
-        self._save_model(False)
-        model_inst = custom_model_with_embedding_layer()
-        train_model = self.model_handler.get_model_to_train(model_inst)
-        export_model = self.model_handler.get_model_to_export(
-            train_model, dataset=None
-        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.model_handler._checkpoint_dir = os.path.join(
+                temp_dir, "test_export"
+            )
+            self._save_model(False)
+            model_inst = custom_model_with_embedding_layer()
+            train_model = self.model_handler.get_model_to_train(model_inst)
+            export_model = self.model_handler.get_model_to_export(
+                train_model, dataset=None
+            )
 
-        test_data = tf.constant([0])
-        result = export_model.call(test_data).numpy()
-        self.assertEqual(result[0][0], 3.0)
+            test_data = tf.constant([0])
+            result = export_model.call(test_data).numpy()
+            self.assertEqual(result[0][0], 3.0)
 
     def test_get_subclass_model_to_export(self):
-        self.model_handler._checkpoint_dir = (
-            "elasticdl/python/tests/testdata/subclass_ckpt/"
-        )
-        self._save_model(True)
-
-        def _get_dataset():
-            dataset = tf.data.Dataset.from_tensor_slices(
-                np.random.randint(0, 10, (10, 4))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.model_handler._checkpoint_dir = os.path.join(
+                temp_dir, "test_export"
             )
-            dataset = dataset.batch(2)
-            return dataset
+            self._save_model(True)
 
-        model_inst = CustomModel()
-        dataset = _get_dataset()
+            def _get_dataset():
+                dataset = tf.data.Dataset.from_tensor_slices(
+                    np.random.randint(0, 10, (10, 4))
+                )
+                dataset = dataset.batch(2)
+                return dataset
 
-        train_model = self.model_handler.get_model_to_train(model_inst)
-        self.assertEqual(type(train_model.embedding), Embedding)
+            model_inst = CustomModel()
+            dataset = _get_dataset()
 
-        export_model = self.model_handler.get_model_to_export(
-            train_model, dataset=dataset
-        )
+            train_model = self.model_handler.get_model_to_train(model_inst)
+            self.assertEqual(type(train_model.embedding), Embedding)
 
-        test_data = tf.constant([0])
-        result = export_model.call(test_data).numpy()
-        self.assertEqual(result[0][0], 3.0)
+            export_model = self.model_handler.get_model_to_export(
+                train_model, dataset=dataset
+            )
+
+            test_data = tf.constant([0])
+            result = export_model.call(test_data).numpy()
+            self.assertEqual(result[0][0], 3.0)
 
     def test_get_model_with_sparse_to_train(self):
         model_inst = custom_model_with_sparse_embedding()
@@ -229,24 +236,29 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
         self.assertEqual(type(model_inst.layers[1]), Embedding)
 
     def test_get_model_with_sparse_to_export(self):
-        self._save_model(False)
-        model_inst = custom_model_with_sparse_embedding()
-        train_model = self.model_handler.get_model_to_train(model_inst)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.model_handler._checkpoint_dir = os.path.join(
+                temp_dir, "test_export"
+            )
+            self._save_model(False)
+            model_inst = custom_model_with_sparse_embedding()
+            train_model = self.model_handler.get_model_to_train(model_inst)
 
-        # Model handler will restore model parameters from the checkpoint
-        # directory and assign parameters to train_model.
-        export_model = self.model_handler.get_model_to_export(
-            train_model, dataset=None
-        )
-        test_data = tf.SparseTensor(
-            indices=[[0, 0]], values=[0], dense_shape=(1, 1)
-        )
-        result = export_model.call(test_data).numpy()
+            # Model handler will restore model parameters from the checkpoint
+            # directory and assign parameters to train_model.
+            export_model = self.model_handler.get_model_to_export(
+                train_model, dataset=None
+            )
+            test_data = tf.SparseTensor(
+                indices=[[0, 0]], values=[0], dense_shape=(1, 1)
+            )
+            result = export_model.call(test_data).numpy()
 
-        # The embedding table in checkpoint file is
-        # [[1.0, 1.0], [1.0, 1.0], [1.0,1.0], [1.0, 1.0]], weights in the dense
-        # layer is [[1.0],[1.0]], bias is [1.0]. So the result is 3.0.
-        self.assertEqual(result[0][0], 3.0)
+            # The embedding table in checkpoint file is
+            # [[1.0, 1.0], [1.0, 1.0], [1.0,1.0], [1.0, 1.0]], weights in the
+            # dense layer is [[1.0],[1.0]], bias is [1.0]. So the result
+            # is 3.0.
+            self.assertEqual(result[0][0], 3.0)
 
 
 if __name__ == "__main__":
