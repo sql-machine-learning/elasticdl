@@ -13,7 +13,6 @@ from elasticdl.python.common.model_utils import (
     load_module,
 )
 from elasticdl.python.common.save_utils import CheckpointSaver
-from elasticdl.python.common.tensor import emplace_tensor_pb_from_ndarray
 from elasticdl.python.common.tensor_utils import (
     pb_to_ndarray,
     serialize_indexed_slices,
@@ -116,9 +115,7 @@ class PserverServicerTest(unittest.TestCase):
             req = elasticdl_pb2.Model()
             req.version = idx + 1
             for name in model:
-                emplace_tensor_pb_from_ndarray(
-                    req.param, model[name], name=name
-                )
+                serialize_ndarray(model[name], req.dense_parameters[name])
             req.embedding_table_info.append(self._embedding_info)
             res = self._stub.push_model(req)
             self.assertEqual(res, empty_pb2.Empty())
@@ -182,7 +179,7 @@ class PserverServicerTest(unittest.TestCase):
         req = elasticdl_pb2.Model()
         req.version = 1
         for name, var in param0.items():
-            emplace_tensor_pb_from_ndarray(req.param, var, name=name)
+            serialize_ndarray(var, req.dense_parameters[name])
         res = self._stub.push_model(req)
         self.assertEqual(res, empty_pb2.Empty())
 
@@ -281,9 +278,7 @@ class PserverServicerTest(unittest.TestCase):
         push_model_req = elasticdl_pb2.Model()
         push_model_req.version = self._parameters.version
         for name, value in zip(self.var_names, self.var_values):
-            emplace_tensor_pb_from_ndarray(
-                push_model_req.param, value, name=name
-            )
+            serialize_ndarray(value, push_model_req.dense_parameters[name])
         push_model_req.embedding_table_info.append(self._embedding_info)
         self._stub.push_model(push_model_req)
 

@@ -29,7 +29,6 @@ from elasticdl.python.common.model_utils import (
     get_non_embedding_trainable_vars,
     set_callback_parameters,
 )
-from elasticdl.python.common.tensor import emplace_tensor_pb_from_ndarray
 from elasticdl.python.common.tensor_utils import (
     deduplicate_indexed_slices,
     merge_indexed_slices,
@@ -430,8 +429,8 @@ class Worker(object):
         if ps_id in self._ps_vars:
             vars = self._ps_vars[ps_id]
             for var in vars:
-                emplace_tensor_pb_from_ndarray(
-                    model.param, var.numpy(), name=var.name
+                serialize_ndarray(
+                    var.numpy(), model.dense_parameters[var.name]
                 )
         self._ps_stubs[ps_id].push_model(model)
 
