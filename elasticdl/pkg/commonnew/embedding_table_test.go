@@ -16,7 +16,7 @@ func TestEmbeddingTableGet(t *testing.T) {
 	e1 := NewEmbeddingTable(2, "zero", Float32)
 	v1 := e1.GetEmbeddingVector(1) // Note: this is a reference type, future changes have effect on it
 	t1 := NewTensor([]float32{1, 2}, []int64{1, 2})
-	it := NewIndexedTensor(t1, []int64{1})
+	it := NewIndexedSlices(t1, []int64{1})
 	e1.SetEmbeddingVectors(it)
 	assert.Equal(t, Slice(v1).([]float32), []float32{1, 2}, "GetEmbeddingVector FAIL")
 
@@ -30,7 +30,7 @@ func TestEmbeddingTableSet(t *testing.T) {
 	i := []int64{1, 3, 5}
 	v := []float32{1.0, 2.0, 3.0, 4.0, 5.0, 6.0}
 	tensor := NewTensor(v, []int64{3, 2})
-	it := NewIndexedTensor(tensor, i)
+	it := NewIndexedSlices(tensor, i)
 
 	err := e.SetEmbeddingVectors(it)
 	assert.Nil(t, err)

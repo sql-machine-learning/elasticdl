@@ -43,10 +43,10 @@ func (e *EmbeddingTable) GetEmbeddingVectors(indices []int64) *Tensor {
 }
 
 // SetEmbeddingVectors sets (indices, value) pair to embedding vector
-func (e *EmbeddingTable) SetEmbeddingVectors(idxslice *IndexedTensor) error {
-	for i, index := range idxslice.Indices {
+func (e *EmbeddingTable) SetEmbeddingVectors(idxslice *IndexedSlices) error {
+	for i, index := range idxslice.Ids {
 		value := e.GetEmbeddingVector(index)
-		copy(value.Buffer, idxslice.GetRow(int64(i)).Buffer)
+		copy(value.Buffer, idxslice.ConcatTensors.GetRow(int64(i)).Buffer)
 	}
 	return nil
 }

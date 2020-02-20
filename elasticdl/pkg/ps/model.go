@@ -53,14 +53,15 @@ func (model *Model) InitFromModelPB(pb *proto.Model) error {
 		model.SetEmbeddingTableInfo(v)
 	}
 	for name, v := range pb.DenseParameters {
-		model.DenseParameters[name] = commonnew.DeserializeFromTensorPB(v)
+		model.DenseParameters[name] = commonnew.DeserializeFromTensorProto(v)
 	}
 	for name, v := range pb.EmbeddingTables {
 		table := model.GetEmbeddingTable(name)
 		if table == nil {
 			return fmt.Errorf("Embedding table %s is not created", name)
 		}
-		err := model.EmbeddingTables[name].SetEmbeddingVectors(v)
+		iv := commonnew.DeserializeFromIndexedSliceProto(v)
+		err := model.EmbeddingTables[name].SetEmbeddingVectors(iv)
 		if err != nil {
 			return err
 		}

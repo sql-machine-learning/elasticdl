@@ -32,7 +32,7 @@ func TestModelInit(t *testing.T) {
 func TestModelInitFrom(t *testing.T) {
 	var modelPB = proto.Model{
 		Version:            int32(1),
-		EmbeddingTables:    make(map[string]*proto.IndexedSlices),
+		EmbeddingTables:    make(map[string]*proto.IndexedSlicesProto),
 		EmbeddingTableInfo: []*proto.EmbeddingTableInfo{},
 	}
 	d1 := []int64{3, 2}
@@ -40,8 +40,12 @@ func TestModelInitFrom(t *testing.T) {
 	t1 := commonnew.NewTensor(v1, d1)
 
 	i1 := []int64{1, 3, 5}
-	p1 := t1.SerializeToIndexedSlices(i1)
-	modelPB.EmbeddingTables["e1"] = p1
+	var is = commonnew.IndexedSlices{
+		ConcatTensors: t1,
+		Ids:           i1,
+	}
+	isPB := is.SerializeToIndexedSlicesProto()
+	modelPB.EmbeddingTables["e1"] = isPB
 
 	var epb = proto.EmbeddingTableInfo{
 		Name:        "e1",

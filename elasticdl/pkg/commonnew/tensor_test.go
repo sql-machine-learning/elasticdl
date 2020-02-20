@@ -63,9 +63,9 @@ func TestPbTransform(t *testing.T) {
 		Dtype:         Float32,
 	}
 
-	t1 := DeserializeFromTensorPB(&pb)
+	t1 := DeserializeFromTensorProto(&pb)
 	assert.Equal(t, Slice(t1).([]float32), val, "Deserialize FAIL")
 
-	pb2 := t1.SerializeToTensor()
+	pb2 := t1.SerializeToTensorProto()
 	assert.Equal(t, pb2.GetTensorContent(), bval, "Serialize FAIL")
 }

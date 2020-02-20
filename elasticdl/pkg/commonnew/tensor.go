@@ -142,8 +142,8 @@ func (t *Tensor) IsValid() bool {
 	return true
 }
 
-// DeserializeFromTensorPB transforms pb to tensor
-func DeserializeFromTensorPB(pb *tensor_go_proto.TensorProto) *Tensor {
+// DeserializeFromTensorProto transforms pb to tensor
+func DeserializeFromTensorProto(pb *tensor_go_proto.TensorProto) *Tensor {
 	pbDim := pb.GetTensorShape().GetDim()
 	dims := make([]int64, len(pbDim), len(pbDim))
 	for i, iDim := range pbDim {
@@ -160,8 +160,8 @@ func DeserializeFromTensorPB(pb *tensor_go_proto.TensorProto) *Tensor {
 	}
 }
 
-// SerializeToTensor transforms tensor to pb
-func (t *Tensor) SerializeToTensor() *tensor_go_proto.TensorProto {
+// SerializeToTensorProto transforms tensor to pb
+func (t *Tensor) SerializeToTensorProto() *tensor_go_proto.TensorProto {
 	shapeDim := make([]*tensor_shape_go_proto.TensorShapeProto_Dim, len(t.Dims), len(t.Dims))
 	for i, dim := range t.Dims {
 		shapeDim[i] = &tensor_shape_go_proto.TensorShapeProto_Dim{
@@ -178,35 +178,35 @@ func (t *Tensor) SerializeToTensor() *tensor_go_proto.TensorProto {
 	}
 }
 
-// IndexedTensor : IndexedSlice in memory representation
-type IndexedTensor struct {
-	Tensor
-	Indices []int64
+// IndexedSlices : IndexedSlice in memory representation
+type IndexedSlices struct {
+	ConcatTensors *Tensor
+	Ids           []int64
 }
 
-// NewIndexedTensor return a IndexedTensor instance
-func NewIndexedTensor(t *Tensor, indices []int64) *IndexedTensor {
-	return &IndexedTensor{
-		Tensor:  *t,
-		Indices: indices,
+// NewIndexedSlices return a IndexedTensor instance
+func NewIndexedSlices(t *Tensor, ids []int64) *IndexedSlices {
+	return &IndexedSlices{
+		ConcatTensors: t,
+		Ids:           ids,
 	}
 }
 
-// SerializeToIndexedSlices return proto.IndexedSlices
-func (t *IndexedTensor) SerializeToIndexedSlices() *proto.IndexedSlices {
-	if t.Dims[0] != int64(len(t.Indices)) || len(t.Dims) != 2 {
+// SerializeToIndexedSlicesProto return proto.IndexedSlices
+func (t *IndexedSlices) SerializeToIndexedSlicesProto() *proto.IndexedSlicesProto {
+	if t.ConcatTensors.Dims[0] != int64(len(t.Ids)) || len(t.ConcatTensors.Dims) != 2 {
 		return nil
 	}
-	return &proto.IndexedSlices{
-		ConcatTensors: t.SerializeToTensor(),
-		Ids:           t.Indices,
+	return &proto.IndexedSlicesProto{
+		ConcatTensors: t.ConcatTensors.SerializeToTensorProto(),
+		Ids:           t.Ids,
 	}
 }
 
-// DeserializeFromIndexedSlicePB return common.IndexedTensor
-func DeserializeFromIndexedSlicePB(pb *proto.IndexedSlices) *IndexedTensor {
-	return &IndexedTensor{
-		Tensor:  *DeserializeFromTensorPB(pb.ConcatTensors),
-		Indices: pb.Ids,
+// DeserializeFromIndexedSliceProto return common.IndexedTensor
+func DeserializeFromIndexedSliceProto(pb *proto.IndexedSlicesProto) *IndexedSlices {
+	return &IndexedSlices{
+		ConcatTensors: DeserializeFromTensorProto(pb.ConcatTensors),
+		Ids:           pb.Ids,
 	}
 }
