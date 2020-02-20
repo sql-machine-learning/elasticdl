@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.core.framework import tensor_pb2
@@ -7,6 +9,8 @@ from elasticdl.python.common.dtypes import (
     dtype_numpy_to_tensor,
     dtype_tensor_to_numpy,
 )
+
+Tensor = namedtuple("Tensor", ("name", "values", "indices"))
 
 
 def merge_indexed_slices(*args):
@@ -78,8 +82,7 @@ def pb_to_indexed_slices(pb):
     return tf.IndexedSlices(concat_tensors, ids)
 
 
-def indexed_slices_to_pb(slices):
-    pb = elasticdl_pb2.IndexedSlices()
+def serialize_indexed_slices(slices, pb):
     serialize_ndarray(slices.values, pb.concat_tensors)
     if (
         isinstance(slices.indices, np.ndarray)
@@ -90,4 +93,9 @@ def indexed_slices_to_pb(slices):
             len(slices.indices.shape),
         )
     pb.ids.extend(slices.indices)
+
+
+def indexed_slices_to_pb(slices):
+    pb = elasticdl_pb2.IndexedSlices()
+    serialize_indexed_slices(slices, pb)
     return pb
