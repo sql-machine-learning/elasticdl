@@ -108,6 +108,7 @@ message ReportTaskResultRequest {
 message ReportEvaluationMetricsRequest {
   map<string, tensorflow.TensorProto> model_outputs = 1;
   tensorflow.TensorProto labels = 2;
+  int32 worker_id = 3;
 }
 
 message ReportVersionRequest {

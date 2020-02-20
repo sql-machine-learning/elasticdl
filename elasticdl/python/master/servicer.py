@@ -1,4 +1,6 @@
+import statistics
 import threading
+import time
 
 from google.protobuf import empty_pb2
 
@@ -19,6 +21,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version = 0
 
         self._evaluation_service = evaluation_service
+        self._task_complete_times = {
+            elasticdl_pb2.EVALUATION: [],
+            elasticdl_pb2.TRAINING: [],
+        }
+        self._worker_liveness_time = {}
         if evaluation_service:
             evaluation_service.set_master_servicer(self)
 
@@ -59,7 +66,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # Then the master tells the worker to wait
             # in case of new tasks later.
             res.type = elasticdl_pb2.WAIT
-
+        self._worker_liveness_time[request.worker_id] = time.time()
         return res
 
     def report_task_result(self, request, _):
@@ -67,10 +74,20 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             logger.warning("Worker reported error: " + request.err_message)
             self._task_d.report(request, False)
         else:
-            self._task_d.report(request, True)
+            complete_time, task, worker_id = self._task_d.report(request, True)
+            if task:
+                with self._lock:
+                    self._worker_liveness_time[worker_id] = time.time()
+                if task.type in [
+                    elasticdl_pb2.TRAINING,
+                    elasticdl_pb2.EVALUATION,
+                ]:
+                    self._task_complete_times[task.type].append(complete_time)
         return empty_pb2.Empty()
 
     def report_evaluation_metrics(self, request, _):
+        with self._lock:
+            self._worker_liveness_time[request.worker_id] = time.time()
         self._evaluation_service.report_evaluation_metrics(
             request.model_outputs, request.labels
         )
@@ -83,3 +100,22 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 master_locking=False, model_version=request.model_version
             )
         return empty_pb2.Empty()
+
+    def get_average_task_complete_time(self):
+        if len(self._task_complete_times) < 20:
+            return {
+                elasticdl_pb2.TRAINING: 36000,
+                elasticdl_pb2.EVALUATION: 36000,
+            }
+        else:
+            return {
+                elasticdl_pb2.TRAINING: statistics.mean(
+                    self._task_complete_times[elasticdl_pb2.TRAINING]
+                ),
+                elasticdl_pb2.EVALUATION: statistics.mean(
+                    self._task_complete_times[elasticdl_pb2.EVALUATION]
+                ),
+            }
+
+    def get_worker_liveness_time(self, worker_id):
+        return self._worker_liveness_time[worker_id]
