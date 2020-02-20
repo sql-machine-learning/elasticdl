@@ -46,10 +46,9 @@ func (e *EmbeddingTable) GetEmbeddingVectors(indices []int64) *tensor_go_proto.T
 }
 
 // SetEmbeddingVectors sets (indices, value) pair to embedding vector
-func (e *EmbeddingTable) SetEmbeddingVectors(idxslice *proto.IndexedSlices) error {
+func (e *EmbeddingTable) SetEmbeddingVectors(idxslice *proto.IndexedSlices) {
 	for i, index := range idxslice.Ids {
 		value := e.GetEmbeddingVector(index)
 		copy(value.TensorContent, idxsliceTensor.GetRow(int64(i)).TensorContent)
 	}
-	return nil
 }
