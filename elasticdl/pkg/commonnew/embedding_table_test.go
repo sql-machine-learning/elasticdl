@@ -1,6 +1,7 @@
 package commonnew
 
 import (
+	"elasticdl.org/elasticdl/pkg/proto"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -16,8 +17,10 @@ func TestEmbeddingTableGet(t *testing.T) {
 	e1 := NewEmbeddingTable(2, "zero", Float32)
 	v1 := e1.GetEmbeddingVector(1) // Note: this is a reference type, future changes have effect on it
 	t1 := NewTensor([]float32{1, 2}, []int64{1, 2})
-	is1 := t1.SerializeToIndexedSlices([]int64{1})
-	e1.SetEmbeddingVectors(is1)
+	var is1 proto.IndexedSlices
+	is1.ConcatTensors = t1
+	is.Ids = []int64{1}
+	e1.SetEmbeddingVectors(&is1)
 	assert.Equal(t, Slice(v1).([]float32), []float32{1, 2}, "GetEmbeddingVector FAIL")
 
 	indices := []int64{1, 3, 5, 7, 9}
@@ -30,10 +33,10 @@ func TestEmbeddingTableSet(t *testing.T) {
 	i := []int64{1, 3, 5}
 	v := []float32{1.0, 2.0, 3.0, 4.0, 5.0, 6.0}
 	tensor := NewTensor(v, []int64{3, 2})
-
-	is := tensor.SerializeToIndexedSlices(i)
-
-	err := e.SetEmbeddingVectors(is)
+	var is proto.IndexedSlices
+	is.ConcatTensors = tensor
+	is.Ids = i
+	err := e.SetEmbeddingVectors(&is)
 	assert.Nil(t, err)
 
 	v1 := e.GetEmbeddingVector(1)

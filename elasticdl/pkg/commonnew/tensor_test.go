@@ -35,37 +35,3 @@ func TestTensor(t *testing.T) {
 	t1.SetRow(1, val)
 	assert.Equal(t, Slice(t1).([]float32), []float32{1.0, 2.0, 3.0, 30, 40, 50}, "SetRow FAIL")
 }
-
-func TestPbTransform(t *testing.T) {
-	val := []float32{1, 2, 3, 4, 5}
-	bval := make([]byte, 20, 20)
-	for i, num := range val {
-		bits := math.Float32bits(num)
-		binary.LittleEndian.PutUint32(bval[(i*4):], bits)
-	}
-	//dim := []int64{2,5}
-
-	dim1 := tensor_shape_go_proto.TensorShapeProto_Dim{
-		Size: 1,
-	}
-	dim2 := tensor_shape_go_proto.TensorShapeProto_Dim{
-		Size: 5,
-	}
-
-	shapeDim := []*tensor_shape_go_proto.TensorShapeProto_Dim{&dim1, &dim2}
-
-	var pbDim = tensor_shape_go_proto.TensorShapeProto{
-		Dim: shapeDim,
-	}
-	pb := tensor_go_proto.TensorProto{
-		TensorContent: bval,
-		TensorShape:   &pbDim,
-		Dtype:         Float32,
-	}
-
-	t1 := DeserializeFromTensorPB(&pb)
-	assert.Equal(t, Slice(t1).([]float32), val, "Deserialize FAIL")
-
-	pb2 := t1.SerializeToTensor()
-	assert.Equal(t, pb2.GetTensorContent(), bval, "Serialize FAIL")
-}

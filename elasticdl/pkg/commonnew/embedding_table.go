@@ -3,6 +3,7 @@ package commonnew
 import (
 	"elasticdl.org/elasticdl/pkg/proto"
 	"fmt"
+	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/types_go_proto"
 )
 
@@ -10,7 +11,7 @@ import (
 type EmbeddingTable struct {
 	Dim              int64
 	Initializer      string
-	EmbeddingVectors map[int64]*Tensor
+	EmbeddingVectors map[int64]*tensor_go_proto.TensorProto
 	Dtype            types_go_proto.DataType
 }
 
@@ -19,13 +20,13 @@ func NewEmbeddingTable(dim int64, initializer string, dtype types_go_proto.DataT
 	return &EmbeddingTable{
 		Dim:              dim,
 		Initializer:      initializer,
-		EmbeddingVectors: make(map[int64]*Tensor),
+		EmbeddingVectors: make(map[int64]*tensor_go_proto.TensorProto),
 		Dtype:            dtype,
 	}
 }
 
 // GetEmbeddingVector returns an REFERENCE of embedding vector giving an index
-func (e *EmbeddingTable) GetEmbeddingVector(index int64) *Tensor {
+func (e *EmbeddingTable) GetEmbeddingVector(index int64) *tensor_go_proto.TensorProto {
 	if value, ok := e.EmbeddingVectors[index]; ok {
 		return value
 	}
@@ -35,7 +36,7 @@ func (e *EmbeddingTable) GetEmbeddingVector(index int64) *Tensor {
 }
 
 // GetEmbeddingVectors returns COPYS of embedding vectors giving an array of indices
-func (e *EmbeddingTable) GetEmbeddingVectors(indices []int64) *Tensor {
+func (e *EmbeddingTable) GetEmbeddingVectors(indices []int64) *tensor_go_proto.TensorProto {
 	dim := []int64{int64(len(indices)), e.Dim}
 	tensor := NewEmptyTensor(dim, e.Dtype)
 	for i, index := range indices {
@@ -46,13 +47,9 @@ func (e *EmbeddingTable) GetEmbeddingVectors(indices []int64) *Tensor {
 
 // SetEmbeddingVectors sets (indices, value) pair to embedding vector
 func (e *EmbeddingTable) SetEmbeddingVectors(idxslice *proto.IndexedSlices) error {
-	idxsliceTensor := DeserializeFromTensorPB(idxslice.ConcatTensors)
-	if idxsliceTensor == nil {
-		return fmt.Errorf("Embedding vectors dim not match")
-	}
 	for i, index := range idxslice.Ids {
 		value := e.GetEmbeddingVector(index)
-		copy(value.Buffer, idxsliceTensor.GetRow(int64(i)).Buffer)
+		copy(value.TensorContent, idxsliceTensor.GetRow(int64(i)).TensorContent)
 	}
 	return nil
 }
