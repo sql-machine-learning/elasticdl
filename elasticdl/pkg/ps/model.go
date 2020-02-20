@@ -53,7 +53,7 @@ func (model *Model) InitFromModelPB(pb *proto.Model) error {
 		model.SetEmbeddingTableInfo(v)
 	}
 	for name, v := range pb.DenseParameters {
-		model.DenseParameters[name] = DeserializeFromTensorPB(v)
+		model.DenseParameters[name] = commonnew.DeserializeFromTensorPB(v)
 	}
 	for name, v := range pb.EmbeddingTables {
 		table := model.GetEmbeddingTable(name)
