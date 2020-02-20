@@ -1,9 +1,14 @@
 package commonnew
 
 import (
-	"elasticdl.org/elasticdl/pkg/proto"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/types_go_proto"
 )
+
+// IndexedSlices is a wrapper for proto.IndexedSlices
+type IndexedSlices struct {
+	ConcatTensors *Tensor
+	Ids           []int64
+}
 
 // EmbeddingTable struct
 type EmbeddingTable struct {
@@ -44,7 +49,7 @@ func (e *EmbeddingTable) GetEmbeddingVectors(indices []int64) *Tensor {
 }
 
 // SetEmbeddingVectors sets (indices, value) pair to embedding vector
-func (e *EmbeddingTable) SetEmbeddingVectors(idxslice *proto.IndexedSlices) {
+func (e *EmbeddingTable) SetEmbeddingVectors(idxslice *IndexedSlices) {
 	for i, index := range idxslice.Ids {
 		value := e.GetEmbeddingVector(index)
 		copy(value.TensorContent, idxslice.ConcatTensors.GetRow(int64(i)).TensorContent)

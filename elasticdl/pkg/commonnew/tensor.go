@@ -8,12 +8,12 @@ import (
 	"unsafe"
 )
 
-// Tensor is an alias for tensor_go_proto.TensorProto of tensorflow
+// Tensor is a wrapper for tensor_go_proto.TensorProto
 type Tensor tensor_go_proto.TensorProto
 
 // GetDim returns dims of a tensor
 func (t *Tensor) GetDim() []int64 {
-	pbDim := t.GetTensorShape().GetDim()
+	pbDim := t.TensorShape.Dim
 	dims := make([]int64, len(pbDim), len(pbDim))
 	for i, iDim := range pbDim {
 		dims[i] = iDim.GetSize()
@@ -23,10 +23,16 @@ func (t *Tensor) GetDim() []int64 {
 
 // SetDim sets dims of a tensor
 func (t *Tensor) SetDim(dims []int64) {
-	t.TensorShape.Dim = make([]*tensor_shape_go_proto.TensorShapeProto_Dim, len(dims), len(dims))
+	shapeDim := make([]*tensor_shape_go_proto.TensorShapeProto_Dim, len(dims), len(dims))
 	for i, dim := range dims {
-		t.TensorShape.Dim[i].Size = dim
+		shapeDim[i] = &tensor_shape_go_proto.TensorShapeProto_Dim{
+			Size: dim,
+		}
 	}
+	pbDim := tensor_shape_go_proto.TensorShapeProto{
+		Dim: shapeDim,
+	}
+	t.TensorShape = &pbDim
 }
 
 // NewEmptyTensor create an empty n-dim tensor
@@ -69,8 +75,8 @@ func NewEmptyVector(dim int64, dtype types_go_proto.DataType) *Tensor {
 func NewVector(slice interface{}) *Tensor {
 	v := reflect.ValueOf(slice)
 	length := v.Len()
-	dims = []int64{int64(length)}
-	return NewTensor(dims, slice)
+	dims := []int64{int64(length)}
+	return NewTensor(slice, dims)
 }
 
 // DimProduct get the number of the elements of a tensor of this dim
@@ -95,7 +101,7 @@ func (t *Tensor) GetSubTensor(begin int64, length int64) *Tensor {
 
 // GetRow get the row reference of a 2-dim tensor
 func (t *Tensor) GetRow(idx int64) *Tensor {
-	dims = t.GetDim()
+	dims := t.GetDim()
 	if len(dims) != 2 || idx >= dims[0] {
 		return nil
 	}
@@ -113,7 +119,7 @@ func (t *Tensor) SetSubTensor(begin int64, length int64, val *Tensor) {
 
 // SetRow set a vector to an index of tensor
 func (t *Tensor) SetRow(idx int64, vec *Tensor) {
-	dims = t.GetDim()
+	dims := t.GetDim()
 	if len(dims) != 2 || idx >= dims[0] {
 		return
 	}
