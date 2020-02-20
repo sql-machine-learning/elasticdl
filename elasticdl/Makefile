@@ -2,6 +2,7 @@ PYTHON = python
 GO_FILE_DIR = elasticdl/pkg/proto
 CXX = g++
 CAPI_DIR = elasticdl/pkg/kernel/capi
+CAPI_DIR_new = elasticdl/pkg/kernelnew/capi
 
 all: python_pb go_pb kernel
 
@@ -20,5 +21,8 @@ go_pb: elasticdl/proto/elasticdl.proto
 kernel:
 	${CXX} -O3 -std=c++11 ${CAPI_DIR}/kernel_api.cc -c -o ${CAPI_DIR}/libkernel_api.o
 	ar crv ${CAPI_DIR}/libkernel_api.a ${CAPI_DIR}/libkernel_api.o
+	${CXX} -O3 -std=c++11 ${CAPI_DIR_new}/kernel_api.cc -c -o ${CAPI_DIR_new}/libkernel_api.o
+	ar crv ${CAPI_DIR_new}/libkernel_api.a ${CAPI_DIR_new}/libkernel_api.o
 clean:
 	rm -rf ${CAPI_DIR}/*.o ${CAPI_DIR}/*.a
+	rm -rf ${CAPI_DIR_new}/*.o ${CAPI_DIR_new}/*.a
