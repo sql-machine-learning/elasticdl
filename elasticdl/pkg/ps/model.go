@@ -9,30 +9,30 @@ import (
 // Model contains dense parameters and embedding tables
 type Model struct {
 	DenseParameters map[string]*commonnew.Tensor
-	EmbeddingTables    map[string]*commonnew.EmbeddingTable
-	Version           int32
-	Initialized        bool
+	EmbeddingTables map[string]*commonnew.EmbeddingTable
+	Version         int32
+	Initialized     bool
 }
 
 // NewModel creates a model instance
 func NewModel() *Model {
-    return &Model {
-       DenseParameters: make(map[string]*commonnew.Tensor),
-        EmbeddingTables : make(map[string]*commonnew.EmbeddingTable)
-    }
+	return &Model{
+		DenseParameters: make(map[string]*commonnew.Tensor),
+		EmbeddingTables: make(map[string]*commonnew.EmbeddingTable),
+	}
 }
 
 // GetDenseParameter returns dense parameter pointer
-func (p *Model) GetDenseParameter(name string) *commonnew.Tensor {
-	if value, ok := p.DenseParameters[name]; ok {
+func (model *Model) GetDenseParameter(name string) *commonnew.Tensor {
+	if value, ok := model.DenseParameters[name]; ok {
 		return value
 	}
 	return nil
 }
 
 // GetEmbeddingTable returns embedding table pointer
-func (p *Model) GetEmbeddingTable(name string) *commonnew.EmbeddingTable {
-	if value, ok := p.EmbeddingTables[name]; ok {
+func (model *Model) GetEmbeddingTable(name string) *commonnew.EmbeddingTable {
+	if value, ok := model.EmbeddingTables[name]; ok {
 		return value
 	}
 	return nil
@@ -43,12 +43,12 @@ func (model *Model) SetEmbeddingTableInfo(info *proto.EmbeddingTableInfo) {
 	if _, ok := model.EmbeddingTables[info.Name]; ok {
 		return
 	}
-	t := common.NewEmbeddingTable(info.Dim, info.Initializer, info.Dtype)
+	t := commonnew.NewEmbeddingTable(info.Dim, info.Initializer, info.Dtype)
 	model.EmbeddingTables[info.Name] = t
 }
 
 // InitFromModelPB inits a Parameter instance from model PB to Parameter
-func (p *Parameter) InitFromModelPB(pb *proto.Model) error {
+func (model *Model) InitFromModelPB(pb *proto.Model) error {
 	for _, v := range pb.EmbeddingTableInfo {
 		model.SetEmbeddingTableInfo(v)
 	}
@@ -56,17 +56,17 @@ func (p *Parameter) InitFromModelPB(pb *proto.Model) error {
 		model.DenseParameters[name] = DeserializeFromTensorPB(v)
 	}
 	for name, v := range pb.EmbeddingTables {
-	    table := p.GetEmbeddingTable(name)
-	    if table == nil {
+		table := model.GetEmbeddingTable(name)
+		if table == nil {
 			return fmt.Errorf("Embedding table %s is not created", name)
 		}
-        err := model.EmbeddingTables[name].SetEmbeddingVectors(v)
-        if err != nil {
-				return err
-			}
+		err := model.EmbeddingTables[name].SetEmbeddingVectors(v)
+		if err != nil {
+			return err
+		}
 	}
 	if pb.Version >= 0 {
-		p.Version = pb.Version
+		model.Version = pb.Version
 	}
 	return nil
 }
