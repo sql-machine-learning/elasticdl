@@ -148,10 +148,12 @@ class Master(object):
         self._exit_code = 0
 
     def _set_completed_steps_by_checkpoint(self, checkpoint_dir_for_init):
-        if not checkpoint_dir_for_init:
+        if (
+            not checkpoint_dir_for_init
+            or CheckpointSaver.check_checkpoint_valid(checkpoint_dir_for_init)
+        ):
             return
 
-        CheckpointSaver.check_checkpoint_valid(checkpoint_dir_for_init)
         model_verion = CheckpointSaver.get_version_from_checkpoint(
             checkpoint_dir_for_init
         )
