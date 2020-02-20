@@ -11,9 +11,6 @@ import (
 
 // SGD kernel
 func SGD(grad *commonnew.Tensor, param *commonnew.Tensor, lr float32) error {
-	if len(grad.Buffer) != len(param.Buffer) {
-		return fmt.Errorf("grad Value size not equal to param")
-	}
 	gradPtr := (*C.float)(unsafe.Pointer(&grad.Buffer[0]))
 	paramPtr := (*C.float)(unsafe.Pointer(&param.Buffer[0]))
 	length := len(grad.Buffer) / int(commonnew.DtypeSize[grad.Dtype])
@@ -27,10 +24,17 @@ func SparseSGD(grad *commonnew.IndexedTensor, param *commonnew.EmbeddingTable, l
 		return fmt.Errorf("grad width is not equal to embedding dim")
 	}
 	for i, index := range grad.Indices {
-		if index == -1 {
-			continue
-		}
 		vector := param.GetEmbeddingVector(index)
+		subGrad := grad.GetRow(int64(i))
+		SGD(subGrad, vector, lr)
+	}
+	return nil
+}
+
+// IndexedSGD kernel
+func IndexedSGD(grad *commonnew.IndexedTensor, param *commonnew.Tensor, lr float32) error {
+	for i, index := range grad.Indices {
+		vector := param.GetRow(index)
 		subGrad := grad.GetRow(int64(i))
 		SGD(subGrad, vector, lr)
 	}
@@ -63,9 +67,6 @@ func SparseAdam(grad *commonnew.IndexedTensor, param *commonnew.EmbeddingTable, 
 		return fmt.Errorf("grad width is not equal to embedding dim")
 	}
 	for i, index := range grad.Indices {
-		if index == -1 {
-			continue
-		}
 		subgrad := grad.GetRow(int64(i))
 		subparam := param.GetEmbeddingVector(index)
 		subm := m.GetEmbeddingVector(index)
@@ -73,6 +74,25 @@ func SparseAdam(grad *commonnew.IndexedTensor, param *commonnew.EmbeddingTable, 
 		var submaxs *commonnew.Tensor = nil
 		if amsgrad {
 			submaxs = maxSquare.GetEmbeddingVector(index)
+		}
+		Adam(subgrad, subparam, subm, subv, lr, step, beta1, beta2, epsilon, amsgrad, submaxs)
+	}
+	return nil
+}
+
+// IndexedAdam kernel
+func IndexedAdam(grad *commonnew.IndexedTensor, param *commonnew.Tensor, m *commonnew.Tensor, v *commonnew.Tensor, lr float32, step int64, beta1 float32, beta2 float32, epsilon float32, amsgrad bool, maxSquare *commonnew.Tensor) error {
+	if grad.Dims[1] != param.Dims[1] {
+		return fmt.Errorf("grad width is not equal to embedding dim")
+	}
+	for i, index := range grad.Indices {
+		subgrad := grad.GetRow(int64(i))
+		subparam := param.GetRow(index)
+		subm := m.GetRow(index)
+		subv := v.GetRow(index)
+		var submaxs *commonnew.Tensor = nil
+		if amsgrad {
+			submaxs = maxSquare.GetRow(index)
 		}
 		Adam(subgrad, subparam, subm, subv, lr, step, beta1, beta2, epsilon, amsgrad, submaxs)
 	}
