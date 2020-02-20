@@ -48,6 +48,6 @@ func (e *EmbeddingTable) GetEmbeddingVectors(indices []int64) *tensor_go_proto.T
 func (e *EmbeddingTable) SetEmbeddingVectors(idxslice *proto.IndexedSlices) {
 	for i, index := range idxslice.Ids {
 		value := e.GetEmbeddingVector(index)
-		copy(value.TensorContent, idxsliceTensor.GetRow(int64(i)).TensorContent)
+		copy(value.TensorContent, idxslice.ConcatTensors.GetRow(int64(i)).TensorContent)
 	}
 }

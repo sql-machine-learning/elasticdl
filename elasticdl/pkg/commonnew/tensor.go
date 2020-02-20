@@ -1,7 +1,6 @@
 package commonnew
 
 import (
-	"elasticdl.org/elasticdl/pkg/proto"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_shape_go_proto"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/types_go_proto"
@@ -19,13 +18,10 @@ func (t *tensor_go_proto.TensorProto) GetDim() []int64 {
 }
 
 func (t *tensor_go_proto.TensorProto) SetDim(dims []int64) {
-	shapeDim := make([]*tensor_shape_go_proto.TensorShapeProto_Dim, len(t.Dims), len(t.Dims))
+	t.TensorShape.Dim = make([]*tensor_shape_go_proto.TensorShapeProto_Dim, len(dims), len(dims))
 	for i, dim := range dims {
-		shapeDim[i] = &tensor_shape_go_proto.TensorShapeProto_Dim{
-			Size: dim,
-		}
+		t.TensorShape.Dim[i].Size = dim
 	}
-	t.TensorShape = &shapeDim
 }
 
 // NewEmptyTensor create an empty n-dim tensor
