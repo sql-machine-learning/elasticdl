@@ -1,5 +1,6 @@
 import os
 import shutil
+
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
