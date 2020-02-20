@@ -5,6 +5,7 @@ import traceback
 import numpy as np
 import tensorflow as tf
 
+import elasticdl.python.common.tensor_utils as tensor_utils
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
 from elasticdl.python.common.constants import (
@@ -28,10 +29,11 @@ from elasticdl.python.common.model_utils import (
     get_non_embedding_trainable_vars,
     set_callback_parameters,
 )
-from elasticdl.python.common.tensor import emplace_tensor_pb_from_ndarray
 from elasticdl.python.common.tensor_utils import (
     deduplicate_indexed_slices,
+    merge_indexed_slices,
     pb_to_ndarray,
+    serialize_indexed_slices,
     serialize_ndarray,
 )
 from elasticdl.python.common.timing_utils import Timing
@@ -427,8 +429,8 @@ class Worker(object):
         if ps_id in self._ps_vars:
             vars = self._ps_vars[ps_id]
             for var in vars:
-                emplace_tensor_pb_from_ndarray(
-                    model.param, var.numpy(), name=var.name
+                serialize_ndarray(
+                    var.numpy(), model.dense_parameters[var.name]
                 )
         self._ps_stubs[ps_id].push_model(model)
 
@@ -468,14 +470,38 @@ class Worker(object):
         ):
             ps_id = self._var_to_ps[v.name]
             if ps_id not in ps_grads:
-                ps_grads[ps_id] = [(g, v.name)]
+                ps_grads[ps_id] = {v.name: g}
             else:
-                ps_grads[ps_id].append((g, v.name))
+                if v.name not in ps_grads[ps_id]:
+                    ps_grads[ps_id][v.name] = g
+                else:
+                    if isinstance(g, tf.IndexedSlices):
+                        ps_grads[ps_id][v.name] = merge_indexed_slices(
+                            ps_grads[ps_id][v.name], g
+                        )
+                    else:
+                        ps_grads[ps_id][v.name] += g
+
+        for ps_id, pair in ps_grads.items():
+            for name, g in pair.items():
+                if isinstance(g, tf.IndexedSlices):
+                    v, i = deduplicate_indexed_slices(g.values, g.indices)
+                    ps_grads[ps_id][name] = tf.IndexedSlices(v, i)
 
         for ps_id in ps_grads:
             req = reqs[ps_id]
-            for g, name in ps_grads[ps_id]:
-                emplace_tensor_pb_from_ndarray(req.param, g, name=name)
+            for name, g in ps_grads[ps_id].items():
+                # Keras embedding layer has a dense parameter,
+                # but an indexed slices type gradient
+                if isinstance(g, tf.IndexedSlices):
+                    serialize_indexed_slices(
+                        tensor_utils.Tensor(
+                            None, g.values.numpy(), g.indices.numpy()
+                        ),
+                        req.embedding_tables[name],
+                    )
+                else:
+                    serialize_ndarray(g.numpy(), req.dense_parameters[name])
 
         edl_embedding_name_values = self._collect_edl_embedding_name_values()
 
@@ -522,8 +548,9 @@ class Worker(object):
                 for ps_id in results:
                     req = reqs[ps_id]
                     gv, gi = results[ps_id]
-                    emplace_tensor_pb_from_ndarray(
-                        req.param, values=gv, indices=gi, name=name
+                    serialize_indexed_slices(
+                        tensor_utils.Tensor(None, gv, gi),
+                        req.embedding_tables[name],
                     )
 
         report_futures = []

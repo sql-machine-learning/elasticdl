@@ -3,8 +3,12 @@ import unittest
 import numpy as np
 import tensorflow as tf
 
-from elasticdl.proto.elasticdl_pb2 import EmbeddingTableInfo, Model
-from elasticdl.python.common.tensor import Tensor
+from elasticdl.proto.elasticdl_pb2 import Model
+from elasticdl.python.common.tensor_utils import (
+    Tensor,
+    serialize_indexed_slices,
+    serialize_ndarray,
+)
 from elasticdl.python.ps.embedding_table import get_slot_table_name
 from elasticdl.python.ps.parameters import Parameters
 
@@ -14,33 +18,28 @@ class ParametersTest(unittest.TestCase):
         self.params = Parameters()
 
         self.model_pb = Model()
-        self.tensors_pb = self.model_pb.param
-        self.embeddings_pb = self.model_pb.embedding_table_info
-
-        arr1 = np.random.uniform(size=(3, 4))
-        tensor1_pb = Tensor(arr1, name="x").to_tensor_pb()
-        arr2 = np.random.uniform(size=(4, 5))
-        tensor2_pb = Tensor(arr2, name="y").to_tensor_pb()
-        self.tensors_pb.extend([tensor1_pb, tensor2_pb])
+        self.infos_pb = self.model_pb.embedding_table_info
+        self.tensors_pb = self.model_pb.dense_parameters
+        self.embedding_tables_pb = self.model_pb.embedding_tables
 
         self.embedding_table_name = "embedding_1"
         self.embedding_dim = 10
-        embedding_pb = EmbeddingTableInfo()
+        embedding_pb = self.infos_pb.add()
         embedding_pb.name = self.embedding_table_name
         embedding_pb.dim = self.embedding_dim
         embedding_pb.initializer = "uniform"
 
+        arr1 = np.random.uniform(size=(3, 4))
+        serialize_ndarray(arr1, self.tensors_pb["x"])
+        arr2 = np.random.uniform(size=(4, 5))
+        serialize_ndarray(arr2, self.tensors_pb["y"])
+
         embedding_vectors = np.random.uniform(size=(2, 10))
         embedding_indices = np.array([0, 8])
-        embedding_tensor = Tensor(
-            embedding_vectors,
-            indices=embedding_indices,
-            name=self.embedding_table_name,
+        serialize_indexed_slices(
+            Tensor(None, embedding_vectors, embedding_indices),
+            self.embedding_tables_pb[self.embedding_table_name],
         )
-        embedding_tensor_pb = embedding_tensor.to_tensor_pb()
-        self.tensors_pb.append(embedding_tensor_pb)
-
-        self.embeddings_pb.append(embedding_pb)
 
     def _test_get_embedding_param(self, slot_names=[], slot_init_value={}):
         indices = [0, 3, 7]
@@ -90,12 +89,12 @@ class ParametersTest(unittest.TestCase):
 
     def test_get_embedding_param(self):
         self.params.reset()
-        self.params.init_embedding_params(self.embeddings_pb)
+        self.params.init_embedding_params(self.infos_pb)
         self._test_get_embedding_param()
 
     def test_set_embedding_param(self):
         self.params.reset()
-        self.params.init_embedding_params(self.embeddings_pb)
+        self.params.init_embedding_params(self.infos_pb)
         indices = [100, 34, 8]
         x = len(indices)
         values = np.random.uniform(size=x * self.embedding_dim).reshape(
@@ -123,11 +122,11 @@ class ParametersTest(unittest.TestCase):
         self.params.reset()
         self.params.init_from_model_pb(self.model_pb)
 
-        grad0 = Tensor(name="z")
+        grad0 = Tensor("z", None, None)
         with self.assertRaisesRegex(ValueError, "Name error"):
             self.params.check_grad(grad0)
 
-        grad1 = Tensor(name="x", values=np.random.uniform(size=(3, 5)))
+        grad1 = Tensor("x", np.random.uniform(size=(3, 5)), None)
         with self.assertRaisesRegex(ValueError, "Non embedding param error"):
             self.params.check_grad(grad1)
 
@@ -154,7 +153,7 @@ class ParametersTest(unittest.TestCase):
         self.assertFalse(self.params.has_embedding_params())
 
         # create embedding tables in the parameters
-        self.params.init_embedding_params(self.embeddings_pb)
+        self.params.init_embedding_params(self.infos_pb)
         self.assertTrue(self.params.has_embedding_params())
 
         slot_names = ["accumulator", "linear"]
