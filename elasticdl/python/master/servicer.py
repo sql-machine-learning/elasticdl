@@ -66,7 +66,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # Then the master tells the worker to wait
             # in case of new tasks later.
             res.type = elasticdl_pb2.WAIT
-
+        self._worker_liveness_time[request.worker_id] = time.time()
         return res
 
     def report_task_result(self, request, _):
