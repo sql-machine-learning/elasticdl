@@ -1,11 +1,7 @@
 package commonnew
 
 import (
-	"encoding/binary"
 	"github.com/stretchr/testify/assert"
-	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"
-	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_shape_go_proto"
-	"math"
 	"testing"
 )
 
