@@ -38,7 +38,7 @@ func TestSparseSGD(t *testing.T) {
 	d := []int64{3, 2}
 	indices := []int64{1, 3, 3}
 	grad := commonnew.NewTensor(a, d)
-	isgrad := commonnew.NewIndexedTensor(grad, indices)
+	isgrad := commonnew.NewIndexedSlices(grad, indices)
 
 	table := commonnew.NewEmbeddingTable(2, "zero", commonnew.Float32)
 
@@ -194,7 +194,7 @@ func TestSparseAdam(t *testing.T) {
 	m := commonnew.NewTensor(rawM, dim)
 	v := commonnew.NewTensor(rawV, dim)
 	maxSquare := commonnew.NewTensor(rawMaxSquare, dim)
-	isgrad := commonnew.NewIndexedTensor(grad, []int64{1})
+	isgrad := commonnew.NewIndexedSlices(grad, []int64{1})
 
 	ptable.EmbeddingVectors[1] = param
 	mtable.EmbeddingVectors[1] = m

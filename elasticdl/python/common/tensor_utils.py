@@ -96,6 +96,6 @@ def serialize_indexed_slices(slices, pb):
 
 
 def indexed_slices_to_pb(slices):
-    pb = elasticdl_pb2.IndexedSlices()
+    pb = elasticdl_pb2.IndexedSlicesProto()
     serialize_indexed_slices(slices, pb)
     return pb
