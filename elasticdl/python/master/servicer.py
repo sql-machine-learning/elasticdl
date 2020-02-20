@@ -76,7 +76,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         else:
             complete_time, task, worker_id = self._task_d.report(request, True)
             if task:
-                self._worker_liveness_time[worker_id] = time.time()
+                with self._lock:
+                    self._worker_liveness_time[worker_id] = time.time()
                 if task.type in [
                     elasticdl_pb2.TRAINING,
                     elasticdl_pb2.EVALUATION,
@@ -85,7 +86,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return empty_pb2.Empty()
 
     def report_evaluation_metrics(self, request, _):
-        self._worker_liveness_time[request.worker_id] = time.time()
+        with self._lock:
+            self._worker_liveness_time[request.worker_id] = time.time()
         self._evaluation_service.report_evaluation_metrics(
             request.model_outputs, request.labels
         )
