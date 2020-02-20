@@ -1,11 +1,12 @@
 import os
+import threading
 import time
 from concurrent import futures
 
 import grpc
 from kubernetes.client import V1EnvVar
 
-from elasticdl.proto import elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
@@ -126,6 +127,11 @@ class Master(object):
 
         self._should_stop = False
         self._exit_code = 0
+        threading.Thread(
+            target=self._check_timeout_tasks,
+            name="check_timeout_tasks",
+            daemon=True,
+        ).start()
 
     def request_stop(self, err_msg=None):
         """Request master to quit"""
@@ -430,3 +436,27 @@ class Master(object):
             )
 
         return instance_manager
+
+    def _check_timeout_tasks(self):
+        while True:
+            doing_tasks = self.task_d._doing.copy()
+            cur_time = time.time()
+            avg_time = self.master_servicer.get_average_task_complete_time()
+            for task_id, (worker_id, task, start_time) in doing_tasks.items():
+                if task.type == elasticdl_pb2.TRAINING:
+                    start_time = self.master_servicer.get_worker_liveness_time(
+                        worker_id
+                    )
+                if task.type in [
+                    elasticdl_pb2.TRAINING,
+                    elasticdl_pb2.EVALUATION,
+                ]:
+                    if (cur_time - start_time) > 3 * avg_time[task.type]:
+                        self.logger.info(
+                            "worker %d timeout, relaunch it" % worker_id
+                        )
+                        self.task_d.recover_tasks(worker_id)
+                        # TODO: save worker logs before remove it
+                        self.instance_manager._remove_worker(worker_id)
+                        break
+            time.sleep(30)
