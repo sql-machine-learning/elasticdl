@@ -47,7 +47,7 @@ func (model *Model) SetEmbeddingTableInfo(info *proto.EmbeddingTableInfo) {
 	model.EmbeddingTables[info.Name] = t
 }
 
-// InitFromModelPB inits a Parameter instance from model PB to Parameter
+// InitFromModelPB inits the model from model PB
 func (model *Model) InitFromModelPB(pb *proto.Model) error {
 	for _, v := range pb.EmbeddingTableInfo {
 		model.SetEmbeddingTableInfo(v)
