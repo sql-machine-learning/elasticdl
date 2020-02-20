@@ -9,9 +9,9 @@ import (
 	"unsafe"
 )
 
-func (t *tensor_go_proto.TensorProto) GetDim() []int64{
-    pbDim := t.GetTensorShape().GetDim()
-    dims := make([]int64, len(pbDim), len(pbDim))
+func (t *tensor_go_proto.TensorProto) GetDim() []int64 {
+	pbDim := t.GetTensorShape().GetDim()
+	dims := make([]int64, len(pbDim), len(pbDim))
 	for i, iDim := range pbDim {
 		dims[i] = iDim.GetSize()
 	}
@@ -19,7 +19,7 @@ func (t *tensor_go_proto.TensorProto) GetDim() []int64{
 }
 
 func (t *tensor_go_proto.TensorProto) SetDim(dims []int64) {
-    shapeDim := make([]*tensor_shape_go_proto.TensorShapeProto_Dim, len(t.Dims), len(t.Dims))
+	shapeDim := make([]*tensor_shape_go_proto.TensorShapeProto_Dim, len(t.Dims), len(t.Dims))
 	for i, dim := range dims {
 		shapeDim[i] = &tensor_shape_go_proto.TensorShapeProto_Dim{
 			Size: dim,
@@ -30,11 +30,11 @@ func (t *tensor_go_proto.TensorProto) SetDim(dims []int64) {
 
 // NewEmptyTensor create an empty n-dim tensor
 func NewEmptyTensor(dim []int64, dtype types_go_proto.DataType) *tensor_go_proto.TensorProto {
-    var t tensor_go_proto.TensorProto
-    t.SetDim(dim)
-    t.TensorContent = make([]byte, DimProduct(dim)*int64(DtypeSize[dtype]))
-    t.Dtype = dtype
-    return &t
+	var t tensor_go_proto.TensorProto
+	t.SetDim(dim)
+	t.TensorContent = make([]byte, DimProduct(dim)*int64(DtypeSize[dtype]))
+	t.Dtype = dtype
+	return &t
 }
 
 // NewTensor create a n-dim tensor using exsiting slice
@@ -53,15 +53,15 @@ func NewTensor(slice interface{}, dim []int64) *tensor_go_proto.TensorProto {
 	}
 	var t tensor_go_proto.TensorProto
 	t.SetDim(dim)
-    t.TensorContent = *(*[]byte)(unsafe.Pointer(&sliceHeader))
-    t.Dtype = dtype
-    return &t
+	t.TensorContent = *(*[]byte)(unsafe.Pointer(&sliceHeader))
+	t.Dtype = dtype
+	return &t
 }
 
 // NewEmptyVector create an empty 1-dim tensor
 func NewEmptyVector(dim int64, dtype types_go_proto.DataType) *tensor_go_proto.TensorProto {
-    dims := []int64{dim}
-    return NewEmptyTensor(dims, dtype)
+	dims := []int64{dim}
+	return NewEmptyTensor(dims, dtype)
 }
 
 // NewVector create an empty 1-dim tensor
@@ -94,7 +94,7 @@ func (t *tensor_go_proto.TensorProto) GetSubTensor(begin int64, length int64) *t
 
 // GetRow get the row reference of a 2-dim tensor
 func (t *tensor_go_proto.TensorProto) GetRow(idx int64) *tensor_go_proto.TensorProto {
-    dims = t.GetDim()
+	dims = t.GetDim()
 	if len(dims) != 2 || idx >= dims[0] {
 		return nil
 	}
@@ -112,7 +112,7 @@ func (t *tensor_go_proto.TensorProto) SetSubTensor(begin int64, length int64, va
 
 // SetRow set a vector to an index of tensor
 func (t *tensor_go_proto.TensorProto) SetRow(idx int64, vec *tensor_go_proto.TensorProto) {
-    dims = t.GetDim()
+	dims = t.GetDim()
 	if len(dims) != 2 || idx >= dims[0] {
 		return
 	}
@@ -122,7 +122,7 @@ func (t *tensor_go_proto.TensorProto) SetRow(idx int64, vec *tensor_go_proto.Ten
 
 // Slice gives a Slice interface to the Tensor data
 func Slice(t *tensor_go_proto.TensorProto) interface{} {
-	length := int(DimProduct(t.GetDim())
+	length := int(DimProduct(t.GetDim()))
 	sliceHeader := reflect.SliceHeader{
 		Data: uintptr(unsafe.Pointer(&t.TensorContent[0])),
 		Cap:  length,

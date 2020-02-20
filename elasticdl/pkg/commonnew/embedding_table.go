@@ -2,7 +2,6 @@ package commonnew
 
 import (
 	"elasticdl.org/elasticdl/pkg/proto"
-	"fmt"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/types_go_proto"
 )
