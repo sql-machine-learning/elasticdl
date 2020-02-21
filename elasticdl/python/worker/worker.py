@@ -421,7 +421,9 @@ class Worker(object):
                 # tf.keras.initializers. Keep aligned between these two.
                 embedding_info.initializer = "uniform"
                 # set to float32
-                embedding_info.dtype = dtype_numpy_to_tensor(np.float32)
+                embedding_info.dtype = dtype_numpy_to_tensor(
+                    np.dtype("float32")
+                )
 
         for ps_id in range(self._ps_num):
             self._ps_stubs[ps_id].push_embedding_table_infos(model)
