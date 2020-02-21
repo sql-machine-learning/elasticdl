@@ -2,7 +2,7 @@ package ps
 
 import (
 	"context"
-	"elasticdl.org/elasticdl/pkg/proto"
+	"elasticdl.org/elasticdl/proto"
 	"fmt"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"

@@ -2,8 +2,8 @@ package ps
 
 import (
 	"context"
-	"elasticdl.org/elasticdl/pkg/commonnew"
-	"elasticdl.org/elasticdl/pkg/proto"
+	"elasticdl.org/elasticdl/common"
+	"elasticdl.org/elasticdl/proto"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/assert"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"
@@ -115,8 +115,8 @@ func TestPushModel(t *testing.T) {
 		b[i] = rand.Float32()
 	}
 	d := []int64{2, 5}
-	t1 := commonnew.NewTensor(a, d) // t1
-	t2 := commonnew.NewTensor(b, d) // t2
+	t1 := common.NewTensor(a, d) // t1
+	t2 := common.NewTensor(b, d) // t2
 
 	request.DenseParameters["t1"] = t1.SerializeToTensorProto()
 	request.DenseParameters["t2"] = t2.SerializeToTensorProto()
@@ -131,8 +131,8 @@ func TestPushModel(t *testing.T) {
 	assert.Len(t, s.Model.DenseParameters, 2)
 	assert.Contains(t, s.Model.DenseParameters, "t1")
 	assert.Contains(t, s.Model.DenseParameters, "t2")
-	assert.True(t, commonnew.CompareFloatArray(a, commonnew.Slice(s.Model.GetDenseParameter("t1")).([]float32), 0.0001))
-	assert.True(t, commonnew.CompareFloatArray(b, commonnew.Slice(s.Model.GetDenseParameter("t2")).([]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(a, common.Slice(s.Model.GetDenseParameter("t1")).([]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(b, common.Slice(s.Model.GetDenseParameter("t2")).([]float32), 0.0001))
 	assert.Contains(t, s.Model.EmbeddingTables, "e1")
 	assert.Equal(t, int64(2), s.Model.GetEmbeddingTable("e1").Dim)
 	gs.Stop()
@@ -154,7 +154,7 @@ func TestPullEmbeddingVectors(t *testing.T) {
 			Name:        "e1",
 			Dim:         10,
 			Initializer: "zero",
-			Dtype:       commonnew.Float32,
+			Dtype:       common.Float32,
 		}},
 	}
 
@@ -168,11 +168,11 @@ func TestPullEmbeddingVectors(t *testing.T) {
 		c[i] = rand.Float32()
 	}
 	d := []int64{2, 5}
-	t1 := commonnew.NewTensor(a, d) // t1
-	t2 := commonnew.NewTensor(b, d) // t2
+	t1 := common.NewTensor(a, d) // t1
+	t2 := common.NewTensor(b, d) // t2
 
 	ed := []int64{1, 10}
-	e1 := commonnew.NewIndexedSlices(commonnew.NewTensor(c, ed), []int64{1})
+	e1 := common.NewIndexedSlices(common.NewTensor(c, ed), []int64{1})
 
 	request.DenseParameters["t1"] = t1.SerializeToTensorProto()
 	request.DenseParameters["t2"] = t2.SerializeToTensorProto()
@@ -186,7 +186,7 @@ func TestPullEmbeddingVectors(t *testing.T) {
 	}
 
 	resp, _ := client.PullEmbeddingVectors(ctx, pr)
-	assert.True(t, commonnew.CompareFloatArray(c, commonnew.Slice(commonnew.DeserializeFromTensorProto(resp)).([]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(c, common.Slice(common.DeserializeFromTensorProto(resp)).([]float32), 0.0001))
 	gs.Stop()
 }
 
@@ -206,7 +206,7 @@ func TestPullDenseParameters(t *testing.T) {
 			Name:        "e1",
 			Dim:         10,
 			Initializer: "zero",
-			Dtype:       commonnew.Float32,
+			Dtype:       common.Float32,
 		}},
 	}
 
@@ -220,11 +220,11 @@ func TestPullDenseParameters(t *testing.T) {
 		c[i] = rand.Float32()
 	}
 	d := []int64{2, 5}
-	t1 := commonnew.NewTensor(a, d) // t1
-	t2 := commonnew.NewTensor(b, d) // t2
+	t1 := common.NewTensor(a, d) // t1
+	t2 := common.NewTensor(b, d) // t2
 
 	ed := []int64{1, 10}
-	e1 := commonnew.NewIndexedSlices(commonnew.NewTensor(c, ed), []int64{1})
+	e1 := common.NewIndexedSlices(common.NewTensor(c, ed), []int64{1})
 
 	request.DenseParameters["t1"] = t1.SerializeToTensorProto()
 	request.DenseParameters["t2"] = t2.SerializeToTensorProto()
@@ -239,8 +239,8 @@ func TestPullDenseParameters(t *testing.T) {
 	resp, _ := client.PullDenseParameters(ctx, pr)
 	assert.Equal(t, true, resp.Initialized)
 	assert.Equal(t, int32(0), resp.Version)
-	assert.True(t, commonnew.CompareFloatArray(a, commonnew.Slice(commonnew.DeserializeFromTensorProto(resp.DenseParameters["t1"])).([]float32), 0.0001))
-	assert.True(t, commonnew.CompareFloatArray(b, commonnew.Slice(commonnew.DeserializeFromTensorProto(resp.DenseParameters["t2"])).([]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(a, common.Slice(common.DeserializeFromTensorProto(resp.DenseParameters["t1"])).([]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(b, common.Slice(common.DeserializeFromTensorProto(resp.DenseParameters["t2"])).([]float32), 0.0001))
 	gs.Stop()
 }
 
@@ -260,7 +260,7 @@ func TestPushGradients(t *testing.T) {
 			Name:        "e1",
 			Dim:         10,
 			Initializer: "zero",
-			Dtype:       commonnew.Float32,
+			Dtype:       common.Float32,
 		}},
 	}
 
@@ -274,11 +274,11 @@ func TestPushGradients(t *testing.T) {
 		c[i] = rand.Float32()
 	}
 	d := []int64{2, 5}
-	t1 := commonnew.NewTensor(a, d) // t1
-	t2 := commonnew.NewTensor(b, d) // t2
+	t1 := common.NewTensor(a, d) // t1
+	t2 := common.NewTensor(b, d) // t2
 
 	ed := []int64{1, 10}
-	e1 := commonnew.NewIndexedSlices(commonnew.NewTensor(c, ed), []int64{1})
+	e1 := common.NewIndexedSlices(common.NewTensor(c, ed), []int64{1})
 
 	request.DenseParameters["t1"] = t1.SerializeToTensorProto()
 	request.DenseParameters["t2"] = t2.SerializeToTensorProto()
@@ -301,8 +301,8 @@ func TestPushGradients(t *testing.T) {
 		expectede1[i] = c[i] - 0.1*c[i]
 	}
 
-	assert.True(t, commonnew.CompareFloatArray(expectedt1, commonnew.Slice(s.Model.GetDenseParameter("t1")).([]float32), 0.0001))
-	assert.True(t, commonnew.CompareFloatArray(expectedt2, commonnew.Slice(s.Model.GetDenseParameter("t2")).([]float32), 0.0001))
-	assert.True(t, commonnew.CompareFloatArray(expectede1, commonnew.Slice(s.Model.GetEmbeddingTable("e1").GetEmbeddingVector(1)).([]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(expectedt1, common.Slice(s.Model.GetDenseParameter("t1")).([]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(expectedt2, common.Slice(s.Model.GetDenseParameter("t2")).([]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(expectede1, common.Slice(s.Model.GetEmbeddingTable("e1").GetEmbeddingVector(1)).([]float32), 0.0001))
 	gs.Stop()
 }

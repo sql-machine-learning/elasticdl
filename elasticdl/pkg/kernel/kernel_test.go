@@ -1,7 +1,7 @@
 package kernel
 
 import (
-	"elasticdl.org/elasticdl/pkg/common"
+	"elasticdl.org/elasticdl/common"
 	"github.com/stretchr/testify/assert"
 	"math"
 	"math/rand"
@@ -20,15 +20,15 @@ func TestSGD(t *testing.T) {
 	}
 
 	d := []int64{2, 5}
-	grad := common.Tensor{"t", a, d, nil}
-	param := common.Tensor{"t", b, d, nil}
+	grad := common.NewTensor(a, d)
+	param := common.NewTensor(b, d)
 
 	expected := make([]float32, size)
 	for i := 0; i < size; i++ {
 		expected[i] = b[i] - lr*a[i]
 	}
 
-	err := SGD(&grad, &param, lr)
+	err := SGD(grad, param, lr)
 	assert.Nil(t, err)
 	assert.Equal(t, expected, b)
 }
@@ -37,21 +37,20 @@ func TestSparseSGD(t *testing.T) {
 	a := []float32{-1.0, -1.0, -1.0, -1.0, -1.0, -1.0}
 	d := []int64{3, 2}
 	indices := []int64{1, 3, 3}
-	grad := common.Tensor{"t", a, d, indices}
+	grad := common.NewTensor(a, d)
+	isgrad := common.NewIndexedSlices(grad, indices)
 
-	table := common.NewEmbeddingTable("t", 2, "zero")
+	table := common.NewEmbeddingTable(2, "zero", common.Float32)
 
-	err := SparseSGD(&grad, table, 0.1)
+	err := SparseSGD(isgrad, table, 0.1)
 	assert.Nil(t, err)
-	assert.Equal(t, 2, len(table.EmbeddingVector))
+	assert.Equal(t, 2, len(table.EmbeddingVectors))
 
 	v1 := table.GetEmbeddingVector(1)
-	assert.Equal(t, 2, len(v1.Value))
-	assert.Equal(t, float32(0.1), v1.Value[0])
+	assert.Equal(t, []float32{0.1, 0.1}, common.Slice(v1).([]float32))
 
 	v3 := table.GetEmbeddingVector(3)
-	assert.Equal(t, 2, len(v3.Value))
-	assert.Equal(t, float32(0.2), v3.Value[0])
+	assert.Equal(t, []float32{0.2, 0.2}, common.Slice(v3).([]float32))
 }
 
 func TestAdam(t *testing.T) {
@@ -69,10 +68,10 @@ func TestAdam(t *testing.T) {
 		rawV[i] = rand.Float32()
 	}
 
-	grad := common.Tensor{"t", rawGrad, dim, nil}
-	param := common.Tensor{"t", rawParam, dim, nil}
-	m := common.Tensor{"t", rawM, dim, nil}
-	v := common.Tensor{"t", rawV, dim, nil}
+	grad := common.NewTensor(rawGrad, dim)
+	param := common.NewTensor(rawParam, dim)
+	m := common.NewTensor(rawM, dim)
+	v := common.NewTensor(rawV, dim)
 
 	var lr float32 = 0.1
 	var step int64 = 5
@@ -97,12 +96,12 @@ func TestAdam(t *testing.T) {
 				epsilon)
 	}
 
-	Adam(&grad, &param, &m, &v, lr, step, beta1, beta2,
+	Adam(grad, param, m, v, lr, step, beta1, beta2,
 		epsilon, false, nil)
 
-	assert.True(t, common.CompareFloatArray(expectedM, m.Value, 0.0001))
-	assert.True(t, common.CompareFloatArray(expectedV, v.Value, 0.00001))
-	assert.True(t, common.CompareFloatArray(expectedParam, param.Value, 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedM, common.Slice(m).([]float32), 0.0001))
+	assert.True(t, common.CompareFloatArray(expectedV, common.Slice(v).([]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedParam, common.Slice(param).([]float32), 0.00001))
 }
 
 func TestAdamWithAmsgrad(t *testing.T) {
@@ -122,11 +121,11 @@ func TestAdamWithAmsgrad(t *testing.T) {
 		rawMaxSquare[i] = rand.Float32()
 	}
 
-	grad := common.Tensor{"t", rawGrad, dim, nil}
-	param := common.Tensor{"t", rawParam, dim, nil}
-	m := common.Tensor{"t", rawM, dim, nil}
-	v := common.Tensor{"t", rawV, dim, nil}
-	maxSquare := common.Tensor{"t", rawMaxSquare, dim, nil}
+	grad := common.NewTensor(rawGrad, dim)
+	param := common.NewTensor(rawParam, dim)
+	m := common.NewTensor(rawM, dim)
+	v := common.NewTensor(rawV, dim)
+	maxSquare := common.NewTensor(rawMaxSquare, dim)
 
 	var lr float32 = 0.1
 	var step int64 = 5
@@ -158,13 +157,13 @@ func TestAdamWithAmsgrad(t *testing.T) {
 				epsilon)
 	}
 
-	Adam(&grad, &param, &m, &v, lr, step, beta1, beta2,
-		epsilon, true, &maxSquare)
+	Adam(grad, param, m, v, lr, step, beta1, beta2,
+		epsilon, true, maxSquare)
 
-	assert.True(t, common.CompareFloatArray(expectedM, m.Value, 0.00001))
-	assert.True(t, common.CompareFloatArray(expectedV, v.Value, 0.00001))
-	assert.True(t, common.CompareFloatArray(expectedParam, param.Value, 0.00001))
-	assert.True(t, common.CompareFloatArray(expectedMaxSquare, maxSquare.Value, 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedM, common.Slice(m).([]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedV, common.Slice(v).([]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedParam, common.Slice(param).([]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedMaxSquare, common.Slice(maxSquare).([]float32), 0.00001))
 }
 
 func TestSparseAdam(t *testing.T) {
@@ -176,10 +175,11 @@ func TestSparseAdam(t *testing.T) {
 	rawMaxSquare := make([]float32, size)
 	dim := []int64{1, 10}
 
-	ptable := common.NewEmbeddingTable("t", 10, "zero")
-	mtable := common.NewEmbeddingTable("t", 10, "zero")
-	vtable := common.NewEmbeddingTable("t", 10, "zero")
-	mstable := common.NewEmbeddingTable("t", 10, "zero")
+	var embdim int64 = 10
+	ptable := common.NewEmbeddingTable(embdim, "zero", common.Float32)
+	mtable := common.NewEmbeddingTable(embdim, "zero", common.Float32)
+	vtable := common.NewEmbeddingTable(embdim, "zero", common.Float32)
+	mstable := common.NewEmbeddingTable(embdim, "zero", common.Float32)
 
 	for i := 0; i < size; i++ {
 		rawGrad[i] = rand.Float32()
@@ -189,16 +189,17 @@ func TestSparseAdam(t *testing.T) {
 		rawMaxSquare[i] = rand.Float32()
 	}
 
-	grad := &common.Tensor{"t", rawGrad, dim, []int64{1}}
-	param := &common.Tensor{"", rawParam, dim, nil}
-	m := &common.Tensor{"", rawM, dim, nil}
-	v := &common.Tensor{"", rawV, dim, nil}
-	maxSquare := &common.Tensor{"", rawMaxSquare, dim, nil}
+	grad := common.NewTensor(rawGrad, dim)
+	param := common.NewTensor(rawParam, dim)
+	m := common.NewTensor(rawM, dim)
+	v := common.NewTensor(rawV, dim)
+	maxSquare := common.NewTensor(rawMaxSquare, dim)
+	isgrad := common.NewIndexedSlices(grad, []int64{1})
 
-	ptable.EmbeddingVector[1] = param
-	mtable.EmbeddingVector[1] = m
-	vtable.EmbeddingVector[1] = v
-	mstable.EmbeddingVector[1] = maxSquare
+	ptable.EmbeddingVectors[1] = param
+	mtable.EmbeddingVectors[1] = m
+	vtable.EmbeddingVectors[1] = v
+	mstable.EmbeddingVectors[1] = maxSquare
 
 	var lr float32 = 0.1
 	var step int64 = 5
@@ -230,11 +231,11 @@ func TestSparseAdam(t *testing.T) {
 				epsilon)
 	}
 
-	SparseAdam(grad, ptable, mtable, vtable, lr, step, beta1, beta2,
+	SparseAdam(isgrad, ptable, mtable, vtable, lr, step, beta1, beta2,
 		epsilon, true, mstable)
 
-	assert.True(t, common.CompareFloatArray(expectedM, m.Value, 0.00001))
-	assert.True(t, common.CompareFloatArray(expectedV, v.Value, 0.00001))
-	assert.True(t, common.CompareFloatArray(expectedParam, param.Value, 0.00001))
-	assert.True(t, common.CompareFloatArray(expectedMaxSquare, maxSquare.Value, 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedM, common.Slice(m).([]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedV, common.Slice(v).([]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedParam, common.Slice(param).([]float32), 0.00001))
+	assert.True(t, common.CompareFloatArray(expectedMaxSquare, common.Slice(maxSquare).([]float32), 0.00001))
 }
