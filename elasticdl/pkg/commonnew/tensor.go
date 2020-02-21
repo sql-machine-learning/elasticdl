@@ -142,13 +142,19 @@ func (t *Tensor) IsValid() bool {
 	return true
 }
 
-// DeserializeFromTensorProto transforms pb to tensor
-func DeserializeFromTensorProto(pb *tensor_go_proto.TensorProto) *Tensor {
+// GetDimFromTensorProto get dim from proto
+func GetDimFromTensorProto(pb *tensor_go_proto.TensorProto) []int64 {
 	pbDim := pb.GetTensorShape().GetDim()
 	dims := make([]int64, len(pbDim), len(pbDim))
 	for i, iDim := range pbDim {
 		dims[i] = iDim.GetSize()
 	}
+	return dims
+}
+
+// DeserializeFromTensorProto transforms pb to tensor
+func DeserializeFromTensorProto(pb *tensor_go_proto.TensorProto) *Tensor {
+	dims := GetDimFromTensorProto(pb)
 	if int(DimProduct(dims))*int(DtypeSize[pb.GetDtype()]) != len(pb.GetTensorContent()) {
 		return nil
 	}

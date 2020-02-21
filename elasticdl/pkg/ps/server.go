@@ -2,10 +2,9 @@ package ps
 
 import (
 	"context"
-	"elasticdl.org/elasticdl/pkg/common"
-	pb "elasticdl.org/elasticdl/pkg/proto"
-	"fmt"
-	empty "github.com/golang/protobuf/ptypes/empty"
+	"elasticdl.org/elasticdl/pkg/proto"
+	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -14,13 +13,13 @@ import (
 
 // MasterClient contains attributes to call master GRPC services
 type MasterClient struct {
-	client     pb.MasterClient
+	client     proto.MasterClient
 	context    context.Context
 	clientConn *grpc.ClientConn
 }
 
 func (c *MasterClient) reportVersion(modelVersion int32) {
-	var request pb.ReportVersionRequest
+	var request proto.ReportVersionRequest
 	request.ModelVersion = modelVersion
 	c.client.ReportVersion(c.context, &request)
 }
@@ -31,8 +30,8 @@ func (c *MasterClient) closeConn() {
 
 // Server defines servicer of ps
 type Server struct {
-	pb.PserverServer
-	Param           *Parameter
+	proto.UnimplementedPserverServer
+	Model           *Model
 	Opt             Optimizer
 	masterClient    *MasterClient
 	evaluationSteps int32
@@ -49,7 +48,7 @@ func createMasterClient(masterAddr string) *MasterClient {
 	if err != nil {
 		log.Fatalf("failed to connect to master: %v", err)
 	}
-	client := pb.NewMasterClient(conn)
+	client := proto.NewMasterClient(conn)
 	return &MasterClient{
 		client:     client,
 		context:    context.Background(),
@@ -60,7 +59,7 @@ func createMasterClient(masterAddr string) *MasterClient {
 // NewServer creates a Server instance
 func NewServer(ID int, optType string, optArgs string, masterAddr string, evaluationSteps int) *Server {
 	var ps Server
-	ps.Param = NewParameter()
+	ps.Model = NewModel()
 	var err error
 	ps.Opt, err = NewOptimizer(optType, optArgs)
 	if err != nil {
@@ -78,79 +77,105 @@ func (s *Server) reportModelVersionIfNeeded(modelVersion int32) {
 	}
 }
 
+// PullDenseParameters pulls dense parameter from server
+func (s *Server) PullDenseParameters(ctx context.Context, in *proto.PullDenseParametersRequest) (*proto.PullDenseParametersResponse, error) {
+	if !s.Model.Initialized {
+		return &proto.PullDenseParametersResponse{Initialized: false}, nil
+	}
+	denseParamPB := make(map[string]*tensor_go_proto.TensorProto)
+	for name, tensor := range s.Model.DenseParameters {
+		denseParamPB[name] = tensor.SerializeToTensorProto()
+	}
+	var resp = proto.PullDenseParametersResponse{
+		Initialized:     true,
+		Version:         s.Model.Version,
+		DenseParameters: denseParamPB,
+	}
+	return &resp, nil
+}
+
+// PullEmbeddingVectors pulls sparse parameter from server
+func (s *Server) PullEmbeddingVectors(ctx context.Context, in *proto.PullEmbeddingVectorsRequest) (*tensor_go_proto.TensorProto, error) {
+	return s.Model.EmbeddingTables[in.Name].GetEmbeddingVectors(in.Ids).SerializeToTensorProto(), nil
+}
+
+// PushGradients push gradients to server
+func (s *Server) PushGradients(ctx context.Context, in *proto.Model) (*proto.PushGradientsResponse, error) {
+	err := s.Opt.ApplyGradients(in, s.Model)
+	s.versionLock.Lock()
+	s.Model.Version += int32(1)
+	s.versionLock.Unlock()
+	s.reportModelVersionIfNeeded(s.Model.Version)
+	var resp = proto.PushGradientsResponse{
+		Accepted: true,
+		Version:  s.Model.Version,
+	}
+	return &resp, err
+}
+
+// PushModel push Model to server
+func (s *Server) PushModel(ctx context.Context, in *proto.Model) (*empty.Empty, error) {
+	s.lock.Lock()
+	var err error
+	if !s.Model.Initialized {
+		err = s.Model.InitFromModelPB(in)
+		if err == nil {
+			s.Model.Initialized = true
+		}
+	}
+	s.lock.Unlock()
+	return &empty.Empty{}, err
+}
+
+/* DEPRECATED
 // PullVariable pulls variable from server
-func (s *Server) PullVariable(ctx context.Context, in *pb.PullVariableRequest) (*pb.PullVariableResponse, error) {
+func (s *Server) PullVariable(ctx context.Context, in *proto.PullVariableRequest) (*proto.PullVariableResponse, error) {
 	// TODO(qijun) only support async now
-	var res pb.PullVariableResponse
-	if !s.Param.InitStatus {
+	var res proto.PullVariableResponse
+	if !s.Model.Initialized {
 		res.ModelInitStatus = false
 		return &res, nil
 	}
 	res.ModelInitStatus = true
-	res.Model = &pb.Model{}
-	res.Model.Version = s.Param.Version
-	if s.Param.Version > in.CurrentModelVersion {
-		for _, v := range s.Param.NonEmbeddingParam {
-			res.Model.Param = append(res.Model.Param, common.SerializeTensor(v))
+	res.Model = &proto.Model{}
+	res.Model.Version = s.Model.Version
+	if s.Model.Version > in.CurrentModelVersion {
+		for name, tensor := range s.Model.DenseParameters {
+			res.Model.Param = append(res.Model.Param, &proto.Tensor{
+				Name: name,
+				Dim: tensor.Dims,
+				Content: tensor.Buffer,
+			})
 		}
 	}
-	s.Param.InitStatus = true
+	s.Model.Initialized = true
 	return &res, nil
 }
 
 // PullEmbeddingVector pulls embedding vector from server
-func (s *Server) PullEmbeddingVector(ctx context.Context, in *pb.PullEmbeddingVectorRequest) (*pb.Tensor, error) {
+func (s *Server) PullEmbeddingVector(ctx context.Context, in *proto.PullEmbeddingVectorRequest) (*proto.Tensor, error) {
 	if in.Ids == nil {
-		return &pb.Tensor{}, nil
+		return &proto.Tensor{}, nil
 	}
-	table := s.Param.GetEmbeddingParam(in.Name)
+	table := s.Model.GetEmbeddingTable(in.Name)
 	if table == nil {
-		return &pb.Tensor{}, fmt.Errorf("Request embedding Table %s not found in Param", in.Name)
+		return &proto.Tensor{}, fmt.Errorf("Request embedding Table %s not found in Param", in.Name)
 	}
 	t := table.GetEmbeddingVectors(in.Ids)
-	return common.SerializeTensor(t), nil
-}
-
-// PushModel pushes model to server
-func (s *Server) PushModel(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
-	s.lock.Lock()
-	var err error
-	if !s.Param.InitStatus {
-		err = s.Param.InitFromModelPB(in)
-		if err == nil {
-			s.Param.InitStatus = true
-		}
-	}
-	s.lock.Unlock()
-	return &empty.Empty{}, err
+	return &proto.Tensor{
+		Name: in.Name,
+		Dim: t.Dims,
+		Content: t.Buffer,
+	}, nil
 }
 
 // PushEmbeddingInfo pushes embedding info to server
-func (s *Server) PushEmbeddingInfo(ctx context.Context, in *pb.Model) (*empty.Empty, error) {
+func (s *Server) PushEmbeddingInfo(ctx context.Context, in *proto.Model) (*empty.Empty, error) {
 	s.lock.Lock()
-	err := s.Param.InitFromModelPB(in)
+	err := s.Model.InitFromModelPB(in)
 	s.lock.Unlock()
 	return &empty.Empty{}, err
-}
-
-// PushGradients pushes gradient to server
-func (s *Server) PushGradients(ctx context.Context, in *pb.Model) (*pb.PushGradientsResponse, error) {
-	// TODO(qijun) only support async now
-	var res pb.PushGradientsResponse
-	var grads []*common.Tensor
-	for _, gradPB := range in.Param {
-		grad := common.DeserializeTensorPB(gradPB)
-		grads = append(grads, grad)
-	}
-	err := s.Opt.ApplyGradients(grads, s.Param)
-	s.versionLock.Lock()
-	s.Param.Version += int32(1)
-	s.versionLock.Unlock()
-	s.reportModelVersionIfNeeded(s.Param.Version)
-	res.Accepted = true
-	res.Version = s.Param.Version
-	return &res, err
-}
+}*/
 
 // Run creates a grpc server and starts the serving. Set serverDone when finishes.
 func (s *Server) Run(address string, serverDone chan bool) *grpc.Server {
@@ -160,7 +185,7 @@ func (s *Server) Run(address string, serverDone chan bool) *grpc.Server {
 	}
 	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
 	grpcServer := grpc.NewServer()
-	pb.RegisterPserverServer(grpcServer, s)
+	proto.RegisterPserverServer(grpcServer, s)
 	go startServe(grpcServer, lis, serverDone, s.masterClient)
 	return grpcServer
 }

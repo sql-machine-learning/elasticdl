@@ -2,10 +2,11 @@ package ps
 
 import (
 	"context"
-	"elasticdl.org/elasticdl/pkg/common"
-	pb "elasticdl.org/elasticdl/pkg/proto"
-	empty "github.com/golang/protobuf/ptypes/empty"
+	"elasticdl.org/elasticdl/pkg/commonnew"
+	"elasticdl.org/elasticdl/pkg/proto"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/stretchr/testify/assert"
+	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"
 	"google.golang.org/grpc"
 	"log"
 	"math/rand"
@@ -19,7 +20,7 @@ const (
 )
 
 type masterServer struct {
-	pb.MasterServer
+	proto.UnimplementedMasterServer
 	address      string
 	modelVersion int32
 	server       *grpc.Server
@@ -31,7 +32,7 @@ func (s *masterServer) run() {
 		log.Fatalf("failed to start Master: %v", err)
 	}
 	s.server = grpc.NewServer()
-	pb.RegisterMasterServer(s.server, s)
+	proto.RegisterMasterServer(s.server, s)
 	go s.startServe(lis)
 }
 
@@ -44,7 +45,7 @@ func (s *masterServer) stop() {
 }
 
 // ReportVersion grpc service
-func (s *masterServer) ReportVersion(ctx context.Context, in *pb.ReportVersionRequest) (*empty.Empty, error) {
+func (s *masterServer) ReportVersion(ctx context.Context, in *proto.ReportVersionRequest) (*empty.Empty, error) {
 	var res empty.Empty
 	if in.ModelVersion > s.modelVersion {
 		s.modelVersion = in.ModelVersion
@@ -57,12 +58,12 @@ func newMasterServer(addr string) *masterServer {
 	return &server
 }
 
-func createClient() (pb.PserverClient, context.Context, *grpc.ClientConn, context.CancelFunc) {
+func createClient() (proto.PserverClient, context.Context, *grpc.ClientConn, context.CancelFunc) {
 	conn, err := grpc.Dial(ADDR, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
-	c := pb.NewPserverClient(conn)
+	c := proto.NewPserverClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	return c, ctx, conn, cancel
 }
@@ -97,8 +98,16 @@ func TestPushModel(t *testing.T) {
 	defer conn.Close()
 	defer cancel()
 
-	var request pb.Model
-	// non embedding param
+	var request = &proto.Model{
+		DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
+		EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
+		EmbeddingTableInfo: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
+			Name:        "e1",
+			Dim:         2,
+			Initializer: "zero",
+		}},
+	}
+	// dense embedding param
 	a := make([]float32, 10)
 	b := make([]float32, 10)
 	for i := 0; i < 10; i++ {
@@ -106,28 +115,30 @@ func TestPushModel(t *testing.T) {
 		b[i] = rand.Float32()
 	}
 	d := []int64{2, 5}
-	t1 := common.Tensor{"t1", a, d, nil}
-	t2 := common.Tensor{"t2", b, d, nil}
+	t1 := commonnew.NewTensor(a, d) // t1
+	t2 := commonnew.NewTensor(b, d) // t2
 
-	request.Param = append(request.Param, common.SerializeTensor(&t1))
-	request.Param = append(request.Param, common.SerializeTensor(&t2))
+	request.DenseParameters["t1"] = t1.SerializeToTensorProto()
+	request.DenseParameters["t2"] = t2.SerializeToTensorProto()
 
-	_, err := client.PushModel(ctx, &request)
+	_, err := client.PushModel(ctx, request)
 
 	if err != nil {
 		t.Errorf("Failed to push model")
 	}
 
-	assert.True(t, s.Param.InitStatus)
-	assert.Len(t, s.Param.NonEmbeddingParam, 2)
-	assert.Contains(t, s.Param.NonEmbeddingParam, "t1")
-	assert.Contains(t, s.Param.NonEmbeddingParam, "t2")
-	assert.True(t, common.CompareFloatArray(a, s.Param.GetNonEmbeddingParam("t1").Value, 0.001))
-	assert.True(t, common.CompareFloatArray(b, s.Param.GetNonEmbeddingParam("t2").Value, 0.001))
+	assert.True(t, s.Model.Initialized)
+	assert.Len(t, s.Model.DenseParameters, 2)
+	assert.Contains(t, s.Model.DenseParameters, "t1")
+	assert.Contains(t, s.Model.DenseParameters, "t2")
+	assert.True(t, commonnew.CompareFloatArray(a, commonnew.Slice(s.Model.GetDenseParameter("t1")).([]float32), 0.0001))
+	assert.True(t, commonnew.CompareFloatArray(b, commonnew.Slice(s.Model.GetDenseParameter("t2")).([]float32), 0.0001))
+	assert.Contains(t, s.Model.EmbeddingTables, "e1")
+	assert.Equal(t, int64(2), s.Model.GetEmbeddingTable("e1").Dim)
 	gs.Stop()
 }
 
-func TestPushEmbeddingInfo(t *testing.T) {
+func TestPullEmbeddingTables(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
 	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", "", 0)
@@ -136,80 +147,50 @@ func TestPushEmbeddingInfo(t *testing.T) {
 	defer conn.Close()
 	defer cancel()
 
-	var request pb.Model
-	// embedding table info
-	var epb pb.EmbeddingTableInfo
-	epb.Name = "e1"
-	epb.Dim = 2
-	epb.Initializer = "zero"
-	request.EmbeddingTableInfo = append(request.EmbeddingTableInfo, &epb)
-
-	_, err := client.PushEmbeddingInfo(ctx, &request)
-	if err != nil {
-		t.Errorf("Failed to push embedding vector info")
+	var request = &proto.Model{
+		DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
+		EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
+		EmbeddingTableInfo: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
+			Name:        "e1",
+			Dim:         10,
+			Initializer: "zero",
+			Dtype:       commonnew.Float32,
+		}},
 	}
 
-	assert.Contains(t, s.Param.EmbeddingParam, "e1")
-	assert.Equal(t, int64(2), s.Param.GetEmbeddingParam("e1").Dim)
-	gs.Stop()
-}
-
-func TestPullVariable(t *testing.T) {
-	// Create a PS server
-	serverDone := make(chan bool)
-	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", "", 0)
-	gs := s.Run(ADDR, serverDone)
-	client, ctx, conn, cancel := createClient()
-	defer conn.Close()
-	defer cancel()
-
-	var request1 pb.Model
-	// non embedding param
-	a := make([]float32, 6)
-	b := make([]float32, 6)
-	for i := 0; i < 6; i++ {
+	// dense embedding param
+	a := make([]float32, 10)
+	b := make([]float32, 10)
+	c := make([]float32, 10)
+	for i := 0; i < 10; i++ {
 		a[i] = rand.Float32()
 		b[i] = rand.Float32()
+		c[i] = rand.Float32()
 	}
-	d := []int64{2, 3}
-	t1 := common.Tensor{"t1", a, d, nil}
-	t2 := common.Tensor{"t2", b, d, nil}
+	d := []int64{2, 5}
+	t1 := commonnew.NewTensor(a, d) // t1
+	t2 := commonnew.NewTensor(b, d) // t2
 
-	request1.Param = append(request1.Param, common.SerializeTensor(&t1))
-	request1.Param = append(request1.Param, common.SerializeTensor(&t2))
+	ed := []int64{1, 10}
+	e1 := commonnew.NewIndexedSlices(commonnew.NewTensor(c, ed), []int64{1})
 
-	_, err1 := client.PushModel(ctx, &request1)
+	request.DenseParameters["t1"] = t1.SerializeToTensorProto()
+	request.DenseParameters["t2"] = t2.SerializeToTensorProto()
+	request.EmbeddingTables["e1"] = e1.SerializeToIndexedSlicesProto()
 
-	if err1 != nil {
-		t.Errorf("Failed to push model")
-	}
+	client.PushModel(ctx, request)
 
-	assert.Contains(t, s.Param.NonEmbeddingParam, "t1")
-	assert.Contains(t, s.Param.NonEmbeddingParam, "t2")
-
-	var request2 pb.PullVariableRequest
-	request2.CurrentModelVersion = -1
-
-	res, err2 := client.PullVariable(ctx, &request2)
-	if err2 != nil {
-		t.Errorf("Failed to pull variable")
+	pr := &proto.PullEmbeddingVectorsRequest{
+		Name: "e1",
+		Ids:  []int64{1},
 	}
 
-	assert.True(t, res.ModelInitStatus)
-
-	p := NewParameter()
-	p.InitFromModelPB(res.Model)
-
-	assert.Equal(t, int32(0), p.Version)
-	assert.Equal(t, 2, len(p.NonEmbeddingParam))
-	assert.Contains(t, p.NonEmbeddingParam, "t1")
-	assert.Contains(t, p.NonEmbeddingParam, "t2")
-	assert.True(t, common.CompareFloatArray(p.GetNonEmbeddingParam("t1").Value, a, 0.0001))
-	assert.True(t, common.CompareFloatArray(p.GetNonEmbeddingParam("t2").Value, b, 0.0001))
+	resp, _ := client.PullEmbeddingVectors(ctx, pr)
+	assert.True(t, commonnew.CompareFloatArray(c, commonnew.Slice(commonnew.DeserializeFromTensorProto(resp)).([]float32), 0.0001))
 	gs.Stop()
 }
 
-func TestPullEmbeddingVector(t *testing.T) {
+func TestPullDenseParameters(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
 	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", "", 0)
@@ -218,110 +199,110 @@ func TestPullEmbeddingVector(t *testing.T) {
 	defer conn.Close()
 	defer cancel()
 
-	var request1 pb.Model
-	// embedding table info
-	var epb pb.EmbeddingTableInfo
-	epb.Name = "e1"
-	epb.Dim = 2
-	epb.Initializer = "zero"
-	request1.EmbeddingTableInfo = append(request1.EmbeddingTableInfo, &epb)
+	var request = &proto.Model{
+		DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
+		EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
+		EmbeddingTableInfo: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
+			Name:        "e1",
+			Dim:         10,
+			Initializer: "zero",
+			Dtype:       commonnew.Float32,
+		}},
+	}
 
-	_, err1 := client.PushEmbeddingInfo(ctx, &request1)
-	if err1 != nil {
+	// dense embedding param
+	a := make([]float32, 10)
+	b := make([]float32, 10)
+	c := make([]float32, 10)
+	for i := 0; i < 10; i++ {
+		a[i] = rand.Float32()
+		b[i] = rand.Float32()
+		c[i] = rand.Float32()
+	}
+	d := []int64{2, 5}
+	t1 := commonnew.NewTensor(a, d) // t1
+	t2 := commonnew.NewTensor(b, d) // t2
+
+	ed := []int64{1, 10}
+	e1 := commonnew.NewIndexedSlices(commonnew.NewTensor(c, ed), []int64{1})
+
+	request.DenseParameters["t1"] = t1.SerializeToTensorProto()
+	request.DenseParameters["t2"] = t2.SerializeToTensorProto()
+	request.EmbeddingTables["e1"] = e1.SerializeToIndexedSlicesProto()
+
+	client.PushModel(ctx, request)
+
+	pr := &proto.PullDenseParametersRequest{
+		Version: 0,
+	}
+
+	resp, _ := client.PullDenseParameters(ctx, pr)
+	assert.Equal(t, true, resp.Initialized)
+	assert.Equal(t, int32(0), resp.Version)
+	assert.True(t, commonnew.CompareFloatArray(a, commonnew.Slice(commonnew.DeserializeFromTensorProto(resp.DenseParameters["t1"])).([]float32), 0.0001))
+	assert.True(t, commonnew.CompareFloatArray(b, commonnew.Slice(commonnew.DeserializeFromTensorProto(resp.DenseParameters["t2"])).([]float32), 0.0001))
+	gs.Stop()
+}
+
+func TestPushGradient(t *testing.T) {
+	// Create a PS server
+	serverDone := make(chan bool)
+	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", "", 0)
+	gs := s.Run(ADDR, serverDone)
+	client, ctx, conn, cancel := createClient()
+	defer conn.Close()
+	defer cancel()
+
+	var request = &proto.Model{
+		DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
+		EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
+		EmbeddingTableInfo: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
+			Name:        "e1",
+			Dim:         10,
+			Initializer: "zero",
+			Dtype:       commonnew.Float32,
+		}},
+	}
+
+	// dense embedding param
+	a := make([]float32, 10)
+	b := make([]float32, 10)
+	c := make([]float32, 10)
+	for i := 0; i < 10; i++ {
+		a[i] = rand.Float32()
+		b[i] = rand.Float32()
+		c[i] = rand.Float32()
+	}
+	d := []int64{2, 5}
+	t1 := commonnew.NewTensor(a, d) // t1
+	t2 := commonnew.NewTensor(b, d) // t2
+
+	ed := []int64{1, 10}
+	e1 := commonnew.NewIndexedSlices(commonnew.NewTensor(c, ed), []int64{1})
+
+	request.DenseParameters["t1"] = t1.SerializeToTensorProto()
+	request.DenseParameters["t2"] = t2.SerializeToTensorProto()
+	request.EmbeddingTables["e1"] = e1.SerializeToIndexedSlicesProto()
+
+	client.PushModel(ctx, request)
+
+	_, err := client.PushGradients(ctx, request)
+	if err != nil {
 		t.Errorf("Failed to push embedding vector info")
 	}
 
-	var request2 pb.PullEmbeddingVectorRequest
-	ids := []int64{1, 3, 5}
-	request2.Name = "e1"
-	request2.Ids = ids
+	expectedt1 := make([]float32, 10, 10)
+	expectedt2 := make([]float32, 10, 10)
+	expectede1 := make([]float32, 10, 10)
 
-	res, err2 := client.PullEmbeddingVector(ctx, &request2)
-	if err2 != nil {
-		t.Errorf("Failed to pull embedding vector")
+	for i := 0; i < 10; i++ {
+		expectedt1[i] = a[i] - 0.1*a[i]
+		expectedt2[i] = b[i] - 0.1*b[i]
+		expectede1[i] = c[i] - 0.1*c[i]
 	}
 
-	assert.Contains(t, s.Param.EmbeddingParam, "e1")
-	tensor := common.DeserializeTensorPB(res)
-	assert.Equal(t, "e1", tensor.Name)
-	assert.Equal(t, ids, tensor.Indices)
-	assert.Equal(t, 6, len(tensor.Value))
-	gs.Stop()
-}
-
-func TestPushGradients(t *testing.T) {
-	// Create a PS server
-	serverDone := make(chan bool)
-	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", "", 0)
-	gs := s.Run(ADDR, serverDone)
-	client, ctx, conn, cancel := createClient()
-	defer conn.Close()
-	defer cancel()
-
-	// non embedding param
-	v1 := []float32{10.0, 20.0, 30.0}
-	v2 := []float32{20.0, 40.0, 60.0}
-	d := []int64{1, 3}
-	t1 := common.Tensor{"t1", v1, d, nil}
-	t2 := common.Tensor{"t2", v2, d, nil}
-
-	// embedding param info
-	var epb pb.EmbeddingTableInfo
-	epb.Name = "e1"
-	epb.Dim = 2
-	epb.Initializer = "zero"
-
-	ev := []float32{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0}
-	ed := []int64{4, 2}
-	ei := []int64{0, 1, 2, 3}
-	e1 := common.Tensor{"e1", ev, ed, ei}
-
-	// push model request
-	var request1 pb.Model
-	request1.EmbeddingTableInfo = append(request1.EmbeddingTableInfo, &epb)
-	request1.Param = append(request1.Param, common.SerializeTensor(&t1))
-	request1.Param = append(request1.Param, common.SerializeTensor(&t2))
-	request1.Param = append(request1.Param, common.SerializeTensor(&e1))
-
-	_, err1 := client.PushModel(ctx, &request1)
-	if err1 != nil {
-		t.Errorf("Failed to push model")
-	}
-
-	gv1 := []float32{1.0, 2.0, 3.0}
-	gv2 := []float32{2.0, 4.0, 6.0}
-	g1 := common.Tensor{"t1", gv1, d, nil}
-	g2 := common.Tensor{"t2", gv2, d, nil}
-
-	egv1 := []float32{1.0, 1.0, 1.0, 2.0, 2.0, 2.0}
-	egd1 := []int64{3, 2}
-	egi1 := []int64{3, 1, 3}
-	eg1 := common.Tensor{"e1", egv1, egd1, egi1}
-
-	var request2 pb.Model
-	request2.Version = 0
-	request2.Param = append(request2.Param, common.SerializeTensor(&g1))
-	request2.Param = append(request2.Param, common.SerializeTensor(&g2))
-	request2.Param = append(request2.Param, common.SerializeTensor(&eg1))
-
-	res1, err2 := client.PushGradients(ctx, &request2)
-	if err2 != nil {
-		t.Errorf("Failed to pull gradients")
-	}
-
-	assert.True(t, res1.Accepted)
-	assert.Equal(t, int32(1), res1.Version)
-
-	assert.Contains(t, s.Param.NonEmbeddingParam, "t1")
-	assert.Contains(t, s.Param.NonEmbeddingParam, "t2")
-	assert.Contains(t, s.Param.EmbeddingParam, "e1")
-	exptV1 := []float32{9.9, 19.8, 29.7}
-	exptV2 := []float32{19.8, 39.6, 59.4}
-	assert.True(t, common.CompareFloatArray(s.Param.GetNonEmbeddingParam("t1").Value, exptV1, 0.0001))
-	assert.True(t, common.CompareFloatArray(s.Param.GetNonEmbeddingParam("t2").Value, exptV2, 0.0001))
-
-	expGV1 := []float32{1.0, 2.0, 2.9, 3.8, 5.0, 6.0, 6.7, 7.7}
-	actGV1 := s.Param.GetEmbeddingParam("e1").GetEmbeddingVectors(ei)
-	assert.True(t, common.CompareFloatArray(actGV1.Value, expGV1, 0.0001))
+	assert.True(t, commonnew.CompareFloatArray(expectedt1, commonnew.Slice(s.Model.GetDenseParameter("t1")).([]float32), 0.0001))
+	assert.True(t, commonnew.CompareFloatArray(expectedt2, commonnew.Slice(s.Model.GetDenseParameter("t2")).([]float32), 0.0001))
+	assert.True(t, commonnew.CompareFloatArray(expectede1, commonnew.Slice(s.Model.GetEmbeddingTable("e1").GetEmbeddingVector(1)).([]float32), 0.0001))
 	gs.Stop()
 }
