@@ -138,7 +138,7 @@ func TestPushModel(t *testing.T) {
 	gs.Stop()
 }
 
-func TestPullEmbeddingTables(t *testing.T) {
+func TestPullEmbeddingVectors(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
 	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", "", 0)
@@ -244,7 +244,7 @@ func TestPullDenseParameters(t *testing.T) {
 	gs.Stop()
 }
 
-func TestPushGradient(t *testing.T) {
+func TestPushGradients(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
 	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", "", 0)
