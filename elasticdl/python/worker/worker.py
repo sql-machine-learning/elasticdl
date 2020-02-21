@@ -309,6 +309,8 @@ class Worker(object):
         try:
             res = self._stub.get_task(req)
         except Exception:
+            # Master may have stopped GRPC service when there are no more
+            # tasks. This will result in a GRPC call exception.
             self.logger.info(
                 "Cannot connect to master, assuming no more tasks"
             )
