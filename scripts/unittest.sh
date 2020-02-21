@@ -5,7 +5,6 @@ make -f elasticdl/Makefile
 
 # Go unittests
 pushd $ELASTICDLPATH
-go install ./...
 go test -v -cover ./...
 popd
 

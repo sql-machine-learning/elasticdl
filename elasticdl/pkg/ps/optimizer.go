@@ -1,9 +1,9 @@
 package ps
 
 import (
-	"elasticdl.org/elasticdl/pkg/commonnew"
-	"elasticdl.org/elasticdl/pkg/kernelnew"
-	"elasticdl.org/elasticdl/pkg/proto"
+	"elasticdl.org/elasticdl/common"
+	"elasticdl.org/elasticdl/kernel"
+	"elasticdl.org/elasticdl/proto"
 	"fmt"
 	"strconv"
 	"strings"
@@ -20,16 +20,16 @@ type Optimizer interface {
 type BaseOptimizer struct {
 	lr            float32
 	step          int64
-	DenseKernel   func(*commonnew.Tensor, *commonnew.Tensor, string) error
-	SparseKernel  func(*commonnew.IndexedSlices, *commonnew.EmbeddingTable, string) error
-	IndexedKernel func(*commonnew.IndexedSlices, *commonnew.Tensor, string) error
+	DenseKernel   func(*common.Tensor, *common.Tensor, string) error
+	SparseKernel  func(*common.IndexedSlices, *common.EmbeddingTable, string) error
+	IndexedKernel func(*common.IndexedSlices, *common.Tensor, string) error
 }
 
 // ApplyGradients base method
 func (opt *BaseOptimizer) ApplyGradients(grads *proto.Model, model *Model) error {
 	opt.step++
 	for name, tensorPB := range grads.DenseParameters {
-		grad := commonnew.DeserializeFromTensorProto(tensorPB)
+		grad := common.DeserializeFromTensorProto(tensorPB)
 		param := model.GetDenseParameter(name)
 		if param == nil {
 			return fmt.Errorf("grad %s not in Parameter", name)
@@ -37,7 +37,7 @@ func (opt *BaseOptimizer) ApplyGradients(grads *proto.Model, model *Model) error
 		opt.DenseKernel(grad, param, name)
 	}
 	for name, indexedSlicePB := range grads.EmbeddingTables {
-		grad := commonnew.DeserializeFromIndexedSliceProto(indexedSlicePB)
+		grad := common.DeserializeFromIndexedSliceProto(indexedSlicePB)
 		param := model.GetDenseParameter(name)
 		if param == nil {
 			table := model.GetEmbeddingTable(name)
@@ -69,14 +69,14 @@ func NewSGDOptimizer(lr float32) *SGDOptimizer {
 			lr: lr,
 		},
 	}
-	opt.DenseKernel = func(grad *commonnew.Tensor, param *commonnew.Tensor, name string) error {
-		return kernelnew.SGD(grad, param, opt.GetLR())
+	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string) error {
+		return kernel.SGD(grad, param, opt.GetLR())
 	}
-	opt.SparseKernel = func(grad *commonnew.IndexedSlices, param *commonnew.EmbeddingTable, name string) error {
-		return kernelnew.SparseSGD(grad, param, opt.GetLR())
+	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string) error {
+		return kernel.SparseSGD(grad, param, opt.GetLR())
 	}
-	opt.IndexedKernel = func(grad *commonnew.IndexedSlices, param *commonnew.Tensor, name string) error {
-		return kernelnew.IndexedSGD(grad, param, opt.GetLR())
+	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string) error {
+		return kernel.IndexedSGD(grad, param, opt.GetLR())
 	}
 	return &opt
 }
@@ -118,37 +118,37 @@ func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32,
 		v:         NewModel(),
 		maxSquare: NewModel(),
 	}
-	opt.DenseKernel = func(grad *commonnew.Tensor, param *commonnew.Tensor, name string) error {
+	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string) error {
 		m := opt.m.GetDenseParameter(name)
 		v := opt.v.GetDenseParameter(name)
 		if opt.amsgrad {
 			ms := opt.maxSquare.GetDenseParameter(name)
-			return kernelnew.Adam(grad, param, m, v, opt.GetLR(), opt.step,
+			return kernel.Adam(grad, param, m, v, opt.GetLR(), opt.step,
 				opt.beta1, opt.beta2, opt.epsilon, true, ms)
 		}
-		return kernelnew.Adam(grad, param, m, v, opt.GetLR(), opt.step,
+		return kernel.Adam(grad, param, m, v, opt.GetLR(), opt.step,
 			opt.beta1, opt.beta2, opt.epsilon, false, nil)
 	}
-	opt.SparseKernel = func(grad *commonnew.IndexedSlices, param *commonnew.EmbeddingTable, name string) error {
+	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string) error {
 		m := opt.m.GetEmbeddingTable(name)
 		v := opt.v.GetEmbeddingTable(name)
 		if opt.amsgrad {
 			ms := opt.maxSquare.GetEmbeddingTable(name)
-			return kernelnew.SparseAdam(grad, param, m, v, opt.GetLR(), opt.step,
+			return kernel.SparseAdam(grad, param, m, v, opt.GetLR(), opt.step,
 				opt.beta1, opt.beta2, opt.epsilon, true, ms)
 		}
-		return kernelnew.SparseAdam(grad, param, m, v, opt.GetLR(), opt.step,
+		return kernel.SparseAdam(grad, param, m, v, opt.GetLR(), opt.step,
 			opt.beta1, opt.beta2, opt.epsilon, false, nil)
 	}
-	opt.IndexedKernel = func(grad *commonnew.IndexedSlices, param *commonnew.Tensor, name string) error {
+	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string) error {
 		m := opt.m.GetDenseParameter(name)
 		v := opt.v.GetDenseParameter(name)
 		if opt.amsgrad {
 			ms := opt.maxSquare.GetDenseParameter(name)
-			return kernelnew.IndexedAdam(grad, param, m, v, opt.GetLR(), opt.step,
+			return kernel.IndexedAdam(grad, param, m, v, opt.GetLR(), opt.step,
 				opt.beta1, opt.beta2, opt.epsilon, true, ms)
 		}
-		return kernelnew.IndexedAdam(grad, param, m, v, opt.GetLR(), opt.step,
+		return kernel.IndexedAdam(grad, param, m, v, opt.GetLR(), opt.step,
 			opt.beta1, opt.beta2, opt.epsilon, false, nil)
 	}
 	return &opt
@@ -157,12 +157,12 @@ func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32,
 // InitOptimizer set m,v,maxSquare non-embedding of AdamOptimizer
 func (opt *AdamOptimizer) InitOptimizer(pb *proto.Model) error {
 	for name, tensor := range pb.DenseParameters {
-		dims := commonnew.GetDimFromTensorProto(tensor)
+		dims := common.GetDimFromTensorProto(tensor)
 		dtype := tensor.Dtype
-		opt.m.DenseParameters[name] = commonnew.NewEmptyTensor(dims, dtype)
-		opt.v.DenseParameters[name] = commonnew.NewEmptyTensor(dims, dtype)
+		opt.m.DenseParameters[name] = common.NewEmptyTensor(dims, dtype)
+		opt.v.DenseParameters[name] = common.NewEmptyTensor(dims, dtype)
 		if opt.amsgrad {
-			opt.maxSquare.DenseParameters[name] = commonnew.NewEmptyTensor(dims, dtype)
+			opt.maxSquare.DenseParameters[name] = common.NewEmptyTensor(dims, dtype)
 		}
 	}
 	for _, info := range pb.EmbeddingTableInfo {

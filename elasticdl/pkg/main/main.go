@@ -1,7 +1,7 @@
 package main
 
 import (
-	"elasticdl.org/elasticdl/pkg/ps"
+	"elasticdl.org/elasticdl/ps"
 	"flag"
 	"fmt"
 	"log"
