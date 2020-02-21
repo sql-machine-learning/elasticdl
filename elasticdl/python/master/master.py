@@ -21,10 +21,14 @@ from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
     get_module_file_path,
     get_optimizer_info,
+    load_callbacks_from_module,
     load_model_from_module,
     load_module,
+    set_callback_parameters,
 )
+from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
+from elasticdl.python.elasticdl.callbacks import MaxStepsStopping
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl.python.master.servicer import MasterServicer
@@ -40,6 +44,7 @@ def _make_task_dispatcher(
     num_epochs,
     data_reader_params,
     create_data_reader_fn,
+    callbacks_list,
 ):
     def _maybe_create_shards(data_origin):
         kwargs = get_dict_from_params_str(data_reader_params)
@@ -63,6 +68,7 @@ def _make_task_dispatcher(
         records_per_task,
         # Only generate prediction tasks for 1 epoch
         1 if prediction_f_records else num_epochs,
+        callbacks_list,
     )
 
 
@@ -103,6 +109,19 @@ class Master(object):
                 args.custom_data_reader
             ]
 
+        # Initialize the callbacks
+        self.callbacks_list = load_callbacks_from_module(
+            args.callbacks, self.model_module
+        )
+        self.callbacks_list.set_model(self.model_inst)
+        set_callback_parameters(
+            self.callbacks_list,
+            batch_size=args.minibatch_size,
+            saved_model_path=args.output,
+            checkpoint_path=args.checkpoint_dir,
+        )
+        self._set_completed_steps_by_checkpoint(args.checkpoint_dir_for_init)
+
         # Start task queue
         records_per_task = args.minibatch_size * args.num_minibatches_per_task
         self.task_d = _make_task_dispatcher(
@@ -113,6 +132,7 @@ class Master(object):
             args.num_epochs,
             args.data_reader_params,
             self._create_data_reader_fn,
+            self.callbacks_list,
         )
 
         self.task_d.add_deferred_callback_create_train_end_task()
@@ -126,6 +146,24 @@ class Master(object):
 
         self._should_stop = False
         self._exit_code = 0
+
+    def _set_completed_steps_by_checkpoint(self, checkpoint_dir_for_init):
+        if not checkpoint_dir_for_init:
+            return
+
+        if not CheckpointSaver.check_checkpoint_valid(checkpoint_dir_for_init):
+            raise ValueError(
+                "Invalid checkpoint directory {}".format(
+                    checkpoint_dir_for_init
+                )
+            )
+
+        model_verion = CheckpointSaver.get_version_from_checkpoint(
+            checkpoint_dir_for_init
+        )
+        for callback in self.callbacks_list.callbacks:
+            if isinstance(callback, MaxStepsStopping):
+                callback.set_completed_steps(model_verion)
 
     def request_stop(self, err_msg=None):
         """Request master to quit"""
