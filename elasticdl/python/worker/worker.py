@@ -306,7 +306,14 @@ class Worker(object):
         if task_type is not None:
             req.task_type = task_type
 
-        return self._stub.get_task(req)
+        try:
+            res = self._stub.get_task(req)
+        except Exception:
+            self.logger.info(
+                "Cannot connect to master, assuming no more tasks"
+            )
+            res = elasticdl_pb2.Task()
+        return res
 
     def get_model(self):
         self._timing.start_record_time("get_model")
