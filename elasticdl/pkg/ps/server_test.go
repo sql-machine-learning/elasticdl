@@ -101,7 +101,7 @@ func TestPushModel(t *testing.T) {
 	var request = &proto.Model{
 		DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
 		EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
-		EmbeddingTableInfo: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
+		EmbeddingTableInfos: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
 			Name:        "e1",
 			Dim:         2,
 			Initializer: "zero",
@@ -150,7 +150,7 @@ func TestPullEmbeddingVectors(t *testing.T) {
 	var request = &proto.Model{
 		DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
 		EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
-		EmbeddingTableInfo: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
+		EmbeddingTableInfos: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
 			Name:        "e1",
 			Dim:         10,
 			Initializer: "zero",
@@ -202,7 +202,7 @@ func TestPullDenseParameters(t *testing.T) {
 	var request = &proto.Model{
 		DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
 		EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
-		EmbeddingTableInfo: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
+		EmbeddingTableInfos: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
 			Name:        "e1",
 			Dim:         10,
 			Initializer: "zero",
@@ -256,7 +256,7 @@ func TestPushGradients(t *testing.T) {
 	var request = &proto.Model{
 		DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
 		EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
-		EmbeddingTableInfo: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
+		EmbeddingTableInfos: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
 			Name:        "e1",
 			Dim:         10,
 			Initializer: "zero",

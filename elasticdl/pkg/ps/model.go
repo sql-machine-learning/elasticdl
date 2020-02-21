@@ -49,7 +49,7 @@ func (model *Model) SetEmbeddingTableInfo(info *proto.EmbeddingTableInfo) {
 
 // InitFromModelPB inits the model from model PB
 func (model *Model) InitFromModelPB(pb *proto.Model) error {
-	for _, v := range pb.EmbeddingTableInfo {
+	for _, v := range pb.EmbeddingTableInfos {
 		model.SetEmbeddingTableInfo(v)
 	}
 	for name, v := range pb.DenseParameters {

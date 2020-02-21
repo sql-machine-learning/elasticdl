@@ -116,7 +116,7 @@ class PserverServicerTest(unittest.TestCase):
             req.version = idx + 1
             for name in model:
                 serialize_ndarray(model[name], req.dense_parameters[name])
-            req.embedding_table_info.append(self._embedding_info)
+            req.embedding_table_infos.append(self._embedding_info)
             res = self._stub.push_model(req)
             self.assertEqual(res, empty_pb2.Empty())
             # self._parameters is initialized with the first push_model call
@@ -206,12 +206,12 @@ class PserverServicerTest(unittest.TestCase):
 
         req = elasticdl_pb2.Model()
         req.version = 1
-        req.embedding_table_info.append(self._embedding_info)
+        req.embedding_table_infos.append(self._embedding_info)
         another_embedding_info = elasticdl_pb2.EmbeddingTableInfo()
         another_embedding_info.name = "layer_b"
         another_embedding_info.dim = 16
         another_embedding_info.initializer = "normal"
-        req.embedding_table_info.append(another_embedding_info)
+        req.embedding_table_infos.append(another_embedding_info)
         res = self._stub.push_model(req)
         self.assertEqual(res, empty_pb2.Empty())
 
@@ -279,7 +279,7 @@ class PserverServicerTest(unittest.TestCase):
         push_model_req.version = self._parameters.version
         for name, value in zip(self.var_names, self.var_values):
             serialize_ndarray(value, push_model_req.dense_parameters[name])
-        push_model_req.embedding_table_info.append(self._embedding_info)
+        push_model_req.embedding_table_infos.append(self._embedding_info)
         self._stub.push_model(push_model_req)
 
         for name, var in zip(self.var_names, self.var_values):

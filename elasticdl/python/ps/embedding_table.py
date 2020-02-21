@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto.elasticdl_pb2 import EmbeddingTableInfo
+from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
 
 
 class EmbeddingTable(object):
@@ -31,6 +32,8 @@ class EmbeddingTable(object):
         self.name = name
         self.dim = dim
         self.initializer_value = initializer
+        # set dtype to float32
+        self.dtype = np.dtype("float32")
         if is_slot:
             self.initializer = tf.keras.initializers.Constant(
                 float(self.initializer_value)
@@ -79,6 +82,7 @@ class EmbeddingTable(object):
         embedding_pb.name = self.name
         embedding_pb.dim = self.dim
         embedding_pb.initializer = str(self.initializer_value)
+        embedding_pb.dtype = dtype_numpy_to_tensor(self.dtype)
         return embedding_pb
 
     def get_table_size(self):

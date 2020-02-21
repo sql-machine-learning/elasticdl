@@ -5,7 +5,6 @@ import traceback
 import numpy as np
 import tensorflow as tf
 
-import elasticdl.python.common.tensor_utils as tensor_utils
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
 from elasticdl.python.common.constants import (
@@ -15,6 +14,7 @@ from elasticdl.python.common.constants import (
     MetricsDictKey,
     Mode,
 )
+from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
 from elasticdl.python.common.hash_utils import (
     int_to_id,
     scatter_embedding_vector,
@@ -30,6 +30,7 @@ from elasticdl.python.common.model_utils import (
     set_callback_parameters,
 )
 from elasticdl.python.common.tensor_utils import (
+    Tensor,
     deduplicate_indexed_slices,
     merge_indexed_slices,
     pb_to_ndarray,
@@ -400,15 +401,19 @@ class Worker(object):
     def report_embedding_info(self):
         model = elasticdl_pb2.Model()
         if self._embedding_layers:
-            embedding_infos = model.embedding_table_info
+            embedding_infos = model.embedding_table_infos
             for layer in self._embedding_layers:
                 embedding_info = embedding_infos.add()
                 embedding_info.name = layer.name
                 embedding_info.dim = layer.output_dim
                 embedding_info.initializer = layer.embeddings_initializer
+                # set to float32
+                embedding_info.dtype = dtype_numpy_to_tensor(
+                    np.dtype("float32")
+                )
 
         if self._embedding_columns:
-            embedding_infos = model.embedding_table_info
+            embedding_infos = model.embedding_table_infos
             for column in self._embedding_columns:
                 embedding_info = embedding_infos.add()
                 embedding_info.name = column.name
@@ -417,9 +422,13 @@ class Worker(object):
                 # a variable initializer function. For embedding layer, it's a
                 # tf.keras.initializers. Keep aligned between these two.
                 embedding_info.initializer = "uniform"
+                # set to float32
+                embedding_info.dtype = dtype_numpy_to_tensor(
+                    np.dtype("float32")
+                )
 
         for ps_id in range(self._ps_num):
-            self._ps_stubs[ps_id].push_embedding_info(model)
+            self._ps_stubs[ps_id].push_embedding_table_infos(model)
 
     def report_variable_to_ps(self, ps_id):
         model = elasticdl_pb2.Model()
@@ -493,9 +502,7 @@ class Worker(object):
                 # but an indexed slices type gradient
                 if isinstance(g, tf.IndexedSlices):
                     serialize_indexed_slices(
-                        tensor_utils.Tensor(
-                            None, g.values.numpy(), g.indices.numpy()
-                        ),
+                        Tensor(None, g.values.numpy(), g.indices.numpy()),
                         req.embedding_tables[name],
                     )
                 else:
@@ -547,8 +554,7 @@ class Worker(object):
                     req = reqs[ps_id]
                     gv, gi = results[ps_id]
                     serialize_indexed_slices(
-                        tensor_utils.Tensor(None, gv, gi),
-                        req.embedding_tables[name],
+                        Tensor(None, gv, gi), req.embedding_tables[name],
                     )
 
         report_futures = []

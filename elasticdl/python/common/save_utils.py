@@ -239,7 +239,7 @@ class CheckpointSaver(object):
                     "The versions in model shards are not consistency"
                 )
 
-            for embedding_info_pb in model_pb.embedding_table_info:
+            for embedding_info_pb in model_pb.embedding_table_infos:
                 embedding_table = create_embedding_table(embedding_info_pb)
                 embedding_tables.setdefault(
                     embedding_table.name, embedding_table

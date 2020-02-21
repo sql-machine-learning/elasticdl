@@ -139,8 +139,8 @@ func (s *Server) PushModel(ctx context.Context, in *proto.Model) (*empty.Empty, 
 	return &empty.Empty{}, err
 }
 
-// PushEmbeddingInfo pushes embedding info to server
-func (s *Server) PushEmbeddingInfo(ctx context.Context, in *proto.Model) (*empty.Empty, error) {
+// PushEmbeddingTableInfos pushes embedding table infos to server
+func (s *Server) PushEmbeddingTableInfos(ctx context.Context, in *proto.Model) (*empty.Empty, error) {
 	s.lock.Lock()
 	err := s.Model.InitFromModelPB(in)
 	s.lock.Unlock()

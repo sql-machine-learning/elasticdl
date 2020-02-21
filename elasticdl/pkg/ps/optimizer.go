@@ -165,7 +165,7 @@ func (opt *AdamOptimizer) InitOptimizer(pb *proto.Model) error {
 			opt.maxSquare.DenseParameters[name] = common.NewEmptyTensor(dims, dtype)
 		}
 	}
-	for _, info := range pb.EmbeddingTableInfo {
+	for _, info := range pb.EmbeddingTableInfos {
 		opt.m.SetEmbeddingTableInfo(info)
 		opt.v.SetEmbeddingTableInfo(info)
 		opt.maxSquare.SetEmbeddingTableInfo(info)
