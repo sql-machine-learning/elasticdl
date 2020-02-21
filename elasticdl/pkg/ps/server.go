@@ -84,7 +84,7 @@ func (s *Server) PullDenseParameters(ctx context.Context, in *proto.PullDensePar
 		return &proto.PullDenseParametersResponse{Initialized: false}, nil
 	}
 	denseParamPB := make(map[string]*tensor_go_proto.TensorProto)
-	if s.Model.Version > in.Version {
+	if s.Model.Version >= in.Version {
 		for name, tensor := range s.Model.DenseParameters {
 			denseParamPB[name] = tensor.SerializeToTensorProto()
 		}
