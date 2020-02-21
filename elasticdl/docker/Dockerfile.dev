@@ -58,7 +58,7 @@ RUN cd /tmp/elasticdl && \
     cp -r /tmp/elasticdl/elasticdl/pkg $ELASTICDLPATH && \
     cd $GOPATH/pkg/mod/github.com/tensorflow && \
     go mod init github.com/tensorflow &&\
-    cd $ELASTICDLPATH/pkg && \
+    cd $ELASTICDLPATH && \
     go mod init elasticdl.org/elasticdl && \
     go mod edit -replace github.com/tensorflow=${GOPATH}/pkg/mod/github.com/tensorflow && \
     go mod tidy && \
