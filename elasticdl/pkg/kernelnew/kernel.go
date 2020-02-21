@@ -44,7 +44,7 @@ func IndexedSGD(grad *commonnew.IndexedSlices, param *commonnew.Tensor, lr float
 // Adam kernel
 func Adam(grad *commonnew.Tensor, param *commonnew.Tensor, m *commonnew.Tensor, v *commonnew.Tensor,
 	lr float32, step int64, beta1 float32, beta2 float32,
-	epsilon float32, amsgrad bool, maxSquare *commonnew.Tensor) {
+	epsilon float32, amsgrad bool, maxSquare *commonnew.Tensor) error {
 	gradPtr := (*C.float)(unsafe.Pointer(&grad.Buffer[0]))
 	paramPtr := (*C.float)(unsafe.Pointer(&param.Buffer[0]))
 	mPtr := (*C.float)(unsafe.Pointer(&m.Buffer[0]))
@@ -59,6 +59,7 @@ func Adam(grad *commonnew.Tensor, param *commonnew.Tensor, m *commonnew.Tensor, 
 		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.float(lr), C.longlong(length),
 			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon), nil)
 	}
+	return nil
 }
 
 // SparseAdam kernel
