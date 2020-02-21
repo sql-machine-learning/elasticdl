@@ -3,6 +3,7 @@ package ps
 import (
 	"context"
 	"elasticdl.org/elasticdl/pkg/proto"
+	"fmt"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"
 	"google.golang.org/grpc"
@@ -83,8 +84,10 @@ func (s *Server) PullDenseParameters(ctx context.Context, in *proto.PullDensePar
 		return &proto.PullDenseParametersResponse{Initialized: false}, nil
 	}
 	denseParamPB := make(map[string]*tensor_go_proto.TensorProto)
-	for name, tensor := range s.Model.DenseParameters {
-		denseParamPB[name] = tensor.SerializeToTensorProto()
+	if s.Model.Version > in.Version {
+		for name, tensor := range s.Model.DenseParameters {
+			denseParamPB[name] = tensor.SerializeToTensorProto()
+		}
 	}
 	var resp = proto.PullDenseParametersResponse{
 		Initialized:     true,
@@ -96,11 +99,20 @@ func (s *Server) PullDenseParameters(ctx context.Context, in *proto.PullDensePar
 
 // PullEmbeddingVectors pulls sparse parameter from server
 func (s *Server) PullEmbeddingVectors(ctx context.Context, in *proto.PullEmbeddingVectorsRequest) (*tensor_go_proto.TensorProto, error) {
-	return s.Model.EmbeddingTables[in.Name].GetEmbeddingVectors(in.Ids).SerializeToTensorProto(), nil
+	if in.Ids == nil {
+		return &tensor_go_proto.TensorProto{}, nil
+	}
+	table := s.Model.GetEmbeddingTable(in.Name)
+	if table == nil {
+		return &tensor_go_proto.TensorProto{}, fmt.Errorf("Request embedding Table %s not found in Param", in.Name)
+	}
+	t := table.GetEmbeddingVectors(in.Ids)
+	return t.SerializeToTensorProto(), nil
 }
 
 // PushGradients push gradients to server
 func (s *Server) PushGradients(ctx context.Context, in *proto.Model) (*proto.PushGradientsResponse, error) {
+	// TODO: only support async now
 	err := s.Opt.ApplyGradients(in, s.Model)
 	s.versionLock.Lock()
 	s.Model.Version += int32(1)
