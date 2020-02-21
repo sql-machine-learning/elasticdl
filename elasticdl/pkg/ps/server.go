@@ -139,55 +139,13 @@ func (s *Server) PushModel(ctx context.Context, in *proto.Model) (*empty.Empty, 
 	return &empty.Empty{}, err
 }
 
-/* DEPRECATED
-// PullVariable pulls variable from server
-func (s *Server) PullVariable(ctx context.Context, in *proto.PullVariableRequest) (*proto.PullVariableResponse, error) {
-	// TODO(qijun) only support async now
-	var res proto.PullVariableResponse
-	if !s.Model.Initialized {
-		res.ModelInitStatus = false
-		return &res, nil
-	}
-	res.ModelInitStatus = true
-	res.Model = &proto.Model{}
-	res.Model.Version = s.Model.Version
-	if s.Model.Version > in.CurrentModelVersion {
-		for name, tensor := range s.Model.DenseParameters {
-			res.Model.Param = append(res.Model.Param, &proto.Tensor{
-				Name: name,
-				Dim: tensor.Dims,
-				Content: tensor.Buffer,
-			})
-		}
-	}
-	s.Model.Initialized = true
-	return &res, nil
-}
-
-// PullEmbeddingVector pulls embedding vector from server
-func (s *Server) PullEmbeddingVector(ctx context.Context, in *proto.PullEmbeddingVectorRequest) (*proto.Tensor, error) {
-	if in.Ids == nil {
-		return &proto.Tensor{}, nil
-	}
-	table := s.Model.GetEmbeddingTable(in.Name)
-	if table == nil {
-		return &proto.Tensor{}, fmt.Errorf("Request embedding Table %s not found in Param", in.Name)
-	}
-	t := table.GetEmbeddingVectors(in.Ids)
-	return &proto.Tensor{
-		Name: in.Name,
-		Dim: t.Dims,
-		Content: t.Buffer,
-	}, nil
-}
-
 // PushEmbeddingInfo pushes embedding info to server
 func (s *Server) PushEmbeddingInfo(ctx context.Context, in *proto.Model) (*empty.Empty, error) {
 	s.lock.Lock()
 	err := s.Model.InitFromModelPB(in)
 	s.lock.Unlock()
 	return &empty.Empty{}, err
-}*/
+}
 
 // Run creates a grpc server and starts the serving. Set serverDone when finishes.
 func (s *Server) Run(address string, serverDone chan bool) *grpc.Server {
