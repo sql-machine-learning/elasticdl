@@ -16,7 +16,22 @@ _model_file = get_module_file_path(_model_zoo_path, "test_module.custom_model")
 m = load_module(_model_file).__dict__
 
 
+def save_variables_to_checkpoint(root_dir, params):
+    ckpt_dir = os.path.join(root_dir, "testSaveLoadCheckpoint")
+    os.makedirs(ckpt_dir)
+    checkpoint_saver = CheckpointSaver(ckpt_dir, 3, 5, False)
+    model_pb = params.to_model_pb()
+    checkpoint_saver.save(params.version, model_pb, False)
+    return ckpt_dir
+
+
 class SaveUtilsTest(unittest.TestCase):
+    def setUp(self):
+        init_var = m["custom_model"]().trainable_variables
+        self.params = Parameters()
+        for var in init_var:
+            self.params.non_embedding_params[var.name] = var
+
     def testNeedToCheckpoint(self):
         checkpointer = CheckpointSaver("", 0, 5, False)
         self.assertFalse(checkpointer.is_enabled())
@@ -40,32 +55,31 @@ class SaveUtilsTest(unittest.TestCase):
         )
 
     def testSaveLoadCheckpoint(self):
-        init_var = m["custom_model"]().trainable_variables
         with tempfile.TemporaryDirectory() as tempdir:
-            ckpt_dir = os.path.join(tempdir, "testSaveLoadCheckpoint")
-            os.makedirs(ckpt_dir)
-            checkpoint_saver = CheckpointSaver(ckpt_dir, 3, 5, False)
-            self.assertTrue(checkpoint_saver.is_enabled())
-            params = Parameters()
-
-            for var in init_var:
-                params.non_embedding_params[var.name] = var
-            model_pb = params.to_model_pb()
-
-            checkpoint_saver.save(0, model_pb, False)
-
+            self.params.version = 0
+            ckpt_dir = save_variables_to_checkpoint(tempdir, self.params)
             ckpt_version_dir = os.path.join(ckpt_dir, "version-0")
             restore_params = CheckpointSaver.restore_params_from_checkpoint(
                 ckpt_version_dir, 0, 1
             )
-            self.assertEqual(restore_params.version, params.version)
-            for var_name in params.non_embedding_params:
+            self.assertEqual(restore_params.version, self.params.version)
+            for var_name in self.params.non_embedding_params:
                 self.assertTrue(
                     np.array_equal(
-                        params.non_embedding_params[var_name].numpy(),
+                        self.params.non_embedding_params[var_name].numpy(),
                         restore_params.non_embedding_params[var_name].numpy(),
                     )
                 )
+
+    def testGetVersionFromCheckpoint(self):
+        with tempfile.TemporaryDirectory() as tempdir:
+            self.params.version = 100
+            ckpt_dir = save_variables_to_checkpoint(tempdir, self.params)
+            ckpt_version_dir = os.path.join(ckpt_dir, "version-100")
+            model_version = CheckpointSaver.get_version_from_checkpoint(
+                ckpt_version_dir
+            )
+            self.assertTrue(model_version, 100)
 
 
 if __name__ == "__main__":
