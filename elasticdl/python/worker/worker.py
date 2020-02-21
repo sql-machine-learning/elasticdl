@@ -408,7 +408,9 @@ class Worker(object):
                 embedding_info.dim = layer.output_dim
                 embedding_info.initializer = layer.embeddings_initializer
                 # set to float32
-                embedding_info.dtype = dtype_numpy_to_tensor(np.float32)
+                embedding_info.dtype = dtype_numpy_to_tensor(
+                    np.dtype("float32")
+                )
 
         if self._embedding_columns:
             embedding_infos = model.embedding_table_infos
