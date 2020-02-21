@@ -126,7 +126,7 @@ func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32,
 			return kernelnew.Adam(grad, param, m, v, opt.GetLR(), opt.step,
 				opt.beta1, opt.beta2, opt.epsilon, true, ms)
 		}
-		return kernelnew.Adam(grad, param, m, v, opt.lr, opt.step,
+		return kernelnew.Adam(grad, param, m, v, opt.GetLR(), opt.step,
 			opt.beta1, opt.beta2, opt.epsilon, false, nil)
 	}
 	opt.SparseKernel = func(grad *commonnew.IndexedSlices, param *commonnew.EmbeddingTable, name string) error {
@@ -134,10 +134,10 @@ func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32,
 		v := opt.v.GetEmbeddingTable(name)
 		if opt.amsgrad {
 			ms := opt.maxSquare.GetEmbeddingTable(name)
-			return kernelnew.SparseAdam(grad, param, m, v, opt.lr, opt.step,
+			return kernelnew.SparseAdam(grad, param, m, v, opt.GetLR(), opt.step,
 				opt.beta1, opt.beta2, opt.epsilon, true, ms)
 		}
-		return kernelnew.SparseAdam(grad, param, m, v, opt.lr, opt.step,
+		return kernelnew.SparseAdam(grad, param, m, v, opt.GetLR(), opt.step,
 			opt.beta1, opt.beta2, opt.epsilon, false, nil)
 	}
 	opt.IndexedKernel = func(grad *commonnew.IndexedSlices, param *commonnew.Tensor, name string) error {
@@ -145,10 +145,10 @@ func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32,
 		v := opt.v.GetDenseParameter(name)
 		if opt.amsgrad {
 			ms := opt.maxSquare.GetDenseParameter(name)
-			return kernelnew.IndexedAdam(grad, param, m, v, opt.lr, opt.step,
+			return kernelnew.IndexedAdam(grad, param, m, v, opt.GetLR(), opt.step,
 				opt.beta1, opt.beta2, opt.epsilon, true, ms)
 		}
-		return kernelnew.IndexedAdam(grad, param, m, v, opt.lr, opt.step,
+		return kernelnew.IndexedAdam(grad, param, m, v, opt.GetLR(), opt.step,
 			opt.beta1, opt.beta2, opt.epsilon, false, nil)
 	}
 	return &opt
