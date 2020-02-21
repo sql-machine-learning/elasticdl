@@ -18,7 +18,7 @@ class ParametersTest(unittest.TestCase):
         self.params = Parameters()
 
         self.model_pb = Model()
-        self.infos_pb = self.model_pb.embedding_table_info
+        self.infos_pb = self.model_pb.embedding_table_infos
         self.tensors_pb = self.model_pb.dense_parameters
         self.embedding_tables_pb = self.model_pb.embedding_tables
 

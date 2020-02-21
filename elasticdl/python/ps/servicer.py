@@ -97,10 +97,10 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             self.wrap_optimizer_and_set_slot()
         return empty_pb2.Empty()
 
-    def push_embedding_info(self, request, _):
+    def push_embedding_table_infos(self, request, _):
         with self._lock:
             self._parameters.init_embedding_params(
-                request.embedding_table_info
+                request.embedding_table_infos
             )
             self.wrap_optimizer_and_set_slot()
         return empty_pb2.Empty()

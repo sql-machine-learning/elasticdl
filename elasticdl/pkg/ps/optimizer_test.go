@@ -120,7 +120,7 @@ func TestAdamOptimizer(t *testing.T) {
 	grad2 := common.NewTensor(gv2, d2) //t2
 	pbModel := &proto.Model{
 		DenseParameters: map[string]*tensor_go_proto.TensorProto{"t1": grad1.SerializeToTensorProto(), "t2": grad2.SerializeToTensorProto()},
-		EmbeddingTableInfo: []*proto.EmbeddingTableInfo{
+		EmbeddingTableInfos: []*proto.EmbeddingTableInfo{
 			&proto.EmbeddingTableInfo{
 				Name:        "t3",
 				Dim:         2,

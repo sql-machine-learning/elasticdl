@@ -31,9 +31,9 @@ func TestModelInit(t *testing.T) {
 
 func TestModelInitFrom(t *testing.T) {
 	var modelPB = proto.Model{
-		Version:            int32(1),
-		EmbeddingTables:    make(map[string]*proto.IndexedSlicesProto),
-		EmbeddingTableInfo: []*proto.EmbeddingTableInfo{},
+		Version:             int32(1),
+		EmbeddingTables:     make(map[string]*proto.IndexedSlicesProto),
+		EmbeddingTableInfos: []*proto.EmbeddingTableInfo{},
 	}
 	d1 := []int64{3, 2}
 	v1 := []float32{1.0, 2.0, 3.0, 4.0, 5.0, 6.0}
@@ -53,7 +53,7 @@ func TestModelInitFrom(t *testing.T) {
 		Initializer: "zero",
 		Dtype:       common.Float32,
 	}
-	modelPB.EmbeddingTableInfo = append(modelPB.EmbeddingTableInfo, &epb)
+	modelPB.EmbeddingTableInfos = append(modelPB.EmbeddingTableInfos, &epb)
 
 	model := NewModel()
 	assert.NotNil(t, model)

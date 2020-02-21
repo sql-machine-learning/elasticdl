@@ -126,7 +126,7 @@ class Parameters(object):
             A bool indicates whether `Parameters` accepts this model pb or not.
         """
         if not self.initialized:
-            infos = model_pb.embedding_table_info
+            infos = model_pb.embedding_table_infos
             self.init_embedding_params(infos)
             for name, pb in model_pb.dense_parameters.items():
                 # Please note that `tf.Variable` will do something with magic.
@@ -187,7 +187,7 @@ class Parameters(object):
                     model_pb.embedding_tables[name],
                 )
                 embedding_info = embedding_table.to_embedding_table_info_pb()
-                model_pb.embedding_table_info.append(embedding_info)
+                model_pb.embedding_table_infos.append(embedding_info)
         return model_pb
 
     def debug_info(self):
