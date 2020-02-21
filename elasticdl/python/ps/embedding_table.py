@@ -82,7 +82,7 @@ class EmbeddingTable(object):
         embedding_pb.name = self.name
         embedding_pb.dim = self.dim
         embedding_pb.initializer = str(self.initializer_value)
-        embedding_pb.dtype = dtype_numpy_to_tensor[self.dtype]
+        embedding_pb.dtype = dtype_numpy_to_tensor(self.dtype)
         return embedding_pb
 
     def get_table_size(self):
