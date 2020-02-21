@@ -8,5 +8,3 @@ curl --silent ${GO_MIRROR_URL}/go1.13.4.linux-amd64.tar.gz | tar -C /usr/local -
 
 go env -w GO111MODULE=on
 go env -w GOPROXY=https://goproxy.io,direct
-
-cp $GOPATH/bin/* /usr/local/bin/
