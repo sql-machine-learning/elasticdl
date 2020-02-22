@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/types_go_proto"
+	"sync"
 )
 
 // EmbeddingTable struct
@@ -10,6 +11,7 @@ type EmbeddingTable struct {
 	Initializer      string
 	EmbeddingVectors map[int64]*Tensor
 	Dtype            types_go_proto.DataType
+	lock             sync.RWMutex
 }
 
 // NewEmbeddingTable creates an embedding table instance
@@ -24,11 +26,16 @@ func NewEmbeddingTable(dim int64, initializer string, dtype types_go_proto.DataT
 
 // GetEmbeddingVector returns an REFERENCE of embedding vector giving an index
 func (e *EmbeddingTable) GetEmbeddingVector(index int64) *Tensor {
+	e.lock.RLock()
 	if value, ok := e.EmbeddingVectors[index]; ok {
+		e.lock.RUnlock()
 		return value
 	}
+	e.lock.RUnlock()
 	newVector := NewEmptyVector(e.Dim, e.Dtype)
+	e.lock.Lock()
 	e.EmbeddingVectors[index] = newVector
+	e.lock.Unlock()
 	return newVector
 }
 
