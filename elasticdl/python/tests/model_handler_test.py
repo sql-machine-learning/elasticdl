@@ -8,11 +8,13 @@ from tensorflow.python.feature_column import feature_column_v2 as fc_lib
 
 from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.model_handler import ModelHandler
+from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.elasticdl.feature_column.feature_column import (
     EmbeddingColumn,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.keras.layers import SparseEmbedding
+from elasticdl.python.ps.parameters import Parameters
 
 EMBEDDING_INPUT_DIM = 300000
 
@@ -149,6 +151,24 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
             distribution_strategy=DistributionStrategy.PARAMETER_SERVER,
             checkpoint_dir="",
         )
+
+    def _save_model(self, is_subclass):
+        prefix = "custom_model/" if is_subclass else ""
+        ckpt_dir = self.model_handler._checkpoint_dir
+        checkpoint_saver = CheckpointSaver(ckpt_dir, 0, 0, False)
+        params = Parameters()
+        params.non_embedding_params[
+            prefix + "embedding/embeddings:0"
+        ] = tf.Variable(tf.ones([EMBEDDING_INPUT_DIM, 2]), dtype=tf.float32)
+        params.non_embedding_params[prefix + "dense/kernel:0"] = tf.Variable(
+            [[1.0], [1.0]]
+        )
+        params.non_embedding_params[prefix + "dense/bias:0"] = tf.Variable(
+            [1.0]
+        )
+        params.version = 100
+        model_pb = params.to_model_pb()
+        checkpoint_saver.save(100, model_pb, False)
 
     def test_get_model_with_embedding_layer_to_train(self):
         model_inst = custom_model_with_embedding_layer()
