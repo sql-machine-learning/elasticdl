@@ -37,6 +37,7 @@ class LocalExecutor:
             self.eval_metrics_fn,
             self.prediction_outputs_processor,
             self.custom_data_reader,
+            self.callback_list,
         ) = get_model_spec(
             model_zoo=args.model_zoo,
             model_def=args.model_def,
@@ -47,6 +48,7 @@ class LocalExecutor:
             model_params=args.model_params,
             prediction_outputs_processor="",
             custom_data_reader=args.custom_data_reader,
+            callbacks=args.callbacks,
         )
         self.opt = self.opt_fn()
         self.epoch = args.num_epochs
