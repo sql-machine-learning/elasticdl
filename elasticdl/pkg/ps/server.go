@@ -12,6 +12,11 @@ import (
 	"sync"
 )
 
+const (
+	maxSendMessageLength    = 256 * 1024 * 1024
+	maxReceiveMessageLength = 256 * 1024 * 1024
+)
+
 // MasterClient contains attributes to call master GRPC services
 type MasterClient struct {
 	client     proto.MasterClient
@@ -131,6 +136,7 @@ func (s *Server) PushModel(ctx context.Context, in *proto.Model) (*empty.Empty, 
 	var err error
 	if !s.Model.Initialized {
 		err = s.Model.InitFromModelPB(in)
+		s.Opt.InitOptimizer(in)
 		if err == nil {
 			s.Model.Initialized = true
 		}
@@ -143,18 +149,20 @@ func (s *Server) PushModel(ctx context.Context, in *proto.Model) (*empty.Empty, 
 func (s *Server) PushEmbeddingTableInfos(ctx context.Context, in *proto.Model) (*empty.Empty, error) {
 	s.lock.Lock()
 	err := s.Model.InitFromModelPB(in)
+	s.Opt.InitOptimizer(in)
 	s.lock.Unlock()
 	return &empty.Empty{}, err
 }
 
 // Run creates a grpc server and starts the serving. Set serverDone when finishes.
-func (s *Server) Run(address string, serverDone chan bool) *grpc.Server {
+func (s *Server) Run(address string, concurrentStreams int, serverDone chan bool) *grpc.Server {
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("failed to start PS: %v", err)
 	}
-	// TODO: set maxReceiveMessageSize (default is 4M, too small for elasticdl), maxConcurrentStreams
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.MaxRecvMsgSize(maxReceiveMessageLength),
+		grpc.MaxSendMsgSize(maxSendMessageLength),
+		grpc.MaxConcurrentStreams(uint32(concurrentStreams)))
 	proto.RegisterPserverServer(grpcServer, s)
 	go startServe(grpcServer, lis, serverDone, s.masterClient)
 	return grpcServer
