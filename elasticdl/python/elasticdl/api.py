@@ -51,7 +51,13 @@ def train(args):
     ]
     container_args.extend(
         build_arguments_from_parsed_result(
-            args, filter_args=["model_zoo", "cluster_spec", "worker_image"]
+            args,
+            filter_args=[
+                "model_zoo",
+                "cluster_spec",
+                "worker_image",
+                "force_use_kube_config_file",
+            ],
         )
     )
 
@@ -90,7 +96,13 @@ def evaluate(args):
     ]
     container_args.extend(
         build_arguments_from_parsed_result(
-            args, filter_args=["model_zoo", "cluster_spec", "worker_image"]
+            args,
+            filter_args=[
+                "model_zoo",
+                "cluster_spec",
+                "worker_image",
+                "force_use_kube_config_file",
+            ],
         )
     )
 
@@ -128,7 +140,13 @@ def predict(args):
     ]
     container_args.extend(
         build_arguments_from_parsed_result(
-            args, filter_args=["model_zoo", "cluster_spec", "worker_image"]
+            args,
+            filter_args=[
+                "model_zoo",
+                "cluster_spec",
+                "worker_image",
+                "force_use_kube_config_file",
+            ],
         )
     )
 
@@ -161,6 +179,7 @@ def _submit_job(image_name, client_args, container_args):
         job_name=client_args.job_name,
         event_callback=None,
         cluster_spec=client_args.cluster_spec,
+        force_use_kube_config_file=client_args.force_use_kube_config_file,
     )
 
     if client_args.yaml:

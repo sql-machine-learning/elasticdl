@@ -261,6 +261,15 @@ def add_common_params(parser):
         "the job automatically, and users need to launch the job through "
         "command `kubectl create -f path_to_yaml_file`.",
     )
+    add_bool_param(
+        parser=parser,
+        name="--force_use_kube_config_file",
+        default=False,
+        help="If true, force to load the cluster config from the ~/.kube/config "
+        "while submitting the ElasticDL job. Otherwise, if the client is in a "
+        "K8S client, load the incluster config, if cannot, load the kube "
+        "config file.",
+    )
     # delete this argument after finishing Go-based PS implementation
     add_bool_param(
         parser=parser,
