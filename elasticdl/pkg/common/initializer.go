@@ -70,9 +70,10 @@ func Constant(n interface{}) Initializer{
 }
 
 // RandomNorm return a normal Initializer
-func RandomNorm(mean float64, std float64) Initializer{
+func RandomNorm(mean float64, std float64, seed int64) Initializer{
 	return func(t *Tensor) error {
 		length := int(DimProduct(t.Dims))
+		rand.Seed(seed)
 		switch t.Dtype {
 		case Float32:
 			for i := 0; i<length; i++ {
@@ -90,10 +91,11 @@ func RandomNorm(mean float64, std float64) Initializer{
 }
 
 // RandomUniform return a uniform Initializer
-func RandomUniform(min float64, max float64) Initializer{
+func RandomUniform(min float64, max float64, seed int64) Initializer{
 	return func(t *Tensor) error {
 		length := int(DimProduct(t.Dims))
 		factor := max-min
+		rand.Seed(seed)
 		switch t.Dtype {
 		case Float32:
 			for i := 0; i<length; i++ {
@@ -102,6 +104,35 @@ func RandomUniform(min float64, max float64) Initializer{
 		case Float64:
 			for i := 0; i<length; i++ {
 				byteSetFloat64(t.Buffer, i, rand.Float64()*factor+min)
+			}
+		default:
+			return fmt.Errorf("Wrong tensor data type")
+		}
+		return nil
+	}
+}
+
+func truncatedNorm(mean float64, std float64) float64 {
+	temp := rand.NormFloat64()*std+mean
+	if math.Abs(temp-mean)<=2*std {
+		return temp
+	}
+	return truncatedNorm(mean, std)
+}
+
+// TruncatedNormal return a truncated-normal Initializer
+func TruncatedNormal(mean float64, std float64, seed int64) Initializer {
+	return func(t *Tensor) error {
+		length := int(DimProduct(t.Dims))
+		rand.Seed(seed)
+		switch t.Dtype {
+		case Float32:
+			for i := 0; i<length; i++ {
+				byteSetFloat32(t.Buffer, i, float32(truncatedNorm(mean, std)))
+			}
+		case Float64:
+			for i := 0; i<length; i++ {
+				byteSetFloat64(t.Buffer, i, float64(truncatedNorm(mean, std)))
 			}
 		default:
 			return fmt.Errorf("Wrong tensor data type")

@@ -16,11 +16,15 @@ func TestInitializer(t *testing.T){
 	zeroinit(tensor)
 	fmt.Println(Slice(tensor).([]float32))
 
-	norminit := RandomNorm(0, 1.0)
+	norminit := RandomNorm(0, 1.0, 0.0)
 	norminit(tensor)
 	fmt.Println(Slice(tensor).([]float32))
 
-	uniforminit := RandomUniform(-1.0, 1.0)
+	uniforminit := RandomUniform(-1.0, 1.0, 0.0)
 	uniforminit(tensor)
+	fmt.Println(Slice(tensor).([]float32))
+
+	truncatenorminit := TruncatedNormal(-1.0, 1.0, 0.0)
+	truncatenorminit(tensor)
 	fmt.Println(Slice(tensor).([]float32))
 }
