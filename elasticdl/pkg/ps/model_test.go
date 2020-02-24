@@ -75,3 +75,34 @@ func TestModelInitFrom(t *testing.T) {
 	ev5 := e1.GetEmbeddingVector(5)
 	assert.True(t, common.CompareFloatArray([]float32{5.0, 6.0}, common.Slice(ev5).([]float32), 0.0001))
 }
+
+func TestModelSaveToPB(t *testing.T) {
+	model := NewModel()
+
+	d1 := []int64{3, 2}
+	v1 := []float32{1.0, 2.0, 3.0, 4.0, 5.0, 6.0}
+	t1 := common.NewTensor(v1, d1)
+
+	i1 := []int64{1, 3, 5}
+	var is = common.IndexedSlices{
+		ConcatTensors: t1,
+		Ids:           i1,
+	}
+
+	model.EmbeddingTables["e1"] = common.NewEmbeddingTable(2, "zero", common.Float32)
+	model.EmbeddingTables["e1"].SetEmbeddingVectors(&is)
+
+	modelPB := model.SaveToModelPB()
+	assert.Equal(t, int64(2), modelPB.EmbeddingTableInfos[0].Dim)
+	assert.Equal(t, "e1", modelPB.EmbeddingTableInfos[0].Name)
+
+	resModel := NewModel()
+	resModel.InitFromModelPB(modelPB)
+
+	for _, i := range i1 {
+		ev := model.EmbeddingTables["e1"].GetEmbeddingVector(i)
+		rev := resModel.EmbeddingTables["e1"].GetEmbeddingVector(i)
+		assert.True(t, common.CompareFloatArray(common.Slice(ev).([]float32),
+			common.Slice(rev).([]float32), 0.0001))
+	}
+}
