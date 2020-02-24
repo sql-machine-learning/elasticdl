@@ -2,11 +2,8 @@ import threading
 import time
 from threading import Thread
 
-import numpy as np
-from tensorflow.python.keras import metrics as metrics_module
-
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.constants import MetricsDictKey
+from elasticdl.python.common.evaluation_utils import EvaluationMetrics
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor import tensor_pb_to_ndarray
 
@@ -34,31 +31,7 @@ class EvaluationJob(object):
         self.model_version = model_version
         self._total_tasks = total_tasks
         self._completed_tasks = 0
-        self._init_metrics_dict(metrics_dict)
-
-    def _init_metrics_dict(self, metrics_dict):
-        if not metrics_dict:
-            raise ValueError(
-                "Evaluation metrics dictionary must not be empty."
-            )
-        first_metrics = list(metrics_dict.values())[0]
-        if isinstance(first_metrics, dict):
-            self._model_have_multiple_outputs = True
-            self._metrics_dict = metrics_dict
-        else:
-            # When model has only one output, save it in a dict in order to
-            # keep the same data structure as the `metrics_dict` when model
-            # has multiple outputs.
-            self._model_have_multiple_outputs = False
-            self._metrics_dict = {MetricsDictKey.MODEL_OUTPUT: metrics_dict}
-        for output_name, metrics in self._metrics_dict.items():
-            for metric_name, metric in metrics.items():
-                if not isinstance(metric, metrics_module.Metric):
-                    # `tf.keras.metrics.MeanMetricWrapper` wraps stateless
-                    # functions into `tf.keras.metrics.Metric` instance.
-                    metrics[metric_name] = metrics_module.MeanMetricWrapper(
-                        metric, name=metric_name
-                    )
+        self.evaluation_metrics = EvaluationMetrics(metrics_dict)
 
     def complete_task(self):
         self._completed_tasks += 1
@@ -72,56 +45,9 @@ class EvaluationJob(object):
         for tensor_pb in model_outputs_pb:
             key = tensor_pb.name
             model_outputs[key] = tensor_pb_to_ndarray(tensor_pb)
-        self.update_evaluation_metrics(model_outputs, labels)
-
-    def update_evaluation_metrics(self, model_outputs, labels):
-        for key in model_outputs:
-            metrics = self._metrics_dict.get(key, {})
-            if not metrics:
-                continue
-            outputs = model_outputs.get(key)
-            for metric_inst in metrics.values():
-                self._update_metric_by_small_chunk(
-                    metric_inst, labels, outputs
-                )
-
-    def get_evaluation_summary(self):
-        if self._model_have_multiple_outputs:
-            return {
-                output_name: {
-                    metric_name: metric_inst.result().numpy()
-                    for metric_name, metric_inst in metrics.items()
-                }
-                for output_name, metrics in self._metrics_dict.items()
-            }
-        return {
-            metric_name: metric_inst.result().numpy()
-            for metric_name, metric_inst in self._metrics_dict[
-                MetricsDictKey.MODEL_OUTPUT
-            ].items()
-        }
-
-    def reset_metric_states(self):
-        """Resets all of the metric state variables."""
-        for metrics in self._metrics_dict.values():
-            for metric_inst in metrics.values():
-                metric_inst.reset_states()
-
-    @staticmethod
-    def _update_metric_by_small_chunk(
-        metric, labels, outputs, chunk_length=500
-    ):
-        """The metric updates state in a thread launched by grpc. The memory will
-        increase greatly if we update the metric with large size outputs. So
-        we split the outputs and labels to small chunks then update the metric
-        with those small chunks. The [issue 35044](https://github.com/
-        tensorflow/tensorflow/issues/35044) has been submitted to tensorflow.
-        """
-        chunk_boundaries = np.asarray(range(0, len(labels), chunk_length))
-        label_chunks = np.array_split(labels, chunk_boundaries)
-        output_chunks = np.array_split(outputs, chunk_boundaries)
-        for label, output in zip(label_chunks, output_chunks):
-            metric.update_state(label, output)
+        self.evaluation_metrics.update_evaluation_metrics(
+            model_outputs, labels
+        )
 
 
 class _EvaluationTrigger(Thread):
@@ -271,7 +197,9 @@ class EvaluationService(object):
     def complete_task(self):
         self._eval_job.complete_task()
         if self._eval_job.finished():
-            evaluation_metrics = self._eval_job.get_evaluation_summary()
+            evaluation_metrics = (
+                self._eval_job.evaluation_metrics.get_evaluation_summary()
+            )
             if self._tensorboard_service and evaluation_metrics:
                 self._tensorboard_service.write_dict_to_summary(
                     evaluation_metrics, version=self._eval_job.model_version
