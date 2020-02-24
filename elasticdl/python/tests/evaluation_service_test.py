@@ -6,6 +6,7 @@ from tensorflow.keras.metrics import Accuracy, MeanSquaredError
 
 from elasticdl.python.common.constants import MetricsDictKey
 from elasticdl.python.common.tensor_utils import ndarray_to_pb
+from elasticdl.python.common.evaluation_utils import EvaluationMetrics
 from elasticdl.python.master.evaluation_service import (
     EvaluationJob,
     EvaluationService,
@@ -72,7 +73,7 @@ class EvaluationServiceTest(unittest.TestCase):
             ndarray_to_pb(np.array([[7], [8], [9], [10], [11]], np.float32)),
         )
         expected_acc = 0.25
-        evaluation_metrics = job.get_evaluation_summary()
+        evaluation_metrics = job.evaluation_metrics.get_evaluation_summary()
         self.assertAlmostEqual(expected_acc, evaluation_metrics.get("acc"))
         self.assertAlmostEqual(expected_acc, evaluation_metrics.get("acc_fn"))
         self.assertAlmostEqual(10.125, evaluation_metrics.get("mse"))
@@ -178,7 +179,7 @@ class EvaluationServiceTest(unittest.TestCase):
         auc_value_0 = auc.result()
 
         auc.reset_states()
-        EvaluationJob._update_metric_by_small_chunk(auc, labels, preds)
+        EvaluationMetrics._update_metric_by_small_chunk(auc, labels, preds)
         auc_value_1 = auc.result()
         self.assertEquals(auc_value_0, auc_value_1)
 
