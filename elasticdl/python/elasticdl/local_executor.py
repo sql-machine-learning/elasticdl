@@ -15,7 +15,7 @@ from elasticdl.python.data.reader.csv_reader import CSVDataReader
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.data.reader.odps_reader import ODPSDataReader
 from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
-from elasticdl.python.master.evaluation_service import EvaluationJob
+from elasticdl.python.common.evaluation_utils import EvaluationMetrics
 
 _MockedTask = namedtuple("Task", ["shard_name", "start", "end"])
 
@@ -120,13 +120,13 @@ class LocalExecutor:
         if dataset is None:
             logger.info("No validation dataset is configured")
             return
-        eval_job = EvaluationJob(self.eval_metrics_fn(), -1)
+        eval_metrics = EvaluationMetrics(self.eval_metrics_fn())
         for features, labels in dataset:
             outputs = self.model_inst.call(features)
             if not isinstance(outputs, dict):
                 outputs = {MetricsDictKey.MODEL_OUTPUT: outputs}
-            eval_job.update_evaluation_metrics(outputs, labels)
-        metrics = eval_job.get_evaluation_summary()
+            eval_metrics.update_evaluation_metrics(outputs, labels)
+        metrics = eval_metrics.get_evaluation_summary()
         logger.info("Evaluation metrics : {}".format(metrics))
         return metrics
 
