@@ -54,7 +54,8 @@ class Client(object):
         namespace,
         job_name,
         event_callback=None,
-        cluster_spec=""
+        cluster_spec="",
+        force_use_kube_config_file=False
     ):
         """
         ElasticDL k8s client.
@@ -67,14 +68,23 @@ class Client(object):
                 Used as pod name prefix and value for "elasticdl" label.
             event_callback: If not None, an event watcher will be created and
                 events passed to the callback.
+            force_use_kube_config_file: If true, force to load the cluster
+                config from ~/.kube/config. Otherwise, if it's in a process
+                running in a K8S environment, it loads the incluster config,
+                if not, it loads the kube config file.
         """
         try:
-            if os.getenv("KUBERNETES_SERVICE_HOST"):
+            if (
+                os.getenv("KUBERNETES_SERVICE_HOST")
+                and not force_use_kube_config_file
+            ):
                 # We are running inside a k8s cluster
                 config.load_incluster_config()
+                logger.info("Load the incluster config.")
             else:
                 # Use user's kube config
                 config.load_kube_config()
+                logger.info("Load the kube config file.")
         except Exception as ex:
             traceback.print_exc()
             raise Exception(
