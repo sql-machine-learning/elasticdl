@@ -73,7 +73,7 @@ func (model *Model) InitFromModelPB(pb *proto.Model) error {
 	return nil
 }
 
-// SaveToModelPB saves in memory model to PB
+// SaveToModelPB saves in-memory model to PB
 func (model *Model) SaveToModelPB() *proto.Model {
 	var modelPB proto.Model
 	modelPB.Version = model.Version
