@@ -184,7 +184,7 @@ func (t *Tensor) SerializeToTensorProto() *tensor_go_proto.TensorProto {
 	}
 }
 
-// IndexedSlices : IndexedSlice in memory representation
+// IndexedSlices : IndexedSlices in-memory representation
 type IndexedSlices struct {
 	ConcatTensors *Tensor
 	Ids           []int64
@@ -215,4 +215,30 @@ func DeserializeFromIndexedSliceProto(pb *proto.IndexedSlicesProto) *IndexedSlic
 		ConcatTensors: DeserializeFromTensorProto(pb.ConcatTensors),
 		Ids:           pb.Ids,
 	}
+}
+
+func MergeIndexedSlices(first *IndexedSlices, second *IndexedSlices) (*IndexedSlices, err) {
+    if (first == nil) return second, nil
+    if (second == nil) return first, nil
+    if (first.ConcatTensors.Dtype != second.ConcatTensors.Dtype) {
+        return nil, fmt.Errorf("Could not merge two IndexedSlices with different types")
+    }
+    if (first.ConcatTensors.Dims[1] != second.ConcatTensors.Dims[1]) {
+        return nil, fmt.Errorf("Could not merge two IndexedSlices with different widths")
+    }
+    height := first.ConcatTensors.Dims[0] + second.ConcatTensors.Dims[0]
+    width := first.ConcatTensors.Dims[1]
+    dtype := first.ConcatTensors.Dtype
+    tensor := NewEmptyTensor([]int64{height, width}, dtype)
+    ids := make([]int64)
+    for i, id := range first.Ids {
+        tensor.SetRow(int64(i), first.ConcatTensors.GetRow(int64(i)))
+        ids = append(ids, id)
+    }
+    start := len(ids)
+    for i, id := range second.Ids {
+        tensor.SetRow(int64(start + i), second.ConcatTensors.GetRow(int64(i)))
+        ids = append(ids, id)
+    }
+    return NewIndexedSlices(tensor, ids)
 }
