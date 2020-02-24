@@ -265,9 +265,9 @@ def add_common_params(parser):
         parser=parser,
         name="--force_use_kube_config_file",
         default=False,
-        help="If true, force to load the cluster config from the ~/.kube/config "
+        help="If true, force to load the cluster config from ~/.kube/config "
         "while submitting the ElasticDL job. Otherwise, if the client is in a "
-        "K8S client, load the incluster config, if cannot, load the kube "
+        "K8S environment, load the incluster config, if not, load the kube "
         "config file.",
     )
     # delete this argument after finishing Go-based PS implementation

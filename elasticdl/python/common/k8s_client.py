@@ -70,8 +70,8 @@ class Client(object):
                 events passed to the callback.
             force_use_kube_config_file: If true, force load the cluster config
                 from ~/.kube/config file. Otherwise, if it's in a process
-                running in a K8S environment, it loads the incluster config, 
-                if cannot, load the kube config file.
+                running in a K8S environment, it loads the incluster config,
+                if not, load the kube config file.
         """
         try:
             if (
