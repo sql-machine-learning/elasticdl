@@ -6,6 +6,7 @@ import tensorflow as tf
 
 from elasticdl.python.common.args import parse_envs
 from elasticdl.python.common.constants import MetricsDictKey
+from elasticdl.python.common.evaluation_utils import EvaluationMetrics
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
@@ -15,7 +16,6 @@ from elasticdl.python.data.reader.csv_reader import CSVDataReader
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.data.reader.odps_reader import ODPSDataReader
 from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
-from elasticdl.python.common.evaluation_utils import EvaluationMetrics
 
 _MockedTask = namedtuple("Task", ["shard_name", "start", "end"])
 

@@ -3,9 +3,9 @@ import time
 from threading import Thread
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.evaluation_utils import EvaluationMetrics
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor import tensor_pb_to_ndarray
-from elasticdl.python.common.evaluation_utils import EvaluationMetrics
 
 
 class EvaluationJob(object):
@@ -197,7 +197,9 @@ class EvaluationService(object):
     def complete_task(self):
         self._eval_job.complete_task()
         if self._eval_job.finished():
-            evaluation_metrics = self._eval_job.get_evaluation_summary()
+            evaluation_metrics = (
+                self._eval_job.evaluation_metrics.get_evaluation_summary()
+            )
             if self._tensorboard_service and evaluation_metrics:
                 self._tensorboard_service.write_dict_to_summary(
                     evaluation_metrics, version=self._eval_job.model_version
