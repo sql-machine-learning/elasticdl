@@ -68,10 +68,10 @@ class Client(object):
                 Used as pod name prefix and value for "elasticdl" label.
             event_callback: If not None, an event watcher will be created and
                 events passed to the callback.
-            force_use_kube_config_file: If true, force load the cluster config
-                from ~/.kube/config file. Otherwise, if it's in a process
+            force_use_kube_config_file: If true, force to load the cluster
+                config from ~/.kube/config. Otherwise, if it's in a process
                 running in a K8S environment, it loads the incluster config,
-                if not, load the kube config file.
+                if not, it loads the kube config file.
         """
         try:
             if (
