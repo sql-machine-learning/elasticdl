@@ -8,6 +8,7 @@ import (
 	"hash/fnv"
 	"io/ioutil"
 	"os"
+	"path"
 )
 
 func stringToID(name string, bucketNum int) int {
@@ -106,4 +107,12 @@ func LoadModelFromCheckPoint(checkPointDir string, shardID int, shardNum int) (*
 		model.EmbeddingTables[k].SetEmbeddingVectors(v)
 	}
 	return model, nil
+}
+
+// SaveModelToCheckPoint saves in-memory model to checkpoint
+func SaveModelToCheckPoint(checkPointDir string, model *Model, shardID int, shardNum int) {
+    os.MkdirAll(checkPointDir, os.ModePerm)
+    file := fmt.Sprintf("variables-%d-of-%d.ckpt", shardID, shardNum)
+    modelPB := model.SaveToModelPB()
+    savePBToFile(modelPB, file)
 }
