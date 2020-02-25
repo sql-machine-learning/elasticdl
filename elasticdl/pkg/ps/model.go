@@ -4,6 +4,7 @@ import (
 	"elasticdl.org/elasticdl/common"
 	"elasticdl.org/elasticdl/proto"
 	"fmt"
+	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"
 )
 
 // Model contains dense parameters and embedding tables
@@ -70,4 +71,26 @@ func (model *Model) InitFromModelPB(pb *proto.Model) error {
 		model.Version = pb.Version
 	}
 	return nil
+}
+
+// SaveToModelPB saves in-memory model to PB
+func (model *Model) SaveToModelPB() *proto.Model {
+	var modelPB proto.Model
+	modelPB.Version = model.Version
+	modelPB.DenseParameters = make(map[string]*tensor_go_proto.TensorProto)
+	for name, v := range model.DenseParameters {
+		modelPB.DenseParameters[name] = v.SerializeToTensorProto()
+	}
+	modelPB.EmbeddingTables = make(map[string]*proto.IndexedSlicesProto)
+	for name, v := range model.EmbeddingTables {
+		modelPB.EmbeddingTables[name] = v.ToIndexedSlices().SerializeToIndexedSlicesProto()
+		info := proto.EmbeddingTableInfo{
+			Name:        name,
+			Dim:         v.Dim,
+			Initializer: v.Initializer,
+			Dtype:       v.Dtype,
+		}
+		modelPB.EmbeddingTableInfos = append(modelPB.EmbeddingTableInfos, &info)
+	}
+	return &modelPB
 }
