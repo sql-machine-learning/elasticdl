@@ -19,7 +19,6 @@ from elasticdl.python.common.constants import (
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
-    get_dict_from_params_str,
     get_module_file_path,
     get_optimizer_info,
     load_callbacks_from_module,
@@ -35,42 +34,6 @@ from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.master.tensorboard_service import TensorboardService
-
-
-def _make_task_dispatcher(
-    training_data,
-    validation_data,
-    prediction_data,
-    records_per_task,
-    num_epochs,
-    data_reader_params,
-    create_data_reader_fn,
-    callbacks_list,
-):
-    def _maybe_create_shards(data_origin):
-        kwargs = get_dict_from_params_str(data_reader_params)
-        partition = kwargs.get("partition", None) if kwargs else None
-        return (
-            create_data_reader_fn(
-                data_origin=data_origin,
-                records_per_task=records_per_task,
-                partition=partition,
-            ).create_shards()
-            if data_origin
-            else {}
-        )
-
-    prediction_f_records = _maybe_create_shards(prediction_data)
-
-    return _TaskDispatcher(
-        _maybe_create_shards(training_data),
-        _maybe_create_shards(validation_data),
-        prediction_f_records,
-        records_per_task,
-        # Only generate prediction tasks for 1 epoch
-        1 if prediction_f_records else num_epochs,
-        callbacks_list,
-    )
 
 
 class Master(object):
@@ -125,12 +88,13 @@ class Master(object):
 
         # Start task queue
         records_per_task = args.minibatch_size * args.num_minibatches_per_task
-        self.task_d = _make_task_dispatcher(
+        self.task_d = _TaskDispatcher(
             args.training_data,
             args.validation_data,
             args.prediction_data,
             records_per_task,
-            args.num_epochs,
+            1 if args.prediction_data else args.num_epochs,
+            args.num_workers,
             args.data_reader_params,
             self._create_data_reader_fn,
             self.callbacks_list,

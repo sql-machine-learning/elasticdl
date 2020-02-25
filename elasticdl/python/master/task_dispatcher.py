@@ -10,6 +10,7 @@ from tensorflow.python.keras.callbacks import CallbackList
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import TaskExecCounterKey
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.model_utils import get_dict_from_params_str
 
 
 class _Task(object):
@@ -64,56 +65,103 @@ class _TaskDispatcher(object):
 
     def __init__(
         self,
-        training_shards,
-        evaluation_shards,
-        prediction_shards,
-        records_per_task,
+        training_data,
+        validation_data,
+        prediction_data,
+        training_records_per_task,
         num_epochs,
+        num_workers,
+        data_reader_params,
+        create_data_reader_fn,
         callbacks_list=None,
     ):
-        """
-        Arguments:
-            training_shards: A dictionary from RecordIO file name to the
-                number of training records.
-            evaluation_shards: A dictionary from RecordIO file name to
-                the number of evaluation records.
-            prediction_shards: A dictionary from RecordIO file name to
-                the number of prediction records.
-            records_per_task: The number of records per task.
-            num_epochs: The total number of epochs for the tasks where
-                an epoch is a complete iteration over the shards.
-            callbacks_list: The Keras CallbacksList object to contain all
-                callback instances.
-        """
         self._lock = threading.Lock()
-
+        self._training_data = training_data
+        self._validation_data = validation_data
+        self._prediction_data = prediction_data
+        self._training_records_per_task = training_records_per_task
         self._num_epochs = num_epochs
-        self._epoch = 0
-        self._training_shards = training_shards
-        self._evaluation_shards = evaluation_shards
-        self._prediction_shards = prediction_shards
-        self._records_per_task = records_per_task
+        self._num_workers = num_workers
+        self._data_reader_params = data_reader_params
+        self._create_data_reader_fn = create_data_reader_fn
         self._init_callbacks(callbacks_list)
 
+        self._epoch = 0
         self._todo = []
         # dictionary from task id to Task.
         self._doing = {}
         self._task_id = 0
         self._eval_todo = []
         self._evaluation_service = None
+        self._eval_table_size = 0
 
         # Callback list to invoke after all tasks complete.
         self._tasks_done_deferred_callbacks = []
 
         self._job_counters = {}
 
-        if self._training_shards:
+        if self._training_data:
             logger.info("Starting epoch %d", self._epoch)
             self.create_tasks(elasticdl_pb2.TRAINING)
-        elif self._evaluation_shards:
+        elif self._validation_data:
             self.create_tasks(elasticdl_pb2.EVALUATION)
-        elif self._prediction_shards:
+        elif self._prediction_data:
             self.create_tasks(elasticdl_pb2.PREDICTION)
+
+    def _create_shards(self, task_type):
+        kwargs = get_dict_from_params_str(self._data_reader_params)
+        partition = kwargs.get("partition", None) if kwargs else None
+        if (
+            task_type == elasticdl_pb2.TRAINING
+            or task_type == elasticdl_pb2.PREDICTION
+        ):
+            return (
+                self._create_data_reader_fn(
+                    data_origin=self._training_data,
+                    records_per_task=self._training_records_per_task,
+                    partition=partition,
+                ).create_shards(),
+                self._training_records_per_task,
+            )
+        else:
+            if self._eval_table_size == 0:
+                reader = self._create_data_reader_fn(
+                    data_origin=self._validation_data, partition=partition,
+                )
+                if hasattr(reader, "get_table_size") and callable(
+                    reader.get_table_size
+                ):
+                    self._eval_table_size = reader.get_table_size()
+                else:
+                    self._eval_table_size = -1
+
+            if self._eval_table_size > 0:
+                records_per_task = self._training_records_per_task
+                if (
+                    self._eval_table_size // self._training_records_per_task
+                    < self._num_workers // 2
+                ):
+                    records_per_task = (
+                        self._eval_table_size // self._num_workers
+                    )
+
+                return (
+                    self._create_data_reader_fn(
+                        data_origin=self._validation_data,
+                        records_per_task=records_per_task,
+                        partition=partition,
+                    ).create_shards(),
+                    records_per_task,
+                )
+            else:
+                return (
+                    self._create_data_reader_fn(
+                        data_origin=self._validation_data,
+                        records_per_task=self._training_records_per_task,
+                        partition=partition,
+                    ).create_shards(),
+                    self._training_records_per_task,
+                )
 
     def _init_callbacks(self, callbacks_list):
         if callbacks_list is None:
@@ -135,12 +183,7 @@ class _TaskDispatcher(object):
             model_version,
         )
         self.reset_job_counters(task_type)
-        if task_type == elasticdl_pb2.TRAINING:
-            shards = self._training_shards
-        elif task_type == elasticdl_pb2.EVALUATION:
-            shards = self._evaluation_shards
-        else:
-            shards = self._prediction_shards
+        shards, records_per_task = self._create_shards(task_type)
         tasks = []
         num_records_before_create = self._job_counters[task_type].total_records
         # Note that a shard may contain records for multiple tasks.
@@ -153,13 +196,10 @@ class _TaskDispatcher(object):
                 task_type
             ].total_records += num_records_this_shard
             for start_ind_this_task in range(
-                start_ind_this_shard,
-                max_ind_this_shard,
-                self._records_per_task,
+                start_ind_this_shard, max_ind_this_shard, records_per_task,
             ):
                 end_ind_this_task = min(
-                    start_ind_this_task + self._records_per_task,
-                    max_ind_this_shard,
+                    start_ind_this_task + records_per_task, max_ind_this_shard,
                 )
 
                 # Note that only records in [start, end) of this task
@@ -346,7 +386,7 @@ class _TaskDispatcher(object):
     def set_evaluation_service(self, evaluation_service):
         with self._lock:
             self._evaluation_service = evaluation_service
-            if self._evaluation_shards and not self._training_shards:
+            if self._validation_data and not self._training_data:
                 evaluation_service.init_eval_only_job(len(self._eval_todo))
 
     def _call_on_task_end(self, task):

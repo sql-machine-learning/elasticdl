@@ -61,6 +61,11 @@ class ODPSDataReader(AbstractDataReader):
     def metadata(self):
         return self._metadata
 
+    def get_table_size(self):
+        check_required_kwargs(["table"], self._kwargs)
+        reader = self._get_reader(self._kwargs["table"])
+        return reader.get_table_size()
+
     def _get_reader(self, table_name):
         check_required_kwargs(
             ["project", "access_id", "access_key"], self._kwargs
