@@ -2,6 +2,7 @@ package common
 
 import (
 	"elasticdl.org/elasticdl/proto"
+	"fmt"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_go_proto"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/tensor_shape_go_proto"
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/types_go_proto"
@@ -217,28 +218,33 @@ func DeserializeFromIndexedSliceProto(pb *proto.IndexedSlicesProto) *IndexedSlic
 	}
 }
 
-func MergeIndexedSlices(first *IndexedSlices, second *IndexedSlices) (*IndexedSlices, err) {
-    if (first == nil) return second, nil
-    if (second == nil) return first, nil
-    if (first.ConcatTensors.Dtype != second.ConcatTensors.Dtype) {
-        return nil, fmt.Errorf("Could not merge two IndexedSlices with different types")
-    }
-    if (first.ConcatTensors.Dims[1] != second.ConcatTensors.Dims[1]) {
-        return nil, fmt.Errorf("Could not merge two IndexedSlices with different widths")
-    }
-    height := first.ConcatTensors.Dims[0] + second.ConcatTensors.Dims[0]
-    width := first.ConcatTensors.Dims[1]
-    dtype := first.ConcatTensors.Dtype
-    tensor := NewEmptyTensor([]int64{height, width}, dtype)
-    ids := make([]int64)
-    for i, id := range first.Ids {
-        tensor.SetRow(int64(i), first.ConcatTensors.GetRow(int64(i)))
-        ids = append(ids, id)
-    }
-    start := len(ids)
-    for i, id := range second.Ids {
-        tensor.SetRow(int64(start + i), second.ConcatTensors.GetRow(int64(i)))
-        ids = append(ids, id)
-    }
-    return NewIndexedSlices(tensor, ids)
+// MergeIndexedSlices merges two indexed slices into one indexed slices
+func MergeIndexedSlices(first *IndexedSlices, second *IndexedSlices) (*IndexedSlices, error) {
+	if first == nil {
+		return second, nil
+	}
+	if second == nil {
+		return first, nil
+	}
+	if first.ConcatTensors.Dtype != second.ConcatTensors.Dtype {
+		return nil, fmt.Errorf("Could not merge two IndexedSlices with different types")
+	}
+	if first.ConcatTensors.Dims[1] != second.ConcatTensors.Dims[1] {
+		return nil, fmt.Errorf("Could not merge two IndexedSlices with different widths")
+	}
+	height := first.ConcatTensors.Dims[0] + second.ConcatTensors.Dims[0]
+	width := first.ConcatTensors.Dims[1]
+	dtype := first.ConcatTensors.Dtype
+	tensor := NewEmptyTensor([]int64{height, width}, dtype)
+	var ids []int64
+	for i, id := range first.Ids {
+		tensor.SetRow(int64(i), first.ConcatTensors.GetRow(int64(i)))
+		ids = append(ids, id)
+	}
+	start := len(ids)
+	for i, id := range second.Ids {
+		tensor.SetRow(int64(start+i), second.ConcatTensors.GetRow(int64(i)))
+		ids = append(ids, id)
+	}
+	return NewIndexedSlices(tensor, ids), nil
 }
