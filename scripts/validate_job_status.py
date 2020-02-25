@@ -1,56 +1,7 @@
 import sys
 import time
 
-from kubernetes import client, config
-
-
-class Client(object):
-    def __init__(self, namespace):
-        self.namespace = namespace
-        config.load_kube_config()
-        self.client = client.CoreV1Api()
-
-    def get_pod_phase(self, pod_name):
-        try:
-            pod = self.client.read_namespaced_pod(
-                namespace=self.namespace, name=pod_name
-            )
-            return pod.status.phase
-        except Exception:
-            return "Pod %s not found" % pod_name
-
-    def get_pod_status(self, pod_name):
-        try:
-            pod = self.client.read_namespaced_pod(
-                namespace=self.namespace, name=pod_name
-            )
-            return pod.status.to_str()
-        except Exception:
-            return "Pod %s not found" % pod_name
-
-    def get_pod_label_status(self, pod_name):
-        try:
-            pod = self.client.read_namespaced_pod(
-                namespace=self.namespace, name=pod_name
-            )
-            return pod.metadata.labels["status"]
-        except Exception:
-            return "Pod %s not found" % pod_name
-
-    def get_pod_log(self, pod_name):
-        try:
-            return self.client.read_namespaced_pod_log(
-                namespace=self.namespace, name=pod_name
-            )
-        except Exception:
-            return "Pod %s not found" % pod_name
-
-    def delete_pod(self, pod_name):
-        self.client.delete_namespaced_pod(
-            pod_name,
-            self.namespace,
-            body=client.V1DeleteOptions(grace_period_seconds=0),
-        )
+from elasticdl.python.common.k8s_client import Client
 
 
 def check_success(statuses):
@@ -68,21 +19,28 @@ def check_failed(statuses):
 
 
 def validate_job_status(client, job_type, ps_num, worker_num):
-    ps_pod_names = [
-        "elasticdl-test-" + job_type + "-ps-" + str(i) for i in range(ps_num)
-    ]
-    worker_pod_names = [
-        "elasticdl-test-" + job_type + "-worker-" + str(i)
-        for i in range(worker_num)
-    ]
-    master_pod_name = "elasticdl-test-" + job_type + "-master"
-
     for step in range(200):
-        master_pod_phase = client.get_pod_phase(master_pod_name)
-        ps_pod_phases = [client.get_pod_phase(ps) for ps in ps_pod_names]
-        worker_pod_phases = [
-            client.get_pod_phase(worker) for worker in worker_pod_names
-        ]
+        master_pod = client.get_master_pod()
+        master_pod_phase = (
+            master_pod.status.phase if master_pod is not None else None
+        )
+        master_label_status = (
+            master_pod.metadata.labels["status"]
+            if master_pod is not None
+            else None
+        )
+        ps_pod_phases = []
+        for i in range(ps_num):
+            ps_pod = client.get_ps_pod(i)
+            ps_pod_phases.append(
+                ps_pod.status.phase if ps_pod is not None else None
+            )
+        worker_pod_phases = []
+        for i in range(worker_num):
+            worker_pod = client.get_worker_pod(i)
+            worker_pod_phases.append(
+                worker_pod.status.phase if worker_pod is not None else None
+            )
 
         if (
             check_success([master_pod_phase])
@@ -90,19 +48,19 @@ def validate_job_status(client, job_type, ps_num, worker_num):
             and check_success(worker_pod_phases)
         ):
             print("ElasticDL job succeeded.")
-            client.delete_pod(master_pod_name)
+            client.delete_master()
             exit(0)
         elif (
             check_success(ps_pod_phases)
             and check_success(worker_pod_phases)
-            and client.get_pod_phase(master_pod_name) == "Running"
-            and client.get_pod_label_status(master_pod_name) == "Finished"
+            and master_pod_phase == "Running"
+            and master_label_status == "Finished"
         ):
             print(
                 "ElasticDL job succeeded"
                 "(master pod keeps running for TensorBoard service)."
             )
-            client.delete_pod(master_pod_name)
+            client.delete_master()
             exit(0)
         elif (
             check_failed(ps_pod_phases)
@@ -110,40 +68,49 @@ def validate_job_status(client, job_type, ps_num, worker_num):
             or check_failed([master_pod_phase])
         ):
             print("ElasticDL job failed.")
-            print(client.get_pod_status(master_pod_name))
+            if master_pod is not None:
+                print(master_pod.status)
+            else:
+                print("Not Found {}".format(client.get_master_pod_name()))
             print("Master log:")
-            print(client.get_pod_log(master_pod_name))
-            for i, ps in enumerate(ps_pod_names):
+            print(client.get_master_log())
+            for i in range(ps_num):
                 print("PS%d log" % i)
-                print(client.get_pod_log(ps))
-            for i, worker in enumerate(worker_pod_names):
+                print(client.get_ps_log(i))
+            for i, worker in range(worker_num):
                 print("Worker%d log" % i)
-                print(client.get_pod_log(worker))
-            client.delete_pod(master_pod_name)
+                print(client.get_worker_log(i))
+            client.delete_master()
             exit(-1)
         else:
             print(
-                "Master (status.phase): %s"
-                % client.get_pod_phase(master_pod_name)
+                "Master (status.phase): %s" % master_pod_phase
             )
             print(
-                "Master (metadata.labels.status): %s"
-                % client.get_pod_label_status(master_pod_name)
+                "Master (metadata.labels.status): %s" % master_label_status
             )
-            for i, ps in enumerate(ps_pod_names):
-                print("PS%d: %s" % (i, client.get_pod_phase(ps)))
-            for i, worker in enumerate(worker_pod_names):
-                print("Worker%d: %s" % (i, client.get_pod_phase(worker)))
+            for i, phase in enumerate(ps_pod_phases):
+                print("PS%d: %s" % (i, phase))
+            for i, phase in enumerate(worker_pod_phases):
+                print("Worker%d: %s" % (i, phase))
             time.sleep(10)
 
     print("ElasticDL job timed out.")
-    client.delete_pod(master_pod_name)
+    client.delete_master()
     exit(-1)
 
 
 if __name__ == "__main__":
-    k8s_client = Client(namespace="default")
     job_type = sys.argv[1]
     ps_num = int(sys.argv[2])
     worker_num = int(sys.argv[3])
+
+    k8s_client = Client(
+        image_name="",
+        namespace="default",
+        job_name="test-" + job_type,
+        event_callback=None,
+        cluster_spec="",
+        force_use_kube_config_file=True
+    )
     validate_job_status(k8s_client, job_type, ps_num, worker_num)

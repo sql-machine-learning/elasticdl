@@ -493,3 +493,31 @@ class Client(object):
            current job.
         """
         return {"app": ELASTICDL_APP_NAME, ELASTICDL_JOB_KEY: self.job_name}
+
+    def get_master_log(self):
+        try:
+            return self.client.read_namespaced_pod_log(
+                name=self.get_master_pod_name(), namespace=self.namespace
+            )
+        except client.api_client.ApiException as e:
+            logger.warning("Exception when reading master log: %s\n" % e)
+            return None
+
+    def get_worker_log(self, worker_id):
+        try:
+            return self.client.read_namespaced_pod_log(
+                name=self.get_worker_pod_name(worker_id),
+                namespace=self.namespace,
+            )
+        except client.api_client.ApiException as e:
+            logger.warning("Exception when reading worker log: %s\n" % e)
+            return None
+
+    def get_ps_log(self, ps_id):
+        try:
+            return self.client.read_namespaced_pod_log(
+                name=self.get_ps_pod_name(ps_id), namespace=self.namespace
+            )
+        except client.api_client.ApiException as e:
+            logger.warning("Exception when reading ps log: %s\n" % e)
+            return None
