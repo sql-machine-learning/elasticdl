@@ -20,15 +20,13 @@ def check_failed(statuses):
 
 def validate_job_status(client, job_type, ps_num, worker_num):
     for step in range(200):
+        master_pod_phase = None
+        master_label_status = None
         master_pod = client.get_master_pod()
-        master_pod_phase = (
-            master_pod.status.phase if master_pod is not None else None
-        )
-        master_label_status = (
-            master_pod.metadata.labels["status"]
-            if master_pod is not None
-            else None
-        )
+        if master_pod is not None:
+            master_pod_phase = master_pod.status.phase
+            master_label_status = master_pod.metadata.labels["status"]
+
         ps_pod_phases = []
         for i in range(ps_num):
             ps_pod = client.get_ps_pod(i)
@@ -83,12 +81,8 @@ def validate_job_status(client, job_type, ps_num, worker_num):
             client.delete_master()
             exit(-1)
         else:
-            print(
-                "Master (status.phase): %s" % master_pod_phase
-            )
-            print(
-                "Master (metadata.labels.status): %s" % master_label_status
-            )
+            print("Master (status.phase): %s" % master_pod_phase)
+            print("Master (metadata.labels.status): %s" % master_label_status)
             for i, phase in enumerate(ps_pod_phases):
                 print("PS%d: %s" % (i, phase))
             for i, phase in enumerate(worker_pod_phases):
@@ -111,6 +105,6 @@ if __name__ == "__main__":
         job_name="test-" + job_type,
         event_callback=None,
         cluster_spec="",
-        force_use_kube_config_file=True
+        force_use_kube_config_file=True,
     )
     validate_job_status(k8s_client, job_type, ps_num, worker_num)
