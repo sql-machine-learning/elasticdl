@@ -84,13 +84,10 @@ func TestModelSaveToPB(t *testing.T) {
 	t1 := common.NewTensor(v1, d1)
 
 	i1 := []int64{1, 3, 5}
-	var is = common.IndexedSlices{
-		ConcatTensors: t1,
-		Ids:           i1,
-	}
+	is := common.NewIndexedSlices(t1, i1)
 
 	model.EmbeddingTables["e1"] = common.NewEmbeddingTable(2, "zero", common.Float32)
-	model.EmbeddingTables["e1"].SetEmbeddingVectors(&is)
+	model.EmbeddingTables["e1"].SetEmbeddingVectors(is)
 
 	modelPB := model.SaveToModelPB()
 	assert.Equal(t, int64(2), modelPB.EmbeddingTableInfos[0].Dim)

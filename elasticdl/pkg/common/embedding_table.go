@@ -57,8 +57,5 @@ func (e *EmbeddingTable) ToIndexedSlices() *IndexedSlices {
 	for k := range e.EmbeddingVectors {
 		ids = append(ids, k)
 	}
-	return &IndexedSlices{
-		ConcatTensors: e.GetEmbeddingVectors(ids),
-		Ids:           ids,
-	}
+	return NewIndexedSlices(e.GetEmbeddingVectors(ids), ids)
 }
