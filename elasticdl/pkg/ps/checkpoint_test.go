@@ -2,15 +2,15 @@ package ps
 
 import (
 	"elasticdl.org/elasticdl/common"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"os"
+	"path"
 	"testing"
 )
 
 func TestCheckPoint(t *testing.T) {
 	tmpDir := os.TempDir()
-	fmt.Println(tmpDir)
+	tmpDir = path.Join(tmpDir, "TestCheckPoint")
 	var bucketNum int = 2
 
 	model1 := NewModel()
@@ -54,4 +54,5 @@ func TestCheckPoint(t *testing.T) {
 		assert.True(t, common.CompareFloatArray(common.Slice(ev).([]float32),
 			common.Slice(rev).([]float32), 0.0001))
 	}
+	os.RemoveAll(tmpDir)
 }

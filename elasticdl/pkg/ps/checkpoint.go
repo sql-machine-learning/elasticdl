@@ -84,7 +84,7 @@ func LoadModelFromCheckPoint(checkPointDir string, shardID int, shardNum int) (*
 	model := NewModel()
 	embeddingParams := make(map[string]*common.IndexedSlices)
 	for _, file := range files {
-		pb, err2 := loadPBFromFile(file.Name())
+		pb, err2 := loadPBFromFile(path.Join(checkPointDir, file.Name()))
 		if err2 != nil {
 			return nil, err2
 		}
