@@ -1,5 +1,6 @@
 #!/bin/bash
 
+sudo pip3 install tensorflow
 # install Kuberneters Python client to validate job status
 sudo pip3 install kubernetes
 export MINIKUBE_WANTUPDATENOTIFICATION=false
