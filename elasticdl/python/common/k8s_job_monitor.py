@@ -153,7 +153,7 @@ class EdlJobMonitor:
                 job_succeed = True
                 break
             elif master_pod.status.phase == PodStatus.PENDING:
-                time.sleep(60)
+                time.sleep(10)
             elif master_pod.status.phase == PodStatus.FAILED:
                 log = self.client.get_master_log()
                 print_tail_log(log, tail_num=100)
