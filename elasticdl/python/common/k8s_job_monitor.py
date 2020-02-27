@@ -58,16 +58,16 @@ class PodMonitor:
                 time.sleep(10)
                 retry_num += 1
                 if retry_num > MAX_READ_POD_RETRIES:
-                    raise ValueError("{} Not Found".format(self.pod_name))
+                    logger.error("{} Not Found".format(self.pod_name))
 
             if pod.status.phase == PodStatus.SUCCEEDED:
                 pod_succeed = True
                 break
             elif pod.status.phase == PodStatus.FAILED:
-                print(self.get_pod_log())
-                raise ValueError("Failed")
+                logger.info(self.get_pod_log())
+                break
             else:
-                print(pod.status.phase)
+                logger.info(pod.status.phase)
                 time.sleep(30)
 
         self.core_api.delete_namespaced_pod(
@@ -128,25 +128,24 @@ class EdlJobMonitor:
             worker_pod = self.client.get_worker_pod(i)
             worker_pod_name = self.client.get_worker_pod_name(i)
             if worker_pod is None:
-                print("Worker {} Not Found".format(worker_pod_name))
+                logger.error("Worker {} Not Found".format(worker_pod_name))
             elif worker_pod.status.phase == PodStatus.FAILED:
                 logger.error(
                     "Worker {} {}".format(
                         worker_pod_name, worker_pod.status.phase
                     )
                 )
-                print("{} log :".format(worker_pod_name))
-                log = self.client.get_worker_log(i)
-                print_tail_log(log, tail_num=100)
 
     def check_ps_status(self):
         for i in range(self.ps_num):
             ps_pod = self.client.get_ps_pod(i)
             ps_pod_name = self.client.get_ps_pod_name(i)
             if ps_pod is None:
-                print("PS {} Not Found".format(ps_pod_name))
+                logger.error("PS {} Not Found".format(ps_pod_name))
             elif ps_pod.status.phase == PodStatus.FAILED:
-                print("PS {} {}".format(ps_pod_name, ps_pod.status.phase))
+                logger.error(
+                    "PS {} {}".format(ps_pod_name, ps_pod.status.phase)
+                )
 
     def show_master_increment_log(self, old_log):
         new_log = self.client.get_master_log()
@@ -171,16 +170,15 @@ class EdlJobMonitor:
             if master_pod is None:
                 retry_num += 1
                 if retry_num > MAX_READ_POD_RETRIES:
-                    raise ValueError(
+                    logger.error(
                         "{} Not Found".format(
                             self.client.get_master_pod_name()
                         )
                     )
-                print("{} Not Found".format(self.client.get_master_pod_name()))
                 time.sleep(10)
                 continue
 
-            print("Master status: {}".format(master_pod.status.phase))
+            logger.info("Master status: {}".format(master_pod.status.phase))
             if master_pod.status.phase == PodStatus.SUCCEEDED:
                 job_succeed = True
                 break
@@ -192,7 +190,7 @@ class EdlJobMonitor:
             elif master_pod.status.phase == PodStatus.FAILED:
                 log = self.client.get_master_log()
                 print_tail_log(log, tail_num=100)
-                print("Job {} Failed".format(self.job_name))
+                logger.error("Job {} Failed".format(self.job_name))
                 break
             else:
                 master_log = self.show_master_increment_log(master_log)
