@@ -155,10 +155,10 @@ class EdlJobMonitor:
         task_log = ""
         for log_line in increment_log.split("\n"):
             if "Evaluation" in log_line:
-                print(log_line)
+                logger.info(log_line)
             if "Task" in log_line:
                 task_log = log_line
-        print(task_log)
+        logger.info(task_log)
         return new_log
 
     def monitor_status(self):
@@ -187,7 +187,7 @@ class EdlJobMonitor:
                 time.sleep(60)
             elif master_pod.status.phase == PodStatus.FAILED:
                 log = self.client.get_master_log()
-                print_tail_log(log, tail_num=100)
+                logger.info(log, tail_num=100)
                 logger.error("Job {} Failed".format(self.job_name))
                 break
             else:

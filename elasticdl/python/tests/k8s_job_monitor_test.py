@@ -42,7 +42,7 @@ def launch_elasticdl_job(image_name, namespace, job_name, worker_num, ps_num):
     while tracker._count < pod_count:
         time.sleep(1)
 
-    # Start 3 workers
+    # Start worker pods
     for i in range(worker_num):
         _ = c.create_worker(
             worker_id=str(i),
@@ -62,7 +62,7 @@ def launch_elasticdl_job(image_name, namespace, job_name, worker_num, ps_num):
     while tracker._count < pod_count:
         time.sleep(1)
 
-    # Start 2 ps pods
+    # Start ps pods
     for i in range(ps_num):
         _ = c.create_ps(
             ps_id=str(i),
@@ -128,8 +128,8 @@ class K8sClientTest(unittest.TestCase):
     def test_job_monitor(self):
         namespace = self.namespace
         job_name = "test-job-%d" % (int(time.time()))
-        worker_num = 3
-        ps_num = 2
+        worker_num = 2
+        ps_num = 1
         launch_elasticdl_job(
             image_name=self.image_name,
             namespace=namespace,
