@@ -36,23 +36,33 @@ func TestCheckPoint(t *testing.T) {
 	SaveModelToCheckPoint(tmpDir, model1, 0, bucketNum)
 	SaveModelToCheckPoint(tmpDir, model2, 1, bucketNum)
 
-	modelRes1, err1 := LoadModelFromCheckPoint(tmpDir, 0, bucketNum)
+	modelRes1, err1 := LoadModelFromCheckPoint(tmpDir, 0, 3)
 	assert.Nil(t, err1)
-	modelRes2, err2 := LoadModelFromCheckPoint(tmpDir, 1, bucketNum)
+	modelRes2, err2 := LoadModelFromCheckPoint(tmpDir, 1, 3)
 	assert.Nil(t, err2)
+	modelRes3, err3 := LoadModelFromCheckPoint(tmpDir, 2, 3)
+	assert.Nil(t, err3)
 
-	for _, i := range i1 {
-		ev := model1.EmbeddingTables["e1"].GetEmbeddingVector(i)
-		rev := modelRes1.EmbeddingTables["e1"].GetEmbeddingVector(i)
-		assert.True(t, common.CompareFloatArray(common.Slice(ev).([]float32),
-			common.Slice(rev).([]float32), 0.0001))
-	}
+	assert.Contains(t, modelRes1.EmbeddingTables["e1"].EmbeddingVectors, int64(0))
+	assert.Contains(t, modelRes1.EmbeddingTables["e1"].EmbeddingVectors, int64(3))
+	ev0 := model1.EmbeddingTables["e1"].GetEmbeddingVector(int64(0))
+	rev0 := modelRes1.EmbeddingTables["e1"].GetEmbeddingVector(int64(0))
+	assert.True(t, common.CompareFloatArray(common.Slice(ev0).([]float32),
+		common.Slice(rev0).([]float32), 0.0001))
 
-	for _, i := range i2 {
-		ev := model2.EmbeddingTables["e1"].GetEmbeddingVector(i)
-		rev := modelRes2.EmbeddingTables["e1"].GetEmbeddingVector(i)
-		assert.True(t, common.CompareFloatArray(common.Slice(ev).([]float32),
-			common.Slice(rev).([]float32), 0.0001))
-	}
+	assert.Contains(t, modelRes2.EmbeddingTables["e1"].EmbeddingVectors, int64(1))
+	assert.Contains(t, modelRes2.EmbeddingTables["e1"].EmbeddingVectors, int64(4))
+	ev1 := model2.EmbeddingTables["e1"].GetEmbeddingVector(int64(1))
+	rev1 := modelRes2.EmbeddingTables["e1"].GetEmbeddingVector(int64(1))
+	assert.True(t, common.CompareFloatArray(common.Slice(ev1).([]float32),
+		common.Slice(rev1).([]float32), 0.0001))
+
+	assert.Contains(t, modelRes3.EmbeddingTables["e1"].EmbeddingVectors, int64(2))
+	assert.Contains(t, modelRes3.EmbeddingTables["e1"].EmbeddingVectors, int64(5))
+	ev5 := model2.EmbeddingTables["e1"].GetEmbeddingVector(int64(5))
+	rev5 := modelRes3.EmbeddingTables["e1"].GetEmbeddingVector(int64(5))
+	assert.True(t, common.CompareFloatArray(common.Slice(ev5).([]float32),
+		common.Slice(rev5).([]float32), 0.0001))
+
 	os.RemoveAll(tmpDir)
 }
