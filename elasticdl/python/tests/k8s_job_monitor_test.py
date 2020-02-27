@@ -93,22 +93,26 @@ class K8sJobMonitor(unittest.TestCase):
         )
 
         # Start master
+        pod_name = "test-job-%d-worker" % (int(time.time()))
         resource = "cpu=100m,memory=64M"
-        _ = c.create_worker(
-            worker_id="0",
+
+        pod = c._create_pod(
+            pod_name=pod_name,
             resource_requests=resource,
             resource_limits=resource,
+            image_name=self.image_name,
             command=["echo"],
-            pod_priority=None,
-            args=None,
+            container_args=None,
             volume=None,
             image_pull_policy="Never",
             restart_policy="Never",
+            env=[],
         )
+        c.create_namespaced_pod(self.namespace, pod)
+
         while tracker._count < 1:
             time.sleep(1)
 
-        pod_name = c.get_worker_pod_name(0)
         pod_monitor = PodMonitor(namespace=self.namespace, pod_name=pod_name)
         pod_succeed = pod_monitor.monitor_status()
         self.assertTrue(pod_succeed)
