@@ -40,8 +40,8 @@ class PodMonitor:
 
     def monitor_status(self):
         retry_num = 0
-        pod_succeed = False
-        while True:
+        pod_succeeded = False
+        for i in range(6):
             pod = self.client.get_pod(self.pod_name)
             if pod is None:
                 time.sleep(10)
@@ -50,7 +50,7 @@ class PodMonitor:
                     logger.error("{} Not Found".format(self.pod_name))
 
             if pod.status.phase == PodStatus.SUCCEEDED:
-                pod_succeed = True
+                pod_succeeded = True
                 break
             elif pod.status.phase == PodStatus.FAILED:
                 logger.info(self.client.get_pod_log(self.pod_name))
@@ -59,7 +59,7 @@ class PodMonitor:
                 logger.info(pod.status.phase)
                 time.sleep(30)
         self.client.delete_pod(self.pod_name)
-        return pod_succeed
+        return pod_succeeded
 
 
 class EdlJobMonitor:
