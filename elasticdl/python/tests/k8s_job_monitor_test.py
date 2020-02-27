@@ -3,7 +3,7 @@ import time
 import unittest
 
 from elasticdl.python.common import k8s_client as k8s
-from elasticdl.python.common.k8s_job_monitor import EdlJobMonitor, PodMonitor
+from elasticdl.python.common.k8s_job_monitor import PodMonitor
 
 
 class WorkerTracker(object):
@@ -77,7 +77,7 @@ def launch_elasticdl_job(image_name, namespace, job_name, worker_num, ps_num):
     os.environ.get("K8S_TESTS", "True") == "False",
     "No Kubernetes cluster available",
 )
-class K8sClientTest(unittest.TestCase):
+class K8sJobMonitor(unittest.TestCase):
     def setUp(self):
         self.namespace = "default"
         self.image_name = "gcr.io/google-samples/hello-app:1.0"
