@@ -13,7 +13,8 @@ MAX_READ_POD_RETRIES = 6
 def print_tail_log(log, tail_num):
     if log is not None:
         log_lines = log.split("\n")
-        print("\n".join(log_lines[-1 * tail_num:]))
+        tail_index = -1 * tail_num
+        print("\n".join(log_lines[tail_index:]))
 
 
 class PodMonitor:
@@ -50,6 +51,7 @@ class PodMonitor:
 
     def monitor_status(self):
         retry_num = 0
+        pod_succeed = False
         while True:
             pod = self.get_pod()
             if pod is None:
@@ -59,6 +61,7 @@ class PodMonitor:
                     raise ValueError("{} Not Found".format(self.pod_name))
 
             if pod.status.phase == PodStatus.SUCCEEDED:
+                pod_succeed = True
                 break
             elif pod.status.phase == PodStatus.FAILED:
                 print(self.get_pod_log())
@@ -73,6 +76,7 @@ class PodMonitor:
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )
         print("End")
+        return pod_succeed
 
     def get_pod(self):
         try:
@@ -98,7 +102,8 @@ class PodMonitor:
 class EdlJobMonitor:
     def __init__(self, namespace, job_name, worker_num, ps_num):
         """
-        ElasticDL job monitor.
+        ElasticDL job monitor. After launching an ElasticDL job, the user
+        may want to monitor the job status.
 
         Args:
             namespace: The name of the Kubernetes namespace where the pod
@@ -159,7 +164,7 @@ class EdlJobMonitor:
 
     def monitor_status(self):
         retry_num = 0
-        job_success = False
+        job_succeed = False
         master_log = ""
         while True:
             master_pod = self.client.get_master_pod()
@@ -177,13 +182,13 @@ class EdlJobMonitor:
 
             print("Master status: {}".format(master_pod.status.phase))
             if master_pod.status.phase == PodStatus.SUCCEEDED:
-                job_success = True
+                job_succeed = True
                 break
             elif master_pod.status.phase in [
                 PodStatus.PENDING,
                 PodStatus.CREATING,
             ]:
-                time.sleep(120)
+                time.sleep(60)
             elif master_pod.status.phase == PodStatus.FAILED:
                 log = self.client.get_master_log()
                 print_tail_log(log, tail_num=100)
@@ -193,7 +198,8 @@ class EdlJobMonitor:
                 master_log = self.show_master_increment_log(master_log)
                 self.check_worker_status()
                 self.check_ps_status()
-                time.sleep(120)
+                time.sleep(60)
 
-        if job_success:
+        if job_succeed:
             self.client.delete_master()
+        return job_succeed
