@@ -105,9 +105,12 @@ class K8sJobMonitor(unittest.TestCase):
             image_pull_policy="Never",
             restart_policy="Never",
         )
+        while tracker._count < 1:
+            time.sleep(1)
 
         pod_name = c.get_worker_pod_name(0)
         pod_monitor = PodMonitor(namespace=self.namespace, pod_name=pod_name)
+        self.assertEqual(pod_name, "aaaa")
         pod_succeed = pod_monitor.monitor_status()
         self.assertTrue(pod_succeed)
 
