@@ -14,7 +14,7 @@ def print_tail_log(log, tail_num):
     if log is not None:
         log_lines = log.split("\n")
         tail_index = -1 * tail_num
-        print("\n".join(log_lines[tail_index:]))
+        logger.info("\n".join(log_lines[tail_index:]))
 
 
 class PodMonitor:
@@ -187,7 +187,7 @@ class EdlJobMonitor:
                 time.sleep(60)
             elif master_pod.status.phase == PodStatus.FAILED:
                 log = self.client.get_master_log()
-                logger.info(log, tail_num=100)
+                print_tail_log(log, tail_num=100)
                 logger.error("Job {} Failed".format(self.job_name))
                 break
             else:
