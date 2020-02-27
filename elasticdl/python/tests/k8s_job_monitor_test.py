@@ -110,7 +110,6 @@ class K8sJobMonitor(unittest.TestCase):
 
         pod_name = c.get_worker_pod_name(0)
         pod_monitor = PodMonitor(namespace=self.namespace, pod_name=pod_name)
-        self.assertEqual(pod_name, "aaaa")
         pod_succeed = pod_monitor.monitor_status()
         self.assertTrue(pod_succeed)
 
