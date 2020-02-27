@@ -75,7 +75,7 @@ class PodMonitor:
             namespace=self.namespace,
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )
-        print("End")
+        logger.info("End")
         return pod_succeed
 
     def get_pod(self):
@@ -182,10 +182,7 @@ class EdlJobMonitor:
             if master_pod.status.phase == PodStatus.SUCCEEDED:
                 job_succeed = True
                 break
-            elif master_pod.status.phase in [
-                PodStatus.PENDING,
-                PodStatus.CREATING,
-            ]:
+            elif master_pod.status.phase == PodStatus.PENDING:
                 time.sleep(60)
             elif master_pod.status.phase == PodStatus.FAILED:
                 log = self.client.get_master_log()

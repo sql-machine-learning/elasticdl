@@ -108,9 +108,11 @@ class K8sClientTest(unittest.TestCase):
 
         # Start master
         resource = "cpu=100m,memory=64M"
-        c.create_master(
+        _ = c.create_worker(
+            worker_id="0",
             resource_requests=resource,
             resource_limits=resource,
+            command=["echo"],
             pod_priority=None,
             args=None,
             volume=None,
@@ -118,9 +120,9 @@ class K8sClientTest(unittest.TestCase):
             restart_policy="Never",
         )
 
-        master_pod_name = c.get_master_pod_name()
+        pod_name = c.get_worker_pod_name(0)
         pod_monitor = PodMonitor(
-            namespace=self.namespace, pod_name=master_pod_name
+            namespace=self.namespace, pod_name=pod_name
         )
         pod_succeed = pod_monitor.monitor_status()
         self.assertTrue(pod_succeed)
