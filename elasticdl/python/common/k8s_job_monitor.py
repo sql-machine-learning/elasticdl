@@ -41,13 +41,14 @@ class PodMonitor:
     def monitor_status(self):
         retry_num = 0
         pod_succeeded = False
-        for i in range(6):
+        while True:
             pod = self.client.get_pod(self.pod_name)
             if pod is None:
                 time.sleep(10)
                 retry_num += 1
                 if retry_num > MAX_READ_POD_RETRIES:
                     logger.error("{} Not Found".format(self.pod_name))
+                    break
 
             if pod.status.phase == PodStatus.SUCCEEDED:
                 pod_succeeded = True
