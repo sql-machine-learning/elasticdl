@@ -111,27 +111,6 @@ class K8sClientTest(unittest.TestCase):
         pod_succeed = pod_monitor.monitor_status()
         self.assertTrue(pod_succeed)
 
-    def test_job_monitor(self):
-        namespace = self.namespace
-        job_name = "test-job-%d" % (int(time.time()))
-        worker_num = 2
-        ps_num = 1
-        launch_elasticdl_job(
-            image_name=self.image_name,
-            namespace=namespace,
-            job_name=job_name,
-            worker_num=worker_num,
-            ps_num=ps_num,
-        )
-        edl_job_monitor = EdlJobMonitor(
-            namespace=namespace,
-            job_name=job_name,
-            worker_num=worker_num,
-            ps_num=ps_num,
-        )
-        job_succeed = edl_job_monitor.monitor_status()
-        self.assertTrue(job_succeed)
-
 
 if __name__ == "__main__":
     unittest.main()
