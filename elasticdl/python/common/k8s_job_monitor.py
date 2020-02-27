@@ -175,6 +175,7 @@ class EdlJobMonitor:
                             self.client.get_master_pod_name()
                         )
                     )
+                    break
                 time.sleep(10)
                 continue
 

@@ -33,7 +33,7 @@ def launch_elasticdl_job(image_name, namespace, job_name, worker_num, ps_num):
         resource_requests=resource,
         resource_limits=resource,
         pod_priority=None,
-        args=None,
+        args=["-V"],
         volume=None,
         image_pull_policy="Never",
         restart_policy="Never",
