@@ -93,7 +93,7 @@ def launch_elasticdl_job(image_name, namespace, job_name, worker_num, ps_num):
 )
 class K8sClientTest(unittest.TestCase):
     def setUp(self):
-        self.namespace = ("default",)
+        self.namespace = "default"
         self.image_name = "gcr.io/google-samples/hello-app:1.0"
 
     def test_pod_monitor(self):
