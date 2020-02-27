@@ -107,6 +107,8 @@ class K8sJobMonitor(unittest.TestCase):
             image_pull_policy="Never",
             restart_policy="Never",
             env=[],
+            pod_priority=None,
+            owner_pod=None,
         )
         c.create_namespaced_pod(self.namespace, pod)
 
