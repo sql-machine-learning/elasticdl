@@ -57,11 +57,6 @@ def launch_elasticdl_job(image_name, namespace, job_name, worker_num, ps_num):
         )
         time.sleep(5)
 
-    # Wait for workers to be added
-    pod_count = pod_count + worker_num
-    while tracker._count < pod_count:
-        time.sleep(1)
-
     # Start ps pods
     for i in range(ps_num):
         _ = c.create_ps(
@@ -76,15 +71,6 @@ def launch_elasticdl_job(image_name, namespace, job_name, worker_num, ps_num):
             restart_policy="Never",
         )
         time.sleep(5)
-
-    # Wait for ps to be added
-    pod_count = pod_count + ps_num
-    while tracker._count < pod_count:
-        time.sleep(1)
-
-    # Start 2 ps services
-    for i in range(2):
-        c.create_ps_service(i)
 
 
 @unittest.skipIf(

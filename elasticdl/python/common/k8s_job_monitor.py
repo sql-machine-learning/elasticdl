@@ -35,7 +35,7 @@ class PodMonitor:
             image_name=None,
             namespace=namespace,
             job_name=None,
-            force_use_kube_config_file=True,
+            force_use_kube_config_file=use_kube_config,
         )
 
     def monitor_status(self):
@@ -63,7 +63,9 @@ class PodMonitor:
 
 
 class EdlJobMonitor:
-    def __init__(self, namespace, job_name, worker_num, ps_num):
+    def __init__(
+        self, namespace, job_name, worker_num, ps_num, use_kube_config=True
+    ):
         """
         ElasticDL job monitor. After launching an ElasticDL job, the user
         may want to monitor the job status.
@@ -75,6 +77,9 @@ class EdlJobMonitor:
                 Used as pod name prefix and value for "elasticdl" label.
             worker_num: Integer, worker number of the job.
             ps_num: Integer, parameter server number of the job.
+            use_kube_config: If true, load the cluster config from
+                ~/.kube/config. Otherwise, if it's in a process running in
+                a K8S environment, it loads the incluster config.
         """
         self.worker_num = worker_num
         self.ps_num = ps_num
@@ -83,7 +88,7 @@ class EdlJobMonitor:
             image_name=None,
             namespace=namespace,
             job_name=job_name,
-            force_use_kube_config_file=True,
+            force_use_kube_config_file=use_kube_config,
         )
 
     def check_worker_status(self):
