@@ -1,7 +1,4 @@
 import time
-import traceback
-
-from kubernetes import client, config
 
 from elasticdl.python.common.constants import PodStatus
 from elasticdl.python.common.k8s_client import Client
@@ -34,26 +31,18 @@ class PodMonitor:
         """
         self.namespace = namespace
         self.pod_name = pod_name
-        self.core_api = client.CoreV1Api()
-
-        try:
-            if use_kube_config:
-                config.load_kube_config()
-                logger.info("Load the incluster config.")
-            else:
-                config.load_incluster_config()
-                logger.info("Load the kube config file.")
-        except Exception as ex:
-            traceback.print_exc()
-            raise Exception(
-                "Failed to load configuration for Kubernetes:\n%s" % str(ex)
-            )
+        self.client = Client(
+            image_name=None,
+            namespace=namespace,
+            job_name=None,
+            force_use_kube_config_file=True,
+        )
 
     def monitor_status(self):
         retry_num = 0
         pod_succeed = False
         while True:
-            pod = self.get_pod()
+            pod = self.client.get_pod(self.pod_name)
             if pod is None:
                 time.sleep(10)
                 retry_num += 1
@@ -64,39 +53,13 @@ class PodMonitor:
                 pod_succeed = True
                 break
             elif pod.status.phase == PodStatus.FAILED:
-                logger.info(self.get_pod_log())
+                logger.info(self.client.get_pod_log(self.pod_name))
                 break
             else:
                 logger.info(pod.status.phase)
                 time.sleep(30)
-
-        self.core_api.delete_namespaced_pod(
-            name=self.pod_name,
-            namespace=self.namespace,
-            body=client.V1DeleteOptions(grace_period_seconds=0),
-        )
-        logger.info("End")
+        self.client.delete_pod(self.pod_name)
         return pod_succeed
-
-    def get_pod(self):
-        try:
-            pod = self.core_api.read_namespaced_pod(
-                namespace=self.namespace, name=self.pod_name
-            )
-            return pod
-        except client.api_client.ApiException as e:
-            logger.warning("Exception when reading pod: %s\n" % e)
-            return None
-
-    def get_pod_log(self):
-        try:
-            logs = self.core_api.read_namespaced_pod_log(
-                namespace=self.namespace, name=self.pod_name
-            )
-            return logs
-        except client.api_client.ApiException as e:
-            logger.warning("Exception when reading log: %s\n" % e)
-            return None
 
 
 class EdlJobMonitor:
