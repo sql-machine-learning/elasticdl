@@ -110,7 +110,7 @@ class K8sJobMonitor(unittest.TestCase):
             pod_priority=None,
             owner_pod=None,
         )
-        c.create_namespaced_pod(self.namespace, pod)
+        c.client.create_namespaced_pod(self.namespace, pod)
 
         while tracker._count < 1:
             time.sleep(1)
