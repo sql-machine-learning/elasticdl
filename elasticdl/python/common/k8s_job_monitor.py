@@ -42,7 +42,7 @@ class PodMonitor:
         retry_num = 0
         pod_succeeded = False
 
-        for i in range(2):
+        while True:
             pod = self.client.get_pod(self.pod_name)
             if pod is None:
                 retry_num += 1
