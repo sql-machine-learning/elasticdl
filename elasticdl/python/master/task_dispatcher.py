@@ -312,12 +312,12 @@ class _TaskDispatcher(object):
                     task_id,
                     len(self._todo) + len(self._doing),
                 )
-        if evaluation_task_completed:
-            self._evaluation_service.complete_task()
+            if evaluation_task_completed:
+                self._evaluation_service.complete_task()
 
-        if self._callbacks_list.model.stop_training:
-            # Clear todo list to stop training
-            self._todo = []
+            if self._callbacks_list.model.stop_training:
+                # Clear todo list to stop training
+                self._todo = []
 
     def finished(self):
         """Return if all tasks are done"""
