@@ -1,0 +1,13 @@
+FROM elasticdl:dev
+
+WORKDIR /root/
+RUN git clone --depth=1 https://github.com/caicloud/ftlib.git
+RUN cd /root/ftlib && pip install -r /requirements.txt
+RUN cd /root/ftlib/ftlib/consensus/gossip && bash ./gen_shared_lib.sh
+
+FROM pytorch/pytorch:1.2-cuda10.0-cudnn7-runtime
+
+WORKDIR /root/
+COPY --from=0 /root/ftlib/ftlib /opt/conda/lib/python3.6/site-packages/ftlib
+RUN ls /opt/conda/lib/python3.6/site-packages
+RUN which python
