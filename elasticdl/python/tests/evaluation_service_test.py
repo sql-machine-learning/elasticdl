@@ -5,8 +5,8 @@ import tensorflow as tf
 from tensorflow.keras.metrics import Accuracy, MeanSquaredError
 
 from elasticdl.python.common.constants import MetricsDictKey
-from elasticdl.python.common.tensor_utils import ndarray_to_pb
 from elasticdl.python.common.evaluation_utils import EvaluationMetrics
+from elasticdl.python.common.tensor_utils import ndarray_to_pb
 from elasticdl.python.master.evaluation_service import (
     EvaluationJob,
     EvaluationService,
