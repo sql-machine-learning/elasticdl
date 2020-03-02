@@ -9,5 +9,3 @@ FROM pytorch/pytorch:1.2-cuda10.0-cudnn7-runtime
 
 WORKDIR /root/
 COPY --from=0 /root/ftlib/ftlib /opt/conda/lib/python3.6/site-packages/ftlib
-RUN ls /opt/conda/lib/python3.6/site-packages
-RUN which python
