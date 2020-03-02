@@ -61,8 +61,10 @@ class PodMonitor:
                 break
             else:
                 time.sleep(30)
-        self.client.delete_pod(self.pod_name)
         return pod_succeeded
+
+    def delete_pod(self):
+        self.client.delete_pod(self.pod_name)
 
 
 class EdlJobMonitor:
@@ -118,8 +120,10 @@ class EdlJobMonitor:
                     "PS {} {}".format(ps_pod_name, ps_pod.status.phase)
                 )
 
-    def show_master_increment_log(self, old_log):
-        new_log = self.client.get_master_log()
+    def show_evaluation_and_task_log(self, new_log, old_log):
+        """Show the master's incremental logs about evaluation task and
+        latest completed task compared with the last query.
+        """
         if new_log is None:
             return
         increment_log = new_log.replace(old_log, "")
@@ -135,7 +139,7 @@ class EdlJobMonitor:
     def monitor_status(self):
         retry_num = 0
         job_succeed = False
-        master_log = ""
+        master_old_log = ""
         while True:
             master_pod = self.client.get_master_pod()
             if master_pod is None:
@@ -162,11 +166,15 @@ class EdlJobMonitor:
                 logger.error("Job {} Failed".format(self.job_name))
                 break
             else:
-                master_log = self.show_master_increment_log(master_log)
+                master_new_log = self.client.get_master_log()
+                self.show_evaluation_and_task_log(
+                    master_new_log, master_old_log
+                )
+                master_old_log = master_new_log
                 self.check_worker_status()
                 self.check_ps_status()
                 time.sleep(60)
-
-        if job_succeed:
-            self.client.delete_master()
         return job_succeed
+
+    def delete_job(self):
+        self.client.delete_master()
