@@ -42,9 +42,8 @@ class EvaluationJob(object):
     def report_evaluation_metrics(self, model_outputs_pb, labels):
         labels = pb_to_ndarray(labels)
         model_outputs = {}
-        for tensor_pb in model_outputs_pb:
-            key = tensor_pb.name
-            model_outputs[key] = pb_to_ndarray(tensor_pb)
+        for name, tensor_pb in model_outputs_pb.items():
+            model_outputs[name] = pb_to_ndarray(tensor_pb)
         self.evaluation_metrics.update_evaluation_metrics(
             model_outputs, labels
         )
