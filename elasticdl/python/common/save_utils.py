@@ -108,7 +108,8 @@ class CheckpointSaver(object):
         checkpoint_version_dir = os.path.join(
             checkpoint_dir, "version-%s" % str(version)
         )
-        os.makedirs(checkpoint_version_dir, exist_ok=True)
+        with contextlib.suppress(FileExistsError):
+            os.makedirs(checkpoint_version_dir, exist_ok=True)
         return "%s/variables-%s-of-%s.ckpt" % (
             checkpoint_version_dir,
             str(shard_index),
