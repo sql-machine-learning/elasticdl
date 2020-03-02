@@ -149,12 +149,6 @@ class Client(object):
             self.get_ps_service_name(ps_id), _PS_SERVICE_PORT
         )
 
-    def get_embedding_service_pod_name(self, embedding_service_id):
-        return "elasticdl-%s-embedding-service-%s" % (
-            self.job_name,
-            str(embedding_service_id),
-        )
-
     def patch_labels_to_pod(self, pod_name, labels_dict):
         body = {"metadata": {"labels": labels_dict}}
         try:
@@ -182,18 +176,6 @@ class Client(object):
         except client.api_client.ApiException as e:
             logger.warning(
                 "Exception when reading pod %s: %s\n" % (pod_name, e)
-            )
-            return None
-
-    def get_embedding_service_pod(self, embedding_service_id):
-        try:
-            return self.client.read_namespaced_pod(
-                name=self.get_embedding_service_pod_name(embedding_service_id),
-                namespace=self.namespace,
-            )
-        except client.api_client.ApiException as e:
-            logger.warning(
-                "Exception when reading embedding service pod: %s\n" % e
             )
             return None
 
@@ -362,12 +344,6 @@ class Client(object):
             pod_name, "worker", kargs["worker_id"], **kargs
         )
 
-    def create_embedding_service(self, **kargs):
-        pod_name = self.get_embedding_service_pod_name(kargs["worker_id"])
-        return self._create_ps_worker_pod(
-            pod_name, "embedding_service", kargs["worker_id"], **kargs
-        )
-
     def create_ps(self, **kargs):
         pod_name = self.get_ps_pod_name(kargs["ps_id"])
         return self._create_ps_worker_pod(
@@ -380,11 +356,6 @@ class Client(object):
 
     def delete_worker(self, worker_id):
         self.delete_pod(self.get_worker_pod_name(worker_id))
-
-    def delete_embedding_service(self, embedding_service_id):
-        self.delete_pod(
-            self.get_embedding_service_pod_name(embedding_service_id)
-        )
 
     def delete_ps(self, ps_id):
         self.delete_pod(self.get_ps_pod_name(ps_id))
