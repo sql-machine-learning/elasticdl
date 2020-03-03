@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"os"
 	"path"
 	"sync"
 )
@@ -45,10 +46,12 @@ type Server struct {
 	checkpointDirForInit string
 	checkpointDir        string
 	checkpointStep       int
+	keepCheckpointMax    int
 	numPsPods            int
 	ID                   int // a zero-based successive integer number
 	lock                 sync.Mutex
 	versionLock          sync.Mutex
+	savedCheckpointDirs  []string
 }
 
 func createMasterClient(masterAddr string) *MasterClient {
@@ -70,7 +73,7 @@ func createMasterClient(masterAddr string) *MasterClient {
 // NewServer creates a Server instance
 func NewServer(ID int, optType string, optArgs string, masterAddr string,
 	evaluationStep int, checkpointDirForInit string,
-	checkpointDir string, checkpointStep int, numPsPods int) *Server {
+	checkpointDir string, checkpointStep int, keepCheckpointMax int, numPsPods int) *Server {
 	var ps Server
 	if checkpointDirForInit != "" {
 		var err error
@@ -94,6 +97,7 @@ func NewServer(ID int, optType string, optArgs string, masterAddr string,
 	ps.checkpointDirForInit = checkpointDirForInit
 	ps.checkpointDir = checkpointDir
 	ps.checkpointStep = checkpointStep
+	ps.keepCheckpointMax = keepCheckpointMax
 	ps.numPsPods = numPsPods
 	return &ps
 }
@@ -107,7 +111,13 @@ func (s *Server) reportModelVersionIfNeeded(modelVersion int) {
 func (s *Server) saveCheckpointIfNeeded(modelVersion int) {
 	if s.checkpointDir != "" && s.checkpointStep != 0 && modelVersion%s.checkpointStep == 0 {
 		checkpointVersionDir := path.Join(s.checkpointDir, fmt.Sprintf("version-%d", modelVersion))
+		s.savedCheckpointDirs = append(s.savedCheckpointDirs, checkpointVersionDir)
 		SaveModelToCheckpoint(checkpointVersionDir, s.Model, s.ID, s.numPsPods)
+		if len(s.savedCheckpointDirs) > s.keepCheckpointMax {
+			deletedDir := s.savedCheckpointDirs[0]
+			s.savedCheckpointDirs = s.savedCheckpointDirs[1:]
+			os.RemoveAll(deletedDir)
+		}
 	}
 }
 
