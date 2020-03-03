@@ -5,6 +5,9 @@ import (
 	"reflect"
 )
 
+// DataType alias
+type DataType = types_go_proto.DataType
+
 // const alias for dtype
 const (
 	Invalid = types_go_proto.DataType_DT_INVALID
@@ -23,6 +26,9 @@ var DtypeSize = make(map[types_go_proto.DataType]int32)
 
 // DtypeToSliceType Dtype -> reflect.Type
 var DtypeToSliceType = make(map[types_go_proto.DataType]reflect.Type)
+
+// DtypeToValueType Dtype -> reflect.Type
+var DtypeToValueType = make(map[types_go_proto.DataType]reflect.Type)
 
 // SliceTypeToDtype reflect.Type -> Dtype
 var SliceTypeToDtype = make(map[reflect.Type]types_go_proto.DataType)
@@ -47,6 +53,16 @@ func init() {
 	DtypeToSliceType[types_go_proto.DataType_DT_FLOAT] = reflect.TypeOf([]float32{0})
 	DtypeToSliceType[types_go_proto.DataType_DT_DOUBLE] = reflect.TypeOf([]float64{0})
 	DtypeToSliceType[types_go_proto.DataType_DT_BOOL] = reflect.TypeOf([]bool{true})
+
+	DtypeToValueType[types_go_proto.DataType_DT_INVALID] = reflect.TypeOf(byte(0))
+	DtypeToValueType[types_go_proto.DataType_DT_INT8] = reflect.TypeOf(int8(0))
+	DtypeToValueType[types_go_proto.DataType_DT_INT16] = reflect.TypeOf(int16(0))
+	DtypeToValueType[types_go_proto.DataType_DT_INT32] = reflect.TypeOf(int32(0))
+	DtypeToValueType[types_go_proto.DataType_DT_INT64] = reflect.TypeOf(int64(0))
+	//DtypeToValueType[types_go_proto.DataType_DT_FLOAT16] = reflect.TypeOf(float16(0))
+	DtypeToValueType[types_go_proto.DataType_DT_FLOAT] = reflect.TypeOf(float32(0))
+	DtypeToValueType[types_go_proto.DataType_DT_DOUBLE] = reflect.TypeOf(float64(0))
+	DtypeToValueType[types_go_proto.DataType_DT_BOOL] = reflect.TypeOf(bool(true))
 
 	SliceTypeToDtype[reflect.TypeOf([]byte{0})] = types_go_proto.DataType_DT_INVALID
 	SliceTypeToDtype[reflect.TypeOf([]int8{0})] = types_go_proto.DataType_DT_INT8
