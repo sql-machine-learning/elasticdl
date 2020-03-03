@@ -3,9 +3,10 @@ FROM elasticdl:dev
 WORKDIR /root/
 RUN git clone --depth=1 https://github.com/caicloud/ftlib.git
 RUN cd /root/ftlib && pip install -r /requirements.txt
+
+# Note that pip is having issue downloading PyTorch on manylinux so we use curl to download it instead
+RUN curl -o torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl https://files.pythonhosted.org/packages/24/19/4804aea17cd136f1705a5e98a00618cb8f6ccc375ad8bfa437408e09d058/torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl
+RUN pip install torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl
+
 RUN cd /root/ftlib/ftlib/consensus/gossip && bash ./gen_shared_lib.sh
-
-FROM pytorch/pytorch:1.2-cuda10.0-cudnn7-runtime
-
-WORKDIR /root/
-COPY --from=0 /root/ftlib/ftlib /opt/conda/lib/python3.6/site-packages/ftlib
+RUN cp -r /root/ftlib/ftlib /usr/local/lib/python3.6/dist-packages/ftlib
