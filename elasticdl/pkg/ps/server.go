@@ -72,7 +72,17 @@ func NewServer(ID int, optType string, optArgs string, masterAddr string,
 	evaluationStep int, checkpointDirForInit string,
 	checkpointDir string, checkpointStep int, numPsPods int) *Server {
 	var ps Server
-	ps.Model = NewModel()
+	if checkpointDirForInit != "" {
+		var err error
+		ps.Model, err = LoadModelFromCheckpoint(checkpointDirForInit, ID, numPsPods)
+		ps.Model.Initialized = true
+		if err != nil {
+			log.Fatalf("failed to load from checkpoint: %v", err)
+		}
+	} else {
+		ps.Model = NewModel()
+	}
+
 	var err error
 	ps.Opt, err = NewOptimizer(optType, optArgs)
 	if err != nil {
@@ -90,14 +100,14 @@ func NewServer(ID int, optType string, optArgs string, masterAddr string,
 
 func (s *Server) reportModelVersionIfNeeded(modelVersion int) {
 	if s.evaluationStep > 0 && modelVersion%s.evaluationStep == 0 && s.masterClient != nil {
-		s.masterClient.reportVersion(modelVersion)
+		s.masterClient.reportVersion(int32(modelVersion))
 	}
 }
 
 func (s *Server) saveCheckpointIfNeeded(modelVersion int) {
 	if s.checkpointDir != "" && s.checkpointStep != 0 && modelVersion%s.checkpointStep == 0 {
 		checkpointVersionDir := path.Join(s.checkpointDir, fmt.Sprintf("version-%d", modelVersion))
-		SaveModelToCheckpoint(checkpointVersionDir, s.Model, ps.ID, ps.numPsPods)
+		SaveModelToCheckpoint(checkpointVersionDir, s.Model, s.ID, s.numPsPods)
 	}
 }
 

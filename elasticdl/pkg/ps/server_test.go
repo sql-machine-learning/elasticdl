@@ -74,7 +74,7 @@ func TestMasterClient(t *testing.T) {
 	masterServer := newMasterServer(masterAddr)
 	masterServer.run()
 	// New a PS server
-	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", masterAddr, 0)
+	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;", masterAddr, 0, "", "", 0, 1)
 
 	version := int32(2)
 	s.masterClient.reportVersion(version)
