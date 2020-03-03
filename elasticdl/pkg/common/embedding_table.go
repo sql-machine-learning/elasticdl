@@ -12,7 +12,6 @@ type EmbeddingTable struct {
 	EmbeddingVectors map[int64]*Tensor
 	Dtype            types_go_proto.DataType
 	lock             sync.RWMutex
-	seed             int64
 }
 
 // NewEmbeddingTable creates an embedding table instance
@@ -34,14 +33,13 @@ func (e *EmbeddingTable) GetEmbeddingVector(index int64) *Tensor {
 	}
 	e.lock.RUnlock()
 	newVector := NewEmptyVector(e.Dim, e.Dtype)
+	e.lock.Lock()
 	// TODO(qijun) only support uniform initializer
 	if e.Initializer == "uniform" {
-		InitializerFn := RandomUniform(-0.05, 0.05, e.seed)
+		InitializerFn := RandomUniform(-0.05, 0.05, int64(len(e.EmbeddingVectors)))
 		InitializerFn(newVector)
 	}
-	e.lock.Lock()
 	e.EmbeddingVectors[index] = newVector
-	e.seed++
 	e.lock.Unlock()
 	return newVector
 }
