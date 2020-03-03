@@ -10,6 +10,7 @@ type EmbeddingTable struct {
 	Initializer      string
 	EmbeddingVectors map[int64]*Tensor
 	Dtype            types_go_proto.DataType
+	RandomSeed       int64
 }
 
 // NewEmbeddingTable creates an embedding table instance
@@ -28,6 +29,12 @@ func (e *EmbeddingTable) GetEmbeddingVector(index int64) *Tensor {
 		return value
 	}
 	newVector := NewEmptyVector(e.Dim, e.Dtype)
+	// TODO(qijun) only support uniform initializer
+	if e.Initializer == "uniform" {
+		InitializerFn := RandomUniform(-0.05, 0.05, e.RandomSeed)
+		InitializerFn(newVector)
+		e.RandomSeed++
+	}
 	e.EmbeddingVectors[index] = newVector
 	return newVector
 }
