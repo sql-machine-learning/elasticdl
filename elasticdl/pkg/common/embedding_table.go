@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/tensorflow/tensorflow/tensorflow/go/core/framework/types_go_proto"
+	"sync"
 )
 
 // EmbeddingTable struct
@@ -10,7 +11,8 @@ type EmbeddingTable struct {
 	Initializer      string
 	EmbeddingVectors map[int64]*Tensor
 	Dtype            types_go_proto.DataType
-	RandomSeed       int64
+	lock             sync.RWMutex
+	seed             int64
 }
 
 // NewEmbeddingTable creates an embedding table instance
@@ -25,17 +27,22 @@ func NewEmbeddingTable(dim int64, initializer string, dtype types_go_proto.DataT
 
 // GetEmbeddingVector returns an REFERENCE of embedding vector giving an index
 func (e *EmbeddingTable) GetEmbeddingVector(index int64) *Tensor {
+	e.lock.RLock()
 	if value, ok := e.EmbeddingVectors[index]; ok {
+		e.lock.RUnlock()
 		return value
 	}
+	e.lock.RUnlock()
 	newVector := NewEmptyVector(e.Dim, e.Dtype)
 	// TODO(qijun) only support uniform initializer
 	if e.Initializer == "uniform" {
-		InitializerFn := RandomUniform(-0.05, 0.05, e.RandomSeed)
+		InitializerFn := RandomUniform(-0.05, 0.05, e.seed)
 		InitializerFn(newVector)
-		e.RandomSeed++
 	}
+	e.lock.Lock()
 	e.EmbeddingVectors[index] = newVector
+	e.seed++
+	e.lock.Unlock()
 	return newVector
 }
 
@@ -56,4 +63,13 @@ func (e *EmbeddingTable) SetEmbeddingVectors(idxslice *IndexedSlices) error {
 		copy(value.Buffer, idxslice.ConcatTensors.GetRow(int64(i)).Buffer)
 	}
 	return nil
+}
+
+// ToIndexedSlices transforms embedding table format to indexed slices format
+func (e *EmbeddingTable) ToIndexedSlices() *IndexedSlices {
+	ids := make([]int64, 0, len(e.EmbeddingVectors))
+	for k := range e.EmbeddingVectors {
+		ids = append(ids, k)
+	}
+	return NewIndexedSlices(e.GetEmbeddingVectors(ids), ids)
 }

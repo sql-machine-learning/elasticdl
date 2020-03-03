@@ -69,7 +69,7 @@ class ParameterServer(object):
         self.parameters = CheckpointSaver.restore_params_from_checkpoint(
             checkpoint_dir_for_init, self.ps_id, self.num_ps_pods
         )
-        self.parameters.init_status = True
+        self.parameters.initialized = True
         self.logger.info(
             "The version of restored parameters is %d"
             % self.parameters.version
