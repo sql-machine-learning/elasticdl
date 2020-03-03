@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
+	"path"
 	"sync"
 )
 
@@ -37,13 +38,17 @@ func (c *MasterClient) closeConn() {
 // Server defines servicer of ps
 type Server struct {
 	proto.UnimplementedPserverServer
-	Model           *Model
-	Opt             Optimizer
-	masterClient    *MasterClient
-	evaluationSteps int32
-	ID              int // a zero-based successive integer number
-	lock            sync.Mutex
-	versionLock     sync.Mutex
+	Model                *Model
+	Opt                  Optimizer
+	masterClient         *MasterClient
+	evaluationStep       int
+	checkpointDirForInit string
+	checkpointDir        string
+	checkpointStep       int
+	numPsPods            int
+	ID                   int // a zero-based successive integer number
+	lock                 sync.Mutex
+	versionLock          sync.Mutex
 }
 
 func createMasterClient(masterAddr string) *MasterClient {
@@ -63,7 +68,9 @@ func createMasterClient(masterAddr string) *MasterClient {
 }
 
 // NewServer creates a Server instance
-func NewServer(ID int, optType string, optArgs string, masterAddr string, evaluationSteps int) *Server {
+func NewServer(ID int, optType string, optArgs string, masterAddr string,
+	evaluationStep int, checkpointDirForInit string,
+	checkpointDir string, checkpointStep int, numPsPods int) *Server {
 	var ps Server
 	ps.Model = NewModel()
 	var err error
@@ -73,13 +80,24 @@ func NewServer(ID int, optType string, optArgs string, masterAddr string, evalua
 	}
 	ps.ID = ID
 	ps.masterClient = createMasterClient(masterAddr)
-	ps.evaluationSteps = int32(evaluationSteps)
+	ps.evaluationStep = evaluationStep
+	ps.checkpointDirForInit = checkpointDirForInit
+	ps.checkpointDir = checkpointDir
+	ps.checkpointStep = checkpointStep
+	ps.numPsPods = numPsPods
 	return &ps
 }
 
-func (s *Server) reportModelVersionIfNeeded(modelVersion int32) {
-	if s.evaluationSteps > 0 && modelVersion%s.evaluationSteps == 0 && s.masterClient != nil {
+func (s *Server) reportModelVersionIfNeeded(modelVersion int) {
+	if s.evaluationStep > 0 && modelVersion%s.evaluationStep == 0 && s.masterClient != nil {
 		s.masterClient.reportVersion(modelVersion)
+	}
+}
+
+func (s *Server) saveCheckpointIfNeeded(modelVersion int) {
+	if s.checkpointDir != "" && s.checkpointStep != 0 && modelVersion%s.checkpointStep == 0 {
+		checkpointVersionDir := path.Join(s.checkpointDir, fmt.Sprintf("version-%d", modelVersion))
+		SaveModelToCheckpoint(checkpointVersionDir, s.Model, ps.ID, ps.numPsPods)
 	}
 }
 
@@ -122,7 +140,8 @@ func (s *Server) PushGradients(ctx context.Context, in *proto.Model) (*proto.Pus
 	s.versionLock.Lock()
 	s.Model.Version += int32(1)
 	s.versionLock.Unlock()
-	s.reportModelVersionIfNeeded(s.Model.Version)
+	s.reportModelVersionIfNeeded(int(s.Model.Version))
+	s.saveCheckpointIfNeeded(int(s.Model.Version))
 	var resp = proto.PushGradientsResponse{
 		Accepted: true,
 		Version:  s.Model.Version,
