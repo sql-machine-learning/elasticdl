@@ -18,6 +18,8 @@ ELASTICDL_REPLICA_TYPE_KEY = "elasticdl-replica-type"
 ELASTICDL_REPLICA_INDEX_KEY = "elasticdl-replica-index"
 _PS_SERVICE_PORT = 2222
 _WORKER_SERVICE_PORT = 3333
+_FTLIB_GOSSIP_CONTAINER_PORT = 7946
+_FTLIB_SSH_CONTAINER_PORT = 22
 
 
 def get_master_pod_name(job_name):
@@ -238,6 +240,14 @@ class Client(object):
             args=kargs["container_args"],
             image_pull_policy=kargs["image_pull_policy"],
             env=kargs["env"],
+            ports=[
+                client.V1ContainerPort(
+                    container_port=_FTLIB_GOSSIP_CONTAINER_PORT, name="gossip"
+                ),
+                client.V1ContainerPort(
+                    container_port=_FTLIB_SSH_CONTAINER_PORT, name="ssh"
+                ),
+            ],
         )
 
         # Pod
@@ -385,6 +395,19 @@ class Client(object):
             replica_type=replica_type,
             replica_index=replica_index,
             service_type=service_type,
+            owner=self.get_master_pod(),
+        )
+
+    def get_ftlib_consensus_service_name(self):
+        return self.job_name + "ftlib-consensus"
+
+    def create_ftlib_consensus_service(self):
+        return self._create_service(
+            name=self.get_ftlib_consensus_service_name(),
+            port=_FTLIB_GOSSIP_CONTAINER_PORT,
+            target_port=_FTLIB_GOSSIP_CONTAINER_PORT,
+            replica_type="master",
+            replica_index="0",
             owner=self.get_master_pod(),
         )
 

@@ -161,6 +161,9 @@ class InstanceManager(object):
         for _ in range(self._num_workers):
             self._start_worker(self._next_worker_id())
 
+    def start_ftlib_consensus_service(self):
+        self._k8s_client.create_ftlib_consensus_service()
+
     def start_parameter_servers(self):
         for i in range(self._num_ps):
             self._start_ps(i)
