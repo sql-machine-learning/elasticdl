@@ -36,8 +36,8 @@ func (e *EmbeddingTable) GetEmbeddingVector(index int64) *Tensor {
 	e.lock.Lock()
 	// TODO(qijun) only support uniform initializer
 	if e.Initializer == "uniform" {
-		InitializerFn := RandomUniform(-0.05, 0.05, int64(len(e.EmbeddingVectors)))
-		InitializerFn(newVector)
+		initializerFn := RandomUniform(-0.05, 0.05, int64(len(e.EmbeddingVectors)))
+		initializerFn(newVector)
 	}
 	e.EmbeddingVectors[index] = newVector
 	e.lock.Unlock()
