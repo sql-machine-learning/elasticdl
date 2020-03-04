@@ -80,7 +80,10 @@ class CollectiveCommunicator(object):
            * Collective-communication operations fail or time out
            * Liveness probe fails for existing workers
         """
-        return self._ftlib.initialized
+        if self._ftlib is not None:
+            return self._ftlib.initialized
+        else:
+            return True
 
     def _get_peer_set(self, svc_name):
         if svc_name is None:
