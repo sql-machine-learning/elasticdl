@@ -1,3 +1,5 @@
+import socket
+
 from elasticdl.python.common.constants import CollectiveCommunicatorStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 
@@ -16,10 +18,15 @@ _SUPPORTED_ALLREDUCE_OPS = ["MEAN"]
 
 
 class CollectiveCommunicator(object):
-    def __init__(self):
+    def __init__(self, svc_name=None):
         if _FTLIB_INSTALLED:
-            self._ftlib = BasicFTLib()
-            self._ftlib.init(consensus="gossip", commlib="pytorch")
+            self._ftlib = BasicFTLib(
+                consensus="gossip",
+                commlib="pytorch",
+                consensus_init_kwargs={
+                    "known_addr_list": list(self._get_peer_set(svc_name))
+                },
+            )
         else:
             logger.warning(
                 "FTLib is not installed. The CollectiveCommunicator "
@@ -69,3 +76,11 @@ class CollectiveCommunicator(object):
 
     def has_new_worker_joining(self):
         return True
+
+    def _get_peer_set(self, svc_name):
+        if svc_name is None:
+            return None
+        my_ip = socket.gethostbyname(socket.gethostname())
+        temp_set = socket.getaddrinfo(svc_name, 0, proto=socket.IPPROTO_TCP)
+        peer_set = {peer[-1][0] for peer in temp_set if peer[-1][0] != my_ip}
+        return peer_set
