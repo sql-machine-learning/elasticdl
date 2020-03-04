@@ -6,17 +6,19 @@ Development Docker image contains dependencies for ElasticDL development and pro
 
 ```bash
 docker build \
+    --target dev \
     -t elasticdl:dev \
-    -f elasticdl/docker/Dockerfile.dev .
+    -f elasticdl/docker/Dockerfile .
 ```
 
 To build the Docker image with GPU support, run the following command:
 
 ```bash
 docker build \
+    --target dev \
     -t elasticdl:dev-gpu \
     -f elasticdl/docker/Dockerfile \
-    --build-arg BASE_IMAGE=tensorflow/tensorflow:2.0.0-gpu-py3 .
+    --build-arg BASE_IMAGE=tensorflow/tensorflow:2.1.0-gpu-py3 .
 ```
 
 Note that since ElasticDL depends on TensorFlow, the base image must have TensorFlow installed.
@@ -27,8 +29,9 @@ When having difficulties downloading from the main PyPI site or Golang site, you
 docker build \
     --build-arg EXTRA_PYPI_INDEX=https://mirrors.aliyun.com/pypi/simple \
     --build-arg GO_MIRROR_URL=http://mirrors.ustc.edu.cn/golang \
+    --target dev \
     -t elasticdl:dev \
-    -f elasticdl/docker/Dockerfile.dev .
+    -f elasticdl/docker/Dockerfile .
 ```
 
 
@@ -48,8 +51,9 @@ Continuous integration docker image contains everything from the development doc
 
 ```bash
 docker build \
+    --target ci \
     -t elasticdl:ci \
-    -f elasticdl/docker/Dockerfile.ci .
+    -f elasticdl/docker/Dockerfile .
 ```
 
 ## Test and Debug

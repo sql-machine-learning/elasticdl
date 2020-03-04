@@ -21,8 +21,8 @@ else
     ci_image="elasticdl:ci"
 fi
 
-docker build -t $dev_image -f elasticdl/docker/Dockerfile.dev --build-arg BASE_IMAGE=$base_image .
+docker build --target dev -t $dev_image -f elasticdl/docker/Dockerfile --build-arg BASE_IMAGE=$base_image .
 
 docker build -t $image -f elasticdl/docker/Dockerfile --build-arg BASE_IMAGE=$base_image .
 
-docker build -t $ci_image -f elasticdl/docker/Dockerfile.ci --build-arg BASE_IMAGE=$dev_image .
+docker build --target ci -t $ci_image -f elasticdl/docker/Dockerfile --build-arg BASE_IMAGE=$base_image .
