@@ -80,12 +80,10 @@ RUN cd / && rm -rf /elasticdl && \
 # Stage 4: ci
 FROM data as ci
 
-# Install elasticdl package
-RUN pip install /elasticdl-develop-py3-none-any.whl --extra-index-url=${EXTRA_PYPI_INDEX} && \
-    rm /elasticdl-develop-py3-none-any.whl
-
 WORKDIR /
 ENV PYTHONPATH=/
+COPY setup.py /elasticdl/setup.py
+RUN cd /elasticdl && python setup.py install
 COPY model_zoo /model_zoo
 
 # Stage 5: release
