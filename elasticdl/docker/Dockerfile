@@ -82,6 +82,7 @@ RUN pip install /elasticdl-develop-py3-none-any.whl --extra-index-url=${EXTRA_PY
 
 WORKDIR /
 COPY model_zoo /model_zoo
+COPY elasticdl /elasticdl
 
 # Stage 4: release
 FROM ${BASE_IMAGE} as release
