@@ -238,7 +238,7 @@ class Client(object):
                     container_port=_FTLIB_SSH_CONTAINER_PORT, name="ssh"
                 ),
             ]
-            if kargs["expose_ports"]
+            if "expose_ports" in kargs and kargs["expose_ports"]
             else None
         )
         container = client.V1Container(
