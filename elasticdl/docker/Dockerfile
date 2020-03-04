@@ -50,6 +50,9 @@ RUN cd /tmp/elasticdl && \
 # Stage 2: dev
 FROM ${BASE_IMAGE} as dev
 
+RUN apt update && \
+    apt install -y git
+
 # Copy GO PS
 ARG GO_PS=/root/go/bin/main
 RUN mkdir -p /usr/local/go/bin
