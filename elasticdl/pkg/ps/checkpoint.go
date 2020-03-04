@@ -1,21 +1,27 @@
 package ps
 
 import (
+	"crypto/sha256"
 	"elasticdl.org/elasticdl/common"
 	"elasticdl.org/elasticdl/proto"
+	"encoding/hex"
 	"fmt"
 	go_pb "github.com/golang/protobuf/proto"
-	"hash/fnv"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path"
 )
 
 // StringToID maps a string to an id
 func StringToID(name string, bucketNum int) int {
-	h := fnv.New32a()
-	h.Write([]byte(name))
-	return int(h.Sum32()) % bucketNum
+	input := []byte(name)
+	sha256Bytes := sha256.Sum256(input)
+	hexString := hex.EncodeToString(sha256Bytes[:])
+	n := new(big.Int)
+	res, _ := n.SetString(hexString, 32)
+	bucketNumBig := new(big.Int).SetUint64(uint64(bucketNum))
+	return int(res.Mod(res, bucketNumBig).Uint64())
 }
 
 // IntToID maps an int to an id
