@@ -229,6 +229,18 @@ class Client(object):
             if pod_resource_limits
             else pod_resource_requests
         )
+        ports = (
+            [
+                client.V1ContainerPort(
+                    container_port=_FTLIB_GOSSIP_CONTAINER_PORT, name="gossip"
+                ),
+                client.V1ContainerPort(
+                    container_port=_FTLIB_SSH_CONTAINER_PORT, name="ssh"
+                ),
+            ]
+            if kargs["expose_ports"]
+            else None
+        )
         container = client.V1Container(
             name=kargs["pod_name"],
             image=kargs["image_name"],
@@ -240,14 +252,7 @@ class Client(object):
             args=kargs["container_args"],
             image_pull_policy=kargs["image_pull_policy"],
             env=kargs["env"],
-            ports=[
-                client.V1ContainerPort(
-                    container_port=_FTLIB_GOSSIP_CONTAINER_PORT, name="gossip"
-                ),
-                client.V1ContainerPort(
-                    container_port=_FTLIB_SSH_CONTAINER_PORT, name="ssh"
-                ),
-            ],
+            ports=ports,
         )
 
         # Pod
@@ -321,7 +326,9 @@ class Client(object):
         pod.kind = "Pod"
         return pod
 
-    def _create_ps_worker_pod(self, pod_name, type_key, index_key, **kargs):
+    def _create_ps_worker_pod(
+        self, pod_name, type_key, index_key, expose_ports, **kargs
+    ):
         # Find that master pod that will be used as the owner reference
         # for the ps or worker pod.
         master_pod = self.get_master_pod()
@@ -342,6 +349,7 @@ class Client(object):
             owner_pod=master_pod,
             ps_addrs=kargs.get("ps_addrs", ""),
             env=env,
+            expose_ports=expose_ports,
         )
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = type_key
@@ -351,13 +359,23 @@ class Client(object):
     def create_worker(self, **kargs):
         pod_name = self.get_worker_pod_name(kargs["worker_id"])
         return self._create_ps_worker_pod(
-            pod_name, "worker", kargs["worker_id"], **kargs
+            pod_name, "worker", kargs["worker_id"], expose_ports=True, **kargs
+        )
+
+    def create_embedding_service(self, **kargs):
+        pod_name = self.get_embedding_service_pod_name(kargs["worker_id"])
+        return self._create_ps_worker_pod(
+            pod_name,
+            "embedding_service",
+            kargs["worker_id"],
+            expose_ports=False,
+            **kargs
         )
 
     def create_ps(self, **kargs):
         pod_name = self.get_ps_pod_name(kargs["ps_id"])
         return self._create_ps_worker_pod(
-            pod_name, "ps", kargs["ps_id"], **kargs
+            pod_name, "ps", kargs["ps_id"], expose_ports=False, **kargs
         )
 
     def delete_master(self):
