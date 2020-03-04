@@ -81,6 +81,7 @@ RUN pip install /elasticdl-develop-py3-none-any.whl --extra-index-url=${EXTRA_PY
 
 
 WORKDIR /
+ENV PYTHONPATH=/
 COPY model_zoo /model_zoo
 COPY elasticdl /elasticdl
 
