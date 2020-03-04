@@ -10,13 +10,13 @@ RUN apt update && \
     libeigen3-dev
 
 COPY elasticdl/requirements.txt /requirements.txt
-ARG GO_MIRROR_URL=https://dl.google.com/go
 RUN pip install -r /requirements.txt --extra-index-url=${EXTRA_PYPI_INDEX} && rm /requirements.txt
 
 ENV TF_PATH /tmp/tensorflow
 RUN cd /tmp && git clone --depth=1 https://github.com/tensorflow/tensorflow.git
 
 # Install Go and related tools
+ARG GO_MIRROR_URL=https://dl.google.com/go
 ENV GOPATH /root/go
 ENV PATH /usr/local/go/bin:$GOPATH/bin:$PATH
 COPY elasticdl/docker/scripts/install-go.bash /
@@ -48,20 +48,9 @@ RUN cd /tmp/elasticdl && \
     cd / && rm -rf /tmp/elasticdl
 
 # Stage 2: dev
-FROM ${BASE_IMAGE} as dev
+FROM builder as dev
 
-RUN apt update && \
-    apt install -y git
-
-# Copy GO PS
-ARG GO_PS=/root/go/bin/main
-RUN mkdir -p /usr/local/go/bin
-COPY --from=builder  ${GO_PS} /usr/local/go/bin
-ENV PATH /usr/local/go/bin::$PATH
-
-COPY elasticdl/requirements.txt /requirements.txt
 COPY elasticdl/requirements-dev.txt /requirements-dev.txt
-RUN pip install -r /requirements.txt --extra-index-url=${EXTRA_PYPI_INDEX} && rm /requirements.txt
 RUN pip install -r /requirements-dev.txt --extra-index-url=${EXTRA_PYPI_INDEX} && rm /requirements-dev.txt
 
 # This assumes that the data generation package is independent with the
@@ -87,7 +76,6 @@ RUN rm -rf /root/.keras/datasets
 FROM dev as ci
 
 # Install elasticdl package
-COPY --from=builder  /elasticdl-develop-py3-none-any.whl /
 RUN pip install /elasticdl-develop-py3-none-any.whl --extra-index-url=${EXTRA_PYPI_INDEX} && \
     rm /elasticdl-develop-py3-none-any.whl
 
