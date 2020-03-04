@@ -81,8 +81,8 @@ RUN cd / && rm -rf /elasticdl && \
 FROM data as ci
 
 # Install elasticdl package
-#RUN pip install /elasticdl-develop-py3-none-any.whl --extra-index-url=${EXTRA_PYPI_INDEX} && \
-#    rm /elasticdl-develop-py3-none-any.whl
+RUN pip install /elasticdl-develop-py3-none-any.whl --extra-index-url=${EXTRA_PYPI_INDEX} && \
+    rm /elasticdl-develop-py3-none-any.whl
 
 WORKDIR /
 ENV PYTHONPATH=/
