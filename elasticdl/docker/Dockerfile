@@ -81,7 +81,7 @@ RUN cd / && rm -rf /elasticdl && \
 FROM data as ci
 
 WORKDIR /
-ENV PYTHONPATH=/
+ENV PYTHONPATH=/elasticdl
 COPY setup.py /elasticdl/setup.py
 RUN cd /elasticdl && python setup.py install
 COPY model_zoo /model_zoo
