@@ -28,10 +28,10 @@ RUN /install-protobuf.bash && rm /install-protobuf.bash
 
 # Install elasticdl.org/elasticdl Go package
 ENV ELASTICDLPATH /root/elasticdl
-COPY . /tmp/elasticdl
-RUN cd /tmp/elasticdl && \
+COPY . /elasticdl
+RUN cd /elasticdl && \
     make -f elasticdl/Makefile && \
-    cp -r /tmp/elasticdl/elasticdl/pkg $ELASTICDLPATH && \
+    cp -r /elasticdl/elasticdl/pkg $ELASTICDLPATH && \
     cd $GOPATH/pkg/mod/github.com/tensorflow && \
     go mod init github.com/tensorflow &&\
     cd $ELASTICDLPATH && \
@@ -41,14 +41,12 @@ RUN cd /tmp/elasticdl && \
     go install ./... 
 
 # Create elasticdl package
-#COPY setup.py /tmp/elasticdl/setup.py
-RUN cd /tmp/elasticdl && \
+RUN cd /elasticdl && \
     python setup.py bdist_wheel && \
-    cp dist/elasticdl-develop-py3-none-any.whl / && \
-    cd / && rm -rf /tmp/elasticdl
+    cp dist/elasticdl-develop-py3-none-any.whl / 
 
-# Stage 2: dev
-FROM builder as dev
+# Stage 2: data
+FROM builder as data
 
 COPY elasticdl/requirements-dev.txt /requirements-dev.txt
 RUN pip install -r /requirements-dev.txt --extra-index-url=${EXTRA_PYPI_INDEX} && rm /requirements-dev.txt
@@ -72,20 +70,25 @@ RUN python /var/census_recordio_gen.py --data_dir /root/.keras/datasets --output
 
 RUN rm -rf /root/.keras/datasets
 
-# Stage 3: ci
-FROM dev as ci
+# Stage 3: dev
+FROM data as dev
 
-# Install elasticdl package
-RUN pip install /elasticdl-develop-py3-none-any.whl --extra-index-url=${EXTRA_PYPI_INDEX} && \
+# Remove /elasticdl in dev
+RUN cd / && rm -rf /elasticdl && \
     rm /elasticdl-develop-py3-none-any.whl
 
+# Stage 4: ci
+FROM data as ci
+
+# Install elasticdl package
+#RUN pip install /elasticdl-develop-py3-none-any.whl --extra-index-url=${EXTRA_PYPI_INDEX} && \
+#    rm /elasticdl-develop-py3-none-any.whl
 
 WORKDIR /
 ENV PYTHONPATH=/
 COPY model_zoo /model_zoo
-COPY elasticdl /elasticdl
 
-# Stage 4: release
+# Stage 5: release
 FROM ${BASE_IMAGE} as release
 
 # Replace the Splash screen from TensorFlow image.
