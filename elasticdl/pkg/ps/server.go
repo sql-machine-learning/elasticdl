@@ -113,10 +113,12 @@ func (s *Server) saveCheckpointIfNeeded(modelVersion int) {
 		checkpointVersionDir := path.Join(s.checkpointDir, fmt.Sprintf("version-%d", modelVersion))
 		s.savedCheckpointDirs = append(s.savedCheckpointDirs, checkpointVersionDir)
 		SaveModelToCheckpoint(checkpointVersionDir, s.Model, s.ID, s.numPsPods)
-		if len(s.savedCheckpointDirs) > s.keepCheckpointMax {
-			deletedDir := s.savedCheckpointDirs[0]
-			s.savedCheckpointDirs = s.savedCheckpointDirs[1:]
-			os.RemoveAll(deletedDir)
+		if s.ID == 0 {
+			if len(s.savedCheckpointDirs) > s.keepCheckpointMax {
+				deletedDir := s.savedCheckpointDirs[0]
+				s.savedCheckpointDirs = s.savedCheckpointDirs[1:]
+				os.RemoveAll(deletedDir)
+			}
 		}
 	}
 }
