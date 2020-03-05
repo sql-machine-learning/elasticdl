@@ -134,7 +134,7 @@ def _train_edl_embedding_with_optimizer_wrapper(
         for layer in embed_layers:
             embed_items.extend(
                 [
-                    (bet, layer.name, ids)
+                    (bet, layer.embedding_weight_name, ids)
                     for bet, ids in layer.embedding_and_ids
                 ]
             )
@@ -349,14 +349,19 @@ class OptimizerWrapperTest(unittest.TestCase):
         model2 = model_module["EdlEmbeddingModel"](dim, weights[2:])
         opt2 = optimizer_class(**opt_kwargs)
 
-        layer_names = [layer.name for layer in find_layer(model2, Embedding)]
+        embedding_weight_names = [
+            layer.embedding_weight_name
+            for layer in find_layer(model2, Embedding)
+        ]
 
         # create Parameters object and initialize embedding vectors
         params = Parameters()
-        for layer_name, embed_value in zip(layer_names, weights[:2]):
-            embed_table = EmbeddingTable(layer_name, dim)
+        for weight_name, embed_value in zip(
+            embedding_weight_names, weights[:2]
+        ):
+            embed_table = EmbeddingTable(weight_name, dim)
             embed_table.set(range(len(embed_value)), embed_value)
-            params.embedding_params[layer_name] = embed_table
+            params.embedding_params[weight_name] = embed_table
 
         _train_edl_embedding_with_optimizer_wrapper(
             model2, opt2, X, Y, loss_fn, params, random_seed=seed
@@ -371,7 +376,9 @@ class OptimizerWrapperTest(unittest.TestCase):
         for layer1, layer2 in zip(model1.layers, model2.layers):
             if "embedding" in layer2.name:
                 w1 = layer1.weights[0].numpy()
-                w2 = params.get_embedding_param(layer2.name, range(4))
+                w2 = params.get_embedding_param(
+                    layer2.embedding_weight_name, range(4)
+                )
                 self.assertTrue(np.isclose(w1, w2).all(), msg=wrong_msg)
             else:
                 for w1, w2 in zip(layer1.weights, layer2.weights):
