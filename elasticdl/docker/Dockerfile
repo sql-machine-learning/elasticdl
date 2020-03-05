@@ -2,8 +2,8 @@ ARG BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
 # Use tensorflow/tensorflow:2.1.0-gpu-py3 if you want GPU-support.
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 
-# Stage 1: builder
-FROM ${BASE_IMAGE} as builder
+# Stage 1: dev
+FROM ${BASE_IMAGE} as dev
 
 RUN apt update && \
     apt install -y unzip curl git software-properties-common g++ wget \
@@ -11,6 +11,8 @@ RUN apt update && \
 
 COPY elasticdl/requirements.txt /requirements.txt
 RUN pip install -r /requirements.txt --extra-index-url=${EXTRA_PYPI_INDEX} && rm /requirements.txt
+COPY elasticdl/requirements-dev.txt /requirements-dev.txt
+RUN pip install -r /requirements-dev.txt --extra-index-url=${EXTRA_PYPI_INDEX} && rm /requirements-dev.txt
 
 ENV TF_PATH /tmp/tensorflow
 RUN cd /tmp && git clone --depth=1 https://github.com/tensorflow/tensorflow.git
@@ -45,31 +47,9 @@ RUN cd /elasticdl && \
     python setup.py bdist_wheel && \
     cp dist/elasticdl-develop-py3-none-any.whl / 
 
-# Stage 2: release
-FROM ${BASE_IMAGE} as release
 
-# Replace the Splash screen from TensorFlow image.
-COPY elasticdl/docker/bashrc /etc/bash.bashrc
-RUN chmod a+rwx /etc/bash.bashrc
-
-# Copy GO PS
-ARG GO_PS=/root/go/bin/main
-RUN mkdir -p /usr/local/go/bin
-COPY --from=builder  ${GO_PS} /usr/local/go/bin
-ENV PATH /usr/local/go/bin::$PATH
-
-WORKDIR /
-
-# Install elasticdl package
-COPY --from=builder  /elasticdl-develop-py3-none-any.whl /
-RUN pip install /elasticdl-develop-py3-none-any.whl --extra-index-url=${EXTRA_PYPI_INDEX} &&  \
-    rm /elasticdl-develop-py3-none-any.whl
-
-# Stage 3: data
-FROM builder as data
-
-COPY elasticdl/requirements-dev.txt /requirements-dev.txt
-RUN pip install -r /requirements-dev.txt --extra-index-url=${EXTRA_PYPI_INDEX} && rm /requirements-dev.txt
+# Stage 2: ci
+FROM dev as ci
 
 # This assumes that the data generation package is independent with the
 # rest part of ElasticDL.  The generated data will be in /data.
@@ -90,18 +70,29 @@ RUN python /var/census_recordio_gen.py --data_dir /root/.keras/datasets --output
 
 RUN rm -rf /root/.keras/datasets
 
-# Stage 4: dev
-FROM data as dev
-
-# Remove /elasticdl in dev
-RUN cd / && rm -rf /elasticdl && \
-    rm /elasticdl-develop-py3-none-any.whl
-
-# Stage 5: ci
-FROM data as ci
-
 WORKDIR /
 ENV PYTHONPATH=/elasticdl
 COPY setup.py /elasticdl/setup.py
 RUN cd /elasticdl && python setup.py install
 COPY model_zoo /model_zoo
+
+
+# Stage 3: release
+FROM ${BASE_IMAGE} as release
+
+# Replace the Splash screen from TensorFlow image.
+COPY elasticdl/docker/bashrc /etc/bash.bashrc
+RUN chmod a+rwx /etc/bash.bashrc
+
+# Copy GO PS
+ARG GO_PS=/root/go/bin/main
+RUN mkdir -p /usr/local/go/bin
+COPY --from=dev ${GO_PS} /usr/local/go/bin
+ENV PATH /usr/local/go/bin:$PATH
+
+WORKDIR /
+
+# Install elasticdl package
+COPY --from=dev /elasticdl-develop-py3-none-any.whl /
+RUN pip install /elasticdl-develop-py3-none-any.whl --extra-index-url=${EXTRA_PYPI_INDEX} &&  \
+    rm /elasticdl-develop-py3-none-any.whl
