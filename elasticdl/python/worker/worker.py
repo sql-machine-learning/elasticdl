@@ -413,7 +413,7 @@ class Worker(object):
             embedding_infos = model.embedding_table_infos
             for layer in self._embedding_layers:
                 embedding_info = embedding_infos.add()
-                embedding_info.name = layer.name
+                embedding_info.name = layer.embedding_weight_name
                 embedding_info.dim = layer.output_dim
                 embedding_info.initializer = layer.embeddings_initializer
                 # set to float32
