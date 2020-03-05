@@ -85,7 +85,7 @@ class InstanceManager(object):
             self._num_workers, self._k8s_client.get_worker_service_address
         )
 
-    def _start_worker(self, worker_id):
+    def _start_worker(self, worker_id, expose_ports):
         logger.info("Starting worker: %d" % worker_id)
         with self._lock:
             pod = self._k8s_client.create_worker(
@@ -102,6 +102,7 @@ class InstanceManager(object):
                 restart_policy=self._restart_policy,
                 ps_addrs=self._ps_addrs,
                 envs=copy.deepcopy(self._envs),
+                expose_ports=expose_ports,
             )
             name = pod.metadata.name
             self._worker_pod_name_to_id[name] = worker_id
@@ -157,9 +158,9 @@ class InstanceManager(object):
             master_name, labels_dict={"status": status}
         )
 
-    def start_workers(self):
+    def start_workers(self, expose_ports):
         for _ in range(self._num_workers):
-            self._start_worker(self._next_worker_id())
+            self._start_worker(self._next_worker_id(), expose_ports)
 
     def start_ftlib_consensus_service(self):
         self._k8s_client.create_ftlib_consensus_service()

@@ -359,7 +359,11 @@ class Client(object):
     def create_worker(self, **kargs):
         pod_name = self.get_worker_pod_name(kargs["worker_id"])
         return self._create_ps_worker_pod(
-            pod_name, "worker", kargs["worker_id"], expose_ports=True, **kargs
+            pod_name,
+            "worker",
+            kargs["worker_id"],
+            expose_ports=kargs["expose_ports"],
+            **kargs
         )
 
     def create_embedding_service(self, **kargs):
