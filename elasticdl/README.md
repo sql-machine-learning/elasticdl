@@ -2,7 +2,7 @@
 
 ## Development Docker Image
 
-Development Docker image contains dependencies for ElasticDL development and processed demo data in RecordIO format. In repo's root directory, run the following command:
+Development Docker image contains dependencies for ElasticDL development. In repo's root directory, run the following command:
 
 ```bash
 docker build \
@@ -47,7 +47,7 @@ docker run --rm -u $(id -u):$(id -g) -it \
 
 ## Continuous Integration Docker Image
 
-Continuous integration docker image contains everything from the development docker image and the ElasticDL source code. It is  used to run continuous integration with the latest version of the source code. In repo's root directory, run the following command:
+Continuous integration docker image contains everything from the development docker image , processed demo data in RecordIO format and the ElasticDL source code. It is  used to run continuous integration with the latest version of the source code. In repo's root directory, run the following command:
 
 ```bash
 docker build \
