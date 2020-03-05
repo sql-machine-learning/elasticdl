@@ -2,6 +2,15 @@ ARG BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
 # Use tensorflow/tensorflow:2.1.0-gpu-py3 if you want GPU-support.
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 
+# Multi-stage is used for dev/ci/release images
+# Better to build in DOCKER_BUILDKIT by setting env: DOCKER_BUILDKIT=1
+# To build dev:
+# docker build --target dev -t dev_image_name -f this_dockerfile elasticdl_repo_dir
+# To build ci:
+# docker build --target ci -t ci_image_name -f this_dockerfile elasticdl_repo_dir
+# To build release:
+# docker -t image_name -f this_dockerfile elasticdl_repo_dir
+
 # Stage 1: dev
 FROM ${BASE_IMAGE} as dev
 
