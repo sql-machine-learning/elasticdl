@@ -45,7 +45,27 @@ RUN cd /elasticdl && \
     python setup.py bdist_wheel && \
     cp dist/elasticdl-develop-py3-none-any.whl / 
 
-# Stage 2: data
+# Stage 2: release
+FROM ${BASE_IMAGE} as release
+
+# Replace the Splash screen from TensorFlow image.
+COPY elasticdl/docker/bashrc /etc/bash.bashrc
+RUN chmod a+rwx /etc/bash.bashrc
+
+# Copy GO PS
+ARG GO_PS=/root/go/bin/main
+RUN mkdir -p /usr/local/go/bin
+COPY --from=builder  ${GO_PS} /usr/local/go/bin
+ENV PATH /usr/local/go/bin::$PATH
+
+WORKDIR /
+
+# Install elasticdl package
+COPY --from=builder  /elasticdl-develop-py3-none-any.whl /
+RUN pip install /elasticdl-develop-py3-none-any.whl --extra-index-url=${EXTRA_PYPI_INDEX} &&  \
+    rm /elasticdl-develop-py3-none-any.whl
+
+# Stage 3: data
 FROM builder as data
 
 COPY elasticdl/requirements-dev.txt /requirements-dev.txt
@@ -70,14 +90,14 @@ RUN python /var/census_recordio_gen.py --data_dir /root/.keras/datasets --output
 
 RUN rm -rf /root/.keras/datasets
 
-# Stage 3: dev
+# Stage 4: dev
 FROM data as dev
 
 # Remove /elasticdl in dev
 RUN cd / && rm -rf /elasticdl && \
     rm /elasticdl-develop-py3-none-any.whl
 
-# Stage 4: ci
+# Stage 5: ci
 FROM data as ci
 
 WORKDIR /
@@ -85,24 +105,3 @@ ENV PYTHONPATH=/elasticdl
 COPY setup.py /elasticdl/setup.py
 RUN cd /elasticdl && python setup.py install
 COPY model_zoo /model_zoo
-
-# Stage 5: release
-FROM ${BASE_IMAGE} as release
-
-# Replace the Splash screen from TensorFlow image.
-COPY elasticdl/docker/bashrc /etc/bash.bashrc
-RUN chmod a+rwx /etc/bash.bashrc
-
-# Copy GO PS
-ARG GO_PS=/root/go/bin/main
-RUN mkdir -p /usr/local/go/bin
-COPY --from=builder  ${GO_PS} /usr/local/go/bin
-ENV PATH /usr/local/go/bin::$PATH
-
-WORKDIR /
-
-# Install elasticdl package
-COPY --from=builder  /elasticdl-develop-py3-none-any.whl /
-RUN pip install /elasticdl-develop-py3-none-any.whl --extra-index-url=${EXTRA_PYPI_INDEX} &&  \
-    rm /elasticdl-develop-py3-none-any.whl
-
