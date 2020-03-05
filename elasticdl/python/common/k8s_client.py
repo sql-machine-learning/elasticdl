@@ -149,12 +149,6 @@ class Client(object):
             self.get_ps_service_name(ps_id), _PS_SERVICE_PORT
         )
 
-    def get_embedding_service_pod_name(self, embedding_service_id):
-        return "elasticdl-%s-embedding-service-%s" % (
-            self.job_name,
-            str(embedding_service_id),
-        )
-
     def patch_labels_to_pod(self, pod_name, labels_dict):
         body = {"metadata": {"labels": labels_dict}}
         try:
@@ -166,42 +160,22 @@ class Client(object):
             return None
 
     def get_master_pod(self):
-        try:
-            return self.client.read_namespaced_pod(
-                name=self.get_master_pod_name(), namespace=self.namespace
-            )
-        except client.api_client.ApiException as e:
-            logger.warning("Exception when reading master pod: %s\n" % e)
-            return None
+        return self.get_pod(self.get_master_pod_name())
 
     def get_worker_pod(self, worker_id):
-        try:
-            return self.client.read_namespaced_pod(
-                name=self.get_worker_pod_name(worker_id),
-                namespace=self.namespace,
-            )
-        except client.api_client.ApiException as e:
-            logger.warning("Exception when reading worker pod: %s\n" % e)
-            return None
+        return self.get_pod(self.get_worker_pod_name(worker_id))
 
     def get_ps_pod(self, ps_id):
-        try:
-            return self.client.read_namespaced_pod(
-                name=self.get_ps_pod_name(ps_id), namespace=self.namespace
-            )
-        except client.api_client.ApiException as e:
-            logger.warning("Exception when reading ps pod: %s\n" % e)
-            return None
+        return self.get_pod(self.get_ps_pod_name(ps_id))
 
-    def get_embedding_service_pod(self, embedding_service_id):
+    def get_pod(self, pod_name):
         try:
             return self.client.read_namespaced_pod(
-                name=self.get_embedding_service_pod_name(embedding_service_id),
-                namespace=self.namespace,
+                namespace=self.namespace, name=pod_name
             )
         except client.api_client.ApiException as e:
             logger.warning(
-                "Exception when reading embedding service pod: %s\n" % e
+                "Exception when reading pod %s: %s\n" % (pod_name, e)
             )
             return None
 
@@ -370,12 +344,6 @@ class Client(object):
             pod_name, "worker", kargs["worker_id"], **kargs
         )
 
-    def create_embedding_service(self, **kargs):
-        pod_name = self.get_embedding_service_pod_name(kargs["worker_id"])
-        return self._create_ps_worker_pod(
-            pod_name, "embedding_service", kargs["worker_id"], **kargs
-        )
-
     def create_ps(self, **kargs):
         pod_name = self.get_ps_pod_name(kargs["ps_id"])
         return self._create_ps_worker_pod(
@@ -384,29 +352,17 @@ class Client(object):
 
     def delete_master(self):
         logger.info("pod name is %s" % self.get_master_pod_name())
-        self.client.delete_namespaced_pod(
-            self.get_master_pod_name(),
-            self.namespace,
-            body=client.V1DeleteOptions(grace_period_seconds=0),
-        )
+        self.delete_pod(self.get_master_pod_name())
 
     def delete_worker(self, worker_id):
-        self.client.delete_namespaced_pod(
-            self.get_worker_pod_name(worker_id),
-            self.namespace,
-            body=client.V1DeleteOptions(grace_period_seconds=0),
-        )
-
-    def delete_embedding_service(self, embedding_service_id):
-        self.client.delete_namespaced_pod(
-            self.get_embedding_service_pod_name(embedding_service_id),
-            self.namespace,
-            body=client.V1DeleteOptions(grace_period_seconds=0),
-        )
+        self.delete_pod(self.get_worker_pod_name(worker_id))
 
     def delete_ps(self, ps_id):
+        self.delete_pod(self.get_ps_pod_name(ps_id))
+
+    def delete_pod(self, pod_name):
         self.client.delete_namespaced_pod(
-            self.get_ps_pod_name(ps_id),
+            pod_name,
             self.namespace,
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )
@@ -493,3 +449,23 @@ class Client(object):
            current job.
         """
         return {"app": ELASTICDL_APP_NAME, ELASTICDL_JOB_KEY: self.job_name}
+
+    def get_master_log(self):
+        return self.get_pod_log(self.get_master_pod_name())
+
+    def get_worker_log(self, worker_id):
+        return self.get_pod_log(self.get_worker_pod_name(worker_id))
+
+    def get_ps_log(self, ps_id):
+        return self.get_pod_log(self.get_ps_pod_name(ps_id))
+
+    def get_pod_log(self, pod_name):
+        try:
+            return self.client.read_namespaced_pod_log(
+                namespace=self.namespace, name=pod_name
+            )
+        except client.api_client.ApiException as e:
+            logger.warning(
+                "Exception when reading log of pod %s: %s\n" % (pod_name, e)
+            )
+            return None
