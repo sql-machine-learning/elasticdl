@@ -8,9 +8,9 @@ import (
 	"testing"
 )
 
-func TestCheckPoint(t *testing.T) {
+func TestCheckpoint(t *testing.T) {
 	tmpDir := os.TempDir()
-	tmpDir = path.Join(tmpDir, "TestCheckPoint")
+	tmpDir = path.Join(tmpDir, "TestCheckpoint")
 	var bucketNum int = 2
 
 	model1 := NewModel()
@@ -33,14 +33,14 @@ func TestCheckPoint(t *testing.T) {
 	model2.EmbeddingTables["e1"] = common.NewEmbeddingTable(2, "zero", common.Float32)
 	model2.EmbeddingTables["e1"].SetEmbeddingVectors(is2)
 
-	SaveModelToCheckPoint(tmpDir, model1, 0, bucketNum)
-	SaveModelToCheckPoint(tmpDir, model2, 1, bucketNum)
+	SaveModelToCheckpoint(tmpDir, model1, 0, bucketNum)
+	SaveModelToCheckpoint(tmpDir, model2, 1, bucketNum)
 
-	modelRes1, err1 := LoadModelFromCheckPoint(tmpDir, 0, 3)
+	modelRes1, err1 := LoadModelFromCheckpoint(tmpDir, 0, 3)
 	assert.Nil(t, err1)
-	modelRes2, err2 := LoadModelFromCheckPoint(tmpDir, 1, 3)
+	modelRes2, err2 := LoadModelFromCheckpoint(tmpDir, 1, 3)
 	assert.Nil(t, err2)
-	modelRes3, err3 := LoadModelFromCheckPoint(tmpDir, 2, 3)
+	modelRes3, err3 := LoadModelFromCheckpoint(tmpDir, 2, 3)
 	assert.Nil(t, err3)
 
 	assert.Contains(t, modelRes1.EmbeddingTables["e1"].EmbeddingVectors, int64(0))

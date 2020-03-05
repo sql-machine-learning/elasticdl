@@ -1,21 +1,27 @@
 package ps
 
 import (
+	"crypto/sha256"
 	"elasticdl.org/elasticdl/common"
 	"elasticdl.org/elasticdl/proto"
+	"encoding/hex"
 	"fmt"
 	go_pb "github.com/golang/protobuf/proto"
-	"hash/fnv"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path"
 )
 
 // StringToID maps a string to an id
 func StringToID(name string, bucketNum int) int {
-	h := fnv.New32a()
-	h.Write([]byte(name))
-	return int(h.Sum32()) % bucketNum
+	input := []byte(name)
+	sha256Bytes := sha256.Sum256(input)
+	hexString := hex.EncodeToString(sha256Bytes[:])
+	n := new(big.Int)
+	res, _ := n.SetString(hexString, 32)
+	bucketNumBig := new(big.Int).SetUint64(uint64(bucketNum))
+	return int(res.Mod(res, bucketNumBig).Uint64())
 }
 
 // IntToID maps an int to an id
@@ -74,9 +80,9 @@ func loadModelShardFromPB(pb *proto.Model, shardID int, shardNum int) (map[strin
 	return denseParams, embeddingParams
 }
 
-// LoadModelFromCheckPoint loads model from checkpoint directory
-func LoadModelFromCheckPoint(checkPointDir string, shardID int, shardNum int) (*Model, error) {
-	files, err1 := ioutil.ReadDir(checkPointDir)
+// LoadModelFromCheckpoint loads model from checkpoint directory
+func LoadModelFromCheckpoint(checkpointDir string, shardID int, shardNum int) (*Model, error) {
+	files, err1 := ioutil.ReadDir(checkpointDir)
 	if err1 != nil {
 		return nil, err1
 	}
@@ -84,7 +90,7 @@ func LoadModelFromCheckPoint(checkPointDir string, shardID int, shardNum int) (*
 	model := NewModel()
 	embeddingParams := make(map[string]*common.IndexedSlices)
 	for _, file := range files {
-		pb, err2 := loadPBFromFile(path.Join(checkPointDir, file.Name()))
+		pb, err2 := loadPBFromFile(path.Join(checkpointDir, file.Name()))
 		if err2 != nil {
 			return nil, err2
 		}
@@ -112,10 +118,10 @@ func LoadModelFromCheckPoint(checkPointDir string, shardID int, shardNum int) (*
 	return model, nil
 }
 
-// SaveModelToCheckPoint saves in-memory model to checkpoint
-func SaveModelToCheckPoint(checkPointDir string, model *Model, shardID int, shardNum int) {
-	os.MkdirAll(checkPointDir, os.ModePerm)
+// SaveModelToCheckpoint saves in-memory model to checkpoint
+func SaveModelToCheckpoint(checkpointDir string, model *Model, shardID int, shardNum int) {
+	os.MkdirAll(checkpointDir, os.ModePerm)
 	file := fmt.Sprintf("variables-%d-of-%d.ckpt", shardID, shardNum)
 	modelPB := model.SaveToModelPB()
-	savePBToFile(modelPB, path.Join(checkPointDir, file))
+	savePBToFile(modelPB, path.Join(checkpointDir, file))
 }
