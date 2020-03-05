@@ -468,7 +468,9 @@ class Worker(object):
 
         embedding_name_values = []
         for layer in self._embedding_layers:
-            embedding_name_values.append((layer.name, layer.embedding_and_ids))
+            embedding_name_values.append(
+                (layer.embedding_weight_name, layer.embedding_and_ids)
+            )
         for column in self._embedding_columns:
             embedding_name_values.append(
                 (column.name, column.embedding_and_ids)
