@@ -74,8 +74,16 @@ class CollectiveCommunicator(object):
     def barrier(self):
         return CollectiveCommunicatorStatus.SUCCEEDED
 
-    def has_new_worker_joining(self):
-        return True
+    def is_initialized(self):
+        """This will be `False` under three occasions:
+           * New workers report joining in
+           * Collective-communication operations fail or time out
+           * Liveness probe fails for existing workers
+        """
+        if self._ftlib is not None:
+            return self._ftlib.initialized
+        else:
+            return True
 
     def _get_peer_set(self, svc_name):
         if svc_name is None:

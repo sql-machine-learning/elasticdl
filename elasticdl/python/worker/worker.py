@@ -1,5 +1,6 @@
 import os
 import socket
+import time
 import traceback
 
 import numpy as np
@@ -50,6 +51,9 @@ DEFAULT_MAX_MINIBATCH_RETRY_NUM = 64
 # The default maximum number of retries for allreduce operation
 # if allreduce-based distributed training strategy is used.
 DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
+# The default timeout in seconds allowed for reinitializing the
+# collective communicator.
+DEFAULT_COMMUNICATOR_REINITIALIZING_TIMEOUT = 20
 
 
 class Worker(object):
@@ -786,18 +790,27 @@ class Worker(object):
     def _collect_gradients_with_allreduce_robust(self, grads):
         accepted = self._calculate_grads_and_report_with_allreduce(grads)
         if not accepted:
-            if self._collective_communicator.has_new_worker_joining():
-                succeeded = self._broadcast_model_params()
-                if succeeded:
-                    return self._calculate_grads_and_report_with_allreduce(
-                        grads
+            start_time = time.time()
+            while not self._collective_communicator.is_initialized():
+                if (
+                    time.time() - start_time
+                    < DEFAULT_COMMUNICATOR_REINITIALIZING_TIMEOUT
+                ):
+                    self.logger.info(
+                        "(Re-)initializing the collective communicator..."
                     )
+                    time.sleep(3)
                 else:
+                    self.logger.warning(
+                        "Failed to (re-)initializing the "
+                        "collective communicator"
+                    )
                     return False
+            succeeded = self._broadcast_model_params()
+            if succeeded:
+                return self._calculate_grads_and_report_with_allreduce(grads)
             else:
-                self.logger.warning(
-                    "No new worker joining. Broadcast operation skipped"
-                )
+                self.logger.warning("Failed to broadcast model parameters")
                 return False
         else:
             return True

@@ -69,11 +69,6 @@ class WorkerAllReduceStrategyTest(unittest.TestCase):
                 False,
                 "Should fail when no data is received",
             )
-            self.assertEqual(
-                worker._collect_gradients_with_allreduce_robust(None),
-                False,
-                "Should fail when no data is received and no retry is allowed",
-            )
 
 
 if __name__ == "__main__":
