@@ -67,6 +67,7 @@ class Worker(object):
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
         max_allreduce_retry_num=DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
         set_parallelism=False,
+        collective_communicator_service_name="",
     ):
         """
         Arguments:
@@ -77,6 +78,8 @@ class Worker(object):
             max_allreduce_retry_num: The maximum number of retries for
                 allreduce operation if allreduce-based distributed
                 training strategy is used.
+            collective_communicator_service_name: The name of the collective
+                communicator k8s service for allreduce-based training.
         """
         self._args = args
         self.logger = get_logger("Worker", level=args.log_level.upper())
@@ -121,6 +124,9 @@ class Worker(object):
         self._max_allreduce_retry_num = max_allreduce_retry_num
         self._init_from_args(args)
         self._timing = Timing(args.log_level.upper() == "DEBUG", self.logger)
+        self._collective_communicator_service_name = (
+            collective_communicator_service_name
+        )
 
     def _init_from_args(self, args):
         """
@@ -153,7 +159,9 @@ class Worker(object):
         )
 
         self._collective_communicator = (
-            CollectiveCommunicator()
+            CollectiveCommunicator(
+                service_name=self._collective_communicator_service_name
+            )
             if self._distribution_strategy == DistributionStrategy.ALLREDUCE
             else None
         )

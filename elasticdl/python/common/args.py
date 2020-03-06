@@ -688,6 +688,13 @@ def parse_worker_args(worker_args=None):
         type=str,
         help="Addresses of parameter service pods, separated by comma",
     )
+    parser.add_argument(
+        "--collective_communicator_service_name",
+        default="",
+        type=str,
+        help="The name of the collective communicator k8s service for "
+        "allreduce-based training",
+    )
 
     if worker_args:
         worker_args = list(map(str, worker_args))

@@ -404,12 +404,12 @@ class Client(object):
             owner=self.get_master_pod(),
         )
 
-    def get_ftlib_consensus_service_name(self):
+    def get_collective_communicator_service_name(self):
         return self.job_name + "ftlib-consensus"
 
     def create_ftlib_consensus_service(self):
         return self._create_service(
-            name=self.get_ftlib_consensus_service_name(),
+            name=self.get_collective_communicator_service_name(),
             port=_FTLIB_GOSSIP_CONTAINER_PORT,
             target_port=_FTLIB_GOSSIP_CONTAINER_PORT,
             replica_type="master",
