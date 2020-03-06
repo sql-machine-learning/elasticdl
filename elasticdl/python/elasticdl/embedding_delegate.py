@@ -215,7 +215,6 @@ class EmbeddingDelegate(object):
             is_row_empty,
             array_ops.zeros_like(batch_embedding),
             batch_embedding,
-            name=self.name,
         )
         batch_embedding.set_shape((None, self.output_dim))
         return batch_embedding

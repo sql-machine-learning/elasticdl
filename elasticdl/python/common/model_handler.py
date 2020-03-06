@@ -23,10 +23,7 @@ def _get_trained_params_from_checkpoint(checkpoint_dir):
 
     trained_params = parameters.non_embedding_params
     for name, table in parameters.embedding_params.items():
-        # The name of variable in a tf.keras.layers.Embedding layer is
-        # "{layer_name}/embeddings:0"
-        var_name = name + "/embeddings:0"
-        trained_params[var_name] = table
+        trained_params[name] = table
     return trained_params
 
 
@@ -291,6 +288,9 @@ class ParameterServerModelHandler(ModelHandler):
                         name=layer.name,
                         combiner=layer.combiner,
                     )
+                embedding_layer.set_embedding_weight_name(
+                    layer.trainable_weights[0].name
+                )
                 return embedding_layer
             elif type(layer) == tf.keras.layers.DenseFeatures:
                 return _replace_tf_embedding_column_with_edl(layer)
@@ -361,6 +361,13 @@ class ParameterServerModelHandler(ModelHandler):
                     embeddings_initializer=initializer_name,
                     mask_zero=value.mask_zero,
                     input_length=value.input_length,
+                    name=value.name,
+                )
+                # The weights of subclass model is None, so we need to create
+                # the weight name which is "{layer_name}/embeddings:0" in
+                # tf.keras.layers.Embedding.
+                embedding_layer.set_embedding_weight_name(
+                    value.name + "/embeddings:0"
                 )
                 setattr(model, name, embedding_layer)
             elif type(value) == SparseEmbedding and _need_partition_embedding(
@@ -375,6 +382,10 @@ class ParameterServerModelHandler(ModelHandler):
                     input_dim=value.input_dim,
                     embeddings_initializer=initializer_name,
                     combiner=value.combiner,
+                    name=value.name,
+                )
+                embedding_layer.set_embedding_weight_name(
+                    value.name + "/embeddings:0"
                 )
                 setattr(model, name, embedding_layer)
             elif type(value) == tf.keras.layers.DenseFeatures:
