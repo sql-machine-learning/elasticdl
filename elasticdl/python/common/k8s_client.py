@@ -362,7 +362,7 @@ class Client(object):
             pod_name,
             "worker",
             kargs["worker_id"],
-            expose_ports=kargs["expose_ports"],
+            kargs["expose_ports"],
             **kargs
         )
 
