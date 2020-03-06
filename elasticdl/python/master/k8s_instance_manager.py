@@ -29,6 +29,7 @@ class InstanceManager(object):
         image_pull_policy=None,
         restart_policy="Never",
         envs=None,
+        expose_ports=False,
         **kwargs
     ):
         self._num_workers = num_workers
@@ -37,6 +38,7 @@ class InstanceManager(object):
         self._worker_resource_request = worker_resource_request
         self._worker_resource_limit = worker_resource_limit
         self._worker_pod_priority = worker_pod_priority
+        self._expose_ports = expose_ports
 
         self._num_ps = num_ps
         self._ps_command = ps_command
@@ -85,7 +87,7 @@ class InstanceManager(object):
             self._num_workers, self._k8s_client.get_worker_service_address
         )
 
-    def _start_worker(self, worker_id, expose_ports):
+    def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
         with self._lock:
             pod = self._k8s_client.create_worker(
@@ -102,7 +104,7 @@ class InstanceManager(object):
                 restart_policy=self._restart_policy,
                 ps_addrs=self._ps_addrs,
                 envs=copy.deepcopy(self._envs),
-                expose_ports=expose_ports,
+                expose_ports=self._expose_ports,
             )
             name = pod.metadata.name
             self._worker_pod_name_to_id[name] = worker_id
@@ -123,6 +125,7 @@ class InstanceManager(object):
                 args=self._ps_args + ["--ps_id", str(ps_id)],
                 restart_policy=self._restart_policy,
                 envs=copy.deepcopy(self._envs),
+                expose_ports=False,
             )
             name = pod.metadata.name
             self._ps_pod_name_to_id[name] = ps_id
@@ -158,9 +161,9 @@ class InstanceManager(object):
             master_name, labels_dict={"status": status}
         )
 
-    def start_workers(self, expose_ports):
+    def start_workers(self):
         for _ in range(self._num_workers):
-            self._start_worker(self._next_worker_id(), expose_ports)
+            self._start_worker(self._next_worker_id())
 
     def start_ftlib_consensus_service(self):
         self._k8s_client.create_ftlib_consensus_service()

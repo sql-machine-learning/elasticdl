@@ -27,7 +27,7 @@ class InstanceManagerTest(unittest.TestCase):
             num_workers=3,
         )
 
-        instance_manager.start_workers(expose_ports=False)
+        instance_manager.start_workers()
         max_check_num = 20
         for _ in range(max_check_num):
             time.sleep(3)
@@ -67,7 +67,7 @@ class InstanceManagerTest(unittest.TestCase):
             num_workers=3,
             restart_policy="Never",
         )
-        instance_manager.start_workers(expose_ports=False)
+        instance_manager.start_workers()
         max_check_num = 20
         for _ in range(max_check_num):
             time.sleep(3)
@@ -103,7 +103,7 @@ class InstanceManagerTest(unittest.TestCase):
             num_workers=num_workers,
         )
 
-        instance_manager.start_workers(expose_ports=False)
+        instance_manager.start_workers()
 
         max_check_num = 60
         for _ in range(max_check_num):

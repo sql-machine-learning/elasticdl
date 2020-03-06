@@ -326,9 +326,7 @@ class Client(object):
         pod.kind = "Pod"
         return pod
 
-    def _create_ps_worker_pod(
-        self, pod_name, type_key, index_key, expose_ports, **kargs
-    ):
+    def _create_ps_worker_pod(self, pod_name, type_key, index_key, **kargs):
         # Find that master pod that will be used as the owner reference
         # for the ps or worker pod.
         master_pod = self.get_master_pod()
@@ -349,7 +347,7 @@ class Client(object):
             owner_pod=master_pod,
             ps_addrs=kargs.get("ps_addrs", ""),
             env=env,
-            expose_ports=expose_ports,
+            expose_ports=kargs["expose_ports"],
         )
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = type_key
@@ -359,17 +357,13 @@ class Client(object):
     def create_worker(self, **kargs):
         pod_name = self.get_worker_pod_name(kargs["worker_id"])
         return self._create_ps_worker_pod(
-            pod_name,
-            "worker",
-            kargs["worker_id"],
-            kargs["expose_ports"],
-            **kargs
+            pod_name, "worker", kargs["worker_id"], **kargs
         )
 
     def create_ps(self, **kargs):
         pod_name = self.get_ps_pod_name(kargs["ps_id"])
         return self._create_ps_worker_pod(
-            pod_name, "ps", kargs["ps_id"], expose_ports=False, **kargs
+            pod_name, "ps", kargs["ps_id"], **kargs
         )
 
     def delete_master(self):

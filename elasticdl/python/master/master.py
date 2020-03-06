@@ -200,9 +200,7 @@ class Master(object):
         if self.instance_manager:
             self.instance_manager.update_status(InstanceManagerStatus.PENDING)
             self.instance_manager.start_parameter_servers()
-            self.instance_manager.start_workers(
-                self.distribution_strategy == DistributionStrategy.ALLREDUCE
-            )
+            self.instance_manager.start_workers()
             self.instance_manager.update_status(InstanceManagerStatus.RUNNING)
 
         # Exposes the consensus service for allreduce-based training
@@ -479,6 +477,8 @@ class Master(object):
                 restart_policy=args.restart_policy,
                 cluster_spec=args.cluster_spec,
                 envs=env,
+                expose_ports=self.distribution_strategy
+                == DistributionStrategy.ALLREDUCE,
             )
 
         return instance_manager
