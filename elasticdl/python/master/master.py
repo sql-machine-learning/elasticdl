@@ -13,6 +13,7 @@ from elasticdl.python.common.args import (
 )
 from elasticdl.python.common.constants import (
     GRPC,
+    DistributionStrategy,
     InstanceManagerStatus,
     JobType,
 )
@@ -79,6 +80,7 @@ class Master(object):
 
         self.num_ps_pods = args.num_ps_pods
         self.checkpoint_output_path = args.checkpoint_dir
+        self.distribution_strategy = args.distribution_strategy
 
         # Master addr
         master_ip = os.getenv("MY_POD_IP", "localhost")
@@ -200,6 +202,10 @@ class Master(object):
             self.instance_manager.start_parameter_servers()
             self.instance_manager.start_workers()
             self.instance_manager.update_status(InstanceManagerStatus.RUNNING)
+
+        # Exposes the consensus service for allreduce-based training
+        if self.distribution_strategy == DistributionStrategy.ALLREDUCE:
+            self.instance_manager.start_ftlib_consensus_service()
 
         # Start TensorBoard k8s Service if requested
         if self.tb_service and self.tb_client:
@@ -471,6 +477,8 @@ class Master(object):
                 restart_policy=args.restart_policy,
                 cluster_spec=args.cluster_spec,
                 envs=env,
+                expose_ports=self.distribution_strategy
+                == DistributionStrategy.ALLREDUCE,
             )
 
         return instance_manager

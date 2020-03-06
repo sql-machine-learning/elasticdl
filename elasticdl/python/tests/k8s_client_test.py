@@ -71,6 +71,7 @@ class K8sClientTest(unittest.TestCase):
                 volume=None,
                 image_pull_policy="Never",
                 restart_policy="Never",
+                expose_ports=False,
             )
             time.sleep(5)
 
@@ -122,6 +123,7 @@ class K8sClientTest(unittest.TestCase):
                 volume=None,
                 image_pull_policy="Never",
                 restart_policy="Never",
+                expose_ports=False,
             )
             time.sleep(5)
 
@@ -191,6 +193,7 @@ class K8sClientTest(unittest.TestCase):
             volume=None,
             image_pull_policy="Never",
             restart_policy="Never",
+            expose_ports=False,
         )
 
         label_k = "status"
