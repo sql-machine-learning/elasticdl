@@ -141,7 +141,7 @@ class EmbeddingColumn(
             dense_feature_layer_name, self.name,
         )
 
-        self._embedding_delegate.set_name = embedding_variable_name
+        self._embedding_delegate.set_name(embedding_variable_name)
 
     def get_dense_tensor(self, transformation_cache, state_manager):
         if isinstance(
