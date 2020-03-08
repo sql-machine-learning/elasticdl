@@ -86,6 +86,57 @@ func (opt *SGDOptimizer) InitOptimizer(pb *proto.Model) error {
 	return nil
 }
 
+// MomentumOptimizer struct
+type MomentumOptimizer struct {
+	BaseOptimizer
+	mu       float32
+	nesterov bool
+	v        *Model
+}
+
+// GetLR returns learning rate
+func (opt *MomentumOptimizer) GetLR() float32 {
+	return opt.lr
+}
+
+// NewMomentumOptimizer creates a Momentum optimizer instance
+func NewMomentumOptimizer(lr float32, mu float32, nesterov bool) *MomentumOptimizer {
+	var opt = MomentumOptimizer{
+		BaseOptimizer: BaseOptimizer{
+			lr: lr,
+		},
+		mu:       mu,
+		nesterov: nesterov,
+		v:        NewModel(),
+	}
+	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string) error {
+		v := opt.v.GetDenseParameter(name)
+		return kernel.Momentum(grad, param, v, opt.mu, opt.nesterov, opt.GetLR())
+	}
+	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string) error {
+		v := opt.v.GetEmbeddingTable(name)
+		return kernel.SparseMomentum(grad, param, v, opt.mu, opt.nesterov, opt.GetLR())
+	}
+	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string) error {
+		v := opt.v.GetDenseParameter(name)
+		return kernel.IndexedMomentum(grad, param, v, opt.mu, opt.nesterov, opt.GetLR())
+	}
+	return &opt
+}
+
+// InitOptimizer set v non-embedding of MomentumOptimizer
+func (opt *MomentumOptimizer) InitOptimizer(pb *proto.Model) error {
+	for name, tensor := range pb.DenseParameters {
+		dims := common.GetDimFromTensorProto(tensor)
+		dtype := tensor.Dtype
+		opt.v.DenseParameters[name] = common.NewEmptyTensor(dims, dtype)
+	}
+	for _, info := range pb.EmbeddingTableInfos {
+		opt.v.SetEmbeddingTableInfo(info)
+	}
+	return nil
+}
+
 // AdamOptimizer struct
 type AdamOptimizer struct {
 	BaseOptimizer
@@ -240,14 +291,10 @@ func NewOptimizer(optType string, optArgs string) (Optimizer, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		if momentum > float64(0.0) {
-			return nil, fmt.Errorf("SGD optimizer with momentum has not been implemented")
+			return NewMomentumOptimizer(lr, float32(momentum), nesterov), nil
 		}
-		if !nesterov {
-			return NewSGDOptimizer(lr), nil
-		}
-		return nil, fmt.Errorf("SGD optimizer with nesterov=true has not been implemented")
+		return NewSGDOptimizer(lr), nil
 	} else if optType == optTypeAdam {
 		var (
 			beta1   float64

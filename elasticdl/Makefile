@@ -23,4 +23,3 @@ kernel:
 
 clean:
 	rm -rf ${CAPI_DIR}/*.o ${CAPI_DIR}/*.a
-	rm -rf ${CAPI_DIR_new}/*.o ${CAPI_DIR_new}/*.a
