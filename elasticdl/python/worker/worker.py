@@ -477,7 +477,7 @@ class Worker(object):
             )
         for column in self._embedding_columns:
             embedding_name_values.append(
-                (column.name, column.embedding_and_ids)
+                (column.embedding_weight_name, column.embedding_and_ids)
             )
 
         return embedding_name_values

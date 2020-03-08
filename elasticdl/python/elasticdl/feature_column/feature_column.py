@@ -97,18 +97,8 @@ class EmbeddingColumn(
     ),
 ):
     def __init__(self, **kwargs):
-        default_num_buckets = (
-            self.categorical_column.num_buckets
-            if self._is_v2_column
-            else self.categorical_column._num_buckets
-        )  # pylint: disable=protected-access
-        num_buckets = getattr(
-            self.categorical_column, "num_buckets", default_num_buckets
-        )
-
-        self._embedding_delegate = EmbeddingDelegate(
-            input_dim=num_buckets, output_dim=self.dimension, name=self.name
-        )
+        self._embedding_delegate = None
+        self._lookup_embedding_func = None
 
     @property
     def _is_v2_column(self):
@@ -131,6 +121,34 @@ class EmbeddingColumn(
     def variable_shape(self):
         """See `DenseColumn` base class."""
         return tensor_shape.TensorShape([self.dimension])
+
+    def create_state(self, state_manager):
+        # Get the input dimension of the embedding variable
+        default_num_buckets = (
+            self.categorical_column.num_buckets
+            if self._is_v2_column
+            else self.categorical_column._num_buckets
+        )  # pylint: disable=protected-access
+        num_buckets = getattr(
+            self.categorical_column, "num_buckets", default_num_buckets
+        )
+
+        # Get the name of the embedding variable
+        EMBEDDING_VARIABLE_NAME_FORMAT = "{}/{}/embedding_weights:0"
+        dense_feature_layer_name = state_manager._layer.name
+        embedding_variable_name = EMBEDDING_VARIABLE_NAME_FORMAT.format(
+            dense_feature_layer_name, self.name,
+        )
+
+        self._embedding_delegate = EmbeddingDelegate(
+            input_dim=num_buckets,
+            output_dim=self.dimension,
+            name=embedding_variable_name,
+        )
+        if self._lookup_embedding_func:
+            self._embedding_delegate.set_lookup_embedding_func(
+                self._lookup_embedding_func
+            )
 
     def get_dense_tensor(self, transformation_cache, state_manager):
         if isinstance(
@@ -179,7 +197,7 @@ class EmbeddingColumn(
                 the name of embedding column, and `embedding_id_list` is a list
                 of embedding ids to be looked up.
         """
-        self._embedding_delegate.set_lookup_embedding_func(func)
+        self._lookup_embedding_func = func
 
     def reset(self):
         self._embedding_delegate.reset()
@@ -187,6 +205,10 @@ class EmbeddingColumn(
     @property
     def embedding_and_ids(self):
         return self._embedding_delegate.embedding_and_ids
+
+    @property
+    def embedding_weight_name(self):
+        return self._embedding_delegate.name
 
 
 def concat_column(categorical_columns):
