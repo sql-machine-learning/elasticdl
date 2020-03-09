@@ -135,10 +135,13 @@ class EmbeddingColumn(
 
     def create_state(self, state_manager):
         # Get the name of the embedding variable
-        EMBEDDING_VARIABLE_NAME_FORMAT = "{}/{}/embedding_weights:0"
-        dense_feature_layer_name = state_manager._layer.name
+        EMBEDDING_VARIABLE_NAME_FORMAT = (
+            "{dense_features_layer_name}/{column_name}/embedding_weights:0"
+        )
+        dense_features_layer_name = state_manager._layer.name
         embedding_variable_name = EMBEDDING_VARIABLE_NAME_FORMAT.format(
-            dense_feature_layer_name, self.name,
+            dense_features_layer_name=dense_features_layer_name,
+            column_name=self.name,
         )
 
         self._embedding_delegate.set_name(embedding_variable_name)
