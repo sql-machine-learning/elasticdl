@@ -53,7 +53,6 @@ class Embedding(tf.keras.layers.Layer):
         self.combiner = combiner
         self.tape = None
         self._lookup_embedding_func = None
-        self.embedding_weight_name = self.name + "/embeddings:0"
 
         self._embedding_and_ids_eagerly = []
 
@@ -63,7 +62,7 @@ class Embedding(tf.keras.layers.Layer):
         # `tf.Variable` requires initial value if shape has `None` dimension.
         self._embedding_and_ids_graph = []
         self.embedding_delegate = EmbeddingDelegate(
-            self.input_dim, self.output_dim, self.embedding_weight_name
+            self.input_dim, self.output_dim
         )
 
     @tf_utils.shape_type_conversion
@@ -103,6 +102,10 @@ class Embedding(tf.keras.layers.Layer):
     @staticmethod
     def get_key(name_list):
         return "-".join(map(str, name_list))
+
+    def build(self, input_shape):
+        embedding_variable_name = self.name + "/embeddings:0"
+        self.embedding_delegate.set_name(embedding_variable_name)
 
     def call(self, input):
         input = tf.cast(input, tf.int64)
@@ -148,5 +151,6 @@ class Embedding(tf.keras.layers.Layer):
     def embedding_and_ids(self):
         return self.embedding_delegate.embedding_and_ids
 
-    def set_embedding_weight_name(self, name):
-        self.embedding_weight_name = name
+    @property
+    def embedding_weight_name(self):
+        return self.embedding_delegate.get_name()
