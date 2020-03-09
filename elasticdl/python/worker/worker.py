@@ -153,7 +153,9 @@ class Worker(object):
         )
 
         self._collective_communicator = (
-            CollectiveCommunicator()
+            CollectiveCommunicator(
+                service_name=args.collective_communicator_service_name
+            )
             if self._distribution_strategy == DistributionStrategy.ALLREDUCE
             else None
         )

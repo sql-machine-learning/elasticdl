@@ -1,6 +1,5 @@
 ARG BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
 # Use tensorflow/tensorflow:2.1.0-gpu-py3 if you want GPU-support.
-ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 
 # Multi-stage is used for dev/ci/release images
 # Better to build in DOCKER_BUILDKIT by setting env: DOCKER_BUILDKIT=1
@@ -13,6 +12,7 @@ ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 
 # Stage 1: dev
 FROM ${BASE_IMAGE} as dev
+ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 
 RUN apt update && \
     apt install -y unzip curl git software-properties-common g++ wget \
@@ -88,6 +88,7 @@ COPY model_zoo /model_zoo
 
 # Stage 3: release
 FROM ${BASE_IMAGE} as release
+ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 
 # Replace the Splash screen from TensorFlow image.
 COPY elasticdl/docker/bashrc /etc/bash.bashrc

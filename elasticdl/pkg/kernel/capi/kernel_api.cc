@@ -64,14 +64,14 @@ void Adam(float* grad,
 
   ev = beta2 * ev + (1.0 - beta2) * eg.square();
 
+  lr *= sqrt(1 - pow(beta2, step)) / (1 - pow(beta1, step));
+
   if (max_square != NULL) {
     Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> ems{
         max_square, static_cast<Eigen::Index>(size)};
     ems = ems.cwiseMax(ev);
-    ep -= lr * em / (1.0 - pow(beta1, step)) /
-          ((ems / (1.0 - pow(beta2, step))).sqrt() + epsilon);
+    ep -= lr * em / (ems.sqrt() + epsilon);
   } else {
-    ep -= lr * em / (1.0 - pow(beta1, step)) /
-          ((ev / (1.0 - pow(beta2, step))).sqrt() + epsilon);
+    ep -= lr * em / (ev.sqrt() + epsilon);
   }
 }

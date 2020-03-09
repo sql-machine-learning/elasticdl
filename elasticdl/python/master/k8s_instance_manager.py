@@ -86,6 +86,11 @@ class InstanceManager(object):
         self._worker_addrs = self._get_addrs(
             self._num_workers, self._k8s_client.get_worker_service_address
         )
+        if expose_ports:
+            self._worker_args += [
+                "--collective_communicator_service_name",
+                self._k8s_client.get_collective_communicator_service_name(),
+            ]
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
