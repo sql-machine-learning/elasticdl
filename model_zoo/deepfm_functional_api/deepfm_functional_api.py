@@ -140,8 +140,3 @@ CustomDataReader = RecordIODataReader
 
 def custom_data_reader(data_origin, records_per_task=None, **kwargs):
     return CustomDataReader(data_dir=data_origin)
-
-
-if __name__ == "__main__":
-    model = custom_model()
-    print(model.trainable_weights)
