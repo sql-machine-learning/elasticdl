@@ -12,6 +12,7 @@ from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.elasticdl.callbacks import (
     MaxStepsStopping,
     SavedModelExporter,
+    LearningRateScheduler,
 )
 from elasticdl.python.master.task_dispatcher import _Task
 from elasticdl.python.tests.test_utils import save_checkpoint_without_embedding
@@ -95,6 +96,68 @@ class MaxStepsStoppingTest(unittest.TestCase):
             )
             max_steps_stopping.on_task_end(task)
         self.assertTrue(max_steps_stopping.model.stop_training)
+
+
+class LearningRateSchedulerTest(unittest.TestCase):
+
+    def _schedule(self, model_version):
+        return 0.2 if model_version < 2 else 0.1
+
+    def test_learning_rate_scheduler(self):
+        learning_rate_scheduler = LearningRateScheduler(self._schedule)
+        model = tf.keras.Model()
+        model.optimizer = tf.optimizers.SGD(0.1)
+        learning_rate_scheduler.set_model(model)
+
+        learning_rate_scheduler.on_train_batch_begin(batch=1)
+        self.assertEqual(model.optimizer.lr.numpy(), np.float32(0.2))
+        learning_rate_scheduler.on_train_batch_begin(batch=2)
+        self.assertEqual(model.optimizer.lr.numpy(), np.float32(0.1))
+
+        model_versions = [0, 1, 2]
+        variables = []
+        grads = []
+        original_values = [1.2, 0.8]
+        grad_values = [0.2, 0.1]
+
+        for i in range(len(model_versions)):
+            variables.append([tf.Variable(v) for v in original_values])
+            grads.append([tf.convert_to_tensor(g) for g in grad_values])
+
+        results = []
+        for i in range(len(model_versions)):
+            result = self.apply_gradients_with_scheduler(
+                learning_rate_scheduler,
+                model.optimizer,
+                model_versions[i],
+                variables[i],
+                grads[i],
+            )
+            results.append(result)
+
+        place = 5
+        for i in range(0, len(model_versions)):
+            i_diff = [
+                original_values[j] - results[i][j]
+                for j in range(len(original_values))
+            ]
+            for j in range(len(original_values)):
+                # variable value change ratio equals the learning rate ratio
+                # for SGD without momentum
+                self.assertAlmostEqual(
+                    i_diff[j],
+                    grad_values[j] * self._schedule(model_versions[i]),
+                    place,
+                )
+
+    @staticmethod
+    def apply_gradients_with_scheduler(
+        lr_scheduler, opt, model_version, variables, grads
+    ):
+        lr_scheduler.on_train_batch_begin(model_version)
+        grads_and_vars = zip(grads, variables)
+        opt.apply_gradients(grads_and_vars)
+        return [v.numpy() for v in variables]
 
 
 if __name__ == "__main__":

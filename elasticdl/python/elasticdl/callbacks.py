@@ -1,7 +1,9 @@
 import os
 import shutil
 
+import numpy as np
 import tensorflow as tf
+from tensorflow.keras import backend as K
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import Mode
@@ -90,3 +92,45 @@ class MaxStepsStopping(tf.keras.callbacks.Callback):
             self._completed_steps += task_batch_count
             if self._completed_steps > self._max_steps:
                 self.model.stop_training = True
+
+
+class LearningRateScheduler(tf.keras.callbacks.Callback):
+    """Stop training if the training steps exceed the maximum.
+
+    Args:
+        schedule: A function that takes a batch index as input
+        (integer, indexed from 0) and returns a new learning rate
+        as output (float).
+
+    Example:
+    ```python
+    from elasticdl.python.elasticdl.callbacks import LearningRateScheduler
+
+    def callbacks():
+        # This callback will schedule the learning rate for each step.
+        def _schedule(batch):
+            return 0.002 if batch < 1000 else 0.001
+        learning_rate_scheduler = LearningRateScheduler(_schedule)
+        return [learning_rate_scheduler]
+    ```
+    """
+
+    def __init__(self, schedule):
+        self._schedule = schedule
+
+    def on_train_batch_begin(self, batch, logs=None):
+        """
+        Args:
+            batch: integer, the model version requested from PS.
+            logs: dict. Has keys batch and size representing the current batch
+                number and the size of the batch.
+        """
+        if not hasattr(self.model.optimizer, 'lr'):
+            raise ValueError('Optimizer must have a "lr" attribute.')
+
+        lr = self._schedule(batch)
+        if not isinstance(lr, (tf.Tensor, float, np.float32, np.float64)):
+            raise ValueError(
+                'The output of the "schedule" function should be float.'
+            )
+        K.set_value(self.model.optimizer.lr, K.get_value(lr))

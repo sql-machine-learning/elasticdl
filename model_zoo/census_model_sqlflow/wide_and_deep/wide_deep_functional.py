@@ -291,7 +291,9 @@ def eval_metrics_fn():
     }
 
 
-def learning_rate_scheduler(model_version):
+def callbacks():
+
+def learning_rate_s(model_version):
     if model_version < 5000:
         return 0.0003
     elif model_version < 12000:

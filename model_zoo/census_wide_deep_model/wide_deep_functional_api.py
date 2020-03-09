@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+from elasticdl.python.elasticdl.callbacks import LearningRateScheduler
 from model_zoo.census_wide_deep_model.feature_config import (
     CATEGORICAL_FEATURE_KEYS,
     FEATURE_GROUPS,
@@ -57,13 +58,15 @@ def eval_metrics_fn():
     }
 
 
-def learning_rate_scheduler(model_version):
-    if model_version < 5000:
-        return 0.0003
-    elif model_version < 12000:
-        return 0.0002
-    else:
-        return 0.0001
+def callbacks():
+    def _schedule(model_version):
+        if model_version < 5000:
+            return 0.0003
+        elif model_version < 12000:
+            return 0.0002
+        else:
+            return 0.0001
+    return [LearningRateScheduler(_schedule)]
 
 
 def dataset_fn(dataset, mode, _):

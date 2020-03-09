@@ -67,6 +67,7 @@ message Model {
   repeated EmbeddingTableInfo embedding_table_infos = 2;
   map<string, tensorflow.TensorProto> dense_parameters = 3;
   map<string, IndexedSlicesProto> embedding_tables = 4;
+  float learning_rate = 5;
 }
 
 message GetTaskRequest {
