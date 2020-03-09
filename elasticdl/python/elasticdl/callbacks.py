@@ -125,7 +125,7 @@ class LearningRateScheduler(tf.keras.callbacks.Callback):
             logs: dict. Has keys batch and size representing the current batch
                 number and the size of the batch.
         """
-        if not hasattr(self.model.optimizer, 'lr'):
+        if not hasattr(self.model.optimizer, "lr"):
             raise ValueError('Optimizer must have a "lr" attribute.')
 
         lr = self._schedule(batch)

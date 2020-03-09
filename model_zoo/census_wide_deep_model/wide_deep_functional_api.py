@@ -66,6 +66,7 @@ def callbacks():
             return 0.0002
         else:
             return 0.0001
+
     return [LearningRateScheduler(_schedule)]
 
 

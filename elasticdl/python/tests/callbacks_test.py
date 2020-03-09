@@ -10,9 +10,9 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import DistributionStrategy, JobType
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.elasticdl.callbacks import (
+    LearningRateScheduler,
     MaxStepsStopping,
     SavedModelExporter,
-    LearningRateScheduler,
 )
 from elasticdl.python.master.task_dispatcher import _Task
 from elasticdl.python.tests.test_utils import save_checkpoint_without_embedding
@@ -99,7 +99,6 @@ class MaxStepsStoppingTest(unittest.TestCase):
 
 
 class LearningRateSchedulerTest(unittest.TestCase):
-
     def _schedule(self, model_version):
         return 0.2 if model_version < 2 else 0.1
 

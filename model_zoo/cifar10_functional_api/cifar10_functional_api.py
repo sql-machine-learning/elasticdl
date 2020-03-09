@@ -5,10 +5,10 @@ import tensorflow as tf
 from elasticdl.python.common.constants import MaxComputeConfig, Mode
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.data.odps_io import ODPSWriter, is_odps_configured
+from elasticdl.python.elasticdl.callbacks import LearningRateScheduler
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
 )
-from elasticdl.python.elasticdl.callbacks import LearningRateScheduler
 
 
 def custom_model():
@@ -123,6 +123,7 @@ def callbacks():
             return 0.01
         else:
             return 0.001
+
     LearningRateScheduler(_schedule)
 
 
