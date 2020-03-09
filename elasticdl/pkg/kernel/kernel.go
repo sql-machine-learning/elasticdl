@@ -71,6 +71,9 @@ func SparseMomentum(grad *common.IndexedSlices, param *common.EmbeddingTable,
 // IndexedMomentum kernel
 func IndexedMomentum(grad *common.IndexedSlices, param *common.Tensor, velocity *common.Tensor,
 	mu float32, nesterov bool, lr float32) error {
+	if grad.ConcatTensors.Dims[1] != param.Dims[1] {
+		return fmt.Errorf("grad width is not equal to embedding dim")
+	}
 	for i, index := range grad.Ids {
 		vector := param.GetRow(index)
 		subGrad := grad.ConcatTensors.GetRow(int64(i))
