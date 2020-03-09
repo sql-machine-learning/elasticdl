@@ -51,9 +51,6 @@ class Embedding(tf.keras.layers.Layer):
         self.supports_masking = mask_zero
         self.input_length = input_length
         self.combiner = combiner
-        self.tape = None
-        self._lookup_embedding_func = None
-
         self._embedding_and_ids_eagerly = []
 
         # BET's shape and ids' shape in `self._embedding_and_ids_graph` have
@@ -153,4 +150,4 @@ class Embedding(tf.keras.layers.Layer):
 
     @property
     def embedding_weight_name(self):
-        return self.embedding_delegate.get_name()
+        return self.embedding_delegate.name

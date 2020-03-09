@@ -83,6 +83,7 @@ def create_embedding_layer(
         combiner=combiner,
         mask_zero=mask_zero,
     )
+    layer.build(input_shape=None)
     worker = mock_worker(embedding_size, output_dim)
     layer.set_lookup_embedding_func(worker.lookup_embedding)
     return layer
