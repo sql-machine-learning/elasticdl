@@ -173,9 +173,55 @@ func (opt *AdamOptimizer) InitOptimizer(pb *proto.Model) error {
 	return nil
 }
 
+// AdagradOptimizer struct
+type AdagradOptimizer struct {
+	BaseOptimizer
+	epsilon float32
+	m       *Model
+}
+
+// GetLR returns learning rate
+func (opt *AdagradOptimizer) GetLR() float32 {
+	return opt.lr
+}
+
+// NewAdagradOptimizer creates a SGD optimizer instance
+func NewAdagradOptimizer(lr float32, epsilon float32) *AdagradOptimizer {
+	var opt = AdagradOptimizer{
+		BaseOptimizer: BaseOptimizer{
+			lr: lr,
+			epsilon, epsilon,
+		},
+	}
+	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string) error {
+		return kernel.Adagrad(grad, param, opt.GetLR())
+	}
+	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string) error {
+		return kernel.SparseAdagrad(grad, param, opt.GetLR())
+	}
+	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string) error {
+		return kernel.IndexedAdagrad(grad, param, opt.GetLR())
+	}
+	return &opt
+}
+
+// InitOptimizer SGD Nothing to Init
+func (opt *AdagradOptimizer) InitOptimizer(pb *proto.Model) error {
+	for name, tensor := range pb.DenseParameters {
+		dims := common.GetDimFromTensorProto(tensor)
+		dtype := tensor.Dtype
+		opt.m.DenseParameters[name] = common.NewEmptyTensor(dims, dtype)
+	}
+	for _, info := range pb.EmbeddingTableInfos {
+		opt.m.SetEmbeddingTableInfo(info)
+	}
+	return nil
+}
+
 const (
 	optTypeSGD     = "SGD"
 	optTypeAdam    = "Adam"
+	optTypeAdagrad = "Adagrad"
 	optArgLR       = "learning_rate"
 	optArgMomentum = "momentum"
 	optArgNesterov = "nesterov"
@@ -272,6 +318,12 @@ func NewOptimizer(optType string, optArgs string) (Optimizer, error) {
 			return nil, err
 		}
 		return NewAdamOptimizer(lr, float32(beta1), float32(beta2), float32(epsilon), amsgrad), nil
+	} else if optType == optTypeAdagrad {
+		epsilon, err := strconv.ParseFloat(argsMap[optArgEpsilon], 32)
+		if err != nil {
+			return nil, err
+		}
+		return NewAdagradOptimizer(lr, float32(epsilon)), nil
 	} else {
 		return nil, fmt.Errorf("Unknown optimizer type %s", optType)
 	}
