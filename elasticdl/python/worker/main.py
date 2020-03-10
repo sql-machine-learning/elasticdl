@@ -36,7 +36,7 @@ def main():
                     ps_channels.append(channel)
                     connect_succeed = True
                     break
-                except concurrent.futures.TimeoutError:
+                except grpc.FutureTimeoutError:
                     logger.warning(
                         "Failed to connect pod %s with %d retry"
                         % (i, addr.split(".")[0])
