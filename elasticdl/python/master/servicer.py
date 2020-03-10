@@ -91,9 +91,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def report_evaluation_metrics(self, request, _):
         with self._lock:
             self._worker_liveness_time[request.worker_id] = time.time()
-            self._evaluation_service.report_evaluation_metrics(
-                request.model_outputs, request.labels
-            )
+        self._evaluation_service.report_evaluation_metrics(
+            request.model_outputs, request.labels
+        )
         return empty_pb2.Empty()
 
     def report_version(self, request, _):
