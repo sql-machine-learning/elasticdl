@@ -1,4 +1,5 @@
 import grpc
+import concurrent
 
 from elasticdl.python.common import log_utils
 from elasticdl.python.common.args import parse_worker_args
@@ -24,12 +25,27 @@ def main():
             channel = build_channel(addr)
 
             # Wait the channel is ready by a Future object.
-            grpc.channel_ready_future(channel).result()
-            logger.info(
-                "grpc channel %s to connect pod %s is ready"
-                % (addr, addr.split(".")[0])
-            )
-            ps_channels.append(channel)
+            connect_succeed = False
+            for i in range(3):
+                try:
+                    grpc.channel_ready_future(channel).result(timeout=60)
+                    logger.info(
+                        "grpc channel %s to connect pod %s is ready"
+                        % (addr, addr.split(".")[0])
+                    )
+                    ps_channels.append(channel)
+                    connect_succeed = True
+                    break
+                except concurrent.futures.TimeoutError:
+                    logger.warning(
+                        "Failed to connect pod %s with %d retry"
+                        % (i, addr.split(".")[0])
+                    )
+            if not connect_succeed:
+                raise TimeoutError(
+                    "Time out to connect pod %s with 3 retries"
+                    % addr.split(".")[0]
+                )
 
     worker = Worker(
         args,
