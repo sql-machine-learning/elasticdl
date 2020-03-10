@@ -1,5 +1,4 @@
 import grpc
-import concurrent
 
 from elasticdl.python.common import log_utils
 from elasticdl.python.common.args import parse_worker_args
