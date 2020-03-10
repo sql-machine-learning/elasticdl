@@ -112,7 +112,7 @@ func Adagrad(grad *common.Tensor, param *common.Tensor, m *common.Tensor, lr flo
 	paramPtr := (*C.float)(unsafe.Pointer(&param.Buffer[0]))
 	mPtr := (*C.float)(unsafe.Pointer(&m.Buffer[0]))
 	length := len(grad.Buffer) / int(common.DtypeSize[grad.Dtype])
-	C.Adagrad(gradPtr, paramPtr, mPtr, C.float(lr), C.longlong(length), C.float(epsilon), maxSquarePtr)
+	C.Adagrad(gradPtr, paramPtr, mPtr, C.float(lr), C.longlong(length), C.float(epsilon))
 	return nil
 }
 

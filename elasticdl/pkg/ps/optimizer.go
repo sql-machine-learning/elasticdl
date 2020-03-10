@@ -190,17 +190,22 @@ func NewAdagradOptimizer(lr float32, epsilon float32) *AdagradOptimizer {
 	var opt = AdagradOptimizer{
 		BaseOptimizer: BaseOptimizer{
 			lr: lr,
-			epsilon, epsilon,
 		},
+		epsilon: epsilon,
+		m:       NewModel(),
 	}
 	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string) error {
-		return kernel.Adagrad(grad, param, opt.GetLR())
+		m := opt.m.GetDenseParameter(name)
+		return kernel.Adagrad(grad, param, m, opt.GetLR(), opt.epsilon)
 	}
 	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string) error {
-		return kernel.SparseAdagrad(grad, param, opt.GetLR())
+		m := opt.m.GetEmbeddingTable(name)
+
+		return kernel.SparseAdagrad(grad, param, m, opt.GetLR(), opt.epsilon)
 	}
 	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string) error {
-		return kernel.IndexedAdagrad(grad, param, opt.GetLR())
+		m := opt.m.GetDenseParameter(name)
+		return kernel.IndexedAdagrad(grad, param, m, opt.GetLR(), opt.epsilon)
 	}
 	return &opt
 }
