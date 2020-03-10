@@ -36,7 +36,7 @@ func main() {
 	serverDone := make(chan bool)
 	ps.NewServer(*psID, *optType, *optArgs, *masterAddr, *evaluationSteps,
 		*checkpointDirForInit, *checkpointDir, *checkpointSteps,
-		*keepCheckpointMax, *numPsPods).Run(address, *numWorkers, serverDone)
+		*keepCheckpointMax, *numPsPods, *lrStalenessModulation).Run(address, *numWorkers, serverDone)
 	log.Println("PS service started at ", address)
 	for {
 		select {
