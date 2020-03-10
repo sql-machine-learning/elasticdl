@@ -246,10 +246,10 @@ func TestNewOptimizer(t *testing.T) {
 	opt, err := NewOptimizer(optType, optArgs)
 	assert.Nil(t, err)
 	assert.Equal(t, opt.GetLR(), float32(0.1))
+
 	optType = "Adam"
 	optArgs = "learning_rate=0.2;beta_1=0.5;beta_2=0.3;epsilon=0.005;amsgrad=false;"
 	opt, err = NewOptimizer(optType, optArgs)
-
 	assert.Nil(t, err)
 	adamOpt, ok := opt.(*AdamOptimizer)
 	assert.True(t, ok)
@@ -258,4 +258,13 @@ func TestNewOptimizer(t *testing.T) {
 	assert.Equal(t, adamOpt.beta2, float32(0.3))
 	assert.Equal(t, adamOpt.epsilon, float32(0.005))
 	assert.False(t, adamOpt.amsgrad)
+
+	optType = "Adagrad"
+	optArgs = "learning_rate=0.2;epsilon=0.005;"
+	opt, err = NewOptimizer(optType, optArgs)
+	assert.Nil(t, err)
+	adagradOpt, ok := opt.(*AdagradOptimizer)
+	assert.True(t, ok)
+	assert.Equal(t, adagradOpt.GetLR(), float32(0.2))
+	assert.Equal(t, adagradOpt.epsilon, float32(0.005))
 }

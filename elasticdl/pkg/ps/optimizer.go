@@ -237,8 +237,9 @@ const (
 )
 
 var optArgumentsMap = map[string][]string{
-	"SGD":  []string{optArgLR, optArgMomentum, optArgNesterov},
-	"Adam": []string{optArgLR, optArgBeta1, optArgBeta2, optArgEpsilon, optArgAmsgrad},
+	"SGD":     []string{optArgLR, optArgMomentum, optArgNesterov},
+	"Adam":    []string{optArgLR, optArgBeta1, optArgBeta2, optArgEpsilon, optArgAmsgrad},
+	"Adagrad": []string{optArgLR, optArgEpsilon},
 }
 
 // parseOptArgs parses optimizer arguments according to optimizer type
