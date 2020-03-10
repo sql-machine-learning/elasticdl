@@ -246,7 +246,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             )
 
     def _set_optimizer_learning_rate(self, learning_rate):
-        if learning_rate is None:
+        if learning_rate == 0.0:
             return
 
         if self._use_wrap_opt:

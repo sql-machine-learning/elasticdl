@@ -12,7 +12,7 @@ from elasticdl.python.ps.embedding_table import (
     create_embedding_table,
     get_slot_table_name,
 )
-from elasticdl.python.common.log_utils import default_logger as logger
+
 
 class Parameters(object):
     """

@@ -95,7 +95,8 @@ class MaxStepsStopping(tf.keras.callbacks.Callback):
 
 
 class LearningRateScheduler(tf.keras.callbacks.Callback):
-    """Stop training if the training steps exceed the maximum.
+    """Learning rate scheduler schedule the learning rate according
+    to the iteration steps.
 
     Args:
         schedule: A function that takes a batch index as input
