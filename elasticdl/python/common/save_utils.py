@@ -1,6 +1,7 @@
 import contextlib
 import os
 import tempfile
+import shutil
 
 import tensorflow as tf
 
@@ -155,12 +156,15 @@ class CheckpointSaver(object):
         checkpoints is not beyond max_version.
         """
         while len(self._checkpoint_dir_list) > self._max_versions:
-            oldest_checkpoint_dir = self._checkpoint_dir_list[0]
-            if self.check_checkpoint_valid(oldest_checkpoint_dir):
+            old_version_dir = self._checkpoint_dir_list[0]
+
+            # Some PS instances have not saved checkpoint shard files of
+            # the version if invalid. And the slowest PS will remove the
+            # old version checkpoint.
+            if self.check_checkpoint_valid(old_version_dir):
                 self._checkpoint_dir_list.pop(0)
                 with contextlib.suppress(FileNotFoundError):
-                    if not os.listdir(oldest_checkpoint_dir):
-                        os.rmdir(oldest_checkpoint_dir)
+                    shutil.rmtree(old_version_dir)
             else:
                 break
 
