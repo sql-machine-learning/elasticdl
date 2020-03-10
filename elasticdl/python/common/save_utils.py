@@ -161,6 +161,8 @@ class CheckpointSaver(object):
                 with contextlib.suppress(FileNotFoundError):
                     if not os.listdir(oldest_checkpoint_dir):
                         os.rmdir(oldest_checkpoint_dir)
+            else:
+                break
 
     @staticmethod
     def get_valid_lastest_version_dir(checkpoint_dir):
