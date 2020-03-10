@@ -10,12 +10,11 @@ import (
 )
 
 // SGD kernel
-func SGD(grad *common.Tensor, param *common.Tensor, lr float32) error {
+func SGD(grad *common.Tensor, param *common.Tensor, lr float32) {
 	gradPtr := (*C.float)(unsafe.Pointer(&grad.Buffer[0]))
 	paramPtr := (*C.float)(unsafe.Pointer(&param.Buffer[0]))
 	length := len(grad.Buffer) / int(common.DtypeSize[grad.Dtype])
 	C.SGD(gradPtr, paramPtr, C.float(lr), C.longlong(length))
-	return nil
 }
 
 // SparseSGD kernel
@@ -43,14 +42,13 @@ func IndexedSGD(grad *common.IndexedSlices, param *common.Tensor, lr float32) er
 
 // Momentum kernel
 func Momentum(grad *common.Tensor, param *common.Tensor, velocity *common.Tensor,
-	mu float32, nesterov bool, lr float32) error {
+	mu float32, nesterov bool, lr float32) {
 	gradPtr := (*C.float)(unsafe.Pointer(&grad.Buffer[0]))
 	paramPtr := (*C.float)(unsafe.Pointer(&param.Buffer[0]))
 	velocityPtr := (*C.float)(unsafe.Pointer(&velocity.Buffer[0]))
 	length := len(grad.Buffer) / int(common.DtypeSize[grad.Dtype])
 	C.Momentum(gradPtr, paramPtr, velocityPtr, C.float(mu), C._Bool(nesterov),
 		C.float(lr), C.longlong(length))
-	return nil
 }
 
 // SparseMomentum kernel
@@ -86,7 +84,7 @@ func IndexedMomentum(grad *common.IndexedSlices, param *common.Tensor, velocity 
 // Adam kernel
 func Adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common.Tensor,
 	lr float32, step int64, beta1 float32, beta2 float32,
-	epsilon float32, amsgrad bool, maxSquare *common.Tensor) error {
+	epsilon float32, amsgrad bool, maxSquare *common.Tensor) {
 	gradPtr := (*C.float)(unsafe.Pointer(&grad.Buffer[0]))
 	paramPtr := (*C.float)(unsafe.Pointer(&param.Buffer[0]))
 	mPtr := (*C.float)(unsafe.Pointer(&m.Buffer[0]))
@@ -101,7 +99,6 @@ func Adam(grad *common.Tensor, param *common.Tensor, m *common.Tensor, v *common
 		C.Adam(gradPtr, paramPtr, mPtr, vPtr, C.float(lr), C.longlong(length),
 			C.longlong(step), C.float(beta1), C.float(beta2), C.float(epsilon), nil)
 	}
-	return nil
 }
 
 // SparseAdam kernel
