@@ -39,7 +39,7 @@ def main():
                 except grpc.FutureTimeoutError:
                     logger.warning(
                         "Failed to connect pod %s with %d retry"
-                        % (i, addr.split(".")[0])
+                        % (addr.split(".")[0], i)
                     )
             if not connect_succeed:
                 raise TimeoutError(
