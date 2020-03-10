@@ -113,12 +113,12 @@ def validate_job_status(client, job_type, ps_num, worker_num):
             print(client.get_pod_status(master_pod_name))
             print("Master log:")
             print(client.get_pod_log(master_pod_name))
-            for i, ps in enumerate(ps_pod_names):
-                print("PS%d log" % i)
-                print(client.get_pod_log(ps))
             for i, worker in enumerate(worker_pod_names):
                 print("Worker%d log" % i)
                 print(client.get_pod_log(worker))
+            for i, ps in enumerate(ps_pod_names):
+                print("PS%d log" % i)
+                print(client.get_pod_log(ps))
             client.delete_pod(master_pod_name)
             exit(-1)
         else:
