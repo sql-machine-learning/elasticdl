@@ -66,7 +66,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # Then the master tells the worker to wait
             # in case of new tasks later.
             res.type = elasticdl_pb2.WAIT
-        self._worker_liveness_time[request.worker_id] = time.time()
+        with self._lock:
+            self._worker_liveness_time[request.worker_id] = time.time()
         return res
 
     def report_task_result(self, request, _):
@@ -78,19 +79,21 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             if task:
                 with self._lock:
                     self._worker_liveness_time[worker_id] = time.time()
-                if task.type in [
-                    elasticdl_pb2.TRAINING,
-                    elasticdl_pb2.EVALUATION,
-                ]:
-                    self._task_complete_times[task.type].append(complete_time)
+                    if task.type in [
+                        elasticdl_pb2.TRAINING,
+                        elasticdl_pb2.EVALUATION,
+                    ]:
+                        self._task_complete_times[task.type].append(
+                            complete_time
+                        )
         return empty_pb2.Empty()
 
     def report_evaluation_metrics(self, request, _):
         with self._lock:
             self._worker_liveness_time[request.worker_id] = time.time()
-        self._evaluation_service.report_evaluation_metrics(
-            request.model_outputs, request.labels
-        )
+            self._evaluation_service.report_evaluation_metrics(
+                request.model_outputs, request.labels
+            )
         return empty_pb2.Empty()
 
     def report_version(self, request, _):
@@ -104,8 +107,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def get_average_task_complete_time(self):
         if len(self._task_complete_times) < 20:
             return {
-                elasticdl_pb2.TRAINING: 36000,
-                elasticdl_pb2.EVALUATION: 36000,
+                elasticdl_pb2.TRAINING: 300,
+                elasticdl_pb2.EVALUATION: 300,
             }
         else:
             return {
