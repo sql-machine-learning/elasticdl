@@ -17,8 +17,9 @@ from elasticdl.python.ps.parameters import Parameters
 def save_pb_to_file(pb_obj, file_name):
     """Save a protobuf object to file"""
     encoded_model = pb_obj.SerializeToString()
-    with open(file_name, "wb") as f:
-        f.write(encoded_model)
+    with contextlib.suppress(FileNotFoundError):
+        with open(file_name, "wb") as f:
+            f.write(encoded_model)
 
 
 def load_pb_from_file(pb_obj, file_name):
