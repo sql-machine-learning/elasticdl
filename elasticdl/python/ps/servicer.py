@@ -3,6 +3,7 @@ import threading
 import tensorflow as tf
 from google.protobuf import empty_pb2
 from tensorflow.core.framework import tensor_pb2
+from tensorflow.keras import backend as K
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -24,7 +25,6 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         parameters,
         grads_to_wait,
         optimizer,
-        lr_scheduler="",
         lr_staleness_modulation=False,
         sync_version_tolerance=0,
         use_async=False,
@@ -42,7 +42,6 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         self._parameters = parameters
         self._grads_to_wait = grads_to_wait
         self._optimizer = optimizer
-        self._lr_scheduler = lr_scheduler
         self._lr_staleness_modulation = lr_staleness_modulation
         self._sync_version_tolerance = sync_version_tolerance
         self._use_async = use_async
@@ -127,8 +126,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                     grad_vars.append((grad, var))
                 else:
                     grad_vars.append((grad, name))
-            if self._lr_scheduler:
-                self._lr_scheduler.set_model_version(self._parameters.version)
+            self._set_optimizer_learning_rate(request.learning_rate)
             self._optimizer.apply_gradients(grad_vars)
             with self._version_lock:
                 self._parameters.version += 1
@@ -190,10 +188,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                         else:
                             grad_vars.append((grad, var))
 
-                    if self._lr_scheduler:
-                        self._lr_scheduler.set_model_version(
-                            self._parameters.version
-                        )
+                    self._set_optimizer_learning_rate(request.learning_rate)
                     self._optimizer.apply_gradients(grad_vars)
                     self._grads_n = 0
                     self._grads_buffer.clear()
@@ -249,3 +244,12 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                 shard_index=self._ps_id,
                 shard_num=self._num_ps_pods,
             )
+
+    def _set_optimizer_learning_rate(self, learning_rate):
+        if learning_rate == 0.0:
+            return
+
+        if self._use_wrap_opt:
+            self._optimizer.set_learning_rate(learning_rate)
+        else:
+            K.set_value(self._optimizer.lr, K.get_value(learning_rate))

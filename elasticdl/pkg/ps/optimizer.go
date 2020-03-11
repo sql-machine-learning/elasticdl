@@ -12,21 +12,21 @@ import (
 // Optimizer interface
 type Optimizer interface {
 	GetLR() float32
-	ApplyGradients(*proto.Model, *Model) error
 	InitOptimizer(*proto.Model)
+	ApplyGradients(*proto.Model, *Model, float32) error
 }
 
 // BaseOptimizer struct
 type BaseOptimizer struct {
 	lr            float32
 	step          int64
-	DenseKernel   func(*common.Tensor, *common.Tensor, string)
-	SparseKernel  func(*common.IndexedSlices, *common.EmbeddingTable, string) error
-	IndexedKernel func(*common.IndexedSlices, *common.Tensor, string) error
+	DenseKernel   func(*common.Tensor, *common.Tensor, string, float32)
+	SparseKernel  func(*common.IndexedSlices, *common.EmbeddingTable, string, float32) error
+	IndexedKernel func(*common.IndexedSlices, *common.Tensor, string, float32) error
 }
 
 // ApplyGradients base method
-func (opt *BaseOptimizer) ApplyGradients(grads *proto.Model, model *Model) error {
+func (opt *BaseOptimizer) ApplyGradients(grads *proto.Model, model *Model, lrMultiplier float32) error {
 	opt.step++
 	for name, tensorPB := range grads.DenseParameters {
 		grad := common.DeserializeFromTensorProto(tensorPB)
@@ -34,7 +34,7 @@ func (opt *BaseOptimizer) ApplyGradients(grads *proto.Model, model *Model) error
 		if param == nil {
 			return fmt.Errorf("grad %s not in Parameter", name)
 		}
-		opt.DenseKernel(grad, param, name)
+		opt.DenseKernel(grad, param, name, lrMultiplier)
 	}
 	for name, indexedSlicePB := range grads.EmbeddingTables {
 		grad := common.DeserializeFromIndexedSliceProto(indexedSlicePB)
@@ -44,28 +44,28 @@ func (opt *BaseOptimizer) ApplyGradients(grads *proto.Model, model *Model) error
 			if table == nil {
 				return fmt.Errorf("grad %s not in Parameter", name)
 			}
-			err := opt.SparseKernel(grad, table, name)
+			err := opt.SparseKernel(grad, table, name, lrMultiplier)
 			if err != nil {
-				return nil
+				return err
 			}
 		} else {
-			err := opt.IndexedKernel(grad, param, name)
+			err := opt.IndexedKernel(grad, param, name, lrMultiplier)
 			if err != nil {
-				return nil
+				return err
 			}
 		}
 	}
 	return nil
 }
 
+// GetLR returns learning rate
+func (opt *BaseOptimizer) GetLR() float32 {
+	return opt.lr
+}
+
 // SGDOptimizer struct
 type SGDOptimizer struct {
 	BaseOptimizer
-}
-
-// GetLR returns learning rate
-func (opt *SGDOptimizer) GetLR() float32 {
-	return opt.lr
 }
 
 // NewSGDOptimizer creates a SGD optimizer instance
@@ -75,14 +75,14 @@ func NewSGDOptimizer(lr float32) *SGDOptimizer {
 			lr: lr,
 		},
 	}
-	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string) {
-		kernel.SGD(grad, param, opt.GetLR())
+	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string, lrMultiplier float32) {
+		kernel.SGD(grad, param, opt.GetLR()*lrMultiplier)
 	}
-	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string) error {
-		return kernel.SparseSGD(grad, param, opt.GetLR())
+	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string, lrMultiplier float32) error {
+		return kernel.SparseSGD(grad, param, opt.GetLR()*lrMultiplier)
 	}
-	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string) error {
-		return kernel.IndexedSGD(grad, param, opt.GetLR())
+	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string, lrMultiplier float32) error {
+		return kernel.IndexedSGD(grad, param, opt.GetLR()*lrMultiplier)
 	}
 	return &opt
 }
@@ -100,11 +100,6 @@ type MomentumOptimizer struct {
 	v        *Model
 }
 
-// GetLR returns learning rate
-func (opt *MomentumOptimizer) GetLR() float32 {
-	return opt.lr
-}
-
 // NewMomentumOptimizer creates a Momentum optimizer instance
 func NewMomentumOptimizer(lr float32, mu float32, nesterov bool) *MomentumOptimizer {
 	var opt = MomentumOptimizer{
@@ -115,17 +110,19 @@ func NewMomentumOptimizer(lr float32, mu float32, nesterov bool) *MomentumOptimi
 		nesterov: nesterov,
 		v:        NewModel(),
 	}
-	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string) {
+	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string, lrMultiplier float32) {
 		v := opt.v.GetDenseParameter(name)
-		kernel.Momentum(grad, param, v, opt.mu, opt.nesterov, opt.GetLR())
+		kernel.Momentum(grad, param, v, opt.mu, opt.nesterov, opt.GetLR()*lrMultiplier)
 	}
-	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string) error {
+	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string,
+		lrMultiplier float32) error {
 		v := opt.v.GetEmbeddingTable(name)
-		return kernel.SparseMomentum(grad, param, v, opt.mu, opt.nesterov, opt.GetLR())
+		return kernel.SparseMomentum(grad, param, v, opt.mu, opt.nesterov, opt.GetLR()*lrMultiplier)
 	}
-	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string) error {
+	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string,
+		lrMultiplier float32) error {
 		v := opt.v.GetDenseParameter(name)
-		return kernel.IndexedMomentum(grad, param, v, opt.mu, opt.nesterov, opt.GetLR())
+		return kernel.IndexedMomentum(grad, param, v, opt.mu, opt.nesterov, opt.GetLR()*lrMultiplier)
 	}
 	return &opt
 }
@@ -154,11 +151,6 @@ type AdamOptimizer struct {
 	maxSquare *Model
 }
 
-// GetLR returns learning rate
-func (opt *AdamOptimizer) GetLR() float32 {
-	return opt.lr
-}
-
 // NewAdamOptimizer creates a Adam optimizer instance
 func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32, amsgrad bool) *AdamOptimizer {
 	var opt AdamOptimizer = AdamOptimizer{
@@ -174,37 +166,37 @@ func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32,
 		v:         NewModel(),
 		maxSquare: NewModel(),
 	}
-	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string) {
+	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string, lrMultiplier float32) {
 		m := opt.m.GetDenseParameter(name)
 		v := opt.v.GetDenseParameter(name)
 		if opt.amsgrad {
 			ms := opt.maxSquare.GetDenseParameter(name)
-			kernel.Adam(grad, param, m, v, opt.GetLR(), opt.step,
+			kernel.Adam(grad, param, m, v, opt.GetLR()*lrMultiplier, opt.step,
 				opt.beta1, opt.beta2, opt.epsilon, true, ms)
 		}
-		kernel.Adam(grad, param, m, v, opt.GetLR(), opt.step,
+		kernel.Adam(grad, param, m, v, opt.GetLR()*lrMultiplier, opt.step,
 			opt.beta1, opt.beta2, opt.epsilon, false, nil)
 	}
-	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string) error {
+	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string, lrMultiplier float32) error {
 		m := opt.m.GetEmbeddingTable(name)
 		v := opt.v.GetEmbeddingTable(name)
 		if opt.amsgrad {
 			ms := opt.maxSquare.GetEmbeddingTable(name)
-			return kernel.SparseAdam(grad, param, m, v, opt.GetLR(), opt.step,
+			return kernel.SparseAdam(grad, param, m, v, opt.GetLR()*lrMultiplier, opt.step,
 				opt.beta1, opt.beta2, opt.epsilon, true, ms)
 		}
-		return kernel.SparseAdam(grad, param, m, v, opt.GetLR(), opt.step,
+		return kernel.SparseAdam(grad, param, m, v, opt.GetLR()*lrMultiplier, opt.step,
 			opt.beta1, opt.beta2, opt.epsilon, false, nil)
 	}
-	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string) error {
+	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string, lrMultiplier float32) error {
 		m := opt.m.GetDenseParameter(name)
 		v := opt.v.GetDenseParameter(name)
 		if opt.amsgrad {
 			ms := opt.maxSquare.GetDenseParameter(name)
-			return kernel.IndexedAdam(grad, param, m, v, opt.GetLR(), opt.step,
+			return kernel.IndexedAdam(grad, param, m, v, opt.GetLR()*lrMultiplier, opt.step,
 				opt.beta1, opt.beta2, opt.epsilon, true, ms)
 		}
-		return kernel.IndexedAdam(grad, param, m, v, opt.GetLR(), opt.step,
+		return kernel.IndexedAdam(grad, param, m, v, opt.GetLR()*lrMultiplier, opt.step,
 			opt.beta1, opt.beta2, opt.epsilon, false, nil)
 	}
 	return &opt

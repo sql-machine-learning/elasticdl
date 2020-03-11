@@ -5,6 +5,7 @@ import traceback
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras import backend as K
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
@@ -187,8 +188,8 @@ class Worker(object):
                     "not provide default implementation of dataset_fn"
                 )
         self._get_model_steps = args.get_model_steps
-        if self._get_model_steps > 1:
-            self._opt = self._opt_fn()
+        self._opt = self._opt_fn()
+        self._model.optimizer = self._opt
         self._non_embed_grads = {}
         self._evaluation_result = {}
 
@@ -578,6 +579,7 @@ class Worker(object):
         for ps_id in range(self._ps_num):
             req = reqs[ps_id]
             req.version = self._model_versions_from_ps[ps_id]
+            req.learning_rate = K.get_value(self._model.optimizer.lr)
             report_future = self._ps_stubs[ps_id].push_gradients.future(req)
             report_futures.append(report_future)
 
@@ -887,6 +889,7 @@ class Worker(object):
                 #       get_model call.
                 if not train_with_local_model:
                     self.get_model()
+                self._callbacks_list.on_train_batch_begin(self._model_version)
                 *accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )
