@@ -67,7 +67,6 @@ message Model {
   repeated EmbeddingTableInfo embedding_table_infos = 2;
   map<string, tensorflow.TensorProto> dense_parameters = 3;
   map<string, IndexedSlicesProto> embedding_tables = 4;
-  float learning_rate = 5;
 }
 
 message GetTaskRequest {
@@ -124,6 +123,11 @@ message PullEmbeddingVectorsRequest {
   repeated int64 ids = 2;
 }
 
+message PushGradientsRequest {
+  Model gradients = 1;
+  float learning_rate = 2;
+}
+
 message PushGradientsResponse {
   bool accepted = 1;
   int32 version = 2;
@@ -137,5 +141,5 @@ service Pserver {
       returns (PullDenseParametersResponse);
   rpc pull_embedding_vectors(PullEmbeddingVectorsRequest)
       returns (tensorflow.TensorProto);
-  rpc push_gradients(Model) returns (PushGradientsResponse);
+  rpc push_gradients(PushGradientsRequest) returns (PushGradientsResponse);
 }
