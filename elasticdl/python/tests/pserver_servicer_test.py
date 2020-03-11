@@ -54,7 +54,6 @@ class PserverServicerTest(unittest.TestCase):
     ):
         args = PserverArgs(
             grads_to_wait=grads_to_wait,
-            lr_scheduler="learning_rate_scheduler",
             lr_staleness_modulation=lr_staleness_modulation,
             use_async=use_async,
             port=self._port,
@@ -488,7 +487,6 @@ class PserverServicerTest(unittest.TestCase):
             model_zoo=_test_model_zoo_path,
             model_def="test_module.custom_model",
             checkpoint_dir_for_init=checkpoint_dir_for_init,
-            lr_scheduler="learning_rate_scheduler",
         )
         pserver_0 = ParameterServer(args)
 
@@ -516,7 +514,6 @@ class PserverServicerTest(unittest.TestCase):
             model_zoo=_test_model_zoo_path,
             model_def="test_module.custom_model",
             checkpoint_dir_for_init=checkpoint_dir_for_init,
-            lr_scheduler="learning_rate_scheduler",
         )
         pserver_1 = ParameterServer(args)
 

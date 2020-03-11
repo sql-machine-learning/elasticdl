@@ -3,6 +3,7 @@
 import threading
 
 import tensorflow as tf
+from tensorflow.keras import backend as K
 from tensorflow.keras.optimizers import (
     SGD,
     Adadelta,
@@ -324,6 +325,9 @@ class OptimizerWrapper(object):
         # Delete variables in unique_ids_all_layers.
         for key in list(self._tls._unique_ids_all_layers.keys()):
             del self._tls._unique_ids_all_layers[key]
+
+    def set_learning_rate(self, learning_rate):
+        K.set_value(self._opt.lr, K.get_value(learning_rate))
 
     @property
     def allowed_slot_names(self):

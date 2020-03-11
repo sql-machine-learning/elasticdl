@@ -3,6 +3,7 @@ import itertools
 import tensorflow as tf
 from tensorflow import feature_column as fc
 
+from elasticdl.python.elasticdl.callbacks import LearningRateScheduler
 from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
     FEATURE_TRANSFORM_INFO_EXECUTE_ARRAY,
     INPUT_SCHEMAS,
@@ -291,10 +292,13 @@ def eval_metrics_fn():
     }
 
 
-def learning_rate_scheduler(model_version):
-    if model_version < 5000:
-        return 0.0003
-    elif model_version < 12000:
-        return 0.0002
-    else:
-        return 0.0001
+def callbacks():
+    def _schedule(model_version):
+        if model_version < 5000:
+            return 0.0003
+        elif model_version < 12000:
+            return 0.0002
+        else:
+            return 0.0001
+
+    return [LearningRateScheduler(_schedule)]
