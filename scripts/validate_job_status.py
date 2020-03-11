@@ -4,6 +4,13 @@ import time
 from kubernetes import client, config
 
 
+def print_tail_log(log, tail_num):
+    if log is not None:
+        log_lines = log.split("\n")
+        tail_index = -1 * tail_num
+        print("\n".join(log_lines[tail_index:]))
+
+
 class Client(object):
     def __init__(self, namespace):
         self.namespace = namespace
@@ -113,12 +120,14 @@ def validate_job_status(client, job_type, ps_num, worker_num):
             print(client.get_pod_status(master_pod_name))
             print("Master log:")
             print(client.get_pod_log(master_pod_name))
-            for i, ps in enumerate(ps_pod_names):
-                print("PS%d log" % i)
-                print(client.get_pod_log(ps))
-            for i, worker in enumerate(worker_pod_names):
-                print("Worker%d log" % i)
-                print(client.get_pod_log(worker))
+            for ps, pod_phase in zip(ps_pod_names, ps_pod_phases):
+                if check_failed([pod_phase]):
+                    print("PS %s log" % ps)
+                    print_tail_log(client.get_pod_log(ps), 50)
+            for worker, pod_phase in zip(worker_pod_names, worker_pod_phases):
+                if check_failed([pod_phase]):
+                    print("Worker %s log" % worker)
+                    print_tail_log(client.get_pod_log(worker), 50)
             client.delete_pod(master_pod_name)
             exit(-1)
         else:

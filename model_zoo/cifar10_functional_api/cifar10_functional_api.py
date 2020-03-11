@@ -5,6 +5,7 @@ import tensorflow as tf
 from elasticdl.python.common.constants import MaxComputeConfig, Mode
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.data.odps_io import ODPSWriter, is_odps_configured
+from elasticdl.python.elasticdl.callbacks import LearningRateScheduler
 from elasticdl.python.worker.prediction_outputs_processor import (
     BasePredictionOutputsProcessor,
 )
@@ -114,13 +115,16 @@ def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
 
-def learning_rate_scheduler(model_version):
-    if model_version < 5000:
-        return 0.1
-    elif model_version < 15000:
-        return 0.01
-    else:
-        return 0.001
+def callbacks():
+    def _schedule(model_version):
+        if model_version < 5000:
+            return 0.1
+        elif model_version < 15000:
+            return 0.01
+        else:
+            return 0.001
+
+    LearningRateScheduler(_schedule)
 
 
 def dataset_fn(dataset, mode, _):
