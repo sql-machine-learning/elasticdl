@@ -47,6 +47,10 @@ class SavedModelExporter(tf.keras.callbacks.Callback):
             )
             if os.path.exists(saved_model_path):
                 shutil.rmtree(saved_model_path)
+
+            # tf.saved_model cannot save the model if model.optimizer is not
+            # None and the model is not complied.
+            model.optimizer = None
             tf.saved_model.save(model, saved_model_path)
 
 
