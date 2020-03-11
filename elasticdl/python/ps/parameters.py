@@ -175,10 +175,13 @@ class Parameters(object):
         """
         model_pb = elasticdl_pb2.Model()
         model_pb.version = self.version
-        for name, var in self.non_embedding_params.items():
+        non_embedding_params = self.non_embedding_params.copy()
+        for name, var in non_embedding_params.items():
             serialize_ndarray(var.numpy(), model_pb.dense_parameters[name])
+        del non_embedding_params
 
-        for name, embedding_table in self.embedding_params.items():
+        embedding_params = self.embedding_params.copy()
+        for name, embedding_table in embedding_params.items():
             # Slot embedding table is not weights in the model, so we don't
             # save it to checkpoint.
             if not embedding_table.is_slot:
@@ -188,6 +191,7 @@ class Parameters(object):
                 )
                 embedding_info = embedding_table.to_embedding_table_info_pb()
                 model_pb.embedding_table_infos.append(embedding_info)
+        del embedding_params
         return model_pb
 
     def debug_info(self):
