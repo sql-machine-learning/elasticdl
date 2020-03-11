@@ -158,17 +158,25 @@ func (s *Server) PullEmbeddingVectors(ctx context.Context, in *proto.PullEmbeddi
 // PushGradients push gradients to server
 func (s *Server) PushGradients(ctx context.Context, in *proto.Model) (*proto.PushGradientsResponse, error) {
 	// TODO: only support async now
-	err := s.Opt.ApplyGradients(in, s.Model)
+	err := s.Opt.ApplyGradients(in.Gradients, s.Model)
+	if err != nil {
+		var resp = proto.PushGradientsResponse{
+			Accepted: false,
+			Version:  s.Model.Version,
+		}
+		return &resp, err
+	}
 	s.versionLock.Lock()
 	s.Model.Version += int32(1)
 	s.versionLock.Unlock()
 	s.reportModelVersionIfNeeded(int(s.Model.Version))
 	s.saveCheckpointIfNeeded(int(s.Model.Version))
+	s.Opt.SetLR(in.LearningRate)
 	var resp = proto.PushGradientsResponse{
 		Accepted: true,
 		Version:  s.Model.Version,
 	}
-	return &resp, err
+	return &resp, nil
 }
 
 // PushModel push Model to server

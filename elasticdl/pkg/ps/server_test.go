@@ -258,15 +258,19 @@ func TestPushGradients(t *testing.T) {
 	defer conn.Close()
 	defer cancel()
 
-	var request = &proto.Model{
-		DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
-		EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
-		EmbeddingTableInfos: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
-			Name:        "e1",
-			Dim:         10,
-			Initializer: "zero",
-			Dtype:       common.Float32,
-		}},
+	var newLR float32 = 0.2
+	var request = &proto.PushGradientsRequest{
+		Gradients: &proto.Model{
+			DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
+			EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
+			EmbeddingTableInfos: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
+				Name:        "e1",
+				Dim:         10,
+				Initializer: "zero",
+				Dtype:       common.Float32,
+			}},
+		},
+		LearningRate: newLR,
 	}
 
 	// dense embedding param
@@ -301,9 +305,9 @@ func TestPushGradients(t *testing.T) {
 	expectede1 := make([]float32, 10, 10)
 
 	for i := 0; i < 10; i++ {
-		expectedt1[i] = a[i] - 0.1*a[i]
-		expectedt2[i] = b[i] - 0.1*b[i]
-		expectede1[i] = c[i] - 0.1*c[i]
+		expectedt1[i] = a[i] - newLR*a[i]
+		expectedt2[i] = b[i] - newLR*b[i]
+		expectede1[i] = c[i] - newLR*c[i]
 	}
 
 	assert.True(t, common.CompareFloatArray(expectedt1, common.Slice(s.Model.GetDenseParameter("t1")).([]float32), 0.0001))

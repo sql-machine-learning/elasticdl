@@ -12,6 +12,7 @@ import (
 // Optimizer interface
 type Optimizer interface {
 	GetLR() float32
+	SetLR(float32 learningRate)
 	ApplyGradients(*proto.Model, *Model) error
 	InitOptimizer(*proto.Model) error
 }
@@ -52,14 +53,19 @@ func (opt *BaseOptimizer) ApplyGradients(grads *proto.Model, model *Model) error
 	return nil
 }
 
+// GetLR returns learning rate
+func (opt *BaseOptimizer) GetLR() float32 {
+	return opt.lr
+}
+
+// SetLR sets learning rate
+func (opt *BaseOptimizer) SetLR(learningRate float32) {
+	opt.lr = learningRate
+}
+
 // SGDOptimizer struct
 type SGDOptimizer struct {
 	BaseOptimizer
-}
-
-// GetLR returns learning rate
-func (opt *SGDOptimizer) GetLR() float32 {
-	return opt.lr
 }
 
 // NewSGDOptimizer creates a SGD optimizer instance
@@ -96,11 +102,6 @@ type AdamOptimizer struct {
 	m         *Model
 	v         *Model
 	maxSquare *Model
-}
-
-// GetLR returns learning rate
-func (opt *AdamOptimizer) GetLR() float32 {
-	return opt.lr
 }
 
 // NewAdamOptimizer creates a Adam optimizer instance

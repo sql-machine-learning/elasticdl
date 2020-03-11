@@ -109,14 +109,14 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
         if self._use_async:
             grad_vars = []
 
-            for name, pb in request.dense_parameters.items():
+            for name, pb in request.gradients.dense_parameters.items():
                 grad = pb_to_ndarray(pb)
                 self._parameters.check_grad(Tensor(name, grad, None))
                 grad = tf.constant(grad)
                 var = self._parameters.get_non_embedding_param(name)
                 grad_vars.append((grad, var))
 
-            for name, pb in request.embedding_tables.items():
+            for name, pb in request.gradients.embedding_tables.items():
                 grad = pb_to_indexed_slices(pb)
                 self._parameters.check_grad(
                     Tensor(name, grad.values, grad.indices)
@@ -147,7 +147,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                 return res
 
             with self._lock:
-                for name, pb in request.dense_parameters.items():
+                for name, pb in request.gradients.dense_parameters.items():
                     grad = pb_to_ndarray(pb)
                     self._parameters.check_grad(Tensor(name, grad, None))
                     if name in self._grads_buffer:
@@ -157,7 +157,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                     else:
                         self._grads_buffer[name] = grad
 
-                for name, pb in request.embedding_tables.items():
+                for name, pb in request.gradients.embedding_tables.items():
                     grad = pb_to_indexed_slices(pb)
                     self._parameters.check_grad(
                         Tensor(name, grad.values, grad.indices)
