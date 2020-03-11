@@ -60,6 +60,9 @@ func (opt *BaseOptimizer) GetLR() float32 {
 
 // SetLR sets learning rate
 func (opt *BaseOptimizer) SetLR(learningRate float32) {
+	if learningRate == 0.0 {
+		return
+	}
 	opt.lr = learningRate
 }
 

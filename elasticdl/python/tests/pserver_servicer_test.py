@@ -293,12 +293,12 @@ class PserverServicerTest(unittest.TestCase):
         self.push_gradient_test_setup()
 
         # Test applying gradients to embedding and non-embedding parameters
-        req = elasticdl_pb2.Model()
+        req = elasticdl_pb2.PushGradientsRequest()
         for g, name in zip(self.grad_values0, self.var_names):
-            serialize_ndarray(g, req.dense_parameters[name])
+            serialize_ndarray(g, req.gradients.dense_parameters[name])
         serialize_indexed_slices(
             self.embedding_grads0,
-            req.embedding_tables[self._embedding_info.name],
+            req.gradients.embedding_tables[self._embedding_info.name],
         )
         res = self._stub.push_gradients(req)
         self.assertEqual(res.accepted, True)
@@ -329,9 +329,10 @@ class PserverServicerTest(unittest.TestCase):
         # Test applying gradients with same name
         for name, var in zip(self.var_names, self.var_values):
             self._parameters.non_embedding_params[name] = tf.Variable(var)
-        req = elasticdl_pb2.Model()
+        req = elasticdl_pb2.PushGradientsRequest()
         serialize_ndarray(
-            self.grad_values1[1], req.dense_parameters[self.var_names[0]]
+            self.grad_values1[1],
+            req.gradients.dense_parameters[self.var_names[0]],
         )
         res = self._stub.push_gradients(req)
         self.assertEqual(res.accepted, True)
@@ -354,35 +355,35 @@ class PserverServicerTest(unittest.TestCase):
         )
         self.push_gradient_test_setup()
 
-        req = elasticdl_pb2.Model()
-        req.version = 0
+        req = elasticdl_pb2.PushGradientsRequest()
+        req.gradients.version = 0
         for g, name in zip(self.grad_values0, self.var_names):
-            serialize_ndarray(g, req.dense_parameters[name])
+            serialize_ndarray(g, req.gradients.dense_parameters[name])
         serialize_indexed_slices(
             self.embedding_grads0,
-            req.embedding_tables[self._embedding_info.name],
+            req.gradients.embedding_tables[self._embedding_info.name],
         )
 
         res = self._stub.push_gradients(req)
         self.assertEqual(res.accepted, True)
         self.assertEqual(res.version, 0)
 
-        req = elasticdl_pb2.Model()
-        req.version = 0
+        req = elasticdl_pb2.PushGradientsRequest()
+        req.gradients.version = 0
         for g, name in zip(self.grad_values1, self.var_names):
-            serialize_ndarray(g, req.dense_parameters[name])
+            serialize_ndarray(g, req.gradients.dense_parameters[name])
         serialize_indexed_slices(
             self.embedding_grads1,
-            req.embedding_tables[self._embedding_info.name],
+            req.gradients.embedding_tables[self._embedding_info.name],
         )
         res = self._stub.push_gradients(req)
         self.assertEqual(res.accepted, True)
         self.assertEqual(res.version, 1)
 
-        req = elasticdl_pb2.Model()
-        req.version = 0
+        req = elasticdl_pb2.PushGradientsRequest()
+        req.gradients.version = 0
         for g, name in zip(self.grad_values1, self.var_names):
-            serialize_ndarray(g, req.dense_parameters[name])
+            serialize_ndarray(g, req.gradients.dense_parameters[name])
         res = self._stub.push_gradients(req)
         self.assertEqual(res.accepted, False)
         self.assertEqual(res.version, 1)

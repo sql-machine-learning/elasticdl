@@ -139,7 +139,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
             return res
         else:
             if (
-                request.version
+                request.gradients.version
                 < self._parameters.version - self._sync_version_tolerance
             ):
                 res.accepted = False
