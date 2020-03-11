@@ -101,10 +101,6 @@ class Embedding(tf.keras.layers.Layer):
     def get_key(name_list):
         return "-".join(map(str, name_list))
 
-    def build(self, input_shape):
-        embedding_variable_name = self.name + "/embeddings:0"
-        self.embedding_delegate.set_name(embedding_variable_name)
-
     def call(self, input):
         input = tf.cast(input, tf.int64)
         if isinstance(input, tf.SparseTensor):
