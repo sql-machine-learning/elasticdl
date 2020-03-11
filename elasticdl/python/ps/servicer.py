@@ -126,7 +126,18 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                     grad_vars.append((grad, var))
                 else:
                     grad_vars.append((grad, name))
-            self._set_optimizer_learning_rate(request.learning_rate)
+
+            learning_rate = request.learning_rate
+            # TODO: if request.learning_rate == 0.0, modulate learning_rate
+            #       in self._optimizer with staleness
+            if self._lr_staleness_modulation and learning_rate > 0.0:
+                staleness = max(
+                    1, self._parameters.version - request.gradients.version
+                )
+                # Modulate learning rate by staleness
+                learning_rate /= staleness
+
+            self._set_optimizer_learning_rate(learning_rate)
             self._optimizer.apply_gradients(grad_vars)
             with self._version_lock:
                 self._parameters.version += 1
