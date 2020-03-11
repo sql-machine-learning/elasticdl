@@ -576,7 +576,8 @@ class Worker(object):
                     req = reqs[ps_id]
                     gv, gi = results[ps_id]
                     serialize_indexed_slices(
-                        Tensor(None, gv, gi), req.embedding_tables[name],
+                        Tensor(None, gv, gi),
+                        req.gradients.embedding_tables[name],
                     )
 
         report_futures = []
