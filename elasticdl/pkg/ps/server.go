@@ -156,7 +156,7 @@ func (s *Server) PullEmbeddingVectors(ctx context.Context, in *proto.PullEmbeddi
 }
 
 // PushGradients push gradients to server
-func (s *Server) PushGradients(ctx context.Context, in *proto.Model) (*proto.PushGradientsResponse, error) {
+func (s *Server) PushGradients(ctx context.Context, in *proto.PushGradientsRequest) (*proto.PushGradientsResponse, error) {
 	// TODO: only support async now
 	err := s.Opt.ApplyGradients(in.Gradients, s.Model)
 	if err != nil {

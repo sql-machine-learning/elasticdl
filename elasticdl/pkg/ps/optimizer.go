@@ -12,7 +12,7 @@ import (
 // Optimizer interface
 type Optimizer interface {
 	GetLR() float32
-	SetLR(float32 learningRate)
+	SetLR(learningRate float32)
 	ApplyGradients(*proto.Model, *Model) error
 	InitOptimizer(*proto.Model) error
 }

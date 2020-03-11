@@ -258,9 +258,8 @@ func TestPushGradients(t *testing.T) {
 	defer conn.Close()
 	defer cancel()
 
-	var newLR float32 = 0.2
-	var request = &proto.PushGradientsRequest{
-		Gradients: &proto.Model{
+
+	var modelReq = &proto.Model{
 			DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
 			EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
 			EmbeddingTableInfos: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
@@ -269,9 +268,8 @@ func TestPushGradients(t *testing.T) {
 				Initializer: "zero",
 				Dtype:       common.Float32,
 			}},
-		},
-		LearningRate: newLR,
-	}
+		}
+
 
 	// dense embedding param
 	a := make([]float32, 10)
@@ -289,13 +287,19 @@ func TestPushGradients(t *testing.T) {
 	ed := []int64{1, 10}
 	e1 := common.NewIndexedSlices(common.NewTensor(c, ed), []int64{1})
 
-	request.DenseParameters["t1"] = t1.SerializeToTensorProto()
-	request.DenseParameters["t2"] = t2.SerializeToTensorProto()
-	request.EmbeddingTables["e1"] = e1.SerializeToIndexedSlicesProto()
+	modelReq.DenseParameters["t1"] = t1.SerializeToTensorProto()
+	modelReq.DenseParameters["t2"] = t2.SerializeToTensorProto()
+	modelReq.EmbeddingTables["e1"] = e1.SerializeToIndexedSlicesProto()
 
-	client.PushModel(ctx, request)
+	client.PushModel(ctx, modelReq)
 
-	_, err := client.PushGradients(ctx, request)
+    var newLR float32 = 0.2
+	var gradReq = &proto.PushGradientsRequest{
+		Gradients: modelReq
+		LearningRate: newLR,
+	}
+
+	_, err := client.PushGradients(ctx, gradReq)
 	if err != nil {
 		t.Errorf("Failed to push embedding vector info")
 	}
