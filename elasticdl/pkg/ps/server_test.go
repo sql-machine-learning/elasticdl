@@ -75,7 +75,7 @@ func TestMasterClient(t *testing.T) {
 	masterServer.run()
 	// New a PS server
 	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;",
-		masterAddr, 0, "", "", 0, 0, 1)
+		masterAddr, 0, "", "", 0, 0, 1, false)
 
 	version := int32(2)
 	s.masterClient.reportVersion(version)
@@ -94,7 +94,7 @@ func TestPushModel(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
 	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;",
-		"", 0, "", "", 0, 0, 1)
+		"", 0, "", "", 0, 0, 1, false)
 	gs := s.Run(ADDR, 1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
@@ -144,7 +144,7 @@ func TestPullEmbeddingVectors(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
 	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;",
-		"", 0, "", "", 0, 0, 1)
+		"", 0, "", "", 0, 0, 1, false)
 	gs := s.Run(ADDR, 1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
@@ -197,7 +197,7 @@ func TestPullDenseParameters(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
 	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;",
-		"", 0, "", "", 0, 0, 1)
+		"", 0, "", "", 0, 0, 1, false)
 	gs := s.Run(ADDR, 1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
@@ -252,13 +252,13 @@ func TestPushGradients(t *testing.T) {
 	// Create a PS server
 	serverDone := make(chan bool)
 	s := NewServer(0, "SGD", "learning_rate=0.1;momentum=0.0;nesterov=false;",
-		"", 0, "", "", 0, 0, 1)
+		"", 0, "", "", 0, 0, 1, false)
 	gs := s.Run(ADDR, 1, serverDone)
 	client, ctx, conn, cancel := createClient()
 	defer conn.Close()
 	defer cancel()
 
-	var request = &proto.Model{
+	var modelReq = &proto.Model{
 		DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
 		EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
 		EmbeddingTableInfos: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
@@ -285,13 +285,19 @@ func TestPushGradients(t *testing.T) {
 	ed := []int64{1, 10}
 	e1 := common.NewIndexedSlices(common.NewTensor(c, ed), []int64{1})
 
-	request.DenseParameters["t1"] = t1.SerializeToTensorProto()
-	request.DenseParameters["t2"] = t2.SerializeToTensorProto()
-	request.EmbeddingTables["e1"] = e1.SerializeToIndexedSlicesProto()
+	modelReq.DenseParameters["t1"] = t1.SerializeToTensorProto()
+	modelReq.DenseParameters["t2"] = t2.SerializeToTensorProto()
+	modelReq.EmbeddingTables["e1"] = e1.SerializeToIndexedSlicesProto()
 
-	client.PushModel(ctx, request)
+	client.PushModel(ctx, modelReq)
 
-	_, err := client.PushGradients(ctx, request)
+	var newLR float32 = 0.2
+	var gradReq = &proto.PushGradientsRequest{
+		Gradients:    modelReq,
+		LearningRate: newLR,
+	}
+
+	_, err := client.PushGradients(ctx, gradReq)
 	if err != nil {
 		t.Errorf("Failed to push embedding vector info")
 	}
@@ -301,9 +307,9 @@ func TestPushGradients(t *testing.T) {
 	expectede1 := make([]float32, 10, 10)
 
 	for i := 0; i < 10; i++ {
-		expectedt1[i] = a[i] - 0.1*a[i]
-		expectedt2[i] = b[i] - 0.1*b[i]
-		expectede1[i] = c[i] - 0.1*c[i]
+		expectedt1[i] = a[i] - newLR*a[i]
+		expectedt2[i] = b[i] - newLR*b[i]
+		expectede1[i] = c[i] - newLR*c[i]
 	}
 
 	assert.True(t, common.CompareFloatArray(expectedt1, common.Slice(s.Model.GetDenseParameter("t1")).([]float32), 0.0001))

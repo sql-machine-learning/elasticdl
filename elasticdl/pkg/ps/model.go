@@ -67,7 +67,7 @@ func (model *Model) InitFromModelPB(pb *proto.Model) error {
 			return err
 		}
 	}
-	if pb.Version >= 0 {
+	if pb.Version >= 1 {
 		model.Version = pb.Version
 	}
 	return nil

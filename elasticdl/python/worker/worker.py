@@ -5,6 +5,7 @@ import traceback
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras import backend as K
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
@@ -153,7 +154,9 @@ class Worker(object):
         )
 
         self._collective_communicator = (
-            CollectiveCommunicator()
+            CollectiveCommunicator(
+                service_name=args.collective_communicator_service_name
+            )
             if self._distribution_strategy == DistributionStrategy.ALLREDUCE
             else None
         )
@@ -185,8 +188,8 @@ class Worker(object):
                     "not provide default implementation of dataset_fn"
                 )
         self._get_model_steps = args.get_model_steps
-        if self._get_model_steps > 1:
-            self._opt = self._opt_fn()
+        self._opt = self._opt_fn()
+        self._model.optimizer = self._opt
         self._non_embed_grads = {}
         self._evaluation_result = {}
 
@@ -484,7 +487,9 @@ class Worker(object):
 
     def report_gradient_to_ps(self, grads):
         self._timing.start_record_time("report_gradient")
-        reqs = [elasticdl_pb2.Model() for i in range(self._ps_num)]
+        reqs = [
+            elasticdl_pb2.PushGradientsRequest() for i in range(self._ps_num)
+        ]
         ps_grads = {}
         non_embed_vars_n = len(self._non_embed_vars)
         for g, v in zip(
@@ -518,10 +523,12 @@ class Worker(object):
                 if isinstance(g, tf.IndexedSlices):
                     serialize_indexed_slices(
                         Tensor(None, g.values.numpy(), g.indices.numpy()),
-                        req.embedding_tables[name],
+                        req.gradients.embedding_tables[name],
                     )
                 else:
-                    serialize_ndarray(g.numpy(), req.dense_parameters[name])
+                    serialize_ndarray(
+                        g.numpy(), req.gradients.dense_parameters[name]
+                    )
 
         edl_embedding_name_values = self._collect_edl_embedding_name_values()
 
@@ -569,13 +576,15 @@ class Worker(object):
                     req = reqs[ps_id]
                     gv, gi = results[ps_id]
                     serialize_indexed_slices(
-                        Tensor(None, gv, gi), req.embedding_tables[name],
+                        Tensor(None, gv, gi),
+                        req.gradients.embedding_tables[name],
                     )
 
         report_futures = []
         for ps_id in range(self._ps_num):
             req = reqs[ps_id]
-            req.version = self._model_versions_from_ps[ps_id]
+            req.gradients.version = self._model_versions_from_ps[ps_id]
+            req.learning_rate = K.get_value(self._model.optimizer.lr)
             report_future = self._ps_stubs[ps_id].push_gradients.future(req)
             report_futures.append(report_future)
 
@@ -885,6 +894,7 @@ class Worker(object):
                 #       get_model call.
                 if not train_with_local_model:
                     self.get_model()
+                self._callbacks_list.on_train_batch_begin(self._model_version)
                 *accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )

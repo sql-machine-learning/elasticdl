@@ -18,13 +18,13 @@ _SUPPORTED_ALLREDUCE_OPS = ["MEAN"]
 
 
 class CollectiveCommunicator(object):
-    def __init__(self, svc_name=None):
+    def __init__(self, service_name=None):
         if _FTLIB_INSTALLED:
             self._ftlib = BasicFTLib(
                 consensus="gossip",
                 commlib="pytorch",
                 consensus_init_kwargs={
-                    "known_addr_list": list(self._get_peer_set(svc_name))
+                    "known_addr_list": list(self._get_peer_set(service_name))
                 },
             )
         else:
