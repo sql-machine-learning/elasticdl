@@ -39,19 +39,20 @@ func (c *MasterClient) closeConn() {
 // Server defines servicer of ps
 type Server struct {
 	proto.UnimplementedPserverServer
-	Model                *Model
-	Opt                  Optimizer
-	masterClient         *MasterClient
-	evaluationStep       int
-	checkpointDirForInit string
-	checkpointDir        string
-	checkpointStep       int
-	keepCheckpointMax    int
-	numPsPods            int
-	ID                   int // a zero-based successive integer number
-	lock                 sync.Mutex
-	versionLock          sync.Mutex
-	savedCheckpointDirs  []string
+	Model                 *Model
+	Opt                   Optimizer
+	masterClient          *MasterClient
+	evaluationStep        int
+	checkpointDirForInit  string
+	checkpointDir         string
+	checkpointStep        int
+	keepCheckpointMax     int
+	numPsPods             int
+	lrStalenessModulation bool
+	ID                    int // a zero-based successive integer number
+	lock                  sync.Mutex
+	versionLock           sync.Mutex
+	savedCheckpointDirs   []string
 }
 
 func createMasterClient(masterAddr string) *MasterClient {
@@ -73,7 +74,8 @@ func createMasterClient(masterAddr string) *MasterClient {
 // NewServer creates a Server instance
 func NewServer(ID int, optType string, optArgs string, masterAddr string,
 	evaluationStep int, checkpointDirForInit string,
-	checkpointDir string, checkpointStep int, keepCheckpointMax int, numPsPods int) *Server {
+	checkpointDir string, checkpointStep int, keepCheckpointMax int, numPsPods int,
+	lrStalenessModulation bool) *Server {
 	var ps Server
 	if checkpointDirForInit != "" {
 		var err error
@@ -99,6 +101,7 @@ func NewServer(ID int, optType string, optArgs string, masterAddr string,
 	ps.checkpointStep = checkpointStep
 	ps.keepCheckpointMax = keepCheckpointMax
 	ps.numPsPods = numPsPods
+	ps.lrStalenessModulation = lrStalenessModulation
 	return &ps
 }
 
@@ -158,6 +161,11 @@ func (s *Server) PullEmbeddingVectors(ctx context.Context, in *proto.PullEmbeddi
 // PushGradients push gradients to server
 func (s *Server) PushGradients(ctx context.Context, in *proto.PushGradientsRequest) (*proto.PushGradientsResponse, error) {
 	// TODO: only support async now
+	var lrMultiplier = float32(1.0)
+	if s.lrStalenessModulation && s.Model.Version > in.Version {
+		staleness := s.Model.Version - in.Version
+		lrMultiplier = lrMultiplier / float32(staleness)
+	}
 	s.Opt.SetLR(in.LearningRate)
 	err := s.Opt.ApplyGradients(in.Gradients, s.Model)
 	if err != nil {
