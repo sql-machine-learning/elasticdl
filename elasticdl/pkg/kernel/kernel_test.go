@@ -28,8 +28,7 @@ func TestSGD(t *testing.T) {
 		expected[i] = b[i] - lr*a[i]
 	}
 
-	err := SGD(grad, param, lr)
-	assert.Nil(t, err)
+	SGD(grad, param, lr)
 	assert.Equal(t, expected, b)
 }
 

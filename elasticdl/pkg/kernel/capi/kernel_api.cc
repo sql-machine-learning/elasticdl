@@ -13,6 +13,30 @@ void SGD(float* grad, float* param, float lr, long long size) {
   ep -= lr * eg;
 }
 
+void Momentum(float* grad,
+              float* param,
+              float* velocity,
+              float mu,
+              bool nesterov,
+              float lr,
+              long long size) {
+  Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> eg{
+      grad, static_cast<Eigen::Index>(size)};
+
+  Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> ep{
+      param, static_cast<Eigen::Index>(size)};
+
+  Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> ev{
+      velocity, static_cast<Eigen::Index>(size)};
+
+  ev = mu * ev + eg;
+  if (nesterov) {
+    ep -= lr * (eg + mu * ev);
+  } else {
+    ep -= lr * ev;
+  }
+}
+
 void Adam(float* grad,
           float* param,
           float* m,

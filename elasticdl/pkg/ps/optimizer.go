@@ -12,15 +12,15 @@ import (
 // Optimizer interface
 type Optimizer interface {
 	GetLR() float32
+	InitOptimizer(*proto.Model)
 	ApplyGradients(*proto.Model, *Model, float32) error
-	InitOptimizer(*proto.Model) error
 }
 
 // BaseOptimizer struct
 type BaseOptimizer struct {
 	lr            float32
 	step          int64
-	DenseKernel   func(*common.Tensor, *common.Tensor, string, float32) error
+	DenseKernel   func(*common.Tensor, *common.Tensor, string, float32)
 	SparseKernel  func(*common.IndexedSlices, *common.EmbeddingTable, string, float32) error
 	IndexedKernel func(*common.IndexedSlices, *common.Tensor, string, float32) error
 }
@@ -44,22 +44,28 @@ func (opt *BaseOptimizer) ApplyGradients(grads *proto.Model, model *Model, lrMul
 			if table == nil {
 				return fmt.Errorf("grad %s not in Parameter", name)
 			}
-			opt.SparseKernel(grad, table, name, lrMultiplier)
+			err := opt.SparseKernel(grad, table, name, lrMultiplier)
+			if err != nil {
+				return err
+			}
 		} else {
-			opt.IndexedKernel(grad, param, name, lrMultiplier)
+			err := opt.IndexedKernel(grad, param, name, lrMultiplier)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
+// GetLR returns learning rate
+func (opt *BaseOptimizer) GetLR() float32 {
+	return opt.lr
+}
+
 // SGDOptimizer struct
 type SGDOptimizer struct {
 	BaseOptimizer
-}
-
-// GetLR returns learning rate
-func (opt *SGDOptimizer) GetLR() float32 {
-	return opt.lr
 }
 
 // NewSGDOptimizer creates a SGD optimizer instance
@@ -69,8 +75,8 @@ func NewSGDOptimizer(lr float32) *SGDOptimizer {
 			lr: lr,
 		},
 	}
-	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string, lrMultiplier float32) error {
-		return kernel.SGD(grad, param, opt.GetLR()*lrMultiplier)
+	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string, lrMultiplier float32) {
+		kernel.SGD(grad, param, opt.GetLR()*lrMultiplier)
 	}
 	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string, lrMultiplier float32) error {
 		return kernel.SparseSGD(grad, param, opt.GetLR()*lrMultiplier)
@@ -82,8 +88,55 @@ func NewSGDOptimizer(lr float32) *SGDOptimizer {
 }
 
 // InitOptimizer SGD Nothing to Init
-func (opt *SGDOptimizer) InitOptimizer(pb *proto.Model) error {
-	return nil
+func (opt *SGDOptimizer) InitOptimizer(pb *proto.Model) {
+	return
+}
+
+// MomentumOptimizer struct
+type MomentumOptimizer struct {
+	BaseOptimizer
+	mu       float32
+	nesterov bool
+	v        *Model
+}
+
+// NewMomentumOptimizer creates a Momentum optimizer instance
+func NewMomentumOptimizer(lr float32, mu float32, nesterov bool) *MomentumOptimizer {
+	var opt = MomentumOptimizer{
+		BaseOptimizer: BaseOptimizer{
+			lr: lr,
+		},
+		mu:       mu,
+		nesterov: nesterov,
+		v:        NewModel(),
+	}
+	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string, lrMultiplier float32) {
+		v := opt.v.GetDenseParameter(name)
+		kernel.Momentum(grad, param, v, opt.mu, opt.nesterov, opt.GetLR()*lrMultiplier)
+	}
+	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string,
+		lrMultiplier float32) error {
+		v := opt.v.GetEmbeddingTable(name)
+		return kernel.SparseMomentum(grad, param, v, opt.mu, opt.nesterov, opt.GetLR()*lrMultiplier)
+	}
+	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string,
+		lrMultiplier float32) error {
+		v := opt.v.GetDenseParameter(name)
+		return kernel.IndexedMomentum(grad, param, v, opt.mu, opt.nesterov, opt.GetLR()*lrMultiplier)
+	}
+	return &opt
+}
+
+// InitOptimizer set v non-embedding of MomentumOptimizer
+func (opt *MomentumOptimizer) InitOptimizer(pb *proto.Model) {
+	for name, tensor := range pb.DenseParameters {
+		dims := common.GetDimFromTensorProto(tensor)
+		dtype := tensor.Dtype
+		opt.v.DenseParameters[name] = common.NewEmptyTensor(dims, dtype)
+	}
+	for _, info := range pb.EmbeddingTableInfos {
+		opt.v.SetEmbeddingTableInfo(info)
+	}
 }
 
 // AdamOptimizer struct
@@ -96,11 +149,6 @@ type AdamOptimizer struct {
 	m         *Model
 	v         *Model
 	maxSquare *Model
-}
-
-// GetLR returns learning rate
-func (opt *AdamOptimizer) GetLR() float32 {
-	return opt.lr
 }
 
 // NewAdamOptimizer creates a Adam optimizer instance
@@ -118,15 +166,15 @@ func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32,
 		v:         NewModel(),
 		maxSquare: NewModel(),
 	}
-	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string, lrMultiplier float32) error {
+	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string, lrMultiplier float32) {
 		m := opt.m.GetDenseParameter(name)
 		v := opt.v.GetDenseParameter(name)
 		if opt.amsgrad {
 			ms := opt.maxSquare.GetDenseParameter(name)
-			return kernel.Adam(grad, param, m, v, opt.GetLR()*lrMultiplier, opt.step,
+			kernel.Adam(grad, param, m, v, opt.GetLR()*lrMultiplier, opt.step,
 				opt.beta1, opt.beta2, opt.epsilon, true, ms)
 		}
-		return kernel.Adam(grad, param, m, v, opt.GetLR(), opt.step,
+		kernel.Adam(grad, param, m, v, opt.GetLR()*lrMultiplier, opt.step,
 			opt.beta1, opt.beta2, opt.epsilon, false, nil)
 	}
 	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string, lrMultiplier float32) error {
@@ -137,7 +185,7 @@ func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32,
 			return kernel.SparseAdam(grad, param, m, v, opt.GetLR()*lrMultiplier, opt.step,
 				opt.beta1, opt.beta2, opt.epsilon, true, ms)
 		}
-		return kernel.SparseAdam(grad, param, m, v, opt.GetLR(), opt.step,
+		return kernel.SparseAdam(grad, param, m, v, opt.GetLR()*lrMultiplier, opt.step,
 			opt.beta1, opt.beta2, opt.epsilon, false, nil)
 	}
 	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string, lrMultiplier float32) error {
@@ -148,14 +196,14 @@ func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32,
 			return kernel.IndexedAdam(grad, param, m, v, opt.GetLR()*lrMultiplier, opt.step,
 				opt.beta1, opt.beta2, opt.epsilon, true, ms)
 		}
-		return kernel.IndexedAdam(grad, param, m, v, opt.GetLR(), opt.step,
+		return kernel.IndexedAdam(grad, param, m, v, opt.GetLR()*lrMultiplier, opt.step,
 			opt.beta1, opt.beta2, opt.epsilon, false, nil)
 	}
 	return &opt
 }
 
 // InitOptimizer set m,v,maxSquare non-embedding of AdamOptimizer
-func (opt *AdamOptimizer) InitOptimizer(pb *proto.Model) error {
+func (opt *AdamOptimizer) InitOptimizer(pb *proto.Model) {
 	for name, tensor := range pb.DenseParameters {
 		dims := common.GetDimFromTensorProto(tensor)
 		dtype := tensor.Dtype
@@ -170,7 +218,6 @@ func (opt *AdamOptimizer) InitOptimizer(pb *proto.Model) error {
 		opt.v.SetEmbeddingTableInfo(info)
 		opt.maxSquare.SetEmbeddingTableInfo(info)
 	}
-	return nil
 }
 
 const (
@@ -240,14 +287,10 @@ func NewOptimizer(optType string, optArgs string) (Optimizer, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		if momentum > float64(0.0) {
-			return nil, fmt.Errorf("SGD optimizer with momentum has not been implemented")
+			return NewMomentumOptimizer(lr, float32(momentum), nesterov), nil
 		}
-		if !nesterov {
-			return NewSGDOptimizer(lr), nil
-		}
-		return nil, fmt.Errorf("SGD optimizer with nesterov=true has not been implemented")
+		return NewSGDOptimizer(lr), nil
 	} else if optType == optTypeAdam {
 		var (
 			beta1   float64
