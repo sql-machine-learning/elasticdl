@@ -1,6 +1,6 @@
 from kubernetes import client
 
-_ALLOWED_VOLUME_KEYS = ["claim_name", "host_path", "type", "mount_path"]
+_ALLOWED_VOLUME_KEYS = ["claim_name", "host_path", "type", "mount_path", "sub_path"]
 
 
 def parse_volume_and_mount(volume_conf, pod_name):
