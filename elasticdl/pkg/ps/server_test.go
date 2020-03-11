@@ -258,18 +258,16 @@ func TestPushGradients(t *testing.T) {
 	defer conn.Close()
 	defer cancel()
 
-
 	var modelReq = &proto.Model{
-			DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
-			EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
-			EmbeddingTableInfos: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
-				Name:        "e1",
-				Dim:         10,
-				Initializer: "zero",
-				Dtype:       common.Float32,
-			}},
-		}
-
+		DenseParameters: make(map[string]*tensor_go_proto.TensorProto),
+		EmbeddingTables: make(map[string]*proto.IndexedSlicesProto),
+		EmbeddingTableInfos: []*proto.EmbeddingTableInfo{&proto.EmbeddingTableInfo{
+			Name:        "e1",
+			Dim:         10,
+			Initializer: "zero",
+			Dtype:       common.Float32,
+		}},
+	}
 
 	// dense embedding param
 	a := make([]float32, 10)
@@ -293,9 +291,9 @@ func TestPushGradients(t *testing.T) {
 
 	client.PushModel(ctx, modelReq)
 
-    var newLR float32 = 0.2
+	var newLR float32 = 0.2
 	var gradReq = &proto.PushGradientsRequest{
-		Gradients: modelReq
+		Gradients:    modelReq,
 		LearningRate: newLR,
 	}
 
