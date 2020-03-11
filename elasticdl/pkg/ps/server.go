@@ -162,12 +162,12 @@ func (s *Server) PullEmbeddingVectors(ctx context.Context, in *proto.PullEmbeddi
 func (s *Server) PushGradients(ctx context.Context, in *proto.PushGradientsRequest) (*proto.PushGradientsResponse, error) {
 	// TODO: only support async now
 	var lrMultiplier = float32(1.0)
-	if s.lrStalenessModulation && s.Model.Version > in.Version {
-		staleness := s.Model.Version - in.Version
+	if s.lrStalenessModulation && s.Model.Version > in.Gradients.Version {
+		staleness := s.Model.Version - in.Gradients.Version
 		lrMultiplier = lrMultiplier / float32(staleness)
 	}
 	s.Opt.SetLR(in.LearningRate)
-	err := s.Opt.ApplyGradients(in.Gradients, s.Model)
+	err := s.Opt.ApplyGradients(in.Gradients, s.Model, lrMultiplier)
 	if err != nil {
 		var resp = proto.PushGradientsResponse{
 			Accepted: false,
