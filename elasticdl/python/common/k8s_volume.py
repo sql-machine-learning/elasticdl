@@ -39,7 +39,9 @@ def parse_volume_and_mount(volume_conf, pod_name):
         volumes.append(volume)
         volume_mounts.append(
             client.V1VolumeMount(
-                name=volume_name, mount_path=volume_dict["mount_path"]
+                name=volume_name,
+                mount_path=volume_dict["mount_path"],
+                sub_path=volume_dict.get("sub_path", None),
             )
         )
     return volumes, volume_mounts
