@@ -69,9 +69,11 @@ class EmbeddingTable(object):
     def to_indexed_slices(self):
         indices = []
         embedding_vectors = []
-        for id, embedding_vector in self.embedding_vectors.items():
+        embedding_vectors_dict = self.embedding_vectors.copy()
+        for id, embedding_vector in embedding_vectors_dict.items():
             indices.append(id)
             embedding_vectors.append(embedding_vector)
+        del embedding_vectors_dict
         return tf.IndexedSlices(
             values=np.array(embedding_vectors), indices=np.array(indices)
         )
