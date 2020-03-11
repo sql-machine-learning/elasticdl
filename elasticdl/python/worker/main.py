@@ -5,6 +5,9 @@ from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.worker.worker import Worker
 
+CONNECT_PS_MAX_RETRIES = 3
+CONNECT_PS_TIMEOUT = 60
+
 
 def main():
     args = parse_worker_args()
@@ -23,24 +26,25 @@ def main():
             # addr is in the form as "ps-pod-name.namespace.svc:port"
             channel = build_channel(addr)
 
-            # Wait the channel is ready by a Future object.
-            connect_succeed = False
-            for i in range(3):
+            succeeded = False
+            for i in range(CONNECT_PS_MAX_RETRIES):
                 try:
-                    grpc.channel_ready_future(channel).result(timeout=60)
+                    grpc.channel_ready_future(channel).result(
+                        timeout=CONNECT_PS_TIMEOUT
+                    )
                     logger.info(
                         "grpc channel %s to connect pod %s is ready"
                         % (addr, addr.split(".")[0])
                     )
                     ps_channels.append(channel)
-                    connect_succeed = True
+                    succeeded = True
                     break
                 except grpc.FutureTimeoutError:
                     logger.warning(
                         "Failed to connect pod %s with %d retry"
                         % (addr.split(".")[0], i)
                     )
-            if not connect_succeed:
+            if not succeeded:
                 raise TimeoutError(
                     "Time out to connect pod %s with 3 retries"
                     % addr.split(".")[0]
