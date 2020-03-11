@@ -58,8 +58,9 @@ class Embedding(tf.keras.layers.Layer):
         # different iterations.
         # `tf.Variable` requires initial value if shape has `None` dimension.
         self._embedding_and_ids_graph = []
+        self.embedding_weight_name = self.name + "/embeddings:0"
         self.embedding_delegate = EmbeddingDelegate(
-            self.input_dim, self.output_dim
+            self.input_dim, self.output_dim, self.embedding_weight_name
         )
 
     @tf_utils.shape_type_conversion
@@ -148,6 +149,5 @@ class Embedding(tf.keras.layers.Layer):
     def embedding_and_ids(self):
         return self.embedding_delegate.embedding_and_ids
 
-    @property
-    def embedding_weight_name(self):
-        return self.embedding_delegate.name
+    def set_embedding_weight_name(self, name):
+        self.embedding_weight_name = name
