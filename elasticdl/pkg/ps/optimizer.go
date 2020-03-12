@@ -151,7 +151,7 @@ type AdamOptimizer struct {
 	maxSquare *Model
 }
 
-// NewAdamOptimizer creates a Adam optimizer instance
+// NewAdamOptimizer creates an Adam optimizer instance
 func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32, amsgrad bool) *AdamOptimizer {
 	var opt AdamOptimizer = AdamOptimizer{
 		BaseOptimizer: BaseOptimizer{
@@ -229,7 +229,7 @@ type AdagradOptimizer struct {
 	m       *Model
 }
 
-// NewAdagradOptimizer creates a SGD optimizer instance
+// NewAdagradOptimizer creates an Adagrad optimizer instance
 func NewAdagradOptimizer(lr float32, epsilon float32) *AdagradOptimizer {
 	var opt = AdagradOptimizer{
 		BaseOptimizer: BaseOptimizer{
