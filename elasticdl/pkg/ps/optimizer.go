@@ -238,18 +238,19 @@ func NewAdagradOptimizer(lr float32, epsilon float32) *AdagradOptimizer {
 		epsilon: epsilon,
 		m:       NewModel(),
 	}
-	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string) {
+	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string, lr float32) {
 		m := opt.m.GetDenseParameter(name)
-		kernel.Adagrad(grad, param, m, opt.GetLR(), opt.epsilon)
+		kernel.Adagrad(grad, param, m, lr, opt.epsilon)
 	}
-	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string) error {
+	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable,
+		name string, lr float32) error {
 		m := opt.m.GetEmbeddingTable(name)
-
-		return kernel.SparseAdagrad(grad, param, m, opt.GetLR(), opt.epsilon)
+		return kernel.SparseAdagrad(grad, param, m, lr, opt.epsilon)
 	}
-	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor, name string) error {
+	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor,
+		name string, lr float32) error {
 		m := opt.m.GetDenseParameter(name)
-		return kernel.IndexedAdagrad(grad, param, m, opt.GetLR(), opt.epsilon)
+		return kernel.IndexedAdagrad(grad, param, m, lr, opt.epsilon)
 	}
 	return &opt
 }
