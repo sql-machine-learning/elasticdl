@@ -14,8 +14,8 @@ from elasticdl.python.elasticdl.feature_column.feature_column import (
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.keras.layers import SparseEmbedding
-from elasticdl.python.ps.parameters import Parameters
 from elasticdl.python.ps.embedding_table import EmbeddingTable
+from elasticdl.python.ps.parameters import Parameters
 
 EMBEDDING_INPUT_DIM = 300000
 
@@ -41,12 +41,10 @@ def custom_model_with_embedding_layer():
 
 def custom_model_with_embedding_column():
     inputs = {
-        "age": tf.keras.layers.Input(
-            shape=(1,), name="age", dtype=tf.float32
-        ),
+        "age": tf.keras.layers.Input(shape=(1,), name="age", dtype=tf.float32),
         "user_id": tf.keras.layers.Input(
             shape=(1,), name="user_id", dtype=tf.string
-        )
+        ),
     }
     age = tf.feature_column.numeric_column("age", dtype=tf.int64)
     user_id_embedding = tf.feature_column.embedding_column(
@@ -56,9 +54,9 @@ def custom_model_with_embedding_column():
         dimension=2,
     )
     feature_columns = [age, user_id_embedding]
-    dense = tf.keras.layers.DenseFeatures(
-        feature_columns=feature_columns
-    )(inputs)
+    dense = tf.keras.layers.DenseFeatures(feature_columns=feature_columns)(
+        inputs
+    )
     output = tf.keras.layers.Dense(1)(dense)
     return tf.keras.models.Model(inputs, output)
 
@@ -173,7 +171,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
                 embedding_table = EmbeddingTable(
                     name=weight.name,
                     dim=weight.shape[1],
-                    initializer='RandomUniform',
+                    initializer="RandomUniform",
                 )
                 embedding_table.set(
                     np.arange(weight.shape[0]), np.ones(weight.shape)
@@ -221,7 +219,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
                 model_inst, dataset=None
             )
             result = export_model.call(
-                {'age': tf.constant([[1]]), "user_id": tf.constant([['134']])}
+                {"age": tf.constant([[1]]), "user_id": tf.constant([["134"]])}
             ).numpy()
             self.assertEqual(result[0][0], 4.0)
 

@@ -8,8 +8,8 @@ from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.elasticdl.feature_column.feature_column import (
-    embedding_column,
     EmbeddingColumn,
+    embedding_column,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.keras.layers import SparseEmbedding
