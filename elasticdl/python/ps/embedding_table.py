@@ -1,4 +1,5 @@
 import threading
+
 import numpy as np
 import tensorflow as tf
 
@@ -94,9 +95,9 @@ class EmbeddingTable(object):
         """Get the element count of an embedding table"""
         with self._lock:
             if len(self.embedding_vectors) > 0:
-                element_size = list(
-                    self.embedding_vectors.values()
-                )[0].itemsize
+                element_size = list(self.embedding_vectors.values())[
+                    0
+                ].itemsize
                 size = self.dim * len(self.embedding_vectors) * element_size
                 return size
         return 0
