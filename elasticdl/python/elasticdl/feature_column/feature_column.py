@@ -133,19 +133,6 @@ class EmbeddingColumn(
         """See `DenseColumn` base class."""
         return tensor_shape.TensorShape([self.dimension])
 
-    def create_state(self, state_manager):
-        # Get the name of the embedding variable
-        EMBEDDING_VARIABLE_NAME_FORMAT = (
-            "{dense_features_layer_name}/{column_name}/embedding_weights:0"
-        )
-        dense_features_layer_name = state_manager._layer.name
-        embedding_variable_name = EMBEDDING_VARIABLE_NAME_FORMAT.format(
-            dense_features_layer_name=dense_features_layer_name,
-            column_name=self.name,
-        )
-
-        self._embedding_delegate.set_name(embedding_variable_name)
-
     def get_dense_tensor(self, transformation_cache, state_manager):
         if isinstance(
             self.categorical_column, fc_lib.SequenceCategoricalColumn
@@ -194,6 +181,18 @@ class EmbeddingColumn(
                 of embedding ids to be looked up.
         """
         self._embedding_delegate.set_lookup_embedding_func(func)
+
+    def set_dense_features_layer_name(self, dense_features_layer_name):
+        # Get the name of the embedding variable
+        EMBEDDING_VARIABLE_NAME_FORMAT = (
+            "{dense_features_layer_name}/{column_name}/embedding_weights:0"
+        )
+        embedding_variable_name = EMBEDDING_VARIABLE_NAME_FORMAT.format(
+            dense_features_layer_name=dense_features_layer_name,
+            column_name=self.name,
+        )
+
+        self._embedding_delegate.set_name(embedding_variable_name)
 
     def reset(self):
         self._embedding_delegate.reset()
