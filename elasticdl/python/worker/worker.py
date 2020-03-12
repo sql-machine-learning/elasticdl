@@ -748,32 +748,23 @@ class Worker(object):
     def _get_local_model_params(self):
         return self._non_embed_vars
 
-    # TODO: Implement master gRPC service to select a worker
-    # to be used for broadcast model parameters from.
     @staticmethod
-    def _get_ip_of_broadcast_root_worker():
-        return 1
+    def _get_rank_of_broadcast_src_worker():
+        return 0
 
-    @staticmethod
-    def _get_ip_of_this_worker():
-        hostname = socket.gethostname()
-        # Use localhost for testing locally on a laptop or inside a container
-        if ".local" in hostname or "." not in hostname:
-            hostname = "localhost"
-        return socket.gethostbyname(hostname)
+    def _get_rank_of_this_worker(self):
+        return self._collective_communicator.rank
 
     def _broadcast_model_params(self):
         status = self._collective_communicator.barrier()
         if status == CollectiveCommunicatorStatus.FAILED:
             self.logger.warning("Failed to perform barrier operation")
             return False
-        broadcast_root_worker_ip = self._get_ip_of_broadcast_root_worker()
-        this_worker_ip = self._get_ip_of_this_worker()
-        is_broadcast_root_worker = this_worker_ip == broadcast_root_worker_ip
+        broadcast_root_worker_ip = self._get_rank_of_broadcast_src_worker()
+        this_worker_ip = self._get_rank_of_this_worker()
+        is_broadcast_src_worker = this_worker_ip == broadcast_root_worker_ip
         model_params = (
-            self._get_local_model_params()
-            if is_broadcast_root_worker
-            else None
+            self._get_local_model_params() if is_broadcast_src_worker else None
         )
         status, model_params = self._collective_communicator.broadcast(
             model_params, broadcast_root_worker_ip
@@ -781,7 +772,7 @@ class Worker(object):
         if status == CollectiveCommunicatorStatus.FAILED:
             self.logger.warning("Failed to broadcast model parameters")
             return False
-        if not is_broadcast_root_worker and model_params is not None:
+        if not is_broadcast_src_worker and model_params is not None:
             self._update_local_model_params(model_params)
         status = self._collective_communicator.barrier()
         if status == CollectiveCommunicatorStatus.FAILED:
