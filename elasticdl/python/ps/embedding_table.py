@@ -1,3 +1,4 @@
+import threading
 import numpy as np
 import tensorflow as tf
 
@@ -44,24 +45,27 @@ class EmbeddingTable(object):
             )
         self.is_slot = is_slot
         self.embedding_vectors = {}
+        self._lock = threading.Lock()
 
     def get(self, indices):
         if len(indices) == 0:
             return None
         values = []
-        for i in indices:
-            value = self.embedding_vectors.get(i, None)
-            if value is None:
-                value = self.initializer(shape=(self.dim,)).numpy()
-                self.embedding_vectors[i] = value
-            values.append(value)
+        with self._lock:
+            for i in indices:
+                value = self.embedding_vectors.get(i, None)
+                if value is None:
+                    value = self.initializer(shape=(self.dim,)).numpy()
+                    self.embedding_vectors[i] = value
+                values.append(value)
         return np.stack(values)
 
     def set(self, indices, values):
         # TODO(qijun) need to add a RWLock in Sync-SGD
-        for index, i in enumerate(indices):
-            embedding_vector = values[index]
-            self.embedding_vectors[i] = embedding_vector
+        with self._lock:
+            for index, i in enumerate(indices):
+                embedding_vector = values[index]
+                self.embedding_vectors[i] = embedding_vector
 
     def clear(self):
         self.embedding_vectors.clear()
@@ -69,11 +73,10 @@ class EmbeddingTable(object):
     def to_indexed_slices(self):
         indices = []
         embedding_vectors = []
-        embedding_vectors_dict = self.embedding_vectors.copy()
-        for id, embedding_vector in embedding_vectors_dict.items():
-            indices.append(id)
-            embedding_vectors.append(embedding_vector)
-        del embedding_vectors_dict
+        with self._lock:
+            for id, embedding_vector in self.embedding_vectors.items():
+                indices.append(id)
+                embedding_vectors.append(embedding_vector)
         return tf.IndexedSlices(
             values=np.array(embedding_vectors), indices=np.array(indices)
         )
@@ -89,10 +92,13 @@ class EmbeddingTable(object):
 
     def get_table_size(self):
         """Get the element count of an embedding table"""
-        if len(self.embedding_vectors) > 0:
-            element_size = list(self.embedding_vectors.values())[0].itemsize
-            size = self.dim * len(self.embedding_vectors) * element_size
-            return size
+        with self._lock:
+            if len(self.embedding_vectors) > 0:
+                element_size = list(
+                    self.embedding_vectors.values()
+                )[0].itemsize
+                size = self.dim * len(self.embedding_vectors) * element_size
+                return size
         return 0
 
     def debug_info(self):
