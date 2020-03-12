@@ -65,9 +65,11 @@ func (e *EmbeddingTable) SetEmbeddingVectors(idxslice *IndexedSlices) error {
 
 // ToIndexedSlices transforms embedding table format to indexed slices format
 func (e *EmbeddingTable) ToIndexedSlices() *IndexedSlices {
+	e.lock.RLock()
 	ids := make([]int64, 0, len(e.EmbeddingVectors))
 	for k := range e.EmbeddingVectors {
 		ids = append(ids, k)
 	}
+	e.lock.RUnlock()
 	return NewIndexedSlices(e.GetEmbeddingVectors(ids), ids)
 }

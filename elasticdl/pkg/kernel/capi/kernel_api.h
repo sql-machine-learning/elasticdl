@@ -1,11 +1,21 @@
 #ifndef ELASTICDL_PKG_KERNEL_CAPI_KERNEL_API_H_
 #define ELASTICDL_PKG_KERNEL_CAPI_KERNEL_API_H_
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 void SGD(float* grad, float* param, float lr, long long size);
+
+void Momentum(float* grad,
+              float* param,
+              float* velocity,
+              float mu,
+              bool nesterov,
+              float lr,
+              long long size);
 
 void Adam(float* grad,
           float* param,
