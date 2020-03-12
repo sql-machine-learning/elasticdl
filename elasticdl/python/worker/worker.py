@@ -432,7 +432,7 @@ class Worker(object):
             embedding_infos = model.embedding_table_infos
             for column in self._embedding_columns:
                 embedding_info = embedding_infos.add()
-                embedding_info.name = column.name
+                embedding_info.name = column.embedding_weight_name
                 embedding_info.dim = column.dimension
                 # TODO(brightcoder01): The initializer in embedding column is
                 # a variable initializer function. For embedding layer, it's a
@@ -480,7 +480,7 @@ class Worker(object):
             )
         for column in self._embedding_columns:
             embedding_name_values.append(
-                (column.name, column.embedding_and_ids)
+                (column.embedding_weight_name, column.embedding_and_ids)
             )
 
         return embedding_name_values

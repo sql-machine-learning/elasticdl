@@ -51,10 +51,6 @@ class Embedding(tf.keras.layers.Layer):
         self.supports_masking = mask_zero
         self.input_length = input_length
         self.combiner = combiner
-        self.tape = None
-        self._lookup_embedding_func = None
-        self.embedding_weight_name = self.name + "/embeddings:0"
-
         self._embedding_and_ids_eagerly = []
 
         # BET's shape and ids' shape in `self._embedding_and_ids_graph` have
@@ -62,6 +58,7 @@ class Embedding(tf.keras.layers.Layer):
         # different iterations.
         # `tf.Variable` requires initial value if shape has `None` dimension.
         self._embedding_and_ids_graph = []
+        self.embedding_weight_name = self.name + "/embeddings:0"
         self.embedding_delegate = EmbeddingDelegate(
             self.input_dim, self.output_dim, self.embedding_weight_name
         )
