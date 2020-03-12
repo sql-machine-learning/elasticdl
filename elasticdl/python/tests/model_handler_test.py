@@ -215,6 +215,8 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
             )
             model_inst = custom_model_with_embedding_column()
             self._save_model(model_inst)
+
+            model_inst = self.model_handler.get_model_to_train(model_inst)
             export_model = self.model_handler.get_model_to_export(
                 model_inst, dataset=None
             )

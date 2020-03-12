@@ -123,7 +123,6 @@ def _replace_edl_embedding_column_with_tf(dense_features_layer):
             new_column = fc_lib.embedding_column(
                 column.categorical_column, dimension=column.dimension
             )
-            new_column.set_dense_features_layer_name(dense_features_layer.name)
             new_feature_columns.append(new_column)
         else:
             new_feature_columns.append(column)
