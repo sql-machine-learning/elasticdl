@@ -146,13 +146,12 @@ func IndexedAdam(grad *common.IndexedSlices, param *common.Tensor,
 }
 
 // Adagrad kernel
-func Adagrad(grad *common.Tensor, param *common.Tensor, m *common.Tensor, lr float32, epsilon float32) error {
+func Adagrad(grad *common.Tensor, param *common.Tensor, m *common.Tensor, lr float32, epsilon float32) {
 	gradPtr := (*C.float)(unsafe.Pointer(&grad.Buffer[0]))
 	paramPtr := (*C.float)(unsafe.Pointer(&param.Buffer[0]))
 	mPtr := (*C.float)(unsafe.Pointer(&m.Buffer[0]))
 	length := len(grad.Buffer) / int(common.DtypeSize[grad.Dtype])
 	C.Adagrad(gradPtr, paramPtr, mPtr, C.float(lr), C.longlong(length), C.float(epsilon))
-	return nil
 }
 
 // SparseAdagrad kernel

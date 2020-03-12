@@ -229,11 +229,6 @@ type AdagradOptimizer struct {
 	m       *Model
 }
 
-// GetLR returns learning rate
-func (opt *AdagradOptimizer) GetLR() float32 {
-	return opt.lr
-}
-
 // NewAdagradOptimizer creates a SGD optimizer instance
 func NewAdagradOptimizer(lr float32, epsilon float32) *AdagradOptimizer {
 	var opt = AdagradOptimizer{
@@ -243,9 +238,9 @@ func NewAdagradOptimizer(lr float32, epsilon float32) *AdagradOptimizer {
 		epsilon: epsilon,
 		m:       NewModel(),
 	}
-	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string) error {
+	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string) {
 		m := opt.m.GetDenseParameter(name)
-		return kernel.Adagrad(grad, param, m, opt.GetLR(), opt.epsilon)
+		kernel.Adagrad(grad, param, m, opt.GetLR(), opt.epsilon)
 	}
 	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable, name string) error {
 		m := opt.m.GetEmbeddingTable(name)
@@ -259,8 +254,8 @@ func NewAdagradOptimizer(lr float32, epsilon float32) *AdagradOptimizer {
 	return &opt
 }
 
-// InitOptimizer SGD Nothing to Init
-func (opt *AdagradOptimizer) InitOptimizer(pb *proto.Model) error {
+// InitOptimizer set m, non-embedding of AdagradOptimizer
+func (opt *AdagradOptimizer) InitOptimizer(pb *proto.Model) {
 	for name, tensor := range pb.DenseParameters {
 		dims := common.GetDimFromTensorProto(tensor)
 		dtype := tensor.Dtype
@@ -269,7 +264,6 @@ func (opt *AdagradOptimizer) InitOptimizer(pb *proto.Model) error {
 	for _, info := range pb.EmbeddingTableInfos {
 		opt.m.SetEmbeddingTableInfo(info)
 	}
-	return nil
 }
 
 const (
