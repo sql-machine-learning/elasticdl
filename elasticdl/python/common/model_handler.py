@@ -9,6 +9,7 @@ from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.elasticdl.feature_column.feature_column import (
     embedding_column,
+    EmbeddingColumn,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.keras.layers import SparseEmbedding
@@ -99,6 +100,27 @@ def _replace_tf_embedding_column_with_edl(dense_features_layer):
                 "version to ElasticDL version".format(column.name)
             )
             new_column = embedding_column(
+                column.categorical_column, dimension=column.dimension
+            )
+            new_column.set_dense_features_layer_name(dense_features_layer.name)
+            new_feature_columns.append(new_column)
+        else:
+            new_feature_columns.append(column)
+
+    return tf.keras.layers.DenseFeatures(
+        feature_columns=new_feature_columns, name=dense_features_layer.name
+    )
+
+
+def _replace_edl_embedding_column_with_tf(dense_features_layer):
+    new_feature_columns = []
+    for column in dense_features_layer._feature_columns:
+        if isinstance(column, EmbeddingColumn):
+            logger.info(
+                "Replace embedding_column {} from ElasticDL "
+                "version to TF version".format(column.name)
+            )
+            new_column = fc_lib.embedding_column(
                 column.categorical_column, dimension=column.dimension
             )
             new_column.set_dense_features_layer_name(dense_features_layer.name)
@@ -334,6 +356,8 @@ class ParameterServerModelHandler(ModelHandler):
                         name=layer.name,
                     )
                 return embedding_layer
+            elif type(layer) == tf.keras.layers.DenseFeatures:
+                return _replace_edl_embedding_column_with_tf(layer)
             return layer
 
         return tf.keras.models.clone_model(
@@ -424,4 +448,7 @@ class ParameterServerModelHandler(ModelHandler):
                         input_length=value.input_length,
                     )
                 setattr(model, name, embedding_layer)
+            elif type(value) == tf.keras.layers.DenseFeatures:
+                feature_layer = _replace_edl_embedding_column_with_tf(value)
+                setattr(model, name, feature_layer)
         return model
