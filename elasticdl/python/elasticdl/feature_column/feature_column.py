@@ -133,6 +133,10 @@ class EmbeddingColumn(
         """See `DenseColumn` base class."""
         return tensor_shape.TensorShape([self.dimension])
 
+    def create_state(self, state_manager):
+        dense_features_layer_name = state_manager._layer.name
+        self.set_dense_features_layer_name(dense_features_layer_name)
+
     def get_dense_tensor(self, transformation_cache, state_manager):
         if isinstance(
             self.categorical_column, fc_lib.SequenceCategoricalColumn
