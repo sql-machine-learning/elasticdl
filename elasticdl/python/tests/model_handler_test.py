@@ -184,8 +184,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
         params.version = 100
         return params
 
-    def _save_model(self, model):
-        # prefix = "custom_model/" if is_subclass else ""
+    def _mock_model_weights_and_save_checkpoint(self, model):
         ckpt_dir = self.model_handler._checkpoint_dir
         checkpoint_saver = CheckpointSaver(ckpt_dir, 0, 0, False)
         params = self._mock_model_parameters(model)
@@ -225,7 +224,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
                 temp_dir, "test_export"
             )
             model_inst = custom_model_with_embedding_column()
-            self._save_model(model_inst)
+            self._mock_model_weights_and_save_checkpoint(model_inst)
 
             model_inst = self.model_handler.get_model_to_train(model_inst)
             export_model = self.model_handler.get_model_to_export(
@@ -244,7 +243,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
             model_inst = custom_model_with_embedding_layer()
             train_model = self.model_handler.get_model_to_train(model_inst)
 
-            self._save_model(model_inst)
+            self._mock_model_weights_and_save_checkpoint(model_inst)
             export_model = self.model_handler.get_model_to_export(
                 train_model, dataset=None
             )
@@ -269,7 +268,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
             model_inst = CustomModel()
             dataset = _get_dataset()
             model_inst._build_model_with_inputs(inputs=dataset, targets=None)
-            self._save_model(model_inst)
+            self._mock_model_weights_and_save_checkpoint(model_inst)
 
             model_inst.inputs = None  # Reset model inputs
             train_model = self.model_handler.get_model_to_train(model_inst)
@@ -296,7 +295,7 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
             model_inst = custom_model_with_sparse_embedding()
             train_model = self.model_handler.get_model_to_train(model_inst)
 
-            self._save_model(model_inst)
+            self._mock_model_weights_and_save_checkpoint(model_inst)
             # Model handler will restore model parameters from the checkpoint
             # directory and assign parameters to train_model.
             export_model = self.model_handler.get_model_to_export(
