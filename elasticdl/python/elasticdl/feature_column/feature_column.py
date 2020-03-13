@@ -228,6 +228,54 @@ def concatenated_categorical_column(categorical_columns):
     to avoid this conflict. The id range of the concatenated column is
     [0, num_bucket_0 + num_bucket_1 + ... + num_bucket_n].
 
+    Example
+
+    ```python
+    id = categorical_column_with_identity("id", num_buckets=32)
+    work_class = categorical_column_with_vocabulary_list(
+        "work_class",
+        vocabulary_list=[
+            "Private",
+            "Self-emp-not-inc",
+            "Self-emp-inc",
+            "Federal-gov",
+            "Local-gov",
+            "State-gov",
+            "Without-pay",
+            "Never-worked",
+        ],
+    )
+    concat = concatenated_categorical_column([id, work_class])
+    ```
+
+    For the feature inputs:
+    {
+        "id": tf.constant([[1], [-1], [8]]),
+        "work_class": tf.constant(
+            [
+                [""],
+                ["Private"],
+                ["Self-emp-inc"]
+            ], tf.string)
+    }
+
+    The sparse id tensor from `id` column is:
+    shape = [3,1]
+    [0,0]: 1
+    [2,0]: 8
+
+    The sparse id tensor from `workclass` column is:
+    shape = [3,1]
+    [1,0]: 0
+    [2,0]: 2
+
+    The concatenated sparse id tensor from `concat` column is:
+    shape = [3,2]
+    [0,0]: 1
+    [1,0]: 32
+    [2,0]: 8
+    [2,1]: 34
+
     Returns:
         A `CategoricalColumn` to concatenate multiple categorical columns.
 
