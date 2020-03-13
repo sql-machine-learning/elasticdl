@@ -237,7 +237,7 @@ class CheckpointSaver(object):
                 version = model_pb.version
             elif version != model_pb.version:
                 raise ValueError(
-                    "The versions in model shards are not consistency"
+                    "The versions in model shards are not consistent"
                 )
 
             for embedding_info_pb in model_pb.embedding_table_infos:
