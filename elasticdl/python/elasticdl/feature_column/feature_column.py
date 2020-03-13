@@ -210,7 +210,32 @@ class EmbeddingColumn(
         return self._embedding_delegate.name
 
 
-def concat_column(categorical_columns):
+def concatenated_categorical_column(categorical_columns):
+    """A `CategoricalColumn` to concatenate multiple categorical columns.
+
+    Use this when you have many categorical columns and want to map all
+    to embedding. It's recommended to concatenate the sparse id tensors
+    from the categorical columns above to one sparse id tensor using this
+    API, and then map the combined SparseTensor to Embedding. Because
+    there is much overhead to create embedding variables for each
+    categorical column, the model size will be huge. Using this way, we
+    can reduce the model size.
+
+    The id range of source categorical columns are [0, num_buckets_0],
+    [0, num_buckets_1] ... [0, num_buckets_n]. The ids will meet conflict
+    in the combined sparse id tensor because they all start from 0. In this
+    api, we will add offsets in sparse id tensors from each categorical column
+    to avoid this conflict. The id range of the concatenated column is
+    [0, num_bucket_0 + num_bucket_1 + ... + num_bucket_n].
+
+    Returns:
+        A `CategoricalColumn` to concatenate multiple categorical columns.
+
+    Raises:
+        ValueError: `categorical_columns` is missing or not a list.
+        ValueError: `categorical_columns` contains any element which
+            is not CategoricalColumn
+    """
     if not isinstance(categorical_columns, list):
         raise ValueError("categorical_columns should be a list")
 
@@ -224,13 +249,17 @@ def concat_column(categorical_columns):
                 " Given:{}".format(column)
             )
 
-    return ConcatColumn(categorical_columns=tuple(categorical_columns))
+    return ConcatenatedCategoricalColumn(
+        categorical_columns=tuple(categorical_columns)
+    )
 
 
-class ConcatColumn(
+class ConcatenatedCategoricalColumn(
     fc_lib.CategoricalColumn,
     fc_old._CategoricalColumn,
-    collections.namedtuple("ConcatColumn", ("categorical_columns")),
+    collections.namedtuple(
+        "ConcatenatedCategoricalColumn", ("categorical_columns")
+    ),
 ):
     def __init__(self, **kwargs):
         # Calculate the offset tensor
