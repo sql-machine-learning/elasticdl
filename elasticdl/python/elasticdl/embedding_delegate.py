@@ -18,7 +18,7 @@ class EmbeddingDelegate(object):
     use this component.
     """
 
-    def __init__(self, input_dim, output_dim, name):
+    def __init__(self, input_dim, output_dim, name=None):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.name = name
@@ -30,9 +30,6 @@ class EmbeddingDelegate(object):
         # `tf.Variable` requires initial value if shape has `None` dimension.
         self._embedding_and_ids_graph = []
         self.tape = None
-
-    def set_tape(self, tape):
-        self.tape = tape
 
     def _init_for_graph_mode_if_necessary(self):
         if (
@@ -273,6 +270,12 @@ class EmbeddingDelegate(object):
     def reset(self):
         self.tape = None
         self._embedding_and_ids_eagerly = []
+
+    def set_name(self, name):
+        self.name = name
+
+    def set_tape(self, tape):
+        self.tape = tape
 
     def set_lookup_embedding_func(self, lookup_embedding_func):
         self._lookup_embedding_func = lookup_embedding_func

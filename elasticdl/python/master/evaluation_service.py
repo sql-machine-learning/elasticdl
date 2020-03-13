@@ -194,6 +194,8 @@ class EvaluationService(object):
             )
 
     def complete_task(self):
+        if self._eval_job is None:
+            return
         self._eval_job.complete_task()
         if self._eval_job.finished():
             evaluation_metrics = (

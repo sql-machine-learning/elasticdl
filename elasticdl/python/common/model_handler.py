@@ -101,11 +101,14 @@ def _replace_tf_embedding_column_with_edl(dense_features_layer):
             new_column = embedding_column(
                 column.categorical_column, dimension=column.dimension
             )
+            new_column.set_dense_features_layer_name(dense_features_layer.name)
             new_feature_columns.append(new_column)
         else:
             new_feature_columns.append(column)
 
-    return tf.keras.layers.DenseFeatures(new_feature_columns)
+    return tf.keras.layers.DenseFeatures(
+        feature_columns=new_feature_columns, name=dense_features_layer.name
+    )
 
 
 class ModelHandler(metaclass=abc.ABCMeta):

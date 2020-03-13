@@ -1,3 +1,5 @@
+import threading
+
 import numpy as np
 import tensorflow as tf
 
@@ -44,6 +46,7 @@ class EmbeddingTable(object):
             )
         self.is_slot = is_slot
         self.embedding_vectors = {}
+        self._lock = threading.Lock()
 
     def get(self, indices):
         if len(indices) == 0:
@@ -52,8 +55,9 @@ class EmbeddingTable(object):
         for i in indices:
             value = self.embedding_vectors.get(i, None)
             if value is None:
-                value = self.initializer(shape=(self.dim,)).numpy()
-                self.embedding_vectors[i] = value
+                with self._lock:
+                    value = self.initializer(shape=(self.dim,)).numpy()
+                    self.embedding_vectors[i] = value
             values.append(value)
         return np.stack(values)
 
@@ -69,9 +73,10 @@ class EmbeddingTable(object):
     def to_indexed_slices(self):
         indices = []
         embedding_vectors = []
-        for id, embedding_vector in self.embedding_vectors.items():
-            indices.append(id)
-            embedding_vectors.append(embedding_vector)
+        with self._lock:
+            for id, embedding_vector in self.embedding_vectors.items():
+                indices.append(id)
+                embedding_vectors.append(embedding_vector)
         return tf.IndexedSlices(
             values=np.array(embedding_vectors), indices=np.array(indices)
         )

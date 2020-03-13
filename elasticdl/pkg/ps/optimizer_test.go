@@ -32,12 +32,12 @@ func TestSGDOptimizer(t *testing.T) {
 	opt := NewSGDOptimizer(0.1)
 
 	// test dense parameter update
-	err1 := opt.ApplyGradients(pbModel, model)
+	err1 := opt.ApplyGradients(pbModel, model, float32(0.5)*opt.GetLR())
 	assert.Equal(t, opt.GetLR(), float32(0.1))
 	assert.Nil(t, err1)
 
-	ev1 := []float32{0.9, 1.9, 2.9, 3.9, 4.9, 5.9}
-	ev2 := []float32{0.9, 1.9, 1.0, 2.1}
+	ev1 := []float32{0.95, 1.95, 2.95, 3.95, 4.95, 5.95}
+	ev2 := []float32{0.95, 1.95, 1.05, 2.15}
 
 	assert.True(t, common.CompareFloatArray(common.Slice(model.DenseParameters["t1"]).([]float32), ev1, 0.0001))
 	assert.True(t, common.CompareFloatArray(common.Slice(model.DenseParameters["t2"]).([]float32), ev2, 0.0001))
@@ -47,7 +47,7 @@ func TestSGDOptimizer(t *testing.T) {
 	pbModel = &proto.Model{
 		DenseParameters: map[string]*tensor_go_proto.TensorProto{"t3": grad3.SerializeToTensorProto()},
 	}
-	err2 := opt.ApplyGradients(pbModel, model)
+	err2 := opt.ApplyGradients(pbModel, model, float32(1.0)*opt.GetLR())
 	assert.NotNil(t, err2)
 
 	// test sparse parameter update
@@ -70,11 +70,11 @@ func TestSGDOptimizer(t *testing.T) {
 		EmbeddingTables: map[string]*proto.IndexedSlicesProto{"t3": sgrad3.SerializeToIndexedSlicesProto()},
 	}
 
-	err3 := opt.ApplyGradients(pbModel, model)
+	err3 := opt.ApplyGradients(pbModel, model, float32(1.0)*opt.GetLR())
 	assert.Nil(t, err3)
 
-	ev1 = []float32{0.8, 1.8, 2.8, 3.8, 4.8, 5.8}
-	ev2 = []float32{0.8, 1.8, 0.9, 2.0}
+	ev1 = []float32{0.85, 1.85, 2.85, 3.85, 4.85, 5.85}
+	ev2 = []float32{0.85, 1.85, 0.95, 2.05}
 	assert.True(t, common.CompareFloatArray(common.Slice(model.DenseParameters["t1"]).([]float32), ev1, 0.0001))
 	assert.True(t, common.CompareFloatArray(common.Slice(model.DenseParameters["t2"]).([]float32), ev2, 0.0001))
 
@@ -93,7 +93,7 @@ func TestSGDOptimizer(t *testing.T) {
 		EmbeddingTables: map[string]*proto.IndexedSlicesProto{"t3": sgrad3.SerializeToIndexedSlicesProto()},
 	}
 
-	err4 := opt.ApplyGradients(pbModel, model)
+	err4 := opt.ApplyGradients(pbModel, model, float32(1.0)*opt.GetLR())
 	assert.Nil(t, err4)
 
 	vectors = model.GetEmbeddingTable("t3").GetEmbeddingVectors([]int64{1, 3, 5})
@@ -135,8 +135,8 @@ func TestAdamOptimizer(t *testing.T) {
 	opt.step = 1
 
 	// test dense parameter update
-	err1 := opt.ApplyGradients(pbModel, model)
-	assert.Equal(t, opt.BaseOptimizer.lr, float32(0.1))
+	err1 := opt.ApplyGradients(pbModel, model, float32(1.0)*opt.GetLR())
+	assert.Equal(t, opt.GetLR(), float32(0.1))
 	assert.Nil(t, err1)
 
 	ev1 := []float32{0.9255863187, 1.9255863187, 2.9255863187, 3.9255863187, 4.9255863187, 5.9255863187}
@@ -150,7 +150,7 @@ func TestAdamOptimizer(t *testing.T) {
 	pbModel = &proto.Model{
 		DenseParameters: map[string]*tensor_go_proto.TensorProto{"t3": grad3.SerializeToTensorProto()},
 	}
-	err2 := opt.ApplyGradients(pbModel, model)
+	err2 := opt.ApplyGradients(pbModel, model, float32(1.0)*opt.GetLR())
 	assert.NotNil(t, err2)
 
 	// test sparse parameter update
@@ -173,7 +173,7 @@ func TestAdamOptimizer(t *testing.T) {
 		EmbeddingTables: map[string]*proto.IndexedSlicesProto{"t3": sgrad3.SerializeToIndexedSlicesProto()},
 	}
 
-	err3 := opt.ApplyGradients(pbModel, model)
+	err3 := opt.ApplyGradients(pbModel, model, float32(1.0)*opt.GetLR())
 	assert.Nil(t, err3)
 
 	ev1 = []float32{0.8474920307, 1.8474920307, 2.8474920307, 3.8474920307, 4.8474920307, 5.8474920307}
@@ -196,7 +196,7 @@ func TestAdamOptimizer(t *testing.T) {
 		EmbeddingTables: map[string]*proto.IndexedSlicesProto{"t3": sgrad3.SerializeToIndexedSlicesProto()},
 	}
 
-	err4 := opt.ApplyGradients(pbModel, model)
+	err4 := opt.ApplyGradients(pbModel, model, float32(1.0)*opt.GetLR())
 	assert.Nil(t, err4)
 
 	vectors = model.GetEmbeddingTable("t3").GetEmbeddingVectors([]int64{1, 3, 5})
