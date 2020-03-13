@@ -199,13 +199,24 @@ class ParameterSeverModelHandlerTest(unittest.TestCase):
 
     def test_get_model_with_embedding_column_to_train(self):
         model_inst = custom_model_with_embedding_column()
+        dense_features_layer_index = 2
+        embedding_column_index = 1
         self.assertEqual(
-            type(model_inst.layers[2]._feature_columns[1]),
+            type(
+                model_inst.layers[dense_features_layer_index]._feature_columns[
+                    embedding_column_index
+                ]
+            ),
             fc_lib.EmbeddingColumn,
         )
         model_inst = self.model_handler.get_model_to_train(model_inst)
         self.assertEqual(
-            type(model_inst.layers[2]._feature_columns[1]), EmbeddingColumn
+            type(
+                model_inst.layers[dense_features_layer_index]._feature_columns[
+                    embedding_column_index
+                ]
+            ),
+            EmbeddingColumn,
         )
 
     def test_get_model_with_embedding_column_to_export(self):
