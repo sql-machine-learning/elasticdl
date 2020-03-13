@@ -155,7 +155,7 @@ class CheckpointSaver(object):
         """Delete the oldest checkpoint files and keep the number of
         checkpoints is not beyond max_version.
         """
-        while len(self._checkpoint_dir_list) > self._max_versions:
+        if len(self._checkpoint_dir_list) > self._max_versions:
             old_version_dir = self._checkpoint_dir_list[0]
 
             # Some PS instances have not saved checkpoint shard files of
@@ -165,8 +165,6 @@ class CheckpointSaver(object):
                 self._checkpoint_dir_list.pop(0)
                 with contextlib.suppress(FileNotFoundError):
                     shutil.rmtree(old_version_dir)
-            else:
-                break
 
     @staticmethod
     def get_valid_lastest_version_dir(checkpoint_dir):
