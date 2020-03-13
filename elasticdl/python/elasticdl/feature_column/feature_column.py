@@ -221,12 +221,12 @@ def concatenated_categorical_column(categorical_columns):
     categorical column, the model size will be huge. Using this way, we
     can reduce the model size.
 
-    The id range of source categorical columns are [0, num_buckets_0],
-    [0, num_buckets_1] ... [0, num_buckets_n]. The ids will meet conflict
+    The output id range of source categorical columns are [0, num_buckets_0),
+    [0, num_buckets_1) ... [0, num_buckets_n). The ids will meet conflict
     in the combined sparse id tensor because they all start from 0. In this
     api, we will add offsets in sparse id tensors from each categorical column
     to avoid this conflict. The id range of the concatenated column is
-    [0, num_bucket_0 + num_bucket_1 + ... + num_bucket_n].
+    [0, num_bucket_0 + num_bucket_1 + ... + num_bucket_n).
 
     Example
 
