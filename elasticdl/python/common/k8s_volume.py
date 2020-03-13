@@ -7,6 +7,10 @@ _ALLOWED_VOLUME_KEYS = [
     "mount_path",
     "sub_path",
 ]
+_ALLOWED_VOLUME_TYPES = [
+    "pvc",
+    "host_path",
+]
 
 
 def parse_volume_and_mount(volume_conf, pod_name):
@@ -22,15 +26,15 @@ def parse_volume_and_mount(volume_conf, pod_name):
         volumes (List): a Python list contains k8s volumes.
         volume_mounts (List): a Python list contains k8s volume mounts.
     """
-    volumes_cache = {}
-    volumes_cache["pvc"] = {}
-    volumes_cache["host_path"] = {}
+    volumes_per_type = {type_name: {} for type_name in _ALLOWED_VOLUME_TYPES}
     volume_mounts = []
     volume_dicts = parse(volume_conf)
     num_volumes = 0
     for volume_dict in volume_dicts:
         if "claim_name" in volume_dict:
-            volume = volumes_cache["pvc"].get(volume_dict["claim_name"], None)
+            volume = volumes_per_type["pvc"].get(
+                volume_dict["claim_name"], None
+            )
             if volume is None:
                 pvc_volume_source = client.V1PersistentVolumeClaimVolumeSource(
                     claim_name=volume_dict["claim_name"], read_only=False
@@ -39,10 +43,10 @@ def parse_volume_and_mount(volume_conf, pod_name):
                 volume = client.V1Volume(
                     name=volume_name, persistent_volume_claim=pvc_volume_source
                 )
-                volumes_cache["pvc"][volume_dict["claim_name"]] = volume
+                volumes_per_type["pvc"][volume_dict["claim_name"]] = volume
                 num_volumes += 1
         elif "host_path" in volume_dict:
-            volume = volumes_cache["host_path"].get(
+            volume = volumes_per_type["host_path"].get(
                 volume_dict["host_path"], None
             )
             if volume is None:
@@ -54,7 +58,9 @@ def parse_volume_and_mount(volume_conf, pod_name):
                         type=volume_dict.get("type", None),
                     ),
                 )
-                volumes_cache["host_path"][volume_dict["host_path"]] = volume
+                volumes_per_type["host_path"][
+                    volume_dict["host_path"]
+                ] = volume
                 num_volumes += 1
         else:
             continue
@@ -68,8 +74,9 @@ def parse_volume_and_mount(volume_conf, pod_name):
         )
 
     volumes = []
-    volumes.extend(volumes_cache["pvc"].values())
-    volumes.extend(volumes_cache["host_path"].values())
+    for volumes_one_type in volumes_per_type.values():
+        volumes.extend(volumes_one_type.values())
+
     return volumes, volume_mounts
 
 
