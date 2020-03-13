@@ -144,3 +144,42 @@ func IndexedAdam(grad *common.IndexedSlices, param *common.Tensor,
 	}
 	return nil
 }
+
+// Adagrad kernel
+func Adagrad(grad *common.Tensor, param *common.Tensor, m *common.Tensor, lr float32, epsilon float32) {
+	gradPtr := (*C.float)(unsafe.Pointer(&grad.Buffer[0]))
+	paramPtr := (*C.float)(unsafe.Pointer(&param.Buffer[0]))
+	mPtr := (*C.float)(unsafe.Pointer(&m.Buffer[0]))
+	length := len(grad.Buffer) / int(common.DtypeSize[grad.Dtype])
+	C.Adagrad(gradPtr, paramPtr, mPtr, C.float(lr), C.longlong(length), C.float(epsilon))
+}
+
+// SparseAdagrad kernel
+func SparseAdagrad(grad *common.IndexedSlices, param *common.EmbeddingTable,
+	m *common.EmbeddingTable, lr float32, epsilon float32) error {
+	if grad.ConcatTensors.Dims[1] != param.Dim {
+		return fmt.Errorf("grad width is not equal to embedding dim")
+	}
+	for i, index := range grad.Ids {
+		subgrad := grad.ConcatTensors.GetRow(int64(i))
+		subparam := param.GetEmbeddingVector(index)
+		subm := m.GetEmbeddingVector(index)
+		Adagrad(subgrad, subparam, subm, lr, epsilon)
+	}
+	return nil
+}
+
+// IndexedAdagrad kernel
+func IndexedAdagrad(grad *common.IndexedSlices, param *common.Tensor,
+	m *common.Tensor, lr float32, epsilon float32) error {
+	if grad.ConcatTensors.Dims[1] != param.Dims[1] {
+		return fmt.Errorf("grad width is not equal to embedding dim")
+	}
+	for i, index := range grad.Ids {
+		subgrad := grad.ConcatTensors.GetRow(int64(i))
+		subparam := param.GetRow(index)
+		subm := m.GetRow(index)
+		Adagrad(subgrad, subparam, subm, lr, epsilon)
+	}
+	return nil
+}

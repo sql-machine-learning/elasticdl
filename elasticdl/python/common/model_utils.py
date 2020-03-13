@@ -226,6 +226,7 @@ def get_optimizer_info(optimizer):
     OPT_ARGUMENTS = {
         "SGD": ["learning_rate", "momentum", "nesterov"],
         "Adam": ["learning_rate", "beta_1", "beta_2", "epsilon", "amsgrad"],
+        "Adagrad": ["learning_rate", "epsilon"],
         "unkown": [],
     }
     opt_type = "unknown"
@@ -235,6 +236,8 @@ def get_optimizer_info(optimizer):
         opt_type = "SGD"
     elif isinstance(optimizer, tf.keras.optimizers.Adam):
         opt_type = "Adam"
+    elif isinstance(optimizer, tf.keras.optimizers.Adagrad):
+        opt_type = "Adagrad"
     opt_config = optimizer.get_config()
     for arg_name in OPT_ARGUMENTS[opt_type]:
         arg_value = opt_config[arg_name]

@@ -75,3 +75,22 @@ void Adam(float* grad,
     ep -= lr * em / (ev.sqrt() + epsilon);
   }
 }
+
+void Adagrad(float* grad,
+             float* param,
+             float* m,
+             float lr,
+             long long size,
+             float epsilon) {
+  Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> eg{
+      grad, static_cast<Eigen::Index>(size)};
+
+  Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> ep{
+      param, static_cast<Eigen::Index>(size)};
+
+  Eigen::Map<Eigen::Array<float, 1, Eigen::Dynamic>> em{
+      m, static_cast<Eigen::Index>(size)};
+
+  em += eg.square();
+  ep -= lr * eg / (em.sqrt() + epsilon);
+}

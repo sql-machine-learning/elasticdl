@@ -29,6 +29,13 @@ void Adam(float* grad,
           float epsilon,
           float* max_square);
 
+void Adagrad(float* grad,
+             float* param,
+             float* m,
+             float lr,
+             long long size,
+             float epsilon);
+
 #ifdef __cplusplus
 }
 #endif

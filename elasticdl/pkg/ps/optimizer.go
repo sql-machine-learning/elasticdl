@@ -151,7 +151,7 @@ type AdamOptimizer struct {
 	maxSquare *Model
 }
 
-// NewAdamOptimizer creates a Adam optimizer instance
+// NewAdamOptimizer creates an Adam optimizer instance
 func NewAdamOptimizer(lr float32, beta1 float32, beta2 float32, epsilon float32, amsgrad bool) *AdamOptimizer {
 	var opt AdamOptimizer = AdamOptimizer{
 		BaseOptimizer: BaseOptimizer{
@@ -222,9 +222,55 @@ func (opt *AdamOptimizer) InitOptimizer(pb *proto.Model) {
 	}
 }
 
+// AdagradOptimizer struct
+type AdagradOptimizer struct {
+	BaseOptimizer
+	epsilon float32
+	m       *Model
+}
+
+// NewAdagradOptimizer creates an Adagrad optimizer instance
+func NewAdagradOptimizer(lr float32, epsilon float32) *AdagradOptimizer {
+	var opt = AdagradOptimizer{
+		BaseOptimizer: BaseOptimizer{
+			lr: lr,
+		},
+		epsilon: epsilon,
+		m:       NewModel(),
+	}
+	opt.DenseKernel = func(grad *common.Tensor, param *common.Tensor, name string, lr float32) {
+		m := opt.m.GetDenseParameter(name)
+		kernel.Adagrad(grad, param, m, lr, opt.epsilon)
+	}
+	opt.SparseKernel = func(grad *common.IndexedSlices, param *common.EmbeddingTable,
+		name string, lr float32) error {
+		m := opt.m.GetEmbeddingTable(name)
+		return kernel.SparseAdagrad(grad, param, m, lr, opt.epsilon)
+	}
+	opt.IndexedKernel = func(grad *common.IndexedSlices, param *common.Tensor,
+		name string, lr float32) error {
+		m := opt.m.GetDenseParameter(name)
+		return kernel.IndexedAdagrad(grad, param, m, lr, opt.epsilon)
+	}
+	return &opt
+}
+
+// InitOptimizer set m, non-embedding of AdagradOptimizer
+func (opt *AdagradOptimizer) InitOptimizer(pb *proto.Model) {
+	for name, tensor := range pb.DenseParameters {
+		dims := common.GetDimFromTensorProto(tensor)
+		dtype := tensor.Dtype
+		opt.m.DenseParameters[name] = common.NewEmptyTensor(dims, dtype)
+	}
+	for _, info := range pb.EmbeddingTableInfos {
+		opt.m.SetEmbeddingTableInfo(info)
+	}
+}
+
 const (
 	optTypeSGD     = "SGD"
 	optTypeAdam    = "Adam"
+	optTypeAdagrad = "Adagrad"
 	optArgLR       = "learning_rate"
 	optArgMomentum = "momentum"
 	optArgNesterov = "nesterov"
@@ -235,8 +281,9 @@ const (
 )
 
 var optArgumentsMap = map[string][]string{
-	"SGD":  []string{optArgLR, optArgMomentum, optArgNesterov},
-	"Adam": []string{optArgLR, optArgBeta1, optArgBeta2, optArgEpsilon, optArgAmsgrad},
+	"SGD":     []string{optArgLR, optArgMomentum, optArgNesterov},
+	"Adam":    []string{optArgLR, optArgBeta1, optArgBeta2, optArgEpsilon, optArgAmsgrad},
+	"Adagrad": []string{optArgLR, optArgEpsilon},
 }
 
 // parseOptArgs parses optimizer arguments according to optimizer type
@@ -317,6 +364,12 @@ func NewOptimizer(optType string, optArgs string) (Optimizer, error) {
 			return nil, err
 		}
 		return NewAdamOptimizer(lr, float32(beta1), float32(beta2), float32(epsilon), amsgrad), nil
+	} else if optType == optTypeAdagrad {
+		epsilon, err := strconv.ParseFloat(argsMap[optArgEpsilon], 32)
+		if err != nil {
+			return nil, err
+		}
+		return NewAdagradOptimizer(lr, float32(epsilon)), nil
 	} else {
 		return nil, fmt.Errorf("Unknown optimizer type %s", optType)
 	}
