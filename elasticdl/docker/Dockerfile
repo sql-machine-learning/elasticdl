@@ -48,6 +48,7 @@ RUN cd /elasticdl && \
     cd $ELASTICDLPATH && \
     go mod init elasticdl.org/elasticdl && \
     go mod edit -replace github.com/tensorflow=${GOPATH}/pkg/mod/github.com/tensorflow && \
+    go get k8s.io/client-go@v0.17.0 && \
     go mod tidy && \
     go install ./... 
 
