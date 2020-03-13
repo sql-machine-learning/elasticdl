@@ -32,6 +32,12 @@ def parse_volume_and_mount(volume_conf, pod_name):
     num_volumes = 0
     for volume_dict in volume_dicts:
         if "claim_name" in volume_dict:
+            """For the volume configuration string
+            'claim_name=c1,mount_path=/path1;
+             claim_name=c1,mount_path=/path2,sub_path=/sub_path0'
+            We don't need create PVC volume for `c1` twice and
+            prefer to reuse it by getting from volumes_per_type.
+            """
             volume = volumes_per_type["pvc"].get(
                 volume_dict["claim_name"], None
             )
