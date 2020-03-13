@@ -759,14 +759,14 @@ class Worker(object):
         if status == CollectiveCommunicatorStatus.FAILED:
             self.logger.warning("Failed to perform barrier operation")
             return False
-        broadcast_root_worker_ip = self._get_rank_of_broadcast_src_worker()
-        this_worker_ip = self._get_rank_of_this_worker()
-        is_broadcast_src_worker = this_worker_ip == broadcast_root_worker_ip
+        broadcast_root_worker_rank = self._get_rank_of_broadcast_src_worker()
+        this_worker_rank = self._get_rank_of_this_rank()
+        is_broadcast_src_worker = this_worker_rank == broadcast_root_worker_rank
         model_params = (
             self._get_local_model_params() if is_broadcast_src_worker else None
         )
         status, model_params = self._collective_communicator.broadcast(
-            model_params, broadcast_root_worker_ip
+            model_params, broadcast_root_worker_rank
         )
         if status == CollectiveCommunicatorStatus.FAILED:
             self.logger.warning("Failed to broadcast model parameters")
