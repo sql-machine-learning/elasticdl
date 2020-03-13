@@ -181,9 +181,9 @@ func (s *Server) PushGradients(ctx context.Context, in *proto.PushGradientsReque
 	}
 	s.versionLock.Lock()
 	s.Model.Version += int32(1)
+	s.saveCheckpointIfNeeded(int(s.Model.Version))
 	s.versionLock.Unlock()
 	s.reportModelVersionIfNeeded(int(s.Model.Version))
-	s.saveCheckpointIfNeeded(int(s.Model.Version))
 	var resp = proto.PushGradientsResponse{
 		Accepted: true,
 		Version:  s.Model.Version,
