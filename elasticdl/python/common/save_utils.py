@@ -1,7 +1,7 @@
 import contextlib
 import os
-import tempfile
 import shutil
+import tempfile
 
 import tensorflow as tf
 
