@@ -1,6 +1,16 @@
 from kubernetes import client
 
-_ALLOWED_VOLUME_KEYS = ["claim_name", "host_path", "type", "mount_path"]
+_ALLOWED_VOLUME_KEYS = [
+    "claim_name",
+    "host_path",
+    "type",
+    "mount_path",
+    "sub_path",
+]
+_ALLOWED_VOLUME_TYPES = [
+    "pvc",
+    "host_path",
+]
 
 
 def parse_volume_and_mount(volume_conf, pod_name):
@@ -16,32 +26,63 @@ def parse_volume_and_mount(volume_conf, pod_name):
         volumes (List): a Python list contains k8s volumes.
         volume_mounts (List): a Python list contains k8s volume mounts.
     """
-    volumes = []
+    volumes_per_type = {type_name: {} for type_name in _ALLOWED_VOLUME_TYPES}
     volume_mounts = []
     volume_dicts = parse(volume_conf)
-    for i, volume_dict in enumerate(volume_dicts):
-        volume_name = pod_name + "-volume-%d" % i
+    num_volumes = 0
+    for volume_dict in volume_dicts:
         if "claim_name" in volume_dict:
-            pvc_volume_source = client.V1PersistentVolumeClaimVolumeSource(
-                claim_name=volume_dict["claim_name"], read_only=False
+            """For the volume configuration string
+            'claim_name=c1,mount_path=/path1;
+             claim_name=c1,mount_path=/path2,sub_path=/sub_path0'
+            We don't need create PVC volume for `c1` twice and
+            prefer to reuse it by getting from volumes_per_type.
+            """
+            volume = volumes_per_type["pvc"].get(
+                volume_dict["claim_name"], None
             )
-            volume = client.V1Volume(
-                name=volume_name, persistent_volume_claim=pvc_volume_source
-            )
+            if volume is None:
+                pvc_volume_source = client.V1PersistentVolumeClaimVolumeSource(
+                    claim_name=volume_dict["claim_name"], read_only=False
+                )
+                volume_name = pod_name + "-volume-%d" % num_volumes
+                volume = client.V1Volume(
+                    name=volume_name, persistent_volume_claim=pvc_volume_source
+                )
+                volumes_per_type["pvc"][volume_dict["claim_name"]] = volume
+                num_volumes += 1
         elif "host_path" in volume_dict:
-            volume = client.V1Volume(
-                name=volume_name,
-                host_path=client.V1HostPathVolumeSource(
-                    path=volume_dict["host_path"],
-                    type=volume_dict.get("type", None),
-                ),
+            volume = volumes_per_type["host_path"].get(
+                volume_dict["host_path"], None
             )
-        volumes.append(volume)
+            if volume is None:
+                volume_name = pod_name + "-volume-%d" % num_volumes
+                volume = client.V1Volume(
+                    name=volume_name,
+                    host_path=client.V1HostPathVolumeSource(
+                        path=volume_dict["host_path"],
+                        type=volume_dict.get("type", None),
+                    ),
+                )
+                volumes_per_type["host_path"][
+                    volume_dict["host_path"]
+                ] = volume
+                num_volumes += 1
+        else:
+            continue
+
         volume_mounts.append(
             client.V1VolumeMount(
-                name=volume_name, mount_path=volume_dict["mount_path"]
+                name=volume.name,
+                mount_path=volume_dict["mount_path"],
+                sub_path=volume_dict.get("sub_path", None),
             )
         )
+
+    volumes = []
+    for volumes_one_type in volumes_per_type.values():
+        volumes.extend(volumes_one_type.values())
+
     return volumes, volume_mounts
 
 
