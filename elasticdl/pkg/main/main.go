@@ -41,17 +41,19 @@ func main() {
 	log.Println("PS service started at ", address)
 	masterPodName := common.GetMasterPodName(*jobName)
 	clientSet := common.CreateClientSet()
+	done := false
 	for {
-		if common.PodFinished(clientSet, *namespace, masterPodName) {
-			grpcServer.Stop()
-		}
 		select {
-		case done := <-serverDone:
-			_ = done
+		case done = <-serverDone:
 			break
 		default:
-			// TODO: check master pod status and break loop if needed
+			if common.PodFinished(clientSet, *namespace, masterPodName) {
+				grpcServer.Stop()
+			}
 			time.Sleep(time.Second * 30)
+		}
+		if done {
+			break
 		}
 	}
 	log.Println("PS service stopped.")
