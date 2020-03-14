@@ -1,6 +1,7 @@
 package main
 
 import (
+	"elasticdl.org/elasticdl/common"
 	"elasticdl.org/elasticdl/ps"
 	"flag"
 	"fmt"
@@ -34,18 +35,26 @@ func main() {
 	flag.Parse()
 	address := fmt.Sprintf("%s:%d", os.Getenv("MY_POD_IP"), *port)
 	serverDone := make(chan bool)
-	ps.NewServer(*psID, *optType, *optArgs, *masterAddr, *evaluationSteps,
+	grpcServer := ps.NewServer(*psID, *optType, *optArgs, *masterAddr, *evaluationSteps,
 		*checkpointDirForInit, *checkpointDir, *checkpointSteps,
 		*keepCheckpointMax, *numPsPods, *lrStalenessModulation).Run(address, *numWorkers, serverDone)
 	log.Println("PS service started at ", address)
+	masterPodName := common.GetMasterPodName(*jobName)
+	clientSet := common.CreateClientSet()
+	done := false
 	for {
 		select {
-		case done := <-serverDone:
-			_ = done
+		case done = <-serverDone:
 			break
 		default:
-			// TODO: check master pod status and break loop if needed
+			if common.PodFinished(clientSet, *namespace, masterPodName) {
+				grpcServer.Stop()
+			}
 			time.Sleep(time.Second * 30)
 		}
+		if done {
+			break
+		}
 	}
+	log.Println("PS service stopped.")
 }
