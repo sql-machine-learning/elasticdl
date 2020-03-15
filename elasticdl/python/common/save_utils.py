@@ -1,5 +1,6 @@
 import contextlib
 import os
+import shutil
 import tempfile
 
 import tensorflow as tf
@@ -91,7 +92,7 @@ class CheckpointSaver(object):
             self._directory = os.getcwd() + "/checkpoint_dir"
         if self._steps:
             os.makedirs(self._directory, exist_ok=True)
-        self._checkpoint_list = []
+        self._checkpoint_dir_list = []
         self._include_evaluation = include_evaluation
         self._eval_checkpoint_dir = (
             tempfile.mkdtemp() if include_evaluation else ""
@@ -141,12 +142,12 @@ class CheckpointSaver(object):
                 e.g. shard_number is the number of PS instances using
                 ParameterServerStrategy.
         """
-        file = self._get_checkpoint_file(
+        filename = self._get_checkpoint_file(
             version, is_eval_checkpoint, shard_index, shard_num
         )
-        save_pb_to_file(model, file)
+        save_pb_to_file(model, filename)
         if not is_eval_checkpoint:
-            self._checkpoint_list.append(Checkpoint(version, file))
+            self._checkpoint_dir_list.append(os.path.dirname(filename))
             if self._max_versions:
                 self._delete_old_checkpoints_if_needed()
 
@@ -154,20 +155,16 @@ class CheckpointSaver(object):
         """Delete the oldest checkpoint files and keep the number of
         checkpoints is not beyond max_version.
         """
-        while len(self._checkpoint_list) > self._max_versions:
-            checkpoint_file = self._checkpoint_list.pop(0).file
-            checkpoint_version_dir = os.path.dirname(checkpoint_file)
-            with contextlib.suppress(FileNotFoundError):
-                os.remove(checkpoint_file)
-                # Remove the directory if empty
-                if not os.listdir(checkpoint_version_dir):
-                    os.rmdir(checkpoint_version_dir)
+        if len(self._checkpoint_dir_list) > self._max_versions:
+            old_version_dir = self._checkpoint_dir_list[0]
 
-    def get_latest_checkpoint_version(self):
-        """Get the latest checkpointed model version"""
-        if not self._checkpoint_list:
-            raise RuntimeError("No model checkpoint available")
-        return self._checkpoint_list[-1].version
+            # Some PS instances have not saved checkpoint shard files of
+            # the version if invalid. And the slowest PS will remove the
+            # old version checkpoint.
+            if self.check_checkpoint_valid(old_version_dir):
+                self._checkpoint_dir_list.pop(0)
+                with contextlib.suppress(FileNotFoundError):
+                    shutil.rmtree(old_version_dir)
 
     @staticmethod
     def get_valid_lastest_version_dir(checkpoint_dir):
