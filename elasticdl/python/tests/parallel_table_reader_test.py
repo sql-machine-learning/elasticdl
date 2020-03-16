@@ -51,7 +51,7 @@ class ParallelTableReaderTest(unittest.TestCase):
             self._project,
             self._endpoint,
             self._test_read_table,
-            "",
+            None,
             None,
             batch_size,
             num_parallel_processes,
