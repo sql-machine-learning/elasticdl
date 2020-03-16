@@ -18,11 +18,11 @@ class CollectiveCommunicatorTest(unittest.TestCase):
         )
         data = {"param1": 1}
         self.assertEqual(
-            communicator.broadcast(data, "worker_0_ip"),
+            communicator.broadcast(data, 0),
             (CollectiveCommunicatorStatus.SUCCEEDED, data),
         )
         self.assertEqual(
-            communicator.broadcast(None, "worker_0_ip"),
+            communicator.broadcast(None, 0),
             (CollectiveCommunicatorStatus.SUCCEEDED, None),
         )
         self.assertEqual(
