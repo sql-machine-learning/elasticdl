@@ -1,4 +1,5 @@
-import tensorflow as tf 
+import tensorflow as tf
+
 
 class ToNumber(tf.keras.layers.Layer):
     def __init__(self, out_type, default_value):
