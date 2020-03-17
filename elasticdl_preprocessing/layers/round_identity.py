@@ -1,0 +1,78 @@
+import tensorflow as tf
+
+from tensorflow.python.framework import dtypes
+from tensorflow.python.ops.ragged import ragged_tensor
+from tensorflow.python.ops.ragged import ragged_functional_ops
+
+NUMERIC_TYPES = frozenset(
+    [dtypes.float32, dtypes.float64, dtypes.int8, dtypes.int16, dtypes.int32,
+     dtypes.int64, dtypes.uint8, dtypes.qint8, dtypes.qint32, dtypes.quint8,
+     dtypes.complex64])
+
+
+class RoundIdentity(tf.keras.layers.Layer):
+    """Implements numeric feature roundding with a max value.
+
+    This layer transforms numeric inputs to integer output. It is a special
+    case of bucketizing to bins. The max value in the layer is the number of
+    bins.
+
+    Example :
+    ```python
+        layer = RoundIdentity(max_value=5)
+        inp = np.asarray([[1.2], [1.6], [0.2], [3.1], [4.9]])
+        layer(inputs)
+        [[1], [2], [0], [3], [5]]
+    ```
+
+    Arguments:
+        num_buckets: Range of inputs and outputs is `[0, num_buckets)`.
+        **kwargs: Keyword arguments to construct a layer.
+
+    Input shape: A numeric tensor of shape
+        `[batch_size, d1, ..., dm]`
+
+    Output shape: An int64 tensor of shape `[batch_size, d1, ..., dm]`
+
+    """
+    def __init__(self, num_buckets, default_value=0):
+        super(RoundIdentity, self).__init__()
+        self.num_buckets = tf.cast(num_buckets, tf.int64)
+        self.default_value = tf.cast(default_value, tf.int64)
+
+    def call(self, inputs):
+        if isinstance(inputs, tf.SparseTensor):
+            id_values = self._round_and_truncate(inputs.values)
+            result = tf.SparseTensor(
+                indices=inputs.indices,
+                values=id_values,
+                dense_shape=inputs.dense_shape,
+            )
+        elif ragged_tensor.is_ragged(inputs):
+            result = ragged_functional_ops.map_flat_values(
+                self._round_and_truncate, inputs
+            )
+        else:
+            result = self._round_and_truncate(inputs)
+        return tf.cast(result, tf.int64)
+
+    def _round_and_truncate(self, values):
+        values = tf.keras.backend.round(values)
+        values = tf.cast(values, tf.int64)
+        values = tf.where(
+            tf.logical_or(values < 0, values > self.num_buckets),
+            x=tf.fill(dims=tf.shape(values), value=self.default_value),
+            y=values
+        )
+        return values
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
+    def get_config(self):
+        config = {
+            'num_buckets': self.num_buckets,
+            'default_value': self.default_value,
+        }
+        base_config = super(RoundIdentity, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
