@@ -24,7 +24,7 @@ COPY elasticdl/requirements-dev.txt /requirements-dev.txt
 RUN pip install -r /requirements-dev.txt --extra-index-url=${EXTRA_PYPI_INDEX} && rm /requirements-dev.txt
 
 ENV TF_PATH /tmp/tensorflow
-RUN cd /tmp && git clone --depth=1 https://github.com/tensorflow/tensorflow.git
+RUN cd /tmp && git clone --depth=1 https://github.com/tensorflow/tensorflow.git && cd tensorflow && git checkout v2.1.0
 
 # Install Go and related tools
 ARG GO_MIRROR_URL=https://dl.google.com/go
