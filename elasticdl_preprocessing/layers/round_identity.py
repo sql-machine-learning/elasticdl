@@ -4,14 +4,9 @@ from tensorflow.python.framework import dtypes
 from tensorflow.python.ops.ragged import ragged_tensor
 from tensorflow.python.ops.ragged import ragged_functional_ops
 
-NUMERIC_TYPES = frozenset(
-    [dtypes.float32, dtypes.float64, dtypes.int8, dtypes.int16, dtypes.int32,
-     dtypes.int64, dtypes.uint8, dtypes.qint8, dtypes.qint32, dtypes.quint8,
-     dtypes.complex64])
-
 
 class RoundIdentity(tf.keras.layers.Layer):
-    """Implements numeric feature roundding with a max value.
+    """Implements numeric feature rounding with a max value.
 
     This layer transforms numeric inputs to integer output. It is a special
     case of bucketizing to bins. The max value in the layer is the number of
