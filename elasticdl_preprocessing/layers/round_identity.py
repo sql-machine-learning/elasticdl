@@ -1,8 +1,5 @@
 import tensorflow as tf
-
-from tensorflow.python.framework import dtypes
-from tensorflow.python.ops.ragged import ragged_tensor
-from tensorflow.python.ops.ragged import ragged_functional_ops
+from tensorflow.python.ops.ragged import ragged_functional_ops, ragged_tensor
 
 
 class RoundIdentity(tf.keras.layers.Layer):
@@ -30,6 +27,7 @@ class RoundIdentity(tf.keras.layers.Layer):
     Output shape: An int64 tensor of shape `[batch_size, d1, ..., dm]`
 
     """
+
     def __init__(self, num_buckets, default_value=0):
         super(RoundIdentity, self).__init__()
         self.num_buckets = tf.cast(num_buckets, tf.int64)
@@ -57,7 +55,7 @@ class RoundIdentity(tf.keras.layers.Layer):
         values = tf.where(
             tf.logical_or(values < 0, values > self.num_buckets),
             x=tf.fill(dims=tf.shape(values), value=self.default_value),
-            y=values
+            y=values,
         )
         return values
 
@@ -66,8 +64,8 @@ class RoundIdentity(tf.keras.layers.Layer):
 
     def get_config(self):
         config = {
-            'num_buckets': self.num_buckets,
-            'default_value': self.default_value,
+            "num_buckets": self.num_buckets,
+            "default_value": self.default_value,
         }
         base_config = super(RoundIdentity, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
