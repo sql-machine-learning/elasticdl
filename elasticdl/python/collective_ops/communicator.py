@@ -15,6 +15,9 @@ except ImportError:
 
 
 _SUPPORTED_ALLREDUCE_OPS = ["MEAN"]
+_FTLIB_UNINSTALLED_DEFAULT_STATUS_MESSAGE = (
+    "FTLib is not installed. Default to succeeded for testing purposes"
+)
 
 
 class CollectiveCommunicator(object):
@@ -51,28 +54,30 @@ class CollectiveCommunicator(object):
             else:
                 return CollectiveCommunicatorStatus.FAILED, data
         else:
-            logger.warning(
-                "FTLib is not installed. "
-                "Default to succeeded for testing purposes"
-            )
+            logger.warning(_FTLIB_UNINSTALLED_DEFAULT_STATUS_MESSAGE)
             return CollectiveCommunicatorStatus.SUCCEEDED, data
 
-    def broadcast(self, data, root_ip):
+    def broadcast(self, data, src_rank):
         if self._ftlib is not None:
-            res = self._ftlib.broadcast(data, root_ip)
+            res = self._ftlib.broadcast(data, src_rank)
             if res == FTAllReduceStatus.SUCCESS:
                 return CollectiveCommunicatorStatus.SUCCEEDED, data
             else:
                 return CollectiveCommunicatorStatus.FAILED, data
         else:
-            logger.warning(
-                "FTLib is not installed. "
-                "Default to succeeded for testing purposes"
-            )
+            logger.warning(_FTLIB_UNINSTALLED_DEFAULT_STATUS_MESSAGE)
             return CollectiveCommunicatorStatus.SUCCEEDED, data
 
     def barrier(self):
-        return CollectiveCommunicatorStatus.SUCCEEDED
+        if self._ftlib is not None:
+            res = self._ftlib.barrier()
+            if res == FTAllReduceStatus.SUCCESS:
+                return CollectiveCommunicatorStatus.SUCCEEDED
+            else:
+                return CollectiveCommunicatorStatus.FAILED
+        else:
+            logger.warning(_FTLIB_UNINSTALLED_DEFAULT_STATUS_MESSAGE)
+            return CollectiveCommunicatorStatus.SUCCEEDED
 
     def is_initialized(self):
         """This will be `False` under three occasions:

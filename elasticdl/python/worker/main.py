@@ -6,7 +6,7 @@ from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.worker.worker import Worker
 
 CONNECT_PS_MAX_RETRIES = 3
-CONNECT_PS_TIMEOUT = 60
+CONNECT_PS_TIMEOUT = 300
 
 
 def main():
