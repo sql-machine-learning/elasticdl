@@ -1,18 +1,32 @@
 import tensorflow as tf
 
+_NUMBER_DTYPES = [
+    tf.int8,
+    tf.unit8,
+    tf.int16,
+    tf.uint16,
+    tf.int32,
+    tf.uint32,
+    tf.int64,
+    tf.uint64,
+    tf.float16,
+    tf.float32,
+    tf.float64,
+    tf.bfloat16,
+    tf.double,
+]
+
 
 class ToNumber(tf.keras.layers.Layer):
+    """Convert the inputs to a number dtype (int, float, double)
+
+    Input Shape: Tensor or SparseTensor of any shape
+    Output Shape: Tensor or SparseTensor of the same shape with input
+    """
     def __init__(self, out_type, default_value):
         super(ToNumber, self).__init__()
-        assert out_type in [
-            tf.int16,
-            tf.int32,
-            tf.int64,
-            tf.float16,
-            tf.float32,
-            tf.float64,
-            tf.double,
-        ]
+        if out_type not in _NUMBER_DTYPES:
+            raise ValueError("{} is not a number type.".format(out_type))
         self.out_type = out_type
         self.default_value = default_value
 
