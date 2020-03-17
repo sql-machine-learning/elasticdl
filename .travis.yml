@@ -48,7 +48,7 @@ jobs:
           if [ "$ODPS_ACCESS_ID" == "" ] || [ "$ODPS_ACCESS_KEY" == "" ]; then
             echo "Skipping ODPS related unit tests since either ODPS_ACCESS_ID or ODPS_ACCESS_KEY is not set"
           else
-            docker run --rm -it -e MAXCOMPUTE_PROJECT=$MAXCOMPUTE_PROJECT -e MAXCOMPUTE_AK=$ODPS_ACCESS_ID -e MAXCOMPUTE_SK=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests/odps_* elasticdl/python/tests/data_reader_test.py elasticdl/python/tests/parallel_table_reader_test.py"
+            docker run --rm -it -e MAXCOMPUTE_PROJECT=$MAXCOMPUTE_PROJECT -e MAXCOMPUTE_AK=$ODPS_ACCESS_ID -e MAXCOMPUTE_SK=$ODPS_ACCESS_KEY -v $PWD:/work -w /work elasticdl:dev bash -c "make -f elasticdl/Makefile && K8S_TESTS=False pytest elasticdl/python/tests/*odps_* elasticdl/python/tests/data_reader_test.py"
           fi
         # Run integration tests
         - kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
