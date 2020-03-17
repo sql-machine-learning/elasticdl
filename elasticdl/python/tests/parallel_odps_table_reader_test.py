@@ -7,14 +7,16 @@ from odps import ODPS
 
 from elasticdl.python.common.constants import MaxComputeConfig
 from elasticdl.python.data.odps_io import is_odps_configured
-from elasticdl.python.data.parallel_table_reader import ParallelTableReader
+from elasticdl.python.data.parallel_odps_table_reader import (
+    ParallelODPSTableReader,
+)
 from elasticdl.python.tests.test_utils import create_iris_odps_table
 
 
 @unittest.skipIf(
     not is_odps_configured(), "ODPS environment is not configured",
 )
-class ParallelTableReaderTest(unittest.TestCase):
+class ParallelODPSTableReaderTest(unittest.TestCase):
     def setUp(self):
         self._project = os.environ[MaxComputeConfig.PROJECT_NAME]
         self._access_id = os.environ[MaxComputeConfig.ACCESS_ID]
@@ -42,10 +44,10 @@ class ParallelTableReaderTest(unittest.TestCase):
 
         start = 0
         end = 100
-        batch_size = (end - start) // 4
+        shard_size = (end - start) // 4
         num_parallel_processes = 2
 
-        pd = ParallelTableReader(
+        pd = ParallelODPSTableReader(
             self._access_id,
             self._access_key,
             self._project,
@@ -53,7 +55,7 @@ class ParallelTableReaderTest(unittest.TestCase):
             self._test_read_table,
             None,
             None,
-            batch_size,
+            shard_size,
             num_parallel_processes,
             transform,
         )

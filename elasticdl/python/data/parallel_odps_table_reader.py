@@ -3,7 +3,26 @@ from multiprocessing import Process, Queue
 from odps import ODPS
 
 
-class ParallelTableReader(object):
+class ParallelODPSTableReader(object):
+    """
+    The ParallelODPSTableReader launches multiple worker processes to read
+    records from an ODPS table and applies `transform_fn` to each record.
+    If `transform_fn` is not set, the transform stage will be skipped.
+
+    Worker process:
+    1. get a shard from index queue, the shard is a pair (start, count)
+       of the ODPS table
+    2. reads the records from the ODPS table
+    3. apply `transform_fn` to each record
+    4. put records to the result queue
+
+    Main process:
+    1. call `reset` to create a number of shards given a input shard
+    2. put shard to index queue of workers in round-robin way
+    3. call `get_records`  to get transformed data from result queue
+    4. call `stop` to stop the workers
+    """
+
     def __init__(
         self,
         access_id,
@@ -13,20 +32,19 @@ class ParallelTableReader(object):
         table,
         partition,
         columns,
-        batch_size,
+        shard_size,
         num_parallel_processes,
-        transform_fn,
+        transform_fn=None,
     ):
         self._odps_table = ODPS(
             access_id, access_key, project, endpoint
         ).get_table(table)
         self._partition = partition
         self._columns = columns
-        self._batch_size = batch_size
+        self._shard_size = shard_size
 
         self._num_parallel_processes = num_parallel_processes
         self._transform_fn = transform_fn
-
         self._result_queue = Queue()
         self._index_queues = []
         self._workers = []
@@ -61,6 +79,11 @@ class ParallelTableReader(object):
     def stop(self):
         for q in self._index_queues:
             q.put((None, None))
+        for w in self._workers:
+            w.join()
+        for q in self._index_queues:
+            q.cancel_join_thread()
+            q.close()
 
     def _worker_loop(self, worker_id):
         while True:
@@ -77,22 +100,23 @@ class ParallelTableReader(object):
                     start=index[0], count=index[1], columns=self._columns
                 ):
                     record = [str(record[column]) for column in self._columns]
-                    record = self._transform_fn(record)
+                    if self._transform_fn:
+                        record = self._transform_fn(record)
                     records.append(record)
             self._result_queue.put(records)
 
     def _create_shards(self, shards):
         start = shards[0]
         count = shards[1]
-        m = count // self._batch_size
-        n = count % self._batch_size
+        m = count // self._shard_size
+        n = count % self._shard_size
 
         for i in range(m):
             self._shards.append(
-                (start + i * self._batch_size, self._batch_size)
+                (start + i * self._shard_size, self._shard_size)
             )
         if n != 0:
-            self._shards.append((start + m * self._batch_size, n))
+            self._shards.append((start + m * self._shard_size, n))
 
     def _next_worker_id(self):
         cur_id = self._worker_idx
