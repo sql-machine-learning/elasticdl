@@ -107,6 +107,24 @@ class ODPSReader(object):
         self._columns = columns
 
     def reset(self, shards, shard_size):
+        """
+        The parallel reader launches multiple worker processes to read
+        records from an ODPS table and applies `transform_fn` to each record.
+        If `transform_fn` is not set, the transform stage will be skipped.
+
+        Worker process:
+        1. get a shard from index queue, the shard is a pair (start, count)
+            of the ODPS table
+        2. reads the records from the ODPS table
+        3. apply `transform_fn` to each record
+        4. put records to the result queue
+
+        Main process:
+        1. call `reset` to create a number of shards given a input shard
+        2. put shard to index queue of workers in round-robin way
+        3. call `get_records`  to get transformed data from result queue
+        4. call `stop` to stop the workers
+        """
         self._result_queue = Queue()
         self._index_queues = []
         self._workers = []
