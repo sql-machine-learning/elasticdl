@@ -106,7 +106,7 @@ class ODPSReader(object):
         self._transform_fn = transform_fn
         self._columns = columns
 
-    def reset(self, shards):
+    def reset(self, shards, shard_size):
         self._result_queue = Queue()
         self._index_queues = []
         self._workers = []
@@ -124,7 +124,7 @@ class ODPSReader(object):
             p.start()
             self._workers.append(p)
 
-        self._create_shards(shards)
+        self._create_shards(shards, shard_size)
         for i in range(2 * self._num_processes):
             self._put_index()
 
