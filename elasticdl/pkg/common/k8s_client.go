@@ -5,6 +5,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"log"
 )
 
 // GetMasterPodName returns master pod name
@@ -30,6 +31,7 @@ func PodFinished(clientSet *kubernetes.Clientset, namespace string, podName stri
 	pod, err := clientSet.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
 	// Network instability may cause error, assuming not finished.
 	if err != nil {
+		log.Println("Get pod ", podName, " failed with err ", err)
 		return false
 	}
 	if pod.Status.Phase == v1.PodFailed || pod.Status.Phase == v1.PodSucceeded {
