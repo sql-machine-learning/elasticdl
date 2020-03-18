@@ -299,7 +299,10 @@ class _TaskDispatcher(object):
                 logger.warning("Unknown task_id: %d" % task_id)
             elif not success:
                 # TODO: keep count of retries.
-                if task.type == elasticdl_pb2.TRAINING:
+                logger.warning("Task %d of %s failed " % (task_id, task.type))
+                if task.type in [
+                    elasticdl_pb2.TRAINING, elasticdl_pb2.TRAIN_END_CALLBACK
+                ]:
                     self._todo.append(task)
                 else:
                     self._eval_todo.append(task)
@@ -318,7 +321,7 @@ class _TaskDispatcher(object):
             if evaluation_task_completed:
                 self._evaluation_service.complete_task()
 
-            if self._callbacks_list.model.stop_training:
+            if success and self._callbacks_list.model.stop_training:
                 # Clear todo list to stop training
                 self._todo = []
 
