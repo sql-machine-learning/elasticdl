@@ -2,7 +2,7 @@ import tensorflow as tf
 
 _NUMBER_DTYPES = [
     tf.int8,
-    tf.unit8,
+    tf.uint8,
     tf.int16,
     tf.uint16,
     tf.int32,
@@ -23,6 +23,7 @@ class ToNumber(tf.keras.layers.Layer):
     Input Shape: Tensor or SparseTensor of any shape
     Output Shape: Tensor or SparseTensor of the same shape with input
     """
+
     def __init__(self, out_type, default_value):
         super(ToNumber, self).__init__()
         if out_type not in _NUMBER_DTYPES:

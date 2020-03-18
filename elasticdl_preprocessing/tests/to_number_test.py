@@ -4,22 +4,7 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl_preprocessing.layers.to_number import ToNumber
-
-
-def sparse_tensor_equal(sp_a, sp_b):
-    if not np.array_equal(sp_a.dense_shape.numpy(), sp_b.dense_shape.numpy()):
-        return False
-
-    if not np.array_equal(sp_a.indices.numpy(), sp_b.indices.numpy()):
-        return False
-
-    if sp_a.values.dtype != sp_b.values.dtype:
-        return False
-
-    if not np.array_equal(sp_a.values.numpy(), sp_b.values.numpy()):
-        return False
-
-    return True
+from elasticdl_preprocessing.tests.test_utils import sparse_tensor_equal
 
 
 class ToNumberTest(unittest.TestCase):
