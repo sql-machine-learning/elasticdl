@@ -301,7 +301,8 @@ class _TaskDispatcher(object):
                 # TODO: keep count of retries.
                 logger.warning("Task %d of %s failed " % (task_id, task.type))
                 if task.type in [
-                    elasticdl_pb2.TRAINING, elasticdl_pb2.TRAIN_END_CALLBACK
+                    elasticdl_pb2.TRAINING,
+                    elasticdl_pb2.TRAIN_END_CALLBACK,
                 ]:
                     self._todo.append(task)
                 else:
