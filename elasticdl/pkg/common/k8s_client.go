@@ -28,9 +28,9 @@ func CreateClientSet() *kubernetes.Clientset {
 // PodFinished returns true if the pod is Succeeded/Failed, or still running but with metadata.labels["status"]==""Finished"
 func PodFinished(clientSet *kubernetes.Clientset, namespace string, podName string) bool {
 	pod, err := clientSet.CoreV1().Pods(namespace).Get(podName, metav1.GetOptions{})
-	// Assume finished if pod not exists
+	// Network instability may cause error, assuming not finished.
 	if err != nil {
-		return true
+		return false
 	}
 	if pod.Status.Phase == v1.PodFailed || pod.Status.Phase == v1.PodSucceeded {
 		return true
