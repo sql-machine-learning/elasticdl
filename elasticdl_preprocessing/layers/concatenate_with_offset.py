@@ -28,6 +28,7 @@ class ConcatenateWithOffset(tf.keras.layers.Concatenate):
         axis: Axis along which to concatenate.
         **kwargs: standard layer keyword arguments.
     """
+
     def __init__(self, offsets, axis=-1):
         super(ConcatenateWithOffset, self).__init__()
         self.offsets = offsets

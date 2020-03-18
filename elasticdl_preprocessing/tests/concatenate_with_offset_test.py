@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl_preprocessing.layers.concatenate_with_offset import (
-    ConcatenateWithOffset
+    ConcatenateWithOffset,
 )
 
 
