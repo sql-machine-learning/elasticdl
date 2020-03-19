@@ -13,7 +13,7 @@ class RoundIdentity(tf.keras.layers.Layer):
     ```python
         layer = RoundIdentity(max_value=5)
         inp = np.asarray([[1.2], [1.6], [0.2], [3.1], [4.9]])
-        layer(inputs)
+        layer(inp)
         [[1], [2], [0], [3], [5]]
     ```
 
