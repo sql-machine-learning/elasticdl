@@ -21,7 +21,7 @@ class RoundIdentity(tf.keras.layers.Layer):
         num_buckets: Range of inputs and outputs is `[0, num_buckets)`.
         **kwargs: Keyword arguments to construct a layer.
 
-    Input shape: A numeric tensor of shape
+    Input shape: A numeric `Tensor`, `SparseTensor` or `RaggedTensor` of shape
         `[batch_size, d1, ..., dm]`
 
     Output shape: An int64 tensor of shape `[batch_size, d1, ..., dm]`
