@@ -11,7 +11,7 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import TaskExecCounterKey
 from elasticdl.python.common.log_utils import default_logger as logger
 
-MAX_TASK_RETRIES = 3
+_MAX_TASK_RETRIES = 3
 
 
 class _Task(object):
@@ -325,19 +325,22 @@ class _TaskDispatcher(object):
             if evaluation_task_completed:
                 self._evaluation_service.complete_task()
 
-            if success and self._callbacks_list.model.stop_training:
-                # Clear todo list to stop training
-                self._todo = []
+            if success:
+                if task in self._task_retry_count:
+                    del self._task_retry_count[task]
+                if self._callbacks_list.model.stop_training:
+                    # Clear todo list to stop training
+                    self._todo = []
 
         return (time.time() - start_time), task, worker_id
 
     def check_exceed_max_task_retries(self, task):
         self._task_retry_count.setdefault(task, 1)
         self._task_retry_count[task] += 1
-        if self._task_retry_count[task] > MAX_TASK_RETRIES:
+        if self._task_retry_count[task] > _MAX_TASK_RETRIES:
             logger.error(
                 "A %s task failed with %d retries "
-                % (task.type, MAX_TASK_RETRIES)
+                % (task.type, _MAX_TASK_RETRIES)
             )
             return True
         return False
