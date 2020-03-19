@@ -10,7 +10,10 @@ class Hashing(Layer):
     """Implements categorical feature hashing, also known as "hashing trick".
 
     This layer transforms categorical inputs to hashed output. It converts a
-    sequence of int or string to a sequence of int.
+    sequence of int or string to a sequence of int. TensorFlow 2.2 has
+    developed `tf.keras.layers.preprocessing.Hashing` but not released it yet.
+    So the layer is a simple temporary version.
+    https://github.com/tensorflow/tensorflow/blob/r2.2/tensorflow/python/keras/layers/preprocessing/hashing.py
 
     Example:
     ```python
