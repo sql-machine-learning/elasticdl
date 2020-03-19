@@ -74,7 +74,9 @@ class Hashing(Layer):
                 dense_shape=inputs.dense_shape,
             )
         else:
-            return string_ops.string_to_hash_bucket_fast(inputs, self.num_bins, name="hash")
+            return string_ops.string_to_hash_bucket_fast(
+                inputs, self.num_bins, name="hash"
+            )
 
     def compute_output_shape(self, input_shape):
         return input_shape

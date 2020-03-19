@@ -5,22 +5,20 @@ import tensorflow as tf
 
 from elasticdl_preprocessing.layers.hashing import Hashing
 from elasticdl_preprocessing.tests.test_utils import (
-    sparse_tensor_equal,
     ragged_tensor_equal,
+    sparse_tensor_equal,
 )
 
 
 class HashingTest(unittest.TestCase):
     def test_hashing(self):
         hash_layer = Hashing(num_bins=3)
-        inp = np.asarray([['A'], ['B'], ['C'], ['D'], ['E']])
+        inp = np.asarray([["A"], ["B"], ["C"], ["D"], ["E"]])
         hash_out = hash_layer(inp)
         expected_out = np.array([[1], [0], [1], [1], [2]])
         self.assertTrue(np.array_equal(hash_out.numpy(), expected_out))
 
-        ragged_in = tf.ragged.constant(
-            [['A', 'B'], ['C', 'D'], ['E'], []]
-        )
+        ragged_in = tf.ragged.constant([["A", "B"], ["C", "D"], ["E"], []])
         hash_out = hash_layer(ragged_in)
         expected_ragged_out = tf.ragged.constant(
             [[1, 0], [1, 1], [2], []], dtype=tf.int64
