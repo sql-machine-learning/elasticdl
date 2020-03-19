@@ -24,13 +24,13 @@ class Hashing(Layer):
     ```
 
     Arguments:
-    num_bins: Number of hash bins.
-    name: Name to give to the layer.
-    **kwargs: Keyword arguments to construct a layer.
+        num_bins: Number of hash bins.
+        name: Name to give to the layer.
+        **kwargs: Keyword arguments to construct a layer.
 
     Input shape: A string, int32 or int64 tensor of shape
-    `[batch_size, d1, ..., dm]`. The tensor can be `tf.Tensor`,
-    `tf.SparseTensor` and `tf.RaggedTensor`
+        `[batch_size, d1, ..., dm]`. The tensor can be `tf.Tensor`,
+        `tf.SparseTensor` and `tf.RaggedTensor`
 
     Output shape: An int64 tensor of shape `[batch_size, d1, ..., dm]`
 
