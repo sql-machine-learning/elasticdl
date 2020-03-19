@@ -19,7 +19,7 @@ class Hashing(Layer):
     ```python
     layer = Hashing(num_bins=3)
     inp = np.asarray([['A'], ['B'], ['C'], ['D'], ['E']])
-    layer(inputs)
+    layer(inp)
     [[1], [0], [1], [1], [2]]
     ```
 
