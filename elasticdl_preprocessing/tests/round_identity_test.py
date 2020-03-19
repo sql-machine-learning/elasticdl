@@ -4,6 +4,10 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl_preprocessing.layers.round_identity import RoundIdentity
+from elasticdl_preprocessing.tests.test_utils import (
+    ragged_tensor_equal,
+    sparse_tensor_equal,
+)
 
 
 class RoundIdentityTest(unittest.TestCase):
@@ -17,11 +21,14 @@ class RoundIdentityTest(unittest.TestCase):
 
         ragged_input = tf.ragged.constant([[1.1, 3.4], [0.5]])
         ragged_output = round_identity(ragged_input)
-        ragged_output_values = ragged_output.values.numpy()
-        expected_out = np.array([1.0, 3.0, 0.0])
-        self.assertTrue(np.array_equal(ragged_output_values, expected_out))
+        expected_ragged_out = tf.ragged.constant([[1, 3], [0]], dtype=tf.int64)
+        self.assertTrue(
+            ragged_tensor_equal(ragged_output, expected_ragged_out)
+        )
 
         sparse_input = ragged_input.to_sparse()
         sparse_output = round_identity(sparse_input)
-        sparse_output_values = sparse_output.values
-        self.assertTrue(np.array_equal(sparse_output_values, expected_out))
+        expected_sparse_out = expected_ragged_out.to_sparse()
+        self.assertTrue(
+            sparse_tensor_equal(sparse_output, expected_sparse_out)
+        )
