@@ -157,11 +157,6 @@ class ODPSReader(object):
     def stop(self):
         for q in self._index_queues:
             q.put((None, None))
-        for w in self._workers:
-            w.join()
-        for q in self._index_queues:
-            q.cancel_join_thread()
-            q.close()
 
     def _worker_loop(self, worker_id):
         while True:
