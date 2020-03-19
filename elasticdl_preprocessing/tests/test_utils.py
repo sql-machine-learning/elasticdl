@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.ops.ragged import ragged_functional_ops, ragged_tensor
+from tensorflow.python.ops.ragged import ragged_tensor
 
 
 def sparse_tensor_equal(sp_a, sp_b):

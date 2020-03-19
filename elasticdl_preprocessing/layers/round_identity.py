@@ -3,7 +3,7 @@ from tensorflow.python.ops.ragged import ragged_functional_ops, ragged_tensor
 
 
 class RoundIdentity(tf.keras.layers.Layer):
-    """Implements numeric feature rounding with a max value.
+    """Cast a numeric feature into a discrete integer value.
 
     This layer transforms numeric inputs to integer output. It is a special
     case of bucketizing to bins. The max value in the layer is the number of
