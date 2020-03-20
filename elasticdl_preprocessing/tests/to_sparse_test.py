@@ -19,6 +19,7 @@ class ToSparseTest(unittest.TestCase):
         )
         self.assertTrue(sparse_tensor_equal(output, expected_out))
 
+        layer = ToSparse()
         inp = tf.constant([[12, -1], [45, 78]], tf.int64)
         output = layer.call(inp)
         expected_out = tf.SparseTensor(

@@ -37,11 +37,12 @@ class ToSparse(tf.keras.layers.Layer):
             return inputs
         if self.ignore_value is None:
             if inputs.dtype == tf.string:
-                ignore_value = ""
+                print("string")
+                self.ignore_value = ""
             elif inputs.dtype.is_integer:
-                ignore_value = -1  # Embedding layer cannot use -1
-        ignore_value = tf.cast(ignore_value, inputs.dtype)
-        indices = tf.where(tf.not_equal(inputs, ignore_value))
+                self.ignore_value = -1
+        self.ignore_value = tf.cast(self.ignore_value, inputs.dtype)
+        indices = tf.where(tf.not_equal(inputs, self.ignore_value))
         values = tf.gather_nd(inputs, indices)
         dense_shape = tf.shape(inputs, out_type=tf.int64)
         return tf.SparseTensor(
