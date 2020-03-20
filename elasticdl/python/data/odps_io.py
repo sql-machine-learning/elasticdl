@@ -163,19 +163,15 @@ class ODPSReader(object):
             index = self._index_queues[worker_id].get()
             if index[0] is None and index[1] is None:
                 break
-            if self._columns is None:
-                self._columns = self._odps_table.schema.names
+
             records = []
-            with self._odps_table.open_reader(
-                partition=self._partition, reopen=False
-            ) as reader:
-                for record in reader.read(
-                    start=index[0], count=index[1], columns=self._columns
-                ):
-                    record = [str(record[column]) for column in self._columns]
-                    if self._transform_fn:
-                        record = self._transform_fn(record)
-                    records.append(record)
+            for record in self.record_generator_with_retry(
+                start=index[0],
+                end=index[0] + index[1],
+                columns=self._columns,
+                transform_fn=self._transform_fn,
+            ):
+                records.append(record)
             self._result_queue.put(records)
 
     def _create_shards(self, shards, shard_size):
@@ -206,7 +202,7 @@ class ODPSReader(object):
             self._shard_idx += 1
 
     def record_generator_with_retry(
-        self, start, end, columns=None, max_retries=3
+        self, start, end, columns=None, max_retries=3, transform_fn=None
     ):
         """Wrap record_generator with retry to avoid ODPS table read failure
         due to network instability.
@@ -215,6 +211,8 @@ class ODPSReader(object):
         while retry_count < max_retries:
             try:
                 for record in self.record_generator(start, end, columns):
+                    if transform_fn:
+                        record = transform_fn(record)
                     yield record
                 break
             except Exception as e:
