@@ -3,7 +3,7 @@ import tensorflow as tf
 
 class ToSparse(tf.keras.layers.Layer):
     """Converts a `Tensor` to a `SparseTensor`, dropping ignore_value cells.
-    If `input_tensor` is already a `SparseTensor`, just return it.
+    If the input is already a `SparseTensor`, just return it.
 
     Example :
     ```python
@@ -18,9 +18,9 @@ class ToSparse(tf.keras.layers.Layer):
     ```
 
     Arguments:
-        ignore_value: Entries in `dense_tensor` equal to this value will be
+        ignore_value: Entries in inputs equal to this value will be
             absent from the output `SparseTensor`. If `None`, default value of
-            `dense_tensor`'s dtype will be used ('' for `str`, -1 for `int`).
+            inputs dtype will be used ('' for `str`, -1 for `int`).
 
     Input shape: A numeric or string `Tensor` of shape
         `[batch_size, d1, ..., dm]`
