@@ -27,6 +27,7 @@ class ToSparse(tf.keras.layers.Layer):
 
     Output shape: An `SparseTensor` with the same shape as inputs
     """
+
     def __init__(self, ignore_value=None):
         super(ToSparse, self).__init__()
         self.ignore_value = ignore_value
@@ -36,7 +37,7 @@ class ToSparse(tf.keras.layers.Layer):
             return inputs
         if self.ignore_value is None:
             if inputs.dtype == tf.string:
-                ignore_value = ''
+                ignore_value = ""
             elif inputs.dtype.is_integer:
                 ignore_value = -1  # Embedding layer cannot use -1
         ignore_value = tf.cast(ignore_value, inputs.dtype)
