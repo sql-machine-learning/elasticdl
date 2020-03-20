@@ -47,3 +47,13 @@ class ToSparse(tf.keras.layers.Layer):
         return tf.SparseTensor(
             indices=indices, values=values, dense_shape=dense_shape
         )
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
+    def get_config(self):
+        config = {
+            "ignore_value": self.ignore_value,
+        }
+        base_config = super(ToSparse, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
