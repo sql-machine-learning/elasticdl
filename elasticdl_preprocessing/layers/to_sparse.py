@@ -37,7 +37,6 @@ class ToSparse(tf.keras.layers.Layer):
             return inputs
         if self.ignore_value is None:
             if inputs.dtype == tf.string:
-                print("string")
                 self.ignore_value = ""
             elif inputs.dtype.is_integer:
                 self.ignore_value = -1
