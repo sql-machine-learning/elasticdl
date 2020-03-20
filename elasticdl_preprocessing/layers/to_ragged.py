@@ -50,7 +50,7 @@ class ToRagged(tf.keras.layers.Layer):
                 self.ignore_value = ""
                 inputs = tf.strings.split(inputs, sep=self.sep).values
             elif inputs.dtype.is_integer:
-                self.ignore_value = -1 
+                self.ignore_value = -1
         self.ignore_value = tf.cast(self.ignore_value, inputs.dtype)
 
         return tf.ragged.boolean_mask(
