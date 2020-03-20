@@ -83,6 +83,9 @@ class TaskDataService(object):
         if err_msg:
             self._failed_record_count += count
 
+        # TODO(qijun) This is a workaround for #1829
+        if not self._pending_tasks:
+            return False
         task = self._pending_tasks[0]
         total_record_num = task.end - task.start
         if self._reported_record_count >= total_record_num:
