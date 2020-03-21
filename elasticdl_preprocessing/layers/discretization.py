@@ -8,7 +8,7 @@ class Discretization(tf.keras.layers.Layer):
     """Buckets data into discrete ranges.
 
     TensorFlow 2.2 has developed `tf.keras.layers.preprocessing.Discretization`
-    but not released it yet. So the layer is a simple temporary version 
+    but not released it yet. So the layer is a simple temporary version
     `tensorflow.python.keras.layers.preprocessing.discretization.Discretization`
 
     Input shape:
