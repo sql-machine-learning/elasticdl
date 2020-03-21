@@ -12,8 +12,8 @@ class IndexLookup(tf.keras.layers.Layer):
     This layer transforms categorical inputs to hashed output. It converts a
     sequence of int or string to a sequence of int. TensorFlow 2.2 has
     developed `tf.keras.layers.preprocessing.Hashing` but not released it yet.
-    So the layer is a simple temporary version.
-    https://github.com/tensorflow/tensorflow/blob/r2.2/tensorflow/python/keras/layers/preprocessing/hashing.py
+    So the layer is a simple temporary version. The codes in TensorFlow 2.2 is
+    `tensorflow.python.keras.layers.preprocessing.hashing.Hashing`.
 
     Example:
     ```python
