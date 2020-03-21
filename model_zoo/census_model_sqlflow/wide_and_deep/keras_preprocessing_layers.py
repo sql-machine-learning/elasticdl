@@ -3,6 +3,10 @@ import os
 import tensorflow as tf
 from tensorflow.python.ops import lookup_ops, math_ops
 
+"""
+The layers in this file will be replaced with the layers in
+elasticdl_preprocessing folder while they are committed.
+"""
 
 class ToSparse(tf.keras.layers.Layer):
     """Converts a `Tensor` to a `SparseTensor`, dropping ignore_value cells.
