@@ -30,7 +30,7 @@ class Hashing(tf.keras.layers.Layer):
     Input: A string, int32 or int64 `tf.Tensor`,
         `tf.SparseTensor` or `tf.RaggedTensor`
 
-    Output shape: An int64 tensor with the same type as input.
+    Output: An int64 tensor with the same type as input.
 
     """
 
