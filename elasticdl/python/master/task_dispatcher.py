@@ -11,6 +11,8 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import TaskExecCounterKey
 from elasticdl.python.common.log_utils import default_logger as logger
 
+_MAX_TASK_RETRIES = 3
+
 
 class _Task(object):
     """Internal representation of a task"""
@@ -106,6 +108,7 @@ class _TaskDispatcher(object):
         self._tasks_done_deferred_callbacks = []
 
         self._job_counters = {}
+        self._task_retry_count = {}
 
         if self._training_shards:
             logger.info("Starting epoch %d", self._epoch)
@@ -298,11 +301,15 @@ class _TaskDispatcher(object):
             if not task:
                 logger.warning("Unknown task_id: %d" % task_id)
             elif not success:
-                # TODO: keep count of retries.
-                if task.type == elasticdl_pb2.TRAINING:
-                    self._todo.append(task)
-                else:
-                    self._eval_todo.append(task)
+                logger.warning("Task %d of %s failed " % (task_id, task.type))
+                if not self.check_exceed_max_task_retries(task):
+                    if task.type in [
+                        elasticdl_pb2.TRAINING,
+                        elasticdl_pb2.TRAIN_END_CALLBACK,
+                    ]:
+                        self._todo.append(task)
+                    else:
+                        self._eval_todo.append(task)
             elif (
                 task.type == elasticdl_pb2.EVALUATION
                 and self._evaluation_service is not None
@@ -318,11 +325,25 @@ class _TaskDispatcher(object):
             if evaluation_task_completed:
                 self._evaluation_service.complete_task()
 
-            if self._callbacks_list.model.stop_training:
-                # Clear todo list to stop training
-                self._todo = []
+            if success:
+                if task in self._task_retry_count:
+                    del self._task_retry_count[task]
+                if self._callbacks_list.model.stop_training:
+                    # Clear todo list to stop training
+                    self._todo = []
 
         return (time.time() - start_time), task, worker_id
+
+    def check_exceed_max_task_retries(self, task):
+        self._task_retry_count.setdefault(task, 1)
+        self._task_retry_count[task] += 1
+        if self._task_retry_count[task] > _MAX_TASK_RETRIES:
+            logger.error(
+                "A %s task failed with %d retries "
+                % (task.type, _MAX_TASK_RETRIES)
+            )
+            return True
+        return False
 
     def finished(self):
         """Return if all tasks are done"""
