@@ -7,8 +7,8 @@ from elasticdl_preprocessing.layers.concatenate_with_offset import (
     ConcatenateWithOffset,
 )
 from elasticdl_preprocessing.tests.test_utils import (
-    sparse_tensor_equal,
     ragged_tensor_equal,
+    sparse_tensor_equal,
 )
 
 
@@ -35,6 +35,6 @@ class ConcatenateWithOffsetTest(unittest.TestCase):
         expected_out = tf.SparseTensor(
             indices=np.array([[0, 0], [0, 1], [1, 1], [2, 0]]),
             values=np.array([1, 12, 12, 1]),
-            dense_shape=(3, 2)
+            dense_shape=(3, 2),
         )
         self.assertTrue(sparse_tensor_equal(output, expected_out))
