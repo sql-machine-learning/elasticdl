@@ -4,12 +4,15 @@ import tensorflow as tf
 
 
 class Hashing(tf.keras.layers.Layer):
-    """Implements categorical feature hashing, also known as "hashing trick".
+    """Distribute categorical feature values into a finite number of buckets
+    by hashing.
 
-    This layer transforms categorical inputs to hashed output. It converts a
-    sequence of int or string to a sequence of int. TensorFlow 2.2 has
-    developed `tf.keras.layers.preprocessing.Hashing` but not released it yet.
-    So the layer is a simple temporary version.
+    This layer converts a sequence of int or string to a sequence of int.
+    output_id = Hash(input_feature_string) % num_bins for string type input.
+    For int type input, the layer converts the value to string and then
+    processes it by the same formula. TensorFlow 2.2 has developed
+    `tf.keras.layers.preprocessing.Hashing` but not released it yet. So the
+    layer is a simple temporary version.
     https://github.com/tensorflow/tensorflow/blob/r2.2/tensorflow/python/keras/layers/preprocessing/hashing.py
 
     Example:
@@ -17,28 +20,26 @@ class Hashing(tf.keras.layers.Layer):
     layer = Hashing(num_bins=3)
     inp = np.asarray([['A'], ['B'], ['C'], ['D'], ['E']])
     layer(inp)
-    [[1], [0], [1], [1], [2]]
     ```
+    The output will be `[[1], [0], [1], [1], [2]]`
 
     Arguments:
         num_bins: Number of hash bins.
-        name: Name to give to the layer.
         **kwargs: Keyword arguments to construct a layer.
 
-    Input shape: A string, int32 or int64 tensor of shape
-        `[batch_size, d1, ..., dm]`. The tensor can be `tf.Tensor`,
-        `tf.SparseTensor` and `tf.RaggedTensor`
+    Input: A string, int32 or int64 `tf.Tensor`,
+        `tf.SparseTensor` or `tf.RaggedTensor`
 
-    Output shape: An int64 tensor of shape `[batch_size, d1, ..., dm]`
+    Output shape: An int64 tensor with the same type as input.
 
     """
 
-    def __init__(self, num_bins, name=None, **kwargs):
+    def __init__(self, num_bins, **kwargs):
         if num_bins is None or num_bins <= 0:
             raise ValueError(
                 "`num_bins` cannot be `None` or non-positive values."
             )
-        super(Hashing, self).__init__(name=name, **kwargs)
+        super(Hashing, self).__init__(**kwargs)
         self.num_bins = num_bins
         self._supports_ragged_inputs = True
 
