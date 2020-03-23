@@ -20,7 +20,6 @@ def sparse_tensor_equal(sp_a, sp_b):
 
 
 def ragged_tensor_equal(rt_a, rt_b):
-    print(rt_a, rt_b)
     if rt_a.shape.as_list() != rt_b.shape.as_list():
         return False
 
