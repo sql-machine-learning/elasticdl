@@ -15,6 +15,8 @@ class IndexLookup(tf.keras.layers.Layer):
     So the layer is a simple temporary version. The codes in TensorFlow 2.2 is
     `tensorflow.python.keras.layers.preprocessing.index_lookup.IndexLookup`.
 
+    Note that the TensorFlow version with the layer must be greater than 2.0.0.
+
     Example:
     ```python
     layer = IndexLookup(vocabulary=['A', 'B', 'C'])
