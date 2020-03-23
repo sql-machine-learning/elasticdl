@@ -158,7 +158,7 @@ We can't use SQL directly to do the same analysis work as above.
 
 #### Proposal
 
-We can provide common tools to normalize the table schema. If the data is stored in MaxCompute table, we can use [PyODPS](https://pyodps.readthedocs.io/en/latest/) + [UDF](https://www.alibabacloud.com/help/doc-detail/73359.htm) to complete the task. We can look at the doc [flatten_odps_key_value_table](./flatten_odps_key_value_table.md) for the detailed design.  
+We can provide common tools to normalize the table schema. If the data is stored in MaxCompute table, we can use [PyODPS](https://pyodps.readthedocs.io/en/latest/) + [UDF](https://www.alibabacloud.com/help/doc-detail/73359.htm) to complete the task. Please look at the doc [flatten_odps_key_value_table](./flatten_odps_key_value_table.md) for the detailed design.  
 
 After normalizing the table schema, we can do data analysis and transformation on this normalized table. The preprocess pipeline is described using SQLFlow statement. The logic can be very flexible and [the current synatx of COLUMN clause](https://sql-machine-learning.github.io/sqlflow/doc/language_guide/#column-clause) cannot cover all the scenarios, such as standardize `age`. We want to design SQLFlow syntax extension to fully express the analysis and transform process elegantly.  
 
