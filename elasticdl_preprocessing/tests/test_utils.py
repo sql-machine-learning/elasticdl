@@ -3,6 +3,11 @@ import tensorflow as tf
 
 
 def sparse_tensor_equal(sp_a, sp_b):
+    if not isinstance(sp_a, tf.SparseTensor) or not isinstance(
+        sp_b, tf.SparseTensor
+    ):
+        return False
+
     if not np.array_equal(sp_a.dense_shape.numpy(), sp_b.dense_shape.numpy()):
         return False
 
