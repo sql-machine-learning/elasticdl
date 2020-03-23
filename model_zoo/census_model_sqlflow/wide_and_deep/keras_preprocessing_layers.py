@@ -4,8 +4,9 @@ import tensorflow as tf
 from tensorflow.python.ops import lookup_ops, math_ops
 
 """
-The layers in this file will be replaced with the layers in
-elasticdl_preprocessing folder while they are committed.
+The layers in this file is copied from the code in the PRs which are in the
+process of code reviewing. They will be replaced with the layers in
+elasticdl_preprocessing folder once committed.
 """
 
 class ToSparse(tf.keras.layers.Layer):

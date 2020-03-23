@@ -17,6 +17,8 @@ class TransformOp(object):
         self.input = input
         # The output name
         self.output = output
+        # The type of the TransformOp.
+        # The value is one of `TransformOpType`.
         self.op_type = None
 
 
