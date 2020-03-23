@@ -21,8 +21,8 @@ class ToRagged(tf.keras.layers.Layer):
         ayer = ToRagged()
         inp = tf.constant([["1,2,3"], ["4,5"], [""]])
         out = layer(inp)
-        [["1", "2", "3"], ["4", "5"], []]
     ```
+    The expected output is `[["1", "2", "3"], ["4", "5"], []]`
 
     Arguments:
         sep: Valid if the input's dtype is string.
