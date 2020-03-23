@@ -9,34 +9,33 @@ from tensorflow.python.ops import lookup_ops
 class IndexLookup(tf.keras.layers.Layer):
     """Maps strings from a vocabulary to integer indices.
 
-    This layer transforms categorical inputs to hashed output. It converts a
-    sequence of int or string to a sequence of int. TensorFlow 2.2 has
-    developed `tf.keras.layers.preprocessing.Hashing` but not released it yet.
+    This layer transforms categorical inputs to zero-based integer by
+    lookuping with a vocabulary list. TensorFlow 2.2 has developed
+    `tf.keras.layers.preprocessing.IndexLookup` but not released it yet.
     So the layer is a simple temporary version. The codes in TensorFlow 2.2 is
-    `tensorflow.python.keras.layers.preprocessing.hashing.Hashing`.
+    `tensorflow.python.keras.layers.preprocessing.index_lookup.IndexLookup`.
 
     Example:
     ```python
     layer = IndexLookup(vocabulary=['A', 'B', 'C'])
-    inp = np.asarray([['A'], ['B'], ['C'], ['D'], ['E']])
+    inp = np.array([['A'], ['B'], ['C'], ['D'], ['E']])
     layer(inputs)
     ```
     Then output will be `[[0], [1], [2], [3], [3]]`
 
     Attributes:
     num_oov_tokens: The number of out-of-vocabulary tokens to use; defaults to
-        1. If this value is more than 1, OOV inputs are hashed to determine
-        their OOV value; if this value is 0, passing an OOV input will result
-        in a '-1' being returned for that value in the output tensor.
-    vocabulary: An optional list of vocabulary terms, or a path to a text file
+        1. If this value is more than 1,
+        `hash(inputs) % num_oov_tokens + len(vocabulary)` converts OOV inputs
+        to integer values.
+    vocabulary: A list of vocabulary terms, or a path to a text file
         containing a vocabulary to load into this layer. The file should
         contain one token per line.
 
-    Input shape: A string tensor of shape
-        `[batch_size, d1, ..., dm]`. The tensor can be `tf.Tensor`,
-        `tf.SparseTensor` and `tf.RaggedTensor`
+    Input: A string `tf.Tensor`,`tf.SparseTensor` or
+        `tf.RaggedTensor`.
 
-    Output shape: An int64 tensor of shape `[batch_size, d1, ..., dm]`
+    Output: An int64 tensor with the same type as input.
 
     """
 
