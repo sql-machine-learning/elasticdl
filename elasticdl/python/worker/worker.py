@@ -326,37 +326,38 @@ class Worker(object):
 
     def get_model(self):
         self._timing.start_record_time("get_model")
-        variable_future_and_id_pairs = []
-        if self._use_multi_ps:
-            self.init_ps_var_partition()
-        for ps_id, stub in enumerate(self._ps_stubs):
-            if ps_id not in self._ps_vars:
-                continue
-            # async grpc call
-            req = elasticdl_pb2.PullDenseParametersRequest()
-            req.version = self._model_versions_from_ps[ps_id]
-            var_future = stub.pull_dense_parameters.future(req)
-            variable_future_and_id_pairs.append((var_future, ps_id))
-
-        for var_future, ps_id in variable_future_and_id_pairs:
-            res = var_future.result()
-            if not res.initialized:
-                # push variable to ps for initialization
-                self.report_variable_to_ps(ps_id)
+        if self._distribution_strategy != DistributionStrategy.ALLREDUCE:
+            variable_future_and_id_pairs = []
+            if self._use_multi_ps:
+                self.init_ps_var_partition()
+            for ps_id, stub in enumerate(self._ps_stubs):
+                if ps_id not in self._ps_vars:
+                    continue
+                # async grpc call
                 req = elasticdl_pb2.PullDenseParametersRequest()
                 req.version = self._model_versions_from_ps[ps_id]
-                res = self._ps_stubs[ps_id].pull_dense_parameters(req)
+                var_future = stub.pull_dense_parameters.future(req)
+                variable_future_and_id_pairs.append((var_future, ps_id))
+
+            for var_future, ps_id in variable_future_and_id_pairs:
+                res = var_future.result()
                 if not res.initialized:
-                    # TODO: support PS fault-tolerance
-                    raise RuntimeError(
-                        "PS pod %d cannot be initialized" % ps_id
-                    )
+                    # push variable to ps for initialization
+                    self.report_variable_to_ps(ps_id)
+                    req = elasticdl_pb2.PullDenseParametersRequest()
+                    req.version = self._model_versions_from_ps[ps_id]
+                    res = self._ps_stubs[ps_id].pull_dense_parameters(req)
+                    if not res.initialized:
+                        # TODO: support PS fault-tolerance
+                        raise RuntimeError(
+                            "PS pod %d cannot be initialized" % ps_id
+                        )
 
-            for name, pb in res.dense_parameters.items():
-                self._non_embed_vars[name].assign(pb_to_ndarray(pb))
-            self._model_versions_from_ps[ps_id] = res.version
+                for name, pb in res.dense_parameters.items():
+                    self._non_embed_vars[name].assign(pb_to_ndarray(pb))
+                self._model_versions_from_ps[ps_id] = res.version
 
-        self._model_version = max(self._model_versions_from_ps)
+            self._model_version = max(self._model_versions_from_ps)
         self._timing.end_record_time("get_model")
 
     def pull_embedding_vectors(self, layer_name, embedding_ids):
