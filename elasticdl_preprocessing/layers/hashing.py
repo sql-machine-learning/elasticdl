@@ -15,6 +15,8 @@ class Hashing(tf.keras.layers.Layer):
     layer is a simple temporary version.
     https://github.com/tensorflow/tensorflow/blob/r2.2/tensorflow/python/keras/layers/preprocessing/hashing.py
 
+    Note that the TensorFlow version with the layer must be greater than 2.0.0.
+
     Example:
     ```python
     layer = Hashing(num_bins=3)
