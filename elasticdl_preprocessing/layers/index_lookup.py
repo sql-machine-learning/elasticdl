@@ -20,8 +20,8 @@ class IndexLookup(tf.keras.layers.Layer):
     layer = IndexLookup(vocabulary=['A', 'B', 'C'])
     inp = np.asarray([['A'], ['B'], ['C'], ['D'], ['E']])
     layer(inputs)
-    [[0], [1], [2], [3], [3]]
     ```
+    Then output will be `[[0], [1], [2], [3], [3]]`
 
     Attributes:
     num_oov_tokens: The number of out-of-vocabulary tokens to use; defaults to
