@@ -9,8 +9,11 @@ class ToSparse(tf.keras.layers.Layer):
     ```python
         layer = ToSparse()
         inp = tf.constant([["A", ""], ["B", "C"]], tf.string)
-        layer.call(inp)
-        tf.SparseTensor(
+        out = layer(inp)
+    ```
+    The expected output is
+    ```
+    tf.SparseTensor(
             indices=np.array([[0, 0], [1, 0], [1, 1]]),
             values=np.array(["A", "B", "C"]),
             dense_shape=(2, 2),
