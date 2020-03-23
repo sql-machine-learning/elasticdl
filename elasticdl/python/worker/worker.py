@@ -166,7 +166,8 @@ class Worker(object):
         self.set_model(model_inst)
 
         self._model_version = -1
-        self._model_versions_from_ps = [-1 for _ in range(self._ps_num)]
+        if self._distribution_strategy != DistributionStrategy.ALLREDUCE:
+            self._model_versions_from_ps = [-1 for _ in range(self._ps_num)]
         self._task_data_service = TaskDataService(
             self,
             self._job_type == JobType.TRAINING_WITH_EVALUATION,
