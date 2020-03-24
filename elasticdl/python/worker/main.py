@@ -2,7 +2,6 @@ import grpc
 
 from elasticdl.python.common import log_utils
 from elasticdl.python.common.args import parse_worker_args
-from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.worker.worker import Worker
 
@@ -20,10 +19,7 @@ def main():
     master_channel = build_channel(args.master_addr)
 
     ps_channels = []
-    if (
-        args.ps_addrs
-        and args.distribution_strategy != DistributionStrategy.ALLREDUCE
-    ):
+    if args.ps_addrs:
         ps_addrs = args.ps_addrs.split(",")
 
         for addr in ps_addrs:
