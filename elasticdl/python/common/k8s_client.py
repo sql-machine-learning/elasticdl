@@ -412,8 +412,8 @@ class Client(object):
             name=self.get_collective_communicator_service_name(),
             port=_FTLIB_GOSSIP_CONTAINER_PORT,
             target_port=_FTLIB_GOSSIP_CONTAINER_PORT,
-            replica_type="master",
-            replica_index="0",
+            replica_type="worker",
+            replica_index=None,
             owner=self.get_master_pod(),
         )
 
@@ -452,18 +452,20 @@ class Client(object):
             else None,
             namespace=self.namespace,
         )
+        selector = {
+            "app": ELASTICDL_APP_NAME,
+            ELASTICDL_JOB_KEY: self.job_name,
+            ELASTICDL_REPLICA_TYPE_KEY: kargs["replica_type"],
+        }
+        if kargs["replica_index"] is not None:
+            selector[ELASTICDL_REPLICA_INDEX_KEY] = str(kargs["replica_index"])
         spec = client.V1ServiceSpec(
             ports=[
                 client.V1ServicePort(
                     port=kargs["port"], target_port=kargs["target_port"]
                 )
             ],
-            selector={
-                "app": ELASTICDL_APP_NAME,
-                ELASTICDL_JOB_KEY: self.job_name,
-                ELASTICDL_REPLICA_TYPE_KEY: kargs["replica_type"],
-                ELASTICDL_REPLICA_INDEX_KEY: str(kargs["replica_index"]),
-            },
+            selector=selector,
             type=kargs.get("service_type", None),
         )
         service = client.V1Service(

@@ -66,16 +66,16 @@ SELECT * FROM new_plates TO PREDICT price USING a_model;
 If the user doesn't want normalization, but the raw value, as the input, she could write the following.
 
 ```sql
-SELECT * FROM new_plate TO PREDICT price USING a_model COLUMN size
+SELECT * FROM new_plates TO PREDICT price USING a_model COLUMN size
 ```
 
 Or, if she wants standardization instead of normalization, she could write the following.
 
 ```sql
-SELECT * FROM new_plate TO PREDICT price USING a_model COLUMN standardize(size)
+SELECT * FROM new_plates TO PREDICT price USING a_model COLUMN standardize(size)
 ```
 
-How if the table new_plate doesn't have the field used to train the model? How if there is no field named `size`, but a field `diameter`. We should allow users to use the latter as well.
+How if the table new_plates doesn't have the field used to train the model? How if there is no field named `size`, but a field `diameter`. We should allow users to use the latter as well.
 
 ```sql
 SELECT * FROM new_plates TO PREDICT price USING a_model COLUM normalize(diameter)
@@ -158,9 +158,7 @@ We can't use SQL directly to do the same analysis work as above.
 
 #### Proposal
 
-We can provide common tools to normalize the table schema. If the data is stored in Odps table, we can use [PyOdps](https://pyodps.readthedocs.io/en/latest/) + [UDF](https://www.alibabacloud.com/help/doc-detail/73359.htm) to complete the task.  
-
-*Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1648).*
+We can provide common tools to normalize the table schema. If the data is stored in MaxCompute table, we can use [PyODPS](https://pyodps.readthedocs.io/en/latest/) + [UDF](https://www.alibabacloud.com/help/doc-detail/73359.htm) to complete the task. Please look at the doc [flatten_odps_key_value_table](./flatten_odps_key_value_table.md) for the detailed design.  
 
 After normalizing the table schema, we can do data analysis and transformation on this normalized table. The preprocess pipeline is described using SQLFlow statement. The logic can be very flexible and [the current synatx of COLUMN clause](https://sql-machine-learning.github.io/sqlflow/doc/language_guide/#column-clause) cannot cover all the scenarios, such as standardize `age`. We want to design SQLFlow syntax extension to fully express the analysis and transform process elegantly.  
 
