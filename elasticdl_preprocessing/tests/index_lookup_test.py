@@ -27,6 +27,17 @@ class IndexLookupTest(unittest.TestCase):
             lookup_layer = IndexLookup(vocabulary=vocab_file)
             self._check_lookup(lookup_layer)
 
+    def test_model_with_lookup(self):
+        inputs = tf.keras.Input(shape=(1,), dtype=tf.string)
+        lookup_out = IndexLookup(vocabulary=["A", "B", "C"])(inputs)
+        model = tf.keras.Model(inputs=inputs, outputs=lookup_out)
+        out = model.call(tf.constant([["A"], ["C"], ["B"], ["D"], ["E"]]))
+        self.assertTrue(
+            np.array_equal(
+                np.array([[0], [2], [1], [3], [3]], dtype=int), out.numpy()
+            )
+        )
+
     def _check_lookup(self, lookup_layer):
         dense_input = tf.constant([["A"], ["B"], ["C"], ["D"], ["E"]])
         output = lookup_layer(dense_input)
