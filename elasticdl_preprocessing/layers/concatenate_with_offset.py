@@ -2,8 +2,8 @@ import tensorflow as tf
 
 
 class ConcatenateWithOffset(tf.keras.layers.Concatenate):
-    """Layer that add offset for tensor in the list of inputs and
-    concatenate the tensors.
+    """Layer that add offset to each id tensor in the input list and
+    then concatenate these tensors.
 
     It takes as input a list of tensors and returns a single tensor.
     Firstly, it will add an offset in offsets for each tensor in inputs.
