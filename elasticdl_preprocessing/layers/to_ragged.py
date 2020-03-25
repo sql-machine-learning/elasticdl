@@ -44,7 +44,7 @@ class ToRagged(tf.keras.layers.Layer):
         self.ignore_value = ignore_value
 
     def call(self, inputs):
-        if not isinstance(inputs, tf.Tensor) or not isinstance(
+        if not isinstance(inputs, tf.Tensor) and not isinstance(
             inputs, tf.RaggedTensor
         ):
             raise TypeError(
@@ -55,17 +55,18 @@ class ToRagged(tf.keras.layers.Layer):
         if isinstance(inputs, tf.Tensor):
             inputs = tf.RaggedTensor.from_tensor(inputs)
 
-        if self.ignore_value is None:
+        ignore_value = self.ignore_value
+        if ignore_value is None:
             if inputs.dtype == tf.string:
-                self.ignore_value = ""
+                ignore_value = ""
                 inputs = tf.strings.split(inputs, sep=self.sep).values
             elif inputs.dtype.is_integer:
-                self.ignore_value = -1
+                ignore_value = -1
 
-        if self.ignore_value is not None:
-            self.ignore_value = tf.cast(self.ignore_value, inputs.dtype)
+        if ignore_value is not None:
+            ignore_value = tf.cast(ignore_value, inputs.dtype)
             return tf.ragged.boolean_mask(
-                inputs, tf.not_equal(inputs, self.ignore_value)
+                inputs, tf.not_equal(inputs, ignore_value)
             )
 
         return inputs

@@ -21,6 +21,14 @@ class ToRaggedTest(unittest.TestCase):
         expected_out = tf.ragged.constant([["1", "2", "3"], ["4", "5"], []])
         self.assertTrue(ragged_tensor_equal(out, expected_out))
 
+    def test_model_with_ragged(self):
+        inputs = tf.keras.Input(shape=(1,), dtype=tf.int32)
+        ragged = ToRagged(ignore_value=-1)(inputs)
+        sum_out = tf.reduce_sum(ragged)
+        model = tf.keras.Model(inputs=inputs, outputs=sum_out)
+        sum_value = model.call(tf.constant([[1], [-1], [4]])).numpy()
+        self.assertEqual(sum_value, 5.0)
+
 
 if __name__ == "__main__":
     unittest.main()
