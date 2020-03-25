@@ -44,9 +44,8 @@ class ToRagged(tf.keras.layers.Layer):
         self.ignore_value = ignore_value
 
     def call(self, inputs):
-        if (
-            not isinstance(inputs, tf.Tensor) or
-            not isinstance(inputs, tf.RaggedTensor)
+        if not isinstance(inputs, tf.Tensor) or not isinstance(
+            inputs, tf.RaggedTensor
         ):
             raise TypeError(
                 "The inputs must be a Tensor or RaggedTensor and "
