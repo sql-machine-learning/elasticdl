@@ -1,9 +1,13 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.ops.ragged import ragged_tensor
 
 
 def sparse_tensor_equal(sp_a, sp_b):
+    if not isinstance(sp_a, tf.SparseTensor) or not isinstance(
+        sp_b, tf.SparseTensor
+    ):
+        return False
+
     if not np.array_equal(sp_a.dense_shape.numpy(), sp_b.dense_shape.numpy()):
         return False
 
@@ -20,15 +24,19 @@ def sparse_tensor_equal(sp_a, sp_b):
 
 
 def ragged_tensor_equal(rt_a, rt_b):
-    print(rt_a, rt_b)
+    if not isinstance(rt_a, tf.RaggedTensor) or not isinstance(
+        rt_b, tf.RaggedTensor
+    ):
+        return False
+
     if rt_a.shape.as_list() != rt_b.shape.as_list():
         return False
 
     for i in range(rt_a.shape[0]):
         sub_rt_a = rt_a[i]
         sub_rt_b = rt_b[i]
-        if ragged_tensor.is_ragged(sub_rt_a) and ragged_tensor.is_ragged(
-            sub_rt_b
+        if isinstance(sub_rt_a, tf.RaggedTensor) and isinstance(
+            sub_rt_b, tf.RaggedTensor
         ):
             if not ragged_tensor_equal(sub_rt_a, sub_rt_b):
                 return False
