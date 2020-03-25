@@ -38,15 +38,17 @@ class ToSparse(tf.keras.layers.Layer):
     def call(self, inputs):
         if isinstance(inputs, tf.SparseTensor):
             return inputs
-        if self.ignore_value is None:
+
+        ignore_value = self.ignore_value
+        if ignore_value is None:
             if inputs.dtype == tf.string:
-                self.ignore_value = ""
+                ignore_value = ""
             elif inputs.dtype.is_integer:
-                self.ignore_value = -1
+                ignore_value = -1
             else:
-                self.ignore_value = 0.0
-        self.ignore_value = tf.cast(self.ignore_value, inputs.dtype)
-        indices = tf.where(tf.not_equal(inputs, self.ignore_value))
+                ignore_value = 0.0
+        ignore_value = tf.cast(ignore_value, inputs.dtype)
+        indices = tf.where(tf.not_equal(inputs, ignore_value))
         values = tf.gather_nd(inputs, indices)
         dense_shape = tf.shape(inputs, out_type=tf.int64)
         return tf.SparseTensor(
