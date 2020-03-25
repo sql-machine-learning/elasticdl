@@ -75,7 +75,7 @@ Or, if she wants standardization instead of normalization, she could write the f
 SELECT * FROM new_plates TO PREDICT price USING a_model COLUMN standardize(size)
 ```
 
-How if the table new_plate doesn't have the field used to train the model? How if there is no field named `size`, but a field `diameter`. We should allow users to use the latter as well.
+How if the table new_plates doesn't have the field used to train the model? How if there is no field named `size`, but a field `diameter`. We should allow users to use the latter as well.
 
 ```sql
 SELECT * FROM new_plates TO PREDICT price USING a_model COLUM normalize(diameter)
