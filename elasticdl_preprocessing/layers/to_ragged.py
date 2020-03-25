@@ -8,6 +8,8 @@ class ToRagged(tf.keras.layers.Layer):
     dropping ignore_value cells. If the input's dtype is string, split
     the string elements to convert the input to `RaggedTensor` firstly.
 
+    Note that the TensorFlow version with the layer must be greater than 2.0.0.
+
     Example (Integer):
     ```python
         layer = ToRagged()
