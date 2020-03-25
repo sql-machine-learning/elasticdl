@@ -43,6 +43,8 @@ class ToSparse(tf.keras.layers.Layer):
                 self.ignore_value = ""
             elif inputs.dtype.is_integer:
                 self.ignore_value = -1
+            else:
+                self.ignore_value = 0.0
         self.ignore_value = tf.cast(self.ignore_value, inputs.dtype)
         indices = tf.where(tf.not_equal(inputs, self.ignore_value))
         values = tf.gather_nd(inputs, indices)
