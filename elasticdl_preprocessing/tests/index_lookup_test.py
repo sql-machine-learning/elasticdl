@@ -31,7 +31,6 @@ class IndexLookupTest(unittest.TestCase):
         dense_input = tf.constant([["A"], ["B"], ["C"], ["D"], ["E"]])
         output = lookup_layer(dense_input)
         expected_out = np.array([[0], [1], [2], [3], [3]])
-        print(output)
         self.assertTrue(np.array_equal(output.numpy(), expected_out))
 
         ragged_input = tf.ragged.constant([["A", "B", "C"], ["D", "E"]])

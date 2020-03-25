@@ -7,7 +7,7 @@ from tensorflow.python.ops import lookup_ops
 
 
 class IndexLookup(tf.keras.layers.Layer):
-    """Maps strings from a vocabulary to integer indices.
+    """Maps strings to integer indices by looking up a vocabulary.
 
     This layer transforms categorical inputs to zero-based integer by
     lookuping with a vocabulary list. TensorFlow 2.2 has developed
