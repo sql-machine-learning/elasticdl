@@ -754,7 +754,7 @@ class Worker(object):
         return 0
 
     def _get_rank_of_this_worker(self):
-        return self._collective_communicator.rank
+        return self._collective_communicator._ftlib.rank
 
     def _broadcast_model_params(self):
         status = self._collective_communicator.barrier()
@@ -762,7 +762,7 @@ class Worker(object):
             self.logger.warning("Failed to perform barrier operation")
             return False
         broadcast_root_worker_rank = self._get_rank_of_broadcast_src_worker()
-        this_worker_rank = self._get_rank_of_this_rank()
+        this_worker_rank = self._get_rank_of_this_worker()
         is_broadcast_src_worker = (
             this_worker_rank == broadcast_root_worker_rank
         )
