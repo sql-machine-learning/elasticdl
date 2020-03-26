@@ -32,21 +32,10 @@ def ragged_tensor_equal(rt_a, rt_b):
     if rt_a.shape.as_list() != rt_b.shape.as_list():
         return False
 
-    for i in range(rt_a.shape[0]):
-        sub_rt_a = rt_a[i]
-        sub_rt_b = rt_b[i]
-        if isinstance(sub_rt_a, tf.RaggedTensor) and isinstance(
-            sub_rt_b, tf.RaggedTensor
-        ):
-            if not ragged_tensor_equal(sub_rt_a, sub_rt_b):
-                return False
-        elif isinstance(sub_rt_a, tf.Tensor) and isinstance(
-            sub_rt_b, tf.Tensor
-        ):
-            if sub_rt_a.dtype != sub_rt_b.dtype:
-                return False
-            if not np.array_equal(sub_rt_a.numpy(), sub_rt_b.numpy()):
-                return False
-        else:
-            return False
+    if rt_a.dtype != rt_b.dtype:
+        return False
+
+    if rt_a.to_list() != rt_b.to_list():
+        return False
+
     return True
