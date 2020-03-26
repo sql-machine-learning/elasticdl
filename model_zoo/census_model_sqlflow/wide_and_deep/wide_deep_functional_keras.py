@@ -27,13 +27,13 @@ from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
     sex_lookup,
     workclass_lookup,
 )
-from model_zoo.census_model_sqlflow.wide_and_deep.keras_preprocessing_layers import (
+from elasticdl_preprocessing.layers.concatenate_with_offset import (
     ConcatenateWithOffset,
-    Discretization,
-    Hashing,
-    Lookup,
-    ToSparse,
 )
+from elasticdl_preprocessing.layers.discretization import Discretization
+from elasticdl_preprocessing.layers.hashing import Hashing
+from elasticdl_preprocessing.layers.index_lookup import IndexLookup
+from elasticdl_preprocessing.layers.to_sparse import ToSparse
 from model_zoo.census_model_sqlflow.wide_and_deep.transform_ops import (
     TransformOpType,
 )
