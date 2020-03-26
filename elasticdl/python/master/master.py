@@ -199,14 +199,13 @@ class Master(object):
         # Start the worker manager if requested
         if self.instance_manager:
             self.instance_manager.update_status(InstanceManagerStatus.PENDING)
-            if self.distribution_strategy != DistributionStrategy.ALLREDUCE:
+            if self.distribution_strategy == DistributionStrategy.ALLREDUCE:
+                # Exposes the consensus service for allreduce-based training
+                self.instance_manager.start_ftlib_consensus_service()
+            else:
                 self.instance_manager.start_parameter_servers()
             self.instance_manager.start_workers()
             self.instance_manager.update_status(InstanceManagerStatus.RUNNING)
-
-        # Exposes the consensus service for allreduce-based training
-        if self.distribution_strategy == DistributionStrategy.ALLREDUCE:
-            self.instance_manager.start_ftlib_consensus_service()
 
         # Start TensorBoard k8s Service if requested
         if self.tb_service and self.tb_client:

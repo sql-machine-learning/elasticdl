@@ -1,12 +1,18 @@
+import time
+
 import grpc
 
 from elasticdl.python.common import log_utils
 from elasticdl.python.common.args import parse_worker_args
+from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.worker.worker import Worker
 
 CONNECT_PS_MAX_RETRIES = 3
 CONNECT_PS_TIMEOUT = 300
+# The number of seconds we wait for allreduce strategy's
+# FTLib consensus service to detect the worker pod
+_ALLREDUCE_STRATEGY_WARM_UP_SECS = 20
 
 
 def main():
@@ -49,6 +55,13 @@ def main():
                     "Time out to connect pod %s with 3 retries"
                     % addr.split(".")[0]
                 )
+
+    if args.distribution_strategy == DistributionStrategy.ALLREDUCE:
+        logger.info(
+            "Wait for %s seconds for FTLib consensus service to "
+            "detect the worker pod" % str(_ALLREDUCE_STRATEGY_WARM_UP_SECS)
+        )
+        time.sleep(_ALLREDUCE_STRATEGY_WARM_UP_SECS)
 
     worker = Worker(
         args,
