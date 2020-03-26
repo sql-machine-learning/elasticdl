@@ -33,6 +33,11 @@ class CollectiveCommunicator(object):
                     ),
                 },
             )
+            while not self._ftlib.consensus_joined():
+                logger.warning("Retry building consensus...")
+                self._ftlib.manual_join(
+                    known_addr_list=list(self._get_peer_set(service_name))
+                )
         else:
             logger.warning(
                 "FTLib is not installed. The CollectiveCommunicator "
@@ -51,7 +56,7 @@ class CollectiveCommunicator(object):
             )
             return CollectiveCommunicatorStatus.FAILED, data
         if self._ftlib is not None:
-            res = self._ftlib.allreduce_average(data)
+            res = self._ftlib.wait_gradients_ready(data)
             if res == FTAllReduceStatus.SUCCESS:
                 return CollectiveCommunicatorStatus.SUCCEEDED, data
             else:

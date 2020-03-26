@@ -777,10 +777,6 @@ class Worker(object):
             return False
         if not is_broadcast_src_worker and model_params is not None:
             self._update_local_model_params(model_params)
-        status = self._collective_communicator.barrier()
-        if status == CollectiveCommunicatorStatus.FAILED:
-            self.logger.warning("Failed to perform barrier operation")
-            return False
         return True
 
     def _calculate_grads_and_report_with_allreduce(self, grads):
