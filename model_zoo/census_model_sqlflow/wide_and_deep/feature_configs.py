@@ -1,3 +1,5 @@
+import itertools
+
 import tensorflow as tf
 
 from model_zoo.census_model_sqlflow.wide_and_deep.transform_ops import (
@@ -118,6 +120,11 @@ hours_per_week_bucketize = Bucketize(
     boundaries=HOURS_BOUNDARIES,
 )
 
+
+def _get_id_offsets_from_dependency_bucket_num(num_buckets):
+    return list(itertools.accumulate([0] + num_buckets[:-1]))
+
+
 group1 = Concat(
     "group1",
     [
@@ -127,7 +134,7 @@ group1 = Concat(
         "capital_loss_bucketize",
     ],
     "group1",
-    id_offsets=[8, 7, 6, 5],
+    id_offsets=_get_id_offsets_from_dependency_bucket_num([8, 7, 6, 6]),
 )
 group2 = Concat(
     "group2",
@@ -138,27 +145,27 @@ group2 = Concat(
         "occupation_hash",
     ],
     "group2",
-    id_offsets=[30, 7, 6, 30],
+    id_offsets=_get_id_offsets_from_dependency_bucket_num([30, 7, 6, 30]),
 )
 group3 = Concat(
     "group3",
     ["age_bucketize", "sex_lookup", "race_lookup", "native_country_hash"],
     "group3",
-    id_offsets=[6, 2, 5, 100],
+    id_offsets=_get_id_offsets_from_dependency_bucket_num([6, 2, 5, 100]),
 )
 
 group1_embedding_wide = Embedding(
     "group1_embedding_wide",
     "group1",
     "group1_embedding_wide",
-    input_dim=300,
+    input_dim=sum([8, 7, 6, 6]),
     output_dim=1,
 )
 group2_embedding_wide = Embedding(
     "group2_embedding_wide",
     "group2",
     "group2_embedding_wide",
-    input_dim=1000,
+    input_dim=sum([30, 7, 6, 30]),
     output_dim=1,
 )
 
@@ -166,21 +173,21 @@ group1_embedding_deep = Embedding(
     "group1_embedding_deep",
     "group1",
     "group1_embedding_deep",
-    input_dim=300,
+    input_dim=sum([8, 7, 6, 6]),
     output_dim=8,
 )
 group2_embedding_deep = Embedding(
     "group2_embedding_deep",
     "group2",
     "group2_embedding_deep",
-    input_dim=1000,
+    input_dim=sum([30, 7, 6, 30]),
     output_dim=8,
 )
 group3_embedding_deep = Embedding(
     "group3_embedding_deep",
     "group3",
     "group3_embedding_deep",
-    input_dim=512,
+    input_dim=sum([6, 2, 5, 100]),
     output_dim=8,
 )
 
