@@ -2,6 +2,13 @@ import tensorflow as tf
 
 from elasticdl.python.elasticdl.callbacks import LearningRateScheduler
 from elasticdl.python.keras.layers.sparse_embedding import SparseEmbedding
+from elasticdl_preprocessing.layers.concatenate_with_offset import (
+    ConcatenateWithOffset,
+)
+from elasticdl_preprocessing.layers.discretization import Discretization
+from elasticdl_preprocessing.layers.hashing import Hashing
+from elasticdl_preprocessing.layers.index_lookup import IndexLookup
+from elasticdl_preprocessing.layers.to_sparse import ToSparse
 from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
     FEATURE_TRANSFORM_INFO_EXECUTE_ARRAY,
     INPUT_SCHEMAS,
@@ -27,13 +34,6 @@ from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
     sex_lookup,
     workclass_lookup,
 )
-from elasticdl_preprocessing.layers.concatenate_with_offset import (
-    ConcatenateWithOffset,
-)
-from elasticdl_preprocessing.layers.discretization import Discretization
-from elasticdl_preprocessing.layers.hashing import Hashing
-from elasticdl_preprocessing.layers.index_lookup import IndexLookup
-from elasticdl_preprocessing.layers.to_sparse import ToSparse
 from model_zoo.census_model_sqlflow.wide_and_deep.transform_ops import (
     TransformOpType,
 )
@@ -101,7 +101,7 @@ def transform(inputs):
             transformed[feature_transform_info.input] = ToSparse()(
                 transformed[feature_transform_info.input]
             )
-            transformed[feature_transform_info.output] = Lookup(
+            transformed[feature_transform_info.output] = IndexLookup(
                 feature_transform_info.vocabulary_list
             )(transformed[feature_transform_info.input])
         elif feature_transform_info.op_type == TransformOpType.CONCAT:
@@ -138,19 +138,19 @@ def transform_from_code_gen(source_inputs):
     native_country_hash_out = Hashing(native_country_hash.hash_bucket_size)(
         ToSparse()(inputs["native_country"])
     )
-    workclass_lookup_out = Lookup(workclass_lookup.vocabulary_list)(
+    workclass_lookup_out = IndexLookup(workclass_lookup.vocabulary_list)(
         ToSparse()(inputs["workclass"])
     )
-    marital_status_lookup_out = Lookup(marital_status_lookup.vocabulary_list)(
-        ToSparse()(inputs["marital_status"])
-    )
-    relationship_lookup_out = Lookup(relationship_lookup.vocabulary_list)(
+    marital_status_lookup_out = IndexLookup(
+        marital_status_lookup.vocabulary_list
+    )(ToSparse()(inputs["marital_status"]))
+    relationship_lookup_out = IndexLookup(relationship_lookup.vocabulary_list)(
         ToSparse()(inputs["relationship"])
     )
-    race_lookup_out = Lookup(race_lookup.vocabulary_list)(
+    race_lookup_out = IndexLookup(race_lookup.vocabulary_list)(
         ToSparse()(inputs["race"])
     )
-    sex_lookup_out = Lookup(sex_lookup.vocabulary_list)(
+    sex_lookup_out = IndexLookup(sex_lookup.vocabulary_list)(
         ToSparse()(inputs["sex"])
     )
     age_bucketize_out = Discretization(age_bucketize.boundaries)(
