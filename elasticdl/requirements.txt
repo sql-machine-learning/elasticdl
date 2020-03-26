@@ -2,4 +2,5 @@ grpcio-tools
 kubernetes==10.1.0
 docker
 pyrecordio>=0.0.6
+Cython
 odps

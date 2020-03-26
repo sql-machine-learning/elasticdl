@@ -42,6 +42,35 @@ class ODPSIOTest(unittest.TestCase):
             self._odps_client, self._project, self._test_read_table
         )
 
+    def test_parallel_read(self):
+        def transform(record):
+            return float(record[0]) + 1
+
+        start = 0
+        end = 100
+        shard_size = (end - start) // 4
+
+        pd = ODPSReader(
+            access_id=self._access_id,
+            access_key=self._access_key,
+            project=self._project,
+            endpoint=self._endpoint,
+            table=self._test_read_table,
+            num_processes=2,
+            transform_fn=transform,
+        )
+
+        results = []
+        pd.reset((start, end - start), shard_size)
+        shard_count = pd.get_shards_count()
+        for i in range(shard_count):
+            records = pd.get_records()
+            for record in records:
+                results.append(record)
+        pd.stop()
+
+        self.assertEqual(len(results), 100)
+
     def test_read_to_iterator(self):
         reader = ODPSReader(
             self._project,
