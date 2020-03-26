@@ -694,6 +694,8 @@ def parse_worker_args(worker_args=None):
     print_args(args, groups=ALL_ARGS_GROUPS)
     if unknown_args:
         logger.warning("Unknown arguments: %s", unknown_args)
+    if args.distribution_strategy == DistributionStrategy.ALLREDUCE:
+        args.ps_addrs = ""
     return args
 
 
