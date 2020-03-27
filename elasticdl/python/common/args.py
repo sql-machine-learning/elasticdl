@@ -161,7 +161,10 @@ def add_common_params(parser):
     parser.add_argument(
         "--worker_pod_priority",
         default="",
-        help="The requested priority of worker pod",
+        help="The requested priority of worker pod, we support following"
+        "configs: high/low/high=0.5. The high=0.5 means that half"
+        "worker pods have high priority, and half worker pods have"
+        "low priority. The default value is low",
     )
     parser.add_argument(
         "--num_ps_pods", type=int, help="Number of PS pods", default=1
