@@ -234,9 +234,6 @@ class Client(object):
                 client.V1ContainerPort(
                     container_port=_FTLIB_GOSSIP_CONTAINER_PORT, name="gossip"
                 ),
-                client.V1ContainerPort(
-                    container_port=_FTLIB_SSH_CONTAINER_PORT, name="ssh"
-                ),
             ]
             if "expose_ports" in kargs and kargs["expose_ports"]
             else None
@@ -405,7 +402,7 @@ class Client(object):
         )
 
     def get_collective_communicator_service_name(self):
-        return self.job_name + "ftlib-consensus"
+        return self.job_name + "-ftlib-consensus"
 
     def create_ftlib_consensus_service(self):
         return self._create_service(
