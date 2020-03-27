@@ -260,7 +260,9 @@ class Client(object):
             containers=[container],
             restart_policy=kargs["restart_policy"],
             priority_class_name=kargs["pod_priority"],
-            termination_grace_period_seconds=kargs["termination_period"],
+            termination_grace_period_seconds=kargs.get(
+                "termination_period", None
+            ),
         )
 
         # Mount data path
