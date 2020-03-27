@@ -260,6 +260,7 @@ class Client(object):
             containers=[container],
             restart_policy=kargs["restart_policy"],
             priority_class_name=kargs["pod_priority"],
+            termination_grace_period_seconds=kargs["termination_period"],
         )
 
         # Mount data path
@@ -346,6 +347,7 @@ class Client(object):
             volume=kargs["volume"],
             owner_pod=master_pod,
             ps_addrs=kargs.get("ps_addrs", ""),
+            termination_period=kargs.get("termination_period", None),
             env=env,
             expose_ports=kargs["expose_ports"],
         )

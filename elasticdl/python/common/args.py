@@ -154,6 +154,12 @@ def add_common_params(parser):
         "default to worker_resource_request",
     )
     parser.add_argument(
+        "--worker_termination_period",
+        type=int,
+        default=30,
+        help="The termination grace period seconds of worker pod",
+    )
+    parser.add_argument(
         "--master_pod_priority",
         default="",
         help="The requested priority of master pod",

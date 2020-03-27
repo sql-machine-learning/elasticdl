@@ -466,6 +466,7 @@ class Master(object):
                 worker_resource_request=args.worker_resource_request,
                 worker_resource_limit=args.worker_resource_limit,
                 worker_pod_priority=args.worker_pod_priority,
+                worker_termination_period=args.worker_termination_period,
                 num_ps=args.num_ps_pods,
                 ps_command=ps_command,
                 ps_args=ps_args,
