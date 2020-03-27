@@ -27,7 +27,10 @@ class CollectiveCommunicator(object):
                 consensus="gossip",
                 commlib="pytorch",
                 consensus_init_kwargs={
-                    "known_addr_list": list(self._get_peer_set(service_name))
+                    "known_addr_list": list(self._get_peer_set(service_name)),
+                    "custom_bind_addr": socket.gethostbyname(
+                        socket.gethostname()
+                    ),
                 },
             )
         else:
