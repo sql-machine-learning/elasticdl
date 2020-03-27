@@ -100,6 +100,7 @@ class InstanceManager(object):
                 resource_requests=self._worker_resource_request,
                 resource_limits=self._worker_resource_limit,
                 pod_priority=self._worker_pod_priority,
+                termination_period=1,
                 volume=self._volume,
                 image_pull_policy=self._image_pull_policy,
                 command=self._worker_command,
