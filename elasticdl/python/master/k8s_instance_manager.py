@@ -19,7 +19,6 @@ class InstanceManager(object):
         worker_resource_request="cpu=1,memory=4096Mi",
         worker_resource_limit="cpu=1,memory=4096Mi",
         worker_pod_priority=None,
-        worker_termination_period=None,
         num_ps=0,
         ps_command=None,
         ps_args=None,
@@ -39,7 +38,6 @@ class InstanceManager(object):
         self._worker_resource_request = worker_resource_request
         self._worker_resource_limit = worker_resource_limit
         self._worker_pod_priority = worker_pod_priority
-        self._worker_termination_period = worker_termination_period
         self._expose_ports = expose_ports
 
         self._num_ps = num_ps
@@ -102,7 +100,7 @@ class InstanceManager(object):
                 resource_requests=self._worker_resource_request,
                 resource_limits=self._worker_resource_limit,
                 pod_priority=self._worker_pod_priority,
-                termination_period=self._worker_termination_period,
+                termination_period=1,
                 volume=self._volume,
                 image_pull_policy=self._image_pull_policy,
                 command=self._worker_command,
