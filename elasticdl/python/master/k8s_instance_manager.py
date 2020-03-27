@@ -23,7 +23,7 @@ def _parse_worker_pod_priority(num_workers, worker_pod_priority):
         except Exception:
             logger.warning(
                 "Please check the input worker pod priority format,"
-                "e.g. high=0.5  The config is no use, and ElasticDL sets"
+                "e.g. high=0.5  The config is no use, and ElasticDL sets "
                 "low priority for all worker pods by default."
             )
             for i in range(num_workers):
