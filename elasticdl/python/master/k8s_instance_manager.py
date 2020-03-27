@@ -9,6 +9,25 @@ from elasticdl.python.common.log_utils import default_logger as logger
 _SERVICE_ADDR_SEP = ","
 
 
+def _parse_worker_pod_priority(num_workers, worker_pod_priority):
+    res = {}
+    if "high=" in worker_pod_priority:
+        fraction = float(worker_pod_priority.spllit("=")[1])
+        high_count = int(num_workers * fraction)
+        for i in range(num_workers):
+            if i < high_count:
+                res[i] = "high"
+            else:
+                res[i] = "low"
+    elif worker_pod_priority == "high":
+        for i in range(num_workers):
+            res[i] = "high"
+    else:
+        for i in range(num_workers):
+            res[i] = "low"
+    return res
+
+
 class InstanceManager(object):
     def __init__(
         self,
@@ -37,7 +56,9 @@ class InstanceManager(object):
         self._worker_args = worker_args
         self._worker_resource_request = worker_resource_request
         self._worker_resource_limit = worker_resource_limit
-        self._worker_pod_priority = worker_pod_priority
+        self._worker_pod_priority = _parse_worker_pod_priority(
+            self._num_workers, worker_pod_priority
+        )
         self._expose_ports = expose_ports
 
         self._num_ps = num_ps
@@ -99,7 +120,7 @@ class InstanceManager(object):
                 worker_id=worker_id,
                 resource_requests=self._worker_resource_request,
                 resource_limits=self._worker_resource_limit,
-                pod_priority=self._worker_pod_priority,
+                pod_priority=self._worker_pod_priority[worker_id],
                 volume=self._volume,
                 image_pull_policy=self._image_pull_policy,
                 command=self._worker_command,
@@ -297,6 +318,10 @@ class InstanceManager(object):
         if relaunch_worker and worker_id >= 0:
             logger.info("Relaunching worker.")
             new_worker_id = self._next_worker_id()
+            with self._lock:
+                self._worker_pod_priority[
+                    new_worker_id
+                ] = self._worker_pod_priority[worker_id]
             self._start_worker(new_worker_id)
             with self._lock:
                 self._update_worker_addr(worker_id, new_worker_id)
