@@ -11,10 +11,7 @@ _SERVICE_ADDR_SEP = ","
 
 def _parse_worker_pod_priority(num_workers, worker_pod_priority):
     res = {}
-    if worker_pod_priority is None:
-        for i in range(num_workers):
-            res[i] = None
-    elif "high=" in worker_pod_priority:
+    if isinstance(worker_pod_priority, str) and "high=" in worker_pod_priority:
         fraction = float(worker_pod_priority.split("=")[1])
         high_count = int(num_workers * fraction)
         for i in range(num_workers):
@@ -22,12 +19,6 @@ def _parse_worker_pod_priority(num_workers, worker_pod_priority):
                 res[i] = "high"
             else:
                 res[i] = "low"
-    elif worker_pod_priority == "high":
-        for i in range(num_workers):
-            res[i] = "high"
-    elif worker_pod_priority == "low":
-        for i in range(num_workers):
-            res[i] = "low"
     else:
         for i in range(num_workers):
             res[i] = worker_pod_priority
