@@ -12,13 +12,22 @@ _SERVICE_ADDR_SEP = ","
 def _parse_worker_pod_priority(num_workers, worker_pod_priority):
     res = {}
     if isinstance(worker_pod_priority, str) and "high=" in worker_pod_priority:
-        fraction = float(worker_pod_priority.split("=")[1])
-        high_count = int(num_workers * fraction)
-        for i in range(num_workers):
-            if i < high_count:
-                res[i] = "high"
-            else:
-                res[i] = "low"
+        try:
+            fraction = float(worker_pod_priority.split("=")[1])
+            high_count = int(num_workers * fraction)
+            for i in range(num_workers):
+                if i < high_count:
+                    res[i] = "high"
+                else:
+                    res[i] = "low"
+        except Exception:
+            logger.warning(
+                "Please check the input worker pod priority format,"
+                "e.g. high=0.5  The config is no use, and ElasticDL sets"
+                "low priority for all worker pods by default."
+            )
+            for i in range(num_workers):
+                res[i] = None
     else:
         for i in range(num_workers):
             res[i] = worker_pod_priority
