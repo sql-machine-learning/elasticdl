@@ -23,17 +23,18 @@ _FTLIB_UNINSTALLED_DEFAULT_STATUS_MESSAGE = (
 class CollectiveCommunicator(object):
     def __init__(self, service_name=None):
         if _FTLIB_INSTALLED:
+            peer_list = list(self._get_peer_set(service_name))
             self._ftlib = BasicFTLib(
                 consensus="gossip",
                 commlib="pytorch",
                 consensus_init_kwargs={
-                    "known_addr_list": list(self._get_peer_set(service_name)),
+                    "known_addr_list": peer_list,
                     "custom_bind_addr": socket.gethostbyname(
                         socket.gethostname()
                     ),
                 },
             )
-            while not self._ftlib.consensus_joined():
+            while peer_list and not self._ftlib.consensus_joined():
                 logger.warning("Retry building consensus...")
                 self._ftlib.manual_join(
                     known_addr_list=list(self._get_peer_set(service_name))
