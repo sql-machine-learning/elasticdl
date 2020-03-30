@@ -16,7 +16,7 @@ class ToRaggedTest(unittest.TestCase):
 
     def test_string_split_to_ragged(self):
         layer = ToRagged()
-        input_data = tf.constant([["1,2,3"], ["4,5"], [""]])
+        input_data = tf.ragged.constant([["1", "2", "3"], ["4", "5"], [""]])
         out = layer(input_data)
         expected_out = tf.ragged.constant([["1", "2", "3"], ["4", "5"], []])
         self.assertTrue(ragged_tensor_equal(out, expected_out))

@@ -13,16 +13,16 @@ class ToRagged(tf.keras.layers.Layer):
     Example (Integer):
     ```python
         layer = ToRagged()
-        inp = tf.constant([[1], [-1], [4]], tf.int64)
-        out = layer(inp)
+        input_tensor = tf.constant([[1], [-1], [4]], tf.int64)
+        out = layer(input_tensor)
         [[1], [], [4]]
     ```
 
     Example (String):
     ```python
-        ayer = ToRagged()
-        inp = tf.constant([["1,2,3"], ["4,5"], [""]])
-        out = layer(inp)
+        layer = ToRagged()
+        input_tensor = tf.constant([["1", "2", "3"], ["4", "5"], [""]])
+        out = layer(input_tensor)
     ```
     The expected output is `[["1", "2", "3"], ["4", "5"], []]`
 
@@ -52,9 +52,6 @@ class ToRagged(tf.keras.layers.Layer):
 
         if isinstance(inputs, tf.Tensor):
             inputs = tf.RaggedTensor.from_tensor(inputs)
-
-        if inputs.dtype == tf.string:
-            inputs = tf.strings.split(inputs, sep=self.sep).values
 
         ignore_value = self._get_ignore_value(inputs.dtype)
         if ignore_value is None:
