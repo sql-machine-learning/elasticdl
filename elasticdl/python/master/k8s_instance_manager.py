@@ -55,7 +55,7 @@ class InstanceManager(object):
         restart_policy="Never",
         envs=None,
         expose_ports=False,
-        disable_relanuch_mechanism=False,
+        disable_relaunch=False,
         **kwargs
     ):
         self._num_workers = num_workers
@@ -105,7 +105,7 @@ class InstanceManager(object):
 
         self._failed_pods = []
 
-        if disable_relanuch_mechanism:
+        if disable_relaunch:
             self._k8s_client = k8s.Client(**kwargs)
         else:
             self._k8s_client = k8s.Client(
