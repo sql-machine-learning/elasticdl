@@ -285,7 +285,8 @@ def add_common_params(parser):
         type=str,
         default="",
         help="Only for debug. The debug parameters in a string separated "
-        'by semi-colon used to debug , e.g. "param1=1; param2=2"',
+        'by semi-colon used to debug , e.g. "param1=1; param2=2" '
+        "Supported debug parameters: disable_relaunch",
     )
 
 
