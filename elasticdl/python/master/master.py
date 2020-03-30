@@ -479,6 +479,7 @@ class Master(object):
                 envs=env,
                 expose_ports=self.distribution_strategy
                 == DistributionStrategy.ALLREDUCE,
+                disable_relanuch_mechanism=args.disable_relanuch_mechanism,
             )
 
         return instance_manager

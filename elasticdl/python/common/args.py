@@ -280,6 +280,14 @@ def add_common_params(parser):
         default=False,
         help="True for Go-based PS, False for Python-based PS",
     )
+    add_bool_param(
+        parser=parser,
+        name="--disable_relanuch_mechanism",
+        default=False,
+        help="Only for benchmark experiments. It disables relaunching "
+        "mechanism. So, worker pod will not be relaunched if killed "
+        "by some reason.",
+    )
 
 
 def add_train_params(parser):
