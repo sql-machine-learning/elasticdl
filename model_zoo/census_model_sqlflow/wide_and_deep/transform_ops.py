@@ -23,6 +23,14 @@ class TransformOp(object):
 
 
 class Vocabularize(TransformOp):
+    """
+    feature_column:
+        tf.feature_column.categorical_column_with_vocabulary_file
+        tf.feature_column.categorical_column_with_vocabulary_list
+    keras preprocessing:
+        elasticdl_preprocessing.layers.index_lookup.IndexLookup
+    """
+
     def __init__(
         self, name, input, output, vocabulary_list=None, vocabulary_file=None
     ):
@@ -33,6 +41,13 @@ class Vocabularize(TransformOp):
 
 
 class Bucketize(TransformOp):
+    """
+    feature_column:
+        tf.feature_column.bucketized_column
+    keras preprocessing:
+        elasticdl_preprocessing.layers.discretization.Discretization
+    """
+
     def __init__(self, name, input, output, num_buckets=None, boundaries=None):
         super(Bucketize, self).__init__(name, input, output)
         self.op_type = TransformOpType.BUCKETIZE
@@ -41,6 +56,13 @@ class Bucketize(TransformOp):
 
 
 class Embedding(TransformOp):
+    """
+    feature_column:
+        tf.feature_column.embedding_column
+    keras preprocessing:
+        elasticdl_preprocessing.layers.embedding.SparseEmbedding
+    """
+
     def __init__(self, name, input, output, input_dim, output_dim):
         super(Embedding, self).__init__(name, input, output)
         self.op_type = TransformOpType.EMBEDDING
@@ -49,6 +71,13 @@ class Embedding(TransformOp):
 
 
 class Hash(TransformOp):
+    """
+    feature_column:
+        tf.feature_column.categorical_column_with_hash_bucket
+    keras preprocessing:
+        elasticdl_preprocessing.layers.hashing.Hashing
+    """
+
     def __init__(self, name, input, output, hash_bucket_size):
         super().__init__(name, input, output)
         self.op_type = TransformOpType.HASH
@@ -56,6 +85,15 @@ class Hash(TransformOp):
 
 
 class Concat(TransformOp):
+    """
+    feature_column:
+        elasticdl_preprocessing.feature_column \
+            .concatenated_categorical_column
+    keras preprocessing:
+        elasticdl_preprocessing.layers.concatenate_with_offset \
+            .ConcatenateWithOffset
+    """
+
     def __init__(self, name, input, output, id_offsets):
         super().__init__(name, input, output)
         self.op_type = TransformOpType.CONCAT
