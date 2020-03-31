@@ -42,8 +42,8 @@ from model_zoo.census_model_sqlflow.wide_and_deep.transform_ops import (
 # The model definition from model zoo. It's functional style.
 # Input Params:
 #   input_layers: The input layers dict of feature inputs
-#   wide_embeddings: The embedding list for the wide part
-#   deep_embeddings: The embedding list for the deep part
+#   wide_embedding: A tensor. Embedding for the wide part.
+#   deep_embedding: A tensor. Embedding for the deep part.
 def wide_and_deep_classifier(input_layers, wide_embedding, deep_embedding):
     # Wide Part
     wide = wide_embedding  # shape = (None, 3)
