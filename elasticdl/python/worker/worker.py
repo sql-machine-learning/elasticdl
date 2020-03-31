@@ -606,15 +606,14 @@ class Worker(object):
                 "ElasticDL embedding layer is not supported when"
                 "reporting gradients locally"
             )
-        for g, v in zip(
-            grads[: len(self._non_embed_vars)], self._non_embed_vars.values()
-        ):
-            self._non_embed_grads[v.name] = g
+        self._non_embed_grads = grads[:len(self._non_embed_vars)]
         return True, None
 
     def report_gradient(self, grads):
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            return self.report_gradient_locally(grads)
+            self.report_gradient_locally(grads)
+            self._update_local_model()
+            return True, None
         else:
             if self._use_multi_ps:
                 return self.report_gradient_to_ps(grads)
@@ -769,7 +768,7 @@ class Worker(object):
         model_params = (
             self._get_local_model_params() if is_broadcast_src_worker else None
         )
-        status, model_params = self._collective_communicator.broadcast(
+        status, model_params = self._collective_communicator.tf_broadcast(
             model_params, broadcast_root_worker_rank
         )
         if status == CollectiveCommunicatorStatus.FAILED:
@@ -780,7 +779,7 @@ class Worker(object):
         return True
 
     def _calculate_grads_and_report_with_allreduce(self, grads):
-        status, averaged_grads = self._collective_communicator.allreduce(grads)
+        status, averaged_grads = self._collective_communicator.tf_allreduce(grads)
         accepted = False
         if status == CollectiveCommunicatorStatus.SUCCEEDED:
             accepted, _ = self.report_gradient(averaged_grads)

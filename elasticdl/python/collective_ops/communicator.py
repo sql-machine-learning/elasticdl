@@ -46,6 +46,11 @@ class CollectiveCommunicator(object):
             )
             self._ftlib = None
 
+    def tf_allreduce(self, grads, op="MEAN"):
+        # convert tf.Tensor to numpy
+        numpy_data = [g.numpy() for g in grads]
+        return self.allreduce(numpy_data, op)
+
     def allreduce(self, data, op="MEAN"):
         if data is None:
             logger.error("Data is required for allreduce operation")
@@ -57,14 +62,28 @@ class CollectiveCommunicator(object):
             )
             return CollectiveCommunicatorStatus.FAILED, data
         if self._ftlib is not None:
-            res = self._ftlib.wait_gradients_ready(data)
-            if res == FTAllReduceStatus.SUCCESS:
+            res = self._ftlib.wait_gradients_ready(params=data)
+            logger.warning("allreduce result is %s" % str(res))
+            if (
+                res == FTAllReduceStatus.SUCCESS
+                or res == FTAllReduceStatus.NO_NEED
+            ):
                 return CollectiveCommunicatorStatus.SUCCEEDED, data
             else:
                 return CollectiveCommunicatorStatus.FAILED, data
         else:
             logger.warning(_FTLIB_UNINSTALLED_DEFAULT_STATUS_MESSAGE)
             return CollectiveCommunicatorStatus.SUCCEEDED, data
+
+    def tf_broadcast(self, params, src_rank):
+        for p in params:
+            data = p.numpy()
+            status, data = self.broadcast(p.numpy(), src_rank)
+            if status == CollectiveCommunicatorStatus.SUCCEEDED:
+                p.assign(data)
+            else:
+                return status, params
+        return status, params
 
     def broadcast(self, data, src_rank):
         if self._ftlib is not None:
