@@ -606,7 +606,7 @@ class Worker(object):
                 "ElasticDL embedding layer is not supported when"
                 "reporting gradients locally"
             )
-        self._non_embed_grads = grads[:len(self._non_embed_vars)]
+        self._non_embed_grads = grads[: len(self._non_embed_vars)]
         return True, None
 
     def report_gradient(self, grads):
@@ -779,7 +779,9 @@ class Worker(object):
         return True
 
     def _calculate_grads_and_report_with_allreduce(self, grads):
-        status, averaged_grads = self._collective_communicator.tf_allreduce(grads)
+        status, averaged_grads = self._collective_communicator.tf_allreduce(
+            grads
+        )
         accepted = False
         if status == CollectiveCommunicatorStatus.SUCCEEDED:
             accepted, _ = self.report_gradient(averaged_grads)

@@ -5,6 +5,7 @@ from elasticdl.python.common.log_utils import default_logger as logger
 
 try:
     from ftlib import BasicFTLib
+    from ftlib.commlib.commlib_status import CommLibStatus
     from ftlib.ftlib_status import FTAllReduceStatus
 
     _FTLIB_INSTALLED = True
@@ -63,7 +64,6 @@ class CollectiveCommunicator(object):
             return CollectiveCommunicatorStatus.FAILED, data
         if self._ftlib is not None:
             res = self._ftlib.wait_gradients_ready(params=data)
-            logger.warning("allreduce result is %s" % str(res))
             if (
                 res == CommLibStatus.SUCCESS
                 or res == FTAllReduceStatus.NO_NEED
