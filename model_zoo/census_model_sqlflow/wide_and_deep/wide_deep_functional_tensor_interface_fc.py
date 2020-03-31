@@ -246,12 +246,10 @@ def transform_from_code_gen(source_inputs):
 # The entry point of the submitter program
 def custom_model():
     input_layers = get_input_layers(input_schemas=INPUT_SCHEMAS)
-    wide_feature_columns, deep_feature_columns = transform_from_code_gen(
-        input_layers
-    )
+    wide_embedding, deep_embedding = transform_from_code_gen(input_layers)
 
     return wide_and_deep_classifier(
-        input_layers, wide_feature_columns, deep_feature_columns
+        input_layers, wide_embedding, deep_embedding
     )
 
 
