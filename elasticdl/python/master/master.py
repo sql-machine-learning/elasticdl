@@ -455,7 +455,7 @@ class Master(object):
             for key in env_dict:
                 env.append(V1EnvVar(name=key, value=env_dict[key]))
 
-            kwargs = get_dict_from_params_str(args.debug_params)
+            kwargs = get_dict_from_params_str(args.aux_params)
             disable_relaunch = (
                 kwargs.get("disable_relaunch", False) if kwargs else False
             )

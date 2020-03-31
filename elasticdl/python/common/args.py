@@ -281,12 +281,13 @@ def add_common_params(parser):
         help="True for Go-based PS, False for Python-based PS",
     )
     parser.add_argument(
-        "--debug_params",
+        "--aux_params",
         type=str,
         default="",
-        help="Only for debug. The debug parameters in a string separated "
+        help="Auxiliary parameters for misc purposes such as debugging."
+        "The auxiliary parameters in a string separated "
         'by semi-colon used to debug , e.g. "param1=1; param2=2" '
-        "Supported debug parameters: disable_relaunch",
+        "Supported auxiliary parameters: disable_relaunch",
     )
 
 
