@@ -35,6 +35,13 @@ class ConcatenateWithOffset(tf.keras.layers.Concatenate):
         self.axis = axis
 
     def call(self, inputs):
+        return (
+            self._call_with_none_offsets(inputs)
+            if self.offsets is None
+            else self._call_with_offsets(inputs)
+        )
+
+    def _call_with_offsets(self, inputs):
         ids_with_offset = []
         if len(self.offsets) != len(inputs):
             raise ValueError(
@@ -63,4 +70,13 @@ class ConcatenateWithOffset(tf.keras.layers.Concatenate):
             result = tf.keras.layers.concatenate(
                 ids_with_offset, axis=self.axis
             )
+
+        return result
+
+    def _call_with_none_offsets(self, inputs):
+        if isinstance(inputs[0], tf.SparseTensor):
+            result = tf.sparse.concat(axis=self.axis, sp_inputs=inputs)
+        else:
+            result = tf.keras.layers.concatenate(inputs, axis=self.axis)
+
         return result
