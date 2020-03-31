@@ -65,7 +65,7 @@ class CollectiveCommunicator(object):
             res = self._ftlib.wait_gradients_ready(params=data)
             logger.warning("allreduce result is %s" % str(res))
             if (
-                res == FTAllReduceStatus.SUCCESS
+                res == CommLibStatus.SUCCESS
                 or res == FTAllReduceStatus.NO_NEED
             ):
                 return CollectiveCommunicatorStatus.SUCCEEDED, data
