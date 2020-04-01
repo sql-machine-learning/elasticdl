@@ -50,7 +50,7 @@ class CollectiveCommunicator(object):
     def tf_allreduce(self, grads, op="MEAN"):
         if grads is None:
             logger.error("Grads is required for tf_allreduce operation")
-            return CollectiveCommunicatorStatus.FAILED, data
+            return CollectiveCommunicatorStatus.FAILED, grads
         # convert tf.Tensor to numpy
         numpy_data = [g.numpy() for g in grads]
         return self.allreduce(numpy_data, op)
