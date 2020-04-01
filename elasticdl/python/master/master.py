@@ -456,9 +456,7 @@ class Master(object):
                 env.append(V1EnvVar(name=key, value=env_dict[key]))
 
             kwargs = get_dict_from_params_str(args.aux_params)
-            disable_relaunch = (
-                kwargs.get("disable_relaunch", False) if kwargs else False
-            )
+            disable_relaunch = kwargs.get("disable_relaunch", False)
 
             instance_manager = InstanceManager(
                 self.task_d,
