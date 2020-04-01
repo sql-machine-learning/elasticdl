@@ -28,7 +28,7 @@ class SparseEmbedding(tf.keras.layers.Layer):
         combiner="mean",
         **kwargs
     ):
-        dtype = kwargs.pop('dtype', K.floatx())
+        dtype = kwargs.pop("dtype", K.floatx())
         super(SparseEmbedding, self).__init__(dtype=dtype, **kwargs)
 
         self.input_dim = input_dim
