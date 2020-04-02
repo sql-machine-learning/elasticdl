@@ -35,11 +35,10 @@ class ConcatenateWithOffset(tf.keras.layers.Concatenate):
         self.axis = axis
 
     def call(self, inputs):
-        return (
-            self._call_with_none_offsets(inputs)
-            if self.offsets is None
-            else self._call_with_offsets(inputs)
-        )
+        if self.offsets is None:
+            return self._call_with_none_offsets(inputs)
+
+        return self._call_with_offsets(inputs)
 
     def _call_with_offsets(self, inputs):
         ids_with_offset = []
