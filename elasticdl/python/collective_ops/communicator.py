@@ -6,12 +6,12 @@ from elasticdl.python.common.log_utils import default_logger as logger
 try:
     from ftlib import BasicFTLib
     from ftlib.commlib.commlib_status import CommLibStatus
-    from ftlib.ftlib_status import FTAllReduceStatus
+    from ftlib.ftlib_status import FTCollectiveStatus
 
     _FTLIB_INSTALLED = True
 except ImportError:
     BasicFTLib = object
-    FTAllReduceStatus = object
+    FTCollectiveStatus = object
     _FTLIB_INSTALLED = False
 
 
@@ -66,10 +66,10 @@ class CollectiveCommunicator(object):
             )
             return CollectiveCommunicatorStatus.FAILED, data
         if self._ftlib is not None:
-            res = self._ftlib.wait_gradients_ready(params=data)
+            status, res = self._ftlib.wait_gradients_ready(params=data)
             if (
-                res == CommLibStatus.SUCCESS
-                or res == FTAllReduceStatus.NO_NEED
+                status == FTCollectiveStatus.SUCCESS and res == CommLibStatus.SUCCESS
+                or status == FTCollectiveStatus.NO_NEED
             ):
                 return CollectiveCommunicatorStatus.SUCCEEDED, data
             else:
@@ -85,13 +85,13 @@ class CollectiveCommunicator(object):
             if status == CollectiveCommunicatorStatus.SUCCEEDED:
                 p.assign(data)
             else:
-                return status, params
-        return status, params
+                return status
+        return CollectiveCommunicatorStatus.SUCCEEDED
 
     def broadcast(self, data, src_rank):
         if self._ftlib is not None:
-            res = self._ftlib.broadcast(data, src_rank)
-            if res == FTAllReduceStatus.SUCCESS:
+            status, _ = self._ftlib.broadcast(data, src_rank)
+            if status == FTCollectiveStatus.SUCCESS:
                 return CollectiveCommunicatorStatus.SUCCEEDED, data
             else:
                 return CollectiveCommunicatorStatus.FAILED, data
@@ -101,8 +101,8 @@ class CollectiveCommunicator(object):
 
     def barrier(self):
         if self._ftlib is not None:
-            res = self._ftlib.barrier()
-            if res == FTAllReduceStatus.SUCCESS:
+            status, _ = self._ftlib.barrier()
+            if status == FTCollectiveStatus.SUCCESS:
                 return CollectiveCommunicatorStatus.SUCCEEDED
             else:
                 return CollectiveCommunicatorStatus.FAILED

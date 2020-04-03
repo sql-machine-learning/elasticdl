@@ -742,18 +742,12 @@ class Worker(object):
         outputs = self._model.call(features, training=False)
         return outputs
 
-    def _update_local_model_params(self, model_params):
-        self._non_embed_vars = model_params
-
     def _get_local_model_params(self):
-        return self._non_embed_vars
+        return [v for v in self._non_embed_vars.values()]
 
     @staticmethod
     def _get_rank_of_broadcast_src_worker():
         return 0
-
-    def _get_rank_of_this_worker(self):
-        return self._collective_communicator._ftlib.rank
 
     def _broadcast_model_params(self):
         status = self._collective_communicator.barrier()
@@ -761,21 +755,13 @@ class Worker(object):
             self.logger.warning("Failed to perform barrier operation")
             return False
         broadcast_root_worker_rank = self._get_rank_of_broadcast_src_worker()
-        this_worker_rank = self._get_rank_of_this_worker()
-        is_broadcast_src_worker = (
-            this_worker_rank == broadcast_root_worker_rank
-        )
-        model_params = (
-            self._get_local_model_params() if is_broadcast_src_worker else None
-        )
-        status, model_params = self._collective_communicator.tf_broadcast(
+        model_params = self._get_local_model_params()
+        status = self._collective_communicator.tf_broadcast(
             model_params, broadcast_root_worker_rank
         )
         if status == CollectiveCommunicatorStatus.FAILED:
             self.logger.warning("Failed to broadcast model parameters")
             return False
-        if not is_broadcast_src_worker and model_params is not None:
-            self._update_local_model_params(model_params)
         return True
 
     def _calculate_grads_and_report_with_allreduce(self, grads):
