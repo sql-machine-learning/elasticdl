@@ -9,7 +9,7 @@ with open("elasticdl/requirements-dev.txt") as f:
 
 setup(
     name="elasticdl",
-    version="develop",
+    version="0.2.0rc0",
     description="A Kubernetes-native Deep Learning Framework",
     long_description="ElasticDL is a Kubernetes-native deep learning framework"
     " built on top of TensorFlow 2.0 that supports"
@@ -21,6 +21,7 @@ setup(
     extras_require=extras,
     python_requires=">=3.5",
     packages=find_packages(exclude=["*test*"]),
+    package_dir={'additional_dir': 'elasticdl_preprocessing/'},
     package_data={
         "": [
             "proto/*.proto",
@@ -28,7 +29,6 @@ setup(
             "Makefile",
             "requirements.txt",
             "pkg/kernel/capi/*",
-            "elasticdl_preprocessing/layers/*",
         ]
     },
     entry_points={
