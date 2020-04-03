@@ -67,11 +67,8 @@ class PodMonitor:
         if self.client.get_pod(self.pod_name):
             self.client.delete_pod(self.pod_name)
         # Wait until the pod is deleted
-        while True:
-            if self.client.get_pod(self.pod_name):
-                time.sleep(5)
-            else:
-                break
+        while self.client.get_pod(self.pod_name):
+            time.sleep(5)
 
 
 class EdlJobMonitor:
@@ -188,8 +185,5 @@ class EdlJobMonitor:
             self.client.delete_master()
 
         # Wait until the master is deleted
-        while True:
-            if self.client.get_master_pod():
-                time.sleep(5)
-            else:
-                break
+        while self.client.get_master_pod():
+            time.sleep(5)
