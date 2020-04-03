@@ -64,7 +64,11 @@ class PodMonitor:
         return pod_succeeded
 
     def delete_pod(self):
-        self.client.delete_pod(self.pod_name)
+        if self.client.get_pod(self.pod_name):
+            self.client.delete_pod(self.pod_name)
+        # Wait until the pod is deleted
+        while self.client.get_pod(self.pod_name):
+            time.sleep(5)
 
 
 class EdlJobMonitor:
@@ -177,4 +181,9 @@ class EdlJobMonitor:
         return job_succeed
 
     def delete_job(self):
-        self.client.delete_master()
+        if self.client.get_master_pod():
+            self.client.delete_master()
+
+        # Wait until the master is deleted
+        while self.client.get_master_pod():
+            time.sleep(5)
