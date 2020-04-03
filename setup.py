@@ -28,6 +28,7 @@ setup(
             "Makefile",
             "requirements.txt",
             "pkg/kernel/capi/*",
+            "elasticdl_preprocessing/layers/*",
         ]
     },
     entry_points={
