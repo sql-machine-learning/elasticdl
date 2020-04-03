@@ -68,7 +68,8 @@ class CollectiveCommunicator(object):
         if self._ftlib is not None:
             status, res = self._ftlib.wait_gradients_ready(params=data)
             if (
-                status == FTCollectiveStatus.SUCCESS and res == CommLibStatus.SUCCESS
+                status == FTCollectiveStatus.SUCCESS
+                and res == CommLibStatus.SUCCESS
                 or status == FTCollectiveStatus.NO_NEED
             ):
                 return CollectiveCommunicatorStatus.SUCCEEDED, data
