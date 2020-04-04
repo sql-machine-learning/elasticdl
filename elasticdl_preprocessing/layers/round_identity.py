@@ -30,8 +30,8 @@ class RoundIdentity(tf.keras.layers.Layer):
 
     def __init__(self, num_buckets, default_value=0):
         super(RoundIdentity, self).__init__()
-        self.num_buckets = tf.cast(num_buckets, tf.int64)
-        self.default_value = tf.cast(default_value, tf.int64)
+        self.num_buckets = num_buckets
+        self.default_value = default_value
 
     def call(self, inputs):
         if isinstance(inputs, tf.SparseTensor):
@@ -52,9 +52,11 @@ class RoundIdentity(tf.keras.layers.Layer):
     def _round_and_truncate(self, values):
         values = tf.keras.backend.round(values)
         values = tf.cast(values, tf.int64)
+        num_buckets = tf.cast(self.num_buckets, tf.int64)
+        default_value = tf.cast(self.default_value, tf.int64)
         values = tf.where(
-            tf.logical_or(values < 0, values > self.num_buckets),
-            x=tf.fill(dims=tf.shape(values), value=self.default_value),
+            tf.logical_or(values < 0, values > num_buckets),
+            x=tf.fill(dims=tf.shape(values), value=default_value),
             y=values,
         )
         return values
