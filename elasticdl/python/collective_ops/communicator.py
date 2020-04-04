@@ -5,12 +5,13 @@ from elasticdl.python.common.log_utils import default_logger as logger
 
 try:
     from ftlib import BasicFTLib
-    from ftlib.ftlib_status import FTAllReduceStatus
+    from ftlib.commlib.commlib_status import CommLibStatus
+    from ftlib.ftlib_status import FTCollectiveStatus
 
     _FTLIB_INSTALLED = True
 except ImportError:
     BasicFTLib = object
-    FTAllReduceStatus = object
+    FTCollectiveStatus = object
     _FTLIB_INSTALLED = False
 
 
@@ -46,6 +47,14 @@ class CollectiveCommunicator(object):
             )
             self._ftlib = None
 
+    def tf_allreduce(self, grads, op="MEAN"):
+        if grads is None:
+            logger.error("Grads is required for tf_allreduce operation")
+            return CollectiveCommunicatorStatus.FAILED, grads
+        # convert tf.Tensor to numpy
+        numpy_data = [g.numpy() for g in grads]
+        return self.allreduce(numpy_data, op)
+
     def allreduce(self, data, op="MEAN"):
         if data is None:
             logger.error("Data is required for allreduce operation")
@@ -57,8 +66,12 @@ class CollectiveCommunicator(object):
             )
             return CollectiveCommunicatorStatus.FAILED, data
         if self._ftlib is not None:
-            res = self._ftlib.wait_gradients_ready(data)
-            if res == FTAllReduceStatus.SUCCESS:
+            status, res = self._ftlib.wait_gradients_ready(params=data)
+            if (
+                status == FTCollectiveStatus.SUCCESS
+                and res == CommLibStatus.SUCCESS
+                or status == FTCollectiveStatus.NO_NEED
+            ):
                 return CollectiveCommunicatorStatus.SUCCEEDED, data
             else:
                 return CollectiveCommunicatorStatus.FAILED, data
@@ -66,10 +79,20 @@ class CollectiveCommunicator(object):
             logger.warning(_FTLIB_UNINSTALLED_DEFAULT_STATUS_MESSAGE)
             return CollectiveCommunicatorStatus.SUCCEEDED, data
 
+    def tf_broadcast(self, params, src_rank):
+        for p in params:
+            data = p.numpy()
+            status, data = self.broadcast(p.numpy(), src_rank)
+            if status == CollectiveCommunicatorStatus.SUCCEEDED:
+                p.assign(data)
+            else:
+                return status
+        return CollectiveCommunicatorStatus.SUCCEEDED
+
     def broadcast(self, data, src_rank):
         if self._ftlib is not None:
-            res = self._ftlib.broadcast(data, src_rank)
-            if res == FTAllReduceStatus.SUCCESS:
+            status, _ = self._ftlib.broadcast(data, src_rank)
+            if status == FTCollectiveStatus.SUCCESS:
                 return CollectiveCommunicatorStatus.SUCCEEDED, data
             else:
                 return CollectiveCommunicatorStatus.FAILED, data
@@ -79,8 +102,8 @@ class CollectiveCommunicator(object):
 
     def barrier(self):
         if self._ftlib is not None:
-            res = self._ftlib.barrier()
-            if res == FTAllReduceStatus.SUCCESS:
+            status, _ = self._ftlib.barrier()
+            if status == FTCollectiveStatus.SUCCESS:
                 return CollectiveCommunicatorStatus.SUCCEEDED
             else:
                 return CollectiveCommunicatorStatus.FAILED
