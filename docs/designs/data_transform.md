@@ -310,14 +310,13 @@ In one sentence, we need walk through the DAG and calculate the parameters of on
 
 Now we have a complete DAG: a complete Graph describing the dependency of TransformOPs and each TranformOP has all the required parameters. We can then make typological sort on the DAG and get an ordered list. Then we generate the python code according to the order. Each line of python code is an api call to feature column api or keras preprocessing layer. Please check the sample code for the example SQL: [keras preprocessing layer version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py#L129-L228) and [feature column version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_fc.py#L130-L243).
 
-At this moment, we have gotten the full transform code and can prepare for model training. For the clause `TO TRAIN WideAndDeepClassifier`, we will combine the transform code and `WideAndDeepClassifier` from model zoo to the submitter program.
+At this moment, we have gotten the full transform code and can prepare for model training. For the sample SQL, we will combine the transform code and `WideAndDeepClassifier` from model zoo to the submitter program. The bridge between these two part is import for the combination.  
 
 #### The Bridge Between Transform Code and Model Definition from Model Zoo
 
-The model definition in the model zoo is a python function or a python class. It has some input parameters.  
-The transform python code is built upon feature column api or keras preprocessing layers.  
+The model definition in the model zoo is a python function or a python class. It has some input parameters. The transform python code is built upon feature column api or keras preprocessing layers. The bridge between transform code and model definition should cover the transform logic using both feature column and keras preprocessing layers.  
 
-For functional model，Tensors is a good choice to bridge the transform code and model definition. The output of the transform logic for one COLUMN expression is one tensor, and two expressions output two tensors.  
+For functional model，Tensors is a good choice for the bridge. The transform logic for one `COLUMN` expression outputs one tensor, and two expressions output two tensors. So the COLUMN expressions in example SQL output two tensors: `deep_embeddings` and `wide_embeddings`. The python function of the functional model is [`def wide_and_deep_classifier(input_layers, wide_embeddings, deep_embeddings)`](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py#L47-L66). The names of the output tensors match the names of the input parameters in the function. We will combine the transform code and model definition through parameter binding according to the name.  
 
 ## Further Consideration
 
