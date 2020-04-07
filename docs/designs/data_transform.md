@@ -224,7 +224,7 @@ COLUMN
 LABEL label
 ```
 
-SQLFlow will compile the `COLUMN` expression to Python code of data transformation. Let's take the SQLFlow statement of WideAndDeepClassifier above for example to describe the compilation workflow in the next section.  
+SQLFlow will compile the `COLUMN` expression to Python code of data transformation. Let's take the SQLFlow statement above for example to describe the compilation workflow step by step in the next section.  
 
 ### COLUMN Expression Compilation Workflow
 
