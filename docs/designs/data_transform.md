@@ -242,7 +242,7 @@ To convert ASTs into transform flow, we will do a one-on-one mapping at first.
 3. Column Node(AST) to Combine + Out(Transform Flow)
 We may have two or more column expressions, one column for one AST (tree structure). If we combine these ASTs, we will get a forest at this time.
 
-We may also have alias with keyword `AS` just like the example SQL. The alias stands for a part of transform flow which is shared by multiple upstream nodes. And then the forest will become a DAG.
+We may also have alias with keyword `AS` just like `AS group1` in the example SQL. The alias stands for a part of transform flow which is shared by multiple upstream nodes. And then the forest will become a DAG.
 ![transform_flow_dag](../images/transform_flow_dag.png)
 
 #### Expand the TransformOP
