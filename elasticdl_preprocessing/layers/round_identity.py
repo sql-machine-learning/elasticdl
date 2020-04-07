@@ -55,7 +55,7 @@ class RoundIdentity(tf.keras.layers.Layer):
         num_buckets = tf.cast(self.num_buckets, tf.int64)
         default_value = tf.cast(self.default_value, tf.int64)
         values = tf.where(
-            tf.logical_or(values < 0, values > num_buckets),
+            tf.logical_or(values < 0, values >= num_buckets),
             x=tf.fill(dims=tf.shape(values), value=default_value),
             y=values,
         )
