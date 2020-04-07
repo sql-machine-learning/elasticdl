@@ -224,13 +224,13 @@ COLUMN
 LABEL label
 ```
 
-SQLFlow will compile the `COLUMN` expression to Python code of data transformation. Let's take the SQLFlow statement above for example to describe the compilation workflow in the next section.  
+SQLFlow will compile the `COLUMN` expression to Python code of data transformation. Let's take the SQLFlow statement of WideAndDeepClassifier above for example to describe the compilation workflow in the next section.  
 
 ### COLUMN Expression Compilation Workflow
 
 #### Parse COLUMN Expression into AST
 
-Given a COLUMN expression, syntax parsing is naturally the first step. We will parse one COLUMN expression to one AST. For the SQL statement containing two column expressions above, we will parse them into two ASTs. Please check the following figures of the AST from the example SQL.  
+Given a COLUMN expression, syntax parsing is naturally the first step. We will parse one COLUMN expression to one AST. For the SQL statement containing two column expressions above, we will parse them into two ASTs. Please check the following figure of the AST for the example SQL.  
 ![column_clause_ast](../images/column_clause_ast.png)
 
 #### Convert the AST into a DAG of Transform Flow
@@ -240,9 +240,9 @@ To convert ASTs into transform flow, we will do a one-on-one mapping at first.
 1. Transform Function(AST) to TransformOP(Transform Flow)
 2. Input Feature(AST) to Input Feature(Transform Flow)
 3. Column Node(AST) to Combine + Out(Transform Flow)
-We may have two or more column expressions, one column for one AST (tree structure). If we combine these ASTs, we will get a forest at fist.
+We may have two or more column expressions, one column for one AST (tree structure). If we combine these ASTs, we will get a forest at this time.
 
-We may also have alias `AS group1` just like the example SQL. The alias stands for a part of transform flow which is shared by multiple upstream nodes. And then the forest will become a DAG.
+We may also have alias with keyword `AS` just like the example SQL. The alias stands for a part of transform flow which is shared by multiple upstream nodes. And then the forest will become a DAG.
 ![transform_flow_dag](../images/transform_flow_dag.png)
 
 #### Expand the TransformOP
@@ -302,21 +302,23 @@ FROM data_table;
 
 #### Derive the parameters of TransformOP from DAG Walkthrough
 
-Some parameters of TransformOP can't be gotten from analysis.
-For example, `Embedding` needs the parameter `input_dimension`, it's equals to `num_buckets` of the `CONCAT` which is the dependency of `Embedding`.
+Some parameters of TransformOP can't be gotten from data analysis. For example, `Embedding` needs the parameter `input_dimension`, it's equals to `num_buckets` attribute of `CONCAT` which is the dependency of `Embedding`.  
 In one sentence, we need walk through the DAG and calculate the parameters of one TransformOP from its dependency.
 
 #### Generate the Transform Python code from the DAG
 
-Now we have a complete DAG: a complete Graph describing the dependency of TransformOPs and each TranformOP has all the required parameters. We can then make typological sort on the DAG and get an ordered list. Then we generate the python code according to the order. Each line of python code is an api call to feature column api or keras preprocessing layer. Please check the sample code for the example SQL: [keras preprocessing layer version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py#L129-L228) and [feature column version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_fc.py#L130-L243).
+Now we have a complete DAG: a complete Graph describing the dependency of TransformOPs and each TranformOP has all the required parameters.  
+We can make typological sort on the DAG and get an ordered list. Then we generate the python code according to this order. A TransformOP node will generate a line of python code. A line of python code is an api call to feature column api or keras preprocessing layer. Please check the sample code generated from the example SQL: [keras preprocessing layer version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py#L129-L228) and [feature column version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_fc.py#L130-L243).
 
-At this moment, we have gotten the full transform code and can prepare for model training. For the sample SQL, we will combine the transform code and `WideAndDeepClassifier` from model zoo to the submitter program. The bridge between these two part is import for the combination.  
+At this moment, we have gotten the full transform code and can prepare for model training. For the sample SQL, we will combine the transform code and `WideAndDeepClassifier` from model zoo to the submitter program. The bridge between these two parts is important for the combination.  
 
 #### The Bridge Between Transform Code and Model Definition from Model Zoo
 
 The model definition in the model zoo is a python function or a python class. It has some input parameters. The transform python code is built upon feature column api or keras preprocessing layers. The bridge between transform code and model definition should cover the transform logic using both feature column and keras preprocessing layers.  
 
 For functional model，Tensors is a good choice for the bridge. The transform logic for one `COLUMN` expression outputs one tensor, and two expressions output two tensors. So the COLUMN expressions in example SQL output two tensors: `deep_embeddings` and `wide_embeddings`. The python function of the functional model is [`def wide_and_deep_classifier(input_layers, wide_embeddings, deep_embeddings)`](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py#L47-L66). The names of the output tensors match the names of the input parameters in the function. We will combine the transform code and model definition through parameter binding according to the name.  
+
+For subclass model, please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1867).
 
 ## Further Consideration
 
