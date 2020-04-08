@@ -300,6 +300,8 @@ SELECT (COUNT(DISTINCT(x)) * 3) AS x_hash_bucket_size
 FROM data_table;
 ```
 
+*Note: If we assign COUNT(DISTINCT(x)) as hash_bucket_size, the conflict ratio is high - about 40%. So we multiply it with a factor `3` here. And the factor is tunable here.*
+
 #### Derive the parameters of TransformOP from DAG Walkthrough
 
 Some parameters of TransformOP can't be gotten from data analysis. For example, `Embedding` needs the parameter `input_dimension`, it's equals to `num_buckets` attribute of `CONCAT` which is the dependency of `Embedding`.  
