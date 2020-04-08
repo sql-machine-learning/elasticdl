@@ -220,7 +220,7 @@ class Client(object):
         )
         return owner_ref
 
-    def _create_pod(self, **kargs):
+    def create_pod(self, **kargs):
         # Container
         pod_resource_requests = kargs["resource_requests"]
         pod_resource_limits = kargs["resource_limits"]
@@ -304,7 +304,7 @@ class Client(object):
                 env.append(V1EnvVar(name=key, value=kargs["envs"][key]))
         env = append_pod_ip_to_env(env)
 
-        pod = self._create_pod(
+        pod = self.create_pod(
             pod_name=self.get_master_pod_name(),
             job_name=self.job_name,
             image_name=self._image_name,
@@ -332,7 +332,7 @@ class Client(object):
         master_pod = self.get_master_pod()
         env = kargs["envs"] if "envs" in kargs else None
         env = append_pod_ip_to_env(env)
-        pod = self._create_pod(
+        pod = self.create_pod(
             pod_name=pod_name,
             job_name=self.job_name,
             image_name=self._image_name,
