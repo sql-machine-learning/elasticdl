@@ -237,9 +237,9 @@ Given a COLUMN expression, syntax parsing is naturally the first step. We will p
 
 To convert ASTs into a transform flow, we will do an one-to-one mapping at first.
 
-1. Transform Function(AST) to TransformOP(Transform Flow)
-2. Input Feature(AST) to Input Feature(Transform Flow)
-3. Column Node(AST) to Combine + Out(Transform Flow)
+1. Transform Function(AST) to TransformOP(Transform Flow). Each TransformOP has parameters. Some parameters can be gotten directly from the parsed result of COLUMN clause. And some parameters need be derived from data analysis and we will talk about it in detail in the following steps.
+2. Input Feature(AST) to Input Feature(Transform Flow).
+3. Column Node(AST) to Combine + Out(Transform Flow).
 We may have two or more column expressions, one column for one AST (tree structure). If we combine these ASTs, we will get a forest at this time.
 
 We may also have alias with keyword `AS` just like `AS group1` in the example SQL. The alias stands for a part of transform flow which is shared by multiple upstream nodes. And then the forest will become a DAG.
