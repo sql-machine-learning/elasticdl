@@ -235,7 +235,7 @@ Given a COLUMN expression, syntax parsing is naturally the first step. We will p
 
 #### Convert the AST into a DAG of Transform Flow
 
-To convert ASTs into transform flow, we will do a one-on-one mapping at first.
+To convert ASTs into a transform flow, we will do an one-to-one mapping at first.
 
 1. Transform Function(AST) to TransformOP(Transform Flow)
 2. Input Feature(AST) to Input Feature(Transform Flow)
