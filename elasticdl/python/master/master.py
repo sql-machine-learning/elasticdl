@@ -455,6 +455,9 @@ class Master(object):
             for key in env_dict:
                 env.append(V1EnvVar(name=key, value=env_dict[key]))
 
+            kwargs = get_dict_from_params_str(args.aux_params)
+            disable_relaunch = kwargs.get("disable_relaunch", False)
+
             instance_manager = InstanceManager(
                 self.task_d,
                 job_name=args.job_name,
@@ -479,6 +482,7 @@ class Master(object):
                 envs=env,
                 expose_ports=self.distribution_strategy
                 == DistributionStrategy.ALLREDUCE,
+                disable_relaunch=disable_relaunch,
             )
 
         return instance_manager
