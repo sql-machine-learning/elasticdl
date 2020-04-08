@@ -55,7 +55,7 @@ RUN cd /elasticdl && \
 # Create elasticdl package
 RUN cd /elasticdl && \
     python setup.py bdist_wheel && \
-    cp dist/elasticdl-develop-py3-none-any.whl / 
+    cp dist/elasticdl-0.2.0-py3-none-any.whl / 
 
 
 # Stage 2: ci
