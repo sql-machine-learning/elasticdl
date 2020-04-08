@@ -204,7 +204,7 @@ COLUMN
             VOCABULARIZE(workclass),
             BUCKETIZE(capital_gain, num_buckets=5),
             BUCKETIZE(capital_loss, num_buckets=5),
-            BUCKTIZE(hours_per_week, num_buckets=6)
+            BUCKETIZE(hours_per_week, num_buckets=6)
             ) AS group_1,
         8),
     EMBEDDING(
