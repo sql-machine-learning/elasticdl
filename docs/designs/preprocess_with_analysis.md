@@ -18,8 +18,13 @@ For MySQL or MaxCompute table, we can use SQL to analyze each column. For exampl
 
 For numeric column, we can get the mean, standard deviation and bucket boundaries using
 ```sql
-SELECT MEAN(age) AS age_mean, STDDEV(age) AS age_std, per(age) AS age_bucket_boundaries FROM ${training_table}
+SELECT 
+    MEAN(age) AS age_mean,
+    STDDEV(age) AS age_std,
+    PERCENTILE(age, ARRAY(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)) AS age_bucket_boundaries 
+    FROM ${training_table}
 ```
+The SQL expression use MaxCompute SQL syntax and `PERCENTILE` is a function in MaxCompute SQL
 
 For feature to hash with bucket size, we can get the count of distinct values by 
 ```sql
