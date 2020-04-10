@@ -22,7 +22,7 @@ SELECT
     MEAN(age) AS age_mean,
     STDDEV(age) AS age_std,
     PERCENTILE(age, ARRAY(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)) AS age_bucket_boundaries 
-    FROM ${training_table}
+FROM ${training_table}
 ```
 The SQL expression use MaxCompute SQL syntax and `PERCENTILE` is a function in MaxCompute SQL
 
