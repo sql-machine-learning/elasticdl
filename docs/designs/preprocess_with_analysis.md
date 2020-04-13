@@ -105,7 +105,7 @@ def get_mean(feature_name, default_value):
 def get_stddev(feature_name, default_value):
     env_name = feature_name + "_stddev"
     std_dev = os.getenv(env_name, None)
-    if mean is None:
+    if std_dev is None:
         return default_value
     else:
         return float(std_dev)
@@ -113,7 +113,7 @@ def get_stddev(feature_name, default_value):
 def get_bucket_boundaries(feature_name, default_value):
     env_name = feature_name + "_bkt_boundaries"
     boundaries = os.getenv(env_name, None)
-    if mean is None:
+    if boundaries is None:
         return default_value
     else:
         return list(map(float, boundaries.split(",")))
@@ -121,7 +121,7 @@ def get_bucket_boundaries(feature_name, default_value):
 def get_distinct_count(feature_name, default_value):
     env_name = feature_name + "_count"
     count = os.getenv(env_name, None)
-    if mean is None:
+    if count is None:
         return default_value
     else:
         return int(count)
