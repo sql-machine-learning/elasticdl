@@ -19,7 +19,7 @@ For MySQL or MaxCompute table, we can use SQL to analyze each column. For exampl
 For numeric column, we can get the mean, standard deviation and bucket boundaries using
 ```sql
 SELECT 
-    MEAN(age) AS age_mean,
+    AVG(age) AS age_avg,
     STDDEV(age) AS age_std,
     PERCENTILE(age, ARRAY(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)) AS age_bucket_boundaries 
 FROM ${training_table}
