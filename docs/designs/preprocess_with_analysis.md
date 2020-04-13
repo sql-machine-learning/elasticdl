@@ -102,8 +102,8 @@ def get_mean(feature_name, default_value):
     else:
         return float(mean)
 
-def get_std_dev(feature_name, default_value):
-    env_name = feature_name + "_std_dev"
+def get_stddev(feature_name, default_value):
+    env_name = feature_name + "_stddev"
     std_dev = os.getenv(env_name, None)
     if mean is None:
         return default_value
@@ -111,7 +111,7 @@ def get_std_dev(feature_name, default_value):
         return float(std_dev)
 
 def get_bucket_boundaries(feature_name, default_value):
-    env_name = feature_name + "_bucket_boundaries"
+    env_name = feature_name + "_bkt_boundaries"
     boundaries = os.getenv(env_name, None)
     if mean is None:
         return default_value
