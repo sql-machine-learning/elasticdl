@@ -157,4 +157,4 @@ You will see following logs:
 [2020-04-14 02:47:52,082] [INFO] [master.py:249:_stop] Evaluation service stopped
 ```
 
-The log shows that the accuracy reaches to 0.77 after 250 steps training.
+The logs show that the accuracy reaches to 0.77 after 250 steps iteration.
