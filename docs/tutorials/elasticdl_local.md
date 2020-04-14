@@ -37,7 +37,7 @@ bash elasticdl/docker/build_all.sh
 
 ### Summit a training job
 
-There are other docker settings that you might also want to configure prior to submitting the training job. Please run `minikube docker-env` to get docker host url and docker cert path.
+There are other docker settings to configure prior to submitting the training job. Please run `minikube docker-env` to get docker host url and docker cert path.
 
 A possible docker settings could be:
 
@@ -86,13 +86,13 @@ In this example, we use parameter server strategy. We launch a master pod, a par
 
 ### Check job status
 
-After submitting the job to Minikube, you can run following command to check the status of each pod:
+After submitting the job to Minikube, we can run following command to check the status of each pod:
 
 ```bash
 kubectl get pods
 ```
 
-You will see information on each pod like the following:
+We will see information on each pod like the following:
 
 ```bash
 NAME                            READY   STATUS    RESTARTS   AGE
@@ -107,7 +107,7 @@ To see the loss in worker pod:
 kubectl logs elasticdl-test-mnist-worker-0 | grep "Loss"
 ```
 
-You will see following logs:
+We will see following logs:
 
 ```bash
 [2020-04-14 02:46:28,535] [INFO] [worker.py:879:_process_minibatch] Loss is 3.07190203666687
@@ -145,7 +145,7 @@ To see the evaluation metrics in master pod:
 kubectl logs elasticdl-test-mnist-master | grep "Evaluation"
 ```
 
-You will see following logs:
+We will see following logs:
 
 ```bash
 [2020-04-14 02:46:21,836] [INFO] [master.py:192:prepare] Evaluation service started
