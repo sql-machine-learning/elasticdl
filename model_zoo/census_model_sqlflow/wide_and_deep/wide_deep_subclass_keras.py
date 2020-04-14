@@ -42,6 +42,8 @@ class WideAndDeepClassifier(tf.keras.Model):
 
     # TODO: Add a decorator here to describe the InputSpec
     # of `inputs`. It contains two tensors in this model.
+    # The decorator should be able to inject some metadata of the InputSpec
+    # and model zoo can extract this information from it.
     def call(self, inputs):
         wide_input, dnn_input = inputs
 
