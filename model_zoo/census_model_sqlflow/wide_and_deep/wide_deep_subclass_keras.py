@@ -39,17 +39,37 @@ from model_zoo.census_model_sqlflow.wide_and_deep.transform_ops import (
 )
 
 
-class WideAndDeepClassifier(tf.keras.Model):
-    def __init__(self, transform_model):
-        super(WideAndDeepClassifier, self).__init__()
+class WideAndDeepClassifierV0(tf.keras.Model):
+    def __init__(self, transform_model, hidden_units=[16, 8, 4]):
+        super(WideAndDeepClassifierV0, self).__init__()
         self.transform_model = transform_model
-        self.dense_layers = [tf.keras.layers.Dense(i) for i in [16, 8, 4]]
+        self.dense_layers = [tf.keras.layers.Dense(i) for i in hidden_units]
 
     def call(self, inputs):
         if self.transform_model:
             wide_input, dnn_input = self.transform_model(inputs)
         else:
             wide_input, dnn_input = inputs
+
+        for dense_layer in self.dense_layers:
+            dnn_input = dense_layer(dnn_input)
+
+        # Output Part
+        concat_input = tf.concat([wide_input, dnn_input], 1)
+
+        logits = tf.reduce_sum(concat_input, 1, keepdims=True)
+        probs = tf.reshape(tf.sigmoid(logits), shape=(-1,))
+
+        return {"logits": logits, "probs": probs}
+
+
+class WideAndDeepClassifier(tf.keras.Model):
+    def __init__(self, hidden_units=[16, 8, 4]):
+        super(WideAndDeepClassifier, self).__init__()
+        self.dense_layers = [tf.keras.layers.Dense(i) for i in hidden_units]
+
+    def call(self, inputs):
+        wide_input, dnn_input = inputs
 
         for dense_layer in self.dense_layers:
             dnn_input = dense_layer(dnn_input)
@@ -271,12 +291,20 @@ def get_transform_model():
         })
     '''
 
-    return tf.keras.Model(inputs=input_layers, outputs=[wide_embedding, deep_embedding])
+    return tf.keras.Model(inputs=input_layers, outputs=[wide_embedding, deep_embedding], name="transform_model")
 
 
 def custom_model_from_subclass():
     transform_model = get_transform_model()
     return WideAndDeepClassifier(transform_model)
+
+
+def custom_model_from_subclass_2():
+    input_layers = get_input_layers(input_schemas=INPUT_SCHEMAS)
+    transformed = transform_from_code_gen(input_layers)
+    main_model = WideAndDeepClassifier()
+    outputs = main_model(transformed)
+    return tf.keras.Model(inputs=input_layers, outputs=outputs)
 
 
 def loss(labels, predictions):
@@ -318,7 +346,8 @@ def callbacks():
 
 
 if __name__ == "__main__":
-    model = custom_model_from_subclass()
+    # model = custom_model_from_subclass()
+    model = custom_model_from_subclass_2()
     # model = custom_model()
     # print(model.summary())
 
@@ -336,13 +365,17 @@ if __name__ == "__main__":
             "capital_loss": tf.constant([[1.0]], tf.float32),
             "hours_per_week": tf.constant([[40]], tf.float32),
         }
-    output = {
-        "logits"
-    }
+    
+    dataset = tf.data.Dataset.from_tensor_slices(inputs)
+    for item in dataset:
+        print(item)
+
     # model.build(inputs)
     # print(model.summary())
 
     output = model.call(inputs)
     print(output)
 
-    # print(model.summary())
+    # model._build_model_with_inputs(inputs=dataset, targets=None)
+    print(model.summary())
+    # print(model.transform_model.summary())
