@@ -16,6 +16,7 @@ class IndexLookupTest(unittest.TestCase):
     def test_lookup_with_list(self):
         lookup_layer = IndexLookup(vocabulary=["A", "B", "C"])
         self._check_lookup(lookup_layer)
+        self.assertEqual(lookup_layer.vocab_size(), 4)
 
     def test_lookup_with_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
