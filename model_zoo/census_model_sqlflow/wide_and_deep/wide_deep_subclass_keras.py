@@ -1,6 +1,5 @@
 import tensorflow as tf
 
-from elasticdl.python.elasticdl.callbacks import LearningRateScheduler
 from elasticdl.python.keras.layers.sparse_embedding import SparseEmbedding
 from elasticdl_preprocessing.layers.concatenate_with_offset import (
     ConcatenateWithOffset,
@@ -207,18 +206,6 @@ def eval_metrics_fn():
         },
         "probs": {"auc": tf.keras.metrics.AUC()},
     }
-
-
-def callbacks():
-    def _schedule(model_version):
-        if model_version < 5000:
-            return 0.0003
-        elif model_version < 12000:
-            return 0.0002
-        else:
-            return 0.0001
-
-    return [LearningRateScheduler(_schedule)]
 
 
 if __name__ == "__main__":
