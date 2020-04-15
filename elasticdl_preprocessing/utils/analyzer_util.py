@@ -7,6 +7,46 @@ import os
 import tensorflow as tf
 
 
+def get_min(feature_name, default_value):
+    """Get the min value of numeric feature from the environment.
+    Return the default value if there is no the statistics in
+    the environment.
+
+    Args:
+        feature_name: String, feature name or column name in a table
+        default_value: Float.
+
+    Return:
+        Float
+    """
+    env_name = feature_name + "_min"
+    min_value = os.getenv(env_name, None)
+    if min_value is None:
+        return default_value
+    else:
+        return float(min_value)
+
+
+def get_max(feature_name, default_value):
+    """Get the max value of numeric feature from the environment.
+    Return the default value if there is no the statistics in
+    the environment.
+
+    Args:
+        feature_name: String, feature name or column name in a tableq
+        default_value: Float.
+
+    Return:
+        Float
+    """
+    env_name = feature_name + "_max"
+    max_value = os.getenv(env_name, None)
+    if max_value is None:
+        return default_value
+    else:
+        return float(max_value)
+
+
 def get_mean(feature_name, default_value):
     """Get the mean of numeric feature from the environment.
     Return the default value if there is no the statistics in
