@@ -33,7 +33,7 @@ def get_max(feature_name, default_value):
     the environment.
 
     Args:
-        feature_name: String, feature name or column name in a tableq
+        feature_name: String, feature name or column name in a table
         default_value: Float.
 
     Return:
@@ -47,8 +47,8 @@ def get_max(feature_name, default_value):
         return float(max_value)
 
 
-def get_mean(feature_name, default_value):
-    """Get the mean of numeric feature from the environment.
+def get_avg(feature_name, default_value):
+    """Get the average of numeric feature from the environment.
     Return the default value if there is no the statistics in
     the environment.
 
@@ -59,7 +59,7 @@ def get_mean(feature_name, default_value):
     Return:
         Float
     """
-    env_name = feature_name + "_mean"
+    env_name = feature_name + "_avg"
     mean = os.getenv(env_name, None)
     if mean is None:
         return default_value

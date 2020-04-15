@@ -10,7 +10,7 @@ class AnalyzerUtilTest(unittest.TestCase):
         # using default value
         self.assertEqual(analyzer_util.get_min("age", 10), 10)
         self.assertEqual(analyzer_util.get_max("age", 100), 100)
-        self.assertEqual(analyzer_util.get_mean("age", 10), 10)
+        self.assertEqual(analyzer_util.get_avg("age", 10), 10)
         self.assertEqual(analyzer_util.get_stddev("age", 10), 10)
         self.assertListEqual(
             analyzer_util.get_bucket_boundaries("age", [10, 78]), [10, 78]
@@ -23,14 +23,14 @@ class AnalyzerUtilTest(unittest.TestCase):
         # Get value from environment
         os.environ["age_min"] = "11"
         os.environ["age_max"] = "100"
-        os.environ["age_mean"] = "50.9"
+        os.environ["age_avg"] = "50.9"
         os.environ["age_stddev"] = "90.87"
         os.environ["age_bkt_boundaries"] = "15,67,89"
         os.environ["city_count"] = "50"
 
         self.assertEqual(analyzer_util.get_min("age", 10), 11)
         self.assertEqual(analyzer_util.get_max("age", 10), 100)
-        self.assertEqual(analyzer_util.get_mean("age", 10), 50.9)
+        self.assertEqual(analyzer_util.get_avg("age", 10), 50.9)
         self.assertEqual(analyzer_util.get_stddev("age", 10), 90.87)
         self.assertListEqual(
             analyzer_util.get_bucket_boundaries("age", [10, 78]), [15, 67, 89]
