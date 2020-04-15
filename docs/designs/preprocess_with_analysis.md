@@ -1,12 +1,12 @@
 # Preprocess with Analysis Result Design
-This document describes the design of preprocessing feature inputs using analysis results.
+This document describes the design about how to use analysis result while preprocessing feature inputs.
 
 ## Motivation
-Before preprocessing the feature inputs, we need to analyze the training dataset to collect the feature statistics. For example, we need the mean and standard deviation to normalize a numeric value, `vocabulary` to lookup a string value to an integer id and `boundary` to discretize a numeric value. Using SQLFlow, the training dataset is usually a table saved in MySQL or MaxCompute and other databases, so we can use SQL to analyze the training table. During [data transformation pipeline](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/data_transform.md), we may launch a pod to analyze the training table and then submit the ElasticDL training job. So, the design is to solve how to pass the analysis results into the pods of an ElasticDL training job.
+Before preprocessing the feature inputs, we need to analyze the training dataset to collect the feature statistical results. For example, we need the mean and standard deviation to normalize a numeric value, `vocabulary` to lookup a string value to an integer id and `boundary` to discretize a numeric value. Using SQLFlow, the training dataset is usually a table saved in MySQL or MaxCompute and other databases, so we can use SQL to analyze the training table. During [data transformation pipeline](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/data_transform.md), we may launch a pod to analyze the training table and then submit the ElasticDL training job. So, the design is to solve how to pass the analysis results into the pods of an ElasticDL training job.
 
 ## Define preprocess layers with analysis result
 
-### 1. Persist the analysis result collected in the analysis pod?
+### 1. Persist the analysis result collected in the analysis pod.
 For MySQL or MaxCompute table, we can use SQL to analyze each column. For example, the table is
 
 |  age | education | marital |
