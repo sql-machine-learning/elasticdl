@@ -16,9 +16,11 @@ For MySQL or MaxCompute table, we can use SQL to analyze each column. For exampl
 |  42  | Bachelor | Never-married |
 |  49  | Bachelor | Divorced |
 
-For numeric column, we can get the mean, standard deviation and bucket boundaries using
+For numeric column, we can get the min, max, mean, standard deviation and bucket boundaries using
 ```sql
 SELECT 
+    MIN(age) as age_min,
+    MAX(age) as age_max,
     AVG(age) AS age_avg,
     STDDEV(age) AS age_std,
     PERCENTILE(age, ARRAY(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)) AS age_bucket_boundaries 
@@ -55,6 +57,8 @@ Besides vocabulary, other analysis results are a number or a list of number like
 
 |  feature_stats | value | 
 | ---- | --- | 
+|  age_min  | 10 |
+|  age_max  | 90 | 
 |  age_mean  | 44.75 |
 |  age_std_dev  | 56.6875 | 
 |  age_bucket_boundries  | 30,40,50 | 
@@ -94,6 +98,24 @@ layer = Discretization(bins=age_boundaries)
 Further, we can provide an `analyzer_utils` in `elasticdl_preprocessing` to get the statistics from environment variables like:
 ```python
 import os
+def get_min(feature_name, default_value):
+    env_name = feature_name + "_min"
+    min_value = os.getenv(env_name, None)
+    if mean is None:
+        return default_value
+    else:
+        return float(min_value)
+
+
+def get_max(feature_name, default_value):
+    env_name = feature_name + "_max"
+    max_value = os.getenv(env_name, None)
+    if max_value is None:
+        return default_value
+    else:
+        return float(max_value)
+
+
 def get_mean(feature_name, default_value):
     env_name = feature_name + "_mean"
     mean = os.getenv(env_name, None)
