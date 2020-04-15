@@ -28,7 +28,7 @@ python setup.py install
 ### Setup Kubernetes related environment
 
 ```bash
-minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=50gb
+minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=20gb
 kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
 eval $(minikube docker-env)
 export DOCKER_BUILDKIT=1
@@ -80,7 +80,7 @@ elasticdl train \
   --distribution_strategy=ParameterServerStrategy
 ```
 
-`image_base` is the base docke image argument. A new image will be built based on it each time while submitting the Elastic job.
+`image_base` is the base docker image argument. A new image will be built based on it each time while submitting the Elastic job.
 
 We use the model predefined in model zoo directory. The model definition will be packed into the new docker image. The training and validation data are packaged to the base docker image already. We could use them directly.
 
