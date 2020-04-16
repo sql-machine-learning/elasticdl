@@ -15,7 +15,7 @@ class AnalyzerUtilTest(unittest.TestCase):
         self.assertListEqual(
             analyzer_util.get_bucket_boundaries("age", [10, 78]), [10, 78]
         )
-        self.assertEqual(analyzer_util.get_value_count("city", 19), 19)
+        self.assertEqual(analyzer_util.get_count("city", 19), 19)
         self.assertListEqual(
             analyzer_util.get_vocabulary("city", ["a", "b"]), ["a", "b"]
         )
@@ -35,7 +35,7 @@ class AnalyzerUtilTest(unittest.TestCase):
         self.assertListEqual(
             analyzer_util.get_bucket_boundaries("age", [10, 78]), [15, 67, 89]
         )
-        self.assertEqual(analyzer_util.get_value_count("city", 19), 50)
+        self.assertEqual(analyzer_util.get_count("city", 19), 50)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             vocab_path = os.path.join(temp_dir, "city.txt")
