@@ -11,3 +11,4 @@ from elasticdl_preprocessing.layers.round_identity import RoundIdentity
 from elasticdl_preprocessing.layers.to_number import ToNumber
 from elasticdl_preprocessing.layers.to_ragged import ToRagged
 from elasticdl_preprocessing.layers.to_sparse import ToSparse
+from elasticdl_preprocessing.layers.sparse_embedding import SparseEmbedding
