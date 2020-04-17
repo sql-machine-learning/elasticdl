@@ -13,9 +13,9 @@ from elasticdl.python.elasticdl.feature_column.feature_column import (
     EmbeddingColumn,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl_preprocessing.layers import SparseEmbedding
 from elasticdl.python.ps.embedding_table import EmbeddingTable
 from elasticdl.python.ps.parameters import Parameters
+from elasticdl_preprocessing.layers import SparseEmbedding
 
 EMBEDDING_INPUT_DIM = 300000
 
