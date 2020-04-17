@@ -108,8 +108,8 @@ def get_bucket_boundaries(feature_name, default_value):
         return sorted(set(boundaries))
 
 
-def get_count(feature_name, default_value):
-    """Get the count of feature values set from the environment.
+def get_distinct_count(feature_name, default_value):
+    """Get the count of distinct feature values set from the environment.
     Return the default value if there is no the statistics in
     the environment.
 
