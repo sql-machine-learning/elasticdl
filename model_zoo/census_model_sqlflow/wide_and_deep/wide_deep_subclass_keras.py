@@ -1,6 +1,5 @@
 import tensorflow as tf
 
-from elasticdl.python.elasticdl.callbacks import LearningRateScheduler
 from elasticdl_preprocessing.layers import SparseEmbedding
 from elasticdl_preprocessing.layers.concatenate_with_offset import (
     ConcatenateWithOffset,
@@ -10,9 +9,7 @@ from elasticdl_preprocessing.layers.hashing import Hashing
 from elasticdl_preprocessing.layers.index_lookup import IndexLookup
 from elasticdl_preprocessing.layers.to_sparse import ToSparse
 from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
-    FEATURE_TRANSFORM_INFO_EXECUTE_ARRAY,
     INPUT_SCHEMAS,
-    TRANSFORM_OUTPUTS,
     age_bucketize,
     capital_gain_bucketize,
     capital_loss_bucketize,
@@ -34,36 +31,31 @@ from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
     sex_lookup,
     workclass_lookup,
 )
-from model_zoo.census_model_sqlflow.wide_and_deep.transform_ops import (
-    TransformOpType,
-)
 
 
-# The model definition from model zoo. It's functional style.
-# Input Params:
-#   input_layers: The input layers dict of feature inputs
-#   wide_embedding: A tensor. Embedding for the wide part.
-#   deep_embedding: A tensor. Embedding for the deep part.
-def wide_and_deep_classifier(input_layers, wide_embedding, deep_embedding):
-    # Wide Part
-    wide = wide_embedding  # shape = (None, 3)
+# The model definition in model zoo
+class WideAndDeepClassifier(tf.keras.Model):
+    def __init__(self, hidden_units=[16, 8, 4]):
+        super(WideAndDeepClassifier, self).__init__()
+        self.dense_layers = [tf.keras.layers.Dense(i) for i in hidden_units]
 
-    # Deep Part
-    dnn_input = deep_embedding
-    for i in [16, 8, 4]:
-        dnn_input = tf.keras.layers.Dense(i)(dnn_input)
+    # TODO: Add a decorator here to describe the InputSpec
+    # of `inputs`. It contains two tensors in this model.
+    # The decorator should be able to inject some metadata of the InputSpec
+    # and model zoo can extract this information from it.
+    def call(self, inputs):
+        wide_input, dnn_input = inputs
 
-    # Output Part
-    concat_input = tf.concat([wide, dnn_input], 1)
+        for dense_layer in self.dense_layers:
+            dnn_input = dense_layer(dnn_input)
 
-    logits = tf.reduce_sum(concat_input, 1, keepdims=True)
-    probs = tf.reshape(tf.sigmoid(logits), shape=(-1,))
+        # Output Part
+        concat_input = tf.concat([wide_input, dnn_input], 1)
 
-    return tf.keras.Model(
-        inputs=input_layers,
-        outputs={"logits": logits, "probs": probs},
-        name="wide_deep",
-    )
+        logits = tf.reduce_sum(concat_input, 1, keepdims=True)
+        probs = tf.reshape(tf.sigmoid(logits), shape=(-1,))
+
+        return {"logits": logits, "probs": probs}
 
 
 # Build the input layers from the schema of the input features
@@ -78,57 +70,9 @@ def get_input_layers(input_schemas):
     return input_layers
 
 
-# Build the transform logic from the metadata in feature_configs.py.
-def transform(inputs):
-    transformed = inputs.copy()
-
-    for feature_transform_info in FEATURE_TRANSFORM_INFO_EXECUTE_ARRAY:
-        if feature_transform_info.op_type == TransformOpType.HASH:
-            transformed[feature_transform_info.input] = ToSparse()(
-                transformed[feature_transform_info.input]
-            )
-            transformed[feature_transform_info.output] = Hashing(
-                feature_transform_info.hash_bucket_size
-            )(transformed[feature_transform_info.input])
-        elif feature_transform_info.op_type == TransformOpType.BUCKETIZE:
-            transformed[feature_transform_info.input] = ToSparse()(
-                transformed[feature_transform_info.input]
-            )
-            transformed[feature_transform_info.output] = Discretization(
-                feature_transform_info.boundaries
-            )(transformed[feature_transform_info.input])
-        elif feature_transform_info.op_type == TransformOpType.LOOKUP:
-            transformed[feature_transform_info.input] = ToSparse()(
-                transformed[feature_transform_info.input]
-            )
-            transformed[feature_transform_info.output] = IndexLookup(
-                feature_transform_info.vocabulary_list
-            )(transformed[feature_transform_info.input])
-        elif feature_transform_info.op_type == TransformOpType.CONCAT:
-            inputs_to_concat = [
-                transformed[name] for name in feature_transform_info.input
-            ]
-            transformed[feature_transform_info.output] = ConcatenateWithOffset(
-                feature_transform_info.id_offsets
-            )(inputs_to_concat)
-        elif feature_transform_info.op_type == TransformOpType.EMBEDDING:
-            transformed[feature_transform_info.output] = SparseEmbedding(
-                input_dim=feature_transform_info.input_dim,
-                output_dim=feature_transform_info.output_dim,
-            )(transformed[feature_transform_info.input])
-        elif feature_transform_info.op_type == TransformOpType.ARRAY:
-            transformed[feature_transform_info.output] = ConcatenateWithOffset(
-                offsets=None
-            )([transformed[name] for name in feature_transform_info.input])
-
-    return tuple([transformed[name] for name in TRANSFORM_OUTPUTS])
-
-
 # The following code has the same logic with the `transform` function above.
 # It can be generated from the parsed meta in feature_configs using code_gen.
-def transform_from_code_gen(source_inputs):
-    inputs = source_inputs.copy()
-
+def transform_from_code_gen(inputs):
     education_hash_out = Hashing(education_hash.hash_bucket_size)(
         ToSparse()(inputs["education"])
     )
@@ -228,14 +172,14 @@ def transform_from_code_gen(source_inputs):
     return wide_embeddings_out, deep_embeddings_out
 
 
-# The entry point of the submitter program
+# The entry point of the submitter program.
+# This should be generated by SQLFlow.
 def custom_model():
     input_layers = get_input_layers(input_schemas=INPUT_SCHEMAS)
-    wide_embedding, deep_embedding = transform_from_code_gen(input_layers)
-
-    return wide_and_deep_classifier(
-        input_layers, wide_embedding, deep_embedding
-    )
+    transformed = transform_from_code_gen(input_layers)
+    main_model = WideAndDeepClassifier()
+    outputs = main_model(transformed)
+    return tf.keras.Model(inputs=input_layers, outputs=outputs)
 
 
 def loss(labels, predictions):
@@ -264,37 +208,24 @@ def eval_metrics_fn():
     }
 
 
-def callbacks():
-    def _schedule(model_version):
-        if model_version < 5000:
-            return 0.0003
-        elif model_version < 12000:
-            return 0.0002
-        else:
-            return 0.0001
-
-    return [LearningRateScheduler(_schedule)]
-
-
 if __name__ == "__main__":
     model = custom_model()
     print(model.summary())
 
-    output = model.call(
-        {
-            "education": tf.constant([["Bachelors"]], tf.string),
-            "occupation": tf.constant([["Tech-support"]], tf.string),
-            "native_country": tf.constant([["United-States"]], tf.string),
-            "workclass": tf.constant([["Private"]], tf.string),
-            "marital_status": tf.constant([["Separated"]], tf.string),
-            "relationship": tf.constant([["Husband"]], tf.string),
-            "race": tf.constant([["White"]], tf.string),
-            "sex": tf.constant([["Female"]], tf.string),
-            "age": tf.constant([[18]], tf.float32),
-            "capital_gain": tf.constant([[100.0]], tf.float32),
-            "capital_loss": tf.constant([[1.0]], tf.float32),
-            "hours_per_week": tf.constant([[40]], tf.float32),
-        }
-    )
+    inputs = {
+        "education": tf.constant([["Bachelors"]], tf.string),
+        "occupation": tf.constant([["Tech-support"]], tf.string),
+        "native_country": tf.constant([["United-States"]], tf.string),
+        "workclass": tf.constant([["Private"]], tf.string),
+        "marital_status": tf.constant([["Separated"]], tf.string),
+        "relationship": tf.constant([["Husband"]], tf.string),
+        "race": tf.constant([["White"]], tf.string),
+        "sex": tf.constant([["Female"]], tf.string),
+        "age": tf.constant([[18]], tf.float32),
+        "capital_gain": tf.constant([[100.0]], tf.float32),
+        "capital_loss": tf.constant([[1.0]], tf.float32),
+        "hours_per_week": tf.constant([[40]], tf.float32),
+    }
 
+    output = model.call(inputs)
     print(output)

@@ -1,4 +1,3 @@
-
 # Data Preparation Design Doc
 
 ## Background

@@ -12,8 +12,8 @@ from elasticdl.python.elasticdl.feature_column.feature_column import (
     embedding_column,
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.keras.layers import SparseEmbedding
 from elasticdl.python.ps.embedding_table import EmbeddingTable
+from elasticdl_preprocessing.layers import SparseEmbedding
 
 
 def _get_trained_params_from_checkpoint(checkpoint_dir):
