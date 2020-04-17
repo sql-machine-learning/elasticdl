@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 from elasticdl.python.elasticdl.callbacks import LearningRateScheduler
-from elasticdl.python.keras.layers.sparse_embedding import SparseEmbedding
+from elasticdl_preprocessing.layers import SparseEmbedding
 from elasticdl_preprocessing.layers.concatenate_with_offset import (
     ConcatenateWithOffset,
 )
