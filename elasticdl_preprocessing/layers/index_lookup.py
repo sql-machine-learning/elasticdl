@@ -63,23 +63,23 @@ class IndexLookup(tf.keras.layers.Layer):
         self.vocabulary = vocabulary
 
     def build(self, input_shape):
-        self.table = lookup_ops.index_table_from_tensor(
+        self._table = lookup_ops.index_table_from_tensor(
             vocabulary_list=self.vocabulary,
             num_oov_buckets=self.num_oov_tokens,
         )
 
     def call(self, inputs):
         if isinstance(inputs, tf.SparseTensor):
-            lookup_id = self.table.lookup(inputs.values)
+            lookup_id = self._table.lookup(inputs.values)
             output = tf.SparseTensor(
                 indices=inputs.indices,
                 values=lookup_id,
                 dense_shape=inputs.dense_shape,
             )
         elif isinstance(inputs, tf.RaggedTensor):
-            return tf.ragged.map_flat_values(self.table.lookup, inputs,)
+            return tf.ragged.map_flat_values(self._table.lookup, inputs,)
         else:
-            output = self.table.lookup(inputs)
+            output = self._table.lookup(inputs)
         return tf.cast(output, tf.int64)
 
     def _get_vocabulary_from_file(self, vocabulary_path):
