@@ -1,5 +1,4 @@
 import os
-import tempfile
 import unittest
 
 from elasticdl_preprocessing.utils import analyzer_utils
@@ -39,6 +38,5 @@ class AnalyzerUtilTest(unittest.TestCase):
         self.assertEqual(analyzer_utils.get_distinct_count("city", 19), 50)
 
         self.assertEqual(
-            analyzer_utils.get_vocabulary("city", ["a", "b"]),
-            "./city.txt",
+            analyzer_utils.get_vocabulary("city", ["a", "b"]), "./city.txt",
         )
