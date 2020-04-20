@@ -14,7 +14,7 @@ def log(x, base):
 
 
 class LogRound(tf.keras.layers.Layer):
-    """Cast a numeric feature into a discrete integer value by
+    """Cast a numeric value into a discrete integer value by
     `round(log(x))`.
 
 
