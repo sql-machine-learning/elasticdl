@@ -22,15 +22,15 @@ SELECT
     MIN(age) as age_min,
     MAX(age) as age_max,
     AVG(age) AS age_avg,
-    STDDEV(age) AS age_std,
-    PERCENTILE(age, ARRAY(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)) AS age_bucket_boundaries 
+    STDDEV(age) AS age_stddev,
+    PERCENTILE(age, ARRAY(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)) AS age_boundaries 
 FROM ${training_table}
 ```
 The SQL expression use MaxCompute SQL syntax and `PERCENTILE` is a function in MaxCompute SQL
 
 For feature to hash with bucket size, we can get the count of distinct values by 
 ```sql
-SELECT count(distinct(marital)) AS martial_count FROM ${training_table}
+SELECT count(distinct(marital)) AS martial_distinct_count FROM ${training_table}
 ```
 
 For feature to lookup with vocabulary, we can get the vocabulary by
@@ -106,7 +106,7 @@ def get_bucket_boundaries(feature_name, default_value):
         return list(map(float, boundaries.split(",")))
 
 def get_distinct_count(feature_name, default_value):
-    env_name = "_" + feature_name + "_count"
+    env_name = "_" + feature_name + "_distinct_count"
     count = os.getenv(env_name, None)
     if count is None:
         return default_value
