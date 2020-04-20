@@ -5,6 +5,10 @@ from tensorflow.python.ops.ragged import ragged_functional_ops, ragged_tensor
 def log(x, base):
     x = tf.cast(x, tf.float64)
     numerator = tf.math.log(x)
+
+    if base is None:
+        return numerator
+
     denominator = tf.math.log(tf.constant(base, dtype=numerator.dtype))
     return numerator / denominator
 

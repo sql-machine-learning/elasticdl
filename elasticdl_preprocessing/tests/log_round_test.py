@@ -14,7 +14,7 @@ class LogRoundTest(unittest.TestCase):
     def test_round_indentity(self):
         log_round = LogRound(num_bins=20, base=2)
 
-        dense_input = tf.constant([[1.2], [2.6], [0.2], [3.1], [1024]])
+        dense_input = tf.constant([[0.0], [2.6], [0.2], [3.1], [1024]])
         output = log_round(dense_input)
         expected_out = np.array([[0], [1], [0], [2], [10]])
 
