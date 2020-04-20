@@ -84,56 +84,21 @@ After analysis, we get two tables with the analysis results. One is the statisti
 ### Pass analysis results to build a model in training pods.
 For the values in the statistics table, we can write them into environment variables for the training pod to build model. For example:
 ```shell
-envs='age_mean=44.75,age_std=56.6875,age_bucket_boundaries="30,40,50"'
+envs='_age_mean=44.75,_age_std=56.6875,_age_boundaries="30,40,50"'
 ```
 In preprocessing layers, we can get the statistics from environment variables like:
 ```python
 import os
 from elasticdl_preprocessing.layers import Discretization
 age_boundaries = list(
-    map(float, os.getenv("age_bucket_boundaries", "30,50").split(","))
+    map(float, os.getenv("_age_boundaries", "30,50").split(","))
 )
 layer = Discretization(bins=age_boundaries)
 ```
 Further, we can provide an `analyzer_utils` in `elasticdl_preprocessing` to get the statistics from environment variables like:
 ```python
-import os
-def get_min(feature_name, default_value):
-    env_name = feature_name + "_min"
-    min_value = os.getenv(env_name, None)
-    if mean is None:
-        return default_value
-    else:
-        return float(min_value)
-
-
-def get_max(feature_name, default_value):
-    env_name = feature_name + "_max"
-    max_value = os.getenv(env_name, None)
-    if max_value is None:
-        return default_value
-    else:
-        return float(max_value)
-
-
-def get_mean(feature_name, default_value):
-    env_name = feature_name + "_mean"
-    mean = os.getenv(env_name, None)
-    if mean is None:
-        return default_value
-    else:
-        return float(mean)
-
-def get_stddev(feature_name, default_value):
-    env_name = feature_name + "_stddev"
-    std_dev = os.getenv(env_name, None)
-    if std_dev is None:
-        return default_value
-    else:
-        return float(std_dev)
-
 def get_bucket_boundaries(feature_name, default_value):
-    env_name = feature_name + "_bkt_boundaries"
+    env_name = "_" + feature_name + "_boundaries"
     boundaries = os.getenv(env_name, None)
     if boundaries is None:
         return default_value
@@ -141,7 +106,7 @@ def get_bucket_boundaries(feature_name, default_value):
         return list(map(float, boundaries.split(",")))
 
 def get_distinct_count(feature_name, default_value):
-    env_name = feature_name + "_count"
+    env_name = "_" + feature_name + "_count"
     count = os.getenv(env_name, None)
     if count is None:
         return default_value
@@ -169,17 +134,17 @@ hash_layer = Hashing(
 
 For the values in the vocabulary table, we cannot save the vocabulary into environment variables because the vocabulary size may be huge. However, we can save the vocabulary into the shared storage like glusterfs and write the path into the environment variables of a training pod. After the training job completes, we can clear the vocabulary files in the storage.
 ```shell
-envs="education_vocab_path=/testdata/elasticdl/vocabulary/education.txt"
+envs="_education_vocab=/testdata/elasticdl/vocabulary/education.txt"
 ```
 
 ```python
 def get_vocabulary(feature_name, default_value):
-    env_name = feature_name + "_vocab_path"
+    env_name = feature_name + "_vocab"
     vocabulary_path = os.getenv(env_name, None)
     if vocabulary_path is None:
         return default_value
     else:
-        return read_file(vocabulary_path)
+        return vocabulary_path
 
 lookup_layer = IndexLookup(
     vocabulary=get_vocabulary("education", ["Master"])
