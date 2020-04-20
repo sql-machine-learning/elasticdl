@@ -21,12 +21,13 @@ class AnalyzerUtilTest(unittest.TestCase):
         )
 
         # Get value from environment
-        os.environ["age_min"] = "11"
-        os.environ["age_max"] = "100"
-        os.environ["age_avg"] = "50.9"
-        os.environ["age_stddev"] = "90.87"
-        os.environ["age_bkt_boundaries"] = "15,67,89"
-        os.environ["city_count"] = "50"
+        os.environ["_age_min"] = "11"
+        os.environ["_age_max"] = "100"
+        os.environ["_age_avg"] = "50.9"
+        os.environ["_age_stddev"] = "90.87"
+        os.environ["_age_boundaries"] = "15,67,89"
+        os.environ["_city_count"] = "50"
+        os.environ["_city_vocab"] = "./city.txt"
 
         self.assertEqual(analyzer_utils.get_min("age", 10), 11)
         self.assertEqual(analyzer_utils.get_max("age", 10), 100)
@@ -37,14 +38,7 @@ class AnalyzerUtilTest(unittest.TestCase):
         )
         self.assertEqual(analyzer_utils.get_distinct_count("city", 19), 50)
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            vocab_path = os.path.join(temp_dir, "city.txt")
-
-            with open(vocab_path, "w") as f:
-                f.write("Beijing\n")
-                f.write("NewYork\n")
-            os.environ["city_vocab_path"] = vocab_path
-            self.assertListEqual(
-                analyzer_utils.get_vocabulary("city", ["a", "b"]),
-                ["Beijing", "NewYork"],
-            )
+        self.assertEqual(
+            analyzer_utils.get_vocabulary("city", ["a", "b"]),
+            "./city.txt",
+        )
