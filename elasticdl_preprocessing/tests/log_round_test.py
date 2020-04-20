@@ -10,7 +10,7 @@ from elasticdl_preprocessing.tests.test_utils import (
 )
 
 
-class RoundIdentityTest(unittest.TestCase):
+class LogRoundTest(unittest.TestCase):
     def test_round_indentity(self):
         log_round = LogRound(num_bins=20, base=2)
 
