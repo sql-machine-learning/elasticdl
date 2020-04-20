@@ -118,7 +118,7 @@ def get_distinct_count(feature_name, default_value):
     Return:
         Integer.
     """
-    env_name = "_" + feature_name + "_count"
+    env_name = "_" + feature_name + "_distinct_count"
     count = os.getenv(env_name, None)
     if count is None:
         return default_value

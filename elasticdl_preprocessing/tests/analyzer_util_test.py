@@ -25,7 +25,7 @@ class AnalyzerUtilTest(unittest.TestCase):
         os.environ["_age_avg"] = "50.9"
         os.environ["_age_stddev"] = "90.87"
         os.environ["_age_boundaries"] = "15,67,89"
-        os.environ["_city_count"] = "50"
+        os.environ["_city_distinct_count"] = "50"
         os.environ["_city_vocab"] = "./city.txt"
 
         self.assertEqual(analyzer_utils.get_min("age", 10), 11)
