@@ -4,3 +4,4 @@ docker
 pyrecordio>=0.0.6
 Cython
 odps
+tensorflow==2.1.0
