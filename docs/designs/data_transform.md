@@ -280,10 +280,7 @@ BUCKETIZE(x, num_buckets=5)
 
 ```SQL
 SELECT
-    percentile(x, 0.2) AS x_bkt_boundry_1,
-    percentile(x, 0.4) AS x_bkt_boundry_2,
-    percentile(x, 0.6) AS x_bkt_boundry_3,
-    percentile(x, 0.8) AS x_bkt_boundry_4
+    PERCENTILE(age, ARRAY(0.2, 0.4, 0.6, 0.8)) AS x_bucket_boundaries
 FROM data_table;
 ```
 
