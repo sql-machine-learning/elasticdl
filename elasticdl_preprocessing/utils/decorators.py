@@ -1,11 +1,13 @@
-def model_input_name(input_names):
+def model_input_name(*args):
     def decorator(clz):
-        if isinstance(input_names, str):
-            setattr(clz, "_model_input_names", [input_names])
-        elif isinstance(input_names, list) and all(
-            isinstance(name, str) for name in input_names
-        ):
-            setattr(clz, "_model_input_names", input_names)
+        input_names = list(args)
+        if not input_names:
+            raise ValueError("Input names should not be empty")
+
+        if not all(isinstance(name, str) for name in input_names):
+            raise ValueError("Input names should be string type")
+
+        setattr(clz, "_model_input_names", input_names)
 
         return clz
 
