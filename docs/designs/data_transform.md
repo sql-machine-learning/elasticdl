@@ -199,28 +199,29 @@ SELECT *
 FROM census_income
 TO TRAIN WideAndDeepClassifier
 COLUMN
-    EMBEDDING(
-        CONCAT(
-            VOCABULARIZE(workclass),
-            BUCKETIZE(capital_gain, num_buckets=5),
-            BUCKETIZE(capital_loss, num_buckets=5),
-            BUCKETIZE(hours_per_week, num_buckets=6)
-            ) AS group_1,
-        8),
-    EMBEDDING(
-        CONCAT(
-            HASH(education),
-            HASH(occupation),
-            VOCABULARIZE(martial_status),
-            VOCABULARIZE(relationship)
-            ) AS group_2,
-        8),
-    EMBEDDING(race, 8)
-    FOR deep_embeddings
-COLUMN
-    EMBEDDING(group1, 1),
-    EMBEDDING(group2, 1)
-    FOR wide_embeddings
+    COMBINE (
+        EMBEDDING(
+            CONCAT(
+                VOCABULARIZE(workclass),
+                BUCKETIZE(capital_gain, num_buckets=5),
+                BUCKETIZE(capital_loss, num_buckets=5),
+                BUCKETIZE(hours_per_week, num_buckets=6)
+                ) AS group_1,
+            8),
+        EMBEDDING(
+            CONCAT(
+                HASH(education),
+                HASH(occupation),
+                VOCABULARIZE(martial_status),
+                VOCABULARIZE(relationship)
+                ) AS group_2,
+            8),
+        EMBEDDING(race, 8)
+    ) FOR deep_embeddings,
+    COMBINE (
+        EMBEDDING(group1, 1),
+        EMBEDDING(group2, 1)
+    ) FOR wide_embeddings
 LABEL label
 ```
 
@@ -318,9 +319,24 @@ At this moment, we have gotten the full transform code and can prepare for model
 
 The model definition in the model zoo is a python function or a python class. It has some input parameters. The transform python code is built upon feature column api or keras preprocessing layers. The bridge between transform code and model definition should cover the transform logic using both feature column and keras preprocessing layers.  
 
-For functional model，Tensors is a good choice for the bridge. The transform logic for one `COLUMN` expression outputs one tensor, and two expressions output two tensors. So the COLUMN expressions in example SQL output two tensors: `deep_embeddings` and `wide_embeddings`. The python function of the functional model is [`def wide_and_deep_classifier(input_layers, wide_embeddings, deep_embeddings)`](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py#L47-L66). The names of the output tensors match the names of the input parameters in the function. We will combine the transform code and model definition through parameter binding according to the name.  
+Tensors is a good choice for the bridge. The keyword `FOR` in the column clause means that it will output one tensor, and two `FOR` keywords output two tensors. So the COLUMN expressions in example SQL output two tensors: `deep_embeddings` and `wide_embeddings`.
 
-For subclass model, please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1867).
+For keras functional model, the python function of the model is [`def wide_and_deep_classifier(input_layers, wide_embeddings, deep_embeddings)`](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py#L47-L66). The names of the output tensors match the names of the input parameters in the function. We will combine the transform code and model definition through parameter binding according to the name.  
+
+For keras subclass model, it has a core method to decribe the forward pass logic: `def call(self, inputs)`, we cannot get how many tensors the model accepts just from the parameter `inputs`. To solve this problem, we propose to provide a decorator `@model_input_name` on the model class to inject some metadata. The metadata tells us how many input tensors for the model and the names of these tensors.  
+
+```python
+@model_input_name("wide_embeddings", "deep_embeddings")
+class WideAndDeepClassifier(tf.keras.Model):
+    def __init__(self):
+        pass
+
+    def call(self, inputs):
+        pass
+```
+
+- If ML specialist develops the model structure and verify it using `model.fit`, the decorator is not necessary.  
+- If ML specialist run the machine learning pipeline locally using SQLFlow / run model unit test using SQLFlow / submit model into SQLFlow model zoo, ML specialist need add the decorator.
 
 ## Further Consideration
 
