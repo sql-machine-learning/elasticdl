@@ -1,6 +1,5 @@
 import tensorflow as tf
 
-from model_zoo.census_model_sqlflow.wide_and_deep.decorators import model_input_name
 from elasticdl_preprocessing.layers import SparseEmbedding
 from elasticdl_preprocessing.layers.concatenate_with_offset import (
     ConcatenateWithOffset,
@@ -9,6 +8,9 @@ from elasticdl_preprocessing.layers.discretization import Discretization
 from elasticdl_preprocessing.layers.hashing import Hashing
 from elasticdl_preprocessing.layers.index_lookup import IndexLookup
 from elasticdl_preprocessing.layers.to_sparse import ToSparse
+from model_zoo.census_model_sqlflow.wide_and_deep.decorators import (
+    model_input_name,
+)
 from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
     INPUT_SCHEMAS,
     age_bucketize,
