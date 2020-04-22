@@ -199,7 +199,7 @@ SELECT *
 FROM census_income
 TO TRAIN WideAndDeepClassifier
 COLUMN
-    COMBINE (
+    COMBINE(
         EMBEDDING(
             CONCAT(
                 VOCABULARIZE(workclass),
@@ -218,7 +218,7 @@ COLUMN
             8),
         EMBEDDING(race, 8)
     ) FOR deep_embeddings,
-    COMBINE (
+    COMBINE(
         EMBEDDING(group1, 1),
         EMBEDDING(group2, 1)
     ) FOR wide_embeddings
