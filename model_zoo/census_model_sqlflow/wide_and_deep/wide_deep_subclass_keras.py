@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+from model_zoo.census_model_sqlflow.wide_and_deep.decorators import model_input_name
 from elasticdl_preprocessing.layers import SparseEmbedding
 from elasticdl_preprocessing.layers.concatenate_with_offset import (
     ConcatenateWithOffset,
@@ -34,6 +35,9 @@ from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
 
 
 # The model definition in model zoo
+# Add this annotation `@model_input_name` to indicate that this model
+# need two input tensors: `wide_embeddings` and `deep_embeddings`.
+@model_input_name(["wide_embeddings", "deep_embeddings"])
 class WideAndDeepClassifier(tf.keras.Model):
     def __init__(self, hidden_units=[16, 8, 4]):
         super(WideAndDeepClassifier, self).__init__()
@@ -209,6 +213,8 @@ def eval_metrics_fn():
 
 
 if __name__ == "__main__":
+    print(WideAndDeepClassifier._model_input_names)
+
     model = custom_model()
     print(model.summary())
 
