@@ -8,6 +8,7 @@ from elasticdl_preprocessing.layers.discretization import Discretization
 from elasticdl_preprocessing.layers.hashing import Hashing
 from elasticdl_preprocessing.layers.index_lookup import IndexLookup
 from elasticdl_preprocessing.layers.to_sparse import ToSparse
+from elasticdl_preprocessing.utils.decorators import model_input_name
 from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
     INPUT_SCHEMAS,
     age_bucketize,
@@ -34,6 +35,9 @@ from model_zoo.census_model_sqlflow.wide_and_deep.feature_configs import (
 
 
 # The model definition in model zoo
+# Add this annotation `@model_input_name` to indicate that this model
+# need two input tensors: `wide_embeddings` and `deep_embeddings`.
+@model_input_name("wide_embeddings", "deep_embeddings")
 class WideAndDeepClassifier(tf.keras.Model):
     def __init__(self, hidden_units=[16, 8, 4]):
         super(WideAndDeepClassifier, self).__init__()
@@ -209,6 +213,8 @@ def eval_metrics_fn():
 
 
 if __name__ == "__main__":
+    print(WideAndDeepClassifier._model_input_names)
+
     model = custom_model()
     print(model.summary())
 
