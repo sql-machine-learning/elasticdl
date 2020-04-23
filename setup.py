@@ -5,11 +5,11 @@ with open("elasticdl/requirements.txt") as f:
 
 extras = {}
 with open("elasticdl/requirements-dev.txt") as f:
-    extras["develop"] = f.read().splitlines()
+    extras["0.2.0"] = f.read().splitlines()
 
 setup(
     name="elasticdl",
-    version="develop",
+    version="0.2.0",
     description="A Kubernetes-native Deep Learning Framework",
     long_description="ElasticDL is a Kubernetes-native deep learning framework"
     " built on top of TensorFlow 2.0 that supports"
