@@ -59,6 +59,9 @@ class ODPSDataReader(AbstractDataReader):
             self._metadata.column_names = (
                 reader._odps_table.schema.names if columns is None else columns
             )
+            column_dtypes = []
+            for column_name in self._metadata.column_names:
+                column_dtypes.append(reader._odps_table.schema[column_name])
 
         for record in reader.record_generator_with_retry(
             start=task.start, end=task.end, columns=self._metadata.column_names

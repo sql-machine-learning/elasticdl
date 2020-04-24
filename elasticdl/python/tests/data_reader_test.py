@@ -6,6 +6,7 @@ import unittest
 from collections import namedtuple
 
 import numpy as np
+import odps
 import tensorflow as tf
 from odps import ODPS
 
@@ -146,6 +147,16 @@ class ODPSDataReaderTest(unittest.TestCase):
         )
         self.assertEqual(
             self.reader.metadata.column_names, IRIS_TABLE_COLUMN_NAMES
+        )
+        self.assertListEqual(
+            self.reader.metadata.column_dtypes,
+            [
+                odps.types.double,
+                odps.types.double,
+                odps.types.double,
+                odps.types.double,
+                odps.types.bigint,
+            ],
         )
 
     def test_create_data_reader(self):
