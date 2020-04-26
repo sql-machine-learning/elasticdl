@@ -342,4 +342,4 @@ And when do we use this decorator during model development? Please check the fol
 
 ## Further Consideration
 
-From the syntax design above, we can see that the COLUMN clause can be very complicated. It's will be challenging to users to write the entire COLUMN clause if there are hundreds of features from source table. And it's common in the search and recommendatation scenario. In the long term, user can write simpiflied COLUMN clause or even don't need write it. SQLFlow will do feature deriviation and auto-complete the COLUMN clause.  
+From the syntax design above, we can see that the COLUMN clause can be very long. It's will be challenging to users to write the entire COLUMN clause if there are hundreds of features or even more from source table. And it's common in the search and recommendatation scenario. In the long term, user can write simpiflied COLUMN clause or even don't need write it. SQLFlow will do feature deriviation and auto-complete the COLUMN clause.  
