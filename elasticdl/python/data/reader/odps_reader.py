@@ -59,8 +59,10 @@ class ODPSDataReader(AbstractDataReader):
             self._metadata.column_names = (
                 reader._odps_table.schema.names if columns is None else columns
             )
-            self._metadata.column_names = [
-                reader._odps_table.schema[column_name]
+
+        if self._metadata.column_names:
+            self._metadata.column_dtypes = [
+                reader._odps_table.schema[column_name].type
                 for column_name in self._metadata.column_names
             ]
 
