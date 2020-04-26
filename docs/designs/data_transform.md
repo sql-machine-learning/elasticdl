@@ -175,7 +175,8 @@ We can extend the SQLFlow syntax and enrich the `COLUMN` expression. We propose 
 | VOCABULARIZE(x)  | Map the inputs to integer ids by looking up the vocabulary | vocabulary_list | string, int32, int64 | int64 |
 | EMBEDDING(x, dimension) | Map the inputs to embedding vectors             |          N/A         | int32, int64 | float32 |
 | CROSS(x1, x2, ..., xn, hash_bucket_size)  | Hash(cartesian product of features) % hash_bucket_size |          N/A         | string, number   | int64 |
-| CONCAT(x1, x2, ..., xn)   | Concatenate multiple tensors representing categorical ids into one tensor. | N/A | int32, int64 | int64 |
+| CONCAT(x1, x2, ..., xn)   | Concatenate multiple tensors representing categorical ids (zero-based) into one tensor. The output id space is the sum of inputs. | N/A | int32, int64 | int64 |
+| COMBINE(x1, x2, ..., xn)  | Combine multiple tensors into one tensor | N/A | number | number |
 
 *Please check more [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1723) about `CONCAT` transform function*
 
@@ -320,10 +321,10 @@ Tensors is a good choice for the bridge. The keyword `FOR` in the column clause 
 
 For keras functional model, the python function of the model is [`def wide_and_deep_classifier(input_layers, wide_embeddings, deep_embeddings)`](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py#L47-L66). The names of the output tensors match the names of the input parameters in the function. We will combine the transform code and model definition through parameter binding according to the name.  
 
-For keras subclass model, it has a core method to decribe the forward pass logic: `def call(self, inputs)`, we cannot get how many tensors the model accepts just from the parameter `inputs`. To solve this problem, we propose to provide a decorator `@model_input_name` on the model class to inject some metadata. The metadata tells us how many input tensors for the model and the names of these tensors.  
+For keras subclass model, it has a core method `def call(self, inputs)` to describe the forward pass logic. But we cannot get how many tensors the model accepts from the parameter `inputs`. To solve this problem, we propose to add a decorator `@declare_model_inputs` on the model class to inject some metadata. The metadata tells us the number and names of the input tensor for this model.  
 
 ```python
-@model_input_name("wide_embeddings", "deep_embeddings")
+@declare_model_inputs("wide_embeddings", "deep_embeddings")
 class WideAndDeepClassifier(tf.keras.Model):
     def __init__(self):
         pass
@@ -332,19 +333,11 @@ class WideAndDeepClassifier(tf.keras.Model):
         pass
 ```
 
+And then we can get the input tensor names `[wide_embeddings, deep_embeddings]` from the static attribute of the model class - `WideAndDeepClassifier._model_inputs`. Model zoo service can load the python module and get the metadata using this way. It's useful for the parameter binding between COLUMN clause and model definition.
+
+And when do we use this decorator during model development? Please check the following:
+
 - If ML specialist develops the model structure and verify it using `model.fit`, the decorator is not necessary.  
 - If ML specialist run the machine learning pipeline locally using SQLFlow / run model unit test using SQLFlow / submit model into SQLFlow model zoo, ML specialist need add the decorator.
 
 ## Further Consideration
-
-In the design above, we generated the concrete feature column definition for data transformation in the Transform stage. The actual transform logic on the raw data executes along with the model training process. Based on this design, we can further consider transforming the raw data and writing the transformed result into a new table in the stage.  
-After analyzing the data, we construct the TF graph for transform instead of feature column definition and export it to SavedModel. And then we submit a data processing job to transform the raw data by executing UDF with the SavedModel. The whole process is also matched with the TFX pipeline.  
-This solution can bring the following benifits:
-
-1. We can reuse the transformed data in the temporary table to execute multipe model training run for different hyperparameter combinations and all the epochs. Data transformation is only executed once.
-2. We can support more flexible transform logic such as inter column calculation. Feature column has some limit on the inter column calculation. Please check the [Wiki](https://github.com/sql-machine-learning/elasticdl/wiki/ElasticDL-TF-Transform-Explore#inter-columns-calculation) for more details.
-
-We need figure out the following points for this further solution:
-
-1. Model Export: Upgrade keras API to support exporting the transform logic and the model definition together to SavedModel for inference. [Issue](https://github.com/tensorflow/tensorflow/issues/34618)
-2. Transform Execution: We will transform the data records one by one using the transform logic in the SavedModel format and then write to a new table. We also need write a Jar, it packages the TensorFlow library, loads the SavedModel into memory and processes the input data. And then we register it as UDF in Hive or MaxCompute and use it to transform the data.  
