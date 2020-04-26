@@ -17,7 +17,7 @@ And then we can get the input tensor names from the property of the model class
 `WideAndDeepClassifier._model_inputs` => ["wide_embeddings", "deep_embeddings"]
 """
 def declare_model_inputs(*args):
-    def decorator(func):
+    def decorator(clz):
         input_names = list(args)
         if not input_names:
             raise ValueError("Model input names should not be empty.")
@@ -25,8 +25,8 @@ def declare_model_inputs(*args):
         if not all(isinstance(name, str) for name in input_names):
             raise ValueError("Model input names should be string type.")
 
-        setattr(func, "_model_inputs", input_names)
+        setattr(clz, "_model_inputs", input_names)
 
-        return func
+        return clz
 
     return decorator
