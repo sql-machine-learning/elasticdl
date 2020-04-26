@@ -16,6 +16,8 @@ class WideAndDeepClassifier(tf.keras.Model):
 And then we can get the input tensor names from the property of the model class
 `WideAndDeepClassifier._model_inputs` => ["wide_embeddings", "deep_embeddings"]
 """
+
+
 def declare_model_inputs(*args):
     def decorator(clz):
         input_names = list(args)
