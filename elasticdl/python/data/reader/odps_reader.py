@@ -130,9 +130,9 @@ class ODPSDataReader(AbstractDataReader):
 
     def _get_table_schema(self):
         odps_client = ODPS(
-            access_id=self._kwargs["project"],
-            secret_access_key=self._kwargs["access_id"],
-            project=self._kwargs.get("partition", None),
+            access_id=self._kwargs["access_id"],
+            secret_access_key=self._kwargs["access_key"],
+            project=self._kwargs["project"],
             endpoint=self._kwargs.get("endpoint"),
         )
         odps_table = odps_client.get_table(self._kwargs["table"])
