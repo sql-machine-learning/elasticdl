@@ -163,7 +163,10 @@ class ODPSDataReaderTest(unittest.TestCase):
         reader = create_data_reader(
             data_origin=self.test_table,
             records_per_task=10,
-            **{"columns": ["a", "b"], "label_col": "class"}
+            **{
+                "columns": ["sepal_length", "sepal_width"],
+                "label_col": "class",
+            }
         )
         self.assertEqual(reader._kwargs["columns"], ["a", "b"])
         self.assertEqual(reader._kwargs["label_col"], "class")
