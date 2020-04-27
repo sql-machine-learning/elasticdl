@@ -2,7 +2,7 @@ SELECT *
 FROM census_income
 TO TRAIN DNNClassifier
 WITH model.hidden_units = [10, 20]
-COLUMN (
+COLUMN
     age, 
     capital_gain, 
     capital_loss, 
@@ -15,5 +15,4 @@ COLUMN (
     EMBEDDING(race, 16),
     EMBEDDING(sex, 16),
     EMBEDDING(native_country, 16)
-)
 LABEL label
