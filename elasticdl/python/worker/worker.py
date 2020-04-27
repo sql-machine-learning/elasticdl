@@ -174,6 +174,7 @@ class Worker(object):
             data_reader_params=get_dict_from_params_str(
                 args.data_reader_params
             ),
+            data_origin=args.training_data,
         )
         if self._dataset_fn is None:
             if hasattr(
