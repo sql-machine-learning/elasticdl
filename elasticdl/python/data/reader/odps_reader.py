@@ -1,4 +1,5 @@
 import tensorflow as tf
+from odps import ODPS
 
 from elasticdl.python.common.constants import Mode
 from elasticdl.python.data.odps_io import ODPSReader
@@ -14,6 +15,23 @@ class ODPSDataReader(AbstractDataReader):
         AbstractDataReader.__init__(self, **kwargs)
         self._kwargs = kwargs
         self._metadata = Metadata(column_names=None)
+        self._reader = None
+        self._table = self._kwargs["table"]
+        self._columns = self._kwargs.get("columns")
+
+    def _init_metadata(self):
+        table_schema = self._get_table_schema()
+        if self._metadata.column_names is None:
+            self._metadata.column_names = (
+                table_schema.names
+                if self._columns is None else self._columns
+            )
+
+        if self._metadata.column_names:
+            self._metadata.column_dtypes = [
+                table_schema[column_name].type
+                for column_name in self._metadata.column_names
+            ]
 
     def parallel_record_records(
         self, task, num_processes, shard_size, transform_fn
@@ -51,31 +69,22 @@ class ODPSDataReader(AbstractDataReader):
         pd.stop()
 
     def read_records(self, task):
-        reader = self._get_reader(
-            table_name=self._get_odps_table_name(task.shard_name)
-        )
-        if self._metadata.column_names is None:
-            columns = self._kwargs.get("columns")
-            self._metadata.column_names = (
-                reader._odps_table.schema.names if columns is None else columns
+        if self._reader is None:
+            self._init_reader(
+                table_name=self._get_odps_table_name(task.shard_name)
             )
 
-        if self._metadata.column_names:
-            self._metadata.column_dtypes = [
-                reader._odps_table.schema[column_name].type
-                for column_name in self._metadata.column_names
-            ]
-
-        for record in reader.record_generator_with_retry(
+        for record in self._reader.record_generator_with_retry(
             start=task.start, end=task.end, columns=self._metadata.column_names
         ):
             yield record
 
     def create_shards(self):
         check_required_kwargs(["table", "records_per_task"], self._kwargs)
-        reader = self._get_reader(self._kwargs["table"])
+        if self._reader is None:
+            self._init_reader(self._kwargs["table"])
         shard_name_prefix = self._kwargs["table"] + ":shard_"
-        table_size = reader.get_table_size()
+        table_size = self._reader.get_table_size()
         records_per_task = self._kwargs["records_per_task"]
         shards = {}
         num_shards = table_size // records_per_task
@@ -102,11 +111,14 @@ class ODPSDataReader(AbstractDataReader):
     def metadata(self):
         return self._metadata
 
-    def _get_reader(self, table_name):
+    def set_reader(self, reader):
+        self._reader = reader
+
+    def _init_reader(self, table_name):
         check_required_kwargs(
             ["project", "access_id", "access_key"], self._kwargs
         )
-        return ODPSReader(
+        self._reader = ODPSReader(
             project=self._kwargs["project"],
             access_id=self._kwargs["access_id"],
             access_key=self._kwargs["access_key"],
@@ -115,6 +127,16 @@ class ODPSDataReader(AbstractDataReader):
             partition=self._kwargs.get("partition", None),
             num_processes=self._kwargs.get("num_processes", 1),
         )
+
+    def _get_table_schema(self):
+        odps_client = ODPS(
+            access_id=self._kwargs["project"],
+            secret_access_key=self._kwargs["access_id"],
+            project=self._kwargs.get("partition", None),
+            endpoint=self._kwargs.get("endpoint")
+        )
+        odps_table = odps_client.get_table(self._kwargs["table"])
+        return odps_table.schema
 
     @staticmethod
     def _get_odps_table_name(shard_name):
