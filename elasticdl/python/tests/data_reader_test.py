@@ -168,7 +168,9 @@ class ODPSDataReaderTest(unittest.TestCase):
                 "label_col": "class",
             }
         )
-        self.assertEqual(reader._kwargs["columns"], ["a", "b"])
+        self.assertEqual(
+            reader._kwargs["columns"], ["sepal_length", "sepal_width"]
+        )
         self.assertEqual(reader._kwargs["label_col"], "class")
         self.assertEqual(reader._kwargs["records_per_task"], 10)
         reader = create_data_reader(
