@@ -23,8 +23,7 @@ class ODPSDataReader(AbstractDataReader):
         table_schema = self._get_table_schema()
         if self._metadata.column_names is None:
             self._metadata.column_names = (
-                table_schema.names
-                if self._columns is None else self._columns
+                table_schema.names if self._columns is None else self._columns
             )
 
         if self._metadata.column_names:
@@ -133,7 +132,7 @@ class ODPSDataReader(AbstractDataReader):
             access_id=self._kwargs["project"],
             secret_access_key=self._kwargs["access_id"],
             project=self._kwargs.get("partition", None),
-            endpoint=self._kwargs.get("endpoint")
+            endpoint=self._kwargs.get("endpoint"),
         )
         odps_table = odps_client.get_table(self._kwargs["table"])
         return odps_table.schema
