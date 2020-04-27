@@ -169,8 +169,7 @@ class ODPSDataReaderTest(unittest.TestCase):
         self.assertEqual(reader._kwargs["label_col"], "class")
         self.assertEqual(reader._kwargs["records_per_task"], 10)
         reader = create_data_reader(
-            data_origin=self.test_table,
-            records_per_task=10
+            data_origin=self.test_table, records_per_task=10
         )
         self.assertEqual(reader._kwargs["records_per_task"], 10)
         self.assertTrue("columns" not in reader._kwargs)
