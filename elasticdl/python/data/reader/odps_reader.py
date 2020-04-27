@@ -18,6 +18,7 @@ class ODPSDataReader(AbstractDataReader):
         self._reader = None
         self._table = self._kwargs["table"]
         self._columns = self._kwargs.get("columns")
+        self._init_metadata()
 
     def _init_metadata(self):
         table_schema = self._get_table_schema()
