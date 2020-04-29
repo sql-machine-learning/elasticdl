@@ -18,7 +18,7 @@ class ODPSDataReader(AbstractDataReader):
         self._table = self._kwargs["table"]
         self._columns = self._kwargs.get("columns")
         self._init_metadata()
-        # Initilize an ODPS IO reader for each table
+        # Initialize an ODPS IO reader for each table with task type
         self._table_readers = dict()
 
     def _init_metadata(self):
@@ -71,10 +71,9 @@ class ODPSDataReader(AbstractDataReader):
 
     def read_records(self, task):
         task_table_name = self._get_odps_table_name(task.shard_name)
-        if task_table_name not in self._table_readers:
-            self._init_reader(table_name=task_table_name)
+        self._init_reader(task_table_name, task.type)
 
-        reader = self._table_readers[task_table_name]
+        reader = self._table_readers[task_table_name][task.type]
         for record in reader.record_generator_with_retry(
             start=task.start, end=task.end, columns=self._metadata.column_names
         ):
@@ -82,8 +81,7 @@ class ODPSDataReader(AbstractDataReader):
 
     def create_shards(self):
         check_required_kwargs(["table", "records_per_task"], self._kwargs)
-        self._init_reader(self._kwargs["table"])
-        reader = self._table_readers[self._kwargs["table"]]
+        reader = self.get_odps_reader(self._kwargs["table"])
         shard_name_prefix = self._kwargs["table"] + ":shard_"
         table_size = reader.get_table_size()
         records_per_task = self._kwargs["records_per_task"]
@@ -112,11 +110,26 @@ class ODPSDataReader(AbstractDataReader):
     def metadata(self):
         return self._metadata
 
-    def _init_reader(self, table_name):
+    def _init_reader(self, table_name, task_type):
+        if (
+            table_name in self._table_readers
+            and task_type in self._table_readers[table_name]
+        ):
+            return
+
+        self._table_readers.setdefault(table_name, {})
+
         check_required_kwargs(
             ["project", "access_id", "access_key"], self._kwargs
         )
-        reader = ODPSReader(
+        reader = self.get_odps_reader(table_name)
+
+        # There may be weird errors if tasks with the same table
+        # and different type use the same reader.
+        self._table_readers[table_name][task_type] = reader
+
+    def get_odps_reader(self, table_name):
+        return ODPSReader(
             project=self._kwargs["project"],
             access_id=self._kwargs["access_id"],
             access_key=self._kwargs["access_key"],
@@ -125,7 +138,6 @@ class ODPSDataReader(AbstractDataReader):
             partition=self._kwargs.get("partition", None),
             num_processes=self._kwargs.get("num_processes", 1),
         )
-        self._table_readers[table_name] = reader
 
     def _get_table_schema(self):
         odps_client = ODPS(
