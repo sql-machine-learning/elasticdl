@@ -205,6 +205,8 @@ class TaskDataService(object):
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True
                     logger.info("No tasks for now, maybe more later")
+                    # There are too many requests to get task from the master
+                    # if the worker does not sleep.
                     time.sleep(5)
                 else:
                     logger.info("No more task, stopping")
