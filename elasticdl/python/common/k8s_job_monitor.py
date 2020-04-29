@@ -1,5 +1,5 @@
 import time
-
+import traceback
 from elasticdl.python.common.constants import PodStatus
 from elasticdl.python.common.k8s_client import Client
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -43,24 +43,28 @@ class PodMonitor:
         pod_succeeded = False
 
         while True:
-            pod = self.client.get_pod(self.pod_name)
-            if pod is None:
-                retry_num += 1
-                if retry_num > MAX_READ_POD_RETRIES:
-                    logger.error("{} Not Found".format(self.pod_name))
-                    break
-                time.sleep(10)
-                continue
+            try:
+                pod = self.client.get_pod(self.pod_name)
+                if pod is None:
+                    retry_num += 1
+                    if retry_num > MAX_READ_POD_RETRIES:
+                        logger.error("{} Not Found".format(self.pod_name))
+                        break
+                    time.sleep(10)
+                    continue
 
-            logger.info("Pod Status : %s" % pod.status.phase)
-            if pod.status.phase == PodStatus.SUCCEEDED:
-                pod_succeeded = True
-                break
-            elif pod.status.phase == PodStatus.FAILED:
-                logger.info(self.client.get_pod_log(self.pod_name))
-                break
-            else:
-                time.sleep(30)
+                logger.info("Pod Status : %s" % pod.status.phase)
+                if pod.status.phase == PodStatus.SUCCEEDED:
+                    pod_succeeded = True
+                    break
+                elif pod.status.phase == PodStatus.FAILED:
+                    logger.info(self.client.get_pod_log(self.pod_name))
+                    break
+                else:
+                    time.sleep(30)
+            except Exception:
+                traceback.print_exc()
+                time.sleep(60)
         return pod_succeeded
 
     def delete_pod(self):
@@ -145,38 +149,40 @@ class EdlJobMonitor:
         job_succeed = False
         master_old_log = ""
         while True:
-            master_pod = self.client.get_master_pod()
-            if master_pod is None:
-                retry_num += 1
-                if retry_num > MAX_READ_POD_RETRIES:
-                    logger.error(
-                        "{} Not Found".format(
-                            self.client.get_master_pod_name()
+            try:
+                master_pod = self.client.get_master_pod()
+                if master_pod is None:
+                    retry_num += 1
+                    if retry_num > MAX_READ_POD_RETRIES:
+                        logger.error(
+                            "{} Not Found".format(
+                                self.client.get_master_pod_name()
+                            )
                         )
-                    )
-                    break
-                time.sleep(10)
-                continue
+                        break
+                    time.sleep(10)
+                    continue
 
-            logger.info("Master status: {}".format(master_pod.status.phase))
-            if master_pod.status.phase == PodStatus.SUCCEEDED:
-                job_succeed = True
-                break
-            elif master_pod.status.phase == PodStatus.PENDING:
-                time.sleep(10)
-            elif master_pod.status.phase == PodStatus.FAILED:
-                log = self.client.get_master_log()
-                print_tail_log(log, tail_num=100)
-                logger.error("Job {} Failed".format(self.job_name))
-                break
-            else:
-                master_new_log = self.client.get_master_log()
-                self.show_evaluation_and_task_log(
-                    master_new_log, master_old_log
-                )
-                master_old_log = master_new_log
-                self.check_worker_status()
-                self.check_ps_status()
+                logger.info("Master status: {}".format(master_pod.status.phase))
+                if master_pod.status.phase == PodStatus.SUCCEEDED:
+                    job_succeed = True
+                    break
+                elif master_pod.status.phase == PodStatus.PENDING:
+                    time.sleep(10)
+                elif master_pod.status.phase == PodStatus.FAILED:
+                    log = self.client.get_master_log()
+                    print_tail_log(log, tail_num=100)
+                    logger.error("Job {} Failed".format(self.job_name))
+                    break
+                else:
+                    master_new_log = self.client.get_master_log()
+                    self.show_evaluation_and_task_log(
+                        master_new_log, master_old_log
+                    )
+                    master_old_log = master_new_log
+                    time.sleep(60)
+            except Exception:
+                traceback.print_exc()
                 time.sleep(60)
         return job_succeed
 
