@@ -205,6 +205,7 @@ class TaskDataService(object):
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True
                     logger.info("No tasks for now, maybe more later")
+                    time.sleep(5)
                 else:
                     logger.info("No more task, stopping")
                 break
