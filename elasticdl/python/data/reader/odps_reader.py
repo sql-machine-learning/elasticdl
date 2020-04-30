@@ -176,6 +176,7 @@ class ODPSDataReader(AbstractDataReader):
 class ParallelODPSDataReader(ODPSDataReader):
     """Use multi-process to download records from a MaxCompute table
     """
+
     def __init__(self, parse_fn, **kwargs):
         ODPSDataReader.__init__(self, **kwargs)
         self.py_parse_data = parse_fn
