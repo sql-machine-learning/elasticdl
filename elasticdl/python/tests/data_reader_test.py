@@ -10,6 +10,7 @@ import odps
 import tensorflow as tf
 from odps import ODPS
 
+from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import MaxComputeConfig
 from elasticdl.python.common.model_utils import load_module
 from elasticdl.python.data.odps_io import is_odps_configured
@@ -26,7 +27,7 @@ from elasticdl.python.tests.test_utils import (
     create_recordio_file,
 )
 
-_MockedTask = namedtuple("Task", ["start", "end", "shard_name"])
+_MockedTask = namedtuple("Task", ["start", "end", "shard_name", "type"])
 
 
 class RecordIODataReaderTest(unittest.TestCase):
@@ -44,7 +45,11 @@ class RecordIODataReaderTest(unittest.TestCase):
 
             # Test records reading
             records = list(
-                reader.read_records(_MockedTask(0, num_records, shard_name))
+                reader.read_records(
+                    _MockedTask(
+                        0, num_records, shard_name, elasticdl_pb2.TRAINING
+                    )
+                )
             )
             self.assertEqual(len(records), num_records)
             for record in records:
@@ -74,7 +79,9 @@ class CSVDataReaderTest(unittest.TestCase):
                 size=num_records, columns=columns, temp_dir=temp_dir_name
             )
             csv_data_reader = CSVDataReader(columns=columns, sep=",")
-            task = _MockedTask(0, num_records, iris_file_name)
+            task = _MockedTask(
+                0, num_records, iris_file_name, elasticdl_pb2.TRAINING
+            )
 
             def _gen():
                 for record in csv_data_reader.read_records(task):
@@ -138,7 +145,9 @@ class ODPSDataReaderTest(unittest.TestCase):
     def test_odps_data_reader_records_reading(self):
         records = list(
             self.reader.read_records(
-                _MockedTask(0, 2, self.test_table + ":shard_0")
+                _MockedTask(
+                    0, 2, self.test_table + ":shard_0", elasticdl_pb2.TRAINING
+                )
             )
         )
         records = np.array(records, dtype="float").tolist()
@@ -200,7 +209,12 @@ class ODPSDataReaderTest(unittest.TestCase):
 
         def _gen():
             for data in self.reader.read_records(
-                _MockedTask(0, num_records, self.test_table + ":shard_0")
+                _MockedTask(
+                    0,
+                    num_records,
+                    self.test_table + ":shard_0",
+                    elasticdl_pb2.TRAINING,
+                )
             ):
                 if data is not None:
                     yield data
