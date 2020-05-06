@@ -9,7 +9,7 @@ from kubernetes.client import V1EnvVar, V1EnvVarSource, V1ObjectFieldSelector
 
 from elasticdl.python.common.k8s_resource import parse as parse_resource
 from elasticdl.python.common.k8s_volume import parse_volume_and_mount
-from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.log_utils import stdout_logger as logger
 from elasticdl.python.common.model_utils import load_module
 
 ELASTICDL_APP_NAME = "elasticdl"
@@ -295,7 +295,7 @@ class Client(object):
         pod = self._create_master_pod_obj(**kargs)
         pod_dict = self.client.api_client.sanitize_for_serialization(pod)
         with open(kargs["yaml"], "w") as f:
-            yaml.safe_dump(pod_dict, f)
+            yaml.safe_dump(pod_dict, f, default_flow_style=False)
 
     def _create_master_pod_obj(self, **kargs):
         env = []

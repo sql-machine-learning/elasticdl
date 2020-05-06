@@ -18,7 +18,10 @@ from elasticdl.python.common.constants import (
     JobType,
 )
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
-from elasticdl.python.common.log_utils import get_logger
+from elasticdl.python.common.log_utils import (
+    get_logger,
+    LOG_FILE
+)
 from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
     get_module_file_path,
@@ -76,7 +79,9 @@ def _make_task_dispatcher(
 
 class Master(object):
     def __init__(self, args):
-        self.logger = get_logger("master", level=args.log_level.upper())
+        self.logger = get_logger(
+            "master", level=args.log_level.upper(), filename=LOG_FILE
+        )
 
         self.num_ps_pods = args.num_ps_pods
         self.checkpoint_output_path = args.checkpoint_dir

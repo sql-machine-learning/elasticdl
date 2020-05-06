@@ -6,7 +6,7 @@ from elasticdl.python.common.args import (
     parse_envs,
 )
 from elasticdl.python.common.constants import DistributionStrategy
-from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.log_utils import stdout_logger as logger
 from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
     remove_images,

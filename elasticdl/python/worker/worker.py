@@ -21,7 +21,10 @@ from elasticdl.python.common.hash_utils import (
     scatter_embedding_vector,
     string_to_id,
 )
-from elasticdl.python.common.log_utils import get_logger
+from elasticdl.python.common.log_utils import (
+    get_logger,
+    LOG_FILE,
+)
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
     find_layer,
@@ -79,7 +82,9 @@ class Worker(object):
                 training strategy is used.
         """
         self._args = args
-        self.logger = get_logger("Worker", level=args.log_level.upper())
+        self.logger = get_logger(
+            "Worker", level=args.log_level.upper(), filename=LOG_FILE
+        )
 
         if set_parallelism:
             # Explicitly setting the parallelism will avoid multi-process hangs
