@@ -179,12 +179,13 @@ def _submit_job(image_name, client_args, container_args):
         force_use_kube_config_file=client_args.force_use_kube_config_file,
     )
 
+    container_args = wrap_python_args_with_string(container_args)
+
+    master_client_command = "python -m elasticdl.python.master.main"
+    container_args.insert(0, master_client_command)
     if client_args.log_file_path:
         container_args.append(">> {} 2>&1".format(client_args.log_file_path))
 
-    master_client_command = "python -m elasticdl.python.master.main"
-    container_args = wrap_python_args_with_string(container_args)
-    container_args.insert(0, master_client_command)
     python_command = " ".join(container_args)
     container_args = ["-c", python_command]
 
