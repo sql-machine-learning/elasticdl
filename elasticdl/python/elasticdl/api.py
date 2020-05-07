@@ -40,7 +40,7 @@ def train(args):
     )
 
     container_args = [
-        "-m",
+        "python -m",
         "elasticdl.python.master.main",
         "--worker_image",
         image_name,
@@ -57,6 +57,7 @@ def train(args):
                 "cluster_spec",
                 "worker_image",
                 "force_use_kube_config_file",
+                "func",
             ],
         )
     )
@@ -85,7 +86,7 @@ def evaluate(args):
         )
     )
     container_args = [
-        "-m",
+        "python -m",
         "elasticdl.python.master.main",
         "--worker_image",
         image_name,
@@ -102,6 +103,7 @@ def evaluate(args):
                 "cluster_spec",
                 "worker_image",
                 "force_use_kube_config_file",
+                "func",
             ],
         )
     )
@@ -129,7 +131,7 @@ def predict(args):
         )
     )
     container_args = [
-        "-m",
+        "python -m",
         "elasticdl.python.master.main",
         "--worker_image",
         image_name,
@@ -181,6 +183,12 @@ def _submit_job(image_name, client_args, container_args):
         cluster_spec=client_args.cluster_spec,
         force_use_kube_config_file=client_args.force_use_kube_config_file,
     )
+
+    if client_args.log_file_path:
+        container_args.append(">> {} 2>&1".format(client_args.log_file_path))
+
+    python_command = " ".join(container_args)
+    container_args = ["-c", python_command]
 
     if client_args.yaml:
         client.dump_master_yaml(

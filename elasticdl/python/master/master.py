@@ -363,13 +363,13 @@ class Master(object):
 
     def _create_instance_manager(self, args):
         instance_manager = None
+
+        pod_command = ["/bin/bash"]
         if args.num_workers:
             assert args.worker_image, "Worker image cannot be empty"
 
-            worker_command = ["python"]
             worker_args = [
-                "-m",
-                "elasticdl.python.worker.main",
+                "python -m elasticdl.python.worker.main",
                 "--master_addr",
                 self.master_addr,
                 "--job_type",
@@ -380,8 +380,8 @@ class Master(object):
             if args.use_go_ps:
                 opt_type, opt_args = get_optimizer_info(self.optimizer)
                 # TODO: rename the Go PS executable using a meaningful filename
-                ps_command = ["main"]
                 ps_args = [
+                    "main",
                     "-job_name=" + args.job_name,
                     "-namespace=" + args.namespace,
                     "-master_addr=" + self.master_addr,
@@ -404,10 +404,8 @@ class Master(object):
                     "-opt_args=" + opt_args,
                 ]
             else:
-                ps_command = ["python"]
                 ps_args = [
-                    "-m",
-                    "elasticdl.python.ps.main",
+                    "python -m elasticdl.python.ps.main",
                     "--grads_to_wait",
                     str(args.grads_to_wait),
                     "--lr_staleness_modulation",
@@ -450,6 +448,15 @@ class Master(object):
                     str(args.num_minibatches_per_task),
                 ]
 
+            if args.log_file_path:
+                worker_args.append(">> {} 2>&1".format(args.log_file_path))
+                ps_args.append(">> {} 2>&1".format(args.log_file_path))
+
+            worker_args = self._process_empty_string(worker_args)
+            worker_args = ["-c", " ".join(worker_args)]
+            ps_args = self._process_empty_string(ps_args)
+            ps_args = ["-c", " ".join(ps_args)]
+
             env_dict = parse_envs(args.envs)
             env = []
             for key in env_dict:
@@ -462,7 +469,7 @@ class Master(object):
                 self.task_d,
                 job_name=args.job_name,
                 image_name=args.worker_image,
-                worker_command=worker_command,
+                worker_command=pod_command,
                 worker_args=worker_args,
                 namespace=args.namespace,
                 num_workers=args.num_workers,
@@ -470,7 +477,7 @@ class Master(object):
                 worker_resource_limit=args.worker_resource_limit,
                 worker_pod_priority=args.worker_pod_priority,
                 num_ps=args.num_ps_pods,
-                ps_command=ps_command,
+                ps_command=pod_command,
                 ps_args=ps_args,
                 ps_resource_request=args.ps_resource_request,
                 ps_resource_limit=args.ps_resource_limit,
@@ -510,3 +517,12 @@ class Master(object):
                         self.instance_manager._remove_worker(worker_id)
                         break
             time.sleep(30)
+
+    def _process_empty_string(self, args):
+        result = []
+        for value in args:
+            if value.strip():
+                result.append(value)
+            else:
+                result.append("'{}'".format(value))
+        return result

@@ -289,6 +289,12 @@ def add_common_params(parser):
         'by semi-colon used to debug , e.g. "param1=1; param2=2" '
         "Supported auxiliary parameters: disable_relaunch",
     )
+    parser.add_argument(
+        "--log_file_path",
+        type=str,
+        default="",
+        help="The path to save logs",
+    )
 
 
 def add_train_params(parser):
@@ -721,6 +727,7 @@ def build_arguments_from_parsed_result(args, filter_args=None):
         such as ["--foo", "3", "--bar", False]
     """
     items = vars(args).items()
+    items = filter(lambda item: item[1] != "", items)
     if filter_args:
         items = filter(lambda item: item[0] not in filter_args, items)
 
