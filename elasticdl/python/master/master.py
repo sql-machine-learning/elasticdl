@@ -453,7 +453,7 @@ class Master(object):
                     "--num_minibatches_per_task",
                     str(args.num_minibatches_per_task),
                 ]
-                ps_args = self._wrap_python_args_with_string(ps_args)
+                ps_args = wrap_python_args_with_string(ps_args)
                 ps_args.insert(0, ps_client_command)
 
             if args.log_file_path:
