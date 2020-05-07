@@ -10,6 +10,8 @@ from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
+    wrap_go_args_with_string,
+    wrap_python_args_with_string,
 )
 from elasticdl.python.common.constants import (
     GRPC,
@@ -368,20 +370,22 @@ class Master(object):
         if args.num_workers:
             assert args.worker_image, "Worker image cannot be empty"
 
+            worker_client_command = "python -m elasticdl.python.worker.main"
             worker_args = [
-                "python -m elasticdl.python.worker.main",
                 "--master_addr",
                 self.master_addr,
                 "--job_type",
                 self.job_type,
             ]
             worker_args.extend(build_arguments_from_parsed_result(args))
+            worker_args = wrap_python_args_with_string(worker_args)
+            worker_args.insert(0, worker_client_command)
 
             if args.use_go_ps:
                 opt_type, opt_args = get_optimizer_info(self.optimizer)
                 # TODO: rename the Go PS executable using a meaningful filename
+                ps_client_command = "main"
                 ps_args = [
-                    "main",
                     "-job_name=" + args.job_name,
                     "-namespace=" + args.namespace,
                     "-master_addr=" + self.master_addr,
@@ -403,9 +407,11 @@ class Master(object):
                     "-opt_type=" + opt_type,
                     "-opt_args=" + opt_args,
                 ]
+                ps_args = wrap_go_args_with_string(ps_args)
+                ps_args.insert(0, ps_client_command)
             else:
+                ps_client_command = "python -m elasticdl.python.ps.main"
                 ps_args = [
-                    "python -m elasticdl.python.ps.main",
                     "--grads_to_wait",
                     str(args.grads_to_wait),
                     "--lr_staleness_modulation",
@@ -447,14 +453,14 @@ class Master(object):
                     "--num_minibatches_per_task",
                     str(args.num_minibatches_per_task),
                 ]
+                ps_args = self._wrap_python_args_with_string(ps_args)
+                ps_args.insert(0, ps_client_command)
 
             if args.log_file_path:
                 worker_args.append(">> {} 2>&1".format(args.log_file_path))
                 ps_args.append(">> {} 2>&1".format(args.log_file_path))
 
-            worker_args = self._process_empty_string(worker_args)
             worker_args = ["-c", " ".join(worker_args)]
-            ps_args = self._process_empty_string(ps_args)
             ps_args = ["-c", " ".join(ps_args)]
 
             env_dict = parse_envs(args.envs)
@@ -517,12 +523,3 @@ class Master(object):
                         self.instance_manager._remove_worker(worker_id)
                         break
             time.sleep(30)
-
-    def _process_empty_string(self, args):
-        result = []
-        for value in args:
-            if value.strip():
-                result.append(value)
-            else:
-                result.append("'{}'".format(value))
-        return result

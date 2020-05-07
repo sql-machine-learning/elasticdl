@@ -4,6 +4,7 @@ from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
+    wrap_python_args_with_string,
 )
 from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -40,8 +41,6 @@ def train(args):
     )
 
     container_args = [
-        "python -m",
-        "elasticdl.python.master.main",
         "--worker_image",
         image_name,
         "--model_zoo",
@@ -86,8 +85,6 @@ def evaluate(args):
         )
     )
     container_args = [
-        "python -m",
-        "elasticdl.python.master.main",
         "--worker_image",
         image_name,
         "--model_zoo",
@@ -131,8 +128,6 @@ def predict(args):
         )
     )
     container_args = [
-        "python -m",
-        "elasticdl.python.master.main",
         "--worker_image",
         image_name,
         "--model_zoo",
@@ -187,6 +182,9 @@ def _submit_job(image_name, client_args, container_args):
     if client_args.log_file_path:
         container_args.append(">> {} 2>&1".format(client_args.log_file_path))
 
+    master_client_command = "python -m elasticdl.python.master.main"
+    container_args = wrap_python_args_with_string(container_args)
+    container_args.insert(0, master_client_command)
     python_command = " ".join(container_args)
     container_args = ["-c", python_command]
 
