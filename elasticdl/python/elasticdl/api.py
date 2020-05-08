@@ -6,8 +6,10 @@ from elasticdl.python.common.args import (
     parse_envs,
     wrap_python_args_with_string,
 )
-from elasticdl.python.common.constants import BashCommandTemplate
-from elasticdl.python.common.constants import DistributionStrategy
+from elasticdl.python.common.constants import (
+    BashCommandTemplate,
+    DistributionStrategy,
+)
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
