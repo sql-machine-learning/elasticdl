@@ -21,8 +21,8 @@ class InstanceManagerTest(unittest.TestCase):
             job_name="test-create-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="gcr.io/google-samples/hello-app:1.0",
-            worker_command=["echo"],
-            worker_args=[],
+            worker_command=["/bin/bash"],
+            worker_args=['-c', 'echo'],
             namespace="default",
             num_workers=3,
         )
@@ -61,8 +61,8 @@ class InstanceManagerTest(unittest.TestCase):
             job_name="test-failed-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="gcr.io/google-samples/hello-app:1.0",
-            worker_command=["badcommand"],
-            worker_args=["badargs"],
+            worker_command=["/bin/bash"],
+            worker_args=["-c", "badcommand"],
             namespace="default",
             num_workers=3,
             restart_policy="Never",
@@ -97,8 +97,8 @@ class InstanceManagerTest(unittest.TestCase):
             job_name="test-relaunch-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="gcr.io/google-samples/hello-app:1.0",
-            worker_command=["sleep 10"],
-            worker_args=[],
+            worker_command=["/bin/bash"],
+            worker_args=["-c", "sleep 10"],
             namespace="default",
             num_workers=num_workers,
         )
@@ -149,8 +149,8 @@ class InstanceManagerTest(unittest.TestCase):
             job_name="test-relaunch-ps-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="gcr.io/google-samples/hello-app:1.0",
-            ps_command=["sleep 10"],
-            ps_args=[],
+            ps_command=["/bin/bash"],
+            ps_args=["-c", "sleep 10"],
             namespace="default",
             num_ps=num_ps,
         )

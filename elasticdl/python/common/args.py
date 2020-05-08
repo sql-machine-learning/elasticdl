@@ -290,7 +290,10 @@ def add_common_params(parser):
         "Supported auxiliary parameters: disable_relaunch",
     )
     parser.add_argument(
-        "--log_file_path", type=str, default="", help="The path to save logs",
+        "--log_file_path",
+        type=str,
+        default="",
+        help="The path to save logs (e.g. stdout, stderr)",
     )
 
 

@@ -15,6 +15,7 @@ from elasticdl.python.common.args import (
 )
 from elasticdl.python.common.constants import (
     GRPC,
+    BashCommandTemplate,
     DistributionStrategy,
     InstanceManagerStatus,
     JobType,
@@ -366,7 +367,7 @@ class Master(object):
     def _create_instance_manager(self, args):
         instance_manager = None
 
-        pod_command = ["/bin/bash"]
+        container_command = ["/bin/bash"]
         if args.num_workers:
             assert args.worker_image, "Worker image cannot be empty"
 
@@ -457,8 +458,12 @@ class Master(object):
                 ps_args.insert(0, ps_client_command)
 
             if args.log_file_path:
-                worker_args.append(">> {} 2>&1".format(args.log_file_path))
-                ps_args.append(">> {} 2>&1".format(args.log_file_path))
+                worker_args.append(
+                    BashCommandTemplate.REDIRECTION.format(args.log_file_path)
+                )
+                ps_args.append(
+                    BashCommandTemplate.REDIRECTION.format(args.log_file_path)
+                )
 
             worker_args = ["-c", " ".join(worker_args)]
             ps_args = ["-c", " ".join(ps_args)]
@@ -475,7 +480,7 @@ class Master(object):
                 self.task_d,
                 job_name=args.job_name,
                 image_name=args.worker_image,
-                worker_command=pod_command,
+                worker_command=container_command,
                 worker_args=worker_args,
                 namespace=args.namespace,
                 num_workers=args.num_workers,
@@ -483,7 +488,7 @@ class Master(object):
                 worker_resource_limit=args.worker_resource_limit,
                 worker_pod_priority=args.worker_pod_priority,
                 num_ps=args.num_ps_pods,
-                ps_command=pod_command,
+                ps_command=container_command,
                 ps_args=ps_args,
                 ps_resource_request=args.ps_resource_request,
                 ps_resource_limit=args.ps_resource_limit,
