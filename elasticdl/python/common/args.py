@@ -357,6 +357,13 @@ def add_train_params(parser):
         "and PS that synchronous SGD can accepts.",
         default=0,
     )
+    parser.add_argument(
+        "--log_loss_steps",
+        type=int,
+        help="The frequency, in number of global steps, that the global step "
+        "and the loss will be logged during training.",
+        default=100,
+    )
     add_bool_param(
         parser=parser,
         name="--use_async",

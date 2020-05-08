@@ -130,6 +130,7 @@ class Worker(object):
         self._worker_id = args.worker_id
         self._job_type = args.job_type
         self._minibatch_size = args.minibatch_size
+        self._log_loss_steps = args.log_loss_steps
         (
             model_inst,
             self._dataset_fn,
@@ -876,8 +877,12 @@ class Worker(object):
                 *accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )
-                if accepted:
-                    self.logger.info("Loss is {}".format(loss.numpy()))
+                if accepted and min_model_version % self._log_loss_steps == 0:
+                    self.logger.info(
+                        "Loss = {}, steps = {}:".format(
+                            loss.numpy(), min_model_version
+                        )
+                    )
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
                 if self._model_version != min_model_version:
