@@ -6,7 +6,10 @@ from elasticdl.python.common.args import (
     parse_envs,
     wrap_python_args_with_string,
 )
-from elasticdl.python.common.constants import DistributionStrategy
+from elasticdl.python.common.constants import (
+    BashCommandTemplate,
+    DistributionStrategy,
+)
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.elasticdl.image_builder import (
     build_and_push_docker_image,
@@ -184,7 +187,9 @@ def _submit_job(image_name, client_args, container_args):
     master_client_command = "python -m elasticdl.python.master.main"
     container_args.insert(0, master_client_command)
     if client_args.log_file_path:
-        container_args.append(">> {} 2>&1".format(client_args.log_file_path))
+        container_args.append(
+            BashCommandTemplate.REDIRECTION.format(client_args.log_file_path)
+        )
 
     python_command = " ".join(container_args)
     container_args = ["-c", python_command]

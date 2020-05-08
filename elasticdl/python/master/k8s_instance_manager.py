@@ -4,6 +4,7 @@ import threading
 from collections import Counter
 
 from elasticdl.python.common import k8s_client as k8s
+from elasticdl.python.common.constants import BashCommandTemplate
 from elasticdl.python.common.log_utils import default_logger as logger
 
 _SERVICE_ADDR_SEP = ","
@@ -56,6 +57,7 @@ class InstanceManager(object):
         envs=None,
         expose_ports=False,
         disable_relaunch=False,
+        log_file_path=None,
         **kwargs
     ):
         self._num_workers = num_workers
@@ -81,6 +83,7 @@ class InstanceManager(object):
         self._envs = envs
         self._task_d = task_d
         self._next_worker_id = itertools.count().__next__
+        self._log_file_path = log_file_path
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
@@ -130,6 +133,10 @@ class InstanceManager(object):
         bash_command = self._worker_args[1]
         bash_command += " --worker_id {}".format(worker_id)
         bash_command += " --ps_addrs {}".format(self._ps_addrs)
+        if self._log_file_path:
+            bash_command += BashCommandTemplate.REDIRECTION.format(
+                self._log_file_path
+            )
         worker_args = [self._worker_args[0], bash_command]
         with self._lock:
             pod = self._k8s_client.create_worker(
@@ -156,6 +163,10 @@ class InstanceManager(object):
         logger.info("Starting PS: %d" % ps_id)
         bash_command = self._ps_args[1]
         bash_command += " --ps_id {}".format(ps_id)
+        if self._log_file_path:
+            bash_command += BashCommandTemplate.REDIRECTION.format(
+                self._log_file_path
+            )
         ps_args = [self._ps_args[0], bash_command]
         with self._lock:
             pod = self._k8s_client.create_ps(

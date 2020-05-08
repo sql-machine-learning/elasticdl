@@ -15,7 +15,6 @@ from elasticdl.python.common.args import (
 )
 from elasticdl.python.common.constants import (
     GRPC,
-    BashCommandTemplate,
     DistributionStrategy,
     InstanceManagerStatus,
     JobType,
@@ -457,14 +456,6 @@ class Master(object):
                 ps_args = wrap_python_args_with_string(ps_args)
                 ps_args.insert(0, ps_client_command)
 
-            if args.log_file_path:
-                worker_args.append(
-                    BashCommandTemplate.REDIRECTION.format(args.log_file_path)
-                )
-                ps_args.append(
-                    BashCommandTemplate.REDIRECTION.format(args.log_file_path)
-                )
-
             worker_args = ["-c", " ".join(worker_args)]
             ps_args = ["-c", " ".join(ps_args)]
 
@@ -501,6 +492,7 @@ class Master(object):
                 expose_ports=self.distribution_strategy
                 == DistributionStrategy.ALLREDUCE,
                 disable_relaunch=disable_relaunch,
+                log_file_path=args.log_file_path,
             )
 
         return instance_manager
