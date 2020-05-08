@@ -877,12 +877,14 @@ class Worker(object):
                 *accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )
-                if accepted and min_model_version % self._log_loss_steps == 0:
+                if min_model_version % self._log_loss_steps == 0:
                     self.logger.info(
                         "Loss = {}, steps = {}:".format(
                             loss.numpy(), min_model_version
                         )
                     )
+
+                if accepted:
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
                 if self._model_version != min_model_version:
