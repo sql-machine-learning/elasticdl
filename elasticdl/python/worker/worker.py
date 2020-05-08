@@ -121,6 +121,7 @@ class Worker(object):
         self._max_allreduce_retry_num = max_allreduce_retry_num
         self._init_from_args(args)
         self._timing = Timing(args.log_level.upper() == "DEBUG", self.logger)
+        self._log_loss_count = 0
 
     def _init_from_args(self, args):
         """
@@ -877,13 +878,16 @@ class Worker(object):
                 *accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )
-                if min_model_version % self._log_loss_steps == 0:
+                if (
+                    self._model_version
+                    >= self._log_loss_count * self._log_loss_steps
+                ):
                     self.logger.info(
                         "Loss = {}, steps = {}".format(
-                            loss.numpy(), min_model_version
+                            loss.numpy(), self._model_version
                         )
                     )
-
+                    self._log_loss_count += 1
                 if accepted:
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
