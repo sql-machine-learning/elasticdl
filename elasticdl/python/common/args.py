@@ -289,6 +289,12 @@ def add_common_params(parser):
         'by semi-colon used to debug , e.g. "param1=1; param2=2" '
         "Supported auxiliary parameters: disable_relaunch",
     )
+    parser.add_argument(
+        "--log_file_path",
+        type=str,
+        default="",
+        help="The path to save logs (e.g. stdout, stderr)",
+    )
 
 
 def add_train_params(parser):
@@ -741,3 +747,38 @@ def build_arguments_from_parsed_result(args, filter_args=None):
         "--" + k if i % 2 == 0 else k for i, k in enumerate(arguments)
     ]
     return arguments
+
+
+def wrap_python_args_with_string(args):
+    """Wrap argument values with string
+    Args:
+        args: list like ["--foo", "3", "--bar", False]
+
+    Returns:
+        list of string: like ["--foo", "'3'", "--bar", "'False'"]
+    """
+    result = []
+    for value in args:
+        if "--" not in value:
+            result.append("'{}'".format(value))
+        else:
+            result.append(value)
+    return result
+
+
+def wrap_go_args_with_string(args):
+    """Wrap argument values with string
+    Args:
+        args: list like ["--foo=3", "--bar=False"]
+
+    Returns:
+        list of string: like ["--foo='3'", "--bar='False'"]
+    """
+    result = []
+    for value in args:
+        equal_mark_index = value.index("=")
+        arg_value_index = equal_mark_index + 1
+        result.append(
+            value[0:equal_mark_index] + "='{}'".format(value[arg_value_index:])
+        )
+    return result
