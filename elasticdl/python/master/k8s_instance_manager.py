@@ -127,6 +127,10 @@ class InstanceManager(object):
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
+        bash_command = self._worker_args[1]
+        bash_command += " --worker_id {}".format(worker_id)
+        bash_command += " --ps_addrs {}".format(self._ps_addrs)
+        worker_args = [self._worker_args[0], bash_command]
         with self._lock:
             pod = self._k8s_client.create_worker(
                 worker_id=worker_id,
@@ -137,9 +141,7 @@ class InstanceManager(object):
                 volume=self._volume,
                 image_pull_policy=self._image_pull_policy,
                 command=self._worker_command,
-                args=self._worker_args
-                + ["--worker_id", str(worker_id)]
-                + ["--ps_addrs", self._ps_addrs],
+                args=worker_args,
                 restart_policy=self._restart_policy,
                 ps_addrs=self._ps_addrs,
                 envs=copy.deepcopy(self._envs),
@@ -152,6 +154,9 @@ class InstanceManager(object):
 
     def _start_ps(self, ps_id):
         logger.info("Starting PS: %d" % ps_id)
+        bash_command = self._ps_args[1]
+        bash_command += " --ps_id {}".format(ps_id)
+        ps_args = [self._ps_args[0], bash_command]
         with self._lock:
             pod = self._k8s_client.create_ps(
                 ps_id=ps_id,
@@ -161,7 +166,7 @@ class InstanceManager(object):
                 volume=self._volume,
                 image_pull_policy=self._image_pull_policy,
                 command=self._ps_command,
-                args=self._ps_args + ["--ps_id", str(ps_id)],
+                args=ps_args,
                 restart_policy=self._restart_policy,
                 envs=copy.deepcopy(self._envs),
                 expose_ports=False,
