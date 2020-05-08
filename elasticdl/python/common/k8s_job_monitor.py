@@ -1,5 +1,6 @@
 import time
 import traceback
+
 from elasticdl.python.common.constants import PodStatus
 from elasticdl.python.common.k8s_client import Client
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -163,7 +164,9 @@ class EdlJobMonitor:
                     time.sleep(10)
                     continue
 
-                logger.info("Master status: {}".format(master_pod.status.phase))
+                logger.info(
+                    "Master status: {}".format(master_pod.status.phase)
+                )
                 if master_pod.status.phase == PodStatus.SUCCEEDED:
                     job_succeed = True
                     break
