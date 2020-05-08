@@ -879,7 +879,7 @@ class Worker(object):
                 )
                 if min_model_version % self._log_loss_steps == 0:
                     self.logger.info(
-                        "Loss = {}, steps = {}:".format(
+                        "Loss = {}, steps = {}".format(
                             loss.numpy(), min_model_version
                         )
                     )
