@@ -74,4 +74,4 @@ class ReaderType(object):
 
 
 class BashCommandTemplate(object):
-    REDIRECTION = ">> {} 2>&1"
+    REDIRECTION = " 2>&1 | tee {}"
