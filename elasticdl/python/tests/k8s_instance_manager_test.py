@@ -22,7 +22,7 @@ class InstanceManagerTest(unittest.TestCase):
             % (int(time.time()), random.randint(1, 101)),
             image_name="gcr.io/google-samples/hello-app:1.0",
             worker_command=["/bin/bash"],
-            worker_args=['-c', 'echo'],
+            worker_args=["-c", "echo"],
             namespace="default",
             num_workers=3,
         )
