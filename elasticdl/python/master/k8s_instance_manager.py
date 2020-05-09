@@ -4,10 +4,7 @@ import threading
 from collections import Counter
 
 from elasticdl.python.common import k8s_client as k8s
-from elasticdl.python.common.constants import (
-    BashCommandTemplate,
-    PodStatus
-)
+from elasticdl.python.common.constants import BashCommandTemplate, PodStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 
 _SERVICE_ADDR_SEP = ","
