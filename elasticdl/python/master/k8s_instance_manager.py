@@ -4,7 +4,10 @@ import threading
 from collections import Counter
 
 from elasticdl.python.common import k8s_client as k8s
-from elasticdl.python.common.constants import BashCommandTemplate
+from elasticdl.python.common.constants import (
+    BashCommandTemplate,
+    PodStatus
+)
 from elasticdl.python.common.log_utils import default_logger as logger
 
 _SERVICE_ADDR_SEP = ","
@@ -107,6 +110,7 @@ class InstanceManager(object):
         self._relaunch_deleted_live_ps = True
 
         self._failed_pods = []
+        self.all_workers_failed = False
 
         if disable_relaunch:
             self._k8s_client = k8s.Client(**kwargs)
@@ -290,11 +294,12 @@ class InstanceManager(object):
         with self._lock:
             if pod_name in self._failed_pods:
                 return
+
             # When a pod fails with exit_code == 137, it may be deleted,
             # preempted, or OOMkilled. Master will try to relaunch it.
             # For OOMkilled, the relaunch is a workaround for memory leak
             # issues in tf eager mode.
-            failed_pod = False
+            relaunch_failed_pod = False
             if (
                 evt_type == "MODIFIED"
                 and phase == "Failed"
@@ -306,7 +311,7 @@ class InstanceManager(object):
                 == 137
             ):
                 self._failed_pods.append(pod_name)
-                failed_pod = True
+                relaunch_failed_pod = True
                 logger.info(
                     "Pod %s is killed with reason %s."
                     % (
@@ -316,10 +321,11 @@ class InstanceManager(object):
                         ].state.terminated.reason,
                     )
                 )
+
             if pod_name in self._worker_pod_name_to_id:
                 worker_id = self._worker_pod_name_to_id.get(pod_name)
                 self._worker_pods_phase[worker_id] = (pod_name, phase)
-                if evt_type == "DELETED" or failed_pod:
+                if evt_type == "DELETED" or relaunch_failed_pod:
                     del self._worker_pods_phase[worker_id]
                     del self._worker_pod_name_to_id[pod_name]
                     self._task_d.recover_tasks(worker_id)
@@ -329,11 +335,16 @@ class InstanceManager(object):
                         self._relaunch_deleted_live_worker
                         and phase != "Succeeded"
                     )
+                else:
+                    workers_failed = []
+                    for pod_name, phase in self._worker_pods_phase.values():
+                        workers_failed.append(phase == PodStatus.FAILED)
+                    self.all_workers_failed = all(workers_failed)
 
             elif pod_name in self._ps_pod_name_to_id:
                 ps_id = self._ps_pod_name_to_id.get(pod_name)
                 self._ps_pods_phase[ps_id] = (pod_name, phase)
-                if evt_type == "DELETED" or failed_pod:
+                if evt_type == "DELETED" or relaunch_failed_pod:
                     del self._ps_pods_phase[ps_id]
                     del self._ps_pod_name_to_id[pod_name]
                     relaunch_ps = self._relaunch_deleted_live_ps
