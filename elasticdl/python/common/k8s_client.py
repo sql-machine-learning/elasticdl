@@ -117,8 +117,8 @@ class Client(object):
                 )
                 for event in stream:
                     self._event_cb(event)
-            except Exception:
-                traceback.print_exc()
+            except Exception as e:
+                logger.debug(e)
             # In case of any flaky issue causing exceptions, we wait for little
             # time and retry.
             time.sleep(5)
