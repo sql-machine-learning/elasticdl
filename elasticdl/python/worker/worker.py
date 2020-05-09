@@ -887,7 +887,9 @@ class Worker(object):
                             loss.numpy(), self._model_version
                         )
                     )
-                    self._log_loss_count += 1
+                    self._log_loss_count = (
+                        int(self._model_version / self._log_loss_steps) + 1
+                    )
                 if accepted:
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
