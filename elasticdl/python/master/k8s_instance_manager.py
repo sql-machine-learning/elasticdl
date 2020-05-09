@@ -279,9 +279,6 @@ class InstanceManager(object):
 
         pod_name = evt_obj.metadata.name
         phase = evt_obj.status.phase
-        logger.info(
-            "Got event %s, phase %s for pod: %s" % (evt_type, phase, pod_name)
-        )
         if pod_name == self._k8s_client.get_master_pod_name():
             # No need to care about master pod
             return
