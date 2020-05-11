@@ -1,5 +1,6 @@
 import time
 
+from kubernetes import client
 from elasticdl.python.common.constants import PodStatus
 from elasticdl.python.common.k8s_client import Client
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -64,7 +65,7 @@ class PodMonitor:
                     break
                 else:
                     time.sleep(30)
-            except Exception:
+            except client.api_client.ApiException:
                 time.sleep(60)
         return pod_succeeded
 
@@ -185,7 +186,7 @@ class EdlJobMonitor:
                     )
                     master_old_log = master_new_log
                     time.sleep(60)
-            except Exception:
+            except client.api_client.ApiException:
                 time.sleep(60)
         return job_succeed
 
