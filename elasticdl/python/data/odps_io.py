@@ -15,12 +15,12 @@ from elasticdl.python.common.constants import MaxComputeConfig
 from elasticdl.python.common.log_utils import default_logger as logger
 
 
-def _nested_list_size(l):
+def _nested_list_size(nested_list):
     """
     Obtains the memory size for the nested list.
     """
-    total = sys.getsizeof(l)
-    for i in l:
+    total = sys.getsizeof(nested_list)
+    for i in nested_list:
         if isinstance(i, list):
             total += _nested_list_size(i)
         else:
@@ -379,9 +379,23 @@ class ODPSReader(object):
             ):
                 yield [str(record[column]) for column in columns]
 
-    def get_table_size(self):
-        with self._odps_table.open_reader(partition=self._partition) as reader:
-            return reader.count
+    def get_table_size(self, max_retries=3):
+        retry_count = 0
+        while retry_count < max_retries:
+            try:
+                with self._odps_table.open_reader(
+                    partition=self._partition
+                ) as reader:
+                    return reader.count
+            except Exception as e:
+                if retry_count >= max_retries:
+                    raise Exception("Exceeded maximum number of retries")
+                logger.warning(
+                    "ODPS read exception {} to get table size."
+                    "Retrying time: {}".format(e, retry_count)
+                )
+                time.sleep(5)
+                retry_count += 1
 
     def _estimate_cache_batch_count(self, columns, table_size, batch_size):
         """

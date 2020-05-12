@@ -4,6 +4,7 @@ import threading
 from collections import Counter
 
 from elasticdl.python.common import k8s_client as k8s
+from elasticdl.python.common.constants import BashCommandTemplate, PodStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 
 _SERVICE_ADDR_SEP = ","
@@ -56,6 +57,7 @@ class InstanceManager(object):
         envs=None,
         expose_ports=False,
         disable_relaunch=False,
+        log_file_path=None,
         **kwargs
     ):
         self._num_workers = num_workers
@@ -81,6 +83,7 @@ class InstanceManager(object):
         self._envs = envs
         self._task_d = task_d
         self._next_worker_id = itertools.count().__next__
+        self._log_file_path = log_file_path
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
@@ -104,6 +107,7 @@ class InstanceManager(object):
         self._relaunch_deleted_live_ps = True
 
         self._failed_pods = []
+        self.all_workers_failed = False
 
         if disable_relaunch:
             self._k8s_client = k8s.Client(**kwargs)
@@ -127,6 +131,14 @@ class InstanceManager(object):
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
+        bash_command = self._worker_args[1]
+        bash_command += " --worker_id {}".format(worker_id)
+        bash_command += " --ps_addrs {}".format(self._ps_addrs)
+        if self._log_file_path:
+            bash_command += BashCommandTemplate.REDIRECTION.format(
+                self._log_file_path
+            )
+        worker_args = [self._worker_args[0], bash_command]
         with self._lock:
             pod = self._k8s_client.create_worker(
                 worker_id=worker_id,
@@ -137,9 +149,7 @@ class InstanceManager(object):
                 volume=self._volume,
                 image_pull_policy=self._image_pull_policy,
                 command=self._worker_command,
-                args=self._worker_args
-                + ["--worker_id", str(worker_id)]
-                + ["--ps_addrs", self._ps_addrs],
+                args=worker_args,
                 restart_policy=self._restart_policy,
                 ps_addrs=self._ps_addrs,
                 envs=copy.deepcopy(self._envs),
@@ -152,6 +162,13 @@ class InstanceManager(object):
 
     def _start_ps(self, ps_id):
         logger.info("Starting PS: %d" % ps_id)
+        bash_command = self._ps_args[1]
+        bash_command += " --ps_id {}".format(ps_id)
+        if self._log_file_path:
+            bash_command += BashCommandTemplate.REDIRECTION.format(
+                self._log_file_path
+            )
+        ps_args = [self._ps_args[0], bash_command]
         with self._lock:
             pod = self._k8s_client.create_ps(
                 ps_id=ps_id,
@@ -161,7 +178,7 @@ class InstanceManager(object):
                 volume=self._volume,
                 image_pull_policy=self._image_pull_policy,
                 command=self._ps_command,
-                args=self._ps_args + ["--ps_id", str(ps_id)],
+                args=ps_args,
                 restart_policy=self._restart_policy,
                 envs=copy.deepcopy(self._envs),
                 expose_ports=False,
@@ -263,9 +280,6 @@ class InstanceManager(object):
 
         pod_name = evt_obj.metadata.name
         phase = evt_obj.status.phase
-        logger.info(
-            "Got event %s, phase %s for pod: %s" % (evt_type, phase, pod_name)
-        )
         if pod_name == self._k8s_client.get_master_pod_name():
             # No need to care about master pod
             return
@@ -277,11 +291,12 @@ class InstanceManager(object):
         with self._lock:
             if pod_name in self._failed_pods:
                 return
+
             # When a pod fails with exit_code == 137, it may be deleted,
             # preempted, or OOMkilled. Master will try to relaunch it.
             # For OOMkilled, the relaunch is a workaround for memory leak
             # issues in tf eager mode.
-            failed_pod = False
+            relaunch_failed_pod = False
             if (
                 evt_type == "MODIFIED"
                 and phase == "Failed"
@@ -293,7 +308,7 @@ class InstanceManager(object):
                 == 137
             ):
                 self._failed_pods.append(pod_name)
-                failed_pod = True
+                relaunch_failed_pod = True
                 logger.info(
                     "Pod %s is killed with reason %s."
                     % (
@@ -303,10 +318,11 @@ class InstanceManager(object):
                         ].state.terminated.reason,
                     )
                 )
+
             if pod_name in self._worker_pod_name_to_id:
                 worker_id = self._worker_pod_name_to_id.get(pod_name)
                 self._worker_pods_phase[worker_id] = (pod_name, phase)
-                if evt_type == "DELETED" or failed_pod:
+                if evt_type == "DELETED" or relaunch_failed_pod:
                     del self._worker_pods_phase[worker_id]
                     del self._worker_pod_name_to_id[pod_name]
                     self._task_d.recover_tasks(worker_id)
@@ -316,11 +332,16 @@ class InstanceManager(object):
                         self._relaunch_deleted_live_worker
                         and phase != "Succeeded"
                     )
+                else:
+                    workers_failed = []
+                    for pod_name, phase in self._worker_pods_phase.values():
+                        workers_failed.append(phase == PodStatus.FAILED)
+                    self.all_workers_failed = all(workers_failed)
 
             elif pod_name in self._ps_pod_name_to_id:
                 ps_id = self._ps_pod_name_to_id.get(pod_name)
                 self._ps_pods_phase[ps_id] = (pod_name, phase)
-                if evt_type == "DELETED" or failed_pod:
+                if evt_type == "DELETED" or relaunch_failed_pod:
                     del self._ps_pods_phase[ps_id]
                     del self._ps_pod_name_to_id[pod_name]
                     relaunch_ps = self._relaunch_deleted_live_ps
