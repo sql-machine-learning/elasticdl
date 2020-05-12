@@ -1,13 +1,13 @@
 # Preprocess Inputs using ElasticDL Preprocessing Layers
 
-The tutorials in this document aim to help users use ElasticDL preprocessing layers to transform model inputs.
+This document is a tutorial for ElasticDL preprocessing layers.
 
 ## Preprocessing Layers
-Generally, we cannot feed the raw data into the NN layer. So, ElasticDL provides the preprocessing layers to transform the raw data into numeric tensors. 
+Generally, we cannot feed the raw data into the Neural Network (NN) layers because it requires input with numeric tensors. So, ElasticDL provides preprocessing layers to transform the raw data into numeric tensors. 
 The preprocessing layers allow users to include data preprocessing directly in their Keras model. Now, the preprocessing layers mainly aim to transform
-structured data (numeric data or string data) stored as a CSV file or a MaxCompute table and so on.  
+structured data (numeric data or string data) stored as a CSV file or a MaxCompute table.  
 
-### Transform numeric inputs
+### Transform Numeric Inputs
 For numeric inputs, ElasticDL provides `Normalizer` to scale the numeric data to a range, `Discretization` and other layers to map the numeric data to integer values.
 
 #### Normalizer Layer
@@ -22,7 +22,7 @@ result = layer(input_data)
 ```
 If we want to implement standardization, we can set subtractor and divisor to the mean and standard deviation.
 
-#### Discretization layer
+#### Discretization Layer
 The `Discretization` layer is to bucketize numeric data into discrete ranges according to boundaries and return integer values. For example, if the numeric
 data is `[19, 42, 55]` and the boundaries are `[30, 45]`, the outputs are `[0, 1, 2]`.
 
@@ -34,7 +34,7 @@ result = layer(age_values)
 ```
 The outputs are `[[2, 3, 1, 4], [0, 2, 4, 3]]`
 
-#### LogRound layer
+#### LogRound Layer
 The `LogRound` layer is a special case of `Discretization` with fixed boundaries. It casts a numeric value into a discrete integer value by `round(log(x))`.
 The `base` of `LogRound` is the base of the `log` operator and the `num_bins` is the maximum output value. If the input value is bigger than `2^min_bins`, the output is also
 the `num_bins`. 
@@ -46,7 +46,7 @@ the `num_bins`.
 The outputs are `[[0], [1], [0], [2], [7]]`
 
 
-#### RoundIdentity layer
+#### RoundIdentity Layer
 The `RoundIdentity` layer is to cast a float value to a integer value using `round(x)`. Then we can feed the integer values into `tf.keras.layer.Embedding`. If the input is bigger than
 the `max_value`, the output will be the `max_value`.
  ```python
@@ -57,12 +57,12 @@ the `max_value`, the output will be the `max_value`.
 ```
 The outputs are `[[1], [2], [0], [3], [5]]`
 
-### Transform string inputs
+### Transform String Inputs
 
 For string inputs, we usually make embedding of the inputs to numeric tensors. Using TensorFlow, We cannot feed the string inputs into `tf.keras.layer.Embedding` and must convert
 those string inputs to integer values. So ElasticdDL provides `Hashing` and `IndexLookup` layers to map string inputs to integer values.
 
-#### Hashing layer
+#### Hashing Layer
 The `Hashing` layer is to distribute string values into a finite number of buckets by `hash(x) % num_bins`. 
 
 ```python
@@ -72,7 +72,7 @@ result = layer(input_data)
 ```
 The outputs are `[[1], [0], [1], [1], [2]]`
 
-#### IndexLookup layer
+#### IndexLookup Layer
 The `IndexLookup` layer is to maps strings to integer indices by looking up vocabulary.
 
 ```python
@@ -82,11 +82,11 @@ result = layer(inputs)
 ```
 The outputs are `[[0], [1], [2], [3], [3]]`
 
-## Embedding for preprocessing results
+## Embedding for Preprocessing Results
 
 After preprocessing layers, we usually lookup embedding using the integer results to a float vector and feed the vector into NN layers.
 
-### Embedding for features group 
+### Embedding for Features Group 
 Sometimes, we may divide input features input groups and use the same embedding layer for one group. Firstly, we may convert the inputs to zero-based integer values using the above
 preprocessing layers. Then, we can concatenate those outputs into a big tensor. For example, the data set is
 
@@ -133,7 +133,7 @@ embedding_sum = tf.keras.backend.sum(embedding_result, axis=1)
 ```
 
 
-### Embedding for features group with missing values
+### Embedding for Feature Group with Missing Values
 Generally, there are missing values in the data set and the missing value may be an empty string for string feature and -1 for the numeric feature. For example, there are
 missing values for "education" and "marital-status". 
 
