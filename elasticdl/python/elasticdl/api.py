@@ -184,7 +184,10 @@ def _submit_job(image_name, client_args, container_args):
 
     container_args = wrap_python_args_with_string(container_args)
 
-    master_client_command = "python -m elasticdl.python.master.main"
+    master_client_command = (
+        BashCommandTemplate.SET_PIPEFAIL
+        + " python -m elasticdl.python.master.main"
+    )
     container_args.insert(0, master_client_command)
     if client_args.log_file_path:
         container_args.append(

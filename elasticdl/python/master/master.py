@@ -15,6 +15,7 @@ from elasticdl.python.common.args import (
 )
 from elasticdl.python.common.constants import (
     GRPC,
+    BashCommandTemplate,
     DistributionStrategy,
     InstanceManagerStatus,
     JobType,
@@ -375,7 +376,10 @@ class Master(object):
         if args.num_workers:
             assert args.worker_image, "Worker image cannot be empty"
 
-            worker_client_command = "python -m elasticdl.python.worker.main"
+            worker_client_command = (
+                BashCommandTemplate.SET_PIPEFAIL
+                + " python -m elasticdl.python.worker.main"
+            )
             worker_args = [
                 "--master_addr",
                 self.master_addr,
@@ -415,7 +419,10 @@ class Master(object):
                 ps_args = wrap_go_args_with_string(ps_args)
                 ps_args.insert(0, ps_client_command)
             else:
-                ps_client_command = "python -m elasticdl.python.ps.main"
+                ps_client_command = (
+                    BashCommandTemplate.SET_PIPEFAIL
+                    + " python -m elasticdl.python.ps.main"
+                )
                 ps_args = [
                     "--grads_to_wait",
                     str(args.grads_to_wait),
