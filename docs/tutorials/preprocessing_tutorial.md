@@ -8,7 +8,7 @@ The preprocessing layers allow users to include data preprocessing directly in t
 structured data (numeric data or string data) stored as a CSV file or a MaxCompute table.  
 
 ### Transform Numeric Inputs
-For numeric inputs, ElasticDL provides `Normalizer` to scale the numeric data to a range, `Discretization` and other layers to map the numeric data to integer values.
+For numeric inputs, ElasticDL provides [Normalizer](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/normalizer.py) to scale the numeric data to a range, [Discretization](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/discretization.py), [LogRound](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/log_round.py) and [RoundIdentity](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/round_identity.py) to map the numeric data to integer values.
 
 #### Normalizer Layer
 The `Normalizer` layer is to normalize the numeric values by (x-subtractor)/divisor. For example, we can set the subtractor to the minimum and divisor to the range size to 
@@ -59,8 +59,7 @@ The outputs are `[[1], [2], [0], [3], [5]]`
 
 ### Transform String Inputs
 
-For string inputs, we usually make embedding of the inputs to numeric tensors. Using TensorFlow, We cannot feed the string inputs into `tf.keras.layer.Embedding` and must convert
-those string inputs to integer values. So ElasticdDL provides `Hashing` and `IndexLookup` layers to map string inputs to integer values.
+ElasticDL provides [Hashing](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/hashing.py) and [IndexLookup](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/index_lookup.py) layers to map strings to numeric values..
 
 #### Hashing Layer
 The `Hashing` layer is to distribute string values into a finite number of buckets by `hash(x) % num_bins`. 
@@ -84,7 +83,7 @@ The outputs are `[[0], [1], [2], [3], [3]]`
 
 ## Embedding for Preprocessing Results
 
-After preprocessing layers, we usually lookup embedding using the integer results to a float vector and feed the vector into NN layers.
+After preprocessing layers, we get numeric tensors. These numeric tensors can be used as inputs for NN layers. Here, we provide some examples of using preprocessing layers to provide inputs for embedding layers.
 
 ### Embedding for Features Group 
 Sometimes, we may divide input features input groups and use the same embedding layer for one group. Firstly, we may convert the inputs to zero-based integer values using the above
