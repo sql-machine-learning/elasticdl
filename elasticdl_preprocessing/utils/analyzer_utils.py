@@ -4,6 +4,8 @@ to perform unit tests.
 """
 import os
 
+from elasticdl_preprocessing.constants import AnalysisEnvTemplate
+
 
 def get_min(feature_name, default_value):
     """Get the min value of numeric feature from the environment.
@@ -17,7 +19,7 @@ def get_min(feature_name, default_value):
     Return:
         Float
     """
-    env_name = "_" + feature_name + "_min"
+    env_name = AnalysisEnvTemplate.MIN_ENV.format(feature_name)
     min_value = os.getenv(env_name, None)
     if min_value is None:
         return default_value
@@ -37,7 +39,7 @@ def get_max(feature_name, default_value):
     Return:
         Float
     """
-    env_name = "_" + feature_name + "_max"
+    env_name = AnalysisEnvTemplate.MAX_ENV.format(feature_name)
     max_value = os.getenv(env_name, None)
     if max_value is None:
         return default_value
@@ -57,7 +59,7 @@ def get_avg(feature_name, default_value):
     Return:
         Float
     """
-    env_name = "_" + feature_name + "_avg"
+    env_name = AnalysisEnvTemplate.AVG_ENV.format(feature_name)
     mean = os.getenv(env_name, None)
     if mean is None:
         return default_value
@@ -77,7 +79,7 @@ def get_stddev(feature_name, default_value):
     Return:
         Float.
     """
-    env_name = "_" + feature_name + "_stddev"
+    env_name = AnalysisEnvTemplate.STDDEV_ENV.format(feature_name)
     std_dev = os.getenv(env_name, None)
     if std_dev is None:
         return default_value
@@ -97,7 +99,7 @@ def get_bucket_boundaries(feature_name, default_value):
     Return:
         List with float values.
     """
-    env_name = "_" + feature_name + "_boundaries"
+    env_name = AnalysisEnvTemplate.BUCKET_BOUNDARIES_ENV.format(feature_name)
     boundaries = os.getenv(env_name, None)
     if boundaries is None:
         return default_value
@@ -118,7 +120,7 @@ def get_distinct_count(feature_name, default_value):
     Return:
         Integer.
     """
-    env_name = "_" + feature_name + "_distinct_count"
+    env_name = AnalysisEnvTemplate.DISTINCT_COUNT_ENV.format(feature_name)
     count = os.getenv(env_name, None)
     if count is None:
         return default_value
@@ -138,7 +140,7 @@ def get_vocabulary(feature_name, default_value):
     Return:
         List with strings.
     """
-    env_name = "_" + feature_name + "_vocab"
+    env_name = AnalysisEnvTemplate.VOCABULARY_ENV.format(feature_name)
     vocabulary_path = os.getenv(env_name, None)
     if vocabulary_path is None:
         return default_value
