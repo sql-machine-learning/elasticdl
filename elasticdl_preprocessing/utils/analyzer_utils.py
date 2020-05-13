@@ -4,6 +4,8 @@ to perform unit tests.
 """
 import os
 
+from elasticdl_preprocessing.constants import AnalysisEnvTemplate
+
 
 def get_min(feature_name, default_value):
     """Get the min value of numeric feature from the environment.
