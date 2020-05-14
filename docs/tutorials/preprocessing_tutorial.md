@@ -3,12 +3,16 @@
 This document is a tutorial for ElasticDL preprocessing layers.
 
 ## Preprocessing Layers
-Generally, we cannot feed the raw data into Neural Network (NN) layers because it requires the numeric tensor input. So, ElasticDL provides preprocessing layers to transform the raw data into numeric tensors. 
-ElasticDL Preprocessing layers allow users to include data preprocessing directly in their Keras model. Now, preprocessing layers mainly aim to transform
-structured data (numeric data or string data) stored as a CSV file or a MaxCompute table.  
+ElasticDL preprocessing layers is a library based TensorFlow for preprocessing input data for TensorFlow. ElasticDL Preprocessing layers allow users to include data preprocessing directly in their Keras model.
+For example, using ElasticDL preprocessing layers you could:
+
+* Normalize an input value by using the mean and standard deviation.
+* Convert strings to integers by lookuping a vocabulary or hashing.
+* Convert floats to integers by assigning them to buckets and rounding.
+
 
 ### Transform Numeric Inputs
-For numeric inputs, ElasticDL provides [Normalizer](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/normalizer.py) to scale the numeric data to a range, [Discretization](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/discretization.py), [LogRound](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/log_round.py) and [RoundIdentity](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/round_identity.py) to map the numeric data to integer values.
+For numeric inputs, ElasticDL provides [Normalizer](#normalizer-layer) to scale the numeric data to a range, [Discretization](#discretization-layer), [LogRound](#loground-layer) and [RoundIdentity](#roundidentity-layer) to map the numeric data to integer values.
 
 #### Normalizer Layer
 The `Normalizer` layer is to normalize numeric values by (x-subtractor)/divisor. For example, we can set the subtractor to the minimum and divisor to the range size to 
@@ -59,7 +63,7 @@ The output is `[[1], [2], [0], [3], [5]]`
 
 ### Transform String Inputs
 
-ElasticDL provides [Hashing](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/hashing.py) and [IndexLookup](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/index_lookup.py) layers to map strings to numeric values..
+ElasticDL provides [Hashing](#hashing-layer) and [IndexLookup](#indexlookup-layer) layers to map strings to numeric values..
 
 #### Hashing Layer
 The `Hashing` layer is to distribute the string value into a finite number of buckets by `hash(x) % num_bins`. 
