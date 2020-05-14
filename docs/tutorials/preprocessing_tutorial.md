@@ -3,15 +3,14 @@
 This document is a tutorial for ElasticDL preprocessing layers.
 
 ## ElasticDL Preprocessing Layers
-ElasticDL preprocessing layers is a library based TensorFlow for preprocessing input data for TensorFlow. ElasticDL Preprocessing layers allow users to include data preprocessing directly in their Keras model.
+ElasticDL preprocessing is a library for preprocessing input data using TensorFlow. ElasticDL preprocessing provides a number of Keras layers to preprocess data directly in Keras models.
 For example, using ElasticDL preprocessing layers you could:
 
 * Normalize an input value by using the mean and standard deviation.
-* Convert strings to integers by lookuping a vocabulary or hashing.
 * Convert floats to integers by assigning them to buckets and rounding.
+* Convert strings to integers by lookuping a vocabulary or hashing.
 
-
-### Transform Numeric Inputs
+### Normalize input values
 For numeric inputs, ElasticDL provides [Normalizer](#normalizer-layer) to scale the numeric data to a range, [Discretization](#discretization-layer), [LogRound](#loground-layer) and [RoundIdentity](#roundidentity-layer) to map the numeric data to integer values.
 
 #### Normalizer Layer
@@ -25,6 +24,8 @@ input_data = tf.constant([[3.0], [5.0], [7.0]])
 result = layer(input_data)
 ```
 If we want to implement standardization, we can set the subtractor and divisor to the mean and standard deviation.
+
+### Convert floats to integers
 
 #### Discretization Layer
 The `Discretization` layer is to bucketize numeric data into discrete ranges according to boundaries and return integer values. For example, if the numeric
@@ -61,7 +62,7 @@ the `max_value`, the output will be the `max_value`.
 ```
 The output is `[[1], [2], [0], [3], [5]]`
 
-### Transform String Inputs
+### Convert strings to integers
 
 ElasticDL provides [Hashing](#hashing-layer) and [IndexLookup](#indexlookup-layer) layers to map strings to numeric values..
 
