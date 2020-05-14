@@ -118,7 +118,7 @@ marital_status_result = [[0], [1], [1]]
 Then, we may want to lookup embedding to map those integer values to different embedding vectors for different features. What's more, we want to set "education" and "martial-status" into a group and lookup embedding with the "education" and "marital_status" results using the same embedding table. If we directly
 concatenate two results into a tensor `[[0, 0], [1, 1], [2, 1]]` and lookup an embedding table, embedding results are the same for the same integer values of those features. 
 It will make information loss. So, we need to cast integer results of different features into different ranges. 
-For example, we can add the vocabulary size of `education_lookup` to `martial_status_result` and concatenate them into a tensor to lookup embedding. In the example, the vocabulary size of `education_lookup is 3, 
+For example, we can add the vocabulary size of `education_lookup` to `martial_status_result` and concatenate them into a tensor to lookup embedding. In the example, the vocabulary size of `education_lookup` is 3, 
 the `martial_status_result` is `[[3], [4], [4]]` and the concatenated result is `[[0, 3], [1, 4], [2, 4]]`. So we can map the feature values to different embedding vectors using an embedding table.
 
 ElasticDL provides [ConcatenateWithOffset](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/concatenate_with_offset.py) layer to concatenate features in a group and cast integer values to different ranges. 
