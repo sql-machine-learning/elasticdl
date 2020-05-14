@@ -100,7 +100,6 @@ class IndexLookup(tf.keras.layers.Layer):
                 vocab.append(token)
         return vocab
 
-    @property
     def vocab_size(self):
         return self._table.size().numpy()
 

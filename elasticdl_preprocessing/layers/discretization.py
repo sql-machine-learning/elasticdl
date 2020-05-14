@@ -28,7 +28,6 @@ class Discretization(tf.keras.layers.Layer):
         self._supports_ragged_inputs = True
         self.bins = bins
 
-    @property
     def num_bins(self):
         return len(self.bins) + 1
 
