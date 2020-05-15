@@ -150,7 +150,7 @@ concat_result = ConcatenateWithOffset(offsets=offsets, axis=1)([education_result
 After concatenate features in a group into a tensor, we can feed the tensor into `tf.keras.layer.Embedding`. However, we need to set the `input_dim` for `Embedding` layer and the `input_dim`
 should be bigger than the max integer value in the tensor. We can get the maximum by the preprocessing layers like:
 
-```
+```python
 max_value = education_lookup.vocab_size() + marital_status_lookup.vocab_size()
 embedding_result = tf.keras.layer.Embedding(max_value, 1)(concat_result)
 embedding_sum = tf.keras.backend.sum(embedding_result, axis=1)
@@ -182,7 +182,8 @@ marital_status_sparse = to_sparse(marital_status)
 Then, we can use `IndexLookup` layer to convert the sparse tensors to sparse integer tensor and concatenate them into a tensor like the above example. However, `tf.keras.layers.Embedding`
 cannot support `tf.SparseTenor` and we need use `elasticdl_preprocessing.layer.Embedding` to lookup embedding with `tf.SparseTenor`.
 
-```from elasticdl_preprocessing.layers import Embedding
+```python
+from elasticdl_preprocessing.layers import Embedding
 
 education_lookup = IndexLookup(vocabulary=['Master', 'Doctor', 'Bachelor'])
 education_result = education_lookup(education_sparse)
