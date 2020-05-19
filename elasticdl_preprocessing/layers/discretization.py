@@ -28,6 +28,12 @@ class Discretization(tf.keras.layers.Layer):
         self._supports_ragged_inputs = True
         self.bins = bins
 
+    def num_bins(self):
+        """The bins is a list with boundaries, so the number of bins is
+        len(bins) + 1.
+        """
+        return len(self.bins) + 1
+
     def get_config(self):
         config = {
             "bins": self.bins,

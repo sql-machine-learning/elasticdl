@@ -145,8 +145,10 @@ ENV PYTHONPATH=/
         HEAD = """
 %s
 COPY %s/elasticdl /elasticdl
+COPY %s/elasticdl_preprocessing /elasticdl_preprocessing
 """ % (
             HEAD,
+            elasticdl,
             elasticdl,
         )
 

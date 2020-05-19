@@ -117,8 +117,8 @@ class Client(object):
                 )
                 for event in stream:
                     self._event_cb(event)
-            except Exception:
-                traceback.print_exc()
+            except Exception as e:
+                logger.debug(e)
             # In case of any flaky issue causing exceptions, we wait for little
             # time and retry.
             time.sleep(5)
@@ -295,7 +295,7 @@ class Client(object):
         pod = self._create_master_pod_obj(**kargs)
         pod_dict = self.client.api_client.sanitize_for_serialization(pod)
         with open(kargs["yaml"], "w") as f:
-            yaml.safe_dump(pod_dict, f)
+            yaml.safe_dump(pod_dict, f, default_flow_style=False)
 
     def _create_master_pod_obj(self, **kargs):
         env = []
@@ -308,7 +308,7 @@ class Client(object):
             pod_name=self.get_master_pod_name(),
             job_name=self.job_name,
             image_name=self._image_name,
-            command=["python"],
+            command=["/bin/bash"],
             resource_requests=kargs["resource_requests"],
             resource_limits=kargs["resource_limits"],
             container_args=kargs["args"],

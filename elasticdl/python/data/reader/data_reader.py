@@ -2,8 +2,9 @@ from abc import ABC, abstractmethod
 
 
 class Metadata(object):
-    def __init__(self, column_names):
+    def __init__(self, column_names, column_dtypes=None):
         self.column_names = column_names
+        self.column_dtypes = column_dtypes
 
 
 class AbstractDataReader(ABC):

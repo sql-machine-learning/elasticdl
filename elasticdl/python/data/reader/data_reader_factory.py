@@ -13,7 +13,8 @@ def create_data_reader(data_origin, records_per_task=None, **kwargs):
         data_origin: The origin of the data, e.g. location to files,
             table name in the database, etc.
         records_per_task: The number of records to create a task
-        kwargs: data reader params
+        kwargs: data reader params, the supported keys are
+            "columns", "partition", "reader_type"
     """
     reader_type = kwargs.get("reader_type", None)
     if reader_type is None:

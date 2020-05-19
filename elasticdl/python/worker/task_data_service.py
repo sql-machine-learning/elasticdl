@@ -12,7 +12,11 @@ from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 
 class TaskDataService(object):
     def __init__(
-        self, worker, training_with_evaluation, data_reader_params=None
+        self,
+        worker,
+        training_with_evaluation,
+        data_reader_params=None,
+        data_origin=None,
     ):
         self._worker = worker
         self._create_data_reader_fn = create_data_reader
@@ -24,10 +28,12 @@ class TaskDataService(object):
         self._pending_train_end_callback_task = None
         if data_reader_params:
             self.data_reader = self._create_data_reader_fn(
-                data_origin=None, **data_reader_params
+                data_origin=data_origin, **data_reader_params
             )
         else:
-            self.data_reader = self._create_data_reader_fn(data_origin=None)
+            self.data_reader = self._create_data_reader_fn(
+                data_origin=data_origin
+            )
         self._warm_up_task = None
         self._has_warmed_up = False
         self._failed_record_count = 0
@@ -199,6 +205,9 @@ class TaskDataService(object):
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True
                     logger.info("No tasks for now, maybe more later")
+                    # There are too many requests to get task from the master
+                    # if the worker does not sleep.
+                    time.sleep(5)
                 else:
                     logger.info("No more task, stopping")
                 break

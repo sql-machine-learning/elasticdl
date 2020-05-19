@@ -1,4 +1,5 @@
 import tensorflow as tf
+from odps import ODPS
 
 from elasticdl.python.common.constants import Mode
 from elasticdl.python.data.odps_io import ODPSReader
@@ -14,52 +15,30 @@ class ODPSDataReader(AbstractDataReader):
         AbstractDataReader.__init__(self, **kwargs)
         self._kwargs = kwargs
         self._metadata = Metadata(column_names=None)
+        self._table = self._kwargs["table"]
+        self._columns = self._kwargs.get("columns")
+        self._init_metadata()
+        # Initialize an ODPS IO reader for each table with task type
+        self._table_readers = dict()
 
-    def parallel_record_records(
-        self, task, num_processes, shard_size, transform_fn
-    ):
-        check_required_kwargs(
-            ["project", "access_id", "access_key"], self._kwargs
-        )
-        start = task.start
-        end = task.end
-        table = self._get_odps_table_name(task.shard_name)
-        table = table.split(".")[1]
-        project = self._kwargs["project"]
-        access_id = self._kwargs["access_id"]
-        access_key = self._kwargs["access_key"]
-        endpoint = self._kwargs.get("endpoint")
-        partition = self._kwargs.get("partition", None)
-        columns = self._kwargs.get("columns", None)
-        pd = ODPSReader(
-            access_id=access_id,
-            access_key=access_key,
-            project=project,
-            endpoint=endpoint,
-            table=table,
-            partition=partition,
-            num_processes=num_processes,
-            transform_fn=transform_fn,
-            columns=columns,
-        )
-        pd.reset((start, end - start), shard_size)
-        shard_count = pd.get_shards_count()
-        for i in range(shard_count):
-            records = pd.get_records()
-            for record in records:
-                yield record
-        pd.stop()
-
-    def read_records(self, task):
-        reader = self._get_reader(
-            table_name=self._get_odps_table_name(task.shard_name)
-        )
+    def _init_metadata(self):
+        table_schema = self._get_table_schema()
         if self._metadata.column_names is None:
-            columns = self._kwargs.get("columns")
             self._metadata.column_names = (
-                reader._odps_table.schema.names if columns is None else columns
+                table_schema.names if self._columns is None else self._columns
             )
 
+        if self._metadata.column_names:
+            self._metadata.column_dtypes = [
+                table_schema[column_name].type
+                for column_name in self._metadata.column_names
+            ]
+
+    def read_records(self, task):
+        task_table_name = self._get_odps_table_name(task.shard_name)
+        self._init_reader(task_table_name, task.type)
+
+        reader = self._table_readers[task_table_name][task.type]
         for record in reader.record_generator_with_retry(
             start=task.start, end=task.end, columns=self._metadata.column_names
         ):
@@ -67,7 +46,7 @@ class ODPSDataReader(AbstractDataReader):
 
     def create_shards(self):
         check_required_kwargs(["table", "records_per_task"], self._kwargs)
-        reader = self._get_reader(self._kwargs["table"])
+        reader = self.get_odps_reader(self._kwargs["table"])
         shard_name_prefix = self._kwargs["table"] + ":shard_"
         table_size = reader.get_table_size()
         records_per_task = self._kwargs["records_per_task"]
@@ -96,10 +75,25 @@ class ODPSDataReader(AbstractDataReader):
     def metadata(self):
         return self._metadata
 
-    def _get_reader(self, table_name):
+    def _init_reader(self, table_name, task_type):
+        if (
+            table_name in self._table_readers
+            and task_type in self._table_readers[table_name]
+        ):
+            return
+
+        self._table_readers.setdefault(table_name, {})
+
         check_required_kwargs(
             ["project", "access_id", "access_key"], self._kwargs
         )
+        reader = self.get_odps_reader(table_name)
+
+        # There may be weird errors if tasks with the same table
+        # and different type use the same reader.
+        self._table_readers[table_name][task_type] = reader
+
+    def get_odps_reader(self, table_name):
         return ODPSReader(
             project=self._kwargs["project"],
             access_id=self._kwargs["access_id"],
@@ -109,6 +103,16 @@ class ODPSDataReader(AbstractDataReader):
             partition=self._kwargs.get("partition", None),
             num_processes=self._kwargs.get("num_processes", 1),
         )
+
+    def _get_table_schema(self):
+        odps_client = ODPS(
+            access_id=self._kwargs["access_id"],
+            secret_access_key=self._kwargs["access_key"],
+            project=self._kwargs["project"],
+            endpoint=self._kwargs.get("endpoint"),
+        )
+        odps_table = odps_client.get_table(self._kwargs["table"])
+        return odps_table.schema
 
     @staticmethod
     def _get_odps_table_name(shard_name):
@@ -167,3 +171,62 @@ class ODPSDataReader(AbstractDataReader):
             return dataset
 
         return dataset_fn
+
+
+class ParallelODPSDataReader(ODPSDataReader):
+    """Use multi-process to download records from a MaxCompute table
+    """
+
+    def __init__(self, parse_fn, **kwargs):
+        ODPSDataReader.__init__(self, **kwargs)
+        self.py_parse_data = parse_fn
+
+    def parallel_record_records(
+        self, task, num_processes, shard_size, transform_fn
+    ):
+        check_required_kwargs(
+            ["project", "access_id", "access_key"], self._kwargs
+        )
+        start = task.start
+        end = task.end
+        table = self._get_odps_table_name(task.shard_name)
+        table = table.split(".")[1]
+        project = self._kwargs["project"]
+        access_id = self._kwargs["access_id"]
+        access_key = self._kwargs["access_key"]
+        endpoint = self._kwargs.get("endpoint")
+        partition = self._kwargs.get("partition", None)
+        columns = self._kwargs.get("columns", None)
+        pd = ODPSReader(
+            access_id=access_id,
+            access_key=access_key,
+            project=project,
+            endpoint=endpoint,
+            table=table,
+            partition=partition,
+            num_processes=num_processes,
+            transform_fn=transform_fn,
+            columns=columns,
+        )
+        pd.reset((start, end - start), shard_size)
+        shard_count = pd.get_shards_count()
+        for i in range(shard_count):
+            records = pd.get_records()
+            for record in records:
+                yield record
+        pd.stop()
+
+    def read_records(self, task):
+        shard_size = (task.end - task.start) // 4
+        record_gen = self.parallel_record_records(
+            task=task,
+            num_processes=4,
+            shard_size=shard_size,
+            transform_fn=self.py_parse_data,
+        )
+        for record in record_gen:
+            yield record
+
+    @property
+    def records_output_types(self):
+        return tf.string
