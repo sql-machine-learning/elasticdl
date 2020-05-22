@@ -5,7 +5,7 @@ with open("elasticdl/requirements.txt") as f:
 
 extras = {}
 with open("elasticdl/requirements-dev.txt") as f:
-    extras["0.2.0"] = f.read().splitlines()
+    extras["develop"] = f.read().splitlines()
 
 setup(
     name="elasticdl",
