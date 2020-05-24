@@ -66,9 +66,7 @@ class ConcatenateWithOffset(tf.keras.layers.Concatenate):
                 axis=self.axis, sp_inputs=ids_with_offset
             )
         else:
-            result = tf.keras.layers.concatenate(
-                ids_with_offset, axis=self.axis
-            )
+            result = tf.concat(ids_with_offset, axis=self.axis)
 
         return result
 
@@ -76,6 +74,6 @@ class ConcatenateWithOffset(tf.keras.layers.Concatenate):
         if isinstance(inputs[0], tf.SparseTensor):
             result = tf.sparse.concat(axis=self.axis, sp_inputs=inputs)
         else:
-            result = tf.keras.layers.concatenate(inputs, axis=self.axis)
+            result = tf.concat(inputs, axis=self.axis)
 
         return result
