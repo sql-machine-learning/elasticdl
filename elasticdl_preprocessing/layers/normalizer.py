@@ -29,6 +29,10 @@ class Normalizer(tf.keras.layers.Layer):
         self.subtractor = subtractor
         self.divisor = divisor
 
+    def build(self, input_shape):
+        if self.divisor == 0:
+            raise ValueError("The divisor cannot be 0")
+
     def get_config(self):
         config = {"subtractor": self.subtractor, "divisor": self.divisor}
         base_config = super(Normalizer, self).get_config()
