@@ -23,7 +23,7 @@ class NormalizerTest(unittest.TestCase):
         ragged_input = tf.ragged.constant([[5.0, 7.0], [9.0]])
         ragged_output = normalizer(ragged_input)
         expected_ragged_out = tf.ragged.constant(
-            [[2.0, 3.0], [4.0]], dtype=tf.float64
+            [[2.0, 3.0], [4.0]], dtype=tf.float32
         )
         self.assertTrue(
             ragged_tensor_equal(ragged_output, expected_ragged_out)
