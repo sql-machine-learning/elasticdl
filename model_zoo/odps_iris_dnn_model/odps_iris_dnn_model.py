@@ -34,7 +34,7 @@ def dataset_fn(dataset, mode, metadata):
         features = tf.strings.to_number(record[0:-1], tf.float32)
         label = tf.strings.to_number(
             record[-1],
-            metadata.get_tf_dtype_by_maxcompute(metadata.column_names[-1])
+            metadata.get_tf_dtype_by_maxcompute(metadata.column_names[-1]),
         )
         return features, label
 
