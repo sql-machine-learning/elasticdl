@@ -4,8 +4,20 @@ from elasticdl.python.common.dtypes import MAXCOMPUTE_DTYPE_TO_TF
 
 
 class Metadata(object):
+    """ Metadata of a dataset containing column name and dtype
+
+    Attributes:
+        column_names: A list with column names
+        column_dtypes: A dict where the key is a column name
+            and the value is a dtype
+    """
+
     def __init__(self, column_names, column_dtypes=None):
         self.column_names = column_names
+        self.column_dtypes = column_dtypes
+
+    def set_column_dtypes(self, column_dtypes):
+        """Set column dtypes for the metadata"""
         self.column_dtypes = column_dtypes
 
     def get_tf_dtype_by_maxcompute(self, column_name):
@@ -17,9 +29,11 @@ class Metadata(object):
         Returns:
             TensorFlow dtype
         """
-        maxcompute_dtype = self.column_dtypes[
-            self.column_names.index(column_name)
-        ]
+        if self.column_dtypes is None:
+            raise ValueError("The column dtypes has not been configured")
+
+        maxcompute_dtype = self.column_dtypes.get(column_name, None)
+
         if maxcompute_dtype not in MAXCOMPUTE_DTYPE_TO_TF:
             raise ValueError(
                 "Not support {} and only support {}".format(

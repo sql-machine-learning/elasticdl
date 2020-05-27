@@ -158,7 +158,7 @@ class ODPSDataReaderTest(unittest.TestCase):
             self.reader.metadata.column_names, IRIS_TABLE_COLUMN_NAMES
         )
         self.assertListEqual(
-            self.reader.metadata.column_dtypes,
+            list(self.reader.metadata.column_dtypes.values()),
             [
                 odps.types.double,
                 odps.types.double,
