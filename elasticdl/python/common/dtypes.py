@@ -1,4 +1,5 @@
 import numpy as np
+from odps import types
 from tensorflow.core.framework import types_pb2
 
 
@@ -37,4 +38,10 @@ _DT_NP_TO_TENSOR = {
     np.float32: types_pb2.DT_FLOAT,
     np.float64: types_pb2.DT_DOUBLE,
     np.bool: types_pb2.DT_BOOL,
+}
+
+MAXCOMPUTE_DTYPE_TO_TF = {
+    types.bigint: types_pb2.DT_INT64,
+    types.double: types_pb2.DT_DOUBLE,
+    types.string: types_pb2.DT_STRING,
 }

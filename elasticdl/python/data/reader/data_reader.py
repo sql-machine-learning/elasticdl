@@ -1,10 +1,32 @@
 from abc import ABC, abstractmethod
 
+from elasticdl.python.common.dtypes import MAXCOMPUTE_DTYPE_TO_TF
+
 
 class Metadata(object):
     def __init__(self, column_names, column_dtypes=None):
         self.column_names = column_names
         self.column_dtypes = column_dtypes
+
+    def get_tf_dtype_by_maxcompute(self, column_name):
+        """Get TensorFlow dtype according to the column name in
+
+        Args:
+            column_name: The column name in a MaxCompute table.
+
+        Returns:
+            TensorFlow dtype
+        """
+        maxcompute_dtype = self.column_dtypes[
+            self.column_names.index(column_name)
+        ]
+        if maxcompute_dtype not in MAXCOMPUTE_DTYPE_TO_TF:
+            raise ValueError(
+                "Not support {} and only support {}".format(
+                    maxcompute_dtype, list(MAXCOMPUTE_DTYPE_TO_TF.keys())
+                )
+            )
+        return MAXCOMPUTE_DTYPE_TO_TF[maxcompute_dtype]
 
 
 class AbstractDataReader(ABC):
