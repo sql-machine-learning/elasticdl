@@ -167,6 +167,18 @@ class ODPSDataReaderTest(unittest.TestCase):
                 odps.types.bigint,
             ],
         )
+        self.assertEqual(
+            self.reader.metadata.get_tf_dtype_by_maxcompute(
+                self.reader.metadata.column_names[0]
+            ),
+            tf.float64,
+        )
+        self.assertEqual(
+            self.reader.metadata.get_tf_dtype_by_maxcompute(
+                self.reader.metadata.column_names[-1]
+            ),
+            tf.int64,
+        )
 
     def test_create_data_reader(self):
         reader = create_data_reader(
