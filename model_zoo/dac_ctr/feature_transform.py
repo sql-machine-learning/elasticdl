@@ -1,6 +1,6 @@
 import tensorflow as tf
-
 from elasticdl_antfin.common.log_utils import default_logger as logger
+
 from elasticdl_preprocessing.layers import (
     ConcatenateWithOffset,
     Discretization,

@@ -1,5 +1,3 @@
-import tensorflow as tf
-
 STANDARDIZED_FEATURES = [
     "I1",
     "I2",

@@ -105,5 +105,5 @@ if __name__ == "__main__":
     for name in STANDARDIZED_FEATURES:
         test_data[name] = tf.constant([[10]])
     for name in HASH_FEATURES:
-        test_data[name] = tf.constant([['aa']])
+        test_data[name] = tf.constant([["aa"]])
     print(model.call(test_data))
