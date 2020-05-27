@@ -80,7 +80,9 @@ def dataset_fn(dataset, mode, _):
 
         return parsed_record, label
 
-    dataset = dataset.map(_parse_data)
+    dataset = dataset.prefetch(10000)
+    dataset = dataset.shuffle(10000)
+    dataset = dataset.map(_parse_data, num_parallel_calls=8)
 
     return dataset
 
