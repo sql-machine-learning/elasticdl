@@ -8,7 +8,7 @@ from model_zoo.dac_ctr.feature_config import (
     STANDARDIZED_FEATURES,
 )
 from model_zoo.dac_ctr.feature_transform import transform_feature
-from model_zoo.dac_ctr.wide_dee_model import wide_deep_model
+from model_zoo.dac_ctr.wide_deep_model import wide_deep_model
 
 
 def custom_model():
