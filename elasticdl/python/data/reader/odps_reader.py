@@ -32,7 +32,7 @@ class ODPSDataReader(AbstractDataReader):
             column_dtypes = {}
             for column_name in self._metadata.column_names:
                 column_dtypes[column_name] = table_schema[column_name].type
-            self.metadata.set_column_dtypes(column_dtypes)
+            self.metadata.column_dtypes = column_dtypes
 
     def read_records(self, task):
         task_table_name = self._get_odps_table_name(task.shard_name)

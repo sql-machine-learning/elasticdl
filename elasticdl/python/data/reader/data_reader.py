@@ -16,9 +16,13 @@ class Metadata(object):
         self.column_names = column_names
         self.column_dtypes = column_dtypes
 
-    def set_column_dtypes(self, column_dtypes):
-        """Set column dtypes for the metadata"""
-        self.column_dtypes = column_dtypes
+    @property
+    def column_dtypes(self):
+        return self.__column_dtypes
+
+    @column_dtypes.setter
+    def column_dtypes(self, column_dtypes):
+        self.__column_dtypes = column_dtypes
 
     def get_tf_dtype_by_maxcompute(self, column_name):
         """Get TensorFlow dtype according to the column name in
