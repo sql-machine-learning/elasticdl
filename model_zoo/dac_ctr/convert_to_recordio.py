@@ -156,9 +156,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_dir", help="The directory for the generated recordio files"
     )
-    parser.add_argument(
-        "--data_path", help="The path of the origin data file"
-    )
+    parser.add_argument("--data_path", help="The path of the origin data file")
 
     args = parser.parse_args(sys.argv[1:])
 
