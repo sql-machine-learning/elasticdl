@@ -1,6 +1,9 @@
 import tensorflow as tf
 
-from elasticdl.python.elasticdl.callbacks import LearningRateScheduler
+from elasticdl.python.elasticdl.callbacks import (
+    LearningRateScheduler,
+    MaxStepsStopping,
+)
 from model_zoo.dac_ctr.feature_config import (
     FEATURE_NAMES,
     HASH_FEATURES,
@@ -58,7 +61,10 @@ def callbacks():
         else:
             return 0.0001
 
-    return [LearningRateScheduler(_schedule)]
+    return [
+        LearningRateScheduler(_schedule),
+        MaxStepsStopping(max_steps=200000),
+    ]
 
 
 def dataset_fn(dataset, mode, _):
