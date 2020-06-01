@@ -1,7 +1,6 @@
 import tensorflow as tf
 
 from elasticdl.python.elasticdl.callbacks import (
-    LearningRateScheduler,
     MaxStepsStopping,
 )
 from model_zoo.dac_ctr.feature_config import (
@@ -11,7 +10,7 @@ from model_zoo.dac_ctr.feature_config import (
     STANDARDIZED_FEATURES,
 )
 from model_zoo.dac_ctr.feature_transform import transform_feature
-from model_zoo.dac_ctr.wide_deep_model import wide_deep_model
+from model_zoo.dac_ctr.xdeepfm_model import ctr_model
 
 
 def custom_model():
@@ -20,7 +19,7 @@ def custom_model():
     standardized_tensor, id_tensors, max_ids = transform_feature(
         input_layers, feature_groups=None
     )
-    model = wide_deep_model(
+    model = ctr_model(
         input_layers, standardized_tensor, id_tensors, max_ids,
     )
     return model
@@ -53,16 +52,7 @@ def eval_metrics_fn():
 
 
 def callbacks():
-    def _schedule(model_version):
-        if model_version < 5000:
-            return 0.0003
-        elif model_version < 12000:
-            return 0.0002
-        else:
-            return 0.0001
-
     return [
-        LearningRateScheduler(_schedule),
         MaxStepsStopping(max_steps=200000),
     ]
 
