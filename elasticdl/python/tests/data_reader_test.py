@@ -168,13 +168,13 @@ class ODPSDataReaderTest(unittest.TestCase):
             ],
         )
         self.assertEqual(
-            self.reader.metadata.get_tf_dtype_by_maxcompute(
+            self.reader.metadata.get_tf_dtype_from_maxcompute_column(
                 self.reader.metadata.column_names[0]
             ),
             tf.float64,
         )
         self.assertEqual(
-            self.reader.metadata.get_tf_dtype_by_maxcompute(
+            self.reader.metadata.get_tf_dtype_from_maxcompute_column(
                 self.reader.metadata.column_names[-1]
             ),
             tf.int64,

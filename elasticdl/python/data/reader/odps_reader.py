@@ -29,9 +29,10 @@ class ODPSDataReader(AbstractDataReader):
             )
 
         if self._metadata.column_names:
-            column_dtypes = {}
-            for column_name in self._metadata.column_names:
-                column_dtypes[column_name] = table_schema[column_name].type
+            column_dtypes = {
+                column_name: table_schema[column_name].type
+                for column_name in self._metadata.column_names
+            }
             self.metadata.column_dtypes = column_dtypes
 
     def read_records(self, task):

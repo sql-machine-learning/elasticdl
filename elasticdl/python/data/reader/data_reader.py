@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from elasticdl.python.common.dtypes import MAXCOMPUTE_DTYPE_TO_TF
+from elasticdl.python.common.dtypes import MAXCOMPUTE_DTYPE_TO_TF_DTYPE
 
 
 class Metadata(object):
@@ -9,7 +9,8 @@ class Metadata(object):
     Attributes:
         column_names: A list with column names
         column_dtypes: A dict where the key is a column name
-            and the value is a dtype
+            and the value is a dtype. The dtypes are MaxCompute dtypes for a
+            MaxCompute table or numpy dtypes for a CSV file.
     """
 
     def __init__(self, column_names, column_dtypes=None):
@@ -24,8 +25,9 @@ class Metadata(object):
     def column_dtypes(self, column_dtypes):
         self.__column_dtypes = column_dtypes
 
-    def get_tf_dtype_by_maxcompute(self, column_name):
+    def get_tf_dtype_from_maxcompute_column(self, column_name):
         """Get TensorFlow dtype according to the column name in
+        a MaxCompute table
 
         Args:
             column_name: The column name in a MaxCompute table.
@@ -38,13 +40,13 @@ class Metadata(object):
 
         maxcompute_dtype = self.column_dtypes.get(column_name, None)
 
-        if maxcompute_dtype not in MAXCOMPUTE_DTYPE_TO_TF:
+        if maxcompute_dtype not in MAXCOMPUTE_DTYPE_TO_TF_DTYPE:
             raise ValueError(
                 "Not support {} and only support {}".format(
-                    maxcompute_dtype, list(MAXCOMPUTE_DTYPE_TO_TF.keys())
+                    maxcompute_dtype, list(MAXCOMPUTE_DTYPE_TO_TF_DTYPE.keys())
                 )
             )
-        return MAXCOMPUTE_DTYPE_TO_TF[maxcompute_dtype]
+        return MAXCOMPUTE_DTYPE_TO_TF_DTYPE[maxcompute_dtype]
 
 
 class AbstractDataReader(ABC):

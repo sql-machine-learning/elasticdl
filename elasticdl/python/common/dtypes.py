@@ -41,7 +41,7 @@ _DT_NP_TO_TENSOR = {
 }
 
 # TODO: There are many dtypes in MaxCompute and we can add them if needed.
-MAXCOMPUTE_DTYPE_TO_TF = {
+MAXCOMPUTE_DTYPE_TO_TF_DTYPE = {
     types.bigint: types_pb2.DT_INT64,
     types.double: types_pb2.DT_DOUBLE,
     types.string: types_pb2.DT_STRING,
