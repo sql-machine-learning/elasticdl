@@ -59,6 +59,7 @@ class Normalizer(tf.keras.layers.Layer):
         return normalized_tensor
 
     def _normalize_fn(self, x):
-        subtractor = tf.cast(self.subtractor, x.dtype)
-        divisor = tf.cast(self.divisor, x.dtype)
+        x = tf.cast(x, tf.float32)
+        subtractor = tf.cast(self.subtractor, tf.float32)
+        divisor = tf.cast(self.divisor, tf.float32)
         return (x - subtractor) / divisor
