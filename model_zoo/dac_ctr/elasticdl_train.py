@@ -1,8 +1,6 @@
 import tensorflow as tf
 
-from elasticdl.python.elasticdl.callbacks import (
-    MaxStepsStopping,
-)
+from elasticdl.python.elasticdl.callbacks import MaxStepsStopping
 from model_zoo.dac_ctr.feature_config import (
     FEATURE_NAMES,
     HASH_FEATURES,
@@ -10,7 +8,7 @@ from model_zoo.dac_ctr.feature_config import (
     STANDARDIZED_FEATURES,
 )
 from model_zoo.dac_ctr.feature_transform import transform_feature
-from model_zoo.dac_ctr.xdeepfm_model import ctr_model
+from model_zoo.dac_ctr.xdeepfm_model import xdeepfm_model as ctr_model
 
 
 def custom_model():
@@ -19,9 +17,7 @@ def custom_model():
     standardized_tensor, id_tensors, max_ids = transform_feature(
         input_layers, feature_groups=None
     )
-    model = ctr_model(
-        input_layers, standardized_tensor, id_tensors, max_ids,
-    )
+    model = ctr_model(input_layers, standardized_tensor, id_tensors, max_ids,)
     return model
 
 

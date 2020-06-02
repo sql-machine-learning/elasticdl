@@ -5,11 +5,7 @@ from model_zoo.dac_ctr.utils import DNN, lookup_embedding_func
 
 
 def dcn_model(
-    input_layers,
-    dense_tensor,
-    id_tensors,
-    max_ids,
-    deep_embedding_dim=8,
+    input_layers, dense_tensor, id_tensors, max_ids, deep_embedding_dim=8,
 ):
     """
     Args:

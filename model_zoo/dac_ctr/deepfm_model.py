@@ -1,7 +1,7 @@
 import tensorflow as tf
+from deepctr.layers.interaction import FM
 
 from model_zoo.dac_ctr.utils import DNN, lookup_embedding_func
-from deepctr.layers.interaction import FM
 
 
 def deepfm_model(
