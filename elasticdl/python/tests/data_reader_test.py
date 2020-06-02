@@ -158,7 +158,7 @@ class ODPSDataReaderTest(unittest.TestCase):
             self.reader.metadata.column_names, IRIS_TABLE_COLUMN_NAMES
         )
         self.assertListEqual(
-            self.reader.metadata.column_dtypes,
+            list(self.reader.metadata.column_dtypes.values()),
             [
                 odps.types.double,
                 odps.types.double,
@@ -166,6 +166,18 @@ class ODPSDataReaderTest(unittest.TestCase):
                 odps.types.double,
                 odps.types.bigint,
             ],
+        )
+        self.assertEqual(
+            self.reader.metadata.get_tf_dtype_from_maxcompute_column(
+                self.reader.metadata.column_names[0]
+            ),
+            tf.float64,
+        )
+        self.assertEqual(
+            self.reader.metadata.get_tf_dtype_from_maxcompute_column(
+                self.reader.metadata.column_names[-1]
+            ),
+            tf.int64,
         )
 
     def test_create_data_reader(self):
