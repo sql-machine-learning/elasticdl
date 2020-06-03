@@ -6,16 +6,17 @@ from model_zoo.dac_ctr.feature_config import (
     HASH_FEATURES,
     LABEL_KEY,
     STANDARDIZED_FEATURES,
+    FEATURE_GROUPS,
 )
 from model_zoo.dac_ctr.feature_transform import transform_feature
-from model_zoo.dac_ctr.xdeepfm_model import xdeepfm_model as ctr_model
+from model_zoo.dac_ctr.wide_deep_model import wide_deep_model as ctr_model
 
 
 def custom_model():
     # The codes in the method can all be auto-generated
     input_layers = get_input_layers(FEATURE_NAMES)
     standardized_tensor, id_tensors, max_ids = transform_feature(
-        input_layers, feature_groups=None
+        input_layers, feature_groups=FEATURE_GROUPS
     )
     model = ctr_model(input_layers, standardized_tensor, id_tensors, max_ids,)
     return model

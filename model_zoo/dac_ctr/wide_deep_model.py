@@ -3,7 +3,7 @@ import tensorflow as tf
 from model_zoo.dac_ctr.utils import DNN, lookup_embedding_func
 
 
-def ç(
+def wide_deep_model(
     input_layers,
     standardized_tensor,
     id_tensors,
