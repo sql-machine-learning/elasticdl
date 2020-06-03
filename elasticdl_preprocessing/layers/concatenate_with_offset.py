@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 
-class ConcatenateWithOffset(tf.keras.layers.Concatenate):
+class ConcatenateWithOffset(tf.keras.layers.Layer):
     """Layer that add offset to each id tensor in the input list and
     then concatenate these tensors.
 
@@ -42,6 +42,9 @@ class ConcatenateWithOffset(tf.keras.layers.Concatenate):
 
     def _call_with_offsets(self, inputs):
         ids_with_offset = []
+        if not isinstance(inputs, list):
+            return inputs
+
         if len(self.offsets) != len(inputs):
             raise ValueError(
                 "The offsets length is not equal to inputs length"
