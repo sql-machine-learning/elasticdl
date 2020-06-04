@@ -92,5 +92,5 @@ def deepfm(
     return tf.keras.Model(
         inputs=input_layers,
         outputs={"logits": logits, "probs": probs},
-        name="wide_deep",
+        name="deepfm",
     )

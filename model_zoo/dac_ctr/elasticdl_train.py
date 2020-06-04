@@ -50,7 +50,7 @@ def eval_metrics_fn():
 
 def callbacks():
     return [
-        MaxStepsStopping(max_steps=200000),
+        MaxStepsStopping(max_steps=150000),
     ]
 
 
