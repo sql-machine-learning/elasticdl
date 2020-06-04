@@ -2,11 +2,11 @@ import tensorflow as tf
 
 from elasticdl.python.elasticdl.callbacks import MaxStepsStopping
 from model_zoo.dac_ctr.feature_config import (
+    FEATURE_GROUPS,
     FEATURE_NAMES,
     HASH_FEATURES,
     LABEL_KEY,
     STANDARDIZED_FEATURES,
-    FEATURE_GROUPS,
 )
 from model_zoo.dac_ctr.feature_transform import transform_feature
 from model_zoo.dac_ctr.xdeepfm_model import xdeepfm_model as ctr_model
