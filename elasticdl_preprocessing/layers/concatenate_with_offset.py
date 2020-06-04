@@ -42,6 +42,9 @@ class ConcatenateWithOffset(tf.keras.layers.Layer):
 
     def _call_with_offsets(self, inputs):
         ids_with_offset = []
+        if not isinstance(inputs, list):
+            return inputs
+
         if len(self.offsets) != len(inputs):
             raise ValueError(
                 "The offsets length is not equal to inputs length"

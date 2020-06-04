@@ -79,6 +79,9 @@ def wide_deep(
     dnn_logit = tf.keras.layers.Dense(
         1, use_bias=False, activation=None
     )(dnn_output)
+    dnn_logit = tf.keras.layers.Dense(1, use_bias=False, activation=None)(
+        dnn_output
+    )
 
     # Output Part
     concat_input = tf.concat([linear_logit, dnn_logit], 1)
