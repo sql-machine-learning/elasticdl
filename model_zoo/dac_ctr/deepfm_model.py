@@ -81,7 +81,7 @@ def deepfm(
             deep_embeddings, 1
         )  # shape = (None, field_size, 8)
         embeddings = tf.reshape(embeddings, shape=(-1, field_size, 8))
-        FM_output = FM(embeddings)
+        FM_output = FM()(embeddings)
         # Output Part
         concat_input = tf.concat([linear_logit, dnn_logit, FM_output], 1)
     else:
