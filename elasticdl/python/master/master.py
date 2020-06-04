@@ -9,7 +9,6 @@ from kubernetes.client import V1EnvVar
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.args import (
     build_arguments_from_parsed_result,
-    parse_envs,
     wrap_go_args_with_string,
     wrap_python_args_with_string,
 )
@@ -473,10 +472,9 @@ class Master(object):
             worker_args = ["-c", " ".join(worker_args)]
             ps_args = ["-c", " ".join(ps_args)]
 
-            env_dict = parse_envs(args.envs)
             env = []
-            for key in env_dict:
-                env.append(V1EnvVar(name=key, value=env_dict[key]))
+            for key in os.environ:
+                env.append(V1EnvVar(name=key, value=os.environ[key]))
 
             kwargs = get_dict_from_params_str(args.aux_params)
             disable_relaunch = kwargs.get("disable_relaunch", False)

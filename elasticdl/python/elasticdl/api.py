@@ -60,6 +60,7 @@ def train(args):
                 "worker_image",
                 "force_use_kube_config_file",
                 "func",
+                'envs',
             ],
         )
     )
