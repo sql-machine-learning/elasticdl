@@ -9,7 +9,7 @@ from model_zoo.dac_ctr.feature_config import (
     FEATURE_GROUPS,
 )
 from model_zoo.dac_ctr.feature_transform import transform_feature
-from model_zoo.dac_ctr.dcn_model import dcn_model as ctr_model
+from model_zoo.dac_ctr.xdeepfm_model import xdeepfm_model as ctr_model
 
 
 def custom_model():
