@@ -16,7 +16,6 @@ class MaxComputeConfig(object):
     ACCESS_ID = "MAXCOMPUTE_AK"
     ACCESS_KEY = "MAXCOMPUTE_SK"
     ENDPOINT = "MAXCOMPUTE_ENDPOINT"
-    TUNNEL_ENDPOINT = "MAXCOMPUTE_TUNNEL_ENDPOINT"
 
 
 class JobType(object):

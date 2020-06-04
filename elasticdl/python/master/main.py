@@ -1,4 +1,5 @@
 import sys
+
 from elasticdl.python.common.args import parse_master_args
 from elasticdl.python.master.master import Master
 
