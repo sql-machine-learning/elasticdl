@@ -67,6 +67,7 @@ class ODPSReader(object):
         access_key,
         endpoint,
         table,
+        tunnel_endpoint=None,
         partition=None,
         num_processes=None,
         options=None,
@@ -82,6 +83,7 @@ class ODPSReader(object):
             access_key: ODPS user access key.
             endpoint: ODPS cluster endpoint.
             table: ODPS table name.
+            tunnel_endpoint: ODPS tunnel endpoint.
             partition: ODPS table's partition.
             options: Other options passed to ODPS context.
             num_processes: Number of parallel processes on this worker.
@@ -99,12 +101,17 @@ class ODPSReader(object):
         self._access_id = access_id
         self._access_key = access_key
         self._endpoint = endpoint
+        self._tunnel_endpoint = tunnel_endpoint
         self._table = table
         self._partition = partition
         self._num_processes = num_processes
         _configure_odps_options(self._endpoint, options)
         self._odps_table = ODPS(
-            self._access_id, self._access_key, self._project, self._endpoint
+            self._access_id,
+            self._access_key,
+            self._project,
+            self._endpoint,
+            tunnel_endpoint=self._tunnel_endpoint
         ).get_table(self._table)
 
         self._transform_fn = transform_fn
