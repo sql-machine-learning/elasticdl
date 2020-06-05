@@ -103,6 +103,11 @@ class ODPSDataReader(AbstractDataReader):
             endpoint=self._kwargs.get("endpoint"),
             partition=self._kwargs.get("partition", None),
             num_processes=self._kwargs.get("num_processes", 1),
+            options={
+                "odps.options.tunnel.endpoint": self._kwargs.get(
+                    "tunnel_endpoint", None
+                )
+            },
         )
 
     def _get_table_schema(self):
