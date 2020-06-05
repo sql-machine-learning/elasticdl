@@ -25,6 +25,9 @@ def create_data_reader(data_origin, records_per_task=None, **kwargs):
                 access_key=os.environ[MaxComputeConfig.ACCESS_KEY],
                 table=data_origin,
                 endpoint=os.environ.get(MaxComputeConfig.ENDPOINT),
+                tunnel_endpoint=os.environ.get(
+                    MaxComputeConfig.TUNNEL_ENDPOINT, None
+                ),
                 records_per_task=records_per_task,
                 **kwargs,
             )

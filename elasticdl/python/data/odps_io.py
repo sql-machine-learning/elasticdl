@@ -111,7 +111,7 @@ class ODPSReader(object):
             self._access_key,
             self._project,
             self._endpoint,
-            tunnel_endpoint=self._tunnel_endpoint
+            tunnel_endpoint=self._tunnel_endpoint,
         ).get_table(self._table)
 
         self._transform_fn = transform_fn

@@ -116,6 +116,9 @@ class ODPSDataReaderTest(unittest.TestCase):
         access_id = os.environ[MaxComputeConfig.ACCESS_ID]
         access_key = os.environ[MaxComputeConfig.ACCESS_KEY]
         endpoint = os.environ.get(MaxComputeConfig.ENDPOINT)
+        tunnel_endpoint = os.environ.get(
+            MaxComputeConfig.TUNNEL_ENDPOINT, None
+        )
         self.test_table = "test_odps_data_reader_%d_%d" % (
             int(time.time()),
             random.randint(1, 101),
@@ -130,6 +133,7 @@ class ODPSDataReaderTest(unittest.TestCase):
             access_key=access_key,
             endpoint=endpoint,
             table=self.test_table,
+            tunnel_endpoint=tunnel_endpoint,
             num_processes=1,
             records_per_task=self.records_per_task,
         )
