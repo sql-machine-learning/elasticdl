@@ -136,14 +136,13 @@ spec:
 
 ### Submit Job
 
-Please refer to elasticdl_local.md to build the elasticdl:ci image. The difference is that we have to push the image to Google Cloud repo. We authenticate to Container Registry:
+Please refer to [elasticdl_local tutorual](./elasticdl_local.md) to build the `elasticdl:ci` image. The difference is that we have to push the image to Google Cloud repo. We use the following command to get the authentication:
 
 ```
 gcloud auth configure-docker
 ```
 
-Submit the training job:
-
+We launch a training job with 2 PS pods and 4 worker pods. The master pod and PS pods are set with priority, while worker pods are set with low priority.
 
 ```
 python -m elasticdl.python.elasticdl.client train \
@@ -153,7 +152,7 @@ python -m elasticdl.python.elasticdl.client train \
   --model_def=mnist_functional_api.mnist_functional_api.custom_model \
   --training_data=/data/mnist/train \
   --validation_data=/data/mnist/test \
-  --num_epochs=2 \
+  --num_epochs=5 \
   --master_resource_request="cpu=1,memory=2048Mi" \
   --master_resource_limit="cpu=1,memory=2048Mi" \
   --master_pod_priority=high \
@@ -179,21 +178,10 @@ python -m elasticdl.python.elasticdl.client train \
 After submitting the job to the cluster, we can run the following command to check the status of each pod:
 
 
+To see the status of each pod:
+
 ```
 kubectl get pods
-```
-
-We will see the status of each pod:
-
-```
-NAME                            READY   STATUS    RESTARTS   AGE
-elasticdl-test-mnist-master     1/1     Running   0          41s
-elasticdl-test-mnist-ps-0       1/1     Running   0          33s
-elasticdl-test-mnist-ps-1       1/1     Running   0          32s
-elasticdl-test-mnist-worker-0   1/1     Running   0          32s
-elasticdl-test-mnist-worker-1   1/1     Running   0          32s
-elasticdl-test-mnist-worker-2   1/1     Running   0          32s
-elasticdl-test-mnist-worker-3   1/1     Running   0          32s
 ```
 
 To see the loss in worker pod:
@@ -201,34 +189,48 @@ To see the loss in worker pod:
 ```
 kubectl logs elasticdl-test-mnist-worker-0 | grep "Loss"
 ```
-We will see following logs:
-
-```
-[2020-06-08 02:54:01,489] [INFO] [worker.py:887:_process_minibatch] Loss = 2.906989812850952, steps = 0
-[2020-06-08 02:54:35,487] [INFO] [worker.py:887:_process_minibatch] Loss = 0.5924279689788818, steps = 100
-[2020-06-08 02:55:06,928] [INFO] [worker.py:887:_process_minibatch] Loss = 0.46202218532562256, steps = 201
-[2020-06-08 02:55:40,727] [INFO] [worker.py:887:_process_minibatch] Loss = 0.26237753033638, steps = 300
-```
-
 To see the evaluation metrics in the master pod:
 
 ```
 kubectl logs elasticdl-test-mnist-master | grep "Evaluation"
 ```
 
-We will see following logs:
-
-```
-[2020-06-08 02:53:46,884] [INFO] [master.py:195:prepare] Evaluation service started
-[2020-06-08 02:55:13,525] [INFO] [evaluation_service.py:214:complete_task] Evaluation metrics[v=200]: {'accuracy': 0.8066}
-[2020-06-08 02:56:20,930] [INFO] [evaluation_service.py:214:complete_task] Evaluation metrics[v=400]: {'accuracy': 0.8973}
-```
-
-
-
 ## Example of Job Fault Tolerance
 
-TODO
+ElasticDL supports falut tolerance in distributed training. When a worker pod is killed, the master pod will try to relaunch a new worker pod.
+
+At first, all pods are running:
+
+```
+elasticdl-test-mnist-master     1/1     Running   0          35s
+elasticdl-test-mnist-ps-0       1/1     Running   0          29s
+elasticdl-test-mnist-ps-1       1/1     Running   0          28s
+elasticdl-test-mnist-worker-0   1/1     Running   0          28s
+elasticdl-test-mnist-worker-1   1/1     Running   0          28s
+elasticdl-test-mnist-worker-2   1/1     Running   0          28s
+elasticdl-test-mnist-worker-3   1/1     Running   0          28s
+```
+
+Then, we delete a worker pod:
+
+```
+kubectl delete pod elasticdl-test-mnist-worker-0
+```
+
+The master pod creates a new worker pod `elasticdl-test-mnist-worker-4` at once.
+
+```
+NAME                            READY   STATUS    RESTARTS   AGE
+elasticdl-test-mnist-master     1/1     Running   0          51s
+elasticdl-test-mnist-ps-0       1/1     Running   0          45s
+elasticdl-test-mnist-ps-1       1/1     Running   0          44s
+elasticdl-test-mnist-worker-1   1/1     Running   0          44s
+elasticdl-test-mnist-worker-2   1/1     Running   0          44s
+elasticdl-test-mnist-worker-3   1/1     Running   0          44s
+elasticdl-test-mnist-worker-4   1/1     Running   0          6s
+```
+
+The training job does not crash, and the new worker pod joins the training smoothly.
 
 ## Example of Elastic Scheduling
 
