@@ -311,14 +311,14 @@ test-nginx-7585fc5976-ckd94     1/1     Running   0          29s
 test-nginx-7585fc5976-ss8pk     1/1     Running   0          29s
 ```
 
-Then, we scale the nginx deployment down to 1 replica. Some cluster esources are freed.
+Then, we scale the nginx deployment down to 1 replica. Some cluster resources are freed.
 
 
 ```
 kubectl scale deployment.v1.apps/test-nginx --replicas=1
 ```
 
-We find that the training job take over the freed resources, and training with 4 worker pods.
+We find that the training job takes over the freed resources, and goes on with 4 worker pods.
 
 ```
 NAME                            READY   STATUS    RESTARTS   AGE
