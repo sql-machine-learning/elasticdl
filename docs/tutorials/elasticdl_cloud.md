@@ -15,14 +15,15 @@ We will use the project id and cluster name in next steps.
 To access GKE, we need to install [Google Cloud SDK](https://cloud.google.com/sdk/install), which includes command-line tools like `gcloud`.
 
 
-1. Set the PROJECT_ID environment variable in shell
+Step 1: Set the PROJECT_ID environment variable in shell.
 
 ```
 export PROJECT_ID=${your_project_id}
 gcloud config set project ${PROJECT_ID}
 ```
 
-1. List clusters info with gcloud, and double check it with web console
+
+Step 2: List clusters info with gcloud, and double check it with web console.
 
 ```
 gcloud container clusters list
@@ -35,13 +36,13 @@ NAME         LOCATION       MASTER_VERSION  MASTER_IP       MACHINE_TYPE   NODE_
 edl-cluster  us-central1-c  1.14.10-gke.36  x.x.x.x         n1-standard-8  1.14.10-gke.36  3          RUNNING
 ```
 
-1. Use the command below to generate the corresponding kubeconfig
+Step 3: Use the command below to generate the corresponding kubeconfig.
 
 ```
 gcloud container clusters get-credentials edl-cluster --zone us-central1-c
 ```
  
-1. Make sure you have [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/) available locally.
+Make sure you have [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/) available locally.
 
 Use the following command to list all the started components.
 
@@ -58,7 +59,7 @@ ElasticDL jobs require pod creation and deletion permissions. Make sure you have
 kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
 ```
 
-ElasticDL supports elastic scheduling, and works well the priority-based scheduling of Kubernetes. We create two customized PriorityClass in this testing cluster, high and low.
+ElasticDL supports elastic scheduling, and works well the priority-based scheduling of Kubernetes. We create two customized PriorityClass in the cluster, high and low.
 
 
 high.yaml
@@ -83,27 +84,31 @@ value: 1000
 globalDefault: false
 ```
 
+```
+kubectl create -f high.yaml
+kubectl create -f low.yaml
+```
+
+
 ### Mount a Volume for the Kubernetes Cluster
 
 First, we create a [Cloud Filestore](https://cloud.google.com/filestore) instance in web console.
 
 Then we follow the [doc](https://cloud.google.com/filestore/docs/accessing-fileshares) to access fileshares from the Kubernetes cluster.
 
+In this example, we create a persistent value claim named `fileserver-claim`.
 
 ## Submit Job to the Kubernetes Cluster
 
-We submit a mnist job.
-
-
 ### Prepare Dataset
 
-- We generate MNIST training and evaluation data in recordio format
+Step 1: We generate MNIST training and evaluation data in RecordIO format.
 
 ```
 python elasticdl/python/data/recordio_gen/image_label.py --dataset mnist --records_per_shard 4096 .
 ```
 
-- We launch a pod which mounts the volume, and use `kubectl cp` command to copy data from local to the volume
+Step 2: We launch a pod which mounts the volume, and use `kubectl cp` command to copy data from local to the volume.
 
 ```
 kubectl create -f my-pod.yaml
@@ -132,17 +137,15 @@ spec:
       readOnly: false
 ```
 
-
-
 ### Submit Job
 
-Please refer to [elasticdl_local tutorual](./elasticdl_local.md) to build the `elasticdl:ci` image. The difference is that we have to push the image to Google Cloud repo. We use the following command to get the authentication:
+Please refer to [elasticdl_local tutorial](./elasticdl_local.md) to build the `elasticdl:ci` image. The difference is that we have to push the image to google cloud repo. We use the following command to get the authentication:
 
 ```
 gcloud auth configure-docker
 ```
 
-We launch a training job with 2 PS pods and 4 worker pods. The master pod and PS pods are set with priority, while worker pods are set with low priority.
+We launch a training job with 2 PS pods and 4 worker pods. The master pod and PS pods are set with priority, while worker pods are set with low priority. The training docker image will be pushed to google cloud repo.
 
 ```
 python -m elasticdl.python.elasticdl.client train \
@@ -175,9 +178,6 @@ python -m elasticdl.python.elasticdl.client train \
   --distribution_strategy=ParameterServerStrategy
 ```
 
-After submitting the job to the cluster, we can run the following command to check the status of each pod:
-
-
 To see the status of each pod:
 
 ```
@@ -197,7 +197,7 @@ kubectl logs elasticdl-test-mnist-master | grep "Evaluation"
 
 ## Example of Job Fault Tolerance
 
-ElasticDL supports falut tolerance in distributed training. When a worker pod is killed, the master pod will try to relaunch a new worker pod.
+ElasticDL supports fault tolerance in distributed training. When a worker pod is killed, the training job does not crash and the master pod will try to relaunch a new worker pod.
 
 At first, all pods are running:
 
@@ -229,8 +229,6 @@ elasticdl-test-mnist-worker-2   1/1     Running   0          44s
 elasticdl-test-mnist-worker-3   1/1     Running   0          44s
 elasticdl-test-mnist-worker-4   1/1     Running   0          6s
 ```
-
-The training job does not crash, and the new worker pod joins the training smoothly.
 
 ## Example of Elastic Scheduling
 
@@ -332,5 +330,4 @@ elasticdl-test-mnist-worker-4   1/1     Running   0          88s
 elasticdl-test-mnist-worker-5   1/1     Running   0          88s
 elasticdl-test-mnist-worker-6   1/1     Running   0          88s
 test-nginx-7585fc5976-5hs7h     1/1     Running   0          91s
-
 ```
