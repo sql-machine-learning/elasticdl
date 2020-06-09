@@ -2,7 +2,7 @@ import argparse
 import time
 
 import odps
-from odps import options, ODPS
+from odps import ODPS, options
 
 options.log_view_host = "http://logview.odps.aliyun-inc.com:8080"
 
@@ -296,7 +296,7 @@ if __name__ == "__main__":
         access_id=args.MAXCOMPUTE_AK,
         secret_access_key=args.MAXCOMPUTE_SK,
         project=args.MAXCOMPUTE_PROJECT,
-        endpoint=args.MAXCOMPUTE_ENDPOINT
+        endpoint=args.MAXCOMPUTE_ENDPOINT,
     )
 
     append_columns = (
