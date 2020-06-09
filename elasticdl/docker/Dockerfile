@@ -16,14 +16,15 @@ ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 
 RUN apt -qq update && \
     apt -qq install -y unzip curl git software-properties-common g++ wget \
-    libeigen3-dev > /dev/null
+                       libeigen3-dev > /dev/null && \
+    python -m pip install --upgrade pip
 
 COPY elasticdl/requirements.txt /requirements.txt
-RUN pip -q install -r /requirements.txt \
+RUN python -m pip -q install -r /requirements.txt \
         --extra-index-url=$EXTRA_PYPI_INDEX \
     && rm /requirements.txt
 COPY elasticdl/requirements-dev.txt /requirements-dev.txt
-RUN pip -q install -r /requirements-dev.txt \
+RUN python -m pip -q install -r /requirements-dev.txt \
         --extra-index-url=$EXTRA_PYPI_INDEX \
     && rm /requirements-dev.txt
 
@@ -112,6 +113,6 @@ WORKDIR /
 
 # Install elasticdl package
 COPY --from=dev /elasticdl-develop-py3-none-any.whl /
-RUN pip install -q /elasticdl-develop-py3-none-any.whl \
+RUN python -m pip -q install /elasticdl-develop-py3-none-any.whl \
         --extra-index-url=${EXTRA_PYPI_INDEX} \
     && rm /elasticdl-develop-py3-none-any.whl
