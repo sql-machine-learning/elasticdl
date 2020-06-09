@@ -22,9 +22,5 @@ setup(
     extras_require=extras,
     python_requires=">=3.5",
     packages=["elasticdl_preprocessing"],
-    package_data={
-        "": [
-            "requirements.txt",
-        ]
-    },
+    package_data={"": ["requirements.txt"]},
 )
