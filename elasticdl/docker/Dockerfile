@@ -14,8 +14,8 @@ ARG BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
 FROM ${BASE_IMAGE} as dev
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 
-RUN apt -qq update && \
-    apt -qq install -y unzip curl git software-properties-common g++ wget \
+RUN apt-get -qq update && \
+    apt-get -qq install -y unzip curl git software-properties-common g++ wget \
                        libeigen3-dev > /dev/null && \
     python -m pip install --upgrade pip
 
@@ -61,7 +61,7 @@ RUN cd /elasticdl && \
 
 # Create elasticdl package
 RUN cd /elasticdl && \
-    python setup.py bdist_wheel -q && \
+    python setup.py -q bdist_wheel && \
     cp dist/elasticdl-develop-py3-none-any.whl /
 
 
@@ -91,7 +91,7 @@ RUN rm -rf /root/.keras/datasets
 WORKDIR /
 ENV PYTHONPATH=/elasticdl
 COPY setup.py /elasticdl/setup.py
-RUN cd /elasticdl && python setup.py install -q
+RUN cd /elasticdl && python setup.py -q install
 COPY model_zoo /model_zoo
 
 
