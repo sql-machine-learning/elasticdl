@@ -44,7 +44,7 @@
 
 ### ElasticDL 弹性调度分布式架构
 
-ElasticDL 采用 master-worker 的分布式架构，下图为采用 [Parameter Server] 分布式策略的 ElasticDL 架构。
+ElasticDL 采用 master-worker 的分布式架构，下图为采用 Parameter Server 分布式策略的 ElasticDL 架构。
 
 ![ElasticDL PS Architecture](../images/elasticdl_ps_architecture.svg)
 
