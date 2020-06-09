@@ -8,8 +8,6 @@
 具有良好的吞吐能力和可扩展性，同时优化了 embedding table 的梯度更新策略，减少通信开销，加速模型迭代。
 - TensorFlow 2.x Keras API 定义模型。keras API 具有很高的易用性和灵活性，
 学习成本低，同时开源社区基于 Keras 开发了很多经典模型和 layer，便于复用。
-- Keras 特征预处理 layer。ElasticDL 的特征预处理 Keras layer 覆盖了深度学习里常用的特征处理方法，
-在模型导出时会将预处理逻辑与模型一起导出TensorFlow SavedModel，保证训练和预测的一致性。
 
 ## 弹性调度
 
@@ -122,6 +120,11 @@ ElasticDL 用 Go 实现了 Parameter Server，具有良好的吞吐能力和可�
 
 ## TensorFlow 2.x Keras API 定义模型
 
+ElasticDL 支持原生 Keras API 来定义模型，用户在定义模型时并需要感知 ElasticDL，只需用 TensorFlow 提供的 Keras API 定义模型即可。
+除了模型定义，ElasticDL 还提供了基于 TensorFlow op 开发的 Keras 特征预处理 layer，方便用户进行特征预处理。
+
+### Keras API 定义模型
+
 ElasticDL 使用 TensorFlow eager execution 来计算模型梯度，支持用户使用 TensorFlow 2.x 的 Keras API 来定义模型，如下所示：
 
 ```python
@@ -195,7 +198,7 @@ elasticdl train \
   --job_name=test-edl-changfan \
 ```
 
-## 特征预处理 Keras layer
+### Keras 特征预处理 layer
 
 通常情况下，原始数据是不能直接被深度学习模型来训练的，需要将原始数据进行预处理，同时需要保证预处理逻辑的离线训练和在线部署的一致性。
 为了方便用户在开发模型时进行数据预处理，ElasticDL 基于 TensorFlow op 开发了特征预处理库 elasticdl_preprocessing，
@@ -216,4 +219,6 @@ elasticdl_preprocessing 提供了下列特预处理 layer：
 | Hashing | 将字符串进行 hashing 后对 bins 数量求余运算|
 | IndexLookup | 将字符串通过查词表转成整数，输出词所在词表的索引|
 
-elasticdl_preprocessing 特征处理 layer 的详细使用，可以参考 [Preprocess Inputs using ElasticDL Preprocessing Layers](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/tutorials/preprocessing_tutorial.md)
+elasticdl_preprocessing 的特征预处理 layer 可以和 TensorFlow 的 Keras layer 一起构造一个完成的模型，
+并在训练结束后保存到 TensorFlow 的 SavedModel 中。特征预处理 layer 的使用可以参考
+[Preprocess Inputs using ElasticDL Preprocessing Layers](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/tutorials/preprocessing_tutorial.md)
