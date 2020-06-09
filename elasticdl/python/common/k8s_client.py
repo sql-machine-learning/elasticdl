@@ -51,13 +51,12 @@ def append_pod_ip_to_env(env):
 class Client(object):
     def __init__(
         self,
-        *,
         image_name,
         namespace,
         job_name,
         event_callback=None,
         cluster_spec="",
-        force_use_kube_config_file=False
+        force_use_kube_config_file=False,
     ):
         """
         ElasticDL k8s client.
