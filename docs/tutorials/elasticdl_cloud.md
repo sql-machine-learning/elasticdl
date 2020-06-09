@@ -2,30 +2,56 @@
 
 ElasticDL is a Kubernetes-native machine learning framework.  This document explains how to run an ElasticDL job on a public cloud, namely, Google Kubernetes Engine (GKE).
 
-## Configure Your GKE Environment
+## Configure GKE Environment
+
+### Create a Project and a Kubernetes Cluster
+
+First, we create a new project for elasticdl in [web console](https://console.cloud.google.com/) and a new Kubernetes cluster under this project.
+
+We will use the project id and cluster name in next steps.
+
+### Access the Kubernetes Cluster
 
 To access GKE, we need to install [Google Cloud SDK](https://cloud.google.com/sdk/install), which includes command-line tools like `gcloud`.
 
-- Set the PROJECT_ID environment variable in your shell by retrieving the pre-configured project ID on gcloud by running the command below:
 
-   ```
-   export PROJECT_ID="$(gcloud config get-value project -q)"
-   ```
+Step 1: Set the PROJECT_ID environment variable in shell.
 
-- Use the command below to generate the corresponding kubeconfig:
+```
+export PROJECT_ID=${your_project_id}
+gcloud config set project ${PROJECT_ID}
+```
 
-   ```
-   gcloud container clusters get-credentials ${PROJECT_ID}
-   ```
-    and then add the generated config to your local kubeconfig file (`~/.kube/config` by default). 
+
+Step 2: List clusters info with gcloud, and double check it with web console.
+
+```
+gcloud container clusters list
+```
+
+Following is an our testing cluster
+
+```
+NAME         LOCATION       MASTER_VERSION  MASTER_IP       MACHINE_TYPE   NODE_VERSION    NUM_NODES  STATUS
+edl-cluster  us-central1-c  1.14.10-gke.36  x.x.x.x         n1-standard-8  1.14.10-gke.36  3          RUNNING
+```
+
+Step 3: Use the command below to generate the corresponding kubeconfig.
+
+```
+gcloud container clusters get-credentials edl-cluster --zone us-central1-c
+```
  
-- Make sure you have [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/) available locally.
+Make sure you have [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/) available locally.
 
 Use the following command to list all the started components.
 
-```bash
+```
 kubectl get all --all-namespaces
 ```
+
+
+### Config the Kubernetes Cluster
 
 ElasticDL jobs require pod creation and deletion permissions. Make sure you have granted related permissions to the default or other related service accounts.
 
@@ -33,199 +59,275 @@ ElasticDL jobs require pod creation and deletion permissions. Make sure you have
 kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
 ```
 
-## Build Docker Image
+ElasticDL supports elastic scheduling, and works well the priority-based scheduling of Kubernetes. We create two customized PriorityClass in the cluster, high and low.
 
-Clone ElasticDL source code:
 
-```bash
-git clone https://github.com/sql-machine-learning/elasticdl.git
+high.yaml
+
+```
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: high
+value: 1000000
+globalDefault: false
 ```
 
-Build docker image:
+low.yaml
 
-```bash
-cd elasticdl
-docker build -t gcr.io/${PROJECT_ID}/elasticdl:dev -f elasticdl/docker/Dockerfile .
+```
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: low
+value: 1000
+globalDefault: false
 ```
 
-## Upload Docker Image
-Configure Docker command-line tool to authenticate to Container Registry:
+```
+kubectl create -f high.yaml
+kubectl create -f low.yaml
+```
+
+
+### Mount a Volume for the Kubernetes Cluster
+
+First, we create a [Cloud Filestore](https://cloud.google.com/filestore) instance in web console.
+
+Then we follow the [doc](https://cloud.google.com/filestore/docs/accessing-fileshares) to access fileshares from the Kubernetes cluster.
+
+In this example, we create a persistent value claim named `fileserver-claim`.
+
+## Submit Job to the Kubernetes Cluster
+
+### Prepare Dataset
+
+Step 1: We generate MNIST training and evaluation data in RecordIO format.
+
+```
+python elasticdl/python/data/recordio_gen/image_label.py --dataset mnist --records_per_shard 4096 .
+```
+
+Step 2: We launch a pod which mounts the volume, and use `kubectl cp` command to copy data from local to the volume.
+
+```
+kubectl create -f my-pod.yaml
+
+kubectl cp mnist my-pod:/data
+```
+
+my-pod.yaml
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: test-pod
+    image: nginx:1.7.9
+    volumeMounts:
+    - mountPath: /data
+      name: mypvc
+  volumes:
+  - name: mypvc
+    persistentVolumeClaim:
+      claimName: fileserver-claim
+      readOnly: false
+```
+
+### Submit Job
+
+Please refer to [elasticdl_local tutorial](./elasticdl_local.md) to build the `elasticdl:ci` image. The difference is that we have to push the image to google cloud repo. We use the following command to get the authentication:
 
 ```
 gcloud auth configure-docker
 ```
-and then use the Docker command-line tool to upload the image to your Container Registry:
 
-```
-docker push gcr.io/${PROJECT_ID}/elasticdl:dev
-```
-## Example of Job Submission on GKE
-Use the command below to submit your first ElasticDL job on GKE:
+We launch a training job with 2 PS pods and 4 worker pods. The master pod and PS pods are set with priority, while worker pods are set with low priority. The training docker image will be pushed to google cloud repo.
 
 ```
 python -m elasticdl.python.elasticdl.client train \
-    --job_name=hello-world \
-    --model_zoo=model_zoo \
-    --model_def=mnist_subclass.mnist_subclass.CustomModel \
-    --training_data=${MNIST_DATA_DIR}/train \
-    --validation_data=${MNIST_DATA_DIR}/test \
-    --num_epochs=1 \
-    --minibatch_size=10 \
-    --num_minibatches_per_task=10 \
-    --num_workers=2 \
-    --checkpoint_steps=2 \
-    --grads_to_wait=2 \
-    --volume="mount_path=/data,claim_name=fileserver-claim" \
-    --log_level=INFO \
-    --docker_image_prefix=gcr.io/${PROJECT_ID}
+  --image_base=elasticdl:ci \
+  --docker_image_repository=gcr.io/${PROJECT_ID}  \
+  --model_zoo=model_zoo \
+  --model_def=mnist_functional_api.mnist_functional_api.custom_model \
+  --training_data=/data/mnist/train \
+  --validation_data=/data/mnist/test \
+  --num_epochs=5 \
+  --master_resource_request="cpu=2,memory=2048Mi" \
+  --master_resource_limit="cpu=2,memory=2048Mi" \
+  --master_pod_priority=high \
+  --worker_resource_request="cpu=2,memory=2048Mi" \
+  --worker_resource_limit="cpu=2,memory=2048Mi" \
+  --worker_pod_priority=low \
+  --ps_resource_request="cpu=2,memory=2048Mi" \
+  --ps_resource_limit="cpu=2,memory=2048Mi" \
+  --ps_pod_priority=high \
+  --minibatch_size=64 \
+  --num_minibatches_per_task=64 \
+  --num_ps_pods=2 \
+  --num_workers=4 \
+  --evaluation_steps=200 \
+  --grads_to_wait=1 \
+  --job_name=test-mnist \
+  --log_level=INFO \
+  --image_pull_policy=Always \
+  --volume="mount_path=/data,claim_name=fileserver-claim" \
+  --distribution_strategy=ParameterServerStrategy
 ```
 
-where `MNIST_DATA_DIR` is the directory that contains MNIST training and evaluation data in RecordIO format (e.g. /data/mnist_nfs/mnist) and
-
-`--volume` is a string that contains information for the [Kubernetes Volume](https://cloud.google.com/kubernetes-engine/docs/concepts/volumes).
-
-
-Use the following command to check the job's pods statuses:
-
-```bash
-kubectl get pods -l elasticdl-job-name=hello-world
-```
-You could delete all the pods of the submitted job using the command below:
+To see the status of each pod:
 
 ```
-kubectl delete pod -l elasticdl-job-name=hello-world
+kubectl get pods
+```
+
+To see the loss in worker pod:
+
+```
+kubectl logs elasticdl-test-mnist-worker-0 | grep "Loss"
+```
+To see the evaluation metrics in the master pod:
+
+```
+kubectl logs elasticdl-test-mnist-master | grep "Evaluation"
 ```
 
 ## Example of Job Fault Tolerance
-One of the important features of ElasticDL is fault tolerance which ensures job success in extreme cases such as pods get killed due to some reasons.
 
-Same as the first example, submit a job on GKE using the command below:
+ElasticDL supports fault tolerance in distributed training. When a worker pod is killed, the training job does not crash and the master pod will try to relaunch a new worker pod.
 
-```
-python -m elasticdl.python.elasticdl.client train \
-    --job_name=fault-tolerance \
-    --model_zoo=model_zoo \
-    --model_def=mnist_subclass.mnist_subclass.CustomModel \
-    --training_data=${MNIST_DATA_DIR}/train \
-    --validation_data=${MNIST_DATA_DIR}/test \
-    --num_epochs=1 \
-    --minibatch_size=10 \
-    --num_minibatches_per_task=10 \
-    --num_workers=2 \
-    --checkpoint_steps=2 \
-    --grads_to_wait=2 \
-    --volume="mount_path=/data,claim_name=fileserver-claim" \
-    --log_level=INFO \
-    --docker_image_prefix=gcr.io/${PROJECT_ID}
-```
-Check the job's pods statuses and wait until all the pods become `Running`:
+At first, all pods are running:
 
 ```
-kubectl get pods -l elasticdl-job-name=fault-tolerance
+elasticdl-test-mnist-master     1/1     Running   0          35s
+elasticdl-test-mnist-ps-0       1/1     Running   0          29s
+elasticdl-test-mnist-ps-1       1/1     Running   0          28s
+elasticdl-test-mnist-worker-0   1/1     Running   0          28s
+elasticdl-test-mnist-worker-1   1/1     Running   0          28s
+elasticdl-test-mnist-worker-2   1/1     Running   0          28s
+elasticdl-test-mnist-worker-3   1/1     Running   0          28s
 ```
-And then delete one of the two worker's pods:
+
+Then, we delete a worker pod:
 
 ```
-kubectl delete pod elasticdl-worker-fault-tolerance-0
+kubectl delete pod elasticdl-test-mnist-worker-0
 ```
-Keeping track the number of job's pods, you will see the number restores to two pods, and the job will complete successfully.
+
+The master pod creates a new worker pod `elasticdl-test-mnist-worker-4` at once.
+
+```
+NAME                            READY   STATUS    RESTARTS   AGE
+elasticdl-test-mnist-master     1/1     Running   0          51s
+elasticdl-test-mnist-ps-0       1/1     Running   0          45s
+elasticdl-test-mnist-ps-1       1/1     Running   0          44s
+elasticdl-test-mnist-worker-1   1/1     Running   0          44s
+elasticdl-test-mnist-worker-2   1/1     Running   0          44s
+elasticdl-test-mnist-worker-3   1/1     Running   0          44s
+elasticdl-test-mnist-worker-4   1/1     Running   0          6s
+```
 
 ## Example of Elastic Scheduling
-Assume we have a GKE cluster with three instances, and each instance is configured with 4 CPU cores and 15 GB memory.
 
-### Setup priority classes
+After we launch the MNIST training job, we launch another nginx service with high priority in the same cluster.
 
-Kubernetes provides priority for jobs using PriorityClass. To test the ability of elastic scheduling, you need to create two customized PriorityClass. Save the following two yaml files as high-prio.yaml and low-prio.yaml respectively.
+nginx.yaml
 
 ```
-apiVersion: scheduling.k8s.io/v1
-kind: PriorityClass
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: high-priority
-value: 1000000
-globalDefault: false
-```
-```
-apiVersion: scheduling.k8s.io/v1
-kind: PriorityClass
-metadata:
-  name: low-priority
-value: 1000
-globalDefault: false
-```
-And then execute the commands below to create PriorityClass in GKE cluster:
-
-```
-kubectl apply -f high-prio.yaml
-kubectl apply -f low-prio.yaml
-```
-For more about PriorityClass, please check out [Pod Priority and Preemption](https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/).
-
-### Submit the first job with `low-priority`
-```
-python -m elasticdl.python.elasticdl.client train \
-    --job_name=low-prio-job \
-    --model_zoo=model_zoo \
-    --model_def=mnist_subclass.mnist_subclass.CustomModel \
-    --training_data=${MNIST_DATA_DIR}/train \
-    --validation_data=${MNIST_DATA_DIR}/test \
-    --master_pod_priority=high-priority \
-    --worker_pod_priority=low-priority \
-    --num_epochs=1 \
-    --minibatch_size=10 \
-    --num_minibatches_per_task=10 \
-    --num_workers=2 \
-    --checkpoint_steps=2 \
-    --master_resource_request="cpu=1,memory=1024Mi" \
-    --master_resource_limit="cpu=1,memory=1024Mi" \
-    --worker_resource_request="cpu=3,memory=4096Mi" \
-    --worker_resource_limit="cpu=3,memory=4096Mi" \
-    --grads_to_wait=2 \
-    --volume="mount_path=/data,claim_name=fileserver-claim" \
-    --log_level=INFO \
-    --docker_image_prefix=gcr.io/${PROJECT_ID}
-```
-Please note that the master pod is configured priority `high-priority` which means the master cannot be preempted even for low priority jobs.
-
-The first job will launch one master pod and two worker pods. Use the following command to check pods statues, and wait until all pods become `Running`.
-
-```bash
-kubectl get pods -l elasticdl-job-name=low-prio-job
+  name: test-nginx
+  labels:
+    app: nginx
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.7.9
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 2
+            memory: 2048Mi
+            ephemeral-storage: 1024Mi
+          requests:
+            cpu: 2
+            memory: 2048Mi
+            ephemeral-storage: 1024Mi
+      priorityClassName: high
+      restartPolicy: Always
 ```
 
-### Submit the second job with `high-priority`
 ```
-python -m elasticdl.python.elasticdl.client train \
-    --job_name=high-prio-job \
-    --model_zoo=model_zoo \
-    --model_def=mnist_subclass.mnist_subclass.CustomModel \
-    --training_data=${MNIST_DATA_DIR}/train \
-    --validation_data=${MNIST_DATA_DIR}/test \
-    --master_pod_priority=high-priority \
-    --worker_pod_priority=high-priority \
-    --num_epochs=1 \
-    --minibatch_size=10 \
-    --num_minibatches_per_task=10 \
-    --num_workers=1 \
-    --checkpoint_steps=2 \
-    --master_resource_request="cpu=1,memory=1024Mi" \
-    --master_resource_limit="cpu=1,memory=1024Mi" \
-    --worker_resource_request="cpu=3,memory=4096Mi" \
-    --worker_resource_limit="cpu=3,memory=4096Mi" \
-    --grads_to_wait=2 \
-    --volume="mount_path=/data,claim_name=fileserver-claim" \
-    --log_level=INFO \
-    --docker_image_prefix=gcr.io/${PROJECT_ID}
+kubectl create -f nginx.yaml
 ```
-Use the following command:
 
-```bash
-kubectl get pods -l elasticdl-job-name=high-prio-job
+We will find that some worker pods with low priority are preempted by nginx pods with high priority.
+
 ```
-You will find the master is Running and a worker is Pending due to insufficient resources.
+NAME                            READY   STATUS        RESTARTS   AGE
+elasticdl-test-mnist-master     1/1     Running       0          34s
+elasticdl-test-mnist-ps-0       1/1     Running       0          27s
+elasticdl-test-mnist-ps-1       1/1     Running       0          27s
+elasticdl-test-mnist-worker-0   1/1     Running       0          27s
+elasticdl-test-mnist-worker-1   1/1     Terminating   0          27s
+elasticdl-test-mnist-worker-2   1/1     Terminating   0          27s
+elasticdl-test-mnist-worker-3   1/1     Terminating   0          26s
+test-nginx-7585fc5976-5hs7h     1/1     Running       0          2s
+test-nginx-7585fc5976-9s4nx     1/1     Running       0          2s
+test-nginx-7585fc5976-bf2th     0/1     Pending       0          2s
+test-nginx-7585fc5976-ckd94     0/1     Pending       0          2s
+test-nginx-7585fc5976-ss8pk     0/1     Pending       0          2s
+```
 
-Because the second job has higher priority than the first one, so soon the first job gets preempted and one of its workers is deleted by Kubernetes, the released resource is re-assigned to the second job.
+After preemption, the training job still goes on with one worker pod.
 
-Because of elastic scheduling, the two ElasticDL jobs continue running.
+```
+elasticdl-test-mnist-master     1/1     Running   0          61s
+elasticdl-test-mnist-ps-0       1/1     Running   0          54s
+elasticdl-test-mnist-ps-1       1/1     Running   0          54s
+elasticdl-test-mnist-worker-0   1/1     Running   0          54s
+elasticdl-test-mnist-worker-4   0/1     Pending   0          26s
+elasticdl-test-mnist-worker-5   0/1     Pending   0          26s
+elasticdl-test-mnist-worker-6   0/1     Pending   0          26s
+test-nginx-7585fc5976-5hs7h     1/1     Running   0          29s
+test-nginx-7585fc5976-9s4nx     1/1     Running   0          29s
+test-nginx-7585fc5976-bf2th     1/1     Running   0          29s
+test-nginx-7585fc5976-ckd94     1/1     Running   0          29s
+test-nginx-7585fc5976-ss8pk     1/1     Running   0          29s
+```
 
-When the job with high-priority finished, the low-priority job would restore to two pods due to released resources and finish finally.
+Then, we scale the nginx deployment down to 1 replica. Some cluster resources are freed.
+
+
+```
+kubectl scale deployment.v1.apps/test-nginx --replicas=1
+```
+
+We find that the training job takes over the freed resources, and goes on with 4 worker pods.
+
+```
+NAME                            READY   STATUS    RESTARTS   AGE
+elasticdl-test-mnist-master     1/1     Running   0          2m3s
+elasticdl-test-mnist-ps-0       1/1     Running   0          116s
+elasticdl-test-mnist-ps-1       1/1     Running   0          116s
+elasticdl-test-mnist-worker-0   1/1     Running   0          116s
+elasticdl-test-mnist-worker-4   1/1     Running   0          88s
+elasticdl-test-mnist-worker-5   1/1     Running   0          88s
+elasticdl-test-mnist-worker-6   1/1     Running   0          88s
+test-nginx-7585fc5976-5hs7h     1/1     Running   0          91s
+```

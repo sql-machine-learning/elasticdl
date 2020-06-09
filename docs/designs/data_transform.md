@@ -175,7 +175,8 @@ We can extend the SQLFlow syntax and enrich the `COLUMN` expression. We propose 
 | VOCABULARIZE(x)  | Map the inputs to integer ids by looking up the vocabulary | vocabulary_list | string, int32, int64 | int64 |
 | EMBEDDING(x, dimension) | Map the inputs to embedding vectors             |          N/A         | int32, int64 | float32 |
 | CROSS(x1, x2, ..., xn, hash_bucket_size)  | Hash(cartesian product of features) % hash_bucket_size |          N/A         | string, number   | int64 |
-| CONCAT(x1, x2, ..., xn)   | Concatenate multiple tensors representing categorical ids into one tensor. | N/A | int32, int64 | int64 |
+| CONCAT(x1, x2, ..., xn)   | Concatenate multiple tensors representing categorical ids (zero-based) into one tensor. The output id space is the sum of inputs. | N/A | int32, int64 | int64 |
+| COMBINE(x1, x2, ..., xn)  | Combine multiple tensors into one tensor | N/A | number | number |
 
 *Please check more [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1723) about `CONCAT` transform function*
 
@@ -199,86 +200,146 @@ SELECT *
 FROM census_income
 TO TRAIN WideAndDeepClassifier
 COLUMN
-    EMBEDDING(CONCAT(VOCABULARIZE(workclass), BUCKETIZE(capital_gain, num_buckets=5), BUCKETIZE(capital_loss, num_buckets=5), BUCKTIZE(hours_per_week, num_buckets=6)) AS group_1, 8),
-    EMBEDDING(CONCAT(HASH(education), HASH(occupation), VOCABULARIZE(martial_status), VOCABULARIZE(relationship)) AS group_2, 8),
-    EMBEDDING(CONCAT(BUCKETIZE(age, num_buckets=5), HASH(native_country), VOCABULARIZE(race), VOCABULARIZE(sex)) AS group_3, 8)
-    FOR deep_embeddings
-COLUMN
-    EMBEDDING(group1, 1),
-    EMBEDDING(group2, 1)
-    FOR wide_embeddings
+    COMBINE(
+        EMBEDDING(
+            CONCAT(
+                VOCABULARIZE(workclass),
+                BUCKETIZE(capital_gain, num_buckets=5),
+                BUCKETIZE(capital_loss, num_buckets=5),
+                BUCKETIZE(hours_per_week, num_buckets=6)
+                ) AS group_1,
+            8),
+        EMBEDDING(
+            CONCAT(
+                HASH(education),
+                HASH(occupation),
+                VOCABULARIZE(martial_status),
+                VOCABULARIZE(relationship)
+                ) AS group_2,
+            8),
+        EMBEDDING(race, 8)
+    ) FOR deep_embeddings,
+    COMBINE(
+        EMBEDDING(group1, 1),
+        EMBEDDING(group2, 1)
+    ) FOR wide_embeddings
 LABEL label
 ```
 
-SQLFlow will convert the `COLUMN` expression to Python code of data transformation. But it requires some parameters which are derived from the data. So next we will do the analysis work.  
+SQLFlow will compile the `COLUMN` expression to Python code of data transformation. Let's take the SQLFlow statement above for example to describe the compilation workflow step by step in the next section.  
 
-### Generate Analysis SQL From SQLFlow Statement
+### COLUMN Expression Compilation Workflow
 
-SQLFlow will generate the analysis SQL to calculate the statistical value. For this clause `COLUMN NORMALIZE(capital_gain), STANDARDIZE(age)`, the corresponding analysis SQL is as follows:
+#### Parse COLUMN Expression into AST
+
+Given a COLUMN expression, syntax parsing is naturally the first step. We will parse one COLUMN expression to one AST. For the SQL statement containing two column expressions above, we will parse them into two ASTs. Please check the following figure of the AST for the example SQL.  
+![column_clause_ast](../images/column_clause_ast.png)
+
+#### Convert the AST into a DAG of Transform Flow
+
+To convert ASTs into a transform flow, we will do an one-to-one mapping at first.
+
+1. Transform Function(AST) to TransformOP(Transform Flow). Each TransformOP has parameters. Some parameters can be gotten directly from the parsed result of COLUMN clause. And some parameters need be derived from data analysis and we will talk about it in detail in the following steps.
+2. Input Feature(AST) to Input Feature(Transform Flow).
+3. Column Node(AST) to Combine + Out(Transform Flow).
+We may have two or more column expressions, one column for one AST (tree structure). If we combine these ASTs, we will get a forest at this time.
+
+We may also have alias with keyword `AS` just like `AS group1` in the example SQL. The alias stands for a part of transform flow which is shared by multiple upstream nodes. And then the forest will become a DAG.
+![transform_flow_dag](../images/transform_flow_dag.png)
+
+#### Expand the TransformOP
+
+Let's focus on the clause `EMBEDDING(race, 8)` in the example SQL.  
+As we know, the SQLFlow statement is intention driven. We tell it to do embedding for the input feature `race` directly and don't tell how to map it into an integer id at first. And the latter is required for the model built using native TensorFlow. So we will expand the `Embedding` TransformOP and add `Hash` to do the id conversion work. The DAG will be expaneded from `race -> Embedding` to `race -> Hash -> Embedding`, just like the following graph.
+![transform_flow_dag_expanded](../images/transform_flow_dag_expanded.png)
+
+At this time, we have gotten a complete graph of the transform flow. But some TransformOP don't have all the required parameters, such as `vocabulary list` for `VOCABULARIZE(workclass)`. We will do the data analysis work to derive the parameter value.  
+
+#### Derive the Parameters of TransformOP from Data Analysis
+
+SQLFlow will generate the analysis SQL to calculate the statistical value. Please check the following analysis SQL for each transform function.
+
+NORMALIZE(x)
 
 ```SQL
 SELECT
-    MIN(capital_gain) AS capital_gain_min,
-    MAX(capital_gain) AS capital_gain_max,
-    AVG(age) AS age_mean,
-    STDDEV(age) AS age_stddev
-FROM census_income;
+    MIN(x) AS x_min,
+    MAX(x) AS x_max
+FROM data_table;
 ```
 
-*Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1667).*
+STANDARDIZE(x)
 
-After calculating the statistical data, SQLFlow is able to generate the concrete Python source code for data transform.  
+```SQL
+SELECT
+    AVG(x) AS x_mean,
+    STDDEV(x) AS x_stddev
+FROM data_table;
+```
 
-### Generate Transform Code From SQLFlow Statement
+BUCKETIZE(x, num_buckets=5)
 
-*Please check the [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1686).*
+```SQL
+SELECT
+    PERCENTILE(age, ARRAY(0.2, 0.4, 0.6, 0.8)) AS x_bucket_boundaries
+FROM data_table;
+```
 
-At this moment, we have gotten the full transform code and can prepare for model training. For the clause `TO TRAIN DNNClassifier`, we will combine the transform code and `DNNClassifier` from model zoo to the final submitter program.
+VOCABULARIZE(x)
 
-### Combine Transform Code And Model Definition
+```SQL
+SELECT DISTINCT(x)
+FROM data_table;
+```
 
-The model definition in model zoo is a Python class derived from `tf.keras.Model`. It is compatible with various feature input. Please check the [sample model](https://github.com/sql-machine-learning/models/blob/1b6f5eaabd57b8ca682e60c1dde4cd4ec1053bf9/sqlflow_models/dnnclassifier.py#L3).  
+HASH(x)
 
-The transform code generated from `COLUMN` clause specifies how to convert the SELECT result into model inputs in the form of tensors.
+```SQL
+SELECT (COUNT(DISTINCT(x)) * 3) AS x_hash_bucket_size
+FROM data_table;
+```
 
-The [submitter pragram](https://github.com/sql-machine-learning/sqlflow/blob/develop/doc/design/model_zoo.md#submitter-programs) will combine these two and feed the output tensor of transform code into the model definition.  
+*Note: If we assign COUNT(DISTINCT(x)) as hash_bucket_size, the conflict ratio is high - about 40%. So we multiply it with a factor `3` here. And the factor is tunable here.*
 
-### Implementation (To Be Improved)
+#### Derive the parameters of TransformOP from DAG Walkthrough
 
-Data transform contains two stages: analyze and transform. In our design, we will do the analysis using SQL as the first step, and generate the feature column definition as the second step. The feature column contains the transform logic and executes along with the model training process.  
-We choose to convert the transform expression into two steps of the work flow described by [Couler](https://github.com/sql-machine-learning/sqlflow/blob/develop/python/couler/README.md): analyze and feature column generation. Couler is a programming language for describing workflows. Its compiler translates a workflow represented by a Python program into an [Argo](https://argoproj.github.io/) YAML file. The output of feature column generation will be passed to the next model training step.  
-![data_transform_pipeline](../images/data_transform_pipeline.png)
+Some parameters of TransformOP can't be gotten from data analysis. For example, `Embedding` needs the parameter `input_dimension`, it's equals to `num_buckets` attribute of `CONCAT` which is the dependency of `Embedding`.  
+In one sentence, we need walk through the DAG and calculate the parameters of one TransformOP from its dependency.
 
-Let's take STANDARDIZE(age) for example, the following figure describes how the data transform pipeline works in detail.  
+#### Generate the Transform Python code from the DAG
 
-![transform_steps](../images/transform_steps.png)
+Now we have a complete DAG: a complete Graph describing the dependency of TransformOPs and each TranformOP has all the required parameters.  
+We can make typological sort on the DAG and get an ordered list. Then we generate the python code according to this order. A TransformOP node will generate a line of python code. A line of python code is an api call to [feature column](https://www.tensorflow.org/versions/r2.2/api_docs/python/tf/feature_column) or [keras preprocessing layer](https://github.com/tensorflow/community/pull/188) from TensorFlow native API and our extensions in [elasticdl_preprocessing](https://github.com/sql-machine-learning/elasticdl/tree/develop/elasticdl_preprocessing). Please check the sample code generated from the example SQL: [keras preprocessing layer version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py#L129-L228) and [feature column version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_fc.py#L130-L243).
 
-A transform API contains two members: analyzers and feature column template. Analyzer is the statistical operation which needs run at first to complement the whole transform logic. Feature column template is used to build the concrete feature column definition.  
+At this moment, we have gotten the full transform code and can prepare for model training. For the sample SQL, we will combine the transform code and `WideAndDeepClassifier` from model zoo to the submitter program. The bridge between these two parts is important for the combination.  
 
-The **Analyze Step** and **Feature Column Generation Step** are two couler steps. Analyze Result and Generated Feature Column Definition Result are the output of these two couler steps.  
-In the Analyze step, we will parse the TRANSFORM expression and collect the statistics requirements. It's a dictionary of {statistic_variable_name} -> tuple({analyze_operation_name}, {column_name_in_source_table}). The SQL generator will generate the analyze SQL expression containing built-in aggregate functions from this dictionary for different data sources such as [Hive](https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF), [MaxCompute](https://help.aliyun.com/document_detail/48975.html) and so on. After executing the SQL, the statistical result will be writen to the standard output of the container.  
-In the feature column generation step, we will format the feature column template with the variable name and the statistical values to get the integral feature column definition for the transform logic.  
-The generated feature column definitions will be passed to the next couler step: model training. We combine them with the COLUMN expression to generated the final feature column definitions and then pass to the model. Let's take **NUMERIC(STANDARDIZE(age))** for example, the final definition will be **numeric_column('age', normalizer_fn=lambda x: x - 18.0 / 6.0)**  
+#### The Bridge Between Transform Code and Model Definition from Model Zoo
 
-We plan to implement the following common used transform APIs at the first step. And we will add more according to further requirements.
+The model definition in the model zoo is a python function or a python class. It has some input parameters. The transform python code is built upon feature column api or keras preprocessing layers. The bridge between transform code and model definition should cover the transform logic using both feature column and keras preprocessing layers.  
 
-|            Name             |                      Feature Column Template                                   |      Analyzer      |
-|:---------------------------:|:------------------------------------------------------------------------------:|:------------------:|
-|       STANDARDIZE(x)        | numeric_column({var_name}, normalizer_fn=lambda x : x - {mean} / {std})        |    MEAN, STDDEV    |
-|        NORMALIZE(x)         | numeric_column({var_name}, normalizer_fn=lambda x : x - {min} / {max} - {min}) |      MAX, MIN      |
-|           LOG(x)            | numeric_column({var_name}, normalizer_fn=lambda x : tf.math.log(x))            |         N/A        |
-| BUCKETIZE(x, num_buckets=y) | bucketized_column({var_name}, boundaries={percentiles})                        |     PERCENTILE     |
+Tensors is a good choice for the bridge. The keyword `FOR` in the column clause means that it will output one tensor, and two `FOR` keywords output two tensors. So the COLUMN expressions in example SQL output two tensors: `deep_embeddings` and `wide_embeddings`.
+
+For keras functional model, the python function of the model is [`def wide_and_deep_classifier(input_layers, wide_embeddings, deep_embeddings)`](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py#L47-L66). The names of the output tensors match the names of the input parameters in the function. We will combine the transform code and model definition through parameter binding according to the name.  
+
+For keras subclass model, it has a core method `def call(self, inputs)` to describe the forward pass logic. But we cannot get how many tensors the model accepts from the parameter `inputs`. To solve this problem, we propose to add a decorator `@declare_model_inputs` on the model class to inject some metadata. The metadata tells us the number and names of the input tensor for this model.  
+
+```python
+@declare_model_inputs("wide_embeddings", "deep_embeddings")
+class WideAndDeepClassifier(tf.keras.Model):
+    def __init__(self):
+        pass
+
+    def call(self, inputs):
+        pass
+```
+
+And then we can get the input tensor names `[wide_embeddings, deep_embeddings]` from the static attribute of the model class - `WideAndDeepClassifier._model_inputs`. Model zoo service can load the python module and get the metadata using this way. It's useful for the parameter binding between COLUMN clause and model definition.
+
+And when do we use this decorator during model development? Please check the following:
+
+- If ML specialist develops the model structure and verify it using `model.fit`, the decorator is not necessary.  
+- If ML specialist run the machine learning pipeline locally using SQLFlow / run model unit test using SQLFlow / submit model into SQLFlow model zoo, ML specialist need add the decorator.
 
 ## Further Consideration
 
-In the design above, we generated the concrete feature column definition for data transformation in the Transform stage. The actual transform logic on the raw data executes along with the model training process. Based on this design, we can further consider transforming the raw data and writing the transformed result into a new table in the stage.  
-After analyzing the data, we construct the TF graph for transform instead of feature column definition and export it to SavedModel. And then we submit a data processing job to transform the raw data by executing UDF with the SavedModel. The whole process is also matched with the TFX pipeline.  
-This solution can bring the following benifits:
-
-1. We can reuse the transformed data in the temporary table to execute multipe model training run for different hyperparameter combinations and all the epochs. Data transformation is only executed once.
-2. We can support more flexible transform logic such as inter column calculation. Feature column has some limit on the inter column calculation. Please check the [Wiki](https://github.com/sql-machine-learning/elasticdl/wiki/ElasticDL-TF-Transform-Explore#inter-columns-calculation) for more details.
-
-We need figure out the following points for this further solution:
-
-1. Model Export: Upgrade keras API to support exporting the transform logic and the model definition together to SavedModel for inference. [Issue](https://github.com/tensorflow/tensorflow/issues/34618)
-2. Transform Execution: We will transform the data records one by one using the transform logic in the SavedModel format and then write to a new table. We also need write a Jar, it packages the TensorFlow library, loads the SavedModel into memory and processes the input data. And then we register it as UDF in Hive or MaxCompute and use it to transform the data.  
+From the syntax design above, we can see that the COLUMN clause can be very long. It's will be challenging to users to write the entire COLUMN clause if there are hundreds of features or even more from source table. And it's common in the search and recommendatation scenario. In the long term, user can write simpiflied COLUMN clause or even don't need write it. SQLFlow will do feature deriviation and auto-complete the COLUMN clause.  
