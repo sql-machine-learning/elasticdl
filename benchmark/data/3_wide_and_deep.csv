@@ -1,4 +1,4 @@
-Steps,baseline_4worker_1 ,baseline_4worker_2,baseline_4worker_3 ,baseline_8worker_1,baseline_8worker_2,baseline_8worker_3,elastic_4_8worker_test1,elastic_4_8worker_test2 ,elastic_4_8worker_test3 ,
+Steps,baseline_4worker_1 ,baseline_4worker_2,baseline_4worker_3 ,baseline_8worker_1,baseline_8worker_2,baseline_8worker_3,elastic_4_8worker_1,elastic_4_8worker_2 ,elastic_4_8worker_3 ,
 10000,0.78866583,0.7884404,0.7894794,0.7882349,0.7886429,0.7890107,0.78874326,0.7891954,0.7888796,
 20000,0.79341567,0.7927047,0.7939053,0.79292613,0.7935699,0.793484,0.7929012,0.7936799,0.79324573,
 30000,0.7956067,0.79471743,0.796426,0.7956646,0.7957148,0.7960735,0.79546267,0.7958846,0.7954321,
