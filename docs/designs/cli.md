@@ -61,7 +61,9 @@ elasticdl_cli zoo push reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0
 ```BASH
 elasticdl_cli train \
     --image=reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0 \
-    --model_def=models.my_model_repo.models.wnd.custom_model \
+    --model_def=my_model_repo.models.wnd.custom_model \
+    --training_data=/data/mnist/train \
+    --validation_data=/data/mnist/test \
     --num_epochs=2 \
     --minibatch_size=64 \
     --num_minibatches_per_task=2 \
