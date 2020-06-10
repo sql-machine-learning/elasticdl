@@ -7,22 +7,31 @@ all : 1.png 2.png 3-1.png 3-2.png
 %.png : %.pdf
 	convert $< $@
 
+%.pdf : %.gnuplot
+	gnuplot $<
+
 1.pdf : 1c.data 1s.data 1.gnuplot
 	gnuplot 1.gnuplot
 
 2.pdf : 2.data 2.gnuplot
 	gnuplot 2.gnuplot
 
-3-1.pdf : 3_wide_and_deep.data 3_wide_and_deep.gnuplot
-	gnuplot 3_wide_and_deep.gnuplot
+3-1.pdf : 3-1.gnuplot 3-1.data
+	gnuplot $<
 
-3-2.pdf : 3_xdeepfm.data 3_xdeepfm.gnuplot
-	gnuplot 3_xdeepfm.gnuplot
+3-2.pdf : 3-2.gnuplot 3-2.data
+	gnuplot $<
 
 # tail -n +2 skips over the first one line of a file.  The sed command replaces
 # the CSV separator by whitespace, as required by Gnuplot.
 %.data : %.csv
 	tail -n +2 $<  | sed 's/,/ /g' > $@
+
+3-1.data : 3-1.csv
+	tail -n +2 $<  | head -n 14 | sed 's/,/ /g' > $@
+
+3-2.data : 3-2.csv
+	tail -n +2 $<  | head -n 8 | sed 's/,/ /g' > $@
 
 clean:
 	rm *.data *.pdf *.png
