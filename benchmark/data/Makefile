@@ -1,4 +1,4 @@
-all : 1.png 2.png 3.png
+all : 1.png 2.png 3-1.png 3-2.png
 
 # We use convert from ImageMagick to generate PNG files from PDF files, because
 # Gnuplot replot command doesn't work well with multiplot used in 1.gnuplot.
@@ -13,8 +13,11 @@ all : 1.png 2.png 3.png
 2.pdf : 2.data 2.gnuplot
 	gnuplot 2.gnuplot
 
-3.pdf : 3_wide_and_deep.data 3_xdeepfm.data 3.gnuplot
-	gnuplot 3.gnuplot
+3-1.pdf : 3_wide_and_deep.data 3_wide_and_deep.gnuplot
+	gnuplot 3_wide_and_deep.gnuplot
+
+3-2.pdf : 3_xdeepfm.data 3_xdeepfm.gnuplot
+	gnuplot 3_xdeepfm.gnuplot
 
 # tail -n +2 skips over the first one line of a file.  The sed command replaces
 # the CSV separator by whitespace, as required by Gnuplot.
