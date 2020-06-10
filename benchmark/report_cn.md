@@ -72,7 +72,7 @@ Elastic scheduling 的实现可以带来用户体验和集群利用率的双丰�
 
 ## 实验三：训练时更改 worker 数量不影响收敛性
 
-有用户担心训练过程中 worker 的数量发生变化，会导致不收敛。实际情况下从未发生这类问题。用 ElasticDL 和用 gang scheduling 分别训练 wide-and-deep DNN model，收敛曲线如下：
+有用户担心训练过程中 worker 的数量发生变化，会导致不收敛。实际情况下从未发生这类问题。用 ElasticDL 和用 gang scheduling 分别训练 wide-and-deep DNN model 和 xdeepFM DNN model，收敛曲线如下：
 
 ![](./data/3.pdf)
 

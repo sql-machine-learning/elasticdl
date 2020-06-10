@@ -13,7 +13,7 @@ all : 1.png 2.png 3.png
 2.pdf : 2.data 2.gnuplot
 	gnuplot 2.gnuplot
 
-3.pdf : 3.data 3.gnuplot
+3.pdf : 3_wide_and_deep.data 3_xdeepfm.data 3.gnuplot
 	gnuplot 3.gnuplot
 
 # tail -n +2 skips over the first one line of a file.  The sed command replaces
