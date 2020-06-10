@@ -78,5 +78,3 @@ elasticdl_cli train \
     --ps_resource_request="cpu=0.2,memory=1024Mi" \
     --ps_resource_limit="cpu=1,memory=2048Mi" \
 ```
-
-## Command
