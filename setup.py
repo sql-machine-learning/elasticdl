@@ -28,6 +28,7 @@ setup(
             "Makefile",
             "requirements.txt",
             "pkg/kernel/capi/*",
+            "pkg/ps_main",
         ]
     },
     entry_points={

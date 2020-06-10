@@ -60,6 +60,7 @@ RUN cd /elasticdl && \
     go install ./...
 
 # Create elasticdl package
+RUN cp /root/go/bin/main /elasticdl/elasticdl/pkg/ps_main
 RUN cd /elasticdl && \
     python setup.py -q bdist_wheel && \
     cp dist/elasticdl-develop-py3-none-any.whl /

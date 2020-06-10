@@ -395,7 +395,7 @@ class Master(object):
             if args.use_go_ps:
                 opt_type, opt_args = get_optimizer_info(self.optimizer)
                 # TODO: rename the Go PS executable using a meaningful filename
-                ps_client_command = "main"
+                ps_client_command = "ps_main"
                 ps_args = [
                     "-job_name=" + args.job_name,
                     "-namespace=" + args.namespace,
