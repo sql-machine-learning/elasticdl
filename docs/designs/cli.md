@@ -37,7 +37,7 @@ discusssing about this command-line client tool.
     `base_image_name` is optional and the default value is `python:3`. The generated Dockerfile example is:
 
     ```Dockerfile
-    FROM python
+    FROM python:3.7
     COPY . /model_zoo
     RUN pip install -r /model_zoo/requirements.txt
     RUN pip install elasticdl
