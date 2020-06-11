@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 with open("elasticdl_preprocessing/requirements.txt") as f:
     required_deps = f.read().splitlines()
@@ -21,6 +21,6 @@ setup(
     install_requires=required_deps,
     extras_require=extras,
     python_requires=">=3.5",
-    packages=["elasticdl_preprocessing"],
+    packages=find_packages(include=["*elasticdl_preprocessing*"], ),
     package_data={"": ["requirements.txt"]},
 )
