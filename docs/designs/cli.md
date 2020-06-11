@@ -31,7 +31,7 @@ In this doc, we are focusing on a light-weight client CLI of ElasticDL.
     elasticdl zoo init [base_image_name]
     ```
 
-    The example Dockerfile is:
+    `base_image_name` is optional and the default value is `python:3`. The generated Dockerfile example is:
 
     ```Dockerfile
     FROM python:3
