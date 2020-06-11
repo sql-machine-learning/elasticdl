@@ -90,7 +90,7 @@ jobs:
               else
                 echo "Running ElasticDL job: ${JOB_TYPE}"
                 if [[ "$JOB_TYPE" == "odps" ]]; then
-                    export MAXCOMPUTE_TABLE=\
+                    export MAXCOMPUTE_TABLE= \
                     "odps_integration_build_${TRAVIS_BUILD_NUMBER}_$(date +%s)"
                     docker run --rm -it \
                       -e MAXCOMPUTE_TABLE=$MAXCOMPUTE_TABLE \
