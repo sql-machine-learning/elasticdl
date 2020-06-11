@@ -4,11 +4,11 @@
 
 ElasticDL is a Kubernetes-Native deep learning framework. As it runs
 distributed training/prediction/evaluation jobs in a cluster, we need a client
-to submit the job to the cluster. The main functionality of the client is
+to submit the jobs to the cluster. The main functionality of the client is
 *building image for ElasticDL job* and *submitting ElasticDL job*.
 
-Currently we have one but it's tightly coupled with the main package. It's too
-heavy that users need pip install the whole elasticdl package and lots of
+Currently we have a client but it's tightly coupled with the main package. It's
+too heavy that users need pip install the whole elasticdl package and lots of
 dependencies such as TensorFlow, grpcio, etc.
 
 To improve the user experience, we need a light-weight client CLI of ElasticDL.
@@ -25,7 +25,7 @@ discusssing about this command-line client tool.
     requirements.txt
     ```
 
-2. Generate an Dockerfile.  
+2. Generate a Dockerfile.  
 
     Input the command:
 
