@@ -17,7 +17,8 @@ discusssing about this command-line client tool.
 
 ## User Story
 
-1. User develops model and the directory structure is as follows:
+1. Users develop model and the directory structure of model definition files
+   is as follows:
 
     ```TEXT
     a_directory
