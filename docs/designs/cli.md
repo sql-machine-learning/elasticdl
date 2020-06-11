@@ -18,9 +18,7 @@ In this doc, we are focusing on a light-weight client CLI of ElasticDL.
 
     ```TEXT
     a_directory
-    - layers
-    - models
-    - utils
+    - wide_and_deep.py
     requirements.txt
     ```
 
@@ -29,16 +27,17 @@ In this doc, we are focusing on a light-weight client CLI of ElasticDL.
     Input the command:
 
     ```bash
-    cd ${model_repo_root_path}
-    elasticdl zoo init
+    cd ${model_root_path}
+    elasticdl zoo init [base_image_name]
     ```
 
     The example Dockerfile is:
 
     ```Dockerfile
-    FROM elastcdl:latest
-    COPY . /models
-    RUN pip install -r /models/requirements.txt
+    FROM python:3
+    COPY . /model_zoo
+    RUN pip install -r /model_zoo/requirements.txt
+    RUN pip install elasticdl
     ```
 
     User can make additional update on the Dockerfile if necessary.
@@ -60,7 +59,7 @@ In this doc, we are focusing on a light-weight client CLI of ElasticDL.
     ```bash
     elasticdl train \
         --image=reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0 \
-        --model_def=my_model_repo.models.wnd.custom_model \
+        --model_def=a_directory.wide_and_deep.custom_model \
         --training_data=/data/mnist/train \
         --validation_data=/data/mnist/test \
         --num_epochs=2 \
