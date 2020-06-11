@@ -43,19 +43,19 @@ In this doc, we are focusing on a light-weight client CLI of ElasticDL.
 
     User can make additional update on the Dockerfile if necessary.
 
-3. Build the docker image for ElasticDL job.
+3. Build the Docker image for ElasticDL job.
 
     ```bash
     elasticdl zoo build --image=reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0 .
     ```
 
-4. Push the docker image to a remote registry (optional)
+4. Push the Docker image to a remote registry (optional)
 
     ```bash
     elasticdl zoo push reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0
     ```
 
-5. Submit a model training/prediction/evalution job.
+5. Submit a model training/prediction/evaluation job.
 
     ```bash
     elasticdl train \
