@@ -1,4 +1,4 @@
-# ElasticDL Client CLI
+# ElasticDL Command-line Client Tool
 
 ## Background
 
@@ -9,16 +9,15 @@ coupled with the main package. User need pip install the whole elasticdl
 package and lots of dependencies and it's too heavy.
 
 The main functionality of the client is *building image for ElasticDL job* and
-*submitting ElasticDL job*. It only depedent on docker and Kubernetes Api.
+*submitting ElasticDL job*. It only has depedency on docker and Kubernetes Api.
 In this doc, we are focusing on a light-weight client CLI of ElasticDL.
 
 ## User Story
 
-1. User develops model in the IDE (VSCode/Emacs/PyCharm) and commit to a git
-repo (optional). The directory structure is as follows:
+1. User develops model and the directory structure is as follows:
 
 ```TEXT
-my_model_repo
+a_directory
 - layers
 - models
 - utils
@@ -29,9 +28,9 @@ requirements.txt
 
 Input the command:
 
-```BASH
+```bash
 cd ${model_repo_root_path}
-elasticdl_cli zoo init
+elasticdl zoo init
 ```
 
 Get the sample Dockerfile.
@@ -46,20 +45,20 @@ User can make additional update on the Dockerfile if necessary.
 
 3. Build the docker image for elasticdl job.
 
-```BASH
-elasticdl_cli zoo build --image=reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0 .
+```bash
+elasticdl zoo build --image=reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0 .
 ```
 
 4. Push the docker image to a remote registry (optional)
 
-```BASH
-elasticdl_cli zoo push reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0
+```bash
+elasticdl zoo push reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0
 ```
 
 5. Submit a model training/prediction/evalution job.
 
-```BASH
-elasticdl_cli train \
+```bash
+elasticdl train \
     --image=reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0 \
     --model_def=my_model_repo.models.wnd.custom_model \
     --training_data=/data/mnist/train \
@@ -78,5 +77,5 @@ elasticdl_cli train \
     --worker_resource_request="cpu=0.4,memory=1024Mi" \
     --worker_resource_limit="cpu=1,memory=2048Mi" \
     --ps_resource_request="cpu=0.2,memory=1024Mi" \
-    --ps_resource_limit="cpu=1,memory=2048Mi" \
+    --ps_resource_limit="cpu=1,memory=2048Mi"
 ```
