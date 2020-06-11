@@ -47,9 +47,10 @@ RUN /install-protobuf.bash && rm /install-protobuf.bash
 # Install elasticdl.org/elasticdl Go package
 ENV ELASTICDLPATH /root/elasticdl
 COPY . /elasticdl
+
 RUN cd /elasticdl && \
     make -f elasticdl/Makefile && \
-    cp -r /elasticdl/elasticdl/pkg $ELASTICDLPATH && \
+    cp -r /elasticdl/elasticdl/go/ ${ELASTICDLPATH} && \
     cd $GOPATH/pkg/mod/github.com/tensorflow && \
     go mod init github.com/tensorflow &&\
     cd $ELASTICDLPATH && \
