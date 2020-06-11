@@ -34,10 +34,11 @@ discusssing about this command-line client tool.
     elasticdl zoo init [base_image_name]
     ```
 
-    `base_image_name` is optional and the default value is `python:3`. The generated Dockerfile example is:
+    `base_image_name` is optional and the default value is `python`.
+    The generated Dockerfile example is:
 
     ```Dockerfile
-    FROM python:3.7
+    FROM python
     COPY . /model_zoo
     RUN pip install -r /model_zoo/requirements.txt
     RUN pip install elasticdl
