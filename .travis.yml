@@ -27,8 +27,7 @@ jobs:
     - stage: precommit
       name: "Pre-commit Check"
       script:
-        - >-
-          docker build --target dev -t elasticdl:dev -f
+        - docker build --target dev -t elasticdl:dev -f
           elasticdl/docker/Dockerfile .
         - docker run --rm -it -v $PWD:/work -w /work
           elasticdl:dev /work/scripts/pre-commit.sh
