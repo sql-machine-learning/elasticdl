@@ -63,9 +63,9 @@ jobs:
           else
             docker run --rm -it \
             -e MAXCOMPUTE_PROJECT=$MAXCOMPUTE_PROJECT \
-            -e MAXCOMPUTE_AK=$ODPS_ACCESS_ID
-            -e MAXCOMPUTE_SK=$ODPS_ACCESS_KEY
-            -v $PWD:/work -w /work elasticdl:dev bash
+            -e MAXCOMPUTE_AK=$ODPS_ACCESS_ID \
+            -e MAXCOMPUTE_SK=$ODPS_ACCESS_KEY \
+            -v $PWD:/work -w /work elasticdl:dev bash \
             -c "make -f elasticdl/Makefile && K8S_TESTS=False \
             pytest elasticdl/python/tests/*odps_* \
             elasticdl/python/tests/data_reader_test.py"
