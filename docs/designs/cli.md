@@ -4,13 +4,16 @@
 
 ElasticDL is a Kubernetes-Native deep learning framework. As it runs
 distributed training/prediction/evaluation jobs in a cluster, we need a client
-to submit the job to the cluster. Currently we have one but it's tightly
-coupled with the main package. User need pip install the whole elasticdl
-package and lots of dependencies and it's too heavy.
+to submit the job to the cluster. The main functionality of the client is
+*building image for ElasticDL job* and *submitting ElasticDL job*.
 
-The main functionality of the client is *building image for ElasticDL job* and
-*submitting ElasticDL job*. It only has depedency on docker and Kubernetes Api.
-In this doc, we are focusing on a light-weight client CLI of ElasticDL.
+Currently we have one but it's tightly coupled with the main package. It's too
+heavy that users need pip install the whole elasticdl package and lots of
+dependencies such as TensorFlow, grpcio, etc.
+
+To improve the user experience, we need a light-weight client CLI of ElasticDL.
+It only has depedency on docker and Kubernetes Api. In this doc, we are
+discusssing about this command-line client tool.
 
 ## User Story
 
@@ -34,15 +37,15 @@ In this doc, we are focusing on a light-weight client CLI of ElasticDL.
     `base_image_name` is optional and the default value is `python:3`. The generated Dockerfile example is:
 
     ```Dockerfile
-    FROM python:3
+    FROM python
     COPY . /model_zoo
     RUN pip install -r /model_zoo/requirements.txt
     RUN pip install elasticdl
     ```
 
-    User can make additional update on the Dockerfile if necessary.
+    Users can make additional updates on the Dockerfile if necessary.
 
-3. Build the Docker image for ElasticDL job.
+3. Build the Docker image for an ElasticDL job.
 
     ```bash
     elasticdl zoo build --image=reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0 .
