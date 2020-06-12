@@ -1,4 +1,4 @@
-FROM elasticdl:ci
+FROM elasticdl:dev
 
 WORKDIR /root/
 RUN git clone --depth=1 https://github.com/caicloud/ftlib.git
