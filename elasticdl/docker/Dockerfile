@@ -7,8 +7,6 @@ ARG BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
 # docker build --target dev -t dev_image -f this_dockerfile elasticdl_repo_dir
 # To build ci:
 # docker build --target ci -t ci_image -f this_dockerfile elasticdl_repo_dir
-# To build release:
-# docker -t image_name -f this_dockerfile elasticdl_repo_dir
 
 # Stage 1: dev
 FROM ${BASE_IMAGE} as dev
@@ -66,9 +64,6 @@ RUN cd /elasticdl && \
     cp dist/elasticdl-develop-py3-none-any.whl /
 
 
-# Stage 2: ci
-FROM dev as ci
-
 # This assumes that the data generation package is independent with the
 # rest part of ElasticDL.  The generated data will be in /data.
 COPY elasticdl/python/data/recordio_gen/image_label.py /var/image_label.py
@@ -89,23 +84,23 @@ RUN python /var/heart_recordio_gen.py --data_dir /root/.keras/datasets \
 
 RUN rm -rf /root/.keras/datasets
 
-WORKDIR /
-ENV PYTHONPATH=/elasticdl
-COPY setup.py /elasticdl/setup.py
-RUN cd /elasticdl && python setup.py -q install
-COPY model_zoo /model_zoo
 
+# Stage 2: ci
 
-# Stage 3: release
-FROM ${BASE_IMAGE} as release
+FROM ${BASE_IMAGE} as ci
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 
-# Replace the Splash screen from TensorFlow image.
 COPY elasticdl/docker/bashrc /etc/bash.bashrc
 RUN chmod a+rwx /etc/bash.bashrc
 
+# Copy data
+COPY --from=dev /data /data
+
+# Copy model zoo
+COPY model_zoo /model_zoo
+
 # Copy GO PS
-ARG GO_PS=/root/go/bin/main
+ARG GO_PS=/root/go/bin/start_ps
 RUN mkdir -p /usr/local/go/bin
 COPY --from=dev ${GO_PS} /usr/local/go/bin
 ENV PATH /usr/local/go/bin:$PATH

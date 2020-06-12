@@ -434,8 +434,7 @@ class Master(object):
                 ps_args.insert(0, ps_client_command)
             else:
                 ps_client_command = (
-                    BashCommandTemplate.SET_PIPEFAIL
-                    + " python -m elasticdl.python.ps.main"
+                    BashCommandTemplate.SET_PIPEFAIL + " elasticdl train"
                 )
                 ps_args = [
                     "--grads_to_wait",
