@@ -1,6 +1,6 @@
 language: minimal
 
-dist: bionic
+dist: focal
 
 addons:
   apt:
