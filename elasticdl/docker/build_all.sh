@@ -18,13 +18,14 @@ TF_VERSION=2.1.0
 
 if [[ ! -d .git ]]; then
     echo "We must run this script at the root of the source tree."
+    exit 1
 fi
 
 if [[ $# -eq 1 && $1 == "-gpu" ]]; then
     base_image="tensorflow/tensorflow:${TF_VERSION}-gpu-py3"
     echo "To support CUDA; all images are from " $base_image
-    dev_image="elasticdl:gpudev"
-    ci_image="elasticdl:gpuci"
+    dev_image="elasticdl:dev-gpu"
+    ci_image="elasticdl:ci-gpu"
 
 else
     base_image="tensorflow/tensorflow:${TF_VERSION}-py3"
