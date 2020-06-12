@@ -10,6 +10,8 @@ addons:
       - clang-format
 
 install:
+  # Install the most recent version of Docker to use DOCKER_BUILDKIT.
+  - bash scripts/travis/install-docker.sh
   - docker version
 
 stages:
@@ -26,8 +28,6 @@ jobs:
     - stage: tests
       script:
         - set -e
-        # Install the most recent version of Docker to use DOCKER_BUILDKIT.
-        - bash scripts/travis/install-docker.sh
         - export DOCKER_BUILDKIT=1
         - bash elasticdl/docker/build_all.sh
         # Run pre-commit checks
