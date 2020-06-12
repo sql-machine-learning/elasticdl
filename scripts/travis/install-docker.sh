@@ -12,11 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-
-# This file comes from https://docs.docker.com/engine/install/ubuntu/.
-sudo apt-get remove docker docker-engine docker.io containerd runc
-
 # Update the apt package index and install packages to allow apt to use a
 # repository over HTTPS.
 sudo apt-get -qq update
@@ -41,6 +36,7 @@ sudo apt-get -qq update
 sudo apt-get -qq install -y docker-ce docker-ce-cli containerd.io > /dev/null
 
 # Enable docker without sudo.
+sudo groupadd docker
 sudo usermod -aG docker "$USER"
 
 # Activate the changes to groups.
