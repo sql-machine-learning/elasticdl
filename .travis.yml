@@ -27,6 +27,8 @@ jobs:
     - stage: precommit
       name: "Pre-commit Check"
       script:
+        - set -e
+        - export DOCKER_BUILDKIT=1
         - docker build --target dev -t elasticdl:dev -f
           elasticdl/docker/Dockerfile .
         - docker run --rm -it -v $PWD:/work -w /work
@@ -35,6 +37,7 @@ jobs:
       name: "Tests"
       script:
         - set -e
+        - export DOCKER_BUILDKIT=1
         # Set up Kubernetes environment
         - bash scripts/setup_k8s_env.sh
         - bash elasticdl/docker/build_all.sh
