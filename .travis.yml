@@ -114,8 +114,8 @@ jobs:
                   -v /home/$USER/.minikube/:/home/$USER/.minikube/ \
                   -v $(pwd):/work \
                   -w /work elasticdl:ci \
-                  bash -c "scripts/client_test.sh " \
-                    "${JOB_TYPE} ${PS_NUM} ${WORKER_NUM}"
+                  bash -c "scripts/client_test.sh \
+                    ${JOB_TYPE} ${PS_NUM} ${WORKER_NUM}"
                 if [[ "$JOB_TYPE" != "local" ]]; then
                     python3 scripts/validate_job_status.py \
                     ${JOB_TYPE} ${PS_NUM} ${WORKER_NUM}
