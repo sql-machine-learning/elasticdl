@@ -36,8 +36,4 @@ sudo apt-get -qq update
 sudo apt-get -qq install -y docker-ce docker-ce-cli containerd.io # > /dev/null
 
 # Enable docker without sudo.
-# sudo groupadd docker
 sudo usermod -aG docker "$USER"
-
-# Activate the changes to groups.
-# newgrp docker

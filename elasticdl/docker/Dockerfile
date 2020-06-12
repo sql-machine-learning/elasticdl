@@ -1,5 +1,5 @@
-ARG BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
-# Use tensorflow/tensorflow:2.1.0-gpu-py3 if you want GPU-support.
+ARG BASE_IMAGE=tensorflow/tensorflow:2.1.1
+# Use tensorflow/tensorflow:2.1.1-gpu if you want GPU-support.
 
 # Multi-stage is used for dev/ci/release images
 # Better to build in DOCKER_BUILDKIT by setting env: DOCKER_BUILDKIT=1
