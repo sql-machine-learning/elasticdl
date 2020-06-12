@@ -58,14 +58,14 @@ jobs:
         # Run unit tests related to ODPS (skipped for pull requests from forks)
         - |
           if [ "$ODPS_ACCESS_ID" == "" ] || [ "$ODPS_ACCESS_KEY" == "" ]; then
-            echo "Skipping ODPS related unit tests since either ODPS_ACCESS_ID
-            or ODPS_ACCESS_KEY is not set"
+            echo "Skipping ODPS related unit tests since either ODPS_ACCESS_ID " \
+            "or ODPS_ACCESS_KEY is not set"
           else
             docker run --rm -it \
             -e MAXCOMPUTE_PROJECT=$MAXCOMPUTE_PROJECT \
-            -e MAXCOMPUTE_AK=$ODPS_ACCESS_ID
-            -e MAXCOMPUTE_SK=$ODPS_ACCESS_KEY
-            -v $PWD:/work -w /work elasticdl:dev bash
+            -e MAXCOMPUTE_AK=$ODPS_ACCESS_ID \
+            -e MAXCOMPUTE_SK=$ODPS_ACCESS_KEY \
+            -v $PWD:/work -w /work elasticdl:dev bash \
             -c "make -f elasticdl/Makefile && K8S_TESTS=False \
             pytest elasticdl/python/tests/*odps_* \
             elasticdl/python/tests/data_reader_test.py"
@@ -90,8 +90,8 @@ jobs:
               else
                 echo "Running ElasticDL job: ${JOB_TYPE}"
                 if [[ "$JOB_TYPE" == "odps" ]]; then
-                    export MAXCOMPUTE_TABLE=\
-                    "odps_integration_build_${TRAVIS_BUILD_NUMBER}_$(date +%s)"
+                    export MAXCOMPUTE_TABLE="odps_integration_build_"`
+                      `"${TRAVIS_BUILD_NUMBER}_$(date +%s)"
                     docker run --rm -it \
                       -e MAXCOMPUTE_TABLE=$MAXCOMPUTE_TABLE \
                       -e MAXCOMPUTE_PROJECT=$MAXCOMPUTE_PROJECT \
@@ -99,8 +99,8 @@ jobs:
                       -e MAXCOMPUTE_SK=$ODPS_ACCESS_KEY \
                       -v $PWD:/work -w /work elasticdl:dev bash \
                       -c 'python -c '`
-                        `'"from elasticdl.python.tests.test_utils import *;"' `
-                        `'"create_iris_odps_table_from_env()"'
+                        `'"from elasticdl.python.tests.test_utils import *;'`
+                        `'create_iris_odps_table_from_env()"'
                 fi
                 PS_NUM=2
                 WORKER_NUM=1
@@ -114,8 +114,8 @@ jobs:
                   -v /home/$USER/.minikube/:/home/$USER/.minikube/ \
                   -v $(pwd):/work \
                   -w /work elasticdl:ci \
-                  bash -c "scripts/client_test.sh "`
-                    `"${JOB_TYPE} ${PS_NUM} ${WORKER_NUM}"
+                  bash -c "scripts/client_test.sh \
+                    ${JOB_TYPE} ${PS_NUM} ${WORKER_NUM}"
                 if [[ "$JOB_TYPE" != "local" ]]; then
                     python3 scripts/validate_job_status.py \
                     ${JOB_TYPE} ${PS_NUM} ${WORKER_NUM}
@@ -130,8 +130,8 @@ jobs:
                       -w /work \
                       elasticdl:dev \
                       bash -c 'python -c '`
-                      `'"from elasticdl.python.tests.test_utils import *; "'`
-                      `'"delete_iris_odps_table_from_env()"'
+                        `'"from elasticdl.python.tests.test_utils import *; '`
+                        `'delete_iris_odps_table_from_env()"'
                 fi
               fi
           done

@@ -1,4 +1,4 @@
-FROM elasticdl:ci
+FROM elasticdl:dev
 
 WORKDIR /root/
 
