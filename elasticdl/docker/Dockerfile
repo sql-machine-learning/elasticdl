@@ -98,6 +98,8 @@ COPY --from=dev /data /data
 
 # Copy model zoo
 COPY model_zoo /model_zoo
+RUN python -m pip -q install -r /model_zoo/requirements.txt \
+        --extra-index-url=${EXTRA_PYPI_INDEX}
 
 # Copy GO PS
 ARG GO_PS=/root/go/bin/start_ps
