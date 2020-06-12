@@ -1,6 +1,6 @@
 language: minimal
 
-dist: xenial
+dist: bionic
 
 addons:
   apt:
