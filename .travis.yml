@@ -1,11 +1,10 @@
 language: minimal
 
-dist: focal
+dist: bionic
 
 addons:
   apt:
     packages:
-      - docker-ce
       - python3-pip
       - python3-setuptools
       - clang-format
@@ -27,8 +26,7 @@ jobs:
     - stage: tests
       script:
         - set -e
-        - sudo apt-get update -y
-        - sudo apt-get install --only-upgrade docker-ce -y
+        - bash scripts/travis/install-docker.sh
         - export DOCKER_BUILDKIT=1
         - bash elasticdl/docker/build_all.sh
         # Run pre-commit checks
