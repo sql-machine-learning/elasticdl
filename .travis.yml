@@ -29,7 +29,7 @@ jobs:
       script:
         - set -e
         # Build Docker images.
-        - bash scripts/travis/build_images.sh
+        - bash $TRAVIS_BUILD_DIR/scripts/travis/build_images.sh
         # Run pre-commit checks.
         - docker run --rm -it -v $PWD:/work -w /work
           elasticdl:dev /work/scripts/pre-commit.sh
