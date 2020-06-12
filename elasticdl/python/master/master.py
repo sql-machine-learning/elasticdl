@@ -407,7 +407,7 @@ class Master(object):
 
             if args.use_go_ps:
                 opt_type, opt_args = get_optimizer_info(self.optimizer)
-                ps_client_command = "start_ps"
+                ps_client_command = "elasticdl_ps"
                 ps_args = [
                     "-job_name=" + args.job_name,
                     "-namespace=" + args.namespace,
