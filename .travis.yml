@@ -58,8 +58,8 @@ jobs:
         # Run unit tests related to ODPS (skipped for pull requests from forks)
         - |
           if [ "$ODPS_ACCESS_ID" == "" ] || [ "$ODPS_ACCESS_KEY" == "" ]; then
-            echo "Skipping ODPS related unit tests since either ODPS_ACCESS_ID
-            or ODPS_ACCESS_KEY is not set"
+            echo "Skipping ODPS related unit tests since either ODPS_ACCESS_ID " \
+            "or ODPS_ACCESS_KEY is not set"
           else
             docker run --rm -it \
             -e MAXCOMPUTE_PROJECT=$MAXCOMPUTE_PROJECT \
