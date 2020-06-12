@@ -32,7 +32,8 @@ minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=20gb
 kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
 eval $(minikube docker-env)
 export DOCKER_BUILDKIT=1
-bash elasticdl/docker/build_all.sh
+export TRAVIS_BUILD_DIR=$PWD
+bash scripts/travis/build_images.sh
 ```
 
 ### Summit a training job
