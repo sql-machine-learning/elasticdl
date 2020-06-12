@@ -36,3 +36,5 @@ fi
 docker build --target dev -t $dev_image -f elasticdl/docker/Dockerfile --build-arg BASE_IMAGE=$base_image .
 
 docker build --target ci -t $ci_image -f elasticdl/docker/Dockerfile --build-arg BASE_IMAGE=$base_image .
+
+docker build -t elasticdl:dev_allreduce -f elasticdl/docker/Dockerfile.dev_allreduce .

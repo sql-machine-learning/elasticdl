@@ -37,12 +37,7 @@ jobs:
         - set -e
         # Set up Kubernetes environment
         - bash scripts/setup_k8s_env.sh
-        - docker build --target dev -t elasticdl:dev -f
-          elasticdl/docker/Dockerfile .
-        - docker build --target ci -t elasticdl:ci -f
-          elasticdl/docker/Dockerfile .
-        - docker build -t elasticdl:dev_allreduce -f
-          elasticdl/docker/Dockerfile.dev_allreduce .
+        - bash elasticdl/docker/build_all.sh
         # Create shared folder to store coverage report
         - mkdir shared
         # Run unit tests not related to ODPS
