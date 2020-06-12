@@ -99,7 +99,7 @@ RUN python -m pip -q install -r /model_zoo/requirements.txt \
         --extra-index-url=${EXTRA_PYPI_INDEX}
 
 # Copy GO PS
-ARG GO_PS=/root/go/bin/start_ps
+ARG GO_PS=/root/go/bin/elasticdl_ps
 RUN mkdir -p /usr/local/go/bin
 COPY --from=dev ${GO_PS} /usr/local/go/bin
 ENV PATH /usr/local/go/bin:$PATH
