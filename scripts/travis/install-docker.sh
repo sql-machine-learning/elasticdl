@@ -20,7 +20,7 @@ sudo apt-get -qq install -y \
     ca-certificates \
     curl \
     gnupg-agent \
-    software-properties-common > /dev/null
+    software-properties-common # > /dev/null
 
 # Add Docker’s official GPG key.
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
@@ -33,9 +33,10 @@ sudo add-apt-repository \
 
 # Install the Docker engine
 sudo apt-get -qq update
-sudo apt-get -qq install -y docker-ce docker-ce-cli containerd.io > /dev/null
+sudo apt-get -qq install -y docker-ce docker-ce-cli containerd.io # > /dev/null
 
 # Enable docker without sudo.
+sudo groupadd docker
 sudo usermod -aG docker "$USER"
 
 # Activate the changes to groups.
