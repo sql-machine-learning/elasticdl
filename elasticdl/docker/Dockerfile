@@ -42,6 +42,24 @@ RUN /install-go.bash ${GO_MIRROR_URL} && rm /install-go.bash
 COPY elasticdl/docker/scripts/install-protobuf.bash /
 RUN /install-protobuf.bash && rm /install-protobuf.bash
 
+# This assumes that the data generation package is independent with the
+# rest part of ElasticDL.  The generated data will be in /data.
+COPY elasticdl/python/data/recordio_gen/image_label.py /var/image_label.py
+RUN python /var/image_label.py --dataset mnist --fraction 0.15 \
+        --records_per_shard 4096 /data
+
+# Copy frappe dataset
+COPY elasticdl/python/data/recordio_gen/frappe_recordio_gen.py \
+     /var/frappe_recordio_gen.py
+RUN python /var/frappe_recordio_gen.py --data /root/.keras/datasets \
+    --output_dir /data/frappe \
+    --fraction 0.05
+# Copy heart dataset
+COPY elasticdl/python/data/recordio_gen/heart_recordio_gen.py \
+     /var/heart_recordio_gen.py
+RUN python /var/heart_recordio_gen.py --data_dir /root/.keras/datasets \
+    --output_dir /data/heart
+
 # Install elasticdl.org/elasticdl Go package
 ENV ELASTICDLPATH /root/elasticdl
 COPY . /elasticdl
@@ -62,27 +80,6 @@ RUN cd /elasticdl && \
 RUN cd /elasticdl && \
     python setup.py -q bdist_wheel && \
     cp dist/elasticdl-develop-py3-none-any.whl /
-
-
-# This assumes that the data generation package is independent with the
-# rest part of ElasticDL.  The generated data will be in /data.
-COPY elasticdl/python/data/recordio_gen/image_label.py /var/image_label.py
-RUN python /var/image_label.py --dataset mnist --fraction 0.15 \
-        --records_per_shard 4096 /data
-
-# Copy frappe dataset
-COPY elasticdl/python/data/recordio_gen/frappe_recordio_gen.py \
-     /var/frappe_recordio_gen.py
-RUN python /var/frappe_recordio_gen.py --data /root/.keras/datasets \
-    --output_dir /data/frappe \
-    --fraction 0.05
-# Copy heart dataset
-COPY elasticdl/python/data/recordio_gen/heart_recordio_gen.py \
-     /var/heart_recordio_gen.py
-RUN python /var/heart_recordio_gen.py --data_dir /root/.keras/datasets \
-    --output_dir /data/heart
-
-RUN rm -rf /root/.keras/datasets
 
 
 # Stage 2: ci
@@ -114,3 +111,7 @@ COPY --from=dev /elasticdl-develop-py3-none-any.whl /
 RUN python -m pip -q install /elasticdl-develop-py3-none-any.whl \
         --extra-index-url=${EXTRA_PYPI_INDEX} \
     && rm /elasticdl-develop-py3-none-any.whl
+
+# Generate mnist checkpoint for evaluation and prediction
+COPY --from=dev /elasticdl/scripts/gen_mnist_checkpoint.py /gen_mnist_checkpoint.py
+RUN python /gen_mnist_checkpoint.py --checkpoint_dir=/model_zoo/test_data/mnist_ckpt
