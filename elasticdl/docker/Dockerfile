@@ -15,14 +15,15 @@ ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 RUN apt-get -qq update && \
     apt-get -qq install -y unzip curl git software-properties-common g++ wget \
                        libeigen3-dev > /dev/null && \
-    python -m pip install --upgrade pip
+    python -m pip install --quiet --upgrade pip
 
 COPY elasticdl/requirements.txt /requirements.txt
-RUN python -m pip -q install -r /requirements.txt \
+RUN python -m pip install --quiet -r /requirements.txt \
         --extra-index-url=$EXTRA_PYPI_INDEX \
-    && rm /requirements.txt
+        && rm /requirements.txt
+
 COPY elasticdl/requirements-dev.txt /requirements-dev.txt
-RUN python -m pip -q install -r /requirements-dev.txt \
+RUN python -m pip install --quiet -r /requirements-dev.txt \
         --extra-index-url=$EXTRA_PYPI_INDEX \
     && rm /requirements-dev.txt
 
@@ -78,7 +79,7 @@ RUN cd /elasticdl && \
 
 # Create elasticdl package
 RUN cd /elasticdl && \
-    python setup.py -q bdist_wheel && \
+    python setup.py --quiet bdist_wheel && \
     cp dist/elasticdl-develop-py3-none-any.whl /
 
 
@@ -88,14 +89,14 @@ FROM ${BASE_IMAGE} as ci
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 
 COPY elasticdl/docker/bashrc /etc/bash.bashrc
-RUN chmod a+rwx /etc/bash.bashrc
+RUN chmod a+rx /etc/bash.bashrc
 
 # Copy data
 COPY --from=dev /data /data
 
 # Copy model zoo
 COPY model_zoo /model_zoo
-RUN python -m pip -q install -r /model_zoo/requirements.txt \
+RUN python -m pip install --quiet -r /model_zoo/requirements.txt \
         --extra-index-url=${EXTRA_PYPI_INDEX}
 
 # Copy GO PS
@@ -108,7 +109,7 @@ WORKDIR /
 
 # Install elasticdl package
 COPY --from=dev /elasticdl-develop-py3-none-any.whl /
-RUN python -m pip -q install /elasticdl-develop-py3-none-any.whl \
+RUN python -m pip install --quiet /elasticdl-develop-py3-none-any.whl \
         --extra-index-url=${EXTRA_PYPI_INDEX} \
     && rm /elasticdl-develop-py3-none-any.whl
 
