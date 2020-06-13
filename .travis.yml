@@ -63,7 +63,7 @@ jobs:
             elasticdl/python/tests/data_reader_test.py"
           fi
         # Run integration tests
-        - kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
+        - kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
         - |
           JOB_TYPES=(
               odps
