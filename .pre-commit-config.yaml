@@ -57,6 +57,6 @@ repos:
         language: system
         files: \.(go|py|sh)$
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.17.0
+    rev: v1.23.0
     hooks:
       - id: yamllint
