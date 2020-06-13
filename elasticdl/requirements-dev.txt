@@ -5,3 +5,4 @@ Pillow
 pre-commit
 pandas
 sklearn
+yamllint
