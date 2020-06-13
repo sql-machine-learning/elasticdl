@@ -24,14 +24,14 @@ spec:
       --grads_to_wait=10
       --minibatch_size=64
       --num_minibatches_per_task=2
-      --num_workers=4
+      --num_workers=2
       --checkpoint_steps=10
       --evaluation_steps=15
       --worker_image=elasticdl:ci
       --job_name=test-mnist
       --log_level=INFO
-      --image_pull_policy=Always
-    imagePullPolicy: Always
+      --image_pull_policy=IfNotPresent
+    imagePullPolicy: IfNotPresent
     env:
       - name: MY_POD_IP
         valueFrom:
