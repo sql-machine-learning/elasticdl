@@ -20,6 +20,6 @@ docker build --target ci -t elasticdl:ci \
        -f "$TRAVIS_BUILD_DIR/elasticdl/docker/Dockerfile" \
        "$TRAVIS_BUILD_DIR"
 
-docker build -t elasticdl:dev_allreduce \
-       -f "$TRAVIS_BUILD_DIR/elasticdl/docker/Dockerfile.dev_allreduce" \
+docker build --target allreduce -t elasticdl:dev_allreduce \
+       -f "$TRAVIS_BUILD_DIR/elasticdl/docker/Dockerfile" \
        "$TRAVIS_BUILD_DIR"
