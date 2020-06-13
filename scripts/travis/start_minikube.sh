@@ -16,7 +16,11 @@ set -e
 
 # install Kuberneters Python client to validate job status
 python3 -m pip install --quiet --upgrade pip
-python3 -m pip install --quiet kubernetes conntrack
+python3 -m pip install --quiet kubernetes
+
+# Kubernetes 1.18.3 requires conntrack
+sudo apt-get -qq update
+sudo apt-get -qq install -y conntrack
 
 export MINIKUBE_WANTUPDATENOTIFICATION=false
 export MINIKUBE_WANTREPORTERRORPROMPT=false
