@@ -35,6 +35,7 @@ jobs:
           elasticdl:dev /work/scripts/pre-commit.sh
         # Set up Kubernetes environment
         - bash scripts/travis/start_minikube.sh
+        - eval $(sudo minikube docker-env)
         # Create shared folder to store coverage report
         - mkdir shared
         # Run unit tests not related to ODPS
