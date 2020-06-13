@@ -26,13 +26,13 @@ export MINIKUBE_VERSION=v1.11.0
 
 # Download and install kubectl
 KUBECTL_BUCKET=https://storage.googleapis.com/kubernetes-release
-curl -Lo kubectl "$KUBECTL_BUCKET/release/$K8S_VERSION/bin/linux/amd64/kubectl"
+curl -sLo kubectl "$KUBECTL_BUCKET/release/$K8S_VERSION/bin/linux/amd64/kubectl"
 chmod +x kubectl
 sudo mv kubectl /usr/local/bin/
 
 # Download and install minikube
 MINIKUBE_BUCKET=https://storage.googleapis.com/minikube/releases
-curl -Lo minikube "$MINIKUBE_BUCKET/$MINIKUBE_VERSION/minikube-linux-amd64"
+curl -sLo minikube "$MINIKUBE_BUCKET/$MINIKUBE_VERSION/minikube-linux-amd64"
 chmod +x minikube
 sudo mv minikube /usr/local/bin/
 
