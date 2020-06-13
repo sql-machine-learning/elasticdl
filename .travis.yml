@@ -34,7 +34,7 @@ jobs:
         - docker run --rm -it -v $PWD:/work -w /work
           elasticdl:dev /work/scripts/pre-commit.sh
         # Set up Kubernetes environment
-        - bash scripts/setup_k8s_env.sh
+        - bash scripts/travis/start_minikube.sh
         # Create shared folder to store coverage report
         - mkdir shared
         # Run unit tests not related to ODPS

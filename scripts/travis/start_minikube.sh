@@ -12,22 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+set -e
 
 # install Kuberneters Python client to validate job status
 sudo pip3 install kubernetes
+
 export MINIKUBE_WANTUPDATENOTIFICATION=false
 export MINIKUBE_WANTREPORTERRORPROMPT=false
 export MINIKUBE_HOME=$HOME
 export CHANGE_MINIKUBE_NONE_USER=true
 export KUBECONFIG=$HOME/.kube/config
-export K8S_VERSION=1.14.0
-export MINIKUBE_VERSION=1.1.1
+export K8S_VERSION=v1.18.3
+export MINIKUBE_VERSION=v1.11.0
 
-curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v${K8S_VERSION}/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-curl -Lo minikube https://storage.googleapis.com/minikube/releases/v${MINIKUBE_VERSION}/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
-mkdir -p $HOME/.kube $HOME/.minikube
-touch ${KUBECONFIG}
-sudo minikube start --vm-driver=none --kubernetes-version=v${K8S_VERSION} --cpus 2 --memory 6144
-sudo chown -R travis: $HOME/.minikube/
+# Download and install kubectl
+KUBECTL_BUCKET=https://storage.googleapis.com/kubernetes-release
+curl -Lo kubectl "$KUBECTL_BUCKET/release/$K8S_VERSION/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+
+# Download and install minikube
+MINIKUBE_BUCKET=https://storage.googleapis.com/minikube/releases
+curl -Lo minikube "$MINIKUBE_BUCKET/$MINIKUBE_VERSION/minikube-linux-amd64"
+chmod +x minikube
+sudo mv minikube /usr/local/bin/
+
+mkdir -p "$HOME"/.kube "$HOME"/.minikube
+touch "$KUBECONFIG"
+minikube start --vm-driver=docker --kubernetes-version="$K8S_VERSION"
 kubectl cluster-info
