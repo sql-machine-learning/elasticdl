@@ -28,6 +28,7 @@ export MINIKUBE_HOME=$HOME
 export KUBECONFIG=$HOME/.kube/config
 export K8S_VERSION=v1.18.3
 export MINIKUBE_VERSION=v1.11.0
+export CHANGE_MINIKUBE_NONE_USER=true
 
 # Download and install kubectl
 KUBECTL_BUCKET=https://storage.googleapis.com/kubernetes-release
