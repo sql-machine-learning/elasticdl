@@ -1,12 +1,5 @@
-ARG BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
-# Use tensorflow/tensorflow:2.1.0-gpu-py3 if you want GPU-support.
-
-# Multi-stage is used for dev/ci/release images
-# Better to build in DOCKER_BUILDKIT by setting env: DOCKER_BUILDKIT=1
-# To build dev:
-# docker build --target dev -t dev_image -f this_dockerfile elasticdl_repo_dir
-# To build ci:
-# docker build --target ci -t ci_image -f this_dockerfile elasticdl_repo_dir
+# To build Docker images, please refer to scripts/travis/build_images.sh.
+ARG BASE_IMAGE
 
 # Stage 1: dev
 FROM ${BASE_IMAGE} as dev

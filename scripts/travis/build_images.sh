@@ -12,14 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Pull base image quietly.  We might want to use
+# tensorflow/tensorflow:2.1.0-gpu-py3 for GPU-accelerated deep learning.
+BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
+docker pull --quiet "$BASE_IMAGE"
+
 docker build --target dev -t elasticdl:dev \
        -f "$TRAVIS_BUILD_DIR/elasticdl/docker/Dockerfile" \
+       --build-arg BASE_IMAGE="$BASE_IMAGE" \
        "$TRAVIS_BUILD_DIR"
 
 docker build --target ci -t elasticdl:ci \
        -f "$TRAVIS_BUILD_DIR/elasticdl/docker/Dockerfile" \
+       --build-arg BASE_IMAGE="$BASE_IMAGE" \
        "$TRAVIS_BUILD_DIR"
 
 docker build -t elasticdl:dev_allreduce \
        -f "$TRAVIS_BUILD_DIR/elasticdl/docker/Dockerfile.dev_allreduce" \
+       --build-arg BASE_IMAGE="$BASE_IMAGE" \
        "$TRAVIS_BUILD_DIR"
