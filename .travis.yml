@@ -30,13 +30,13 @@ jobs:
         - set -e
         # Use GitHub Packages instead of DockerHub.com.
         - echo "$GITHUB_TOKEN" | docker login https://docker.pkg.github.com -u wangkuiyi --password-stdin
+        # Set up Kubernetes environment
+        - bash scripts/travis/start_minikube.sh
         # Build Docker images.
         - bash $TRAVIS_BUILD_DIR/scripts/travis/build_images.sh
         # Run pre-commit checks.
         - docker run --rm -it -v $PWD:/work -w /work
           elasticdl:dev /work/scripts/pre-commit.sh
-        # Set up Kubernetes environment
-        - bash scripts/travis/start_minikube.sh
         # Create shared folder to store coverage report
         - mkdir shared
         # Run unit tests not related to ODPS
