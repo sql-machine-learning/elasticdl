@@ -15,6 +15,7 @@
 set -e
 
 # install Kuberneters Python client to validate job status
+python3 -m pip install --quiet --upgrade pip
 python3 -m pip install --quiet kubernetes
 
 export MINIKUBE_WANTUPDATENOTIFICATION=false
