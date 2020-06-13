@@ -28,8 +28,6 @@ jobs:
       name: "Pre-commit and Tests"
       script:
         - set -e
-        # Use GitHub Packages instead of DockerHub.com.
-        - echo "$GITHUB_TOKEN" | docker login https://docker.pkg.github.com -u wangkuiyi --password-stdin
         # Set up Kubernetes environment
         - bash scripts/travis/start_minikube.sh
         # Build Docker images.
