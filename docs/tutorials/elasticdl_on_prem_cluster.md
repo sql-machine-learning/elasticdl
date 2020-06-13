@@ -7,7 +7,8 @@ You should install ElasticDL first. Please refer to the installation part in [el
 Then, build needed images.
 
 ```bash
-bash elasticdl/docker/build_all.sh
+export TRAVIS_BUILD_DIR=$PWD
+bash scripts/travis/build_images.sh
 ```
 
 ## Submit job to cluster
