@@ -1,4 +1,4 @@
-# ElasticDL Client: Submit ElasticDL Job to Kubernetes 
+# ElasticDL Client: Submit ElasticDL Job to Kubernetes
 
 ## Prepare Model Definition
 
@@ -29,13 +29,13 @@ For demonstration purposes, we use the data stored on `elasticdl:ci` Docker imag
 First we build all development Docker images, which include `elasticdl:ci` image:
 
 ```bash
-elasticdl/docker/build_all.sh
+export TRAVIS_BUILD_DIR=$PWD
+bash scripts/travis/build_images.sh
 ```
 
-Add `-gpu` if you want to build images with GPU support:
-```bash
-elasticdl/docker/build_all.sh -gpu
-```
+By default, the above script builds images with TensorFlow CPU image as the base
+image.  If you want to switch to other images, for example, Python, Ubuntu, or
+TensorFlow GPU image, please edit `elasticdl/docker/Dockerfile`.
 
 Submit training job (make sure you have packages `kubernetes` and `docker` installed in your running environment):
 
@@ -101,7 +101,7 @@ python -m elasticdl.python.elasticdl.client train \
 
 The difference is that we add a new argument `cluster_spec` which points to a cluster specification file.
 The cluster specification module includes a `cluster` component, and ElasticDL will invoke function
-`cluster.with_cluster(pod)` to add extra specifications to the 
+`cluster.with_cluster(pod)` to add extra specifications to the
 [pod](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1Pod.md) and invoke function
 `cluster.with_service(service)` to add extra specifications to the [service](https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1Service.md).
 Here is an example that assigns labels `"app": "elasticdl"` to the `pod` and `service`. Users can implement more customized configurations
