@@ -29,7 +29,7 @@ python setup.py install
 
 ```bash
 minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=20gb
-kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
+kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 eval $(minikube docker-env)
 export DOCKER_BUILDKIT=1
 export TRAVIS_BUILD_DIR=$PWD
