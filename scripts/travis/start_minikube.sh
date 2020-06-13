@@ -15,7 +15,7 @@
 set -e
 
 # install Kuberneters Python client to validate job status
-sudo pip3 install kubernetes
+sudo python -m pip install --quiet kubernetes
 
 export MINIKUBE_WANTUPDATENOTIFICATION=false
 export MINIKUBE_WANTREPORTERRORPROMPT=false
@@ -37,6 +37,7 @@ chmod +x minikube
 sudo mv minikube /usr/local/bin/
 
 # Use the same Docker on the host and with minikube.
+echo $(sudo minikube docker-env)
 eval $(sudo minikube docker-env)
 
 # Start a minikube cluster and generate crediential information.
@@ -44,3 +45,7 @@ mkdir -p "$HOME"/.kube "$HOME"/.minikube
 touch "$KUBECONFIG"
 minikube start --vm-driver=docker --kubernetes-version="$K8S_VERSION"
 kubectl cluster-info
+
+# Debug
+echo $(sudo minikube docker-env)
+eval $(sudo minikube docker-env)
