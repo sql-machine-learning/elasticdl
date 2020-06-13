@@ -20,7 +20,6 @@ sudo pip3 install kubernetes
 export MINIKUBE_WANTUPDATENOTIFICATION=false
 export MINIKUBE_WANTREPORTERRORPROMPT=false
 export MINIKUBE_HOME=$HOME
-export CHANGE_MINIKUBE_NONE_USER=true
 export KUBECONFIG=$HOME/.kube/config
 export K8S_VERSION=v1.18.3
 export MINIKUBE_VERSION=v1.11.0
