@@ -40,8 +40,7 @@ sudo mv minikube /usr/local/bin/
 # Start a minikube cluster and generate crediential information.
 mkdir -p "$HOME"/.kube "$HOME"/.minikube
 touch "$KUBECONFIG"
-minikube start --vm-driver=docker --kubernetes-version="$K8S_VERSION"
+sudo minikube start --vm-driver=none --kubernetes-version="$K8S_VERSION"
 kubectl cluster-info
 
-echo $(sudo minikube docker-env)
 eval $(sudo minikube docker-env)
