@@ -24,8 +24,8 @@ cache:
 
 jobs:
   include:
-    - stage: BuildAndPrecommit
-      name: "Build and pre-commit"
+    - stage: test
+      name: "Pre-commit and Tests"
       script:
         - set -e
         # Set up Kubernetes environment
