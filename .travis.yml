@@ -64,11 +64,11 @@ jobs:
           fi
         # Run integration tests
           JOB_TYPES=(
-            odps
-            train
-            evaluate
-            predict
-            local
+              odps
+              train
+              evaluate
+              predict
+              local
           )
           for JOB_TYPE in "${JOB_TYPES[@]}"; do
             bash scripts/travis/start_elasticdl_job.sh $JOB_TYPE
