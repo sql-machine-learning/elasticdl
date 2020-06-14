@@ -1,12 +1,4 @@
 JOB_TYPE=$1
-ODPS_ACCESS_ID=$2
-ODPS_ACCESS_KEY=$3
-MAXCOMPUTE_TABLE=$4
-MAXCOMPUTE_PROJECT=$5
-PS_NUM=$6
-WORKER_NUM=$7
-
-TRAVIS_BUILD_NUMBER=$8
 
 kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 

@@ -70,6 +70,8 @@ jobs:
             predict
             local
           )
+          for JOB_TYPE in "${JOB_TYPES[@]}"; do
+            bash scripts/travis/start_elasticdl_job.sh $JOB_TYPE
           done
 
 # Only build on this list of branches
