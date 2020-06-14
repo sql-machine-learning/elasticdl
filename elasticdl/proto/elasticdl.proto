@@ -5,7 +5,7 @@ import "tensorflow/core/framework/types.proto";
 import "tensorflow/core/framework/tensor.proto";
 
 package proto;
-option go_package = "elasticdl/pkg/proto";
+option go_package = "elasticdl/go/pkg/proto";
 
 enum TaskType {
   TRAINING = 0;

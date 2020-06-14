@@ -1,3 +1,16 @@
+# Copyright 2020 The ElasticDL Authors. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import contextlib
 import os
 import shutil
@@ -59,6 +72,16 @@ def _get_params_shard_from_pb(model_pb, shard_index, shard_num):
                 embedding_table_values[name][0].append(embedding_id)
                 embedding_table_values[name][1].append(vector)
     return non_embedding_vars, embedding_table_values
+
+
+def save_checkpoint_without_embedding(model, checkpoint_dir, version=100):
+    checkpoint_saver = CheckpointSaver(checkpoint_dir, 0, 0, False)
+    params = Parameters()
+    for var in model.trainable_variables:
+        params.non_embedding_params[var.name] = var
+    params.version = version
+    model_pb = params.to_model_pb()
+    checkpoint_saver.save(version, model_pb, False)
 
 
 class Checkpoint(object):

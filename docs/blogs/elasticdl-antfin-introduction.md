@@ -104,6 +104,8 @@ ElasticDL 的 master 给 worker 分派计算任务 task 的示意图：
 
 ![AUC with different workers](../images/auc_with_different_workers.jpg)
 
+ 此实验使用了异步 SGD 更新。多项研究(如[[Ho2013](http://www.cs.cmu.edu/~seunghak/SSPTable_NIPS2013.pdf)], [[Zhang2016](https://arxiv.org/pdf/1511.05950.pdf)])表明，在异步 SGD 下 worker 数量越多，参数滞后(Staleness)越严重，并且严重的 staleness 会影响到模型收敛。在 ElasticDL 弹性调度下，worker 数量可能因为被抢占而下降，staleness 会减轻，理论上不会对模型训练产生负面影响。实验结果也符合此理论。
+ 
 ## 高性能的 Parameter Server
 
 在搜索广告等场景，模型中可能包含较大的 embedding table，其内存会超过单机内存，我们通常使用 Parameter Server (PS) 分布式策略来训练此类模型，在 PS 策略下，PS 上存储着模型参数，Worker 从 PS 上请求参数，

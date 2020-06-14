@@ -49,3 +49,14 @@ repos:
     rev: v0.1.8
     hooks:
       - id: shellcheck
+  - repo: local
+    hooks:
+      - id: copyright_checker
+        name: copyright_checker
+        entry: python ./scripts/codestyle/copyright.py
+        language: system
+        files: \.(go|py|sh)$
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.23.0
+    hooks:
+      - id: yamllint

@@ -41,7 +41,7 @@ Step 3: Use the command below to generate the corresponding kubeconfig.
 ```
 gcloud container clusters get-credentials edl-cluster --zone us-central1-c
 ```
- 
+
 Make sure you have [`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/) available locally.
 
 Use the following command to list all the started components.
@@ -56,7 +56,7 @@ kubectl get all --all-namespaces
 ElasticDL jobs require pod creation and deletion permissions. Make sure you have granted related permissions to the default or other related service accounts.
 
 ```bash
-kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
+kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 ```
 
 ElasticDL supports elastic scheduling, and works well the priority-based scheduling of Kubernetes. We create two customized PriorityClass in the cluster, high and low.

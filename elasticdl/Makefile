@@ -1,7 +1,7 @@
 PYTHON = python
-GO_FILE_DIR = elasticdl/pkg/proto
+GO_FILE_DIR = elasticdl/go/pkg/proto
 CXX = g++
-CAPI_DIR = elasticdl/pkg/kernel/capi
+CAPI_DIR = elasticdl/go/pkg/kernel/capi
 
 all: python_pb go_pb kernel
 
@@ -10,7 +10,7 @@ python_pb: elasticdl/proto/elasticdl.proto
 	    elasticdl/proto/elasticdl.proto --python_out=. --grpc_python_out=.
 
 go_pb: elasticdl/proto/elasticdl.proto
-	mkdir -p $(GO_FILE_DIR) && mkdir -p $GOPATH/pkg/mod
+	mkdir -p $(GO_FILE_DIR) && mkdir -p ${GOPATH}/pkg/mod
 	protoc -I${TF_PATH} ${TF_PATH}/tensorflow/core/framework/types.proto --go_out=${GOPATH}/pkg/mod
 	protoc -I${TF_PATH} ${TF_PATH}/tensorflow/core/framework/resource_handle.proto --go_out=${GOPATH}/pkg/mod
 	protoc -I${TF_PATH} ${TF_PATH}/tensorflow/core/framework/tensor_shape.proto --go_out=${GOPATH}/pkg/mod
