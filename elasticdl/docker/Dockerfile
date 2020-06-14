@@ -71,6 +71,7 @@ RUN cd /elasticdl && \
     go install ./...
 
 # Create elasticdl package
+RUN mkdir /elasticdl/elasticdl/go/bin && cp /root/go/bin/elasticdl_ps /elasticdl/elasticdl/go/bin
 RUN cd /elasticdl && \
     python setup.py --quiet bdist_wheel && \
     cp dist/elasticdl-develop-py3-none-any.whl /
@@ -80,6 +81,8 @@ RUN cd /elasticdl && \
 
 FROM ${BASE_IMAGE} as ci
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
+
+WORKDIR /
 
 COPY elasticdl/docker/bashrc /etc/bash.bashrc
 RUN chmod a+rx /etc/bash.bashrc
@@ -92,24 +95,18 @@ COPY model_zoo /model_zoo
 RUN python -m pip install --quiet -r /model_zoo/requirements.txt \
         --extra-index-url=${EXTRA_PYPI_INDEX}
 
-# Copy GO PS
-ARG GO_PS=/root/go/bin/elasticdl_ps
-RUN mkdir -p /usr/local/go/bin
-COPY --from=dev ${GO_PS} /usr/local/go/bin
-ENV PATH /usr/local/go/bin:$PATH
-
-WORKDIR /
-
 # Install elasticdl package
 COPY --from=dev /elasticdl-develop-py3-none-any.whl /
 RUN python -m pip install --quiet /elasticdl-develop-py3-none-any.whl \
         --extra-index-url=${EXTRA_PYPI_INDEX} \
     && rm /elasticdl-develop-py3-none-any.whl
 
+# Add elasticdl_ps to system path
+ENV PATH /usr/local/lib/python3.6/dist-packages/elasticdl/go/bin:$PATH
+
 # Generate mnist checkpoint for evaluation and prediction
 COPY --from=dev /elasticdl/scripts/gen_mnist_checkpoint.py /gen_mnist_checkpoint.py
 RUN python /gen_mnist_checkpoint.py --checkpoint_dir=/model_zoo/test_data/mnist_ckpt
-
 
 FROM dev as allreduce
 

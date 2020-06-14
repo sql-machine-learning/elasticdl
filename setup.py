@@ -40,6 +40,7 @@ setup(
             "docker/*",
             "Makefile",
             "requirements.txt",
+            "go/bin/elasticdl_ps",
             "go/pkg/kernel/capi/*",
         ]
     },
