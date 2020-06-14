@@ -109,3 +109,20 @@ RUN python -m pip install --quiet /elasticdl-develop-py3-none-any.whl \
 # Generate mnist checkpoint for evaluation and prediction
 COPY --from=dev /elasticdl/scripts/gen_mnist_checkpoint.py /gen_mnist_checkpoint.py
 RUN python /gen_mnist_checkpoint.py --checkpoint_dir=/model_zoo/test_data/mnist_ckpt
+
+
+FROM dev as allreduce
+
+WORKDIR /root/
+
+# Note that pip is having issue downloading PyTorch on manylinux so we use curl
+# to download it instead
+RUN curl -sLo torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl \
+  https://files.pythonhosted.org/packages/24/19/4804aea17cd136f1705a5e98a00618cb8f6ccc375ad8bfa437408e09d058/torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl
+RUN python -m pip install --quiet torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl \
+        && rm torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl
+
+RUN git clone --depth=1 https://github.com/caicloud/ftlib.git
+RUN cd /root/ftlib && python -m pip install --quiet -r requirements.txt
+RUN cd /root/ftlib/ftlib/consensus/gossip && bash ./gen_shared_lib.sh
+RUN cp -r /root/ftlib/ftlib /usr/local/lib/python3.6/dist-packages/ftlib
