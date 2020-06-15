@@ -32,9 +32,9 @@ make -f elasticdl/Makefile
     cd /tmp/elasticdl
     go mod init elasticdl.org/elasticdl
     go mod edit -replace github.com/tensorflow="${GOPATH}"/pkg/mod/github.com/tensorflow
-    go get k8s.io/client-go@v0.17.0
+    go get -u -t k8s.io/client-go@v0.17.0
     go mod tidy
-    go install ./...
+    GOBIN=/tmp go install ./...
     go test -v -cover ./...
 )
 
@@ -44,7 +44,6 @@ mkdir -p ./build
 mv coverage.xml /elasticdl/build
 
 # Create elasticdl package
-mkdir ./elasticdl/go/bin
-cp "$GOPATH"/go/bin/elasticdl_ps ./elasticdl/go/bin
+mkdir -p ./elasticdl/go/bin
+cp /tmp/elasticdl_ps ./elasticdl/go/bin/
 python setup.py --quiet bdist_wheel --dist-dir ./build
-# cp dist/elasticdl-develop-py3-none-any.whl /elasticdl/build

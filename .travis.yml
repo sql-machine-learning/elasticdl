@@ -22,6 +22,8 @@ cache:
     - $HOME/.keras/datasets
     # https://pre-commit.com/#travis-ci-example
     - $HOME/.cache
+    # Cache $hOME/go, which bound mount to /root/go of dev container.
+    - $HOME/go
 
 
 jobs:
@@ -43,14 +45,14 @@ jobs:
         # Run a minikube cluster
         - bash scripts/travis/start_minikube.sh
         # Run unit tests not related to ODPS
-        - docker run --rm -it --net=host
-          -v $HOME/.cache:/root/.cache
-          -v $HOME/.keras/datasets:/root/.keras/datasets
-          -v $HOME/.kube:/root/.kube
-          -v /home/$USER/.minikube/:/home/$USER/.minikube/
-          -v $PWD:/elasticdl
-          -w /elasticdl elasticdl:dev
-          bash -c "K8S_TESTS=True scripts/build_and_test.sh"
+        - docker run --rm -it --net=host \
+          -v $HOME/.cache:/root/.cache \
+          -v $HOME/.keras/datasets:/root/.keras/datasets \
+          -v $HOME/.kube:/root/.kube \
+          -v $HOME/.minikube:/root/.minikube \
+          -v $HOME/go:/root/go \
+          -v $PWD:/work -w /work \
+          elasticdl:dev bash -c "K8S_TESTS=True scripts/build_and_test.sh"
         # Report code coverage to https://codecov.io
         - bash <(curl -s https://codecov.io/bash)
         # Run unit tests related to ODPS (skipped for pull requests from forks)
