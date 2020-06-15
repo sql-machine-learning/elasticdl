@@ -51,7 +51,7 @@ jobs:
           -v $HOME/.cache:/root/.cache
           -v $HOME/.keras/datasets:/root/.keras/datasets
           -v $HOME/.kube:/root/.kube
-          -v $HOME/.minikube:/root/.minikube
+          -v $HOME/.minikube:/home/$USER/.minikube
           -v $HOME/go:/root/go
           -v $PWD:/work -w /work
           elasticdl:dev bash -c "K8S_TESTS=True scripts/build_and_test.sh"
