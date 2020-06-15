@@ -14,8 +14,6 @@
 
 set -e
 
-WITH_K8S_TESTS=$1
-
 # Build elasticdl.org/elasticdl Go package
 go env -w GOPROXY=https://goproxy.cn,https://developer.aliyun.com/mirror/goproxy,direct
 cd /elasticdl && \
@@ -35,8 +33,8 @@ go test -v -cover ./...
 
 # Run Python unittests
 cd /elasticdl
-K8S_TESTS=${WITH_K8S_TESTS} pytest elasticdl/python/tests elasticdl_preprocessing/tests --cov=elasticdl/python --cov-report=xml
-mv coverage.xml build
+pytest elasticdl/python/tests elasticdl_preprocessing/tests --cov=elasticdl/python --cov-report=xml
+mkdir -p /elasticdl/build && mv coverage.xml /elasticdl/build
 
 # Create elasticdl package
 mkdir /elasticdl/elasticdl/go/bin && cp /root/go/bin/elasticdl_ps /elasticdl/elasticdl/go/bin
