@@ -26,4 +26,6 @@ GO_SOURCE_FILES=$(find elasticdl/pkg -name '*.go' -print0 | tr '\0' ' ')
 
 YAML_SOURCE_FILES=$(find .travis.yml -name '*.yml' -print0 | tr '\0' ' ')
 
-pre-commit run --files "$PYTHON_SOURCE_FILES $GO_SOURCE_FILES"
+MARKDOWN_SOURCE_FILES=$(find elasticdl -name '*.md' -print0 | tr '\0' ' ')
+
+pre-commit run --files "$PYTHON_SOURCE_FILES $GO_SOURCE_FILES $YAML_SOURCE_FILES $MARKDOWN_SOURCE_FILES"

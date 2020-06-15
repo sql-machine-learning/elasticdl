@@ -65,6 +65,6 @@ repos:
     hooks:
       - id: markdownlint
         name: markdownlint
-        description: "Checks the style of Markdown/Commonmark files."
+        description: "Checks the style of Markdown files."
         entry: markdownlint
         language: node
