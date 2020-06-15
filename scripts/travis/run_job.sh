@@ -34,10 +34,8 @@ else
         -w /work elasticdl:ci \
         bash -c "scripts/client_test.sh \
         ${JOB_TYPE} ${PS_NUM} ${WORKER_NUM}"
-    if [[ "$JOB_TYPE" != "local" ]]; then
-        python3 scripts/validate_job_status.py \
+    python3 scripts/validate_job_status.py \
         ${JOB_TYPE} ${PS_NUM} ${WORKER_NUM}
-    fi
     if [[ "$JOB_TYPE" == "odps" ]]; then
         docker run --rm -it \
             -e MAXCOMPUTE_TABLE=$MAXCOMPUTE_TABLE \
