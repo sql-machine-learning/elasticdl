@@ -12,4 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-pre-commit run --from-ref origin.HEAD --to-ref HEAD
+
+changed_files=$(git diff --name-only --diff-filter=ACMR)
+
+pre-commit run --files "$changed_files"
