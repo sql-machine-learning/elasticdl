@@ -28,16 +28,16 @@ jobs:
       name: "Pre-commit and Tests"
       script:
         - set -e
-        # Set up Kubernetes environment
+        # Set up Kubernetes environment.
         - bash scripts/travis/start_minikube.sh
         # Build Docker images.
         - bash $TRAVIS_BUILD_DIR/scripts/travis/build_images.sh
         # Run pre-commit checks.
         - docker run --rm -it -v $PWD:/work -w /work
           elasticdl:dev /work/scripts/pre-commit.sh
-        # Create shared folder to store coverage report
+        # Create shared folder to store coverage report.
         - mkdir shared
-        # Run unit tests not related to ODPS
+        # Run unit tests not related to ODPS.
         - docker run --rm -it --net=host
           -v $HOME/.keras/datasets:/root/.keras/datasets
           -v $HOME/.kube:/root/.kube
@@ -62,7 +62,7 @@ jobs:
             pytest elasticdl/python/tests/*odps_* \
             elasticdl/python/tests/data_reader_test.py"
           fi
-        # Run integration tests
+        # Run integration tests.
           kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
           JOB_TYPES=(
               odps
@@ -75,7 +75,7 @@ jobs:
             bash scripts/travis/start_elasticdl_job.sh $JOB_TYPE
           done
 
-# Only build on this list of branches
+# Only build on this list of branches.
 branches:
   only:
     - develop
