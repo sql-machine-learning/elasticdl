@@ -26,7 +26,7 @@ discusssing about this command-line client tool.
     requirements.txt
     ```
 
-2. Generate a Dockerfile.  
+1. Generate a Dockerfile.  
 
     Input the command:
 
@@ -47,19 +47,20 @@ discusssing about this command-line client tool.
 
     Users can make additional updates on the Dockerfile if necessary.
 
-3. Build the Docker image for an ElasticDL job.
+1. Build the Docker image for an ElasticDL job.
 
     ```bash
-    elasticdl zoo build --image=reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0 .
+    elasticdl zoo build
+        --image=reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0 .
     ```
 
-4. Push the Docker image to a remote registry (optional)
+1. Push the Docker image to a remote registry (optional)
 
     ```bash
     elasticdl zoo push reg.docker.alibaba-inc.com/bright/elasticdl-wnd:1.0
     ```
 
-5. Submit a model training/prediction/evaluation job.
+1. Submit a model training/prediction/evaluation job.
 
     ```bash
     elasticdl train \
