@@ -34,7 +34,9 @@ jobs:
         - set -e
         # Build dev Docker images.
         - export BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
-        - docker pull --quiet "$BASE_IMAGE"
+        # Travis CI VM runs Ubuntu Bionic with Docker 18.06 which doesn't
+        # support docker pull --quiet.
+        - docker pull "$BASE_IMAGE"
         - docker build --target dev -t elasticdl:dev \
           -f elasticdl/docker/Dockerfile \
           --build-arg BASE_IMAGE="$BASE_IMAGE" .
