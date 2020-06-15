@@ -20,6 +20,8 @@ stages:
 cache:
   directories:
     - $HOME/.keras/datasets
+    # https://pre-commit.com/#travis-ci-example
+    - $HOME/.cache/pre-commit
 
 
 jobs:
