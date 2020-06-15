@@ -54,29 +54,6 @@ COPY elasticdl/python/data/recordio_gen/heart_recordio_gen.py \
 RUN python /var/heart_recordio_gen.py --data_dir /root/.keras/datasets \
     --output_dir /data/heart
 
-# Install elasticdl.org/elasticdl Go package
-ENV ELASTICDLPATH /root/elasticdl
-COPY . /elasticdl
-
-RUN cd /elasticdl && \
-    make -f elasticdl/Makefile && \
-    cp -r /elasticdl/elasticdl/go/ ${ELASTICDLPATH} && \
-    cd $GOPATH/pkg/mod/github.com/tensorflow && \
-    go mod init github.com/tensorflow &&\
-    cd $ELASTICDLPATH && \
-    go mod init elasticdl.org/elasticdl && \
-    go mod edit -replace github.com/tensorflow=${GOPATH}/pkg/mod/github.com/tensorflow && \
-    go get k8s.io/client-go@v0.17.0 && \
-    go mod tidy && \
-    go install ./...
-
-# Create elasticdl package
-RUN mkdir /elasticdl/elasticdl/go/bin && cp /root/go/bin/elasticdl_ps /elasticdl/elasticdl/go/bin
-RUN cd /elasticdl && \
-    python setup.py --quiet bdist_wheel && \
-    cp dist/elasticdl-develop-py3-none-any.whl /
-
-
 # Stage 2: ci
 
 FROM ${BASE_IMAGE} as ci
