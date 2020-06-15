@@ -30,14 +30,18 @@ jobs:
       name: "Pre-commit and Tests"
       script:
         - set -e
-        # Set up Kubernetes environment
-        - bash scripts/travis/start_minikube.sh
-        # Build Docker images.
-        - bash scripts/travis/build_images.sh
+        # Build dev Docker images.
+        - export BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
+        - docker pull --quiet "$BASE_IMAGE"
+        - docker build --target dev -t elasticdl:dev \
+          -f elasticdl/docker/Dockerfile \
+          --build-arg BASE_IMAGE="$BASE_IMAGE" .
         # Run pre-commit checks.
         - docker run --rm -it -v $PWD:/work -w /work
           -v $HOME/.cache:/root/.cache
           elasticdl:dev bash -c "scripts/pre-commit.sh"
+        # Run a minikube cluster
+        - bash scripts/travis/start_minikube.sh
         # Run unit tests not related to ODPS
         - docker run --rm -it --net=host
           -v $HOME/.cache:/root/.cache
@@ -68,7 +72,7 @@ jobs:
         - kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
         - docker build --target ci -t elasticdl:ci
           -f elasticdl/docker/Dockerfile.ci
-          --build-arg BASE_IMAGE="tensorflow/tensorflow:2.1.0-py3" .
+          --build-arg BASE_IMAGE="$BASE_IMAGE" .
         - |
           JOB_TYPES=(
               odps
