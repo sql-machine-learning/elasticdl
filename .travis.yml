@@ -20,6 +20,8 @@ stages:
 cache:
   directories:
     - $HOME/.keras/datasets
+    # https://pre-commit.com/#travis-ci-example
+    - $HOME/.cache
 
 
 jobs:
@@ -34,11 +36,13 @@ jobs:
         - bash $TRAVIS_BUILD_DIR/scripts/travis/build_images.sh
         # Run pre-commit checks.
         - docker run --rm -it -v $PWD:/work -w /work
+          -v $HOME/.cache:/root/.cache
           elasticdl:dev /work/scripts/pre-commit.sh
         # Create shared folder to store coverage report
         - mkdir shared
         # Run unit tests not related to ODPS
         - docker run --rm -it --net=host
+          -v $HOME/.cache:/root/.cache
           -v $HOME/.keras/datasets:/root/.keras/datasets
           -v $HOME/.kube:/root/.kube
           -v /home/$USER/.minikube/:/home/$USER/.minikube/
