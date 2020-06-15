@@ -41,7 +41,7 @@ make -f elasticdl/Makefile
 # Run Python unittests
 pytest elasticdl/python/tests elasticdl_preprocessing/tests --cov=elasticdl/python --cov-report=xml
 mkdir -p ./build
-mv coverage.xml /elasticdl/build
+mv coverage.xml ./build
 
 # Create elasticdl package
 mkdir -p ./elasticdl/go/bin
