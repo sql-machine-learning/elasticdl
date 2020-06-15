@@ -33,7 +33,9 @@ jobs:
         # Set up Kubernetes environment
         - bash scripts/travis/start_minikube.sh
         # Build Docker images.
+        - if [[ -f $HOME/.cache/dev.tar.bz2 ]]; then cat $HOME/.cache/dev.tar.bz2 | bunzip2 | docker import - elasticdl:dev; fi
         - bash scripts/travis/build_images.sh
+        - docker save elasticdl:dev | bzip2 > $HOME/.cache/dev.tar.bz2
         # Run pre-commit checks.
         - docker run --rm -it -v $PWD:/work -w /work
           -v $HOME/.cache:/root/.cache
