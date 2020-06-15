@@ -33,8 +33,8 @@ jobs:
         # Build Docker images.
         - bash $TRAVIS_BUILD_DIR/scripts/travis/build_images.sh
         # Run pre-commit checks.
-        - docker run --rm -it -v $PWD:/work -w /work
-          elasticdl:dev /work/scripts/pre-commit.sh
+        - docker run --rm -it -v $PWD:/elasticdl -w /elasticdl
+          elasticdl:dev bash -c "scripts/pre-commit.sh"
         # Create shared folder to store coverage report
         - mkdir shared
         # Run unit tests not related to ODPS
@@ -42,11 +42,12 @@ jobs:
           -v $HOME/.keras/datasets:/root/.keras/datasets
           -v $HOME/.kube:/root/.kube
           -v /home/$USER/.minikube/:/home/$USER/.minikube/
-          -v $PWD/shared:/shared -v $PWD:/work
-          -w /work elasticdl:dev
-          bash -c "scripts/unittest.sh"
+          -v $PWD:/elasticdl
+          -w /elasticdl elasticdl:dev
+          bash -c "scripts/build_and_test.sh"
         # Report code coverage to https://codecov.io
-        - bash <(curl -s https://codecov.io/bash)
+        - mv build/coverage.xml shared &&
+          bash <(curl -s https://codecov.io/bash)
         # Run unit tests related to ODPS (skipped for pull requests from forks)
         - |
           if [ "$ODPS_ACCESS_ID" == "" ] || [ "$ODPS_ACCESS_KEY" == "" ]; then
@@ -57,13 +58,16 @@ jobs:
             -e MAXCOMPUTE_PROJECT=$MAXCOMPUTE_PROJECT \
             -e MAXCOMPUTE_AK=$ODPS_ACCESS_ID \
             -e MAXCOMPUTE_SK=$ODPS_ACCESS_KEY \
-            -v $PWD:/work -w /work elasticdl:dev bash \
+            -v $PWD:/elasticdl -w /elasticdl elasticdl:dev bash \
             -c "make -f elasticdl/Makefile && K8S_TESTS=False \
             pytest elasticdl/python/tests/*odps_* \
             elasticdl/python/tests/data_reader_test.py"
           fi
         # Run integration tests
         - kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
+        - docker build --target ci -t elasticdl:ci \
+          -f elasticdl/docker/Dockerfile \
+          --build-arg BASE_IMAGE="tensorflow/tensorflow:2.1.0-py3" .
         - |
           JOB_TYPES=(
               odps

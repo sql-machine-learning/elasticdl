@@ -12,37 +12,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-
-
 set -e
 
+WITH_K8S_TESTS=$1
+
 # Build elasticdl.org/elasticdl Go package
-RUN cd /elasticdl && \
-    make -f elasticdl/Makefile && \
-    cp -r /elasticdl/elasticdl/go/ /root/elasticdl && \
-    cd "$GOPATH"/pkg/mod/github.com/tensorflow && \
-    go mod init github.com/tensorflow &&\
-    cd /root/elasticdl && \
-    go mod init elasticdl.org/elasticdl && \
-    go mod edit -replace github.com/tensorflow="${GOPATH}"/pkg/mod/github.com/tensorflow && \
-    go get k8s.io/client-go@v0.17.0 && \
-    go mod tidy && \
-    go install ./...
+go env -w GOPROXY=https://goproxy.cn,https://developer.aliyun.com/mirror/goproxy,direct
+cd /elasticdl && \
+make -f elasticdl/Makefile && \
+cp -r /elasticdl/elasticdl/go/ /root/elasticdl && \
+cd "$GOPATH"/pkg/mod/github.com/tensorflow && \
+go mod init github.com/tensorflow &&\
+cd /root/elasticdl && \
+go mod init elasticdl.org/elasticdl && \
+go mod edit -replace github.com/tensorflow="${GOPATH}"/pkg/mod/github.com/tensorflow && \
+go get k8s.io/client-go@v0.17.0 && \
+go mod tidy && \
+go install ./...
 
 # Run Go unittests
 go test -v -cover ./...
 
 # Run Python unittests
 cd /elasticdl
-K8S_TESTS=True pytest elasticdl/python/tests elasticdl_preprocessing/tests --cov=elasticdl/python --cov-report=xml
-mv coverage.xml shared
+K8S_TESTS=${WITH_K8S_TESTS} pytest elasticdl/python/tests elasticdl_preprocessing/tests --cov=elasticdl/python --cov-report=xml
+mv coverage.xml build
 
 # Create elasticdl package
-RUN mkdir /elasticdl/elasticdl/go/bin && cp /root/go/bin/elasticdl_ps /elasticdl/elasticdl/go/bin
-RUN cd /elasticdl && \
-    python setup.py --quiet bdist_wheel && \
-    cp dist/elasticdl-develop-py3-none-any.whl /
+mkdir /elasticdl/elasticdl/go/bin && cp /root/go/bin/elasticdl_ps /elasticdl/elasticdl/go/bin
+cd /elasticdl && \
+python setup.py --quiet bdist_wheel && \
+cp dist/elasticdl-develop-py3-none-any.whl /elasticdl/build
 
 
 

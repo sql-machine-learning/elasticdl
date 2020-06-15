@@ -73,7 +73,7 @@ RUN python -m pip install --quiet -r /model_zoo/requirements.txt \
         --extra-index-url=${EXTRA_PYPI_INDEX}
 
 # Install elasticdl package
-COPY --from=dev /elasticdl-develop-py3-none-any.whl /
+COPY build/elasticdl-develop-py3-none-any.whl /
 RUN python -m pip install --quiet /elasticdl-develop-py3-none-any.whl \
         --extra-index-url=${EXTRA_PYPI_INDEX} \
     && rm /elasticdl-develop-py3-none-any.whl
@@ -82,7 +82,7 @@ RUN python -m pip install --quiet /elasticdl-develop-py3-none-any.whl \
 ENV PATH /usr/local/lib/python3.6/dist-packages/elasticdl/go/bin:$PATH
 
 # Generate mnist checkpoint for evaluation and prediction
-COPY --from=dev /elasticdl/scripts/gen_mnist_checkpoint.py /gen_mnist_checkpoint.py
+COPY scripts/gen_mnist_checkpoint.py /gen_mnist_checkpoint.py
 RUN python /gen_mnist_checkpoint.py --checkpoint_dir=/model_zoo/test_data/mnist_ckpt
 
 FROM dev as allreduce
