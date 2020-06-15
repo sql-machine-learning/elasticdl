@@ -70,7 +70,6 @@ jobs:
               train
               evaluate
               predict
-              local
           )
           for JOB_TYPE in "${JOB_TYPES[@]}"; do
               bash scripts/travis/start_elasticdl_job.sh $JOB_TYPE
