@@ -9,4 +9,3 @@ docker run --rm -it \
     bash -c 'python -c '`
     `'"from elasticdl.python.tests.test_utils import *; '`
     `'delete_iris_odps_table_from_env()"'
-    
