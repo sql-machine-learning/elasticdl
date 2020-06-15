@@ -62,8 +62,8 @@ jobs:
           fi
         # Run integration tests
         - kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
-        - docker build --target ci -t elasticdl:ci \
-          -f elasticdl/docker/Dockerfile.ci \
+        - docker build --target ci -t elasticdl:ci
+          -f elasticdl/docker/Dockerfile.ci
           --build-arg BASE_IMAGE="tensorflow/tensorflow:2.1.0-py3" .
         - |
           JOB_TYPES=(
