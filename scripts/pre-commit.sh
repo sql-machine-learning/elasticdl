@@ -13,7 +13,8 @@
 # limitations under the License.
 
 
-CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR)
+CHANGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
 echo "$CHANGED_FILES"
+git branch
 
 pre-commit run --files "$CHANGED_FILES"
