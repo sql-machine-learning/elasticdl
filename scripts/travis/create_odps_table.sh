@@ -7,4 +7,3 @@ docker run --rm -it \
     -c 'python -c '`
     `'"from elasticdl.python.tests.test_utils import *;'`
     `'create_iris_odps_table_from_env()"'
-    
