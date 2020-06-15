@@ -1,7 +1,5 @@
 JOB_TYPE=$1
 
-kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
-
 if [[ "$JOB_TYPE" == "odps" ]] && \
 { [[ "$ODPS_ACCESS_ID" == "" ]] || \
 [[ "$ODPS_ACCESS_KEY" == "" ]]; }; then
