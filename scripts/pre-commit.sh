@@ -13,8 +13,19 @@
 # limitations under the License.
 
 
-CHANGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
-echo "$CHANGED_FILES"
-git branch
 
-pre-commit run --files "$CHANGED_FILES"
+PYTHON_SOURCE_FILES=$(find elasticdl/python \
+                           elasticdl_preprocessing \
+                           model_zoo \
+                           tools \
+                           setup.py \
+                           scripts \
+                           -name '*.py' -print0 | tr '\0' ' ')
+
+GO_SOURCE_FILES=$(find elasticdl/pkg -name '*.go' -print0 | tr '\0' ' ')
+
+YAML_SOURCE_FILES=$(find .travis.yml -name '*.yml' -print0 | tr '\0' ' ')
+
+MARKDOWN_SOURCE_FILES=$(find . -name '*.md' -print0 | tr '\0' ' ')
+
+pre-commit run --files "$PYTHON_SOURCE_FILES $GO_SOURCE_FILES $YAML_SOURCE_FILES $MARKDOWN_SOURCE_FILES"
