@@ -36,6 +36,7 @@ jobs:
         - bash $TRAVIS_BUILD_DIR/scripts/travis/build_images.sh
         # Run pre-commit checks.
         - docker run --rm -it -v $PWD:/work -w /work
+          -v $HOME/.cache:/root/.cache
           elasticdl:dev /work/scripts/pre-commit.sh
         # Create shared folder to store coverage report
         - mkdir shared
