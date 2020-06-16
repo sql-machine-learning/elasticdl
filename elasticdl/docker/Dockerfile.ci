@@ -1,0 +1,47 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE} as ci
+ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
+
+WORKDIR /
+
+COPY elasticdl/docker/bashrc /etc/bash.bashrc
+RUN chmod a+rx /etc/bash.bashrc
+
+# Generate data
+# This assumes that the data generation package is independent with the
+# rest part of ElasticDL.  The generated data will be in /data.
+RUN pip install pyrecordio>=0.0.6 && pip install sklearn && pip install pandas
+COPY elasticdl/python/data/recordio_gen/image_label.py /var/image_label.py
+RUN python /var/image_label.py --dataset mnist --fraction 0.15 \
+        --records_per_shard 4096 /data
+
+# Copy frappe dataset
+COPY elasticdl/python/data/recordio_gen/frappe_recordio_gen.py \
+     /var/frappe_recordio_gen.py
+RUN python /var/frappe_recordio_gen.py --data /root/.keras/datasets \
+    --output_dir /data/frappe \
+    --fraction 0.05
+# Copy heart dataset
+COPY elasticdl/python/data/recordio_gen/heart_recordio_gen.py \
+     /var/heart_recordio_gen.py
+RUN python /var/heart_recordio_gen.py --data_dir /root/.keras/datasets \
+    --output_dir /data/heart
+
+
+# Copy model zoo
+COPY model_zoo /model_zoo
+RUN python -m pip install --quiet -r /model_zoo/requirements.txt \
+        --extra-index-url=${EXTRA_PYPI_INDEX}
+
+# Install elasticdl package
+COPY build/elasticdl-develop-py3-none-any.whl /
+RUN python -m pip install --quiet /elasticdl-develop-py3-none-any.whl \
+        --extra-index-url=${EXTRA_PYPI_INDEX} \
+    && rm /elasticdl-develop-py3-none-any.whl
+
+# Add elasticdl_ps to system path
+ENV PATH /usr/local/lib/python3.6/dist-packages/elasticdl/go/bin:$PATH
+
+# Generate mnist checkpoint for evaluation and prediction
+COPY scripts/gen_mnist_checkpoint.py /gen_mnist_checkpoint.py
+RUN python /gen_mnist_checkpoint.py --checkpoint_dir=/model_zoo/test_data/mnist_ckpt
