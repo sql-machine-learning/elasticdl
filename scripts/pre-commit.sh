@@ -14,9 +14,6 @@
 
 
 
-git branch -v
-git remote -v
-
 PROJECT_URL=https://github.com/sql-machine-learning/elasticdl.git
 REMOTE=$(git remote -v | grep $PROJECT_URL | cut -f1 | head -1)
 pre-commit run --from-ref "$REMOTE/develop" --to-ref HEAD
