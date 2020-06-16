@@ -32,8 +32,6 @@ jobs:
       name: "Pre-commit and Tests"
       script:
         - set -e
-        # Set up Kubernetes environment
-        - bash scripts/travis/start_minikube.sh
         # Build Docker images.
         - if [[ -f $HOME/.cache/dev.tar.bz2 ]]; then cat $HOME/.cache/dev.tar.bz2 | bunzip2 | docker import - elasticdl:dev; fi
         - export BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
