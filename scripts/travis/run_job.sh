@@ -10,7 +10,7 @@ else
     if [[ "$JOB_TYPE" == "odps" ]]; then
         export MAXCOMPUTE_TABLE="odps_integration_build_"`
             `"${TRAVIS_BUILD_NUMBER}_$(date +%s)"
-        bash /scripts/travis/create_odps_table.sh
+        bash scripts/travis/create_odps_table.sh
     fi
     PS_NUM=2
     WORKER_NUM=1
