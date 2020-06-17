@@ -14,14 +14,6 @@
 
 
 
-PYTHON_SOURCE_FILES=$(find elasticdl/python \
-                           elasticdl_preprocessing \
-                           model_zoo \
-                           tools \
-                           setup.py \
-                           scripts \
-                           -name '*.py' -print0 | tr '\0' ' ')
-
-GO_SOURCE_FILES=$(find elasticdl/go/ -name '*.go' -print0 | tr '\0' ' ')
-
-pre-commit run --files "$PYTHON_SOURCE_FILES $GO_SOURCE_FILES"
+PROJECT_URL=https://github.com/sql-machine-learning/elasticdl.git
+REMOTE=$(git remote -v | grep $PROJECT_URL | cut -f1 | head -1)
+pre-commit run --from-ref "$REMOTE/develop" --to-ref HEAD
