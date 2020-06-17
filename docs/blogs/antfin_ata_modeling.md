@@ -81,11 +81,10 @@ ElasticDL 支持分布式训练 Keras 模型，为了方便用户将特征预处
 特征变换 layer 的使用教程请查看
 [Preprocess Inputs using ElasticDL Preprocessing Layers](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/tutorials/preprocessing_tutorial.md)
 
-### ElasticDL 训练 Keras 模型
+### Keras 模型训练定义
 
-ElasticDL 支持原生 Keras API 来定义模型，用户在定义模型时并不需要
-感知 ElasticDL，只需用 TensorFlow 提供的 Keras API 定义模型即可。
-但是一个完成的深度学习训练定义，除了模型以外还需要定义 loss，optimizer
+ElasticDL 支持直接训练原生的 Keras 模型，用户只需使用 Keras API 来定义模型
+即可。但是一个完整的深度学习训练定义，除了模型以外还需要定义 loss，optimizer
 和 dataset，在 ElasticDL 中的定义方式如下:
 
 ```python
