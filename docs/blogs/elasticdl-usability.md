@@ -13,12 +13,16 @@
 AllReduce 和 Parameter Server 是两种常用的分布式梯度聚合策略。在图像语音模型中，我们通常使用 AllReduce 策略。
 在搜索广告推荐模型中，我们使用 Parameter Server 策略。
 
+以下表格列举了不同的分布式梯度聚合策略和 TensorFlow 版本下，在 Kubernetes 上运行分布式训练程序的解决方案。
+
+**TODO** 再次梳理这张表格
+
 |     | TensorFlow 1.x  | TensorFlow 2.x Estimator API| TensorFlow 2.x Keras API|
 |  ----  | ----  | --- | ---|
 | AllReduce  | Horovod + Kubeflow | Limited Support| Kubeflow |
 | Parameter Server  | Kubeflow |  Limites Support | Supported planned post 2.3|
 
-我们可以观察到在Kubernetes 上执行 TensorFlow 2.x 的分布式训练程序的解决方案还暂不完整。
+我们可以观察到在Kubernetes 上运行 TensorFlow 2.x 的分布式训练程序的解决方案还暂不完整。
 另外需要指出的是，Estimator API 仅支持 graph execution，不支持 eager execution，调试代码和网络各层输出比较麻烦。
 
 ## ElasticDL 是如何解决问题的
@@ -97,6 +101,9 @@ def dataset_fn(dataset, mode, _):
 
 在 TensorFlow 2.x 中，上述定义的每个接口都可以单独测试，我们可以很方便的在本地调试模型定义。
 
+同时，TensorFlow 2.x 默认支持 eager execution，ElasticDL worker 可以直接调用模型定义，进行前向计算。
+在反向计算中，worker 可以通过 TensorFlow 2.x 暴露的 Gradient Tape接口 来计算得到梯度。
+
 ### ElasticDL master 提供 training loop
 
 我们通常使用 mini-batch SGD 的方法来训练深度学习模型。ElasticDL worker 会进行如下步骤来完成对一个 mini-batch 的训练：
@@ -167,6 +174,13 @@ ElasticDL 用 Go 实现了 Parameter Server，具有良好的吞吐能力和可�
 - worker 向 PS 发送梯度时，本地先把相同 ID 的梯度进行合并，减少通信量
 
 通过上述设计与实现，ElasticDL 可以很高效的完成搜索推荐广告模型的训练。
-我们用一个推荐中常用的deepFM模型为例，来说明 ElasticDL 在 Parameter Server 上对性能的提升。
+我们用一个推荐中常用的 deepFM 模型为例，来说明 ElasticDL 相比于去年9月开源时的性能提升。
 
-## 用户实例：ElasticDL在花呗营销场景落地
+**TODO** 添加性能对比
+
+## 使用 ElasticDL 进行 Kaggle 实战
+
+本例中使用的是 Kaggle 上的 Display Advertising Challenge 挑战的 criteo 数据集。
+我们使用 ElasticDL 训练一个 xDeepFM 模型。
+
+**TODO** 加上更详细的过程说明
