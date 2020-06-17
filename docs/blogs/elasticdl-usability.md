@@ -5,7 +5,6 @@
 一个深度学习的训练任务往往需要较多的训练数据，需要较长的训练时间。通常的做法是我们把单机程序给分布式化，利用集群的资源，启动多个 worker，来共同完成一个训练任务。
 
 分布式程序的编写是相对困难的。用户需要关心一些额外的控制逻辑，比如如何把训练数据分发到各个 worker；如何能够在训练若干 step 之后，对验证集发起一次 evaluation。
-
 同时，用户需要在分布式系统上启动多个 worker，让多个 worker 之间建立通信，来共同参与训练。这对希望专注于模型调优的算法同学来说是很不友好的。
 
 在蚂蚁金服内部，TensorFlow 被广泛的在诸多业务场景中使用。Kubernetes 已经成为分布式操作系统的事实标准。
@@ -24,7 +23,7 @@ AllReduce 和 Parameter Server 是两种常用的分布式梯度聚合策略。�
 
 ## ElasticDL 是如何解决问题的
 
-TensorFlow 2.x 支持 eager execution，并且推荐使用 更加精简的 Keras API 来定义模型。
+TensorFlow 2.x 支持 eager execution，并且推荐使用更加精简的 Keras API 来定义模型。
 ElasticDL 支持 TensorFlow 2.x 的 Keras API，为用户提供了良好的体验。
 用户专注于描述单机程序，而不需要关心分布式程序的写法。ElasticDL 会自动把单机程序转为分布式训练程序。下面我们用一个mnist的训练例子来详细说明。
 
@@ -104,7 +103,8 @@ def dataset_fn(dataset, mode, _):
 首先 master 把训练数据的索引创建成一系列的 task，worker 会向 master 请求拿到 task。拿到 task 之后，worker 可以数据的索引找到对应的数据分片。
 
 ElasticDL master 中还为这些 task 维护了三个队列，todo/doing/done 队列。
-每次 master 分发一个task，都会把这个 task 从 todo 队列挪到 doing 队列。
+任务开始时，master 会将所有 task 放入 todo 队列。每分发一个 task 给 worker，
+都会把这个 task 从 todo 队列挪到 doing 队列。
 如果一个 worker 被抢占或者因为其他原因失败，master 可以通过监控 doing 队列 task 的 timeout，
 把这个 task 挪回到 todo 队列中。
 如果 worker 顺利完成一个 task，master 则会收到通知，把这个 task 从 doing 队列挪到 done 队列。
@@ -151,12 +151,12 @@ worker 在本地使用训练数据计算梯度之后，把梯度再发送到 PS 
 
 ElasticDL 用 Go 实现了 Parameter Server，具有良好的吞吐能力和可扩展性。并且，我们针对 embedding table 做了一些额外的优化。
 
-- embedding vector 惰性初始化，用户无需提前指定embedding table的高度
-- 把一个 embedding table 拆分到多个PS上存储与更新，均衡存储/通信/更新的负载
-- worker从PS请求参数时，先滤除重复ID，只请求不同的参数，减少通信量
-- worker向PS发送梯度时，本地先把相同ID的梯度进行合并，减少通信量
+- embedding vector 惰性初始化，用户无需提前指定 embedding table 的大小
+- 把一个 embedding table 拆分到多个 PS 上存储与更新，均衡存储与通信的负载
+- worker 从 PS 请求参数时，先滤除重复 ID ，只请求不同的参数，减少通信量
+- worker 向 PS 发送梯度时，本地先把相同 ID 的梯度进行合并，减少通信量
 
-通过上述设计与实现，ElasticDL可以很高效的完成搜索推荐广告模型的训练。
+通过上述设计与实现，ElasticDL 可以很高效的完成搜索推荐广告模型的训练。
 我们用一个推荐中常用的deepFM模型为例，来说明 ElasticDL 在 Parameter Server 上对性能的提升。
 
 ## 用户实例：ElasticDL在花呗营销场景落地
