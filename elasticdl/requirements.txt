@@ -6,3 +6,4 @@ Cython
 odps
 tensorflow==2.1.0
 deepctr
+elasticdl_preprocessing
