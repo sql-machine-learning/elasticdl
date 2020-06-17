@@ -144,10 +144,11 @@ def dataset_fn(dataset, mode, metadata):
 - 提供了常用的 CTR 预估算法，包括 Wide & Deep, DeepFM, Deep Cross Network 和 xDeepFM。
 - 分布式策略采用 ParameterServer，可以根据数据量来配置 worker 的数量来加速模型训练。
 
-为了验证模型性能，我们选用了 [Kaggle Display Advertising Challenge](https://www.kaggle.com/c/criteo-display-ad-challenge) 的数据集,
-来测试模型性能。将组件的标准化特征列和分箱特征列都配置成 I0-I13，哈希特征列配置成 C0-C13，
-最终使用 xDeepFM 模型的 logloss 为 0.45634 (Kaggle best logloss: 0.44463)。
-通过很简单的配置，就可以训练处一个性能比较好的模型，适合新场景数据集来快速实现 baseline。
+为了验证模型性能，我们选用了 [Kaggle Display Advertising Challenge](https://www.kaggle.com/c/criteo-display-ad-challenge)
+的数据集,来测试模型性能。将组件的标准化特征列和分箱特征列都配置成 I0-I13，
+哈希特征列配置成 C0-C13，最终使用 xDeepFM 模型的 logloss 为
+0.45634 (Kaggle best logloss: 0.44463)。通过很简单的配置，
+就可以训练处一个性能比较好的模型，适合新场景数据集来快速实现 baseline。
 
 ElasticDL DeepCTR 算法的实现原理如下图:
 
