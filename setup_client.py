@@ -24,6 +24,6 @@ setup(
     url="https://elasticdl.org",
     install_requires=required_deps,
     python_requires=">=3.5",
-    packages=[find_packages(include=["elasticdl_client"])],
+    packages=find_packages(include=["elasticdl_client*"]),
     package_data={"": ["requirements.txt"]},
 )
