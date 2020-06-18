@@ -214,7 +214,96 @@ ElasticDL 用 Go 实现了 Parameter Server，具有良好的吞吐能力和可�
 
 ## 使用 ElasticDL 进行 Kaggle 实战
 
-本例中使用的是 Kaggle 上的 Display Advertising Challenge 挑战的 criteo 数据集。
-我们使用 ElasticDL 训练一个 xDeepFM 模型。
+在本小节中，我们将使用 ElasticDL 进行一次 Kaggle 实战。
+本例中使用的是 Kaggle 上 Display Advertising Challenge 中的 criteo 数据集，这是一个关于广告点击率预估的比赛。
+我们将使用 xDeepFM 模型来进行建模，所有的实例代码都放在了 ElasticDL 的 [model zoo](https://github.com/sql-machine-learning/elasticdl/tree/develop/model_zoo/dac_ctr)中。
 
-**TODO** 加上更详细的过程说明
+### 数据预处理
+
+1. 我们首先从官方
+[链接](https://labs.criteo.com/2014/02/download-kaggle-display-advertising-challenge-dataset)
+下载 criteo 数据集。
+
+1. 然后我们需要把原始数据转换为 RecordIO 文件格式。
+我们提供了如下的转换脚本：
+
+```bash
+python convert_to_recordio.py \
+    --records_per_shard 400000 \
+    --output_dir ./dac_records \
+    --data_path train.txt
+```
+
+原始数据会被按照 19:1 的比例，拆分为训练集和验证集，
+转换后的数据放在 dac_records 目录中。
+
+1. 对原始数据进行特征统计。对于连续的特征，我们统计得出均值和方差；
+对于离散的特征，我们得出特征值个数。我们把统计后的数据放在一个文件中，供后续使用。
+
+### 模型定义
+
+xDeepFM 模型由三部分组成，分别是 linear logits，dnn logits 和 xfm logits。
+借助 Keras API，我们可以很清晰的描述模型结构。
+这里贴出 dnn logits 部分的描述代码，完整的模型定义可以参见 model zoo。
+
+```python
+deep_embeddings = lookup_embedding_func(
+    id_tensors, max_ids, embedding_dim=deep_embedding_dim,
+)
+dnn_input = tf.reshape(
+    deep_embeddings, shape=(-1, len(deep_embeddings) * deep_embedding_dim)
+)
+if dense_tensor is not None:
+    dnn_input = tf.keras.layers.Concatenate()([dense_tensor, dnn_input])
+
+dnn_output = DNN(hidden_units=[16, 4], activation="relu")(dnn_input)
+
+dnn_logit = tf.keras.layers.Dense(1, use_bias=False, activation=None)(
+    dnn_output
+)
+```
+
+### 提交训练任务
+
+我们首先在 Google Cloud 上创建一个 GKE 集群，并且把转换好的 RecordIO 训练数据上传到集群上。
+详细的过程可以参考 ElasticDL 的 [gcloud教程](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/tutorials/elasticdl_cloud.md)。
+
+然后，我们在本地制作一个镜像，该镜像包含了 xDeepFM 模型定义，以及相关依赖包。
+
+```bash
+FROM tensorflow
+RUN pip install elasticdl
+COPY model_zoo /model_zoo
+```
+
+我们需要把该镜像推送到 GKE 集群能够访问到的仓库中，比如说 docker hub 的仓库中。
+
+最后，我们通过 ElasticDL client 工具向 GKE 集群提交训练作业。
+我们使用 ParameterServer 分布式策略进行训练，有 2 个 parameter serve pods 和 5个 worker pods共同参与训练。
+
+```bash
+elasticdl train \
+  --image_name=${your_docker_hub_id}/elasticdl:ci \
+  --model_zoo=model_zoo \
+  --model_def=dac_ctr.elasticdl_train.custom_model \
+  --volume="mount_path=/data,claim_name=fileserver-claim" \
+  --minibatch_size=512 \
+  --num_minibatches_per_task=50 \
+  --num_epochs=20 \
+  --num_workers=5 \
+  --num_ps_pods=2 \
+  --use_async=True \
+  --use_go_ps=True \
+  --training_data=/data/dac_records/train  \
+  --validation_data=/data/dac_records/val \
+  --master_resource_request="cpu=1,memory=1024Mi,ephemeral-storage=1024Mi" \
+  --worker_resource_request="cpu=4,memory=2048Mi,ephemeral-storage=1024Mi" \
+  --ps_resource_request="cpu=8,memory=6000Mi,ephemeral-storage=1024Mi" \
+  --evaluation_steps=10000 \
+  --job_name=test-edl \
+  --log_level=INFO \
+  --image_pull_policy=Always \
+  --distribution_strategy=ParameterServerStrategy
+```
+
+约迭代8万个 step 后模型收敛，AUC 可以达到 0.8002 左右。
