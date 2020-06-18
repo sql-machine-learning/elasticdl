@@ -168,9 +168,9 @@ ElasticDL master 中还为这些 task 维护了三个队列，todo/doing/done �
 同时使用动态数据分发机制之后，worker 数目也可以动态变化。
 新加入的 worker 可以直接向 master 请求分配数据分片，从而更方便地支持弹性调度 worker 的数量。
 
-### ElasticDL 命令行工具提交作业
+### ElasticDL client 命令行工具提交作业
 
-在本地完成对模型的调试之后，我们可以借助 ElasticDL 提供的命令行工具向 Kubernetes 集群提交分布式训练作业。我们只需要指定模型定义文件和一些额外的参数，包括资源配置等。
+在本地完成对模型的调试之后，我们可以借助 ElasticDL client 提供的命令行工具向 Kubernetes 集群提交分布式训练作业。我们只需要指定模型定义文件和一些额外的参数，包括资源配置等。
 
 ```bash
 elasticdl train \
@@ -191,8 +191,8 @@ elasticdl train \
  ```
 
  在上述例子中，我们指定了 Parameter Server 的分布式策略，由一个parameter server 和 两个 worker 共同完成训练任务。
- ElasticDL的master pod将会被首先创建，然后由 master 负责启动 worker pod，以及parameter server pod，并且建立通信。
- ElasticDL master可以监控每个pod的状态，当有pod挂掉时，master会重新拉起新的pod。
+ ElasticDL 的 master pod 将会被首先创建，然后由 master 负责启动 worker pod，以及 parameter server pod，并且建立通信。
+ ElasticDL master 可以监控每个 pod 的状态，当有 pod 挂掉时，master 会重新拉起新的 pod。
 
 ## Parameter Server 的改进
 
