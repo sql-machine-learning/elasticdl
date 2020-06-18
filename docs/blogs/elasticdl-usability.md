@@ -44,10 +44,10 @@ TensorFlow 是当今最受欢迎的深度学习框架。在蚂蚁金服内部，
 
 | 分布式策略 | 模型定义 | Kubernetes 任务提交工具 |
 | --- | --- | --- |
-| ParameterServer | TensorFlow Estimator API | Kubeflow TF-operator |
+| ParameterServer | TensorFlow Estimator | Kubeflow TF-operator |
 | AllReduce | Keras + Horovod | Kubeflow MPI-operator |
 
-TensorFlow Estimator API 仅支持 graph execution，不支持 eager execution，调试代码和网络各层输出比较麻烦。并且，用户需要组合使用不同的工具，来编写不同分布式策略的训练程序。
+TensorFlow Estimator 仅支持 graph execution，不支持 eager execution，调试代码和网络各层输出比较麻烦。并且，用户需要组合使用不同的工具，来编写不同分布式策略的训练程序。
 
 TensorFlow 2.x 支持 eager execution，并且推荐使用更加精简的 Keras API 来定义模型。
 TensorFlow Keras API 提高开发效率，降低使用门槛，与 eager execution 配合之后，使得程序更为直观，也更易调试。
@@ -60,8 +60,8 @@ ElasticDL 方案
 
 | 分布式策略 | 模型定义接口 | Kubernetes 任务提交工具 |
 | --- | --- | --- |
-| ParameterServer | TensorFlow Keras API | ElasticDL client |
-| AllReduce | TensorFlow Keras API | ElasticDL client |
+| ParameterServer | TensorFlow Keras | ElasticDL client |
+| AllReduce | TensorFlow Keras | ElasticDL client |
 
 ## ElasticDL 是如何解决问题的
 
