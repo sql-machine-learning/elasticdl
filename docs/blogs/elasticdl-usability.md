@@ -1,35 +1,71 @@
 # ElasticDL: 像写单机程序一样写分布式深度学习程序
 
-## 深度学习程序 for Kubernetes 不容易写
+## 分布式深度学习程序难写
 
-一个深度学习的训练任务往往需要较多的训练数据，需要较长的训练时间。通常的做法是我们把单机程序给分布式化，利用集群的资源，启动多个 worker，来共同完成一个训练任务。
+一个深度学习的训练任务往往需要较多的训练数据，和较长的训练时间。一个通常的做法是把单机程序给分布式化，利用集群的资源，启动多个 worker，来共同完成一个训练任务。
 
-分布式程序的编写是相对困难的。用户需要关心一些额外的控制逻辑，比如如何把训练数据分发到各个 worker；如何能够在训练若干 step 之后，对验证集发起一次 evaluation。
-同时，用户需要在分布式系统上启动多个 worker，让多个 worker 之间建立通信，来共同参与训练。这对希望专注于模型调优的算法同学来说是很不友好的。
+分布式深度学习程序的编写是相对困难的，编程者既要了解深度学习，也要了解分布式系统开发。
+在一个分布式深度学习系统中，需要启动和监控若干个 workers 进程，对数据和计算任务进行拆分，并且分发给 workers。
+此外，还需要考虑 workers 之间的通信（communication）和 同步（synchronization）。
+随着计算规模的增加，workers 进程数目也会增加。当计算规模很大时，包含数十个进程的作业在执行过程中一个进程都不挂的概率几乎是0。
+如果一个进程挂掉，则整个作业重启，那么这个作业会陷入永不停歇的重启，无法结束。
+此时，需要结合深度学习训练算法的数学性质，设计容错机制。
+这要求编程者必须同时是深度学习和分布式系统的专家。
 
-在蚂蚁金服内部，TensorFlow 被广泛的在诸多业务场景中使用。Kubernetes 已经成为分布式操作系统的事实标准。
-因此，我们接下来将对比在 Kubernetes 上运行 TensorFlow 的分布式训练程序的一些开源解决方案。
+我们为此设计和开发了 ElasticDL 分布式计算框架，让编程者只需了解深度学习，不需要了解分布式系统开发。
 
-AllReduce 和 Parameter Server 是两种常用的分布式梯度聚合策略。在图像语音模型中，我们通常使用 AllReduce 策略。
-在搜索广告推荐模型中，我们使用 Parameter Server 策略。
+就像 MapReduce 框架中只需要用户完形填空两个函数：map 和 reduce，ElasticDL 只需要用户填写 forward、cost、feed 三个函数。
+其中 forward 定义深度学习的前向计算过程，
+ElasticDL 会调用 TensorFlow eager mode 中提供的 Gradient Tape 接口，
+来自动推导对应的后向计算过程（backward pass）；
+cost 指定模型训练时使用的 cost 函数；
+feed 用来定制化训练数据到 TensorFlow 的 tensor的转换过程。
 
-以下表格列举了不同的分布式梯度聚合策略和 TensorFlow 版本下，在 Kubernetes 上运行分布式训练程序的解决方案。
+所有的这些函数的编程只需要了解 TensorFlow API，不需要对分布式训练有任何背景知识。
+这些函数也可以在单机上用小数据做调试验证，然后就可以放心地交给 ElasticDL 做分布式的容错的大规模训练了。
 
-**TODO** 再次梳理这张表格
+ElasticDL 要求分布式计算平台是 Kubernetes。
+一方面 Kubernetes 是目前最先进的分布式操作系统，是公有云和私有云的事实工业标准；
+另一方面，ElasticDL 一改 Kubeflow 通过增加 Kubernetes operator 的方式定制 Kubernetes 的思路，
+为每个作业引入一个 master 进程（类似 Google MapReduce）。
+这个 master 进程作为作业的一部分，而不是 Kubernetes 的一部分，
+不仅了解集群情况，更了解深度学习作业本身，所以有充分的信息来做更优的调度。
+比如 master 进程可以请 Kubernetes 把两个 workers 启动在同一台物理机上，公用一个 GPU。
+这样，一个进程读数据的时候，请另外一个进程来做计算，从而让 GPU 的利用率总是很高。
 
-|     | TensorFlow 1.x  | TensorFlow 2.x Estimator API| TensorFlow 2.x Keras API|
-|  ----  | ----  | --- | ---|
-| AllReduce  | Horovod + Kubeflow | Limited Support| Kubeflow |
-| Parameter Server  | Kubeflow |  Limites Support | Supported planned post 2.3|
+TensorFlow 是当今最受欢迎的深度学习框架。在蚂蚁金服内部，TensorFlow 在诸多业务场景中被广泛使用。
+我们发现 AllReduce 和 Parameter Server 是分布式训练程序中常用两种梯度聚合策略。
+在图像语音模型中，AllReduce 策略被广泛的使用。
+在搜索广告推荐模型中，我们更倾向于使用 Parameter Server 策略。
 
-我们可以观察到在Kubernetes 上运行 TensorFlow 2.x 的分布式训练程序的解决方案还暂不完整。
-另外需要指出的是，Estimator API 仅支持 graph execution，不支持 eager execution，调试代码和网络各层输出比较麻烦。
+我们调研了目前在 Kubernetes 上运行 TensorFlow 分布式训练程序的一些开源解决方案。
+
+现有开源方案
+
+| 分布式策略 | 模型定义 | Kubernetes 任务提交工具 |
+| --- | --- | --- |
+| ParameterServer | TensorFlow Estimator API | Kubeflow TF-operator |
+| AllReduce | Keras + Horovod | Kubeflow MPI-operator |
+
+TensorFlow Estimator API 仅支持 graph execution，不支持 eager execution，调试代码和网络各层输出比较麻烦。并且，用户需要组合使用不同的工具，来编写不同分布式策略的训练程序。
+
+TensorFlow 2.x 支持 eager execution，并且推荐使用更加精简的 Keras API 来定义模型。
+TensorFlow Keras API 提高开发效率，降低使用门槛，与 eager execution 配合之后，使得程序更为直观，也更易调试。
+目前 TensorFlow 2.x 的 ParameterServer 和 AllReduce 分布式策略对 Keras API 的支持还不完善。
+
+而 ElasticDL 从易用性的角度出发，直接支持了 TensorFlow 2.x 的 Keras API。
+ElasticDL 同时提供统一的 ElasticDL client 命令行工具来提交作业。
+
+ElasticDL 方案
+
+| 分布式策略 | 模型定义接口 | Kubernetes 任务提交工具 |
+| --- | --- | --- |
+| ParameterServer | TensorFlow Keras API | ElasticDL client |
+| AllReduce | TensorFlow Keras API | ElasticDL client |
 
 ## ElasticDL 是如何解决问题的
 
-TensorFlow 2.x 支持 eager execution，并且推荐使用更加精简的 Keras API 来定义模型。
-ElasticDL 支持 TensorFlow 2.x 的 Keras API，为用户提供了良好的体验。
-用户专注于描述单机程序，而不需要关心分布式程序的写法。ElasticDL 会自动把单机程序转为分布式训练程序。下面我们用一个mnist的训练例子来详细说明。
+在 ElasticDL 中，用户专注于使用 TensorFlow Keras API 描述单机程序，而不需要关心分布式程序的写法。ElasticDL 会自动把单机程序转为分布式训练程序。下面我们用一个mnist的训练例子来详细说明。
 
 ### 使用 Keras API 定义模型
 
