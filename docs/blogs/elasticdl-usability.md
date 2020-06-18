@@ -53,12 +53,13 @@ TensorFlow Keras API 提高开发效率，降低使用门槛，与 eager executi
 
 而 ElasticDL 从易用性的角度出发，直接支持了 TensorFlow 2.x 的 Keras API。
 ElasticDL 同时提供统一的 ElasticDL client 命令行工具来提交作业。
-统一的模型定义接口和统一的任务提交工具，极大地减少了用户的心智负担，提高了工作效率。
 
 | 分布式策略 | 模型定义接口 | Kubernetes 任务提交工具 |
 | --- | --- | --- |
 | ParameterServer | TensorFlow Keras | ElasticDL client |
 | AllReduce | TensorFlow Keras | ElasticDL client |
+
+统一的模型定义接口和统一的任务提交工具，极大地减少了用户的心智负担，提高了工作效率。
 
 ## ElasticDL 是如何解决问题的
 
