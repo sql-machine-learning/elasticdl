@@ -1,0 +1,2 @@
+kubernetes==10.1.0
+docker
