@@ -30,7 +30,7 @@ ElasticDL 要求分布式计算平台是 Kubernetes。
 为每个作业引入一个 master 进程（类似 Google MapReduce）。
 这个 master 进程作为作业的一部分，而不是 Kubernetes 的一部分，
 不仅了解集群情况，更了解深度学习作业本身，所以有充分的信息来做更优的调度。
-比如 master 进程可以请 Kubernetes 把两个 workers 启动在同一台物理机上，公用一个 GPU。
+比如 master 进程可以请 Kubernetes 把两个 workers 启动在同一台物理机上，共用一个 GPU。
 这样，一个进程读数据的时候，请另外一个进程来做计算，从而让 GPU 的利用率总是很高。
 
 TensorFlow 是当今最受欢迎的深度学习框架。在蚂蚁金服内部，TensorFlow 在诸多业务场景中被广泛使用。
@@ -40,23 +40,20 @@ TensorFlow 是当今最受欢迎的深度学习框架。在蚂蚁金服内部，
 
 我们调研了目前在 Kubernetes 上运行 TensorFlow 分布式训练程序的一些开源解决方案。
 
-现有开源方案
-
 | 分布式策略 | 模型定义 | Kubernetes 任务提交工具 |
 | --- | --- | --- |
 | ParameterServer | TensorFlow Estimator | Kubeflow TF-operator |
 | AllReduce | Keras + Horovod | Kubeflow MPI-operator |
 
-TensorFlow Estimator 仅支持 graph execution，不支持 eager execution，调试代码和网络各层输出比较麻烦。并且，用户需要组合使用不同的工具，来编写不同分布式策略的训练程序。
+我们发现 TensorFlow Estimator 仅支持 graph execution，不支持 eager execution，调试代码和网络各层输出比较麻烦。并且，用户需要组合使用不同的工具，来编写不同分布式策略的训练程序。
 
-TensorFlow 2.x 支持 eager execution，并且推荐使用更加精简的 Keras API 来定义模型。
+TensorFlow 2.x 默认支持 eager execution，并且推荐使用更加精简的 Keras API 来定义模型。
 TensorFlow Keras API 提高开发效率，降低使用门槛，与 eager execution 配合之后，使得程序更为直观，也更易调试。
 目前 TensorFlow 2.x 的 ParameterServer 和 AllReduce 分布式策略对 Keras API 的支持还不完善。
 
 而 ElasticDL 从易用性的角度出发，直接支持了 TensorFlow 2.x 的 Keras API。
 ElasticDL 同时提供统一的 ElasticDL client 命令行工具来提交作业。
-
-ElasticDL 方案
+统一的模型定义接口和统一的任务提交工具，极大地减少了用户的心智负担，提高了工作效率。
 
 | 分布式策略 | 模型定义接口 | Kubernetes 任务提交工具 |
 | --- | --- | --- |
