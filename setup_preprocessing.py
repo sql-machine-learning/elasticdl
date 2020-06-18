@@ -34,6 +34,8 @@ setup(
     install_requires=required_deps,
     extras_require=extras,
     python_requires=">=3.5",
-    packages=find_packages(include=["*elasticdl_preprocessing*"],),
+    packages=find_packages(
+        include=["elasticdl_preprocessing*"], exclude=["*test*"]
+    ),
     package_data={"": ["requirements.txt"]},
 )

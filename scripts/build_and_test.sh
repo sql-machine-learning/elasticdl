@@ -46,4 +46,7 @@ mv coverage.xml ./build
 # Create elasticdl package
 mkdir -p ./elasticdl/go/bin
 cp /tmp/elasticdl_ps ./elasticdl/go/bin/
+rm -rf ./build/lib
 python setup.py --quiet bdist_wheel --dist-dir ./build
+rm -rf ./build/lib
+python setup_preprocessing.py --quiet bdist_wheel --dist-dir ./build
