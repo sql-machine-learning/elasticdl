@@ -10,11 +10,12 @@ to collect the feature statistical results. For example, we need the mean and
 standard deviation to normalize a numeric value, `vocabulary` to lookup a string
 value to an integer id and `boundary` to discretize a numeric value. Using
 SQLFlow, the training dataset is usually a table saved in MySQL or MaxCompute
-and other databases, so we can use SQL to analyze the training table.  During
-[data transformation pipeline](./data_transform.md), we may launch a pod to
-analyze the training table and then submit the ElasticDL training job. So, the
-design is to solve how to pass the analysis results into the pods of an
-ElasticDL training job.
+and other databases, so we can use SQL to analyze the training table. During
+[data transformation
+pipeline](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/data_transform.md),
+we may launch a pod to analyze the training table and then submit the ElasticDL
+training job. So, the design is to solve how to pass the analysis results into
+the pods of an ElasticDL training job.
 
 ## Define preprocess layers with analysis result
 
@@ -30,8 +31,8 @@ example, the table is
 |  42  | Bachelor | Never-married |
 |  49  | Bachelor | Divorced |
 
-For numeric column, we can get the min, max, mean, standard deviation and
-bucket boundaries using
+For numeric column, we can get the min, max, mean, standard deviation and bucket
+boundaries using
 
 ```sql
 SELECT
@@ -75,8 +76,8 @@ WHERE _count >= {threshold};
 The `WHERE _count >= {threshold}` will filter the values whose count is less
 than threshold to avoid overfitting.
 
-Besides vocabulary, other analysis results are a number or a list of number
-like bucket boundaries. So we can save them into a table like:
+Besides vocabulary, other analysis results are a number or a list of number like
+bucket boundaries. So we can save them into a table like:
 
 |  feature_stats | value |
 | ---- | --- |
@@ -103,15 +104,15 @@ So, we save the vocabulary into a column and each record has an element, like
 | Bachelor|  |
 
 After analysis, we get two tables with the analysis results. One is the
-statistics table which saves the mean, standard deviation, bucket boundaries
-and distinct count. And another is vocabulary table which saves the vocabulary.
+statistics table which saves the mean, standard deviation, bucket boundaries and
+distinct count. And another is vocabulary table which saves the vocabulary.
 
 ### Pass analysis results to build a model in training pods
 
 For the values in the statistics table, we can write them into environment
 variables for the training pod to build model. For example:
 
-```shell
+```bash
 envs='_age_mean=44.75,_age_std=56.6875,_age_boundaries="30,40,50"'
 ```
 
@@ -149,9 +150,7 @@ def get_distinct_count(feature_name, default_value):
 ```
 
 Using the default values in `analyzer_utils`, users can debug the model without
-analysis.
-
-So, we can define the preprocessing layers like:
+analysis.  So, we can define the preprocessing layers like:
 
 ```python
 import os
@@ -175,7 +174,7 @@ save the vocabulary into the shared storage like glusterfs and write the path
 into the environment variables of a training pod. After the training job
 completes, we can clear the vocabulary files in the storage.
 
-```shell
+```bash
 envs="_education_vocab=/testdata/elasticdl/vocabulary/education.txt"
 ```
 
