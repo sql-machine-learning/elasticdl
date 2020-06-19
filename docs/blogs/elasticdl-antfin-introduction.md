@@ -143,8 +143,8 @@ Kubernetes 自动缩容 NGINX 服务，此时，ElasticDL 自动利用释放的�
 ### 实验三：训练时调整 worker 数量不影响收敛性
 
 有用户担心训练过程中 worker 的数量发生变化，会导致不收敛。实际情况下从未发生这类问题。
-使用 [Kaggle Display Advertising Challenge](https://www.kaggle.com/c/criteo-display-ad-challenge) 的数据集,
-用 ElasticDL 和用 gang scheduling 分别训练 wide-and-deep DNN model，
+使用 [Kaggle Display Advertising Challenge](https://www.kaggle.com/c/criteo-display-ad-challenge)
+的数据集,用 ElasticDL 和用 gang scheduling 分别训练 wide-and-deep DNN model，
 收敛曲线如下:
 
 ![AUC with different workers](../images/auc_with_different_workers.jpg)
@@ -155,7 +155,7 @@ Kubernetes 自动缩容 NGINX 服务，此时，ElasticDL 自动利用释放的�
 并且严重的 staleness 会影响到模型收敛。在 ElasticDL 弹性调度下，
 worker 数量可能因为被抢占而下降，staleness 会减轻，
 理论上不会对模型训练产生负面影响。实验结果也符合此理论。
- 
+
 ## 高性能的 Parameter Server
 
 在搜索广告等场景，模型中可能包含较大的 embedding table，

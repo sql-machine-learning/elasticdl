@@ -32,7 +32,7 @@ elasticdl train \
     --output="gs://bucket-name/tony/my_trained_model"
 ```
 
-The above command-line 
+The above command-line
 
 1. builds a Docker image containing (1) `$HOME/work` mapped
 to `/model_zoo/custom`, (2) ElasticDL, (3) dependencies of ElasticDL,
@@ -54,7 +54,7 @@ function other than `MyKerasModel.default_input`.
 
 Because the above example command line specifies `--input_fn` explicitly,
 the training job is not going to use `MyKerasModel.default_input`,
-but uses `fintech.credit_data_processor`.  Similarly, command line 
+but uses `fintech.credit_data_processor`.  Similarly, command line
 options `loss` and `optimizer` overwrites `MyKerasModel.default_loss`
 and `MyKerasModel.default_optimizer`.
 
@@ -74,7 +74,7 @@ by writing a SQL statement with extended syntax.  The syntax for training
 extends the SELECT statement with the TRAIN clause.  For example:
 
 ```sql
-SELECT name, role, salary FROM employee 
+SELECT name, role, salary FROM employee
 TRAIN regressor.DNN
 WITH hidden_units=[10, 100, 20, 5], learning_rate=0.01
 INTO my_trained_model;
@@ -92,7 +92,7 @@ a Kubernetes cluster.
 SQLFlow often runs in Docker containers, and it is usually intractable
 to build a Docker image from within a Docker container, so the submitter
 requires a pre-built Docker image containing (1) `/model_zoo`,
-(2) ElasticDL, (3) dependenciesof ElasticDL. 
+(2) ElasticDL, (3) dependenciesof ElasticDL.
 The class `regressor.DNN` is a class defined in some
 Python source files in `/model_zoo`.
 
@@ -132,7 +132,7 @@ We propose a function `elastic.train` that can be called like the following:
 ```python
 elasticdl.train(
     model_zoo="$HOME/work",
-    model_def="fintech.MyKerasModel", 
+    model_def="fintech.MyKerasModel",
     input_fn="fintech.credit_data_processor",
     params="hidden_units=[10, 100, 20, 5], learning_rate=0.01",
     data="gs://bucket-name/tony/imagenet/train/*.recordio",
@@ -144,7 +144,7 @@ or
 ```python
 elasticdl.train(
     model_zoo="https://github.com/sql-machine-learning/models",
-    model_def="regressor.DNN", 
+    model_def="regressor.DNN",
     input_fn="sqlflow.elasticdl_input_function',
     params="hidden_units=[10, 100, 20, 5], learning_rate=0.01",
     data="gs://sqlflow/job-xxyyzz/train/*.recordio",
@@ -186,7 +186,7 @@ a parameter, which could be the following cases:
    ```python
    elasticdl.train(model_zoo="a_local_directory", ...)
    ```
-   
+
 1. A URL pointing to a Git repo
 
    ```python
@@ -195,7 +195,7 @@ a parameter, which could be the following cases:
     )
    ```
 
-A model zoo is a plain Python source directory that's added to `/model_zoo` 
+A model zoo is a plain Python source directory that's added to `/model_zoo`
 in the Docker image.  In the root directory there requires a `requirements.txt`
 file, so the image building process can install dependencies via
 
@@ -244,7 +244,7 @@ A key question is what information must be in the directory
 
 1. Model class constructor parameters, like `hidden_units=[10, 100, 20]`.
 
-1. Other parameters passed to `elasticdl.train`, including 
+1. Other parameters passed to `elasticdl.train`, including
    - `model_def`
    - `input_function`
    - `loss`
@@ -253,7 +253,7 @@ A key question is what information must be in the directory
 1. Model parameters as a map from parameter name to parameter value tensors,
 defined in [`elasticdl.proto`](https://github.com/sql-machine-learning/elasticdl/blob/e06618af50cc9507e0b59473f4b97c066fa04870/elasticdl/proto/elasticdl.proto#L51-L54).
 
- 
+
 We define a new wrapper message:
 
 ```protobuf
