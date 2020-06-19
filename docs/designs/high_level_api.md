@@ -1,8 +1,9 @@
-## Targeted Users
+# Targeted Users
 
 ElasticDL targets two categories of users
 
-1. *Modelers*, those who create new models, including deep learning researchers and engineers, and
+1. *Modelers*, those who create new models,
+including deep learning researchers and engineers, and
 1. SQLFlow users.
 
 The high-level API must meet the requirements of these users.
@@ -11,9 +12,15 @@ The high-level API must meet the requirements of these users.
 
 ### Modelers
 
-Modelers usually craft their Keras models on their personal computers, test the model with small datasets, and would like to file a distributed training job with big datasets on the cloud.
+Modelers usually craft their Keras models on their personal computers,
+test the model with small datasets, and would like to file a
+distributed training job with big datasets on the cloud.
 
-Suppose that one is working on a model in the local directory `$HOME/work/fintech/*.py`, where each `.py` file might contain one ore more Keras model classes. We would love to allow the user to submit an ElasticDL training job from the command-line like the following to train a model defined as a class `MyKerasModel`.
+Suppose that one is working on a model in the local directory
+`$HOME/work/fintech/*.py`, where each `.py` file might contain
+one ore more Keras model classes. We would love to allow the user
+to submit an ElasticDL training job from the command-line like the
+following to train a model defined as a class `MyKerasModel`.
 
 ```bash
 elasticdl train \
@@ -27,17 +34,29 @@ elasticdl train \
 
 The above command-line 
 
-1. builds a Docker image containing (1) `$HOME/work` mapped to `/model_zoo/custom`, (2) ElasticDL, (3) dependencies of ElasticDL,
-1. submits an ElasticDL job to the Kubernetes cluster as described in `$HOME/.kube/config`,
-1. prints an URL to the dashboard so users could inspect the progress/status of the job in the user's Web browser.
+1. builds a Docker image containing (1) `$HOME/work` mapped
+to `/model_zoo/custom`, (2) ElasticDL, (3) dependencies of ElasticDL,
+1. submits an ElasticDL job to the Kubernetes cluster as
+described in `$HOME/.kube/config`,
+1. prints an URL to the dashboard so users could inspect
+the progress/status of the job in the user's Web browser.
 
-Please be aware that in the class `fintech.MyKerasModel`, in addition to overriding the method `call`, we also need to provide methods like
+Please be aware that in the class `fintech.MyKerasModel`,
+in addition to overriding the method `call`, we also need
+to provide methods like
 
 - `default_loss` that returns a loss operator,
 - `default_optimizer` that returns an optimizer operator,
-- `default_input` that takes a record (string) as its input and returns something that can be batched and consumed by `MyKerasModel.call`.  In the above example, the user chooses an input function other than `MyKerasModel.default_input`.
+- `default_input` that takes a record (string) as its input and returns
+something that can be batched and consumed by `MyKerasModel.call`.
+In the above example, the user chooses an input
+function other than `MyKerasModel.default_input`.
 
-Because the above example command line specifies `--input_fn` explicitly, the training job is not going to use `MyKerasModel.default_input`, but uses `fintech.credit_data_processor`.  Similarly, command line options `loss` and `optimizer` overwrites `MyKerasModel.default_loss` and `MyKerasModel.default_optimizer`.
+Because the above example command line specifies `--input_fn` explicitly,
+the training job is not going to use `MyKerasModel.default_input`,
+but uses `fintech.credit_data_processor`.  Similarly, command line 
+options `loss` and `optimizer` overwrites `MyKerasModel.default_loss`
+and `MyKerasModel.default_optimizer`.
 
 Another important command-line is to support prediction.
 
@@ -50,7 +69,9 @@ elasticdl predict \
 
 ### SQLFlow Users
 
-SQLFlow users provide the information required by training or prediction by writing a SQL statement with extended syntax.  The syntax for training extends the SELECT statement with the TRAIN clause.  For example:
+SQLFlow users provide the information required by training or prediction
+by writing a SQL statement with extended syntax.  The syntax for training
+extends the SELECT statement with the TRAIN clause.  For example:
 
 ```sql
 SELECT name, role, salary FROM employee 
@@ -59,15 +80,32 @@ WITH hidden_units=[10, 100, 20, 5], learning_rate=0.01
 INTO my_trained_model;
 ```
 
-Please be aware that to minimize the syntax extension, SQLFlow doesn't allow users to specify a directory of models; instead, users can only use pre-built models -- `regressor.DNN` in the above example.
+Please be aware that to minimize the syntax extension, SQLFlow doesn't
+allow users to specify a directory of models; instead, users can only
+use pre-built models -- `regressor.DNN` in the above example.
 
-SQLFlow is a gRPC server that takes the above SQL statement and translates it into a Python program known as a *submitter*.  It is the responsibility of the submitter to call `kubectl` to launch an ElasticDL job on a Kubernetes cluster.
+SQLFlow is a gRPC server that takes the above SQL statement and translates
+it into a Python program known as a *submitter*.  It is the responsibility
+of the submitter to call `kubectl` to launch an ElasticDL job on
+a Kubernetes cluster.
 
-SQLFlow often runs in Docker containers, and it is usually intractable to build a Docker image from within a Docker container, so the submitter requires a pre-built Docker image containing (1) `/model_zoo`, (2) ElasticDL, (3) dependencies of ElasticDL.  The class `regressor.DNN` is a class defined in some Python source files in `/model_zoo`.
+SQLFlow often runs in Docker containers, and it is usually intractable
+to build a Docker image from within a Docker container, so the submitter
+requires a pre-built Docker image containing (1) `/model_zoo`,
+(2) ElasticDL, (3) dependenciesof ElasticDL. 
+The class `regressor.DNN` is a class defined in some
+Python source files in `/model_zoo`.
 
-The submitter might file the statement `SELECT name, role, salary FROM employee` to the SQL engine, pull the result, convert the result into one or more RecordIO files whose each record is a serialization of the `tf.Example` protobuf message. So, the input function used by ElasticDL to parse the strings for `DNNClassifer.class` could be standardized one, say, `sqlflow.elasticdl_input_function`.
+The submitter might file the statement
+`SELECT name, role, salary FROM employee` to
+the SQL engine, pull the result, convert the result into one or
+more RecordIOfiles whose each record is a serialization of the
+`tf.Example` protobuf message. So, the input function used by
+ElasticDL to parse the strings for `DNNClassifer.class` could be
+standardized one, say, `sqlflow.elasticdl_input_function`.
 
-To predict using a pre-trained model and to write the results into a column of a table, we can do
+To predict using a pre-trained model and to write the results
+into a column of a table, we can do
 
 ```sql
 SELECT name, role FROM testdata
@@ -77,11 +115,15 @@ USING my_trained_model;
 
 ### Unified API
 
-Both the command line tool `elasticdl` provided for modelers and the submitter program generated by SQLFlow need to call an API that launches ElasticDL jobs.  Hence this design.
+Both the command line tool `elasticdl` provided for modelers and the
+submitter program generated by SQLFlow need to call an API that
+launches ElasticDL jobs.  Hence this design.
 
 ## API
 
-We hope the ElasticDL API supports not only batch learning, but also online learning, adversarial learning, reinforcement learning, and federated learning.  However, at the right moment, let us start with batch learning.
+We hope the ElasticDL API supports not only batch learning, but also online
+learning, adversarial learning, reinforcement learning, and federated learning.
+However, at the right moment, let us start with batch learning.
 
 ### For Training
 
@@ -109,7 +151,8 @@ elasticdl.train(
     output="gs://sqlflow/job-xxyyzz/my_trained_model")
 ```
 
-Please be aware that most parameters of `elasticdl.train` are of string-type because the command line options and SQL statements are all strings.
+Please be aware that most parameters of `elasticdl.train` are of string-type
+because the command line options and SQL statements are all strings.
 
 ### For Prediction
 
@@ -133,7 +176,10 @@ elasticdl.predict(
 
 ## Model Zoo
 
-When the ElasticDL client or the SQLFlow server call `elasticdl.train`, this function calls Docker API to build a Docker image then submits the job.  The building process should add a *model zoo* into the Docker image.  The function `elasticdl.train` has a parameter, which could be the following cases:
+When the ElasticDL client or the SQLFlow server call `elasticdl.train`, this function
+calls Docker API to build a Docker image then submits the job.  The building process
+should add a *model zoo* into the Docker image.  The function `elasticdl.train` has
+a parameter, which could be the following cases:
 
 1. A local directory, for example,
 
@@ -144,16 +190,24 @@ When the ElasticDL client or the SQLFlow server call `elasticdl.train`, this fun
 1. A URL pointing to a Git repo
 
    ```python
-   elasticdl.train(model_zoo="https://git.company.com/sql-machine-learning/models", ...)
+   elasticdl.train(
+       model_zoo="https://git.company.com/sql-machine-learning/models", ...
+    )
    ```
 
-A model zoo is a plain Python source directory that's added to `/model_zoo` in the Docker image.  In the root directory there requires a `requirements.txt` file, so the image building process can install dependencies via
+A model zoo is a plain Python source directory that's added to `/model_zoo` 
+in the Docker image.  In the root directory there requires a `requirements.txt`
+file, so the image building process can install dependencies via
 
 ```dockerfile
 RUN pip install -r /model_zoo/requirements.txt
 ```
 
-Suppose that a Keras model class is referred to as `regressor.DNN` in `elasticdl.train(model_def="regressor.DNN",`, the corresponding Python file should be `/model_zoo/regressor.py`.  A class `regressor.wide_and_deep.MagicalWAD` is in a Python file `/model_zoo/regressor/wide_and_deep.py`.
+Suppose that a Keras model class is referred to as `regressor.DNN` in
+`elasticdl.train(model_def="regressor.DNN",`, the corresponding Python
+file should be `/model_zoo/regressor.py`.  A class
+`regressor.wide_and_deep.MagicalWAD` is in a Python
+file `/model_zoo/regressor/wide_and_deep.py`.
 
 ## Trained Model
 
@@ -171,15 +225,22 @@ It needs to
 1. build and push a Docker image, and
 1. launch a distributed ElasticDL job of the type "predict".
 
-The Docker image must contain the model zoo used to train the model `trained_model='/filestore/tony/my_keras_model'`.
+The Docker image must contain the model zoo used to train the model
+`trained_model='/filestore/tony/my_keras_model'`.
 
-A key question is what information must be in the directory `/filestore/tony/my_keras_model`.
+A key question is what information must be in the directory
+`/filestore/tony/my_keras_model`.
 
 1. A Docker image ID.
 
-   We need this ID to refer to the Docker image built during the call of `elasticdl.train`.  In this image, we have the model zoo used to train the model.  Then, `elasticdl.predict` could build the Docker image for the distributed prediction job from this commit ID.
+   We need this ID to refer to the Docker image built during the call of
+   `elasticdl.train`.  In this image, we have the model zoo used to
+   train the model. Then, `elasticdl.predict` could build the Docker
+   image for the distributed prediction job from this commit ID.
 
-   This image ID must be a pullable ID so that ElasticDL command line tool can `docker pull` it as the base image. An example pullable ID is `docker-pullable://{DOCKRE_IMAGE_REPO}/asdi/aswf-py3@sha256:e8ca09705eed07cdfd060b6b9d27a802`.
+   This image ID must be a pullable ID so that ElasticDL command line tool
+   can `docker pull` it as the base image. An example pullable ID is
+   `docker-pullable://{DOCKRE_IMAGE_REPO}/asdi/aswf-py3@sha256:e8ca09705eed07cdfd060b6b9d27a802`.
 
 1. Model class constructor parameters, like `hidden_units=[10, 100, 20]`.
 
@@ -189,7 +250,8 @@ A key question is what information must be in the directory `/filestore/tony/my_
    - `loss`
    - `optimizer`
 
-1. Model parameters as a map from parameter name to parameter value tensors, defined in [`elasticdl.proto`](https://github.com/sql-machine-learning/elasticdl/blob/e06618af50cc9507e0b59473f4b97c066fa04870/elasticdl/proto/elasticdl.proto#L51-L54).
+1. Model parameters as a map from parameter name to parameter value tensors,
+defined in [`elasticdl.proto`](https://github.com/sql-machine-learning/elasticdl/blob/e06618af50cc9507e0b59473f4b97c066fa04870/elasticdl/proto/elasticdl.proto#L51-L54).
 
  
 We define a new wrapper message:
