@@ -98,7 +98,8 @@ from the PS pod, computes gradients and sends computed gradients to the PS
 pod. The PS pod iteratively updates these model parameters using gradients sent
 by the worker pod. For more details about parameter server strategy, please
 refer to the [design
-doc](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/parameter_server.md).
+doc](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs
+/parameter_server.md).
 
 ### Check job status
 
