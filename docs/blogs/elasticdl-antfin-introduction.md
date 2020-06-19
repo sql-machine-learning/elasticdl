@@ -188,7 +188,7 @@ def dataset_fn(dataset, mode, metadata):
 elasticdl train \
   --image_base=elasticdl:latest \
   --model_zoo=model_zoo \
-  --docker_image_repository=reg.docker.alibaba-inc.com/qinlong-wql/ \
+  --docker_image_repository={REPO} \
   --model_def=dac_ctr.elasticdl_train.custom_model \
   --minibatch_size=512 \
   --num_epochs=20 \
@@ -197,7 +197,7 @@ elasticdl train \
   --training_data=/testdata/elasticdl/dac_records/train  \
   --validation_data=/testdata/elasticdl/dac_records/val \
   --evaluation_steps=10000 \
-  --job_name=test-edl-changfan \
+  --job_name=test-edl \
 ```
 
 ### Keras 特征预处理 layer
