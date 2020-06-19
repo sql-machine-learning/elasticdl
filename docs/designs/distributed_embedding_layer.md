@@ -75,27 +75,21 @@ TensorFlow as an inspiration.
 
 ### Embedding Layers in TensorFlow
 
-TensorFlow assumes that an embedding table is a dense tensor, which implies
-that users must make sure that the discrete input i is a zero-based integer.
-TensorFlow provides the [feature column
-API](https://www.tensorflow.org/guide/feature_columns#feature_columns_2) to
+TensorFlow assumes that an embedding table is a dense tensor, which implies that
+users must make sure that the discrete input i is a zero-based integer.
+TensorFlow provides the feature column
+[API](https://www.tensorflow.org/guide/feature_columns#feature_columns_2) to
 convert strings and other features into zero-based integers.
 
 By calling `tf.create_partitioned_variable` to create the embedding table,
 users can create distributed embedding layers. TensorFlow provides two
 operators to lookup a distributed embedding table:
 
-1.
-[`tf.nn.embedding_lookup`](https://www.tensorflow.org/versions/r2.0/api_docs/pyt
-hon/tf/nn/embedding_lookup), and
-1.
-[`tf.nn.embedding_lookup_sparse`](https://www.tensorflow.org/versions/r2.0/api_d
-ocs/python/tf/nn/embedding_lookup_sparse).
+1. `tf.nn.embedding_lookup`, and
+1. `tf.nn.embedding_lookup_sparse`.
 
 We will dig into these two functions later in this document.  The Keras layer
-[`tf.keras.layers.Embedding`](https://www.tensorflow.org/versions/r2.0/api_docs/
-python/tf/keras/layers/Embedding?hl=en) is a wrapper of
-`tf.nn.embedding_lookup`.
+`tf.keras.layers.Embedding` is a wrapper of `tf.nn.embedding_lookup`.
 
 ### `tf.keras.layers.Embedding` and `tf.nn.embedding_lookup`
 
@@ -120,11 +114,8 @@ input discrete value i, `output_dim` is the length of each embedding vector.
 This constructor creates an embedding layer and its parameter, the embedding
 table, as a (partitioned) tensor of shape `input_dim x output_dim`.
 
-The method
-[`tf.keras.layers.Embedding.call`](https://github.com/tensorflow/tensorflow/blob
-/1f61f13f8715dc26dabe46a2686216674026d812/tensorflow/python/keras/layers/embeddi
-ngs.py#L179) defines the forward-pass.  It simply calls
-`tf.nn.embedding_lookup`.
+The method `tf.keras.layers.Embedding.call` defines the forward-pass.  It simply
+calls `tf.nn.embedding_lookup`.
 
 ```python
   def call(self, inputs):
@@ -157,9 +148,8 @@ embedding vector, or `output_dim`.
 
 ### `tf.nn.embedding_lookup_sparse`
 
-If the input is a sparse tensor, we can use
-[`tf.nn.embedding_lookup_sparse`](https://www.tensorflow.org/versions/r2.0/api_d
-ocs/python/tf/nn/embedding_lookup_sparse) instead.
+If the input is a sparse tensor, we can use `tf.nn.embedding_lookup_sparse`
+instead.
 
 ```python
 tf.nn.embedding_lookup_sparse(
@@ -190,14 +180,10 @@ shape N x O.
 ## elasticdl.layers.Embedding
 
 We plan to support both the fixed number of input ids as
-[tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/py
-thon/tf/keras/layers/Embedding?hl=en) and
-[tf.nn.embedding_lookup](https://www.tensorflow.org/versions/r2.0/api_docs/pytho
-n/tf/nn/embedding_lookup),  and inputs with varying number of ids as
-[tf.nn.embedding\_lookup\_sparse](https://www.tensorflow.org/versions/r2.0/api_d
-ocs/python/tf/nn/embedding_lookup_sparse).
+`tf.keras.layers.Embedding` and `tf.nn.embedding_lookup`, and inputs with
+varying number of ids as `tf.nn.embedding_lookup_sparse`.
 
-```
+```python
 __init__(
     output_dim,
     embeddings_initializer='uniform',
@@ -208,10 +194,7 @@ __init__(
 ```
 
 Because the embedding table size is not fixed in advance, `input_dim` argument
-in
-[tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/py
-thon/tf/keras/layers/Embedding?hl=en) is not used by
-`elasticdl.layers.embedding`.
+in `tf.keras.layers.Embedding` is not used by `elasticdl.layers.embedding`.
 
 We also need to investigate if elasticdl.layers.embedding can
 support`embeddings_regularizer`, `activity_regularizer` and
@@ -219,24 +202,18 @@ support`embeddings_regularizer`, `activity_regularizer` and
 
 In `elasticdl.layers.embedding.call(inputs)`:
 
-* if `inputs` is a N x M SparseTensor, `combiner` cannot be None. The output
+- if `inputs` is a N x M SparseTensor, `combiner` cannot be None. The output
 shape is `N x output_dim`.
-* If `inputs` is a N x M dense tensor, `combiner` can be None or any of the
+- If `inputs` is a N x M dense tensor, `combiner` can be None or any of the
 supported reduction op.
-    * If it is None, the output shape is `N x M x output_dim`.
-    * If it is not None, the output shape is `N x output_dim`.
+  - If it is None, the output shape is `N x M x output_dim`.
+  - If it is not None, the output shape is `N x output_dim`.
 
 In this way, elasticdl.layers.embedding supports ops as:
 
-1.
-[tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/py
-thon/tf/keras/layers/Embedding?hl=en)
-2.
-[tf.nn.embedding\_lookup\_sparse](https://www.tensorflow.org/versions/r2.0/api_d
-ocs/python/tf/nn/embedding_lookup_sparse)
-3.
-[tf.keras.layers.Embedding](https://www.tensorflow.org/versions/r2.0/api_docs/py
-thon/tf/keras/layers/Embedding?hl=en) + reduction op `combiner`.
+1. `tf.keras.layers.Embedding`
+1. `tf.nn.embedding_lookup_sparse`
+1. `tf.keras.layers.Embedding` + reduction op `combiner`.
 
 In this design document, we will describe how to implement
 `elasticdl.layers.Embedding` with a dense tensor `inputs` and `combiner` as
@@ -257,7 +234,7 @@ searches `Embedding` in the model layers. If found, master starts the
 distributed storage service, and passes the access point to the workers through
 WorkerManager.
 
-```
+```python
 // master.main
 embedding_layers = find_layers(model, Embedding)
 access_point = None
@@ -288,7 +265,7 @@ In the forward-pass of each iteration, embedding layer takes a minibatch of
 discrete ids and returns the corresponding embedding vectors. Here is a simple
 example:
 
-```
+```text
 Embedding Table with 3 (discrete id, embedding vector) pairs:
 {
     0: [0, 1, 2, 3],
@@ -315,14 +292,13 @@ a minibatch output with 3 instances, each with 2 embedding vectors
 
 Below, we will illustrate the forward-pass of model with `Embedding` in detail.
 
-In *ElasticDL*, the core function of model calculation is
+In ElasticDL, the core function of model calculation is
 `worker.training_process_eagerly()`. It takes a minibatch of features and
 labels, performs forward calculation and backward calculation, and returns loss
 and gradients. Here is its code in
-[worker.py](https://github.com/sql-machine-learning/elasticdl/blob/develop/elast
-icdl/python/worker/worker.py):
+[worker.py](/elasticdl/python/worker/worker.py):
 
-```
+```text
 [1]    def training_process_eagerly(self, features, labels):
 [2]        # GradientTape is used for recording gradients
 [3]        with tf.GradientTape() as tape:
@@ -343,7 +319,7 @@ For `Embedding.call(inputs)`, it will generate a list of unique ids from
 (Batch Embedding Tensor) and assign the values of BET to `Embedding`'s output.
 Here is a simple example:
 
-```
+```text
 embedding table is E
 minibatch inputs is [[2, 6], [9, 6]]
 
@@ -363,9 +339,9 @@ outputs[1][0] = BET[2] = E[9]
 outputs[1][1] = BET[1] = E[6]
 ```
 
-##### pseudocode for `Embedding.call`
+Here follows the pseudocode for `Embedding.call`
 
-```
+```python
 def Embedding.call(self, inputs):
     unique_ids = get_unique_ids(inputs)
 
@@ -398,7 +374,7 @@ Second, worker should set `Embedding._tape` before `Embedding.call`. This piece
 of pseudocode will be put between line 3 and line 4 of
 `training_process_eagerly` code above:
 
-```
+```python
 for all embedding layers in worker:
     embedding.set_tape(tape)
 ```

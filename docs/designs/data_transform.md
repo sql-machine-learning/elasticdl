@@ -14,8 +14,7 @@ this purpose.
 Currently, SQLFlow converts content in the `COLUMN` clause into the Python
 source code of data transformation.  The following example would call the
 Feature Column API
-[`tf/feature_column/categorical_column_with_hash_bucket`](https://www.tensorflow
-.org/api_docs/python/tf/feature_column/categorical_column_with_hash_bucket)
+[`categorical_column_with_hash_bucket`](https://www.tensorflow.org/api_docs/python/tf/feature_column/categorical_column_with_hash_bucket)
 from TensorFlow to convert a string `address` from the database into a
 single-element tensor of an integer ID.
 
@@ -243,10 +242,8 @@ for the detailed design.
 
 After normalizing the table schema, we can do data analysis and transformation
 on this normalized table. The preprocess pipeline is described using SQLFlow
-statement. The logic can be very flexible and
-[the current synatx of COLUMN
-clause](https://sql-machine-learning.github.io/sqlflow/doc/language_guide/#colum
-n-clause)
+statement. The logic can be very flexible and the current synatx of COLUMN
+[clause](https://sql-machine-learning.github.io/sqlflow/doc/language_guide/#column-clause)
 cannot cover all the scenarios, such as standardize `age`. We want to design
 SQLFlow syntax extension to fully express the analysis and transform process
 elegantly.
@@ -295,10 +292,9 @@ dimension=32)`.
 It will normalize the column *capital_gain*, standardize the column *age*, and
 then map *hours_per_week* to an embedding vector.
 
-Next, Let's see a more complicated scenario. The following SQL statment trains
-a [wide and deep
-model](https://ai.googleblog.com/2016/06/wide-deep-learning-better-together-with
-.html)
+Next, Let's see a more complicated scenario. The following SQL statment trains a
+[wide and deep
+model](https://ai.googleblog.com/2016/06/wide-deep-learning-better-together-with.html)
 using the same dataset.
 
 ```SQL
@@ -442,26 +438,20 @@ one TransformOP from its dependency.
 #### Generate the Transform Python code from the DAG
 
 Now we have a complete DAG: a complete Graph describing the dependency of
-TransformOPs and each TranformOP has all the required parameters.
-We can make typological sort on the DAG and get an ordered list. Then we
-generate the python code according to this order. A TransformOP node will
-generate a line of python code. A line of python code is an api call to
-[feature
-column](https://www.tensorflow.org/versions/r2.2/api_docs/python/tf/feature_colu
-mn)
-or [keras preprocessing layer](https://github.com/tensorflow/community/pull/188)
-from TensorFlow native API and our extensions in
-[elasticdl_preprocessing](https://github.com/sql-machine-learning/elasticdl/tree
-/develop/elasticdl_preprocessing).
-Please check the sample code generated from the example SQL:
-[keras preprocessing layer
-version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df815
-21ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_
-functional_tensor_interface_keras.py#L129-L228)
+TransformOPs and each TranformOP has all the required parameters.  We can make
+typological sort on the DAG and get an ordered list. Then we generate the python
+code according to this order. A TransformOP node will generate a line of python
+code. A line of python code is an api call to [feature
+column](https://www.tensorflow.org/versions/r2.2/api_docs/python/tf/feature_column)
+or keras preprocessing
+[layers](https://github.com/tensorflow/community/pull/188) from TensorFlow
+native API and our extensions in
+[elasticdl_preprocessing](https://github.com/sql-machine-learning/elasticdl/tree/develop/elasticdl_preprocessing).
+Please check the sample code generated from the example SQL: [keras
+preprocessing layer
+version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py#L129-L228)
 and [feature column
-version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df815
-21ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_
-functional_tensor_interface_fc.py#L130-L243).
+version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_fc.py#L130-L243).
 
 At this moment, we have gotten the full transform code and can prepare for model
 training. For the sample SQL, we will combine the transform code and
@@ -482,10 +472,7 @@ So the COLUMN expressions in example SQL output two tensors: `deep_embeddings`
 and `wide_embeddings`.
 
 For keras functional model, the python function of the model is
-[`def wide_and_deep_classifier(input_layers, wide_embeddings,
-deep_embeddings)`](https://github.com/sql-machine-learning/elasticdl/blob/84bf80
-26565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/
-wide_deep_functional_tensor_interface_keras.py#L47-L66).
+[`wide_and_deep_classifier`](/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py).
 The names of the output tensors match the names of the input parameters in the
 function. We will combine the transform code and model definition through
 parameter binding according to the name.

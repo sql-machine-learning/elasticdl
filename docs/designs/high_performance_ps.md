@@ -3,9 +3,8 @@
 ## Motivation
 
 This design doc focuses on implementing a high performance parameter server
-(PS). For the functionality of the PS, please refer to this [design
-doc](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs
-/parameter_server.md)
+(PS). For the functionality of the PS, please refer to this design
+[doc](parameter_server.md).
 
 The PS receives gradients from workers, applies gradients to parameters, and
 sends the latest parameters to workers. Receiving gradients and sending
@@ -102,6 +101,6 @@ optimization.
 
 ## Reference
 
-- https://gitlab.com/libeigen/eigen
-- https://github.com/cpmech/gosl
-- https://github.com/gonum/gonum
+- <https://gitlab.com/libeigen/eigen>
+- <https://github.com/cpmech/gosl>
+- <https://github.com/gonum/gonum>

@@ -11,18 +11,18 @@ more workers and parameter servers as described in [parameter server design
 doc](parameter_server.md), there are additional
 challenges involved in order to optimize the performance, for example:
 
-* It is not easy to identify the right ratio of the number of workers to the
+- It is not easy to identify the right ratio of the number of workers to the
 number of parameter servers. For example,
 if only a small number of parameter servers are used, network communication
 will likely become the bottleneck for training.
 If many parameter servers are used, the communication may saturate network
 interconnects.
-* The memory quota of workers and parameter servers requires fine tuning to
+- The memory quota of workers and parameter servers requires fine tuning to
 avoid out-of-memory or memory waste.
-* If the model could fit within the computational resources on each worker,
+- If the model could fit within the computational resources on each worker,
 additional maintenance and communication overheads are
 introduced when the model is partitioned to multiple parameter servers.
-* We need to replicate the model on each parameter server in order to support
+- We need to replicate the model on each parameter server in order to support
 fault-tolerance, which requires additional
 computational and storage resources.
 
@@ -37,23 +37,20 @@ technologies](#existing-collective-communication-technologies)
 for details if interested. Allreduce-based distributed training could address
 many of the challenges mentioned above, for example:
 
-* Each worker stores a complete set of model parameters. In other words, no
-parameter server is needed so it's straightforward
-to add more workers when necessary.
-* Failures among the workers can be recovered easily by restarting the failed
-workers and then load the current model from
-any of the existing workers. Model does not need to be replicated to support
-fault-tolerance.
-* The model can be updated more efficiently by fully leveraging the network
-structure and collective communication algorithms.
-For example, in
-[ring-allreduce](http://research.baidu.com/bringing-hpc-techniques-deep-learning
-/) algorithm, each of *N* workers only needs to communicate with two of its
-peer workers *2 * (N − 1)* times
-to update all the model parameters completely.
-* Scaling up and down of the number of workers is as easy as reconstructing the
-underlying allreduce communicator and
-re-assigning the ranks among the workers.
+- Each worker stores a complete set of model parameters. In other words, no
+  parameter server is needed so it's straightforward to add more workers when
+  necessary.
+- Failures among the workers can be recovered easily by restarting the failed
+  workers and then load the current model from any of the existing
+  workers. Model does not need to be replicated to support fault-tolerance.
+- The model can be updated more efficiently by fully leveraging the network
+  structure and collective communication algorithms.  For example, in
+  [ring-allreduce](http://research.baidu.com/bringing-hpc-techniques-deep-learning)
+  algorithm, each of *N* workers only needs to communicate with two of its peer
+  workers *2*(N−1)* times to update all the model parameters completely.
+- Scaling up and down of the number of workers is as easy as reconstructing the
+  underlying allreduce communicator and re-assigning the ranks among the
+  workers.
 
 We'd like to support allreduce-based distributed training in ElasticDL so our
 users may obtain more efficient distributed
@@ -84,15 +81,14 @@ fault-tolerant and Kubernetes-native. This will include but not limited to the
 following objectives (more details to be disclosed later once
 the implementation has been open-sourced):
 
-* Fault-tolerant: if any of the worker pod fails, the [NCCL
-communicator](https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs
-/usage/communicators.html)
-can be reconstructed for the active worker pods. The allreduce operation
-continues as long as there's at least one healthy worker pod.
-* Elastic: the number of worker pods can be dynamically added if there are
-enough computational resources available.
-The NCCL communicator will be reconstructed and the ranks can be re-assigned as
-the number of worker pods changes.
+- Fault-tolerant: if any of the worker pod fails, the
+  [NCCLcommunicator](https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs/usage/communicators.html)
+  can be reconstructed for the active worker pods. The allreduce operation
+  continues as long as there's at least one healthy worker pod.
+- Elastic: the number of worker pods can be dynamically added if there are
+  enough computational resources available.  The NCCL communicator will be
+  reconstructed and the ranks can be re-assigned as the number of worker pods
+  changes.
 
 The interface for allreduce would look like the following:
 
@@ -296,54 +292,54 @@ the model defined via
 The following CLI arguments are relevant and their behaviors might be changed
 under allreduce-based training:
 
-* `--restart_policy`: The pod restart policy when pod crashed.
+- `--restart_policy`: The pod restart policy when pod crashed.
 the `CollectiveCommunicator` just reconstructed the communicator and we want to
 wait for a while before restarting the
 failed worker pod which requires reconstruction of the communicator again once
 the pod becomes active.
-* `--distribution_strategy`: In addition to the existing
+- `--distribution_strategy`: In addition to the existing
 "ParameterServerStrategy" that we have, we add a new strategy
 called "AllreduceStrategy".
-* `--num_ps_pods` will be ignored if "AllreduceStrategy" is used and only
+- `--num_ps_pods` will be ignored if "AllreduceStrategy" is used and only
 `--num_workers` will be taken into account.
-* `--use_async` and `--lr_staleness_modulation` will be ignored if
+- `--use_async` and `--lr_staleness_modulation` will be ignored if
 "AllreduceStrategy" is used.
-* Only `--grads_to_wait = 1` will be supported if "AllreduceStrategy" is used.
+- Only `--grads_to_wait = 1` will be supported if "AllreduceStrategy" is used.
 
 The following new CLI arguments are added:
 
-* `--restart_delay_secs`: The number of seconds to delay before restarting the
+- `--restart_delay_secs`: The number of seconds to delay before restarting the
 failed pods. This could be useful when
 
 ## Potential Future Optimizations
 
-* We can potentially overlap the backward computations and gradient
+- We can potentially overlap the backward computations and gradient
 optimizations. More discussions on this can be found
 in [this Github issue](https://github.com/tensorflow/tensorflow/issues/33274).
-* For models with a large amount of tensors, such as ResNet, many small
+- For models with a large amount of tensors, such as ResNet, many small
 allreduce operations are needed. In this case,
 we could fuse multiple small tensors together before performing allreduce
 operations to maximize performance since
 allreduce utilizes the network in an optimal way if the tensors are large
 enough.
-* Since the gradients of the embedding layer are row-sparse, supporting sparse
+- Since the gradients of the embedding layer are row-sparse, supporting sparse
 allreduce for embedding layers
 will decrease communication costs.
-* Since the number of workers may change during training, the batch size (sum
+- Since the number of workers may change during training, the batch size (sum
 of the size of minibatches on each worker)
 will affect the model training accuracy. We can support customized learning
 rate scheduler, which will take epoch/batch_size
 into account. We can also support [LARS (Layer-wise Adaptive Rate
 Scaling)](https://arxiv.org/abs/1708.03888) so that
 large batch size can be used.
-* The fault-tolerant allreduce APIs only accept `numpy.array` as input and NCCL
+- The fault-tolerant allreduce APIs only accept `numpy.array` as input and NCCL
 APIs only support data located in GPU memory.
 In order to work with TensorFlow, we have to first convert `tf.Tensor` object
 to `numpy.array` and then copy it from CPU
 to GPU memory via a `cudaMemcpy` call before making the allreduce call. We can
 optimize this process to avoid unnecessary
 conversions and copies.
-* Under the current design of [model evaluation](model_evaluation.md), the
+- Under the current design of [model evaluation](model_evaluation.md), the
 training tasks are not paused before an evaluation
 job starts, which could easily results in outdated models on each worker that
 will be used for evaluation. On the other hand,
@@ -356,10 +352,10 @@ process so it will work more seamlessly with allreduce-based training.
 The following three libraries provide collective communications and all of them
 have been adopted by large projects:
 
-* [MPI](https://www.mpi-forum.org/)
-* [NCCL](https://github.com/NVIDIA/nccl)
-* [Gloo](https://github.com/facebookincubator/gloo/)
-* [Rabit](https://github.com/dmlc/rabit)
+- [MPI](https://www.mpi-forum.org/)
+- [NCCL](https://github.com/NVIDIA/nccl)
+- [Gloo](https://github.com/facebookincubator/gloo/)
+- [Rabit](https://github.com/dmlc/rabit)
 
 ### MPI
 
@@ -396,10 +392,8 @@ communication strategy to match the system’s underlying
 GPU interconnect topology.
 
 NCCL does not support fault tolerance but one can support this by filtering out
-the failed workers, reassigning ranks, and then
-reconstructuring the [NCCL
-Communicator](https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs
-/usage/communicators.html).
+the failed workers, reassigning ranks, and then reconstructuring the
+[NCCLCommunicator](https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs/usage/communicators.html).
 Also note that NCCL only supports GPUs for the collective communication
 primitives.
 
@@ -433,8 +427,8 @@ MXNet](https://github.com/apache/incubator-mxnet).
 
 Rabit provides fault tolerance via the following steps:
 
-* If a worker fails, other workers will pause before the failed worker recovers
-* Once the failed worker restarts, load the latest checkpoint from one of the
+- If a worker fails, other workers will pause before the failed worker recovers
+- Once the failed worker restarts, load the latest checkpoint from one of the
 existing workers and continue running
 
 Since all the workers will get the same result after calling
@@ -446,8 +440,8 @@ More details on this can be found
 
 A couple of things worth mentioning are:
 
-* The checkpoints are saved to memory instead of disk
-* All the alive workers will be blocked in subsequent allreduce calls
+- The checkpoints are saved to memory instead of disk
+- All the alive workers will be blocked in subsequent allreduce calls
 
 Rabit assumes the number of workers is fixed so if somehow the failed worker
 cannot be recovered, e.g. due to lack of
@@ -458,14 +452,12 @@ words, the fault tolerance of Rabit cannot
 support elastic scheduling.
 
 Rabit supports many networking options through its [MPI
-support](https://github.com/dmlc/rabit/blob/master/src/engine_mpi.cc)
-which is not fault tolerant given that the implementation is based on MPI. If
-fault tolerance is enabled through Rabit's [robust
-implementation](https://github.com/dmlc/rabit/blob/master/src/allreduce_robust.c
-c),
+support](https://github.com/dmlc/rabit/blob/master/src/engine_mpi.cc) which is
+not fault tolerant given that the implementation is based on MPI. If fault
+tolerance is enabled through Rabit's [robust
+implementation](https://github.com/dmlc/rabit/blob/master/src/allreduce_robust.cc),
 Rabit only supports TCP networking but not others like RDMA and InfiniBand.
-Though it provides an interface
-so developers can write implementations based on other frameworks such as NCCL
-and Gloo that provide additional networking
+Though it provides an interface so developers can write implementations based on
+other frameworks such as NCCL and Gloo that provide additional networking
 options. There's an ongoing work for Gloo implementation in Rabit
 [here](https://github.com/dmlc/rabit/pull/113).

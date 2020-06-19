@@ -265,7 +265,7 @@ has an embedding replica `R1` of PS pod 1. It will periodically synchronize the
 replica from PS pod 1. If PS pod 1 is dead, the master will relaunched it and
 it needs to get the replica from PS pod 2 after relaunch.
 
-```
+```protobuf
 message SynchronizeEmbeddingRequest {
     int32 replica_index = 1;
 }
@@ -285,11 +285,9 @@ service PServer{
 
 Each PS pod has a thread dedicated to the replica synchronization:
 
-```
+```python
 # T is the number of seconds for synchronization frequency
-
 # Assume current PS is PS(i), self._stub[index] is the stub for PS((i - index) % N)'s gRPC server.
-
 # self.replicas[index] is the replica for PS((i - index) % N).
 
 req = elasticdl_pb2.SynchronizeEmbeddingRequest()

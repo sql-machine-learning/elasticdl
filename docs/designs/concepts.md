@@ -44,9 +44,9 @@ include:
 ## Message Representation
 
 There is a
-[tensor](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/fr
-amework/tensor.proto) proto message defined in TensorFlow, which meets our
-needs. We could reuse it directly.
+[tensor](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/tensor.proto)
+proto message defined in TensorFlow, which meets our needs. We could reuse it
+directly.
 
 We introduce an `IndexedSlices` proto message to represent the concatenated
 embedding vectors pulled from PS, and the concatenated embedding vectors of

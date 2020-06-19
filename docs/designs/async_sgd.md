@@ -19,24 +19,24 @@ same as the current PS `model_version`.
 This Synchronous SGD ensures model consistency in the price of wasted and
 blocked computation.
 
-* Wasted computation: when a worker reports gradients with an outdated model
+- Wasted computation: when a worker reports gradients with an outdated model
 version to PS, PS will reject these gradients. The worker have to get the
 current model from PS, reuse the minibatch data to train the model again.
-* Blocked computation: PS has to use a lock for model update with gradients and
+- Blocked computation: PS has to use a lock for model update with gradients and
 model read by workers to ensure model consistency.
 
 Asynchronous SGD can avoid the wasted and blocked computation mentioned above
 with a relaxed model consistency.
 
-* PS will accept all gradients from workers.
-* PS does not use locks and supports concurrent model reads and updates.
+- PS will accept all gradients from workers.
+- PS does not use locks and supports concurrent model reads and updates.
 
 ## Asynchronous SGD
 
 Let us recall how workers train the model in synchronous SGD. Below is the
 pseudocode:
 
-```
+```python
 for minibatch in training_data:
     accepted = False
     while not accepted:
@@ -49,7 +49,7 @@ In asynchronous SGD, each worker is training the model in nearly the same way
 as synchronous SGD. The only difference is that the worker does not need to
 retrain any minibatch data as PS accepts all gradients.
 
-```
+```python
 for minibatch in training_data:
     local_model, model_version = get_model_from_ps()
     gradients = compute_gradient(local_model, minibatch)
@@ -59,7 +59,7 @@ for minibatch in training_data:
 PS does not need locks in `GetModel` and `ReportGradient` GRPC services for
 asynchronous SGD.
 
-```
+```python
 def GetModel():
     pb_model = Model()
     for variable in pb_model:
@@ -86,16 +86,15 @@ version.
 variables may apply these gradients in different orders.
 
 Also, the concurrent updates to variables in `ReportGradient` may cause some
-gradients are not applied, as the updates can be overwritten by other
-concurrent running updates. TensorFlow optimizers have an argument
-[`use_locking`](https://github.com/tensorflow/tensorflow/blob/ff441191277b7e758d
-eb48e45249fee9e880f2c8/tensorflow/python/training/optimizer.py#L319). If
-[`use_locking`](https://github.com/tensorflow/tensorflow/blob/ff441191277b7e758d
-eb48e45249fee9e880f2c8/tensorflow/python/training/optimizer.py#L319) is `True`,
-TensorFlow will use a
-[lock](https://github.com/tensorflow/tensorflow/blob/11e22c01eb801ff24200afcdce8
-a03a7cdd2ed3f/tensorflow/core/kernels/training_ops.cc#L528) to prevent
-concurrent updates to variables.
+gradients are not applied, as the updates can be overwritten by other concurrent
+running updates. TensorFlow optimizers have an argument
+[`use_locking`](https://github.com/tensorflow/tensorflow/blob/ff441191277b7e758deb48e45249fee9e880f2c8/tensorflow/python/training/optimizer.py#L319).
+
+If
+[`use_locking`](https://github.com/tensorflow/tensorflow/blob/ff441191277b7e758deb48e45249fee9e880f2c8/tensorflow/python/training/optimizer.py#L319)
+is `True`, TensorFlow will use a
+[lock](https://github.com/tensorflow/tensorflow/blob/11e22c01eb801ff24200afcdce8a03a7cdd2ed3f/tensorflow/core/kernels/training_ops.cc#L528)
+to prevent concurrent updates to variables.
 
 ### Staleness in Asynchronous SGD
 
@@ -103,25 +102,25 @@ In `ReportGradient`, the argument `version` may be smaller than
 `PS_model_version`.
 Staleness value is the difference between `PS_model_version` and `version`:
 
-```
+```python
 staleness = PS_model_version - version
 ```
 
-According to some [researches](https://arxiv.org/abs/1810.03264), this
-staleness affects the training convergence, and large staleness may result in
-poor training accuracy. The deeper the model, the more impact of the staleness.
-Some optimizers such as
-[SGD](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimize
-rs/SGD) and
-[Adagrad](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/opti
-mizers/Adagrad) are more robust to staleness, some optimizers such as other
-with momentum are very bad with staleness.
+According to some [researches](https://arxiv.org/abs/1810.03264), this staleness
+affects the training convergence, and large staleness may result in poor
+training accuracy. The deeper the model, the more impact of the staleness.  Some
+optimizers such as
+[SGD](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/SGD)
+and
+[Adagrad](https://www.tensorflow.org/versions/r2.0/api_docs/python/tf/keras/optimizers/Adagrad)
+are more robust to staleness, some optimizers such as other with momentum are
+very bad with staleness.
 
 [Staleness-aware asychronous SGD](https://arxiv.org/abs/1511.05950) proposes a
 method to modulate learning rate by the staleness. If the staleness is not 0,
 this method modulates the learning rate used in the optimizer as:
 
-```
+```python
 if staleness > 0:
     learning_rate_used = learning_rate / staleness
 else:
@@ -137,7 +136,7 @@ fastest worker can exceed the slowest one within a predefined staleness
 threshold. SSP can reduce the number of `get_model_from_ps` calls. The worker
 training process is:
 
-```
+```python
 get_model_frequency = predefined_staleness_threshold
 local_model, model_version = get_model_from_ps()
 local_update_count = 0
@@ -167,24 +166,22 @@ Also, worker can run `report_gradient_to_ps` concurrently with
 ### Change in PS
 
 1. No need to use locks in `GetModel` and `_update_model` in
-[server.py](../../elasticdl/python/master/servicer.py).
+   [server.py](../../elasticdl/python/master/servicer.py).
 2. No need to accumulate gradients in `ReportGradient` in
-[server.py](../../elasticdl/python/master/servicer.py). `ReportGradient` calls
-`_update_model` directly.
+   [server.py](../../elasticdl/python/master/servicer.py). `ReportGradient`
+   calls `_update_model` directly.
 3. Users decide if disabling concurrent variable update by set `use_locking`
-argument in the optimizer.
-4. To support [Staleness-aware asychronous
-SGD](https://arxiv.org/abs/1511.05950), PS need to modulate the learning rate
-in the optimizer with the staleness value. PS may have multiple threads running
-concurrently for model updates with a same optimizer instance. Thus, we cannot
-modify the learning rate in the optimizer instance. We may modify the learning
-rate as a callable method, and use a thread local storage `threading.local()`
-to store the staleness. The callable method uses the staleness value to
-modulate the learning rate. The optimizer will call this callable method [when
-it reads the learning rate
-hyperparameter](https://github.com/tensorflow/tensorflow/blob/e4262fb2fbf1cb33aa
-ea79ff81754d1e92e99af1/tensorflow/python/keras/optimizer_v2/optimizer_v2.py#L530
-).
+   argument in the optimizer.
+4. To support Staleness-aware asychronous
+   [SGD](https://arxiv.org/abs/1511.05950), PS need to modulate the learning
+   rate in the optimizer with the staleness value. PS may have multiple threads
+   running concurrently for model updates with a same optimizer instance. Thus,
+   we cannot modify the learning rate in the optimizer instance. We may modify
+   the learning rate as a callable method, and use a thread local storage
+   `threading.local()` to store the staleness. The callable method uses the
+   staleness value to modulate the learning rate. The optimizer will call this
+   callable method when it reads the learning rate
+   [hyperparameter](https://github.com/tensorflow/tensorflow/blob/e4262fb2fbf1cb33aaea79ff81754d1e92e99af1/tensorflow/python/keras/optimizer_v2/optimizer_v2.py#L530).
 
 ### Change in Worker
 

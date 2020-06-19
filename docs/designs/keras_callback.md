@@ -43,18 +43,19 @@ behaviors of model. The interfaces may be different. It is more convenient for
 users to define those behaviors using `tf.keras.callbacks.Callback`.
 
 Some use cases we observed that we want to support are:
-* Case 1: Callback similar to `PredictionOutputsProcessor` that is executed
-after prediction outputs are made.
-* Case 2: Callback to modulate learning rate as we are currently doing in
-`LearningRateScheduler`.
-* Case 3: Callback to write additional summaries to TensorBoard after each
-evaluation job completes.
-* Case 4: Callback to perform early stopping when certain conditions are met.
-For example, the metrics are met after an evaluation job.
-* Case 5: Callback to export model using SavedModel after the training is
-completed.
-* Case 6: Callback to upload model to remote storage after the training is
-completed.
+
+- Case 1: Callback similar to `PredictionOutputsProcessor` that is executed
+  after prediction outputs are made.
+- Case 2: Callback to modulate learning rate as we are currently doing in
+  `LearningRateScheduler`.
+- Case 3: Callback to write additional summaries to TensorBoard after each
+  evaluation job completes.
+- Case 4: Callback to perform early stopping when certain conditions are met.
+  For example, the metrics are met after an evaluation job.
+- Case 5: Callback to export model using SavedModel after the training is
+  completed.
+- Case 6: Callback to upload model to remote storage after the training is
+  completed.
 
 Next we will design how to define and implement callbacks to support those
 cases above.
@@ -94,12 +95,7 @@ class CallbackList():
             callback.on_batch_end(bach, logs)
 ```
 
-For detail, we can view the [source
-code](https://github.com/tensorflow/tensorflow/blob/cf7fcf164c9846502b21cebb7d3d
-5ccf6cb626e8/tensorflow/python/keras/callbacks.py#L189-L196
-) of `CallbackList` in TensorFlow.
-
-So, we can also use CallbackList to wrap the callbacks in ElasticDL.
+So, we can also use `CallbackList` to wrap the callbacks in ElasticDL.
 
 ```python
 from tensorflow.python.keras.callbacks import CallbackList
@@ -108,7 +104,7 @@ callback_list = CallbackList(callbacks)
 callback_list.on_batch_end(batch)
 ```
 
-### Set Default Attributes for Callbacks.
+### Set Default Attributes for Callbacks
 
 There are `set_model` and `set_params` in `tf.keras.callbacks.Callback`.
 `set_model` can set a model object to the attribute `model` of callback and
@@ -145,6 +141,7 @@ class CustomCallback(tf.keras.callbacks.Callback):
 
 Now, we only support 4 methods  of `tf.keras.callbacks.Callback`to implement
 those cases above.
+
 1. `on_train_batch_begin`
 2. `on_predict_batch_end`
 3. `on_train_end`
@@ -153,12 +150,10 @@ those cases above.
 The worker will execute `on_train_batch_begin` and `on_predict_batch_end`,
 because the worker processes each batch. Then, the worker also will execute
 `on_train_end` because the worker will exports model using SavedModel after
-training. The details is in [Model Serving
-Design](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/desi
-gns/model_serving.md#export-the-model-with-elasticdllayersembedding-to-savedmode
-l). However, only the master knows when the training is completed. So, the
-master can create a training end task for the worker. The worker call
-`on_train_end` in callbacks after receiving the task.
+training. The details is in Model Serving [Design](model_serving.md). However,
+only the master knows when the training is completed. So, the master can create
+a training end task for the worker. The worker call `on_train_end` in callbacks
+after receiving the task.
 
 The master will execute `on_test_end` because the master receives all
 evaluation metrics from the worker.
@@ -173,7 +168,7 @@ users can configure in the model definition if needed.
 
 Those callbacks is automatically configured for each job by ElasticDL.
 
-* Case 5: Callback to export model using SavedModel after the training is
+- Case 5: Callback to export model using SavedModel after the training is
 completed.
 
 ```python
@@ -235,7 +230,7 @@ def stop_train(metrics_list):
     return True if latest_metrics['auc'] > 0.8 else False
 ```
 
-* Case 1: Callback to process prediction outputs after batch prediction outputs
+- Case 1: Callback to process prediction outputs after batch prediction outputs
 are made.
 
 ```python
@@ -262,7 +257,7 @@ class PredictionOutputsProcessor(tf.keras.callbacks.Callback):
         process(predictions)
 ```
 
-* Case 2: Callback to modulate learning rate.
+- Case 2: Callback to modulate learning rate.
 
 ```python
 def schedule_fn(version):
@@ -296,7 +291,7 @@ gradients. Although the worker can call `on_train_batch_begin` in
 we should send the learning rate with gradients to PS by GRPC and PS updates
 weights using the received learning rate.
 
-* Case 3: Callback to write additional summaries to TensorBoard after each
+- Case 3: Callback to write additional summaries to TensorBoard after each
 evaluation job completes.
 
 ```python
@@ -324,7 +319,7 @@ if evaluation_task_completed:
         self._callbacks_list.on_test_end(logs)
 ```
 
-* Case 4: Callback to perform early stopping when the metrics are met after an
+- Case 4: Callback to perform early stopping when the metrics are met after an
 evaluation job.
 
 ```python
@@ -359,7 +354,7 @@ class EarlyStopper(tf.keras.callbacks.Callback):
 The same as `SummaryWriter`, the master call `on_test_end` of `EarlyStopper`
 After an evaluation job is completed.
 
-* Case 6: Callback to upload model to remote storage after the training is
+- Case 6: Callback to upload model to remote storage after the training is
 completed.
 
 ```python

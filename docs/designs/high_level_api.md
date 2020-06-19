@@ -1,4 +1,4 @@
-## Targeted Users
+# Targeted Users
 
 ElasticDL targets two categories of users
 
@@ -246,9 +246,7 @@ distributed prediction job from this commit ID.
    - `optimizer`
 
 1. Model parameters as a map from parameter name to parameter value tensors,
-defined in
-[`elasticdl.proto`](https://github.com/sql-machine-learning/elasticdl/blob/e0661
-8af50cc9507e0b59473f4b97c066fa04870/elasticdl/proto/elasticdl.proto#L51-L54).
+defined in [`elasticdl.proto`](/proto/elasticdl.proto#L51-L54).
 
 We define a new wrapper message:
 

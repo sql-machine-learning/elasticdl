@@ -2,9 +2,7 @@
 
 This document describes the design to normalize (or transform) the table schema
 to be wide, aka one feature per column. The transformation is a part of [data
-analysis and
-transform](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/d
-esigns/data_transform.md#normalize-table-schema-to-be-wide)
+analysis and transform](data_transform.md#normalize-table-schema-to-be-wide).
 
 ## Motivation
 
@@ -33,13 +31,13 @@ And we need to transform it to
 ### ODPS UDF to Transform Key-value Pairs String to Multiple Values
 
 ODPS provides
-[UDF](https://help.aliyun.com/document_detail/73359.html?spm=5176.10695662.19966
-46101.searchclickresult.759c46d7SD5Hmr#title-mty-z7z-s1j) for users to define
-transformation using Python. We choose the
-[UDTF](https://help.aliyun.com/document_detail/73359.html?spm=5176.10695662.1996
-646101.searchclickresult.759c46d7SD5Hmr#title-d80-lvi-uc7) in UDF to implement
-the transformation because it can
-match any input parameters in SQL. The UDTF demo is
+[UDF](https://help.aliyun.com/document_detail/73359.html?spm=5176.10695662.1996646101.searchclickresult.759c46d7SD5Hmr#title-mty-z7z-s1j)
+for users to define transformation using Python. We choose the
+[UDTF](https://help.aliyun.com/document_detail/73359.html?spm=5176.10695662.1996646101.searchclickresult.759c46d7SD5Hmr#title-d80-lvi-uc7)
+in UDF to implement the transformation because it can match any input parameters
+in SQL.
+
+Here is a UDTF demo.
 
 ```python
 #coding:utf-8
@@ -55,7 +53,7 @@ class Explode(BaseUDTF):
 For the UDTF to transform key-value pairs, we can implement a UDTF with
 multiple arguments. The arguments in the UDTF likes
 
-```
+```python
 udtf_func(kv_column, append_columns, feature_names, inter_kv_separator, intra_kv_separator)
 ```
 
@@ -96,7 +94,7 @@ class Explode(BaseUDTF):
         self.forward(*feature_values)
 ```
 
-### Infer the Feature Names and Generate the SQL to Transform.
+### Infer the Feature Names and Generate the SQL to Transform
 
 If the number of features in key-value pairs string is very large, it is
 tedious for users to write the feature names in the transformation SQL.
@@ -131,9 +129,10 @@ The template of "udf" in the SQL template is:
 """
 ```
 
-### Execute the Generated SQL by PyODPS.
+### Execute the Generated SQL by PyODPS
 
 The steps to execute the generated SQL by PyODPS are:
+
 1. Create an ODPS resource using the UDTF python file.
 2. Create an ODPS function using the resource.
 3. Using PyODPS to submit the SQL to ODPS cluster.

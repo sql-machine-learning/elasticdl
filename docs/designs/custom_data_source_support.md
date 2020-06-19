@@ -1,4 +1,4 @@
-## Design for Custom Data Source Support
+# Design for Custom Data Source Support
 
 This document describes the design for supporting custom data source in
 ElasticDL.
@@ -30,19 +30,18 @@ can implement their own data reading logic to
 avoid having to write RecordIO files to disk. This way ElasticDL can perform
 tasks while reading data into memory asynchronously.
 
-### Support Custom Data Source in ElasticDL
+## Support Custom Data Source in ElasticDL
 
-There are a couple of places in the the current codebase (as of commit
-[77cc87a](https://github.com/sql-machine-learning/elasticdl/tree/77cc87a90eec54d
-b565849f0ae07d271fd957190))
+There are a couple of places in the the current codebase, as of commit
+[77cc87a](https://github.com/sql-machine-learning/elasticdl/tree/77cc87a90eec54db565849f0ae07d271fd957190),
 that are coupled heavily with RecordIO, for example:
 
-* When we create and dispatch tasks via ``_make_task_dispatcher()``, we rely on
+- When we create and dispatch tasks via ``_make_task_dispatcher()``, we rely on
 scanning directories that contain
 RecordIO files and reading the index for each file to obtain dictionaries of
 `{file_path: num_records}`.
 We then use this information to create tasks.
-* ``Worker`` starts a `TaskDataService` that generates a `tf.data.Dataset`
+- ``Worker`` starts a `TaskDataService` that generates a `tf.data.Dataset`
 instance that contains the actual data.
 The data is fetched in `TaskDataService._gen()` by opening a RecordIO reader to
 read the data offsets that each task
@@ -51,10 +50,10 @@ we previously created.
 In order to support custom data sources in ElasticDL, we propose to make the
 following changes:
 
-* Rename ``shard_file_name`` in `Task` protobuf definition to `shard_name` so a
+- Rename ``shard_file_name`` in `Task` protobuf definition to `shard_name` so a
 task is independent with file names and `shard_name` will
 serve as an identifier for the shard.
-* Implement an abstract interface named `AbstractDataReader` that users can
+- Implement an abstract interface named `AbstractDataReader` that users can
 implement in their model definition file.
 The interface would look like the following:
 
@@ -114,17 +113,17 @@ class CustomDataReader(AbstractDataReader):
         return f_records
 ```
 
-* Implement a `RecordIODataReader` that can be used to read RecordIO files,
+- Implement a `RecordIODataReader` that can be used to read RecordIO files,
 serves as the default
 data reader for ElasticDL, and preserves the current ElasticDL functionality.
-* Implement a `ODPSDataReader` that implements the abstract methods in
+- Implement a `ODPSDataReader` that implements the abstract methods in
 `AbstractDataReader` and
 reuses the existing `ODPSReader` we currently have.
-* Keep the existing CLI arguments `--training_data`, `--validation_data`, and
+- Keep the existing CLI arguments `--training_data`, `--validation_data`, and
 `--prediction_data` that
 will be used for specifying paths to RecordIO files if no custom data reader is
 specified.
-* Add CLI argument `--custom_data_reader_params` to pass parameters to the
+- Add CLI argument `--custom_data_reader_params` to pass parameters to the
 constructor of user-defined `CustomDataReader`
 similar to the existing `--model_params` used for passing parameters to model
 constructor.

@@ -15,8 +15,7 @@ a generator. Then the worker will perform the following steps to consume the
 record data from the generator:
 
 1. Create a dataset by
-[tf.data.Dataset.from_generator](https://www.tensorflow.org/api_docs/python/tf/d
-ata/Dataset#from_generator).
+[tf.data.Dataset.from_generator](https://www.tensorflow.org/api_docs/python/tf/data/Dataset#from_generator).
 2. Convert dataset by dataset_fn user defined to generate features and labels.
 3. Calculate gradients of trainable variables for the training task and
 predictions of samples for the evaluation task.
