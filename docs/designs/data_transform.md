@@ -13,7 +13,9 @@ this purpose.
 
 Currently, SQLFlow converts content in the `COLUMN` clause into the Python
 source code of data transformation.  The following example would call the
-Feature Column API [`tf/feature_column/categorical_column_with_hash_bucket`](https://www.tensorflow.org/api_docs/python/tf/feature_column/categorical_column_with_hash_bucket)
+Feature Column API
+[`tf/feature_column/categorical_column_with_hash_bucket`](https://www.tensorflow
+.org/api_docs/python/tf/feature_column/categorical_column_with_hash_bucket)
 from TensorFlow to convert a string `address` from the database into a
 single-element tensor of an integer ID.
 
@@ -150,9 +152,11 @@ Analyzers and TensorFlow Ops. Analyzer will do the statistical work on the
 training dataset once and convert to constant tensors. And then the statistical
 value and TensorFlow Ops will make the concrete transform logic as a TensorFlow
 graph and then convert the data record one by one. The graph will be used for
-both training and serving.  
-Let's take [normalizing (min-max normalization)](https://en.wikipedia.org/wiki/Feature_scaling)
-the column value `capital_gain` in [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income)
+both training and serving.
+Let's take [normalizing (min-max
+normalization)](https://en.wikipedia.org/wiki/Feature_scaling)
+the column value `capital_gain` in [census income
+dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income)
 for example. The following is the `preprocess_fn` definition with TensorFlow
 Transform:
 
@@ -166,7 +170,7 @@ def preprocess_fn(inputs):
 ```
 
 From users' perspective, SQLFlow users prefer to write SQL instead of python.
-It's not user-friendly if we integrate TF Transform with SQLFlow directly.  
+It's not user-friendly if we integrate TF Transform with SQLFlow directly.
 
 ## Our Approach
 
@@ -179,11 +183,13 @@ inference.
 ![transform_training_inference](../images/transform_training_inference.png)
 
 From the perspective of SQLFLow, SQL can naturally support statistical work
-just like the analyzer. [Feature column API](https://tensorflow.google.cn/api_docs/python/tf/feature_column)
-and [keras preprocessing layer](https://github.com/tensorflow/community/pull/188)
+just like the analyzer. [Feature column
+API](https://tensorflow.google.cn/api_docs/python/tf/feature_column)
+and [keras preprocessing
+layer](https://github.com/tensorflow/community/pull/188)
 can take charge of the transform work as transformer. We plan to use SQL and
 feature column/keras preprocessing layer together to do the data analysis and
-transform work.  
+transform work.
 
 Since we use SQL to do the analysis work, SQL requires the table schema to be
 wide - one feature per column. So, we will normalize the table schema at first.
@@ -191,13 +197,13 @@ wide - one feature per column. So, we will normalize the table schema at first.
 ### Normalize Table Schema to Be Wide
 
 Wide table means that it only stores one feature or label in one column. It's
-more friendly to SQL for data analysis.  
+more friendly to SQL for data analysis.
 
 #### Why
 
 Let's take this analysis work for example: calculate the max of `age` and mean
-of `education_num`.  
-If it's a wide table as follows:  
+of `education_num`.
+If it's a wide table as follows:
 
 |  age | education_num |  income_category  |
 |:----:|:-------------:|:-----------------:|
@@ -215,7 +221,7 @@ FROM census_income
 ```
 
 Sometimes users may encode multiple feature values as a key-value string and
-store it in one column of the table, just like the following table:  
+store it in one column of the table, just like the following table:
 
 |            features       |  income_category  |
 |:-------------------------:|:-----------------:|
@@ -228,24 +234,28 @@ We can't use SQL directly to do the same analysis work as above.
 #### Proposal
 
 We can provide common tools to normalize the table schema. If the data is
-stored in MaxCompute table, we can use [PyODPS](https://pyodps.readthedocs.io/en/latest/)
+stored in MaxCompute table, we can use
+[PyODPS](https://pyodps.readthedocs.io/en/latest/)
 and [UDF](https://www.alibabacloud.com/help/doc-detail/73359.htm) to complete
-the task. Please look at the doc [flatten_odps_key_value_table](./flatten_odps_key_value_table.md)
-for the detailed design.  
+the task. Please look at the doc
+[flatten_odps_key_value_table](./flatten_odps_key_value_table.md)
+for the detailed design.
 
 After normalizing the table schema, we can do data analysis and transformation
 on this normalized table. The preprocess pipeline is described using SQLFlow
 statement. The logic can be very flexible and
-[the current synatx of COLUMN clause](https://sql-machine-learning.github.io/sqlflow/doc/language_guide/#column-clause)
+[the current synatx of COLUMN
+clause](https://sql-machine-learning.github.io/sqlflow/doc/language_guide/#colum
+n-clause)
 cannot cover all the scenarios, such as standardize `age`. We want to design
 SQLFlow syntax extension to fully express the analysis and transform process
-elegantly.  
+elegantly.
 
 ### SQLFlow Syntax Extension
 
 We can extend the SQLFlow syntax and enrich the `COLUMN` expression. We propose
 to add some built-in functions to describe the transform process. We will
-implement common used functions at the first stage.  
+implement common used functions at the first stage.
 
 | Name             |    Transformation                                     | Statitical Parameter | Input Type | Output Type |
 |:----------------:|:-----------------------------------------------------:|:--------------------:|:-------------------:|:---------------------:|
@@ -259,10 +269,11 @@ implement common used functions at the first stage.
 | CONCAT(x1, x2, ..., xn)   | Concatenate multiple tensors representing categorical ids (zero-based) into one tensor. The output id space is the sum of inputs. | N/A | int32, int64 | int64 |
 | COMBINE(x1, x2, ..., xn)  | Combine multiple tensors into one tensor | N/A | number | number |
 
-*Please check more [discussion](https://github.com/sql-machine-learning/elasticdl/issues/1723)
+*Please check more
+[discussion](https://github.com/sql-machine-learning/elasticdl/issues/1723)
 about `CONCAT` transform function*
 
-Let's take the following SQLFlow statement for example.  
+Let's take the following SQLFlow statement for example.
 
 ```SQL
 SELECT *
@@ -279,12 +290,15 @@ LABEL label
 It trains a DNN model to classify someone's income level using the
 [census income dataset](https://archive.ics.uci.edu/ml/datasets/Census+Income).
 The transform expression is
-`COLUMN NORMALIZE(capital_gain), STANDARDIZE(age), EMBEDDING(hours_per_week, dimension=32)`.
+`COLUMN NORMALIZE(capital_gain), STANDARDIZE(age), EMBEDDING(hours_per_week,
+dimension=32)`.
 It will normalize the column *capital_gain*, standardize the column *age*, and
-then map *hours_per_week* to an embedding vector.  
+then map *hours_per_week* to an embedding vector.
 
 Next, Let's see a more complicated scenario. The following SQL statment trains
-a [wide and deep model](https://ai.googleblog.com/2016/06/wide-deep-learning-better-together-with.html)
+a [wide and deep
+model](https://ai.googleblog.com/2016/06/wide-deep-learning-better-together-with
+.html)
 using the same dataset.
 
 ```SQL
@@ -320,7 +334,7 @@ LABEL label
 
 SQLFlow will compile the `COLUMN` expression to Python code of data
 transformation. Let's take the SQLFlow statement above for example to describe
-the compilation workflow step by step in the next section.  
+the compilation workflow step by step in the next section.
 
 ### COLUMN Expression Compilation Workflow
 
@@ -329,7 +343,7 @@ the compilation workflow step by step in the next section.
 Given a COLUMN expression, syntax parsing is naturally the first step. We will
 parse one COLUMN expression to one AST. For the SQL statement containing two
 column expressions above, we will parse them into two ASTs. Please check the
-following figure of the AST for the example SQL.  
+following figure of the AST for the example SQL.
 ![column_clause_ast](../images/column_clause_ast.png)
 
 #### Convert the AST into a DAG of Transform Flow
@@ -353,7 +367,7 @@ upstream nodes. And then the forest will become a DAG.
 
 #### Expand the TransformOP
 
-Let's focus on the clause `EMBEDDING(race, 8)` in the example SQL.  
+Let's focus on the clause `EMBEDDING(race, 8)` in the example SQL.
 As we know, the SQLFlow statement is intention driven. We tell it to do
 embedding for the input feature `race` directly and don't tell how to map it
 into an integer id at first. And the latter is required for the model built
@@ -366,7 +380,7 @@ graph.
 At this time, we have gotten a complete graph of the transform flow. But some
 TransformOP don't have all the required parameters, such as `vocabulary list`
 for `VOCABULARIZE(workclass)`. We will do the data analysis work to derive the
-parameter value.  
+parameter value.
 
 #### Derive the Parameters of TransformOP from Data Analysis
 
@@ -421,29 +435,38 @@ is tunable here.*
 
 Some parameters of TransformOP can't be gotten from data analysis. For example,
 `Embedding` needs the parameter `input_dimension`, it's equals to `num_buckets`
-attribute of `CONCAT` which is the dependency of `Embedding`.  
+attribute of `CONCAT` which is the dependency of `Embedding`.
 In one sentence, we need walk through the DAG and calculate the parameters of
 one TransformOP from its dependency.
 
 #### Generate the Transform Python code from the DAG
 
 Now we have a complete DAG: a complete Graph describing the dependency of
-TransformOPs and each TranformOP has all the required parameters.  
+TransformOPs and each TranformOP has all the required parameters.
 We can make typological sort on the DAG and get an ordered list. Then we
 generate the python code according to this order. A TransformOP node will
 generate a line of python code. A line of python code is an api call to
-[feature column](https://www.tensorflow.org/versions/r2.2/api_docs/python/tf/feature_column)
+[feature
+column](https://www.tensorflow.org/versions/r2.2/api_docs/python/tf/feature_colu
+mn)
 or [keras preprocessing layer](https://github.com/tensorflow/community/pull/188)
 from TensorFlow native API and our extensions in
-[elasticdl_preprocessing](https://github.com/sql-machine-learning/elasticdl/tree/develop/elasticdl_preprocessing).
+[elasticdl_preprocessing](https://github.com/sql-machine-learning/elasticdl/tree
+/develop/elasticdl_preprocessing).
 Please check the sample code generated from the example SQL:
-[keras preprocessing layer version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py#L129-L228)
-and [feature column version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_fc.py#L130-L243).
+[keras preprocessing layer
+version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df815
+21ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_
+functional_tensor_interface_keras.py#L129-L228)
+and [feature column
+version](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df815
+21ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_
+functional_tensor_interface_fc.py#L130-L243).
 
 At this moment, we have gotten the full transform code and can prepare for model
 training. For the sample SQL, we will combine the transform code and
 `WideAndDeepClassifier` from model zoo to the submitter program. The bridge
-between these two parts is important for the combination.  
+between these two parts is important for the combination.
 
 #### The Bridge Between Transform Code and Model Definition from Model Zoo
 
@@ -451,7 +474,7 @@ The model definition in the model zoo is a python function or a python class.
 It has some input parameters. The transform python code is built upon feature
 column api or keras preprocessing layers. The bridge between transform code and
 model definition should cover the transform logic using both feature column and
-keras preprocessing layers.  
+keras preprocessing layers.
 
 Tensors is a good choice for the bridge. The keyword `FOR` in the column clause
 means that it will output one tensor, and two `FOR` keywords output two tensors.
@@ -459,10 +482,13 @@ So the COLUMN expressions in example SQL output two tensors: `deep_embeddings`
 and `wide_embeddings`.
 
 For keras functional model, the python function of the model is
-[`def wide_and_deep_classifier(input_layers, wide_embeddings, deep_embeddings)`](https://github.com/sql-machine-learning/elasticdl/blob/84bf8026565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/wide_deep_functional_tensor_interface_keras.py#L47-L66).
+[`def wide_and_deep_classifier(input_layers, wide_embeddings,
+deep_embeddings)`](https://github.com/sql-machine-learning/elasticdl/blob/84bf80
+26565df81521ffdfe55d854428fb1156d4/model_zoo/census_model_sqlflow/wide_and_deep/
+wide_deep_functional_tensor_interface_keras.py#L47-L66).
 The names of the output tensors match the names of the input parameters in the
 function. We will combine the transform code and model definition through
-parameter binding according to the name.  
+parameter binding according to the name.
 
 For keras subclass model, it has a core method `def call(self, inputs)` to
 describe the forward pass logic. But we cannot get how many tensors the model
@@ -490,7 +516,7 @@ And when do we use this decorator during model development? Please check the
 following:
 
 - If ML specialist develops the model structure and verify it using
-`model.fit`, the decorator is not necessary.  
+`model.fit`, the decorator is not necessary.
 - If ML specialist run the machine learning pipeline locally using SQLFlow /
 run model unit test using SQLFlow / submit model into SQLFlow model zoo, ML
 specialist need add the decorator.
@@ -502,4 +528,4 @@ long. It's will be challenging to users to write the entire COLUMN clause if
 there are hundreds of features or even more from source table. And it's common
 in the search and recommendatation scenario. In the long term, user can write
 simpiflied COLUMN clause or even don't need write it. SQLFlow will do feature
-deriviation and auto-complete the COLUMN clause.  
+deriviation and auto-complete the COLUMN clause.
