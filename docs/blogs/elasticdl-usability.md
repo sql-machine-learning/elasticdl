@@ -162,7 +162,8 @@ ElasticDL master 中还为这些 task 维护了三个队列，todo/doing/done �
 如果 worker 顺利完成一个 task，master 则会收到通知，把这个 task 从 doing 队列挪到 done 队列。
 
 由于ElasticDL master 负责把数据索引分发给所有的 worker，所以我们只需要给 master 配置数据源即可。
-目前 ElasticDL 支持 RecordIO 文件和 MaxCompute 表两种数据源。
+目前 ElasticDL 支持 [RecordIO](https://github.com/wangkuiyi/recordio) 文件和
+ [MaxCompute](https://www.alibabacloud.com/zh/product/maxcompute) 表两种数据源。
 用户只需配置训练数据集的 RecordIO 文件路径或者 MaxCompute 表名。
 
 同时使用动态数据分发机制之后，worker 数目也可以动态变化。
@@ -208,9 +209,17 @@ ElasticDL 用 Go 实现了 Parameter Server，具有良好的吞吐能力和可�
 - worker 向 PS 发送梯度时，本地先把相同 ID 的梯度进行合并，减少通信量
 
 通过上述设计与实现，ElasticDL 可以很高效的完成搜索推荐广告模型的训练。
-我们用一个推荐中常用的 deepFM 模型为例，来说明 ElasticDL 相比于去年9月开源时的性能提升。
 
-**TODO** 添加性能对比
+ElasticDL 自去年9月份开源以来，我们对 Parameter Server 持续迭代开发，不断提升性能。
+我们以一个推荐中常用的 deepFM 模型来进行测试，测试中使用 frappe 数据集。
+在每次实验中，我们启动一个 parameter server 进程和四个 worker 进程，训练10个 epoch。
+
+| Parameter Server 实现 | 训练时间（秒） |
+| --- | --- |
+| By Redis (2019.9) | 1350 |
+| By Go (2020.2) | 106 |
+
+从上表中我们可以看出 Go Parameter Server 相比于之前实现有10倍以上的提升。
 
 ## 使用 ElasticDL 进行 Kaggle 实战
 
@@ -283,7 +292,7 @@ COPY model_zoo /model_zoo
 
 ```bash
 elasticdl train \
-  --image_name=${your_docker_hub_id}/elasticdl:ci \
+  --image_name=${your_docker_hub_repo}/elasticdl:ci \
   --model_zoo=model_zoo \
   --model_def=dac_ctr.elasticdl_train.custom_model \
   --volume="mount_path=/data,claim_name=fileserver-claim" \
