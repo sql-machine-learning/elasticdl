@@ -11,6 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 class AnalysisEnvTemplate:
     MIN_ENV = "_{}_min"
     MAX_ENV = "_{}_max"
