@@ -35,7 +35,12 @@ setup(
     extras_require=extras,
     python_requires=">=3.5",
     packages=find_packages(
-        exclude=["*test*", "elasticdl_preprocessing*", "model_zoo*"]
+        exclude=[
+            "*test*",
+            "elasticdl_client*",
+            "elasticdl_preprocessing*",
+            "model_zoo*",
+        ]
     ),
     package_data={
         "": [
