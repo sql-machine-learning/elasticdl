@@ -56,8 +56,8 @@ ElasticDL 同时提供统一的 ElasticDL client 命令行工具来提交作业�
 
 | 分布式策略 | 模型定义接口 | Kubernetes 任务提交工具 |
 | --- | --- | --- |
-| ParameterServer | TensorFlow Keras | ElasticDL client |
-| AllReduce | TensorFlow Keras | ElasticDL client |
+| ParameterServer | TensorFlow Keras API | ElasticDL client |
+| AllReduce | TensorFlow Keras API | ElasticDL client |
 
 统一的模型定义接口和统一的任务提交工具，极大地减少了用户的心智负担，提高了工作效率。
 
