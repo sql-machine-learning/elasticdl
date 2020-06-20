@@ -44,7 +44,8 @@ jobs:
         - docker run --rm -it
           -v $TRAVIS_BUILD_DIR:/work -w /work
           -v $HOME/.cache:/root/.cache
-          elasticdl:dev pre-commit run -a
+          elasticdl:dev
+          bash -c "make -f elasticdl/Makefile && pre-commit run -a"
         # Run a minikube cluster
         - bash scripts/travis/start_minikube.sh
         # Run unit tests not related to ODPS
