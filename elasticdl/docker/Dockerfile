@@ -6,7 +6,7 @@ ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 
 RUN apt-get -qq update && \
     apt-get -qq install -y unzip curl git software-properties-common g++ wget \
-                       shellcheck libeigen3-dev > /dev/null && \
+                       shellcheck libeigen3-dev clang-format > /dev/null && \
     python -m pip install --quiet --upgrade pip
 
 COPY elasticdl/requirements.txt /requirements.txt
