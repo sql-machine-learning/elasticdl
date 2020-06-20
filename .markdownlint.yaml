@@ -4,3 +4,5 @@ default: true
 MD013:
   tables: false
   code_blocks": false
+
+MD041: false
