@@ -9,9 +9,9 @@ TensorFlow. ElasticDL preprocessing provides a number of Keras layers to
 preprocess data directly in Keras models.
 For example, using ElasticDL preprocessing layers you could:
 
-* Normalize an input value by using the mean and standard deviation.
-* Convert floats to integers by assigning them to buckets and rounding.
-* Convert strings to integers by lookuping a vocabulary or hashing.
+- Normalize an input value by using the mean and standard deviation.
+- Convert floats to integers by assigning them to buckets and rounding.
+- Convert strings to integers by lookuping a vocabulary or hashing.
 
 ### Normalize input values
 
