@@ -18,7 +18,8 @@
 实现特征预处理，本文介绍结构化数据特征预处理方案。
 - 开发了 Parameter Server 的分布式训练框架，支持在 Kubernetes 上对 worker
 进行弹性调度。在资源不足的情况下，能快速开始训练任务，缩短模型迭代等待时间。
-详细见 [ElasticDL：同时提升研发效率和机群利用率](./elasticdl-antfin-introduction.md)
+详细见
+[ElasticDL：同时提升研发效率和机群利用率](./elasticdl-antfin-introduction.md)
 
 ## 深度学习中结构化数据的特征预处理
 
@@ -26,11 +27,11 @@
 式，常见的特征变换方式有：
 
 - 对数值型特征进行[标准化](https://en.wikipedia.org/wiki/Feature_scaling#Standardization_(Z-score_Normalization))
-变换。
-- 对数值型特征进行[分桶](https://en.wikipedia.org/wiki/Data_binning)变换，
-输出特征值所在分桶的整数序号。
-- 对字符型特征进行[哈希](https://en.wikipedia.org/wiki/Hash_function)
-分桶变换，即对字符串进行哈希后对桶数取模，映射成整数输出。
+  变换。
+- 对数值型特征进行[分桶](https://en.wikipedia.org/wiki/Data_binning)变换，输出特
+  征值所在分桶的整数序号。
+- 对字符型特征进行[哈希](https://en.wikipedia.org/wiki/Hash_function)分桶变换，
+  即对字符串进行哈希后对桶数取模，映射成整数输出。
 - 对字符型特征进行查词表变换，输出词在词表中的整数序号。
 
 然而在特征变换之前，需要对数据集进行统计分析，得到特征的全局统计量。利用全
@@ -86,7 +87,8 @@ ElasticDL 支持分布式训练 Keras 模型，为了方便用户将特征预处
 | IndexLookup | 将字符串通过查词表转成整数，输出词所在词表的索引 | 特征值集合(词表) |
 
 特征变换 layer 的使用教程请查看
-[Preprocess Inputs using ElasticDL Preprocessing Layers](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/tutorials/preprocessing_tutorial.md)
+[Preprocess Inputs using ElasticDL Preprocessing
+Layers](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/tutorials/preprocessing_tutorial.md)
 
 ### Keras 模型训练定义
 
@@ -104,7 +106,6 @@ def custom_model():
     outputs = tf.keras.layers.Dense(3, name="output")(x)
     return tf.keras.Model(inputs=inputs, outputs=outputs, name="simple-model")
 
-
 def loss(labels, predictions):
     return tf.reduce_mean(
         tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -112,10 +113,8 @@ def loss(labels, predictions):
         )
     )
 
-
 def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
-
 
 def eval_metrics_fn():
     return {
@@ -124,7 +123,6 @@ def eval_metrics_fn():
             tf.cast(tf.reshape(labels, [-1]), tf.int32),
         )
     }
-
 
 def dataset_fn(dataset, mode, metadata):
     def _parse_data(record):
@@ -136,22 +134,28 @@ def dataset_fn(dataset, mode, metadata):
     return dataset
 ```
 
-模型定义完成后，在ElasticDL提供的基础镜像中，放入模型文件生成新的镜像，即可在 PAI 平台上提交分布式训练。
+模型定义完成后，在ElasticDL提供的基础镜像中，放入模型文件生成新的镜像，即可在
+PAI 平台上提交分布式训练。
 
 ## PAI 平台上集成特征预处理的 DeepCTR 算法
 
-为了让用户能快速将 ElasticDL 应用到真实业务场景，ElasticDL 在 [PAI](https://pai.alipay.com)
+为了让用户能快速将 ElasticDL 应用到真实业务场景，ElasticDL 在
+[PAI](https://pai.alipay.com)
 平台上提供了 ElasticDL-DeepCTR 组件，如下图所示:
 
 ![PAI ElasticDL DeepCTR](../images/pai_gui/pai_elasticdl_deepctr.jpg)
 
 该算法组件有如下特点：
 
-- 根据用户配置的特征来自动生成特征预处理逻辑，并与深度学习 CTR 算法相结合，组成完整的模型。
-- 提供了常用的 CTR 预估算法，包括 Wide & Deep, DeepFM, Deep Cross Network 和 xDeepFM。
-- 分布式策略采用 ParameterServer，可以根据数据量来配置 worker 的数量来加速模型训练。
+- 根据用户配置的特征来自动生成特征预处理逻辑，并与深度学习 CTR
+算法相结合，组成完整的模型。
+- 提供了常用的 CTR 预估算法，包括 Wide & Deep, DeepFM, Deep Cross Network 和
+xDeepFM。
+- 分布式策略采用 ParameterServer，可以根据数据量来配置 worker
+的数量来加速模型训练。
 
-为了验证模型性能，我们选用了 [Kaggle Display Advertising Challenge](https://www.kaggle.com/c/criteo-display-ad-challenge)
+为了验证模型性能，我们选用了 [Kaggle Display Advertising
+Challenge](https://www.kaggle.com/c/criteo-display-ad-challenge)
 的数据集,来测试模型性能。将组件的标准化特征列和分箱特征列都配置成 I0-I13，
 哈希特征列配置成 C0-C13，最终使用 xDeepFM 模型的 logloss 为
 0.45634 (Kaggle best logloss: 0.44463)。通过很简单的配置，
