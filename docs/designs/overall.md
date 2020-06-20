@@ -29,18 +29,18 @@ drive the process of the entire job.
 
 Master
 
-* Partition the training/evaluation data into mutiple shards. (see
+- Partition the training/evaluation data into mutiple shards. (see
 [dynamic_data_sharding_design](dynamic_data_sharding.md))
-* Generate the training/evaluation tasks from the data shards.
-* Dispatch these tasks to different workers.
-* Aggregate the gradients reported from the workers.
-* Update the model variables and save the checkpoint if necessary.
+- Generate the training/evaluation tasks from the data shards.
+- Dispatch these tasks to different workers.
+- Aggregate the gradients reported from the workers.
+- Update the model variables and save the checkpoint if necessary.
 
 Worker
 
-* Pull the task from the master. The task contains the index of this data
+- Pull the task from the master. The task contains the index of this data
 shard.
-* Read the data according to the data index message. (see
+- Read the data according to the data index message. (see
 [data_io_pipeline_design](data_io_pipeline.md))
-* Run the training process using this data shard.
-* Report the calculated gradients and task result to the master.
+- Run the training process using this data shard.
+- Report the calculated gradients and task result to the master.

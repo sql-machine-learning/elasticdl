@@ -9,7 +9,6 @@ git clone https://github.com/sql-machine-learning/elasticdl
 cd elasticdl
 ```
 
-
 ## Development Tools in a Docker Image
 
 We prefer to install all building tools in a Docker image.
@@ -17,7 +16,6 @@ We prefer to install all building tools in a Docker image.
 ```bash
 docker build --target dev -t elasticdl:dev -f elasticdl/docker/Dockerfile .
 ```
-
 
 ## Check Code Style
 
