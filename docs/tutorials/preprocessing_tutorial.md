@@ -177,13 +177,14 @@ the `martial_status_result` is `[[3], [4], [4]]` and the concatenated result is
 embedding vectors using an embedding table.
 
 ElasticDL provides
-[ConcatenateWithOffset](https://github.com/sql-machine-learning/elasticdl/blob/d
-evelop/elasticdl_preprocessing/layers/concatenate_with_offset.py) layer to
-concatenate features in a group and cast integer values to different ranges.
+[ConcatenateWithOffset](https://github.com/sql-machine-learning/elasticdl/blob/develop/elasticdl_preprocessing/layers/concatenate_with_offset.py)
+layer to concatenate features in a group and cast integer values to different
+ranges.
 
 ```python
 offsets = [0, education_lookup.vocab_size()]
-concat_result = ConcatenateWithOffset(offsets=offsets, axis=1)([education_result, martial_status_result])
+concat_result = ConcatenateWithOffset(offsets=offsets, axis=1)(
+    [education_result, martial_status_result])
 ```
 
 After concatenate features in a group into a tensor, we can feed the tensor
@@ -219,8 +220,10 @@ need to use `tf.SparseTensor` to contain the result. ElasticDL provides the
 missing values and return a `tf.SparseTensor`.
 
 ```python
-education = tf.keras.layers.Input(shape=(1, ), dtype=tf.string, name="education")
-marital_status = tf.keras.layers.Input(shape=(1, ), dtype=tf.string, name="marital_status")
+education = tf.keras.layers.Input(shape=(1, ),
+                                  dtype=tf.string, name="education")
+marital_status = tf.keras.layers.Input(shape=(1, ), dtype=tf.string,
+                                       name="marital_status")
 to_sparse = ToSparse(ignore_value='')
 education_sparse = to_sparse(education)
 marital_status_sparse = to_sparse(marital_status)
@@ -238,11 +241,13 @@ from elasticdl_preprocessing.layers import Embedding
 
 education_lookup = IndexLookup(vocabulary=['Master', 'Doctor', 'Bachelor'])
 education_result = education_lookup(education_sparse)
-marital_status_lookup = IndexLookup(vocabulary=['Divorced', 'Never-married', 'Never-married'])
+marital_status_lookup = IndexLookup(
+    vocabulary=['Divorced', 'Never-married', 'Never-married'])
 marital_status_result = martial_status_lookup (marital_status_sparse)
 
 offsets = [0, education_lookup.vocab_size()]
-concat_result = ConcatenateWithOffset(offsets=offsets, axis=1)([education_result, martial_status_result])
+concat_result = ConcatenateWithOffset(offsets=offsets, axis=1)(
+    [education_result, martial_status_result])
 max_value = education_lookup.vocab_size() + marital_status_lookup.vocab_size()
 embedding_result = Embedding(max_value, 1, combiner="sum")(concat_result)
 ```

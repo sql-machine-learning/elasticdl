@@ -1,11 +1,9 @@
 # ElasticDL Model Building
 
 To submit an ElasticDL job, a user needs to provide a model file, such as
-[`mnist_functional_api.py`](https://github.com/sql-machine-learning/elasticdl/bl
-ob/develop/model_zoo/mnist_functional_api/mnist_functional_api.py) used in
-[this
-example](https://github.com/sql-machine-learning/elasticdl/blob/develop/doc/tuto
-rials/elasticdl_cloud.md#submit-the-first-job-with-low-priority).
+[`mnist_functional_api.py`](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist_functional_api/mnist_functional_api.py)
+used in this
+[example](https://github.com/sql-machine-learning/elasticdl/blob/develop/doc/tutorials/elasticdl_cloud.md#submit-the-first-job-with-low-priority).
 
 This model file contains a [model](#model) built with TensorFlow Keras API and
 other components required by ElasticDL, including [dataset\_fn](#dataset_fn),
@@ -23,7 +21,7 @@ subclassing](https://www.tensorflow.org/guide/keras#model_subclassing).
 The following example shows a `model` using functional API, which has one input
 with shape (28, 28), and one output with shape (10,):
 
-```
+```python
 inputs = tf.keras.Input(shape=(28, 28), name='image')
 x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
 x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation='relu')(x)
@@ -39,7 +37,7 @@ model = tf.keras.Model(inputs=inputs, outputs=outputs, name='mnist_model')
 
 Another example using model subclassing:
 
-```
+```python
 class MnistModel(tf.keras.Model):
     def __init__(self):
         super(MnistModel, self).__init__(name='mnist_model')
@@ -72,7 +70,7 @@ model = MnistModel()
 
 ### dataset_fn
 
-```
+```python
 dataset_fn(dataset, training)
 ```
 
@@ -99,7 +97,7 @@ Output: a dataset, each data is a tuple (`model_inputs`, `labels`)
 
 Example:
 
-```
+```python
 def dataset_fn(dataset, mode):
     def _parse_data(record):
         if mode == Mode.PREDICTION:
@@ -129,7 +127,7 @@ def dataset_fn(dataset, mode):
 
 ### loss
 
-```
+```python
 loss(labels, output)
 ```
 
@@ -142,7 +140,7 @@ Arguments:
 
 Example:
 
-```
+```python
 def loss(labels, output):
     return tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -153,24 +151,23 @@ def loss(labels, output):
 
 ### optimizer
 
-```
+```python
 optimizer()
 ```
 
 `optimizer` is a function returns a
-[`tf.train.Optimizer`](https://www.tensorflow.org/api_docs/python/tf/train/Optim
-izer).
+[`tf.train.Optimizer`](https://www.tensorflow.org/api_docs/python/tf/train/Optimizer).
 
 Example:
 
-```
+```python
 def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 ```
 
 ### eval_metrics_fn
 
-```
+```python
 eval_metrics_fn()
 ```
 
@@ -181,7 +178,7 @@ TensorFlow API.
 
 Example:
 
-```
+```python
 def eval_metrics_fn(predictions, labels):
     return {
         "accuracy": tf.reduce_mean(
@@ -197,7 +194,7 @@ def eval_metrics_fn(predictions, labels):
 
 ### prepare_data_for_a_single_file
 
-```
+```python
 prepare_data_for_a_single_file(filename)
 ```
 
@@ -212,10 +209,11 @@ the logic to prepare the data accordingly.
 
 Example:
 
-```
+```python
 def prepare_data_for_a_single_file(filename):
     '''
-    An image classification dataset that images belonging to the same category located in the same directory.
+    An image classification dataset that images belonging to the same category
+    located in the same directory.
     '''
     label = int(filename.split('/')[-2])
     image = PIL.Image.open(filename)
@@ -236,21 +234,13 @@ def prepare_data_for_a_single_file(filename):
 
 ## Model Building Examples
 
-### [MNIST model using Keras functional
-API](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mn
-ist_functional_api/mnist_functional_api.py)
+- [MNIST model using Keras functional API](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist_functional_api/mnist_functional_api.py)
 
-### [MNIST model using Keras model
-subclassing](https://github.com/sql-machine-learning/elasticdl/blob/develop/mode
-l_zoo/mnist_subclass/mnist_subclass.py)
+- [MNIST model using Keras modelsubclassing](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist_subclass/mnist_subclass.py)
 
-### [CIFAR10 model using Keras functional
-API](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/ci
-far10_functional_api/cifar10_functional_api.py)
+- [CIFAR10 model using Keras functional API](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/cifar10_functional_api/cifar10_functional_api.py)
 
-### [CIFAR10 model using Keras model
-subclassing](https://github.com/sql-machine-learning/elasticdl/blob/develop/mode
-l_zoo/cifar10_subclass/cifar10_subclass.py)
+- [CIFAR10 model using Keras modelsubclassing](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/cifar10_subclass/cifar10_subclass.py)
 
 ## Run and Debug Locally in VS Code
 
@@ -269,7 +259,8 @@ python -m elasticdl.python.elasticdl.client train \
   --model_def=odps_iris_dnn_model.odps_iris_dnn_model.custom_model \
   --training_data=/{DATA_DIR}/iris.csv \
   --validation_data=/{DATA_DIR}/iris.csv \
-  --data_reader_params="columns=['sepal.length', 'sepal.width', 'petal.length', 'petal.width', 'variety']; sep=','" \
+  --data_reader_params="columns=['sepal.length', 'sepal.width', \
+         'petal.length', 'petal.width', 'variety']; sep=','" \
   --num_epochs=2 \
   --minibatch_size=64 \
   --num_minibatches_per_task=20 \
@@ -325,7 +316,11 @@ DNN model is
                 "--job_name",
                 "test-odps-iris",
                 "--data_reader_params",
-                "columns=['sepal.length', 'sepal.width', 'petal.length', 'petal.width', 'variety']; sep=','"
+                "columns=['sepal.length',
+                          'sepal.width',
+                          'petal.length',
+                          'petal.width',
+                          'variety']; sep=','"
             ]
         }
     ]

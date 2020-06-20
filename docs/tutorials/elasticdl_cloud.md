@@ -22,27 +22,20 @@ like `gcloud`.
 
 Step 1: Set the PROJECT_ID environment variable in shell.
 
-```
+```bash
 export PROJECT_ID=${your_project_id}
 gcloud config set project ${PROJECT_ID}
 ```
 
 Step 2: List clusters info with gcloud, and double check it with web console.
 
-```
+```bash
 gcloud container clusters list
-```
-
-Following is an our testing cluster
-
-```
-NAME         LOCATION       MASTER_VERSION  MASTER_IP       MACHINE_TYPE   NODE_VERSION    NUM_NODES  STATUS
-edl-cluster  us-central1-c  1.14.10-gke.36  x.x.x.x         n1-standard-8  1.14.10-gke.36  3          RUNNING
 ```
 
 Step 3: Use the command below to generate the corresponding kubeconfig.
 
-```
+```bash
 gcloud container clusters get-credentials edl-cluster --zone us-central1-c
 ```
 
@@ -52,7 +45,7 @@ locally.
 
 Use the following command to list all the started components.
 
-```
+```bash
 kubectl get all --all-namespaces
 ```
 
@@ -72,7 +65,7 @@ cluster, high and low.
 
 high.yaml
 
-```
+```yaml
 apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass
 metadata:
@@ -83,7 +76,7 @@ globalDefault: false
 
 low.yaml
 
-```
+```yaml
 apiVersion: scheduling.k8s.io/v1
 kind: PriorityClass
 metadata:
@@ -92,7 +85,7 @@ value: 1000
 globalDefault: false
 ```
 
-```
+```bash
 kubectl create -f high.yaml
 kubectl create -f low.yaml
 ```
@@ -114,22 +107,23 @@ In this example, we create a persistent value claim named `fileserver-claim`.
 
 Step 1: We generate MNIST training and evaluation data in RecordIO format.
 
-```
-python elasticdl/python/data/recordio_gen/image_label.py --dataset mnist --records_per_shard 4096 .
+```bash
+python elasticdl/python/data/recordio_gen/image_label.py \
+    --dataset mnist \
+    --records_per_shard 4096 .
 ```
 
 Step 2: We launch a pod which mounts the volume, and use `kubectl cp` command
 to copy data from local to the volume.
 
-```
+```bash
 kubectl create -f my-pod.yaml
-
 kubectl cp mnist my-pod:/data
 ```
 
 my-pod.yaml
 
-```
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
@@ -154,7 +148,7 @@ Please refer to [elasticdl_local tutorial](./elasticdl_local.md) to build the
 `elasticdl:ci` image. The difference is that we have to push the image to
 google cloud repo. We use the following command to get the authentication:
 
-```
+```bash
 gcloud auth configure-docker
 ```
 
@@ -162,7 +156,7 @@ We launch a training job with 2 PS pods and 4 worker pods. The master pod and
 PS pods are set with priority, while worker pods are set with low priority. The
 training docker image will be pushed to google cloud repo.
 
-```
+```bash
 python -m elasticdl.python.elasticdl.client train \
   --image_base=elasticdl:ci \
   --docker_image_repository=gcr.io/${PROJECT_ID}  \
@@ -195,19 +189,19 @@ python -m elasticdl.python.elasticdl.client train \
 
 To see the status of each pod:
 
-```
+```bash
 kubectl get pods
 ```
 
 To see the loss in worker pod:
 
-```
+```bash
 kubectl logs elasticdl-test-mnist-worker-0 | grep "Loss"
 ```
 
 To see the evaluation metrics in the master pod:
 
-```
+```bash
 kubectl logs elasticdl-test-mnist-master | grep "Evaluation"
 ```
 
@@ -219,7 +213,7 @@ relaunch a new worker pod.
 
 At first, all pods are running:
 
-```
+```text
 elasticdl-test-mnist-master     1/1     Running   0          35s
 elasticdl-test-mnist-ps-0       1/1     Running   0          29s
 elasticdl-test-mnist-ps-1       1/1     Running   0          28s
@@ -231,13 +225,13 @@ elasticdl-test-mnist-worker-3   1/1     Running   0          28s
 
 Then, we delete a worker pod:
 
-```
+```bash
 kubectl delete pod elasticdl-test-mnist-worker-0
 ```
 
 The master pod creates a new worker pod `elasticdl-test-mnist-worker-4` at once.
 
-```
+```text
 NAME                            READY   STATUS    RESTARTS   AGE
 elasticdl-test-mnist-master     1/1     Running   0          51s
 elasticdl-test-mnist-ps-0       1/1     Running   0          45s
@@ -255,7 +249,7 @@ high priority in the same cluster.
 
 nginx.yaml
 
-```
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -291,14 +285,14 @@ spec:
       restartPolicy: Always
 ```
 
-```
+```bash
 kubectl create -f nginx.yaml
 ```
 
 We will find that some worker pods with low priority are preempted by nginx
 pods with high priority.
 
-```
+```text
 NAME                            READY   STATUS        RESTARTS   AGE
 elasticdl-test-mnist-master     1/1     Running       0          34s
 elasticdl-test-mnist-ps-0       1/1     Running       0          27s
@@ -316,7 +310,7 @@ test-nginx-7585fc5976-ss8pk     0/1     Pending       0          2s
 
 After preemption, the training job still goes on with one worker pod.
 
-```
+```text
 elasticdl-test-mnist-master     1/1     Running   0          61s
 elasticdl-test-mnist-ps-0       1/1     Running   0          54s
 elasticdl-test-mnist-ps-1       1/1     Running   0          54s
@@ -334,14 +328,14 @@ test-nginx-7585fc5976-ss8pk     1/1     Running   0          29s
 Then, we scale the nginx deployment down to 1 replica. Some cluster resources
 are freed.
 
-```
+```bash
 kubectl scale deployment.v1.apps/test-nginx --replicas=1
 ```
 
 We find that the training job takes over the freed resources, and goes on with
 4 worker pods.
 
-```
+```text
 NAME                            READY   STATUS    RESTARTS   AGE
 elasticdl-test-mnist-master     1/1     Running   0          2m3s
 elasticdl-test-mnist-ps-0       1/1     Running   0          116s
