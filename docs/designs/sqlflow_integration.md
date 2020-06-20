@@ -2,7 +2,8 @@
 
 ## Overview
 
-This is a design doc on integration with [SQLFlow](https://github.com/sql-machine-learning/sqlflow).
+This is a design doc on integration with
+[SQLFlow](https://github.com/sql-machine-learning/sqlflow).
 
 ### User Interface
 
@@ -85,35 +86,39 @@ WITH
 USING trained_elasticdl_keras_classifier;
 ```
 
-
 ### Implementation
 
 #### Mapping Extended SQL
 
-The components of the extended SQL defined by SQLFlow are mapped to a ``elasticDLFiller`` struct that looks like the following:
+The components of the extended SQL defined by SQLFlow are mapped to a
+`elasticDLFiller` struct that looks like the following:
 
-```
+```go
 type elasticDLFiller struct {
-	IsTraining bool
-	TrainInputTable    string
-	EvalInputTable     string
-	PredictInputTable  string
-	PredictOutputTable string
-	PredictInputModel  string
-	OutputShape        int
-	InputShape         int
-	ModelDir           string
-	LabelColName        string
-	FeaturesList        string
-	TrainClause   *resolvedTrainClause
-	PredictClause *resolvedPredictClause
+    IsTraining bool
+    TrainInputTable    string
+    EvalInputTable     string
+    PredictInputTable  string
+    PredictOutputTable string
+    PredictInputModel  string
+    OutputShape        int
+    InputShape         int
+    ModelDir           string
+    LabelColName        string
+    FeaturesList        string
+    TrainClause   *resolvedTrainClause
+    PredictClause *resolvedPredictClause
 }
 ```
 
-This ``elasticDLFiller`` struct will be used to fill a template pre-defined to generate the model definition components required
-for ElasticDL, such as the model definition using `tf.keras` API, loss, optimizer, `dataset_fn`, etc.
+This `elasticDLFiller` struct will be used to fill a template pre-defined to
+generate the model definition components required
+for ElasticDL, such as the model definition using `tf.keras` API, loss,
+optimizer, `dataset_fn`, etc.
 
-For example, the `dataset_fn` is generated using the `FeaturesList`, `LabelColName`, `InputShape`, `IsTraining`, and `TrainClause` in the ``elasticDLFiller`` struct:
+For example, the `dataset_fn` is generated using the `FeaturesList`,
+`LabelColName`, `InputShape`, `IsTraining`, and `TrainClause` in the
+`elasticDLFiller` struct:
 
 ```python
 def dataset_fn(dataset, mode, metadata):
@@ -161,17 +166,23 @@ def dataset_fn(dataset, mode, metadata):
     return dataset
 ```
 
-Some fields used to generate the above `dataset_fn` are obtained directly from the extended SQL statement. For example, ``FeaturesList`` is obtained
-from `SELECT FROM` clause. `LabelColName` is obtained from `LABEL` clause. `TrainClause.ShuffleBufferSize` is obtained from
-`train.shuffle` in the `WITH` clause. There are also fields that are obtained indirectly. For example, `InputShape` is inferred from `FeaturesList`.
+Some fields used to generate the above `dataset_fn` are obtained directly from
+the extended SQL statement. For example, `FeaturesList` is obtained
+from `SELECT FROM` clause. `LabelColName` is obtained from `LABEL` clause.
+`TrainClause.ShuffleBufferSize` is obtained from
+`train.shuffle` in the `WITH` clause. There are also fields that are obtained
+indirectly. For example, `InputShape` is inferred from `FeaturesList`.
 
-Note that in the template we currently we hard-coded the types for each column to be ``tf.float32`` in the generated `dataset_fn`. We should infer
-this information from the database instead. We also hard-coded other components in the model definition such as ``loss`` and ``optimizer``, these
+Note that in the template we currently we hard-coded the types for each column
+to be `tf.float32` in the generated `dataset_fn`. We should infer
+this information from the database instead. We also hard-coded other components
+in the model definition such as `loss` and `optimizer`, these
 components should be derived from the model zoo instead.
 
 #### Generate ElasticDL Command
 
-Once we generated the components for the model definition, we can then generate the ElasticDL command to submit the job. 
+Once we generated the components for the model definition, we can then generate
+the ElasticDL command to submit the job.
 Below is an example:
 
 ```sh
@@ -202,36 +213,52 @@ elasticdl train \
 --data_reader_params=<data-reader-params>
 ```
 
-In the command, ``--model_def`` is the path to the model definition file we generated earlier. Additional arguments
-related to model definition such as ``--loss`` and ``--eval_metrics_fn`` are obtained from parameters
-with name starting with ``model.``.
+In the command, `--model_def` is the path to the model definition file we
+generated earlier. Additional arguments
+related to model definition such as `--loss` and `--eval_metrics_fn` are
+obtained from parameters
+with name starting with `model.`.
 
 The rest of the arguments are derived from the extended SQL, for example:
 
-* ``--model_zoo`` is obtained from `TRAIN` clause.
-* ``--training_data`` is obtained from `FROM` clause.
-* ``--num_epochs`` is obtained from `train.shuffle` in `WITH` clause.
+- `--model_zoo` is obtained from `TRAIN` clause.
+- `--training_data` is obtained from `FROM` clause.
+- `--num_epochs` is obtained from `train.shuffle` in `WITH` clause.
 
-ElasticDL engine specific arguments such as ``--grads_to_wait`` and ``--num_workers`` are obtained from parameters
-with name starting with ``engine.``.
+ElasticDL engine specific arguments such as `--grads_to_wait` and
+`--num_workers` are obtained from parameters
+with name starting with `engine.`.
 
-In order to integrate with different databases we support, we pass additional information to the ElasticDL command.
+In order to integrate with different databases we support, we pass additional
+information to the ElasticDL command.
 
-For example, we pass necessary environment variables such as access ID and key for ODPS account to ``--envs``. In addition,
-we pass the list of column names that we want to read from ODPS via ``--data_reader_params``.
+For example, we pass necessary environment variables such as access ID and key
+for ODPS account to `--envs`. In addition,
+we pass the list of column names that we want to read from ODPS via
+`--data_reader_params`.
 
 ### Future Work
 
-* Support ``tf.feature_columns`` API via ``COLUMN`` clause.
-* Support evaluation job. Evaluation on separate evaluation table is not supported yet in SQLFlow. Please check out
-[#675](https://github.com/sql-machine-learning/sqlflow/issues/675) and [#675](https://github.com/sql-machine-learning/sqlflow/issues/674) for details.
-* Switch to use intermediate representation for ElasticDL codegen. For details, please see [#1075](https://github.com/sql-machine-learning/sqlflow/issues/1075).
-* Support on synchronous call on high level API. For details, please see [#1285](https://github.com/sql-machine-learning/elasticdl/issues/1285).
-* Unify model zoos between SQLFlow and ElasticDL and support submitting an ElasticDL job for a model defined in model zoo.
-Please see [#22](https://github.com/sql-machine-learning/models/issues/22) and [#1063](https://github.com/sql-machine-learning/sqlflow/issues/1063) for details.
-* Currently the only database ElasticDL supports is ODPS. However, we should expose necessary abstractions so ElasticDL
- can fully leverage SQLFlow's functionality to read/write
-from different SQL databases.
-* Support prediction job and add integration tests on Travis CI.
-* Currently we have hard-coded the types for each column to be ``tf.float32`` in the generated `dataset_fn`. We should infer
-this information from the database instead.
+- Support `tf.feature_columns` API via `COLUMN` clause.
+- Support evaluation job. Evaluation on separate evaluation table is not
+  supported yet in SQLFlow. Please check out
+  [#675](https://github.com/sql-machine-learning/sqlflow/issues/675) and
+  [#675](https://github.com/sql-machine-learning/sqlflow/issues/674) for
+  details.
+- Switch to use intermediate representation for ElasticDL codegen. For details,
+  please see
+  [#1075](https://github.com/sql-machine-learning/sqlflow/issues/1075).
+- Support on synchronous call on high level API. For details, please see
+  [#1285](https://github.com/sql-machine-learning/elasticdl/issues/1285).
+- Unify model zoos between SQLFlow and ElasticDL and support submitting an
+  ElasticDL job for a model defined in model zoo.  Please see
+  [#22](https://github.com/sql-machine-learning/models/issues/22) and
+  [#1063](https://github.com/sql-machine-learning/sqlflow/issues/1063) for
+  details.
+- Currently the only database ElasticDL supports is ODPS. However, we should
+  expose necessary abstractions so ElasticDL can fully leverage SQLFlow's
+  functionality to read/write from different SQL databases.
+- Support prediction job and add integration tests on Travis CI.
+- Currently we have hard-coded the types for each column to be `tf.float32` in
+  the generated `dataset_fn`. We should infer this information from the database
+  instead.

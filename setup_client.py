@@ -11,12 +11,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from setuptools import find_packages, setup
 
-class AnalysisEnvTemplate:
-    MIN_ENV = "_{}_min"
-    MAX_ENV = "_{}_max"
-    AVG_ENV = "_{}_avg"
-    STDDEV_ENV = "_{}_stddev"
-    BUCKET_BOUNDARIES_ENV = "_{}_boundaries"
-    DISTINCT_COUNT_ENV = "_{}_distinct_count"
-    VOCABULARY_ENV = "_{}_vocab"
+with open("elasticdl_client/requirements.txt") as f:
+    required_deps = f.read().splitlines()
+
+setup(
+    name="elasticdl_client",
+    version="develop",
+    description="The client tool for ElasticDL.",
+    author="Ant Financial",
+    url="https://elasticdl.org",
+    install_requires=required_deps,
+    python_requires=">=3.5",
+    packages=find_packages(include=["elasticdl_client*"]),
+    package_data={"": ["requirements.txt"]},
+)

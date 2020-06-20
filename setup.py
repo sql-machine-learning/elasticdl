@@ -15,6 +15,7 @@ from setuptools import find_packages, setup
 
 with open("elasticdl/requirements.txt") as f:
     required_deps = f.read().splitlines()
+required_deps.append("elasticdl_preprocessing")
 
 extras = {}
 with open("elasticdl/requirements-dev.txt") as f:
@@ -33,7 +34,14 @@ setup(
     install_requires=required_deps,
     extras_require=extras,
     python_requires=">=3.5",
-    packages=find_packages(exclude=["*test*"]),
+    packages=find_packages(
+        exclude=[
+            "*test*",
+            "elasticdl_client*",
+            "elasticdl_preprocessing*",
+            "model_zoo*",
+        ]
+    ),
     package_data={
         "": [
             "proto/*.proto",

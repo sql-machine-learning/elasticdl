@@ -1,10 +1,11 @@
-## Design for ODPS Data Source Support
+# Design for ODPS Data Source Support
 
 This document describes the design for supporting ODPS data source in ElasticDL.
 
-### Existing `ODPSReader` Class
+## Existing `ODPSReader` Class
 
-The interface to read data from ODPS with the existing `ODPSReader` is defined as follows:
+The interface to read data from ODPS with the existing `ODPSReader` is defined
+as follows:
 
 ````python
 class ODPSReader(object):
@@ -42,8 +43,10 @@ class ODPSReader(object):
         pass
 ````
 
-For example, if we have 5 workers in total, in the first worker, we can run the following
-to load the ODPS table into a Python iterator where each batch contains 100 rows:
+For example, if we have 5 workers in total, in the first worker, we can run the
+following
+to load the ODPS table into a Python iterator where each batch contains 100
+rows:
 
 ```python
 reader = ODPSReader(...)
@@ -52,10 +55,12 @@ for batch in data_iterator:
     print("Batch size %d\n. Data: %s" % (len(batch), batch))
 ```
 
-### Support ODPS Data Source in ElasticDL
+## Support ODPS Data Source in ElasticDL
 
-The current `Worker` relies heavily on `TaskDispatcher` and RecordIO which overlaps with the
-existing `ODPSReader` so we could not use the above existing `ODPSReader` directly. For example,
+The current `Worker` relies heavily on `TaskDispatcher` and RecordIO which
+overlaps with the
+existing `ODPSReader` so we could not use the above existing `ODPSReader`
+directly. For example,
 `Worker` does the following related steps:
 
 1. `recordio.Scanner(task.shard_file_name, task.start, task.end - task.start)`
@@ -67,15 +72,24 @@ fetch the features and labels from this batch.
 
 Here's a list of things we need to do in order to support ODPS data source:
 
-1. Create `ODPSReader` based on user-provided ODPS information such as ODPS project name and credentials.
-2. Implement a method to create training and evaluation shards based on table name and column names instead of
+1. Create `ODPSReader` based on user-provided ODPS information such as ODPS
+project name and credentials.
+2. Implement a method to create training and evaluation shards based on table
+name and column names instead of
 RecordIO data directories, and then pass the shards to `TaskDispatcher`.
-3. Modify `Worker` to support instantiating a `ODPSReader` in addition to RecordIO reader.
-4. Implement `ODPSReader.record()` for `Worker._get_batch()` to use. Alternatively, we can also re-implement
-`Worker._get_batch()` so it can get the whole batch of data rows if the data source is ODPS. This is because
-the current implementation of `Worker._get_batch()` method contains a for loop that reads one record at a time
+3. Modify `Worker` to support instantiating a `ODPSReader` in addition to
+RecordIO reader.
+4. Implement `ODPSReader.record()` for `Worker._get_batch()` to use.
+Alternatively, we can also re-implement
+`Worker._get_batch()` so it can get the whole batch of data rows if the data
+source is ODPS. This is because
+the current implementation of `Worker._get_batch()` method contains a for loop
+that reads one record at a time
 which is inefficient.
 
-Once the above work is done and we have a clearer picture, we could then think about how to allow users to plug
-in their custom data readers like `ODPSReader` so that they don't have to convert data to RecordIO format, which
-could avoid the IO overhead. This should be discussed further in high-level API designs.
+Once the above work is done and we have a clearer picture, we could then think
+about how to allow users to plug
+in their custom data readers like `ODPSReader` so that they don't have to
+convert data to RecordIO format, which
+could avoid the IO overhead. This should be discussed further in high-level API
+designs.

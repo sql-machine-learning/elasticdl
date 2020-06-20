@@ -48,4 +48,4 @@ touch "$KUBECONFIG"
 sudo minikube start --vm-driver=none --kubernetes-version="$K8S_VERSION"
 kubectl cluster-info
 
-eval $(sudo minikube docker-env)
+eval "$(sudo minikube docker-env)"

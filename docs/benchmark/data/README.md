@@ -10,4 +10,3 @@ Requirements:
 1. Make
 1. Gnuplot
 1. ImageMagick
-
