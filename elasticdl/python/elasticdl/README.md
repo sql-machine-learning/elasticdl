@@ -5,11 +5,11 @@
 A model definition directory is needed to be created, the files in the directory
 are as follows:
 
-* (mandatory) A Python source file which defines the keras model and use the
+- (mandatory) A Python source file which defines the keras model and use the
   directory base name as the filename.
-* (mandatory) The file `__init__.py` is necessary.
-* (optional) Source files of other Python modules.
-* (optional) A requirements.txt file that lists dependencies required by the
+- (mandatory) The file `__init__.py` is necessary.
+- (optional) Source files of other Python modules.
+- (optional) A requirements.txt file that lists dependencies required by the
   above source files.
 
 There are several Keras examples provided in `model_zoo` directory.
