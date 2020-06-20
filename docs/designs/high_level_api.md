@@ -186,7 +186,9 @@ building process should add a *model zoo* into the Docker image.  The function
 1. A URL pointing to a Git repo
 
    ```python
-   elasticdl.train(model_zoo="https://git.company.com/sql-machine-learning/models", ...)
+   elasticdl.train(
+       model_zoo="https://git.company.com/sql-machine-learning/models", ...
+    )
    ```
 
 A model zoo is a plain Python source directory that's added to `/model_zoo` in

@@ -207,8 +207,8 @@ model = custom_model()
 outputs = model.call(tf.constant([[0.4, 0.7, 1.5, 0.3], [1.4, 0.2, 0.5, 1.3]]))
 ```
 
-训练一个模型不只需要上述模型定义，还需要指定数据 (dataset)、优化目标（cost）、和
-优化算法（optimizer）。ElasticDL 和 TensorFlow 其他的 high-level API，
+训练一个模型不只需要上述模型定义，还需要指定数据 (dataset)、优化目标（cost）、
+和优化算法（optimizer）。ElasticDL 和 TensorFlow 其他的 high-level API，
 例如 Keras 和 TensorFlow Estimator 一样，提供了相关配置的定义方式，比如
 
 ```python
@@ -247,7 +247,7 @@ def dataset_fn(dataset, mode, metadata):
 elasticdl train \
   --image_base=elasticdl:latest \
   --model_zoo=model_zoo \
-  --docker_image_repository=reg.docker.alibaba-inc.com/qinlong-wql/ \
+  --docker_image_repository={REPO} \
   --model_def=dac_ctr.elasticdl_train.custom_model \
   --minibatch_size=512 \
   --num_epochs=20 \
@@ -256,7 +256,7 @@ elasticdl train \
   --training_data=/testdata/elasticdl/dac_records/train  \
   --validation_data=/testdata/elasticdl/dac_records/val \
   --evaluation_steps=10000 \
-  --job_name=test-edl-changfan \
+  --job_name=test-edl \
 ```
 
 ### Keras 特征预处理 layer
