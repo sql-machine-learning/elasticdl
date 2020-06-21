@@ -10,13 +10,10 @@ ElasticDL 与 TensorFlow 2.0 以及 Kubernetes 的技术关联。
 
 基于 TensorFlow 的分布式训练系统大致可以分为以下四类：
 
-|-----------------------|-------------------------------|---------------------------------|
 |                       | TensorFlow 1.x graph mode     | TensorFlow 2.x eager execution  |
 |-----------------------|-------------------------------|---------------------------------|
 | in TensorFlow runtime | TensorFlow's parameter server | TensorFlow distributed strategy |
-|-----------------------|-------------------------------|---------------------------------|
 | above TensorFlow API  | Uber Horovod                  | ElasticDL                       |
-|-----------------------|-------------------------------|---------------------------------|
 
 其中，ElasticDL 位于田字格的右下角。之所以选择这条技术思路，是为了利用
 Kubernetes 实现容错和弹性调度。
