@@ -1,4 +1,3 @@
-#!/bin/bash
 # Copyright 2020 The ElasticDL Authors. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,9 +10,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-
-PROJECT_URL=https://github.com/sql-machine-learning/elasticdl.git
-REMOTE=$(git remote -v | grep $PROJECT_URL | cut -f1 | head -1)
-pre-commit run --from-ref "$REMOTE/develop" --to-ref HEAD

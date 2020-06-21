@@ -41,9 +41,11 @@ jobs:
           -f elasticdl/docker/Dockerfile
           --build-arg BASE_IMAGE="$BASE_IMAGE" .
         # Run pre-commit checks.
-        - docker run --rm -it -v $TRAVIS_BUILD_DIR:/work -w /work
+        - docker run --rm -it
+          -v $TRAVIS_BUILD_DIR:/work -w /work
           -v $HOME/.cache:/root/.cache
-          elasticdl:dev bash -c "scripts/pre-commit.sh"
+          elasticdl:dev
+          bash -c "make -f elasticdl/Makefile && pre-commit run -a"
         # Run a minikube cluster
         - bash scripts/travis/start_minikube.sh
         # Run unit tests not related to ODPS

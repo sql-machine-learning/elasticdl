@@ -43,7 +43,14 @@ pytest elasticdl/python/tests elasticdl_preprocessing/tests --cov=elasticdl/pyth
 mkdir -p ./build
 mv coverage.xml ./build
 
+# Create elasticdl_preprocessing package
+rm -rf ./build/lib
+python setup_preprocessing.py --quiet bdist_wheel --dist-dir ./build
+# Create elasticdl_client package
+rm -rf ./build/lib
+python setup_client.py --quiet bdist_wheel --dist-dir ./build
 # Create elasticdl package
 mkdir -p ./elasticdl/go/bin
 cp /tmp/elasticdl_ps ./elasticdl/go/bin/
+rm -rf ./build/lib
 python setup.py --quiet bdist_wheel --dist-dir ./build
