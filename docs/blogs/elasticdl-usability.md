@@ -17,41 +17,15 @@
 此时，需要结合深度学习训练算法的数学性质，设计容错机制。
 这要求编程者必须同时是深度学习和分布式系统的专家。
 
-我们为此设计和开发了 ElasticDL
-分布式计算框架，让编程者只需了解深度学习，不需要了解分布式系统开发。
-
-就像 MapReduce 框架中只需要用户完形填空两个函数：map 和 reduce，ElasticDL
-只需要用户填写 forward、cost、feed 三个函数。
-其中 forward 定义深度学习的前向计算过程，
-ElasticDL 会调用 TensorFlow eager mode 中提供的 Gradient Tape 接口，
-来自动推导对应的后向计算过程（backward pass）；
-cost 指定模型训练时使用的 cost 函数；
-feed 用来定制化训练数据到 TensorFlow 的 tensor的转换过程。
-
-所有的这些函数的编程只需要了解 TensorFlow
-API，不需要对分布式训练有任何背景知识。
-这些函数也可以在单机上用小数据做调试验证，然后就可以放心地交给 ElasticDL
-做分布式的容错的大规模训练了。
-
-ElasticDL 要求分布式计算平台是 Kubernetes。
-一方面 Kubernetes 是目前最先进的分布式操作系统，是公有云和私有云的事实工业标准；
-另一方面，ElasticDL 一改 Kubeflow 通过增加 Kubernetes operator 的方式定制
-Kubernetes 的思路，
-为每个作业引入一个 master 进程（类似 Google MapReduce）。
-这个 master 进程作为作业的一部分，而不是 Kubernetes 的一部分，
-不仅了解集群情况，更了解深度学习作业本身，所以有充分的信息来做更优的调度。
-比如 master 进程可以请 Kubernetes 把两个 workers 启动在同一台物理机上，共用一个
-GPU。
-这样，一个进程读数据的时候，请另外一个进程来做计算，从而让 GPU
-的利用率总是很高。
-
 TensorFlow 是当今最受欢迎的深度学习框架。在蚂蚁金服内部，TensorFlow
 在诸多业务场景中被广泛使用。
+Kubernetes 是目前最先进的分布式操作系统，是公有云和私有云的事实工业标准。
+因此，在本文中我们重点讨论在 Kubernetes 上运行 TensorFlow 分布式训练程序的解决方案。
+
 我们发现 AllReduce 和 Parameter Server 是分布式训练程序中常用两种梯度聚合策略。
 在图像语音模型中，AllReduce 策略被广泛的使用。
 在搜索广告推荐模型中，我们更倾向于使用 Parameter Server 策略。
-
-我们调研了目前在 Kubernetes 上运行 TensorFlow 分布式训练程序的一些开源解决方案。
+我们调研了目前在 Kubernetes 上运行不同分布式策略的 TensorFlow 训练程序的一些开源解决方案。
 
 | 分布式策略 | 模型定义 | 任务提交工具 |
 | --- | --- | --- |
@@ -69,7 +43,33 @@ TensorFlow Keras API 提高开发效率，降低使用门槛，与 eager executi
 目前 TensorFlow 2.x 的 ParameterServer 和 AllReduce 分布式策略对 Keras API
 的支持还不完善。
 
-而 ElasticDL 从易用性的角度出发，直接支持了 TensorFlow 2.x 的 Keras API。
+我们为此设计和开发了 ElasticDL
+分布式计算框架，让编程者只需了解深度学习，不需要了解分布式系统开发。
+同时，ElasticDL 从易用性的角度出发，直接支持了 TensorFlow 2.x 的 Keras API。
+
+就像 MapReduce 框架中只需要用户完形填空两个函数：map 和 reduce，ElasticDL
+只需要用户填写 forward、cost、feed 三个函数。
+其中 forward 定义深度学习的前向计算过程，
+ElasticDL 会调用 TensorFlow eager mode 中提供的 Gradient Tape 接口，
+来自动推导对应的后向计算过程（backward pass）；
+cost 指定模型训练时使用的 cost 函数；
+feed 用来定制化训练数据到 TensorFlow 的 tensor的转换过程。
+
+所有的这些函数的编程只需要了解 TensorFlow
+API，不需要对分布式训练有任何背景知识。
+这些函数也可以在单机上用小数据做调试验证，然后就可以放心地交给 ElasticDL
+做分布式的容错的大规模训练了。
+
+ElasticDL 一改 Kubeflow 通过增加 Kubernetes operator 的方式定制
+Kubernetes 的思路，
+为每个作业引入一个 master 进程（类似 Google MapReduce）。
+这个 master 进程作为作业的一部分，而不是 Kubernetes 的一部分，
+不仅了解集群情况，更了解深度学习作业本身，所以有充分的信息来做更优的调度。
+比如 master 进程可以请 Kubernetes 把两个 workers 启动在同一台物理机上，共用一个
+GPU。
+这样，一个进程读数据的时候，请另外一个进程来做计算，从而让 GPU
+的利用率总是很高。
+
 ElasticDL 同时提供统一的 ElasticDL client 命令行工具来提交作业。
 
 | 分布式策略 | 模型定义 | 任务提交工具 |
@@ -162,7 +162,7 @@ def dataset_fn(dataset, mode, _):
 在反向计算中，worker 可以通过 TensorFlow 2.x 暴露的 Gradient Tape接口
 来计算得到梯度。
 
-### ElasticDL master 提供 training loop
+### ElasticDL Master 提供 Training Loop
 
 我们通常使用 mini-batch SGD 的方法来训练深度学习模型。ElasticDL worker
 会进行如下步骤来完成对一个 mini-batch 的训练：
@@ -201,7 +201,7 @@ ElasticDL master 中还为这些 task 维护了三个队列，todo/doing/done �
 新加入的 worker 可以直接向 master 请求分配数据分片，从而更方便地支持弹性调度
 worker 的数量。
 
-### ElasticDL client 命令行工具提交作业
+### ElasticDL Client 命令行工具提交作业
 
 在本地完成对模型的调试之后，我们可以借助 ElasticDL client 提供的命令行工具向
 Kubernetes
