@@ -49,7 +49,7 @@ ElasticDL 利用 TensorFlow eager execution 和 Kubernetes API，
 ElasticDL 的作业能自动扩容到所申请的资源量。这样既能缩短用户作业等待时间，
 也能提升集群资源利用率。
 
-## ElasticDL 基于 TensorFlow eager execution 实现容错和弹性调度
+## 基于 TensorFlow eager execution 实现分布式训练
 
 ElasticDL 是基于 TensorFlow eager execution 的 Kubernetes-native 弹性分布式
 深度学习系统。目前基于 TensorFlow 的分布式训练系统大致可以分为一下四类：
@@ -117,9 +117,10 @@ with tf.GradientTape() as tape:
 grads = tape.gradient(loss, self.get_trainable_items())
 ```
 
-而且上面这段代码不是需要用户写的，而是 ElasticDL 的一部分。ElasticDL 用户需要写的代码对应上述 Horovod 代码范例中的一行 —— 定义模型。
+而且上面这段代码不是需要用户写的，而是 ElasticDL 的一部分。
+ElasticDL 用户需要写的代码对应上述 Horovod 代码范例中的一行 —— 定义模型。
 
-## ElasticDL 基于 Kubernetes-native 的弹性调度
+## Kubernetes-native 的弹性调度
 
 ElasticDL 通过实现一个 Kubernetes-native 的框架，调用 TensorFlow 2.x
 来实现弹性深度学习。ElasticDL 没有选择开发 Kubernetes Operator，
@@ -151,7 +152,7 @@ master 无法通知调度系统重启进程，也无法得知新启动的进程�
 只能接受资源紧张时一些进程被抢占而挂掉的事实，
 而不能在其他作业释放资源后增加进程充分利用空闲资源。
 
-## ElasticDL 弹性调度 Benchmark
+## 弹性调度 Benchmark
 
 为了说明 ElasticDL 弹性调度可以带来用户体验和集群利用率的双丰收，我们做了三个
 实验来对比弹性调度和刚性调度的性能。
