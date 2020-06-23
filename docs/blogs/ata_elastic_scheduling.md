@@ -126,7 +126,7 @@ AllReduce 分布式策略来更新模型参数。
 ElasticDL 通过实现一个 Kubernetes-native 的框架，调用 TensorFlow 2.x
 来实现弹性深度学习训练。ElasticDL 没有选择开发 Kubernetes Operator，
 是因为 Operator 只能管理作业集群状态，不能感知训练过程，
-从不能动态调整训练过程中的进程数量。
+从而不能动态调整训练过程中的进程数量。
 所以 ElasticDL 通过在 Kubernetes 上创建
 master 进程来控制深度学习训练作业的弹性调度。
 
