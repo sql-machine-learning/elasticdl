@@ -13,7 +13,23 @@
 
 
 def main():
-    pass
+    """
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+    subparsers.required = True
+
+    zoo_parser = subparsers.add_parser("zoo")
+    zoo_subparsers = zoo_parser.add_subparsers()
+    zoo_init_parser = zoo_subparsers.add_parser("init")
+    zoo_init_parser.add_argument()
+    zoo_build_parser = zoo_subparsers.add_parser("build")
+    zoo_push_parser = zoo_subparsers.add_parser("push")
+
+    train_parser = subparsers.add_parser("train")
+
+    args, _ = parser.parse_known_args()
+    print(args)
+    """
 
 
 if __name__ == "__main__":
