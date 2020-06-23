@@ -13,7 +13,7 @@ dependencies such as TensorFlow, grpcio, etc.
 
 To improve the user experience, we need a light-weight ElasticDL client. It
 only has depedency on docker and Kubernetes Api. In this doc, we are
-discusssing about this command-line client tool.
+discussing about this command-line client tool.
 
 ## User Story
 
