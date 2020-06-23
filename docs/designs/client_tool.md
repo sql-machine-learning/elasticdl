@@ -11,9 +11,9 @@ Currently we have a client but it's tightly coupled with the main package. It's
 too heavy that users need pip install the whole elasticdl package and lots of
 dependencies such as TensorFlow, grpcio, etc.
 
-To improve the user experience, we need a light-weight ElasticDL client. It
-only has depedency on docker and Kubernetes Api. In this doc, we are
-discussing about this command-line client tool.
+To improve the user experience, the client should be light-weight. It only has
+depedency on docker and Kubernetes Api. In this doc, we are discussing about
+this command-line client tool.
 
 ## User Story
 
