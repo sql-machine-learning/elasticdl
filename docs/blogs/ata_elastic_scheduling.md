@@ -48,7 +48,7 @@ ElasticDL 利用 TensorFlow eager execution 和 Kubernetes API，
 当集群中有其他作业释放资源时，可以启动新的进程加入到训练作业中，
 加速模型迭代。这样既能缩短用户作业等待时间，也能提升集群资源利用率。
 
-## 基于 TensorFlow eager execution 实现分布式训练
+## 基于 TensorFlow Eager Execution 实现分布式训练
 
 目前基于 TensorFlow 的分布式训练系统大致可以分为以下四类：
 
@@ -58,7 +58,7 @@ ElasticDL 利用 TensorFlow eager execution 和 Kubernetes API，
 | above TensorFlow API | Uber Horovod | ElasticDL |
 
 如上文解释，我们没法通过修改 runtime 实现完备的主动的容错和弹性调度。
-ElasticDL 和 Uber Horovod 都是在 TensorFlow API 上包一层。
+ElasticDL 和 Uber Horovod 都是在 TensorFlow API 基础上构建。
 ElasticDL 位于田字格的右下角，是为了利用 Kubernetes 来实现容错和弹性调度。
 
 Horovod 基于 TensorFlow 1.x。
@@ -66,13 +66,13 @@ Horovod 基于 TensorFlow 1.x。
 然后收集 gradients，并且通过 AllReduce 调用汇聚 gradients 并且更新模型。
 Horovod 也是平台无关的，所以它提供的 AllReduce 操作不支持容错和弹性调度。
 这一点和 ElasticDL 不一样。和 ElasticDL 一样的是，
-Horovod 需要从 TensorFlow 偷偷“截获” gradient。
+Horovod 需要从 TensorFlow 获取 gradient。
 在 TensorFlow 1.x 中，深度学习计算是表示成一个计算图（graph），
 并且由 TensorFlow runtime 解释执行。
-所以 Horovod 为了获得每个进程算的 gradients 并且 AllReduce 它们，
+所以 Horovod 为了获得每个进程算的 gradients 并且执行 AllReduce 操作，
 就得 hack 进入图执行的过程。为此，
 Horovod 要求用户使用特定的 optimizer 代替 TensorFlow 提供的 optimizer，
-从而可以在优化模型阶段透露出 gradients。
+从而可以在模型训练迭代阶段透露出 gradients。
 
 一个调用 Horovod 的用户程序的结构如下。
 其中标记为 (*) 和 (**) 的部 分是 Horovod 要求用户写的，
@@ -98,10 +98,10 @@ with tf.train.MonitoredTrainingSession(checkpoint_dir，config, hooks) as s:
 ElasticDL 没有这些问题，因为它依赖的是 TensorFlow 2.x eager execution。
 TensorFlow 2.x 主推的 eager execution
 采用和解释执行图完全不同的深度学习计算方式。
-类似 PyTorch 的做法，前向计算过程把对基本计算单元（operator）
-的调用记录在一个内存数据结构 tape 里，随后反向计算过程（计算 gradients）
-可以回溯这个 tape，以此调用 operator 对应的 gradient operator。
-这个 tape 提供一个操作让用户可以获取每个参数的 gradient。
+前向计算过程把对基本计算单元（operator）的调用记录在一个内存数据结构 tape 里，
+随后反向计算过程（计算 gradients）可以回溯这个 tape，
+以此调用 operator 对应的 gradient operator。
+我们可以调用 `tape.gradient` 方法来获取每个模型参数的gradient。
 
 ElasticDL 通过调用 TensorFlow 2.x API 可以很直接地获取 gradients：
 
@@ -124,9 +124,10 @@ AllReduce 分布式策略来更新模型参数。
 ## Kubernetes-native 的弹性调度
 
 ElasticDL 通过实现一个 Kubernetes-native 的框架，调用 TensorFlow 2.x
-来实现弹性深度学习训练。ElasticDL 没有选择开发 Kubernetes Operator，
-是因为 Operator 只能管理作业集群状态，不能感知训练过程，
-从而不能动态调整训练过程中的进程数量。
+来实现弹性深度学习训练。所谓 Kubernetes-native 指的是一个程序调用
+Kubernetes API 来起止进程。ElasticDL 没有选择开发 Kubernetes Operator，
+是因为 Operator 只能管理作业集群状态。像上面所说的，
+如果训练框架自身不支持容错和动态增加进程数，Operator 也无能为力。
 所以 ElasticDL 通过在 Kubernetes 上创建
 master 进程来控制深度学习训练作业的弹性调度。
 
