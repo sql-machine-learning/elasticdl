@@ -238,5 +238,5 @@ ElasticDL 采用 Parameter Server（PS）策略来进行分布式训练，
 PS 负责梯度汇总和参数更新。
 
 模型上线后，我们和使用 TensorFlow 原生分布式训练的模型进行了对比，
-线上点击率持平。同时在一个 namespace 下运行多个训练任务时，
-改 namespace 下的资源可以占满。
+线上点击率持平。同时在一个 Kubernetes namespace 下运行多个训练任务时，
+可以占满该 namespace 下的资源。
