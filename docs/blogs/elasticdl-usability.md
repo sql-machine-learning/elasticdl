@@ -2,8 +2,7 @@
 
 ## 分布式深度学习程序难写
 
-一个深度学习的训练任务往往需要较多的训练数据，和较长的训练时间。一个通常的做法是
-把单机程序给分布式化，利用集群的资源，启动多个 worker，来共同完成一个训练任务。
+在工业场景中，我们往往需要在海量数据上完成一个深度学习训练任务，这要求我们利用集群的资源，通过分布式训练来缩短时间。
 
 分布式深度学习程序的编写是相对困难的，编程者既要了解深度学习，也要了解分布式系统
 开发。
@@ -13,11 +12,11 @@
 随着计算规模的增加，workers
 进程数目也会增加。当计算规模很大时，包含数十个进程的作业在执行过程中一个进程都不
 挂的概率几乎是0。
-如果一个进程挂掉，则整个作业重启，那么这个作业会陷入永不停歇的重启，无法结束。
+如果一个进程挂掉，则整个作业重启，那么重启之后可能又会有进程挂掉导致重启，于是作业不断陷入重启。
 此时，需要结合深度学习训练算法的数学性质，设计容错机制。
 这要求编程者必须同时是深度学习和分布式系统的专家。
 
-TensorFlow 是当今最受欢迎的深度学习框架。在蚂蚁金服内部，TensorFlow
+TensorFlow 是当今最受欢迎的深度学习平台。在蚂蚁集团内部，TensorFlow
 在诸多业务场景中被广泛使用。
 Kubernetes 是目前最先进的分布式操作系统，是公有云和私有云的事实工业标准。
 因此，在本文中我们重点讨论在 Kubernetes 上运行 TensorFlow 分布式训练程序的解决方案。
@@ -29,10 +28,11 @@ Kubernetes 是目前最先进的分布式操作系统，是公有云和私有云
 
 | 分布式策略 | 模型定义 | 任务提交工具 |
 | --- | --- | --- |
-| ParameterServer | TensorFlow Estimator | Kubeflow TF-operator |
+| ParameterServer | TensorFlow Estimator API | Kubeflow TF-operator |
 | AllReduce | Keras + Horovod | Kubeflow MPI-operator |
+| AllReduce | TensorFlow Estimator/Keras API | Kubeflow TF-operaror |
 
-我们发现 TensorFlow Estimator 仅支持 graph execution，不支持 eager
+我们发现 TensorFlow Estimator API 仅支持 graph execution，不支持 eager
 execution，调试代码和网络各层输出比较麻烦。并且，用户需要组合使用不同的工具，来
 编写不同分布式策略的训练程序。
 
@@ -40,8 +40,7 @@ TensorFlow 2.x 默认支持 eager execution，并且推荐使用更加精简的 
 来定义模型。
 TensorFlow Keras API 提高开发效率，降低使用门槛，与 eager execution
 配合之后，使得程序更为直观，也更易调试。
-目前 TensorFlow 2.x 的 ParameterServer 和 AllReduce 分布式策略对 Keras API
-的支持还不完善。
+目前 TensorFlow 2.x Keras API 还暂不支持 ParameterServer 分布式策略，对 AllReduce 分布式策略提供了实验性的支持。
 
 我们为此设计和开发了 ElasticDL
 分布式计算框架，让编程者只需了解深度学习，不需要了解分布式系统开发。
@@ -60,9 +59,8 @@ API，不需要对分布式训练有任何背景知识。
 这些函数也可以在单机上用小数据做调试验证，然后就可以放心地交给 ElasticDL
 做分布式的容错的大规模训练了。
 
-ElasticDL 一改 Kubeflow 通过增加 Kubernetes operator 的方式定制
-Kubernetes 的思路，
-为每个作业引入一个 master 进程（类似 Google MapReduce）。
+不同于 Kubeflow 通过 Kubernetes Operator 的方式定制
+Kubernetes 的思路，ElasticDL 为每个作业引入一个 master 进程（类似 Google MapReduce）。
 这个 master 进程作为作业的一部分，而不是 Kubernetes 的一部分，
 不仅了解集群情况，更了解深度学习作业本身，所以有充分的信息来做更优的调度。
 比如 master 进程可以请 Kubernetes 把两个 workers 启动在同一台物理机上，共用一个
