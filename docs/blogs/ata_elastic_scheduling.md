@@ -18,9 +18,8 @@ Kubernetes API 启动进程。类似的，很多诞生在 Kubernetes 之前的�
 这类应用或者框架特定的 controller 被 CoreOS 公司的工程师们称为
 Kubernetes Operator，后来演化成了行业术语。
 
-和早年间用 MPI 运行分布式深度学习作业一样，kubeflow/tf-operator
-并不支持弹性调度。Kubeflow 会询问 Kubernetes
-计划分配哪几台机器来运行一个分布式作业中的各个进程，
+在向 Kubernetes 集群提交作业时，kubeflow/tf-operator
+会询问 Kubernetes 计划分配哪几台机器来运行一个分布式作业中的各个进程，
 随后告知每个进程所有其它进程的 IP 地址和 port，
 从而保证一个作业里各个进程之间互相知道对方。
 
@@ -33,6 +32,8 @@ TensorFlow 1.x runtime 程序。这些进程互相通信，
 或者失败（fail），则整个大 graph 的执行就失败了。最近随着 TensorFlow runtime
 的改进，作业可以依赖剩下的进程继续执行，
 不过也不会因为随后集群里出现空闲资源而增加进程的数量。
+所以使用 kubeflow/tf-operator 提交 TensorFlow
+分布式作业并不支持弹性调度。
 
 Kubeflow 可以在 Kubernetes 上发挥 TensorFlow 原生的分布式计算能力，
 但是因为后者并不能弹性调度运行资源，所以 Kubeflow 并不能无中生有。
@@ -197,10 +198,15 @@ master 无法通知调度系统重启进程，也无法得知新启动的进程�
 
 运行各种在线服务的生产集群，通常需要留出余量资源，以应付突然增⻓的用户请求量。
 我们希望利用这些“余量”来做深度学习训练，从而提升集群利用率。
+
 下面实验验证：通过用较低优先级运行 ElasticDL 训练作业，在用户请求增加的时候，
 Kubernetes 自动扩容在线服务(nginx)；此时 ElasticDL 作业自动释放资源，
 配合在线服务的扩容。当流量高峰过去之后，Kubernetes 自动缩容 nginx 服务，
 此时，ElasticDL 自动利用释放的资源来扩容训练任务。
+真实场景中，可以在 Kubernetes 上使用 [Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
+根据流量的大小来对在线服务进行伸缩。在本实验中，则是通过在特定的时间点，
+调用 `kubectl scale` 命令直接对在线服务进行伸缩，来去模拟流量的增加或者减少。
+集群中总共有 320个CPU，训练任务是 deepFM 二分类模型训练，运行时长约40分钟。
 
 ![CPU utilization with an nginx job](../images/utilized_cpu_with_nginx.jpg)
 
