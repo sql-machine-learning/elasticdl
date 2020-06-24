@@ -24,14 +24,14 @@ Kubernetes Operator，后来演化成了行业术语。
 随后告知每个进程所有其它进程的 IP 地址和 port，
 从而保证一个作业里各个进程之间互相知道对方。
 
-为什么需要让所有进程互相知道对方呢？这是 TensorFlow ps-based distribution
+为什么需要让所有进程互相知道对方呢？这是 TensorFlow 1.x ps-based distribution
 方式要求的。TenosrFlow 1.x 原生的分布式训练功能让一个作业中所有进程都执行
 TensorFlow 1.x runtime 程序。这些进程互相通信，
 互相协调成为一个“分布式 runtime”来解释执行表示深度学习计算过程的 graph。
 在开始分布式训练之初，graph 被 TensorFlow runtime 拆解成若干子 graph；
 每个进程负责执行一个子 graph —— 任何一个进程被抢占（preempted）
 或者失败（fail），则整个大 graph 的执行就失败了。最近随着 TensorFlow runtime
-的改进，作业可能不会失败了，而是剩下的进程继续执行，
+的改进，作业可以依赖剩下的进程继续执行，
 不过也不会因为随后集群里出现空闲资源而增加进程的数量。
 
 Kubeflow 可以在 Kubernetes 上发挥 TensorFlow 原生的分布式计算能力，
@@ -57,7 +57,8 @@ ElasticDL 利用 TensorFlow eager execution 和 Kubernetes API，
 | in TensorFlow runtime | TensorFlow's parameter server | TensorFlow distributed strategy|
 | above TensorFlow API | Uber Horovod | ElasticDL |
 
-如上文解释，我们没法通过修改 runtime 实现完备的主动的容错和弹性调度。
+如上文解释，我们没法通过修改 TensorFlow runtime
+实现完备的主动的容错和弹性调度。
 ElasticDL 和 Uber Horovod 都是在 TensorFlow API 基础上构建。
 ElasticDL 位于田字格的右下角，是为了利用 Kubernetes 来实现容错和弹性调度。
 
@@ -115,11 +116,8 @@ with tf.GradientTape() as tape:
 grads = tape.gradient(loss, self.get_trainable_items())
 ```
 
-而且上面这段代码不是需要用户写的，而是 ElasticDL 的一部分。
-ElasticDL 用户需要写的代码对应上述 Horovod 代码范例中的一行 —— 定义模型。
-
-ElasticDL 通过 tape 获取 gradients 后可以通过 Parameter Server 或者
-AllReduce 分布式策略来更新模型参数。
+ElasticDL通过 tape 获取 gradient 后，
+可以通过 Parameter Server 或者 AllReduce 分布式策略来更新模型参数。
 
 ## Kubernetes-native 的弹性调度
 
@@ -136,9 +134,9 @@ ElasticDL 的 master 会根据数据索引将数据分片，然后为每个数�
 会向 master 请求 task。worker 收到来自 master 分发的 task 后，
 会读取 task 对应的数据分片来前向计算和梯度计算。
 
-当有 worker 失败时，master 通过 Kubernetes API 能感知失败原因。
-如果是因为被抢占导致的失败，master 会回收其计算的 task，
-然后将其分发给其他正常 worker 重新计算。同时 master 会尝试通过 Kubernetes API
+同时，master 会通过 Kubernetes API 观察集群中每个worker的状态。
+当有 worker 被高优先级作业抢占后，master 会回收该 worker 的未完成task，
+然后重新分发给其他的 worker。同时 master 会尝试通过 Kubernetes API
 重新拉起被抢占的 worker。等到资源充足时，worker 进程会被重新启动，
 并加入训练作业。
 
@@ -158,14 +156,15 @@ master 无法通知调度系统重启进程，也无法得知新启动的进程�
 ## 弹性调度 Benchmark
 
 为了说明 ElasticDL 弹性调度可以带来用户体验和集群利用率的双丰收，我们做了三个
-实验来对比弹性调度和刚性调度的性能。
+实验来对比弹性调度和无弹性调度的性能。
 
 ### 实验一：多个深度学习训练作业同时在集群上启动
 
 考虑两个深度学习训练作业需要的资源总和略超过集群的情况：
 
-- 如果没有弹性调度，则两个作业顺序执行。第二个作业的发起人需要等很久 —— 用户
-体验不好。并且任何时刻只有一个作业在运行 —— 集群资源用不满。
+- 如果没有弹性调度，第二个作业需要等待第一个作业完成后才能启动。
+第二个作业的发起人需要等很久 —— 用户体验不好。
+并且任何时刻只有一个作业在运行 —— 集群资源用不满。
 - 如果有弹性调度，则两个作业并发执行，虽然后启动的作业拿不到期待的全部资源，
 但是也马上就开始执行了 —— 用户体验好。因为两个作业并发 —— 集群被用满。
 
@@ -188,10 +187,9 @@ master 无法通知调度系统重启进程，也无法得知新启动的进程�
 总结:
 
 - 用户等待作业启动时间几乎是 0。这对于深度学习很重要，
-因为用户最关注的是第一个迭代尽快开始 —— 如果第一个迭代 fail 了，
-很可能是用户程序的 bug。
+因为用户最关注的是第一个迭代能否执行成功，如果失败了，能够快速发现用户程序的 bug。
 - 集群利用率高。第二个弹性调度实验执行期间，有一段时间集群利用率是 100%；
-其他时间也不低于第一个刚性调度实验。
+其他时间也不低于第一个无弹性调度实验。
 - 作业完成更快。第二个试验里，两个作业用了约 1100 秒；
 第一个实验里需要约 1300 秒。
 
@@ -212,10 +210,12 @@ Kubernetes 自动扩容在线服务(nginx)；此时 ElasticDL 作业自动释放
 
 ### 实验三：训练时调整 Worker 数量不影响收敛性
 
-有用户担心训练过程中 worker 的数量发生变化，会导致不收敛。
-实际情况下从未发生这类问题。使用 [Kaggle Display Advertising Challenge](https://www.kaggle.com/c/criteo-display-ad-challenge)
-的数据集，用 ElasticDL 和用刚性调度的 kubeflow/tf-operator 分别
-训练 wide & deep 模型，收敛曲线如下:
+有用户担心训练过程中 worker 的数量发生变化，会导致模型不收敛。
+实际情况下并未发生这类问题。使用 [Kaggle Display Advertising Challenge](https://www.kaggle.com/c/criteo-display-ad-challenge)
+的数据集，其中训练样本 4 千万条，测试样本 600 万条。
+用 ElasticDL 和用无弹性调度的 kubeflow/tf-operator 分别
+训练 wide & deep 模型。模型中 deep 包含 2 层 layer，输出单元数分别为
+8 和 4，激活函数才用 relu，模型收敛曲线如下:
 
 ![AUC with different worker number](../images/auc_with_different_workers.jpg)
 
@@ -231,7 +231,12 @@ ElasticDL 已经成功将蚂蚁花呗推荐场景的深度学习模型运行在 
 此推荐场景使用的是 Deep Interest Evolution Network [(DIEN)](https://arxiv.org/abs/1809.03672)
 来预估推荐的点击率。DIEN 模型的输入包括用户属性特征、
 商品属性特征和用户行为的序列特征，其中用户和商品属性特征是高维稀疏特征。
-所以模型首先需要通过 embedding 将稀疏特征降维成稠密矩阵，
+所以模型首先需要通过 embedding 将稀疏特征转成 embedding vector，
 然后进行给深度学习模型进行计算。因为 embedding 的规模很大，
 ElasticDL 采用 Parameter Server（PS）策略来进行分布式训练，
-将参数分散到多个 PS 节点上，worker 负责前向计算并获取梯度，PS 负责梯度更新。
+将参数分散到多个 PS 节点上，worker 负责前向计算并获取梯度，
+PS 负责梯度汇总和参数更新。
+
+模型上线后，我们和使用 TensorFlow 原生分布式训练的模型进行了对比，
+线上点击率持平。同时在一个 namespace 下运行多个训练任务时，
+改 namespace 下的资源可以占满。
