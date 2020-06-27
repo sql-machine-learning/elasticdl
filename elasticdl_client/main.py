@@ -13,17 +13,7 @@
 
 import argparse
 
-
-def zoo_init(args):
-    print("Initialize model zoo")
-
-
-def zoo_build(args):
-    print("Build model zoo")
-
-
-def zoo_push(args):
-    print("Push model zoo")
+from elasticdl_client.api import zoo_build, zoo_init, zoo_push
 
 
 def build_argument_parser():
