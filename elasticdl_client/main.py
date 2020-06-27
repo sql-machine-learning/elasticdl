@@ -27,12 +27,17 @@ def build_argument_parser():
     # elasticdl zoo push
     zoo_parser = subparsers.add_parser("zoo")
     zoo_subparsers = zoo_parser.add_subparsers()
+    zoo_subparsers.required = True
 
     zoo_init_parser = zoo_subparsers.add_parser("init")
     zoo_init_parser.set_defaults(func=zoo_init)
     zoo_init_parser.add_argument(
         "--base_image", type=str, default="python:latest"
     )
+    zoo_init_parser.add_argument(
+        "--extra_pypi_index", type=str, required=False
+    )
+    zoo_init_parser.add_argument("--cluster_spec", type=str, required=False)
 
     zoo_build_parser = zoo_subparsers.add_parser("build")
     zoo_build_parser.set_defaults(func=zoo_build)

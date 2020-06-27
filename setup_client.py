@@ -26,4 +26,7 @@ setup(
     python_requires=">=3.5",
     packages=find_packages(include=["elasticdl_client*"]),
     package_data={"": ["requirements.txt"]},
+    entry_points={
+        "console_scripts": ["elasticdl_client=elasticdl_client.main:main"]
+    },
 )
