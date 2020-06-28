@@ -13,8 +13,18 @@
 
 
 def add_zoo_init_arguments(parser):
-    parser.add_argument("--base_image", type=str, default="python:latest")
-    parser.add_argument("--extra_pypi_index", type=str, required=False)
+    parser.add_argument(
+        "--base_image",
+        type=str,
+        default="python:latest",
+        help="Base Docker image.",
+    )
+    parser.add_argument(
+        "--extra_pypi_index",
+        type=str,
+        help="The extra URLs of Python package repository indexes",
+        required=False,
+    )
     parser.add_argument(
         "--cluster_spec",
         type=str,
@@ -25,13 +35,25 @@ def add_zoo_init_arguments(parser):
 
 
 def add_zoo_build_arguments(parser):
-    parser.add_argument("path", type=str)
-    parser.add_argument("--image", type=str, required=True)
+    parser.add_argument(
+        "path", type=str, help="The path where the build context locate."
+    )
+    parser.add_argument(
+        "--image",
+        type=str,
+        required=True,
+        help="The name of the docker image we are building for"
+        "this model zoo.",
+    )
     add_docker_arguments(parser)
 
 
 def add_zoo_push_arguments(parser):
-    parser.add_argument("image", type=str)
+    parser.add_argument(
+        "image",
+        type=str,
+        help="The name of the docker image for this model zoo.",
+    )
     add_docker_arguments(parser)
 
 
