@@ -54,7 +54,6 @@ def build_argument_parser():
 def main():
     parser = build_argument_parser()
     args, _ = parser.parse_known_args()
-    print(args)
     args.func(args)
 
 

@@ -11,12 +11,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import docker
 from jinja2 import Template
 
 
 def zoo_init(args):
     print("Create the Dockerfile for the model zoo.")
+
+    cluster_spec_path = args.cluster_spec
+    cluster_spec_name = None
+    if cluster_spec_path:
+        if not os.path.exists(cluster_spec_path):
+            raise RuntimeError(
+                "The cluster spec {} doesn't exist".format(cluster_spec_path)
+            )
+        cluster_spec_name = os.path.dirname(cluster_spec_path)
+
     # Create the docker file
     # Build the content from the template and arguments
     tmpl_str = """\
@@ -28,14 +40,21 @@ RUN pip install elasticdl
 COPY . /model_zoo
 {% if EXTRA_PYPI_INDEX %}
 RUN pip install -r /model_zoo/requirements.txt\
-  --extra-index-url={{ EXTRA_PYPI_INDEX }}
-{% else %}
-RUN pip install -r /model_zoo/requirements.txt
+  --extra-index-url={{ EXTRA_PYPI_INDEX }}\
+{% else %}\
+RUN pip install -r /model_zoo/requirements.txt\
+{% endif %}
+
+{% if CLUSTER_SPEC_PATH and CLUSTER_SPEC_NAME  %}\
+COPY {{ CLUSTER_SPEC_PATH }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
 {% endif %}
 """
     template = Template(tmpl_str)
     docker_file_content = template.render(
-        BASE_IMAGE=args.base_image, EXTRA_PYPI_INDEX=args.extra_pypi_index
+        BASE_IMAGE=args.base_image,
+        EXTRA_PYPI_INDEX=args.extra_pypi_index,
+        CLUSTER_SPEC_PATH=cluster_spec_path,
+        CLUSTER_SPEC_NAME=cluster_spec_name,
     )
 
     with open("./Dockerfile", mode="w+") as f:
@@ -68,6 +87,6 @@ def _print_docker_progress(line):
         raise RuntimeError("Docker image build: " + error)
     stream = line.get("stream", None)
     if stream:
-        print(stream)
+        print(stream, end="")
     else:
         print(line)
