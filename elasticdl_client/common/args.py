@@ -37,7 +37,20 @@ def add_zoo_push_arguments(parser):
 
 def add_docker_arguments(parser):
     parser.add_argument(
-        "--docker_base_url", type=str, default="unix://var/run/docker.sock"
+        "--docker_base_url",
+        type=str,
+        help="URL to the Docker server",
+        default="unix://var/run/docker.sock",
     )
-    parser.add_argument("--docker_tlscert", type=str, default="")
-    parser.add_argument("--docker_tlskey", type=str, default="")
+    parser.add_argument(
+        "--docker_tlscert",
+        type=str,
+        help="Path to Docker client cert",
+        default="",
+    )
+    parser.add_argument(
+        "--docker_tlskey",
+        type=str,
+        help="Path to Docker client key",
+        default="",
+    )
