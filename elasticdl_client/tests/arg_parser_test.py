@@ -69,12 +69,3 @@ class ArgParserTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             args = ["zoo", "push"]
             args = self._parser.parse_args(args)
-
-    def test_parse_train(self):
-        pass
-
-    def test_parse_predict(self):
-        pass
-
-    def test_parse_evaluate(self):
-        pass
