@@ -27,7 +27,7 @@ def zoo_init(args):
             raise RuntimeError(
                 "The cluster spec {} doesn't exist".format(cluster_spec_path)
             )
-        cluster_spec_name = os.path.dirname(cluster_spec_path)
+        cluster_spec_name = os.path.basename(cluster_spec_path)
 
     # Create the docker file
     # Build the content from the template and arguments
@@ -65,7 +65,11 @@ def zoo_build(args):
     print("Build the image for the model zoo.")
     # Call docker api to build the image
     # Validate the image name schema
-    client = docker.APIClient(base_url="unix://var/run/docker.sock")
+    client = _get_docker_client(
+        docker_base_url=args.docker_base_url,
+        docker_tlscert=args.docker_tlscert,
+        docker_tlskey=args.docker_tlskey,
+    )
     for line in client.build(
         dockerfile="./Dockerfile",
         path=".",
@@ -79,6 +83,24 @@ def zoo_build(args):
 def zoo_push(args):
     print("Push the image for the model zoo.")
     # Call docker api to push the image to remote registry
+    client = _get_docker_client(
+        docker_base_url=args.docker_base_url,
+        docker_tlscert=args.docker_tlscert,
+        docker_tlskey=args.docker_tlskey,
+    )
+
+    for line in client.push(args.image, stream=True, decode=True):
+        _print_docker_progress(line)
+
+
+def _get_docker_client(docker_base_url, docker_tlscert, docker_tlskey):
+    if docker_tlscert and docker_tlskey:
+        tls_config = docker.tls.TLSConfig(
+            client_cert=(docker_tlscert, docker_tlskey)
+        )
+        return docker.APIClient(base_url=docker_base_url, tls=tls_config)
+    else:
+        return docker.APIClient(base_url=docker_base_url)
 
 
 def _print_docker_progress(line):

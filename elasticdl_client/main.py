@@ -35,18 +35,30 @@ def build_argument_parser():
     zoo_init_parser.add_argument(
         "--extra_pypi_index", type=str, required=False
     )
-    zoo_init_parser.add_argument("--cluster_spec", type=str, required=False)
+    zoo_init_parser.add_argument(
+        "--cluster_spec",
+        type=str,
+        help="The file that contains user-defined cluster specification,"
+        "the file path can be accessed by ElasticDL client.",
+        default="",
+    )
 
     # elasticdl zoo build
     zoo_build_parser = zoo_subparsers.add_parser("build")
     zoo_build_parser.set_defaults(func=zoo_build)
     zoo_build_parser.add_argument("path", type=str)
     zoo_build_parser.add_argument("--image", type=str, required=True)
+    zoo_build_parser.add_argument(
+        "--docker_base_url", type=str, default="unix://var/run/docker.sock"
+    )
 
     # elasticdl zoo push
     zoo_push_parser = zoo_subparsers.add_parser("push")
     zoo_push_parser.set_defaults(func=zoo_push)
     zoo_push_parser.add_argument("image", type=str)
+    zoo_build_parser.add_argument(
+        "--docker_base_url", type=str, default="unix://var/run/docker.sock"
+    )
 
     return parser
 
