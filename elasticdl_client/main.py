@@ -21,14 +21,12 @@ def build_argument_parser():
     subparsers = parser.add_subparsers()
     subparsers.required = True
 
-    # Initialize the parser for the commands
-    # elasticdl zoo init
-    # elasticdl zoo build
-    # elasticdl zoo push
+    # Initialize the parser for the `elasticdl zoo` commands
     zoo_parser = subparsers.add_parser("zoo")
     zoo_subparsers = zoo_parser.add_subparsers()
     zoo_subparsers.required = True
 
+    # elasticdl zoo init
     zoo_init_parser = zoo_subparsers.add_parser("init")
     zoo_init_parser.set_defaults(func=zoo_init)
     zoo_init_parser.add_argument(
@@ -39,11 +37,13 @@ def build_argument_parser():
     )
     zoo_init_parser.add_argument("--cluster_spec", type=str, required=False)
 
+    # elasticdl zoo build
     zoo_build_parser = zoo_subparsers.add_parser("build")
     zoo_build_parser.set_defaults(func=zoo_build)
     zoo_build_parser.add_argument("path", type=str)
     zoo_build_parser.add_argument("--image", type=str, required=True)
 
+    # elasticdl zoo push
     zoo_push_parser = zoo_subparsers.add_parser("push")
     zoo_push_parser.set_defaults(func=zoo_push)
     zoo_push_parser.add_argument("image", type=str)
