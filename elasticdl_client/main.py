@@ -55,6 +55,7 @@ def main():
     parser = build_argument_parser()
     args, _ = parser.parse_known_args()
     print(args)
+    args.func(args)
 
 
 if __name__ == "__main__":

@@ -20,7 +20,7 @@ def zoo_init(args):
     # Create the docker file
     # Build the content from the template and arguments
     tmpl_str = """\
-FROM {BASE_IMAGE} as base
+FROM {{ BASE_IMAGE }} as base
 
 RUN pip install elasticdl_preprocessing
 RUN pip install elasticdl
@@ -54,9 +54,20 @@ def zoo_build(args):
         tag=args.image,
         decode=True,
     ):
-        print(line)
+        _print_docker_progress(line)
 
 
 def zoo_push(args):
     print("Push the image for the model zoo.")
     # Call docker api to push the image to remote registry
+
+
+def _print_docker_progress(line):
+    error = line.get("error", None)
+    if error:
+        raise RuntimeError("Docker image build: " + error)
+    stream = line.get("stream", None)
+    if stream:
+        print(stream)
+    else:
+        print(line)
