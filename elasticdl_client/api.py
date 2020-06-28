@@ -17,7 +17,7 @@ import docker
 from jinja2 import Template
 
 
-def zoo_init(args):
+def init_zoo(args):
     print("Create the Dockerfile for the model zoo.")
 
     cluster_spec_path = args.cluster_spec
@@ -61,7 +61,7 @@ COPY {{ CLUSTER_SPEC_PATH }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
         f.write(docker_file_content)
 
 
-def zoo_build(args):
+def build_zoo(args):
     print("Build the image for the model zoo.")
     # Call docker api to build the image
     # Validate the image name schema
@@ -72,7 +72,7 @@ def zoo_build(args):
     )
     for line in client.build(
         dockerfile="./Dockerfile",
-        path=".",
+        path=args.path,
         rm=True,
         tag=args.image,
         decode=True,
@@ -80,7 +80,7 @@ def zoo_build(args):
         _print_docker_progress(line)
 
 
-def zoo_push(args):
+def push_zoo(args):
     print("Push the image for the model zoo.")
     # Call docker api to push the image to remote registry
     client = _get_docker_client(
