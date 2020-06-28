@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import os
+import shutil
 
 import docker
 from jinja2 import Template
@@ -20,6 +21,7 @@ from jinja2 import Template
 def init_zoo(args):
     print("Create the Dockerfile for the model zoo.")
 
+    # Copy cluster spec file to the current directory if specified
     cluster_spec_path = args.cluster_spec
     cluster_spec_name = None
     if cluster_spec_path:
@@ -27,6 +29,7 @@ def init_zoo(args):
             raise RuntimeError(
                 "The cluster spec {} doesn't exist".format(cluster_spec_path)
             )
+        shutil.copy2(cluster_spec_path, os.getcwd())
         cluster_spec_name = os.path.basename(cluster_spec_path)
 
     # Create the docker file
@@ -45,15 +48,14 @@ RUN pip install -r /model_zoo/requirements.txt\
 RUN pip install -r /model_zoo/requirements.txt\
 {% endif %}
 
-{% if CLUSTER_SPEC_PATH and CLUSTER_SPEC_NAME  %}\
-COPY {{ CLUSTER_SPEC_PATH }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
+{% if CLUSTER_SPEC_NAME  %}\
+COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
 {% endif %}
 """
     template = Template(tmpl_str)
     docker_file_content = template.render(
         BASE_IMAGE=args.base_image,
         EXTRA_PYPI_INDEX=args.extra_pypi_index,
-        CLUSTER_SPEC_PATH=cluster_spec_path,
         CLUSTER_SPEC_NAME=cluster_spec_name,
     )
 
