@@ -11,9 +11,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
+
+from elasticdl_client.api import build_zoo, init_zoo, push_zoo
+from elasticdl_client.common import args
+
+
+def build_argument_parser():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers()
+    subparsers.required = True
+
+    # Initialize the parser for the `elasticdl zoo` commands
+    zoo_parser = subparsers.add_parser("zoo")
+    zoo_subparsers = zoo_parser.add_subparsers()
+    zoo_subparsers.required = True
+
+    # elasticdl zoo init
+    zoo_init_parser = zoo_subparsers.add_parser("init")
+    zoo_init_parser.set_defaults(func=init_zoo)
+    args.add_zoo_init_arguments(zoo_init_parser)
+
+    # elasticdl zoo build
+    zoo_build_parser = zoo_subparsers.add_parser("build")
+    zoo_build_parser.set_defaults(func=build_zoo)
+    args.add_zoo_build_arguments(zoo_build_parser)
+
+    # elasticdl zoo push
+    zoo_push_parser = zoo_subparsers.add_parser("push")
+    zoo_push_parser.set_defaults(func=push_zoo)
+    args.add_zoo_push_arguments(zoo_push_parser)
+
+    return parser
+
 
 def main():
-    pass
+    parser = build_argument_parser()
+    args, _ = parser.parse_known_args()
+    args.func(args)
 
 
 if __name__ == "__main__":

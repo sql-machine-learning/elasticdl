@@ -37,8 +37,3 @@ cloud, namely, Google Kubernetes Engine (GKE).
 We have also provided [this tutorial](model_building.md) to illustrate how to
 define necessary components that will be used for ElasticDL model training,
 evaluation, and prediction.
-
-## Data Preparation
-
-[This tutorial](data_preparation.md) demonstrates how to prepare datasets into
-the right format that can be used by ElasticDL.

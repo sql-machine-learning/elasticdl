@@ -1,4 +1,4 @@
-grpcio-tools
+grpcio-tools==1.29.0
 kubernetes==10.1.0
 docker
 pyrecordio>=0.0.6
