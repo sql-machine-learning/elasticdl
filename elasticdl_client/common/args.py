@@ -212,10 +212,7 @@ def add_common_params(parser):
     """Common arguments for training/prediction/evaluation"""
     add_common_args_between_master_and_worker(parser)
     parser.add_argument(
-        "--image",
-        default="",
-        help="The pre-built image for this job. If set, "
-        "use this image instead of building a new one.",
+        "--image", default="", help="The docker image for this job.",
     )
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)
     parser.add_argument(
