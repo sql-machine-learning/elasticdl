@@ -28,7 +28,7 @@ from elasticdl_client.common.log_utils import default_logger as logger
 
 
 def init_zoo(args):
-    print("Create the Dockerfile for the model zoo.")
+    logger.info("Create the Dockerfile for the model zoo.")
 
     # Copy cluster spec file to the current directory if specified
     cluster_spec_path = args.cluster_spec
@@ -73,7 +73,7 @@ COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
 
 
 def build_zoo(args):
-    print("Build the image for the model zoo.")
+    logger.info("Build the image for the model zoo.")
     # Call docker api to build the image
     # Validate the image name schema
     client = _get_docker_client(
@@ -92,7 +92,7 @@ def build_zoo(args):
 
 
 def push_zoo(args):
-    print("Push the image for the model zoo.")
+    logger.info("Push the image for the model zoo.")
     # Call docker api to push the image to remote registry
     client = _get_docker_client(
         docker_base_url=args.docker_base_url,
@@ -126,6 +126,8 @@ def train(args):
             ],
         )
     )
+
+    _submit_job(args.image, args, container_args)
 
 
 def evaluate(args):
