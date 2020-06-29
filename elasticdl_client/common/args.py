@@ -36,7 +36,7 @@ def add_zoo_init_arguments(parser):
 
 def add_zoo_build_arguments(parser):
     parser.add_argument(
-        "path", type=str, help="The path where the build context locate."
+        "path", type=str, help="The path where the build context locates."
     )
     parser.add_argument(
         "--image",
@@ -76,3 +76,19 @@ def add_docker_arguments(parser):
         help="Path to Docker client key",
         default="",
     )
+
+
+def add_train_params(parser):
+    pass
+
+
+def add_evaluate_params(parser):
+    pass
+
+
+def add_predict_params(parser):
+    pass
+
+
+def add_common_params(parser):
+    pass

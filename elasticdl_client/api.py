@@ -59,7 +59,7 @@ COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
         CLUSTER_SPEC_NAME=cluster_spec_name,
     )
 
-    with open("./Dockerfile", mode="w+") as f:
+    with open("./Dockerfile", mode="w") as f:
         f.write(docker_file_content)
 
 
@@ -93,6 +93,22 @@ def push_zoo(args):
 
     for line in client.push(args.image, stream=True, decode=True):
         _print_docker_progress(line)
+
+
+def train(args):
+    pass
+
+
+def evaluate(args):
+    pass
+
+
+def predict(args):
+    pass
+
+
+def clean(args):
+    pass
 
 
 def _get_docker_client(docker_base_url, docker_tlscert, docker_tlskey):

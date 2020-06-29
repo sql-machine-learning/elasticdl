@@ -13,7 +13,15 @@
 
 import argparse
 
-from elasticdl_client.api import build_zoo, init_zoo, push_zoo
+from elasticdl_client.api import (
+    build_zoo,
+    clean,
+    evaluate,
+    init_zoo,
+    predict,
+    push_zoo,
+    train,
+)
 from elasticdl_client.common import args
 
 
@@ -41,6 +49,33 @@ def build_argument_parser():
     zoo_push_parser = zoo_subparsers.add_parser("push")
     zoo_push_parser.set_defaults(func=push_zoo)
     args.add_zoo_push_arguments(zoo_push_parser)
+
+    train_parser = subparsers.add_parser(
+        "train", help="Submit a ElasticDL distributed training job"
+    )
+    train_parser.set_defaults(func=train)
+    args.add_common_params(train_parser)
+    args.add_train_params(train_parser)
+
+    evaluate_parser = subparsers.add_parser(
+        "evaluate", help="Submit a ElasticDL distributed evaluation job"
+    )
+    evaluate_parser.set_defaults(func=evaluate)
+    args.add_common_params(evaluate_parser)
+    args.add_evaluate_params(evaluate_parser)
+
+    predict_parser = subparsers.add_parser(
+        "predict", help="Submit a ElasticDL distributed prediction job"
+    )
+    predict_parser.set_defaults(func=predict)
+    args.add_common_params(predict_parser)
+    args.add_predict_params(predict_parser)
+
+    clean_parser = subparsers.add_parser(
+        "clean", help="Clean up local docker images"
+    )
+    clean_parser.set_defaults(func=clean)
+    args.add_clean_params(clean_parser)
 
     return parser
 
