@@ -46,16 +46,15 @@ def init_zoo(args):
     tmpl_str = """\
 FROM {{ BASE_IMAGE }} as base
 
-RUN pip install elasticdl_preprocessing
-RUN pip install elasticdl
+RUN pip install elasticdl_preprocessing\
+  --extra-index-url={{ EXTRA_PYPI_INDEX }}
+
+RUN pip install elasticdl --extra-index-url={{ EXTRA_PYPI_INDEX }}
+ENV PATH /usr/local/lib/python3.6/dist-packages/elasticdl/go/bin:$PATH
 
 COPY . /model_zoo
-{% if EXTRA_PYPI_INDEX %}
 RUN pip install -r /model_zoo/requirements.txt\
-  --extra-index-url={{ EXTRA_PYPI_INDEX }}\
-{% else %}\
-RUN pip install -r /model_zoo/requirements.txt\
-{% endif %}
+  --extra-index-url={{ EXTRA_PYPI_INDEX }}
 
 {% if CLUSTER_SPEC_NAME  %}\
 COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\

@@ -26,8 +26,8 @@ def add_zoo_init_arguments(parser):
     parser.add_argument(
         "--extra_pypi_index",
         type=str,
+        default="https://pypi.org/simple",
         help="The extra URLs of Python package repository indexes",
-        required=False,
     )
     parser.add_argument(
         "--cluster_spec",
