@@ -292,32 +292,36 @@ class InstanceManager(object):
             if pod_name in self._failed_pods:
                 return
 
-            # When a pod fails with exit_code == 137, it may be deleted,
-            # preempted, or OOMkilled. Master will try to relaunch it.
-            # For OOMkilled, the relaunch is a workaround for memory leak
-            # issues in tf eager mode.
             relaunch_failed_pod = False
             if (
                 evt_type == "MODIFIED"
                 and phase == "Failed"
-                and evt_obj.status.container_statuses
-                and evt_obj.status.container_statuses[0].state.terminated
-                and evt_obj.status.container_statuses[
-                    0
-                ].state.terminated.exit_code
-                == 137
             ):
                 self._failed_pods.append(pod_name)
-                relaunch_failed_pod = True
-                logger.info(
-                    "Pod %s is killed with reason %s."
-                    % (
-                        pod_name,
-                        evt_obj.status.container_statuses[
-                            0
-                        ].state.terminated.reason,
+                # When a pod fails with exit_code == 137, it may be deleted,
+                # or preempted. Master will try to relaunch it.
+                if (
+                    evt_obj.status.container_statuses
+                    and evt_obj.status.container_statuses[0].state.terminated
+                    and evt_obj.status.container_statuses[
+                        0
+                    ].state.terminated.exit_code
+                    == 137
+                    and evt_obj.status.container_statuses[
+                        0
+                    ].state.terminated.reason
+                    != "OOMkilled"
+                ):
+                    relaunch_failed_pod = True
+                    logger.info(
+                        "Pod %s is killed with reason %s."
+                        % (
+                            pod_name,
+                            evt_obj.status.container_statuses[
+                                0
+                            ].state.terminated.reason,
+                        )
                     )
-                )
 
             if pod_name in self._worker_pod_name_to_id:
                 worker_id = self._worker_pod_name_to_id.get(pod_name)
