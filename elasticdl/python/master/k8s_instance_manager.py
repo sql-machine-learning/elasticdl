@@ -310,7 +310,7 @@ class InstanceManager(object):
                     and evt_obj.status.container_statuses[
                         0
                     ].state.terminated.reason
-                    != "OOMkilled"
+                    != "OOMKilled"
                 ):
                     relaunch_failed_pod = True
                     logger.info(
