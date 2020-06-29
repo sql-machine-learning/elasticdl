@@ -12,6 +12,12 @@
 # limitations under the License.
 
 
+class DistributionStrategy(object):
+    LOCAL = "Local"
+    PARAMETER_SERVER = "ParameterServerStrategy"
+    ALLREDUCE = "AllreduceStrategy"
+
+
 class BashCommandTemplate(object):
     REDIRECTION = " 2>&1 | tee {}"
     SET_PIPEFAIL = "set -o pipefail;"

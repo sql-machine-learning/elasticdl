@@ -13,6 +13,8 @@
 
 from itertools import chain
 
+from elasticdl_client.common.constants import DistributionStrategy
+
 
 def add_zoo_init_arguments(parser):
     parser.add_argument(
@@ -202,8 +204,312 @@ def add_predict_params(parser):
     )
 
 
-def add_common_params(parser):
+def add_clean_params(parser):
     pass
+
+
+def add_common_params(parser):
+    """Common arguments for training/prediction/evaluation"""
+    add_common_args_between_master_and_worker(parser)
+    parser.add_argument(
+        "--image",
+        default="",
+        help="The pre-built image for this job. If set, "
+        "use this image instead of building a new one.",
+    )
+    parser.add_argument("--job_name", help="ElasticDL job name", required=True)
+    parser.add_argument(
+        "--master_resource_request",
+        default="cpu=0.1,memory=1024Mi",
+        type=str,
+        help="The minimal resource required by master, "
+        "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1",
+    )
+    parser.add_argument(
+        "--master_resource_limit",
+        type=str,
+        default="",
+        help="The maximal resource required by master, "
+        "e.g. cpu=0.1,memory=1024Mi,disk=1024Mi,gpu=1, "
+        "default to master_resource_request",
+    )
+    parser.add_argument(
+        "--num_workers", type=int, help="Number of workers", default=0
+    )
+    parser.add_argument(
+        "--worker_resource_request",
+        default="cpu=1,memory=4096Mi",
+        type=str,
+        help="The minimal resource required by worker, "
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+    )
+    parser.add_argument(
+        "--worker_resource_limit",
+        type=str,
+        default="",
+        help="The maximal resource required by worker, "
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1,"
+        "default to worker_resource_request",
+    )
+    parser.add_argument(
+        "--master_pod_priority",
+        default="",
+        help="The requested priority of master pod",
+    )
+    parser.add_argument(
+        "--worker_pod_priority",
+        default="",
+        help="The requested priority of worker pod, we support following"
+        "configs: high/low/high=0.5. The high=0.5 means that half"
+        "worker pods have high priority, and half worker pods have"
+        "low priority. The default value is low",
+    )
+    parser.add_argument(
+        "--num_ps_pods", type=int, help="Number of PS pods", default=1
+    )
+    parser.add_argument(
+        "--ps_resource_request",
+        default="cpu=1,memory=4096Mi",
+        type=str,
+        help="The minimal resource required by worker, "
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1",
+    )
+    parser.add_argument(
+        "--ps_resource_limit",
+        default="",
+        type=str,
+        help="The maximal resource required by worker, "
+        "e.g. cpu=1,memory=1024Mi,disk=1024Mi,gpu=1,"
+        "default to worker_resource_request",
+    )
+    parser.add_argument(
+        "--ps_pod_priority",
+        default="",
+        help="The requested priority of PS pod",
+    )
+    parser.add_argument(
+        "--volume",
+        default="",
+        type=str,
+        help="The Kubernetes volume information, "
+        "the supported volumes are `persistentVolumeClaim` and `hostPath`,"
+        'e.g. "claim_name=c1,mount_path=/path1" for `persistentVolumeClaim`,'
+        '"host_path=c0,mount_path=/path0" for `hostPath`,'
+        'or "host_path=c0,mount_path=/path0,type=Directory" for `hostPath`,'
+        '"host_path=c0,mount_path=/path0;claim_name=c1,mount_path=/path1" for'
+        "multiple volumes",
+    )
+    parser.add_argument(
+        "--image_pull_policy",
+        default="Always",
+        help="The image pull policy of master and worker",
+        choices=["Never", "IfNotPresent", "Always"],
+    )
+    parser.add_argument(
+        "--restart_policy",
+        default="Never",
+        help="The pod restart policy when pod crashed",
+        choices=["Never", "OnFailure", "Always"],
+    )
+    parser.add_argument(
+        "--envs",
+        type=str,
+        default="",
+        help="Runtime environment variables. (key1=value1,key2=value2), "
+        "comma is supported in value field",
+    )
+    parser.add_argument(
+        "--extra_pypi_index",
+        default="https://pypi.org/simple",
+        help="The extra URLs of Python package repository indexes",
+    )
+    parser.add_argument(
+        "--namespace",
+        default="default",
+        type=str,
+        help="The name of the Kubernetes namespace where ElasticDL "
+        "pods will be created",
+    )
+    parser.add_argument(
+        "--num_minibatches_per_task",
+        type=int,
+        help="The number of minibatches per task",
+        required=True,
+    )
+    parser.add_argument(
+        "--cluster_spec",
+        help="The file that contains user-defined cluster specification,"
+        "the file path can be accessed by ElasticDL client.",
+        default="",
+    )
+    parser.add_argument(
+        "--yaml",
+        type=str,
+        default="",
+        help="File path for dumping ElasticDL job YAML specification. "
+        "Note that, if users specify --yaml, the client wouldn't submit "
+        "the job automatically, and users need to launch the job through "
+        "command `kubectl create -f path_to_yaml_file`.",
+    )
+    add_bool_param(
+        parser=parser,
+        name="--force_use_kube_config_file",
+        default=False,
+        help="If true, force to load the cluster config from ~/.kube/config "
+        "while submitting the ElasticDL job. Otherwise, if the client is in a "
+        "K8S environment, load the incluster config, if not, load the kube "
+        "config file.",
+    )
+    # delete this argument after finishing Go-based PS implementation
+    add_bool_param(
+        parser=parser,
+        name="--use_go_ps",
+        default=False,
+        help="True for Go-based PS, False for Python-based PS",
+    )
+    parser.add_argument(
+        "--aux_params",
+        type=str,
+        default="",
+        help="Auxiliary parameters for misc purposes such as debugging."
+        "The auxiliary parameters in a string separated "
+        'by semi-colon used to debug , e.g. "param1=1; param2=2" '
+        "Supported auxiliary parameters: disable_relaunch",
+    )
+    parser.add_argument(
+        "--log_file_path",
+        type=str,
+        default="",
+        help="The path to save logs (e.g. stdout, stderr)",
+    )
+
+
+def add_common_args_between_master_and_worker(parser):
+    parser.add_argument(
+        "--minibatch_size",
+        help="Minibatch size for worker",
+        type=int,
+        required=True,
+    )
+    parser.add_argument(
+        "--model_zoo",
+        help="The directory that contains user-defined model files "
+        "or a specific model file. If set `image_base`, the path should"
+        "be accessed by ElasticDL client. If set `image_name`, it is"
+        "the path inside this pre-built image.",
+        required=True,
+    )
+    parser.add_argument(
+        "--log_level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        type=str.upper,
+        default="INFO",
+        help="Set the logging level",
+    )
+    parser.add_argument(
+        "--dataset_fn",
+        type=str,
+        default="dataset_fn",
+        help="The name of the dataset function defined in the model file",
+    )
+    parser.add_argument(
+        "--loss",
+        type=str,
+        default="loss",
+        help="The name of the loss function defined in the model file",
+    )
+    parser.add_argument(
+        "--optimizer",
+        type=str,
+        default="optimizer",
+        help="The name of the optimizer defined in the model file",
+    )
+    parser.add_argument(
+        "--callbacks",
+        type=str,
+        default="callbacks",
+        help="Optional function to add callbacks to behavior during"
+        "training, evaluation and inference.",
+    )
+    parser.add_argument(
+        "--eval_metrics_fn",
+        type=str,
+        default="eval_metrics_fn",
+        help="The name of the evaluation metrics function defined "
+        "in the model file",
+    )
+    parser.add_argument(
+        "--custom_data_reader",
+        type=str,
+        default="custom_data_reader",
+        help="The custom data reader defined in the model file",
+    )
+    parser.add_argument(
+        "--model_def",
+        type=str,
+        required=True,
+        help="The import path to the model definition function/class in the "
+        'model zoo, e.g. "cifar10_subclass.cifar10_subclass.CustomModel"',
+    )
+    parser.add_argument(
+        "--model_params",
+        type=str,
+        default="",
+        help="The model parameters in a string separated by semi-colon "
+        'used to instantiate the model, e.g. "param1=1; param2=2"',
+    )
+    parser.add_argument(
+        "--get_model_steps",
+        type=int,
+        default=1,
+        help="Worker will get_model from PS every this many steps",
+    )
+    parser.add_argument(
+        "--data_reader_params",
+        type=str,
+        default="",
+        help="The data reader parameters in a string separated by semi-colon "
+        'used to instantiate the data reader, e.g. "param1=1; param2=2"',
+    )
+    parser.add_argument(
+        "--distribution_strategy",
+        type=str,
+        choices=[
+            "",
+            DistributionStrategy.LOCAL,
+            DistributionStrategy.PARAMETER_SERVER,
+            DistributionStrategy.ALLREDUCE,
+        ],
+        default="",
+        help="Master will use a distribution policy on a list of devices "
+        "according to the distributed strategy, "
+        'e.g. "ParameterServerStrategy" or "AllreduceStrategy" or "Local"',
+    )
+    parser.add_argument(
+        "--checkpoint_steps",
+        type=int,
+        help="Save checkpoint every this many steps."
+        "If 0, no checkpoints to save.",
+        default=0,
+    )
+    parser.add_argument(
+        "--checkpoint_dir",
+        help="The directory to store the checkpoint files",
+        default="",
+    )
+    parser.add_argument(
+        "--keep_checkpoint_max",
+        type=int,
+        help="The maximum number of recent checkpoint files to keep."
+        "If 0, keep all.",
+        default=0,
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="",
+        help="The path to save the final trained model",
+    )
 
 
 def parse_envs(arg):
