@@ -57,7 +57,7 @@ API，不需要对分布式训练有任何背景知识。
 这些函数也可以在单机上用小数据做调试验证，然后就可以放心地交给 ElasticDL
 做分布式的容错的大规模训练了。
 
-不同于 Kubeflow 通过 Kubernetes Operator 的方式定制
+不同于 Kubeflow 通过增加 Kubernetes Operator 来定制
 Kubernetes 的思路，ElasticDL 为每个作业引入一个 master（类似于 Google MapReduce）。
 这个 master 作为作业的一部分，而不是 Kubernetes 的一部分，
 不仅了解集群情况，更了解深度学习作业本身，所以有充分的信息来做更优的调度。
