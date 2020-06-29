@@ -49,6 +49,7 @@ def build_argument_parser():
     zoo_push_parser.set_defaults(func=push_zoo)
     args.add_zoo_push_arguments(zoo_push_parser)
 
+    # elasticdl train
     train_parser = subparsers.add_parser(
         "train", help="Submit a ElasticDL distributed training job"
     )
@@ -56,6 +57,7 @@ def build_argument_parser():
     args.add_common_params(train_parser)
     args.add_train_params(train_parser)
 
+    # elasticdl evaluate
     evaluate_parser = subparsers.add_parser(
         "evaluate", help="Submit a ElasticDL distributed evaluation job"
     )
@@ -63,6 +65,7 @@ def build_argument_parser():
     args.add_common_params(evaluate_parser)
     args.add_evaluate_params(evaluate_parser)
 
+    # elasticdl predict
     predict_parser = subparsers.add_parser(
         "predict", help="Submit a ElasticDL distributed prediction job"
     )
