@@ -12,7 +12,6 @@
 # limitations under the License.
 
 import os
-import threading
 import traceback
 
 import yaml
@@ -56,7 +55,6 @@ class Client(object):
         image_name,
         namespace,
         job_name,
-        event_callback=None,
         cluster_spec="",
         force_use_kube_config_file=False
     ):
@@ -69,8 +67,6 @@ class Client(object):
                 pods will be created.
             job_name: ElasticDL job name, should be unique in the namespace.
                 Used as pod name prefix and value for "elasticdl" label.
-            event_callback: If not None, an event watcher will be created and
-                events passed to the callback.
             force_use_kube_config_file: If true, force to load the cluster
                 config from ~/.kube/config. Otherwise, if it's in a process
                 running in a K8S environment, it loads the incluster config,
@@ -98,11 +94,6 @@ class Client(object):
         self.namespace = namespace
         self.job_name = job_name
         self._image_name = image_name
-        self._event_cb = event_callback
-        if self._event_cb:
-            threading.Thread(
-                target=self._watch, name="event_watcher", daemon=True
-            ).start()
         self.cluster = None
         if cluster_spec:
             cluster_spec_module = load_module(cluster_spec)
