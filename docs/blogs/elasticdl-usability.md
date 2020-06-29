@@ -2,17 +2,16 @@
 
 ## 分布式深度学习程序难写
 
-在工业场景中，我们往往需要在海量数据上完成一个深度学习训练任务，这要求我们利用集群的资源，通过分布式训练来缩短时间。
+在工业场景中，我们经常需要利用集群资源，在海量数据上完成分布式深度学习训练任务。
 
 分布式深度学习程序的编写是相对困难的，编程者既要了解深度学习，也要了解分布式系统
 开发。
-在一个分布式深度学习系统中，需要启动和监控若干个 workers
-进程，对数据和计算任务进行拆分，并且分发给 workers。
-此外，还需要考虑 workers 之间的通信（communication）和 同步（synchronization）。
-随着计算规模的增加，workers
-进程数目也会增加。当计算规模很大时，包含数十个进程的作业在执行过程中一个进程都不
+在一个分布式深度学习系统中，需要启动和监控若干个 worker，对数据和计算任务进行拆分，并且分发给 workers。
+此外，还需要考虑 worker 之间的通信（communication）和 同步（synchronization）。
+随着计算规模的增加，worker
+数目也会增加。当计算规模很大时，包含数十个 worker 的作业在执行过程中一个 worker 都不
 挂的概率几乎是0。
-如果一个进程挂掉，则整个作业重启，那么重启之后可能又会有进程挂掉导致重启，于是作业不断陷入重启。
+如果一个 worker 挂掉，则整个作业重启，那么重启之后可能又会有 worker 挂掉导致重启，于是作业不断陷入重启。
 此时，需要结合深度学习训练算法的数学性质，设计容错机制。
 这要求编程者必须同时是深度学习和分布式系统的专家。
 
@@ -47,11 +46,12 @@ TensorFlow Keras API 提高开发效率，降低使用门槛，与 eager executi
 同时，ElasticDL 从易用性的角度出发，直接支持了 TensorFlow 2.x 的 Keras API。
 
 就像 MapReduce 框架中只需要用户完形填空两个函数：map 和 reduce，ElasticDL
-只需要用户填写 forward、cost、feed 三个函数。
+只需要用户填写 forward、loss、optimizer、feed、函数。
 其中 forward 定义深度学习的前向计算过程，
 ElasticDL 会调用 TensorFlow eager mode 中提供的 Gradient Tape 接口，
 来自动推导对应的后向计算过程（backward pass）；
-cost 指定模型训练时使用的 cost 函数；
+loss 指定模型训练时使用的损失函数；
+optimizer 指定模型训练时使用的优化器；
 feed 用来定制化训练数据到 TensorFlow 的 tensor的转换过程。
 
 所有的这些函数的编程只需要了解 TensorFlow
@@ -63,7 +63,7 @@ API，不需要对分布式训练有任何背景知识。
 Kubernetes 的思路，ElasticDL 为每个作业引入一个 master 进程（类似 Google MapReduce）。
 这个 master 进程作为作业的一部分，而不是 Kubernetes 的一部分，
 不仅了解集群情况，更了解深度学习作业本身，所以有充分的信息来做更优的调度。
-比如 master 进程可以请 Kubernetes 把两个 workers 启动在同一台物理机上，共用一个
+比如 master 进程可以请 Kubernetes 把两个 worker 启动在同一台物理机上，共用一个
 GPU。
 这样，一个进程读数据的时候，请另外一个进程来做计算，从而让 GPU
 的利用率总是很高。
