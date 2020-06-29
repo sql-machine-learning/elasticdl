@@ -47,14 +47,14 @@ def init_zoo(args):
 FROM {{ BASE_IMAGE }} as base
 
 RUN pip install elasticdl_preprocessing\
-  --extra-index-url={{ EXTRA_PYPI_INDEX }}
+ --extra-index-url={{ EXTRA_PYPI_INDEX }}
 
 RUN pip install elasticdl --extra-index-url={{ EXTRA_PYPI_INDEX }}
 ENV PATH /usr/local/lib/python3.6/dist-packages/elasticdl/go/bin:$PATH
 
 COPY . /model_zoo
 RUN pip install -r /model_zoo/requirements.txt\
-  --extra-index-url={{ EXTRA_PYPI_INDEX }}
+ --extra-index-url={{ EXTRA_PYPI_INDEX }}
 
 {% if CLUSTER_SPEC_NAME  %}\
 COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
