@@ -17,6 +17,15 @@ import shutil
 import docker
 from jinja2 import Template
 
+from elasticdl_client.common import k8s_client as k8s
+from elasticdl_client.common.args import (
+    build_arguments_from_parsed_result,
+    parse_envs,
+    wrap_python_args_with_string,
+)
+from elasticdl_client.common.constants import BashCommandTemplate
+from elasticdl_client.common.log_utils import default_logger as logger
+
 
 def init_zoo(args):
     print("Create the Dockerfile for the model zoo.")
@@ -96,7 +105,27 @@ def push_zoo(args):
 
 
 def train(args):
-    pass
+    container_args = [
+        "--worker_image",
+        args.image,
+        "--model_zoo",
+        args.model_zoo,
+        "--cluster_spec",
+        args.cluster_spec,
+    ]
+
+    container_args.extend(
+        build_arguments_from_parsed_result(
+            args,
+            filter_args=[
+                "model_zoo",
+                "cluster_spec",
+                "worker_image",
+                "force_use_kube_config_file",
+                "func",
+            ],
+        )
+    )
 
 
 def evaluate(args):
@@ -109,6 +138,65 @@ def predict(args):
 
 def clean(args):
     pass
+
+
+def _submit_job(image_name, client_args, container_args):
+    client = k8s.Client(
+        image_name=image_name,
+        namespace=client_args.namespace,
+        job_name=client_args.job_name,
+        event_callback=None,
+        cluster_spec=client_args.cluster_spec,
+        force_use_kube_config_file=client_args.force_use_kube_config_file,
+    )
+
+    container_args = wrap_python_args_with_string(container_args)
+
+    master_client_command = (
+        BashCommandTemplate.SET_PIPEFAIL
+        + " python -m elasticdl.python.master.main"
+    )
+    container_args.insert(0, master_client_command)
+    if client_args.log_file_path:
+        container_args.append(
+            BashCommandTemplate.REDIRECTION.format(client_args.log_file_path)
+        )
+
+    python_command = " ".join(container_args)
+    container_args = ["-c", python_command]
+
+    if client_args.yaml:
+        client.dump_master_yaml(
+            resource_requests=client_args.master_resource_request,
+            resource_limits=client_args.master_resource_limit,
+            args=container_args,
+            pod_priority=client_args.master_pod_priority,
+            image_pull_policy=client_args.image_pull_policy,
+            restart_policy=client_args.restart_policy,
+            volume=client_args.volume,
+            envs=parse_envs(client_args.envs),
+            yaml=client_args.yaml,
+        )
+        logger.info(
+            "ElasticDL job %s YAML has been dumped into file %s."
+            % (client_args.job_name, client_args.yaml)
+        )
+    else:
+        client.create_master(
+            resource_requests=client_args.master_resource_request,
+            resource_limits=client_args.master_resource_limit,
+            args=container_args,
+            pod_priority=client_args.master_pod_priority,
+            image_pull_policy=client_args.image_pull_policy,
+            restart_policy=client_args.restart_policy,
+            volume=client_args.volume,
+            envs=parse_envs(client_args.envs),
+        )
+        logger.info(
+            "ElasticDL job %s was successfully submitted. "
+            "The master pod is: %s."
+            % (client_args.job_name, client.get_master_pod_name())
+        )
 
 
 def _get_docker_client(docker_base_url, docker_tlscert, docker_tlskey):

@@ -11,6 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from itertools import chain
+
 
 def add_zoo_init_arguments(parser):
     parser.add_argument(
@@ -204,6 +206,34 @@ def add_common_params(parser):
     pass
 
 
+def parse_envs(arg):
+    """Parse environment configs as a dict.
+
+    Support format 'k1=v1,k2=v2,k3=v3..'. Note that comma is supported
+    in value field.
+    """
+    envs = {}
+    if not arg:
+        return envs
+
+    i = 0
+    fields = arg.split("=")
+    if len(fields) < 2:
+        return envs
+    pre_key = ""
+    while i < len(fields):
+        if i == 0:
+            pre_key = fields[i]
+        elif i == len(fields) - 1:
+            envs[pre_key] = fields[i]
+        else:
+            r = fields[i].rfind(",")
+            envs[pre_key] = fields[i][:r]
+            pre_key = fields[i][r + 1 :]  # noqa: E203
+        i += 1
+    return envs
+
+
 def add_bool_param(parser, name, default, help):
     parser.add_argument(
         name,  # should be in "--foo" format
@@ -213,3 +243,44 @@ def add_bool_param(parser, name, default, help):
         type=lambda x: x.lower() in ["true", "yes", "t", "y"],
         help=help,
     )
+
+
+def build_arguments_from_parsed_result(args, filter_args=None):
+    """Reconstruct arguments from parsed result
+    Args:
+        args: result from `parser.parse_args()`
+    Returns:
+        list of string: ready for parser to parse,
+        such as ["--foo", "3", "--bar", False]
+    """
+    items = vars(args).items()
+    if filter_args:
+        items = filter(lambda item: item[0] not in filter_args, items)
+
+    def _str_ignore_none(s):
+        if s is None:
+            return s
+        return str(s)
+
+    arguments = map(_str_ignore_none, chain(*items))
+    arguments = [
+        "--" + k if i % 2 == 0 else k for i, k in enumerate(arguments)
+    ]
+    return arguments
+
+
+def wrap_python_args_with_string(args):
+    """Wrap argument values with string
+    Args:
+        args: list like ["--foo", "3", "--bar", False]
+
+    Returns:
+        list of string: like ["--foo", "'3'", "--bar", "'False'"]
+    """
+    result = []
+    for value in args:
+        if "--" not in value:
+            result.append("'{}'".format(value))
+        else:
+            result.append(value)
+    return result
