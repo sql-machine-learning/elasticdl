@@ -3,9 +3,8 @@
 ## 分布式深度学习程序难写
 
 在工业场景中，我们经常需要利用集群资源，在海量数据上完成分布式深度学习训练任务。
+分布式深度学习程序的编写是相对困难的，编程者既要了解深度学习，也要了解分布式系统开发。
 
-分布式深度学习程序的编写是相对困难的，编程者既要了解深度学习，也要了解分布式系统
-开发。
 在一个分布式深度学习系统中，需要启动和监控若干个 worker，对数据和计算任务进行拆分，并且分发给 workers。
 此外，还需要考虑 worker 之间的通信（communication）和 同步（synchronization）。
 随着计算规模的增加，worker
@@ -23,7 +22,7 @@ Kubernetes 是目前最先进的分布式操作系统，是公有云和私有云
 我们发现 AllReduce 和 Parameter Server 是分布式训练程序中常用两种梯度聚合策略。
 在图像语音模型中，AllReduce 策略被广泛的使用。
 在搜索广告推荐模型中，我们更倾向于使用 Parameter Server 策略。
-我们调研了目前在 Kubernetes 上运行不同分布式策略的 TensorFlow 训练程序的一些开源解决方案。
+我们调研了目前在 Kubernetes 上运行不同分布式策略的 TensorFlow 训练程序的一些开源解决方案，列在下表中。
 
 | 分布式策略 | 模型定义 | 任务提交工具 |
 | --- | --- | --- |
@@ -31,9 +30,9 @@ Kubernetes 是目前最先进的分布式操作系统，是公有云和私有云
 | AllReduce | Keras + Horovod | Kubeflow MPI-operator |
 | AllReduce | TensorFlow Estimator/Keras API | Kubeflow TF-operaror |
 
-我们发现 TensorFlow Estimator API 仅支持 graph execution，不支持 eager
-execution，调试代码和网络各层输出比较麻烦。并且，用户需要组合使用不同的工具，来
-编写不同分布式策略的训练程序。
+TensorFlow Estimator API 仅支持 graph execution，不支持 eager
+execution，调试代码和网络各层输出较为麻烦。
+并且，用户需要掌握并组合使用不同的工具，来编写不同的分布式策略训练程序。
 
 TensorFlow 2.x 默认支持 eager execution，并且推荐使用更加精简的 Keras API
 来定义模型。
@@ -46,7 +45,7 @@ TensorFlow Keras API 提高开发效率，降低使用门槛，与 eager executi
 同时，ElasticDL 从易用性的角度出发，直接支持了 TensorFlow 2.x 的 Keras API。
 
 就像 MapReduce 框架中只需要用户完形填空两个函数：map 和 reduce，ElasticDL
-只需要用户填写 forward、loss、optimizer、feed、函数。
+需要用户填写 forward、loss、optimizer、feed 等函数。
 其中 forward 定义深度学习的前向计算过程，
 ElasticDL 会调用 TensorFlow eager mode 中提供的 Gradient Tape 接口，
 来自动推导对应的后向计算过程（backward pass）；
@@ -60,7 +59,7 @@ API，不需要对分布式训练有任何背景知识。
 做分布式的容错的大规模训练了。
 
 不同于 Kubeflow 通过 Kubernetes Operator 的方式定制
-Kubernetes 的思路，ElasticDL 为每个作业引入一个 master（类似 Google MapReduce）。
+Kubernetes 的思路，ElasticDL 为每个作业引入一个 master（类似于 Google MapReduce）。
 这个 master 作为作业的一部分，而不是 Kubernetes 的一部分，
 不仅了解集群情况，更了解深度学习作业本身，所以有充分的信息来做更优的调度。
 比如 master 可以请 Kubernetes 把两个 worker 启动在同一台物理机上，共用一个
@@ -82,7 +81,7 @@ ElasticDL 同时提供统一的 ElasticDL client 命令行工具来提交作业�
 
 在 ElasticDL 中，用户专注于使用 TensorFlow Keras API
 描述单机程序，而不需要关心分布式程序的写法。ElasticDL
-会自动把单机程序转为分布式训练程序。下面我们用一个mnist的训练例子来详细说明。
+会自动把单机程序转为分布式训练程序。下面我们用一个 MNIST 手写数字识别的例子来详细说明。
 
 ### 使用 Keras API 定义模型
 
@@ -233,21 +232,21 @@ pod，以及 parameter server pod，并且建立通信。
 
 ## Parameter Server 的改进
 
-在搜索广告等场景，模型中可能包含较大的 embedding
-table，其内存会超过单机内存。我们通常使用 Parameter Server (PS)
+在搜索广告等场景中，神经网络模型通常包含较大的 embedding
+table。在一些情况下，embedding table 的大小会超过单机内存。我们通常使用 Parameter Server (PS)
 分布式策略来训练此类模型。
-在 PS 策略下，PS 上存储着模型参数，worker 从 PS 上请求参数。
-worker 在本地使用训练数据计算梯度之后，把梯度再发送到 PS 上，PS 使用 worker
-传来的梯度来迭代更新模型参数。
+在 PS 策略下，模型参数被分成若干个 shard，存储在一组 PS 上。
+worker 首先向 PS 请求参数，然后使用本地训练数据计算梯度，并把梯度发送给PS。
+PS 使用 worker 上传来的梯度来迭代更新模型参数。
 
-ElasticDL 用 Go 实现了 Parameter
+ElasticDL 使用 Go 实现了 Parameter
 Server，具有良好的吞吐能力和可扩展性。并且，我们针对 embedding table
 做了一些额外的优化。
 
-- embedding vector 惰性初始化，用户无需提前指定 embedding table 的大小
-- 把一个 embedding table 拆分到多个 PS 上存储与更新，均衡存储与通信的负载
-- worker 从 PS 请求参数时，先滤除重复 ID ，只请求不同的参数，减少通信量
-- worker 向 PS 发送梯度时，本地先把相同 ID 的梯度进行合并，减少通信量
+- embedding vector 在 PS 上惰性初始化，用户无需提前指定 embedding table 的大小
+- 把一个 embedding table 拆分到多个 PS 上，均衡存储与通信负载
+- worker 从 PS 请求参数时，先滤除重复 ID，只取回不同 ID 的参数，减少通信量
+- worker 向 PS 发送梯度时，先把相同 ID 的梯度进行合并，减少通信量
 
 通过上述设计与实现，ElasticDL 可以很高效的完成搜索推荐广告模型的训练。
 
@@ -262,14 +261,14 @@ epoch。
 | By Redis (2019.9) | 1350 |
 | By Go (2020.2) | 106 |
 
-从上表中我们可以看出 Go Parameter Server 相比于之前实现有10倍以上的提升。
+从上表中我们可以看出 Go Parameter Server 相比于之前的实现有10倍以上的提升。
 
 ## 使用 ElasticDL 进行 Kaggle 实战
 
 在本小节中，我们将使用 ElasticDL 进行一次 Kaggle 实战。
 本例中使用的是 Kaggle 上 Display Advertising Challenge 中的 criteo
 数据集，这是一个关于广告点击率预估的比赛。
-我们将使用 xDeepFM 模型来进行建模，所有的实例代码都放在了 ElasticDL 的 [model
+我们使用 xDeepFM 模型来进行建模，所有的实例代码都放在了 ElasticDL 的 [model
 zoo](https://github.com/sql-machine-learning/elasticdl/tree/develop/model_zoo/dac_ctr)中。
 
 ### 数据预处理
@@ -331,8 +330,8 @@ COPY model_zoo /model_zoo
 我们需要把该镜像推送到 GKE 集群能够访问到的仓库中，比如说 docker hub 的仓库中。
 
 最后，我们通过 ElasticDL client 工具向 GKE 集群提交训练作业。
-我们使用 ParameterServer 分布式策略进行训练，有 2 个 parameter serve pods 和
-5个 worker pods共同参与训练。
+我们使用 ParameterServer 分布式策略进行训练，本次作业中，我们启动了2个 parameter serve pods 和
+5个 worker pods 共同参与训练。
 
 ```bash
 elasticdl train \
