@@ -20,7 +20,7 @@ def add_zoo_init_arguments(parser):
     parser.add_argument(
         "--base_image",
         type=str,
-        default="python:3.7",
+        default="python:3.6",
         help="Base Docker image.",
     )
     parser.add_argument(
