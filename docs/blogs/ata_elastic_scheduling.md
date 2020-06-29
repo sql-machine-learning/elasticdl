@@ -18,8 +18,8 @@ Kubernetes API 启动进程。类似的，很多诞生在 Kubernetes 之前的�
 这类应用或者框架特定的 controller 被 CoreOS 公司的工程师们称为
 Kubernetes Operator，后来演化成了行业术语。
 
-在向 Kubernetes 集群提交作业时，kubeflow/tf-operator
-会询问 Kubernetes 计划分配哪几台机器来运行一个分布式作业中的各个进程，
+在向 Kubernetes 集群提交作业时，kubeflow/tf-operator 会询问 Kubernetes
+计划分配哪几台机器来运行一个分布式作业中的各个进程，
 随后告知每个进程所有其它进程的 IP 地址和 port，
 从而保证一个作业里各个进程之间互相知道对方。
 
@@ -64,7 +64,6 @@ ElasticDL 位于田字格的右下角，是为了利用 Kubernetes 来实现容�
 
 一个 Horovod 作业的每个进程调用单机版 TensorFlow 做本地计算，
 然后收集 gradients，并且通过 AllReduce 调用汇聚 gradients 并且更新模型。在 TensorFlow 1.x graph mode 下， 深度学习计算是表示成一个计算图（graph）， 并且由 TensorFlow runtime 解释执行。 Horovod 通过包裹 Optimizer 的方式添加对 gradient 的 AllReduce 调用。 TensorFlow 2.x eager mode 采用和解释执行图完全不同的深度学习计算方式。 前向计算过程把对基本计算单元（operator）的调用记录在一个内存数据结构 tape 里， 随后反向计算过程（计算 gradients）可以回溯这个 tape， 以此调用 operator 对应的 gradient operator。 Horovod 通过包裹 tape 完成 AllReduce 调用。 Horovod 和 TensorFlow 一样，不是 Kubernetes-native，所以它提供的 AllReduce 操作不支持容错和弹性调度。这一点和 ElasticDL 不一样。ElasticDL 通过 tape 获取 gradient 后，可以使用 Parameter Server 或者 AllReduce 分布式策略来更新模型参数, 并且支持容错和弹性调度。
-
 
 ## Kubernetes-native 的弹性调度
 
