@@ -60,10 +60,10 @@ API，不需要对分布式训练有任何背景知识。
 做分布式的容错的大规模训练了。
 
 不同于 Kubeflow 通过 Kubernetes Operator 的方式定制
-Kubernetes 的思路，ElasticDL 为每个作业引入一个 master 进程（类似 Google MapReduce）。
-这个 master 进程作为作业的一部分，而不是 Kubernetes 的一部分，
+Kubernetes 的思路，ElasticDL 为每个作业引入一个 master（类似 Google MapReduce）。
+这个 master 作为作业的一部分，而不是 Kubernetes 的一部分，
 不仅了解集群情况，更了解深度学习作业本身，所以有充分的信息来做更优的调度。
-比如 master 进程可以请 Kubernetes 把两个 worker 启动在同一台物理机上，共用一个
+比如 master 可以请 Kubernetes 把两个 worker 启动在同一台物理机上，共用一个
 GPU。
 这样，一个进程读数据的时候，请另外一个进程来做计算，从而让 GPU
 的利用率总是很高。
@@ -254,7 +254,7 @@ Server，具有良好的吞吐能力和可扩展性。并且，我们针对 embe
 ElasticDL 自去年9月份开源以来，我们对 Parameter Server
 持续迭代开发，不断提升性能。
 我们以一个推荐中常用的 deepFM 模型来进行测试，测试中使用 frappe 数据集。
-在每次实验中，我们启动一个 parameter server 进程和四个 worker 进程，训练10个
+在每次实验中，我们启动一个 parameter server 和四个 worker，训练10个
 epoch。
 
 | Parameter Server 实现 | 训练时间（秒） |
