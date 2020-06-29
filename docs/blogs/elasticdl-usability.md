@@ -28,12 +28,11 @@ Kubernetes 是目前最先进的分布式操作系统，是公有云和私有云
 | --- | --- | --- |
 | ParameterServer | TensorFlow Estimator API | Kubeflow TF-operator |
 | AllReduce | Keras + Horovod | Kubeflow MPI-operator |
-| AllReduce | TensorFlow Estimator/Keras API | Kubeflow TF-operaror |
+| AllReduce | TensorFlow Estimator/Keras API | Kubeflow TF-operator |
 
-TensorFlow Estimator API 仅支持 graph execution，不支持 eager
+从上表中，我们可以看到用户需要掌握并组合使用不同的工具，来编写不同的分布式策略训练程序。
+模型定义方面，TensorFlow Estimator API 仅支持 graph execution，不支持 eager
 execution，调试代码和网络各层输出较为麻烦。
-并且，用户需要掌握并组合使用不同的工具，来编写不同的分布式策略训练程序。
-
 TensorFlow 2.x 默认支持 eager execution，并且推荐使用更加精简的 Keras API
 来定义模型。
 TensorFlow Keras API 提高开发效率，降低使用门槛，与 eager execution
@@ -53,7 +52,7 @@ loss 指定模型训练时使用的损失函数；
 optimizer 指定模型训练时使用的优化器；
 feed 用来定制化训练数据到 TensorFlow 的 tensor的转换过程。
 
-所有的这些函数的编程只需要了解 TensorFlow
+所有这些函数的编程只需要了解 TensorFlow
 API，不需要对分布式训练有任何背景知识。
 这些函数也可以在单机上用小数据做调试验证，然后就可以放心地交给 ElasticDL
 做分布式的容错的大规模训练了。
@@ -67,7 +66,7 @@ GPU。
 这样，一个进程读数据的时候，请另外一个进程来做计算，从而让 GPU
 的利用率总是很高。
 
-ElasticDL 同时提供统一的 ElasticDL client 命令行工具来提交作业。
+ElasticDL 提供统一的 ElasticDL client 命令行工具来提交作业。
 
 | 分布式策略 | 模型定义 | 任务提交工具 |
 | --- | --- | --- |
