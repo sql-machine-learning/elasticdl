@@ -204,10 +204,6 @@ def add_predict_params(parser):
     )
 
 
-def add_clean_params(parser):
-    pass
-
-
 def add_common_params(parser):
     """Common arguments for training/prediction/evaluation"""
     add_common_args_between_master_and_worker(parser)

@@ -179,10 +179,6 @@ def predict(args):
     _submit_job(args.image, args, container_args)
 
 
-def clean(args):
-    pass
-
-
 def _submit_job(image_name, client_args, container_args):
     client = k8s.Client(
         image_name=image_name,

@@ -15,7 +15,6 @@ import argparse
 
 from elasticdl_client.api import (
     build_zoo,
-    clean,
     evaluate,
     init_zoo,
     predict,
@@ -70,12 +69,6 @@ def build_argument_parser():
     predict_parser.set_defaults(func=predict)
     args.add_common_params(predict_parser)
     args.add_predict_params(predict_parser)
-
-    clean_parser = subparsers.add_parser(
-        "clean", help="Clean up local docker images"
-    )
-    clean_parser.set_defaults(func=clean)
-    args.add_clean_params(clean_parser)
 
     return parser
 
