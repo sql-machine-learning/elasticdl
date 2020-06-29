@@ -130,11 +130,53 @@ def train(args):
 
 
 def evaluate(args):
-    pass
+    container_args = [
+        "--worker_image",
+        args.image,
+        "--model_zoo",
+        args.model_zoo,
+        "--cluster_spec",
+        args.cluster_spec,
+    ]
+    container_args.extend(
+        build_arguments_from_parsed_result(
+            args,
+            filter_args=[
+                "model_zoo",
+                "cluster_spec",
+                "worker_image",
+                "force_use_kube_config_file",
+                "func",
+            ],
+        )
+    )
+
+    _submit_job(args.image, args, container_args)
 
 
 def predict(args):
-    pass
+    container_args = [
+        "--worker_image",
+        args.image,
+        "--model_zoo",
+        args.model_zoo,
+        "--cluster_spec",
+        args.cluster_spec,
+    ]
+
+    container_args.extend(
+        build_arguments_from_parsed_result(
+            args,
+            filter_args=[
+                "model_zoo",
+                "cluster_spec",
+                "worker_image",
+                "force_use_kube_config_file",
+            ],
+        )
+    )
+
+    _submit_job(args.image, args, container_args)
 
 
 def clean(args):
