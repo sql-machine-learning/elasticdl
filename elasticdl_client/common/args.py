@@ -208,7 +208,7 @@ def add_common_params(parser):
     """Common arguments for training/prediction/evaluation"""
     add_common_args_between_master_and_worker(parser)
     parser.add_argument(
-        "--image",
+        "--image_name",
         type=str,
         required=True,
         help="The docker image for this job.",

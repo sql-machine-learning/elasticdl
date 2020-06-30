@@ -99,6 +99,9 @@ class Client(object):
             cluster_spec_module = load_module(cluster_spec)
             self.cluster = cluster_spec_module.cluster
 
+    def get_master_pod_name(self):
+        return get_master_pod_name(self.job_name)
+
     def patch_labels_to_pod(self, pod_name, labels_dict):
         body = {"metadata": {"labels": labels_dict}}
         try:

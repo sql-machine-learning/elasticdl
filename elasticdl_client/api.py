@@ -106,7 +106,7 @@ def push_zoo(args):
 def train(args):
     container_args = [
         "--worker_image",
-        args.image,
+        args.image_name,
         "--model_zoo",
         args.model_zoo,
         "--cluster_spec",
@@ -126,13 +126,13 @@ def train(args):
         )
     )
 
-    _submit_job(args.image, args, container_args)
+    _submit_job(args.image_name, args, container_args)
 
 
 def evaluate(args):
     container_args = [
         "--worker_image",
-        args.image,
+        args.image_name,
         "--model_zoo",
         args.model_zoo,
         "--cluster_spec",
@@ -151,13 +151,13 @@ def evaluate(args):
         )
     )
 
-    _submit_job(args.image, args, container_args)
+    _submit_job(args.image_name, args, container_args)
 
 
 def predict(args):
     container_args = [
         "--worker_image",
-        args.image,
+        args.image_name,
         "--model_zoo",
         args.model_zoo,
         "--cluster_spec",
@@ -176,7 +176,7 @@ def predict(args):
         )
     )
 
-    _submit_job(args.image, args, container_args)
+    _submit_job(args.image_name, args, container_args)
 
 
 def _submit_job(image_name, client_args, container_args):
