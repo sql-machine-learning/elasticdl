@@ -529,6 +529,6 @@ class Master(object):
                         )
                         self.task_d.recover_tasks(worker_id)
                         # TODO: save worker logs before remove it
-                        self.instance_manager._remove_worker(worker_id)
+                        # self.instance_manager._remove_worker(worker_id)
                         break
             time.sleep(30)
