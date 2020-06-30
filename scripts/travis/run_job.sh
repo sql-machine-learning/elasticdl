@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -e
+
 JOB_TYPE=$1
 MAXCOMPUTE_TABLE="odps_integration_build_$TRAVIS_BUILD_NUMBER_$(date +%s)"
 
