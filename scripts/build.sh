@@ -38,11 +38,6 @@ make -f elasticdl/Makefile
     go test -v -cover ./...
 )
 
-# Run Python unittests
-pytest elasticdl/python/tests elasticdl_preprocessing/tests --cov=elasticdl/python --cov-report=xml
-mkdir -p ./build
-mv coverage.xml ./build
-
 # Create elasticdl_preprocessing package
 rm -rf ./build/lib
 python setup_preprocessing.py --quiet bdist_wheel --dist-dir ./build
