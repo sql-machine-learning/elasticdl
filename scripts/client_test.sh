@@ -17,9 +17,9 @@
 JOB_TYPE=$1
 PS_NUM=$2
 WORKER_NUM=$3
+DATA_PATH=$4
 
 MNIST_CKPT_DIR=/model_zoo/test_data/mnist_ckpt/
-
 
 if [[ "$JOB_TYPE" == "train" ]]; then
     elasticdl train \
@@ -48,7 +48,7 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --log_level=INFO \
       --image_pull_policy=Never \
       --output=/data/saved_model/model_output \
-      --volume="host_path=${PWD}/data,mount_path=/data"
+      --volume="host_path=${DATA_PATH},mount_path=/data"
 elif [[ "$JOB_TYPE" == "evaluate" ]]; then
     elasticdl evaluate \
       --image_name=elasticdl:ci \
@@ -72,7 +72,7 @@ elif [[ "$JOB_TYPE" == "evaluate" ]]; then
       --job_name=test-evaluate \
       --log_level=INFO \
       --image_pull_policy=Never \
-      --volume="host_path=${PWD}/data,mount_path=/data"
+      --volume="host_path=${DATA_PATH},mount_path=/data"
 elif [[ "$JOB_TYPE" == "predict" ]]; then
     elasticdl predict \
       --image_name=elasticdl:ci \
@@ -93,7 +93,7 @@ elif [[ "$JOB_TYPE" == "predict" ]]; then
       --job_name=test-predict \
       --log_level=INFO \
       --image_pull_policy=Never \
-      --volume="host_path=${PWD}/data,mount_path=/data"
+      --volume="host_path=${DATA_PATH},mount_path=/data"
 elif [[ "$JOB_TYPE" == "odps" ]]; then
     elasticdl train \
       --image_name=elasticdl:ci \

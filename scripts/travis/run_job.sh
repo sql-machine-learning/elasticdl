@@ -15,6 +15,7 @@
 set -e
 
 JOB_TYPE=$1
+DATA_PATH=$2
 MAXCOMPUTE_TABLE="odps_integration_build_$TRAVIS_BUILD_NUMBER_$(date +%s)"
 
 if [[ "$JOB_TYPE" == "odps" ]] && \
@@ -40,7 +41,7 @@ else
         -v /home/"$USER"/.minikube/:/home/"$USER"/.minikube/ \
         -v "$PWD":/work \
         -w /work elasticdl:ci \
-        bash -c "scripts/client_test.sh $JOB_TYPE $PS_NUM $WORKER_NUM"
+        bash -c "scripts/client_test.sh $JOB_TYPE $PS_NUM $WORKER_NUM $DATA_PATH"
     python3 scripts/validate_job_status.py "$JOB_TYPE" "$PS_NUM" "$WORKER_NUM"
     if [[ "$JOB_TYPE" == "odps" ]]; then
         bash scripts/travis/cleanup_odps_table.sh

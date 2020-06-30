@@ -79,13 +79,13 @@ jobs:
         - docker build --target ci -t elasticdl:ci
           -f elasticdl/docker/Dockerfile.ci
           --build-arg BASE_IMAGE="$BASE_IMAGE" .
-        - docker run --rm -it --net=host
+        - mkdir -p data && docker run --rm -it --net=host
           -v $HOME/.cache:/root/.cache
           -v $HOME/.keras/datasets:/root/.keras/datasets
           -v $HOME/.kube:/root/.kube
           -v $HOME/.minikube:/home/$USER/.minikube
           -v $PWD:/work -w /work
-          elasticdl:dev bash -c "scripts/travis/gen_dataset.sh"
+          elasticdl:dev bash -c "scripts/travis/gen_dataset.sh data"
         - |
           JOB_TYPES=(
               odps
@@ -94,7 +94,7 @@ jobs:
               predict
           )
           for JOB_TYPE in "${JOB_TYPES[@]}"; do
-              bash scripts/travis/run_job.sh $JOB_TYPE
+              bash scripts/travis/run_job.sh $JOB_TYPE $PWD/data
           done
 
 # Only build on this list of branches
