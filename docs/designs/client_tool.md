@@ -53,7 +53,7 @@ this command-line client tool.
     elasticdl zoo build --image=a_docker_registry/bright/elasticdl-wnd:1.0 .
     ```
 
-1. Push the Docker image to a remote registry (optional)
+1. Push the Docker image to a remote registry.
 
     ```bash
     elasticdl zoo push a_docker_registry/bright/elasticdl-wnd:1.0
