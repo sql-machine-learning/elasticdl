@@ -18,8 +18,8 @@ Kubernetes API 启动进程。类似的，很多诞生在 Kubernetes 之前的�
 这类应用或者框架特定的 controller 被 CoreOS 公司的工程师们称为
 Kubernetes Operator，后来演化成了行业术语。
 
-在向 Kubernetes 集群提交作业时，kubeflow/tf-operator
-会询问 Kubernetes 计划分配哪几台机器来运行一个分布式作业中的各个进程，
+在向 Kubernetes 集群提交作业时，kubeflow/tf-operator 会询问 Kubernetes
+计划分配哪几台机器来运行一个分布式作业中的各个进程，
 随后告知每个进程所有其它进程的 IP 地址和 port，
 从而保证一个作业里各个进程之间互相知道对方。
 
@@ -56,69 +56,23 @@ ElasticDL 利用 TensorFlow eager execution 和 Kubernetes API，
 |      | TensorFlow 1.x graph mode| TensorFlow 2.x eager execution |
 | ---- | ------------------------ | -------------------------------- |
 | in TensorFlow runtime | TensorFlow's parameter server | TensorFlow distributed strategy|
-| above TensorFlow API | Uber Horovod | ElasticDL |
+| above TensorFlow API | Horovod | ElasticDL, Horovod |
 
-如上文解释，我们没法通过修改 TensorFlow runtime
-实现完备的主动的容错和弹性调度。
-ElasticDL 和 Uber Horovod 都是在 TensorFlow API 基础上构建。
+如上文解释，我们没法通过修改 TensorFlow runtime 实现完备的主动的容错和弹性调度。
+ElasticDL 和 Horovod 都是在 TensorFlow API 基础上构建。
 ElasticDL 位于田字格的右下角，是为了利用 Kubernetes 来实现容错和弹性调度。
 
-Horovod 基于 TensorFlow 1.x。
 一个 Horovod 作业的每个进程调用单机版 TensorFlow 做本地计算，
 然后收集 gradients，并且通过 AllReduce 调用汇聚 gradients 并且更新模型。
-Horovod 也是平台无关的，所以它提供的 AllReduce 操作不支持容错和弹性调度。
-这一点和 ElasticDL 不一样。和 ElasticDL 一样的是，
-Horovod 需要从 TensorFlow 获取 gradient。
-在 TensorFlow 1.x 中，深度学习计算是表示成一个计算图（graph），
-并且由 TensorFlow runtime 解释执行。
-所以 Horovod 为了获得每个进程算的 gradients 并且执行 AllReduce 操作，
-就得 hack 进入图执行的过程。为此，
-Horovod 要求用户使用特定的 optimizer 代替 TensorFlow 提供的 optimizer，
-从而可以在模型训练迭代阶段透露出 gradients。
-
-一个调用 Horovod 的用户程序的结构如下。
-其中标记为 (*) 和 (**) 的部 分是 Horovod 要求用户写的，
-帮助 Horovod 截获 TensorFlow 计算得到的 gradients 的代码。
-如果用户不慎忘记写了，那么程序执行结果就不对了。
-
-```python
-hvd.init()
-config = tf.ConfigProto()
-config.gpu_options.visible_device_list = str(hvd.local_rank())
-
-loss = ...  # Build model...
-opt = tf.train.AdagradOptimizer(0.01 * hvd.size())
-opt = hvd.DistributedOptimizer(opt) # (*)
-train_op = opt.minimize(loss)
-
-hooks = [hvd.BroadcastGlobalVariablesHook(0)] # (**)
-with tf.train.MonitoredTrainingSession(checkpoint_dir，config, hooks) as s:
-  while not s.should_stop():
-    s.run(train_op)
-```
-
-ElasticDL 没有这些问题，因为它依赖的是 TensorFlow 2.x eager execution。
-TensorFlow 2.x 主推的 eager execution
-采用和解释执行图完全不同的深度学习计算方式。
-前向计算过程把对基本计算单元（operator）的调用记录在一个内存数据结构 tape 里，
-随后反向计算过程（计算 gradients）可以回溯这个 tape，
-以此调用 operator 对应的 gradient operator。
-我们可以调用 `tape.gradient` 方法来获取每个模型参数的gradient。
-
-ElasticDL 通过调用 TensorFlow 2.x API 可以很直接地获取 gradients：
-
-```python
-with tf.GradientTape() as tape:
-    outputs = self._model.call(features, training=True)
-    loss = self._loss(outputs, labels)
-    # Add regularization loss if any
-    if self._model.losses:
-        loss += tf.math.add_n(self._model.losses)
-grads = tape.gradient(loss, self.get_trainable_items())
-```
-
-ElasticDL通过 tape 获取 gradient 后，
-可以通过 Parameter Server 或者 AllReduce 分布式策略来更新模型参数。
+在 TensorFlow 1.x graph mode 下，深度学习计算是表示成一个计算图（graph）， 并且由 TensorFlow runtime 解释执行。
+Horovod 通过包裹 Optimizer 的方式添加对 gradient 的 AllReduce 调用。
+TensorFlow 2.x eager mode 采用和解释执行图完全不同的深度学习计算方式。
+前向计算过程把对基本计算单元（operator）的调用记录在一个内存数据结构 tape 里， 随后反向计算过程（计算 gradients）可以回溯这个 tape，
+以此调用 operator 对应的 gradient operator。 Horovod 通过包裹 tape 完成 AllReduce 调用。
+Horovod 和 TensorFlow 一样，不是 Kubernetes-native，所以它提供的 AllReduce 操作不支持容错和弹性调度。
+这一点和 ElasticDL 不一样。
+ElasticDL 通过 tape 获取 gradient 后，可以使用 Parameter Server 或者 AllReduce 分布式策略来更新模型参数。
+并且，ElasticDL 作为 kubernetes-native 的分布式系统，可以通过调用 Kubernetes API 来支持容错和弹性调度。
 
 ## Kubernetes-native 的弹性调度
 
@@ -130,13 +84,13 @@ Kubernetes API 来起止进程。ElasticDL 没有选择开发 Kubernetes Operato
 所以 ElasticDL 通过在 Kubernetes 上创建
 master 进程来控制深度学习训练作业的弹性调度。
 
-ElasticDL 的 master 会根据数据索引将数据分片，然后为每个数据分片创建一个 task。
+ElasticDL 的 master 会根据数据索引将数据分片，为每个数据分片创建一个 task。
 然后 master 会调用 Kubernetes API 启动多个 worker 进程。每个 worker 启动后，
 会向 master 请求 task。worker 收到来自 master 分发的 task 后，
 会读取 task 对应的数据分片来前向计算和梯度计算。
 
-同时，master 会通过 Kubernetes API 观察集群中每个worker的状态。
-当有 worker 被高优先级作业抢占后，master 会回收该 worker 的未完成task，
+同时，master 会通过 Kubernetes API 监听集群中每个 worker 的状态。
+当有 worker 被高优先级作业抢占后，master 会回收该 worker 的未完成 task，
 然后重新分发给其他的 worker。同时 master 会尝试通过 Kubernetes API
 重新拉起被抢占的 worker。等到资源充足时，worker 进程会被重新启动，
 并加入训练作业。
