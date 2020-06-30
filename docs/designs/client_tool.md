@@ -44,9 +44,11 @@ this command-line client tool.
 
     ```Dockerfile
     FROM python:3.6
-    COPY . /model_zoo
+
     RUN pip install elasticdl_preprocessing
     RUN pip install elasticdl
+
+    COPY . /model_zoo
     RUN pip install -r /model_zoo/requirements.txt
     ...
     ```
