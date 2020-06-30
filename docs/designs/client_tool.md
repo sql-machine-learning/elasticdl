@@ -58,7 +58,12 @@ this command-line client tool.
 1. Build the Docker image for an ElasticDL job.
 
     ```bash
-    elasticdl zoo build --image=a_docker_registry/bright/elasticdl-wnd:1.0 .
+    elasticdl zoo build
+        --image=a_docker_registry/bright/elasticdl-wnd:1.0
+        [--docker_base_url=docke_base_url]
+        [--docker_tlscert=docker_tlscert]
+        [--docker_tlskey=docker_tlskey]
+        .
     ```
 
 1. Push the Docker image to a remote registry.
