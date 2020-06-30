@@ -172,6 +172,7 @@ def predict(args):
                 "cluster_spec",
                 "worker_image",
                 "force_use_kube_config_file",
+                "func",
             ],
         )
     )
