@@ -20,10 +20,10 @@ import yaml
 from kubernetes import client, config, watch
 from kubernetes.client import V1EnvVar, V1EnvVarSource, V1ObjectFieldSelector
 
-from elasticdl.python.common.k8s_resource import parse as parse_resource
-from elasticdl.python.common.k8s_volume import parse_volume_and_mount
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import load_module
+from elasticdl_client.common.k8s_resource import parse as parse_resource
+from elasticdl_client.common.k8s_volume import parse_volume_and_mount
 
 ELASTICDL_APP_NAME = "elasticdl"
 ELASTICDL_JOB_KEY = "elasticdl-job-name"

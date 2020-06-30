@@ -13,7 +13,7 @@
 
 import unittest
 
-from elasticdl.python.common.k8s_volume import parse, parse_volume_and_mount
+from elasticdl_client.common.k8s_volume import parse, parse_volume_and_mount
 
 
 class K8SVolumeTest(unittest.TestCase):
