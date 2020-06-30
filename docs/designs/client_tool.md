@@ -38,7 +38,8 @@ this command-line client tool.
         [--extra_pypi_index=your_pypi_index]
     ```
 
-    `base_image_name` is optional and the default value is `python:3.6`.
+    The options inside `[]` are optional. The default value of `base_image`
+    is `python:3.6`.
     The generated Dockerfile example is:
 
     ```Dockerfile
