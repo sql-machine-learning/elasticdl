@@ -17,9 +17,18 @@ import shutil
 import docker
 from jinja2 import Template
 
+from elasticdl_client.common import k8s_client as k8s
+from elasticdl_client.common.args import (
+    build_arguments_from_parsed_result,
+    parse_envs,
+    wrap_python_args_with_string,
+)
+from elasticdl_client.common.constants import BashCommandTemplate
+from elasticdl_client.common.log_utils import default_logger as logger
+
 
 def init_zoo(args):
-    print("Create the Dockerfile for the model zoo.")
+    logger.info("Create the Dockerfile for the model zoo.")
 
     # Copy cluster spec file to the current directory if specified
     cluster_spec_path = args.cluster_spec
@@ -37,16 +46,15 @@ def init_zoo(args):
     tmpl_str = """\
 FROM {{ BASE_IMAGE }} as base
 
-RUN pip install elasticdl_preprocessing
-RUN pip install elasticdl
+RUN pip install elasticdl_preprocessing\
+ --extra-index-url={{ EXTRA_PYPI_INDEX }}
+
+RUN pip install elasticdl --extra-index-url={{ EXTRA_PYPI_INDEX }}
+ENV PATH /usr/local/lib/python3.6/dist-packages/elasticdl/go/bin:$PATH
 
 COPY . /model_zoo
-{% if EXTRA_PYPI_INDEX %}
 RUN pip install -r /model_zoo/requirements.txt\
-  --extra-index-url={{ EXTRA_PYPI_INDEX }}\
-{% else %}\
-RUN pip install -r /model_zoo/requirements.txt\
-{% endif %}
+ --extra-index-url={{ EXTRA_PYPI_INDEX }}
 
 {% if CLUSTER_SPEC_NAME  %}\
 COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
@@ -59,12 +67,12 @@ COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
         CLUSTER_SPEC_NAME=cluster_spec_name,
     )
 
-    with open("./Dockerfile", mode="w+") as f:
+    with open("./Dockerfile", mode="w") as f:
         f.write(docker_file_content)
 
 
 def build_zoo(args):
-    print("Build the image for the model zoo.")
+    logger.info("Build the image for the model zoo.")
     # Call docker api to build the image
     # Validate the image name schema
     client = _get_docker_client(
@@ -83,7 +91,7 @@ def build_zoo(args):
 
 
 def push_zoo(args):
-    print("Push the image for the model zoo.")
+    logger.info("Push the image for the model zoo.")
     # Call docker api to push the image to remote registry
     client = _get_docker_client(
         docker_base_url=args.docker_base_url,
@@ -93,6 +101,140 @@ def push_zoo(args):
 
     for line in client.push(args.image, stream=True, decode=True):
         _print_docker_progress(line)
+
+
+def train(args):
+    container_args = [
+        "--worker_image",
+        args.image,
+        "--model_zoo",
+        args.model_zoo,
+        "--cluster_spec",
+        args.cluster_spec,
+    ]
+
+    container_args.extend(
+        build_arguments_from_parsed_result(
+            args,
+            filter_args=[
+                "model_zoo",
+                "cluster_spec",
+                "worker_image",
+                "force_use_kube_config_file",
+                "func",
+            ],
+        )
+    )
+
+    _submit_job(args.image, args, container_args)
+
+
+def evaluate(args):
+    container_args = [
+        "--worker_image",
+        args.image,
+        "--model_zoo",
+        args.model_zoo,
+        "--cluster_spec",
+        args.cluster_spec,
+    ]
+    container_args.extend(
+        build_arguments_from_parsed_result(
+            args,
+            filter_args=[
+                "model_zoo",
+                "cluster_spec",
+                "worker_image",
+                "force_use_kube_config_file",
+                "func",
+            ],
+        )
+    )
+
+    _submit_job(args.image, args, container_args)
+
+
+def predict(args):
+    container_args = [
+        "--worker_image",
+        args.image,
+        "--model_zoo",
+        args.model_zoo,
+        "--cluster_spec",
+        args.cluster_spec,
+    ]
+
+    container_args.extend(
+        build_arguments_from_parsed_result(
+            args,
+            filter_args=[
+                "model_zoo",
+                "cluster_spec",
+                "worker_image",
+                "force_use_kube_config_file",
+            ],
+        )
+    )
+
+    _submit_job(args.image, args, container_args)
+
+
+def _submit_job(image_name, client_args, container_args):
+    client = k8s.Client(
+        image_name=image_name,
+        namespace=client_args.namespace,
+        job_name=client_args.job_name,
+        cluster_spec=client_args.cluster_spec,
+        force_use_kube_config_file=client_args.force_use_kube_config_file,
+    )
+
+    container_args = wrap_python_args_with_string(container_args)
+
+    master_client_command = (
+        BashCommandTemplate.SET_PIPEFAIL
+        + " python -m elasticdl.python.master.main"
+    )
+    container_args.insert(0, master_client_command)
+    if client_args.log_file_path:
+        container_args.append(
+            BashCommandTemplate.REDIRECTION.format(client_args.log_file_path)
+        )
+
+    python_command = " ".join(container_args)
+    container_args = ["-c", python_command]
+
+    if client_args.yaml:
+        client.dump_master_yaml(
+            resource_requests=client_args.master_resource_request,
+            resource_limits=client_args.master_resource_limit,
+            args=container_args,
+            pod_priority=client_args.master_pod_priority,
+            image_pull_policy=client_args.image_pull_policy,
+            restart_policy=client_args.restart_policy,
+            volume=client_args.volume,
+            envs=parse_envs(client_args.envs),
+            yaml=client_args.yaml,
+        )
+        logger.info(
+            "ElasticDL job %s YAML has been dumped into file %s."
+            % (client_args.job_name, client_args.yaml)
+        )
+    else:
+        client.create_master(
+            resource_requests=client_args.master_resource_request,
+            resource_limits=client_args.master_resource_limit,
+            args=container_args,
+            pod_priority=client_args.master_pod_priority,
+            image_pull_policy=client_args.image_pull_policy,
+            restart_policy=client_args.restart_policy,
+            volume=client_args.volume,
+            envs=parse_envs(client_args.envs),
+        )
+        logger.info(
+            "ElasticDL job %s was successfully submitted. "
+            "The master pod is: %s."
+            % (client_args.job_name, client.get_master_pod_name())
+        )
 
 
 def _get_docker_client(docker_base_url, docker_tlscert, docker_tlskey):
