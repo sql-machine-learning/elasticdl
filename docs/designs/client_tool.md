@@ -72,7 +72,7 @@ this command-line client tool.
     elasticdl zoo push a_docker_registry/bright/elasticdl-wnd:1.0
     ```
 
-    If you want to execute the job in Minikue, the `push` step
+    If you want to execute the job locally in Minikube, the `push` step
     is not necessary.
 
 1. Submit a model training/prediction/evaluation job.
