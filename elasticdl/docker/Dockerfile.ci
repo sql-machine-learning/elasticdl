@@ -34,5 +34,5 @@ RUN python -m pip install --quiet /elasticdl-develop-py3-none-any.whl \
 ENV PATH /usr/local/lib/python3.6/dist-packages/elasticdl/go/bin:$PATH
 
 # Generate mnist checkpoint for evaluation and prediction
-COPY scripts/gen_mnist_checkpoint.py /gen_mnist_checkpoint.py
+COPY scripts/travis/gen_mnist_checkpoint.py /gen_mnist_checkpoint.py
 RUN python /gen_mnist_checkpoint.py --checkpoint_dir=/model_zoo/test_data/mnist_ckpt

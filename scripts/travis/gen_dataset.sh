@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Generate mnist dataset
-mkdir data
+mkdir -p data
 python elasticdl/python/data/recordio_gen/image_label.py --dataset mnist --fraction 0.15 \
         --records_per_shard 4096 data
 
@@ -23,4 +23,4 @@ python elasticdl/python/data/recordio_gen/frappe_recordio_gen.py --data /root/.k
 
 # Generate heart dataset
 python elasticdl/python/data/recordio_gen/heart_recordio_gen.py --data_dir /root/.keras/datasets \
-    --output_dir /data/heart
+    --output_dir data/heart
