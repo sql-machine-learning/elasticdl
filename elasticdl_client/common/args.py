@@ -49,7 +49,6 @@ def add_zoo_build_arguments(parser):
         help="The name of the docker image we are building for"
         "this model zoo.",
     )
-    add_docker_arguments(parser)
 
 
 def add_zoo_push_arguments(parser):
@@ -57,28 +56,6 @@ def add_zoo_push_arguments(parser):
         "image",
         type=str,
         help="The name of the docker image for this model zoo.",
-    )
-    add_docker_arguments(parser)
-
-
-def add_docker_arguments(parser):
-    parser.add_argument(
-        "--docker_base_url",
-        type=str,
-        help="URL to the Docker server",
-        default="unix://var/run/docker.sock",
-    )
-    parser.add_argument(
-        "--docker_tlscert",
-        type=str,
-        help="Path to Docker client cert",
-        default="",
-    )
-    parser.add_argument(
-        "--docker_tlskey",
-        type=str,
-        help="Path to Docker client key",
-        default="",
     )
 
 
