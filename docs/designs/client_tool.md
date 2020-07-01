@@ -20,7 +20,7 @@ this command-line client tool.
 1. Prerequisite
 
     - Install [Docker CE >= 18.x](https://docs.docker.com/docker-for-mac/install/)
-    for building the docker images of the distributed ElasticDL jobs.
+    for building the Docker images of the distributed ElasticDL jobs.
     - Install Python >= 3.6.
     - Install elasticdl_client: `pip install elasticdl_client`.
 
