@@ -20,7 +20,6 @@ from kubernetes import client, config
 from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.constants import GRPC, PodStatus
 from elasticdl.python.common.grpc_utils import build_channel
-from elasticdl.python.common.k8s_client import get_master_pod_name
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
@@ -29,6 +28,7 @@ from elasticdl.python.common.model_utils import (
 from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.ps.parameters import Parameters
 from elasticdl.python.ps.servicer import PserverServicer
+from elasticdl_client.common.k8s_client import get_master_pod_name
 
 
 class ParameterServer(object):

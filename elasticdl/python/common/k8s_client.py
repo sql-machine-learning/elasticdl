@@ -15,7 +15,6 @@ import threading
 import time
 
 from kubernetes import client, watch
-from kubernetes.client import V1EnvVar, V1EnvVarSource, V1ObjectFieldSelector
 
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl_client.common.k8s_client import (
@@ -25,6 +24,7 @@ from elasticdl_client.common.k8s_client import (
     ELASTICDL_REPLICA_TYPE_KEY,
 )
 from elasticdl_client.common.k8s_client import Client as BaseClient
+from elasticdl_client.common.k8s_client import append_pod_ip_to_env
 
 _PS_SERVICE_PORT = 2222
 _WORKER_SERVICE_PORT = 3333
@@ -37,20 +37,6 @@ def get_worker_pod_name(job_name, worker_id):
 
 def get_ps_pod_name(job_name, ps_id):
     return "elasticdl-%s-ps-%s" % (job_name, str(ps_id))
-
-
-def append_pod_ip_to_env(env):
-    pod_ip_var = V1EnvVar(
-        name="MY_POD_IP",
-        value_from=V1EnvVarSource(
-            field_ref=V1ObjectFieldSelector(field_path="status.podIP")
-        ),
-    )
-    if env:
-        env.append(pod_ip_var)
-    else:
-        env = [pod_ip_var]
-    return env
 
 
 class Client(BaseClient):

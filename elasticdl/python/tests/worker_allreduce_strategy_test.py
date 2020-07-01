@@ -16,9 +16,9 @@ import unittest
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
-from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.tests.test_utils import get_mnist_dataset
 from elasticdl.python.worker.worker import Worker
+from elasticdl_client.common.constants import DistributionStrategy
 
 
 class WorkerAllReduceStrategyTest(unittest.TestCase):

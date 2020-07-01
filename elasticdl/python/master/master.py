@@ -20,16 +20,9 @@ import grpc
 from kubernetes.client import V1EnvVar
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
-from elasticdl.python.common.args import (
-    build_arguments_from_parsed_result,
-    parse_envs,
-    wrap_go_args_with_string,
-    wrap_python_args_with_string,
-)
+from elasticdl.python.common.args import wrap_go_args_with_string
 from elasticdl.python.common.constants import (
     GRPC,
-    BashCommandTemplate,
-    DistributionStrategy,
     InstanceManagerStatus,
     JobType,
 )
@@ -52,6 +45,15 @@ from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.master.tensorboard_service import TensorboardService
+from elasticdl_client.common.args import (
+    build_arguments_from_parsed_result,
+    parse_envs,
+    wrap_python_args_with_string,
+)
+from elasticdl_client.common.constants import (
+    BashCommandTemplate,
+    DistributionStrategy,
+)
 
 
 def _make_task_dispatcher(
