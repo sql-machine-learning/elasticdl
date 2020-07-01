@@ -1,75 +1,103 @@
 # ElasticDL: 像写单机程序一样写分布式深度学习程序
 
-## 分布式深度学习程序难写
+2019 年秋天，在上海的 Google Developer Day 活动中，来自蚂蚁金服的 ElasticDL 团队
+展示了 ElasticDL 的[第一个开源版
+本](https://events.google.cn/intl/en/developerdays2019/agenda/#table-row-2-34)。
+本文更新这大半年来 ElasticDL 项目的进展。
 
-为了从海量数据中学习规律，我们需要编写分布式深度学习程序来完成训练任务。这在工业场景中尤为常见。
+ElasticDL 是一套分布式深度学习训练框架，其首要设计意图是简化分布式编程。它允许用
+户只提供用 TensorFlow 2.0 API 描述的模型，而不需要用户写训练过程代码。
 
-分布式深度学习程序的编写是相对困难的，编程者既要了解深度学习，也要了解分布式系统开发。
-在一个分布式深度学习系统中，需要启动和监控若干个 worker，对数据和计算任务进行拆分，并且分发给 workers。
-此外，还需要考虑 worker 之间的通信（communication）和 同步（synchronization）。
-随着计算规模的增加，worker
-数目也会增加。当 worker 数目很多时，作业在执行过程中有 worker 挂掉的概率也会变得很大。
-如果一个 worker 挂掉，则整个作业重启，那么重启之后可能又会有 worker 挂掉导致重启，于是作业不断陷入重启。
-此时，需要结合深度学习训练算法的数学性质，设计容错机制。
-这要求编程者必须同时是深度学习和分布式系统的专家。
+同时，ElasticDL 提供基于 Kubernetes 的弹性调度的能力 —— 当机群资源不足时，一个训
+练作业里的进程减少；当其他作业结束释放资源后，进程数量随之增加。这样的做法比
+TensorFlow distribution strategy 以及 PyTorch Elastic 专注容错（进程减少的情况下
+作业不失败，但不会增加进程数量）更进一步，在实践中可以让机群的利用高达 90%。不仅
+如此，每个作业的启动等待时间都相应缩短。
 
-我们对编写分布式深度学习程序的现有开源方案进行了调研。一方面，TensorFlow 是当今最受欢迎的深度学习平台，在蚂蚁集团内部，TensorFlow
-在诸多业务场景中被广泛使用；
-另一方面，Kubernetes 是目前最先进的分布式操作系统，是公有云和私有云的事实工业标准。
-因此，本文重点讨论在 Kubernetes 上运行 TensorFlow 分布式训练程序的解决方案。调研结果参见下表。
+限于篇幅，本文主要介绍 ElasticDL 简化分布式深度学习系统开发的特点。弹性调度的思
+路和 benchmark 留待下篇。
 
-|  | 模型定义 | 分布式调度工具 |
+## 简化分布式深度学习编程
+
+为了从海量数据中学习规律，我们需要编写分布式深度学习程序来完成训练任务。这在工业
+场景中尤为常见。
+
+可分布式深度学习程序的编写很难 —— 编程者既要了解深度学习，也要了解分布式系统开发。
+在一个分布式深度学习系统中，需要启动和监控若干个 workers。因为既要拆分训练数据给
+workers，还要综合各个 worker 算出的 gradients 来更新模型，所以涉及通信
+（communication）和 同步（synchronization）。此外，当 worker 数目很多时，作业在
+执行过程中有 worker 挂掉的概率也会变得很大。如果一个 worker 挂掉，则整个作业重启
+或者恢复到最近的 checkpoint（fault recovery），那么重启之后可能又会有 worker 挂
+掉导致重启，于是作业不断陷入重启和恢复，永远也无法完成。这进一步要求编程者具备设
+计容错（fault tolerance）系统的能力。其实不仅分布式深度学习，其他分布式机器学习
+程序、分布式离线和在线数据处理程序等各种分布式程序的写作，都对编程者有类似上述要
+求。
+
+一个常见的解决思路是为特定类型的作业提供分布式编程框架，让用户只需要完形填空一样
+补上业务逻辑，而分布式计算（包括通信、同步、和容错）都由框架的代码来完成。一个典
+型的例子是离线数据处理程序用 MapReduce 框架来写。不管是 Google MapReduce 还是
+Hadoop MapReduce，用户基本都只需填写 map 和 reduce 两个函数的实现即可。类似的，
+在线数据流系统基于 Storm 和 Flink 来写，用户只需提供 bolts 和 nuts 这样的业务逻
+辑定义。
+
+在 ElasticDL 之前，蚂蚁金服的同事们使用过多种框架和类似框架的高层 API。这些方案
+大都基于 TensorFlow 和 Kubernetes。
+
+1. TensorFlow Estimator 作为构建在 TensorFlow 之上的一层 API，允许用户只需定义模
+   型，而训练过程封装在一个函数调用里。这个函数调用可以把分布式作业启动在
+   Kubernetes 上，前提是 Kubernetes 机群部署了 Kubeflow 项目提供的 TF-operator。
+   这个方案的局限是：它仅支持 TensorFlow 的 graph mode，不支持 eager execution；
+   而 eager execution 可以大幅简化调试，尤其方便跟踪网络各层输出。
+
+2. Keras API 支持 TensorFlow 2.x 和 eager execution。目前 TensorFlow 2.x Keras
+   API 还暂不支持 ParameterServer 分布式策略，对 AllReduce 分布式策略提供了实验
+   性的支持。
+
+3. Horovod 对用户代码有侵入性，用户除了必须熟悉 TensorFlow API 之外，还需学习
+   Horovod API。
+
+| 方案 | 模型定义方式 | 分布式执行机制 |
 | --- | --- | --- |
-| 方案一 | TensorFlow Estimator API | Kubeflow TF-operator |
-| 方案二 | TensorFlow Keras API | Kubeflow TF-operator |
-| 方案三 | Horovod with TensorFlow | Kubeflow MPI-operator |
+| Estimator | TensorFlow Estimator API | Kubeflow TF-operator |
+| Keras | TensorFlow Keras API | Kubeflow TF-operator |
+| Horovod | Horovod with TensorFlow | Kubeflow MPI-operator |
+| ElasticDL | TensorFlow Keras API | ElasticDL master process per job |
 
-现有开源方案的使用仍有一定门槛。在模型定义方面，TensorFlow Estimator API 仅支持 graph execution，不支持 eager
-execution，调试代码和网络各层输出较为麻烦。
-TensorFlow 2.x 默认支持 eager execution，并且推荐使用更加精简的 Keras API
-来定义模型。
-TensorFlow Keras API 提高开发效率，降低使用门槛，与 eager execution
-配合之后，使得程序更为直观，也更易调试。
-目前 TensorFlow 2.x Keras API 还暂不支持 ParameterServer 分布式策略，对 AllReduce 分布式策略提供了实验性的支持。
-而Horovod 有一定的侵入性，用户除了熟悉 TensorFlow API之外，还需学习 Horovod API。
-另一方面，用户依赖 Kubeflow 项目提供的 Kubernetes Operator
-在 Kubernetes 集群上运行分布式训练作业，这要求用户对 Kubernetes 分布式操作系统有一定掌握。
+以上三个方案的共同局限是，虽然具备一定的容错能力，不过不支持弹性调度。而且它们都
+依赖部署 Kubernetes operator，了解 Kubernetes 对 AI 专家来说颇有挑战。
 
-我们为此设计和开发了 ElasticDL
-分布式计算框架，让编程者只需了解深度学习，不需要了解分布式系统开发。
-同时，ElasticDL 从易用性的角度出发，直接支持了 TensorFlow 2.x 的 Keras API。
+针对这些局限，我们设计和开发了 ElasticDL 分布式计算框架。用户定义可以用
+TensorFlow 2.x 的 Keras API 来定义模型。并且，分布式执行不要求 Kubernetes 机群有
+任何特殊配置，而是利用每个作业里的 master 进程来协调训练数据分配、通信、同步、和
+容错 —— 这也是 ElasticDL 除了容错，支持弹性调度的原因。
 
-就像 MapReduce 框架中只需要用户完形填空两个函数：map 和 reduce，ElasticDL
-需要用户填写 forward、loss、optimizer、feed 等函数。
-其中 forward 定义深度学习的前向计算过程，
-ElasticDL 会调用 TensorFlow eager mode 中提供的 Gradient Tape 接口，
-来自动推导对应的后向计算过程（backward pass）；
-loss 指定模型训练时使用的损失函数；
-optimizer 指定模型训练时使用的优化器；
-feed 用来定制化训练数据到 TensorFlow 的 tensor的转换过程。
+### 基于 ElasticDL 框架的编程
 
-所有这些函数的编程只需要了解 TensorFlow
-API，不需要对分布式训练有任何背景知识。
-这些函数也可以在单机上用小数据做调试验证，然后就可以放心地交给 ElasticDL
-做分布式的容错的大规模训练了。
+就像 MapReduce 框架中只需要用户完形填空两个函数：map 和 reduce，ElasticDL需要用
+户填写 forward、loss、optimizer、feed 函数。其中 forward 定义深度学习的前向计算
+过程（forward pass），ElasticDL 会调用 TensorFlow eager execution 的
+GradientTape 机制来自动推导对应的后向计算过程（backward pass）；loss 函数返回模
+型训练时使用的损失函数；optimizer 函数返回模型训练时使用的优化器；feed 定制化训
+练数据到 TensorFlow 模型输入（tensors）的转换过程。
 
-不同于 Kubeflow 通过增加 Kubernetes Operator 来定制
-Kubernetes 的思路，ElasticDL 为每个作业引入一个 master（类似于 Google MapReduce）。
-这个 master 作为作业的一部分，而不是 Kubernetes 的一部分，
-不仅了解集群情况，更了解深度学习作业本身，所以有充分的信息来做更优的调度。
-比如 master 可以请 Kubernetes 把两个 worker 启动在同一台物理机上，共用一个
-GPU。
-这样，一个进程读数据的时候，请另外一个进程来做计算，从而让 GPU
-的利用率总是很高。
+所有这些函数的编程只需要了解 TensorFlow API，不需要对分布式训练有任何背景知识。
+写完之后，用户可以在单机上用小数据做调试验证。如果通过，可以不做任何代码修改就提
+交到 Kubernetes 机群上做分布式的容错的大规模训练。
 
-## ElasticDL 简化分布式深度学习程序编写
+相比于不同于 Kubeflow/TF-operator 给每个机群部署一个 Kubernetes Operator，
+ElasticDL 为每个作业引入一个 master 进程。通过调用 Kubernetes API，master 进程了
+解机群情况；同时，作为作业的一部分，master 还了解深度学习作业的特点 —— 包括利用
+Python inspection 机制了解上述各个函数的特点，其中调用的 API 函数等。所以，
+master 有非常充分的信息来做更优的调度。比如 master 可以请 Kubernetes 把两个
+worker 启动在同一台物理机上，共用一个 GPU —— 当一个进程读数据的时候，请另外一个
+进程来做计算，从始终保持 GPU 的利用率。
 
-### 用户只需提供模型定义
+### 一个例子
 
-如上文所述，用户使用 Keras API 定义模型结构。这里我们用一个 MNIST 手写数字识别的例子来详细说明。
+我们用一个 MNIST 手写数字识别的例子来说明。
 
 ```python
-def custom_model():
+def forward():
     inputs = tf.keras.Input(shape=(28, 28), name="image")
     x = tf.keras.layers.Reshape((28, 28, 1))(inputs)
     x = tf.keras.layers.Conv2D(32, kernel_size=(3, 3), activation="relu")(x)
@@ -79,7 +107,6 @@ def custom_model():
     x = tf.keras.layers.Dropout(0.25)(x)
     x = tf.keras.layers.Flatten()(x)
     outputs = tf.keras.layers.Dense(10)(x)
-
     return tf.keras.Model(inputs=inputs, outputs=outputs, name="mnist_model")
 ```
 
@@ -132,101 +159,112 @@ def dataset_fn(dataset, mode, _):
     return dataset
 ```
 
-在 TensorFlow 2.x
-中，上述定义的每个接口都可以单独测试，我们可以很方便的在本地调试模型定义。
+上述每个函数都很容易做单独测试（unit test）。而且，利用 TensorFlow 2.x eager
+execution，上述函数很容易 log 每一层的输出。基于个特点，ElasticDL worker 在调用
+forward 函数的时候，可以打印中间结果，便于调试和复现问题。
 
-同时，TensorFlow 2.x 默认支持 eager execution，ElasticDL worker
-可以直接调用模型定义，进行前向计算。
-在反向计算中，worker 可以通过 TensorFlow 2.x 暴露的 Gradient Tape接口
-来计算得到梯度。
+## ElasticDL 的弹性训练过程
 
-### ElasticDL 提供 Training Loop
+给定上述模型定义，ElasticDL 的 master 进程按照 asynchronous 或者 synchronous SGD
+方法，协调 workers 来做训练。当使用 asynchronous SGD 方法时，master 会启动一个高
+性能的 parameter server，供各个 workers 使用。当使用 synchronous SGD 时，
+ElasticDL 使用和才云科技合作研发的一个 Kubernetes-native 的 fault-tolerable
+AllReduce 实现 TFlib。
 
-我们通常使用 mini-batch SGD 的方法来训练深度学习模型。ElasticDL worker
-会进行如下步骤来完成对一个 mini-batch 的训练：
+### Master 负责动态数据划分
 
-1. 读取一个 mini-batch 的训练数据
-2. 获取模型参数，进行 forward 计算
-3. 进行 backward 计算，得到梯度
-4. 把梯度以某种方式进行聚合，并更新模型
+弹性训练过程的一个容易被忽略的前提是动态数据划分（dynamic data partitioning）。
+很多用 MPI 写分布式程序的时候，因为作业中进程数量是恒定的，所以经常采用荆条数据
+划分的做法 —— 在训练之前把训练数据预先分成 N 个文件，对应作业中的 N 个 worker 进
+程。这个做法在弹性调度的时候就失效了 —— 因为弹性调度时，作业中的进程数量是可变的。
+为此，需要实现动态数据划分。
 
-我们需要一个更大的 training loop 来包含上述的四个步骤，确保 worker
-可以持续的读取下一个 mini-batch 的数据，继续训练，直到满足终止条件。
+ElasticDL 的动态数据划分是基于索引的。ElasticDL 要求训练数据是一个或者多个
+[RecordIO](https://github.com/wangkuiyi/recordio) 格式的文件，或者是
+[MaxCompute](https://www.alibabacloud.com/zh/product/maxcompute) 数据库系统中的
+表（table）。这辆中数据源都允许 master 进程在开始训练之前快速地，在基本存储单元
+（block）间快速跳跃着扫描数据，把数据分成小段，称之为任务（task）。每个 task 包
+括的内容如下：
 
-ElasticDL master 中实现了这样的 training
-loop，其关键点是通过动态数据分发，解决分布式训练中的数据读取问题。
-首先 master 会根据数据索引将数据分片，然后为每个分片的索引创建一个 task。
-ElasticDL worker 会向 master 请求拿到 task。拿到 task 之后，worker
-可以数据的索引找到对应的数据分片。
+1. 文件名或者表名，
+2. 第一条记录相对于文件（或者表）开始处的偏移（offset），
+3. 这个 task 里的总记录数。
 
-ElasticDL master 中还为这些 task 维护了三个队列，todo/doing/done 队列。
-任务开始时，master 会将所有 task 放入 todo 队列。每分发一个 task 给 worker，
-都会把这个 task 从 todo 队列挪到 doing 队列。
-如果一个 worker 被抢占或者因为其他原因失败，master 可以通过监控 doing 队列 task
-的 timeout，
-把这个 task 挪回到 todo 队列中。
-如果 worker 顺利完成一个 task，master 则会收到通知，把这个 task 从 doing
-队列挪到 done 队列。
+扫描结果是很多 tasks，这些 tasks 被放进一个 master 在 etcd 上维护的 TODO 队列里。
+因为 etcd 是不死的，所以 master 即使被高优先级作业抢占了，这个信息也不会丢失；可
+以通过在资源富余时重启 master 进程来回复作业状态。
 
-由于ElasticDL master 负责把数据索引分发给所有的 worker，所以我们只需要给 master
-配置数据源即可。
-目前 ElasticDL 支持 [RecordIO](https://github.com/wangkuiyi/recordio) 文件和
- [MaxCompute](https://www.alibabacloud.com/zh/product/maxcompute) 表两种数据源。
-用户只需配置训练数据集的 RecordIO 文件路径或者 MaxCompute 表名。
+扫描和划分数据的同时，master 开始请 Kubernetes 启动 workers，总数不超过用户指定
+的数量 N（最大并发度）。每当一个 worker 启动起来了，master 会收到 Kubernetes 发
+来的通知；master 在一个 etcd 数据结构里记录“活着”的 workers。
 
-同时使用动态数据分发机制之后，worker 数目也可以动态变化。
-新加入的 worker 可以直接向 master 请求分配数据分片，从而更方便地支持弹性调度
-worker 的数量。
+扫描和划分数据结束之后，master 就依次从 TODO 队列里取出 task，通过 gRPC 发给某一
+个活着的 worker，同时 master 把这个 task 挪进 DOING 队列里。接受到 task 的
+worker 负责打开文件（或者表），并且从指定的 offset 开始依次读取记录，并且更新本
+地模型。根据用户选择的 asynchronous 或者 synchronous 算法，workers 会通过调用
+parameter server 或者 AllReduce 来协调更新全局模型。
 
-### ElasticDL 高效完成 Training Loop
+当一个 worker 处理完了接收到的 task，它通过 gRPC 返回一个表示成功的标记；master
+就把这个 task 从 DOING 队列挪到 DONE 队列了。当所有 task 都从 TODO 挪进了 DONE，
+则说明一个 epoch 完成了。
 
-Training loop 中的关键一步是把来自多个 worker 的梯度进行高效聚合。一种常用的梯度聚合策略是 Parameter Server (PS) 策略。
-在 PS 策略下，模型参数被分成若干个 shard，存储在一组 PS 上。
-worker 首先向 PS 请求参数，然后使用本地训练数据计算梯度，并把梯度发送给PS。
-PS 使用 worker 上传来的梯度来迭代更新模型参数。
+如果一个 worker 失败了（比如被更高优先级作业抢占了），则 master 的 gRPC call 会
+timeout；此时，master 把对应的 task 从 DOING 队列挪回 TODO 队列了。下一次有
+worker 完成 task 时，master 会把这个 task 再发出去。这里有一个细节：有的 task 可
+能被某个 worker 使用了一部分，也因此影响到了模型更新；此时 worker 被抢占，那么这
+部分已经被处理的数据会因为 task 的下一次分发，被重复使用。不过这个并不影响机器学
+习训练要求数据统计一致性的假设。而且其他动态数据划分方法造成的数据复用情况可能更
+严重。
 
-ElasticDL master 会首先进行组网，协调 worker 和 PS 之间进行通信。ElasticDL 的 master 将会被首先创建，
-然后由 master 启动 worker pod，以及 parameter server pod，并且建立通信。
-ElasticDL master 可以监控每个 pod 的状态，当有 pod 挂掉时，master 会重新拉起新的 pod。
+### Woker 调用 TensorFlow Eager Execution
 
-其次，ElasticDL 使用 Go 实现了 parameter
-server，具有良好的吞吐能力和可扩展性。
-在搜索推荐广告等场景中，神经网络模型通常包含较大的 embedding
-table。在一些情况下，embedding table 的大小会超过单机内存。
-为此，我们针对 embedding table
-做了一些额外的优化。
+ElasticDL worker 接收到的一个 task 通常包括多个 minibatches。对于每个 task，
+worker 打开对应的文件或者表，随后做如下操作：
 
-- embedding vector 在 PS 上惰性初始化，用户无需提前指定 embedding table 的大小
-- 把一个 embedding table 拆分到多个 PS 上，均衡存储与通信负载
-- worker 从 PS 请求参数时，先滤除重复 ID，只取回不同 ID 的参数，减少通信量
-- worker 向 PS 发送梯度时，先把相同 ID 的梯度进行合并，减少通信量
+1. 读取一个 mini-batch 的训练数据。
+2. 用本地模型（local model）作为参数调用用户定义的 forward 函数以计算 cost。如果
+   模型很大，则部分参数可能来自于 parameter server。
+3. 给定 cost，master 利用 TensorFlow eager execution 的 GradientTape 机制，进行
+   backward 计算，得到梯度（gradient）。
+4. 如果是 synchronous SGD，此时 worker 调用 AllReduce 实现 FTlib 来同步
+   gradients 并且更新模型。如果是 asynchronous SGD，worker 不定时的向 parameter
+   server 上传 gradients，也不定时地从 parameter server 获取全局模型参数。
 
-通过上述设计与实现，ElasticDL 可以很高效的完成搜索推荐广告模型的训练。
+### 高效训练的优化
 
-ElasticDL 自去年9月份开源以来，我们对 Parameter Server
-持续迭代开发，不断提升性能。
-我们以一个推荐中常用的 deepFM 模型来进行测试，测试中使用 frappe 数据集。
-在每次实验中，我们启动一个 parameter server 和四个 worker，训练10个
-epoch。
+相对于 2019 年秋季 ElasticDL 在 Google Developer Day 上亮相时的状态，最近几个月
+ElasticDL 项目针对性能优化做了很多工作。当时 ElasticDL 使用 Redis 作为 parameter
+server。现在有了自己的用 Go 语言写的 parameter server。相对于 Redis， ElasticDL
+parameter server 可以做一些深度学习计算，从而减少 worker 和 parameter server 之
+间通信的次数。
 
-| Parameter Server 实现 | 训练时间（秒） |
-| --- | --- |
-| By Redis (2019.9) | 1350 |
-| By Go (2020.2) | 106 |
+这个变化和其他优化工作一起让同样的训练作业，总体训练时间下降了约 13 倍。最近一个
+基于 DeepFM 模型的试验展示，用两个 parameter server 进程和四个 workers 进程来训
+练，10 个 epochs 的总体时间从 1350 秒（ElasticDL 的 2019年9月版本）下降到 106 秒
+（2020年2月版本）。这些优化策略包括：
 
-从上表中我们可以看出 Go Parameter Server 相比于之前的实现有10倍以上的提升。
+- 在 parameter server 上惰性初始化（lazy initialize） embedding vectors —— 在使
+  用到 vector 的时候才初始化。
+- 把一个 embedding table 拆分到多个 parameter server 进程里以均衡存储与通信负载。
+- worker 从 PS 请求 embedding vectors 时，先滤除重复的 embedding ID，只取回不同
+  ID 的 vectors，从而减少通信量。
+- worker 向 PS 发送梯度时，先把相同 ID 的梯度进行合并（调用 TensorFlow 的
+  embedding vector combinanation 函数），从而减少通信量。
 
-## 使用 ElasticDL 进行 Kaggle 实战
+## 一个 ElasticDL 的使用实例
 
-在本小节中，我们将使用 ElasticDL 进行一次 Kaggle 实战。
-本例中使用的是 Kaggle 上 Display Advertising Challenge 中的 criteo
-数据集，这是一个关于广告点击率预估的比赛。
-我们使用 xDeepFM 模型来进行建模，所有的实例代码都放在了 ElasticDL 的 [model
-zoo](https://github.com/sql-machine-learning/elasticdl/tree/develop/model_zoo/dac_ctr)中。
+在本小节中，我们将使用 ElasticDL 进行一次 Kaggle 实战。本例中使用的是 Kaggle 上
+Display Advertising Challenge 中的 criteo数据集，这是一个关于广告点击率预估的比
+赛。我们使用 xDeepFM 模型来进行建模，所有的实例代码都放在了 ElasticDL 的 [model
+zoo](https://github.com/sql-machine-learning/elasticdl/tree/develop/model_zoo/dac_ctr)
+中。
 
 ### 数据预处理
 
-1. 下载 criteo [数据集](https://labs.criteo.com/2014/02/download-kaggle-display-advertising-challenge-dataset)。
+1. 下载 criteo [数据
+   集
+   ](https://labs.criteo.com/2014/02/download-kaggle-display-advertising-challenge-dataset)
+   。
 
 1. 然后我们需要把原始数据转换为 RecordIO 文件格式。我们提供了如下的转换脚本：
 
@@ -237,16 +275,17 @@ zoo](https://github.com/sql-machine-learning/elasticdl/tree/develop/model_zoo/da
       --data_path train.txt
    ```
 
-   原始数据会被按照 19:1 的比例，拆分为训练集和验证集，转换后的数据放在dac_records 目录中。
+   原始数据会被按照 19:1 的比例，拆分为训练集和验证集，转换后的数据放在
+   dac_records 目录中。
 
 1. 对原始数据进行特征统计。对于连续的特征，我们统计得出均值和方差；对于离散的特
    征，我们得出特征值个数。我们把统计后的数据放在一个文件中，供后续使用。
 
 ### 模型定义
 
-xDeepFM 模型由三部分组成，分别是 linear logits，dnn logits 和 xfm logits。
-借助 Keras API，我们可以很清晰的描述模型结构。
-这里贴出 dnn logits 部分的描述代码，完整的模型定义可以参见 model zoo。
+xDeepFM 模型由三部分组成，分别是 linear logits，dnn logits 和 xfm logits。借助
+Keras API，我们可以很清晰的描述模型结构。这里贴出 dnn logits 部分的描述代码，完
+整的模型定义可以参见 model zoo。
 
 ```python
 deep_embeddings = lookup_embedding_func(
@@ -267,10 +306,11 @@ dnn_logit = tf.keras.layers.Dense(1, use_bias=False, activation=None)(
 
 ### 提交训练任务
 
-我们首先在 Google Cloud 上创建一个 GKE 集群，并且把转换好的 RecordIO
-训练数据上传到集群上。
-详细的过程可以参考 ElasticDL 的
-[gcloud教程](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/tutorials/elasticdl_cloud.md)。
+我们首先在 Google Cloud 上创建一个 GKE 集群，并且把转换好的 RecordIO训练数据上传
+到集群上。详细的过程可以参考 ElasticDL 的[gcloud教
+程
+](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/tutorials/elasticdl_cloud.md)
+。
 
 然后，我们在本地制作一个镜像，该镜像包含了 xDeepFM 模型定义，以及相关依赖包。
 
@@ -282,15 +322,15 @@ COPY model_zoo /model_zoo
 
 我们需要把该镜像推送到 GKE 集群能够访问到的仓库中，比如说 docker hub 的仓库中。
 
-最后，我们通过 ElasticDL client 工具向 GKE 集群提交训练作业。
-我们使用 ParameterServer 分布式策略进行训练，本次作业中，我们启动了2个 parameter serve pods 和
-5个 worker pods 共同参与训练。
+最后，我们通过 ElasticDL client 工具向 GKE 集群提交训练作业。我们使用
+ParameterServer 分布式策略进行训练，本次作业中，我们启动了2个 parameter serve
+pods 和5个 worker pods 共同参与训练。
 
 ```bash
 elasticdl train \
   --image_name=${your_docker_hub_repo}/elasticdl:ci \
   --model_zoo=model_zoo \
-  --model_def=dac_ctr.elasticdl_train.custom_model \
+  --model_def=dac_ctr.elasticdl_train.forward \
   --volume="mount_path=/data,claim_name=fileserver-claim" \
   --minibatch_size=512 \
   --num_minibatches_per_task=50 \
