@@ -40,11 +40,11 @@ make -f elasticdl/Makefile
     GOBIN=/tmp go install ./...
 )
 
-if [ WITH_TEST ] then;
+if [ WITH_TEST ]; then
     go test -v -cover ./...
 fi
 
-if [ WITH_TEST ] then;
+if [ WITH_TEST ]; then
     pytest elasticdl/python/tests elasticdl_preprocessing/tests \
         --cov=elasticdl/python --cov-report=xml
     mkdir -p ./build
