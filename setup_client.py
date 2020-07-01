@@ -26,5 +26,11 @@ setup(
     python_requires=">=3.5",
     packages=find_packages(include=["elasticdl_client*"]),
     package_data={"": ["requirements.txt"]},
-    entry_points={"console_scripts": ["elasticdl=elasticdl_client.main:main"]},
+    # TODO(brightcoder01): Use `elasticdl_client` as the binary name
+    # temporarily. After we move all the functinality from main package
+    # to elasticdl_client package, we will rename the binary name to
+    # `elasticdl` and then remove the entry_points in main package.
+    entry_points={
+        "console_scripts": ["elasticdl_client=elasticdl_client.main:main"]
+    },
 )
