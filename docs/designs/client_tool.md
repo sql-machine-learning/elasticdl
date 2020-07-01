@@ -22,7 +22,7 @@ this command-line client tool.
     - Install [Docker CE >= 18.x](https://docs.docker.com/docker-for-mac/install/)
     for building the Docker images of the distributed ElasticDL jobs.
     - Install Python >= 3.6.
-    - Install elasticdl_client: `pip install elasticdl_client`.
+    - Install ElasticDL command-line tool by `pip install elasticdl_client`.
 
 1. Users develop model and the directory structure of model definition files
    is as follows:
