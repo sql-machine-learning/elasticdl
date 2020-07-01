@@ -337,7 +337,7 @@ def add_common_params(parser):
     add_bool_param(
         parser=parser,
         name="--use_go_ps",
-        default=False,
+        default=True,
         help="True for Go-based PS, False for Python-based PS",
     )
     parser.add_argument(
