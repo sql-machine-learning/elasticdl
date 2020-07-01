@@ -67,7 +67,6 @@ class Client(BaseClient):
                 if not, it loads the kube config file.
         """
         super().__init__(
-            self,
             image_name=image_name,
             namespace=namespace,
             job_name=job_name,
