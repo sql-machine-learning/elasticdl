@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import argparse
+import sys
 
 from elasticdl_client.api import (
     build_zoo,
@@ -30,22 +31,33 @@ def build_argument_parser():
     subparsers.required = True
 
     # Initialize the parser for the `elasticdl zoo` commands
-    zoo_parser = subparsers.add_parser("zoo")
+    zoo_parser = subparsers.add_parser(
+        "zoo",
+        help="Initialize | Build | Push a docker image for the model zoo.",
+    )
     zoo_subparsers = zoo_parser.add_subparsers()
     zoo_subparsers.required = True
 
     # elasticdl zoo init
-    zoo_init_parser = zoo_subparsers.add_parser("init")
+    zoo_init_parser = zoo_subparsers.add_parser(
+        "init", help="Initialize the model zoo."
+    )
     zoo_init_parser.set_defaults(func=init_zoo)
     args.add_zoo_init_arguments(zoo_init_parser)
 
     # elasticdl zoo build
-    zoo_build_parser = zoo_subparsers.add_parser("build")
+    zoo_build_parser = zoo_subparsers.add_parser(
+        "build", help="Build a docker image for the model zoo."
+    )
     zoo_build_parser.set_defaults(func=build_zoo)
     args.add_zoo_build_arguments(zoo_build_parser)
 
     # elasticdl zoo push
-    zoo_push_parser = zoo_subparsers.add_parser("push")
+    zoo_push_parser = zoo_subparsers.add_parser(
+        "push",
+        help="Push the docker image to a remote registry for the distributed"
+        "ElasticDL job.",
+    )
     zoo_push_parser.set_defaults(func=push_zoo)
     args.add_zoo_push_arguments(zoo_push_parser)
 
@@ -78,6 +90,10 @@ def build_argument_parser():
 
 def main():
     parser = build_argument_parser()
+    if len(sys.argv) == 1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+
     args, _ = parser.parse_known_args()
     args.func(args)
 
