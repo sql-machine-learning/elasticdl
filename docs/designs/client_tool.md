@@ -32,17 +32,25 @@ this command-line client tool.
 
     ```bash
     cd ${model_root_path}
-    elasticdl zoo init [base_image_name]
+    elasticdl zoo init
+        [--base_image=customized_base_image_name]
+        [--cluster_spec=prem_cluster_spec]
+        [--extra_pypi_index=your_pypi_index]
     ```
 
-    `base_image_name` is optional and the default value is `python`.
+    The options inside `[]` are optional. The default value of `base_image`
+    is `python:3.6`.
     The generated Dockerfile example is:
 
     ```Dockerfile
-    FROM python
+    FROM python:3.6
+
+    RUN pip install elasticdl_preprocessing
+    RUN pip install elasticdl
+
     COPY . /model_zoo
     RUN pip install -r /model_zoo/requirements.txt
-    RUN pip install elasticdl
+    ...
     ```
 
     Users can make additional updates on the Dockerfile if necessary.
@@ -50,7 +58,12 @@ this command-line client tool.
 1. Build the Docker image for an ElasticDL job.
 
     ```bash
-    elasticdl zoo build --image=a_docker_registry/bright/elasticdl-wnd:1.0 .
+    elasticdl zoo build
+        --image=a_docker_registry/bright/elasticdl-wnd:1.0
+        [--docker_base_url=docke_base_url]
+        [--docker_tlscert=docker_tlscert]
+        [--docker_tlskey=docker_tlskey]
+        .
     ```
 
 1. Push the Docker image to a remote registry.
@@ -59,11 +72,15 @@ this command-line client tool.
     elasticdl zoo push a_docker_registry/bright/elasticdl-wnd:1.0
     ```
 
+    If you want to execute the job locally in Minikube, the `push` step
+    is not necessary.
+
 1. Submit a model training/prediction/evaluation job.
 
     ```bash
     elasticdl train \
         --image=a_docker_registry/bright/elasticdl-wnd:1.0 \
+        --model_zoo=model_zoo
         --model_def=a_directory.wide_and_deep.custom_model \
         --training_data=/data/mnist/train \
         --validation_data=/data/mnist/test \
