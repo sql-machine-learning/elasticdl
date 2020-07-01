@@ -17,13 +17,21 @@ this command-line client tool.
 
 ## User Story
 
+1. Prerequisite
+
+    - Install [Docker CE >= 18.x](https://docs.docker.com/docker-for-mac/install/)
+    for building the docker images of the distributed ElasticDL jobs.
+    - Install Python >= 3.6.
+    - Install elasticdl_client: `pip install elasticdl_client`.
+
 1. Users develop model and the directory structure of model definition files
    is as follows:
 
     ```TEXT
-    a_directory
-    - wide_and_deep.py
-    requirements.txt
+    model_zoo_root
+        a_directory
+        - wide_and_deep.py
+        requirements.txt
     ```
 
 1. Generate a Dockerfile.  
@@ -31,7 +39,7 @@ this command-line client tool.
     Input the command:
 
     ```bash
-    cd ${model_root_path}
+    cd model_zoo_root
     elasticdl zoo init
         [--base_image=customized_base_image_name]
         [--cluster_spec=prem_cluster_spec]
