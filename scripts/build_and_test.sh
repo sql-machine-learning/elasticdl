@@ -35,13 +35,13 @@ make -f elasticdl/Makefile
     go get -u -t k8s.io/client-go@v0.17.0
     go mod tidy
     GOBIN=/tmp go install ./...
-    # go test -v -cover ./...
+    go test -v -cover ./...
 )
 
 # Run Python unittests
-# pytest elasticdl/python/tests elasticdl_preprocessing/tests --cov=elasticdl/python --cov-report=xml
+pytest elasticdl/python/tests elasticdl_preprocessing/tests --cov=elasticdl/python --cov-report=xml
 mkdir -p ./build
-# mv coverage.xml ./build
+mv coverage.xml ./build
 
 # Create elasticdl_preprocessing package
 rm -rf ./build/lib
