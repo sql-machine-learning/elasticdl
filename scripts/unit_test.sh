@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# RUN Go unittests
+go test -v -cover ./...
+
 # Run Python unittests
 pytest elasticdl/python/tests elasticdl_preprocessing/tests --cov=elasticdl/python --cov-report=xml
 mkdir -p ./build

@@ -35,7 +35,6 @@ make -f elasticdl/Makefile
     go get -u -t k8s.io/client-go@v0.17.0
     go mod tidy
     GOBIN=/tmp go install ./...
-    go test -v -cover ./...
 )
 
 # Create elasticdl_preprocessing package
