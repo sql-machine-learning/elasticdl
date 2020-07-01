@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+WITH_TEST=$1
+
 set -e
 
 # Build elasticdl.org/elasticdl Go package
@@ -31,11 +33,23 @@ make -f elasticdl/Makefile
     go mod init github.com/tensorflow
     cd /tmp/elasticdl
     go mod init elasticdl.org/elasticdl
-    go mod edit -replace github.com/tensorflow="${GOPATH}"/pkg/mod/github.com/tensorflow
+    go mod edit -replace \
+        github.com/tensorflow="${GOPATH}"/pkg/mod/github.com/tensorflow
     go get -u -t k8s.io/client-go@v0.17.0
     go mod tidy
     GOBIN=/tmp go install ./...
 )
+
+if [ WITH_TEST ] then;
+    go test -v -cover ./...
+fi
+
+if [ WITH_TEST ] then;
+    pytest elasticdl/python/tests elasticdl_preprocessing/tests \
+        --cov=elasticdl/python --cov-report=xml
+    mkdir -p ./build
+    mv coverage.xml ./build
+fi
 
 # Create elasticdl_preprocessing package
 rm -rf ./build/lib

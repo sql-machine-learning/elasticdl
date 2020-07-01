@@ -18,4 +18,4 @@ docker build --target dev -t elasticdl:dev -f elasticdl/docker/Dockerfile \
     --build-arg BASE_IMAGE="$BASE_IMAGE" .
 
 docker run --rm -it --net=host -v "$PWD":/work -w /work elasticdl:dev \
-    bash -c "scripts/build.sh"
+    bash -c "scripts/build_and_test.sh 0"
