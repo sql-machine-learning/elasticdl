@@ -39,6 +39,7 @@ share/python-wheels/
 MANIFEST
 *.ckpt
 elasticdl/go/bin/elasticdl_ps
+data/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
