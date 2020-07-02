@@ -267,6 +267,10 @@ class InstanceManager(object):
         with self._lock:
             return Counter([v for _, v in self._ps_pods_phase.values()])
 
+    def get_pod_status(self, worker_id):
+        pod = self._k8s_client.get_worker_pod(worker_id)
+        return pod.status.phase
+
     def _event_cb(self, event):
         evt_obj = event.get("object")
         evt_type = event.get("type")

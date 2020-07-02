@@ -19,6 +19,7 @@ from elasticdl.python.common.constants import (
     DistributionStrategy,
     InstanceManagerStatus,
     JobType,
+    PodStatus
 )
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_utils import get_logger
@@ -529,6 +530,10 @@ class Master(object):
                         )
                         self.task_d.recover_tasks(worker_id)
                         # TODO: save worker logs before remove it
-                        # self.instance_manager._remove_worker(worker_id)
+                        pod_status = self.instance_manager.get_pod_status(
+                            worker_id
+                        )
+                        if pod_status == PodStatus.RUNNING:
+                            self.instance_manager._remove_worker(worker_id)
                         break
             time.sleep(30)
