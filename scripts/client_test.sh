@@ -67,6 +67,7 @@ elif [[ "$JOB_TYPE" == "evaluate" ]]; then
       --num_minibatches_per_task=2 \
       --num_workers="$WORKER_NUM" \
       --num_ps_pods="$PS_NUM" \
+      --use_go_ps=False \
       --evaluation_steps=15 \
       --tensorboard_log_dir=/tmp/tensorboard-log \
       --job_name=test-evaluate \
@@ -90,6 +91,7 @@ elif [[ "$JOB_TYPE" == "predict" ]]; then
       --num_minibatches_per_task=2 \
       --num_workers="$WORKER_NUM" \
       --num_ps_pods="$PS_NUM" \
+      --use_go_ps=False \
       --job_name=test-predict \
       --log_level=INFO \
       --image_pull_policy=Never \
