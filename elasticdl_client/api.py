@@ -51,6 +51,7 @@ RUN pip install elasticdl_preprocessing\
 
 RUN pip install elasticdl --extra-index-url={{ EXTRA_PYPI_INDEX }}
 ENV PATH /usr/local/lib/python3.6/dist-packages/elasticdl/go/bin:$PATH
+ENV PATH /usr/local/lib/python3.6/site-packages/elasticdl/go/bin:$PATH
 
 COPY . /model_zoo
 RUN pip install -r /model_zoo/requirements.txt\
