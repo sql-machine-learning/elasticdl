@@ -1,7 +1,15 @@
+---
+header-includes: |
+   \usepackage{fontspec}
+   \usepackage{xeCJK}
+   \setCJKmainfont{Noto Sans SC}
+---
+
 # ElasticDL: 同时提升机群利用率和研发效率的分布式深度学习框架
 
-ElasticDL 是一个基于 TensorFlow 2.x 和 Kubernetes 的分布式深度学习编程框架。2019 年秋天，
-在上海的 Google Developer Day [活动](https://events.google.cn/intl/en/developerdays2019/agenda/#table-row-2-34)中，
+ElasticDL 是一个基于 TensorFlow 2.x 和 Kubernetes 的分布式深度学习编程框架。2019 年秋天的
+Google Developer Day
+[活动中](https://events.google.cn/intl/en/developerdays2019/agenda/#table-row-2-34)
 来自蚂蚁金服的 ElasticDL 团队展示了 ElasticDL 的第一个开源版本。本文更新这大半年来 ElasticDL
 项目的进展。
 
