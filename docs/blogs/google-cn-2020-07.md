@@ -11,7 +11,7 @@ ElasticDL 是一个基于 TensorFlow 2.x 和 Kubernetes 的分布式深度学习
 Google Developer Day
 [活动中](https://events.google.cn/intl/en/developerdays2019/agenda/#table-row-2-34)
 来自蚂蚁金服的 ElasticDL 团队展示了 ElasticDL 的第一个开源版本。本文更新这大半年来 ElasticDL
-项目的进展。
+项目的进展，尤其是性能优化和业务落地。
 
 ElasticDL 的首要设计意图是简化分布式编程。它允许用户只提供用 TensorFlow 2.0 API 描述的模型，
 而不需要用户写分布式训练过程代码。用户的模型定义只要能在本地调通，即可在分布式环境下
