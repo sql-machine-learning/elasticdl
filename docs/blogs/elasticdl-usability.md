@@ -1,8 +1,7 @@
 # ElasticDL: 像写单机程序一样写分布式深度学习程序
 
 2019 年秋天，在上海的 Google Developer Day 活动中，来自蚂蚁金服的 ElasticDL 团队
-展示了 ElasticDL 的[第一个开源版
-本](https://events.google.cn/intl/en/developerdays2019/agenda/#table-row-2-34)。
+展示了 ElasticDL 的[第一个开源版本](https://events.google.cn/intl/en/developerdays2019/agenda/#table-row-2-34)。
 本文更新这大半年来 ElasticDL 项目的进展。
 
 ElasticDL 是一套分布式深度学习训练框架，其首要设计意图是简化分布式编程。它允许用
@@ -190,9 +189,10 @@ ElasticDL 的动态数据划分是基于索引的。ElasticDL 要求训练数据
 2. 第一条记录相对于文件（或者表）开始处的偏移（offset），
 3. 这个 task 里的总记录数。
 
-扫描结果是很多 tasks，这些 tasks 被放进一个 master 在 etcd 上维护的 TODO 队列里。
-因为 etcd 是不死的，所以 master 即使被高优先级作业抢占了，这个信息也不会丢失；可
-以通过在资源富余时重启 master 进程来恢复作业状态。
+扫描结果是很多 tasks，master 把这些 tasks 放进一个 TODO 队列里。这个队列不一定需
+要是 master 进程里的数据结构，可以是放在 etcd 里的 —— 因为 etcd 是不死的，所以
+master 即使被高优先级作业抢占了，这个信息也不会丢失；可以通过在资源富余时重启
+master 进程来恢复作业状态。
 
 扫描和划分数据的同时，master 开始请 Kubernetes 启动 workers，总数不超过用户指定
 的数量 N（最大并发度）。每当一个 worker 启动起来了，master 会收到 Kubernetes 发
