@@ -84,13 +84,13 @@ GradientTape 机制来自动推导对应的后向计算过程（backward pass）
 写完之后，用户可以在单机上用小数据做调试验证。如果通过，可以不做任何代码修改就提
 交到 Kubernetes 机群上做分布式的容错的大规模训练。
 
-相比于不同于 Kubeflow/TF-operator 给每个机群部署一个 Kubernetes Operator，
+不同于 Kubeflow/TF-operator 给每个集群部署一个 Kubernetes Operator 的方式，
 ElasticDL 为每个作业引入一个 master 进程。通过调用 Kubernetes API，master 进程了
-解机群情况；同时，作为作业的一部分，master 还了解深度学习作业的特点 —— 包括利用
+解集群情况；同时，作为作业的一部分，master 还了解深度学习作业的特点 —— 包括利用
 Python inspection 机制了解上述各个函数的特点，其中调用的 API 函数等。所以，
 master 有非常充分的信息来做更优的调度。比如 master 可以请 Kubernetes 把两个
-worker 启动在同一台物理机上，共用一个 GPU —— 当一个进程读数据的时候，请另外一个
-进程来做计算，从始终保持 GPU 的利用率。
+worker 启动在同一台物理机上，共用一个 GPU —— 当一个 worker 读数据的时候，请另外一个
+ worker 来做计算，从而始终保持较高的 GPU 利用率。
 
 ### 一个例子
 
@@ -174,7 +174,7 @@ AllReduce 实现 TFlib。
 ### Master 负责动态数据划分
 
 弹性训练过程的一个容易被忽略的前提是动态数据划分（dynamic data partitioning）。
-很多用 MPI 写分布式程序的时候，因为作业中进程数量是恒定的，所以经常采用荆条数据
+在用 MPI 写分布式程序的时候，因为作业中进程数量是恒定的，所以经常采用静态数据
 划分的做法 —— 在训练之前把训练数据预先分成 N 个文件，对应作业中的 N 个 worker 进
 程。这个做法在弹性调度的时候就失效了 —— 因为弹性调度时，作业中的进程数量是可变的。
 为此，需要实现动态数据划分。
@@ -182,7 +182,7 @@ AllReduce 实现 TFlib。
 ElasticDL 的动态数据划分是基于索引的。ElasticDL 要求训练数据是一个或者多个
 [RecordIO](https://github.com/wangkuiyi/recordio) 格式的文件，或者是
 [MaxCompute](https://www.alibabacloud.com/zh/product/maxcompute) 数据库系统中的
-表（table）。这辆中数据源都允许 master 进程在开始训练之前快速地，在基本存储单元
+表（table）。这两种数据源都允许 master 进程在开始训练之前，在基本存储单元
 （block）间快速跳跃着扫描数据，把数据分成小段，称之为任务（task）。每个 task 包
 括的内容如下：
 
@@ -192,14 +192,14 @@ ElasticDL 的动态数据划分是基于索引的。ElasticDL 要求训练数据
 
 扫描结果是很多 tasks，这些 tasks 被放进一个 master 在 etcd 上维护的 TODO 队列里。
 因为 etcd 是不死的，所以 master 即使被高优先级作业抢占了，这个信息也不会丢失；可
-以通过在资源富余时重启 master 进程来回复作业状态。
+以通过在资源富余时重启 master 进程来恢复作业状态。
 
 扫描和划分数据的同时，master 开始请 Kubernetes 启动 workers，总数不超过用户指定
 的数量 N（最大并发度）。每当一个 worker 启动起来了，master 会收到 Kubernetes 发
 来的通知；master 在一个 etcd 数据结构里记录“活着”的 workers。
 
 扫描和划分数据结束之后，master 就依次从 TODO 队列里取出 task，通过 gRPC 发给某一
-个活着的 worker，同时 master 把这个 task 挪进 DOING 队列里。接受到 task 的
+个活着的 worker，同时 master 把这个 task 挪进 DOING 队列里。接收到 task 的
 worker 负责打开文件（或者表），并且从指定的 offset 开始依次读取记录，并且更新本
 地模型。根据用户选择的 asynchronous 或者 synchronous 算法，workers 会通过调用
 parameter server 或者 AllReduce 来协调更新全局模型。
@@ -224,7 +224,7 @@ worker 打开对应的文件或者表，随后做如下操作：
 1. 读取一个 mini-batch 的训练数据。
 2. 用本地模型（local model）作为参数调用用户定义的 forward 函数以计算 cost。如果
    模型很大，则部分参数可能来自于 parameter server。
-3. 给定 cost，master 利用 TensorFlow eager execution 的 GradientTape 机制，进行
+3. 给定 cost，worker 利用 TensorFlow eager execution 的 GradientTape 机制，进行
    backward 计算，得到梯度（gradient）。
 4. 如果是 synchronous SGD，此时 worker 调用 AllReduce 实现 FTlib 来同步
    gradients 并且更新模型。如果是 asynchronous SGD，worker 不定时的向 parameter
