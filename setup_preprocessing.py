@@ -22,7 +22,7 @@ with open("elasticdl_preprocessing/requirements-dev.txt") as f:
 
 setup(
     name="elasticdl_preprocessing",
-    version="0.2.0-rc0",
+    version="0.2.0rc0",
     description="A Kubernetes-native Deep Learning Framework",
     long_description="This is an extension of the native Keras Preprocessing"
     " Layers and Feature Column API from TensorFlow. We can develop our model"
