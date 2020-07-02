@@ -22,21 +22,29 @@ we use a model predefined in model zoo directory.
 
 ## Summit Job to Minikube
 
-### Install ElasticDL
+### Install ElasticDL Client
 
 ```bash
 pip install elasticdl_client
+```
+
+Clone elasticdl repo for model zoo and some scripts.
+
+```bash
 git clone https://github.com/sql-machine-learning/elasticdl.git
-cd elasticdl
 ```
 
 ### Setup Kubernetes related environment
 
 ```bash
-minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=20gb
+export DATA_PATH={a_folder_path_to_store_training_data}
+minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=50gb --mount=true --mount-string="$DATA_PATH:/data"
+cd elasticdl
 kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 eval $(minikube docker-env)
 ```
+
+Mount the host path $DATA_PATH to /data of minikube
 
 ### Build the Docker image for distributed training
 
@@ -61,7 +69,7 @@ docker run --rm -it \
   -v $HOME/.keras/datasets:/root/.keras/datasets \
   -v $PWD:/work \
   -w /work elasticdl/elasticdl:dev \
-  bash -c "scripts/gen_dataset.sh data"
+  bash -c "scripts/gen_dataset.sh $DATA_PATH"
 ```
 
 ### Summit a training job
@@ -91,15 +99,15 @@ elasticdl train \
   --job_name=test-mnist \
   --log_level=INFO \
   --image_pull_policy=Never \
-  --volume="host_path=${PWD}/data,mount_path=/data" \
+  --volume="/data,mount_path=/data" \
   --distribution_strategy=ParameterServerStrategy
 ```
 
 `image_name` is the Docker image name for the distributed ElasticDL job. We built
 it using the `elasticdl zoo build` command above.
 
-The training and validation data are mounted into the Docker image from our
-host path.
+The directory to store the training and validation data are mounted into Minikube
+in the previous step. We will then mount it in the path `/data` inside the pod.
 
 In this example, we use parameter server strategy. We launch a master pod, a
 parameter server(PS) pod and a worker pod. The worker pod gets model parameters
