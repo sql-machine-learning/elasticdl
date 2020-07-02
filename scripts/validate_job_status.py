@@ -99,6 +99,7 @@ def validate_job_status(client, job_type, ps_num, worker_num):
 
     for step in range(200):
         master_pod_phase = client.get_pod_phase(master_pod_name)
+        print("Master pod phase: {}".format(master_pod_phase))
         ps_pod_phases = [client.get_pod_phase(ps) for ps in ps_pod_names]
         worker_pod_phases = [
             client.get_pod_phase(worker) for worker in worker_pod_names
@@ -166,6 +167,9 @@ def validate_job_status(client, job_type, ps_num, worker_num):
 if __name__ == "__main__":
     k8s_client = Client(namespace="default")
     job_type = sys.argv[1]
+    print(job_type)
     ps_num = int(sys.argv[2])
+    print(ps_num)
     worker_num = int(sys.argv[3])
+    print(worker_num)
     validate_job_status(k8s_client, job_type, ps_num, worker_num)

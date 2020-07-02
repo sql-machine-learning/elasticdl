@@ -26,11 +26,7 @@ from odps import ODPS
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
-from elasticdl.python.common.constants import (
-    DistributionStrategy,
-    JobType,
-    MaxComputeConfig,
-)
+from elasticdl.python.common.constants import JobType, MaxComputeConfig
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
@@ -45,6 +41,7 @@ from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.ps.parameter_server import ParameterServer
 from elasticdl.python.tests.in_process_master import InProcessMaster
 from elasticdl.python.worker.worker import Worker
+from elasticdl_client.common.constants import DistributionStrategy
 
 
 class PserverArgs(object):
