@@ -43,11 +43,11 @@ eval $(minikube docker-env)
 ```bash
 cd model_zoo
 elasticdl zoo init
-elasticdl zoo build --image=elasticdl:mnist-run .
+elasticdl zoo build --image=elasticdl:mnist .
 ```
 
 We use the model predefined in model zoo directory. The model definition will
-be packed into the new Docker image `elasticdl:mnist-run`.
+be packed into the new Docker image `elasticdl:mnist`.
 
 ### Prepare the dataset
 
@@ -70,7 +70,7 @@ We use the following command to submit a training job:
 
 ```bash
 elasticdl train \
-  --image_name=elasticdl:mnist-run \
+  --image_name=elasticdl:mnist \
   --model_zoo=model_zoo \
   --model_def=mnist_functional_api.mnist_functional_api.custom_model \
   --training_data=/data/mnist/train \
