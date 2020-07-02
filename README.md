@@ -3,7 +3,7 @@
 [![Travis-CI Build Status](https://travis-ci.com/sql-machine-learning/elasticdl.svg?branch=develop)](https://travis-ci.com/sql-machine-learning/elasticdl)
 [![Code Coverage](https://codecov.io/gh/sql-machine-learning/elasticdl/branch/develop/graph/badge.svg)](https://codecov.io/gh/sql-machine-learning/elasticdl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![PyPaI Status Badge](https://badge.fury.io/py/elasticdl-client.svg)](https://pypi.org/project/elasticdl-client/)
+[![PyPI Status Badge](https://badge.fury.io/py/elasticdl-client.svg)](https://pypi.org/project/elasticdl-client/)
 
 ElasticDL is a Kubernetes-native deep learning framework built on top of
 TensorFlow 2.0 that supports fault-tolerance and elastic scheduling.
