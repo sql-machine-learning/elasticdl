@@ -87,11 +87,12 @@ jobs:
           -v $PWD:/work -w /work
           elasticdl:dev bash -c "scripts/travis/gen_dataset.sh data"
         - |
+          # TODO Restore evaluate and predict integration tests
           JOB_TYPES=(
               odps
               train
               #evaluate
-              predict
+              #predict
           )
           for JOB_TYPE in "${JOB_TYPES[@]}"; do
               bash scripts/travis/run_job.sh $JOB_TYPE $PWD/data
