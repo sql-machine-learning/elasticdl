@@ -18,7 +18,7 @@ with open("elasticdl_client/requirements.txt") as f:
 
 setup(
     name="elasticdl_client",
-    version="0.2.0-rc0",
+    version="0.2.0rc0",
     description="The client tool for ElasticDL.",
     author="Ant Financial",
     url="https://elasticdl.org",
