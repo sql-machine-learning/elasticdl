@@ -6,11 +6,13 @@ the working process of ElasticDL.
 
 ## Environment preparation
 
-Here we should install Minikube first. Please refer to the official
+1. Install Minikube >= v1.11.0. Please refer to the official
 [installation guide](https://kubernetes.io/docs/tasks/tools/install-minikube/).
-
 In this tutorial, we use [hyperkit](https://github.com/moby/hyperkit) as the
 hypervisor of Minikube.
+1. Install [Docker CE >= 18.x](https://docs.docker.com/docker-for-mac/install/)
+for building the Docker images of the distributed ElasticDL jobs.
+1. Install Python >= 3.6.
 
 ## Write model file
 
@@ -20,48 +22,63 @@ we use a model predefined in model zoo directory.
 
 ## Summit Job to Minikube
 
-### Install ElasticDL
+### Install ElasticDL Client
+
+```bash
+pip install elasticdl_client
+```
+
+Clone elasticdl repo for model zoo and some scripts.
 
 ```bash
 git clone https://github.com/sql-machine-learning/elasticdl.git
-cd elasticdl
-pip install -r elasticdl/requirements.txt
-python setup.py install
 ```
 
 ### Setup Kubernetes related environment
 
 ```bash
-minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=20gb
+export DATA_PATH={a_folder_path_to_store_training_data}
+minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=50gb --mount=true --mount-string="$DATA_PATH:/data"
+cd elasticdl
 kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 eval $(minikube docker-env)
-export DOCKER_BUILDKIT=1
-export TRAVIS_BUILD_DIR=$PWD
-bash scripts/travis/build_images.sh
+```
+
+Mount the host path $DATA_PATH to /data of minikube
+
+### Build the Docker image for distributed training
+
+```bash
+cd model_zoo
+elasticdl zoo init
+elasticdl zoo build --image=elasticdl:mnist .
+```
+
+We use the model predefined in model zoo directory. The model definition will
+be packed into the new Docker image `elasticdl:mnist`.
+
+### Prepare the dataset
+
+We generate MNIST training and evaluation data in RecordIO format. We provide a
+script in elasticdl repo.
+
+```bash
+docker pull elasticdl/elasticdl:dev
+cd {elasticdl_repo_root}
+docker run --rm -it \
+  -v $HOME/.keras/datasets:/root/.keras/datasets \
+  -v $PWD:/work \
+  -w /work elasticdl/elasticdl:dev \
+  bash -c "scripts/gen_dataset.sh $DATA_PATH"
 ```
 
 ### Summit a training job
-
-There are other docker settings to configure before submitting the training job.
-
-For example:
-
-```bash
-export DOCKER_BASE_URL=tcp://192.168.64.5:2376
-export DOCKER_TLSCERT=${HOME}/.minikube/certs/cert.pem
-export DOCKER_TLSKEY=${HOME}/.minikube/certs/key.pem
-```
-
-We can get these setting values by running `minikube docker-env`.
 
 We use the following command to submit a training job:
 
 ```bash
 elasticdl train \
-  --image_base=elasticdl:ci \
-  --docker_base_url=${DOCKER_BASE_URL} \
-  --docker_tlscert=${DOCKER_TLSCERT} \
-  --docker_tlskey=${DOCKER_TLSKEY} \
+  --image_name=elasticdl:mnist \
   --model_zoo=model_zoo \
   --model_def=mnist_functional_api.mnist_functional_api.custom_model \
   --training_data=/data/mnist/train \
@@ -82,15 +99,15 @@ elasticdl train \
   --job_name=test-mnist \
   --log_level=INFO \
   --image_pull_policy=Never \
+  --volume="/data,mount_path=/data" \
   --distribution_strategy=ParameterServerStrategy
 ```
 
-`image_base` is the base docker image argument. A new image will be built based
-on it each time while submitting the Elastic job.
+`image_name` is the Docker image name for the distributed ElasticDL job. We built
+it using the `elasticdl zoo build` command above.
 
-We use the model predefined in model zoo directory. The model definition will be
-packed into the new docker image. The training and validation data are packaged
-to the base docker image already. We could use them directly.
+The directory to store the training and validation data are mounted into Minikube
+in the previous step. We will then mount it in the path `/data` inside the pod.
 
 In this example, we use parameter server strategy. We launch a master pod, a
 parameter server(PS) pod and a worker pod. The worker pod gets model parameters
@@ -126,7 +143,7 @@ kubectl logs elasticdl-test-mnist-worker-0 | grep "Loss"
 
 We will see following logs:
 
-```bash
+```txt
 [2020-04-14 02:46:28,535] [INFO] [worker.py:879:_process_minibatch] Loss is 3.07190203666687
 [2020-04-14 02:46:28,920] [INFO] [worker.py:879:_process_minibatch] Loss is 9.413976669311523
 [2020-04-14 02:46:29,120] [INFO] [worker.py:879:_process_minibatch] Loss is 3.9641590118408203
@@ -164,7 +181,7 @@ kubectl logs elasticdl-test-mnist-master | grep "Evaluation"
 
 We will see following logs:
 
-```bash
+```txt
 [2020-04-14 02:46:21,836] [INFO] [master.py:192:prepare] Evaluation service started
 [2020-04-14 02:46:40,750] [INFO] [evaluation_service.py:214:complete_task] Evaluation metrics[v=50]: {'accuracy': 0.21933334}
 [2020-04-14 02:46:53,827] [INFO] [evaluation_service.py:214:complete_task] Evaluation metrics[v=100]: {'accuracy': 0.5173333}
