@@ -16,37 +16,17 @@ We will use the project id and cluster name in next steps.
 
 ### Access the Kubernetes Cluster
 
-To access GKE, we need to install [Google Cloud
+To access GKE in a local computer, we need to install [Google Cloud
 SDK](https://cloud.google.com/sdk/install), which includes command-line tools
 like `gcloud`.
 
-Step 1: Set the PROJECT_ID environment variable in shell.
+Luckily, Google Cloud also provides Cloud Shell with `gcloud` installed already.
+In this tutorial, we use Cloud Shell to access the Kubernetes cluster.
+We run the following command in Cloud Shell.
 
 ```bash
 export PROJECT_ID=${your_project_id}
-gcloud config set project ${PROJECT_ID}
-```
-
-Step 2: List clusters info with gcloud, and double check it with web console.
-
-```bash
-gcloud container clusters list
-```
-
-Step 3: Use the command below to generate the corresponding kubeconfig.
-
-```bash
-gcloud container clusters get-credentials edl-cluster --zone us-central1-c
-```
-
-Make sure you have
-[`kubectl`](https://kubernetes.io/docs/tasks/tools/install-kubectl/) available
-locally.
-
-Use the following command to list all the started components.
-
-```bash
-kubectl get all --all-namespaces
+gcloud container clusters get-credentials cluster-1 --zone us-central1-c --project ${PROJECT_ID}
 ```
 
 ### Config the Kubernetes Cluster
@@ -56,6 +36,9 @@ have granted related permissions to the default or other related service
 accounts.
 
 ```bash
+export CODE_PATH=${your_code_dir}
+cd ${CODE_PATH} && git clone https://github.com/sql-machine-learning/elasticdl.git
+cd ${CODE_PATH}/elasticdl
 kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 ```
 
@@ -106,19 +89,21 @@ In this example, we create a persistent value claim named `fileserver-claim`.
 ### Prepare Dataset
 
 Step 1: We generate MNIST training and evaluation data in RecordIO format.
+We provide a script in elasticdl repo.
 
 ```bash
-python elasticdl/python/data/recordio_gen/image_label.py \
-    --dataset mnist \
-    --records_per_shard 4096 .
+cd ${CODE_PATH}/elasticdl
+docker run --rm -it -v $HOME/.keras/datasets:/root/.keras/datasets -v $PWD:/work -w /work elasticdl/elasticdl:dev bash -c "scripts/travis/gen_dataset.sh data"
 ```
 
+The RecordIO format dataset will generated in the `data` directory.
+
 Step 2: We launch a pod which mounts the volume, and use `kubectl cp` command
-to copy data from local to the volume.
+to copy MNIST dataset from local to the volume.
 
 ```bash
 kubectl create -f my-pod.yaml
-kubectl cp mnist my-pod:/data
+kubectl cp data/mnist my-pod:/data
 ```
 
 my-pod.yaml
@@ -144,12 +129,19 @@ spec:
 
 ### Submit Job
 
-Please refer to [elasticdl_local tutorial](./elasticdl_local.md) to build the
-`elasticdl:ci` image. The difference is that we have to push the image to
-google cloud repo. We use the following command to get the authentication:
+Please refer to [elasticdl_local tutorial](./elasticdl_local.md) for more details.
+The difference is that we have to push the image to google cloud repo.
 
 ```bash
-gcloud auth configure-docker
+pip install elasticdl-client
+
+cd ${CODE_PATH}/elasticdl/model_zoo
+
+elasticdl zoo init
+
+elasticdl zoo build --image=gcr.io/${PROJECT_ID}/elasticdl:mnist .
+
+elasticdl zoo push gcr.io/${PROJECT_ID}/elasticdl:mnist
 ```
 
 We launch a training job with 2 PS pods and 4 worker pods. The master pod and
@@ -157,9 +149,8 @@ PS pods are set with priority, while worker pods are set with low priority. The
 training docker image will be pushed to google cloud repo.
 
 ```bash
-python -m elasticdl.python.elasticdl.client train \
-  --image_base=elasticdl:ci \
-  --docker_image_repository=gcr.io/${PROJECT_ID}  \
+elasticdl train \
+  --image_name=gcr.io/${PROJECT_ID}/elasticdl:mnist \
   --model_zoo=model_zoo \
   --model_def=mnist_functional_api.mnist_functional_api.custom_model \
   --training_data=/data/mnist/train \
