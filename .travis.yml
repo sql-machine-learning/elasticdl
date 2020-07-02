@@ -90,7 +90,7 @@ jobs:
           JOB_TYPES=(
               odps
               train
-              evaluate
+              #evaluate
               predict
           )
           for JOB_TYPE in "${JOB_TYPES[@]}"; do
