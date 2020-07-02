@@ -8,7 +8,6 @@
 ElasticDL is a Kubernetes-native deep learning framework built on top of
 TensorFlow 2.0 that supports fault-tolerance and elastic scheduling.
 
-
 ## Main Features
 
 ### Elastic Scheduling and Fault-Tolerance
@@ -25,7 +24,8 @@ graph execution process.
 
 ### Minimalism Interface
 
-Given a [model](model_zoo/mnist_functional_api/mnist_functional_api.py) defined with Keras API, train the model distributedly with a command line.
+Given a [model](model_zoo/mnist_functional_api/mnist_functional_api.py) defined
+with Keras API, train the model distributedly with a command line.
 
 ```bash
 elasticdl train \
