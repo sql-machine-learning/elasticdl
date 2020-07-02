@@ -5,7 +5,7 @@ header-includes: |
    \setCJKmainfont{Noto Sans SC}
 ---
 
-# ElasticDL: 同时提升机群利用率和研发效率的分布式深度学习框架
+# ElasticDL: 同时提升集群利用率和研发效率的分布式深度学习框架
 
 ElasticDL 是一个基于 TensorFlow 2.x 和 Kubernetes 的分布式深度学习编程框架。2019 年秋天的
 Google Developer Day
@@ -17,11 +17,11 @@ ElasticDL 的首要设计意图是简化分布式编程。它允许用户只提�
 而不需要用户写分布式训练过程代码。用户的模型定义只要能在本地调通，即可在分布式环境下
 用大规模数据训练模型。从而提升研发效率。
 
-同时，ElasticDL 提供的弹性调度的能力在实践中可以让机群的利用高达 90%。当机群资源不足时，
+同时，ElasticDL 提供的弹性调度的能力在实践中可以让集群的利用高达 90%。当集群资源不足时，
 一个训练作业里的进程减少；当其他作业结束释放资源后，进程数量随之增加。这样的做法比
 TensorFlow distribution strategy 以及 TorchElastic 专注容错（进程减少的情况下作业不失败，
 但不会增加进程数量）更进一步。并且，因为 ElasticDL 作业容忍变化的 worker 数量，
-所以每个作业的启动都不必等待机群有足够的资源，而是可以见缝插针的尽早开始训练，从而缩短
+所以每个作业的启动都不必等待集群有足够的资源，而是可以见缝插针的尽早开始训练，从而缩短
 等待作业启动的时间，让研发人员可以尽快看到第一个迭代的结果，万一分布式训练有问题，也能
 尽早发现，从而进一步提升了研发效率。
 
@@ -53,7 +53,7 @@ Hadoop MapReduce，用户基本都只需填写 map 和 reduce 两个函数的实
 
 1. TensorFlow Estimator 作为构建在 TensorFlow 之上的一层 API，允许用户只需定义模
    型，而训练过程封装在一个函数调用里。这个函数调用可以把分布式作业启动在
-   Kubernetes 上，前提是 Kubernetes 机群部署了 Kubeflow 项目提供的 TF-operator。
+   Kubernetes 上，前提是 Kubernetes 集群部署了 Kubeflow 项目提供的 TF-operator。
    这个方案的局限是：它仅支持 TensorFlow 的 graph mode，不支持 eager execution；
    而 eager execution 可以大幅简化调试，尤其方便跟踪网络各层输出。
 
@@ -75,7 +75,7 @@ Hadoop MapReduce，用户基本都只需填写 map 和 reduce 两个函数的实
 依赖部署 Kubernetes operator，了解 Kubernetes 对 AI 专家来说颇有挑战。
 
 针对这些局限，我们设计和开发了 ElasticDL 分布式计算框架。用户定义可以用
-TensorFlow 2.x 的 Keras API 来定义模型。并且，分布式执行不要求 Kubernetes 机群有
+TensorFlow 2.x 的 Keras API 来定义模型。并且，分布式执行不要求 Kubernetes 集群有
 任何特殊配置，而是利用每个作业里的 master 进程来协调训练数据分配、通信、同步、和
 容错 —— 这也是 ElasticDL 除了容错，支持弹性调度的原因。
 
@@ -90,7 +90,7 @@ GradientTape 机制来自动推导对应的后向计算过程（backward pass）
 
 所有这些函数的编程只需要了解 TensorFlow API，不需要对分布式训练有任何背景知识。
 写完之后，用户可以在单机上用小数据做调试验证。如果通过，可以不做任何代码修改就提
-交到 Kubernetes 机群上做分布式的容错的大规模训练。
+交到 Kubernetes 集群上做分布式的容错的大规模训练。
 
 不同于 Kubeflow/TF-operator 给每个集群部署一个 Kubernetes Operator 的方式，
 ElasticDL 为每个作业引入一个 master 进程。通过调用 Kubernetes API，master 进程了
@@ -260,7 +260,7 @@ parameter server 可以做一些深度学习计算，从而减少 worker 和 par
 - worker 向 PS 发送梯度时，先把相同 ID 的梯度进行合并（调用 TensorFlow 的
   embedding vector combinanation 函数），从而减少通信量。
 
-## 弹性调度提升机群利用率
+## 弹性调度提升集群利用率
 
 ElasticDL 实现的弹性调度和刚性调度[（gang scheduling）](https://en.wikipedia.org/wiki/Gang_scheduling)
 是对应的。刚性调度的简洁不求甚解的描述是：一个作业里的 n 个进程，运行时如果有一个进程挂了
@@ -281,7 +281,7 @@ Kubeflow 拉起。
 
 上文简述了 ElasticDL 实现弹性调度的机制，包括动态数据分配以及由 master 来启动、监控、和管理
 workers，而不依赖 Kubernetes operator。本节展示三个 benchmark 试验，帮助大家直观地了解
-ElasticDL 对机群利用率和研发效率的同时提升。
+ElasticDL 对集群利用率和研发效率的同时提升。
 
 ## 实验一：多个 AI 训练作业并发
 
@@ -323,7 +323,7 @@ ElasticDL 作业自动释放资源，配合在线服务的扩容。当流量高�
 ![auto react](../benchmark/data/2.pdf)
 
 图中紫色曲线是 NGINX 服务使用的 CPU 数量，随用户请求数量变化。绿色曲线是 ElasticDL 训练
-作业使用的 CPU 数量，随 NGINX 的资源需求自动变化。蓝色曲线是机群的总体资源利用率 ——
+作业使用的 CPU 数量，随 NGINX 的资源需求自动变化。蓝色曲线是集群的总体资源利用率 ——
 保持在 90% 以上。
 
 ## 实验三：训练时更改 worker 数量不影响收敛性
@@ -347,14 +347,14 @@ ElasticDL 作业自动释放资源，配合在线服务的扩容。当流量高�
 蚂蚁金服要训练的模型的类型繁多，呈现更长尾的特点。也对工具提升研发效率提出了高要求。
 ElasticDL 正是针对这些特点设计的。
 
-同时，对机群的利用率提升是各行各业都关注的。在很多公司和行业，AI 机群的利用率通常在 30%
-以下。当通过全面实现弹性调度，把机群利用率提升到 90% 左右时，相当于空手套白狼地把机群
+同时，对集群的利用率提升是各行各业都关注的。在很多公司和行业，AI 集群的利用率通常在 30%
+以下。当通过全面实现弹性调度，把集群利用率提升到 90% 左右时，相当于空手套白狼地把集群
 规模扩大了为原来的三倍多。因此节省的硬件投资可能高达数千万甚至数亿元人民币。
 
 ElasticDL 的设计和实现依托了 TensorFlow 2.x 提供的高效率的模型描述 API。也依赖了 TensorFlow
 eager execution 提供的 GradientTape 机制 —— 使得 ElasticDL 可以在不改变 TensorFlow runtime
 的情况下，结合 Kubernetes 实现彻底的弹性调度（进程数可增也可减），从而实现了减少作业启动
-的等待时间，提升机群利用率，和提醒研发效率的效果。
+的等待时间，提升集群利用率，和提醒研发效率的效果。
 
 目前 ElasticDL 在阿里系结合 PAI 平台在推广。PAI 平台提供的拖拽式编程模式进一步降低了端到端
 机器学习流程的研发门槛。希望接下来 ElasticDL 团队可以有更多结合业务实践的分享。
