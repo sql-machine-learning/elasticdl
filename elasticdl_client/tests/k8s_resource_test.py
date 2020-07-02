@@ -13,7 +13,7 @@
 
 import unittest
 
-from elasticdl.python.common.k8s_resource import parse
+from elasticdl_client.common.k8s_resource import parse
 
 
 class K8SResourceTest(unittest.TestCase):

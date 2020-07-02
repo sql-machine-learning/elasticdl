@@ -17,7 +17,6 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.feature_column import feature_column_v2 as fc_lib
 
-from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.elasticdl.feature_column.feature_column import (
@@ -26,6 +25,7 @@ from elasticdl.python.elasticdl.feature_column.feature_column import (
 )
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.ps.embedding_table import EmbeddingTable
+from elasticdl_client.common.constants import DistributionStrategy
 from elasticdl_preprocessing.layers import SparseEmbedding
 
 

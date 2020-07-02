@@ -55,12 +55,6 @@ class MetricsDictKey(object):
     LABEL = "label"
 
 
-class DistributionStrategy(object):
-    LOCAL = "Local"
-    PARAMETER_SERVER = "ParameterServerStrategy"
-    ALLREDUCE = "AllreduceStrategy"
-
-
 class SaveModelConfig(object):
     SAVED_MODEL_PATH = "saved_model_path"
 
@@ -86,8 +80,3 @@ class ReaderType(object):
     CSV_READER = "CSV"
     ODPS_READER = "ODPS"
     RECORDIO_READER = "RecordIO"
-
-
-class BashCommandTemplate(object):
-    REDIRECTION = " 2>&1 | tee {}"
-    SET_PIPEFAIL = "set -o pipefail;"

@@ -20,7 +20,6 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
-from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.model_utils import get_model_spec
 from elasticdl.python.ps.embedding_table import EmbeddingTable
@@ -31,6 +30,7 @@ from elasticdl.python.tests.test_utils import (
     get_random_batch,
 )
 from elasticdl.python.worker.worker import Worker
+from elasticdl_client.common.constants import DistributionStrategy
 
 
 class WorkerPSInteractionTest(unittest.TestCase):

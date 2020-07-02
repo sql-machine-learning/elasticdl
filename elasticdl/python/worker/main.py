@@ -17,9 +17,9 @@ import grpc
 
 from elasticdl.python.common import log_utils
 from elasticdl.python.common.args import parse_worker_args
-from elasticdl.python.common.constants import DistributionStrategy
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.worker.worker import Worker
+from elasticdl_client.common.constants import DistributionStrategy
 
 CONNECT_PS_MAX_RETRIES = 3
 CONNECT_PS_TIMEOUT = 300
