@@ -310,10 +310,7 @@ class InstanceManager(object):
                 return
 
             relaunch_failed_pod = False
-            if (
-                evt_type == "MODIFIED"
-                and phase == "Failed"
-            ):
+            if evt_type == "MODIFIED" and phase == "Failed":
                 self._failed_pods.append(pod_name)
                 # When a pod fails with exit_code == 137, it may be deleted,
                 # or preempted. Master will try to relaunch it.
