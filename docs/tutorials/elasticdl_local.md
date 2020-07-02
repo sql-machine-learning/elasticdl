@@ -6,7 +6,7 @@ the working process of ElasticDL.
 
 ## Environment preparation
 
-1. Install Minikube first. Please refer to the official
+1. Install Minikube >= v1.11.0. Please refer to the official
 [installation guide](https://kubernetes.io/docs/tasks/tools/install-minikube/).
 In this tutorial, we use [hyperkit](https://github.com/moby/hyperkit) as the
 hypervisor of Minikube.
