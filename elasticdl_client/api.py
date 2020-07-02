@@ -75,12 +75,8 @@ def build_zoo(args):
     logger.info("Build the image for the model zoo.")
     # Call docker api to build the image
     # Validate the image name schema
-    client = _get_docker_client(
-        docker_base_url=args.docker_base_url,
-        docker_tlscert=args.docker_tlscert,
-        docker_tlskey=args.docker_tlskey,
-    )
-    for line in client.build(
+    client = docker.DockerClient.from_env()
+    for line in client.api.build(
         dockerfile="./Dockerfile",
         path=args.path,
         rm=True,
@@ -93,13 +89,8 @@ def build_zoo(args):
 def push_zoo(args):
     logger.info("Push the image for the model zoo.")
     # Call docker api to push the image to remote registry
-    client = _get_docker_client(
-        docker_base_url=args.docker_base_url,
-        docker_tlscert=args.docker_tlscert,
-        docker_tlskey=args.docker_tlskey,
-    )
-
-    for line in client.push(args.image, stream=True, decode=True):
+    client = docker.DockerClient.from_env()
+    for line in client.api.push(args.image, stream=True, decode=True):
         _print_docker_progress(line)
 
 

@@ -17,13 +17,21 @@ this command-line client tool.
 
 ## User Story
 
+1. Prerequisite
+
+    - Install [Docker CE >= 18.x](https://docs.docker.com/docker-for-mac/install/)
+    for building the Docker images of the distributed ElasticDL jobs.
+    - Install Python >= 3.6.
+    - Install ElasticDL command-line tool by `pip install elasticdl_client`.
+
 1. Users develop model and the directory structure of model definition files
    is as follows:
 
     ```TEXT
-    a_directory
-    - wide_and_deep.py
-    requirements.txt
+    model_zoo_root
+        a_directory
+        - wide_and_deep.py
+        requirements.txt
     ```
 
 1. Generate a Dockerfile.  
@@ -31,7 +39,7 @@ this command-line client tool.
     Input the command:
 
     ```bash
-    cd ${model_root_path}
+    cd model_zoo_root
     elasticdl zoo init
         [--base_image=customized_base_image_name]
         [--cluster_spec=prem_cluster_spec]
@@ -58,12 +66,7 @@ this command-line client tool.
 1. Build the Docker image for an ElasticDL job.
 
     ```bash
-    elasticdl zoo build
-        --image=a_docker_registry/bright/elasticdl-wnd:1.0
-        [--docker_base_url=docke_base_url]
-        [--docker_tlscert=docker_tlscert]
-        [--docker_tlskey=docker_tlskey]
-        .
+    elasticdl zoo build --image=a_docker_registry/bright/elasticdl-wnd:1.0 .
     ```
 
 1. Push the Docker image to a remote registry.
@@ -79,7 +82,7 @@ this command-line client tool.
 
     ```bash
     elasticdl train \
-        --image=a_docker_registry/bright/elasticdl-wnd:1.0 \
+        --image_name=a_docker_registry/bright/elasticdl-wnd:1.0 \
         --model_zoo=model_zoo
         --model_def=a_directory.wide_and_deep.custom_model \
         --training_data=/data/mnist/train \

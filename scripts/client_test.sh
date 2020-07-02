@@ -17,9 +17,9 @@
 JOB_TYPE=$1
 PS_NUM=$2
 WORKER_NUM=$3
+DATA_PATH=$4
 
 MNIST_CKPT_DIR=/model_zoo/test_data/mnist_ckpt/
-
 
 if [[ "$JOB_TYPE" == "train" ]]; then
     elasticdl train \
@@ -47,8 +47,8 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --job_name=test-train \
       --log_level=INFO \
       --image_pull_policy=Never \
-      --output=/saved_model/model_output \
-      --volume="host_path=${PWD},mount_path=/saved_model"
+      --output=/data/saved_model/model_output \
+      --volume="host_path=${DATA_PATH},mount_path=/data"
 elif [[ "$JOB_TYPE" == "evaluate" ]]; then
     elasticdl evaluate \
       --image_name=elasticdl:ci \
@@ -71,7 +71,8 @@ elif [[ "$JOB_TYPE" == "evaluate" ]]; then
       --tensorboard_log_dir=/tmp/tensorboard-log \
       --job_name=test-evaluate \
       --log_level=INFO \
-      --image_pull_policy=Never
+      --image_pull_policy=Never \
+      --volume="host_path=${DATA_PATH},mount_path=/data"
 elif [[ "$JOB_TYPE" == "predict" ]]; then
     elasticdl predict \
       --image_name=elasticdl:ci \
@@ -91,7 +92,8 @@ elif [[ "$JOB_TYPE" == "predict" ]]; then
       --num_ps_pods="$PS_NUM" \
       --job_name=test-predict \
       --log_level=INFO \
-      --image_pull_policy=Never
+      --image_pull_policy=Never \
+      --volume="host_path=${DATA_PATH},mount_path=/data"
 elif [[ "$JOB_TYPE" == "odps" ]]; then
     elasticdl train \
       --image_name=elasticdl:ci \
