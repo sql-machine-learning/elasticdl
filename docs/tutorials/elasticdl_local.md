@@ -56,6 +56,7 @@ script in elasticdl repo.
 
 ```bash
 docker pull elasticdl/elasticdl:dev
+cd {elasticdl_repo_root}
 docker run --rm -it \
   -v $HOME/.keras/datasets:/root/.keras/datasets \
   -v $PWD:/work \
