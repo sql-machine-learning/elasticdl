@@ -543,11 +543,13 @@ class Master(object):
                             "worker %d timeout, relaunch it" % worker_id
                         )
                         self.task_d.recover_tasks(worker_id)
-                        # TODO: save worker logs before remove it
                         pod_status = self.instance_manager.get_pod_status(
                             worker_id
                         )
+                        # Only delete the running worker and its task is
+                        # timeout
                         if pod_status == PodStatus.RUNNING:
+                            # TODO: save worker logs before remove it
                             self.instance_manager._remove_worker(worker_id)
                         break
             time.sleep(30)
