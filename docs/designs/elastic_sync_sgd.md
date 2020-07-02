@@ -2,9 +2,13 @@
 
 ```python
 # Basic design philosophy:
+
 #
+
 # - Workers are gRPC client, the master is the gRPC server.
+
 # - The master keeps the three task queues: todo, doing, and done.
+
 # - The master keeps the current global model and the model ID is the hash of the model parameters.
 
 #------- worker.py -------#
@@ -34,7 +38,7 @@ while True:
         while not accepted:
             try:
                 # If the current model_version on the worker is older than the model
-                # on the master, this call updates model_version and 
+                # on the master, this call updates model_version and
                 # model_params; otherwise, it leaves these two variables unchanged.
                 master.UpdateModelIfOutOfDate(&model_version, &model_params)
                 cost = module.forward(data, model_params)
@@ -55,7 +59,6 @@ while True:
         if task_status == FAILED:
             break
     master.ReportTask(task, task_status)
-    
 
 #------- master.py -------#
 
@@ -78,13 +81,11 @@ def UpdateModelIfOutOfDate(mv, mp):
         copy(*mv, model_version)
         copy(*mp, model_params)
 
-
 @grpc
 def GetTask():
     task = todo.pop()
     doing.push(task)
     return task
-
 
 @grpc
 def ReportGradients(mv, grads):
@@ -97,7 +98,6 @@ def ReportGradients(mv, grads):
             model_version = model_version + 1
             gradients = [] # Clear out the buffer.
     return accepted
-
 
 @grpc
 def ReportTask(task, status):

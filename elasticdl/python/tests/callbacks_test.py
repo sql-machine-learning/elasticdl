@@ -1,3 +1,16 @@
+# Copyright 2020 The ElasticDL Authors. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import tempfile
 import unittest
@@ -9,13 +22,15 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import DistributionStrategy, JobType
 from elasticdl.python.common.model_handler import ModelHandler
+from elasticdl.python.common.save_utils import (
+    save_checkpoint_without_embedding,
+)
 from elasticdl.python.elasticdl.callbacks import (
     LearningRateScheduler,
     MaxStepsStopping,
     SavedModelExporter,
 )
 from elasticdl.python.master.task_dispatcher import _Task
-from elasticdl.python.tests.test_utils import save_checkpoint_without_embedding
 from elasticdl.python.worker.task_data_service import TaskDataService
 
 

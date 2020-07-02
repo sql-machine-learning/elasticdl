@@ -1,3 +1,16 @@
+# Copyright 2020 The ElasticDL Authors. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import threading
 import time
@@ -387,14 +400,15 @@ class Master(object):
                 "--job_type",
                 self.job_type,
             ]
-            worker_args.extend(build_arguments_from_parsed_result(args))
+            worker_args.extend(
+                build_arguments_from_parsed_result(args, filter_args=["envs"])
+            )
             worker_args = wrap_python_args_with_string(worker_args)
             worker_args.insert(0, worker_client_command)
 
             if args.use_go_ps:
                 opt_type, opt_args = get_optimizer_info(self.optimizer)
-                # TODO: rename the Go PS executable using a meaningful filename
-                ps_client_command = "main"
+                ps_client_command = "elasticdl_ps"
                 ps_args = [
                     "-job_name=" + args.job_name,
                     "-namespace=" + args.namespace,

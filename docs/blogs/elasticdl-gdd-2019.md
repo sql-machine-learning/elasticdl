@@ -10,21 +10,10 @@ ElasticDL 与 TensorFlow 2.0 以及 Kubernetes 的技术关联。
 
 基于 TensorFlow 的分布式训练系统大致可以分为以下四类：
 
-```
-|---------------|----------------|----------------|
-|               | TensorFlow 1.x | TensorFlow 2.x |
-|               |  graph mode    | eager mode     |
-|---------------|----------------|----------------|
-| in TensorFlow | TensorFlow's   | TensorFlow     |
-|   runtime     | PS-based       | distribution   |
-|               | distribution   | strategies     |
-|               |                | (early stage)  |
-|---------------|----------------|----------------|
-| on TensorFlow | Uber Horovod   | Ant Financial  |
-|  API          |                | ElasticDL      |
-|               |                | (early stage)  |
-|---------------|----------------|----------------|
-```
+|                       | TensorFlow 1.x graph mode     | TensorFlow 2.x eager execution  |
+|-----------------------|-------------------------------|---------------------------------|
+| in TensorFlow runtime | TensorFlow's parameter server | TensorFlow distributed strategy |
+| above TensorFlow API  | Uber Horovod                  | ElasticDL                       |
 
 其中，ElasticDL 位于田字格的右下角。之所以选择这条技术思路，是为了利用
 Kubernetes 实现容错和弹性调度。
@@ -61,7 +50,8 @@ TensorFlow 原生的分布式训练能力不是*容错*的（fault-tolerant）�
 checkpoint 的能力；如果一个作业失败了，可以重启作业，从最近的
 checkpoint 开始继续执行。
 
-Kubeflow 可以在 Kubernetes 上启动基于 TensorFlow 原生的分布式计算能力的作业。但是
+Kubeflow 可以在 Kubernetes 上启动基于 TensorFlow
+原生的分布式计算能力的作业。但是
 因为后者并不能容错，所以 Kubeflow 并不能无中生有。不能容错，也意味着不
 能弹性调度。
 
@@ -140,7 +130,6 @@ Kubernetes 的通知，master 可以通过检查其他继承的心跳（heartbea
 知新启动的进程的信息，并且帮助它加入作业。这种“非 Kubernetes-native”的
 容错方式颇为被动，只能接受资源紧张时一些进程被抢占而挂掉的事实，而不能
 在其他作业释放资源后增加进程充分利用空闲资源。
-
 
 ## TensorFlow 2.0
 
@@ -270,10 +259,9 @@ ElasticDL 项目希望通过这样的分而治之的策略，提供高性能并�
 
 最近几年里，很多互联网服务开始把数据直接上传到通用数据库中，比如蚂蚁金
 服的很多数据是在 ODPS（也就是阿里云上的 MaxCompute 服务）以及新一代的
-[智能数据系
-统
-](https://www.infoq.cn/article/tdpG65SjWSsdBgHmCTc5?utm_source=related_read&utm_medium=article)
-。这促使我们考虑把数据清洗和预处理放在数据库中做，而特征工程、自动机器
+[智能数据系统](https://www.infoq.cn/article/tdpG65SjWSsdBgHmCTc5?utm_source=related_read&utm_medium=article)。
+
+这促使我们考虑把数据清洗和预处理放在数据库中做，而特征工程、自动机器
 学习、和训练过程在 ElasticDL 这样的 AI 引擎里做。SQLFlow 把扩展语法的
 SQL 程序翻译成一个 Python 程序，把两部分链接起来。
 

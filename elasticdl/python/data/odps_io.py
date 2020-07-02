@@ -1,3 +1,16 @@
+# Copyright 2020 The ElasticDL Authors. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import queue
 import random
@@ -82,6 +95,7 @@ class ODPSReader(object):
             access_key: ODPS user access key.
             endpoint: ODPS cluster endpoint.
             table: ODPS table name.
+            tunnel_endpoint: ODPS tunnel endpoint.
             partition: ODPS table's partition.
             options: Other options passed to ODPS context.
             num_processes: Number of parallel processes on this worker.
@@ -104,7 +118,7 @@ class ODPSReader(object):
         self._num_processes = num_processes
         _configure_odps_options(self._endpoint, options)
         self._odps_table = ODPS(
-            self._access_id, self._access_key, self._project, self._endpoint
+            self._access_id, self._access_key, self._project, self._endpoint,
         ).get_table(self._table)
 
         self._transform_fn = transform_fn

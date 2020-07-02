@@ -1,18 +1,22 @@
 # ElasticDL on Local Environment
 
-This document aims to give a simple example to show how to submit deep learning jobs to a local kubernetes cluster in a local computer. It helps to understand the working process of ElasticDL.
+This document aims to give a simple example to show how to submit deep learning
+jobs to a local kubernetes cluster in a local computer. It helps to understand
+the working process of ElasticDL.
 
 ## Environment preparation
 
-Here we should install Minikube first. Please refer to the official [installation guide](https://kubernetes.io/docs/tasks/tools/install-minikube/).
+Here we should install Minikube first. Please refer to the official
+[installation guide](https://kubernetes.io/docs/tasks/tools/install-minikube/).
 
-In this tutorial, we use [hyperkit](https://github.com/moby/hyperkit) as the hypervisor of Minikube.
+In this tutorial, we use [hyperkit](https://github.com/moby/hyperkit) as the
+hypervisor of Minikube.
 
 ## Write model file
 
-We use TensorFlow Keras API to build our models. Please refer to this [tutorials](model_building.md) on model building for details.
-
-In this tutorial, we use a [model](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist_functional_api/mnist_functional_api.py) predefined in model zoo directory.
+We use TensorFlow Keras API to build our models. Please refer to this
+[tutorials](model_building.md) on model building for details.  In this tutorial,
+we use a model predefined in model zoo directory.
 
 ## Summit Job to Minikube
 
@@ -29,10 +33,11 @@ python setup.py install
 
 ```bash
 minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=20gb
-kubectl apply -f elasticdl/manifests/examples/elasticdl-rbac.yaml
+kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 eval $(minikube docker-env)
 export DOCKER_BUILDKIT=1
-bash elasticdl/docker/build_all.sh
+export TRAVIS_BUILD_DIR=$PWD
+bash scripts/travis/build_images.sh
 ```
 
 ### Summit a training job
@@ -80,15 +85,25 @@ elasticdl train \
   --distribution_strategy=ParameterServerStrategy
 ```
 
-`image_base` is the base docker image argument. A new image will be built based on it each time while submitting the Elastic job.
+`image_base` is the base docker image argument. A new image will be built based
+on it each time while submitting the Elastic job.
 
-We use the model predefined in model zoo directory. The model definition will be packed into the new docker image. The training and validation data are packaged to the base docker image already. We could use them directly.
+We use the model predefined in model zoo directory. The model definition will be
+packed into the new docker image. The training and validation data are packaged
+to the base docker image already. We could use them directly.
 
-In this example, we use parameter server strategy. We launch a master pod, a parameter server(PS) pod and a worker pod. The worker pod gets model parameters from the PS pod, computes gradients and sends computed gradients to the PS pod. The PS pod iteratively updates these model parameters using gradients sent by the worker pod. For more details about parameter server strategy, please refer to the [design doc](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/parameter_server.md).
+In this example, we use parameter server strategy. We launch a master pod, a
+parameter server(PS) pod and a worker pod. The worker pod gets model parameters
+from the PS pod, computes gradients and sends computed gradients to the PS
+pod. The PS pod iteratively updates these model parameters using gradients sent
+by the worker pod. For more details about parameter server strategy, please
+refer to the [design
+doc](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/parameter_server.md).
 
 ### Check job status
 
-After submitting the job to Minikube, we can run the following command to check the status of each pod:
+After submitting the job to Minikube, we can run the following command to check
+the status of each pod:
 
 ```bash
 kubectl get pods

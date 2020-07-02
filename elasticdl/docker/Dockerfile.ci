@@ -1,0 +1,38 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE} as ci
+ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
+
+WORKDIR /
+
+COPY elasticdl/docker/bashrc /etc/bash.bashrc
+RUN chmod a+rx /etc/bash.bashrc
+
+# Copy model zoo
+COPY model_zoo /model_zoo
+RUN python -m pip install --quiet -r /model_zoo/requirements.txt \
+        --extra-index-url=${EXTRA_PYPI_INDEX}
+
+# Install elasticdl_preprocessing package
+COPY build/elasticdl_preprocessing-develop-py3-none-any.whl /
+RUN python -m pip install --quiet /elasticdl_preprocessing-develop-py3-none-any.whl \
+        --extra-index-url=${EXTRA_PYPI_INDEX} \
+    && rm /elasticdl_preprocessing-develop-py3-none-any.whl
+
+# Install elasticdl_client package
+COPY build/elasticdl_client-develop-py3-none-any.whl /
+RUN python -m pip install --quiet /elasticdl_client-develop-py3-none-any.whl \
+        --extra-index-url=${EXTRA_PYPI_INDEX} \
+    && rm /elasticdl_client-develop-py3-none-any.whl
+
+# Install elasticdl package
+COPY build/elasticdl-develop-py3-none-any.whl /
+RUN python -m pip install --quiet /elasticdl-develop-py3-none-any.whl \
+        --extra-index-url=${EXTRA_PYPI_INDEX} \
+    && rm /elasticdl-develop-py3-none-any.whl
+
+# Add elasticdl_ps to system path
+ENV PATH /usr/local/lib/python3.6/dist-packages/elasticdl/go/bin:$PATH
+
+# Generate mnist checkpoint for evaluation and prediction
+COPY scripts/travis/gen_mnist_checkpoint.py /gen_mnist_checkpoint.py
+RUN python /gen_mnist_checkpoint.py --checkpoint_dir=/model_zoo/test_data/mnist_ckpt

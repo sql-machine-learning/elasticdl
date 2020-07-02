@@ -2,17 +2,20 @@
 
 ## Environment preparation
 
-You should install ElasticDL first. Please refer to the installation part in [elastic_local](elasticdl_local.md) doc.
+You should install ElasticDL first. Please refer to the installation part in
+[elastic_local](elasticdl_local.md) doc.
 
 Then, build needed images.
 
 ```bash
-bash elasticdl/docker/build_all.sh
+export TRAVIS_BUILD_DIR=$PWD
+bash scripts/travis/build_images.sh
 ```
 
 ## Submit job to cluster
 
-The submit command is similar to local mode. The local scripts will be built into a docker image, and pushed to `$DOCKER_HUB_REPO` remote docker hub.
+The submit command is similar to local mode. The local scripts will be built
+into a docker image, and pushed to `$DOCKER_HUB_REPO` remote docker hub.
 
 Following is an exmaple:
 
