@@ -20,6 +20,11 @@ setup(
     name="elasticdl_client",
     version="develop",
     description="The client tool for ElasticDL.",
+    long_description="This is the client tool for ElasticDL. It's convenient"
+    "to build and push Docker images for a distributed ElasticDL job with it."
+    "And then we can use it to submit a train, evaluate and predict job to"
+    "a Kubernetes cluster.",
+    long_description_content_type="text/markdown",
     author="Ant Financial",
     url="https://elasticdl.org",
     install_requires=required_deps,
