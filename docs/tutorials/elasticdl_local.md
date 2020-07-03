@@ -44,7 +44,7 @@ kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 eval $(minikube docker-env)
 ```
 
-Mount the host path $DATA_PATH to /data of minikube
+We mount the host path `$DATA_PATH` to `/data` path of minikube
 
 ### Build the Docker image for distributed training
 
@@ -69,8 +69,11 @@ docker run --rm -it \
   -v $HOME/.keras/datasets:/root/.keras/datasets \
   -v $PWD:/work \
   -w /work elasticdl/elasticdl:dev \
-  bash -c "scripts/gen_dataset.sh $DATA_PATH"
+  bash -c "scripts/gen_dataset.sh data"
+cp -r data/* $DATA_PATH
 ```
+
+We generate datasets and copy them to `$DATA_PATH`.
 
 ### Summit a training job
 
