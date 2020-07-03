@@ -9,6 +9,21 @@ RUN apt-get -qq update && \
                        shellcheck libeigen3-dev clang-format > /dev/null && \
     python -m pip install --quiet --upgrade pip
 
+COPY elasticdl_client/requirements.txt /requirements.txt
+RUN python -m pip install --quiet -r /requirements.txt \
+        --extra-index-url=$EXTRA_PYPI_INDEX \
+        && rm /requirements.txt
+
+COPY elasticdl_preprocessing/requirements.txt /requirements.txt
+RUN python -m pip install --quiet -r /requirements.txt \
+        --extra-index-url=$EXTRA_PYPI_INDEX \
+        && rm /requirements.txt
+
+COPY elasticdl_preprocessing/requirements-dev.txt /requirements-dev.txt
+RUN python -m pip install --quiet -r /requirements-dev.txt \
+        --extra-index-url=$EXTRA_PYPI_INDEX \
+    && rm /requirements-dev.txt
+
 COPY elasticdl/requirements.txt /requirements.txt
 RUN python -m pip install --quiet -r /requirements.txt \
         --extra-index-url=$EXTRA_PYPI_INDEX \
