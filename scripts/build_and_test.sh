@@ -15,6 +15,8 @@
 
 set -e
 
+sh scripts/build.sh
+
 (
     cd /tmp/elasticdl
     go test -v -cover ./...
