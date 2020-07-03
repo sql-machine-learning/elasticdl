@@ -34,7 +34,9 @@ Clone elasticdl repo for model zoo and some scripts.
 git clone https://github.com/sql-machine-learning/elasticdl.git
 ```
 
-### Setup Kubernetes related environment
+### Start Kubernetes Cluster
+
+We start minikube with a command-line option `--mount-string`, which mounts the host directory `$DATA_PATH` to `/data` path in all minikube containers.
 
 ```bash
 export DATA_PATH={a_folder_path_to_store_training_data}
@@ -43,8 +45,6 @@ cd elasticdl
 kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 eval $(minikube docker-env)
 ```
-
-We mount the host path `$DATA_PATH` to `/data` path of minikube
 
 ### Build the Docker image for distributed training
 
