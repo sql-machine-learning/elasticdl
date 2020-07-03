@@ -1,6 +1,6 @@
 # ElasticDL on Local Environment
 
-This document aims to give a simple example to show how to submit deep learning
+This document aims to give a simple example about how to submit deep learning
 jobs to a local kubernetes cluster in a local computer. It helps to understand
 the working process of ElasticDL.
 
@@ -103,7 +103,7 @@ elasticdl train \
   --job_name=test-mnist \
   --log_level=INFO \
   --image_pull_policy=Never \
-  --volume="/data,mount_path=/data" \
+  --volume="host_path=/data,mount_path=/data" \
   --distribution_strategy=ParameterServerStrategy
 ```
 
