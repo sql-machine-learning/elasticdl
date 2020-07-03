@@ -43,14 +43,14 @@ def build_argument_parser():
         "init", help="Initialize the model zoo."
     )
     zoo_init_parser.set_defaults(func=init_zoo)
-    args.add_zoo_init_arguments(zoo_init_parser)
+    args.add_zoo_init_params(zoo_init_parser)
 
     # elasticdl zoo build
     zoo_build_parser = zoo_subparsers.add_parser(
         "build", help="Build a docker image for the model zoo."
     )
     zoo_build_parser.set_defaults(func=build_zoo)
-    args.add_zoo_build_arguments(zoo_build_parser)
+    args.add_zoo_build_params(zoo_build_parser)
 
     # elasticdl zoo push
     zoo_push_parser = zoo_subparsers.add_parser(
@@ -59,7 +59,7 @@ def build_argument_parser():
         "ElasticDL job.",
     )
     zoo_push_parser.set_defaults(func=push_zoo)
-    args.add_zoo_push_arguments(zoo_push_parser)
+    args.add_zoo_push_params(zoo_push_parser)
 
     # elasticdl train
     train_parser = subparsers.add_parser(

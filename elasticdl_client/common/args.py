@@ -16,7 +16,7 @@ from itertools import chain
 from elasticdl_client.common.constants import DistributionStrategy
 
 
-def add_zoo_init_arguments(parser):
+def add_zoo_init_params(parser):
     parser.add_argument(
         "--base_image",
         type=str,
@@ -38,7 +38,7 @@ def add_zoo_init_arguments(parser):
     )
 
 
-def add_zoo_build_arguments(parser):
+def add_zoo_build_params(parser):
     parser.add_argument(
         "path", type=str, help="The path where the build context locates."
     )
@@ -51,7 +51,7 @@ def add_zoo_build_arguments(parser):
     )
 
 
-def add_zoo_push_arguments(parser):
+def add_zoo_push_params(parser):
     parser.add_argument(
         "image",
         type=str,
