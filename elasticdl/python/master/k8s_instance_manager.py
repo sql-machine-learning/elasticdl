@@ -280,10 +280,6 @@ class InstanceManager(object):
         with self._lock:
             return Counter([v for _, v in self._ps_pods_phase.values()])
 
-    def get_pod_status(self, worker_id):
-        pod = self._k8s_client.get_worker_pod(worker_id)
-        return pod.status.phase
-
     def _event_cb(self, event):
         evt_obj = event.get("object")
         evt_type = event.get("type")
@@ -313,28 +309,32 @@ class InstanceManager(object):
             if (
                 evt_type == "MODIFIED"
                 and phase == "Failed"
-                and evt_obj.status.container_statuses
-                and evt_obj.status.container_statuses[0].state.terminated
-                and evt_obj.status.container_statuses[
-                    0
-                ].state.terminated.exit_code
-                == 137
-                and evt_obj.status.container_statuses[
-                    0
-                ].state.terminated.reason
-                != "OOMKilled"
             ):
-                self._failed_pods.append(pod_name)
-                relaunch_failed_pod = True
-                logger.info(
-                    "Pod %s is killed with reason %s."
-                    % (
-                        pod_name,
-                        evt_obj.status.container_statuses[
-                            0
-                        ].state.terminated.reason,
+                # Recover tasks when the worker failed
+                self._task_d.recover_tasks(worker_id)
+                if(
+                    evt_obj.status.container_statuses
+                    and evt_obj.status.container_statuses[0].state.terminated
+                    and evt_obj.status.container_statuses[
+                        0
+                    ].state.terminated.exit_code
+                    == 137
+                    and evt_obj.status.container_statuses[
+                        0
+                    ].state.terminated.reason
+                    != "OOMKilled"
+                ):
+                    self._failed_pods.append(pod_name)
+                    relaunch_failed_pod = True
+                    logger.info(
+                        "Pod %s is killed with reason %s."
+                        % (
+                            pod_name,
+                            evt_obj.status.container_statuses[
+                                0
+                            ].state.terminated.reason,
+                        )
                     )
-                )
 
             if pod_name in self._worker_pod_name_to_id:
                 worker_id = self._worker_pod_name_to_id.get(pod_name)
@@ -342,7 +342,6 @@ class InstanceManager(object):
                 if evt_type == "DELETED" or relaunch_failed_pod:
                     del self._worker_pods_phase[worker_id]
                     del self._worker_pod_name_to_id[pod_name]
-                    self._task_d.recover_tasks(worker_id)
 
                     # If a deleted pod was not "Succeeded", relaunch a worker.
                     relaunch_worker = (
