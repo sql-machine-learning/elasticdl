@@ -3,20 +3,10 @@
 [![Travis-CI Build Status](https://travis-ci.com/sql-machine-learning/elasticdl.svg?branch=develop)](https://travis-ci.com/sql-machine-learning/elasticdl)
 [![Code Coverage](https://codecov.io/gh/sql-machine-learning/elasticdl/branch/develop/graph/badge.svg)](https://codecov.io/gh/sql-machine-learning/elasticdl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![PyPI Status Badge](https://badge.fury.io/py/elasticdl.svg)](https://pypi.org/project/elasticdl/)
+[![PyPI Status Badge](https://badge.fury.io/py/elasticdl-client.svg)](https://pypi.org/project/elasticdl-client/)
 
 ElasticDL is a Kubernetes-native deep learning framework built on top of
 TensorFlow 2.0 that supports fault-tolerance and elastic scheduling.
-
-|                          | TensorFlow 1.x graph mode | TensorFlow 2.x eager execution |
-|--------------------------|---------------------------|--------------------------------|
-| No change to the runtime | Uber Horovod              | ElasticDL (early stage)        |
-| Changes the runtime      | TensorFlow ps-based distribution | TensorFlow distribution strategies |
-
-**Note that ElasticDL is still under active development, and we have not
-extensively tested it in production environments. We open sourced this
-early-stage project with the hope of encouraging further work on fault-tolerance
-and elastic scheduling from the community.**
 
 ## Main Features
 
@@ -34,7 +24,8 @@ graph execution process.
 
 ### Minimalism Interface
 
-Given a model defined with Keras API, train the model with a command line.
+Given a [model](model_zoo/mnist_functional_api/mnist_functional_api.py) defined
+with Keras API, train the model distributedly with a command line.
 
 ```bash
 elasticdl train \
