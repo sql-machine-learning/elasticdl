@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Copyright 2020 The ElasticDL Authors. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,17 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+export BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
 
-set -e
+docker build --target dev -t elasticdl:dev -f elasticdl/docker/Dockerfile \
+    --build-arg BASE_IMAGE="$BASE_IMAGE" .
 
-sh scripts/build.sh
-
-(
-    cd /tmp/elasticdl
-    go test -v -cover ./...
-)
-
-pytest elasticdl/python/tests elasticdl_preprocessing/tests \
-    --cov=elasticdl/python --cov-report=xml
-mkdir -p ./build
-mv coverage.xml ./build
+docker run --rm -it --net=host -v "$PWD":/work -w /work elasticdl:dev \
+    bash -c "scripts/build.sh"
