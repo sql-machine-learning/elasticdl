@@ -22,7 +22,11 @@ sh scripts/build.sh
     go test -v -cover ./...
 )
 
-pytest elasticdl/python/tests elasticdl_preprocessing/tests \
-    --cov=elasticdl/python --cov-report=xml
+# Run Python unittests
+pytest elasticdl/python/tests \
+    elasticdl_preprocessing/tests \
+    elasticdl_client/tests \
+    --cov=elasticdl/python \
+    --cov-report=xml
 mkdir -p ./build
 mv coverage.xml ./build
