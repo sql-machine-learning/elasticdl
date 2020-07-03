@@ -1,4 +1,4 @@
-# ElasticDL Model Building
+# ElasticDL Model Contribution
 
 To submit an ElasticDL job, a user needs to provide a model file, such as
 [`mnist_functional_api.py`](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist_functional_api/mnist_functional_api.py)
@@ -192,46 +192,6 @@ def eval_metrics_fn(predictions, labels):
     }
 ```
 
-### prepare_data_for_a_single_file
-
-```python
-prepare_data_for_a_single_file(filename)
-```
-
-`prepare_data_for_a_single_file` is to read a single file and do whatever
-user-defined logic to prepare the data (e.g, IO from the user's file system,
-feature engineering), and return the serialized data. The function can be used
-to process data for training, evaluation and prediction. The only difference
-between prediction data with training/evaluation data is that the 'label' in
-prediction data should be empty. Users should be able to determine if the data
-file contains label (e.g, via the different formats of filename) and implement
-the logic to prepare the data accordingly.
-
-Example:
-
-```python
-def prepare_data_for_a_single_file(filename):
-    '''
-    An image classification dataset that images belonging to the same category
-    located in the same directory.
-    '''
-    label = int(filename.split('/')[-2])
-    image = PIL.Image.open(filename)
-    numpy_image = np.array(image)
-    example_dict = {
-        "image": tf.train.Feature(
-            float_list=tf.train.FloatList(value=numpy_image.flatten())
-        ),
-        "label": tf.train.Feature(
-            int64_list=tf.train.Int64List(value=[label])
-        ),
-    }
-    example = tf.train.Example(
-        features=tf.train.Features(feature=example_dict)
-    )
-    return example.SerializeToString()
-```
-
 ## Model Building Examples
 
 - [MNIST model using Keras functional API](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist_functional_api/mnist_functional_api.py)
@@ -242,86 +202,4 @@ def prepare_data_for_a_single_file(filename):
 
 - [CIFAR10 model using Keras modelsubclassing](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/cifar10_subclass/cifar10_subclass.py)
 
-## Run and Debug Locally in VS Code
-
-It is more convenient to locally run and debug the defined model than
-submitting a job with the model to k8s cluster. The following example shows how
-to run and debug
-the DNN model using iris dataset.
-
-### Locally Run
-
-The command to locally run the DNN model using iris dataset saved in a CSV file.
-
-```shell
-python -m elasticdl.python.elasticdl.client train \
-  --model_zoo=/{REPO_DIR}/elasticdl/model_zoo \
-  --model_def=odps_iris_dnn_model.odps_iris_dnn_model.custom_model \
-  --training_data=/{DATA_DIR}/iris.csv \
-  --validation_data=/{DATA_DIR}/iris.csv \
-  --data_reader_params="columns=['sepal.length', 'sepal.width', \
-         'petal.length', 'petal.width', 'variety']; sep=','" \
-  --num_epochs=2 \
-  --minibatch_size=64 \
-  --num_minibatches_per_task=20 \
-  --distribution_strategy=Local \
-  --job_name=test-odps-iris \
-  --evaluation_steps=20 \
-  --output=iris_dnn_model
-```
-
-### Debug Model in VS Code
-
-We can add the command to the configurations in the `launch.json` file to debug
-the model in VS Code. The
-[tutorial](https://code.visualstudio.com/docs/python/debugging) show how to
-configure the `launch.json` file. For example, the configuration to debug the
-DNN model is
-
-```json
-{
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Python: Current File",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "module": "elasticdl.python.elasticdl.client",
-            "args": ["train",
-                "--model_zoo",
-                "/{REPO_DIR}/elasticdl/model_zoo",
-                "--model_def",
-                "odps_iris_dnn_model.odps_iris_dnn_model.custom_model",
-                "--training_data",
-                "/{DATA_DIR}/iris.csv",
-                "--num_epochs",
-                "2",
-                "--minibatch_size",
-                "64",
-                "--num_minibatches_per_task",
-                "20",
-                "--distribution_strategy",
-                "Local",
-                "--num_workers",
-                "2",
-                "--checkpoint_steps",
-                "10",
-                "--evaluation_steps",
-                "20",
-                "--job_name",
-                "test-odps-iris",
-                "--data_reader_params",
-                "columns=['sepal.length',
-                          'sepal.width',
-                          'petal.length',
-                          'petal.width',
-                          'variety']; sep=','"
-            ]
-        }
-    ]
-}
+- [Preprocess structured data for Keras model](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/tutorials/preprocessing_tutorial.md)
