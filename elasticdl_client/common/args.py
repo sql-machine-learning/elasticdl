@@ -15,12 +15,14 @@ from itertools import chain
 
 from elasticdl_client.common.constants import DistributionStrategy
 
+DEFAULT_BASE_IMAGE = "python:3.6"
+
 
 def add_zoo_init_arguments(parser):
     parser.add_argument(
         "--base_image",
         type=str,
-        default="python:3.6",
+        default=DEFAULT_BASE_IMAGE,
         help="Base Docker image.",
     )
     parser.add_argument(
