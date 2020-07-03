@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+set -e
+
 (
     cd /tmp/elasticdl
     go test -v -cover ./...
