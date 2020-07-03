@@ -71,7 +71,7 @@ model = MnistModel()
 ### dataset_fn
 
 ```python
-dataset_fn(dataset, training)
+dataset_fn(dataset, mode)
 ```
 
 `dataset_fn` is a function that takes a RecordIO `dataset` as input,
@@ -128,7 +128,7 @@ def dataset_fn(dataset, mode):
 ### loss
 
 ```python
-loss(labels, output)
+loss(labels, predictions)
 ```
 
 `loss` is the loss function used in ElasticDL training.
@@ -136,15 +136,15 @@ loss(labels, output)
 Arguments:
 
 - labels: `labels` from [`dataset_fn`](#dataset_fn).
-- output:  [model](#model)'s output.
+- predictions:  [model](#model)'s output.
 
 Example:
 
 ```python
-def loss(labels, output):
+def loss(labels, predictions):
     return tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=output, labels=labels.flatten()
+            logits=predictions, labels=labels.flatten()
         )
     )
 ```
@@ -179,15 +179,11 @@ TensorFlow API.
 Example:
 
 ```python
-def eval_metrics_fn(predictions, labels):
+def eval_metrics_fn():
     return {
-        "accuracy": tf.reduce_mean(
-            input_tensor=tf.cast(
-                tf.equal(
-                    tf.argmax(input=predictions, axis=1), labels.flatten()
-                ),
-                tf.float32,
-            )
+        "accuracy": lambda labels, predictions: tf.equal(
+            tf.argmax(predictions, 1, output_type=tf.int32),
+            tf.cast(tf.reshape(labels, [-1]), tf.int32),
         )
     }
 ```
