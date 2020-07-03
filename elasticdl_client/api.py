@@ -38,7 +38,10 @@ def init_zoo(args):
             raise RuntimeError(
                 "The cluster spec {} doesn't exist".format(cluster_spec_path)
             )
-        shutil.copy2(cluster_spec_path, os.getcwd())
+        try:
+            shutil.copy2(cluster_spec_path, os.getcwd())
+        except shutil.SameFileError:
+            pass
         cluster_spec_name = os.path.basename(cluster_spec_path)
 
     # Create the docker file
