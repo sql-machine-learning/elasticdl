@@ -32,7 +32,6 @@ from elasticdl.python.common.constants import (
     DistributionStrategy,
     InstanceManagerStatus,
     JobType,
-    PodStatus,
 )
 from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_utils import get_logger
