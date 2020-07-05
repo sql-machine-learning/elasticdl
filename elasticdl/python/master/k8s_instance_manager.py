@@ -306,13 +306,10 @@ class InstanceManager(object):
                 return
 
             relaunch_failed_pod = False
-            if (
-                evt_type == "MODIFIED"
-                and phase == "Failed"
-            ):
+            if evt_type == "MODIFIED" and phase == "Failed":
                 # Recover tasks when the worker failed
                 self._task_d.recover_tasks(worker_id)
-                if(
+                if (
                     evt_obj.status.container_statuses
                     and evt_obj.status.container_statuses[0].state.terminated
                     and evt_obj.status.container_statuses[
