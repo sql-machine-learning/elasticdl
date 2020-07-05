@@ -4,16 +4,16 @@ set output "1.pdf"
 set multiplot layout 2,1 rowsfirst
 set bmargin 3
 
-set yrange [0:320]
-set xrange [0:1400]
+set yrange [0:24]
+set xrange [0:800]
 set xlabel "training time (seconds)"
 set ylabel "# utilized CPU"
 set grid
 set title "Gang scheduling -- two jobs one after another"
 plot '1c.data' with lines notitle
 
-set yrange [0:320]
-set xrange [0:1400]
+set yrange [0:24]
+set xrange [0:800]
 set xlabel "training time (seconds)"
 set ylabel "# utilized CPU"
 set grid
