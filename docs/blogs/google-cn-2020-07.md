@@ -52,10 +52,10 @@ Hadoop MapReduce，用户基本都只需填写 map 和 reduce 两个函数的实
 大都基于 TensorFlow 和 Kubernetes。
 
 1. TensorFlow Estimator 作为构建在 TensorFlow 之上的一层 API，允许用户只需定义模
-   型，而训练过程封装在一个函数调用里。这个函数调用可以把分布式作业启动在
-   Kubernetes 上，前提是 Kubernetes 集群部署了 Kubeflow 项目提供的 TF-operator。
-   这个方案的局限是：它仅支持 TensorFlow 的 graph mode，不支持 eager execution；
-   而 eager execution 可以大幅简化调试，尤其方便跟踪网络各层输出。
+   型，而训练过程封装在一个函数调用里。利用 Kubeflow 提供的 TF operator，我们可
+   以将该训练过程以分布式作业的方式启动在Kubernetes 上。这个方案的局限是：它仅支
+   持 TensorFlow 的 graph mode，不支持 eager execution；而 eager execution 可以
+   大幅简化调试，尤其方便跟踪网络各层输出。
 
 2. Keras API 支持 TensorFlow 2.x 和 eager execution。目前 TensorFlow 2.x Keras
    API 还暂不支持 ParameterServer 分布式策略，对 AllReduce 分布式策略提供了实验
@@ -169,7 +169,7 @@ forward 函数的时候，可以打印中间结果，便于调试和复现问题
 方法，协调 workers 来做训练。当使用 asynchronous SGD 方法时，master 会启动一个高
 性能的 parameter server，供各个 workers 使用。当使用 synchronous SGD 时，
 ElasticDL 使用和才云科技合作研发的一个 Kubernetes-native 的 fault-tolerable
-AllReduce 实现 TFlib。
+AllReduce 实现 FTlib。
 
 ### Master 负责动态数据划分
 
@@ -349,7 +349,7 @@ ElasticDL 正是针对这些特点设计的。
 ElasticDL 的设计和实现依托了 TensorFlow 2.x 提供的高效率的模型描述 API。也依赖了 TensorFlow
 eager execution 提供的 GradientTape 机制 —— 使得 ElasticDL 可以在不改变 TensorFlow runtime
 的情况下，结合 Kubernetes 实现彻底的弹性调度（进程数可增也可减），从而实现了减少作业启动
-的等待时间，提升集群利用率，和提醒研发效率的效果。
+的等待时间，提升集群利用率，和提升研发效率的效果。
 
 目前 ElasticDL 在阿里系结合 PAI 平台在推广。PAI 平台提供的拖拽式编程模式进一步降低了端到端
 机器学习流程的研发门槛。希望接下来 ElasticDL 团队可以有更多结合业务实践的分享。
