@@ -1,4 +1,4 @@
-# ElasticDL - Kubernetes-native Deep Learning System with Elastic Scheduling
+# ElasticDL: Kubernetes-native Deep Learning System with Elastic Scheduling
 
 ## Description
 
@@ -17,7 +17,8 @@ improve the resource utilization.
 
 ## Benefits to the Ecosystem
 
-For system developers and operators, this talk
+For system developers and operators, this talk introduces an elastic scheduling for
+machine learning workload.
 For model developers, this talk how to
 For contributors in the ecosystem, this talk
 
