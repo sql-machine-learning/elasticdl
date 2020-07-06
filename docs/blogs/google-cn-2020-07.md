@@ -64,15 +64,15 @@ Hadoop MapReduce，用户基本都只需填写 map 和 reduce 两个函数的实
 3. Horovod 对用户代码有侵入性，用户除了必须熟悉 TensorFlow API 之外，还需学习
    Horovod API。
 
+以上三个方案的共同局限是，虽然具备一定的容错能力，不过不支持弹性调度。而且它们都
+依赖部署 Kubernetes operator，了解 Kubernetes 对 AI 专家来说颇有挑战。
+
 | 方案 | 模型定义方式 | 分布式执行机制 |
 | --- | --- | --- |
 | Estimator | TensorFlow Estimator API | Kubeflow TF-operator |
 | Keras | TensorFlow Keras API | Kubeflow TF-operator |
 | Horovod | Horovod with TensorFlow | Kubeflow MPI-operator |
 | ElasticDL | TensorFlow Keras API | ElasticDL master process per job |
-
-以上三个方案的共同局限是，虽然具备一定的容错能力，不过不支持弹性调度。而且它们都
-依赖部署 Kubernetes operator，了解 Kubernetes 对 AI 专家来说颇有挑战。
 
 针对这些局限，我们设计和开发了 ElasticDL 分布式计算框架。用户定义可以用
 TensorFlow 2.x 的 Keras API 来定义模型。并且，分布式执行不要求 Kubernetes 集群有
@@ -301,8 +301,10 @@ ElasticDL 对集群利用率和研发效率的同时提升。
 
 总结：
 
-- 用户等待作业启动时间几乎是 0。这对于 AI 工作很重要，因为用户最关注的是第一个迭代尽快开始
-   —— 如果第一个迭代失败了，很可能是用户程序的 bug。
+- 用户等待作业启动时间几乎是 0。这对于 AI 工作很重要，因为用户最关注的是第一个迭
+   代尽快开始—— 如果第一个迭代失败了，很可能是用户程序的 bug。另外，深度学习模型
+   往往需要手动调优，学习率、optimizer、activation 等配置如果不合理，往往在前几
+   个迭代就能发现；因此第一个迭代能立刻开始，对模型调优的工作效率提高有很大帮助。
 - 集群利用率高。第二个实验（elastic scheduling）执行期间，有一段时间集群利用率是 100%；
    其他时间也不低于第一个实验（gang scheduling）。
 - 作业完成更快。第二个试验里，两个作业用了约 580 秒；第一个实验里需要约 795 秒。
