@@ -15,7 +15,7 @@ Google Developer Day
 
 ElasticDL 的首要设计意图是简化分布式编程。它允许用户只提供用 TensorFlow 2.0 API 描述的模型，
 而不需要用户写分布式训练过程代码。用户的模型定义只要能在本地调通，即可在分布式环境下
-用大规模数据训练模型。从而提升研发效率。
+用大规模数据训练模型，从而提升研发效率。
 
 同时，ElasticDL 提供的弹性调度的能力在实践中可以让集群的利用高达 90%。当集群资源不足时，
 一个训练作业里的进程减少；当其他作业结束释放资源后，进程数量随之增加。这样的做法比
@@ -118,7 +118,7 @@ def forward():
     return tf.keras.Model(inputs=inputs, outputs=outputs, name="mnist_model")
 ```
 
-除了模型定义之外，用户还需要指定 dataset, loss，optimizer 以及 evaluation函数
+除了模型定义之外，用户还需要指定 dataset, loss，optimizer函数。
 
 ```python
 def loss(labels, predictions):
@@ -132,15 +132,7 @@ def loss(labels, predictions):
 def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
-def eval_metrics_fn():
-    return {
-        "accuracy": lambda labels, predictions: tf.equal(
-            tf.argmax(predictions, 1, output_type=tf.int32),
-            tf.cast(tf.reshape(labels, [-1]), tf.int32),
-        )
-    }
-
-def dataset_fn(dataset, mode, _):
+def feed(dataset, mode, _):
     def _parse_data(record):
         if mode == Mode.PREDICTION:
             feature_description = {
