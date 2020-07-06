@@ -26,7 +26,8 @@ dynamically to them. It doesn't rely on the Kubernetes operators. In this way,
 master can understand the internal details of deep learning process and model
 structure, and then make more optimized scheduling decision.
 
-For system developers and operators, this talk introduces.
+For system developers and operators, this talk introduces a elastic scheduling
+policy for deep learning jobs to improve the resource utilization.
 
 For model developers, this talk introduces how to develop a distributed TensorFlow
 program and submit a training job to Kubernetes. It provides a way to make quick
