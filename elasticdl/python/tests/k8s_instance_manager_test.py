@@ -54,8 +54,6 @@ class InstanceManagerTest(unittest.TestCase):
             counters = instance_manager.get_worker_counter()
             if not counters:
                 break
-        print("Recover tasks")
-        print(task_d.recover_tasks._mock_mock_calls)
         task_d.recover_tasks.assert_has_calls(
             [call(0), call(1), call(2)], any_order=True
         )
