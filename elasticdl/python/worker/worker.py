@@ -23,7 +23,6 @@ from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
 from elasticdl.python.common.constants import (
     CollectiveCommunicatorStatus,
-    DistributionStrategy,
     JobType,
     MetricsDictKey,
     Mode,
@@ -56,6 +55,7 @@ from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.worker.task_data_service import TaskDataService
+from elasticdl_client.common.constants import DistributionStrategy
 
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.

@@ -1,8 +1,7 @@
 set terminal pdf
 set output "2.pdf"
 
-set yrange [0:320]
-# set xrange [0:1400]
+set yrange [0:24]
 set xlabel "training time (seconds)"
 set ylabel "# utilized CPU"
 set key right bottom

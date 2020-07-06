@@ -19,7 +19,12 @@ with open("elasticdl_client/requirements.txt") as f:
 setup(
     name="elasticdl_client",
     version="develop",
-    description="The client tool for ElasticDL.",
+    description="The client command line tool for ElasticDL.",
+    long_description="ElasticDL Client is the client command line tool for"
+    "ElasticDL. It's convenient with it to build and push Docker images for"
+    "a distributed ElasticDL job. And then we can use it to submit a train, "
+    "evaluate or predict job to a Kubernetes cluster.",
+    long_description_content_type="text/markdown",
     author="Ant Financial",
     url="https://elasticdl.org",
     install_requires=required_deps,

@@ -13,6 +13,7 @@
 
 import unittest
 
+from elasticdl_client.common.args import DEFAULT_BASE_IMAGE
 from elasticdl_client.main import build_argument_parser
 
 
@@ -23,7 +24,7 @@ class ArgParserTest(unittest.TestCase):
     def test_parse_zoo_init(self):
         args = ["zoo", "init"]
         args = self._parser.parse_args(args)
-        self.assertEqual(args.base_image, "python:latest")
+        self.assertEqual(args.base_image, DEFAULT_BASE_IMAGE)
         args.func(args)
 
         args = ["zoo", "init", "--base_image=elasticdl:base"]

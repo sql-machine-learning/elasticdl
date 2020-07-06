@@ -15,12 +15,14 @@ from itertools import chain
 
 from elasticdl_client.common.constants import DistributionStrategy
 
+DEFAULT_BASE_IMAGE = "python:3.6"
 
-def add_zoo_init_arguments(parser):
+
+def add_zoo_init_params(parser):
     parser.add_argument(
         "--base_image",
         type=str,
-        default="python:3.6",
+        default=DEFAULT_BASE_IMAGE,
         help="Base Docker image.",
     )
     parser.add_argument(
@@ -38,7 +40,7 @@ def add_zoo_init_arguments(parser):
     )
 
 
-def add_zoo_build_arguments(parser):
+def add_zoo_build_params(parser):
     parser.add_argument(
         "path", type=str, help="The path where the build context locates."
     )
@@ -51,7 +53,7 @@ def add_zoo_build_arguments(parser):
     )
 
 
-def add_zoo_push_arguments(parser):
+def add_zoo_push_params(parser):
     parser.add_argument(
         "image",
         type=str,
@@ -187,7 +189,7 @@ def add_common_params(parser):
     parser.add_argument(
         "--image_name",
         type=str,
-        required=True,
+        default="",
         help="The docker image for this job.",
     )
     parser.add_argument("--job_name", help="ElasticDL job name", required=True)

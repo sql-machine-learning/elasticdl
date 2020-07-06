@@ -38,7 +38,10 @@ def init_zoo(args):
             raise RuntimeError(
                 "The cluster spec {} doesn't exist".format(cluster_spec_path)
             )
-        shutil.copy2(cluster_spec_path, os.getcwd())
+        try:
+            shutil.copy2(cluster_spec_path, os.getcwd())
+        except shutil.SameFileError:
+            pass
         cluster_spec_name = os.path.basename(cluster_spec_path)
 
     # Create the docker file
@@ -50,7 +53,9 @@ RUN pip install elasticdl_preprocessing\
  --extra-index-url={{ EXTRA_PYPI_INDEX }}
 
 RUN pip install elasticdl --extra-index-url={{ EXTRA_PYPI_INDEX }}
-ENV PATH /usr/local/lib/python3.6/dist-packages/elasticdl/go/bin:$PATH
+RUN /bin/bash -c\
+ 'PYTHON_PKG_PATH=$(pip3 show elasticdl | grep "Location:" | cut -d " " -f2);\
+ echo "PATH=${PYTHON_PKG_PATH}/elasticdl/go/bin:$PATH" >> /root/.bashrc'
 
 COPY . /model_zoo
 RUN pip install -r /model_zoo/requirements.txt\
