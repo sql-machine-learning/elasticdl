@@ -17,9 +17,9 @@ improve the resource utilization.
 
 ## Benefits to the Ecosystem
 
-To operators, this talk
-
-To model deveopers, this talk
+For system developers and operators, this talk
+For model developers, this talk how to
+For contributors in the ecosystem, this talk
 
 ## Open Source Projects
 
