@@ -139,6 +139,8 @@ PAI 平台上提交分布式训练。
 
 ## PAI 平台上集成特征预处理的 DeepCTR 算法
 
+### ElasticDL-DeepCTR 组件使用
+
 为了让用户能快速将 ElasticDL 应用到真实业务场景，ElasticDL 在
 [PAI](https://pai.alipay.com)
 平台上提供了 ElasticDL-DeepCTR 组件，如下图所示:
@@ -149,7 +151,7 @@ PAI 平台上提交分布式训练。
 
 - 根据用户配置的特征来自动生成特征预处理逻辑，并与深度学习 CTR
 算法相结合，组成完整的模型。
-- 提供了常用的 CTR 预估算法，包括 Wide & Deep, DeepFM, Deep Cross Network 和
+- 预置了常用的 CTR 预估算法，包括 Wide & Deep, DeepFM, Deep Cross Network 和
 xDeepFM。
 - 分布式策略采用 ParameterServer，可以根据数据量来配置 worker
 的数量来加速模型训练。
@@ -164,3 +166,14 @@ Challenge](https://www.kaggle.com/c/criteo-display-ad-challenge)
 ElasticDL DeepCTR 算法的实现原理如下图:
 
 ![DeepCTR design](../images/pai_gui/pai_deepctr_preprocessing.jpg)
+
+### 基于 ElasticDL-DeepCTR 自定义模型
+
+ElasticDL-DeepCTR 组件提供的预置二分类算法可能无法覆盖所有的场景，
+比如多分类任务和回归任务。所以 ElasticDL-DeepCTR 组件提供了自定义模型的功能。
+在业务场景建模中，特征预处理定义是比较繁琐的事情。基于 ElasticDL-DeepCTR
+的代码，用户可以复用组件的特征预处理逻辑，只需关心模型网络结构。如下图所示：
+
+![Customize DeepCTR Model](../images/pai_gui/customize_pai_deepctr.jpg)
+
+在 ElasticDL-DeepCTR 预置模型代码的基础上，只需修改模型定义即可。
