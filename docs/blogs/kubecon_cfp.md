@@ -12,7 +12,8 @@ a result, the job pending time is long and the resouce utilization is insufficie
 ElasticDL implements elastic scheduling policy. A job doesn't need wait for all
 the required resource ready and start promptly. A job process can be preempted
 by a higher priority job, join later while the resource become sufficient and the
-entire job keeps running.
+entire job keeps running. It can significantly shorten the job waiting time and
+improve the resource utilization.
 
 ## Benefits to the Ecosystem
 
