@@ -17,8 +17,8 @@ time and improve the resource utilization.
 
 ## Benefits to the Ecosystem
 
-This talk introduces a system which implements a new policy to schedule deep
-learning workloads on Kubernetes - elastic scheduling. Compared with the gang
+This talk introduces a system ElasticDL which implements a new policy to schedule
+deep learning workloads on Kubernetes - elastic scheduling. Compared with the gang
 scheduling policy that kubernetes operators from Kubeflow apply, it can improve
 the resource utilization significantly. We add a master to launch, monitor and
 manage the worker pods using Kubernetes API and distribute the sharded data
