@@ -23,15 +23,16 @@ scheduling policy that kubernetes operators from Kubeflow apply, it can improve
 the resource utilization significantly. We add a master to launch, monitor and
 manage the worker pods using Kubernetes API and distribute the sharded data
 dynamically to them. It doesn't rely on the Kubernetes operators. In this way,
-master can understand the internal details of deep learning process and model
-structure, and then make more optimized scheduling decision.
+master can understand not only the internal details of deep learning process
+but also the model structure, and then make more optimized scheduling decision.
 
 For system developers and operators, this talk introduces a elastic scheduling
 policy for deep learning jobs to improve the resource utilization.
 
-For model developers, this talk introduces how to develop a distributed TensorFlow
-program and submit a training job to Kubernetes. It provides a way to make quick
-verfication and iteration on the model and then improve the development efficiency.
+For model developers, this talk introduces how to simply develop a distributed
+TensorFlow program and submit a training job to Kubernetes. It provides a way to
+make quick verfication and iteration on the model and then improve the development
+efficiency.
 
 What's more, we will share the results of three benchmark experiments to show how
 ElasticDL improve the resource utilization and development efficiency.
