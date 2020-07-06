@@ -1,6 +1,6 @@
 # ElasticDL Client
 
-This is the client command-line tool for ElasticDL. We can use it to build
+ElasticDL client is a command-line tool. Users can use it to prepare
 Docker images for a distributed ElasticDL job and submit a train, evaluate
 or predict job to a Kubernetes cluster.
 
