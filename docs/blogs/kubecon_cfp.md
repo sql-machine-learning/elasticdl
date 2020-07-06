@@ -2,8 +2,9 @@
 
 ## Description
 
-In these years, Kubernetes becomes the fundamental infrastructure of Machine
-Learning. gang scheduling.
+In these years, Kubernetes becomes the fundamental infrastructure of machine
+learning. Kubeflow project provides some operators to execute distributed machine
+learning jobs on Kubernetes. It's gang scheduling which means that
 
 ## Benefits to the Ecosystem
 
