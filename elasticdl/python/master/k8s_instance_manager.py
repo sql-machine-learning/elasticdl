@@ -307,8 +307,12 @@ class InstanceManager(object):
 
             relaunch_failed_pod = False
             if evt_type == "MODIFIED" and phase == "Failed":
-                # Recover tasks when the worker failed
-                self._task_d.recover_tasks(worker_id)
+                self._failed_pods.append(pod_name)
+                worker_id = self._worker_pod_name_to_id.get(pod_name, None)
+                if worker_id is not None:
+                    # Recover tasks when the worker failed
+                    self._task_d.recover_tasks(worker_id)
+
                 if (
                     evt_obj.status.container_statuses
                     and evt_obj.status.container_statuses[0].state.terminated
@@ -321,7 +325,6 @@ class InstanceManager(object):
                     ].state.terminated.reason
                     != "OOMKilled"
                 ):
-                    self._failed_pods.append(pod_name)
                     relaunch_failed_pod = True
                     logger.info(
                         "Pod %s is killed with reason %s."
