@@ -118,7 +118,7 @@ def forward():
     return tf.keras.Model(inputs=inputs, outputs=outputs, name="mnist_model")
 ```
 
-除了模型定义之外，用户还需要指定 dataset, loss，optimizer函数。
+除了模型定义之外，用户还需要指定 feed, loss，optimizer函数。
 
 ```python
 def loss(labels, predictions):
