@@ -1,8 +1,8 @@
 # ElasticDL on On-prem Cluster
 
-## Environment preparation
+## Environment Preparation
 
-You should install ElasticDL first. Please refer to the installation part in
+We should install ElasticDL first. Please refer to the installation part in
 [elastic_local](elasticdl_local.md) doc.
 
 Then, build needed images.
@@ -12,7 +12,7 @@ export TRAVIS_BUILD_DIR=$PWD
 bash scripts/travis/build_images.sh
 ```
 
-## Submit job to cluster
+## Submit Job to Cluster
 
 The submit command is similar to local mode. The local scripts will be built
 into a docker image, and pushed to `$DOCKER_HUB_REPO` remote docker hub.
@@ -47,7 +47,7 @@ elasticdl train \
 
 Then the job will be launched on the cluster.
 
-By the way, we can also use the pre-built image to submit the ElasticDL job.
+By the way, we can also use a pre-built image to submit the ElasticDL job.
 
 ```bash
 elasticdl train \
@@ -68,4 +68,45 @@ elasticdl train \
  --log_level=INFO \
  --image_pull_policy=Always \
  --namespace=kubemaker
+```
+
+## Add Cluster-specific Information
+
+If the on-prem cluster requires additional specifications to pods or services, such as labels, tolerations, etc, we can add an additional argument `--cluster_spec spec.py` in the command line above. We define a class instance `cluster` in `spec_py` file. There are two required class functions `with_pod` and `with_service` for adding additional specifications to pods or services.
+
+Below is an example of `spec.py`.
+
+```
+from kubernetes import client
+
+class MyCluster:
+    def __init__(self):
+        self._pool = "elasticdl"
+        self._app_name = "elasticdl"
+
+    # Add pod specifications
+    def with_pod(self, pod):
+        # Add a label
+        pod.metadata.labels["my_app"] = self._app_name
+        
+        # Add tolerations
+        tolerations = [
+            client.V1Toleration(
+                effect="NoSchedule",
+                key="mycluster.com/app-pool",
+                operator="Equal",
+                value=self._pool ,
+            ),
+        ]
+        pod.spec.tolerations = tolerations
+        return pod
+
+    # Add service specifications
+    def with_service(self, service):
+        # Use ClusterIP
+        service.spec.type = "ClusterIP"
+        service.spec.cluster_ip = "None"
+        return service
+        
+cluster = MyCluster()
 ```
