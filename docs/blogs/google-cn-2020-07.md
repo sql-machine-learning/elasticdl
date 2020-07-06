@@ -177,7 +177,7 @@ forward 函数的时候，可以打印中间结果，便于调试和复现问题
 方法，协调 workers 来做训练。当使用 asynchronous SGD 方法时，master 会启动一个高
 性能的 parameter server，供各个 workers 使用。当使用 synchronous SGD 时，
 ElasticDL 使用和才云科技合作研发的一个 Kubernetes-native 的 fault-tolerable
-AllReduce 实现 TFlib。
+AllReduce 实现 FTlib。
 
 ### Master 负责动态数据划分
 
