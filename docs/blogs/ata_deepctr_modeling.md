@@ -142,8 +142,7 @@ PAI 平台上提交分布式训练。
 ### ElasticDL-DeepCTR 组件使用
 
 为了让用户能快速将 ElasticDL 应用到真实业务场景，ElasticDL 在
-[PAI](https://pai.alipay.com)
-平台上提供了 ElasticDL-DeepCTR 组件，如下图所示:
+PAI 平台上提供了 ElasticDL-DeepCTR 组件，如下图所示:
 
 ![PAI ElasticDL DeepCTR](../images/pai_gui/pai_elasticdl_deepctr.jpg)
 
