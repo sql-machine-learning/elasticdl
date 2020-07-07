@@ -23,14 +23,15 @@ ElasticDL boosts the cluster utilization up to 90%, on on-premise clusters at An
 Financial and on Google Cloud, as it makes full use of residual resources to run
 deep learning jobs with elastic scheduling. Moreover, it enables the running of
 deep learning jobs in lower priority than online services on the same cluster.
+It senses and uses resource left by online services.
 
-The master pod is important to elastic scheduling, it takes three roles.
+The master is important to elastic scheduling, it takes three roles.
 
 1. The master dynamically partitions the training data so to decouple the number
 of partitions and that of the workers.
 2. The master also works with Kubernetes to watch the cluster utilization and a
 good chance to restart failed workers. Before the chance, the master always
-leveraging living workers.
+leverages living workers.
 3. The master starts and monitors parameter servers when training large models
 using the asynchronous SGD algorithm, and cooperate workers to implement a
 Kubernetes-native fault-tolerable AllReduce operation for the synchronous SGD
