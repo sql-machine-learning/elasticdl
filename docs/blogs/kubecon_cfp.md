@@ -12,10 +12,10 @@ Maintaining the constant number, it becomes gang scheduling. Either case leads
 to low utilization of clusters.
 
 ElasticDL changes the paradox by using the statistical properties of distributed
-learning theory and making jobs tolerable to varying numbers of workers. Taking it
-as the basis, ElasticDL realize elastic scheduling by introducing a master pod per
-job, to replace the Kubernetes operator per cluster. It makes full use of residual
-resources and improve the utilization significantly.
+learning theory and making jobs tolerable to varying numbers of workers. Taking
+it as the basis, ElasticDL realizes elastic scheduling by introducing a master
+pod per job, to replace the Kubernetes operator per cluster. It makes full use
+of residual resources and improve the utilization significantly.
 
 ## Benefits to the Ecosystem
 
