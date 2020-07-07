@@ -80,7 +80,7 @@ and `with_service` for adding additional specifications to pods or services.
 
 Below is an example of `spec.py`.
 
-```
+```python
 from kubernetes import client
 
 class MyCluster:
@@ -92,7 +92,7 @@ class MyCluster:
     def with_pod(self, pod):
         # Add a label
         pod.metadata.labels["my_app"] = self._app_name
-        
+
         # Add tolerations
         tolerations = [
             client.V1Toleration(
@@ -111,6 +111,6 @@ class MyCluster:
         service.spec.type = "ClusterIP"
         service.spec.cluster_ip = "None"
         return service
-        
+
 cluster = MyCluster()
 ```
