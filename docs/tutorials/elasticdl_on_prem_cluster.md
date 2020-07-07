@@ -72,7 +72,11 @@ elasticdl train \
 
 ## Add Cluster-specific Information
 
-If the on-prem cluster requires additional specifications to pods or services, such as labels, tolerations, etc, we can add an additional argument `--cluster_spec spec.py` in the command line above. We define a class instance `cluster` in `spec_py` file. There are two required class functions `with_pod` and `with_service` for adding additional specifications to pods or services.
+If the on-prem cluster requires additional specifications to pods or services,
+such as labels, tolerations, etc, we can add an additional argument
+`--cluster_spec spec.py` in the command line above. We define a class instance
+`cluster` in `spec_py` file. There are two required class functions `with_pod`
+and `with_service` for adding additional specifications to pods or services.
 
 Below is an example of `spec.py`.
 
