@@ -21,9 +21,9 @@ setup(
     version="develop",
     description="The client command line tool for ElasticDL.",
     long_description="ElasticDL Client is the client command line tool for"
-    "ElasticDL. It's convenient with it to build and push Docker images for"
-    "a distributed ElasticDL job. And then we can use it to submit a train, "
-    "evaluate or predict job to a Kubernetes cluster.",
+    " ElasticDL. It's convenient with it to build and push Docker images for"
+    " distributed ElasticDL jobs. And then we can use it to submit train,"
+    " evaluate or predict jobs to a Kubernetes cluster.",
     long_description_content_type="text/markdown",
     author="Ant Financial",
     url="https://elasticdl.org",
