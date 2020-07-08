@@ -36,8 +36,9 @@ git clone https://github.com/sql-machine-learning/elasticdl.git
 
 ### Start Kubernetes Cluster
 
-We start minikube with a command-line option `--mount-string`,
-which mounts the host directory `$DATA_PATH` to `/data` path in all minikube containers.
+We start minikube with a command-line option `--mount-string`, which mounts the
+directory `{elasticdl_repo_root}/data` in local host to `/data` path in all
+minikube containers.
 
 ```bash
 cd elasticdl
