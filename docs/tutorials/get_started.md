@@ -34,6 +34,6 @@ cloud, namely, Google Kubernetes Engine (GKE).
 
 ## Model Building
 
-We have also provided [this tutorial](model_building.md) to illustrate how to
+We have also provided [this tutorial](model_contribution.md) to illustrate how to
 define necessary components that will be used for ElasticDL model training,
 evaluation, and prediction.
