@@ -40,9 +40,9 @@ We start minikube with a command-line option `--mount-string`,
 which mounts the host directory `$DATA_PATH` to `/data` path in all minikube containers.
 
 ```bash
-export DATA_PATH={a_folder_path_to_store_training_data}
-minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=50gb --mount=true --mount-string="$DATA_PATH:/data"
 cd elasticdl
+mkdir data
+minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=50gb --mount=true --mount-string="./data:/data"
 kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 eval $(minikube docker-env)
 ```
@@ -64,17 +64,15 @@ We generate MNIST training and evaluation data in RecordIO format. We provide a
 script in elasticdl repo.
 
 ```bash
+# Change directory to the root of elasticdl repo
+cd ../
 docker pull elasticdl/elasticdl:dev
-cd {elasticdl_repo_root}
 docker run --rm -it \
   -v $HOME/.keras/datasets:/root/.keras/datasets \
   -v $PWD:/work \
   -w /work elasticdl/elasticdl:dev \
   bash -c "scripts/gen_dataset.sh data"
-cp -r data/* $DATA_PATH
 ```
-
-We generate datasets and copy them to `$DATA_PATH`.
 
 ### Summit a training job
 
