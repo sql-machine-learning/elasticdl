@@ -56,9 +56,9 @@ computing job would fail; however, we can restart the job and recover its status
 from the most recent checkpoint files.
 
 ElasticDL, as an enhancement of TensorFlow's distributed training feature,
-supports fault-tolerance. In the case that some processes fail, the job would go
-on running. Therefore, ElasticDL doesn't need to checkpoint nor recover from
-checkpoints.
+supports fault-tolerance. In the case that some processes fail, the job would
+go on running. Therefore, ElasticDL doesn't need to save checkpoint nor recover
+from checkpoints.
 
 The feature of fault-tolerance makes ElasticDL works with the priority-based
 preemption of Kubernetes to achieve elastic scheduling.  When Kubernetes kills
