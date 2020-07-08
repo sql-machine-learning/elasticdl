@@ -309,7 +309,7 @@ def add_common_params(parser):
         "--num_minibatches_per_task",
         type=int,
         help="The number of minibatches per task",
-        required=True,
+        default=2,
     )
     parser.add_argument(
         "--cluster_spec",
