@@ -209,7 +209,7 @@ def add_common_params(parser):
         "default to master_resource_request",
     )
     parser.add_argument(
-        "--num_workers", type=int, help="Number of workers", default=1
+        "--num_workers", type=int, help="Number of workers", default=2
     )
     parser.add_argument(
         "--worker_resource_request",
@@ -309,7 +309,7 @@ def add_common_params(parser):
         "--num_minibatches_per_task",
         type=int,
         help="The number of minibatches per task",
-        default=2,
+        default=8,
     )
     parser.add_argument(
         "--cluster_spec",
