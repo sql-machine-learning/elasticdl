@@ -409,8 +409,8 @@ class Master(object):
 
             if args.use_go_ps:
                 opt_type, opt_args = get_optimizer_info(self.optimizer)
-                ps_client_command = "elasticdl_ps"
-                ps_args = [
+                ps_command = "elasticdl_ps"
+                ps_command_args = [
                     "-job_name=" + args.job_name,
                     "-namespace=" + args.namespace,
                     "-master_addr=" + self.master_addr,
@@ -432,14 +432,22 @@ class Master(object):
                     "-opt_type=" + opt_type,
                     "-opt_args=" + opt_args,
                 ]
-                ps_args = wrap_go_args_with_string(ps_args)
-                ps_args.insert(0, ps_client_command)
+                ps_command_args = wrap_go_args_with_string(ps_command_args)
+                # Execute source /root/.bashrc to add the file path
+                # of `elasticdl_ps` into the PATH environment variable.
+                ps_args = [
+                    "source",
+                    "/root/.bashrc",
+                    "&&",
+                    ps_command,
+                ]
+                ps_args.extend(ps_command_args)
             else:
-                ps_client_command = (
+                ps_command = (
                     BashCommandTemplate.SET_PIPEFAIL
                     + " python -m elasticdl.python.ps.main"
                 )
-                ps_args = [
+                ps_command_args = [
                     "--grads_to_wait",
                     str(args.grads_to_wait),
                     "--lr_staleness_modulation",
@@ -481,8 +489,8 @@ class Master(object):
                     "--num_minibatches_per_task",
                     str(args.num_minibatches_per_task),
                 ]
-                ps_args = wrap_python_args_with_string(ps_args)
-                ps_args.insert(0, ps_client_command)
+                ps_args = wrap_python_args_with_string(ps_command_args)
+                ps_args.insert(0, ps_command)
 
             worker_args = ["-c", " ".join(worker_args)]
             ps_args = ["-c", " ".join(ps_args)]
