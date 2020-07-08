@@ -433,7 +433,14 @@ class Master(object):
                     "-opt_args=" + opt_args,
                 ]
                 ps_args = wrap_go_args_with_string(ps_args)
-                ps_args.insert(0, ps_client_command)
+                # Execute source /root/.bashrc to add the file path
+                # of `elasticdl_ps` into the PATH environment variable.
+                ps_args = [
+                    "source",
+                    "/root/.bashrc",
+                    "&&",
+                    ps_client_command,
+                ].extend(ps_args)
             else:
                 ps_client_command = (
                     BashCommandTemplate.SET_PIPEFAIL
