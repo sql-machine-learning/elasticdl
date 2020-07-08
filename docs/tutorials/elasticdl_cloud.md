@@ -93,6 +93,7 @@ We provide a script in elasticdl repo.
 
 ```bash
 cd ${CODE_PATH}/elasticdl
+mkdir data
 docker run --rm -it \
   -v $HOME/.keras/datasets:/root/.keras/datasets \
   -v $PWD:/work \
