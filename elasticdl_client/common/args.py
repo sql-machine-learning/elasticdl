@@ -209,7 +209,7 @@ def add_common_params(parser):
         "default to master_resource_request",
     )
     parser.add_argument(
-        "--num_workers", type=int, help="Number of workers", default=0
+        "--num_workers", type=int, help="Number of workers", default=2
     )
     parser.add_argument(
         "--worker_resource_request",
@@ -309,7 +309,7 @@ def add_common_params(parser):
         "--num_minibatches_per_task",
         type=int,
         help="The number of minibatches per task",
-        required=True,
+        default=8,
     )
     parser.add_argument(
         "--cluster_spec",
@@ -364,7 +364,7 @@ def add_common_args_between_master_and_worker(parser):
         "--minibatch_size",
         help="Minibatch size for worker",
         type=int,
-        required=True,
+        default=64,
     )
     parser.add_argument(
         "--model_zoo",
@@ -455,7 +455,7 @@ def add_common_args_between_master_and_worker(parser):
             DistributionStrategy.PARAMETER_SERVER,
             DistributionStrategy.ALLREDUCE,
         ],
-        default="",
+        default=DistributionStrategy.PARAMETER_SERVER,
         help="Master will use a distribution policy on a list of devices "
         "according to the distributed strategy, "
         'e.g. "ParameterServerStrategy" or "AllreduceStrategy" or "Local"',
