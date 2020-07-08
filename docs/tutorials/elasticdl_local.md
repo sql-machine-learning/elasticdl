@@ -34,6 +34,23 @@ Clone elasticdl repo for model zoo and some scripts.
 git clone https://github.com/sql-machine-learning/elasticdl.git
 ```
 
+### Prepare the dataset
+
+We generate MNIST training and evaluation data in RecordIO format. We provide a
+script in elasticdl repo.
+
+```bash
+docker pull elasticdl/elasticdl:dev
+# Change directory to the root of elasticdl repo
+cd elasticdl
+mkdir data
+docker run --rm -it \
+  -v $HOME/.keras/datasets:/root/.keras/datasets \
+  -v $PWD:/work \
+  -w /work elasticdl/elasticdl:dev \
+  bash -c "scripts/gen_dataset.sh data"
+```
+
 ### Start Kubernetes Cluster
 
 We start minikube with a command-line option `--mount-string`, which mounts the
@@ -41,8 +58,6 @@ directory `{elasticdl_repo_root}/data` in local host to `/data` path in all
 minikube containers.
 
 ```bash
-cd elasticdl
-mkdir data
 minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=50gb --mount=true --mount-string="./data:/data"
 kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 eval $(minikube docker-env)
@@ -58,22 +73,6 @@ elasticdl zoo build --image=elasticdl:mnist .
 
 We use the model predefined in model zoo directory. The model definition will
 be packed into the new Docker image `elasticdl:mnist`.
-
-### Prepare the dataset
-
-We generate MNIST training and evaluation data in RecordIO format. We provide a
-script in elasticdl repo.
-
-```bash
-# Change directory to the root of elasticdl repo
-cd ../
-docker pull elasticdl/elasticdl:dev
-docker run --rm -it \
-  -v $HOME/.keras/datasets:/root/.keras/datasets \
-  -v $PWD:/work \
-  -w /work elasticdl/elasticdl:dev \
-  bash -c "scripts/gen_dataset.sh data"
-```
 
 ### Summit a training job
 
