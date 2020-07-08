@@ -9,7 +9,7 @@
 开发者既需要了解深度学习算法也需要了解分布式系统。
 后者需要考虑集群资源利用率，节省成本。
 
-ElasticDL（https://github.com/sql-machine-learning/elasticdl）
+ElasticDL（<https://github.com/sql-machine-learning/elasticdl>）
 是一个基于 TensorFlow 2.x 和 Kubernetes 的分布式深度学习系统。
 ElasticDL 通过提供简化的分布式深度学习编程框架来提高分布式程序的编程效率，
 通过分布式深度学习的弹性调度来提高集群的资源利用率。
@@ -538,6 +538,6 @@ ElasticDL 是 Kubernetes-Native 的弹性分布式深度学习系统，
 旨在通过弹性调度来提高 Kubernetes 集群利用率和分布式深度学习作业的研发效率。
 同时 ElasticDL 基于 TensorFlow 2.x 提供了一个简单高效的深度学习编程框架，
 让用户像写单机程序一样写分布式程序，降低分布式深度学习的编程门槛。
-如果您对 ElasticDL 项目感兴趣，可以在  https://github.com/sql-machine-learning/elasticdl 
+如果您对 ElasticDL 项目感兴趣，可以在<https://github.com/sql-machine-learning/elasticdl>
 获得帮助。也可以使用我们提供的本地 playground 快速试用
-https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/tutorials/elasticdl_local.md。
+<https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/tutorials/elasticdl_local.md>。
