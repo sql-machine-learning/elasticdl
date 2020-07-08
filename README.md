@@ -32,7 +32,7 @@ elasticdl train \
   --image_name=elasticdl:mnist \
   --model_zoo=model_zoo \
   --model_def=mnist_functional_api.mnist_functional_api.custom_model \
-  --training_data=/mnist/train \
+  --training_data=/data/mnist/train \
   --job_name=test-mnist \
   --volume="host_path=/data,mount_path=/data"
 ```
