@@ -12,7 +12,7 @@ scheduling. Either case leads to low utilization.
 
 ElasticDL changes the paradox by realizing elastic scheduling - make deep learning
 jobs tolerable with varying numbers of workers. It introduces a master pod per job
-that controls both the learning process and resource scheduling, to replace the
+that coordinates both the learning process and resource scheduling, to replace the
 Kubernetes operator per cluster. It makes full use of residual resources and
 improves the utilization significantly.
 
@@ -37,19 +37,17 @@ Kubernetes-native fault-tolerable AllReduce operation for the synchronous SGD
 counterpart.
 
 Deep learning researchers like ElasticDL as it reduces the pending time of each
-job as it makes full use of residual resources to run as many concurrent
-experiments as possible. Deep learning jobs depend on many parameters,
-including the optimizer, activator, and cost, hyperparameters. Users are eager
-to see the status of the first few iterations of the learning job so to ensure
-the configuration is mathematically correct. ElasticDL provides a cure. Using
-the residual resource, ElasticDL also shortens the total time to run a batch
-of training jobs.
+job. As Deep learning jobs depend on many parameters, users are eager to see the
+status of the first few iterations of the learning job so to ensure the
+configuration is mathematically correct. Making full use of the residual
+resource, ElasticDL runs as many concurrent experiments as possible and shortens
+the total time to run a batch of training jobs.
 
 ElasticDL provides an easy-to-use interface. Users define models using
 TensorFlow 2.x API just like filling the map and reduce functions required by
 the MapReduce framework, without the need to consider anything about
 distributed programming. The interface allows users to test their models
-locally and run big data using ElasticDL without changing their source code.
+locally and run on big data using ElasticDL without changing their source code.
 
 ## Open Source Projects
 
