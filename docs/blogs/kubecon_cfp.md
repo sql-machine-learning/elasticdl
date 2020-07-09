@@ -20,9 +20,9 @@ improves the utilization significantly.
 
 ElasticDL boosts the cluster utilization up to 90%, on on-premise clusters at Ant
 Financial and on Google Cloud, as it makes full use of residual resources to run
-deep learning jobs with elastic scheduling. Moreover, it enables the running of
-deep learning jobs in lower priority than online services on the same cluster.
-ElasticDL senses and uses resource left by online services.
+deep learning jobs with elastic scheduling. Moreover, it enables the jobs to run
+in lower priority than online services on the same cluster. ElasticDL senses and
+uses resource left by online services.
 
 The master is important to elastic scheduling and takes three roles.
 
