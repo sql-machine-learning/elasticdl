@@ -32,12 +32,11 @@ and workers.
 to restart failed workers.
 3. It starts parameter servers when training large models using the
 asynchronous SGD algorithm, and cooperate workers to implement a
-Kubernetes-native fault-tolerable AllReduce operation for the synchronous SGD
-counterpart.
+Kubernetes-native fault-tolerable AllReduce operation for the synchronous SGD.
 
 Deep learning researchers like ElasticDL as it reduces the pending time of each
 job. As Deep learning jobs depend on many parameters, users are eager to see the
-status of the first few iterations so to ensure the configuration is
+status of the first few iterations to ensure the configuration is
 mathematically correct. Making full use of the residual resource, ElasticDL runs
 as many concurrent experiments as possible and shortens the total time to run a
 batch of training jobs.
@@ -45,8 +44,7 @@ batch of training jobs.
 ElasticDL provides an easy-to-use interface. Users define models using
 TensorFlow 2.x API just like filling the map and reduce functions required by
 the MapReduce framework, without the need to consider anything about
-distributed programming. The interface allows users to test their models
-locally and run on big data using ElasticDL without changing their source code.
+distributed programming.
 
 ## Open Source Projects
 
