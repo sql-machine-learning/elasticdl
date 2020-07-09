@@ -5,10 +5,10 @@
 In addition to online services, users have been running AI jobs on Kubernetes.
 Related projects add Kubernetes operators to start distributed deep learning
 programs calling TensorFlow or PyTorch. In these solutions, Kubernetes plays the
-role to launch pods and restart preempted ones. However, such retrials often fail
-due to the same reason - the lack of resources. If couldn't maintain the constant
-number of worker pods, jobs fail. Maintaining the constant number, it becomes gang
-scheduling. Either case leads to low utilization.
+role to launch pods and restart preempted ones. But such retrials often fail
+due to the same reason - the lack of resources. Jobs would fail if not maintaining
+the constant number of worker pods. Maintaining the constant number, it becomes
+gang scheduling. Either case leads to low utilization.
 
 ElasticDL changes the paradox by realizing elastic scheduling - make deep learning
 jobs tolerable with varying numbers of workers. It introduces a master pod per job
