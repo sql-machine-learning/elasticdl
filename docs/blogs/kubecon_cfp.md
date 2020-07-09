@@ -10,11 +10,11 @@ due to the same reason - the lack of resources. Jobs would fail if not maintaini
 the constant number of worker pods. Maintaining the constant number, it becomes
 gang scheduling. Either case leads to low utilization.
 
-ElasticDL changes the paradox by realizing elastic scheduling - make deep learning
-jobs tolerable with varying numbers of workers. It introduces a master pod per job
-that coordinates both the learning process and resource scheduling, to replace the
-Kubernetes operator per cluster. It makes full use of residual resources and
-improves the utilization significantly.
+ElasticDL changes the paradox by realizing elastic scheduling - making deep
+learning jobs tolerable with varying numbers of workers. It introduces a master
+pod per job that coordinates both the learning process and resource scheduling,
+to replace the Kubernetes operator per cluster. It makes full use of residual
+resources and improves the utilization significantly.
 
 ## Benefits to the Ecosystem
 
