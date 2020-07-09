@@ -37,10 +37,10 @@ counterpart.
 
 Deep learning researchers like ElasticDL as it reduces the pending time of each
 job. As Deep learning jobs depend on many parameters, users are eager to see the
-status of the first few iterations of the learning job so to ensure the
-configuration is mathematically correct. Making full use of the residual
-resource, ElasticDL runs as many concurrent experiments as possible and shortens
-the total time to run a batch of training jobs.
+status of the first few iterations so to ensure the configuration is
+mathematically correct. Making full use of the residual resource, ElasticDL runs
+as many concurrent experiments as possible and shortens the total time to run a
+batch of training jobs.
 
 ElasticDL provides an easy-to-use interface. Users define models using
 TensorFlow 2.x API just like filling the map and reduce functions required by
