@@ -94,8 +94,10 @@ elasticdl zoo build --image=elasticdl:mnist .
 ## Authorize the Job Execution
 
 If you are going to run ElasticDL job in Minikube for the first time. Please
-execute the following command to authorize the execution. The command need
-to be executed only once.
+execute the following command to authorize the execution. As ElasticDL is a
+Kubernetes-native deep learning framework. We need authorize the master pod
+to create and monitor the worker/ps pods. The command need to be executed
+only once.
 
 ```bash
 kubectl apply -f ../elasticdl/manifests/elasticdl-rbac.yaml
