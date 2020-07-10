@@ -1,69 +1,89 @@
-# ElasticDL on Local Environment
+# ElasticDL on Personal Computer
 
-This document aims to give a simple example about how to submit deep learning
-jobs to a local kubernetes cluster in a local computer. It helps to understand
-the working process of ElasticDL.
+This document shows how to run ElasticDL jobs on your personal computer using
+Minikube.
 
-## Environment preparation
+## Prerequisites
 
-1. Install Minikube >= v1.11.0. Please refer to the official
-[installation guide](https://kubernetes.io/docs/tasks/tools/install-minikube/).
-In this tutorial, we use [hyperkit](https://github.com/moby/hyperkit) as the
-hypervisor of Minikube.
-1. Install [Docker CE >= 18.x](https://docs.docker.com/docker-for-mac/install/)
-for building the Docker images of the distributed ElasticDL jobs.
-1. Install Python >= 3.6.
+1. Install Minikube, preferably >= v1.11.0, following the [installation
+   guide](https://kubernetes.io/docs/tasks/tools/install-minikube).  Minikube
+   runs a single-node Kubernetes cluster in a virtual machine on your personal
+   computer.
 
-## Write model file
+Minikube works with a variety of virtual machine hypervisors.  In this tutorial,
+we use [hyperkit](https://github.com/moby/hyperkit) that comes with macOS. If
+you want to use other hypervisors like VirtualBox, please install them
+accordingly.
 
-We use TensorFlow Keras API to build our models. Please refer to this
-[tutorials](model_building.md) on model building for details.  In this tutorial,
-we use a model predefined in model zoo directory.
+1. Install Docker CE, preferably >= 18.x, following the
+   [guide](https://docs.docker.com/docker-for-mac/install/) for building Docker
+   images containing user-defined models and the ElasticDL framework.
 
-## Summit Job to Minikube
+1. Install Python, preferably >= 3.6, because the ElasticDL command-line tool is
+   in Python.
 
-### Install ElasticDL Client
+## Models
+
+Among all machine learning toolkits that ElasticDL can work with, TensorFlow is
+the most tested and used.  In this tutorial, we use a model from the [model
+zoo](https://github.com/sql-machine-learning/elasticdl/tree/develop/model_zoo)
+directory.  This model is defined using TensorFlow Keras API.  To write your
+models, please refer to this [tutorial](./model_contribution.md).
+
+## Datasets
+
+We use the MNIST dataset in this tutorial.  The dynamic data partitioning
+mechanism of ElasticDL requires that the training data files are in the
+[RecordIO format](https://pypi.org/project/pyrecordio). To download the MNIST
+dataset and convert it into RecordIO files, please run the following command.
+
+```bash
+docker run --rm -it \
+  -v $HOME/.keras:/root/.keras \
+  -v $PWD:/work \
+  elasticdl/elasticdl:dev /scripts/gen_dataset.sh data
+```
+
+After the running of this command, we will see dataset files in the current
+directory.
+
+## The Kubernetes Cluster
+
+The following command to start a Kubernetes cluster locally using Minikube.
+
+```bash
+minikube start --vm-driver=hyperkit \
+  --cpus 2 --memory 6144 --disk-size=50gb \
+  --mount=true --mount-string="./data:/data"
+kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
+eval $(minikube docker-env)
+```
+
+The above command-line option `--mount-string` exposes the directory `./data` on
+the host to Minikube, so we can bind mount it into containers running on the
+local Kubernetes cluster.
+
+## Install ElasticDL Client Tool
 
 ```bash
 pip install elasticdl_client
 ```
 
-Clone elasticdl repo for model zoo and some scripts.
+## Build the Docker Image
+
+Kubernetes runs Docker containers, so we need to release the training program,
+composed of user-defined models and ElasticDL, into a Docker image.
+
+In this tutorial, we use a predefined model in the ElasticDL repository. The
+following command retrieves the source code of the user-defined model into
+`./elasticdl/model_zoo`.
 
 ```bash
 git clone https://github.com/sql-machine-learning/elasticdl.git
 ```
 
-### Prepare the dataset
-
-We generate MNIST training and evaluation data in RecordIO format. We provide a
-script in elasticdl repo.
-
-```bash
-docker pull elasticdl/elasticdl:dev
-# Change directory to the root of elasticdl repo
-cd elasticdl
-mkdir data
-docker run --rm -it \
-  -v $HOME/.keras/datasets:/root/.keras/datasets \
-  -v $PWD:/work \
-  -w /work elasticdl/elasticdl:dev \
-  bash -c "scripts/gen_dataset.sh data"
-```
-
-### Start Kubernetes Cluster
-
-We start minikube with a command-line option `--mount-string`, which mounts the
-directory `{elasticdl_repo_root}/data` in local host to `/data` path in all
-minikube containers.
-
-```bash
-minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=50gb --mount=true --mount-string="./data:/data"
-kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
-eval $(minikube docker-env)
-```
-
-### Build the Docker image for distributed training
+The following commands build the Docker image `elasticdl:mnist`. Please feel
+free to name it in any other name you like.
 
 ```bash
 cd model_zoo
@@ -71,12 +91,9 @@ elasticdl zoo init
 elasticdl zoo build --image=elasticdl:mnist .
 ```
 
-We use the model predefined in model zoo directory. The model definition will
-be packed into the new Docker image `elasticdl:mnist`.
+## Submit the Training Job
 
-### Summit a training job
-
-We use the following command to submit a training job:
+The following command submits a training job:
 
 ```bash
 elasticdl train \
@@ -105,30 +122,25 @@ elasticdl train \
   --distribution_strategy=ParameterServerStrategy
 ```
 
-`image_name` is the Docker image name for the distributed ElasticDL job. We built
-it using the `elasticdl zoo build` command above.
+We had exposed the directory `./data` to Minikube in above sections.  Here, the
+option `--volume="host_path=/data,mount_path=/data"` bind mount it into the
+containers/pods.
 
-The directory to store the training and validation data are mounted into Minikube
-in the previous step. We will then mount it in the path `/data` inside the pod.
+The above command starts a Kubernetes job with only one container, or pod, which
+are exchangeable in this document), the master container.
 
-In this example, we use parameter server strategy. We launch a master pod, a
-parameter server(PS) pod and a worker pod. The worker pod gets model parameters
-from the PS pod, computes gradients and sends computed gradients to the PS
-pod. The PS pod iteratively updates these model parameters using gradients sent
-by the worker pod. For more details about parameter server strategy, please
-refer to the [design
-doc](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/parameter_server.md).
+The option `--num_workers=1` tells the master container to start a worker pod.
 
-### Check job status
+The option `--distribution_strategy=ParameterServerStrategy` chooses the
+parameter server for the distributed stochastic gradient descent (SGD)
+algorithm. The option `--num_ps_pods=1` tells the master to start one parameter
+server pod. For more details about parameter server strategy, please refer to
+the [design doc](/docs/designs/parameter_server.md).
 
-After submitting the job to Minikube, we can run the following command to check
-the status of each pod:
+## Check Job Status
 
-```bash
-kubectl get pods
-```
-
-We will see the status of each pod:
+After the job submission, we can run the command `kubectl get pods` to list
+related containers.
 
 ```bash
 NAME                            READY   STATUS    RESTARTS   AGE
@@ -137,51 +149,15 @@ elasticdl-test-mnist-ps-0       1/1     Running   0          30s
 elasticdl-test-mnist-worker-0   1/1     Running   0          30s
 ```
 
-To see the loss in the worker pod:
-
-```bash
-kubectl logs elasticdl-test-mnist-worker-0 | grep "Loss"
-```
-
-We will see following logs:
-
-```txt
-[2020-04-14 02:46:28,535] [INFO] [worker.py:879:_process_minibatch] Loss is 3.07190203666687
-[2020-04-14 02:46:28,920] [INFO] [worker.py:879:_process_minibatch] Loss is 9.413976669311523
-[2020-04-14 02:46:29,120] [INFO] [worker.py:879:_process_minibatch] Loss is 3.9641590118408203
-[2020-04-14 02:46:29,344] [INFO] [worker.py:879:_process_minibatch] Loss is 15.329755783081055
-[2020-04-14 02:46:29,551] [INFO] [worker.py:879:_process_minibatch] Loss is 3.8414430618286133
-[2020-04-14 02:46:29,817] [INFO] [worker.py:879:_process_minibatch] Loss is 2.7703640460968018
-[2020-04-14 02:46:30,041] [INFO] [worker.py:879:_process_minibatch] Loss is 6.920175075531006
-[2020-04-14 02:46:30,242] [INFO] [worker.py:879:_process_minibatch] Loss is 4.375149250030518
-[2020-04-14 02:46:30,433] [INFO] [worker.py:879:_process_minibatch] Loss is 8.31199836730957
-[2020-04-14 02:46:30,650] [INFO] [worker.py:879:_process_minibatch] Loss is 5.039440155029297
-[2020-04-14 02:46:30,853] [INFO] [worker.py:879:_process_minibatch] Loss is 22.80319595336914
-[2020-04-14 02:46:31,132] [INFO] [worker.py:879:_process_minibatch] Loss is 4.777717590332031
-[2020-04-14 02:46:31,319] [INFO] [worker.py:879:_process_minibatch] Loss is 11.329744338989258
-[2020-04-14 02:46:31,529] [INFO] [worker.py:879:_process_minibatch] Loss is 7.414562225341797
-[2020-04-14 02:46:31,733] [INFO] [worker.py:879:_process_minibatch] Loss is 6.1839070320129395
-[2020-04-14 02:46:31,932] [INFO] [worker.py:879:_process_minibatch] Loss is 4.577566146850586
-[2020-04-14 02:46:32,125] [INFO] [worker.py:879:_process_minibatch] Loss is 4.547096252441406
-[2020-04-14 02:46:32,326] [INFO] [worker.py:879:_process_minibatch] Loss is 6.603780269622803
-[2020-04-14 02:46:32,510] [INFO] [worker.py:879:_process_minibatch] Loss is 2.7861897945404053
-[2020-04-14 02:46:32,720] [INFO] [worker.py:879:_process_minibatch] Loss is 1.568850040435791
-[2020-04-14 02:46:32,925] [INFO] [worker.py:879:_process_minibatch] Loss is 1.0977835655212402
-[2020-04-14 02:46:33,123] [INFO] [worker.py:879:_process_minibatch] Loss is 0.8362151384353638
-[2020-04-14 02:46:33,315] [INFO] [worker.py:879:_process_minibatch] Loss is 1.146580696105957
-[2020-04-14 02:46:33,518] [INFO] [worker.py:879:_process_minibatch] Loss is 1.4624073505401611
-[2020-04-14 02:46:33,648] [INFO] [worker.py:879:_process_minibatch] Loss is 0.9980261921882629
-[2020-04-14 02:46:33,851] [INFO] [worker.py:879:_process_minibatch] Loss is 0.47116899490356445
-[2020-04-14 02:46:34,037] [INFO] [worker.py:879:_process_minibatch] Loss is 0.9414381384849548
-```
-
-To see evaluation metrics in the master pod:
+We can also trace the training progress by watching the log from the master
+container. The following command watches the evaluation metrics changing over
+iterations.
 
 ```bash
 kubectl logs elasticdl-test-mnist-master | grep "Evaluation"
 ```
 
-We will see following logs:
+The output looks like the following.
 
 ```txt
 [2020-04-14 02:46:21,836] [INFO] [master.py:192:prepare] Evaluation service started
