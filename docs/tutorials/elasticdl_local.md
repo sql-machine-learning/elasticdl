@@ -63,6 +63,16 @@ The above command-line option `--mount-string` exposes the directory `./data` on
 the host to Minikube, so we can bind mount it into containers running on the
 local Kubernetes cluster.
 
+The following command is necessary to enable [RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)
+of Kubernetes. At first, we need retrieves the source code to get the RBAC
+configuration YAML file.
+
+```bash
+git clone https://github.com/sql-machine-learning/elasticdl.git
+cd elasticdl
+kubectl apply -f ../elasticdl/manifests/elasticdl-rbac.yaml
+```
+
 ## Install ElasticDL Client Tool
 
 ```bash
@@ -75,32 +85,16 @@ Kubernetes runs Docker containers, so we need to release the training program,
 composed of user-defined models and ElasticDL, into a Docker image.
 
 In this tutorial, we use a predefined model in the ElasticDL repository. The
-following command retrieves the source code of the user-defined model into
-`./elasticdl/model_zoo`.
-
-```bash
-git clone https://github.com/sql-machine-learning/elasticdl.git
-```
+repository has been already cloned in the step above. And the model definitions
+are in the `model_zoo` folder.
 
 The following commands build the Docker image `elasticdl:mnist`. Please feel
 free to name it in any other name you like.
 
 ```bash
-cd elasticdl/model_zoo
+cd model_zoo
 elasticdl zoo init
 elasticdl zoo build --image=elasticdl:mnist .
-```
-
-## Authorize the Job Execution
-
-If you are going to run ElasticDL job in Minikube for the first time. Please
-execute the following command to authorize the execution. As ElasticDL is a
-Kubernetes-native deep learning framework, we execute it to authorize the
-master pod to create and monitor the worker/ps pods. The command need to be
-executed only once.
-
-```bash
-kubectl apply -f ../elasticdl/manifests/elasticdl-rbac.yaml
 ```
 
 ## Submit the Training Job
