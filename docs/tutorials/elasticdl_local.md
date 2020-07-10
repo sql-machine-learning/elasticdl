@@ -56,7 +56,6 @@ The following command to start a Kubernetes cluster locally using Minikube.
 minikube start --vm-driver=hyperkit \
   --cpus 2 --memory 6144 --disk-size=50gb \
   --mount=true --mount-string="./data:/data"
-kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 eval $(minikube docker-env)
 ```
 
@@ -87,9 +86,19 @@ The following commands build the Docker image `elasticdl:mnist`. Please feel
 free to name it in any other name you like.
 
 ```bash
-cd model_zoo
+cd elasticdl/model_zoo
 elasticdl zoo init
 elasticdl zoo build --image=elasticdl:mnist .
+```
+
+## Authorize the Job Execution
+
+If you are going to run ElasticDL job in Minikube for the first time. Please
+execute the following command to authorize the execution. The command need
+to be executed only once.
+
+```bash
+kubectl apply -f ../elasticdl/manifests/elasticdl-rbac.yaml
 ```
 
 ## Submit the Training Job
