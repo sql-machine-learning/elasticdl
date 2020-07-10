@@ -56,13 +56,22 @@ The following command to start a Kubernetes cluster locally using Minikube.
 minikube start --vm-driver=hyperkit \
   --cpus 2 --memory 6144 --disk-size=50gb \
   --mount=true --mount-string="./data:/data"
-kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 eval $(minikube docker-env)
 ```
 
 The above command-line option `--mount-string` exposes the directory `./data` on
 the host to Minikube, so we can bind mount it into containers running on the
 local Kubernetes cluster.
+
+The following command is necessary to enable [RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)
+of Kubernetes. At first, we need retrieves the source code to get the RBAC
+configuration YAML file.
+
+```bash
+git clone https://github.com/sql-machine-learning/elasticdl.git
+cd elasticdl
+kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
+```
 
 ## Install ElasticDL Client Tool
 
@@ -76,12 +85,8 @@ Kubernetes runs Docker containers, so we need to release the training program,
 composed of user-defined models and ElasticDL, into a Docker image.
 
 In this tutorial, we use a predefined model in the ElasticDL repository. The
-following command retrieves the source code of the user-defined model into
-`./elasticdl/model_zoo`.
-
-```bash
-git clone https://github.com/sql-machine-learning/elasticdl.git
-```
+repository has been already cloned in the step above. And the model definitions
+are in the `model_zoo` folder.
 
 The following commands build the Docker image `elasticdl:mnist`. Please feel
 free to name it in any other name you like.
