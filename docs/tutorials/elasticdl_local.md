@@ -70,7 +70,7 @@ configuration YAML file.
 ```bash
 git clone https://github.com/sql-machine-learning/elasticdl.git
 cd elasticdl
-kubectl apply -f ../elasticdl/manifests/elasticdl-rbac.yaml
+kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
 ```
 
 ## Install ElasticDL Client Tool
