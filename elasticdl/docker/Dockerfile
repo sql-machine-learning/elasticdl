@@ -50,6 +50,11 @@ RUN /install-go.bash ${GO_MIRROR_URL} && rm /install-go.bash
 COPY elasticdl/docker/scripts/install-protobuf.bash /
 RUN /install-protobuf.bash && rm /install-protobuf.bash
 
+# Copy gen_dataset.sh
+COPY scripts/gen_dataset.sh /scripts/gen_dataset.sh
+COPY elasticdl/python/data/recordio_gen/image_label.py /scripts/image_label.py
+COPY elasticdl/python/data/recordio_gen/frappe_recordio_gen.py /scripts/frappe_recordio_gen.py
+COPY elasticdl/python/data/recordio_gen/heart_recordio_gen.py /scripts/heart_recordio_gen.py
 
 FROM dev as allreduce
 

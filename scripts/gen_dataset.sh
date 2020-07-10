@@ -15,13 +15,13 @@
 # Generate mnist dataset
 DATA_PATH=$1
 
-python elasticdl/python/data/recordio_gen/image_label.py --dataset mnist \
+python /scripts/image_label.py --dataset mnist \
         --records_per_shard 4096 "$DATA_PATH"
 
 # Generate frappe dataset
-python elasticdl/python/data/recordio_gen/frappe_recordio_gen.py --data /root/.keras/datasets \
+python /scripts/frappe_recordio_gen.py --data /root/.keras/datasets \
     --output_dir "$DATA_PATH"/frappe
 
 # Generate heart dataset
-python elasticdl/python/data/recordio_gen/heart_recordio_gen.py --data_dir /root/.keras/datasets \
+python /scripts/heart_recordio_gen.py --data_dir /root/.keras/datasets \
     --output_dir "$DATA_PATH"/heart

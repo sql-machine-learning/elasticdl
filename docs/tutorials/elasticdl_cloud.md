@@ -89,16 +89,13 @@ In this example, we create a persistent value claim named `fileserver-claim`.
 ### Prepare Dataset
 
 Step 1: We generate MNIST training and evaluation data in RecordIO format.
-We provide a script in elasticdl repo.
 
 ```bash
-cd ${CODE_PATH}/elasticdl
-mkdir data
 docker run --rm -it \
-  -v $HOME/.keras/datasets:/root/.keras/datasets \
+  -v $HOME/.keras:/root/.keras \
   -v $PWD:/work \
-  -w /work elasticdl/elasticdl:dev \
-  bash -c "scripts/gen_dataset.sh data"
+  -w /work \
+  elasticdl/elasticdl:dev bash -c "/scripts/gen_dataset.sh data"
 ```
 
 The RecordIO format dataset will generated in the `data` directory.

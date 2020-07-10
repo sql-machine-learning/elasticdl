@@ -41,7 +41,8 @@ dataset and convert it into RecordIO files, please run the following command.
 docker run --rm -it \
   -v $HOME/.keras:/root/.keras \
   -v $PWD:/work \
-  elasticdl/elasticdl:dev /scripts/gen_dataset.sh data
+  -w /work \
+  elasticdl/elasticdl:dev bash -c "/scripts/gen_dataset.sh data"
 ```
 
 After the running of this command, we will see dataset files in the current
