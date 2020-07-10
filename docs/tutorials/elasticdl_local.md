@@ -10,10 +10,10 @@ Minikube.
    runs a single-node Kubernetes cluster in a virtual machine on your personal
    computer.
 
-Minikube works with a variety of virtual machine hypervisors.  In this tutorial,
-we use [hyperkit](https://github.com/moby/hyperkit) that comes with macOS. If
-you want to use other hypervisors like VirtualBox, please install them
-accordingly.
+   Minikube works with a variety of virtual machine hypervisors.  In this tutorial,
+   we use [hyperkit](https://github.com/moby/hyperkit) that comes with macOS. If
+   you want to use other hypervisors like VirtualBox, please install them
+   accordingly.
 
 1. Install Docker CE, preferably >= 18.x, following the
    [guide](https://docs.docker.com/docker-for-mac/install/) for building Docker
