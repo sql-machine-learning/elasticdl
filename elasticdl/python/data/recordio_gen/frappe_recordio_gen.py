@@ -42,7 +42,6 @@ class LoadFrappe(object):
         self.testfile = os.path.join(path, "test.libfm")
         self.validationfile = os.path.join(path, "validation.libfm")
         self.feature_num = self.gen_feature_map()
-        print("feature_num:%d" % self.feature_num)
 
         self.train = self.read_data(self.trainfile)
         maxlen_train = max([len(i) for i in self.train[0]])
@@ -54,7 +53,6 @@ class LoadFrappe(object):
         maxlen_test = max([len(i) for i in self.test[0]])
 
         self.maxlen = max(maxlen_train, maxlen_val, maxlen_test)
-        print("maxlen:%d" % self.maxlen)
 
         self.train = self.to_numpy(self.train, self.maxlen)
         self.validation = self.to_numpy(self.validation, self.maxlen)
@@ -132,7 +130,6 @@ def convert(x, y, args, subdir):
         )
         row = row + 1
     w.close()
-    print("done")
     logging.info(
         "Wrote {} of total {} records into {} files".format(
             row, x.shape[0], shard
