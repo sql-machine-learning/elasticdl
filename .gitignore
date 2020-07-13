@@ -40,6 +40,7 @@ MANIFEST
 *.ckpt
 elasticdl/go/bin/elasticdl_ps
 data/
+model_zoo/Dockerfile
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
