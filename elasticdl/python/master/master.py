@@ -53,6 +53,7 @@ from elasticdl_client.common.args import (
 from elasticdl_client.common.constants import (
     BashCommandTemplate,
     DistributionStrategy,
+    ClusterSpecConfig,
 )
 
 
@@ -532,6 +533,15 @@ class Master(object):
             )
 
         return instance_manager
+
+    def _get_image_cluster_spec(cluster_spec_file):
+        if cluster_spec_file:
+            filename = os.path.basename(cluster_spec_file)
+            image_cluster_spec = os.path.join(
+                ClusterSpecConfig.CLUSTER_SPEC_DIR, filename
+            )
+            return image_cluster_spec
+        return cluster_spec_file
 
     def _check_timeout_tasks(self):
         while True:

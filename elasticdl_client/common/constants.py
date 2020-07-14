@@ -21,3 +21,7 @@ class DistributionStrategy(object):
 class BashCommandTemplate(object):
     REDIRECTION = " 2>&1 | tee {}"
     SET_PIPEFAIL = "set -o pipefail;"
+
+
+class ClusterSpecConfig(object):
+    CLUSTER_SPEC_DIR = "/cluster_spec"
