@@ -52,8 +52,8 @@ from elasticdl_client.common.args import (
 )
 from elasticdl_client.common.constants import (
     BashCommandTemplate,
-    DistributionStrategy,
     ClusterSpecConfig,
+    DistributionStrategy,
 )
 
 

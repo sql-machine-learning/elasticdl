@@ -25,7 +25,7 @@ from elasticdl_client.common.args import (
 )
 from elasticdl_client.common.constants import (
     BashCommandTemplate,
-    ClusterSpecConfig
+    ClusterSpecConfig,
 )
 from elasticdl_client.common.log_utils import default_logger as logger
 
