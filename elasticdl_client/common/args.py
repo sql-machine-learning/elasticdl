@@ -46,6 +46,13 @@ def add_zoo_init_params(parser):
         " and ./elasticdl_client into the image",
         default=False,
     )
+    parser.add_argument(
+        "--model_zoo",
+        help="The directory that contains user-defined model files "
+        "or a specific model file.",
+        required=False,
+        default=".",
+    )
 
 
 def add_zoo_build_params(parser):
