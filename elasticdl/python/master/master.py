@@ -503,6 +503,7 @@ class Master(object):
 
             kwargs = get_dict_from_params_str(args.aux_params)
             disable_relaunch = kwargs.get("disable_relaunch", False)
+            cluster_spec = self._get_image_cluster_spec(args.cluster_spec)
 
             instance_manager = InstanceManager(
                 self.task_d,
@@ -524,7 +525,7 @@ class Master(object):
                 volume=args.volume,
                 image_pull_policy=args.image_pull_policy,
                 restart_policy=args.restart_policy,
-                cluster_spec=args.cluster_spec,
+                cluster_spec=cluster_spec,
                 envs=env,
                 expose_ports=self.distribution_strategy
                 == DistributionStrategy.ALLREDUCE,
@@ -534,7 +535,7 @@ class Master(object):
 
         return instance_manager
 
-    def _get_image_cluster_spec(cluster_spec_file):
+    def _get_image_cluster_spec(self, cluster_spec_file):
         if cluster_spec_file:
             filename = os.path.basename(cluster_spec_file)
             image_cluster_spec = os.path.join(
