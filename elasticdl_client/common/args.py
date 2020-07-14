@@ -38,6 +38,14 @@ def add_zoo_init_params(parser):
         "the file path can be accessed by ElasticDL client.",
         default="",
     )
+    parser.add_argument(
+        "--use_source_repo",
+        type=bool,
+        help="Whether to copy ElasticDL source codes into image,"
+        "If True, the client will copy ./elasticdl, ./elasticdl_preprocessing"
+        " and ./elasticdl_client into the image",
+        default=False,
+    )
 
 
 def add_zoo_build_params(parser):

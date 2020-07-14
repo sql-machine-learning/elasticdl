@@ -64,12 +64,19 @@ RUN pip install -r /model_zoo/requirements.txt\
 {% if CLUSTER_SPEC_NAME  %}\
 COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
 {% endif %}
+
+{% if USE_SOURCE_REPO %}\
+COPY ./elasticdl /elasticdl
+COPY ./elasticdl_client /elasticdl_client
+COPY ./elasticdl_preprocessing /elasticdl_preprocessing
+{% endif %}
 """
     template = Template(tmpl_str)
     docker_file_content = template.render(
         BASE_IMAGE=args.base_image,
         EXTRA_PYPI_INDEX=args.extra_pypi_index,
         CLUSTER_SPEC_NAME=cluster_spec_name,
+        USE_SOURCE_REPO=args.use_source_repo,
     )
 
     with open("./Dockerfile", mode="w") as f:
