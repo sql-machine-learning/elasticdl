@@ -40,7 +40,8 @@ RUN cd /tmp \
            https://github.com/tensorflow/tensorflow
 
 # Install Go and related tools
-ARG GO_MIRROR_URL=https://dl.google.com/go
+# ARG GO_MIRROR_URL=https://dl.google.com/go
+ARG GO_MIRROR_URL=http://mirrors.ustc.edu.cn/golang
 ENV GOPATH /root/go
 ENV PATH /usr/local/go/bin:$GOPATH/bin:$PATH
 COPY elasticdl/docker/scripts/install-go.bash /

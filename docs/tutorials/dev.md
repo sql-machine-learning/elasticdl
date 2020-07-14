@@ -14,7 +14,7 @@ cd elasticdl
 We prefer to install all building tools in a Docker image.
 
 ```bash
-docker build --target dev -t elasticdl:dev -f elasticdl/docker/Dockerfile .
+sh scripts/travis/build_images.sh
 ```
 
 ## Check Code Style
@@ -24,7 +24,7 @@ container and bind mount the local Git repo into the container.  In this
 container, we run the pre-commit command.
 
 ```bash
-docker run --rm -it -v $PWD:/work -w /work elasticdl:dev
+docker run --rm -it -v $PWD:/work -w /work elasticdl:dev \
   bash -c "make -f elasticdl/Makefile && pre-commit run -a"
 ```
 
