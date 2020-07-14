@@ -38,6 +38,13 @@ def add_zoo_init_params(parser):
         "the file path can be accessed by ElasticDL client.",
         default="",
     )
+    parser.add_argument(
+        "--model_zoo",
+        help="The directory that contains user-defined model files "
+        "or a specific model file.",
+        required=False,
+        default=".",
+    )
 
 
 def add_zoo_build_params(parser):

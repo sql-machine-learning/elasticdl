@@ -57,7 +57,7 @@ RUN /bin/bash -c\
  'PYTHON_PKG_PATH=$(pip3 show elasticdl | grep "Location:" | cut -d " " -f2);\
  echo "PATH=${PYTHON_PKG_PATH}/elasticdl/go/bin:$PATH" >> /root/.bashrc'
 
-COPY . /model_zoo
+COPY {{MODEL_ZOO_PATH}} /model_zoo
 RUN pip install -r /model_zoo/requirements.txt\
  --extra-index-url={{ EXTRA_PYPI_INDEX }}
 
@@ -70,6 +70,7 @@ COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
         BASE_IMAGE=args.base_image,
         EXTRA_PYPI_INDEX=args.extra_pypi_index,
         CLUSTER_SPEC_NAME=cluster_spec_name,
+        MODEL_ZOO_PATH=args.model_zoo,
     )
 
     with open("./Dockerfile", mode="w") as f:
