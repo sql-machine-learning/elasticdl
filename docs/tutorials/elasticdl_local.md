@@ -5,15 +5,10 @@ Minikube.
 
 ## Prerequisites
 
-1. Install Minikube, preferably >= v1.11.0, following the [installation
-   guide](https://kubernetes.io/docs/tasks/tools/install-minikube).  Minikube
+1. Install Minikube, preferably >= v1.11.0, following the installation
+   [guide](https://kubernetes.io/docs/tasks/tools/install-minikube).  Minikube
    runs a single-node Kubernetes cluster in a virtual machine on your personal
    computer.
-
-   Minikube works with a variety of virtual machine hypervisors.  In this tutorial,
-   we use [hyperkit](https://github.com/moby/hyperkit) that comes with macOS. If
-   you want to use other hypervisors like VirtualBox, please install them
-   accordingly.
 
 1. Install Docker CE, preferably >= 18.x, following the
    [guide](https://docs.docker.com/docker-for-mac/install/) for building Docker
@@ -45,12 +40,15 @@ docker run --rm -it \
   elasticdl/elasticdl:dev bash -c "/scripts/gen_dataset.sh data"
 ```
 
-After the running of this command, we will see dataset files in the current
-directory.
+After the running of this command, we will see the generated dataset files in
+the directory `./data`.
 
 ## The Kubernetes Cluster
 
-The following command to start a Kubernetes cluster locally using Minikube.
+The following command starts a Kubernetes cluster locally using Minikube.  It
+uses [hyperkit](https://github.com/moby/hyperkit), a hypervisor coming with
+macOS, to create the virtual machine cluster.  If you want, please feel free to
+use other hypervisors including VirtualBox.
 
 ```bash
 minikube start --vm-driver=hyperkit \
@@ -59,40 +57,50 @@ minikube start --vm-driver=hyperkit \
 eval $(minikube docker-env)
 ```
 
-The above command-line option `--mount-string` exposes the directory `./data` on
-the host to Minikube, so we can bind mount it into containers running on the
-local Kubernetes cluster.
+The command-line option `--mount-string` exposes the directory `./data` on the
+host to Minikube as `/data`, which, we can later bind mount into containers
+running on the Kubernetes cluster.
 
-The following command is necessary to enable [RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)
-of Kubernetes. At first, we need retrieves the source code to get the RBAC
-configuration YAML file.
+The command `minikube docker-env` returns a set of Bash environment variable
+exports to configure your local environment to re-use the Docker daemon inside
+the Minikube instance.
+
+The following command is necessary to enable
+[RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/) of
+Kubernetes.
 
 ```bash
-git clone https://github.com/sql-machine-learning/elasticdl.git
-cd elasticdl
-kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
+kubectl apply -f \
+  https://raw.githubusercontent.com/sql-machine-learning/elasticdl/develop/elasticdl/manifests/elasticdl-rbac.yaml
 ```
 
 ## Install ElasticDL Client Tool
+
+The following command installs the command line tool `elasticdl`, which talks to
+the Kubernetes cluster and operates ElasticDL jobs.
 
 ```bash
 pip install elasticdl_client
 ```
 
-## Build the Docker Image
+## Build the Model Zoo
 
-Kubernetes runs Docker containers, so we need to release the training program,
-composed of user-defined models and ElasticDL, into a Docker image.
+Kubernetes runs Docker containers, so we need to put the training system,
+consisting of user-defined models, ElasticDL the trainer, and all dependencies,
+into a Docker image.
 
-In this tutorial, we use a predefined model in the ElasticDL repository. The
-repository has been already cloned in the step above. And the model definitions
-are in the `model_zoo` folder.
-
-The following commands build the Docker image `elasticdl:mnist`. Please feel
-free to name it in any other name you like.
+In this tutorial, we use a predefined model in the ElasticDL repository.  To
+retrieve the source code, please run the following command.
 
 ```bash
-cd model_zoo
+git clone https://github.com/sql-machine-learning/elasticdl
+```
+
+The model definitions are in directory `elasticdl/model_zoo`.  The following
+commands build the Docker image `elasticdl:mnist`
+
+```bash
+cd elasticdl/model_zoo
 elasticdl zoo init
 elasticdl zoo build --image=elasticdl:mnist .
 ```
