@@ -603,6 +603,7 @@ class Worker(object):
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
             self.report_gradient_locally(grads)
             self._update_local_model()
+            self._model_version += 1
             return True, None
         else:
             if self._use_multi_ps:
