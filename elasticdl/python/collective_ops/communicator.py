@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import socket
+import time
 
 from elasticdl.python.common.constants import CollectiveCommunicatorStatus
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -33,11 +34,39 @@ _FTLIB_UNINSTALLED_DEFAULT_STATUS_MESSAGE = (
     "FTLib is not installed. Default to succeeded for testing purposes"
 )
 
+# FTLib consensus service connection timeout in seconds
+_FTLIB_CONSENSUS_CONNECTION_TIMEOUT_SECS = 300
+
 
 class CollectiveCommunicator(object):
     def __init__(self, service_name=None):
         if _FTLIB_INSTALLED:
-            peer_list = list(self._get_peer_set(service_name))
+            connection_try_num = 0
+            while True:
+                try:
+                    peer_list = list(self._get_peer_set(service_name))
+                except Exception:
+                    if (
+                        connection_try_num * 5
+                        > _FTLIB_CONSENSUS_CONNECTION_TIMEOUT_SECS
+                    ):
+                        logger.error(
+                            "Cannot connect to FTLib consensus service in %s "
+                            "seconds",
+                            str(_FTLIB_CONSENSUS_CONNECTION_TIMEOUT_SECS),
+                        )
+                        self._ftlib = None
+                        return
+                    # sleep for 5s and try again
+                    logger.info(
+                        "Cannot connect to FTLib consensus service, "
+                        "trying again."
+                    )
+                    connection_try_num += 1
+                    time.sleep(5)
+                else:
+                    break
+
             self._ftlib = BasicFTLib(
                 consensus="gossip",
                 commlib="pytorch",
