@@ -29,7 +29,6 @@ from elasticdl.python.common.constants import (
 )
 from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
 from elasticdl.python.common.hash_utils import (
-    int_to_id,
     scatter_embedding_vector,
     string_to_id,
 )
@@ -54,6 +53,7 @@ from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
+from elasticdl.python.worker.ps_client import PSClient
 from elasticdl.python.worker.task_data_service import TaskDataService
 from elasticdl_client.common.constants import DistributionStrategy
 
@@ -118,6 +118,7 @@ class Worker(object):
                 ]
                 self._var_to_ps = {}
                 self._ps_num = len(self._ps_stubs)
+                self._ps_client = PSClient(self._ps_stubs)
         else:
             self._ps_num = 0
         self._distribution_strategy = args.distribution_strategy
@@ -246,7 +247,9 @@ class Worker(object):
         self._embedding_layers = find_layer(self._model, Embedding)
         if self._use_multi_ps:
             for layer in self._embedding_layers:
-                layer.set_lookup_embedding_func(self.pull_embedding_vectors)
+                layer.set_lookup_embedding_func(
+                    self._ps_client.pull_embedding_vectors
+                )
 
     def _init_embedding_column(self):
         self._embedding_columns = []
@@ -263,7 +266,9 @@ class Worker(object):
 
         if self._use_multi_ps:
             for column in self._embedding_columns:
-                column.set_lookup_embedding_func(self.pull_embedding_vectors)
+                column.set_lookup_embedding_func(
+                    self._ps_client.pull_embedding_vectors
+                )
 
     def _check_name_conflict_of_embedding_layer_and_column(self):
         if not self._embedding_layers or not self._embedding_columns:
@@ -376,37 +381,6 @@ class Worker(object):
 
             self._model_version = max(self._model_versions_from_ps)
         self._timing.end_record_time("get_model")
-
-    def pull_embedding_vectors(self, layer_name, embedding_ids):
-        """Pulls and returns embedding vectors ordered by the embedding ids."""
-        ps_ids = {}
-        ps_ids_index = {}
-        for idx, embedding_id in enumerate(embedding_ids):
-            ps_id = int_to_id(embedding_id, self._ps_num)
-            ps_ids.setdefault(ps_id, []).append(embedding_id)
-            ps_ids_index.setdefault(ps_id, []).append(idx)
-
-        embeddings = []
-        index = []
-        pb_future_and_id_pairs = []
-        for ps_id, embedding_ids in ps_ids.items():
-            req = elasticdl_pb2.PullEmbeddingVectorRequest()
-            req.name = layer_name
-            req.ids.extend(embedding_ids)
-            pb_future = self._ps_stubs[ps_id].pull_embedding_vectors.future(
-                req
-            )
-            pb_future_and_id_pairs.append((pb_future, ps_id))
-        for pb_future, ps_id in pb_future_and_id_pairs:
-            pb = pb_future.result()
-            embeddings.append(pb_to_ndarray(pb))
-            index.extend(ps_ids_index[ps_id])
-        embeddings = np.concatenate(embeddings)
-
-        # adjust the order of embedding vectors
-        new_embeddings = np.empty_like(embeddings)
-        new_embeddings[index] = embeddings
-        return new_embeddings
 
     def report_task_result(self, task_id, err_msg, exec_counters=None):
         """
