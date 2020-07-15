@@ -94,7 +94,12 @@ def main():
         parser.print_help(sys.stderr)
         sys.exit(1)
 
-    args, _ = parser.parse_known_args()
+    try:
+        args, _ = parser.parse_known_args()
+    except TypeError:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+
     args.func(args)
 
 
