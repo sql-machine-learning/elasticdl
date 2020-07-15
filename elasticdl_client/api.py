@@ -23,7 +23,10 @@ from elasticdl_client.common.args import (
     parse_envs,
     wrap_python_args_with_string,
 )
-from elasticdl_client.common.constants import BashCommandTemplate
+from elasticdl_client.common.constants import (
+    BashCommandTemplate,
+    ClusterSpecConfig,
+)
 from elasticdl_client.common.log_utils import default_logger as logger
 
 
@@ -62,7 +65,7 @@ RUN pip install -r /model_zoo/requirements.txt\
  --extra-index-url={{ EXTRA_PYPI_INDEX }}
 
 {% if CLUSTER_SPEC_NAME  %}\
-COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
+COPY ./{{ CLUSTER_SPEC_NAME }} {{CLUSTER_SPEC_DIR}}/{{ CLUSTER_SPEC_NAME }}\
 {% endif %}
 """
     template = Template(tmpl_str)
@@ -70,6 +73,7 @@ COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
         BASE_IMAGE=args.base_image,
         EXTRA_PYPI_INDEX=args.extra_pypi_index,
         CLUSTER_SPEC_NAME=cluster_spec_name,
+        CLUSTER_SPEC_DIR=ClusterSpecConfig.CLUSTER_SPEC_DIR,
         MODEL_ZOO_PATH=args.model_zoo,
     )
 
