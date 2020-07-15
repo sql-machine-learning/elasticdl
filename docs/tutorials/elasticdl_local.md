@@ -74,8 +74,8 @@ kubectl apply -f \
   https://raw.githubusercontent.com/sql-machine-learning/elasticdl/develop/elasticdl/manifests/elasticdl-rbac.yaml
 ```
 
-If you happen to live in a region where `raw.githubusercontent.com` is banned, you might 
-want to Git clone the above repository to get the YAML file.
+If you happen to live in a region where `raw.githubusercontent.com` is banned,
+you might want to Git clone the above repository to get the YAML file.
 
 ## Install ElasticDL Client Tool
 
