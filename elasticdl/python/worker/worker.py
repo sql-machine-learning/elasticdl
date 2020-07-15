@@ -135,6 +135,7 @@ class Worker(object):
         self._init_from_args(args)
         self._timing = Timing(args.log_level.upper() == "DEBUG", self.logger)
         self._log_loss_count = 0
+        self._var_created = False
 
     def _init_from_args(self, args):
         """
@@ -229,15 +230,6 @@ class Worker(object):
         self._model = model_inst
         self._train_eagerly = False
         self._init_embeddings()
-        self._var_created = self._model.built
-        self._non_embed_vars = {}
-        if self._var_created:
-            for var in get_non_embedding_trainable_vars(
-                self._model, self._embedding_layers
-            ):
-                self._non_embed_vars[var.name] = var
-            if self._use_multi_ps:
-                self.init_ps_var_partition()
 
     def _init_embedding_layer(self):
         """
@@ -345,8 +337,6 @@ class Worker(object):
         self._timing.start_record_time("get_model")
         if self._distribution_strategy != DistributionStrategy.ALLREDUCE:
             variable_future_and_id_pairs = []
-            if self._use_multi_ps:
-                self.init_ps_var_partition()
             for ps_id, stub in enumerate(self._ps_stubs):
                 if ps_id not in self._ps_vars:
                     continue
@@ -679,12 +669,10 @@ class Worker(object):
         ):
             self._non_embed_vars[var.name] = var
 
-        if not self._var_created:
-            if self._use_multi_ps:
-                self.init_ps_var_partition()
-            else:
-                self.report_variable()
-            self._var_created = True
+        self._var_created = True
+
+        if self._use_multi_ps:
+            self.init_ps_var_partition()
 
         if self._need_embedding_layer_check:
             self._train_eagerly = False
