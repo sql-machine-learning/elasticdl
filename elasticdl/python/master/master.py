@@ -535,14 +535,14 @@ class Master(object):
 
         return instance_manager
 
-    def _get_image_cluster_spec(self, cluster_spec_file):
-        if cluster_spec_file:
-            filename = os.path.basename(cluster_spec_file)
+    def _get_image_cluster_spec(self, cluster_spec):
+        if cluster_spec:
+            filename = os.path.basename(cluster_spec)
             image_cluster_spec = os.path.join(
                 ClusterSpecConfig.CLUSTER_SPEC_DIR, filename
             )
             return image_cluster_spec
-        return cluster_spec_file
+        return cluster_spec
 
     def _check_timeout_tasks(self):
         while True:
