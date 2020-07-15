@@ -52,10 +52,9 @@ def init_zoo(args):
     tmpl_str = """\
 FROM {{ BASE_IMAGE }} as base
 
-RUN pip install elasticdl_preprocessing\
+RUN pip install elasticdl_preprocessing==0.2.0rc2 elasticdl==0.2.0rc2\
  --extra-index-url={{ EXTRA_PYPI_INDEX }}
 
-RUN pip install elasticdl --extra-index-url={{ EXTRA_PYPI_INDEX }}
 RUN /bin/bash -c\
  'PYTHON_PKG_PATH=$(pip3 show elasticdl | grep "Location:" | cut -d " " -f2);\
  echo "PATH=${PYTHON_PKG_PATH}/elasticdl/go/bin:$PATH" >> /root/.bashrc'
