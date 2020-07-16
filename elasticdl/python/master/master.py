@@ -438,7 +438,7 @@ class Master(object):
                 # of `elasticdl_ps` into the PATH environment variable.
                 ps_args = [
                     "source",
-                    "/root/.bashrc",
+                    "/root/.bashrc_elasticdl",
                     "&&",
                     ps_command,
                 ]
