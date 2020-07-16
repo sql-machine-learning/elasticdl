@@ -1,7 +1,6 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE} as ci
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
-PKG_VERSION=0.2.0rc3.dev1
 
 WORKDIR /
 
@@ -13,26 +12,12 @@ COPY model_zoo /model_zoo
 RUN python -m pip install --quiet -r /model_zoo/requirements.txt \
         --extra-index-url=${EXTRA_PYPI_INDEX}
 
-# Install elasticdl_preprocessing package
-COPY build/elasticdl_preprocessing-{PKG_VERSION}-py3-none-any.whl /
-RUN python -m pip install --quiet /elasticdl_preprocessing-{PKG_VERSION}-py3-none-any.whl \
-        --extra-index-url=${EXTRA_PYPI_INDEX} \
-    && rm /elasticdl_preprocessing-{PKG_VERSION}-py3-none-any.whl
-
-# Install elasticdl_client package
-COPY build/elasticdl_client-{PKG_VERSION}-py3-none-any.whl /
-RUN python -m pip install --quiet /elasticdl_client-{PKG_VERSION}-py3-none-any.whl \
-        --extra-index-url=${EXTRA_PYPI_INDEX} \
-    && rm /elasticdl_client-{PKG_VERSION}-py3-none-any.whl
-
-# Install elasticdl package
-COPY build/elasticdl-{PKG_VERSION}-py3-none-any.whl /
-RUN python -m pip install --quiet /elasticdl-{PKG_VERSION}-py3-none-any.whl \
-        --extra-index-url=${EXTRA_PYPI_INDEX} \
-    && rm /elasticdl-{PKG_VERSION}-py3-none-any.whl
+# Install ElasticDL packages
+COPY build/*.whl /
+RUN pip install /*.whl --extra-index-url=${EXTRA_PYPI_INDEX} && rm /*.whl
 
 # Add elasticdl_ps to system path
-ENV PATH /usr/local/lib/python3.6/dist-packages/elasticdl/go/bin:$PATH
+RUN /bin/bash -c 'PYTHON_PKG_PATH=$(pip3 show elasticdl | grep "Location:" | cut -d " " -f2); echo "PATH=${PYTHON_PKG_PATH}/elasticdl/go/bin:$PATH" >> /root/.bashrc'
 
 # Generate mnist checkpoint for evaluation and prediction
 COPY scripts/travis/gen_mnist_checkpoint.py /gen_mnist_checkpoint.py
