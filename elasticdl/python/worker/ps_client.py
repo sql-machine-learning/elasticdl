@@ -14,14 +14,20 @@
 import numpy as np
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.hash_utils import int_to_id
-from elasticdl.python.common.tensor_utils import pb_to_ndarray
+from elasticdl.python.common.hash_utils import int_to_id, string_to_id
+from elasticdl.python.common.tensor_utils import (
+    pb_to_ndarray,
+    serialize_ndarray,
+)
 
 
 class PSClient(object):
     def __init__(self, ps_stubs):
-        self._ps_stubs = ps_stubs
-        self._ps_num = len(self._ps_stubs)
+        self.ps_stubs = ps_stubs
+        self.ps_num = len(self.ps_stubs)
+        self.versions = [-1 for _ in range(self.ps_num)]
+        self.parameter_to_ps = {}
+        self.ps_to_parameter = {}
 
     def pull_embedding_vectors(self, layer_name, embedding_ids):
         """
@@ -35,7 +41,7 @@ class PSClient(object):
         ps_ids = {}
         ps_ids_index = {}
         for idx, embedding_id in enumerate(embedding_ids):
-            ps_id = int_to_id(embedding_id, self._ps_num)
+            ps_id = int_to_id(embedding_id, self.ps_num)
             ps_ids.setdefault(ps_id, []).append(embedding_id)
             ps_ids_index.setdefault(ps_id, []).append(idx)
 
@@ -46,9 +52,7 @@ class PSClient(object):
             req = elasticdl_pb2.PullEmbeddingVectorRequest()
             req.name = layer_name
             req.ids.extend(embedding_ids)
-            pb_future = self._ps_stubs[ps_id].pull_embedding_vectors.future(
-                req
-            )
+            pb_future = self.ps_stubs[ps_id].pull_embedding_vectors.future(req)
             pb_future_and_id_pairs.append((pb_future, ps_id))
         for pb_future, ps_id in pb_future_and_id_pairs:
             pb = pb_future.result()
@@ -60,3 +64,31 @@ class PSClient(object):
         new_embeddings = np.empty_like(embeddings)
         new_embeddings[index] = embeddings
         return new_embeddings
+
+    def patition_dense_parameters(self, param_names):
+        """
+        Partition dense parameters to PS
+        ps_id = string_to_id(param_name)
+        """
+        for name in param_names:
+            if name not in self.parameter_to_ps:
+                self.parameter_to_ps[name] = string_to_id(name, self.ps_num)
+                ps_id = self.parameter_to_ps[name]
+                if ps_id not in self.ps_to_parameter:
+                    self.ps_to_parameter[ps_id] = [name]
+                else:
+                    self.ps_to_parameter.append(name)
+
+    def push_dense_parameters(self, parameters, ps_id):
+        """
+        Push dense parameters to PS
+        Args:
+            parameters: a list of Tensors
+            ps_ids: a list of PS ids
+        """
+
+        model = elasticdl_pb2.Model()
+        model.version = self.versions[ps_id]
+        for p in parameters:
+            serialize_ndarray(p.values, model.dense_parameters[p.name])
+        self.ps_stubs[ps_id].push_model(model)
