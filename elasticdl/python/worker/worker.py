@@ -354,7 +354,9 @@ class Worker(object):
                         Tensor(name, self._non_embed_vars[name].numpy(), None)
                         for name in self._ps_client.ps_to_parameter[ps_id]
                     ]
-                    self._ps_client.push_dense_parameters(parameters, ps_id)
+                    self._ps_client.push_dense_parameters(
+                        parameters, ps_id, self._model_versions_from_ps[ps_id]
+                    )
                     req = elasticdl_pb2.PullDenseParametersRequest()
                     req.version = self._model_versions_from_ps[ps_id]
                     res = self._ps_stubs[ps_id].pull_dense_parameters(req)

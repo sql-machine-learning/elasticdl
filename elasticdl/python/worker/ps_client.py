@@ -25,7 +25,6 @@ class PSClient(object):
     def __init__(self, ps_stubs):
         self.ps_stubs = ps_stubs
         self.ps_num = len(self.ps_stubs)
-        self.versions = [-1 for _ in range(self.ps_num)]
         self.parameter_to_ps = {}
         self.ps_to_parameter = {}
 
@@ -79,7 +78,7 @@ class PSClient(object):
                 else:
                     self.ps_to_parameter.append(name)
 
-    def push_dense_parameters(self, parameters, ps_id):
+    def push_dense_parameters(self, parameters, ps_id, version):
         """
         Push dense parameters to PS
         Args:
@@ -88,7 +87,7 @@ class PSClient(object):
         """
 
         model = elasticdl_pb2.Model()
-        model.version = self.versions[ps_id]
+        model.version = version
         for p in parameters:
             serialize_ndarray(p.values, model.dense_parameters[p.name])
         self.ps_stubs[ps_id].push_model(model)
