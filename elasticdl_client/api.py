@@ -49,6 +49,10 @@ def init_zoo(args):
     tmpl_str = """\
 FROM {{ BASE_IMAGE }} as base
 
+{% if USE_LOCAL_PKG %}\
+COPY build/*.whl /
+RUN pip install /*.whl --extra-index-url={{ EXTRA_PYPI_INDEX }} && rm /*.whl
+{% else% }
 RUN pip install elasticdl_preprocessing\
  --extra-index-url={{ EXTRA_PYPI_INDEX }}
 
@@ -57,6 +61,8 @@ RUN /bin/bash -c\
  'PYTHON_PKG_PATH=$(pip3 show elasticdl | grep "Location:" | cut -d " " -f2);\
  echo "PATH=${PYTHON_PKG_PATH}/elasticdl/go/bin:$PATH" >> /root/.bashrc'
 
+{% endif %}
+
 COPY {{MODEL_ZOO_PATH}} /model_zoo
 RUN pip install -r /model_zoo/requirements.txt\
  --extra-index-url={{ EXTRA_PYPI_INDEX }}
@@ -64,19 +70,13 @@ RUN pip install -r /model_zoo/requirements.txt\
 {% if CLUSTER_SPEC_NAME  %}\
 COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
 {% endif %}
-
-{% if USE_SOURCE_REPO %}\
-COPY ./elasticdl /elasticdl
-COPY ./elasticdl_client /elasticdl_client
-COPY ./elasticdl_preprocessing /elasticdl_preprocessing
-{% endif %}
 """
     template = Template(tmpl_str)
     docker_file_content = template.render(
         BASE_IMAGE=args.base_image,
         EXTRA_PYPI_INDEX=args.extra_pypi_index,
         CLUSTER_SPEC_NAME=cluster_spec_name,
-        USE_SOURCE_REPO=args.use_source_repo,
+        USE_LOCAL_PKG=args.use_local_pkg,
         MODEL_ZOO_PATH=args.model_zoo,
     )
 

@@ -39,11 +39,11 @@ def add_zoo_init_params(parser):
         default="",
     )
     parser.add_argument(
-        "--use_source_repo",
+        "--use_local_pkg",
         type=bool,
-        help="Whether to copy ElasticDL source codes into image,"
-        "If True, the client will copy ./elasticdl, ./elasticdl_preprocessing"
-        " and ./elasticdl_client into the image",
+        help="Whether to use local packages to build images"
+        "If True, the client will copy the wheel in build "
+        "into the image",
         default=False,
     )
     parser.add_argument(
