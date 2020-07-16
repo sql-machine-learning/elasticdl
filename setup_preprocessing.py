@@ -22,7 +22,7 @@ with open("elasticdl_preprocessing/requirements-dev.txt") as f:
 
 setup(
     name="elasticdl_preprocessing",
-    version="0.2.0rc3.dev1",
+    version="0.2.0rc3.dev0",
     description="A feature preprocessing library.",
     long_description="This is an extension of the native Keras Preprocessing"
     " Layers and Feature Column API from TensorFlow. We can develop our model"
