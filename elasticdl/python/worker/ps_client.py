@@ -83,7 +83,8 @@ class PSClient(object):
         Push dense parameters to PS
         Args:
             parameters: a list of Tensors
-            ps_ids: a list of PS ids
+            ps_id: PS id
+            version: model version
         """
 
         model = elasticdl_pb2.Model()
