@@ -52,6 +52,7 @@ from elasticdl_client.common.args import (
 )
 from elasticdl_client.common.constants import (
     BashCommandTemplate,
+    ClusterSpecConfig,
     DistributionStrategy,
 )
 
@@ -502,6 +503,7 @@ class Master(object):
 
             kwargs = get_dict_from_params_str(args.aux_params)
             disable_relaunch = kwargs.get("disable_relaunch", False)
+            cluster_spec = self._get_image_cluster_spec(args.cluster_spec)
 
             instance_manager = InstanceManager(
                 self.task_d,
@@ -523,7 +525,7 @@ class Master(object):
                 volume=args.volume,
                 image_pull_policy=args.image_pull_policy,
                 restart_policy=args.restart_policy,
-                cluster_spec=args.cluster_spec,
+                cluster_spec=cluster_spec,
                 envs=env,
                 expose_ports=self.distribution_strategy
                 == DistributionStrategy.ALLREDUCE,
@@ -532,6 +534,15 @@ class Master(object):
             )
 
         return instance_manager
+
+    def _get_image_cluster_spec(self, cluster_spec):
+        if cluster_spec:
+            filename = os.path.basename(cluster_spec)
+            image_cluster_spec = os.path.join(
+                ClusterSpecConfig.CLUSTER_SPEC_DIR, filename
+            )
+            return image_cluster_spec
+        return cluster_spec
 
     def _check_timeout_tasks(self):
         while True:

@@ -193,11 +193,6 @@ class ModelHandler(metaclass=abc.ABCMeta):
         """
         if distribution_strategy == DistributionStrategy.PARAMETER_SERVER:
             return ParameterServerModelHandler(checkpoint_dir=checkpoint_dir)
-        elif distribution_strategy == DistributionStrategy.ALLREDUCE:
-            logger.warning(
-                "Allreduce distribution strategy is not supported yet. "
-                "Switching to use the default distribution strategy."
-            )
         return DefaultModelHandler()
 
 

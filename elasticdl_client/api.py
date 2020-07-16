@@ -23,7 +23,10 @@ from elasticdl_client.common.args import (
     parse_envs,
     wrap_python_args_with_string,
 )
-from elasticdl_client.common.constants import BashCommandTemplate
+from elasticdl_client.common.constants import (
+    BashCommandTemplate,
+    ClusterSpecConfig,
+)
 from elasticdl_client.common.log_utils import default_logger as logger
 
 
@@ -52,23 +55,23 @@ FROM {{ BASE_IMAGE }} as base
 {% if USE_LOCAL_PKG %}\
 COPY build/*.whl /
 RUN pip install /*.whl --extra-index-url={{ EXTRA_PYPI_INDEX }} && rm /*.whl
-{% else% }
+{% else %}
 RUN pip install elasticdl_preprocessing\
  --extra-index-url={{ EXTRA_PYPI_INDEX }}
 
 RUN pip install elasticdl --extra-index-url={{ EXTRA_PYPI_INDEX }}
+{% endif -%}
+
 RUN /bin/bash -c\
  'PYTHON_PKG_PATH=$(pip3 show elasticdl | grep "Location:" | cut -d " " -f2);\
  echo "PATH=${PYTHON_PKG_PATH}/elasticdl/go/bin:$PATH" >> /root/.bashrc'
-
-{% endif %}
 
 COPY {{MODEL_ZOO_PATH}} /model_zoo
 RUN pip install -r /model_zoo/requirements.txt\
  --extra-index-url={{ EXTRA_PYPI_INDEX }}
 
 {% if CLUSTER_SPEC_NAME  %}\
-COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
+COPY ./{{ CLUSTER_SPEC_NAME }} {{CLUSTER_SPEC_DIR}}/{{ CLUSTER_SPEC_NAME }}\
 {% endif %}
 """
     template = Template(tmpl_str)
@@ -77,6 +80,7 @@ COPY ./{{ CLUSTER_SPEC_NAME }} /cluster_spec/{{ CLUSTER_SPEC_NAME }}\
         EXTRA_PYPI_INDEX=args.extra_pypi_index,
         CLUSTER_SPEC_NAME=cluster_spec_name,
         USE_LOCAL_PKG=args.use_local_pkg,
+        CLUSTER_SPEC_DIR=ClusterSpecConfig.CLUSTER_SPEC_DIR,
         MODEL_ZOO_PATH=args.model_zoo,
     )
 

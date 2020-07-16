@@ -147,11 +147,14 @@ class InstanceManager(object):
         logger.info("Starting worker: %d" % worker_id)
         bash_command = self._worker_args[1]
         bash_command += " --worker_id {}".format(worker_id)
-        bash_command += " --ps_addrs {}".format(self._ps_addrs)
+        if self._ps_addrs:
+            bash_command += " --ps_addrs {}".format(self._ps_addrs)
         if self._log_file_path:
             bash_command += BashCommandTemplate.REDIRECTION.format(
                 self._log_file_path
             )
+        for extra_arg in self._worker_args[2:]:
+            bash_command += " {}".format(extra_arg)
         worker_args = [self._worker_args[0], bash_command]
         with self._lock:
             pod = self._k8s_client.create_worker(
