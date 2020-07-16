@@ -76,7 +76,7 @@ class PSClient(object):
                 if ps_id not in self.ps_to_parameter:
                     self.ps_to_parameter[ps_id] = [name]
                 else:
-                    self.ps_to_parameter.append(name)
+                    self.ps_to_parameter[ps_id].append(name)
 
     def push_dense_parameters(self, parameters, ps_id, version):
         """
