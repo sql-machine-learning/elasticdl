@@ -4,6 +4,9 @@ ARG BASE_IMAGE
 FROM ${BASE_IMAGE} as dev
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 
+COPY elasticdl/docker/bashrc /etc/bash.bashrc
+RUN chmod a+rx /etc/bash.bashrc
+
 RUN apt-get -qq update && \
         apt-get -qq install -y unzip curl git software-properties-common g++ wget \
         shellcheck libeigen3-dev clang-format > /dev/null && \
