@@ -112,44 +112,48 @@ class MyCluster:
 cluster = MyCluster()
 ```
 
-Then, we can use the `spec.py` to submit jobs.
+Then, we can use the `spec.py` to submit jobs by the following steps.
 
-Firstly, we need to use `spec.py` to initialize model zoo
+1. we need to use `spec.py` to initialize model zoo
 
-```bash
-elasticdl zoo init --cluster_spec=spec.py
-```
+    ```bash
+    elasticdl zoo init --cluster_spec=spec.py
 
-After building images using above commands, we need to use `spec.py` to
+    elasticdl zoo build --image=${DOCKER_HUB_REPO}/elasticdl:mnist .
+
+    elasticdl zoo push ${DOCKER_HUB_REPO}/elasticdl:mnist
+    ```
+
+1. After building images using above commands, we need to use `spec.py` to
 submit a job.
 
-```bash
-elasticdl train \
-  --image_name=${DOCKER_HUB_REPO}/elasticdl:mnist \
-  --model_zoo=model_zoo \
-  --model_def=mnist_functional_api.mnist_functional_api.custom_model \
-  --training_data=/data/mnist/train \
-  --validation_data=/data/mnist/test \
-  --num_epochs=5 \
-  --master_resource_request="cpu=2,memory=2048Mi" \
-  --master_resource_limit="cpu=2,memory=2048Mi" \
-  --master_pod_priority=high \
-  --worker_resource_request="cpu=2,memory=2048Mi" \
-  --worker_resource_limit="cpu=2,memory=2048Mi" \
-  --worker_pod_priority=low \
-  --ps_resource_request="cpu=2,memory=2048Mi" \
-  --ps_resource_limit="cpu=2,memory=2048Mi" \
-  --ps_pod_priority=high \
-  --minibatch_size=64 \
-  --num_minibatches_per_task=64 \
-  --num_ps_pods=2 \
-  --num_workers=4 \
-  --evaluation_steps=200 \
-  --grads_to_wait=1 \
-  --job_name=test-mnist \
-  --log_level=INFO \
-  --image_pull_policy=Always \
-  --volume="mount_path=/data,claim_name=fileserver-claim" \
-  --distribution_strategy=ParameterServerStrategy
-  --cluster_spec=spec.py
-```
+    ```bash
+    elasticdl train \
+    --image_name=${DOCKER_HUB_REPO}/elasticdl:mnist \
+    --model_zoo=model_zoo \
+    --model_def=mnist_functional_api.mnist_functional_api.custom_model \
+    --training_data=/data/mnist/train \
+    --validation_data=/data/mnist/test \
+    --num_epochs=5 \
+    --master_resource_request="cpu=2,memory=2048Mi" \
+    --master_resource_limit="cpu=2,memory=2048Mi" \
+    --master_pod_priority=high \
+    --worker_resource_request="cpu=2,memory=2048Mi" \
+    --worker_resource_limit="cpu=2,memory=2048Mi" \
+    --worker_pod_priority=low \
+    --ps_resource_request="cpu=2,memory=2048Mi" \
+    --ps_resource_limit="cpu=2,memory=2048Mi" \
+    --ps_pod_priority=high \
+    --minibatch_size=64 \
+    --num_minibatches_per_task=64 \
+    --num_ps_pods=2 \
+    --num_workers=4 \
+    --evaluation_steps=200 \
+    --grads_to_wait=1 \
+    --job_name=test-mnist \
+    --log_level=INFO \
+    --image_pull_policy=Always \
+    --volume="mount_path=/data,claim_name=fileserver-claim" \
+    --distribution_strategy=ParameterServerStrategy
+    --cluster_spec=spec.py
+    ```
