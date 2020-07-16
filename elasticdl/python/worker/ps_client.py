@@ -64,7 +64,7 @@ class PSClient(object):
         new_embeddings[index] = embeddings
         return new_embeddings
 
-    def patition_dense_parameters(self, param_names):
+    def partition_dense_parameters(self, param_names):
         """
         Partition dense parameters to PS
         ps_id = string_to_id(param_name)

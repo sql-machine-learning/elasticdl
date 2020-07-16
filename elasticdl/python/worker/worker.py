@@ -620,7 +620,7 @@ class Worker(object):
         self._var_created = True
 
         if self._use_multi_ps:
-            self._ps_client.patition_dense_parameters(
+            self._ps_client.partition_dense_parameters(
                 self._non_embed_vars.keys()
             )
 
