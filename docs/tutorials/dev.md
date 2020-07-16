@@ -14,7 +14,7 @@ cd elasticdl
 We prefer to install all building tools in a Docker image.
 
 ```bash
-sh scripts/travis/build_images.sh
+scripts/travis/build_images.sh
 ```
 
 ## Check Code Style
@@ -34,3 +34,39 @@ host.
 ```bash
 make -f elasticdl/Makefile && pre-commit run -a
 ```
+
+## Build Wheel Packages Using Your Modified Codes
+
+After modifying codes, you can build wheel packages by running the
+following command in the root of the project.
+
+```bash
+scripts/docker_build_wheel.sh
+```
+
+If you have `elasticdl:dev` image, you can only run the following command to
+generate wheel packages in the root of the project.
+
+```bash
+docker run --rm -it --net=host -v "$PWD":/work -w /work elasticdl:dev \
+    bash -c "scripts/build.sh"
+```
+
+You can find the wheel packages in the `build` directory.
+
+## Build a Docker Image using Local Wheel Packages
+
+After building wheel packages, you can build a docker image by
+`elasticdl zoo`.
+
+```bash
+elasticdl zoo init \
+  --base_image=elasticdl:dev \
+  --model_zoo=model_zoo \
+  --use_local_pkg=true \
+
+elasticdl zoo build --image_name=elasticdl:dev_test .
+```
+
+Then, you can submit a job using the image like the
+[tutorial](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/tutorials/elasticdl_local.md).
