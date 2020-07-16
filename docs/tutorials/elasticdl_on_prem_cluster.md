@@ -70,7 +70,7 @@ elasticdl train \
 If the on-premise cluster is a tailored version of Kubernetes which
 requires additional labels, or we need to add tolerations or node affinity
 to the job's pods, we can use an additional argument
-`--cluster_spec spec.py` in the command `elasticdl zoo init`
+`--cluster_spec spec.py` in commands `elasticdl zoo init`
 and `elasticdl train`. We define a class instance
 `cluster` in `spec.py` file. There are two required class functions `with_pod`
 and `with_service` for adding additional specifications to pods or services.
