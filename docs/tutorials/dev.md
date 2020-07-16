@@ -28,16 +28,16 @@ docker run --rm -it -v $PWD:/work -w /work elasticdl:dev \
   bash -c "make -f elasticdl/Makefile && pre-commit run -a"
 ```
 
-If you have all required tools installed, you can run the same script on your
-host.
+If you have all required tools installed, you can also run the same script
+on your host.
 
 ```bash
 make -f elasticdl/Makefile && pre-commit run -a
 ```
 
-## Build Wheel Packages Using Your Modified Codes
+## Build Wheel Packages Using Your Modified Code
 
-After modifying codes, you can build wheel packages by running the
+After modifying code, you can build wheel packages by running the
 following command in the root of the project.
 
 ```bash
@@ -52,7 +52,7 @@ docker run --rm -it --net=host -v "$PWD":/work -w /work elasticdl:dev \
     bash -c "scripts/build.sh"
 ```
 
-You can find the wheel packages in the `build` directory.
+You can find wheel packages in the `build` directory.
 
 ## Build a Docker Image using Local Wheel Packages
 
