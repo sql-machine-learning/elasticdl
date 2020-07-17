@@ -359,7 +359,6 @@ def distributed_train_and_evaluate(
         distribution_strategy,
     ]
     args = parse_worker_args(worker_arguments)
-    worker = Worker(args, ps_channels=ps_channels)
 
     if dataset_name in [DatasetName.IMAGENET, DatasetName.FRAPPE]:
         record_num = batch_size
@@ -415,7 +414,7 @@ def distributed_train_and_evaluate(
     svc, port = _server(master_creator())
     channel = build_channel("localhost:%d" % port)
     mc = MasterClient(channel, 1)
-    worker._mc = mc
+    worker = Worker(args, master_client=mc, ps_channels=ps_channels)
 
     for pservicer in pservers:
         # FIXME(yancey1989): decouple pserver and master client
@@ -424,6 +423,8 @@ def distributed_train_and_evaluate(
     worker.run()
 
     task = mc.get_task()
+    # stop the master servicer
+    svc.stop(0)
     # No more task.
     if task.shard_name:
         raise RuntimeError(
