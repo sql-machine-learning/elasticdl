@@ -39,6 +39,13 @@ def add_zoo_init_params(parser):
         default="",
     )
     parser.add_argument(
+        "--local_pkg_dir",
+        type=str,
+        help="The directory of wheel packages. The image will install wheel "
+        "packages in the directory",
+        default="",
+    )
+    parser.add_argument(
         "--model_zoo",
         help="The directory that contains user-defined model files "
         "or a specific model file.",

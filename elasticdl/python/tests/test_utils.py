@@ -286,7 +286,6 @@ def distributed_train_and_evaluate(
     loss="loss",
     training=True,
     dataset_name=DatasetName.IMAGE_DEFAULT,
-    callback_classes=[],
     use_async=False,
     get_model_steps=1,
     ps_channels=None,
@@ -310,8 +309,6 @@ def distributed_train_and_evaluate(
         training: True for job type `TRAIN_WITH_EVALUATION`, False for
             job type `EVALUATION`.
         dataset_name: A dataset name from `DatasetName`.
-        callback_classes: A List of callbacks that will be called at given
-            stages of the training procedure.
         use_async: A bool. True if using asynchronous updates.
         get_model_steps: Worker will perform `get_model` from the parameter
             server every this many steps.
@@ -413,11 +410,8 @@ def distributed_train_and_evaluate(
     master = MasterServicer(
         batch_size, task_d, evaluation_service=evaluation_service,
     )
-    callbacks = [
-        callback_class(master, worker) for callback_class in callback_classes
-    ]
 
-    in_process_master = InProcessMaster(master, callbacks)
+    in_process_master = InProcessMaster(master)
     worker._stub = in_process_master
     for pservicer in pservers:
         pservicer._master_stub = in_process_master

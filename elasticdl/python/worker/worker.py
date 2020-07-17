@@ -28,10 +28,7 @@ from elasticdl.python.common.constants import (
     Mode,
 )
 from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
-from elasticdl.python.common.hash_utils import (
-    scatter_embedding_vector,
-    string_to_id,
-)
+from elasticdl.python.common.hash_utils import scatter_embedding_vector
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
@@ -111,14 +108,12 @@ class Worker(object):
             self._mc = MasterClient(channel, args.worker_id)
 
         self._use_multi_ps = False
-        self._ps_vars = {}
         if isinstance(ps_channels, list):
             if len(ps_channels) > 0:
                 self._use_multi_ps = True
                 self._ps_stubs = [
                     elasticdl_pb2_grpc.PserverStub(c) for c in ps_channels
                 ]
-                self._var_to_ps = {}
                 self._ps_num = len(self._ps_stubs)
                 self._ps_client = PSClient(self._ps_stubs)
         else:
@@ -325,7 +320,7 @@ class Worker(object):
         if self._distribution_strategy != DistributionStrategy.ALLREDUCE:
             variable_future_and_id_pairs = []
             for ps_id, stub in enumerate(self._ps_stubs):
-                if ps_id not in self._ps_vars:
+                if ps_id not in self._ps_client.ps_to_parameter:
                     continue
                 # async grpc call
                 req = elasticdl_pb2.PullDenseParametersRequest()
@@ -337,7 +332,13 @@ class Worker(object):
                 res = var_future.result()
                 if not res.initialized:
                     # push variable to ps for initialization
-                    self.report_variable_to_ps(ps_id)
+                    parameters = [
+                        Tensor(name, self._non_embed_vars[name].numpy(), None)
+                        for name in self._ps_client.ps_to_parameter[ps_id]
+                    ]
+                    self._ps_client.push_dense_parameters(
+                        parameters, ps_id, self._model_versions_from_ps[ps_id]
+                    )
                     req = elasticdl_pb2.PullDenseParametersRequest()
                     req.version = self._model_versions_from_ps[ps_id]
                     res = self._ps_stubs[ps_id].pull_dense_parameters(req)
@@ -353,18 +354,6 @@ class Worker(object):
 
             self._model_version = max(self._model_versions_from_ps)
         self._timing.end_record_time("get_model")
-
-    def init_ps_var_partition(self):
-        ps_vars = {}
-        for v in self._non_embed_vars.values():
-            if v.name not in self._var_to_ps:
-                self._var_to_ps[v.name] = string_to_id(v.name, self._ps_num)
-            ps_id = self._var_to_ps[v.name]
-            if ps_id not in ps_vars:
-                ps_vars[ps_id] = [v]
-            else:
-                ps_vars[ps_id].append(v)
-        self._ps_vars = ps_vars
 
     def report_embedding_info(self):
         model = elasticdl_pb2.Model()
@@ -397,22 +386,6 @@ class Worker(object):
 
         for ps_id in range(self._ps_num):
             self._ps_stubs[ps_id].push_embedding_table_infos(model)
-
-    def report_variable_to_ps(self, ps_id):
-        model = elasticdl_pb2.Model()
-        model.version = self._model_versions_from_ps[ps_id]
-        if ps_id in self._ps_vars:
-            vars = self._ps_vars[ps_id]
-            for var in vars:
-                serialize_ndarray(
-                    var.numpy(), model.dense_parameters[var.name]
-                )
-        self._ps_stubs[ps_id].push_model(model)
-
-    def report_variable(self):
-        # TODO: call `push_model` in parallel
-        for ps_id in range(self._ps_num):
-            self.report_variable_to_ps(ps_id)
 
     def _collect_edl_embedding_name_values(self):
         """
@@ -447,7 +420,7 @@ class Worker(object):
         for g, v in zip(
             grads[:non_embed_vars_n], self._non_embed_vars.values()
         ):
-            ps_id = self._var_to_ps[v.name]
+            ps_id = self._ps_client.parameter_to_ps[v.name]
             if ps_id not in ps_grads:
                 ps_grads[ps_id] = {v.name: g}
             else:
@@ -605,7 +578,9 @@ class Worker(object):
         self._var_created = True
 
         if self._use_multi_ps:
-            self.init_ps_var_partition()
+            self._ps_client.partition_dense_parameters(
+                self._non_embed_vars.keys()
+            )
 
         if self._need_embedding_layer_check:
             self._train_eagerly = False
