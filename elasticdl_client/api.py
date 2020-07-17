@@ -52,8 +52,8 @@ def init_zoo(args):
     tmpl_str = """\
 FROM {{ BASE_IMAGE }} as base
 
-{% if USE_LOCAL_PKG %}\
-COPY build/*.whl /
+{% if LOCAL_PKG_DIR %}\
+COPY {{LOCAL_PKG_DIR}}/*.whl /
 RUN pip install /*.whl --extra-index-url={{ EXTRA_PYPI_INDEX }} && rm /*.whl
 {% else %}
 RUN pip install elasticdl_preprocessing\
@@ -79,7 +79,7 @@ COPY ./{{ CLUSTER_SPEC_NAME }} {{CLUSTER_SPEC_DIR}}/{{ CLUSTER_SPEC_NAME }}\
         BASE_IMAGE=args.base_image,
         EXTRA_PYPI_INDEX=args.extra_pypi_index,
         CLUSTER_SPEC_NAME=cluster_spec_name,
-        USE_LOCAL_PKG=args.use_local_pkg,
+        LOCAL_PKG_DIR=args.local_pkg_dir,
         CLUSTER_SPEC_DIR=ClusterSpecConfig.CLUSTER_SPEC_DIR,
         MODEL_ZOO_PATH=args.model_zoo,
     )
