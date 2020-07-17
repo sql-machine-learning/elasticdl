@@ -20,7 +20,7 @@ scripts/travis/build_images.sh
 ## Check Code Style
 
 The above Docker image contains pre-commit and hooks.  We can run it as a
-container and bind mount the local Git repo into the container.  In this
+container and mount the local Git repo into the container.  In this
 container, we run the pre-commit command.
 
 ```bash
