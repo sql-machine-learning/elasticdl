@@ -30,7 +30,9 @@ def main():
     if args.master_addr is None:
         raise ValueError("master_addr is missing for worker")
 
-    master_client = MasterClient(build_channel(args.master_addr))
+    master_client = MasterClient(
+        build_channel(args.master_addr), args.worker_id
+    )
 
     ps_channels = []
     if args.ps_addrs:
