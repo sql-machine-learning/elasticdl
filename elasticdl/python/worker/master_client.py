@@ -23,14 +23,15 @@ class MasterClient:
 
     Usage:
         channel = elasticdl.python.common.grpc_utils.build_channel(
-            "localhost:50001")
+            "localhost:50001"
+        )
         mc = MasterClient(channel, work_id=0)
         # get task unit from master service
         mc.get_task(...)
     """
 
     def __init__(self, channel, worker_id):
-        """initialize a master client.
+        """Initialize a master client.
         Args:
             channel: grpc.Channel
             the gRPC channel object connects to master gRPC server.
@@ -43,7 +44,7 @@ class MasterClient:
         self._worker_id = worker_id
 
     def get_task(self, task_type=None):
-        """get task from master.
+        """Get a task from master.
 
         Args:
             task_type: elasticdl_pb.TaskType
@@ -71,11 +72,11 @@ class MasterClient:
         return res
 
     def report_task_result(self, task_id, err_msg, exec_counters=None):
-        """report task result to master.
+        """Report task result to master.
 
         Args:
           task_id: int
-          the taskID assigned by master
+          the task ID assigned by master
 
           err_msg: string
           the error message on training.
@@ -92,7 +93,7 @@ class MasterClient:
         return self._stub.report_task_result(report)
 
     def report_evaluation_metrics(self, model_outputs, labels):
-        """report evaluation metrics to master.
+        """Report evaluation metrics to master.
 
         Args:
             model_outputs: dict

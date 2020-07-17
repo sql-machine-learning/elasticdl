@@ -50,7 +50,6 @@ from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.worker.master_client import MasterClient
 from elasticdl.python.worker.ps_client import PSClient
 from elasticdl.python.worker.task_data_service import TaskDataService
 from elasticdl_client.common.constants import DistributionStrategy
@@ -73,7 +72,7 @@ class Worker(object):
     def __init__(
         self,
         args,
-        channel=None,
+        master_client=None,
         ps_channels=None,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
         max_allreduce_retry_num=DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
@@ -101,12 +100,7 @@ class Worker(object):
             tf.config.threading.set_inter_op_parallelism_threads(num_threads)
             tf.config.threading.set_intra_op_parallelism_threads(num_threads)
 
-        if channel is None:
-            # NOTE: raising an error if the gRPC channel is None?
-            self._mc = None
-        else:
-            self._mc = MasterClient(channel, args.worker_id)
-
+        self._mc = master_client
         self._use_multi_ps = False
         if isinstance(ps_channels, list):
             if len(ps_channels) > 0:

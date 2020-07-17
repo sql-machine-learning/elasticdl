@@ -411,7 +411,7 @@ def distributed_train_and_evaluate(
             batch_size, task_d, evaluation_service=evaluation_service
         )
 
-    svc, port = _server(master_creator())
+    svc, port = _server(master_creator)
     channel = build_channel("localhost:%d" % port)
     mc = MasterClient(channel, 1)
     worker = Worker(args, master_client=mc, ps_channels=ps_channels)
