@@ -160,11 +160,11 @@ class Master(object):
         self.task_d.add_deferred_callback_create_train_end_task()
         self.evaluation_service = self._create_evaluation_service(args)
 
-        # Initialize master service
-        self.master_servicer, self.server = self._create_master_service(args)
-
         # Initialize instance manager
         self.instance_manager = self._create_instance_manager(args)
+
+        # Initialize master service
+        self.master_servicer, self.server = self._create_master_service(args)
 
         self._should_stop = False
         self._exit_code = 0
@@ -376,6 +376,7 @@ class Master(object):
             args.minibatch_size,
             self.task_d,
             evaluation_service=self.evaluation_service,
+            master=self,
         )
         elasticdl_pb2_grpc.add_MasterServicer_to_server(
             master_servicer, server

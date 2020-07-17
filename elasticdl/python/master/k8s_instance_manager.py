@@ -386,6 +386,13 @@ class InstanceManager(object):
             # tolerance.
             self._start_ps(ps_id)
 
+    def get_alive_workers(self):
+        alive_workers = []
+        for pod_name, phase in self._worker_pods_phase.values():
+            if phase == PodStatus.RUNNING:
+                alive_workers.append(pod_name)
+        return alive_workers
+
     @property
     def ps_addrs(self):
         return self._ps_addrs
