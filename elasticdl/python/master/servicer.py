@@ -84,6 +84,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 self._master.distribution_strategy
                 == DistributionStrategy.ALLREDUCE
             ):
+                # If there is no more task, master only send wait task to
+                # the last worker and other workers exit.
                 if len(self._master.instance_manager.get_alive_workers()) == 1:
                     res.type = res.type = elasticdl_pb2.WAIT
             else:
