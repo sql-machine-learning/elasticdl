@@ -387,7 +387,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                     # Restart ps for the 2nd worker at i==3
                     # self._restart_pserver(model_def)
                     self._reset_pserver()
-                    # `report_variable` will be called in `get_model` to
+                    # `push_dense_parameters` will be called in `get_model` to
                     # initialize variables on ps with worker variables
                     worker.get_model()
                     # send the grads again as these grads are not applied
