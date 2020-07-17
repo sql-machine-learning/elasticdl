@@ -52,10 +52,16 @@ def init_zoo(args):
     tmpl_str = """\
 FROM {{ BASE_IMAGE }} as base
 
+{% if LOCAL_PKG_DIR %}\
+COPY {{LOCAL_PKG_DIR}}/*.whl /
+RUN pip install /*.whl --extra-index-url={{ EXTRA_PYPI_INDEX }} && rm /*.whl
+{% else %}
 RUN pip install elasticdl_preprocessing\
  --extra-index-url={{ EXTRA_PYPI_INDEX }}
 
 RUN pip install elasticdl --extra-index-url={{ EXTRA_PYPI_INDEX }}
+{% endif -%}
+
 RUN /bin/bash -c\
  'PYTHON_PKG_PATH=$(pip3 show elasticdl | grep "Location:" | cut -d " " -f2);\
  echo "PATH=${PYTHON_PKG_PATH}/elasticdl/go/bin:$PATH" >>\
@@ -75,6 +81,7 @@ COPY ./{{ CLUSTER_SPEC_NAME }} {{CLUSTER_SPEC_DIR}}/{{ CLUSTER_SPEC_NAME }}\
         BASE_IMAGE=args.base_image,
         EXTRA_PYPI_INDEX=args.extra_pypi_index,
         CLUSTER_SPEC_NAME=cluster_spec_name,
+        LOCAL_PKG_DIR=args.local_pkg_dir,
         CLUSTER_SPEC_DIR=ClusterSpecConfig.CLUSTER_SPEC_DIR,
         MODEL_ZOO_PATH=args.model_zoo,
     )
