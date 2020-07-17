@@ -105,7 +105,9 @@ class EvaluationServiceTest(unittest.TestCase):
             None, task_d, 10, 20, 0, False, _eval_metrics_fn,
         )
 
-        _ = MasterServicer(2, task_d, evaluation_service=evaluation_service,)
+        _ = MasterServicer(
+            2, task_d, evaluation_service=evaluation_service, master=None
+        )
 
         # No checkpoint available
         self.assertFalse(evaluation_service.try_to_create_new_job())
@@ -130,7 +132,9 @@ class EvaluationServiceTest(unittest.TestCase):
         )
         task_d.set_evaluation_service(evaluation_service)
 
-        _ = MasterServicer(2, task_d, evaluation_service=evaluation_service,)
+        _ = MasterServicer(
+            2, task_d, evaluation_service=evaluation_service, master=None,
+        )
 
         self.assertEqual(8, len(task_d._eval_todo))
         for i in range(8):

@@ -51,22 +51,23 @@ class SimpleModel(tf.keras.Model):
 
 class ServicerTest(unittest.TestCase):
     def testGetEmptyTask(self):
-        master = MasterServicer(
+        master_servicer = MasterServicer(
             3,
             _TaskDispatcher({}, {}, {}, records_per_task=3, num_epochs=2),
             evaluation_service=None,
+            master=None,
         )
 
         req = elasticdl_pb2.GetTaskRequest()
 
         # No task yet, make sure the returned versions are as expected.
         req.worker_id = 1
-        task = master.get_task(req, None)
+        task = master_servicer.get_task(req, None)
         self.assertEqual("", task.shard_name)
         self.assertEqual(0, task.model_version)
 
-        master._version = 1
-        task = master.get_task(req, None)
+        master_servicer._version = 1
+        task = master_servicer.get_task(req, None)
         self.assertEqual("", task.shard_name)
         self.assertEqual(1, task.model_version)
 
@@ -78,7 +79,9 @@ class ServicerTest(unittest.TestCase):
             records_per_task=3,
             num_epochs=2,
         )
-        master = MasterServicer(3, task_d, evaluation_service=None,)
+        master = MasterServicer(
+            3, task_d, evaluation_service=None, master=None
+        )
 
         # task to number of runs.
         tasks = defaultdict(int)
