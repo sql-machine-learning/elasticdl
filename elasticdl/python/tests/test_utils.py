@@ -408,7 +408,7 @@ def distributed_train_and_evaluate(
     task_d.set_evaluation_service(evaluation_service)
 
     master = MasterServicer(
-        batch_size, task_d, evaluation_service=evaluation_service,
+        batch_size, task_d, evaluation_service=evaluation_service, master=None,
     )
 
     in_process_master = InProcessMaster(master)
