@@ -109,3 +109,6 @@ class MasterClient:
         serialize_ndarray(labels, req.labels)
         req.worker_id = self._worker_id
         self._stub.report_evaluation_metrics(req)
+
+    def get_model_version(self):
+        return self._stub.get_model_version()

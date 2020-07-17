@@ -24,7 +24,6 @@ import recordio
 import tensorflow as tf
 from odps import ODPS
 
-from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import JobType, MaxComputeConfig
 from elasticdl.python.common.grpc_utils import build_channel
@@ -39,7 +38,8 @@ from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.ps.parameter_server import ParameterServer
-from elasticdl.python.tests.in_process_master import InProcessMaster
+from elasticdl.python.tests.mock_service import _server
+from elasticdl.python.worker.master_client import MasterClient
 from elasticdl.python.worker.worker import Worker
 from elasticdl_client.common.constants import DistributionStrategy
 
@@ -407,26 +407,29 @@ def distributed_train_and_evaluate(
         )
     task_d.set_evaluation_service(evaluation_service)
 
-    master = MasterServicer(
-        batch_size, task_d, evaluation_service=evaluation_service,
-    )
+    def master_creator():
+        return MasterServicer(
+            batch_size, task_d, evaluation_service=evaluation_service
+        )
 
-    in_process_master = InProcessMaster(master)
-    worker._stub = in_process_master
+    svc, port = _server(master_creator())
+    channel = build_channel("localhost:%d" % port)
+    mc = MasterClient(channel, 1)
+    worker._mc = mc
+
     for pservicer in pservers:
-        pservicer._master_stub = in_process_master
+        # FIXME(yancey1989): decouple pserver and master client
+        pservicer._master_stub = mc
 
     worker.run()
 
-    req = elasticdl_pb2.GetTaskRequest()
-    req.worker_id = 1
-    task = master.get_task(req, None)
+    task = mc.get_task()
     # No more task.
     if task.shard_name:
         raise RuntimeError(
             "There are some tasks unfinished after worker exits."
         )
-    return master._version
+    return task.model_version
 
 
 IRIS_TABLE_COLUMN_NAMES = [

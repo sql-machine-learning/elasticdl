@@ -73,7 +73,7 @@ class TaskDataService(object):
             }
         else:
             exec_counters = None
-        self._worker.report_task_result(
+        self._worker._mc.report_task_result(
             task.task_id, err_msg, exec_counters=exec_counters
         )
 
@@ -179,7 +179,7 @@ class TaskDataService(object):
             # records so this should not be time consuming.
             if self._warm_up_task is None and not self._has_warmed_up:
                 while True:
-                    task = self._worker.get_task()
+                    task = self._worker._mc.get_task()
                     if task.type != elasticdl_pb2.WAIT:
                         break
                     time.sleep(2)
@@ -213,7 +213,7 @@ class TaskDataService(object):
                 task = self._warm_up_task
                 self._warm_up_task = None
             else:
-                task = self._worker.get_task()
+                task = self._worker._mc.get_task()
             if not task.shard_name:
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True

@@ -31,7 +31,9 @@ class MockMasterService(elasticdl_pb2_grpc.MasterServicer):
         return elasticdl_pb2.Task()
 
 
-def mock_master_servicer(server_instance=MockMasterService):
+def _server(server_instance=MockMasterService):
+    """Launch a master servicer instance.
+    """
     port = find_free_port()
     master_servicer = server_instance()
     svr = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
