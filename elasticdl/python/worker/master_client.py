@@ -65,9 +65,6 @@ class MasterClient:
         except Exception:
             # the master node would stop the gRPC service if no more tasks.
             # And this will result a gRPC call exception.
-            self.logger.info(
-                "Cannot connect to master, assuming no more tasks"
-            )
             res = elasticdl_pb2.Task()
         return res
 
