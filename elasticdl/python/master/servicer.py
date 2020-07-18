@@ -19,13 +19,14 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl_client.common.constants import DistributionStrategy
 
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     """Master service implementation"""
 
     def __init__(
-        self, minibatch_size, task_d, evaluation_service,
+        self, minibatch_size, task_d, evaluation_service, master,
     ):
         # TODO: group params together into a single object.
         self._task_d = task_d
@@ -34,6 +35,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version = 0
 
         self._evaluation_service = evaluation_service
+        self._master = master
         self._task_complete_times = {
             elasticdl_pb2.EVALUATION: [],
             elasticdl_pb2.TRAINING: [],
@@ -78,7 +80,16 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # we are trying to pop and invoke the callback.
             # Then the master tells the worker to wait
             # in case of new tasks later.
-            res.type = elasticdl_pb2.WAIT
+            if (
+                self._master.distribution_strategy
+                == DistributionStrategy.ALLREDUCE
+            ):
+                # If there is no more task, master only send wait task to
+                # the last worker and other workers exit.
+                if len(self._master.instance_manager.get_alive_workers()) == 1:
+                    res.type = elasticdl_pb2.WAIT
+            else:
+                res.type = elasticdl_pb2.WAIT
         with self._lock:
             self._worker_liveness_time[request.worker_id] = time.time()
         return res

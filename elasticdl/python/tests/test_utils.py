@@ -412,8 +412,7 @@ def distributed_train_and_evaluate(
         )
 
     svc, port = _server(master_creator)
-    channel = build_channel("localhost:%d" % port)
-    mc = MasterClient(channel, 1)
+    mc = MasterClient(build_channel("localhost:%d" % port), 1)
     worker = Worker(args, master_client=mc, ps_channels=ps_channels)
 
     for pservicer in pservers:
