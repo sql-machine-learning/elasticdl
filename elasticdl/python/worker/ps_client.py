@@ -110,7 +110,7 @@ class PSClient(object):
          - sparse gradients of ElasticDL embedding layers
         """
         reqs = [
-            elasticdl_pb2.PushGradientsRequest() for i in range(self._ps_num)
+            elasticdl_pb2.PushGradientsRequest() for i in range(self.ps_num)
         ]
         ps_grads = {}
 
@@ -118,20 +118,17 @@ class PSClient(object):
         for grad in grads:
             ps_id = self.parameter_to_ps[grad.name]
             if ps_id not in ps_grads:
-                ps_grads[ps_id] = {grad.name: grad.values}
+                ps_grads[ps_id] = {grad.name: grad}
             else:
-                if grad.indices is not None:
-                    if grad.name not in ps_grads[ps_id]:
-                        ps_id[ps_id][grad.name] = grad
-                    else:
+                if grad.name not in ps_grads[ps_id]:
+                    ps_grads[ps_id][grad.name] = grad
+                else:
+                    if grad.indices is not None:
                         ps_grads[ps_id][grad.name] = merge_indexed_slices(
                             ps_grads[ps_id][grad.name], grad
                         )
-                else:
-                    if grad.name not in ps_grads[ps_id]:
-                        ps_id[ps_id][grad.name] = grad.values
                     else:
-                        ps_grads[ps_id][grad.name] += grad.values
+                        ps_grads[ps_id][grad.name].values += grad.values
 
         for ps_id, pair in ps_grads.items():
             for name, grad in pair.items():
@@ -153,7 +150,7 @@ class PSClient(object):
                     )
                 else:
                     serialize_ndarray(
-                        grad, req.gradients.dense_parameters[name]
+                        grad.values, req.gradients.dense_parameters[name]
                     )
 
         # 2. handle sparse grads of elasticdl embedding layers
@@ -174,7 +171,7 @@ class PSClient(object):
             groups[name] = Tensor(None, v, i)
 
             results = scatter_embedding_vector(
-                groups[name].values, groups[name].indices, self._ps_num
+                groups[name].values, groups[name].indices, self.ps_num
             )
 
             for ps_id in results:

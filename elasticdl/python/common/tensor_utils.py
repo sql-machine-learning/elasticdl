@@ -48,11 +48,11 @@ def deduplicate_indexed_slices(values, indices):
     """
 
     res = {}
-    for i in indices.tolist():
+    for index, i in enumerate(indices.tolist()):
         if i not in res:
-            res[i] = values[i, :]
+            res[i] = values[index, :]
         else:
-            res[i] += values[i, :]
+            res[i] += values[index, :]
 
     return np.stack(res.values()), np.asarray(res.keys())
 
@@ -100,15 +100,17 @@ def pb_to_indexed_slices(pb):
 
 def serialize_indexed_slices(slices, pb):
     serialize_ndarray(slices.values, pb.concat_tensors)
-    if (
-        isinstance(slices.indices, np.ndarray)
-        and len(slices.indices.shape) > 1
-    ):
-        raise ValueError(
-            "IndexedSlices pb only accepts indices with one dimension, got %d",
-            len(slices.indices.shape),
-        )
-    pb.ids.extend(slices.indices)
+    indices = slices.indices
+    if isinstance(indices, np.ndarray):
+        if len(indices.shape) > 1:
+            raise ValueError(
+                "IndexedSlices pb only accepts indices with one"
+                "dimension, got %d",
+                len(indices.shape),
+            )
+        else:
+            indices = indices.tolist()
+    pb.ids.extend(indices)
 
 
 def indexed_slices_to_pb(slices):

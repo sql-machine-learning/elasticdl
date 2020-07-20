@@ -397,6 +397,7 @@ class Worker(object):
         return embedding_name_values
 
     def report_gradient_to_ps(self, gradients):
+
         self._timing.start_record_time("report_gradient")
 
         grads = []
@@ -408,7 +409,7 @@ class Worker(object):
                     gradients[i].indices.numpy(),
                 )
             else:
-                grad = Tensor(v.name, gradients[i].values.numpy(), None)
+                grad = Tensor(v.name, gradients[i].numpy(), None)
             grads.append(grad)
 
         edl_grads = []
@@ -433,7 +434,6 @@ class Worker(object):
                     "does not match the number of its output tensor %d."
                     % (len(edl_embedding_grads), bet_number)
                 )
-
         learning_rate = K.get_value(self._model.optimizer.lr)
         accepted, max_version = self._ps_client.push_gradients(
             grads, edl_grads, learning_rate, self._model_versions_from_ps,
