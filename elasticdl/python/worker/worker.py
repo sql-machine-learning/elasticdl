@@ -399,17 +399,15 @@ class Worker(object):
     def report_gradient_to_ps(self, grads):
         self._timing.start_record_time("report_gradient")
 
-        dense_grads = []
-        sparse_grads = []
+        grads = []
         for i, v in enumerate(self._non_embed_vars.values()):
             if isinstance(grads[i], tf.IndexedSlices):
                 grad = Tensor(
                     v.name, grads[i].values.numpy(), grads[i].indices.numpy()
                 )
-                sparse_grads.append(grad)
             else:
                 grad = Tensor(v.name, grads[i].numpy(),)
-                dense_grads.append(grad)
+            grads.append(grad)
 
         edl_grads = []
 
@@ -438,11 +436,7 @@ class Worker(object):
 
         learning_rate = K.get_value(self._model.optimizer.lr)
         accepted, max_version = self._ps_client.push_gradients(
-            dense_grads,
-            sparse_grads,
-            edl_grads,
-            learning_rate,
-            self._model_versions_from_ps,
+            grads, edl_grads, learning_rate, self._model_versions_from_ps,
         )
         self._timing.end_record_time("report_gradient")
         return accepted, max_version

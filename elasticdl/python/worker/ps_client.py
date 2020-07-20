@@ -102,17 +102,11 @@ class PSClient(object):
         self.ps_stubs[ps_id].push_model(model)
 
     def push_gradients(
-        self,
-        dense_grads,
-        sparse_grads,
-        edl_grads,
-        learning_rate,
-        model_versions,
+        self, grads, edl_grads, learning_rate, model_versions,
     ):
         """
         Push gradients to PS. There three kinds of gradients:
-         - dense gradients
-         - sparse gradients of common embedding layers
+         - gradients
          - sparse gradients of ElasticDL embedding layers
         """
         reqs = [
@@ -120,29 +114,24 @@ class PSClient(object):
         ]
         ps_grads = {}
 
-        # 1. handle dense_grads
-        for grad in dense_grads:
+        # 1. handle grads
+        for grad in grads:
             ps_id = self.parameter_to_ps[grad.name]
             if ps_id not in ps_grads:
                 ps_grads[ps_id] = {grad.name: grad.values}
             else:
-                if grad.name not in ps_grads[ps_id]:
-                    ps_id[ps_id][grad.name] = grad.values
+                if grad.indices is not None:
+                    if grad.name not in ps_grads[ps_id]:
+                        ps_id[ps_id][grad.name] = grad
+                    else:
+                        ps_grads[ps_id][grad.name] = merge_indexed_slices(
+                            ps_grads[ps_id][grad.name], grad
+                        )
                 else:
-                    ps_grads[ps_id][grad.name] += grad.values
-
-        # 2. handle sparse_grads
-        for grad in sparse_grads:
-            ps_id = self.parameter_to_ps[grad.name]
-            if ps_id not in ps_grads:
-                ps_grads[ps_id] = {grad.name: grad}
-            else:
-                if grad.name not in ps_grads[ps_id]:
-                    ps_id[ps_id][grad.name] = grad
-                else:
-                    ps_grads[ps_id][grad.name] = merge_indexed_slices(
-                        ps_grads[ps_id][grad.name], grad
-                    )
+                    if grad.name not in ps_grads[ps_id]:
+                        ps_id[ps_id][grad.name] = grad.values
+                    else:
+                        ps_grads[ps_id][grad.name] += grad.values
 
         for ps_id, pair in ps_grads.items():
             for name, grad in pair.items():
@@ -167,7 +156,7 @@ class PSClient(object):
                         grad, req.gradients.dense_parameters[name]
                     )
 
-        # 3. handle sparse grads of elasticdl embedding layers
+        # 2. handle sparse grads of elasticdl embedding layers
         groups = {}
         for grad in edl_grads:
             if grad.name not in groups:
@@ -195,7 +184,7 @@ class PSClient(object):
                     Tensor(None, gv, gi), req.gradients.embedding_tables[name],
                 )
 
-        # 4. push gradients to PS
+        # 3. push gradients to PS
         report_futures = []
         for ps_id in range(self.ps_num):
             req = reqs[ps_id]
