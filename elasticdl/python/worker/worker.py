@@ -396,17 +396,19 @@ class Worker(object):
 
         return embedding_name_values
 
-    def report_gradient_to_ps(self, grads):
+    def report_gradient_to_ps(self, gradients):
         self._timing.start_record_time("report_gradient")
 
         grads = []
         for i, v in enumerate(self._non_embed_vars.values()):
-            if isinstance(grads[i], tf.IndexedSlices):
+            if isinstance(gradients[i], tf.IndexedSlices):
                 grad = Tensor(
-                    v.name, grads[i].values.numpy(), grads[i].indices.numpy()
+                    v.name,
+                    gradients[i].values.numpy(),
+                    gradients[i].indices.numpy(),
                 )
             else:
-                grad = Tensor(v.name, grads[i].numpy(),)
+                grad = Tensor(v.name, gradients[i].numpy(),)
             grads.append(grad)
 
         edl_grads = []
@@ -415,7 +417,7 @@ class Worker(object):
 
         if edl_embedding_name_values:
             non_embed_vars_n = len(self._non_embed_vars)
-            edl_embedding_grads = grads[non_embed_vars_n:]
+            edl_embedding_grads = gradients[non_embed_vars_n:]
             bet_number = 0
             for name, embedding_and_ids in edl_embedding_name_values:
 
