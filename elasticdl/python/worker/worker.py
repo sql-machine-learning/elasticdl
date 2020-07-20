@@ -408,13 +408,11 @@ class Worker(object):
                     gradients[i].indices.numpy(),
                 )
             else:
-                grad = Tensor(v.name, gradients[i].numpy(),)
+                grad = Tensor(v.name, gradients[i].values.numpy(), None)
             grads.append(grad)
 
         edl_grads = []
-
         edl_embedding_name_values = self._collect_edl_embedding_name_values()
-
         if edl_embedding_name_values:
             non_embed_vars_n = len(self._non_embed_vars)
             edl_embedding_grads = gradients[non_embed_vars_n:]
