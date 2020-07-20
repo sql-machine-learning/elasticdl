@@ -14,9 +14,17 @@
 import numpy as np
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.hash_utils import int_to_id, string_to_id
+from elasticdl.python.common.hash_utils import (
+    int_to_id,
+    scatter_embedding_vector,
+    string_to_id,
+)
 from elasticdl.python.common.tensor_utils import (
+    Tensor,
+    deduplicate_indexed_slices,
+    merge_indexed_slices,
     pb_to_ndarray,
+    serialize_indexed_slices,
     serialize_ndarray,
 )
 
@@ -92,3 +100,116 @@ class PSClient(object):
         for p in parameters:
             serialize_ndarray(p.values, model.dense_parameters[p.name])
         self.ps_stubs[ps_id].push_model(model)
+
+    def push_gradients(
+        self,
+        dense_grads,
+        sparse_grads,
+        edl_grads,
+        learning_rate,
+        model_versions,
+    ):
+        """
+        Push gradients to PS. There three kinds of gradients:
+         - dense gradients
+         - sparse gradients of common embedding layers
+         - sparse gradients of ElasticDL embedding layers
+        """
+        reqs = [
+            elasticdl_pb2.PushGradientsRequest() for i in range(self._ps_num)
+        ]
+        ps_grads = {}
+
+        # 1. handle dense_grads
+        for grad in dense_grads:
+            ps_id = self.parameter_to_ps[grad.name]
+            if ps_id not in ps_grads:
+                ps_grads[ps_id] = {grad.name: grad.values}
+            else:
+                if grad.name not in ps_grads[ps_id]:
+                    ps_id[ps_id][grad.name] = grad.values
+                else:
+                    ps_grads[ps_id][grad.name] += grad.values
+
+        # 2. handle sparse_grads
+        for grad in sparse_grads:
+            ps_id = self.parameter_to_ps[grad.name]
+            if ps_id not in ps_grads:
+                ps_grads[ps_id] = {grad.name: grad}
+            else:
+                if grad.name not in ps_grads[ps_id]:
+                    ps_id[ps_id][grad.name] = grad
+                else:
+                    ps_grads[ps_id][grad.name] = merge_indexed_slices(
+                        ps_grads[ps_id][grad.name], grad
+                    )
+
+        for ps_id, pair in ps_grads.items():
+            for name, grad in pair.items():
+                if grad.indices is not None:
+                    v, i = deduplicate_indexed_slices(
+                        grad.values, grad.indices
+                    )
+                    ps_grads[ps_id][name] = Tensor(None, v, i)
+
+        for ps_id in ps_grads:
+            req = reqs[ps_id]
+            for name, grad in ps_grads[ps_id].items():
+                # Keras embedding layer has a dense parameter,
+                # but an indexed slices type gradient
+                if grad.indices is not None:
+                    serialize_indexed_slices(
+                        Tensor(None, grad.values, grad.indices),
+                        req.gradients.embedding_tables[name],
+                    )
+                else:
+                    serialize_ndarray(
+                        grad, req.gradients.dense_parameters[name]
+                    )
+
+        # 3. handle sparse grads of elasticdl embedding layers
+        groups = {}
+        for grad in edl_grads:
+            if grad.name not in groups:
+                groups[grad.name] = grad
+            else:
+                groups[grad.name] = merge_indexed_slices(
+                    groups[grad.name], grad
+                )
+
+        # Sum up the values of the duplicated indices in the
+        # gradients. It can reduce the gradient payload of the
+        # dense embedding.
+        for name, grad in groups.items():
+            v, i = deduplicate_indexed_slices(grad.values, grad.indices)
+            groups[name] = Tensor(None, v, i)
+
+            results = scatter_embedding_vector(
+                groups[name].values, groups[name].indices, self._ps_num
+            )
+
+            for ps_id in results:
+                req = reqs[ps_id]
+                gv, gi = results[ps_id]
+                serialize_indexed_slices(
+                    Tensor(None, gv, gi), req.gradients.embedding_tables[name],
+                )
+
+        # 4. push gradients to PS
+        report_futures = []
+        for ps_id in range(self.ps_num):
+            req = reqs[ps_id]
+            req.gradients.version = model_versions[ps_id]
+            req.learning_rate = learning_rate
+            report_future = self.ps_stubs[ps_id].push_gradients.future(req)
+            report_futures.append(report_future)
+
+        accepted = False
+        max_version = -1
+        for report_future in report_futures:
+            res = report_future.result()
+            if res.accepted:
+                accepted = True
+            if res.version > max_version:
+                max_version = res.version
+        return accepted, max_version

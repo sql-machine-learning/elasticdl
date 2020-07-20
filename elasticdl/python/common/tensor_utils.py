@@ -27,9 +27,9 @@ Tensor = namedtuple("Tensor", ("name", "values", "indices"))
 
 
 def merge_indexed_slices(*args):
-    return tf.IndexedSlices(
-        tf.concat([i.values for i in args], axis=0),
-        tf.concat([i.indices for i in args], axis=0),
+    return Tensor(
+        values=np.concatenate([i.values for i in args], axis=0),
+        indices=np.concatenate([i.indices for i in args], axis=0),
     )
 
 
@@ -46,12 +46,15 @@ def deduplicate_indexed_slices(values, indices):
         with each unique indice.
         `unique_indices` is a de-duplicated version of `indices`.
     """
-    unique_indices, new_index_positions = tf.unique(indices)
-    sum_combined_values = tf.math.unsorted_segment_sum(
-        values, new_index_positions, tf.shape(unique_indices)[0]
-    )
 
-    return (sum_combined_values, unique_indices)
+    res = {}
+    for i in indices.tolist():
+        if i not in res:
+            res[i] = values[i, :]
+        else:
+            res[i] += values[i, :]
+
+    return np.stack(res.values()), np.asarray(res.keys())
 
 
 def serialize_ndarray(array, pb):
