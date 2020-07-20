@@ -72,7 +72,7 @@ class Worker(object):
     def __init__(
         self,
         args,
-        channel=None,
+        master_client=None,
         ps_channels=None,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
         max_allreduce_retry_num=DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
@@ -100,11 +100,7 @@ class Worker(object):
             tf.config.threading.set_inter_op_parallelism_threads(num_threads)
             tf.config.threading.set_intra_op_parallelism_threads(num_threads)
 
-        if channel is None:
-            self._stub = None
-        else:
-            self._stub = elasticdl_pb2_grpc.MasterStub(channel)
-
+        self._mc = master_client
         self._use_multi_ps = False
         if isinstance(ps_channels, list):
             if len(ps_channels) > 0:
@@ -313,26 +309,6 @@ class Worker(object):
         )
         self._non_embed_grads = None
 
-    def get_task(self, task_type=None):
-        """
-        get task from master
-        """
-        req = elasticdl_pb2.GetTaskRequest()
-        req.worker_id = self._worker_id
-        if task_type is not None:
-            req.task_type = task_type
-
-        try:
-            res = self._stub.get_task(req)
-        except Exception:
-            # Master may have stopped GRPC service when there are no more
-            # tasks. This will result in a GRPC call exception.
-            self.logger.info(
-                "Cannot connect to master, assuming no more tasks"
-            )
-            res = elasticdl_pb2.Task()
-        return res
-
     def get_model(self):
         self._timing.start_record_time("get_model")
         if self._distribution_strategy != DistributionStrategy.ALLREDUCE:
@@ -372,17 +348,6 @@ class Worker(object):
 
             self._model_version = max(self._model_versions_from_ps)
         self._timing.end_record_time("get_model")
-
-    def report_task_result(self, task_id, err_msg, exec_counters=None):
-        """
-        report task result to master
-        """
-        report = elasticdl_pb2.ReportTaskResultRequest()
-        report.task_id = task_id
-        report.err_message = err_msg
-        if isinstance(exec_counters, dict):
-            report.exec_counters.update(exec_counters)
-        return self._stub.report_task_result(report)
 
     def report_embedding_info(self):
         model = elasticdl_pb2.Model()
@@ -572,19 +537,6 @@ class Worker(object):
             if self._use_multi_ps:
                 return self.report_gradient_to_ps(grads)
             raise RuntimeError("Only support report gradients to PS")
-
-    def report_evaluation_metrics(self, model_outputs, labels):
-        """
-        report evaluation metrics to ps.
-        """
-        req = elasticdl_pb2.ReportEvaluationMetricsRequest()
-        for name, output in model_outputs.items():
-            output = np.concatenate(output)
-            serialize_ndarray(output, req.model_outputs[name])
-        labels = np.concatenate(labels)
-        serialize_ndarray(labels, req.labels)
-        req.worker_id = self._worker_id
-        self._stub.report_evaluation_metrics(req)
 
     def report_prediction_outputs(self, predictions):
         if self._prediction_outputs_processor:
@@ -897,11 +849,11 @@ class Worker(object):
                 err_msg = data_err_msg
                 break
         del eval_dataset
-        self.report_evaluation_metrics(
+        self._mc.report_evaluation_metrics(
             model_outputs=self._evaluation_result[MetricsDictKey.MODEL_OUTPUT],
             labels=self._evaluation_result[MetricsDictKey.LABEL],
         )
-        self.report_task_result(task_id, err_msg)
+        self._mc.report_task_result(task_id, err_msg)
         self._evaluation_result = {}
 
     def _process_train_end_callback_task_if_needed(self):
@@ -909,7 +861,9 @@ class Worker(object):
         if train_end_task:
             self._callbacks_list.on_train_end()
             self._task_data_service.clear_train_end_callback_task()
-            self.report_task_result(task_id=train_end_task.task_id, err_msg="")
+            self._mc.report_task_result(
+                task_id=train_end_task.task_id, err_msg=""
+            )
 
     def _process_minibatch_and_report(
         self,
@@ -1035,7 +989,7 @@ class Worker(object):
         # variables of subclass models are not created.
         is_model_got = False
         while True:
-            task = self.get_task(elasticdl_pb2.EVALUATION)
+            task = self._mc.get_task(elasticdl_pb2.EVALUATION)
             # no evaluation task in eval_todo of master
             if not task.shard_name:
                 break
