@@ -63,7 +63,7 @@ After building wheel packages, you can build a docker image by
 elasticdl zoo init \
   --base_image=elasticdl:dev \
   --model_zoo=model_zoo \
-  --use_local_pkg=true \
+  --local_pkg_dir=./build \
 
 elasticdl zoo build --image_name=elasticdl:dev_test .
 ```
