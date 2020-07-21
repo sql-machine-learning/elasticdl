@@ -105,8 +105,8 @@ class PSClient(object):
         self, grads, edl_grads, learning_rate, model_versions,
     ):
         """
-        Push gradients to PS. There three kinds of gradients:
-         - gradients
+        Push gradients to PS. There two kinds of gradients:
+         - gradients of normal layers
          - sparse gradients of ElasticDL embedding layers
         """
         reqs = [

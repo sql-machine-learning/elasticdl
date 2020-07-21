@@ -28,6 +28,7 @@ Tensor = namedtuple("Tensor", ("name", "values", "indices"))
 
 def merge_indexed_slices(*args):
     return Tensor(
+        name=None,
         values=np.concatenate([i.values for i in args], axis=0),
         indices=np.concatenate([i.indices for i in args], axis=0),
     )
