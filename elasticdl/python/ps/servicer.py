@@ -136,7 +136,9 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                 )
                 if name in self._parameters.non_embedding_params:
                     var = self._parameters.get_non_embedding_param(name)
-                    grad_vars.append((grad, var))
+                    grad_vars.append(
+                        (tf.IndexedSlices(grad.values, grad.indices), var)
+                    )
                 else:
                     grad_vars.append((grad, name))
 
@@ -208,7 +210,14 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                             grad = tf.constant(grad)
                         var = self._parameters.get_non_embedding_param(name)
                         if var is None:
-                            grad_vars.append((grad, name))
+                            grad_vars.append(
+                                (
+                                    tf.IndexedSlices(
+                                        grad.values, grad.indices
+                                    ),
+                                    name,
+                                )
+                            )
                         else:
                             grad_vars.append((grad, var))
 
