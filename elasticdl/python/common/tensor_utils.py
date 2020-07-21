@@ -104,7 +104,7 @@ def serialize_indexed_slices(slices, pb):
     if isinstance(indices, np.ndarray):
         if len(indices.shape) > 1:
             raise ValueError(
-                "IndexedSlices pb only accepts indices with one"
+                "IndexedSlices pb only accepts indices with one "
                 "dimension, got %d",
                 len(indices.shape),
             )
