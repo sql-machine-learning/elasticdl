@@ -409,90 +409,39 @@ class Master(object):
             worker_args = wrap_python_args_with_string(worker_args)
             worker_args.insert(0, worker_client_command)
 
-            if args.use_go_ps:
-                opt_type, opt_args = get_optimizer_info(self.optimizer)
-                ps_command = "elasticdl_ps"
-                ps_command_args = [
-                    "-job_name=" + args.job_name,
-                    "-namespace=" + args.namespace,
-                    "-master_addr=" + self.master_addr,
-                    "-port=2222",
-                    "-use_async=" + ("true" if args.use_async else "false"),
-                    "-grads_to_wait=" + str(args.grads_to_wait),
-                    "-lr_staleness_modulation="
-                    + ("true" if args.lr_staleness_modulation else "false"),
-                    "-sync_version_tolerance="
-                    + str(args.sync_version_tolerance),
-                    "-evaluation_steps=" + str(args.evaluation_steps),
-                    "-num_ps_pods=" + str(args.num_ps_pods),
-                    "-num_workers=" + str(args.num_workers),
-                    "-checkpoint_dir=" + str(args.checkpoint_dir),
-                    "-checkpoint_steps=" + str(args.checkpoint_steps),
-                    "-keep_checkpoint_max=" + str(args.keep_checkpoint_max),
-                    "-checkpoint_dir_for_init="
-                    + str(args.checkpoint_dir_for_init),
-                    "-opt_type=" + opt_type,
-                    "-opt_args=" + opt_args,
-                ]
-                ps_command_args = wrap_go_args_with_string(ps_command_args)
-                # Execute source /root/.bashrc to add the file path
-                # of `elasticdl_ps` into the PATH environment variable.
-                ps_args = [
-                    "source",
-                    "/root/.bashrc_elasticdl",
-                    "&&",
-                    ps_command,
-                ]
-                ps_args.extend(ps_command_args)
-            else:
-                ps_command = (
-                    BashCommandTemplate.SET_PIPEFAIL
-                    + " python -m elasticdl.python.ps.main"
-                )
-                ps_command_args = [
-                    "--grads_to_wait",
-                    str(args.grads_to_wait),
-                    "--lr_staleness_modulation",
-                    str(args.lr_staleness_modulation),
-                    "--sync_version_tolerance",
-                    str(args.sync_version_tolerance),
-                    "--use_async",
-                    str(args.use_async),
-                    "--model_zoo",
-                    args.model_zoo,
-                    "--model_def",
-                    args.model_def,
-                    "--job_name",
-                    args.job_name,
-                    "--port",
-                    "2222",
-                    "--master_addr",
-                    self.master_addr,
-                    "--namespace",
-                    args.namespace,
-                    "--evaluation_steps",
-                    str(args.evaluation_steps),
-                    "--checkpoint_dir",
-                    str(args.checkpoint_dir),
-                    "--checkpoint_steps",
-                    str(args.checkpoint_steps),
-                    "--keep_checkpoint_max",
-                    str(args.keep_checkpoint_max),
-                    "--num_ps_pods",
-                    str(args.num_ps_pods),
-                    "--checkpoint_dir_for_init",
-                    str(args.checkpoint_dir_for_init),
-                    "--num_workers",
-                    str(args.num_workers),
-                    "--log_level",
-                    str(args.log_level),
-                    "--minibatch_size",
-                    str(args.minibatch_size),
-                    "--num_minibatches_per_task",
-                    str(args.num_minibatches_per_task),
-                ]
-                ps_args = wrap_python_args_with_string(ps_command_args)
-                ps_args.insert(0, ps_command)
+            opt_type, opt_args = get_optimizer_info(self.optimizer)
+            ps_command = "elasticdl_ps"
+            ps_command_args = [
+                "-job_name=" + args.job_name,
+                "-namespace=" + args.namespace,
+                "-master_addr=" + self.master_addr,
+                "-port=2222",
+                "-use_async=" + ("true" if args.use_async else "false"),
+                "-grads_to_wait=" + str(args.grads_to_wait),
+                "-lr_staleness_modulation="
+                + ("true" if args.lr_staleness_modulation else "false"),
+                "-sync_version_tolerance=" + str(args.sync_version_tolerance),
+                "-evaluation_steps=" + str(args.evaluation_steps),
+                "-num_ps_pods=" + str(args.num_ps_pods),
+                "-num_workers=" + str(args.num_workers),
+                "-checkpoint_dir=" + str(args.checkpoint_dir),
+                "-checkpoint_steps=" + str(args.checkpoint_steps),
+                "-keep_checkpoint_max=" + str(args.keep_checkpoint_max),
+                "-checkpoint_dir_for_init="
+                + str(args.checkpoint_dir_for_init),
+                "-opt_type=" + opt_type,
+                "-opt_args=" + opt_args,
+            ]
+            ps_command_args = wrap_go_args_with_string(ps_command_args)
+            # Execute source /root/.bashrc to add the file path
+            # of `elasticdl_ps` into the PATH environment variable.
+            ps_args = [
+                "source",
+                "/root/.bashrc_elasticdl",
+                "&&",
+                ps_command,
+            ]
+            ps_args.extend(ps_command_args)
 
             worker_args = ["-c", " ".join(worker_args)]
             ps_args = ["-c", " ".join(ps_args)]

@@ -37,7 +37,6 @@ from elasticdl.python.data.recordio_gen.frappe_recordio_gen import (
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
-from elasticdl.python.ps.parameter_server import ParameterServer
 from elasticdl.python.tests.mock_service import _server
 from elasticdl.python.worker.master_client import MasterClient
 from elasticdl.python.worker.worker import Worker
@@ -250,31 +249,6 @@ def create_iris_csv_file(size, columns, temp_dir=None):
         csv_writer.writerows(value_data)
 
     return csv_file_name
-
-
-def create_pserver(
-    model_zoo_path, model_def, grads_to_wait, use_async, num_ps_pods
-):
-    ports = [i + 12345 for i in range(num_ps_pods)]
-    channels = []
-    for port in ports:
-        addr = "localhost:%d" % port
-        channel = build_channel(addr)
-        channels.append(channel)
-
-    pservers = []
-    for port in ports:
-        args = PserverArgs(
-            grads_to_wait=grads_to_wait,
-            use_async=True,
-            port=port,
-            model_zoo=model_zoo_path,
-            model_def=model_def,
-        )
-        pserver = ParameterServer(args)
-        pserver.prepare()
-        pservers.append(pserver)
-    return ports, channels, pservers
 
 
 def distributed_train_and_evaluate(
