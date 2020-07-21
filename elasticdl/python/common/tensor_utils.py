@@ -14,7 +14,6 @@
 from collections import namedtuple
 
 import numpy as np
-import tensorflow as tf
 from tensorflow.core.framework import tensor_pb2
 
 from elasticdl.proto import elasticdl_pb2
@@ -96,7 +95,7 @@ def pb_to_ndarray(pb):
 def pb_to_indexed_slices(pb):
     concat_tensors = pb_to_ndarray(pb.concat_tensors)
     ids = np.array([int(i) for i in pb.ids])
-    return tf.IndexedSlices(concat_tensors, ids)
+    return Tensor(None, concat_tensors, ids)
 
 
 def serialize_indexed_slices(slices, pb):

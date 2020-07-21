@@ -203,7 +203,7 @@ class PserverServicer(elasticdl_pb2_grpc.PserverServicer):
                     for name, grad in self._grads_buffer.items():
                         # Dense gradients are averaged,
                         # while sparse gradients are summed
-                        if not isinstance(grad, tf.IndexedSlices):
+                        if not isinstance(grad, Tensor):
                             grad = grad / self._grads_to_wait
                             grad = tf.constant(grad)
                         var = self._parameters.get_non_embedding_param(name)
