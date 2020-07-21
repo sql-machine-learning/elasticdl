@@ -14,7 +14,6 @@
 from collections import namedtuple
 
 import numpy as np
-import tensorflow as tf
 from tensorflow.core.framework import tensor_pb2
 
 from elasticdl.proto import elasticdl_pb2
@@ -27,9 +26,10 @@ Tensor = namedtuple("Tensor", ("name", "values", "indices"))
 
 
 def merge_indexed_slices(*args):
-    return tf.IndexedSlices(
-        tf.concat([i.values for i in args], axis=0),
-        tf.concat([i.indices for i in args], axis=0),
+    return Tensor(
+        name=None,
+        values=np.concatenate([i.values for i in args], axis=0),
+        indices=np.concatenate([i.indices for i in args], axis=0),
     )
 
 
@@ -46,12 +46,15 @@ def deduplicate_indexed_slices(values, indices):
         with each unique indice.
         `unique_indices` is a de-duplicated version of `indices`.
     """
-    unique_indices, new_index_positions = tf.unique(indices)
-    sum_combined_values = tf.math.unsorted_segment_sum(
-        values, new_index_positions, tf.shape(unique_indices)[0]
-    )
 
-    return (sum_combined_values, unique_indices)
+    res = {}
+    for index, i in enumerate(indices.tolist()):
+        if i not in res:
+            res[i] = values[index, :]
+        else:
+            res[i] += values[index, :]
+
+    return np.stack(res.values()), np.asarray(res.keys())
 
 
 def serialize_ndarray(array, pb):
@@ -92,20 +95,22 @@ def pb_to_ndarray(pb):
 def pb_to_indexed_slices(pb):
     concat_tensors = pb_to_ndarray(pb.concat_tensors)
     ids = np.array([int(i) for i in pb.ids])
-    return tf.IndexedSlices(concat_tensors, ids)
+    return Tensor(None, concat_tensors, ids)
 
 
 def serialize_indexed_slices(slices, pb):
     serialize_ndarray(slices.values, pb.concat_tensors)
-    if (
-        isinstance(slices.indices, np.ndarray)
-        and len(slices.indices.shape) > 1
-    ):
-        raise ValueError(
-            "IndexedSlices pb only accepts indices with one dimension, got %d",
-            len(slices.indices.shape),
-        )
-    pb.ids.extend(slices.indices)
+    indices = slices.indices
+    if isinstance(indices, np.ndarray):
+        if len(indices.shape) > 1:
+            raise ValueError(
+                "IndexedSlices pb only accepts indices with one "
+                "dimension, got %d",
+                len(indices.shape),
+            )
+        else:
+            indices = indices.tolist()
+    pb.ids.extend(indices)
 
 
 def indexed_slices_to_pb(slices):

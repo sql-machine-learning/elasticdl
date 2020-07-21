@@ -27,6 +27,7 @@ from elasticdl.python.common.model_utils import (
 )
 from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.common.tensor_utils import (
+    Tensor,
     pb_to_ndarray,
     serialize_indexed_slices,
     serialize_ndarray,
@@ -275,17 +276,15 @@ class PserverServicerTest(unittest.TestCase):
         self.embedding_table = (
             np.random.rand(4 * dim).reshape((4, dim)).astype(np.float32)
         )
-        self.embedding_grads0 = tf.IndexedSlices(
-            values=np.random.rand(3 * dim)
-            .reshape((3, dim))
-            .astype(np.float32),
-            indices=(3, 1, 3),
+        self.embedding_grads0 = Tensor(
+            None,
+            np.random.rand(3 * dim).reshape((3, dim)).astype(np.float32),
+            np.asarray([3, 1, 3]),
         )
-        self.embedding_grads1 = tf.IndexedSlices(
-            values=np.random.rand(3 * dim)
-            .reshape((3, dim))
-            .astype(np.float32),
-            indices=(2, 2, 3),
+        self.embedding_grads1 = Tensor(
+            None,
+            np.random.rand(3 * dim).reshape((3, dim)).astype(np.float32),
+            np.asarray([2, 2, 3]),
         )
         push_model_req = elasticdl_pb2.Model()
         push_model_req.version = self._parameters.version

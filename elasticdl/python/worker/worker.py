@@ -28,7 +28,6 @@ from elasticdl.python.common.constants import (
     Mode,
 )
 from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
-from elasticdl.python.common.hash_utils import scatter_embedding_vector
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
@@ -38,14 +37,7 @@ from elasticdl.python.common.model_utils import (
     get_non_embedding_trainable_vars,
     set_callback_parameters,
 )
-from elasticdl.python.common.tensor_utils import (
-    Tensor,
-    deduplicate_indexed_slices,
-    merge_indexed_slices,
-    pb_to_ndarray,
-    serialize_indexed_slices,
-    serialize_ndarray,
-)
+from elasticdl.python.common.tensor_utils import Tensor, pb_to_ndarray
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.elasticdl.feature_column import feature_column
@@ -404,57 +396,37 @@ class Worker(object):
 
         return embedding_name_values
 
-    def report_gradient_to_ps(self, grads):
+    def report_gradient_to_ps(self, gradients):
+
         self._timing.start_record_time("report_gradient")
-        reqs = [
-            elasticdl_pb2.PushGradientsRequest() for i in range(self._ps_num)
-        ]
-        ps_grads = {}
-        non_embed_vars_n = len(self._non_embed_vars)
-        for g, v in zip(
-            grads[:non_embed_vars_n], self._non_embed_vars.values()
-        ):
-            ps_id = self._ps_client.parameter_to_ps[v.name]
-            if ps_id not in ps_grads:
-                ps_grads[ps_id] = {v.name: g}
+
+        grads = []
+        for i, v in enumerate(self._non_embed_vars.values()):
+            if isinstance(gradients[i], tf.IndexedSlices):
+                grad = Tensor(
+                    v.name,
+                    gradients[i].values.numpy(),
+                    gradients[i].indices.numpy(),
+                )
             else:
-                if v.name not in ps_grads[ps_id]:
-                    ps_grads[ps_id][v.name] = g
-                else:
-                    if isinstance(g, tf.IndexedSlices):
-                        ps_grads[ps_id][v.name] = merge_indexed_slices(
-                            ps_grads[ps_id][v.name], g
-                        )
-                    else:
-                        ps_grads[ps_id][v.name] += g
+                grad = Tensor(v.name, gradients[i].numpy(), None)
+            grads.append(grad)
 
-        for ps_id, pair in ps_grads.items():
-            for name, g in pair.items():
-                if isinstance(g, tf.IndexedSlices):
-                    v, i = deduplicate_indexed_slices(g.values, g.indices)
-                    ps_grads[ps_id][name] = tf.IndexedSlices(v, i)
-
-        for ps_id in ps_grads:
-            req = reqs[ps_id]
-            for name, g in ps_grads[ps_id].items():
-                # Keras embedding layer has a dense parameter,
-                # but an indexed slices type gradient
-                if isinstance(g, tf.IndexedSlices):
-                    serialize_indexed_slices(
-                        Tensor(None, g.values.numpy(), g.indices.numpy()),
-                        req.gradients.embedding_tables[name],
-                    )
-                else:
-                    serialize_ndarray(
-                        g.numpy(), req.gradients.dense_parameters[name]
-                    )
-
+        edl_grads = []
         edl_embedding_name_values = self._collect_edl_embedding_name_values()
-
         if edl_embedding_name_values:
-            edl_embedding_grads = grads[non_embed_vars_n:]
+            non_embed_vars_n = len(self._non_embed_vars)
+            edl_embedding_grads = gradients[non_embed_vars_n:]
             bet_number = 0
             for name, embedding_and_ids in edl_embedding_name_values:
+
+                for i in range(bet_number):
+                    grad = Tensor(
+                        name,
+                        edl_embedding_grads[i + bet_number].values.numpy(),
+                        edl_embedding_grads[i + bet_number].indices.numpy(),
+                    )
+                    edl_grads.append(grad)
                 bet_number += len(embedding_and_ids)
             if len(edl_embedding_grads) != bet_number:
                 raise ValueError(
@@ -462,59 +434,10 @@ class Worker(object):
                     "does not match the number of its output tensor %d."
                     % (len(edl_embedding_grads), bet_number)
                 )
-
-            grad_accum_iter = 0
-            for name, embedding_and_ids in edl_embedding_name_values:
-                g_values = None
-                g_indices = None
-                for _, ids in embedding_and_ids:
-                    grad = edl_embedding_grads[grad_accum_iter]
-                    grad_accum_iter += 1
-                    # ElasticDL embedding layer with Sparse Gradients
-                    if isinstance(grad, tf.IndexedSlices):
-                        grad = grad.values
-                    if g_values is not None:
-                        g_values = tf.concat([g_values, grad], axis=0)
-                        g_indices = tf.concat([g_indices, ids], axis=0)
-                    else:
-                        g_values = grad
-                        g_indices = ids
-
-                # Sum up the values of the duplicated indices in the
-                # gradients. It can reduce the gradient payload of the
-                # dense embedding.
-                g_values, g_indices = deduplicate_indexed_slices(
-                    values=g_values, indices=g_indices
-                )
-
-                results = scatter_embedding_vector(
-                    g_values.numpy(), g_indices.numpy(), self._ps_num
-                )
-
-                for ps_id in results:
-                    req = reqs[ps_id]
-                    gv, gi = results[ps_id]
-                    serialize_indexed_slices(
-                        Tensor(None, gv, gi),
-                        req.gradients.embedding_tables[name],
-                    )
-
-        report_futures = []
-        for ps_id in range(self._ps_num):
-            req = reqs[ps_id]
-            req.gradients.version = self._model_versions_from_ps[ps_id]
-            req.learning_rate = K.get_value(self._model.optimizer.lr)
-            report_future = self._ps_stubs[ps_id].push_gradients.future(req)
-            report_futures.append(report_future)
-
-        accepted = False
-        max_version = -1
-        for report_future in report_futures:
-            res = report_future.result()
-            if res.accepted:
-                accepted = True
-            if res.version > max_version:
-                max_version = res.version
+        learning_rate = K.get_value(self._model.optimizer.lr)
+        accepted, max_version = self._ps_client.push_gradients(
+            grads, edl_grads, learning_rate, self._model_versions_from_ps,
+        )
         self._timing.end_record_time("report_gradient")
         return accepted, max_version
 
