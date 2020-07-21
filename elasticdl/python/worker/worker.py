@@ -304,16 +304,31 @@ class Worker(object):
     def get_model(self):
         self._timing.start_record_time("get_model")
         if self._distribution_strategy != DistributionStrategy.ALLREDUCE:
-            dense_params = {}
-            for k, v in self._non_embed_vars.items():
-                dense_params[k] = Tensor(None, v.numpy(), None)
-
-            self._ps_client.pull_dense_parameters(
-                dense_params, self._model_versions_from_ps
+            dense_params, uninit_ps = self._ps_client.pull_dense_parameters(
+                self._model_versions_from_ps
             )
 
-            for k, v in self._non_embed_vars.items():
-                v.assign(dense_params[k])
+            for ps_id in uninit_ps:
+                # push variable to ps for initialization
+                parameters = [
+                    Tensor(name, self._non_embed_vars[name].numpy(), None)
+                    for name in self._ps_client.ps_to_parameter[ps_id]
+                ]
+                self._ps_client.push_dense_parameters(
+                    parameters, ps_id, self._model_versions_from_ps[ps_id]
+                )
+                req = elasticdl_pb2.PullDenseParametersRequest()
+                req.version = self._model_versions_from_ps[ps_id]
+                res = self._ps_stubs[ps_id].pull_dense_parameters(req)
+                if not res.initialized:
+                    # TODO: support PS fault-tolerance
+                    raise RuntimeError(
+                        "PS pod %d cannot be initialized" % ps_id
+                    )
+                self._model_versions_from_ps[ps_id] = res.version
+
+            for k, v in dense_params.items():
+                self._non_embed_vars[k].assign(v)
 
             self._model_version = max(self._model_versions_from_ps)
         self._timing.end_record_time("get_model")

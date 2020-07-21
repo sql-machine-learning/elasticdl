@@ -101,11 +101,9 @@ class PSClient(object):
             serialize_ndarray(p.values, model.dense_parameters[p.name])
         self.ps_stubs[ps_id].push_model(model)
 
-    def pull_dense_parameters(self, dense_params, model_versions):
+    def pull_dense_parameters(self, model_versions):
         """
         Pull dense parameters from PS.
-        Args:
-            dense_params: a dict of Tensors
         """
         variable_future_and_id_pairs = []
         for ps_id, stub in enumerate(self.ps_stubs):
@@ -117,29 +115,19 @@ class PSClient(object):
             var_future = stub.pull_dense_parameters.future(req)
             variable_future_and_id_pairs.append((var_future, ps_id))
 
+        dense_params = {}
+        uninit_ps = []
+
         for var_future, ps_id in variable_future_and_id_pairs:
             res = var_future.result()
             if not res.initialized:
-                # push variable to ps for initialization
-                parameters = [
-                    Tensor(name, dense_params[name].values, None)
-                    for name in self.ps_to_parameter[ps_id]
-                ]
-                self.push_dense_parameters(
-                    parameters, ps_id, model_versions[ps_id]
-                )
-                req = elasticdl_pb2.PullDenseParametersRequest()
-                req.version = model_versions[ps_id]
-                res = self.ps_stubs[ps_id].pull_dense_parameters(req)
-                if not res.initialized:
-                    # TODO: support PS fault-tolerance
-                    raise RuntimeError(
-                        "PS pod %d cannot be initialized" % ps_id
-                    )
+                uninit_ps.append(ps_id)
+            else:
+                for name, pb in res.dense_parameters.items():
+                    dense_params[name] = pb_to_ndarray(pb)
+                model_versions[ps_id] = res.version
 
-            for name, pb in res.dense_parameters.items():
-                self.dense_params[name].values = pb_to_ndarray(pb)
-            model_versions[ps_id] = res.version
+        return dense_params, uninit_ps
 
     def push_gradients(
         self, grads, edl_grads, learning_rate, model_versions,
