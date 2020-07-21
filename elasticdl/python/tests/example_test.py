@@ -134,8 +134,8 @@ class ExampleTest(unittest.TestCase):
 
     def test_cifar10_train(self):
         model_defs = [
-            "cifar10_functional_api.cifar10_functional_api.custom_model",
-            "cifar10_subclass.cifar10_subclass.CustomModel",
+            "cifar10.cifar10_functional_api.custom_model",
+            "cifar10.cifar10_subclass.CustomModel",
         ]
 
         model_versions = []
@@ -148,8 +148,8 @@ class ExampleTest(unittest.TestCase):
 
     def test_cifar10_evaluate(self):
         model_defs = [
-            "cifar10_functional_api.cifar10_functional_api.custom_model",
-            "cifar10_subclass.cifar10_subclass.CustomModel",
+            "cifar10.cifar10_functional_api.custom_model",
+            "cifar10.cifar10_subclass.CustomModel",
         ]
         for model_def in model_defs:
             self._test_evaluate(
