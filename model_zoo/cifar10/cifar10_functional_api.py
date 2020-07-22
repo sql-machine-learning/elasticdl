@@ -142,7 +142,9 @@ def callbacks():
 
 
 def dataset_fn(dataset, mode, _):
-    dataset = dataset.map(parse_data)
+    def _parse_data(record):
+        return parse_data(record, mode)
+    dataset = dataset.map(_parse_data)
 
     if mode == Mode.TRAINING:
         dataset = dataset.shuffle(buffer_size=1024)
