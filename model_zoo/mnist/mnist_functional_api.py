@@ -12,9 +12,9 @@
 # limitations under the License.
 
 import numpy as np
+import PIL.Image
 import tensorflow as tf
 
-import PIL.Image
 from elasticdl.python.common.constants import Mode
 
 
