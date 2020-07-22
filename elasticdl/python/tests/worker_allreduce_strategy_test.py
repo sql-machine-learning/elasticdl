@@ -26,9 +26,7 @@ class WorkerAllReduceStrategyTest(unittest.TestCase):
         self._model_zoo_path = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), "../../../model_zoo"
         )
-        self._model_def = (
-            "mnist.mnist_functional_api.custom_model"
-        )
+        self._model_def = "mnist.mnist_functional_api.custom_model"
         self._batch_size = 16
         self._test_steps = 10
         self._workers = []
