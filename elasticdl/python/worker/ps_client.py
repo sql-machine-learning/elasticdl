@@ -94,11 +94,11 @@ class PSClient(object):
             ps_id: PS id
             version: model version
         """
-
         model = elasticdl_pb2.Model()
         model.version = version
         for p in parameters:
-            serialize_ndarray(p.values, model.dense_parameters[p.name])
+            if self.parameter_to_ps[p.name] == ps_id:
+                serialize_ndarray(p.values, model.dense_parameters[p.name])
         self.ps_stubs[ps_id].push_model(model)
 
     def pull_dense_parameters(self, ps_ids, model_versions):
