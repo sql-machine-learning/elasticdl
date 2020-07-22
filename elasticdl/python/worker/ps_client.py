@@ -101,14 +101,15 @@ class PSClient(object):
             serialize_ndarray(p.values, model.dense_parameters[p.name])
         self.ps_stubs[ps_id].push_model(model)
 
-    def pull_dense_parameters(self, model_versions):
+    def pull_dense_parameters(self, ps_ids, model_versions):
         """
         Pull dense parameters from PS.
         """
         variable_future_and_id_pairs = []
-        for ps_id, stub in enumerate(self.ps_stubs):
+        for ps_id in ps_ids:
             if ps_id not in self.ps_to_parameter:
                 continue
+            stub = self.ps_stubs[ps_id]
             # async grpc call
             req = elasticdl_pb2.PullDenseParametersRequest()
             req.version = model_versions[ps_id]

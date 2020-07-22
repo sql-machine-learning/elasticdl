@@ -305,7 +305,7 @@ class Worker(object):
         self._timing.start_record_time("get_model")
         if self._distribution_strategy != DistributionStrategy.ALLREDUCE:
             dense_params, uninit_ps = self._ps_client.pull_dense_parameters(
-                self._model_versions_from_ps
+                [i for i in range(self._ps_num)], self._model_versions_from_ps
             )
 
             for ps_id in uninit_ps:
@@ -317,15 +317,14 @@ class Worker(object):
                 self._ps_client.push_dense_parameters(
                     parameters, ps_id, self._model_versions_from_ps[ps_id]
                 )
-                req = elasticdl_pb2.PullDenseParametersRequest()
-                req.version = self._model_versions_from_ps[ps_id]
-                res = self._ps_stubs[ps_id].pull_dense_parameters(req)
-                if not res.initialized:
+                _, uninit = self._ps_client.pull_dense_parameters(
+                    [ps_id], self._model_versions_from_ps
+                )
+                if len(uninit) > 0:
                     # TODO: support PS fault-tolerance
                     raise RuntimeError(
                         "PS pod %d cannot be initialized" % ps_id
                     )
-                self._model_versions_from_ps[ps_id] = res.version
 
             for k, v in dense_params.items():
                 self._non_embed_vars[k].assign(v)
