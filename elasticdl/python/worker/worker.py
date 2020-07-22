@@ -167,8 +167,9 @@ class Worker(object):
 
         self._model_version = -1
         self._task_data_service = TaskDataService(
-            self,
+            self._mc,
             self._job_type == JobType.TRAINING_WITH_EVALUATION,
+            custom_data_reader=self._custom_data_reader,
             data_reader_params=get_dict_from_params_str(
                 args.data_reader_params
             ),
