@@ -58,7 +58,7 @@ class CollectiveCommunicator(object):
                         self._ftlib = None
                         return
                     # sleep for 5s and try again
-                    logger.info(
+                    logger.warning(
                         "Cannot connect to FTLib consensus service, "
                         "trying again."
                     )
@@ -96,7 +96,7 @@ class CollectiveCommunicator(object):
                         )
                         self._ftlib = None
                         return
-                    logger.info(
+                    logger.warning(
                         "Cannot join FTLib consensus service, " "trying again."
                     )
                     connection_try_num += 1
