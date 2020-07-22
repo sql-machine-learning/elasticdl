@@ -37,7 +37,11 @@ from elasticdl.python.common.model_utils import (
     get_non_embedding_trainable_vars,
     set_callback_parameters,
 )
-from elasticdl.python.common.tensor_utils import Tensor, pb_to_ndarray
+from elasticdl.python.common.tensor_utils import (
+    EmbeddingTableInfo,
+    Tensor,
+    pb_to_ndarray,
+)
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.elasticdl.feature_column import feature_column
@@ -352,36 +356,34 @@ class Worker(object):
         self._timing.end_record_time("get_model")
 
     def report_embedding_info(self):
-        model = elasticdl_pb2.Model()
+        # TODO(qijun): only support float32
+        infos = []
         if self._embedding_layers:
-            embedding_infos = model.embedding_table_infos
             for layer in self._embedding_layers:
-                embedding_info = embedding_infos.add()
-                embedding_info.name = layer.embedding_weight_name
-                embedding_info.dim = layer.output_dim
-                embedding_info.initializer = layer.embeddings_initializer
-                # set to float32
-                embedding_info.dtype = dtype_numpy_to_tensor(
-                    np.dtype("float32")
+                infos.append(
+                    EmbeddingTableInfo(
+                        layer.embedding_weight_name,
+                        layer.output_dim,
+                        layer.embeddings_initializer,
+                        dtype_numpy_to_tensor(np.dtype("float32")),
+                    )
                 )
 
         if self._embedding_columns:
-            embedding_infos = model.embedding_table_infos
             for column in self._embedding_columns:
-                embedding_info = embedding_infos.add()
-                embedding_info.name = column.embedding_weight_name
-                embedding_info.dim = column.dimension
                 # TODO(brightcoder01): The initializer in embedding column is
                 # a variable initializer function. For embedding layer, it's a
                 # tf.keras.initializers. Keep aligned between these two.
-                embedding_info.initializer = "uniform"
-                # set to float32
-                embedding_info.dtype = dtype_numpy_to_tensor(
-                    np.dtype("float32")
+                infos.append(
+                    EmbeddingTableInfo(
+                        column.embedding_weight_name,
+                        column.dimension,
+                        "uniform",
+                        dtype_numpy_to_tensor(np.dtype("float32")),
+                    )
                 )
 
-        for ps_id in range(self._ps_num):
-            self._ps_stubs[ps_id].push_embedding_table_infos(model)
+        self._ps_client.push_embedding_table_infos(infos)
 
     def _collect_edl_embedding_name_values(self):
         """
