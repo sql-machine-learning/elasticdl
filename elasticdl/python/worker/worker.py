@@ -93,26 +93,26 @@ class Worker(object):
             tf.config.threading.set_intra_op_parallelism_threads(num_threads)
 
         self._mc = master_client
-        self._use_multi_ps = False
-        if isinstance(ps_channels, list):
-            if len(ps_channels) > 0:
-                self._use_multi_ps = True
+        self._distribution_strategy = args.distribution_strategy
+
+        if (
+            self._distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
+        ):
+            if isinstance(ps_channels, list) and len(ps_channels) > 0:
                 self._ps_stubs = [
                     elasticdl_pb2_grpc.PserverStub(c) for c in ps_channels
                 ]
                 self._ps_num = len(self._ps_stubs)
                 self._ps_client = PSClient(self._ps_stubs)
-        else:
-            self._ps_num = 0
-        self._distribution_strategy = args.distribution_strategy
-        if (
-            self._distribution_strategy
-            == DistributionStrategy.PARAMETER_SERVER
-            and self._use_multi_ps is False
-        ):
-            raise ValueError(
-                "PS channels are not set up under parameter server strategy"
-            )
+                self._model_versions_from_ps = [
+                    -1 for _ in range(self._ps_num)
+                ]
+            else:
+                raise ValueError(
+                    "PS channels are not set up under "
+                    "parameter server strategy"
+                )
 
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._max_allreduce_retry_num = max_allreduce_retry_num
@@ -166,8 +166,6 @@ class Worker(object):
         self.set_model(model_inst)
 
         self._model_version = -1
-        if self._distribution_strategy != DistributionStrategy.ALLREDUCE:
-            self._model_versions_from_ps = [-1 for _ in range(self._ps_num)]
         self._task_data_service = TaskDataService(
             self,
             self._job_type == JobType.TRAINING_WITH_EVALUATION,
@@ -220,7 +218,10 @@ class Worker(object):
         Init elasticdl.layers.embedding layer list and assign worker to them
         """
         self._embedding_layers = find_layer(self._model, Embedding)
-        if self._use_multi_ps:
+        if (
+            self._distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
+        ):
             for layer in self._embedding_layers:
                 layer.set_lookup_embedding_func(
                     self._ps_client.pull_embedding_vectors
@@ -239,7 +240,10 @@ class Worker(object):
                             )
                         )
 
-        if self._use_multi_ps:
+        if (
+            self._distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
+        ):
             for column in self._embedding_columns:
                 column.set_lookup_embedding_func(
                     self._ps_client.pull_embedding_vectors
@@ -270,7 +274,10 @@ class Worker(object):
         self._init_embedding_column()
         self._check_name_conflict_of_embedding_layer_and_column()
 
-        if self._use_multi_ps:
+        if (
+            self._distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
+        ):
             self.report_embedding_info()
 
         self._need_embedding_layer_check = (
@@ -303,7 +310,10 @@ class Worker(object):
 
     def get_model(self):
         self._timing.start_record_time("get_model")
-        if self._distribution_strategy != DistributionStrategy.ALLREDUCE:
+        if (
+            self._distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
+        ):
             variable_future_and_id_pairs = []
             for ps_id, stub in enumerate(self._ps_stubs):
                 if ps_id not in self._ps_client.ps_to_parameter:
@@ -456,10 +466,16 @@ class Worker(object):
             self._update_local_model()
             self._model_version += 1
             return True, None
+        elif (
+            self._distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
+        ):
+            return self.report_gradient_to_ps(grads)
         else:
-            if self._use_multi_ps:
-                return self.report_gradient_to_ps(grads)
-            raise RuntimeError("Only support report gradients to PS")
+            raise RuntimeError(
+                "Only support Allreduce and ParameterServer "
+                "distribution strategy"
+            )
 
     def report_prediction_outputs(self, predictions):
         if self._prediction_outputs_processor:
@@ -494,7 +510,10 @@ class Worker(object):
 
         self._var_created = True
 
-        if self._use_multi_ps:
+        if (
+            self._distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
+        ):
             self._ps_client.partition_dense_parameters(
                 self._non_embed_vars.keys()
             )
