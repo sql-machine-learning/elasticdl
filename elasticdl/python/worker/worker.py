@@ -317,7 +317,7 @@ class Worker(object):
                 self._ps_client.push_dense_parameters(
                     parameters, ps_id, self._model_versions_from_ps[ps_id]
                 )
-                _, uninit = self._ps_client.pull_dense_parameters(
+                dense_params, uninit = self._ps_client.pull_dense_parameters(
                     [ps_id], self._model_versions_from_ps
                 )
                 if len(uninit) > 0:
