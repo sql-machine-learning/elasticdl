@@ -26,15 +26,16 @@ from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 class TaskDataService(object):
     def __init__(
         self,
-        worker,
+        master_client,
         training_with_evaluation,
+        custom_data_reader=None,
         data_reader_params=None,
         data_origin=None,
     ):
-        self._worker = worker
+        self._mc = master_client
         self._create_data_reader_fn = create_data_reader
-        if self._worker._custom_data_reader is not None:
-            self._create_data_reader_fn = self._worker._custom_data_reader
+        if custom_data_reader is not None:
+            self._create_data_reader_fn = custom_data_reader
         self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
         self._pending_dataset = True
@@ -73,7 +74,7 @@ class TaskDataService(object):
             }
         else:
             exec_counters = None
-        self._worker._mc.report_task_result(
+        self._mc.report_task_result(
             task.task_id, err_msg, exec_counters=exec_counters
         )
 
@@ -179,7 +180,7 @@ class TaskDataService(object):
             # records so this should not be time consuming.
             if self._warm_up_task is None and not self._has_warmed_up:
                 while True:
-                    task = self._worker._mc.get_task()
+                    task = self._mc.get_task()
                     if task.type != elasticdl_pb2.WAIT:
                         break
                     time.sleep(2)
@@ -213,7 +214,7 @@ class TaskDataService(object):
                 task = self._warm_up_task
                 self._warm_up_task = None
             else:
-                task = self._worker._mc.get_task()
+                task = self._mc.get_task()
             if not task.shard_name:
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True
