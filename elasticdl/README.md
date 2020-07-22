@@ -130,7 +130,7 @@ docker run --net=host --rm -it -v $EDL_REPO:/edl_dir -w /edl_dir \
     elasticdl:dev \
     bash -c "python -m elasticdl.python.master.main \
           --model_zoo=model_zoo \
-          --model_def=mnist_functional_api.mnist_functional_api.custom_model \
+          --model_def=mnist.mnist_functional_api.custom_model \
           --job_name=test \
           --training_data=/data/mnist/train \
           --validation_data=/data/mnist/test \
@@ -151,7 +151,7 @@ docker run --net=host --rm -it -v $EDL_REPO:/edl_dir -w /edl_dir \
     bash -c "python -m elasticdl.python.worker.main \
           --worker_id=1 \
           --model_zoo=model_zoo \
-          --model_def=mnist_functional_api.mnist_functional_api.custom_model \
+          --model_def=mnist.mnist_functional_api.custom_model \
           --minibatch_size=10 \
           --job_type=training_with_evaluation \
           --master_addr=localhost:50001 \
