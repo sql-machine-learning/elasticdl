@@ -317,7 +317,7 @@ class Worker(object):
                 self._ps_client.push_dense_parameters(
                     parameters, ps_id, self._model_versions_from_ps[ps_id]
                 )
-                dense_params, uninit = self._ps_client.pull_dense_parameters(
+                ps_params, uninit = self._ps_client.pull_dense_parameters(
                     [ps_id], self._model_versions_from_ps
                 )
                 if len(uninit) > 0:
@@ -325,6 +325,8 @@ class Worker(object):
                     raise RuntimeError(
                         "PS pod %d cannot be initialized" % ps_id
                     )
+                for k, v in ps_params.items():
+                    self._non_embed_vars[k].assign(v)
 
             for k, v in dense_params.items():
                 self._non_embed_vars[k].assign(v)
