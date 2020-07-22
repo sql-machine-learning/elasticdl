@@ -14,6 +14,7 @@
 import tensorflow as tf
 
 from elasticdl.python.common.constants import Mode
+from model_zoo.cifar10.data_parser import parse_data
 
 
 class CustomModel(tf.keras.Model):
@@ -148,26 +149,7 @@ def optimizer(lr=0.1):
 
 
 def dataset_fn(dataset, mode, _):
-    def _parse_data(record):
-        if mode == Mode.PREDICTION:
-            feature_description = {
-                "image": tf.io.FixedLenFeature([32, 32, 3], tf.float32)
-            }
-        else:
-            feature_description = {
-                "image": tf.io.FixedLenFeature([32, 32, 3], tf.float32),
-                "label": tf.io.FixedLenFeature([1], tf.int64),
-            }
-        r = tf.io.parse_single_example(record, feature_description)
-        features = {
-            "image": tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
-        }
-        if mode == Mode.PREDICTION:
-            return features
-        else:
-            return features, tf.cast(r["label"], tf.int32)
-
-    dataset = dataset.map(_parse_data)
+    dataset = dataset.map(parse_data)
 
     if mode == Mode.TRAINING:
         dataset = dataset.shuffle(buffer_size=1024)
