@@ -314,6 +314,11 @@ class Worker(object):
             self._distribution_strategy
             == DistributionStrategy.PARAMETER_SERVER
         ):
+            # 1. Worker tries to pull dense parameters from the PS, maybe one
+            # or more PS instances are uninitialized.
+            #
+            # 2. Worker pushes local dense parameters to these PS instances
+            # to initialize their partition of parameters.
             dense_params, uninit_ps = self._ps_client.pull_dense_parameters(
                 [i for i in range(self._ps_num)], self._model_versions_from_ps
             )
