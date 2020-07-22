@@ -58,7 +58,7 @@ class CollectiveCommunicator(object):
                         self._ftlib = None
                         return
                     # sleep for 5s and try again
-                    logger.info(
+                    logger.warning(
                         "Cannot connect to FTLib consensus service, "
                         "trying again."
                     )
@@ -77,11 +77,30 @@ class CollectiveCommunicator(object):
                     ),
                 },
             )
+            connection_try_num = 0
             while peer_list and not self._ftlib.consensus_joined():
                 logger.warning("Retry building consensus...")
-                self._ftlib.manual_join(
-                    known_addr_list=list(self._get_peer_set(service_name))
-                )
+                try:
+                    self._ftlib.manual_join(
+                        known_addr_list=list(self._get_peer_set(service_name))
+                    )
+                except Exception:
+                    if (
+                        connection_try_num * 5
+                        > _FTLIB_CONSENSUS_CONNECTION_TIMEOUT_SECS
+                    ):
+                        logger.error(
+                            "Cannot join FTLib consensus service in %s "
+                            "seconds",
+                            str(_FTLIB_CONSENSUS_CONNECTION_TIMEOUT_SECS),
+                        )
+                        self._ftlib = None
+                        return
+                    logger.warning(
+                        "Cannot join FTLib consensus service, " "trying again."
+                    )
+                    connection_try_num += 1
+                    time.sleep(5)
         else:
             logger.warning(
                 "FTLib is not installed. The CollectiveCommunicator "

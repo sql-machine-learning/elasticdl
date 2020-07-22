@@ -613,9 +613,11 @@ class Worker(object):
         return True
 
     def _calculate_grads_and_report_with_allreduce(self, grads):
+        self._timing.start_record_time("report_gradient")
         status, averaged_grads = self._collective_communicator.tf_allreduce(
             grads
         )
+        self._timing.end_record_time("report_gradient")
         accepted = False
         if status == CollectiveCommunicatorStatus.SUCCEEDED:
             accepted, _ = self.report_gradient(averaged_grads)
