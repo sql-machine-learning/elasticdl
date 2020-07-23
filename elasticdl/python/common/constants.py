@@ -80,3 +80,7 @@ class ReaderType(object):
     CSV_READER = "CSV"
     ODPS_READER = "ODPS"
     RECORDIO_READER = "RecordIO"
+
+
+class Initializer(object):
+    UNIFORM = "uniform"

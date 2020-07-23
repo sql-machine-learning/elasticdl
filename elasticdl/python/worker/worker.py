@@ -23,6 +23,7 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
 from elasticdl.python.common.constants import (
     CollectiveCommunicatorStatus,
+    Initializer,
     JobType,
     MetricsDictKey,
     Mode,
@@ -364,7 +365,7 @@ class Worker(object):
                     EmbeddingTableInfo(
                         column.embedding_weight_name,
                         column.dimension,
-                        "uniform",
+                        Initializer.UNIFORM,
                         dtype_numpy_to_tensor(np.dtype("float32")),
                     )
                 )
