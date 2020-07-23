@@ -53,7 +53,7 @@ elif [[ "$JOB_TYPE" == "evaluate" ]]; then
     elasticdl evaluate \
       --image_name=elasticdl:ci \
       --model_zoo=model_zoo \
-      --model_def=mnist_functional_api.mnist_functional_api.custom_model \
+      --model_def=mnist.mnist_functional_api.custom_model \
       --checkpoint_dir_for_init=${MNIST_CKPT_DIR}/version-100  \
       --validation_data=/data/mnist/test \
       --num_epochs=1 \
@@ -77,7 +77,7 @@ elif [[ "$JOB_TYPE" == "predict" ]]; then
     elasticdl predict \
       --image_name=elasticdl:ci \
       --model_zoo=model_zoo \
-      --model_def=mnist_functional_api.mnist_functional_api.custom_model \
+      --model_def=mnist.mnist_functional_api.custom_model \
       --checkpoint_dir_for_init=${MNIST_CKPT_DIR}/version-100 \
       --prediction_data=/data/mnist/test \
       --master_resource_request="cpu=0.2,memory=1024Mi" \
