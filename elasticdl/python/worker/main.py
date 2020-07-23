@@ -17,7 +17,9 @@ from elasticdl.python.common import log_utils
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.worker.master_client import MasterClient
+from elasticdl.python.worker.ps_client import PSClient
 from elasticdl.python.worker.worker import Worker
+from elasticdl_client.common.constants import DistributionStrategy
 
 CONNECT_PS_MAX_RETRIES = 3
 CONNECT_PS_TIMEOUT = 300
@@ -34,8 +36,12 @@ def main():
         build_channel(args.master_addr), args.worker_id
     )
 
-    ps_channels = []
-    if args.ps_addrs:
+    ps_client = None
+    if (
+        args.distribution_strategy == DistributionStrategy.PARAMETER_SERVER
+        and args.ps_addrs
+    ):
+        ps_channels = []
         ps_addrs = args.ps_addrs.split(",")
 
         for addr in ps_addrs:
@@ -65,11 +71,12 @@ def main():
                     "Time out to connect pod %s with 3 retries"
                     % addr.split(".")[0]
                 )
+        ps_client = PSClient(ps_channels)
 
     worker = Worker(
         args,
         master_client=master_client,
-        ps_channels=ps_channels,
+        ps_client=ps_client,
         set_parallelism=True,
     )
     worker.run()

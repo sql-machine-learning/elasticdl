@@ -19,7 +19,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 
-from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
 from elasticdl.python.common.constants import (
     CollectiveCommunicatorStatus,
@@ -42,7 +42,6 @@ from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
-from elasticdl.python.worker.ps_client import PSClient
 from elasticdl.python.worker.task_data_service import TaskDataService
 from elasticdl_client.common.constants import DistributionStrategy
 
@@ -65,7 +64,7 @@ class Worker(object):
         self,
         args,
         master_client=None,
-        ps_channels=None,
+        ps_client=None,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
         max_allreduce_retry_num=DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
         set_parallelism=False,
@@ -93,27 +92,19 @@ class Worker(object):
             tf.config.threading.set_intra_op_parallelism_threads(num_threads)
 
         self._mc = master_client
+        self._ps_client = ps_client
         self._distribution_strategy = args.distribution_strategy
-
         if (
             self._distribution_strategy
             == DistributionStrategy.PARAMETER_SERVER
+            and self._ps_client is None
         ):
-            if isinstance(ps_channels, list) and len(ps_channels) > 0:
-                self._ps_stubs = [
-                    elasticdl_pb2_grpc.PserverStub(c) for c in ps_channels
-                ]
-                self._ps_num = len(self._ps_stubs)
-                self._ps_client = PSClient(self._ps_stubs)
-                self._model_versions_from_ps = [
-                    -1 for _ in range(self._ps_num)
-                ]
-            else:
-                raise ValueError(
-                    "PS channels are not set up under "
-                    "parameter server strategy"
-                )
-
+            raise ValueError(
+                "PS channels are not set up under parameter server strategy"
+            )
+        self._model_versions_from_ps = [
+            -1 for _ in range(self._ps_client.ps_num)
+        ]
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._max_allreduce_retry_num = max_allreduce_retry_num
         self._init_from_args(args)
@@ -318,7 +309,8 @@ class Worker(object):
             # 1. Worker tries to pull dense parameters from the PS, maybe one
             # or more PS instances are uninitialized.
             dense_params, uninit_ps = self._ps_client.pull_dense_parameters(
-                [i for i in range(self._ps_num)], self._model_versions_from_ps
+                [i for i in range(self._ps_client.ps_num)],
+                self._model_versions_from_ps,
             )
 
             # 2. Worker pushes local dense parameters to these PS instances
