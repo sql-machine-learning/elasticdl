@@ -98,14 +98,16 @@ class Worker(object):
         if (
             self._distribution_strategy
             == DistributionStrategy.PARAMETER_SERVER
-            and self._ps_client is None
         ):
-            raise ValueError(
-                "PS channels are not set up under parameter server strategy"
-            )
-        self._model_versions_from_ps = [
-            -1 for _ in range(self._ps_client.ps_num)
-        ]
+            if self._ps_client is None:
+                raise ValueError(
+                    "PS channels are not set up under "
+                    "parameter server strategy"
+                )
+            else:
+                self._model_versions_from_ps = [
+                    -1 for _ in range(self._ps_client.ps_num)
+                ]
         self._max_minibatch_retry_num = max_minibatch_retry_num
         self._max_allreduce_retry_num = max_allreduce_retry_num
         self._init_from_args(args)
