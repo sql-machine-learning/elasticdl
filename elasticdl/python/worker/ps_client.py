@@ -94,12 +94,41 @@ class PSClient(object):
             ps_id: PS id
             version: model version
         """
-
         model = elasticdl_pb2.Model()
         model.version = version
         for p in parameters:
-            serialize_ndarray(p.values, model.dense_parameters[p.name])
+            if self.parameter_to_ps[p.name] == ps_id:
+                serialize_ndarray(p.values, model.dense_parameters[p.name])
         self.ps_stubs[ps_id].push_model(model)
+
+    def pull_dense_parameters(self, ps_ids, model_versions):
+        """
+        Pull dense parameters from PS.
+        """
+        variable_future_and_id_pairs = []
+        for ps_id in ps_ids:
+            if ps_id not in self.ps_to_parameter:
+                continue
+            stub = self.ps_stubs[ps_id]
+            # async grpc call
+            req = elasticdl_pb2.PullDenseParametersRequest()
+            req.version = model_versions[ps_id]
+            var_future = stub.pull_dense_parameters.future(req)
+            variable_future_and_id_pairs.append((var_future, ps_id))
+
+        dense_params = {}
+        uninit_ps = []
+
+        for var_future, ps_id in variable_future_and_id_pairs:
+            res = var_future.result()
+            if not res.initialized:
+                uninit_ps.append(ps_id)
+            else:
+                for name, pb in res.dense_parameters.items():
+                    dense_params[name] = pb_to_ndarray(pb)
+                model_versions[ps_id] = res.version
+
+        return dense_params, uninit_ps
 
     def push_gradients(
         self, grads, edl_grads, learning_rate, model_versions,

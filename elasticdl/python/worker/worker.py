@@ -37,7 +37,7 @@ from elasticdl.python.common.model_utils import (
     get_non_embedding_trainable_vars,
     set_callback_parameters,
 )
-from elasticdl.python.common.tensor_utils import Tensor, pb_to_ndarray
+from elasticdl.python.common.tensor_utils import Tensor
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.elasticdl.feature_column import feature_column
@@ -315,39 +315,37 @@ class Worker(object):
             self._distribution_strategy
             == DistributionStrategy.PARAMETER_SERVER
         ):
-            variable_future_and_id_pairs = []
-            for ps_id, stub in enumerate(self._ps_stubs):
-                if ps_id not in self._ps_client.ps_to_parameter:
-                    continue
-                # async grpc call
-                req = elasticdl_pb2.PullDenseParametersRequest()
-                req.version = self._model_versions_from_ps[ps_id]
-                var_future = stub.pull_dense_parameters.future(req)
-                variable_future_and_id_pairs.append((var_future, ps_id))
+            # 1. Worker tries to pull dense parameters from the PS, maybe one
+            # or more PS instances are uninitialized.
+            #
+            # 2. Worker pushes local dense parameters to these PS instances
+            # to initialize their partition of parameters.
+            dense_params, uninit_ps = self._ps_client.pull_dense_parameters(
+                [i for i in range(self._ps_num)], self._model_versions_from_ps
+            )
 
-            for var_future, ps_id in variable_future_and_id_pairs:
-                res = var_future.result()
-                if not res.initialized:
-                    # push variable to ps for initialization
-                    parameters = [
-                        Tensor(name, self._non_embed_vars[name].numpy(), None)
-                        for name in self._ps_client.ps_to_parameter[ps_id]
-                    ]
-                    self._ps_client.push_dense_parameters(
-                        parameters, ps_id, self._model_versions_from_ps[ps_id]
+            for ps_id in uninit_ps:
+                # push variable to ps for initialization
+                parameters = [
+                    Tensor(name, self._non_embed_vars[name].numpy(), None)
+                    for name in self._ps_client.ps_to_parameter[ps_id]
+                ]
+                self._ps_client.push_dense_parameters(
+                    parameters, ps_id, self._model_versions_from_ps[ps_id]
+                )
+                ps_params, uninit = self._ps_client.pull_dense_parameters(
+                    [ps_id], self._model_versions_from_ps
+                )
+                if len(uninit) > 0:
+                    # TODO: support PS fault-tolerance
+                    raise RuntimeError(
+                        "PS pod %d cannot be initialized" % ps_id
                     )
-                    req = elasticdl_pb2.PullDenseParametersRequest()
-                    req.version = self._model_versions_from_ps[ps_id]
-                    res = self._ps_stubs[ps_id].pull_dense_parameters(req)
-                    if not res.initialized:
-                        # TODO: support PS fault-tolerance
-                        raise RuntimeError(
-                            "PS pod %d cannot be initialized" % ps_id
-                        )
+                for k, v in ps_params.items():
+                    self._non_embed_vars[k].assign(v)
 
-                for name, pb in res.dense_parameters.items():
-                    self._non_embed_vars[name].assign(pb_to_ndarray(pb))
-                self._model_versions_from_ps[ps_id] = res.version
+            for k, v in dense_params.items():
+                self._non_embed_vars[k].assign(v)
 
             self._model_version = max(self._model_versions_from_ps)
         self._timing.end_record_time("get_model")
