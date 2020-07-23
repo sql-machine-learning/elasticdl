@@ -375,7 +375,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             args = parse_worker_args(arguments)
             tf.keras.backend.clear_session()
             tf.random.set_seed(22)
-            worker = Worker(args, ps_channels=self._channels)
+            worker = Worker(args, ps_client=PSClient(self._channels))
             workers.append(worker)
             worker._run_model_call_before_training(training_data[0][0])
             for i in range(num_data):
