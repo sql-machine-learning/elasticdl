@@ -40,7 +40,7 @@ def _create_model_instance(model_def):
 
 class FindLayerTest(unittest.TestCase):
     def test_find_layer(self):
-        model_def = "mnist_functional_api.mnist_functional_api.custom_model"
+        model_def = "mnist.mnist_functional_api.custom_model"
         model = _create_model_instance(model_def)
 
         layer_num = {

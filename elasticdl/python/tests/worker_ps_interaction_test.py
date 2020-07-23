@@ -144,7 +144,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             t.join()
 
     def test_worker_pull_embedding(self):
-        model_def = "mnist_functional_api.mnist_functional_api.custom_model"
+        model_def = "mnist.mnist_functional_api.custom_model"
         self._create_pserver(model_def, 2)
         arguments = [
             "--worker_id",
@@ -195,7 +195,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             self.assertTrue(np.allclose(expected_result, result_dict[layer]))
 
     def test_compare_onebatch_train(self):
-        model_def = "mnist_functional_api.mnist_functional_api.custom_model"
+        model_def = "mnist.mnist_functional_api.custom_model"
         self._create_pserver(model_def, 2)
         images, labels = get_random_batch(self._batch_size)
         # TODO(yunjian.lmh): test optimizer wrapper
@@ -264,7 +264,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             np.testing.assert_array_equal(ps_v.numpy(), v.numpy())
 
     def test_compare_mnist_train(self):
-        model_def = "mnist_functional_api.mnist_functional_api.custom_model"
+        model_def = "mnist.mnist_functional_api.custom_model"
         self._create_pserver(model_def, 2)
         db, test_db = get_mnist_dataset(self._batch_size)
         stop_step = 20
@@ -348,7 +348,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         self._test_deepfm_train(num_ps, num_worker, stop_step)
 
     def test_restart_ps(self):
-        model_def = "mnist_functional_api.mnist_functional_api.custom_model"
+        model_def = "mnist.mnist_functional_api.custom_model"
         num_data = 8
         training_data = [
             get_random_batch(self._batch_size) for _ in range(num_data)

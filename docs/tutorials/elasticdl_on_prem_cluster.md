@@ -39,7 +39,7 @@ We launch a training job with 2 PS pods and 4 worker pods.
 elasticdl train \
   --image_name=${DOCKER_HUB_REPO}/elasticdl:mnist \
   --model_zoo=model_zoo \
-  --model_def=mnist_functional_api.mnist_functional_api.custom_model \
+  --model_def=mnist.mnist_functional_api.custom_model \
   --training_data=/data/mnist/train \
   --validation_data=/data/mnist/test \
   --num_epochs=5 \
@@ -131,7 +131,7 @@ submit a job.
     elasticdl train \
     --image_name=${DOCKER_HUB_REPO}/elasticdl:mnist \
     --model_zoo=model_zoo \
-    --model_def=mnist_functional_api.mnist_functional_api.custom_model \
+    --model_def=mnist.mnist_functional_api.custom_model \
     --training_data=/data/mnist/train \
     --validation_data=/data/mnist/test \
     --num_epochs=5 \

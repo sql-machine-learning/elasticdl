@@ -109,8 +109,8 @@ class ExampleTest(unittest.TestCase):
 
     def test_mnist_train(self):
         model_defs = [
-            "mnist_functional_api.mnist_functional_api.custom_model",
-            "mnist_subclass.mnist_subclass.CustomModel",
+            "mnist.mnist_functional_api.custom_model",
+            "mnist.mnist_subclass.CustomModel",
         ]
 
         model_versions = []
@@ -126,8 +126,8 @@ class ExampleTest(unittest.TestCase):
 
     def test_mnist_evaluate(self):
         model_defs = [
-            "mnist_functional_api.mnist_functional_api.custom_model",
-            "mnist_subclass.mnist_subclass.CustomModel",
+            "mnist.mnist_functional_api.custom_model",
+            "mnist.mnist_subclass.CustomModel",
         ]
         for model_def in model_defs:
             self._test_evaluate([28, 28], model_def)
