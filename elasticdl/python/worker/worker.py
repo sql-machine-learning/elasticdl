@@ -323,23 +323,23 @@ class Worker(object):
 
             # 2. Worker pushes local dense parameters to these PS instances
             # to initialize their partition of parameters.
-            for ps_id in uninit_ps:
-                # push variable to ps for initialization
-                parameters = [
-                    Tensor(name, self._non_embed_vars[name].numpy(), None)
-                    for name in self._ps_client.ps_to_parameter[ps_id]
-                ]
-                self._ps_client.push_dense_parameters(
-                    parameters, ps_id, self._model_versions_from_ps[ps_id]
-                )
+            if len(uninit_ps) > 0:
+                for ps_id in uninit_ps:
+                    # push variable to ps for initialization
+                    parameters = [
+                        Tensor(name, self._non_embed_vars[name].numpy(), None)
+                        for name in self._ps_client.ps_to_parameter[ps_id]
+                    ]
+                    self._ps_client.push_dense_parameters(
+                        parameters, ps_id, self._model_versions_from_ps[ps_id]
+                    )
+
                 ps_params, uninit = self._ps_client.pull_dense_parameters(
-                    [ps_id], self._model_versions_from_ps
+                    uninit_ps, self._model_versions_from_ps
                 )
                 if len(uninit) > 0:
                     # TODO: support PS fault-tolerance
-                    raise RuntimeError(
-                        "PS pod %d cannot be initialized" % ps_id
-                    )
+                    raise RuntimeError("PS initialization failed")
                 dense_params.update(ps_params)
 
             # 3. Assign parameters to local model
