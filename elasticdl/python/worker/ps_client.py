@@ -228,3 +228,17 @@ class PSClient(object):
             if res.version > max_version:
                 max_version = res.version
         return accepted, max_version
+
+    def push_embedding_table_infos(self, infos):
+        model = elasticdl_pb2.Model()
+        embedding_infos = model.embedding_table_infos
+
+        for info in infos:
+            embedding_info = embedding_infos.add()
+            embedding_info.name = info.name
+            embedding_info.dim = info.dim
+            embedding_info.initializer = info.initializer
+            embedding_info.dtype = info.dtype
+
+        for ps_id in range(self.ps_num):
+            self.ps_stubs[ps_id].push_embedding_table_infos(model)

@@ -37,7 +37,7 @@ from elasticdl.python.common.model_utils import (
     get_non_embedding_trainable_vars,
     set_callback_parameters,
 )
-from elasticdl.python.common.tensor_utils import Tensor
+from elasticdl.python.common.tensor_utils import EmbeddingTableInfo, Tensor
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.elasticdl.feature_column import feature_column
@@ -317,33 +317,32 @@ class Worker(object):
         ):
             # 1. Worker tries to pull dense parameters from the PS, maybe one
             # or more PS instances are uninitialized.
-            #
-            # 2. Worker pushes local dense parameters to these PS instances
-            # to initialize their partition of parameters.
             dense_params, uninit_ps = self._ps_client.pull_dense_parameters(
                 [i for i in range(self._ps_num)], self._model_versions_from_ps
             )
 
-            for ps_id in uninit_ps:
-                # push variable to ps for initialization
-                parameters = [
-                    Tensor(name, self._non_embed_vars[name].numpy(), None)
-                    for name in self._ps_client.ps_to_parameter[ps_id]
-                ]
-                self._ps_client.push_dense_parameters(
-                    parameters, ps_id, self._model_versions_from_ps[ps_id]
-                )
+            # 2. Worker pushes local dense parameters to these PS instances
+            # to initialize their partition of parameters.
+            if len(uninit_ps) > 0:
+                for ps_id in uninit_ps:
+                    # push variable to ps for initialization
+                    parameters = [
+                        Tensor(name, self._non_embed_vars[name].numpy(), None)
+                        for name in self._ps_client.ps_to_parameter[ps_id]
+                    ]
+                    self._ps_client.push_dense_parameters(
+                        parameters, ps_id, self._model_versions_from_ps[ps_id]
+                    )
+
                 ps_params, uninit = self._ps_client.pull_dense_parameters(
-                    [ps_id], self._model_versions_from_ps
+                    uninit_ps, self._model_versions_from_ps
                 )
                 if len(uninit) > 0:
                     # TODO: support PS fault-tolerance
-                    raise RuntimeError(
-                        "PS pod %d cannot be initialized" % ps_id
-                    )
-                for k, v in ps_params.items():
-                    self._non_embed_vars[k].assign(v)
+                    raise RuntimeError("PS initialization failed")
+                dense_params.update(ps_params)
 
+            # 3. Assign parameters to local model
             for k, v in dense_params.items():
                 self._non_embed_vars[k].assign(v)
 
@@ -351,36 +350,34 @@ class Worker(object):
         self._timing.end_record_time("get_model")
 
     def report_embedding_info(self):
-        model = elasticdl_pb2.Model()
+        # TODO(qijun): only support float32
+        infos = []
         if self._embedding_layers:
-            embedding_infos = model.embedding_table_infos
             for layer in self._embedding_layers:
-                embedding_info = embedding_infos.add()
-                embedding_info.name = layer.embedding_weight_name
-                embedding_info.dim = layer.output_dim
-                embedding_info.initializer = layer.embeddings_initializer
-                # set to float32
-                embedding_info.dtype = dtype_numpy_to_tensor(
-                    np.dtype("float32")
+                infos.append(
+                    EmbeddingTableInfo(
+                        layer.embedding_weight_name,
+                        layer.output_dim,
+                        layer.embeddings_initializer,
+                        dtype_numpy_to_tensor(np.dtype("float32")),
+                    )
                 )
 
         if self._embedding_columns:
-            embedding_infos = model.embedding_table_infos
             for column in self._embedding_columns:
-                embedding_info = embedding_infos.add()
-                embedding_info.name = column.embedding_weight_name
-                embedding_info.dim = column.dimension
                 # TODO(brightcoder01): The initializer in embedding column is
                 # a variable initializer function. For embedding layer, it's a
                 # tf.keras.initializers. Keep aligned between these two.
-                embedding_info.initializer = "uniform"
-                # set to float32
-                embedding_info.dtype = dtype_numpy_to_tensor(
-                    np.dtype("float32")
+                infos.append(
+                    EmbeddingTableInfo(
+                        column.embedding_weight_name,
+                        column.dimension,
+                        "uniform",
+                        dtype_numpy_to_tensor(np.dtype("float32")),
+                    )
                 )
 
-        for ps_id in range(self._ps_num):
-            self._ps_stubs[ps_id].push_embedding_table_infos(model)
+        self._ps_client.push_embedding_table_infos(infos)
 
     def _collect_edl_embedding_name_values(self):
         """

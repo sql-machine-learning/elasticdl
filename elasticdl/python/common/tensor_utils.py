@@ -23,6 +23,9 @@ from elasticdl.python.common.dtypes import (
 )
 
 Tensor = namedtuple("Tensor", ("name", "values", "indices"))
+EmbeddingTableInfo = namedtuple(
+    "EmbeddingTableInfo", ("name", "dim", "initializer", "dtype")
+)
 
 
 def merge_indexed_slices(*args):
