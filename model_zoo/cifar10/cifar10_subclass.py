@@ -151,6 +151,7 @@ def optimizer(lr=0.1):
 def dataset_fn(dataset, mode, _):
     def _parse_data(record):
         return parse_data(record, mode)
+
     dataset = dataset.map(_parse_data)
 
     if mode == Mode.TRAINING:
