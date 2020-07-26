@@ -137,7 +137,7 @@ class ExampleTest(unittest.TestCase):
             "cifar10.cifar10_functional_api.custom_model",
             "cifar10.cifar10_subclass.CustomModel",
             "cifar10.cifar10_resnet50.custom_model",
-            "cifar10.cifar10_mobilenetv2.custom_model"
+            "cifar10.cifar10_mobilenetv2.custom_model",
         ]
 
         model_versions = []
