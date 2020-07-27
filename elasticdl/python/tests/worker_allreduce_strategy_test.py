@@ -39,6 +39,8 @@ class WorkerAllReduceStrategyTest(unittest.TestCase):
             arguments = [
                 "--worker_id",
                 i,
+                "--num_workers",
+                worker_num,
                 "--job_type",
                 elasticdl_pb2.TRAINING,
                 "--minibatch_size",

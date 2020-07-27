@@ -341,8 +341,6 @@ def distributed_train_and_evaluate(
     worker_arguments = [
         "--worker_id",
         "1",
-        "--num_workers",
-        "1",
         "--job_type",
         job_type,
         "--minibatch_size",

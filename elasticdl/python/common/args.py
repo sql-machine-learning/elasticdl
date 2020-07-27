@@ -201,7 +201,7 @@ def parse_worker_args(worker_args=None):
         "--worker_id", help="ID unique to the worker", type=int, required=True
     )
     parser.add_argument(
-        "--num_workers", help="The number of workers", type=int, required=True
+        "--num_workers", help="The number of workers", type=int, required=False
     )
     parser.add_argument("--job_type", help="Job type", required=True)
     parser.add_argument("--master_addr", help="Master ip:port")
