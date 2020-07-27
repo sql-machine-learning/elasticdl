@@ -146,13 +146,15 @@ class Worker(object):
             callbacks=args.callbacks,
         )
 
-        self._collective_communicator = (
-            CollectiveCommunicator(
+        self._collective_communicator = None
+        if (
+            self._distribution_strategy == DistributionStrategy.ALLREDUCE
+            and args.num_workers > 1
+        ):
+            self._collective_communicator = CollectiveCommunicator(
                 service_name=args.collective_communicator_service_name
             )
-            if self._distribution_strategy == DistributionStrategy.ALLREDUCE
-            else None
-        )
+
         self._model_handler = ModelHandler.get_model_handler(
             self._distribution_strategy, checkpoint_dir=args.checkpoint_dir
         )
@@ -605,9 +607,14 @@ class Worker(object):
 
     def _calculate_grads_and_report_with_allreduce(self, grads):
         self._timing.start_record_time("report_gradient")
-        status, averaged_grads = self._collective_communicator.tf_allreduce(
-            grads
-        )
+        if self._collective_communicator:
+            (
+                status,
+                averaged_grads,
+            ) = self._collective_communicator.tf_allreduce(grads)
+        else:
+            status = CollectiveCommunicatorStatus.SUCCEEDED
+            averaged_grads = grads
         self._timing.end_record_time("report_gradient")
         accepted = False
         if status == CollectiveCommunicatorStatus.SUCCEEDED:
