@@ -29,6 +29,7 @@ from elasticdl.python.tests.test_utils import (
     get_mnist_dataset,
     get_random_batch,
 )
+from elasticdl.python.worker.ps_client import PSClient
 from elasticdl.python.worker.worker import Worker
 from elasticdl_client.common.constants import DistributionStrategy
 
@@ -80,7 +81,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 DistributionStrategy.PARAMETER_SERVER,
             ]
             args = parse_worker_args(arguments)
-            worker = Worker(args, ps_channels=self._channels)
+            worker = Worker(args, ps_client=PSClient(self._channels))
             self._workers.append(worker)
 
     def _worker_train(
@@ -161,7 +162,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             DistributionStrategy.PARAMETER_SERVER,
         ]
         args = parse_worker_args(arguments)
-        worker = Worker(args, ps_channels=self._channels)
+        worker = Worker(args, ps_client=PSClient(self._channels))
 
         # Test lookup embedding vectors that do not exist
         layers = ["test-2", "test-2-slot"]
@@ -218,7 +219,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         tf.keras.backend.clear_session()
         tf.random.set_seed(22)
 
-        worker = Worker(args, ps_channels=self._channels)
+        worker = Worker(args, ps_client=PSClient(self._channels))
         worker._run_model_call_before_training(images)
         worker.get_model()
         w_loss, w_grads = worker.training_process_eagerly(images, labels)
@@ -374,7 +375,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             args = parse_worker_args(arguments)
             tf.keras.backend.clear_session()
             tf.random.set_seed(22)
-            worker = Worker(args, ps_channels=self._channels)
+            worker = Worker(args, ps_client=PSClient(self._channels))
             workers.append(worker)
             worker._run_model_call_before_training(training_data[0][0])
             for i in range(num_data):

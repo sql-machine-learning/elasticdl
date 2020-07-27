@@ -13,7 +13,7 @@
 
 import numpy as np
 
-from elasticdl.proto import elasticdl_pb2
+from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.hash_utils import (
     int_to_id,
     scatter_embedding_vector,
@@ -30,8 +30,10 @@ from elasticdl.python.common.tensor_utils import (
 
 
 class PSClient(object):
-    def __init__(self, ps_stubs):
-        self.ps_stubs = ps_stubs
+    def __init__(self, ps_channels):
+        self.ps_stubs = [
+            elasticdl_pb2_grpc.PserverStub(c) for c in ps_channels
+        ]
         self.ps_num = len(self.ps_stubs)
         self.parameter_to_ps = {}
         self.ps_to_parameter = {}

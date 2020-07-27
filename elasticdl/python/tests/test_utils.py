@@ -40,6 +40,7 @@ from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.ps.parameter_server import ParameterServer
 from elasticdl.python.tests.mock_service import _server
 from elasticdl.python.worker.master_client import MasterClient
+from elasticdl.python.worker.ps_client import PSClient
 from elasticdl.python.worker.worker import Worker
 from elasticdl_client.common.constants import DistributionStrategy
 
@@ -416,7 +417,7 @@ def distributed_train_and_evaluate(
 
     svc, port = _server(master_creator)
     mc = MasterClient(build_channel("localhost:%d" % port), 1)
-    worker = Worker(args, master_client=mc, ps_channels=ps_channels)
+    worker = Worker(args, master_client=mc, ps_client=PSClient(ps_channels))
 
     for pservicer in pservers:
         # FIXME(yancey1989): decouple pserver and master client
