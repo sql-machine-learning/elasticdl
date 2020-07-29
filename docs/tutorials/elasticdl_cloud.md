@@ -82,7 +82,7 @@ Then we follow the
 [doc](https://cloud.google.com/filestore/docs/accessing-fileshares) to access
 fileshares from the Kubernetes cluster.
 
-In this example, we create a persistent value claim named `fileserver-claim`.
+In this example, we create a persistent volume claim named `fileserver-claim`.
 
 ## Submit Job to the Kubernetes Cluster
 
