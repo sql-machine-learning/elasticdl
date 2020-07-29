@@ -1,20 +1,43 @@
 # Design doc about Supporting PyTorch
 
 ## introduction
-ElasticDL is an open-source distributed deep learning programming framework based on TensorFlow 2.x and Kubernetes. At the Google Developer Day event in the fall of 2019, the ElasticDL team from Ant Financial showed off the first open-source version of ElasticDL.The primary design intent of ElasticDL is to simplify distributed programming. It allows users to provide only models described with TensorFlow 2.0 API, without requiring users to write distributed training process code. As long as the user's model definition can be adjusted locally, the model can be trained with large-scale data in a distributed environment, thereby improving R&D efficiency.
 
-However, this project only supports TensorFlow. Considering that PyTorch is more widely used in academia, this project will support PyTorch.
+ElasticDL is an open-source distributed deep learning programming framework based
+on TensorFlow 2.x and Kubernetes. At the Google Developer Day event in the fall of
+2019, the ElasticDL team from Ant Financial showed off the first open-source version
+of ElasticDL.The primary design intent of ElasticDL is to simplify distributed programming.
+It allows users to provide only models described with TensorFlow 2.0 API, without
+requiring users to write distributed training process code. As long as the user's
+model definition can be adjusted locally, the model can be trained with large-scale
+ data in a distributed environment, thereby improving R&D efficiency.
 
-## Dataloader
-PyTorch has an abstract Dataset class. A Dataset can be anything that has a `__len__` function (called by Python’s standard `len` function) and a `__getitem__` function as a way of indexing into it. This[tutorial](https://pytorch.org/tutorials/beginner/data_loading_tutorial.html) walks through a nice example of creating a custom `FacialLandmarkDataset` class as a subclass of `Dataset`.
+However, this project only supports TensorFlow. Considering that PyTorch is more
+widely used in academia, this project will support PyTorch.
 
-PyTorch’s [TensorDataset](https://pytorch.org/docs/stable/_modules/torch/utils/data/dataset.html#TensorDataset) is a Dataset wrapping tensors. By defining a length and way of indexing, this also gives us a way to iterate, index, and slice along the first dimension of a tensor. This will make it easier to access both the independent and dependent variables in the same line as we train.
+## DataLoader
 
-DataLoader is a tool used to package your data. So you have to load your own (NumPy array or other) data format into Tensor, and then put it into this wrapper. Using DataLoader help you iterate data efficiently.
+PyTorch has an abstract Dataset class. A Dataset can be anything that has a `__len__`
+function (called by Python’s standard `len` function) and a `__getitem__` function
+as a way of indexing into it. This[tutorial](https://pytorch.org/tutorials/beginner/data_loading_tutorial.html)
+walks through a nice example of creating a custom `FacialLandmarkDataset` class as
+a subclass of `Dataset`.
 
-As we set `BATCH_SIZE = 5`, 5 data are exported for learning in a step. The result is as follows.
+PyTorch’s [TensorDataset](https://pytorch.org/docs/stable/_modules/torch/utils/data/dataset.html#TensorDataset)
+is a Dataset wrapping tensors. By defining a length and way of indexing, this also
+gives us a way to iterate, index, and slice along the first dimension of a tensor.
+This will make it easier to access both the independent and dependent variables in
+the same line as we train.
 
-```
+`torch.utils.data.DataLoader` is an iterator that provides all these features.
+
+- Batching the data
+- Shuffling the data
+- Load the data in parallel using multiprocessing workers.
+
+As we set `BATCH_SIZE = 5`, 5 data are exported for learning in a step. The result
+is as follows.
+
+```text
 Epoch:  0 | Step:  0 | batch x:  tensor([5., 6., 2., 1., 8.]) | batch y:  tensor([ 6.,  5.,  9., 10.,  3.])
 Epoch:  0 | Step:  1 | batch x:  tensor([ 7.,  3.,  9.,  4., 10.]) | batch y:  tensor([4., 8., 2., 7., 1.])
 Epoch:  1 | Step:  0 | batch x:  tensor([ 8., 10.,  5.,  7.,  9.]) | batch y:  tensor([3., 1., 6., 4., 2.])
@@ -22,9 +45,13 @@ Epoch:  1 | Step:  1 | batch x:  tensor([2., 1., 4., 6., 3.]) | batch y:  tensor
 Epoch:  2 | Step:  0 | batch x:  tensor([10.,  7.,  3.,  5.,  9.]) | batch y:  tensor([1., 4., 8., 6., 2.])
 Epoch:  2 | Step:  1 | batch x:  tensor([1., 6., 4., 2., 8.]) | batch y:  tensor([10.,  5.,  7.,  9.,  3.])
 ```
-Another advantage of DataLoader is that the data size can be adjusted automatically according to the batch size.
-As we set `BATCH_SIZE = 7`, the result is as follows. The remaining data in this epoch will be returned at `step = 1`.
-```
+
+Another advantage of DataLoader is that the data size can be adjusted automatically
+according to the batch size.
+As we set `BATCH_SIZE = 7`, the result is as follows. The remaining data in this
+epoch will be returned at `step = 1`.
+
+```text
 Epoch:  0 | Step:  0 | batch x:  tensor([1., 7., 2., 8., 9., 6., 3.]) | batch y:  tensor([10.,  4.,  9.,  3.,  2.,  5.,  8.])
 Epoch:  0 | Step:  1 | batch x:  tensor([ 5., 10.,  4.]) | batch y:  tensor([6., 1., 7.])
 Epoch:  1 | Step:  0 | batch x:  tensor([1., 6., 7., 5., 2., 9., 8.]) | batch y:  tensor([10.,  5.,  4.,  6.,  9.,  2.,  3.])
@@ -59,9 +86,14 @@ def show():
 if __name__ == '__main__':
     show()
 ```
+
 ### MNIST Example
 
-This dataset is in numpy array format, and has been stored using pickle, a python-specific format for serializing data. Each image is 28 x 28, and is being stored as a flattened row of length 784 (=28x28). Let’s take a look at one; we need to reshape it to 2d first.
+This dataset is in numpy array format, and has been stored using pickle, a
+python-specific format for serializing data. Each image is 28 x 28, and is being
+ stored as a flattened row of length 784 (=28x28). Let’s take a look at one; we
+ need to reshape it to 2d first.
+
 ```python
 plt.imshow(train_data.train_data[0].numpy(), cmap='gray')
 plt.title('%i' % train_data.train_labels[0])
@@ -69,12 +101,15 @@ plt.show()
 ```
 
 PyTorch uses `torch.tensor`, rather than `numpy` arrays.
+
 ```python
 x_train, y_train, x_valid, y_valid = map(
     torch.tensor, (x_train, y_train, x_valid, y_valid)
 )
 ```
+
 Or we can convert our data like this.
+
 ```python
 train_data = torchvision.datasets.MNIST(
     root='./mnist/',
@@ -85,12 +120,17 @@ train_data = torchvision.datasets.MNIST(
 )
 ```
 
+## Training Loop
 
+ElasticDL holds master-worker architecture. Workers get model parameters from
+parameter server (PS), compute gradients using different training data, and send
+computed gradients to PS. PS iteratively updates these model parameters using
+gradients sent by workers. In our training loop, the gradient information of the
+neural network needs to be calculated and transmitted between the ps and the worker.
+The advanced API in PyTorch such as `torch.optim` is not available,we had to
+update the value of each parameter by name, and manually zero the gradient of
+each parameter, as follows:
 
-## Training Loop 
-ElasticDL holds master-worker architecture. Workers get model parameters from parameter server (PS), compute gradients using different training data, and send computed gradients to PS. PS iteratively updates these model parameters using gradients sent by workers.
-In our training loop, the gradient information of the neural network needs to be calculated and transmitted between the master and the worker.
-The advanced API in PyTorch such as `torch.optim` is not available,we had to update the value of each parameter by name, and manually zero the gradient of each parameter, as follows:
 ```python
 with torch.no_grad():
     weights -= weights.grad * lr
@@ -98,17 +138,24 @@ with torch.no_grad():
     weights.grad.zero_()
     bias.grad.zero_()
 ```
-`torch.no_grad()` context is necessary because we don't want to record these operations in the next gradient calculation.
-To go further, we can use `model.parameters()` and `model.zero_grad()` (defined by PyTorch for `nn.Module`) to make these steps more concise, and there will be no errors of forgetting some parameters, especially when we build a complex model:
+
+`torch.no_grad()` context is necessary because we don't want to record these
+operations in the next gradient calculation.
+To go further, we can use `model.parameters()` and `model.zero_grad()` (defined
+by PyTorch for `nn.Module`) to make these steps more concise, and there will be
+no errors of forgetting some parameters, especially when we build a complex model:
+
 ```python
 with torch.no_grad():
     for param in model.parameters(): param -= param.grad * lr
     model.zero_grad()
 ```
 
-
 ## Work with PS_client
-This [document](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/parameter_server.md) describes the design of a distributed parameter server for ElasticDL.
+
+This [document](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/parameter_server.md)
+describes the design of a distributed parameter server for ElasticDL.
+
 ```python
 class PSClient(object):
     def __init__(self, ps_stubs):
@@ -123,7 +170,7 @@ class PSClient(object):
     def partition_dense_parameters(self, param_names):
         # Partition dense parameters to PS
         # ps_id = string_to_id(param_name)
-        
+
     def push_dense_parameters(self, parameters, ps_id, version):
         # Push dense parameters to PS
         # Args:parameters: a list of Tensors
@@ -143,24 +190,38 @@ class PSClient(object):
 ```
 
 ### Model Parameter Access from Worker
-Each PS pod has a RPC servicer to provide RPC services. Workers use RPC services to pull model parameters. `pull_variable` service is to pull all non-embedding parameters. `pull_embedding_vector` service is to pull embedding vectors specified by an embedding layer name and a list of discrete IDs.
+
+Each PS pod has a RPC server to provide RPC services. Workers use RPC services
+to pull model parameters. `pull_variable` service is to pull all non-embedding
+parameters. `pull_embedding_vector` service is to pull embedding vectors
+specified by an embedding layer name and a list of discrete IDs.
+
 ```python
 service PServer{
     rpc pull_variable(PullModelRequest) returns (PullModelResponse);
     rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
 }
 ```
+
 ### Model Parameter Update
-A worker computes gradients in each training iteration, which contain gradients for non-embedding parameters and some embedding vectors if applicable. The worker partitions these gradients using their corresponding parameter names or discrete IDs for embedding vectors. Then the worker sends gradient partitions to their corresponding PS pods by RPC calls `push_gradient`.
+
+A worker computes gradients in each training iteration, which contain gradients
+for non-embedding parameters and some embedding vectors if applicable. The worker
+partitions these gradients using their corresponding parameter names or discrete
+IDs for embedding vectors. Then the worker sends gradient partitions to their
+corresponding PS pods by RPC calls `push_gradient`.
+
 ```python
 service PServer{
     rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
 }
 ```
-When a PS pod receives gradients in `push_gradient`, it uses a PyTorch optimizer to apply gradients to non-embedding parameters.
 
+When a PS pod receives gradients in `push_gradient`, it uses a PyTorch optimizer
+to apply gradients to non-embedding parameters.
 
 ## Code
+
 ```python
 import os
 import torch
