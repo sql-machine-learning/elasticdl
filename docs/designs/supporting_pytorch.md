@@ -14,11 +14,11 @@ the network net=Net().
 2. Define the optimizer: `optimizer=optim.xxx(net.parameters()，lr=xxx)`
 3. Define the loss function: `compute_loss=nn.MSELoss()`
 4. training loop:
-    4.1 Clear the gradient information in the optimizer: `optimizer.zero_grad()`
-    4.2 Forward: `output=net(input)`
-    4.3 Calculate the loss: `loss=compute_loss(target,output)`
-    4.4 Backward: `loss.backward()`
-    4.5 Update parameters: `optimizer.step()`
+    (a) Clear the gradient information in the optimizer: `optimizer.zero_grad()`
+    (b) Forward: `output=net(input)`
+    (c) Calculate the loss: `loss=compute_loss(target,output)`
+    (d) Backward: `loss.backward()`
+    (e) Update parameters: `optimizer.step()`
 
 ### Define a Class
 
@@ -131,7 +131,7 @@ The master node plays the master role in two aspects.
 1. It's the master of the cluster.
 2. It's the master of the model training/evaluation/prediction process.
 
-### Simple and Standardized Model Method
+### 1. Simple and Standardized Model Method
 
 In a distributed deep learning system, several workers need to be started and monitored.
 It is necessary to split the training data to the workers and to update the model
@@ -161,24 +161,28 @@ The specific model building method can refer to this
 [mnist_subclass.py](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist/mnist_subclass.py).
 
 
-### Load Data from Task
+### 2. Load Data from Task
 
 ElasticDL introduces a master process for each job. By calling the Kubernetes API,
 the master process understands the cluster situation. The data is distributed by
-the master. 
+the master.[dynamic_data_sharding.md](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/dynamic_data_sharding.md)
+
 1. A worker get a task from the master.
 2. A worker reads real data according to the offset in the task
 `feed` customizes the conversion process of training data
 to PyTorch model input.
+
+`TODO: Make DataLoader works with task, more details will be added.`
+
 There is a tutorial about [feed](https://github.com/sql-machine-learning/elasticdl/blob/dc4b2901d651cea08cdb2825a6829c97294e4652/model_zoo/mnist/mnist_subclass.py#L64)
 in TensorFlow.
 
-### Transmission of Gradient Information
+### 3. Transmission of Gradient Information
 
 A task received by an ElasticDL worker usually includes multiple minibatches.
 For each task, the worker opens the corresponding file or table, and then:
 1. Get a mini-batch training data.
-2. Call the user-defined forward function with the local model as a parameter
+2. Call the user-defined `forward` function with the local model as a parameter
 to calculate the cost. If the model is large, some parameters may come from the
 parameter server.
 3. The worker performs backward calculations to obtain the gradient.
