@@ -1,9 +1,9 @@
 # ElasticDL Model Contribution
 
 To submit an ElasticDL job, a user needs to provide a model file, such as
-[`mnist_functional_api.py`](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist_functional_api/mnist_functional_api.py)
+[`mnist_functional_api.py`](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist/mnist_functional_api.py)
 used in this
-[example](https://github.com/sql-machine-learning/elasticdl/blob/develop/doc/tutorials/elasticdl_cloud.md#submit-the-first-job-with-low-priority).
+[example](https://github.com/sql-machine-learning/elasticdl/blob/develop/doc/tutorials/elasticdl_cloud.md#submit-job).
 
 This model file contains a [model](#model) built with TensorFlow Keras API and
 other components required by ElasticDL, including [dataset\_fn](#dataset_fn),
@@ -190,12 +190,12 @@ def eval_metrics_fn():
 
 ## Model Building Examples
 
-- [MNIST model using Keras functional API](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist_functional_api/mnist_functional_api.py)
+- [MNIST model using Keras functional API](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist/mnist_functional_api.py)
 
-- [MNIST model using Keras modelsubclassing](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist_subclass/mnist_subclass.py)
+- [MNIST model using Keras modelsubclassing](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist/mnist_subclass.py)
 
-- [CIFAR10 model using Keras functional API](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/cifar10_functional_api/cifar10_functional_api.py)
+- [CIFAR10 model using Keras functional API](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/cifar10/cifar10_functional_api.py)
 
-- [CIFAR10 model using Keras modelsubclassing](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/cifar10_subclass/cifar10_subclass.py)
+- [CIFAR10 model using Keras modelsubclassing](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/cifar10/cifar10_subclass.py)
 
 - [Preprocess structured data for Keras model](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/tutorials/preprocessing_tutorial.md)
