@@ -3,7 +3,7 @@
 ## introduction
 ElasticDL is an open-source distributed deep learning programming framework based on TensorFlow 2.x and Kubernetes. At the Google Developer Day event in the fall of 2019, the ElasticDL team from Ant Financial showed off the first open-source version of ElasticDL.The primary design intent of ElasticDL is to simplify distributed programming. It allows users to provide only models described with TensorFlow 2.0 API, without requiring users to write distributed training process code. As long as the user's model definition can be adjusted locally, the model can be trained with large-scale data in a distributed environment, thereby improving R&D efficiency.
 
-However, this project only supports tensorflow. Considering that PyTorch is more widely used in academia, this project will improve and support PyTorch.
+However, this project only supports TensorFlow. Considering that PyTorch is more widely used in academia, this project will support PyTorch.
 
 ## Dataloader
 PyTorch has an abstract Dataset class. A Dataset can be anything that has a `__len__` function (called by Python’s standard `len` function) and a `__getitem__` function as a way of indexing into it. This[tutorial](https://pytorch.org/tutorials/beginner/data_loading_tutorial.html) walks through a nice example of creating a custom `FacialLandmarkDataset` class as a subclass of `Dataset`.
