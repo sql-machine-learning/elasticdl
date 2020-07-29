@@ -147,8 +147,7 @@ elasticdl zoo push gcr.io/${PROJECT_ID}/elasticdl:mnist
 ```
 
 We launch a training job with 2 PS pods and 4 worker pods. The master pod and
-PS pods are set with priority, while worker pods are set with low priority. The
-training docker image will be pushed to google cloud repo.
+PS pods are set with high priority, while worker pods are set with low priority.
 
 ```bash
 elasticdl train \
@@ -186,7 +185,7 @@ To see the status of each pod:
 kubectl get pods
 ```
 
-To see the loss in worker pod:
+To see the loss in a worker pod:
 
 ```bash
 kubectl logs elasticdl-test-mnist-worker-0 | grep "Loss"
