@@ -174,12 +174,12 @@ def feed(dataset, mode, _):
     def _parse_data(record):
         if mode == Mode.PREDICTION:
             feature_description = {
-                "image": Data.DataLoader(dataset=train_data, batch_size=BATCH_SIZE, shuffle=True)
+                "image": tf.io.FixedLenFeature([28, 28], tf.float32)
             }
         else:
             feature_description = {
-                "image": Data.DataLoader(dataset=train_data, batch_size=BATCH_SIZE, shuffle=True),
-                "label": Data.DataLoader(dataset=train_label, batch_size=BATCH_SIZE, shuffle=True),
+                "image": tf.io.FixedLenFeature([28, 28], tf.float32),
+                "label": tf.io.FixedLenFeature([1], tf.int64),
             }
         r = tf.io.parse_single_example(record, feature_description)
         features = {
@@ -202,12 +202,22 @@ def feed(dataset, mode, _):
 
 ElasticDL introduces a master process for each job. By calling the Kubernetes API,
 the master process understands the cluster situation. The data is distributed by
-the master.[dynamic_data_sharding.md](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/dynamic_data_sharding.md)
+the master[dynamic_data_sharding.md](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/dynamic_data_sharding.md).
 
 1. A worker get a task from the master.
 2. A worker reads real data according to the offset in the task
 `feed` customizes the conversion process of training data
 to PyTorch model input.
+
+ElasticDL's dynamic data partitioning is based on indexes.
+The training data of ElasticDL is one or more files in [RecordIO](https://github.com/wangkuiyi/recordio)
+format. Tables in the [MaxCompute](https://www.alibabacloud.com/zh/product/maxcompute)
+database system are also uesd as the format of training data.
+The contents of each task are as follows:
+
+1. File name or table name,
+2. The offset of the first record from the beginning of the file (or table),
+3. The total number of records in this task.
 
 `TODO: Make DataLoader works with task, more details will be added.`
 
@@ -218,6 +228,7 @@ in TensorFlow.
 
 A task received by an ElasticDL worker usually includes multiple minibatches.
 For each task, the worker opens the corresponding file or table, and then:
+
 1. Get a mini-batch training data.
 2. Call the user-defined `forward` function with the local model as a parameter
 to calculate the cost. If the model is large, some parameters may come from the
@@ -245,7 +256,17 @@ The advanced API in PyTorch such as `torch.optim` is not available,we had to
 update the value of each parameter by name, and manually zero the gradient of
 each parameter.
 `torch.no_grad()` context is necessary because we don't want to record these
-operations in the next gradient calculation.
+operations in the next gradient calculation.To go further, we can use
+`model.parameters()` and `model.zero_grad()` (defined by PyTorch for `nn.Module`)
+to make these steps more concise, and there will be no errors of forgetting some
+parameters, especially when we build a complex model:
+
+```python
+with torch.no_grad():
+    for param in model.parameters(): 
+        param -= param.grad * lr
+    model.zero_grad()
+```
 
 #### Aggregating Gradients under Parameter Server Strategy
 
