@@ -1,27 +1,37 @@
 ## Benchmark of FTlib AllReduce
 
 We perform experiments to test the performance of FTlib AllReduce in
-ElasticDL on Minikube, the CPU cluster, and GPU cluster. We adopt
-ResNet50 and MobileNetV2 in experiments. ResNet50 is a computation-intensive
+ElasticDL on three Kubernetes clusters -- a Minikube cluster, an on-premise CPU
+cluster managed by a tailored Kubernetes system, and a GPU cluster
+managed by the same tailored Kubernetes system. In those experiments,
+we adopt ResNet50 and MobileNetV2 models to test the performance of
+computation and communication. ResNet50 is a computation-intensive
 model and MobileNetV2 is a communication-intensive model.
 
-## Minikube
+## Minikube Cluster
 
-The setups of experiments are:
+We start a local Kubernetes cluster on macOS by the command:
+
+```bash
+minikube start --vm-driver=hyperkit --cpus 2 --memory 6144 --disk-size=50gb
+```
+
+The experiment parameters are:
 
 | Experiment parameter | Value    |
 | -- | --- |
 | Batch size | 64 |
 | Batches per task | 50 |
 | Images per task | 3220 |
-| Dataset | cifar10 |
-| Image shape | (32, 32, 3) |
+| Dataset | CIFAR-10 |
+| Input shape | (32, 32, 3) |
+| Output classes| 10 |
 | Worker resource| cpu=0.3,memory=2048Mi,ephemeral-storage=1024Mi|
 
 ### ResNet50
 
-The number of trainable parameters in ResNet50 for cifar10 is 23,555,082.
-The number of trainable tensors is 214.
+There are 214 parameter tensors in ResNet50 for CIFAR-10 dataset. And
+those tensor totally have 23,555,082 trainable parameters.
 
 | Workers |  computation/communication  |  Speed   |  Speedup Ratio |
 | -- | --------------------------- | -------- | ------ |
@@ -30,8 +40,8 @@ The number of trainable tensors is 214.
 
 ### MobileNetV2
 
-The number of trainable parameters in ResNet50 for cifar10 is 2,236,682.
-The number of trainable tensors is 158.
+There are 158 parameter tensors in ResNet50 for CIFAR-10 dataset. And
+those tensors have 2,236,682 trainable parameters.
 
 | Workers   |  computation/communication  |  Speed   |  Speedup Ratio |
 | -- | --------------------------- | -------- | ------ |
@@ -39,17 +49,20 @@ The number of trainable tensors is 158.
 | 2  | 10: 3 | 44.7 images/s | 1.54 |
 | 3  | 10: 6 | 57.2 images/s  | 1.97 |
 
-## CPU Cluster
+## On-premise CPU Cluster Managed by a Tailored Kubernetes System
 
-The setups of experiments are:
+There are more resource on an on-premise CPU cluster, so we can turn up the
+worker resource to do experiments. And, we also use CIFAR-10 dataset and
+assign more CPUs and memory for the worker. The experiment parameters are:
 
 | Experiment parameter | Value |
 | -- | --- |
 | Batch size | 64 |
 | Batches per task | 50 |
 | Images per task | 3220 |
-| Dataset | cifar10 |
-| Image shape | (32, 32, 3) |
+| Dataset | CIFAR-10 |
+| Input shape | (32, 32, 3) |
+| Output classes| 10 |
 | Worker resource| cpu=4,memory=8192Mi,ephemeral-storage=1024Mi|
 
 ### ResNet50
@@ -70,23 +83,35 @@ The setups of experiments are:
 | 4  | 44.7% | 680 images/s  | 1.92 |
 | 8  | 66.7% | 648 images/s  | 1.83 |
 
-### GPU
+For the above experiments of CPU, we find that the speed-up ratio is better if
+the model is more complex. Because the computation on CPUs is
+very slow. The computation is the bottleneck on the CPU cluster. So, the
+the speed-up of ResNet50 is better than MobileNetV2.
 
-The setups of experiments are:
+### On-premise GPU Cluster Managed by a Tailored Kubernetes System
+
+On the on-premise GPU cluster, we can launch pods with single P100 GPU.
+As we known, GPUs are faster for computing than CPUs and the size of
+CIFAR-10 is small to test the performance with GPUs. We use ImageNet with
+input shape (256,256,3) to train Resnet50, MobileNetV2, and an iamge
+compression model. The last model has less parameters tensors.
+
+Experiment parameters are:
 
 | Experiment parameter | Value    |
 | -- | --- |
 | Batch size | 64 |
 | Batches per task | 16 |
 | Images per task | 1024 |
-| Dataset | Imagenet |
+| Dataset | ImageNet |
 | Image shape | (256, 256, 3) |
+| Output classes| 100 |
 | Worker resource| cpu=8,gpu=1,memory=16000Mi,ephemeral-storage=1024Mi|
 
 ### ResNet50
 
-The number of trainable parameters in ResNet50 for cifar10 is 23,739,492.
-The number of trainable tensors is 214.
+There are also 214 trainable tensors in ResNet50 for ImageNet. But the
+model trainable parameters is 23,739,492 because there are 100 classes.
 
 | Workers   | speed | total task time  | allreduce time| tensor.numpy() time| apply_gradients |
 | --------- | ----- | --------------- | -------- | ------ | ---------- |
@@ -98,8 +123,8 @@ The number of trainable tensors is 214.
 
 ### MobileNetV2
 
-The number of trainable parameters in ResNet50 for cifar10 is 2,386,084.
-The number of trainable tensors is 158.
+For ImageNet dataset with 100 classes, there are also 158 trainable tensors in
+MobileNetV2 for ImageNet. And those tensors totally have 2,386,084 trainable parameters.
 
 | Workers   | speed | total task time  | allreduce time| tensor.numpy() time| apply_gradients |
 | --------- | ----- | --------------- | -------- | ------ | ---------- |
@@ -111,10 +136,13 @@ The number of trainable tensors is 158.
 
 ### An Image Compression Model with Conv2DTranspose
 
-On GPU cluster, we also use an image compression model to test performance.
-The model has less trainable tensors and more parameters than MobileNetV2.
-The number of trainable parameters is 11,238,723 and the number of trainable
-tensors is 34.
+From the ResNet50 and MobileNetV2 experiments, we can find that
+the speed-up of MobileNetV2 is better than ResNet50. MobileNetV2 has less
+parameter tensors and parameters. In order to research what plays an important
+role in speed-up, we also do exmperiments with an image compression model.
+This model has less parameter tensors and more parameters than MobileNetV2.
+For ImageNet dataset, there are 34 parameter tensors in the model and those
+tensors totally has 11,238,723 parameters.
 
 | Workers   | speed | total task time  | allreduce time| tensor.numpy() time| apply_gradients |
 | --------- | ----- | --------------- | -------- | ------ | ---------- |
@@ -124,8 +152,20 @@ tensors is 34.
 
 ![Image Compression](https://user-images.githubusercontent.com/18071380/88752707-3059b200-d18d-11ea-84bd-1db670c64924.png)
 
-For the above experiments of GPU, we can get summaries:
+For the above experiments of GPU, we find that the speed-up ratio is better if
+the number of parameter tensors is less. Because the computation on GPUs is
+very fast for different models. The communication is the  bottleneck. So the
+model complexity has little effect on the speed-up. The number of parameter
+tensor is less, the communication is more light, so the speed-up is better.
 
-1. The speed-up ratio is better if the number of trainable weights is less.
-2. The speed-up ratio is better if the computation is more complex.
-3. It is weird that `apply_gradients` is so slow.
+## Conclusion
+
+To improve the performance of FTlib AllReduce in ElasticDL, we need to
+optimize the communication. In order to improve the communication efficiency,
+we can:
+
+1. Interleave communication and computation.
+2. Merge small tensors into a big tensor to reduce communication overhead.
+
+However, Horovod has implemented those two methods to improve performance.
+We can research how to use Horovod in ElasticDL.
