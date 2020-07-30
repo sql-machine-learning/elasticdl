@@ -29,32 +29,15 @@ one is the initialized `__init__` function, and the other is the `forward` funct
 
 ```python
 class Net(nn.Module):
-    def __init__(self):
-        super(CNN, self).__init__()
-        self.conv1 = nn.Sequential(         # input shape (1, 28, 28)
-            nn.Conv2d(
-                in_channels=1,              # input height
-                out_channels=16,            # n_filters
-                kernel_size=5,              # filter size
-                stride=1,                   # filter movement/step
-                padding=2,                  # if want same width and length of this image after Conv2d, padding=(kernel_size-1)/2 if stride=1
-            ),                              # output shape (16, 28, 28)
-            nn.ReLU(),                      # activation
-            nn.MaxPool2d(kernel_size=2),    # choose max value in 2x2 area, output shape (16, 14, 14)
-        )
-        self.conv2 = nn.Sequential(         # input shape (16, 14, 14)
-            nn.Conv2d(16, 32, 5, 1, 2),     # output shape (32, 14, 14)
-            nn.ReLU(),                      # activation
-            nn.MaxPool2d(2),                # output shape (32, 7, 7)
-        )
-        self.out = nn.Linear(32 * 7 * 7, 10)   # fully connected layer, output 10 classes
-
+       def __init__(self):
+        super().__init__()
+        self.conv1=nn.Conv2d(1,6,5)
+        self.conv2=nn.Conv2d(6,16,5)
+ 
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = x.view(x.size(0), -1)           # flatten the output of conv2 to (batch_size, 32 * 7 * 7)
-        output = self.out(x)
-        return output
+        x=F.max_pool2d(F.relu(self.conv1(x)),2)
+        x=F.max_pool2d(F.relu(self.conv2(x)),2)
+        return x
 net = Net()
 ```
 
@@ -133,32 +116,86 @@ The master node plays the master role in two aspects.
 
 ### 1. Simple and Standardized Model Method
 
-In a distributed deep learning system, several workers need to be started and monitored.
-It is necessary to split the training data to the workers and to update the model
-by integrating the gradients calculated by each worker, which involves communication
-and synchronization. Fault-tolerant design is also an issue that must be considered.
+ElasticDL requests users to provide several functions, including `forward`,
+`loss`, `optimizer` and `feed`. [Here](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist/mnist_subclass.py)
+is a MNIST model written in TensorFlow Keras API. The `feed` customizes the conversion
+process of training data to PyTorch model input.
 
-A common solution is to provide a distributed programming framework for jobs so
-that users only need to fill in the business logic like cloze, and distributed
-computing processes such as communication, synchronization, and fault tolerance
-are completed by the code of the framework.
+In PyTorch, we follow the same interface design, and the following is a detailed
+example.
 
-After completing the definition of class, the user is required to fill in the
-`forward`, `loss`, `optimizer` and `feed`functions.
-`forward` defines the forward calculation process of deep learning.The back propagation
-process is automatically derived by PyTorch.The `loss` function returns the loss
-function used during model training. The `optimizer` function returns the optimizer
-used during model training.`feed` customizes the conversion process of training data
-to PyTorch model input.
+```python
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = nn.Sequential(         # input shape (1, 28, 28)
+            nn.Conv2d(
+                in_channels=1,              # input height
+                out_channels=16,            # n_filters
+                kernel_size=5,              # filter size
+                stride=1,                   # filter movement/step
+                padding=2,                  # if want same width and length of this image after Conv2d, padding=(kernel_size-1)/2 if stride=1
+            ),                              # output shape (16, 28, 28)
+            nn.ReLU(),                      # activation
+            nn.MaxPool2d(kernel_size=2),    # choose max value in 2x2 area, output shape (16, 14, 14)
+        )
+        self.conv2 = nn.Sequential(         # input shape (16, 14, 14)
+            nn.Conv2d(16, 32, 5, 1, 2),     # output shape (32, 14, 14)
+            nn.ReLU(),                      # activation
+            nn.MaxPool2d(2),                # output shape (32, 7, 7)
+        )
+        self.out = nn.Linear(32 * 7 * 7, 10)   # fully connected layer, output 10 classes
 
-The programming of all these functions only requires knowledge of the PyTorch API,
-and no background knowledge of distributed training is required. After writing, users
-can use small data for debugging and verification on a single machine. If it passes,
-it can be submitted to the Kubernetes cluster for distributed fault-tolerant large-scale
-training without any code modification.
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = x.view(x.size(0), -1)           # flatten the output of conv2 to (batch_size, 32 * 7 * 7)
+        output = self.out(x)
+        return output
+net = Net()
+```
 
-The specific model building method can refer to this
-[mnist_subclass.py](https://github.com/sql-machine-learning/elasticdl/blob/develop/model_zoo/mnist/mnist_subclass.py).
+In addition to defining models, users also need to specify `feed`, `loss`, `optimizer`
+functions.
+
+```python
+def loss(labels, predictions):
+    labels = tf.reshape(labels, [-1])
+    func = nn.CrossEntropyLoss()
+    return func(predictions, labels)
+    )
+
+def optimizer(lr=0.1):
+    return torch.optim.Adam(cnn.parameters(), lr)
+
+
+# how to make PyTorch DataLoad works with ElasticDL master, need improvment
+def feed(dataset, mode, _):
+    def _parse_data(record):
+        if mode == Mode.PREDICTION:
+            feature_description = {
+                "image": Data.DataLoader(dataset=train_data, batch_size=BATCH_SIZE, shuffle=True)
+            }
+        else:
+            feature_description = {
+                "image": Data.DataLoader(dataset=train_data, batch_size=BATCH_SIZE, shuffle=True),
+                "label": Data.DataLoader(dataset=train_label, batch_size=BATCH_SIZE, shuffle=True),
+            }
+        r = tf.io.parse_single_example(record, feature_description)
+        features = {
+            "image": tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
+        }
+        if mode == Mode.PREDICTION:
+            return features
+        else:
+            return features, tf.cast(r["label"], tf.int32)
+
+    dataset = dataset.map(_parse_data)
+
+    if mode == Mode.TRAINING:
+        dataset = dataset.shuffle(buffer_size=1024)
+    return dataset
+```
 
 
 ### 2. Load Data from Task
@@ -202,32 +239,32 @@ while (True):
         push_gradients()
 ```
 
-#### Gradient information acquisition
+#### Gradient Information Acquisition
 
 The advanced API in PyTorch such as `torch.optim` is not available,we had to
 update the value of each parameter by name, and manually zero the gradient of
 each parameter.
-
 `torch.no_grad()` context is necessary because we don't want to record these
 operations in the next gradient calculation.
-To go further, we can use `model.parameters()` and `model.zero_grad()` (defined
-by PyTorch for `nn.Module`) to make these steps more concise, and there will be
-no errors of forgetting some parameters, especially when we build a complex model:
 
-```python
-with torch.no_grad():
-    for param in model.parameters(): 
-        param -= param.grad * lr
-    model.zero_grad()
-```
-
-#### Work with Parameter Server Client
+#### Aggregating Gradients under Parameter Server Strategy
 
 This [document](https://github.com/sql-machine-learning/elasticdl/blob/develop/docs/designs/parameter_server.md)
 describes the design of a distributed parameter server for ElasticDL.
 
+`PSClient` provides several util functions, like `push_gradients` and `pull_dense_parameters`,
+we could directly use them.
+
+```python
+with torch.no_grad():
+    grads = [param.grad.numpy() for param in model.parameters()]
+    self.ps_client.push_gradients(grads)
+```
+
 #### Model Parameter Access from Worker
 
+In the parameter server strategy, the workers pull the latest parameters from
+the PS before forwarding and push gradients to the PS after backward.
 Each PS pod has a RPC server to provide RPC services. Workers use RPC services
 to pull model parameters. `pull_variable` service is to pull all non-embedding
 parameters. `pull_embedding_vector` service is to pull embedding vectors
