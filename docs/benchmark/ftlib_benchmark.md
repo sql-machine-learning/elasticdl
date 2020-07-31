@@ -28,7 +28,7 @@ The experiment parameters are:
 | Output classes| 10 |
 | Worker resource| cpu=0.3,memory=2048Mi,ephemeral-storage=1024Mi|
 
-### ResNet50
+### ResNet50 with CIFAR-10 on a Minikube Cluster
 
 There are 214 parameter tensors in ResNet50 for CIFAR-10 dataset. And
 those tensor totally have 23,555,082 trainable parameters.
@@ -38,7 +38,7 @@ those tensor totally have 23,555,082 trainable parameters.
 | 1  |  -  | 3.1 images/s  |  1  |
 | 2  | 10: 1 | 5.65 images/s | 1.82 |
 
-### MobileNetV2
+### MobileNetV2 with CIFAR-10 on a Minikube Cluster
 
 There are 158 parameter tensors in ResNet50 for CIFAR-10 dataset. And
 those tensors have 2,236,682 trainable parameters.
@@ -65,7 +65,7 @@ assign more CPUs and memory for the worker. The experiment parameters are:
 | Output classes| 10 |
 | Worker resource| cpu=4,memory=8192Mi,ephemeral-storage=1024Mi|
 
-### ResNet50
+### ResNet50 with CIFAR-10 on an On-premise CPU Cluster
 
 | Workers   | communication   |  Speed   |  Speedup Ratio |
 | -- | --------------------------- | -------- | ------ |
@@ -74,7 +74,7 @@ assign more CPUs and memory for the worker. The experiment parameters are:
 | 4  | 25% | 68.4 images/s  | 2.56 |
 | 8  | 32% | 123 images/s | 4.61 |
 
-### MobileNetV2
+### MobileNetV2 with CIFAR-10 on an On-premise CPU Cluster
 
 | Workers   | communication   |  Speed   |  Speedup Ratio |
 | -- | --------------------------- | -------- | ------ |
@@ -88,7 +88,7 @@ the model is more complex. Because the computation on CPUs is
 very slow. The computation is the bottleneck on the CPU cluster. So, the
 the speed-up of ResNet50 is better than MobileNetV2.
 
-### On-premise GPU Cluster Managed by a Tailored Kubernetes System
+## On-premise GPU Cluster Managed by a Tailored Kubernetes System
 
 On the on-premise GPU cluster, we can launch pods with single P100 GPU.
 As we known, GPUs are faster for computing than CPUs and the size of
@@ -108,7 +108,7 @@ Experiment parameters are:
 | Output classes| 100 |
 | Worker resource| cpu=8,gpu=1,memory=16000Mi,ephemeral-storage=1024Mi|
 
-### ResNet50
+### ResNet50 with ImageNet on an On-premise GPU Cluster
 
 There are also 214 trainable tensors in ResNet50 for ImageNet. But the
 model trainable parameters is 23,739,492 because there are 100 classes.
@@ -121,7 +121,7 @@ model trainable parameters is 23,739,492 because there are 100 classes.
 
 ![Resnet50](https://user-images.githubusercontent.com/18071380/88752262-0fdd2800-d18c-11ea-8b37-83ba5662e53d.png)
 
-### MobileNetV2
+### MobileNetV2 with ImageNet on an On-premise GPU Cluster
 
 For ImageNet dataset with 100 classes, there are also 158 trainable tensors in
 MobileNetV2 for ImageNet. And those tensors totally have 2,386,084 trainable parameters.
@@ -134,7 +134,7 @@ MobileNetV2 for ImageNet. And those tensors totally have 2,386,084 trainable par
 
 ![MobileNetV2](https://user-images.githubusercontent.com/18071380/88752339-43b84d80-d18c-11ea-9139-c907975a7aeb.png)
 
-### An Image Compression Model with Conv2DTranspose
+### An Image Compression Model with Conv2DTranspose with ImageNet
 
 From the ResNet50 and MobileNetV2 experiments, we can find that
 the speed-up of MobileNetV2 is better than ResNet50. MobileNetV2 has less
