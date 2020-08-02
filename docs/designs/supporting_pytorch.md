@@ -204,14 +204,12 @@ The contents of each task are as follows:
 `TODO: Make DataLoader works with task, more details will be added.`
 
 There is a tutorial about [feed](https://github.com/sql-machine-learning/elasticdl/blob/dc4b2901d651cea08cdb2825a6829c97294e4652/model_zoo/mnist/mnist_subclass.py#L64)
-in TensorFlow.
-
-Pytorch's input design is different from TensorFlow. This is a [dataset tutorial](https://github.com/sql-machine-learning/elasticdl/wiki/Dataset-About-PyTorch)
+in TensorFlow.Pytorch's input design is different from TensorFlow. This is a
+[dataset tutorial](https://github.com/sql-machine-learning/elasticdl/wiki/Dataset-About-PyTorch)
 for producing input data for a model.
 
 Let's take a brief look at the data processing in ElasticDL. This helps us
 understand how to make data for the PyTorch model.
-
 Pay attention to the code in `worker.py`.
 
 ```python
