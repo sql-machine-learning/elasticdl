@@ -224,6 +224,18 @@ def get_dataset():
     return ds
 ```
 
+#### Three methods about PyTorch data loading in ElasticDL
+
+1. Reuse the `dataset` of TensorFlow. Convert `dataset` from tf eager tensor to `NumPy`
+and send it to the training loop when sending batch data to PyTorch.
+2. We read all the data from a task and saved it into a list, then created a `dataset`
+from a `list`. In this case, a `dataset` and `dataloader` need to be created for
+each task.
+3. There a `gen` function that yields `data`. We can create an `IterableDataset` from this `gen`
+function, and sends the `data` to the training loop
+
+The rest of this section concerns the case with the third methods.
+
 `_dataset_fn()` converts string types to corresponding numeric types because
 `data_reader.read_records` gets string data.
 In support of PyTorch, we will turn the `dataset` into a list while turning the
@@ -235,7 +247,7 @@ data_list = list(dataset.as_numpy_iterator())
 ```
 
 `_dataset_fn` is defined by the user and make `numpy` data into the index `list`
-for `Custom_Datasets`, which is integrated from an abstract class `torch.utils.data.Dataset`.
+for `Custom_Datasets`, which is inherited from an abstract class `torch.utils.data.Dataset`.
 
 ```python
 def dataset_fn(data_list, mode, _):
