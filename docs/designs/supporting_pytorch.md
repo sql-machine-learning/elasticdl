@@ -234,7 +234,7 @@ each task.
 3. There a `gen` function that yields `data`. We can create an `IterableDataset` from this `gen`
 function, and sends the `data` to the training loop
 
-The rest of this section concerns the case with the third methods.
+The rest of this section concerns the case with the second methods.
 
 `_dataset_fn()` converts string types to corresponding numeric types because
 `data_reader.read_records` gets string data.
