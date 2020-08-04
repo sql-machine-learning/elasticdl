@@ -11,9 +11,8 @@
 
 ## WHY
 
-ElasticDL is an elastic and k8s native distributed deep learning framework. It
-targets to work with a deep learning framework smoothly. This document is going
-to show readers the design of how it works with PyTorch.
+This design is about enhancing ElasticDL to support PyTorch, in addition to
+TensorFlow Eager Execution.
 There are three reasons to support the PyTorch framework.
 
 1. EDL is an optional item for users of PyTorch.
@@ -88,7 +87,7 @@ def dataset_fn(data_list, mode, _):
             label_list.append(data_list[28 * 28:28 * 28 + 1])
             data_list = data_list[28 * 28:]
         return feature_list, label_list
-        
+
 class Custom_Datasets(Dataset):
     def __init__(self, tf_dataset,dataset_fn, transform=None):
         self.transform = transform
@@ -324,16 +323,17 @@ class Custom_Datasets(Dataset):
 ### Training Loop about PyTorch in ElasticDL
 
 The process of training a deep learning model locally:([Completed example mnist pytorch](https://github.com/sql-machine-learning/elasticdl/wiki/Summary-on-Supporting-PyTorch#example-about-mnist-pytorch))
-1. Define the network: Define the `Class` of the network, declare the instance of
-   the network net=Net().
-2. Define the optimizer: `optimizer=optim.xxx(net.parameters()，lr=xxx)`
-3. Define the loss function: `compute_loss=nn.MSELoss()`
+
+1. Define the model: Define the model as a `Net`-derived class,
+and create an instance `net=Net()`.
+2. Create the optimizer: `optimizer=optim.xxx(net.parameters()，lr=xxx)`
+3. Choose the loss function: `compute_loss=nn.MSELoss()`
 4. training loop:
-    * Clear the gradient information in the optimizer: `optimizer.zero_grad()`
-    * Forward: `output=net(input)`
-    * Calculate the loss: `loss=compute_loss(target,output)`
-    * Backward: `loss.backward()`
-    * Update parameters: `optimizer.step()`
+    1. Clear the gradient information in the optimizer: `optimizer.zero_grad()`
+    2. Forward: `output=net(input)`
+    3. Calculate the loss: `loss=compute_loss(target,output)`
+    4. Backward: `loss.backward()`
+    5. Update parameters: `optimizer.step()`
 
 In the MapReduce framework, users only need to cloze two functions: map and reduce.
 All the user needs to do is fill in a few functions just like cloze fills in the
