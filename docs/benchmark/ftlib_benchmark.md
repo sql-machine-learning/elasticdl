@@ -1,6 +1,6 @@
 ## Benchmark of FTlib AllReduce
 
-We benchmarked FTlib AllReduce with ElasticDL on three Kubernetes clusters:
+We benchmark FTlib AllReduce with ElasticDL on three Kubernetes clusters:
 
 1. a Minikube cluster,
 2. an on-premise CPU cluster managed by the tailored Kubernetes system, and
@@ -32,7 +32,7 @@ The experiment parameters are:
 ### ResNet50 with CIFAR-10 on the Minikube Cluster
 
 There are 214 parameter tensors in ResNet50 for CIFAR-10 dataset. And
-those tensor totally have 23,555,082 (89.8 MB) trainable parameters.
+those tensors totally have 23,555,082 (89.8 MB) trainable parameters.
 
 | Workers |  computation/communication  |  Speed   |  Speedup Ratio |
 | -- | --------------------------- | -------- | ------ |
@@ -42,7 +42,7 @@ those tensor totally have 23,555,082 (89.8 MB) trainable parameters.
 ### MobileNetV2 with CIFAR-10 on a Minikube Cluster
 
 There are 158 parameter tensors in ResNet50 for CIFAR-10 dataset. And
-those tensors have 2,236,682 (8.5MB) trainable parameters, about Luckily.
+those tensors have 2,236,682 (8.5MB) trainable parameters.
 
 | Workers   |  computation/communication  |  Speed   |  Speedup Ratio |
 | -- | --------------------------- | -------- | ------ |
@@ -93,11 +93,11 @@ the more sustainable the speedup.
 
 ## On-premise GPU Cluster Managed by a Tailored Kubernetes System
 
-On the on-premise GPU cluster, we can launch pods with single P100 GPU.
+On the on-premise GPU cluster, we can launch the pod with a single P100 GPU.
 As we known, GPUs are faster for computing than CPUs and the size of
 CIFAR-10 is small to test the performance with GPUs. We use ImageNet with
 input shape (256, 256, 3) to train Resnet50, MobileNetV2, and an image
-compression model. The last model has less parameters tensors.
+compression model. The last model has less parameter tensors.
 
 Experiment parameters are:
 
