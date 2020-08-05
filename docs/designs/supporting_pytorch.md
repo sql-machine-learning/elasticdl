@@ -28,6 +28,7 @@ It is necessary to provide a distributed framework for users of PyTorch.
 3. The use of PyTorch under the ElasticDL framework is also simple.
 
 ```python
+# PyTorch
 class CustomModel(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -99,6 +100,7 @@ class Custom_Datasets(Dataset):
 ```
 
 ```python
+# TensorFlow
 class CustomModel(tf.keras.Model):
     def __init__(self, channel_last=True):
         super(CustomModel, self).__init__(name="mnist_model")
@@ -130,7 +132,6 @@ class CustomModel(tf.keras.Model):
         x = self._dense(x)
         return x
 
-
 def loss(labels, predictions):
     labels = tf.reshape(labels, [-1])
     return tf.reduce_mean(
@@ -139,10 +140,8 @@ def loss(labels, predictions):
         )
     )
 
-
 def optimizer(lr=0.01):
     return tf.optimizers.SGD(lr)
-
 
 def dataset_fn(dataset, mode, _):
     def _parse_data(record):
@@ -169,7 +168,6 @@ def dataset_fn(dataset, mode, _):
     if mode == Mode.TRAINING:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
-
 ```
 
 ## HOW
