@@ -6,9 +6,9 @@
   - Introduction
 - HOW
   - The Architecture of ElasticDL
-    - Input with DataLoader
-    - Training Loop about PyTorch in ElasticDL
-    - Transmission of Gradient/Parameter Information
+  - Input with DataLoader
+  - Training Loop about PyTorch in ElasticDL
+  - Transmission of Gradient/Parameter Information
 
 ## WHY
 
