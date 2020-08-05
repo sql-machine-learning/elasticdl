@@ -119,8 +119,8 @@ model trainable parameters is 23,739,492 (90.56) because there are 100 classes.
 | Workers   | speed | speed-up ratio |total task time  | allreduce time| tensor.numpy() time| apply_gradients |
 | --------- | ----- | ------------- |--------------- | -------- | ------ | ---------- |
 | 1 (local) | 145 images/s| 1| 6.1s  |  - | - |  4.16s |
-| 2  | 148 images/s| 0.88 | 13.76s | 10.36s | 5.04s | 1.35s |
-| 4  | 276 images/s| 1.84 | 18s | 14.67s |  5.14s | 1.30s |
+| 2  | 148 images/s| 1.02 | 13.76s | 10.36s | 5.04s | 1.35s |
+| 4  | 276 images/s| 1.90 | 18s | 14.67s |  5.14s | 1.30s |
 
 When we run the model locally, CPU timing is not accurate
 because of async behavior of GPU ops.
@@ -143,9 +143,9 @@ trainable parameters.
 
 | Workers   | speed | speed-up ratio | total task time  | allreduce time| tensor.numpy() time| apply_gradients |
 | --------- | ----- | -------- | --------------- | -------- | ------ | ---------- |
-| 1 (local) | 169 images/s | 1 | 6.06s  |  - | - |  5.59s |
-| 2  | 246 images/s | 1.45 | 8.34s  |   7.25026 | 5.79s | 0.6s |
-| 4  | 390 images/s | 2.32 | 10.2029s | 8.9s |  5.78s | 0.71s |
+| 1 (local) | 150 images/s | 1 | 6.06s  |  - | - |  5.59s |
+| 2  | 246 images/s | 1.64 | 8.34s  |   7.25026 | 5.79s | 0.6s |
+| 4  | 390 images/s | 2.6 | 10.2029s | 8.9s |  5.78s | 0.71s |
 
 Compared with Horovod, we list speeds of ElasticDL and Horovod using
 different workers.
