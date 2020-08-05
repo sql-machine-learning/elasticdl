@@ -118,14 +118,22 @@ model trainable parameters is 23,739,492 (90.56) because there are 100 classes.
 
 | Workers   | speed | speed-up ratio |total task time  | allreduce time| tensor.numpy() time| apply_gradients |
 | --------- | ----- | ------------- |--------------- | -------- | ------ | ---------- |
-| 1 (local) | 168 images/s| 1| 6.1s  |  - | - |  4.16s |
+| 1 (local) | 145 images/s| 1| 6.1s  |  - | - |  4.16s |
 | 2  | 148 images/s| 0.88 | 13.76s | 10.36s | 5.04s | 1.35s |
-| 4  | 228 images/s| 1.35 | 18s | 14.67s |  5.14s | 1.30s |
+| 4  | 276 images/s| 1.84 | 18s | 14.67s |  5.14s | 1.30s |
 
 When we run the model locally, CPU timing is not accurate
 because of async behavior of GPU ops.
 
-![Resnet50](https://user-images.githubusercontent.com/18071380/88752262-0fdd2800-d18c-11ea-8b37-83ba5662e53d.png)
+Further, we use Horovod to test the performance with the same dataset and model.
+
+| Workers | ElasticDL Speed|  Horovod Speed|
+| ------- | --------------- | ---------------|
+| 1 (local)| 145 images/s |  145 images/s |
+| 2 |  148 images/s | 185 images/s |
+| 4 |  276 images/s|  364 images/s |
+
+![Resnet50](./data/resnet50_performance.jpg)
 
 ### MobileNetV2 with ImageNet on an On-premise GPU Cluster
 
@@ -137,9 +145,18 @@ trainable parameters.
 | --------- | ----- | -------- | --------------- | -------- | ------ | ---------- |
 | 1 (local) | 169 images/s | 1 | 6.06s  |  - | - |  5.59s |
 | 2  | 246 images/s | 1.45 | 8.34s  |   7.25026 | 5.79s | 0.6s |
-| 4  | 401 images/s | 2.32 | 10.2029s | 8.9s |  5.78s | 0.71s |
+| 4  | 390 images/s | 2.32 | 10.2029s | 8.9s |  5.78s | 0.71s |
 
-![MobileNetV2](https://user-images.githubusercontent.com/18071380/88752339-43b84d80-d18c-11ea-9139-c907975a7aeb.png)
+Compared with Horovod, we list speeds of ElasticDL and Horovod using
+different workers.
+
+| Workers | ElasticDL Speed|  Horovod Speed|
+| ------- | --------------- | ---------------|
+| 1 (local)| 150 images/s |  150 images/s |
+| 2 |  246 images/s | 198 images/s |
+| 4 |  390 images/s|  394 images/s |
+
+![MobileNetV2](./data/mobilenet_performance.jpg)
 
 ### An Image Compression Model with Conv2DTranspose with ImageNet
 
