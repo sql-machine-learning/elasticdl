@@ -389,13 +389,28 @@ to pull model parameters. `pull_variable` function is to pull all non-embedding
 parameters. `pull_embedding_vector` service is to pull embedding vectors
 specified by an embedding layer name and a list of discrete IDs.
 
-```python
+```proto
 service PServer{
-    rpc pull_variable(PullModelRequest) returns (PullModelResponse);
+    # pull trainable tensorflow variables created by Keras layers
+    rpc pull_variable(PullVariableRequest) returns (PullVariableResponse);
+
+    # pull embedding vectors in ElasticDL embedding layers
+    # Do we need to create a new message `PullEmbeddingVectorRequest` rather than use `Tensor`?
     rpc pull_embedding_vector(PullEmbeddingVectorRequest) returns (Tensor);
+
+    # push trainable tensorflow variables and meta info for ElasticDL embedding layers
+    rpc push_model(Model) returns (google.protobuf.Empty);
+
     rpc push_gradient(PushGradientRequest) returns (PushGradientResponse);
+
+    # PS to recover embedding vectors after relaunch
+    rpc get_replica(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
+
+    # PS replica synchronization
+    rpc synchronize_embedding(SynchronizeEmbeddingRequest) returns (SynchronizeEmbeddingResponse);
 }
 ```
+
 A worker computes gradients in each training iteration, containing gradients
 for non-embedding parameters and some embedding vectors if applicable. The worker
 partitions these gradients using their corresponding parameter names or discrete
