@@ -1,10 +1,11 @@
 # ElasticDL Work Together with PyTorch
 
 ## Catalog
+
 - WHY
-    - Introduction
+  - Introduction
 - HOW
-    - The Architecture of ElasticDL
+  - The Architecture of ElasticDL
     - Input with DataLoader
     - Training Loop about PyTorch in ElasticDL
     - Transmission of Gradient/Parameter Information
@@ -25,15 +26,6 @@ distributed method but also supports AllReduce.
 2. There are more users of PyTorch than TensorFlow in academia.
 It is necessary to provide a distributed framework for users of PyTorch.
 3. The use of PyTorch under the ElasticDL framework is also simple.
-
-<table>
-<tr>
-<th>PyTorch</th>
-<th>TensorFlow</th>
-</tr>
-<tr>
-<td>
-<pre>
 
 ```python
 class CustomModel(nn.Module):
@@ -105,11 +97,6 @@ class Custom_Datasets(Dataset):
     def __len__(self):
         return len(self.data_list)
 ```
-
-</pre>
-</td>
-<td>
-<pre>
 
 ```python
 class CustomModel(tf.keras.Model):
@@ -185,11 +172,6 @@ def dataset_fn(dataset, mode, _):
 
 ```
 
-</pre>
-</td>
-</tr>
-</table>
-
 ## HOW
 
 ### The Architecture of ElasticDL
@@ -233,11 +215,12 @@ the TODO queue and sends them to a specific living worker via gRPC.
 **The worker calls the user-defined PyTorch program.**
 A task received by a worker includes minibatches. For each task, the worker opens
 the corresponding file or table, and then does the following:
-* Read a mini-batch training data.
-* Call the user-defined forward function with the local model to calculate the cost.
+
+- Read a mini-batch training data.
+- Call the user-defined forward function with the local model to calculate the cost.
 If the model is large, some parameters may pull from the parameter server.
-* Perform backward calculation to get the gradient.
-* The worker pushes gradients to the parameter server from time to time and obtains
+- Perform backward calculation to get the gradient.
+- The worker pushes gradients to the parameter server from time to time and obtains
 global model parameters from the parameter server.
 
 ### Input with DataLoader
@@ -270,6 +253,7 @@ def get_dataset():
 `data_reader.read_records` gets string data.
 
 Three methods about PyTorch data loading in ElasticDL:
+
 1. Reuse the `dataset` of TensorFlow. Convert `dataset` from tf eager tensor to `NumPy`
 and send it to the training loop when sending batch data to PyTorch.
 2. We read all the data from a task and saved it into a list, then created a `dataset`
@@ -278,9 +262,9 @@ each task.
 3. There a `gen` function that yields `data`. We can create an `IterableDataset`
 from this `gen` function and sends the `data` to the training loop.
 
-The rest of this section concerns the case with the second method. In support of PyTorch,
-we will turn the `dataset` into a list while turning the data inside into a `NumPy`
-format.
+The rest of this section concerns the case with the second method. In support of
+PyTorch, we will turn the `dataset` into a list while turning the data inside into
+a `NumPy` format.
 `_dataset_fn` is defined by the user and make `NumPy` data into the index `list`
 for `Custom_Datasets`, which is the subclass of an abstract class `torch.utils.data.Dataset`.
 
@@ -346,7 +330,7 @@ is a MNIST model written in TensorFlow Keras API. The `feed` customizes the conv
 process of training data to PyTorch model input.
 In PyTorch, we follow the same interface design,
 users also need to specify `loss`, `optimizer`, `feed`.
-Examples are given at the beginning. 
+Examples are given at the beginning.
 
 ```python
 # Pseudocode about training loop:
