@@ -17,16 +17,18 @@ set -e
 
 sh scripts/build.sh
 
-(
-    cd /tmp/elasticdl
-    go test -v -cover ./...
-)
+#(
+#    cd /tmp/elasticdl
+#    go test -v -cover ./...
+#)
 
 # Run Python unittests
-pytest elasticdl/python/tests \
-    elasticdl_preprocessing/tests \
-    elasticdl_client/tests \
-    --cov=elasticdl/python \
-    --cov-report=xml
+
+#pytest elasticdl/python/tests \
+#    elasticdl_preprocessing/tests \
+#    elasticdl_client/tests \
+#    --cov=elasticdl/python \
+#    --cov-report=xml
+python elasticdl/python/tests/pserver_servicer_test.py PserverServicerTest.test_pull_embedding_vectors
 mkdir -p ./build
 mv coverage.xml ./build
