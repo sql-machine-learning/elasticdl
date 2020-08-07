@@ -29,6 +29,6 @@ sh scripts/build.sh
 #    elasticdl_client/tests \
 #    --cov=elasticdl/python \
 #    --cov-report=xml
-python elasticdl/python/tests/pserver_servicer_test.py PserverServicerTest.test_pull_embedding_vectors
+pytest elasticdl/python/tests/pserver_servicer_test.py::PserverServicerTest::test_pull_embedding_vectors
 mkdir -p ./build
 mv coverage.xml ./build
