@@ -84,7 +84,7 @@ TensorFlow programs; instead, the master process of an ElasticDL job calls
 Kubernetes API to start workers and parameter servers; it also watches events
 like process/pod killing and reacts to such events to realize fault-tolerance.
 
-In short, ElasticDL enhances TensorFlow with fault-tolerance and elastic
+In, ElasticDL enhances TensorFlow with fault-tolerance and elastic
 scheduling in the case that you have a Kubernetes cluster. We provide a tutorial
 showing how to set up a Kubernetes cluster on Google Cloud and run ElasticDL
 jobs there.  We respect TensorFlow's native distributed computing feature, which
