@@ -263,9 +263,6 @@ def create_pserver(
         channel = build_channel(addr)
         channels.append(channel)
 
-    for channel in channels:
-        grpc.channel_ready_future(channel).result()
-
     pservers = []
     for port in ports:
         args = PserverArgs(
@@ -278,6 +275,10 @@ def create_pserver(
         pserver = ParameterServer(args)
         pserver.prepare()
         pservers.append(pserver)
+
+    for channel in channels:
+        grpc.channel_ready_future(channel).result()
+
     return ports, channels, pservers
 
 
