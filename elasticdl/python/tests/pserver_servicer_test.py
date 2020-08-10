@@ -14,8 +14,8 @@
 import os
 import tempfile
 import unittest
-import grpc
 
+import grpc
 import numpy as np
 import tensorflow as tf
 from google.protobuf import empty_pb2
@@ -81,7 +81,7 @@ class PserverServicerTest(unittest.TestCase):
         self._parameters = pserver.parameters
         self._server = pserver.server
         self._stub = elasticdl_pb2_grpc.PserverStub(self._channel)
-        
+
         grpc.channel_ready_future(self._channel).result()
 
         self._lr = 0.1
