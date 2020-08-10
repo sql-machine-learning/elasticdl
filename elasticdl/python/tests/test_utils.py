@@ -256,12 +256,15 @@ def create_iris_csv_file(size, columns, temp_dir=None):
 def create_pserver(
     model_zoo_path, model_def, grads_to_wait, use_async, num_ps_pods
 ):
-    ports = [i + 12346 for i in range(num_ps_pods)]
+    ports = [i + 12345 for i in range(num_ps_pods)]
     channels = []
     for port in ports:
         addr = "localhost:%d" % port
         channel = build_channel(addr)
         channels.append(channel)
+
+    for channel in channels:
+        grpc.channel_ready_future(channel).result()
 
     pservers = []
     for port in ports:
