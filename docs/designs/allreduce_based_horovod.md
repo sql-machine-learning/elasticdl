@@ -1,4 +1,4 @@
-# Design for Elastic AllReduce-based Training Support based on Horovod
+# Design for Elastic AllReduce-based Training Support Based on Horovod
 
 This document describes the design for supporting AllReduce-based distributed
 training based on Horovod in ElasticDL.
@@ -7,45 +7,26 @@ training based on Horovod in ElasticDL.
 
 We have developed elastic AllReduce based on FTlib in ElasticDL.
 From the [benchmark report](../benchmark/ftlib_benchmark.md), we can
-find that the performance of FTlib is worse than Horovod with the
-same backend Gloo. Because there are many optimizations like
-[Tensor Fusion](https://horovod.readthedocs.io/en/latest/tensor-fusion_include.html)
-in Horovod to improve performance. When we use Horovod with Gloo backend,
-the training process cannot crash when the number of workers
-changes. The workers can rebuild consensus to continue training.
-So, we can use Horovod to implement elastic AllReduce-based Training
-in ElasticDL.
-
+find that the performance of FTlib for ResNet50 is worse than Horovod.
 What's more, it is not stable to build consensus by gossip protocol in FTlib
 like the [issue](https://github.com/sql-machine-learning/elasticdl/issues/2192#issuecomment-664096185).
-In ElasticDL, we can utilize master to notify workers to build
-the consensus when the number of workers changes.
 
-So, the design describes how to use ElasticDL master to build a consensus of workers
-and use Horovod with Gloo backend to implement elastic AllReduce.
+FTlib uses Gloo to implement elastic AllReduce because the worker process
+can catch the exception from Gloo and not exit if the AllReduce operator
+fails. Horovod also can use Gloo as backend. What's more, there are many
+optimizations like [Tensor Fusion](https://horovod.readthedocs.io/en/latest/tensor-fusion_include.html)
+in Horovod to improve performance. So, the performance of Horovod for ResNet50 is
+better than FTlib because ResNet50 has may small tensors.
 
-## Initialize the Horovod Context with Gloo Backend
+Horovod provides Python APIs for Gloo and we can use those APIs in ElasticDL
+to implement elastic AllReduce.
 
-A Horovod job contains a driver and workers. The driver does not participate
-in the model training and is responsible for setting worker hosts.
-When we use Horovod with Gloo, the steps to initialize Gloo context are:
+## ElasticDL Re-initialize Horovod When the Number of Workers Changes
 
-1. The driver gets worker hosts and slots from the start command or a discovery
-script.
-1. The driver creates a `RendezvousServer` and set worker hosts into the KVStore
-implemented by HTTP for Gloo.
-1. The driver starts worker processes to execute the training loop.
-1. The worker calls `hvd.init` initialize the Gloo context for AllReduce.
-
-If the worker hosts change, we can re-create a `RendezvousServer` and reset
-worker hosts into the KVStore. Then the worker calls `hvd.shutdown` and `hvd.init`
-to re-initialize the Gloo context.
-
-## ElasticDL Re-initialize the Horovod Context When the Worker Number changes
-
-In ElasticDL, there is a master to manage workers. The master can get all worker
-hosts and detect whether the number of workers changes. So, we can use the master to create a
-`RendezvousServer` similar to the driver in Horovod. After the master launches
+When using Horovod with Gloo backend, we need to create a `RendezvousServer`
+and put worker hosts into the KVStore implemented by HTTP for Gloo.
+In ElasticDL, there is a master to manage workers. The master can get
+all worker hosts and create a `RendezvousServer`. After the master launches
 workers, it can set worker hosts into KVStore of Horovod for Gloo.
 
 ```python
@@ -65,9 +46,9 @@ rendezvous.init(host_alloc_plan)
 Then, the worker can call `hvd.init` to initialize the Gloo context for
 AllReduce.
 
-When the master finds the worker number changes, it can re-create a new
-`RendezvousServer` and notify workers to re-initialize the Gloo Context.
-In the Kubernetes cluster, the ElasticDL worker number may change for the
+When the master finds the number of workers changes, it can re-create a new
+`RendezvousServer` and notify workers to re-initialize Horovod.
+In the Kubernetes cluster, the number of workers may change for the
 following reasons:
 
 1. Some workers fail because of preemption.
