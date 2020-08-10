@@ -35,10 +35,6 @@ from elasticdl_client.common.constants import DistributionStrategy
 import sys
 sys.path.append('../')
 from worker.worker_pytorch import Worker_pytorch
-<<<<<<< HEAD
-=======
-# from elasticdl.python.worker.my_worker_pytorch import Worker_pytorch
->>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
 import torch
 
 class WorkerPSInteractionTest(unittest.TestCase):
@@ -132,26 +128,11 @@ class WorkerPSInteractionTest(unittest.TestCase):
         return worker_results
 
     def test_compare_onebatch_train_pytorch(self):
-<<<<<<< HEAD
         model_def = "mnist.mnist_subclass_pytorch.CustomModel"
         self._create_pserver(model_def, 2)
         images, labels = get_random_batch(self._batch_size)
         images = torch.unsqueeze(torch.from_numpy(images.numpy()), dim=1).float()
         labels = torch.from_numpy(labels.numpy()).type(torch.int64)
-=======
-        print("===========test_compare_onebatch_train begin===========")
-        # model_def = "mnist.mnist_functional_api.custom_model"
-        model_def = "mnist.mnist_subclass_pytorch.CustomModel"
-        self._create_pserver(model_def, 2)
-        images, labels = get_random_batch(self._batch_size)
-        images = torch.from_numpy(images.numpy())
-        # labels = torch.from_numpy(labels.numpy()).type(torch.long)
-        # images = torch.unsqueeze(images, dim=1).type(torch.long)
-        labels = torch.from_numpy(labels.numpy()).type(torch.int64)
-        images = torch.unsqueeze(images, dim=1).float()
-        print("images:",images.size(),images.dtype)  # torch.Size([16, 1, 28, 28])
-        print("labels:",labels.size(),labels.dtype)  # torch.Size([16])
->>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
         
         # TODO(yunjian.lmh): test optimizer wrapper
         arguments = [
@@ -170,7 +151,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
         ]
         args = parse_worker_args(arguments)
 
-<<<<<<< HEAD
         tf.random.set_seed(22)
 
         worker = Worker_pytorch(args, ps_client=PSClient(self._channels))
@@ -180,11 +160,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         worker.report_gradient(w_grads)
 
         tf.random.set_seed(22)
-=======
-        # tf.keras.backend.clear_session()
-        tf.random.set_seed(22)
 
-        # worker = Worker(args, ps_client=PSClient(self._channels))
         worker = Worker_pytorch(args, ps_client=PSClient(self._channels))
         
         worker._run_model_call_before_training(images)
@@ -196,7 +172,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
         # tf.keras.backend.clear_session()
         tf.random.set_seed(22)
 
->>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
         (
             model,
             dataset_fn,
@@ -218,113 +193,22 @@ class WorkerPSInteractionTest(unittest.TestCase):
             custom_data_reader="custom_data_reader",
             callbacks="callbacks",
         )
-<<<<<<< HEAD
+
         # opt_fn(model).zero_grad()
         for name, parms in model.named_parameters():
             parms = torch.zeros_like(parms)
-=======
-        """
-        with tf.GradientTape() as tape:
-            output = model.call(images, training=True)
-            labels = tf.reshape(labels, [-1])
-            loss = loss_fn(labels, output)
-        grads = tape.gradient(loss, model.trainable_variables)
-        opt_fn().apply_gradients(zip(grads, model.trainable_variables))
-        """
-        opt_fn(model).zero_grad()
 
->>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
         output = model.forward(images)
         labels = torch.reshape(labels, [-1])
         loss = loss_fn(labels, output)
         loss.backward()
-
-<<<<<<< HEAD
         for name, parms in model.named_parameters():
             if parms.requires_grad:
                 ps_id = string_to_id(name, len(self._channels))
                 ps_v = self._pservers[ps_id].parameters.get_non_embedding_param(
                     name)
                 np.testing.assert_array_equal(ps_v.numpy(), parms.data.numpy())
-=======
-        loss_tmp = []
-        for name, parms in model.named_parameters():
-            if parms.requires_grad:
-                ps_id = string_to_id(name, len(self._channels))
-                # loss_tmp[name] = parms
-                ps_v = self._pservers[ps_id].parameters.get_non_embedding_param(
-                    name)
-                np.testing.assert_array_equal(ps_v.numpy(), parms.data.numpy())
-        print("===========test_compare_onebatch_train end===========")  
-        
 
-
-    """
-    def test_compare_mnist_train(self):
-        print("===========test_compare_mnist_train begin===========")
-        model_def = "mnist.mnist_functional_api.custom_model"
-        self._create_pserver(model_def, 2)
-        db, test_db = get_mnist_dataset(self._batch_size)
-        stop_step = 20
-
-        self._create_worker(1)
-        worker_results = self._worker_train(
-            0, train_db=db, test_db=test_db, stop_step=stop_step
-        )
-
-        tf.keras.backend.clear_session()
-        tf.random.set_seed(22)
-
-        acc_meter = tf.keras.metrics.Accuracy()
-
-        (
-            model,
-            dataset_fn,
-            loss_fn,
-            opt_fn,
-            eval_metrics_fn,
-            prediction_outputs_processor,
-            create_data_reader_fn,
-            callbacks_list,
-        ) = get_model_spec(
-            model_zoo=self._model_zoo_path,
-            model_def=model_def,
-            dataset_fn="dataset_fn",
-            model_params=None,
-            loss="loss",
-            optimizer="optimizer",
-            eval_metrics_fn="eval_metrics_fn",
-            prediction_outputs_processor="PredictionOutputsProcessor",
-            custom_data_reader="custom_data_reader",
-            callbacks="callbacks",
-        )
-        local_results = []
-        for step, (x, y) in enumerate(db):
-            with tf.GradientTape() as tape:
-                out = model.call(x, training=True)
-                ll = loss_fn(y, out)
-            grads = tape.gradient(ll, model.trainable_variables)
-            opt_fn().apply_gradients(zip(grads, model.trainable_variables))
-
-            if step % 20 == 0:
-                for (x, y) in test_db:
-                    out = model.call(x, training=False)
-                    acc_meter.update_state(tf.argmax(out, axis=1), y)
-
-                local_results.append(
-                    (float(ll.numpy()), float(acc_meter.result().numpy()))
-                )
-                acc_meter.reset_states()
-
-            if step > stop_step:
-                break
-
-        for w, l in zip(worker_results, local_results):
-            self.assertTupleEqual(w, l)
-        print("===========test_compare_mnist_train end===========")
-    """
-
->>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
 
 if __name__ == "__main__":
     unittest.main()
