@@ -90,6 +90,19 @@ class Worker_pytorch(object):
         """
         self._args = args
         self.logger = get_logger("Worker", level=args.log_level.upper())
+<<<<<<< HEAD
+=======
+
+        if set_parallelism:
+            # Explicitly setting the parallelism will avoid multi-process hangs
+            # Maybe due to an unknown bug in Tensorflow?
+            # Must called before TensorFlow is initialized.
+            # Not set_parallelism by default to make unittests happy.
+            num_threads = os.cpu_count()
+            tf.config.threading.set_inter_op_parallelism_threads(num_threads)
+            tf.config.threading.set_intra_op_parallelism_threads(num_threads)
+
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
         self._mc = master_client
         self._ps_client = ps_client
         self._distribution_strategy = args.distribution_strategy
@@ -153,6 +166,13 @@ class Worker_pytorch(object):
                 service_name=args.collective_communicator_service_name
             )
 
+<<<<<<< HEAD
+=======
+        # self._model_handler = ModelHandler.get_model_handler(
+        #      self._distribution_strategy, checkpoint_dir=args.checkpoint_dir
+        # )
+        # model_inst = self._model_handler.get_model_to_train(model_inst)
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
         self.set_model(model_inst)
 
         self._model_version = -1
@@ -183,6 +203,22 @@ class Worker_pytorch(object):
         self._non_embed_grads = {}
         self._evaluation_result = {}
 
+<<<<<<< HEAD
+=======
+        # saved_model_exporter = SavedModelExporter(
+        #     self._task_data_service, self._dataset_fn, self._model_handler
+        # )
+        # Place default callbacks at the head to execute them firstly
+        # self._callbacks_list.callbacks.insert(0, saved_model_exporter)
+        # self._callbacks_list.set_model(model_inst)
+        # set_callback_parameters(
+        #     self._callbacks_list,
+        #     batch_size=args.minibatch_size,
+        #     saved_model_path=args.output,
+        #     checkpoint_path=args.checkpoint_dir,
+        # )
+
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
     # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
     def set_model(self, model_inst):
@@ -370,6 +406,7 @@ class Worker_pytorch(object):
             and column name for embedding column.
             Value is the EmbeddingAndIds tuple.
         """
+<<<<<<< HEAD
         embedding_name_values = []
         return embedding_name_values
 
@@ -379,6 +416,40 @@ class Worker_pytorch(object):
         for i, v in enumerate(self._non_embed_vars.items()):    
             grad = Tensor(v[0], gradients[i].numpy(), None)
             grads.append(grad)
+=======
+
+        embedding_name_values = []
+        # for layer in self._embedding_layers:
+        #     embedding_name_values.append(
+        #         (layer.embedding_weight_name, layer.embedding_and_ids)
+        #     )
+        # for column in self._embedding_columns:
+        #     embedding_name_values.append(
+        #         (column.embedding_weight_name, column.embedding_and_ids)
+        #     )
+
+        return embedding_name_values
+
+    def report_gradient_to_ps(self, gradients):
+
+        self._timing.start_record_time("report_gradient")
+
+        grads = []
+        # for i, v in enumerate(self._non_embed_vars.values()):
+        #     if isinstance(gradients[i], tf.IndexedSlices):
+        #         grad = Tensor(
+        #             v.name,
+        #             gradients[i].values.numpy(),
+        #             gradients[i].indices.numpy(),
+        #         )
+        #     else:
+        #         grad = Tensor(v.name, gradients[i].numpy(), None)
+        #     grads.append(grad)
+        for i, v in enumerate(self._non_embed_vars.items()):    
+            grad = Tensor(v[0], gradients[i].numpy(), None)
+            grads.append(grad)
+
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
         edl_grads = []
         edl_embedding_name_values = self._collect_edl_embedding_name_values()
         if edl_embedding_name_values:
@@ -401,8 +472,14 @@ class Worker_pytorch(object):
                     "does not match the number of its output tensor %d."
                     % (len(edl_embedding_grads), bet_number)
                 )
+<<<<<<< HEAD
         # learning_rate = K.get_value(self._model.optimizer.lr)
         learning_rate = np.float32(0.001)
+=======
+        learning_rate = K.get_value(self._model.optimizer.lr)
+        # learning_rate = self._model.optimizer.param_groups[0]["lr"]
+        print("learning_rate:",type(learning_rate))
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
         accepted, max_version = self._ps_client.push_gradients(
             grads, edl_grads, learning_rate, self._model_versions_from_ps,
         )
@@ -419,11 +496,23 @@ class Worker_pytorch(object):
         return True, None
 
     def report_gradient(self, grads):
+<<<<<<< HEAD
         if (
             self._distribution_strategy
             == DistributionStrategy.PARAMETER_SERVER
         ):
             print("================self.report_gradient_to_ps(grads)================")
+=======
+        if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
+            self.report_gradient_locally(grads)
+            self._update_local_model()
+            self._model_version += 1
+            return True, None
+        elif (
+            self._distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
+        ):
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
             return self.report_gradient_to_ps(grads)
         else:
             raise RuntimeError(
@@ -431,6 +520,22 @@ class Worker_pytorch(object):
                 "distribution strategy"
             )
 
+<<<<<<< HEAD
+=======
+    def report_prediction_outputs(self, predictions):
+        if self._prediction_outputs_processor:
+            self._prediction_outputs_processor.process(
+                predictions, self._worker_id
+            )
+        else:
+            self.logger.warning(
+                "prediction_outputs_processor is not "
+                "defined in the model definition. Prediction outputs "
+                "are not processed."
+            )
+        return True
+
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
     def _run_model_call_before_training(self, features):
         """Call `self._model.call` before training for two things:
             * Create variables and report to ps if not created.
@@ -442,8 +547,12 @@ class Worker_pytorch(object):
 
         self._non_embed_vars = {}
         for name, param in self._model.named_parameters():
+<<<<<<< HEAD
             if param.requires_grad:
                 self._non_embed_vars[name] = param.data
+=======
+            self._non_embed_vars[name] = param.data
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
         # name: <class 'str'>
         # data: <class 'torch.Tensor'>
         
@@ -484,6 +593,108 @@ class Worker_pytorch(object):
 
         return list(self._non_embed_vars.values()) + bets
 
+<<<<<<< HEAD
+=======
+    def training_process(self, features, labels):
+        """
+        training for models with elasticdl.layers.embedding does not
+        support tf.function decorator
+        """
+        if self._train_eagerly:
+            return self.training_process_eagerly(features, labels)
+        else:
+            return self.training_process_with_acceleration(features, labels)
+
+    @tf.function
+    def training_process_with_acceleration(self, features, labels):
+        return self.training_process_eagerly(features, labels)
+
+    def training_process_eagerly(self, features, labels):
+        with tf.GradientTape() as tape:
+            self._set_tape_for_embedding(tape)
+            outputs = self._model.call(features, training=True)
+            loss = self._loss(labels, outputs)
+            # Add regularization loss if any
+            if self._model.losses:
+                loss += tf.math.add_n(self._model.losses)
+        grads = tape.gradient(loss, self.get_trainable_items())
+        return loss, grads
+
+    @tf.function
+    def forward_process(self, features):
+        """Calculates model outputs in non-training mode."""
+        outputs = self._model.call(features, training=False)
+        return outputs
+
+    def _get_local_model_params(self):
+        return [v for v in self._non_embed_vars.values()]
+
+    @staticmethod
+    def _get_rank_of_broadcast_src_worker():
+        return 0
+
+    def _broadcast_model_params(self):
+        status = self._collective_communicator.barrier()
+        if status == CollectiveCommunicatorStatus.FAILED:
+            self.logger.warning("Failed to perform barrier operation")
+            return False
+        broadcast_root_worker_rank = self._get_rank_of_broadcast_src_worker()
+        model_params = self._get_local_model_params()
+        status = self._collective_communicator.tf_broadcast(
+            model_params, broadcast_root_worker_rank
+        )
+        if status == CollectiveCommunicatorStatus.FAILED:
+            self.logger.warning("Failed to broadcast model parameters")
+            return False
+        return True
+
+    def _calculate_grads_and_report_with_allreduce(self, grads):
+        self._timing.start_record_time("report_gradient")
+        if self._collective_communicator:
+            (
+                status,
+                averaged_grads,
+            ) = self._collective_communicator.tf_allreduce(grads)
+        else:
+            status = CollectiveCommunicatorStatus.SUCCEEDED
+            averaged_grads = grads
+        self._timing.end_record_time("report_gradient")
+        accepted = False
+        if status == CollectiveCommunicatorStatus.SUCCEEDED:
+            accepted, _ = self.report_gradient(averaged_grads)
+            if not accepted:
+                self.logger.warning("Failed to report the averaged gradients")
+        return accepted
+
+    def _collect_gradients_with_allreduce_robust(self, grads):
+        accepted = self._calculate_grads_and_report_with_allreduce(grads)
+        if not accepted:
+            start_time = time.time()
+            while not self._collective_communicator.is_initialized():
+                if (
+                    time.time() - start_time
+                    < DEFAULT_COMMUNICATOR_REINITIALIZING_TIMEOUT
+                ):
+                    self.logger.info(
+                        "(Re-)initializing the collective communicator..."
+                    )
+                    time.sleep(3)
+                else:
+                    self.logger.warning(
+                        "Failed to (re-)initializing the "
+                        "collective communicator"
+                    )
+                    return False
+            succeeded = self._broadcast_model_params()
+            if succeeded:
+                return self._calculate_grads_and_report_with_allreduce(grads)
+            else:
+                self.logger.warning("Failed to broadcast model parameters")
+                return False
+        else:
+            return True
+
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
     def _collect_gradients_without_allreduce(self, grads):
         accepted, min_model_version = self.report_gradient(grads)
         if accepted and self._get_model_steps > 1:
@@ -492,6 +703,10 @@ class Worker_pytorch(object):
         self._reset_embedding()
         return accepted, min_model_version
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
     def training_process_pytorch(self, features, labels):
         outputs = self._model(features)
         print("training_process_pytorch:")
@@ -529,6 +744,33 @@ class Worker_pytorch(object):
         else:
             return (*self._collect_gradients_without_allreduce(grads), loss)
 
+<<<<<<< HEAD
+=======
+    def _collect_evaluation_result(self, outputs, labels):
+        key = MetricsDictKey.MODEL_OUTPUT
+        if key not in self._evaluation_result:
+            outputs = {k: [v.numpy()] for k, v in outputs.items()}
+            self._evaluation_result[key] = outputs
+        else:
+            for k, v in outputs.items():
+                self._evaluation_result[key][k].append(v.numpy())
+        key = MetricsDictKey.LABEL
+        if key not in self._evaluation_result:
+            self._evaluation_result[key] = [labels.numpy()]
+        else:
+            self._evaluation_result[key].append(labels.numpy())
+
+    def _run_evaluation_task(self, features, labels):
+        outputs = self.forward_process(features)
+        if not isinstance(outputs, dict):
+            outputs = {MetricsDictKey.MODEL_OUTPUT: outputs}
+        self._collect_evaluation_result(outputs, labels)
+
+    def _run_prediction_task(self, features):
+        predictions = self.forward_process(features)
+        return self.report_prediction_outputs(predictions)
+
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
     def _process_minibatch(
         self,
         task_type,
@@ -542,6 +784,10 @@ class Worker_pytorch(object):
         self._timing.start_record_time("batch_process")
         for _ in range(self._max_minibatch_retry_num):
             if task_type == elasticdl_pb2.EVALUATION:
+<<<<<<< HEAD
+=======
+                self._run_evaluation_task(features, labels)
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
                 break
             elif task_type == elasticdl_pb2.TRAINING:
                 # TODO: optimize the logic to avoid unnecessary
@@ -567,6 +813,13 @@ class Worker_pytorch(object):
                 if accepted:
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
+<<<<<<< HEAD
+=======
+                if self._model_version != min_model_version:
+                    self.get_model()
+                accepted = self._run_prediction_task(features)
+                if accepted:
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
                     break
             else:
                 raise RuntimeError("Unrecognized task type, %s" % task_type)
@@ -578,6 +831,54 @@ class Worker_pytorch(object):
         self._timing.end_record_time("batch_process")
         return min_model_version
 
+<<<<<<< HEAD
+=======
+    def _process_eval_task(self, task):
+        """
+        Check if there are evaluation tasks and process the tasks if any.
+        Return:
+            A python bool indicating whether worker processed some evaluation
+            tasks.
+        """
+        self.logger.info("the evaluation task_id: %d" % task.task_id)
+
+        gen = self._task_data_service.get_dataset_gen(task)
+        if not gen:
+            return None
+
+        def create_dataset():
+            eval_dataset = tf.data.Dataset.from_generator(
+                gen, self._task_data_service.data_reader.records_output_types
+            )
+            eval_dataset = self._dataset_fn(
+                eval_dataset,
+                Mode.EVALUATION,
+                self._task_data_service.data_reader.metadata,
+            )
+            eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
+            return eval_dataset
+
+        with tf.device("/device:cpu:0"):
+            eval_dataset = create_dataset()
+        model_version = task.model_version
+        task_id = task.task_id
+        err_msg = ""
+        for dataset_batch in eval_dataset:
+            data_err_msg = self._process_minibatch_and_report(
+                dataset_batch, elasticdl_pb2.EVALUATION, model_version
+            )
+            if data_err_msg:
+                err_msg = data_err_msg
+                break
+        del eval_dataset
+        self._mc.report_evaluation_metrics(
+            model_outputs=self._evaluation_result[MetricsDictKey.MODEL_OUTPUT],
+            labels=self._evaluation_result[MetricsDictKey.LABEL],
+        )
+        self._mc.report_task_result(task_id, err_msg)
+        self._evaluation_result = {}
+
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
     def _process_train_end_callback_task_if_needed(self):
         train_end_task = self._task_data_service.get_train_end_callback_task()
         if train_end_task:
@@ -656,6 +957,10 @@ class Worker_pytorch(object):
                 Mode.TRAINING,
                 self._task_data_service.data_reader.metadata,
             )
+<<<<<<< HEAD
+=======
+            # dataset = dataset.batch(self._minibatch_size).prefetch(1)
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
             dataset = self._dataset_pytorch(dataset, self._minibatch_size)
             self._timing.start_record_time("task_process")
             for dataset_batch in dataset:
@@ -708,9 +1013,67 @@ class Worker_pytorch(object):
 
             self._process_train_end_callback_task_if_needed()
 
+<<<<<<< HEAD
+=======
+    def _evaluate_only(self):
+        """
+        Only evaluate the model on the worker.
+        """
+        evaluation_task_executed = False
+        # should not get model before finishing some training tasks, because
+        # variables of subclass models are not created.
+        is_model_got = False
+        while True:
+            task = self._mc.get_task(elasticdl_pb2.EVALUATION)
+            # no evaluation task in eval_todo of master
+            if not task.shard_name:
+                break
+            # get the latest model before processing eval tasks
+            if not is_model_got:
+                self.get_model()
+                is_model_got = True
+            self._process_eval_task(task)
+            evaluation_task_executed = True
+        return evaluation_task_executed
+
+    def _predict_only(self):
+        """
+        Only predict outputs of the model with data in tasks on the worker.
+        """
+        while True:
+            dataset = self._task_data_service.get_dataset()
+            if not dataset:
+                break
+            dataset = self._dataset_fn(
+                dataset,
+                Mode.PREDICTION,
+                self._task_data_service.data_reader.metadata,
+            )
+            dataset = dataset.batch(self._minibatch_size).prefetch(1)
+            for dataset_batch in dataset:
+                task = self._task_data_service.get_current_task()
+
+                err_msg = self._process_minibatch_and_report(
+                    dataset_batch, task.type, task.model_version
+                )
+                self._task_data_service.report_record_done(
+                    self._minibatch_size, err_msg
+                )
+            del dataset
+
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
     def run(self):
         """
         Fetches task from master with and performs training, evaluation
         or prediction.
         """
+<<<<<<< HEAD
         self._train_and_evaluate()
+=======
+        if self._job_type == JobType.PREDICTION_ONLY:
+            self._predict_only()
+        elif self._job_type == JobType.EVALUATION_ONLY:
+            self._evaluate_only()
+        else:
+            self._train_and_evaluate()
+>>>>>>> 9c0c4f8b99139d88f8688a1a2a27e1f9a8351dfb
