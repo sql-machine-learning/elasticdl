@@ -275,6 +275,10 @@ def create_pserver(
         pserver = ParameterServer(args)
         pserver.prepare()
         pservers.append(pserver)
+
+    for channel in channels:
+        grpc.channel_ready_future(channel).result()
+
     return ports, channels, pservers
 
 
@@ -337,8 +341,6 @@ def distributed_train_and_evaluate(
         get_module_file_path(model_zoo_path, model_def)
     ).__dict__
 
-    for channel in ps_channels:
-        grpc.channel_ready_future(channel).result()
     worker_arguments = [
         "--worker_id",
         "1",
