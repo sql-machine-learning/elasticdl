@@ -24,84 +24,27 @@ from elasticdl.python.common.constants import Mode
 
 class CustomModel(nn.Module):
     def __init__(self):
-        super(CustomModel, self).__init__()
-        self.conv1 = nn.Sequential(         # input shape (1, 28, 28)
-            nn.Conv2d(
-                in_channels=1,              # input height
-                out_channels=16,            # n_filters
-                kernel_size=5,              # filter size
-                stride=1,                   # filter movement/step
-                padding=2,                  # if want same width and length of this image after Conv2d, padding=(kernel_size-1)/2 if stride=1
-            ),                              # output shape (16, 28, 28)
-            nn.ReLU(),                      # activation
-            nn.MaxPool2d(kernel_size=2),    # choose max value in 2x2 area, output shape (16, 14, 14)
-        )
-        self.conv2 = nn.Sequential(         # input shape (16, 14, 14)
-            nn.Conv2d(16, 32, 5, 1, 2),     # output shape (32, 14, 14)
-            nn.ReLU(),                      # activation
-            nn.MaxPool2d(2),                # output shape (32, 7, 7)
-        )
-        self.out = nn.Linear(32 * 7 * 7, 10)   # fully connected layer, output 10 classes
-
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = x.view(x.size(0), -1)           # flatten the output of conv2 to (batch_size, 32 * 7 * 7)
-        output = self.out(x)
-        print("================pytorch_forward================")
-        return output
-
-    
-    # def __init__(self):
-    #     super(CustomModel,self).__init__()
-    #     self.conv1 = nn.Conv2d(1,32,3,padding = 1)
-    #     self.pool1 = nn.MaxPool2d(2,2)
-    #     self.conv2 = nn.Conv2d(32,64,3,padding = 1)
-    #     self.pool2 = nn.MaxPool2d(2,2)
-    #     self.conv3 = nn.Conv2d(64,128,3,padding = 1)
-    #     self.pool3 = nn.MaxPool2d(2,2)
+        super(CustomModel,self).__init__()
+        self.conv1 = nn.Conv2d(1,32,3,padding = 1)
+        self.pool1 = nn.MaxPool2d(2,2)
+        self.conv2 = nn.Conv2d(32,64,3,padding = 1)
+        self.pool2 = nn.MaxPool2d(2,2)
+        self.conv3 = nn.Conv2d(64,128,3,padding = 1)
+        self.pool3 = nn.MaxPool2d(2,2)
         
-    #     self.fc1 = nn.Linear(128*3*3,625)
-    #     self.fc2 = nn.Linear(625,10)
+        self.fc1 = nn.Linear(128*3*3,625)
+        self.fc2 = nn.Linear(625,10)
           
-    # def forward(self,x):
-    #     x = self.pool1(F.relu(self.conv1(x)))
-    #     x = self.pool2(F.relu(self.conv2(x)))
-    #     x = self.pool3(F.relu(self.conv3(x)))
-    #     x = x.view(-1,128*3*3)
-    #     x = F.relu(self.fc1(x))
-    #     x = self.fc2(x)
-    #     print("================pytorch_forward================")
-    #     return x
-    
+    def forward(self,x):
+        x = self.pool1(F.relu(self.conv1(x)))
+        x = self.pool2(F.relu(self.conv2(x)))
+        x = self.pool3(F.relu(self.conv3(x)))
+        x = x.view(-1,128*3*3)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
 
-    # def __init__(self):
-    #     super(CustomModel, self).__init__()
-    #     self.conv1 = nn.Sequential(
-    #         nn.Conv2d(
-    #             in_channels=1,
-    #             out_channels=32,
-    #             kernel_size=3,
-    #             stride=1,
-    #             padding=2,
-    #         ),
-    #         nn.ReLU(),
-    #         nn.MaxPool2d(kernel_size=2),
-    #     )
-    #     self.conv2 = nn.Sequential(
-    #         nn.Conv2d(32, 64, 3, 1, 2),
-    #         nn.ReLU(),
-    #         nn.MaxPool2d(2),
-    #     )
-    #     self.out = nn.Linear(64 * 7 * 7, 10)
+        return x
 
-    # def forward(self, x):
-    #     x = self.conv1(x)
-    #     x = self.conv2(x)
-    #     x = x.view(x.size(0), -1)
-    #     output = self.out(x)
-    #     print("================pytorch_forward================")
-    #     return output
 
 def prepare_data_for_a_single_file(file_object, filename):
     """
@@ -187,5 +130,3 @@ def dataset_pytorch(dataset, minibatch_size):
     iterable_dataset = CustomDataset(dataset)
     dataloader = DataLoader(dataset=iterable_dataset, batch_size=minibatch_size)
     return dataloader
-
-# args.framework 新参数表示用的tf还是pytorch
