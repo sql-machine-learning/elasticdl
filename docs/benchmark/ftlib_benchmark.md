@@ -125,7 +125,7 @@ model trainable parameters is 23,739,492 (90.56) because there are 100 classes.
 When we run the model locally, CPU timing is not accurate
 because of async behavior of GPU ops.
 
-Further, we use Horovod to test the performance with the same dataset and model.
+In addition to FTlib, we test the performance of Horovod with the same training job.
 
 | Workers | ElasticDL Speed|  Horovod Speed|
 | ------- | --------------- | ---------------|
@@ -147,10 +147,9 @@ trainable parameters.
 | 2  | 246 images/s | 1.64 | 8.34s  |   1.17s | 5.79s | 0.6s |
 | 4  | 390 images/s | 2.6 | 10.2029s | 3.12s |  5.78s | 0.71s |
 
-Compared with Horovod, we list speeds of ElasticDL and Horovod using
-different workers.
+The following table shows the speedup of Horovod v.s. ElasticDL+FTlib
 
-| Workers | ElasticDL Speed|  Horovod Speed|
+| Workers | ElasticDL+FTlib Speed|  Horovod Speed|
 | ------- | --------------- | ---------------|
 | 1 (local)| 150 images/s |  150 images/s |
 | 2 |  246 images/s | 198 images/s |
