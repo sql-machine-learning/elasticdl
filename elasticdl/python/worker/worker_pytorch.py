@@ -72,7 +72,7 @@ class CustomDataset(torch.utils.data.IterableDataset):
         return iter(self.data_source)
 
 
-class Worker_pytorch(object):
+class WorkerPytorch(object):
     """ElasticDL worker"""
 
     def __init__(

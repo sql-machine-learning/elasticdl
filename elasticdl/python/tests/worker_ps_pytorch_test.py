@@ -36,7 +36,7 @@ from test_utils import (
 import sys
 
 sys.path.append('../')
-from worker.worker_pytorch import Worker_pytorch
+from worker.worker_pytorch import WorkerPytorch
 import torch
 from torch.utils.data import Dataset, DataLoader
 
@@ -100,7 +100,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 DistributionStrategy.PARAMETER_SERVER,
             ]
             args = parse_worker_args(arguments)
-            worker = Worker_pytorch(args, ps_client=PSClient(self._channels))
+            worker = WorkerPytorch(args, ps_client=PSClient(self._channels))
             self._workers.append(worker)
 
     def _worker_train(
@@ -153,67 +153,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
         dataloader = DataLoader(dataset=iterable_dataset, batch_size=batch_size)
         return dataloader
 
-    """
-    # TODO: Need to fix bugs
-    def test_compare_mnist_train(self):
-        model_def = "mnist.mnist_subclass_pytorch.CustomModel"
-        self._create_pserver(model_def, 2)
-
-        # Reuse the tf style code to get dataset
-        db, test_db = get_mnist_dataset(self._batch_size)
-        db = self._dataset_pytorch(db, self._batch_size)
-        test_db = self._dataset_pytorch(test_db, self._batch_size)
-        stop_step = 20
-        self._create_worker(1)
-        worker_results = self._worker_train(
-            0, train_db=db, test_db=test_db, stop_step=stop_step
-        )
-
-        # TODO: acc_meter
-        acc_meter = tf.keras.metrics.Accuracy()
-
-        (
-            model,
-            dataset_fn,
-            loss_fn,
-            opt_fn,
-            eval_metrics_fn,
-            prediction_outputs_processor,
-            create_data_reader_fn,
-            callbacks_list,
-        ) = get_model_spec(
-            model_zoo=self._model_zoo_path,
-            model_def=model_def,
-            dataset_fn="dataset_fn",
-            model_params=None,
-            loss="loss",
-            optimizer="optimizer",
-            eval_metrics_fn="eval_metrics_fn",
-            prediction_outputs_processor="PredictionOutputsProcessor",
-            custom_data_reader="custom_data_reader",
-            callbacks="callbacks",
-        )
-        local_results = []
-        for step, (x, y) in enumerate(db):
-            output = model.forward(x)
-            labels = torch.reshape(y, [-1])
-            loss = loss_fn(labels, output)
-            loss.backward()
-
-            if step % 20 == 0:
-                for (x, y) in test_db:
-                    out = model.forward(x)
-                    acc_meter.update_state(tf.argmax(out, axis=1), y)
-                local_results.append(
-                    (float(loss.numpy()), float(acc_meter.result().numpy()))
-                )
-                acc_meter.reset_states()
-            if step > stop_step:
-                break
-        for w, l in zip(worker_results, local_results):
-            self.assertTupleEqual(w, l)
-
-    """
 
     def test_compare_onebatch_train_pytorch(self):
         model_def = "mnist.mnist_subclass_pytorch.CustomModel"
@@ -280,7 +219,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
                     name)
                 np.testing.assert_array_equal(ps_v.numpy(), parms.data.numpy())
         print("finish test_compare_onebatch_train_pytorch!")
-
 
 if __name__ == "__main__":
     unittest.main()
