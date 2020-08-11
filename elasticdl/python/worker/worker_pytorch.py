@@ -62,6 +62,9 @@ DEFAULT_COMMUNICATOR_REINITIALIZING_TIMEOUT = 20
 
 
 class CustomDataset(torch.utils.data.IterableDataset):
+    """
+    make CustomDataset for PyTorch
+    """
     def __init__(self, data):
         self.data_source = data
 
@@ -186,70 +189,10 @@ class Worker_pytorch(object):
         self._non_embed_grads = {}
         self._evaluation_result = {}
 
-    # TODO: Multiple tests are currently using this function to initialize
-    # self._model, where the initialization should be done via constructor.
     def set_model(self, model_inst):
         """Set model instance to worker."""
         self._model = model_inst
         self._model.float()
-        self._train_eagerly = False
-        # self._init_embeddings()
-
-    def _init_embedding_layer(self):
-        """
-        Init elasticdl.layers.embedding layer list and assign worker to them
-        """
-        self._embedding_layers = find_layer(self._model, Embedding)
-        if (
-                self._distribution_strategy
-                == DistributionStrategy.PARAMETER_SERVER
-        ):
-            for layer in self._embedding_layers:
-                layer.set_lookup_embedding_func(
-                    self._ps_client.pull_embedding_vectors
-                )
-
-    def _init_embedding_column(self):
-        self._embedding_columns = []
-        for layer in self._model.layers:
-            if isinstance(layer, tf.keras.layers.DenseFeatures):
-                for column in layer._feature_columns:
-                    if isinstance(column, feature_column.EmbeddingColumn):
-                        self._embedding_columns.append(column)
-                        self.logger.info(
-                            "Initialize ElasticDL EmbeddingColumn:{}".format(
-                                column.name
-                            )
-                        )
-
-        if (
-                self._distribution_strategy
-                == DistributionStrategy.PARAMETER_SERVER
-        ):
-            for column in self._embedding_columns:
-                column.set_lookup_embedding_func(
-                    self._ps_client.pull_embedding_vectors
-                )
-
-    def _check_name_conflict_of_embedding_layer_and_column(self):
-        if not self._embedding_layers or not self._embedding_columns:
-            return
-
-        embedding_layer_name_set = set(
-            [layer.name for layer in self._embedding_layers]
-        )
-        embedding_column_name_set = set(
-            [column.name for column in self._embedding_columns]
-        )
-        conflict_name_set = embedding_column_name_set.union(
-            embedding_layer_name_set
-        )
-        if conflict_name_set:
-            raise Exception(
-                "Name conflict between embedding layer and column: {}".format(
-                    conflict_name_set
-                )
-            )
 
     def _update_local_model(self):
         if not self._non_embed_grads:
@@ -297,100 +240,29 @@ class Worker_pytorch(object):
 
             # 3. Assign parameters to local model
             for k, v in dense_params.items():
-                # print("type(v):",type(v))
-                # self._non_embed_vars[k].assign(v)
                 self._non_embed_vars[k] = torch.from_numpy(v)
-
             self._model_version = max(self._model_versions_from_ps)
         self._timing.end_record_time("get_model")
 
-    def report_embedding_info(self):
-        # TODO(qijun): only support float32
-        infos = []
-        if self._embedding_layers:
-            for layer in self._embedding_layers:
-                infos.append(
-                    EmbeddingTableInfo(
-                        layer.embedding_weight_name,
-                        layer.output_dim,
-                        layer.embeddings_initializer,
-                        dtype_numpy_to_tensor(np.dtype("float32")),
-                    )
-                )
-
-        if self._embedding_columns:
-            for column in self._embedding_columns:
-                # TODO(brightcoder01): The initializer in embedding column is
-                # a variable initializer function. For embedding layer, it's a
-                # tf.keras.initializers. Keep aligned between these two.
-                infos.append(
-                    EmbeddingTableInfo(
-                        column.embedding_weight_name,
-                        column.dimension,
-                        Initializer.UNIFORM,
-                        dtype_numpy_to_tensor(np.dtype("float32")),
-                    )
-                )
-
-        self._ps_client.push_embedding_table_infos(infos)
-
-    def _collect_edl_embedding_name_values(self):
-        """
-        Collect the information of ElasticDL customized
-        embeddings such as EDL embedding layer and EDL embedding column.
-        Return:
-            An array of key-value pair.
-            Key is embedding names, layer name for embedding layer
-            and column name for embedding column.
-            Value is the EmbeddingAndIds tuple.
-        """
-        embedding_name_values = []
-        return embedding_name_values
-
     def report_gradient_to_ps(self, gradients):
+        """
+        report gradient in numpy
+        report learning_rate about PyTorch model optimizer
+        TODO: PS is based on TensorFlow, can not report learning_rat with PyTorch callback
+        """
         self._timing.start_record_time("report_gradient")
         grads = []
         for i, v in enumerate(self._non_embed_vars.items()):
             grad = Tensor(v[0], gradients[i].numpy(), None)
             grads.append(grad)
         edl_grads = []
-        edl_embedding_name_values = self._collect_edl_embedding_name_values()
-        if edl_embedding_name_values:
-            non_embed_vars_n = len(self._non_embed_vars)
-            edl_embedding_grads = gradients[non_embed_vars_n:]
-            bet_number = 0
-            for name, embedding_and_ids in edl_embedding_name_values:
-
-                for i in range(bet_number):
-                    grad = Tensor(
-                        name,
-                        edl_embedding_grads[i + bet_number].values.numpy(),
-                        edl_embedding_grads[i + bet_number].indices.numpy(),
-                    )
-                    edl_grads.append(grad)
-                bet_number += len(embedding_and_ids)
-            if len(edl_embedding_grads) != bet_number:
-                raise ValueError(
-                    "elasticdl.layers.embedding related gradient number %d "
-                    "does not match the number of its output tensor %d."
-                    % (len(edl_embedding_grads), bet_number)
-                )
-        # learning_rate = K.get_value(self._model.optimizer.lr)
-        learning_rate = np.float32(0.001)
+        learning_rate = 0.001
+        # learning_rate = self._model.optimizer.param_groups[0]["lr"]
         accepted, max_version = self._ps_client.push_gradients(
             grads, edl_grads, learning_rate, self._model_versions_from_ps,
         )
         self._timing.end_record_time("report_gradient")
         return accepted, max_version
-
-    def report_gradient_locally(self, grads):
-        if self._embedding_layers or self._embedding_columns:
-            raise ValueError(
-                "ElasticDL embedding layer is not supported when"
-                "reporting gradients locally"
-            )
-        self._non_embed_grads = grads[: len(self._non_embed_vars)]
-        return True, None
 
     def report_gradient(self, grads):
         if (
@@ -405,14 +277,10 @@ class Worker_pytorch(object):
             )
 
     def _run_model_call_before_training(self, features):
-        """Call `self._model.call` before training for two things:
-            * Create variables and report to ps if not created.
-            * Check whether there is an embedding layer that is called
-              more than once during one forward-pass.
         """
-        print("features.dtype:", features.dtype)  # torch.int64
+        before training: Create variables and report to ps if not created.
+        """
         _ = self._model.forward(features)
-
         self._non_embed_vars = {}
         for name, param in self._model.named_parameters():
             if param.requires_grad:
@@ -428,46 +296,15 @@ class Worker_pytorch(object):
                 self._non_embed_vars.keys()
             )
 
-    def get_trainable_items(self):
-        """
-        return all trainable variables list, including batch embedding
-        tensor (BET) if exists. take care to keep the same order as in
-        self.report_gradient()
-        """
-        bets = []
-        if self._embedding_layers:
-            for layer in self._embedding_layers:
-                bets.extend(
-                    [
-                        batch_embedding
-                        for (batch_embedding, _) in layer.embedding_and_ids
-                    ]
-                )
-
-        if self._embedding_columns:
-            for column in self._embedding_columns:
-                bets.extend(
-                    [
-                        batch_embedding
-                        for (batch_embedding, _) in column.embedding_and_ids
-                    ]
-                )
-
-        return list(self._non_embed_vars.values()) + bets
-
     def _collect_gradients_without_allreduce(self, grads):
         accepted, min_model_version = self.report_gradient(grads)
         if accepted and self._get_model_steps > 1:
             non_embed_vars_n = len(self._non_embed_vars)
             self._non_embed_grads = grads[:non_embed_vars_n]
-        self._reset_embedding()
         return accepted, min_model_version
 
     def training_process_pytorch(self, features, labels):
         outputs = self._model(features)
-        print("training_process_pytorch:")
-        print("type(outputs):", type(outputs), outputs.size())
-        print("type(labels):", type(labels), labels.size())
         loss = self._loss(labels, outputs)
         loss.backward()
 
@@ -505,7 +342,7 @@ class Worker_pytorch(object):
             min_model_version,
             train_with_local_model=False,
     ):
-        if self._need_embedding_layer_check or not self._var_created:
+        if not self._var_created:
             self._run_model_call_before_training(features)
         self._timing.start_record_time("batch_process")
         for _ in range(self._max_minibatch_retry_num):
@@ -546,15 +383,6 @@ class Worker_pytorch(object):
         self._timing.end_record_time("batch_process")
         return min_model_version
 
-    def _process_train_end_callback_task_if_needed(self):
-        train_end_task = self._task_data_service.get_train_end_callback_task()
-        if train_end_task:
-            self._callbacks_list.on_train_end()
-            self._task_data_service.clear_train_end_callback_task()
-            self._mc.report_task_result(
-                task_id=train_end_task.task_id, err_msg=""
-            )
-
     def _process_minibatch_and_report(
             self,
             dataset_batch,
@@ -562,14 +390,13 @@ class Worker_pytorch(object):
             model_version,
             train_with_local_model=False,
     ):
+        """
+        train task and report
+        """
         err_msg = ""
         try:
-            if self._job_type == JobType.PREDICTION_ONLY:
-                features = dataset_batch
-                labels = None
-            else:
-                features = dataset_batch[0]
-                labels = dataset_batch[1]
+            features = dataset_batch[0]
+            labels = dataset_batch[1]
             self._process_minibatch(
                 task_type,
                 features,
@@ -586,57 +413,44 @@ class Worker_pytorch(object):
             raise ex
         return err_msg
 
-    def _dataset_pytorch(self, dataset, minibatch_size):
-        dataset = list(dataset.as_numpy_iterator())
-        iterable_dataset = CustomDataset(dataset)
-        dataloader = DataLoader(dataset=iterable_dataset, batch_size=minibatch_size)
+    def _dataset_pytorch(self, dataset, batch_size):
+        """
+        _dataset_fn() builds dataset for TensorFlow
+        this func transforms dataset and set DataLoader for PyTorch
+        TODO: rewrite _dataset_fn() by IterableDataSet for PyTorch
+        """
+        dataset_list = []
+        for data_enum in list(dataset.as_numpy_iterator()):
+            shape_0 = data_enum[0].shape[0]
+            for i in range(shape_0):
+                dataset_list.append((data_enum[0][i:i + 1, ...], data_enum[1][i:i + 1, ...]))
+
+        iterable_dataset = CustomDataset(dataset_list)
+        dataloader = DataLoader(dataset=iterable_dataset, batch_size=batch_size)
         return dataloader
 
-    def _train_and_evaluate(self):
+    def _train(self):
         """
-        Train and evaluate the model on the worker
+        Train the model on the worker
+        _dataset_fn() is based on TensorFlow func, deal with the RecordIO data
+        TODO: rewrite _dataset_fn() to support PyTorch dataset
         """
-
-        # The worker needs to get model from PS if
-        # `train_with_local_model=False`. This happens when:
-        #     processing first minibatch
-        #     any evaluation task has been executed just before this minibatch
-        #     last minibatch is training task and failed
-        #     local_update_count >= worker._get_model_steps
-        # Otherwise, worker trains with local model, i.e.
-        # `train_with_local_model=True`
-        train_with_local_model = False
-
-        # Initialize `local_update_count=get_model_steps` in order to set
-        # `train_with_local_model` to False inside for-loop for the first
-        # minibatch.
-
         local_update_count = self._get_model_steps
         last_training_minibatch_failed = False
         evaluation_task_executed = False
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
-                self._process_train_end_callback_task_if_needed()
                 break
             dataset = self._dataset_fn(
                 dataset,
                 Mode.TRAINING,
                 self._task_data_service.data_reader.metadata,
             )
-            # dataset = dataset.batch(self._minibatch_size).prefetch(1)
             dataset = self._dataset_pytorch(dataset, self._minibatch_size)
+
             self._timing.start_record_time("task_process")
             for dataset_batch in dataset:
-                if self._job_type == JobType.TRAINING_WITH_EVALUATION:
-                    # Give the worker a chance to process an evaluation task
-                    # during training if the task exists
-                    evaluation_task_executed = (
-                        True
-                        if self._evaluate_only()
-                        else evaluation_task_executed
-                    )
-
                 task = self._task_data_service.get_current_task()
                 if (
                         evaluation_task_executed
@@ -669,16 +483,9 @@ class Worker_pytorch(object):
                     self._timing.report_timing(reset=True)
                     self._timing.start_record_time("task_process")
             del dataset
-            # New evaluation tasks may be created after this worker's
-            # training tasks are done, as other workers' may still
-            # have pending training tasks.
-            if self._job_type == JobType.TRAINING_WITH_EVALUATION:
-                evaluation_task_executed = self._evaluate_only()
-            self._process_train_end_callback_task_if_needed()
 
     def run(self):
         """
-        Fetches task from master with and performs training, evaluation
-        or prediction.
+        Fetches task from master with and performs training
         """
-        self._train_and_evaluate()
+        self._train()

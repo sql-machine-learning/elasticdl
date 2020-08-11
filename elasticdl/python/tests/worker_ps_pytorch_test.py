@@ -12,9 +12,9 @@
 # limitations under the License.
 
 import os
+import random
 import unittest
 from threading import Thread
-
 import numpy as np
 import tensorflow as tf
 
@@ -23,19 +23,31 @@ from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.hash_utils import int_to_id, string_to_id
 from elasticdl.python.common.model_utils import get_model_spec
 from elasticdl.python.ps.embedding_table import EmbeddingTable
-from test_utils import (
-    create_pserver,
-    get_frappe_dataset,
-    get_mnist_dataset,
-    get_random_batch,)
 from elasticdl.python.worker.ps_client import PSClient
 from elasticdl.python.worker.worker import Worker
 from elasticdl_client.common.constants import DistributionStrategy
 
+from test_utils import (
+    create_pserver,
+    get_frappe_dataset,
+    get_mnist_dataset,
+    get_random_batch, )
+
 import sys
+
 sys.path.append('../')
 from worker.worker_pytorch import Worker_pytorch
 import torch
+from torch.utils.data import Dataset, DataLoader
+
+
+class CustomDataset(torch.utils.data.IterableDataset):
+    def __init__(self, data):
+        self.data_source = data
+
+    def __iter__(self):
+        return iter(self.data_source)
+
 
 class WorkerPSInteractionTest(unittest.TestCase):
     def setUp(self):
@@ -46,10 +58,20 @@ class WorkerPSInteractionTest(unittest.TestCase):
         self._channels = []
         self._pservers = []
         self._workers = []
+        self._seed_torch()
 
     def tearDown(self):
         for pserver in self._pservers:
             pserver.server.stop(0)
+
+    def _seed_torch(self, seed=1029):
+        random.seed(seed)
+        os.environ['PYTHONHASHSEED'] = str(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
 
     def _create_pserver(self, model_def, num):
         self._ports, self._channels, self._pservers = create_pserver(
@@ -63,8 +85,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
     def _create_worker(self, worker_num):
         for i in range(worker_num):
-            tf.keras.backend.clear_session()
-            tf.random.set_seed(22)
             arguments = [
                 "--worker_id",
                 i,
@@ -80,11 +100,11 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 DistributionStrategy.PARAMETER_SERVER,
             ]
             args = parse_worker_args(arguments)
-            worker = Worker(args, ps_client=PSClient(self._channels))
+            worker = Worker_pytorch(args, ps_client=PSClient(self._channels))
             self._workers.append(worker)
 
     def _worker_train(
-        self, worker_id, train_db, test_db, stop_step, use_tf_function=False
+            self, worker_id, train_db, test_db, stop_step
     ):
         worker = self._workers[worker_id]
         acc_meter = tf.keras.metrics.Accuracy()
@@ -92,14 +112,8 @@ class WorkerPSInteractionTest(unittest.TestCase):
         for step, (x, y) in enumerate(train_db):
             if step == 0:
                 worker._run_model_call_before_training(x)
-
             worker.get_model()
-            if use_tf_function:
-                w_loss, w_grads = worker.training_process_with_acceleration(
-                    x, y
-                )
-            else:
-                w_loss, w_grads = worker.training_process_eagerly(x, y)
+            w_loss, w_grads = worker.training_process_pytorch(x, y)
             worker.report_gradient(w_grads)
 
             if step % 20 == 0:
@@ -127,13 +141,88 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 break
         return worker_results
 
+
+    def _dataset_pytorch(self, dataset, batch_size):
+        dataset_list = []
+        for data_enum in list(dataset.as_numpy_iterator()):
+            shape_0 = data_enum[0].shape[0]
+            for i in range(shape_0):
+                dataset_list.append((data_enum[0][i:i + 1, ...], data_enum[1][i:i + 1, ...]))
+
+        iterable_dataset = CustomDataset(dataset_list)
+        dataloader = DataLoader(dataset=iterable_dataset, batch_size=batch_size)
+        return dataloader
+
+    """
+    # TODO: Need to fix bugs
+    def test_compare_mnist_train(self):
+        model_def = "mnist.mnist_subclass_pytorch.CustomModel"
+        self._create_pserver(model_def, 2)
+
+        # Reuse the tf style code to get dataset
+        db, test_db = get_mnist_dataset(self._batch_size)
+        db = self._dataset_pytorch(db, self._batch_size)
+        test_db = self._dataset_pytorch(test_db, self._batch_size)
+        stop_step = 20
+        self._create_worker(1)
+        worker_results = self._worker_train(
+            0, train_db=db, test_db=test_db, stop_step=stop_step
+        )
+
+        # TODO: acc_meter
+        acc_meter = tf.keras.metrics.Accuracy()
+
+        (
+            model,
+            dataset_fn,
+            loss_fn,
+            opt_fn,
+            eval_metrics_fn,
+            prediction_outputs_processor,
+            create_data_reader_fn,
+            callbacks_list,
+        ) = get_model_spec(
+            model_zoo=self._model_zoo_path,
+            model_def=model_def,
+            dataset_fn="dataset_fn",
+            model_params=None,
+            loss="loss",
+            optimizer="optimizer",
+            eval_metrics_fn="eval_metrics_fn",
+            prediction_outputs_processor="PredictionOutputsProcessor",
+            custom_data_reader="custom_data_reader",
+            callbacks="callbacks",
+        )
+        local_results = []
+        for step, (x, y) in enumerate(db):
+            output = model.forward(x)
+            labels = torch.reshape(y, [-1])
+            loss = loss_fn(labels, output)
+            loss.backward()
+
+            if step % 20 == 0:
+                for (x, y) in test_db:
+                    out = model.forward(x)
+                    acc_meter.update_state(tf.argmax(out, axis=1), y)
+                local_results.append(
+                    (float(loss.numpy()), float(acc_meter.result().numpy()))
+                )
+                acc_meter.reset_states()
+            if step > stop_step:
+                break
+        for w, l in zip(worker_results, local_results):
+            self.assertTupleEqual(w, l)
+
+    """
+
     def test_compare_onebatch_train_pytorch(self):
         model_def = "mnist.mnist_subclass_pytorch.CustomModel"
         self._create_pserver(model_def, 2)
+
         images, labels = get_random_batch(self._batch_size)
         images = torch.unsqueeze(torch.from_numpy(images.numpy()), dim=1).float()
         labels = torch.from_numpy(labels.numpy()).type(torch.int64)
-        
+
         # TODO(yunjian.lmh): test optimizer wrapper
         arguments = [
             "--worker_id",
@@ -150,27 +239,13 @@ class WorkerPSInteractionTest(unittest.TestCase):
             DistributionStrategy.PARAMETER_SERVER,
         ]
         args = parse_worker_args(arguments)
-
-        tf.random.set_seed(22)
-
         worker = Worker_pytorch(args, ps_client=PSClient(self._channels))
         worker._run_model_call_before_training(images)
         worker.get_model()
         w_loss, w_grads = worker.training_process_pytorch(images, labels)
         worker.report_gradient(w_grads)
 
-        tf.random.set_seed(22)
-
-        worker = Worker_pytorch(args, ps_client=PSClient(self._channels))
-        
-        worker._run_model_call_before_training(images)
-        worker.get_model()
-        w_loss, w_grads = worker.training_process_pytorch(images, labels)
-        # w_loss, w_grads = worker.training_process_eagerly(images, labels)
-        worker.report_gradient(w_grads)
-
-        # tf.keras.backend.clear_session()
-        tf.random.set_seed(22)
+        del worker
 
         (
             model,
@@ -194,10 +269,6 @@ class WorkerPSInteractionTest(unittest.TestCase):
             callbacks="callbacks",
         )
 
-        # opt_fn(model).zero_grad()
-        for name, parms in model.named_parameters():
-            parms = torch.zeros_like(parms)
-
         output = model.forward(images)
         labels = torch.reshape(labels, [-1])
         loss = loss_fn(labels, output)
@@ -208,6 +279,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 ps_v = self._pservers[ps_id].parameters.get_non_embedding_param(
                     name)
                 np.testing.assert_array_equal(ps_v.numpy(), parms.data.numpy())
+        print("finish test_compare_onebatch_train_pytorch!")
 
 
 if __name__ == "__main__":
