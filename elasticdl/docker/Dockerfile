@@ -3,6 +3,7 @@ ARG BASE_IMAGE
 
 FROM ${BASE_IMAGE} as dev
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
+ARG HOROVOD_COMMIT_ID="3108a24"
 
 COPY elasticdl/docker/bashrc /etc/bash.bashrc
 RUN chmod a+rx /etc/bash.bashrc
@@ -91,9 +92,15 @@ RUN cd /root/ftlib && python -m pip install --quiet -r requirements.txt
 RUN cd /root/ftlib/ftlib/consensus/gossip && bash ./gen_shared_lib.sh
 RUN cp -r /root/ftlib/ftlib /usr/local/lib/python3.6/dist-packages/ftlib
 
-ENV HOROVOD_PATH /tmp/horovod
+# The latest package of Horovod does not support elastic training,
+# so we need to git clone and install it using source codes.
+ENV HOROVOD_PATH /tmp/${HOROVOD_COMMIT_ID}
 RUN cd /tmp \
-        && git clone --recursive https://github.com/horovod/horovod.git
+        && git clone --recursive https://github.com/horovod/horovod.git \
+        -b master ${HOROVOD_COMMIT_ID}
 
-RUN cd ${HOROVOD_PATH} && HOROVOD_WITH_TENSORFLOW=1 HOROVOD_WITH_PYTORCH=1  \
-    python setup.py install
+RUN cd ${HOROVOD_PATH} && HOROVOD_WITHOUT_MPI=1 \
+        HOROVOD_WITHOUT_MXNET=1 \
+        HOROVOD_WITH_TENSORFLOW=1 \
+        HOROVOD_WITH_PYTORCH=1  \
+        python setup.py install
