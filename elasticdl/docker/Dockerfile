@@ -7,9 +7,25 @@ ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
 COPY elasticdl/docker/bashrc /etc/bash.bashrc
 RUN chmod a+rx /etc/bash.bashrc
 
-RUN apt-get -qq update && \
-        apt-get -qq install -y unzip curl git software-properties-common g++ wget \
-        shellcheck libeigen3-dev clang-format > /dev/null && \
+RUN apt-get -qq update && apt-get -qq install -y \
+        unzip \
+        curl \
+        git \
+        software-properties-common \
+        g++ \
+        wget \
+        build-essential \
+        cmake \
+        vim \
+        ca-certificates \
+        libjpeg-dev \
+        libpng-dev \
+        librdmacm1 \
+        libibverbs1 \
+        ibverbs-providers \
+        shellcheck \
+        libeigen3-dev \
+        clang-format > /dev/null && \
         python -m pip install --quiet --upgrade pip
 
 COPY elasticdl_client/requirements.txt /requirements.txt
@@ -61,6 +77,8 @@ COPY elasticdl/python/data/recordio_gen/heart_recordio_gen.py /scripts/heart_rec
 
 FROM dev as allreduce
 
+RUN pip install future typing
+
 # Note that pip is having issue downloading PyTorch on manylinux so we use curl
 # to download it instead
 RUN curl -sLo torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl \
@@ -72,3 +90,10 @@ RUN cd /root && git clone --depth=1 https://github.com/caicloud/ftlib.git
 RUN cd /root/ftlib && python -m pip install --quiet -r requirements.txt
 RUN cd /root/ftlib/ftlib/consensus/gossip && bash ./gen_shared_lib.sh
 RUN cp -r /root/ftlib/ftlib /usr/local/lib/python3.6/dist-packages/ftlib
+
+ENV HOROVOD_PATH /tmp/horovod
+RUN cd /tmp \
+        && git clone --recursive https://github.com/horovod/horovod.git
+
+RUN cd ${HOROVOD_PATH} && HOROVOD_WITH_TENSORFLOW=1 HOROVOD_WITH_PYTORCH=1  \
+    python setup.py install
