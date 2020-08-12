@@ -65,6 +65,7 @@ class CustomDataset(torch.utils.data.IterableDataset):
     """
     make CustomDataset for PyTorch
     """
+
     def __init__(self, data):
         self.data_source = data
 
@@ -248,7 +249,7 @@ class WorkerPytorch(object):
         """
         report gradient in numpy
         report learning_rate about PyTorch model optimizer
-        TODO: PS is based on TensorFlow, can not report learning_rat with PyTorch callback
+        TODO: PS is based on TensorFlow, can not report learning_rate with PyTorch callback
         """
         self._timing.start_record_time("report_gradient")
         grads = []
@@ -305,18 +306,24 @@ class WorkerPytorch(object):
 
     def training_process_pytorch(self, features, labels):
         outputs = self._model(features)
+        labels = labels.long()
         loss = self._loss(labels, outputs)
         loss.backward()
 
         _non_embed_vars_keys = list(self._non_embed_vars.keys())
         grads = []
-        loss_tmp = {}
+        grads_tmp = {}
         for name, parms in self._model.named_parameters():
-            loss_tmp[name] = parms
+            grads_tmp[name] = parms
         for name in _non_embed_vars_keys:
-            if loss_tmp[name].requires_grad:
-                grads.append(loss_tmp[name].data)
+            if grads_tmp[name].requires_grad:
+                grads.append(grads_tmp[name].data)
         return loss, grads
+
+    def forward_process(self, features):
+        """For unittest. Calculates model outputs in non-training mode."""
+        outputs = self._model.forward(features)
+        return outputs
 
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process_pytorch(features, labels)
@@ -346,9 +353,7 @@ class WorkerPytorch(object):
             self._run_model_call_before_training(features)
         self._timing.start_record_time("batch_process")
         for _ in range(self._max_minibatch_retry_num):
-            if task_type == elasticdl_pb2.EVALUATION:
-                break
-            elif task_type == elasticdl_pb2.TRAINING:
+            if task_type == elasticdl_pb2.TRAINING:
                 # TODO: optimize the logic to avoid unnecessary
                 #       get_model call.
                 if not train_with_local_model:
@@ -357,10 +362,7 @@ class WorkerPytorch(object):
                 *accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )
-                if (
-                        self._model_version
-                        >= self._log_loss_count * self._log_loss_steps
-                ):
+                if self._model_version >= self._log_loss_count * self._log_loss_steps:
                     self.logger.info(
                         "Loss = {}, steps = {}".format(
                             loss.numpy(), self._model_version
@@ -371,6 +373,8 @@ class WorkerPytorch(object):
                     )
                 if accepted:
                     break
+            elif task_type == elasticdl_pb2.EVALUATION:
+                break
             elif task_type == elasticdl_pb2.PREDICTION:
                 break
             else:
