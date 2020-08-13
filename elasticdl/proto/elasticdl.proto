@@ -94,6 +94,16 @@ message ReportVersionRequest {
   int32 model_version = 1;
 }
 
+message GetRankRequest {
+  int32 worker_id;
+}
+
+message GetRankResponse {
+  int32 rank_id;
+  int32 world_size;
+  int32 rendezvous_id;
+}
+
 service Master {
   rpc get_task(GetTaskRequest) returns (Task);
   rpc report_evaluation_metrics(ReportEvaluationMetricsRequest)
@@ -101,6 +111,7 @@ service Master {
   rpc report_task_result(ReportTaskResultRequest)
       returns (google.protobuf.Empty);
   rpc report_version(ReportVersionRequest) returns (google.protobuf.Empty);
+  rpc get_comm_rank(GetRankRequest) returns (GetRankResponse);
 }
 
 message PullEmbeddingVectorRequest {
