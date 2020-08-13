@@ -146,3 +146,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def get_worker_liveness_time(self, worker_id):
         return self._worker_liveness_time[worker_id]
+
+    def get_comm_rank(self, request, _):
+        worker_id = request.worker_id
+        res = elasticdl_pb2.GetRankResponse()
+        res.rank_id = self._master.get_comm_rank()
+        res.world_size = self._master.get_world_size()
+        res/rendezous_id = self._master.get_rendezous_id()
+        return res
