@@ -69,10 +69,11 @@ message GetRankRequest {
 
 message GetRankResponse {
     int32 rank_id = 1;
-    int32 size = 1;
+    int32 world_size = 1;
+    int32 rendezvous_id = 1;
 }
 
-rpc get_rank(ReportVersionRequest) returns (GetRankResponse);
+rpc get_comm_rank(ReportVersionRequest) returns (GetRankResponse);
 ```
 
 After getting the rank, the worker will set `HOROVOD_RANK` and
@@ -88,7 +89,8 @@ hvd.init()
 
 To support elastic training, when the master detects
 the number of workers changes, it will create a new host plan according
-to running workers and put it in the KVStore. In the Kubernetes cluster,
+to running workers and put it in the KVStore. Then, the master will
+add 1 into `rendezvous_id`. In the Kubernetes cluster,
 the number of workers may change for the following reasons:
 
 1. Some workers fail because of preemption.
@@ -98,9 +100,9 @@ In the first case, the Horovod AllReduce communicator will raise an exception.
 The worker can catch the exception and query the master for the new rank
 to re-initialize Horovod.
 
-In the second case, the worker will query the master periodically to see
-if there are new workers and re-initialization of the AllReduce process
-the group is needed.
+In the second case, the worker will query the master periodically. If the
+worker find the `rendezovous_id` of reponse is bigger then the current
+`rendezvous_id`, the worker will call `hvd.init` to re-initialize Horovod.
 
 ## The Worker Averages Gradients Using Horovod
 
