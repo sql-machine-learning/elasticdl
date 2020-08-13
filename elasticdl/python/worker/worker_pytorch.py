@@ -188,7 +188,7 @@ class WorkerPytorch(object):
                     "not provide default implementation of dataset_fn"
                 )
         self._get_model_steps = args.get_model_steps
-        self._opt = self._opt_fn(model_inst)
+        self._opt = self._opt_fn()
         self._model.optimizer = self._opt
         self._non_embed_grads = {}
         self._evaluation_result = {}
@@ -252,7 +252,6 @@ class WorkerPytorch(object):
         """
         report gradient in numpy
         report learning_rate about PyTorch model optimizer
-        TODO: PS is based on TensorFlow, can not report learning_rate with PyTorch callback
         """
         self._timing.start_record_time("report_gradient")
         grads = []
@@ -260,8 +259,12 @@ class WorkerPytorch(object):
             grad = Tensor(v[0], gradients[i].numpy(), None)
             grads.append(grad)
         edl_grads = []
-        learning_rate = 0.001
+
+        # TODO: PS in python/go is tf style to get optimizer info,
+        #  need PyTorch style, revise when rewrite pserver
+        learning_rate = K.get_value(self._model.optimizer.lr)
         # learning_rate = self._model.optimizer.param_groups[0]["lr"]
+
         accepted, max_version = self._ps_client.push_gradients(
             grads, edl_grads, learning_rate, self._model_versions_from_ps,
         )
@@ -289,13 +292,9 @@ class WorkerPytorch(object):
         for name, param in self._model.named_parameters():
             if param.requires_grad:
                 self._non_embed_vars[name] = param.data
-
         self._var_created = True
 
-        if (
-                self._distribution_strategy
-                == DistributionStrategy.PARAMETER_SERVER
-        ):
+        if self._distribution_strategy == DistributionStrategy.PARAMETER_SERVER:
             self._ps_client.partition_dense_parameters(
                 self._non_embed_vars.keys()
             )
@@ -309,7 +308,6 @@ class WorkerPytorch(object):
 
     def training_process_pytorch(self, features, labels):
         outputs = self._model(features)
-        labels = labels.long()
         loss = self._loss(labels, outputs)
         loss.backward()
 
@@ -330,19 +328,7 @@ class WorkerPytorch(object):
 
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process_pytorch(features, labels)
-        if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            # TODO: Delay certain amount of time before retrying
-            for _ in range(self._max_allreduce_retry_num + 1):
-                accepted = self._collect_gradients_with_allreduce_robust(grads)
-                if accepted:
-                    return accepted, None, loss
-                else:
-                    self.logger.warning(
-                        "Failed to perform allreduce operation on"
-                        "the gradients. Retrying..."
-                    )
-        else:
-            return (*self._collect_gradients_without_allreduce(grads), loss)
+        return (*self._collect_gradients_without_allreduce(grads), loss)
 
     def _process_minibatch(
             self,
@@ -357,14 +343,13 @@ class WorkerPytorch(object):
         self._timing.start_record_time("batch_process")
         for _ in range(self._max_minibatch_retry_num):
             if task_type == elasticdl_pb2.TRAINING:
-                # TODO: optimize the logic to avoid unnecessary
-                #       get_model call.
+                # TODO: optimize the logic to avoid unnecessary get_model call.
                 if not train_with_local_model:
                     self.get_model()
-                self._callbacks_list.on_train_batch_begin(self._model_version)
                 *accepted, min_model_version, loss = self._run_training_task(
                     features, labels
                 )
+
                 if self._model_version >= self._log_loss_count * self._log_loss_steps:
                     self.logger.info(
                         "Loss = {}, steps = {}".format(
@@ -384,8 +369,7 @@ class WorkerPytorch(object):
                 raise RuntimeError("Unrecognized task type, %s" % task_type)
         else:
             # Worker got stuck, fail the task.
-            # TODO: stop the worker if it fails to make any
-            #       progress for some time.
+            # TODO: stop the worker if it fails to make any progress for some time.
             raise RuntimeError("Worker got stuck")
         self._timing.end_record_time("batch_process")
         return min_model_version
@@ -402,8 +386,14 @@ class WorkerPytorch(object):
         """
         err_msg = ""
         try:
+            # TODO: dataset is tf style, make it PyTorch style later
             features = dataset_batch[0]
             labels = dataset_batch[1]
+
+            features = torch.from_numpy(features.numpy()).type(torch.FloatTensor)
+            labels = torch.from_numpy(labels.numpy()).type(torch.LongTensor)
+            features = torch.unsqueeze(features, dim=1)
+
             self._process_minibatch(
                 task_type,
                 features,
@@ -420,31 +410,14 @@ class WorkerPytorch(object):
             raise ex
         return err_msg
 
-    def _dataset_pytorch(self, dataset, batch_size):
-        """
-        _dataset_fn() builds dataset for TensorFlow
-        this func transforms dataset and set DataLoader for PyTorch
-        TODO: rewrite _dataset_fn() by IterableDataSet for PyTorch
-        """
-        dataset_list = []
-        for data_enum in list(dataset.as_numpy_iterator()):
-            shape_0 = data_enum[0].shape[0]
-            for i in range(shape_0):
-                dataset_list.append((data_enum[0][i:i + 1, ...], data_enum[1][i:i + 1, ...]))
-
-        iterable_dataset = CustomDataset(dataset_list)
-        dataloader = DataLoader(dataset=iterable_dataset, batch_size=batch_size)
-        return dataloader
-
     def _train(self):
         """
         Train the model on the worker
         _dataset_fn() is based on TensorFlow func, deal with the RecordIO data
         TODO: rewrite _dataset_fn() to support PyTorch dataset
         """
-        local_update_count = self._get_model_steps
-        last_training_minibatch_failed = False
-        evaluation_task_executed = False
+
+        train_with_local_model = False
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
@@ -454,35 +427,15 @@ class WorkerPytorch(object):
                 Mode.TRAINING,
                 self._task_data_service.data_reader.metadata,
             )
-            dataset = self._dataset_pytorch(dataset, self._minibatch_size)
-
             self._timing.start_record_time("task_process")
             for dataset_batch in dataset:
                 task = self._task_data_service.get_current_task()
-                if (
-                        evaluation_task_executed
-                        or last_training_minibatch_failed
-                        or local_update_count >= self._get_model_steps
-                ):
-                    local_update_count = 0
-                    train_with_local_model = False
-                else:
-                    train_with_local_model = True
-
                 err_msg = self._process_minibatch_and_report(
                     dataset_batch,
                     task.type,
                     task.model_version,
                     train_with_local_model,
                 )
-
-                local_update_count += 1
-                if err_msg:
-                    last_training_minibatch_failed = True
-                else:
-                    last_training_minibatch_failed = False
-                    if local_update_count < self._get_model_steps:
-                        self._update_local_model()
                 if self._task_data_service.report_record_done(
                         self._minibatch_size, err_msg
                 ):
@@ -493,6 +446,6 @@ class WorkerPytorch(object):
 
     def run(self):
         """
-        Fetches task from master with and performs training
+        Fetches task from master with and train
         """
         self._train()

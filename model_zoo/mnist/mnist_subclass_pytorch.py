@@ -85,34 +85,4 @@ def dataset_fn(dataset, mode, _):
 
 
 def eval_metrics_fn():
-    return {
-        "accuracy": lambda labels, predictions: tf.equal(
-            tf.argmax(predictions, 1, output_type=tf.int32),
-            tf.cast(tf.reshape(labels, [-1]), tf.int32),
-        )
-    }
-
-
-class CustomDataset(torch.utils.data.IterableDataset):
-    def __init__(self, data):
-        self.data_source = data
-
-    def __iter__(self):
-        return iter(self.data_source)
-
-
-def _dataset_pytorch(dataset, batch_size):
-    """
-    _dataset_fn() builds dataset for TensorFlow
-    this func transforms dataset and set DataLoader for PyTorch
-    TODO: rewrite _dataset_fn() by IterableDataSet for PyTorch
-    """
-    dataset_list = []
-    for data_enum in list(dataset.as_numpy_iterator()):
-        shape_0 = data_enum[0].shape[0]
-        for i in range(shape_0):
-            dataset_list.append((data_enum[0][i:i + 1, ...], data_enum[1][i:i + 1, ...]))
-
-    iterable_dataset = CustomDataset(dataset_list)
-    dataloader = DataLoader(dataset=iterable_dataset, batch_size=batch_size)
-    return dataloader
+    pass
