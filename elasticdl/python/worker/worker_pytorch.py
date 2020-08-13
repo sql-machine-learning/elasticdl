@@ -60,21 +60,6 @@ DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
 # collective communicator.
 DEFAULT_COMMUNICATOR_REINITIALIZING_TIMEOUT = 20
 
-class BasePytorch():
-    def asd(self):
-        pass
-
-class CustomDataset(torch.utils.data.IterableDataset):
-    """
-    make CustomDataset for PyTorch
-    """
-
-    def __init__(self, data):
-        self.data_source = data
-
-    def __iter__(self):
-        return iter(self.data_source)
-
 
 class WorkerPytorch(object):
     """ElasticDL worker"""
@@ -198,16 +183,6 @@ class WorkerPytorch(object):
         self._model = model_inst
         self._model.float()
 
-    def _update_local_model(self):
-        if not self._non_embed_grads:
-            return
-        # Take care of the order of grads and vars if worker modifies
-        # `_non_embed_vars` during training.
-        self._opt.apply_gradients(
-            zip(self._non_embed_grads, self._non_embed_vars.values())
-        )
-        self._non_embed_grads = None
-
     def get_model(self):
         self._timing.start_record_time("get_model")
         if (
@@ -320,11 +295,6 @@ class WorkerPytorch(object):
             if grads_tmp[name].requires_grad:
                 grads.append(grads_tmp[name].data)
         return loss, grads
-
-    def forward_process(self, features):
-        """For unittest. Calculates model outputs in non-training mode."""
-        outputs = self._model.forward(features)
-        return outputs
 
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process_pytorch(features, labels)

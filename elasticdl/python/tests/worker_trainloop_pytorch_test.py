@@ -108,7 +108,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                     y = torch.from_numpy(y.numpy()).type(torch.LongTensor)
                     x = torch.unsqueeze(x, dim=1)
 
-                    out = worker.forward_process(x)
+                    out = worker._model.forward(x)
                     if "mnist" in self._model_def:
                         acc_meter.update_state(torch.argmax(out, dim=1).numpy(), y.numpy())
                     else:
