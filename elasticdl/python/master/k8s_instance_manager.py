@@ -21,8 +21,6 @@ from elasticdl.python.common.constants import PodStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl_client.common.constants import BashCommandTemplate
 
-_SERVICE_ADDR_SEP = ","
-
 
 def _parse_worker_pod_priority(num_workers, worker_pod_priority):
     res = {}
@@ -132,7 +130,7 @@ class InstanceManager(object):
         self._ps_addrs = self._get_addrs(
             self._num_ps, self._k8s_client.get_ps_service_address
         )
-        self._worker_addrs = ""
+        self._worker_addrs = []
         if expose_ports:
             self._worker_args += [
                 "--collective_communicator_service_name",
@@ -376,7 +374,7 @@ class InstanceManager(object):
                     worker_id
                 )
             )
-        return _SERVICE_ADDR_SEP.join(worker_service_addrs)
+        return worker_service_addrs
 
     @property
     def ps_addrs(self):

@@ -17,10 +17,7 @@ import time
 import unittest
 from unittest.mock import MagicMock, call
 
-from elasticdl.python.master.k8s_instance_manager import (
-    InstanceManager,
-    _SERVICE_ADDR_SEP
-)
+from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 
@@ -87,9 +84,8 @@ class InstanceManagerTest(unittest.TestCase):
                 break
 
         worker_addrs = instance_manager._get_alive_worker_service_addr()
-        self.assertEqual(
-            len(worker_addrs.split(_SERVICE_ADDR_SEP)), 3
-        )
+        self.assertEqual(len(worker_addrs), 3)
+        instance_manager.stop_relaunch_and_remove_workers()
 
     @unittest.skipIf(
         os.environ.get("K8S_TESTS", "True") == "False",
