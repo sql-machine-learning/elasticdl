@@ -60,6 +60,9 @@ DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
 # collective communicator.
 DEFAULT_COMMUNICATOR_REINITIALIZING_TIMEOUT = 20
 
+class BasePytorch():
+    def asd(self):
+        pass
 
 class CustomDataset(torch.utils.data.IterableDataset):
     """
