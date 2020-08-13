@@ -370,9 +370,7 @@ class InstanceManager(object):
         for pod_name in alive_workers:
             worker_id = self._worker_pod_name_to_id[pod_name]
             worker_service_addrs.apppend(
-                self._k8s_client.get_worker_service_address(
-                    worker_id
-                )
+                self._k8s_client.get_worker_service_address(worker_id)
             )
         return worker_service_addrs
 
