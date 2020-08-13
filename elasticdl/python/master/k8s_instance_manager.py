@@ -21,6 +21,8 @@ from elasticdl.python.common.constants import PodStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl_client.common.constants import BashCommandTemplate
 
+_SERVICE_ADDR_SEP = ","
+
 
 def _parse_worker_pod_priority(num_workers, worker_pod_priority):
     res = {}
@@ -198,6 +200,12 @@ class InstanceManager(object):
             self._ps_pod_name_to_id[name] = ps_id
             self._ps_pods_phase[ps_id] = (name, None)
             self._k8s_client.create_ps_service(ps_id)
+
+    def _get_addrs(self, num_addrs, addr_get_fn):
+        addrs = []
+        for addr_id in range(num_addrs):
+            addrs.append(addr_get_fn(addr_id))
+        return _SERVICE_ADDR_SEP.join(addrs)
 
     def update_status(self, status):
         master_name = self._k8s_client.get_master_pod_name()
