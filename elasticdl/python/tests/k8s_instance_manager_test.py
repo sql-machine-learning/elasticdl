@@ -17,7 +17,10 @@ import time
 import unittest
 from unittest.mock import MagicMock, call
 
-from elasticdl.python.master.k8s_instance_manager import InstanceManager
+from elasticdl.python.master.k8s_instance_manager import (
+    InstanceManager,
+    _SERVICE_ADDR_SEP
+)
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 
@@ -26,7 +29,7 @@ class InstanceManagerTest(unittest.TestCase):
         os.environ.get("K8S_TESTS", "True") == "False",
         "No Kubernetes cluster available",
     )
-    def testCreateDeleteWorkerPod(self):
+    def test_create_delete_worker_pod(self):
         task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1)
         task_d.recover_tasks = MagicMock()
         instance_manager = InstanceManager(
@@ -62,7 +65,37 @@ class InstanceManagerTest(unittest.TestCase):
         os.environ.get("K8S_TESTS", "True") == "False",
         "No Kubernetes cluster available",
     )
-    def testFailedWorkerPod(self):
+    def test_get_worker_addrs(self):
+        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1)
+        instance_manager = InstanceManager(
+            task_d,
+            job_name="test-create-worker-pod-%d-%d"
+            % (int(time.time()), random.randint(1, 101)),
+            image_name="gcr.io/google-samples/hello-app:1.0",
+            worker_command=["/bin/bash"],
+            worker_args=["-c", "echo"],
+            namespace="default",
+            num_workers=3,
+        )
+
+        instance_manager.start_workers()
+        max_check_num = 20
+        for _ in range(max_check_num):
+            time.sleep(3)
+            counters = instance_manager.get_worker_counter()
+            if counters["Succeeded"] == 3:
+                break
+
+        worker_addrs = instance_manager._get_alive_worker_service_addr()
+        self.assertEqual(
+            len(worker_addrs.split(_SERVICE_ADDR_SEP)), 3
+        )
+
+    @unittest.skipIf(
+        os.environ.get("K8S_TESTS", "True") == "False",
+        "No Kubernetes cluster available",
+    )
+    def test_failed_worker_pod(self):
         """
         Start a pod running a python program destined to fail with
         restart_policy="Never" to test failed_worker_count
@@ -102,7 +135,7 @@ class InstanceManagerTest(unittest.TestCase):
         os.environ.get("K8S_TESTS", "True") == "False",
         "No Kubernetes cluster available",
     )
-    def testRelaunchWorkerPod(self):
+    def test_relaunch_worker_pod(self):
         num_workers = 3
         task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1)
         instance_manager = InstanceManager(
@@ -155,7 +188,7 @@ class InstanceManagerTest(unittest.TestCase):
         os.environ.get("K8S_TESTS", "True") == "False",
         "No Kubernetes cluster available",
     )
-    def testRelaunchPsPod(self):
+    def test_relaunch_ps_pod(self):
         num_ps = 3
         instance_manager = InstanceManager(
             task_d=None,
