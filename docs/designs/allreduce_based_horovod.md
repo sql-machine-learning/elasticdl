@@ -69,8 +69,8 @@ message GetRankRequest {
 
 message GetRankResponse {
     int32 rank_id = 1;
-    int32 world_size = 1;
-    int32 rendezvous_id = 1;
+    int32 world_size = 2;
+    int32 rendezvous_id = 3;
 }
 
 rpc get_comm_rank(ReportVersionRequest) returns (GetRankResponse);
