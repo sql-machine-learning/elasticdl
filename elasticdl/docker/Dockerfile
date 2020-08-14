@@ -108,4 +108,4 @@ RUN cd ${HOROVOD_PATH} && HOROVOD_WITHOUT_MPI=1 \
         HOROVOD_WITH_PYTORCH=1  \
         python setup.py install
 
-RUN rm -rf ${HOROVOD_PATH}}
+RUN rm -rf $HOROVOD_PATH
