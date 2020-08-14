@@ -56,10 +56,10 @@ RUN python -m pip install --quiet -r /requirements-dev.txt \
 ENV TF_PATH /tmp/tensorflow
 RUN mkdir -p /tmp/tensorflow/tensorflow/core/framework/
 RUN cd /tmp/tensorflow/tensorflow/core/framework/ \
-        && wget https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/types.proto \
-        && wget https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/resource_handle.proto \
-        && wget https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor_shape.proto \
-        && wget https://github.com/tensorflow/tensorflow/blob/v2.2.0/tensorflow/core/framework/tensor.proto
+        && wget https://raw.githubusercontent.com/tensorflow/tensorflow/v2.2.0/tensorflow/core/framework/types.proto \
+        && wget https://raw.githubusercontent.com/tensorflow/tensorflow/v2.2.0/tensorflow/core/framework/resource_handle.proto \
+        && wget https://raw.githubusercontent.com/tensorflow/tensorflow/v2.2.0/tensorflow/core/framework/tensor_shape.proto \
+        && wget https://raw.githubusercontent.com/tensorflow/tensorflow/v2.2.0/tensorflow/core/framework/tensor.proto
 
 # Install Go and related tools
 ARG GO_MIRROR_URL=https://dl.google.com/go
