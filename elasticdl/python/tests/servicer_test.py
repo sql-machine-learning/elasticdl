@@ -114,36 +114,6 @@ class ServicerTest(unittest.TestCase):
             tasks,
         )
 
-    def testGetCommRank(self):
-        task_d = _TaskDispatcher(
-            {"shard_1": (0, 10), "shard_2": (0, 9)},
-            {},
-            {},
-            records_per_task=3,
-            num_epochs=2,
-        )
-        master = MasterServicer(
-            3, task_d, evaluation_service=None, master=None
-        )
-
-        # task to number of runs.
-        tasks = defaultdict(int)
-        while True:
-            req = elasticdl_pb2.GetRankRequest()
-            req.worker_id = random.randint(1, 10)
-            task = master.get_task(req, None)
-            if not task.shard_name:
-                break
-            self.assertEqual(task_d._doing[task.task_id][0], req.worker_id)
-            task_key = (task.shard_name, task.start, task.end)
-            tasks[task_key] += 1
-            report = elasticdl_pb2.ReportTaskResultRequest()
-            report.task_id = task.task_id
-            if task.start == 0 and tasks[task_key] == 1:
-                # Simulate error reports.
-                report.err_message = "Worker error"
-            master.report_task_result(report, None)
-
 
 if __name__ == "__main__":
     unittest.main()
