@@ -33,7 +33,7 @@ class InstanceManagerTest(unittest.TestCase):
             task_d,
             job_name="test-create-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
-            image_name="gcr.io/google-samples/hello-app:1.0",
+            image_name="ubuntu:18.04",
             worker_command=["/bin/bash"],
             worker_args=["-c", "echo"],
             namespace="default",
@@ -54,9 +54,7 @@ class InstanceManagerTest(unittest.TestCase):
             counters = instance_manager.get_worker_counter()
             if not counters:
                 break
-        task_d.recover_tasks.assert_has_calls(
-            [call(0), call(1), call(2)], any_order=True
-        )
+        self.assertFalse(counters)
 
     @unittest.skipIf(
         os.environ.get("K8S_TESTS", "True") == "False",
@@ -68,9 +66,9 @@ class InstanceManagerTest(unittest.TestCase):
             task_d,
             job_name="test-create-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
-            image_name="gcr.io/google-samples/hello-app:1.0",
+            image_name="ubuntu:18.04",
             worker_command=["/bin/bash"],
-            worker_args=["-c", "echo"],
+            worker_args=["-c", "sleep 5 #"],
             namespace="default",
             num_workers=3,
         )
@@ -80,11 +78,10 @@ class InstanceManagerTest(unittest.TestCase):
         for _ in range(max_check_num):
             time.sleep(3)
             counters = instance_manager.get_worker_counter()
-            if counters["Succeeded"] == 3:
-                break
+            if counters["Running"]:
+                worker_addrs = instance_manager._get_alive_worker_addr()
+                self.assertEqual(len(worker_addrs), counters["Running"])
 
-        worker_addrs = instance_manager._get_alive_worker_service_addr()
-        self.assertEqual(len(worker_addrs), 3)
         instance_manager.stop_relaunch_and_remove_workers()
 
     @unittest.skipIf(
@@ -102,7 +99,7 @@ class InstanceManagerTest(unittest.TestCase):
             task_d,
             job_name="test-failed-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
-            image_name="gcr.io/google-samples/hello-app:1.0",
+            image_name="ubuntu:18.04",
             worker_command=["/bin/bash"],
             worker_args=["-c", "badcommand"],
             namespace="default",
@@ -138,9 +135,9 @@ class InstanceManagerTest(unittest.TestCase):
             task_d,
             job_name="test-relaunch-worker-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
-            image_name="gcr.io/google-samples/hello-app:1.0",
+            image_name="ubuntu:18.04",
             worker_command=["/bin/bash"],
-            worker_args=["-c", "sleep 10"],
+            worker_args=["-c", "sleep 10 #"],
             namespace="default",
             num_workers=num_workers,
         )
@@ -190,9 +187,9 @@ class InstanceManagerTest(unittest.TestCase):
             task_d=None,
             job_name="test-relaunch-ps-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
-            image_name="gcr.io/google-samples/hello-app:1.0",
+            image_name="ubuntu:18.04",
             ps_command=["/bin/bash"],
-            ps_args=["-c", "sleep 10"],
+            ps_args=["-c", "sleep 10 #"],
             namespace="default",
             num_ps=num_ps,
         )

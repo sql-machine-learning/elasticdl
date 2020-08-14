@@ -363,7 +363,7 @@ class InstanceManager(object):
             # tolerance.
             self._start_ps(ps_id)
 
-        self._worker_addrs = self._get_alive_worker_service_addr()
+        self._worker_addrs = self._get_alive_worker_addr()
 
     def get_alive_workers(self):
         alive_workers = []
@@ -372,12 +372,12 @@ class InstanceManager(object):
                 alive_workers.append(pod_name)
         return alive_workers
 
-    def _get_alive_worker_service_addr(self):
+    def _get_alive_worker_addr(self):
         alive_workers = self.get_alive_workers()
         worker_service_addrs = []
         for pod_name in alive_workers:
             worker_id = self._worker_pod_name_to_id[pod_name]
-            worker_service_addrs.apppend(
+            worker_service_addrs.append(
                 self._k8s_client.get_worker_service_address(worker_id)
             )
         return worker_service_addrs
