@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import unittest
+
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 
 
@@ -24,10 +25,10 @@ class HorovodRendezvousServerTest(unittest.TestCase):
     def test_get_host_plan(self):
         self.rendezvous_server._worker_hosts = ["127.0.0.2", "127.0.0.3"]
         host_alloc_plan = self.rendezvous_server._get_host_plan()
-        self.assertEqual(host_alloc_plan[0].hostname, '127.0.0.2')
+        self.assertEqual(host_alloc_plan[0].hostname, "127.0.0.2")
         self.assertEqual(host_alloc_plan[0].rank, 0)
         self.assertEqual(host_alloc_plan[0].size, 2)
-        self.assertEqual(host_alloc_plan[1].hostname, '127.0.0.3')
+        self.assertEqual(host_alloc_plan[1].hostname, "127.0.0.3")
         self.assertEqual(host_alloc_plan[1].rank, 1)
         self.assertEqual(host_alloc_plan[1].size, 2)
 
