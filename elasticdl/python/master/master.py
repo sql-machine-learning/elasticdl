@@ -374,7 +374,6 @@ class Master(object):
         )
         master_servicer = MasterServicer(
             args.minibatch_size,
-            self.task_d,
             evaluation_service=self.evaluation_service,
             master=self,
         )
