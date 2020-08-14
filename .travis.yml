@@ -36,10 +36,7 @@ jobs:
         - export BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
         # Travis CI VM runs Ubuntu Bionic with Docker 18.06 which doesn't
         # support docker pull --quiet.
-        - docker pull "$BASE_IMAGE"
-        - docker build --target dev -t elasticdl:dev
-          -f elasticdl/docker/Dockerfile
-          --build-arg BASE_IMAGE="$BASE_IMAGE" .
+        - bash scripts/travis/build_images.sh
         # Run pre-commit checks.
         - docker run --rm -it
           -v $TRAVIS_BUILD_DIR:/work -w /work
