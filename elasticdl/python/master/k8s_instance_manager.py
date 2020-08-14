@@ -363,7 +363,7 @@ class InstanceManager(object):
             # tolerance.
             self._start_ps(ps_id)
 
-        self._worker_addrs = self._get_alive_worker_service__addr()
+        self._worker_addrs = self._get_alive_worker_service_addr()
 
     def get_alive_workers(self):
         alive_workers = []
