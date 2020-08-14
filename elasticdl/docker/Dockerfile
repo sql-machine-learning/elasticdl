@@ -3,7 +3,6 @@ ARG BASE_IMAGE
 
 FROM ${BASE_IMAGE} as dev
 ARG EXTRA_PYPI_INDEX=https://pypi.org/simple
-ARG HOROVOD_COMMIT_ID="3108a24"
 
 COPY elasticdl/docker/bashrc /etc/bash.bashrc
 RUN chmod a+rx /etc/bash.bashrc
@@ -81,6 +80,10 @@ COPY elasticdl/python/data/recordio_gen/heart_recordio_gen.py /scripts/heart_rec
 
 FROM dev as allreduce
 
+# TODO: We should use a tag or branch name after Horovod releases
+# elastic training codes.
+ARG HOROVOD_COMMIT_ID="3108a24"
+
 RUN pip install future typing
 
 # Note that pip is having issue downloading PyTorch on manylinux so we use curl
@@ -107,3 +110,5 @@ RUN cd ${HOROVOD_PATH} && HOROVOD_WITHOUT_MPI=1 \
         HOROVOD_WITH_TENSORFLOW=1 \
         HOROVOD_WITH_PYTORCH=1  \
         python setup.py install
+
+RUN rm -rf $HOROVOD_PATH
