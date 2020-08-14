@@ -262,7 +262,6 @@ class WorkerPytorch(object):
         """
         before training: Create variables and report to ps if not created.
         """
-        _ = self._model.forward(features)
         self._non_embed_vars = {}
         for name, param in self._model.named_parameters():
             if param.requires_grad:

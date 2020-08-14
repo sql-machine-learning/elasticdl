@@ -13,16 +13,11 @@
 
 import os
 import unittest
-import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
-from elasticdl.python.common.hash_utils import int_to_id, string_to_id
-from elasticdl.python.common.model_utils import get_model_spec
-from elasticdl.python.ps.embedding_table import EmbeddingTable
 from elasticdl.python.worker.ps_client import PSClient
-from elasticdl.python.worker.worker import Worker
 from elasticdl_client.common.constants import DistributionStrategy
 
 from test_utils import (
@@ -36,7 +31,7 @@ import sys
 sys.path.append('../')
 from worker.worker_pytorch import WorkerPytorch
 import torch
-from torch.utils.data import Dataset, DataLoader
+
 
 class WorkerPSInteractionTest(unittest.TestCase):
     def setUp(self):

@@ -11,14 +11,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-import PIL.Image
+
 import tensorflow as tf
-import torch
-from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
-
 from elasticdl.python.common.constants import Mode
 
 
@@ -46,10 +42,10 @@ class CustomModel(nn.Module):
 
 
 def loss(labels, predictions):
-    labels = labels.long()  # labels.dtype must be Long/int64 for CrossEntropyLoss()
+    labels = labels.long()
+    # labels.dtype must be Long/int64 for CrossEntropyLoss()
     loss_func = nn.CrossEntropyLoss()
     return loss_func(predictions, labels)
-
 
 # def optimizer(model,lr=0.001):
 #     return torch.optim.Adam(model.parameters(), lr)
