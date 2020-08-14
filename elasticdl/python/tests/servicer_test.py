@@ -14,9 +14,10 @@
 import random
 import unittest
 from collections import defaultdict
+from unittest.mock import Mock
 
 import tensorflow as tf
-from unittest.mock import Mock
+
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
@@ -52,9 +53,7 @@ class SimpleModel(tf.keras.Model):
 class ServicerTest(unittest.TestCase):
     def setUp(self):
         self.master = Mock(
-            task_d=None,
-            instance_manager=None,
-            distribution_strategy=None,
+            task_d=None, instance_manager=None, distribution_strategy=None,
         )
 
     def test_get_empty_task(self):
@@ -62,9 +61,7 @@ class ServicerTest(unittest.TestCase):
             {}, {}, {}, records_per_task=3, num_epochs=2
         )
         master_servicer = MasterServicer(
-            3,
-            evaluation_service=None,
-            master=self.master,
+            3, evaluation_service=None, master=self.master,
         )
 
         req = elasticdl_pb2.GetTaskRequest()
@@ -88,9 +85,7 @@ class ServicerTest(unittest.TestCase):
             records_per_task=3,
             num_epochs=2,
         )
-        master = MasterServicer(
-            3, evaluation_service=None, master=self.master
-        )
+        master = MasterServicer(3, evaluation_service=None, master=self.master)
 
         # task to number of runs.
         tasks = defaultdict(int)
