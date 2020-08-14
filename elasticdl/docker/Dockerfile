@@ -77,6 +77,8 @@ COPY elasticdl/python/data/recordio_gen/heart_recordio_gen.py /scripts/heart_rec
 
 FROM dev as allreduce
 
+# TODO: We should use a tag or branch name after Horovod releases
+# elastic training codes.
 ARG HOROVOD_COMMIT_ID="3108a24"
 
 RUN pip install future typing
