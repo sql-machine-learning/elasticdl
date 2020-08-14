@@ -24,6 +24,9 @@ class HorovodRendezvousServer(object):
         self._rendezvous_id = 0
         self._worker_hosts = []
         self._rendezvous_server = RendezvousServer(verbose=True)
+        self._rendezvous_port = None
+
+    def start(self):
         self._rendezvous_port = self._rendezvous_server.start()
 
     def set_worker_hosts(self, worker_hosts):
@@ -50,5 +53,17 @@ class HorovodRendezvousServer(object):
         host_alloc_plan = get_host_assignments(host_infos, len(host_infos))
         return host_alloc_plan
 
-    def get_server_host(self):
+    def get_rendezvous_host(self):
         return self._rendezvous_host
+
+    def get_rendezvous_port(self):
+        return self._rendezvous_port
+
+    def get_worker_host_rank(self, host):
+        self._worker_hosts.index(host)
+
+    def get_size(self):
+        return len(self._worker_hosts)
+
+    def get_rendezvous_id(self):
+        return self._rendezvous_id

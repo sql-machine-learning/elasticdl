@@ -102,6 +102,7 @@ message GetRankResponse {
   int32 rank_id = 1;
   int32 world_size = 2;
   int32 rendezvous_id = 3;
+  int32 rendezvous_port = 4;
 }
 
 service Master {
