@@ -11,42 +11,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import time
-import traceback
 
-import numpy as np
-import tensorflow as tf
+import traceback
 from tensorflow.keras import backend as K
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
 from elasticdl.python.common.constants import (
-    CollectiveCommunicatorStatus,
-    Initializer,
     JobType,
-    MetricsDictKey,
     Mode,
 )
-from elasticdl.python.common.dtypes import dtype_numpy_to_tensor
 from elasticdl.python.common.log_utils import get_logger
-from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
-    find_layer,
     get_dict_from_params_str,
     get_model_spec,
-    get_non_embedding_trainable_vars,
-    set_callback_parameters,
 )
-from elasticdl.python.common.tensor_utils import EmbeddingTableInfo, Tensor
+from elasticdl.python.common.tensor_utils import Tensor
 from elasticdl.python.common.timing_utils import Timing
-from elasticdl.python.elasticdl.callbacks import SavedModelExporter
-from elasticdl.python.elasticdl.feature_column import feature_column
-from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.worker.task_data_service import TaskDataService
 from elasticdl_client.common.constants import DistributionStrategy
-
-from torch.utils.data import Dataset, DataLoader
 import torch
 
 # The default maximum number of a minibatch retry as its results
