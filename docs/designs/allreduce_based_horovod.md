@@ -59,8 +59,8 @@ rendezvous.init(host_alloc_plan)
 ```
 
 When the worker starts, it will query the master for the rank in the
-communication world by GRPC. Then, the master will assign the rank
-accroding to the host plan. The GRPC protobuf to query ranks is
+communication world by GRPC. Then, the master will send the rank according
+to the host plan. The GRPC protobuf to query ranks is
 
 ```proto
 message GetRankRequest {
