@@ -82,9 +82,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # we are trying to pop and invoke the callback.
             # Then the master tells the worker to wait
             # in case of new tasks later.
-            if (
-                self._distribution_strategy == DistributionStrategy.ALLREDUCE
-            ):
+            if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
                 # If there is no more task, master only send wait task to
                 # the last worker and other workers exit.
                 if len(self._instance_manager.get_alive_workers()) == 1:
