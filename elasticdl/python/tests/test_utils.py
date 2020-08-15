@@ -17,6 +17,7 @@ import tempfile
 from collections.__init__ import namedtuple
 from contextlib import closing
 from pathlib import Path
+from unittest.mock import Mock
 
 import grpc
 import numpy as np
@@ -409,12 +410,13 @@ def distributed_train_and_evaluate(
         )
     task_d.set_evaluation_service(evaluation_service)
 
+    master = Mock(
+        task_d=task_d, instance_manager=None, distribution_strategy=None,
+    )
+
     def master_creator():
         return MasterServicer(
-            batch_size,
-            task_d,
-            evaluation_service=evaluation_service,
-            master=None,
+            batch_size, evaluation_service=evaluation_service, master=master,
         )
 
     svc, port = _server(master_creator)
