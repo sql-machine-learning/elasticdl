@@ -53,7 +53,7 @@ jobs:
           -v $HOME/.kube:/root/.kube
           -v $HOME/.minikube:/home/$USER/.minikube
           -v $PWD:/work -w /work
-          elasticdl:dev
+          elasticdl:dev_allreduce
           bash -c "K8S_TESTS=True scripts/build_and_test.sh"
         # Report code coverage to https://codecov.io
         - bash <(curl -s https://codecov.io/bash)
