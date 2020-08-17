@@ -60,7 +60,7 @@ class HorovodRendezvousServer(object):
         return self._rendezvous_port
 
     def get_worker_host_rank(self, host):
-        self._worker_hosts.index(host)
+        return self._worker_hosts.index(host)
 
     def get_size(self):
         return len(self._worker_hosts)
