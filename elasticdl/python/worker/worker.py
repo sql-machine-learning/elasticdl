@@ -15,13 +15,16 @@ import os
 import time
 import traceback
 
+import horovod.tensorflow as hvd
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
+from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
 from elasticdl.python.common.constants import (
+    HOROVOD_CONFIG,
     CollectiveCommunicatorStatus,
     Initializer,
     JobType,
@@ -114,6 +117,7 @@ class Worker(object):
         self._timing = Timing(args.log_level.upper() == "DEBUG", self.logger)
         self._log_loss_count = 0
         self._var_created = False
+        self._rendezvous_id = None
 
     def _init_from_args(self, args):
         """
@@ -154,6 +158,7 @@ class Worker(object):
             self._collective_communicator = CollectiveCommunicator(
                 service_name=args.collective_communicator_service_name
             )
+            self.set_horovod_env(args.master_addr)
 
         self._model_handler = ModelHandler.get_model_handler(
             self._distribution_strategy, checkpoint_dir=args.checkpoint_dir
@@ -201,6 +206,13 @@ class Worker(object):
             saved_model_path=args.output,
             checkpoint_path=args.checkpoint_dir,
         )
+
+    def set_horovod_env(self, master_addr):
+        master_host = master_addr.split(":")[0]
+        os.environ[HOROVOD_CONFIG.RENDEZVOUS_ADDR_ENV] = master_host
+        os.environ[HOROVOD_CONFIG.CONTROLLER_ENV] = "gloo"
+        os.environ[HOROVOD_CONFIG.CPU_OPERATIONS_ENV] = "gloo"
+        os.environ[HOROVOD_CONFIG.HOSTNAME_ENV] = "master"
 
     # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
@@ -577,6 +589,17 @@ class Worker(object):
         grads = tape.gradient(loss, self.get_trainable_items())
         return loss, grads
 
+    def training_process_with_allreduce(self, features, labels):
+        with tf.GradientTape() as tape:
+            outputs = self._model.call(features, training=True)
+            loss = self._loss(labels, outputs)
+            if self._model.losses:
+                loss += tf.math.add_n(self._model.losses)
+
+        tape = hvd.DistributedGradientTape(tape)
+        grads = tape.gradient(loss, self.get_trainable_items())
+        return loss, grads
+
     @tf.function
     def forward_process(self, features):
         """Calculates model outputs in non-training mode."""
@@ -660,19 +683,27 @@ class Worker(object):
         return accepted, min_model_version
 
     def _run_training_task(self, features, labels):
-        loss, grads = self.training_process(features, labels)
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            # TODO: Delay certain amount of time before retrying
             for _ in range(self._max_allreduce_retry_num + 1):
-                accepted = self._collect_gradients_with_allreduce_robust(grads)
-                if accepted:
-                    return accepted, None, loss
-                else:
+                try:
+                    loss, grads = self.training_process_with_allreduce(
+                        features, labels
+                    )
+                    self._model_version += 1
+                    return True, None, loss
+                except UnknownError as e:
                     self.logger.warning(
                         "Failed to perform allreduce operation on"
                         "the gradients. Retrying..."
                     )
+                    if (
+                        "HorovodAllreduce" in e.message
+                        or "HorovodAllgather" in e.message
+                        or "HorovodBroadcast" in e.message
+                    ):
+                        self._initialize_horovod_if_needed()
         else:
+            loss, grads = self.training_process(features, labels)
             return (*self._collect_gradients_without_allreduce(grads), loss)
 
     def _collect_evaluation_result(self, outputs, labels):
@@ -838,6 +869,21 @@ class Worker(object):
             raise ex
         return err_msg
 
+    def _initialize_horovod_if_needed(self):
+        rank_response = self._mc.get_comm_rank()
+        if (
+            self._distribution_strategy == DistributionStrategy.ALLREDUCE
+            and rank_response.rendezvous_id != self._rendezvous_id
+        ):
+            os.environ[HOROVOD_CONFIG.RENDEZVOUS_PORT_ENV] = str(
+                rank_response.rendezvous_port
+            )
+            os.environ[HOROVOD_CONFIG.RANK_ENV] = str(rank_response.rank_id)
+            os.environ[HOROVOD_CONFIG.SIZE_ENV] = str(rank_response.world_size)
+            hvd.shutdown()
+            hvd.init()
+            self._rendezvous_id = rank_response.rendezvous_id
+
     def _train_and_evaluate(self):
         """
         Train and evaluate the model on the worker
@@ -871,6 +917,7 @@ class Worker(object):
                 self._task_data_service.data_reader.metadata,
             )
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
+            self._initialize_horovod_if_needed()
             self._timing.start_record_time("task_process")
             for dataset_batch in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
@@ -913,6 +960,10 @@ class Worker(object):
                     self._timing.end_record_time("task_process")
                     self._timing.report_timing(reset=True)
                     self._timing.start_record_time("task_process")
+                
+                if self._model_version % 20 == 0:
+                    self._initialize_horovod_if_needed()
+
             del dataset
             # New evaluation tasks may be created after this worker's
             # training tasks are done, as other workers' may still
