@@ -14,13 +14,14 @@
 import random
 import unittest
 from collections import defaultdict
-from unittest.mock import Mock
+from unittest.mock import Mock,MagicMock
 
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 
 
 def _get_variable_names(model_pb):
@@ -119,6 +120,29 @@ class ServicerTest(unittest.TestCase):
             },
             tasks,
         )
+
+    def test_get_comm_rank(self):
+        self.master.rendezvous_server = HorovodRendezvousServer(
+            server_host="localhost"
+        )
+        self.master.rendezvous_server.start()
+        self.master.rendezvous_server.set_worker_hosts(
+            ["172.0.0.1", "172.0.0.2"]
+        )
+
+        self.master.instance_manager = Mock(_k8s_client=Mock())
+        self.master.instance_manager._k8s_client.get_worker_service_address = (
+            MagicMock(return_value="172.0.0.1:8080")
+        )
+        master_servicer = MasterServicer(
+            3, evaluation_service=None, master=self.master
+        )
+        request = elasticdl_pb2.GetRankRequest()
+        request.worker_id = 0
+        rank_response = master_servicer.get_comm_rank(request, None)
+        self.assertEqual(rank_response.world_size, 2)
+        self.assertEqual(rank_response.rank_id, 0)
+        self.assertEqual(rank_response.rendezvous_id, 1)
 
 
 if __name__ == "__main__":
