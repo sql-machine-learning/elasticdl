@@ -42,10 +42,10 @@ from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.elasticdl.callbacks import MaxStepsStopping
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_instance_manager import InstanceManager
+from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.master.tensorboard_service import TensorboardService
-from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl_client.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
