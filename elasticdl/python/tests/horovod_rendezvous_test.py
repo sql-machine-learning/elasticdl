@@ -51,12 +51,8 @@ class HorovodRendezvousServerTest(unittest.TestCase):
         self.assertEqual(
             self.rendezvous_server.get_worker_host_rank("127.0.0.2"), 0
         )
-        self.assertEqual(
-            self.rendezvous_server.get_size(), 2
-        )
-        self.assertEqual(
-            self.rendezvous_server.get_rendezvous_id(), 1
-        )
+        self.assertEqual(self.rendezvous_server.get_size(), 2)
+        self.assertEqual(self.rendezvous_server.get_rendezvous_id(), 1)
 
 
 if __name__ == "__main__":
