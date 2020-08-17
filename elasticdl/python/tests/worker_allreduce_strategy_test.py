@@ -56,19 +56,6 @@ class WorkerAllReduceStrategyTest(unittest.TestCase):
             )
             self._workers.append(worker)
 
-    def test_collect_gradients_with_allreduce_success_case(self):
-        worker = self._workers[0]
-        train_db, _ = get_mnist_dataset(self._batch_size)
-        for step, (x, y) in enumerate(train_db):
-            if step == 0:
-                worker._run_model_call_before_training(x)
-            w_loss, w_grads = worker.training_process_eagerly(x, y)
-            if step == self._test_steps:
-                break
-            self.assertEqual(
-                worker._collect_gradients_with_allreduce_robust(w_grads), True,
-            )
-
     def test_collect_gradients_with_allreduce_failure_case(self):
         worker = self._workers[1]
         train_db, _ = get_mnist_dataset(self._batch_size)
