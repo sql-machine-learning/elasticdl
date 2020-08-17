@@ -157,6 +157,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         )
         worker_host = worker_address_port.split(":")[0]
         res.rank_id = self._rendezvous_server.get_worker_host_rank(worker_host)
-        res.world_size = self._rendezvous_server.get_world_size()
+        res.world_size = self._rendezvous_server.get_size()
         res.rendezvous_id = self._rendezvous_server.get_rendezvous_id()
         return res

@@ -141,6 +141,7 @@ class ServicerTest(unittest.TestCase):
         request.worker_id = 0
         rank_response = master_servicer.get_comm_rank(request, None)
         self.assertEqual(rank_response.world_size, 2)
+        self.assertEqual(rank_response.rank_id, 0)
 
 
 if __name__ == "__main__":
