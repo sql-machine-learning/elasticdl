@@ -84,7 +84,7 @@ class MasterClient:
 
         report = elasticdl_pb2.ReportTaskResultRequest()
         report.task_id = task_id
-        report.err_me ssage = err_msg
+        report.err_message = err_msg
         if isinstance(exec_counters, dict):
             report.exec_counters.update(exec_counters)
         return self._stub.report_task_result(report)
