@@ -14,14 +14,14 @@
 import random
 import unittest
 from collections import defaultdict
-from unittest.mock import Mock,MagicMock
+from unittest.mock import MagicMock, Mock
 
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
-from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 
 
 def _get_variable_names(model_pb):
@@ -130,10 +130,11 @@ class ServicerTest(unittest.TestCase):
             ["172.0.0.1", "172.0.0.2"]
         )
 
-        self.master.instance_manager = Mock(_k8s_client=Mock())
-        self.master.instance_manager._k8s_client.get_worker_service_address = (
-            MagicMock(return_value="172.0.0.1:8080")
+        k8s_client = Mock()
+        k8s_client.get_worker_service_address = MagicMock(
+            return_value="172.0.0.1:8080"
         )
+        self.master.instance_manager = Mock(_k8s_client=k8s_client)
         master_servicer = MasterServicer(
             3, evaluation_service=None, master=self.master
         )
