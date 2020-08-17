@@ -21,6 +21,7 @@ class HorovodRendezvousServerTest(unittest.TestCase):
         self.rendezvous_server = HorovodRendezvousServer(
             server_host="127.0.0.1"
         )
+        self.rendezvous_server.start()
 
     def test_get_host_plan(self):
         self.rendezvous_server._worker_hosts = ["127.0.0.2", "127.0.0.3"]
