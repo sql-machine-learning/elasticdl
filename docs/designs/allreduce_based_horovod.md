@@ -35,15 +35,14 @@ assign data shards for workers to solve data access for elastic training.
 So, it is more user-friendly to run an elastic AllReduce-based training
 job using ElasticDL with Horovod.
 
-## ElasticDL Re-initialize Horovod When the Number of Workers Changes
+## The Worker Queries the Master for Rank to Initialize Horovod
 
-When using Horovod with Gloo backend, we need to create a `RendezvousServer`,
-which has a KVStore. Also, we need to put a host plan into this KVStore.
-A host plan includes worker hosts and their assigned ranks,
-which are required by Gloo. The master in ElasticDL is responsible for creating
-the RendezvousServer. To support elastic training, when the master detects
-the number of workers changes, it will create a new host plan and put it
-in the KVStore.
+When the job starts, the master will create a `RendezvousServer`,
+which has a KVStore. The master will query the worker status after
+the master uses Kubernetes API to launch worker pods. The master
+will set a worker host plan into the KVStore of `RendezvousServer`
+according to running workers. The host plan includes worker hosts
+and their assigned ranks which are required by Gloo.
 
 ```python
 import horovod
@@ -59,23 +58,51 @@ global_rendezv_port = rendezvous.start()
 rendezvous.init(host_alloc_plan)
 ```
 
-Then, the worker can call `hvd.init` to initialize the Gloo context for
-AllReduce.
+When the worker starts, it will query the master for the rank in the
+communication world by GRPC. Then, the master will send the rank according
+to the host plan. The GRPC protobuf to query ranks is
 
-When the master finds the number of workers changes, it can re-create a new
-`RendezvousServer` and notify workers to re-initialize Horovod.
-In the Kubernetes cluster, the number of workers may change for the
-following reasons:
+```proto
+message GetRankRequest {
+    int32 worker_id = 1;
+}
+
+message GetRankResponse {
+    int32 rank_id = 1;
+    int32 world_size = 2;
+    int32 rendezvous_id = 3;
+}
+
+rpc get_comm_rank(ReportVersionRequest) returns (GetRankResponse);
+```
+
+After getting the rank, the worker will set `HOROVOD_RANK` and
+`HOROVOD_SIZE`. The the worker can call `hvd.init()` to initialize Horovod.
+
+```python
+os.environ["HOROVOD_RANK"] = str(rank_id)
+os.environ["HOROVOD_SIZE"] = str(size)
+hvd.init()
+```
+
+## Re-initialize Horovod When the Number of Workers Changes
+
+To support elastic training, when the master detects
+the number of workers changes, it will create a new host plan according
+to running workers and put it in the KVStore. Then, the master will
+add 1 into `rendezvous_id`. In the Kubernetes cluster,
+the number of workers may change for the following reasons:
 
 1. Some workers fail because of preemption.
 1. A worker pod status becomes running.
 
-In the first case, the Horovod AllReduce operator will raise an exception
-and the worker can catch the exception and re-initialize.
+In the first case, the Horovod AllReduce communicator will raise an exception.
+The worker can catch the exception and query the master for the new rank
+to re-initialize Horovod.
 
-In the second case, the worker will query the master periodically to see
-if there are new workers and re-initialization of the AllReduce process
-the group is needed.
+In the second case, the worker will query the master periodically. If the
+worker find the `rendezovous_id` of reponse is bigger then the current
+`rendezvous_id`, the worker will call `hvd.init` to re-initialize Horovod.
 
 ## The Worker Averages Gradients Using Horovod
 

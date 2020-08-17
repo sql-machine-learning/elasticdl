@@ -132,11 +132,7 @@ class InstanceManager(object):
         self._ps_addrs = self._get_addrs(
             self._num_ps, self._k8s_client.get_ps_service_address
         )
-        # TODO: Select a worker address to be used for broadcasting model
-        # parameters under allreduce-strategy.
-        self._worker_addrs = self._get_addrs(
-            self._num_workers, self._k8s_client.get_worker_service_address
-        )
+        self._worker_addrs = []
         if expose_ports:
             self._worker_args += [
                 "--collective_communicator_service_name",
@@ -210,23 +206,6 @@ class InstanceManager(object):
         for addr_id in range(num_addrs):
             addrs.append(addr_get_fn(addr_id))
         return _SERVICE_ADDR_SEP.join(addrs)
-
-    @staticmethod
-    def _update_addr(old_addr, new_addr, addrs, addr_get_fn):
-        addrs_list = addrs.split(_SERVICE_ADDR_SEP)
-        addrs_list[addrs_list.index(addr_get_fn(old_addr))] = addr_get_fn(
-            new_addr
-        )
-        return _SERVICE_ADDR_SEP.join(addrs_list)
-
-    def _update_worker_addr(self, old_worker_id, new_worker_id):
-        new_addr = self._update_addr(
-            old_worker_id,
-            new_worker_id,
-            self._worker_addrs,
-            addr_get_fn=self._k8s_client.get_worker_service_address,
-        )
-        self._worker_addrs = new_addr
 
     def update_status(self, status):
         master_name = self._k8s_client.get_master_pod_name()
@@ -377,8 +356,6 @@ class InstanceManager(object):
                     new_worker_id
                 ] = self._worker_pod_priority[worker_id]
             self._start_worker(new_worker_id)
-            with self._lock:
-                self._update_worker_addr(worker_id, new_worker_id)
         elif relaunch_ps:
             logger.info("Relaunching ps.")
             # Note: the ID and service address for relaunched parameter
@@ -386,12 +363,24 @@ class InstanceManager(object):
             # tolerance.
             self._start_ps(ps_id)
 
+        self._worker_addrs = self._get_alive_worker_addr()
+
     def get_alive_workers(self):
         alive_workers = []
         for pod_name, phase in self._worker_pods_phase.values():
             if phase == PodStatus.RUNNING:
                 alive_workers.append(pod_name)
         return alive_workers
+
+    def _get_alive_worker_addr(self):
+        alive_workers = self.get_alive_workers()
+        worker_service_addrs = []
+        for pod_name in alive_workers:
+            worker_id = self._worker_pod_name_to_id[pod_name]
+            worker_service_addrs.append(
+                self._k8s_client.get_worker_service_address(worker_id)
+            )
+        return worker_service_addrs
 
     @property
     def ps_addrs(self):

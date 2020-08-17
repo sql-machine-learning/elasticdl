@@ -26,10 +26,12 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     """Master service implementation"""
 
     def __init__(
-        self, minibatch_size, task_d, evaluation_service, master,
+        self, minibatch_size, evaluation_service, master,
     ):
         # TODO: group params together into a single object.
-        self._task_d = task_d
+        self._task_d = master.task_d
+        self._instance_manager = master.instance_manager
+        self._distribution_strategy = master.distribution_strategy
         self._lock = threading.Lock()
         self._minibatch_size = minibatch_size
         self._version = 0
@@ -80,13 +82,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # we are trying to pop and invoke the callback.
             # Then the master tells the worker to wait
             # in case of new tasks later.
-            if (
-                self._master.distribution_strategy
-                == DistributionStrategy.ALLREDUCE
-            ):
+            if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
                 # If there is no more task, master only send wait task to
                 # the last worker and other workers exit.
-                if len(self._master.instance_manager.get_alive_workers()) == 1:
+                if len(self._instance_manager.get_alive_workers()) == 1:
                     res.type = elasticdl_pb2.WAIT
             else:
                 res.type = elasticdl_pb2.WAIT
