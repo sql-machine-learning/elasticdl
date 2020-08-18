@@ -17,6 +17,7 @@ try:
         parse_hosts,
     )
     from horovod.runner.http.http_server import RendezvousServer
+
     _HOROVOD_INSTALLED = True
 except ImportError:
     _HOROVOD_INSTALLED = False
