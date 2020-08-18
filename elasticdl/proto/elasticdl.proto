@@ -94,7 +94,6 @@ message ReportVersionRequest {
   int32 model_version = 1;
 }
 
-
 message GetRankRequest {
   int32 worker_id = 1;
 }
