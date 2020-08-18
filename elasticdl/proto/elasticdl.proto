@@ -98,7 +98,6 @@ message GetRankRequest {
   int32 worker_id = 1;
 }
 
-
 message GetRankResponse {
   int32 rank_id = 1;
   int32 world_size = 2;
