@@ -53,6 +53,7 @@ class InstanceManager(object):
     def __init__(
         self,
         task_d,
+        rendezvous_server=None,
         num_workers=1,
         worker_command=None,
         worker_args=None,
@@ -96,6 +97,7 @@ class InstanceManager(object):
         self._image_pull_policy = image_pull_policy
         self._envs = envs
         self._task_d = task_d
+        self._rendezvous_server = rendezvous_server
         self._next_worker_id = itertools.count().__next__
         self._log_file_path = log_file_path
 
@@ -363,7 +365,9 @@ class InstanceManager(object):
             # tolerance.
             self._start_ps(ps_id)
 
-        self._worker_addrs = self._get_alive_worker_addr()
+        if self._rendezvous_server:
+            self._worker_addrs = self._get_alive_worker_addr()
+            self._rendezvous_server.set_worker_hosts(self._worker_addrs)
 
     def get_alive_workers(self):
         alive_workers = []
