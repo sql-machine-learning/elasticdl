@@ -226,7 +226,6 @@ class Master(object):
                     os.getenv("MY_POD_IP", "localhost")
                 )
                 self.rendezvous_server.start()
-                self.instance_manager.start_ftlib_consensus_service()
             else:
                 self.instance_manager.start_parameter_servers()
             self.instance_manager.start_workers()

@@ -152,14 +152,10 @@ class Worker(object):
             callbacks=args.callbacks,
         )
 
-        self._collective_communicator = None
         if (
             self._distribution_strategy == DistributionStrategy.ALLREDUCE
             and args.num_workers > 1
         ):
-            self._collective_communicator = CollectiveCommunicator(
-                service_name=args.collective_communicator_service_name
-            )
             self.set_horovod_env(args.master_addr)
 
         self._model_handler = ModelHandler.get_model_handler(
@@ -616,21 +612,6 @@ class Worker(object):
     def _get_rank_of_broadcast_src_worker():
         return 0
 
-    def _broadcast_model_params(self):
-        status = self._collective_communicator.barrier()
-        if status == CollectiveCommunicatorStatus.FAILED:
-            self.logger.warning("Failed to perform barrier operation")
-            return False
-        broadcast_root_worker_rank = self._get_rank_of_broadcast_src_worker()
-        model_params = self._get_local_model_params()
-        status = self._collective_communicator.tf_broadcast(
-            model_params, broadcast_root_worker_rank
-        )
-        if status == CollectiveCommunicatorStatus.FAILED:
-            self.logger.warning("Failed to broadcast model parameters")
-            return False
-        return True
-
     def _calculate_grads_and_report_with_allreduce(self, grads):
         self._timing.start_record_time("report_gradient")
         if self._collective_communicator:
@@ -649,35 +630,7 @@ class Worker(object):
                 self.logger.warning("Failed to report the averaged gradients")
         return accepted
 
-    def _collect_gradients_with_allreduce_robust(self, grads):
-        accepted = self._calculate_grads_and_report_with_allreduce(grads)
-        if not accepted:
-            start_time = time.time()
-            while not self._collective_communicator.is_initialized():
-                if (
-                    time.time() - start_time
-                    < DEFAULT_COMMUNICATOR_REINITIALIZING_TIMEOUT
-                ):
-                    self.logger.info(
-                        "(Re-)initializing the collective communicator..."
-                    )
-                    time.sleep(3)
-                else:
-                    self.logger.warning(
-                        "Failed to (re-)initializing the "
-                        "collective communicator"
-                    )
-                    return False
-            succeeded = self._broadcast_model_params()
-            if succeeded:
-                return self._calculate_grads_and_report_with_allreduce(grads)
-            else:
-                self.logger.warning("Failed to broadcast model parameters")
-                return False
-        else:
-            return True
-
-    def _collect_gradients_without_allreduce(self, grads):
+    def _collect_gradients_with_ps(self, grads):
         accepted, min_model_version = self.report_gradient(grads)
         if accepted and self._get_model_steps > 1:
             non_embed_vars_n = len(self._non_embed_vars)
@@ -708,7 +661,7 @@ class Worker(object):
                         self._init_horovod_if_needed()
         else:
             loss, grads = self.training_process(features, labels)
-            return (*self._collect_gradients_without_allreduce(grads), loss)
+            return (*self._collect_gradients_with_ps(grads), loss)
 
     def _collect_evaluation_result(self, outputs, labels):
         key = MetricsDictKey.MODEL_OUTPUT
