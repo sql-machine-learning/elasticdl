@@ -18,6 +18,7 @@ import tensorflow as tf
 from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticdl.python.common.constants import HOROVOD_CONFIG
+from elasticdl.python.common.log_utils import default_logger as logger
 
 try:
     import horovod.tensorflow as hvd
@@ -62,8 +63,8 @@ class AllReduceTrainer(object):
                 version = self._optimizer.iterations.numpy()
                 return version, loss
             except UnknownError as e:
-                self.logger.warning(
-                    "Failed to perform allreduce operation on"
+                logger.warning(
+                    "Failed to perform allreduce operation on "
                     "the gradients. Retrying..."
                 )
                 if (
@@ -72,7 +73,7 @@ class AllReduceTrainer(object):
                     or "HorovodBroadcast" in e.message
                 ):
                     time.sleep(3)
-                    self._allreduce_trainer.init_horovod_if_needed()
+                    self.init_horovod_if_needed()
 
     def init_horovod_if_needed(self):
         rank_response = self._master_client.get_comm_rank()

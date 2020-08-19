@@ -89,7 +89,6 @@ jobs:
           JOB_TYPES=(
               odps
               train
-              allreduce
               #evaluate
               #predict
           )
