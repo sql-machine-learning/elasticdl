@@ -395,8 +395,7 @@ class Worker(object):
 
         return embedding_name_values
 
-    def report_gradient_s(self, gradients):
-
+    def report_gradient(self, gradients):
         self._timing.start_record_time("report_gradient")
 
         grads = []
