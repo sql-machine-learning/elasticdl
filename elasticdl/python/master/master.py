@@ -106,7 +106,8 @@ class Master(object):
         master_ip = os.getenv("MY_POD_IP", "localhost")
         self.master_addr = "%s:%d" % (master_ip, args.port)
         self.job_type = Master._get_job_type(args)
-        self.rendezvous_server = HorovodRendezvousServer(server_host=master_ip)
+        if self.distribution_strategy == DistributionStrategy.ALLREDUCE:
+            self.rendezvous_server = HorovodRendezvousServer(master_ip)
 
         # Initialize TensorBoard service if requested
         self.tb_service = self._create_tensorboard_service(
