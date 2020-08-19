@@ -513,6 +513,7 @@ class Master(object):
 
             instance_manager = InstanceManager(
                 self.task_d,
+                rendezvous_server=self.rendezvous_server,
                 job_name=args.job_name,
                 image_name=args.worker_image,
                 worker_command=container_command,

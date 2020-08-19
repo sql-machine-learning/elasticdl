@@ -60,6 +60,8 @@ DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
 # collective communicator.
 DEFAULT_COMMUNICATOR_REINITIALIZING_TIMEOUT = 20
 
+DEFAULT_STEPS_TO_CHECK_RENDEZVOUS = 20
+
 
 class Worker(object):
     """ElasticDL worker"""
@@ -589,6 +591,7 @@ class Worker(object):
         grads = tape.gradient(loss, self.get_trainable_items())
         return loss, grads
 
+    @tf.function
     def training_process_with_allreduce(self, features, labels):
         with tf.GradientTape() as tape:
             outputs = self._model.call(features, training=True)
@@ -689,7 +692,7 @@ class Worker(object):
                     loss, grads = self.training_process_with_allreduce(
                         features, labels
                     )
-                    self._model_version += 1
+                    self.report_gradient(grads)
                     return True, None, loss
                 except UnknownError as e:
                     self.logger.warning(
@@ -701,7 +704,8 @@ class Worker(object):
                         or "HorovodAllgather" in e.message
                         or "HorovodBroadcast" in e.message
                     ):
-                        self._initialize_horovod_if_needed()
+                        time.sleep(3)
+                        self._init_horovod_if_needed()
         else:
             loss, grads = self.training_process(features, labels)
             return (*self._collect_gradients_without_allreduce(grads), loss)
@@ -869,7 +873,7 @@ class Worker(object):
             raise ex
         return err_msg
 
-    def _initialize_horovod_if_needed(self):
+    def _init_horovod_if_needed(self):
         rank_response = self._mc.get_comm_rank()
         if (
             self._distribution_strategy == DistributionStrategy.ALLREDUCE
@@ -917,7 +921,7 @@ class Worker(object):
                 self._task_data_service.data_reader.metadata,
             )
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
-            self._initialize_horovod_if_needed()
+            self._init_horovod_if_needed()
             self._timing.start_record_time("task_process")
             for dataset_batch in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
@@ -960,9 +964,12 @@ class Worker(object):
                     self._timing.end_record_time("task_process")
                     self._timing.report_timing(reset=True)
                     self._timing.start_record_time("task_process")
-                
-                if self._model_version % 20 == 0:
-                    self._initialize_horovod_if_needed()
+
+                if (
+                    self._model_version % DEFAULT_STEPS_TO_CHECK_RENDEZVOUS
+                    == 0
+                ):
+                    self._init_horovod_if_needed()
 
             del dataset
             # New evaluation tasks may be created after this worker's
