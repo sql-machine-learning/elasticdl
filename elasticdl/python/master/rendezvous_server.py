@@ -39,10 +39,10 @@ class HorovodRendezvousServer(object):
 
     def set_worker_hosts(self, worker_hosts):
         """
-        Set worker hosts into RendezvousServer
+        Set worker hosts into RendezvousServer.
 
         Args:
-            worker_hosts: String, multiple hosts are separated by ","
+            worker_hosts: List of host string.
         """
         if sorted(worker_hosts) == sorted(self._worker_hosts):
             return
