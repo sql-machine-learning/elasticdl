@@ -59,7 +59,8 @@ class AllReduceTrainer(object):
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
             try:
                 loss = self._training_process(features, labels)
-                return True, None, loss
+                version = self._optimizer.iterations.numpy()
+                return version, loss
             except UnknownError as e:
                 self.logger.warning(
                     "Failed to perform allreduce operation on"

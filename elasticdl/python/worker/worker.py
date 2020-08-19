@@ -565,9 +565,11 @@ class Worker(object):
 
     def _run_training_task(self, features, labels):
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            return self._allreduce_trainer.training_process_elastic(
+            version, loss = self._allreduce_trainer.training_process_elastic(
                 features, labels
             )
+            self._model_version = version
+            return True, version, loss
         else:
             loss, grads = self.training_process(features, labels)
             return (*self._collect_gradients_with_ps(grads), loss)
@@ -814,9 +816,9 @@ class Worker(object):
                     self._timing.start_record_time("task_process")
 
                 if (
-                    self._model_version % DEFAULT_STEPS_TO_CHECK_RENDEZVOUS
+                    self._allreduce_trainer
+                    and self._model_version % DEFAULT_STEPS_TO_CHECK_RENDEZVOUS
                     == 0
-                    and self._allreduce_trainer
                 ):
                     self._allreduce_trainer.init_horovod_if_needed()
 
