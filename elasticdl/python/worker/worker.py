@@ -22,7 +22,6 @@ from tensorflow.keras import backend as K
 from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
 from elasticdl.python.common.constants import (
     HOROVOD_CONFIG,
     CollectiveCommunicatorStatus,
