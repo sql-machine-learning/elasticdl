@@ -42,6 +42,7 @@ from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.elasticdl.callbacks import MaxStepsStopping
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_instance_manager import InstanceManager
+from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.master.tensorboard_service import TensorboardService
@@ -105,6 +106,7 @@ class Master(object):
         master_ip = os.getenv("MY_POD_IP", "localhost")
         self.master_addr = "%s:%d" % (master_ip, args.port)
         self.job_type = Master._get_job_type(args)
+        self.rendezvous_server = HorovodRendezvousServer(server_host=master_ip)
 
         # Initialize TensorBoard service if requested
         self.tb_service = self._create_tensorboard_service(
@@ -220,6 +222,7 @@ class Master(object):
             self.instance_manager.update_status(InstanceManagerStatus.PENDING)
             if self.distribution_strategy == DistributionStrategy.ALLREDUCE:
                 # Exposes the consensus service for allreduce-based training
+                self.rendezvous_server.start()
                 self.instance_manager.start_ftlib_consensus_service()
             else:
                 self.instance_manager.start_parameter_servers()

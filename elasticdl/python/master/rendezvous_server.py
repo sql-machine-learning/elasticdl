@@ -11,8 +11,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from horovod.runner.common.util.hosts import get_host_assignments, parse_hosts
-from horovod.runner.http.http_server import RendezvousServer
+try:
+    from horovod.runner.common.util.hosts import (
+        get_host_assignments,
+        parse_hosts,
+    )
+    from horovod.runner.http.http_server import RendezvousServer
+
+    _HOROVOD_INSTALLED = True
+except ImportError:
+    _HOROVOD_INSTALLED = False
 
 _WORKER_SLOT_NUMBER = 1
 _HOST_SEP = ","
@@ -20,11 +28,12 @@ _HOST_SEP = ","
 
 class HorovodRendezvousServer(object):
     def __init__(self, server_host):
-        self._rendezvous_host = server_host
-        self._rendezvous_id = 0
-        self._worker_hosts = []
-        self._rendezvous_server = RendezvousServer(verbose=True)
-        self._rendezvous_port = None
+        if _HOROVOD_INSTALLED:
+            self._rendezvous_host = server_host
+            self._rendezvous_id = 0
+            self._worker_hosts = []
+            self._rendezvous_server = RendezvousServer(verbose=True)
+            self._rendezvous_port = None
 
     def start(self):
         self._rendezvous_port = self._rendezvous_server.start()
