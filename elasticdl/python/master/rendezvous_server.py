@@ -28,12 +28,11 @@ _HOST_SEP = ","
 
 class HorovodRendezvousServer(object):
     def __init__(self, server_host):
-        if _HOROVOD_INSTALLED:
-            self._rendezvous_host = server_host
-            self._rendezvous_id = 0
-            self._worker_hosts = []
-            self._rendezvous_server = RendezvousServer(verbose=True)
-            self._rendezvous_port = None
+        self._rendezvous_host = server_host
+        self._rendezvous_id = 0
+        self._worker_hosts = []
+        self._rendezvous_server = RendezvousServer(verbose=True)
+        self._rendezvous_port = None
 
     def start(self):
         self._rendezvous_port = self._rendezvous_server.start()
