@@ -221,12 +221,8 @@ class Master(object):
         if self.instance_manager:
             self.instance_manager.update_status(InstanceManagerStatus.PENDING)
             if self.distribution_strategy == DistributionStrategy.ALLREDUCE:
-                # Exposes the consensus service for allreduce-based training
-                self.rendezvous_server = HorovodRendezvousServer(
-                    os.getenv("MY_POD_IP", "localhost")
-                )
+                # Start rendezvous server for workers to initialize Horovod
                 self.rendezvous_server.start()
-                self.instance_manager.start_ftlib_consensus_service()
             else:
                 self.instance_manager.start_parameter_servers()
             self.instance_manager.start_workers()
@@ -513,6 +509,7 @@ class Master(object):
 
             instance_manager = InstanceManager(
                 self.task_d,
+                rendezvous_server=self.rendezvous_server,
                 job_name=args.job_name,
                 image_name=args.worker_image,
                 worker_command=container_command,

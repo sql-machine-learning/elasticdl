@@ -76,7 +76,7 @@ jobs:
         - kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
         - docker build --target ci -t elasticdl:ci
           -f elasticdl/docker/Dockerfile.ci
-          --build-arg BASE_IMAGE="$BASE_IMAGE" .
+          --build-arg BASE_IMAGE=elasticdl:dev_allreduce .
         - mkdir -p data && docker run --rm -it --net=host
           -v $HOME/.cache:/root/.cache
           -v $HOME/.keras/datasets:/root/.keras/datasets
@@ -89,6 +89,7 @@ jobs:
           JOB_TYPES=(
               odps
               train
+              allreduce
               #evaluate
               #predict
           )
