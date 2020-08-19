@@ -68,6 +68,10 @@ class HorovodRendezvousServer(object):
         return self._rendezvous_port
 
     def get_worker_host_rank(self, host):
+        # -1 stands for the worker not in the rendezvous
+        # and the worker can wait and retry to query.
+        if host not in self._worker_hosts:
+            return -1
         return self._worker_hosts.index(host)
 
     def get_size(self):

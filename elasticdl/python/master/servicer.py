@@ -153,7 +153,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         worker_address_port = k8s_client.get_worker_service_address(worker_id)
         worker_host = worker_address_port.split(":")[0]
 
-        res = elasticdl_pb2.GetRankResponse()
+        res = elasticdl_pb2.GetCommRankResponse()
         res.rank_id = self._rendezvous_server.get_worker_host_rank(worker_host)
         res.world_size = self._rendezvous_server.get_size()
         res.rendezvous_id = self._rendezvous_server.get_rendezvous_id()

@@ -138,7 +138,7 @@ class ServicerTest(unittest.TestCase):
         master_servicer = MasterServicer(
             3, evaluation_service=None, master=self.master
         )
-        request = elasticdl_pb2.GetRankRequest()
+        request = elasticdl_pb2.GetCommRankRequest()
         request.worker_id = 0
         rank_response = master_servicer.get_comm_rank(request, None)
         self.assertEqual(rank_response.world_size, 2)

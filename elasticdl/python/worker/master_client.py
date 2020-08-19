@@ -112,6 +112,6 @@ class MasterClient:
         return self._stub.get_model_version()
 
     def get_comm_rank(self):
-        req = elasticdl_pb2.GetRankRequest()
+        req = elasticdl_pb2.GetCommRankRequest()
         req.worker_id = self._worker_id
         return self._stub.get_comm_rank(req)
