@@ -24,7 +24,6 @@ from tensorflow.python.framework.errors_impl import UnknownError
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import (
     HOROVOD_CONFIG,
-    CollectiveCommunicatorStatus,
     Initializer,
     JobType,
     MetricsDictKey,
@@ -606,28 +605,6 @@ class Worker(object):
 
     def _get_local_model_params(self):
         return [v for v in self._non_embed_vars.values()]
-
-    @staticmethod
-    def _get_rank_of_broadcast_src_worker():
-        return 0
-
-    def _calculate_grads_and_report_with_allreduce(self, grads):
-        self._timing.start_record_time("report_gradient")
-        if self._collective_communicator:
-            (
-                status,
-                averaged_grads,
-            ) = self._collective_communicator.tf_allreduce(grads)
-        else:
-            status = CollectiveCommunicatorStatus.SUCCEEDED
-            averaged_grads = grads
-        self._timing.end_record_time("report_gradient")
-        accepted = False
-        if status == CollectiveCommunicatorStatus.SUCCEEDED:
-            accepted, _ = self.report_gradient(averaged_grads)
-            if not accepted:
-                self.logger.warning("Failed to report the averaged gradients")
-        return accepted
 
     def _collect_gradients_with_ps(self, grads):
         accepted, min_model_version = self.report_gradient(grads)
