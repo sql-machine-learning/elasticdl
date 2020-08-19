@@ -32,6 +32,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._task_d = master.task_d
         self._instance_manager = master.instance_manager
         self._distribution_strategy = master.distribution_strategy
+        self._rendezvous_server = master.rendezvous_server
         self._lock = threading.Lock()
         self._minibatch_size = minibatch_size
         self._version = 0
@@ -145,3 +146,16 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def get_worker_liveness_time(self, worker_id):
         return self._worker_liveness_time[worker_id]
+
+    def get_comm_rank(self, request, _):
+        worker_id = request.worker_id
+        k8s_client = self._instance_manager._k8s_client
+        worker_address_port = k8s_client.get_worker_service_address(worker_id)
+        worker_host = worker_address_port.split(":")[0]
+
+        res = elasticdl_pb2.GetCommRankResponse()
+        res.rank_id = self._rendezvous_server.get_worker_host_rank(worker_host)
+        res.world_size = self._rendezvous_server.get_size()
+        res.rendezvous_id = self._rendezvous_server.get_rendezvous_id()
+        res.rendezvous_port = self._rendezvous_server.get_rendezvous_port()
+        return res

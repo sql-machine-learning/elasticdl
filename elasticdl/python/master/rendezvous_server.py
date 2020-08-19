@@ -11,8 +11,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from horovod.runner.common.util.hosts import get_host_assignments, parse_hosts
-from horovod.runner.http.http_server import RendezvousServer
+try:
+    from horovod.runner.common.util.hosts import (
+        get_host_assignments,
+        parse_hosts,
+    )
+    from horovod.runner.http.http_server import RendezvousServer
+
+    _HOROVOD_INSTALLED = True
+except ImportError:
+    _HOROVOD_INSTALLED = False
 
 _WORKER_SLOT_NUMBER = 1
 _HOST_SEP = ","
@@ -31,10 +39,10 @@ class HorovodRendezvousServer(object):
 
     def set_worker_hosts(self, worker_hosts):
         """
-        Set worker hosts into RendezvousServer
+        Set worker hosts into RendezvousServer.
 
         Args:
-            worker_hosts: String, multiple hosts are separated by ","
+            worker_hosts: List of host string.
         """
         if sorted(worker_hosts) == sorted(self._worker_hosts):
             return
@@ -60,6 +68,9 @@ class HorovodRendezvousServer(object):
         return self._rendezvous_port
 
     def get_worker_host_rank(self, host):
+        # -1 if host not in worker_hosts list.
+        if host not in self._worker_hosts:
+            return -1
         return self._worker_hosts.index(host)
 
     def get_size(self):
