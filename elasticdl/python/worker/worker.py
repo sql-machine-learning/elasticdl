@@ -12,18 +12,14 @@
 # limitations under the License.
 
 import os
-import time
 import traceback
 
-import horovod.tensorflow as hvd
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
-from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import (
-    HOROVOD_CONFIG,
     Initializer,
     JobType,
     MetricsDictKey,
@@ -44,6 +40,7 @@ from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
+from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
 from elasticdl.python.worker.task_data_service import TaskDataService
 from elasticdl_client.common.constants import DistributionStrategy
 
@@ -51,9 +48,6 @@ from elasticdl_client.common.constants import DistributionStrategy
 # (e.g. gradients) are not accepted by master.
 DEFAULT_MAX_MINIBATCH_RETRY_NUM = 64
 
-# The default maximum number of retries for allreduce operation
-# if allreduce-based distributed training strategy is used.
-DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
 # The default timeout in seconds allowed for reinitializing the
 # collective communicator.
 DEFAULT_COMMUNICATOR_REINITIALIZING_TIMEOUT = 20
@@ -70,7 +64,6 @@ class Worker(object):
         master_client=None,
         ps_client=None,
         max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
-        max_allreduce_retry_num=DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
         set_parallelism=False,
     ):
         """
@@ -112,12 +105,10 @@ class Worker(object):
                     -1 for _ in range(self._ps_client.ps_num)
                 ]
         self._max_minibatch_retry_num = max_minibatch_retry_num
-        self._max_allreduce_retry_num = max_allreduce_retry_num
         self._init_from_args(args)
         self._timing = Timing(args.log_level.upper() == "DEBUG", self.logger)
         self._log_loss_count = 0
         self._var_created = False
-        self._rendezvous_id = None
 
     def _init_from_args(self, args):
         """
@@ -149,12 +140,6 @@ class Worker(object):
             custom_data_reader=args.custom_data_reader,
             callbacks=args.callbacks,
         )
-
-        if (
-            self._distribution_strategy == DistributionStrategy.ALLREDUCE
-            and args.num_workers > 1
-        ):
-            self.set_horovod_env(args.master_addr)
 
         self._model_handler = ModelHandler.get_model_handler(
             self._distribution_strategy, checkpoint_dir=args.checkpoint_dir
@@ -203,12 +188,15 @@ class Worker(object):
             checkpoint_path=args.checkpoint_dir,
         )
 
-    def set_horovod_env(self, master_addr):
-        master_host = master_addr.split(":")[0]
-        os.environ[HOROVOD_CONFIG.RENDEZVOUS_ADDR_ENV] = master_host
-        os.environ[HOROVOD_CONFIG.CONTROLLER_ENV] = "gloo"
-        os.environ[HOROVOD_CONFIG.CPU_OPERATIONS_ENV] = "gloo"
-        os.environ[HOROVOD_CONFIG.HOSTNAME_ENV] = "master"
+        self._allreduce_trainer = None
+        if (
+            self._distribution_strategy == DistributionStrategy.ALLREDUCE
+            and args.num_workers > 1
+        ):
+            self._allreduce_trainer = AllReduceTrainer(
+                self._mc, self._model, self._loss, self._opt
+            )
+            self._allreduce_trainer.set_horovod_env(args.master_addr)
 
     # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
@@ -407,7 +395,7 @@ class Worker(object):
 
         return embedding_name_values
 
-    def report_gradient_to_ps(self, gradients):
+    def report_gradient_s(self, gradients):
 
         self._timing.start_record_time("report_gradient")
 
@@ -451,32 +439,6 @@ class Worker(object):
         )
         self._timing.end_record_time("report_gradient")
         return accepted, max_version
-
-    def report_gradient_locally(self, grads):
-        if self._embedding_layers or self._embedding_columns:
-            raise ValueError(
-                "ElasticDL embedding layer is not supported when"
-                "reporting gradients locally"
-            )
-        self._non_embed_grads = grads[: len(self._non_embed_vars)]
-        return True, None
-
-    def report_gradient(self, grads):
-        if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            self.report_gradient_locally(grads)
-            self._update_local_model()
-            self._model_version += 1
-            return True, None
-        elif (
-            self._distribution_strategy
-            == DistributionStrategy.PARAMETER_SERVER
-        ):
-            return self.report_gradient_to_ps(grads)
-        else:
-            raise RuntimeError(
-                "Only support Allreduce and ParameterServer "
-                "distribution strategy"
-            )
 
     def report_prediction_outputs(self, predictions):
         if self._prediction_outputs_processor:
@@ -586,18 +548,6 @@ class Worker(object):
         return loss, grads
 
     @tf.function
-    def training_process_with_allreduce(self, features, labels):
-        with tf.GradientTape() as tape:
-            outputs = self._model.call(features, training=True)
-            loss = self._loss(labels, outputs)
-            if self._model.losses:
-                loss += tf.math.add_n(self._model.losses)
-
-        tape = hvd.DistributedGradientTape(tape)
-        grads = tape.gradient(loss, self.get_trainable_items())
-        return loss, grads
-
-    @tf.function
     def forward_process(self, features):
         """Calculates model outputs in non-training mode."""
         outputs = self._model.call(features, training=False)
@@ -616,25 +566,9 @@ class Worker(object):
 
     def _run_training_task(self, features, labels):
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            for _ in range(self._max_allreduce_retry_num + 1):
-                try:
-                    loss, grads = self.training_process_with_allreduce(
-                        features, labels
-                    )
-                    self.report_gradient(grads)
-                    return True, None, loss
-                except UnknownError as e:
-                    self.logger.warning(
-                        "Failed to perform allreduce operation on"
-                        "the gradients. Retrying..."
-                    )
-                    if (
-                        "HorovodAllreduce" in e.message
-                        or "HorovodAllgather" in e.message
-                        or "HorovodBroadcast" in e.message
-                    ):
-                        time.sleep(3)
-                        self._init_horovod_if_needed()
+            return self._allreduce_trainer.training_process_elastic(
+                features, labels
+            )
         else:
             loss, grads = self.training_process(features, labels)
             return (*self._collect_gradients_with_ps(grads), loss)
@@ -802,21 +736,6 @@ class Worker(object):
             raise ex
         return err_msg
 
-    def _init_horovod_if_needed(self):
-        rank_response = self._mc.get_comm_rank()
-        if (
-            self._distribution_strategy == DistributionStrategy.ALLREDUCE
-            and rank_response.rendezvous_id != self._rendezvous_id
-        ):
-            os.environ[HOROVOD_CONFIG.RENDEZVOUS_PORT_ENV] = str(
-                rank_response.rendezvous_port
-            )
-            os.environ[HOROVOD_CONFIG.RANK_ENV] = str(rank_response.rank_id)
-            os.environ[HOROVOD_CONFIG.SIZE_ENV] = str(rank_response.world_size)
-            hvd.shutdown()
-            hvd.init()
-            self._rendezvous_id = rank_response.rendezvous_id
-
     def _train_and_evaluate(self):
         """
         Train and evaluate the model on the worker
@@ -850,7 +769,8 @@ class Worker(object):
                 self._task_data_service.data_reader.metadata,
             )
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
-            self._init_horovod_if_needed()
+            if self._allreduce_trainer:
+                self._allreduce_trainer.init_horovod_if_needed()
             self._timing.start_record_time("task_process")
             for dataset_batch in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:
@@ -897,8 +817,9 @@ class Worker(object):
                 if (
                     self._model_version % DEFAULT_STEPS_TO_CHECK_RENDEZVOUS
                     == 0
+                    and self._allreduce_trainer
                 ):
-                    self._init_horovod_if_needed()
+                    self._allreduce_trainer.init_horovod_if_needed()
 
             del dataset
             # New evaluation tasks may be created after this worker's
