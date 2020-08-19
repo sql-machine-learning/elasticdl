@@ -381,9 +381,10 @@ class InstanceManager(object):
         worker_service_addrs = []
         for pod_name in alive_workers:
             worker_id = self._worker_pod_name_to_id[pod_name]
-            worker_service_addrs.append(
-                self._k8s_client.get_worker_service_address(worker_id)
+            service_addr_port = self._k8s_client.get_worker_service_address(
+                worker_id
             )
+            worker_service_addrs.append(service_addr_port.split(":")[0])
         return worker_service_addrs
 
     @property
