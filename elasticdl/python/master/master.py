@@ -106,8 +106,7 @@ class Master(object):
         master_ip = os.getenv("MY_POD_IP", "localhost")
         self.master_addr = "%s:%d" % (master_ip, args.port)
         self.job_type = Master._get_job_type(args)
-        if self.distribution_strategy == DistributionStrategy.ALLREDUCE:
-            self.rendezvous_server = HorovodRendezvousServer(master_ip)
+        self.distribution_strategy = None
 
         # Initialize TensorBoard service if requested
         self.tb_service = self._create_tensorboard_service(
@@ -223,6 +222,9 @@ class Master(object):
             self.instance_manager.update_status(InstanceManagerStatus.PENDING)
             if self.distribution_strategy == DistributionStrategy.ALLREDUCE:
                 # Exposes the consensus service for allreduce-based training
+                self.rendezvous_server = HorovodRendezvousServer(
+                    os.getenv("MY_POD_IP", "localhost")
+                )
                 self.rendezvous_server.start()
                 self.instance_manager.start_ftlib_consensus_service()
             else:
