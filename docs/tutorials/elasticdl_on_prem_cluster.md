@@ -22,7 +22,7 @@ repo. So we can push the image to any remote docker hub that the on-premise
 cluster can access.
 
 ```bash
-export DOCKER_HUB_REPO=reg.docker.com/user/
+export DOCKER_HUB_REPO=reg.docker.com/user
 
 cd ${CODE_PATH}/elasticdl/model_zoo
 
