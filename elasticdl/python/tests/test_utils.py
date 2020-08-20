@@ -452,7 +452,7 @@ IRIS_TABLE_COLUMN_NAMES = [
 def create_iris_odps_table(odps_client, project_name, table_name):
     sql_tmpl = """
     DROP TABLE IF EXISTS {PROJECT_NAME}.{TABLE_NAME};
-    CREATE TABLE {PROJECT_NAME}.{TABLE_NAME} (
+    CREATE TABLE {PROJECT_NAME}.{TABLE_NAME} LIFECYCLE 3 (
            sepal_length DOUBLE,
            sepal_width  DOUBLE,
            petal_length DOUBLE,
