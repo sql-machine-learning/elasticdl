@@ -189,10 +189,7 @@ class Worker(object):
         )
 
         self._allreduce_trainer = None
-        if (
-            self._distribution_strategy == DistributionStrategy.ALLREDUCE
-            and args.num_workers > 1
-        ):
+        if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
             master_addr = args.master_addr.split(":")[0]
             self._allreduce_trainer = AllReduceTrainer(
                 self._mc, master_addr, self._model, self._loss, self._opt
