@@ -70,7 +70,6 @@ class InstanceManager(object):
         image_pull_policy=None,
         restart_policy="Never",
         envs=None,
-        expose_ports=False,
         disable_relaunch=False,
         log_file_path=None,
         **kwargs
@@ -83,7 +82,6 @@ class InstanceManager(object):
         self._worker_pod_priority = _parse_worker_pod_priority(
             self._num_workers, worker_pod_priority
         )
-        self._expose_ports = expose_ports
 
         self._num_ps = num_ps
         self._ps_command = ps_command
@@ -135,11 +133,6 @@ class InstanceManager(object):
             self._num_ps, self._k8s_client.get_ps_service_address
         )
         self._worker_addrs = []
-        if expose_ports:
-            self._worker_args += [
-                "--collective_communicator_service_name",
-                self._k8s_client.get_collective_communicator_service_name(),
-            ]
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
@@ -168,7 +161,6 @@ class InstanceManager(object):
                 restart_policy=self._restart_policy,
                 ps_addrs=self._ps_addrs,
                 envs=copy.deepcopy(self._envs),
-                expose_ports=self._expose_ports,
             )
             name = pod.metadata.name
             self._worker_pod_name_to_id[name] = worker_id
@@ -196,7 +188,6 @@ class InstanceManager(object):
                 args=ps_args,
                 restart_policy=self._restart_policy,
                 envs=copy.deepcopy(self._envs),
-                expose_ports=False,
             )
             name = pod.metadata.name
             self._ps_pod_name_to_id[name] = ps_id
@@ -218,9 +209,6 @@ class InstanceManager(object):
     def start_workers(self):
         for _ in range(self._num_workers):
             self._start_worker(self._next_worker_id())
-
-    def start_ftlib_consensus_service(self):
-        self._k8s_client.create_ftlib_consensus_service()
 
     def start_parameter_servers(self):
         for i in range(self._num_ps):

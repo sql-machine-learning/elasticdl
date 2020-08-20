@@ -184,7 +184,6 @@ class Client(BaseClient):
             ps_addrs=kargs.get("ps_addrs", ""),
             termination_period=kargs.get("termination_period", None),
             env=env,
-            expose_ports=kargs["expose_ports"],
         )
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = type_key
@@ -234,19 +233,6 @@ class Client(BaseClient):
             replica_type=replica_type,
             replica_index=replica_index,
             service_type=service_type,
-            owner=self.get_master_pod(),
-        )
-
-    def get_collective_communicator_service_name(self):
-        return self.job_name + "-ftlib-consensus"
-
-    def create_ftlib_consensus_service(self):
-        return self._create_service(
-            name=self.get_collective_communicator_service_name(),
-            port=_FTLIB_GOSSIP_CONTAINER_PORT,
-            target_port=_FTLIB_GOSSIP_CONTAINER_PORT,
-            replica_type="worker",
-            replica_index=None,
             owner=self.get_master_pod(),
         )
 
