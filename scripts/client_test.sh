@@ -133,6 +133,7 @@ elif [[ "$JOB_TYPE" == "allreduce" ]]; then
       --minibatch_size=64 \
       --num_minibatches_per_task=2 \
       --num_workers="$WORKER_NUM" \
+      --distribution_strategy=AllreduceStrategy \
       --job_name=test-allreduce \
       --log_level=INFO \
       --image_pull_policy=Never \
