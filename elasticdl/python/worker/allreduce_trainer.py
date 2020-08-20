@@ -21,6 +21,7 @@ from elasticdl.python.common.constants import HorovodEnv
 from elasticdl.python.common.log_utils import default_logger as logger
 
 try:
+    from horovod.tensorflow.functions import broadcast_variables
     import horovod.tensorflow as hvd
 except ImportError:
     hvd = None
@@ -41,6 +42,8 @@ class AllReduceTrainer(object):
         self._loss = loss_fn
         self._optimizer = optimizer
         self._rendezvous_id = None
+        self._need_broadcast = True
+        self._var_created = False
         self.set_horovod_env()
 
     @tf.function
@@ -61,8 +64,14 @@ class AllReduceTrainer(object):
         return loss
 
     def training_process_with_fault_tolerance(self, features, labels):
+        if not self._var_created:
+            self._run_model_call_locally(features, labels)
+
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
             try:
+                if self._need_broadcast:
+                    self._broadcast_model()
+                    self._need_broadcast = False
                 loss = self._training_process(features, labels)
                 version = self._optimizer.iterations.numpy()
                 return version, loss
@@ -97,6 +106,7 @@ class AllReduceTrainer(object):
             hvd.shutdown()
             hvd.init()
             self._rendezvous_id = rank_response.rendezvous_id
+            self._need_broadcast = True
 
     def set_horovod_env(self):
         if self._rendezvous_addr:
@@ -104,3 +114,21 @@ class AllReduceTrainer(object):
         os.environ[HorovodEnv.CONTROLLER] = "gloo"
         os.environ[HorovodEnv.CPU_OPERATIONS] = "gloo"
         os.environ[HorovodEnv.HOSTNAME] = "master"
+
+    def _broadcast_model(self):
+        broadcast_variables(self._model.variables, root_rank=0)
+        broadcast_variables(self._optimizer.variables(), root_rank=0)
+
+    def _run_model_call_locally(self, features, labels):
+        """Call `self._model.call` locally to Create variables of the model
+        and optimizer. Because we should have variables before broadcasting.
+        """
+        with tf.GradientTape() as tape:
+            outputs = self._model.call(features)
+            loss = self._loss(labels, outputs)
+
+        grads = tape.gradient(loss, self._model.variables)
+        self._optimizer.apply_gradients(
+            zip(grads, self._model.trainable_variables)
+        )
+        self._var_created = True
