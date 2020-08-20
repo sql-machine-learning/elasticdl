@@ -83,7 +83,16 @@ class AllReduceTrainer(object):
                     self.init_horovod_if_needed()
 
     def init_horovod_if_needed(self):
-        rank_response = self._master_client.get_comm_rank()
+        for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM):
+            rank_response = self._master_client.get_comm_rank()
+            if rank_response.rank_id < 0:
+                logger.warning(
+                    "The master has not added the worker host into "
+                    "rendezvous yet. Retrying to get rank"
+                )
+                time.sleep(5)
+            else:
+                break
 
         # If the rendezvous from master is unequal to self._rendezvous_id,
         # the worker should rebuild the communication because the master
