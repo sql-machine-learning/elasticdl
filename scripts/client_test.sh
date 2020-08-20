@@ -121,7 +121,7 @@ elif [[ "$JOB_TYPE" == "odps" ]]; then
       --output=model_output
 elif [[ "$JOB_TYPE" == "allreduce" ]]; then
     elasticdl train \
-      --image_name=elasticdl:dev_allreduce \
+      --image_name=elasticdl:ci \
       --model_zoo=model_zoo \
       --model_def=mnist.mnist_functional_api.custom_model \
       --train_data=/data/mnist/train \
