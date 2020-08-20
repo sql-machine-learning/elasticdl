@@ -565,7 +565,10 @@ class Worker(object):
 
     def _run_training_task(self, features, labels):
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            version, loss = self._allreduce_trainer.training_process_with_fault_tolerance(
+            (
+                version,
+                loss,
+            ) = self._allreduce_trainer.training_process_with_fault_tolerance(
                 features, labels
             )
             self._model_version = version
