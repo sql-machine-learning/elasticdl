@@ -17,13 +17,13 @@ import time
 import tensorflow as tf
 from tensorflow.python.framework.errors_impl import UnknownError
 
-from elasticdl.python.common.constants import HOROVOD_CONFIG
+from elasticdl.python.common.constants import HorovodEnv
 from elasticdl.python.common.log_utils import default_logger as logger
 
 try:
     import horovod.tensorflow as hvd
 except ImportError:
-    pass
+    hvd = None
 
 
 # The default maximum number of retries for allreduce operation
@@ -33,6 +33,8 @@ DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
 
 class AllReduceTrainer(object):
     def __init__(self, master_client, model, loss_fn, optimizer):
+        if not hvd:
+            raise RuntimeError("Horovod is not installed for AllReduce")
         self._master_client = master_client
         self._model = model
         self._loss = loss_fn
@@ -78,18 +80,18 @@ class AllReduceTrainer(object):
     def init_horovod_if_needed(self):
         rank_response = self._master_client.get_comm_rank()
         if rank_response.rendezvous_id != self._rendezvous_id:
-            os.environ[HOROVOD_CONFIG.RENDEZVOUS_PORT_ENV] = str(
+            os.environ[HorovodEnv.RENDEZVOUS_PORT] = str(
                 rank_response.rendezvous_port
             )
-            os.environ[HOROVOD_CONFIG.RANK_ENV] = str(rank_response.rank_id)
-            os.environ[HOROVOD_CONFIG.SIZE_ENV] = str(rank_response.world_size)
+            os.environ[HorovodEnv.RANK] = str(rank_response.rank_id)
+            os.environ[HorovodEnv.SIZE] = str(rank_response.world_size)
             hvd.shutdown()
             hvd.init()
             self._rendezvous_id = rank_response.rendezvous_id
 
     def set_horovod_env(self, master_addr):
         master_host = master_addr.split(":")[0]
-        os.environ[HOROVOD_CONFIG.RENDEZVOUS_ADDR_ENV] = master_host
-        os.environ[HOROVOD_CONFIG.CONTROLLER_ENV] = "gloo"
-        os.environ[HOROVOD_CONFIG.CPU_OPERATIONS_ENV] = "gloo"
-        os.environ[HOROVOD_CONFIG.HOSTNAME_ENV] = "master"
+        os.environ[HorovodEnv.RENDEZVOUS_ADDR] = master_host
+        os.environ[HorovodEnv.CONTROLLER] = "gloo"
+        os.environ[HorovodEnv.CPU_OPERATIONS] = "gloo"
+        os.environ[HorovodEnv.HOSTNAME] = "master"
