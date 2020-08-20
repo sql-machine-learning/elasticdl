@@ -457,7 +457,7 @@ def create_iris_odps_table(odps_client, project_name, table_name):
            sepal_width  DOUBLE,
            petal_length DOUBLE,
            petal_width  DOUBLE,
-           class BIGINT);
+           class BIGINT) LIFECYCLE 3;
 
     INSERT INTO {PROJECT_NAME}.{TABLE_NAME} VALUES
     (6.4,2.8,5.6,2.2,2),
