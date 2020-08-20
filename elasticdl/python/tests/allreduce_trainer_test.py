@@ -40,7 +40,7 @@ class AllReduceTrainerTest(unittest.TestCase):
         version, _ = self._trainer.training_process_with_fault_tolerance(
             features, labels
         )
-        self.assertEqual(version, 1)
+        self.assertEqual(version, 2)
         hvd.shutdown()
 
 
