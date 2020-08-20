@@ -32,14 +32,16 @@ DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
 
 
 class AllReduceTrainer(object):
-    def __init__(self, master_client, model, loss_fn, optimizer):
+    def __init__(self, master_client, master_addr, model, loss_fn, optimizer):
         if not hvd:
             raise RuntimeError("Horovod is not installed for AllReduce")
         self._master_client = master_client
+        self._rendezvous_addr = master_addr
         self._model = model
         self._loss = loss_fn
         self._optimizer = optimizer
         self._rendezvous_id = None
+        self.set_horovod_env()
 
     @tf.function
     def _training_process(self, features, labels):
@@ -58,7 +60,7 @@ class AllReduceTrainer(object):
         )
         return loss
 
-    def training_process_elastic(self, features, labels):
+    def training_process_with_fault_tolerance(self, features, labels):
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
             try:
                 loss = self._training_process(features, labels)
@@ -69,6 +71,9 @@ class AllReduceTrainer(object):
                     "Failed to perform allreduce operation on "
                     "the gradients. Retrying..."
                 )
+                # Those error message show that the communication
+                # to merge gradient fails and we can rebuild the
+                # communication.
                 if (
                     "HorovodAllreduce" in e.message
                     or "HorovodAllgather" in e.message
@@ -79,6 +84,10 @@ class AllReduceTrainer(object):
 
     def init_horovod_if_needed(self):
         rank_response = self._master_client.get_comm_rank()
+
+        # If the rendezvous from master is unequal to self._rendezvous_id,
+        # the worker should rebuild the communication because the master
+        # has updated the communication group.
         if rank_response.rendezvous_id != self._rendezvous_id:
             os.environ[HorovodEnv.RENDEZVOUS_PORT] = str(
                 rank_response.rendezvous_port
@@ -89,9 +98,9 @@ class AllReduceTrainer(object):
             hvd.init()
             self._rendezvous_id = rank_response.rendezvous_id
 
-    def set_horovod_env(self, master_addr):
-        master_host = master_addr.split(":")[0]
-        os.environ[HorovodEnv.RENDEZVOUS_ADDR] = master_host
+    def set_horovod_env(self):
+        if self._rendezvous_addr:
+            os.environ[HorovodEnv.RENDEZVOUS_ADDR] = self._rendezvous_addr
         os.environ[HorovodEnv.CONTROLLER] = "gloo"
         os.environ[HorovodEnv.CPU_OPERATIONS] = "gloo"
         os.environ[HorovodEnv.HOSTNAME] = "master"

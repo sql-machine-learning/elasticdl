@@ -31,13 +31,15 @@ class AllReduceTrainerTest(unittest.TestCase):
         )
         model = custom_model()
         opt = optimizer()
-        self._trainer = AllReduceTrainer(master_client, model, loss, opt)
+        self._trainer = AllReduceTrainer(master_client, "", model, loss, opt)
 
-    def test_training_process_elastic(self):
+    def test_training_process_with_fault_tolerance(self):
         self._trainer.init_horovod_if_needed()
         features = tf.constant([[0.5], [0.6], [0.7]])
         labels = tf.constant([[1.0], [0.0], [1.0]])
-        version, _ = self._trainer.training_process_elastic(features, labels)
+        version, _ = self._trainer.training_process_with_fault_tolerance(
+            features, labels
+        )
         self.assertEqual(version, 1)
         hvd.shutdown()
 

@@ -193,10 +193,10 @@ class Worker(object):
             self._distribution_strategy == DistributionStrategy.ALLREDUCE
             and args.num_workers > 1
         ):
+            master_addr = args.master_addr.split(":")[0]
             self._allreduce_trainer = AllReduceTrainer(
-                self._mc, self._model, self._loss, self._opt
+                self._mc, master_addr, self._model, self._loss, self._opt
             )
-            self._allreduce_trainer.set_horovod_env(args.master_addr)
 
     # TODO: Multiple tests are currently using this function to initialize
     # self._model, where the initialization should be done via constructor.
@@ -565,7 +565,7 @@ class Worker(object):
 
     def _run_training_task(self, features, labels):
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            version, loss = self._allreduce_trainer.training_process_elastic(
+            version, loss = self._allreduce_trainer.training_process_with_fault_tolerance(
                 features, labels
             )
             self._model_version = version
