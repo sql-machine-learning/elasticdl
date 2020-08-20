@@ -29,8 +29,13 @@ else
         export MAXCOMPUTE_TABLE
         bash scripts/travis/create_odps_table.sh
     fi
-    PS_NUM=2
-    WORKER_NUM=1
+    if [[ "$JOB_TYPE" == "allreduce" ]]; then
+        PS_NUM=0
+        WORKER_NUM=2
+    else
+        PS_NUM=2
+        WORKER_NUM=1
+    fi
     docker run --rm -it --net=host \
         -e MAXCOMPUTE_TABLE="$MAXCOMPUTE_TABLE" \
         -e MAXCOMPUTE_PROJECT="$MAXCOMPUTE_PROJECT" \

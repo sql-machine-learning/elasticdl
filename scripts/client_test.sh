@@ -119,6 +119,24 @@ elif [[ "$JOB_TYPE" == "odps" ]]; then
       --log_level=INFO \
       --image_pull_policy=Never \
       --output=model_output
+elif [[ "$JOB_TYPE" == "allreduce" ]]; then
+    elasticdl train \
+      --image_name=elasticdl:dev_allreduce \
+      --model_zoo=model_zoo \
+      --model_def=mnist.mnist_functional_api.custom_model \
+      --train_data=/data/mnist/train \
+      --num_epochs=1 \
+      --master_resource_request="cpu=0.3,memory=1024Mi" \
+      --master_resource_limit="cpu=1,memory=2048Mi" \
+      --worker_resource_request="cpu=0.4,memory=2048Mi" \
+      --worker_resource_limit="cpu=1,memory=3072Mi" \
+      --minibatch_size=64 \
+      --num_minibatches_per_task=2 \
+      --num_workers="$WORKER_NUM" \
+      --job_name=test-allreduce \
+      --log_level=INFO \
+      --image_pull_policy=Never \
+      --volume="host_path=${DATA_PATH},mount_path=/data"
 else
     echo "Unsupported job type specified: $JOB_TYPE"
     exit 1
