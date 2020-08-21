@@ -40,7 +40,10 @@ class AllReduceTrainerTest(unittest.TestCase):
         version, _ = self._trainer.training_process_with_fault_tolerance(
             features, labels
         )
-        self.assertEqual(version, 1)
+        # Firstly, we will call model locally to create variables
+        # for the model and optimizer. Then, we will train the
+        # model using Horovod. So, the iteration step = 2.
+        self.assertEqual(version, 2)
         hvd.shutdown()
 
 
