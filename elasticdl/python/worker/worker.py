@@ -48,10 +48,6 @@ from elasticdl_client.common.constants import DistributionStrategy
 # (e.g. gradients) are not accepted by master.
 DEFAULT_MAX_MINIBATCH_RETRY_NUM = 64
 
-# The default timeout in seconds allowed for reinitializing the
-# collective communicator.
-DEFAULT_COMMUNICATOR_REINITIALIZING_TIMEOUT = 20
-
 DEFAULT_STEPS_TO_CHECK_RENDEZVOUS = 20
 
 

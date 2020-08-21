@@ -90,11 +90,6 @@ RUN curl -sLo torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl \
 RUN python -m pip install --quiet torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl \
         && rm torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl
 
-RUN cd /root && git clone --depth=1 https://github.com/caicloud/ftlib.git
-RUN cd /root/ftlib && python -m pip install --quiet -r requirements.txt
-RUN cd /root/ftlib/ftlib/consensus/gossip && bash ./gen_shared_lib.sh
-RUN cp -r /root/ftlib/ftlib /usr/local/lib/python3.6/dist-packages/ftlib
-
 # The latest package of Horovod does not support elastic training,
 # so we need to git clone and install it using source codes.
 ENV HOROVOD_PATH /tmp/${HOROVOD_COMMIT_ID}

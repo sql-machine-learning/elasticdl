@@ -532,8 +532,6 @@ class Master(object):
                 restart_policy=args.restart_policy,
                 cluster_spec=cluster_spec,
                 envs=env,
-                expose_ports=self.distribution_strategy
-                == DistributionStrategy.ALLREDUCE,
                 disable_relaunch=disable_relaunch,
                 log_file_path=args.log_file_path,
             )
