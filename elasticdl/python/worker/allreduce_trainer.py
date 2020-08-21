@@ -116,7 +116,7 @@ class AllReduceTrainer(object):
         os.environ[HorovodEnv.HOSTNAME] = "master"
 
     def _broadcast_model(self):
-        broadcast_variables(self._model.variables, root_rank=0)
+        broadcast_variables(self._model.trainable_variables, root_rank=0)
         broadcast_variables(self._optimizer.variables(), root_rank=0)
 
     def _run_model_call_locally(self, features, labels):
@@ -127,7 +127,7 @@ class AllReduceTrainer(object):
             outputs = self._model.call(features)
             loss = self._loss(labels, outputs)
 
-        grads = tape.gradient(loss, self._model.variables)
+        grads = tape.gradient(loss, self._model.trainable_variables)
         self._optimizer.apply_gradients(
             zip(grads, self._model.trainable_variables)
         )
