@@ -367,12 +367,21 @@ class InstanceManager(object):
     def _get_alive_worker_addr(self):
         alive_workers = self.get_alive_workers()
         worker_service_addrs = []
+        worker_start_times = []
         for pod_name in alive_workers:
+            pod = self._k8s_client.get_pod(pod_name)
+            worker_start_times.append(pod.status.start_time)
             worker_id = self._worker_pod_name_to_id[pod_name]
             service_addr_port = self._k8s_client.get_worker_service_address(
                 worker_id
             )
             worker_service_addrs.append(service_addr_port.split(":")[0])
+
+        # Sort worker addrs by start time. Then the master will assign
+        # the rank according to the order in addrs list.
+        worker_service_addrs = [
+            x for _, x in sorted(zip(worker_start_times, worker_service_addrs))
+        ]
         return worker_service_addrs
 
     @property
