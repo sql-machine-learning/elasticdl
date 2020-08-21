@@ -138,15 +138,6 @@ class Client(object):
             if pod_resource_limits
             else pod_resource_requests
         )
-        ports = (
-            [
-                client.V1ContainerPort(
-                    container_port=_FTLIB_GOSSIP_CONTAINER_PORT, name="gossip"
-                ),
-            ]
-            if "expose_ports" in kargs and kargs["expose_ports"]
-            else None
-        )
         container = client.V1Container(
             name=kargs["pod_name"],
             image=kargs["image_name"],
@@ -158,7 +149,6 @@ class Client(object):
             args=kargs["container_args"],
             image_pull_policy=kargs["image_pull_policy"],
             env=kargs["env"],
-            ports=ports,
         )
 
         # Pod

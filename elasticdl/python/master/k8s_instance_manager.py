@@ -70,7 +70,6 @@ class InstanceManager(object):
         image_pull_policy=None,
         restart_policy="Never",
         envs=None,
-        expose_ports=False,
         disable_relaunch=False,
         log_file_path=None,
         **kwargs
@@ -83,7 +82,6 @@ class InstanceManager(object):
         self._worker_pod_priority = _parse_worker_pod_priority(
             self._num_workers, worker_pod_priority
         )
-        self._expose_ports = expose_ports
 
         self._num_ps = num_ps
         self._ps_command = ps_command
@@ -135,11 +133,6 @@ class InstanceManager(object):
             self._num_ps, self._k8s_client.get_ps_service_address
         )
         self._worker_addrs = []
-        if expose_ports:
-            self._worker_args += [
-                "--collective_communicator_service_name",
-                self._k8s_client.get_collective_communicator_service_name(),
-            ]
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
@@ -168,7 +161,6 @@ class InstanceManager(object):
                 restart_policy=self._restart_policy,
                 ps_addrs=self._ps_addrs,
                 envs=copy.deepcopy(self._envs),
-                expose_ports=self._expose_ports,
             )
             name = pod.metadata.name
             self._worker_pod_name_to_id[name] = worker_id
@@ -196,7 +188,6 @@ class InstanceManager(object):
                 args=ps_args,
                 restart_policy=self._restart_policy,
                 envs=copy.deepcopy(self._envs),
-                expose_ports=False,
             )
             name = pod.metadata.name
             self._ps_pod_name_to_id[name] = ps_id
@@ -218,9 +209,6 @@ class InstanceManager(object):
     def start_workers(self):
         for _ in range(self._num_workers):
             self._start_worker(self._next_worker_id())
-
-    def start_ftlib_consensus_service(self):
-        self._k8s_client.create_ftlib_consensus_service()
 
     def start_parameter_servers(self):
         for i in range(self._num_ps):
@@ -379,12 +367,21 @@ class InstanceManager(object):
     def _get_alive_worker_addr(self):
         alive_workers = self.get_alive_workers()
         worker_service_addrs = []
+        worker_start_times = []
         for pod_name in alive_workers:
+            pod = self._k8s_client.get_pod(pod_name)
+            worker_start_times.append(pod.status.start_time)
             worker_id = self._worker_pod_name_to_id[pod_name]
             service_addr_port = self._k8s_client.get_worker_service_address(
                 worker_id
             )
             worker_service_addrs.append(service_addr_port.split(":")[0])
+
+        # Sort worker addrs by start time. Then the master will assign
+        # the rank according to the order in addrs list.
+        worker_service_addrs = [
+            x for _, x in sorted(zip(worker_start_times, worker_service_addrs))
+        ]
         return worker_service_addrs
 
     @property
