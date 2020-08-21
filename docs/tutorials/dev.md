@@ -65,7 +65,7 @@ elasticdl zoo init \
   --model_zoo=model_zoo \
   --local_pkg_dir=./build \
 
-elasticdl zoo build --image_name=elasticdl:dev_test .
+elasticdl zoo build --image=elasticdl:dev_test .
 ```
 
 Then, you can submit a job using the image like the
