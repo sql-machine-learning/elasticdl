@@ -121,16 +121,7 @@ class WorkerPytorch(object):
         )
 
         self._collective_communicator = None
-        if (
-            self._distribution_strategy == DistributionStrategy.ALLREDUCE
-            and args.num_workers > 1
-        ):
-            self._collective_communicator = CollectiveCommunicator(
-                service_name=args.collective_communicator_service_name
-            )
-
         self.set_model(model_inst)
-
         self._model_version = -1
         self._task_data_service = TaskDataService(
             self._mc,
