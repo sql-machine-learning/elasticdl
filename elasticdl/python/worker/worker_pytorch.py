@@ -18,7 +18,6 @@ import torch
 from tensorflow.keras import backend as K
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
 from elasticdl.python.common.constants import JobType, Mode
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
