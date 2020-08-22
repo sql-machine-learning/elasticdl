@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import unittest
+from unittest.mock import Mock
 
 import numpy as np
 import tensorflow as tf
@@ -105,8 +106,11 @@ class EvaluationServiceTest(unittest.TestCase):
             None, task_d, 10, 20, 0, False, _eval_metrics_fn,
         )
 
+        master = Mock(
+            task_d=task_d, instance_manager=None, distribution_strategy=None,
+        )
         _ = MasterServicer(
-            2, task_d, evaluation_service=evaluation_service, master=None
+            2, evaluation_service=evaluation_service, master=master
         )
 
         # No checkpoint available
@@ -132,8 +136,12 @@ class EvaluationServiceTest(unittest.TestCase):
         )
         task_d.set_evaluation_service(evaluation_service)
 
+        master = Mock(
+            task_d=task_d, instance_manager=None, distribution_strategy=None,
+        )
+
         _ = MasterServicer(
-            2, task_d, evaluation_service=evaluation_service, master=None,
+            2, evaluation_service=evaluation_service, master=master,
         )
 
         self.assertEqual(8, len(task_d._eval_todo))

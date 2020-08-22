@@ -36,10 +36,7 @@ jobs:
         - export BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
         # Travis CI VM runs Ubuntu Bionic with Docker 18.06 which doesn't
         # support docker pull --quiet.
-        - docker pull "$BASE_IMAGE"
-        - docker build --target dev -t elasticdl:dev
-          -f elasticdl/docker/Dockerfile
-          --build-arg BASE_IMAGE="$BASE_IMAGE" .
+        - bash scripts/travis/build_images.sh
         # Run pre-commit checks.
         - docker run --rm -it
           -v $TRAVIS_BUILD_DIR:/work -w /work
@@ -56,7 +53,7 @@ jobs:
           -v $HOME/.kube:/root/.kube
           -v $HOME/.minikube:/home/$USER/.minikube
           -v $PWD:/work -w /work
-          elasticdl:dev
+          elasticdl:dev_allreduce
           bash -c "K8S_TESTS=True scripts/build_and_test.sh"
         # Report code coverage to https://codecov.io
         - bash <(curl -s https://codecov.io/bash)
@@ -79,7 +76,7 @@ jobs:
         - kubectl apply -f elasticdl/manifests/elasticdl-rbac.yaml
         - docker build --target ci -t elasticdl:ci
           -f elasticdl/docker/Dockerfile.ci
-          --build-arg BASE_IMAGE="$BASE_IMAGE" .
+          --build-arg BASE_IMAGE=elasticdl:dev_allreduce .
         - mkdir -p data && docker run --rm -it --net=host
           -v $HOME/.cache:/root/.cache
           -v $HOME/.keras/datasets:/root/.keras/datasets
@@ -92,6 +89,7 @@ jobs:
           JOB_TYPES=(
               odps
               train
+              allreduce
               #evaluate
               #predict
           )

@@ -14,10 +14,12 @@
 import random
 import unittest
 from collections import defaultdict
+from unittest.mock import MagicMock, Mock
 
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
@@ -50,12 +52,17 @@ class SimpleModel(tf.keras.Model):
 
 
 class ServicerTest(unittest.TestCase):
-    def testGetEmptyTask(self):
+    def setUp(self):
+        self.master = Mock(
+            task_d=None, instance_manager=None, distribution_strategy=None,
+        )
+
+    def test_get_empty_task(self):
+        self.master.task_d = _TaskDispatcher(
+            {}, {}, {}, records_per_task=3, num_epochs=2
+        )
         master_servicer = MasterServicer(
-            3,
-            _TaskDispatcher({}, {}, {}, records_per_task=3, num_epochs=2),
-            evaluation_service=None,
-            master=None,
+            3, evaluation_service=None, master=self.master,
         )
 
         req = elasticdl_pb2.GetTaskRequest()
@@ -71,17 +78,15 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual("", task.shard_name)
         self.assertEqual(1, task.model_version)
 
-    def testReportTaskResult(self):
-        task_d = _TaskDispatcher(
+    def test_report_task_result(self):
+        self.master.task_d = _TaskDispatcher(
             {"shard_1": (0, 10), "shard_2": (0, 9)},
             {},
             {},
             records_per_task=3,
             num_epochs=2,
         )
-        master = MasterServicer(
-            3, task_d, evaluation_service=None, master=None
-        )
+        master = MasterServicer(3, evaluation_service=None, master=self.master)
 
         # task to number of runs.
         tasks = defaultdict(int)
@@ -91,7 +96,9 @@ class ServicerTest(unittest.TestCase):
             task = master.get_task(req, None)
             if not task.shard_name:
                 break
-            self.assertEqual(task_d._doing[task.task_id][0], req.worker_id)
+            self.assertEqual(
+                self.master.task_d._doing[task.task_id][0], req.worker_id
+            )
             task_key = (task.shard_name, task.start, task.end)
             tasks[task_key] += 1
             report = elasticdl_pb2.ReportTaskResultRequest()
@@ -113,6 +120,30 @@ class ServicerTest(unittest.TestCase):
             },
             tasks,
         )
+
+    def test_get_comm_rank(self):
+        self.master.rendezvous_server = HorovodRendezvousServer(
+            server_host="localhost"
+        )
+        self.master.rendezvous_server.start()
+        self.master.rendezvous_server.set_worker_hosts(
+            ["172.0.0.1", "172.0.0.2"]
+        )
+
+        k8s_client = Mock()
+        k8s_client.get_worker_service_address = MagicMock(
+            return_value="172.0.0.1:8080"
+        )
+        self.master.instance_manager = Mock(_k8s_client=k8s_client)
+        master_servicer = MasterServicer(
+            3, evaluation_service=None, master=self.master
+        )
+        request = elasticdl_pb2.GetCommRankRequest()
+        request.worker_id = 0
+        rank_response = master_servicer.get_comm_rank(request, None)
+        self.assertEqual(rank_response.world_size, 2)
+        self.assertEqual(rank_response.rank_id, 0)
+        self.assertEqual(rank_response.rendezvous_id, 1)
 
 
 if __name__ == "__main__":

@@ -53,6 +53,7 @@ class InstanceManager(object):
     def __init__(
         self,
         task_d,
+        rendezvous_server=None,
         num_workers=1,
         worker_command=None,
         worker_args=None,
@@ -69,7 +70,6 @@ class InstanceManager(object):
         image_pull_policy=None,
         restart_policy="Never",
         envs=None,
-        expose_ports=False,
         disable_relaunch=False,
         log_file_path=None,
         **kwargs
@@ -82,7 +82,6 @@ class InstanceManager(object):
         self._worker_pod_priority = _parse_worker_pod_priority(
             self._num_workers, worker_pod_priority
         )
-        self._expose_ports = expose_ports
 
         self._num_ps = num_ps
         self._ps_command = ps_command
@@ -96,6 +95,7 @@ class InstanceManager(object):
         self._image_pull_policy = image_pull_policy
         self._envs = envs
         self._task_d = task_d
+        self._rendezvous_server = rendezvous_server
         self._next_worker_id = itertools.count().__next__
         self._log_file_path = log_file_path
 
@@ -132,16 +132,7 @@ class InstanceManager(object):
         self._ps_addrs = self._get_addrs(
             self._num_ps, self._k8s_client.get_ps_service_address
         )
-        # TODO: Select a worker address to be used for broadcasting model
-        # parameters under allreduce-strategy.
-        self._worker_addrs = self._get_addrs(
-            self._num_workers, self._k8s_client.get_worker_service_address
-        )
-        if expose_ports:
-            self._worker_args += [
-                "--collective_communicator_service_name",
-                self._k8s_client.get_collective_communicator_service_name(),
-            ]
+        self._worker_addrs = []
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
@@ -170,7 +161,6 @@ class InstanceManager(object):
                 restart_policy=self._restart_policy,
                 ps_addrs=self._ps_addrs,
                 envs=copy.deepcopy(self._envs),
-                expose_ports=self._expose_ports,
             )
             name = pod.metadata.name
             self._worker_pod_name_to_id[name] = worker_id
@@ -198,7 +188,6 @@ class InstanceManager(object):
                 args=ps_args,
                 restart_policy=self._restart_policy,
                 envs=copy.deepcopy(self._envs),
-                expose_ports=False,
             )
             name = pod.metadata.name
             self._ps_pod_name_to_id[name] = ps_id
@@ -211,23 +200,6 @@ class InstanceManager(object):
             addrs.append(addr_get_fn(addr_id))
         return _SERVICE_ADDR_SEP.join(addrs)
 
-    @staticmethod
-    def _update_addr(old_addr, new_addr, addrs, addr_get_fn):
-        addrs_list = addrs.split(_SERVICE_ADDR_SEP)
-        addrs_list[addrs_list.index(addr_get_fn(old_addr))] = addr_get_fn(
-            new_addr
-        )
-        return _SERVICE_ADDR_SEP.join(addrs_list)
-
-    def _update_worker_addr(self, old_worker_id, new_worker_id):
-        new_addr = self._update_addr(
-            old_worker_id,
-            new_worker_id,
-            self._worker_addrs,
-            addr_get_fn=self._k8s_client.get_worker_service_address,
-        )
-        self._worker_addrs = new_addr
-
     def update_status(self, status):
         master_name = self._k8s_client.get_master_pod_name()
         self._k8s_client.patch_labels_to_pod(
@@ -237,9 +209,6 @@ class InstanceManager(object):
     def start_workers(self):
         for _ in range(self._num_workers):
             self._start_worker(self._next_worker_id())
-
-    def start_ftlib_consensus_service(self):
-        self._k8s_client.create_ftlib_consensus_service()
 
     def start_parameter_servers(self):
         for i in range(self._num_ps):
@@ -377,8 +346,6 @@ class InstanceManager(object):
                     new_worker_id
                 ] = self._worker_pod_priority[worker_id]
             self._start_worker(new_worker_id)
-            with self._lock:
-                self._update_worker_addr(worker_id, new_worker_id)
         elif relaunch_ps:
             logger.info("Relaunching ps.")
             # Note: the ID and service address for relaunched parameter
@@ -386,12 +353,36 @@ class InstanceManager(object):
             # tolerance.
             self._start_ps(ps_id)
 
+        if self._rendezvous_server:
+            self._worker_addrs = self._get_alive_worker_addr()
+            self._rendezvous_server.set_worker_hosts(self._worker_addrs)
+
     def get_alive_workers(self):
         alive_workers = []
         for pod_name, phase in self._worker_pods_phase.values():
             if phase == PodStatus.RUNNING:
                 alive_workers.append(pod_name)
         return alive_workers
+
+    def _get_alive_worker_addr(self):
+        alive_workers = self.get_alive_workers()
+        worker_service_addrs = []
+        worker_start_times = []
+        for pod_name in alive_workers:
+            pod = self._k8s_client.get_pod(pod_name)
+            worker_start_times.append(pod.status.start_time)
+            worker_id = self._worker_pod_name_to_id[pod_name]
+            service_addr_port = self._k8s_client.get_worker_service_address(
+                worker_id
+            )
+            worker_service_addrs.append(service_addr_port.split(":")[0])
+
+        # Sort worker addrs by start time. Then the master will assign
+        # the rank according to the order in addrs list.
+        worker_service_addrs = [
+            x for _, x in sorted(zip(worker_start_times, worker_service_addrs))
+        ]
+        return worker_service_addrs
 
     @property
     def ps_addrs(self):
