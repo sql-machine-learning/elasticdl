@@ -17,12 +17,16 @@ import unittest
 
 import tensorflow as tf
 import torch
-from test_utils import create_pserver, get_mnist_dataset, get_random_batch
-from worker.worker_pytorch import WorkerPytorch
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
+from elasticdl.python.tests.test_utils import (
+    create_pserver,
+    get_mnist_dataset,
+    get_random_batch,
+)
 from elasticdl.python.worker.ps_client import PSClient
+from elasticdl.python.worker.worker_pytorch import WorkerPytorch
 from elasticdl_client.common.constants import DistributionStrategy
 
 sys.path.append("../")
