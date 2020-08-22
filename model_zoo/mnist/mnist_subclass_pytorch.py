@@ -15,6 +15,7 @@
 import tensorflow as tf
 import torch.nn as nn
 import torch.nn.functional as F
+
 from elasticdl.python.common.constants import Mode
 
 
@@ -46,6 +47,7 @@ def loss(labels, predictions):
     # labels.dtype must be Long/int64 for CrossEntropyLoss()
     loss_func = nn.CrossEntropyLoss()
     return loss_func(predictions, labels)
+
 
 # def optimizer(model,lr=0.001):
 #     return torch.optim.Adam(model.parameters(), lr)

@@ -12,25 +12,20 @@
 # limitations under the License.
 
 import os
+import sys
 import unittest
+
 import tensorflow as tf
+import torch
+from test_utils import create_pserver, get_mnist_dataset, get_random_batch
+from worker.worker_pytorch import WorkerPytorch
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.worker.ps_client import PSClient
 from elasticdl_client.common.constants import DistributionStrategy
 
-from test_utils import (
-    create_pserver,
-    get_frappe_dataset,
-    get_mnist_dataset,
-    get_random_batch, )
-
-import sys
-
-sys.path.append('../')
-from worker.worker_pytorch import WorkerPytorch
-import torch
+sys.path.append("../")
 
 
 class WorkerPSInteractionTest(unittest.TestCase):
@@ -77,9 +72,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             worker = WorkerPytorch(args, ps_client=PSClient(self._channels))
             self._workers.append(worker)
 
-    def _worker_train(
-            self, worker_id, train_db, test_db, stop_step
-    ):
+    def _worker_train(self, worker_id, train_db, test_db, stop_step):
         # TODO: acc_meter with PyTorch
         acc_meter = tf.keras.metrics.Accuracy()
 
@@ -105,11 +98,16 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
                     out = worker._model.forward(x)
                     if "mnist" in self._model_def:
-                        acc_meter.update_state(torch.argmax(out, dim=1).numpy(), y.numpy())
+                        acc_meter.update_state(
+                            torch.argmax(out, dim=1).numpy(), y.numpy()
+                        )
                     else:
                         break
                 worker_results.append(
-                    (float(w_loss.detach().numpy()), float(acc_meter.result().numpy()))
+                    (
+                        float(w_loss.detach().numpy()),
+                        float(acc_meter.result().numpy()),
+                    )
                 )
                 acc_meter.reset_states()
 
@@ -117,7 +115,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 break
         return worker_results
 
-    def test_compare_mnist_train(self):
+    def test_mnist_train(self):
         model_def = "mnist.mnist_subclass_pytorch.CustomModel"
         self._create_pserver(model_def, 2)
 
@@ -129,17 +127,20 @@ class WorkerPSInteractionTest(unittest.TestCase):
         worker_results = self._worker_train(
             0, train_db=db, test_db=test_db, stop_step=stop_step
         )
-        print("show batchs train worker_results[0]\n"
-              "w_loss, acc_meter:", worker_results[0])
+        print(
+            "show batchs train worker_results[0]\n" "w_loss, acc_meter:",
+            worker_results[0],
+        )
         print("--------finish test_compare_mnist_train!")
 
-
-    def test_compare_onebatch_train_pytorch(self):
+    def test_onebatch_train_pytorch(self):
         model_def = "mnist.mnist_subclass_pytorch.CustomModel"
         self._create_pserver(model_def, 2)
 
         images, labels = get_random_batch(self._batch_size)
-        images = torch.unsqueeze(torch.from_numpy(images.numpy()), dim=1).float()
+        images = torch.unsqueeze(
+            torch.from_numpy(images.numpy()), dim=1
+        ).float()
         labels = torch.from_numpy(labels.numpy()).type(torch.int64)
         # Focus: labels.dtype is torch.Long/torch.int64
 

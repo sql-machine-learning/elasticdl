@@ -13,14 +13,13 @@
 
 
 import traceback
+
+import torch
 from tensorflow.keras import backend as K
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.collective_ops.communicator import CollectiveCommunicator
-from elasticdl.python.common.constants import (
-    JobType,
-    Mode,
-)
+from elasticdl.python.common.constants import JobType, Mode
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
@@ -30,7 +29,6 @@ from elasticdl.python.common.tensor_utils import Tensor
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.worker.task_data_service import TaskDataService
 from elasticdl_client.common.constants import DistributionStrategy
-import torch
 
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.
@@ -48,13 +46,13 @@ class WorkerPytorch(object):
     """ElasticDL worker"""
 
     def __init__(
-            self,
-            args,
-            master_client=None,
-            ps_client=None,
-            max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
-            max_allreduce_retry_num=DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
-            set_parallelism=False,
+        self,
+        args,
+        master_client=None,
+        ps_client=None,
+        max_minibatch_retry_num=DEFAULT_MAX_MINIBATCH_RETRY_NUM,
+        max_allreduce_retry_num=DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
+        set_parallelism=False,
     ):
         """
         Arguments:
@@ -72,8 +70,8 @@ class WorkerPytorch(object):
         self._ps_client = ps_client
         self._distribution_strategy = args.distribution_strategy
         if (
-                self._distribution_strategy
-                == DistributionStrategy.PARAMETER_SERVER
+            self._distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
         ):
             if self._ps_client is None:
                 raise ValueError(
@@ -124,8 +122,8 @@ class WorkerPytorch(object):
 
         self._collective_communicator = None
         if (
-                self._distribution_strategy == DistributionStrategy.ALLREDUCE
-                and args.num_workers > 1
+            self._distribution_strategy == DistributionStrategy.ALLREDUCE
+            and args.num_workers > 1
         ):
             self._collective_communicator = CollectiveCommunicator(
                 service_name=args.collective_communicator_service_name
@@ -145,7 +143,7 @@ class WorkerPytorch(object):
         )
         if self._dataset_fn is None:
             if hasattr(
-                    self._task_data_service.data_reader, "default_dataset_fn"
+                self._task_data_service.data_reader, "default_dataset_fn"
             ):
                 self._dataset_fn = (
                     self._task_data_service.data_reader.default_dataset_fn()
@@ -169,8 +167,8 @@ class WorkerPytorch(object):
     def get_model(self):
         self._timing.start_record_time("get_model")
         if (
-                self._distribution_strategy
-                == DistributionStrategy.PARAMETER_SERVER
+            self._distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
         ):
             # 1. Worker tries to pull dense parameters from the PS, maybe one
             # or more PS instances are uninitialized.
@@ -231,8 +229,8 @@ class WorkerPytorch(object):
 
     def report_gradient(self, grads):
         if (
-                self._distribution_strategy
-                == DistributionStrategy.PARAMETER_SERVER
+            self._distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
         ):
             return self.report_gradient_to_ps(grads)
         else:
@@ -251,7 +249,10 @@ class WorkerPytorch(object):
                 self._non_embed_vars[name] = param.data
         self._var_created = True
 
-        if self._distribution_strategy == DistributionStrategy.PARAMETER_SERVER:
+        if (
+            self._distribution_strategy
+            == DistributionStrategy.PARAMETER_SERVER
+        ):
             self._ps_client.partition_dense_parameters(
                 self._non_embed_vars.keys()
             )
@@ -283,12 +284,12 @@ class WorkerPytorch(object):
         return (*self._collect_gradients_without_allreduce(grads), loss)
 
     def _process_minibatch(
-            self,
-            task_type,
-            features,
-            labels,
-            min_model_version,
-            train_with_local_model=False,
+        self,
+        task_type,
+        features,
+        labels,
+        min_model_version,
+        train_with_local_model=False,
     ):
         if not self._var_created:
             self._run_model_call_before_training(features)
@@ -302,14 +303,17 @@ class WorkerPytorch(object):
                     features, labels
                 )
 
-                if self._model_version >= self._log_loss_count * self._log_loss_steps:
+                if (
+                    self._model_version
+                    >= self._log_loss_count * self._log_loss_steps
+                ):
                     self.logger.info(
                         "Loss = {}, steps = {}".format(
                             loss.numpy(), self._model_version
                         )
                     )
                     self._log_loss_count = (
-                            int(self._model_version / self._log_loss_steps) + 1
+                        int(self._model_version / self._log_loss_steps) + 1
                     )
                 if accepted:
                     break
@@ -321,17 +325,18 @@ class WorkerPytorch(object):
                 raise RuntimeError("Unrecognized task type, %s" % task_type)
         else:
             # Worker got stuck, fail the task.
-            # TODO: stop the worker if it fails to make any progress for some time.
+            # TODO: stop the worker if it fails to make
+            # any progress for some time.
             raise RuntimeError("Worker got stuck")
         self._timing.end_record_time("batch_process")
         return min_model_version
 
     def _process_minibatch_and_report(
-            self,
-            dataset_batch,
-            task_type,
-            model_version,
-            train_with_local_model=False,
+        self,
+        dataset_batch,
+        task_type,
+        model_version,
+        train_with_local_model=False,
     ):
         """
         train task and report
@@ -342,7 +347,9 @@ class WorkerPytorch(object):
             features = dataset_batch[0]
             labels = dataset_batch[1]
 
-            features = torch.from_numpy(features.numpy()).type(torch.FloatTensor)
+            features = torch.from_numpy(features.numpy()).type(
+                torch.FloatTensor
+            )
             labels = torch.from_numpy(labels.numpy()).type(torch.LongTensor)
             features = torch.unsqueeze(features, dim=1)
 
@@ -389,7 +396,7 @@ class WorkerPytorch(object):
                     train_with_local_model,
                 )
                 if self._task_data_service.report_record_done(
-                        self._minibatch_size, err_msg
+                    self._minibatch_size, err_msg
                 ):
                     self._timing.end_record_time("task_process")
                     self._timing.report_timing(reset=True)
