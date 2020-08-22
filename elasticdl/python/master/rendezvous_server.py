@@ -11,6 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from elasticdl.python.common.log_utils import default_logger as logger
+
 try:
     from horovod.runner.common.util.hosts import (
         get_host_assignments,
@@ -82,7 +84,7 @@ class HorovodRendezvousServer(object):
         if host not in self._worker_hosts:
             return -1
 
-        if not self._rendezvous_host:
+        if not self._rendezvous_completed:
             self._ready_worker_count += 1
             if self._ready_worker_count == len(self._worker_hosts):
                 self._rendezvous_completed = True
