@@ -88,7 +88,7 @@ class HorovodRendezvousServer(object):
             # the server can start to set hosts for the next rendezvous
             if self._ready_worker_hosts == set(self._worker_hosts):
                 self._rendezvous_completed = True
-                self._ready_worker_hosts = []
+                self._ready_worker_hosts = set()
 
         return self._worker_hosts.index(host)
 
