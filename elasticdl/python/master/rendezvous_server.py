@@ -11,8 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from elasticdl.python.common.log_utils import default_logger as logger
-
 try:
     from horovod.runner.common.util.hosts import (
         get_host_assignments,
@@ -36,7 +34,7 @@ class HorovodRendezvousServer(object):
         self._rendezvous_server = RendezvousServer(verbose=True)
         self._rendezvous_port = None
         self._next_worker_hosts = None
-        self._ready_worker_count = 0
+        self._ready_worker_hosts = set()
         self._rendezvous_completed = True
 
     def start(self):
@@ -77,7 +75,7 @@ class HorovodRendezvousServer(object):
         return self._rendezvous_port
 
     def get_worker_host_rank(self, host):
-        if (self._next_worker_hosts and self._rendezvous_completed):
+        if self._next_worker_hosts and self._rendezvous_completed:
             self._init_rendezvous_server()
 
         # -1 if host not in worker_hosts list.
@@ -85,10 +83,12 @@ class HorovodRendezvousServer(object):
             return -1
 
         if not self._rendezvous_completed:
-            self._ready_worker_count += 1
-            if self._ready_worker_count == len(self._worker_hosts):
+            self._ready_worker_hosts.add(host)
+            # If all active workers in the rendezvous are ready,
+            # the server can start to set hosts for the next rendezvous
+            if self._ready_worker_hosts == set(self._worker_hosts):
                 self._rendezvous_completed = True
-                self._ready_worker_count = 0
+                self._ready_worker_hosts = []
 
         return self._worker_hosts.index(host)
 
