@@ -10,6 +10,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import time
+from threading import Lock
 
 try:
     from horovod.runner.common.util.hosts import (
@@ -36,6 +38,7 @@ class HorovodRendezvousServer(object):
         self._next_worker_hosts = None
         self._ready_worker_hosts = set()
         self._rendezvous_completed = True
+        self._lock = Lock()
 
     def start(self):
         self._rendezvous_port = self._rendezvous_server.start()
@@ -75,22 +78,24 @@ class HorovodRendezvousServer(object):
         return self._rendezvous_port
 
     def get_worker_host_rank(self, host):
-        if self._next_worker_hosts and self._rendezvous_completed:
-            self._init_rendezvous_server()
+        with self._lock:
+            if self._next_worker_hosts and self._rendezvous_completed:
+                time.sleep(2)  # Wait 2s for workers to complete rendezvous.
+                self._init_rendezvous_server()
 
-        # -1 if host not in worker_hosts list.
-        if host not in self._worker_hosts:
-            return -1
+            # -1 if host not in worker_hosts list.
+            if host not in self._worker_hosts:
+                return -1
 
-        if not self._rendezvous_completed:
-            self._ready_worker_hosts.add(host)
-            # If all active workers in the rendezvous are ready,
-            # the server can start to set hosts for the next rendezvous
-            if self._ready_worker_hosts == set(self._worker_hosts):
-                self._rendezvous_completed = True
-                self._ready_worker_hosts = set()
+            if not self._rendezvous_completed:
+                self._ready_worker_hosts.add(host)
+                # If all active workers in the rendezvous are ready,
+                # the server can start to set hosts for the next rendezvous
+                if self._ready_worker_hosts == set(self._worker_hosts):
+                    self._rendezvous_completed = True
+                    self._ready_worker_hosts = set()
 
-        return self._worker_hosts.index(host)
+            return self._worker_hosts.index(host)
 
     def get_size(self):
         return len(self._worker_hosts)
