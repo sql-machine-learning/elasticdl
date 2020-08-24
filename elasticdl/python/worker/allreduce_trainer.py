@@ -41,6 +41,7 @@ class AllReduceTrainer(object):
         self._model = model
         self._loss = loss_fn
         self._optimizer = optimizer
+        self._learning_rate = optimizer.lr.numpy()
         self._rendezvous_id = None
         self._need_broadcast = True
         self._var_created = False
@@ -114,6 +115,7 @@ class AllReduceTrainer(object):
             os.environ[HorovodEnv.SIZE] = str(rank_response.world_size)
             hvd.shutdown()
             hvd.init()
+            self._optimizer.lr.assign(self._learning_rate * hvd.size())
             self._rendezvous_id = rank_response.rendezvous_id
             self._need_broadcast = True
 
