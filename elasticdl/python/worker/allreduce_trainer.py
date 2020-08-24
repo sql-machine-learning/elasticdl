@@ -129,7 +129,7 @@ class AllReduceTrainer(object):
         broadcast_variables(self._optimizer.variables(), root_rank=0)
 
     def _run_model_call_locally(self, features, labels):
-        """Call `self._model.call` locally to Create variables of the model
+        """Call `self._model.call` locally to create variables of the model
         and optimizer. Because we should have variables before broadcasting.
         """
         with tf.GradientTape() as tape:
