@@ -84,50 +84,6 @@ class ODPSIOTest(unittest.TestCase):
 
         self.assertEqual(len(results), 100)
 
-    def test_read_to_iterator(self):
-        reader = ODPSReader(
-            self._project,
-            self._access_id,
-            self._access_key,
-            self._endpoint,
-            self._test_read_table,
-            None,
-            4,
-            None,
-        )
-        records_iter = reader.to_iterator(1, 0, 50, 2, False, None)
-        records = list(records_iter)
-        self.assertEqual(
-            len(records), 6, "Unexpected number of batches: %d" % len(records)
-        )
-        flattened_records = [record for batch in records for record in batch]
-        self.assertEqual(
-            len(flattened_records),
-            220,
-            "Unexpected number of total records: %d" % len(flattened_records),
-        )
-
-    def test_write_odps_to_recordio_shards_from_iterator(self):
-        reader = ODPSReader(
-            self._project,
-            self._access_id,
-            self._access_key,
-            self._endpoint,
-            self._test_read_table,
-            None,
-            4,
-            None,
-        )
-        records_iter = reader.to_iterator(1, 0, 50, 2, False, None)
-        with tempfile.TemporaryDirectory() as output_dir:
-            write_recordio_shards_from_iterator(
-                records_iter,
-                ["f" + str(i) for i in range(5)],
-                output_dir,
-                records_per_shard=50,
-            )
-            self.assertEqual(len(os.listdir(output_dir)), 5)
-
     def test_write_from_iterator(self):
         columns = ["num", "num2"]
         column_types = ["bigint", "double"]
