@@ -13,7 +13,6 @@
 
 import os
 import random
-import tempfile
 import time
 import unittest
 
@@ -24,9 +23,6 @@ from elasticdl.python.data.odps_io import (
     ODPSReader,
     ODPSWriter,
     is_odps_configured,
-)
-from elasticdl.python.data.odps_recordio_conversion_utils import (
-    write_recordio_shards_from_iterator,
 )
 from elasticdl.python.tests.test_utils import create_iris_odps_table
 
