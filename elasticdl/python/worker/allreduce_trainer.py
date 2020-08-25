@@ -40,11 +40,23 @@ class AllReduceTrainer(object):
         self._rendezvous_addr = master_addr
         self._model = model
         self._loss = loss_fn
-        self._optimizer = optimizer
         self._rendezvous_id = None
         self._need_broadcast = True
         self._var_created = False
-        self.set_horovod_env()
+        self._world_size = 1
+        self._set_optimizer(optimizer)
+        self._set_horovod_env()
+
+    def _set_optimizer(self, optimizer):
+        self._optimizer = optimizer
+        self._lr = optimizer._hyper["learning_rate"]
+        self._optimizer.lr = self._get_learning_rate
+
+    def _get_learning_rate(self):
+        lr = self._lr
+        if callable(lr):
+            lr = lr()
+        return lr * self._world_size
 
     @tf.function
     def _training_process(self, features, labels):
@@ -114,10 +126,11 @@ class AllReduceTrainer(object):
             os.environ[HorovodEnv.SIZE] = str(rank_response.world_size)
             hvd.shutdown()
             hvd.init()
+            self._world_size = hvd.size()
             self._rendezvous_id = rank_response.rendezvous_id
             self._need_broadcast = True
 
-    def set_horovod_env(self):
+    def _set_horovod_env(self):
         if self._rendezvous_addr:
             os.environ[HorovodEnv.RENDEZVOUS_ADDR] = self._rendezvous_addr
         os.environ[HorovodEnv.CONTROLLER] = "gloo"
