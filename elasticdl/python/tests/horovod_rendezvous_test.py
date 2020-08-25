@@ -36,10 +36,16 @@ class HorovodRendezvousServerTest(unittest.TestCase):
     def test_set_worker_hosts(self):
         worker_hosts = ["127.0.0.2", "127.0.0.3"]
         self.rendezvous_server.set_worker_hosts(worker_hosts)
+        rank_0 = self.rendezvous_server.get_worker_host_rank("127.0.0.2")
+        rank_1 = self.rendezvous_server.get_worker_host_rank("127.0.0.3")
+        self.assertEqual(rank_0, 0)
+        self.assertEqual(rank_1, 1)
+        self.assertEqual(self.rendezvous_server._rendezvous_completed, True)
         self.assertEqual(self.rendezvous_server._rendezvous_id, 1)
 
         new_worker_hosts = ["127.0.0.1", "127.0.0.3"]
         self.rendezvous_server.set_worker_hosts(new_worker_hosts)
+        self.rendezvous_server._init_rendezvous_server()
         self.assertEqual(self.rendezvous_server._rendezvous_id, 2)
 
     def test_get_attr(self):

@@ -10,6 +10,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import time
+from threading import Lock
 
 try:
     from horovod.runner.common.util.hosts import (
@@ -33,6 +35,10 @@ class HorovodRendezvousServer(object):
         self._worker_hosts = []
         self._rendezvous_server = RendezvousServer(verbose=True)
         self._rendezvous_port = None
+        self._next_worker_hosts = None
+        self._ready_worker_hosts = set()
+        self._rendezvous_completed = True
+        self._lock = Lock()
 
     def start(self):
         self._rendezvous_port = self._rendezvous_server.start()
@@ -44,13 +50,17 @@ class HorovodRendezvousServer(object):
         Args:
             worker_hosts: List of host string.
         """
-        if sorted(worker_hosts) == sorted(self._worker_hosts):
-            return
 
-        self._rendezvous_id += 1
-        self._worker_hosts = worker_hosts
+        if sorted(worker_hosts) != sorted(self._worker_hosts):
+            self._next_worker_hosts = worker_hosts
+
+    def _init_rendezvous_server(self):
+        self._worker_hosts = self._next_worker_hosts
+        self._next_worker_hosts = None
         host_alloc_plan = self._get_host_plan()
         self._rendezvous_server.init(host_alloc_plan)
+        self._rendezvous_id += 1
+        self._rendezvous_completed = False
 
     def _get_host_plan(self):
         hosts = []
@@ -68,10 +78,24 @@ class HorovodRendezvousServer(object):
         return self._rendezvous_port
 
     def get_worker_host_rank(self, host):
-        # -1 if host not in worker_hosts list.
-        if host not in self._worker_hosts:
-            return -1
-        return self._worker_hosts.index(host)
+        with self._lock:
+            if self._next_worker_hosts and self._rendezvous_completed:
+                time.sleep(2)  # Wait 2s for workers to complete rendezvous.
+                self._init_rendezvous_server()
+
+            # -1 if host not in worker_hosts list.
+            if host not in self._worker_hosts:
+                return -1
+
+            if not self._rendezvous_completed:
+                self._ready_worker_hosts.add(host)
+                # If all active workers in the rendezvous are ready,
+                # the server can start to set hosts for the next rendezvous
+                if self._ready_worker_hosts == set(self._worker_hosts):
+                    self._rendezvous_completed = True
+                    self._ready_worker_hosts = set()
+
+            return self._worker_hosts.index(host)
 
     def get_size(self):
         return len(self._worker_hosts)
