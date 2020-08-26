@@ -288,11 +288,7 @@ class Master(object):
     @staticmethod
     def _get_job_type(args):
         if all(
-            (
-                args.training_data,
-                args.validation_data,
-                args.evaluation_throttle_secs or args.evaluation_steps,
-            )
+            (args.training_data, args.validation_data, args.evaluation_steps,)
         ):
             job_type = JobType.TRAINING_WITH_EVALUATION
         elif all(
@@ -335,9 +331,7 @@ class Master(object):
             or self.job_type == JobType.EVALUATION_ONLY
         ):
             self.logger.info(
-                "Creating evaluation service with throttle seconds %d "
-                " and evaluation steps %d",
-                args.evaluation_throttle_secs,
+                "Creating evaluation service with " "evaluation steps %d",
                 args.evaluation_steps,
             )
             evaluation_service = EvaluationService(
