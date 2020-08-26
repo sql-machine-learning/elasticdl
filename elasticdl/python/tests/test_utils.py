@@ -392,8 +392,6 @@ def distributed_train_and_evaluate(
         evaluation_service = EvaluationService(
             None,
             task_d,
-            0,
-            0,
             evaluation_steps,
             False,
             model_module[eval_metrics_fn],
@@ -402,8 +400,6 @@ def distributed_train_and_evaluate(
         evaluation_service = EvaluationService(
             None,
             task_d,
-            0,
-            0,
             evaluation_steps,
             True,
             model_module[eval_metrics_fn],

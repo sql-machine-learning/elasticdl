@@ -103,7 +103,7 @@ class EvaluationServiceTest(unittest.TestCase):
 
         # Evaluation metrics will not be accepted if no evaluation ongoing
         evaluation_service = EvaluationService(
-            None, task_d, 10, False, _eval_metrics_fn,
+            None, task_d, 0, False, _eval_metrics_fn,
         )
 
         master = Mock(
