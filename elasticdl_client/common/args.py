@@ -115,21 +115,6 @@ def add_train_params(parser):
         default=0,
     )
     parser.add_argument(
-        "--evaluation_start_delay_secs",
-        type=int,
-        help="Start time-based evaluation only after waiting for "
-        "this many seconds",
-        default=100,
-    )
-    parser.add_argument(
-        "--evaluation_throttle_secs",
-        type=int,
-        help="Do not re-evaluate unless the last evaluation was started "
-        "at least this many seconds ago."
-        "If 0, time-based evaluation is disabled",
-        default=0,
-    )
-    parser.add_argument(
         "--checkpoint_dir_for_init",
         help="The checkpoint directory to initialize the training model",
         default="",

@@ -39,8 +39,6 @@ MODEL_SPEC_GROUP = [
 EVALUATION_GROUP = [
     "evaluation_steps",
     "validation_data",
-    "evaluation_start_delay_secs",
-    "evaluation_throttle_secs",
 ]
 
 PREDICTION_GROUP = ["prediction_data", "prediction_outputs_processor"]

@@ -12,8 +12,6 @@
 # limitations under the License.
 
 import threading
-import time
-from threading import Thread
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.evaluation_utils import EvaluationMetrics
@@ -62,41 +60,6 @@ class EvaluationJob(object):
         )
 
 
-class _EvaluationTrigger(Thread):
-    """A trigger which generates evaluation tasks periodically"""
-
-    def __init__(self, eval_service, start_delay_secs, throttle_secs):
-        Thread.__init__(self)
-        self._eval_service = eval_service
-        self._stopper = threading.Event()
-        self._throttle_secs = throttle_secs
-        self._eval_min_time = time.time() + start_delay_secs
-
-    def stop(self):
-        self._stopper.set()
-
-    def _wait_enough_time(self, cur_time_secs, previous_round_start_secs):
-        if cur_time_secs < self._eval_min_time:
-            return False
-        if (
-            previous_round_start_secs != -1
-            and cur_time_secs - previous_round_start_secs < self._throttle_secs
-        ):
-            return False
-        return True
-
-    def run(self):
-        previous_round_start_secs = -1
-
-        while not self._stopper.is_set():
-            time_now = time.time()
-            if self._wait_enough_time(time_now, previous_round_start_secs):
-                # Time is up, add an evaluation task
-                self._eval_service.add_evaluation_task(is_time_based_eval=True)
-                previous_round_start_secs = time_now
-            time.sleep(5)
-
-
 class EvaluationService(object):
     """Evaluation service"""
 
@@ -104,8 +67,6 @@ class EvaluationService(object):
         self,
         tensorboard_service,
         task_d,
-        start_delay_secs,
-        throttle_secs,
         eval_steps,
         eval_only,
         eval_metrics_fn,
@@ -114,23 +75,11 @@ class EvaluationService(object):
         self._task_d = task_d
         self._lock = threading.Lock()
         self._eval_job = None
-        self.trigger = _EvaluationTrigger(
-            self, start_delay_secs, throttle_secs
-        )
-        self._time_based_eval = throttle_secs > 0
         self._eval_steps = eval_steps
         self._eval_checkpoint_versions = []
         self._last_eval_checkpoint_version = -1
         self._eval_only = eval_only
         self._eval_metrics_fn = eval_metrics_fn
-
-    def start(self):
-        if self._time_based_eval and not self._eval_only:
-            self.trigger.start()
-
-    def stop(self):
-        if self._time_based_eval and not self._eval_only:
-            self.trigger.stop()
 
     def set_master_servicer(self, master_servicer):
         self._master_servicer = master_servicer
@@ -138,15 +87,10 @@ class EvaluationService(object):
     def init_eval_only_job(self, num_task):
         self._eval_job = EvaluationJob(self._eval_metrics_fn(), -1, num_task)
 
-    def add_evaluation_task(
-        self, is_time_based_eval, master_locking=True, model_version=None
-    ):
+    def add_evaluation_task(self, model_version=None):
         """
         Add evaluation task with current model_version.
         """
-        # Do not create time-based eval after all tasks are done
-        if is_time_based_eval and self._task_d.finished():
-            return
         if not model_version:
             model_version = self._master_servicer.get_model_version()
         if model_version == self._last_eval_checkpoint_version:
@@ -181,7 +125,7 @@ class EvaluationService(object):
                 return True
         return False
 
-    def add_evaluation_task_if_needed(self, master_locking, model_version):
+    def add_evaluation_task_if_needed(self, model_version):
         """
         Add step-based evaluation task
         """
@@ -192,11 +136,7 @@ class EvaluationService(object):
             and model_version % self._eval_steps == 0
             and model_version > self._last_eval_checkpoint_version
         ):
-            self.add_evaluation_task(
-                is_time_based_eval=False,
-                master_locking=master_locking,
-                model_version=model_version,
-            )
+            self.add_evaluation_task(model_version=model_version,)
 
     def report_evaluation_metrics(self, model_outputs, labels):
         if self._eval_job is None:

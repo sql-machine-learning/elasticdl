@@ -208,12 +208,6 @@ class Master(object):
         """
         Start the components one by one. Make sure that it is ready to run.
         """
-        # Start the evaluation service if requested
-        if self.evaluation_service:
-            self.logger.info("Starting evaluation service")
-            self.evaluation_service.start()
-            self.logger.info("Evaluation service started")
-
         # Start the master GRPC server
         self.logger.info("Starting master RPC server")
         self.server.start()
@@ -271,11 +265,6 @@ class Master(object):
         """
         self.logger.info("Stopping master")
 
-        if self.evaluation_service:
-            self.logger.info("Stopping evaluation service")
-            self.evaluation_service.stop()
-            self.logger.info("Evaluation service stopped")
-
         self.logger.info("Stopping RPC server")
         self.server.stop(None)  # grace = None
         self.logger.info("RPC server stopped")
@@ -299,11 +288,7 @@ class Master(object):
     @staticmethod
     def _get_job_type(args):
         if all(
-            (
-                args.training_data,
-                args.validation_data,
-                args.evaluation_throttle_secs or args.evaluation_steps,
-            )
+            (args.training_data, args.validation_data, args.evaluation_steps,)
         ):
             job_type = JobType.TRAINING_WITH_EVALUATION
         elif all(
@@ -346,16 +331,12 @@ class Master(object):
             or self.job_type == JobType.EVALUATION_ONLY
         ):
             self.logger.info(
-                "Creating evaluation service with throttle seconds %d "
-                " and evaluation steps %d",
-                args.evaluation_throttle_secs,
+                "Creating evaluation service with " "evaluation steps %d",
                 args.evaluation_steps,
             )
             evaluation_service = EvaluationService(
                 self.tb_service,
                 self.task_d,
-                args.evaluation_start_delay_secs,
-                args.evaluation_throttle_secs,
                 args.evaluation_steps,
                 self.job_type == JobType.EVALUATION_ONLY,
                 self.model_module[args.eval_metrics_fn],
