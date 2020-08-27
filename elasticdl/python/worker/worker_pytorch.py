@@ -208,9 +208,9 @@ class WorkerPytorch(object):
 
             # TODO: PS in python/go is tf style to get optimizer info,
             #  need PyTorch style, revise when rewrite pserver
-            # learning_rate = K.get_value(self._model.optimizer.lr)
+            learning_rate = K.get_value(self._model.optimizer.lr)
             # learning_rate = self._model.optimizer.param_groups[0]["lr"]
-            learning_rate= 0.001
+            # learning_rate = 0.001
 
             accepted, max_version = self._ps_client.push_gradients(
                 grads, edl_grads, learning_rate, self._model_versions_from_ps,
@@ -224,7 +224,6 @@ class WorkerPytorch(object):
                 "distribution strategy"
             )
 
-            
     def _run_model_call_before_training(self, features):
         """
         before training: Create variables and report to ps if not created.

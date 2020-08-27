@@ -11,7 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import tensorflow as tf
 import torch.nn as nn
 import torch.nn.functional as F
@@ -49,8 +48,8 @@ def loss(labels, predictions):
     return loss_func(predictions, labels)
 
 
-# def optimizer(model,lr=0.001):
-#     return torch.optim.Adam(model.parameters(), lr)
+# def optimizer(model=CustomModel(),lr=0.001):
+# return torch.optim.Adam(model.parameters(), lr)
 def optimizer(lr=0.01):
     return tf.optimizers.SGD(lr)
 

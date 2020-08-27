@@ -22,9 +22,9 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.tests.test_utils import (
     create_pserver,
+    create_worker,
     get_mnist_dataset,
     get_random_batch,
-    create_worker,
 )
 from elasticdl.python.worker.ps_client import PSClient
 from elasticdl.python.worker.worker_pytorch import WorkerPytorch
@@ -160,6 +160,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         worker.report_gradient(w_grads)
         self.assertIsInstance(w_loss, torch.Tensor)
         self.assertIsInstance(w_grads[0], torch.Tensor)
+
 
 if __name__ == "__main__":
     unittest.main()
