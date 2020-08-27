@@ -154,3 +154,11 @@ class AllReduceTrainer(object):
             zip(grads, self._model.trainable_variables)
         )
         self._var_created = True
+
+    def export_saved_model(self, model_path):
+        if model_path is None:
+            return
+        if hvd.rank() == 0:
+            self._model.save(
+                model_path, overwrite=True, include_optimizer=False
+            )
