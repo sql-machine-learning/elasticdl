@@ -99,22 +99,42 @@ retrieve the source code, please run the following command.
 git clone https://github.com/sql-machine-learning/elasticdl
 ```
 
-The model definitions are in directory `elasticdl/model_zoo`.  The following
-commands build the Docker image `elasticdl:mnist`
+The model definitions are in directory `elasticdl/model_zoo`.
+
+### Build the Model Zoo for Parameter Server
+
+The following commands build the Docker image `elasticdl:mnist_ps`
 
 ```bash
-cd elasticdl/model_zoo
-elasticdl zoo init
-elasticdl zoo build --image=elasticdl:mnist .
+cd elasticdl
+elasticdl zoo init --model_zoo=model_zoo
+elasticdl zoo build --image=elasticdl:mnist_ps .
 ```
 
-## Submit the Training Job
+### Build the Model Zoo for AllReduce
+
+We must build the base image `elasticdl:dev_allreduce` firstly using the
+
+```bash
+scripts/travis/build_images.sh
+```
+
+Then, we can build the AllReduce training image `elasticdl:mnist_allreduce`
+with model definitions in `model_zoo`.
+
+```bash
+cd elasticdl
+elasticdl zoo init --base_image=elasticdl:dev_allreduce --model_zoo=model_zoo
+elasticdl zoo build --image=elasticdl:mnist_allreduce .
+```
+
+## Submit the Training Job Using Parameter Server
 
 The following command submits a training job:
 
 ```bash
 elasticdl train \
-  --image_name=elasticdl:mnist \
+  --image_name=elasticdl:mnist_ps \
   --model_zoo=model_zoo \
   --model_def=mnist.mnist_functional_api.custom_model \
   --training_data=/data/mnist/train \
@@ -152,7 +172,7 @@ algorithm. The option `--num_ps_pods=1` tells the master to start one parameter
 server pod. For more details about parameter server strategy, please refer to
 the [design doc](/docs/designs/parameter_server.md).
 
-## Check Job Status
+### Check Job Status
 
 After the job submission, we can run the command `kubectl get pods` to list
 related containers.
@@ -185,3 +205,35 @@ The output looks like the following.
 ```
 
 The logs show that the accuracy reaches to 0.77 after 250 steps iteration.
+
+## Submit the Training Job Using AllReduce
+
+```bash
+elasticdl train \
+  --image_name=elasticdl:mnist_allreduce \
+  --model_zoo=model_zoo \
+  --model_def=mnist.mnist_functional_api.custom_model \
+  --training_data=/data/mnist/train \
+  --num_epochs=1 \
+  --master_resource_request="cpu=0.2,memory=1024Mi" \
+  --master_resource_limit="cpu=1,memory=2048Mi" \
+  --worker_resource_request="cpu=0.4,memory=1024Mi" \
+  --worker_resource_limit="cpu=1,memory=2048Mi" \
+  --minibatch_size=64 \
+  --num_minibatches_per_task=2 \
+  --num_workers=2 \
+  --job_name=test-mnist-allreduce \
+  --image_pull_policy=Never \
+  --volume="host_path=/data,mount_path=/data" \
+  --distribution_strategy=AllreduceStrategy
+```
+
+After the job submission, we can run the command `kubectl get pods` to list
+related containers.
+
+```bash
+NAME                                      READY   STATUS    RESTARTS   AGE
+elasticdl-test-mnist-allreduce-master     1/1     Running   0          33s
+elasticdl-test-mnist-allreduce-worker-0   1/1     Running   0          30s
+elasticdl-test-mnist-allreduce-worker-1   1/1     Running   0          30s
+```
