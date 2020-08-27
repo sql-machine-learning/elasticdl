@@ -67,7 +67,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
     #     )
     #     worker = WorkerPytorch(args, ps_client=PSClient(self._channels))
     #     self._workers.append(worker)
-    
+
     def _create_worker(self, worker_num):
         args_list = create_worker_args(
             worker_num,

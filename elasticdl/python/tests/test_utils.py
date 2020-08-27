@@ -44,7 +44,6 @@ from elasticdl.python.tests.mock_service import _server
 from elasticdl.python.worker.master_client import MasterClient
 from elasticdl.python.worker.ps_client import PSClient
 from elasticdl.python.worker.worker import Worker
-from elasticdl.python.worker.worker_pytorch import WorkerPytorch
 from elasticdl_client.common.constants import DistributionStrategy
 
 
@@ -285,7 +284,9 @@ def create_pserver(
     return ports, channels, pservers
 
 
-def create_worker_args(worker_num, batch_size, model_zoo_path, model_def, channels):
+def create_worker_args(
+    worker_num, batch_size, model_zoo_path, model_def, channels
+):
     args_list = []
     for i in range(worker_num):
         tf.keras.backend.clear_session()
