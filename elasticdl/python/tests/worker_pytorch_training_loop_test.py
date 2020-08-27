@@ -22,7 +22,7 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.tests.test_utils import (
     create_pserver,
-    create_worker,
+    create_worker_args,
     get_mnist_dataset,
     get_random_batch,
 )
@@ -57,14 +57,28 @@ class WorkerPSInteractionTest(unittest.TestCase):
         )
         self._model_def = model_def
 
+    # def _create_worker(self, worker_num):
+    #     args = create_worker_args(
+    #         worker_num,
+    #         self._batch_size,
+    #         self._model_zoo_path,
+    #         self._model_def,
+    #         self._channels,
+    #     )
+    #     worker = WorkerPytorch(args, ps_client=PSClient(self._channels))
+    #     self._workers.append(worker)
+    
     def _create_worker(self, worker_num):
-        self._workers = create_worker(
+        args_list = create_worker_args(
             worker_num,
             self._batch_size,
             self._model_zoo_path,
             self._model_def,
             self._channels,
         )
+        for args in args_list:
+            worker = WorkerPytorch(args, ps_client=PSClient(self._channels))
+            self._workers.append(worker)
 
     def _worker_train(self, worker_id, train_db, test_db, stop_step):
         # TODO: acc_meter with PyTorch

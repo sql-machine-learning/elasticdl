@@ -25,7 +25,7 @@ from elasticdl.python.common.model_utils import get_model_spec
 from elasticdl.python.ps.embedding_table import EmbeddingTable
 from elasticdl.python.tests.test_utils import (
     create_pserver,
-    create_worker,
+    create_worker_args,
     get_frappe_dataset,
     get_mnist_dataset,
     get_random_batch,
@@ -64,13 +64,16 @@ class WorkerPSInteractionTest(unittest.TestCase):
             ps.parameters.reset()
 
     def _create_worker(self, worker_num):
-        self._workers = create_worker(
+        args_list = create_worker_args(
             worker_num,
             self._batch_size,
             self._model_zoo_path,
             self._model_def,
             self._channels,
         )
+        for args in args_list:
+            worker = Worker(args, ps_client=PSClient(self._channels))
+            self._workers.append(worker)
 
     def _worker_train(
         self, worker_id, train_db, test_db, stop_step, use_tf_function=False

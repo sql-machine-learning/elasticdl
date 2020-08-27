@@ -285,9 +285,11 @@ def create_pserver(
     return ports, channels, pservers
 
 
-def create_worker(worker_num, batch_size, model_zoo_path, model_def, channels):
-    workers = []
+def create_worker_args(worker_num, batch_size, model_zoo_path, model_def, channels):
+    args_list = []
     for i in range(worker_num):
+        tf.keras.backend.clear_session()
+        tf.random.set_seed(22)
         arguments = [
             "--worker_id",
             i,
@@ -303,9 +305,8 @@ def create_worker(worker_num, batch_size, model_zoo_path, model_def, channels):
             DistributionStrategy.PARAMETER_SERVER,
         ]
         args = parse_worker_args(arguments)
-        worker = WorkerPytorch(args, ps_client=PSClient(channels))
-        workers.append(worker)
-        return workers
+        args_list.append(args)
+    return args_list
 
 
 def distributed_train_and_evaluate(
