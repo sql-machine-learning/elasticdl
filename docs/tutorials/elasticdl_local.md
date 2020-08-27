@@ -131,9 +131,7 @@ elasticdl train \
   --num_ps_pods=1 \
   --num_workers=1 \
   --evaluation_steps=50 \
-  --grads_to_wait=1 \
   --job_name=test-mnist \
-  --log_level=INFO \
   --image_pull_policy=Never \
   --volume="host_path=/data,mount_path=/data" \
   --distribution_strategy=ParameterServerStrategy
