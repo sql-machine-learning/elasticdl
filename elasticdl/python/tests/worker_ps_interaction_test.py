@@ -25,6 +25,7 @@ from elasticdl.python.common.model_utils import get_model_spec
 from elasticdl.python.ps.embedding_table import EmbeddingTable
 from elasticdl.python.tests.test_utils import (
     create_pserver,
+    create_worker,
     get_frappe_dataset,
     get_mnist_dataset,
     get_random_batch,
@@ -63,26 +64,13 @@ class WorkerPSInteractionTest(unittest.TestCase):
             ps.parameters.reset()
 
     def _create_worker(self, worker_num):
-        for i in range(worker_num):
-            tf.keras.backend.clear_session()
-            tf.random.set_seed(22)
-            arguments = [
-                "--worker_id",
-                i,
-                "--job_type",
-                elasticdl_pb2.TRAINING,
-                "--minibatch_size",
-                self._batch_size,
-                "--model_zoo",
-                self._model_zoo_path,
-                "--model_def",
-                self._model_def,
-                "--distribution_strategy",
-                DistributionStrategy.PARAMETER_SERVER,
-            ]
-            args = parse_worker_args(arguments)
-            worker = Worker(args, ps_client=PSClient(self._channels))
-            self._workers.append(worker)
+        self._workers = create_worker(
+            worker_num,
+            self._batch_size,
+            self._model_zoo_path,
+            self._model_def,
+            self._channels,
+        )
 
     def _worker_train(
         self, worker_id, train_db, test_db, stop_step, use_tf_function=False

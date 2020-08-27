@@ -145,6 +145,7 @@ class WorkerPytorch(object):
                 )
         self._get_model_steps = args.get_model_steps
         self._opt = self._opt_fn()
+        # self._opt = self._opt_fn(model_inst)
         self._model.optimizer = self._opt
         self._non_embed_grads = {}
         self._evaluation_result = {}
@@ -152,7 +153,6 @@ class WorkerPytorch(object):
     def set_model(self, model_inst):
         """Set model instance to worker."""
         self._model = model_inst
-        self._model.float()
 
     def get_model(self):
         self._timing.start_record_time("get_model")
@@ -194,41 +194,37 @@ class WorkerPytorch(object):
             self._model_version = max(self._model_versions_from_ps)
         self._timing.end_record_time("get_model")
 
-    def report_gradient_to_ps(self, gradients):
-        """
-        report gradient in numpy
-        report learning_rate about PyTorch model optimizer
-        """
-        self._timing.start_record_time("report_gradient")
-        grads = []
-        for i, v in enumerate(self._non_embed_vars.items()):
-            grad = Tensor(v[0], gradients[i].numpy(), None)
-            grads.append(grad)
-        edl_grads = []
-
-        # TODO: PS in python/go is tf style to get optimizer info,
-        #  need PyTorch style, revise when rewrite pserver
-        learning_rate = K.get_value(self._model.optimizer.lr)
-        # learning_rate = self._model.optimizer.param_groups[0]["lr"]
-
-        accepted, max_version = self._ps_client.push_gradients(
-            grads, edl_grads, learning_rate, self._model_versions_from_ps,
-        )
-        self._timing.end_record_time("report_gradient")
-        return accepted, max_version
-
-    def report_gradient(self, grads):
+    def report_gradient(self, gradients):
         if (
             self._distribution_strategy
             == DistributionStrategy.PARAMETER_SERVER
         ):
-            return self.report_gradient_to_ps(grads)
+            self._timing.start_record_time("report_gradient")
+            grads = []
+            for i, v in enumerate(self._non_embed_vars.items()):
+                grad = Tensor(v[0], gradients[i].numpy(), None)
+                grads.append(grad)
+            edl_grads = []
+
+            # TODO: PS in python/go is tf style to get optimizer info,
+            #  need PyTorch style, revise when rewrite pserver
+            # learning_rate = K.get_value(self._model.optimizer.lr)
+            # learning_rate = self._model.optimizer.param_groups[0]["lr"]
+            learning_rate= 0.001
+
+            accepted, max_version = self._ps_client.push_gradients(
+                grads, edl_grads, learning_rate, self._model_versions_from_ps,
+            )
+            self._timing.end_record_time("report_gradient")
+            return accepted, max_version
+
         else:
             raise RuntimeError(
                 "Only support Allreduce and ParameterServer "
                 "distribution strategy"
             )
 
+            
     def _run_model_call_before_training(self, features):
         """
         before training: Create variables and report to ps if not created.
@@ -247,7 +243,7 @@ class WorkerPytorch(object):
                 self._non_embed_vars.keys()
             )
 
-    def _collect_gradients_without_allreduce(self, grads):
+    def _collect_gradients_with_ps(self, grads):
         accepted, min_model_version = self.report_gradient(grads)
         if accepted and self._get_model_steps > 1:
             non_embed_vars_n = len(self._non_embed_vars)
@@ -271,7 +267,7 @@ class WorkerPytorch(object):
 
     def _run_training_task(self, features, labels):
         loss, grads = self.training_process_pytorch(features, labels)
-        return (*self._collect_gradients_without_allreduce(grads), loss)
+        return (*self._collect_gradients_with_ps(grads), loss)
 
     def _process_minibatch(
         self,

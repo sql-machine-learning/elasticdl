@@ -24,6 +24,7 @@ from elasticdl.python.tests.test_utils import (
     create_pserver,
     get_mnist_dataset,
     get_random_batch,
+    create_worker,
 )
 from elasticdl.python.worker.ps_client import PSClient
 from elasticdl.python.worker.worker_pytorch import WorkerPytorch
@@ -57,24 +58,13 @@ class WorkerPSInteractionTest(unittest.TestCase):
         self._model_def = model_def
 
     def _create_worker(self, worker_num):
-        for i in range(worker_num):
-            arguments = [
-                "--worker_id",
-                i,
-                "--job_type",
-                elasticdl_pb2.TRAINING,
-                "--minibatch_size",
-                self._batch_size,
-                "--model_zoo",
-                self._model_zoo_path,
-                "--model_def",
-                self._model_def,
-                "--distribution_strategy",
-                DistributionStrategy.PARAMETER_SERVER,
-            ]
-            args = parse_worker_args(arguments)
-            worker = WorkerPytorch(args, ps_client=PSClient(self._channels))
-            self._workers.append(worker)
+        self._workers = create_worker(
+            worker_num,
+            self._batch_size,
+            self._model_zoo_path,
+            self._model_def,
+            self._channels,
+        )
 
     def _worker_train(self, worker_id, train_db, test_db, stop_step):
         # TODO: acc_meter with PyTorch
@@ -131,11 +121,10 @@ class WorkerPSInteractionTest(unittest.TestCase):
         worker_results = self._worker_train(
             0, train_db=db, test_db=test_db, stop_step=stop_step
         )
-        print(
-            "show batchs train worker_results[0]\n" "w_loss, acc_meter:",
-            worker_results[0],
-        )
-        print("--------finish test_compare_mnist_train!")
+
+        self.assertIsInstance(worker_results[0], tuple)
+        self.assertIsInstance(worker_results[0][0], float)
+        self.assertIsInstance(worker_results[0][1], float)
 
     def test_onebatch_train_pytorch(self):
         model_def = "mnist.mnist_subclass_pytorch.CustomModel"
@@ -169,10 +158,8 @@ class WorkerPSInteractionTest(unittest.TestCase):
         worker.get_model()
         w_loss, w_grads = worker.training_process_pytorch(images, labels)
         worker.report_gradient(w_grads)
-        print("show onebatch train w_loss:", w_loss)
-        print("show onebatch train w_grads[0]:", w_grads[0].shape)
-        print("--------finish test_compare_onebatch_train_pytorch!")
-
+        self.assertIsInstance(w_loss, torch.Tensor)
+        self.assertIsInstance(w_grads[0], torch.Tensor)
 
 if __name__ == "__main__":
     unittest.main()

@@ -25,7 +25,10 @@ import recordio
 import tensorflow as tf
 from odps import ODPS
 
-from elasticdl.python.common.args import parse_worker_args
+from elasticdl.proto import elasticdl_pb2
+from elasticdl.python.common.args import (
+    parse_worker_args, parse_worker_args
+)
 from elasticdl.python.common.constants import JobType, MaxComputeConfig
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.common.model_utils import (
@@ -43,6 +46,7 @@ from elasticdl.python.tests.mock_service import _server
 from elasticdl.python.worker.master_client import MasterClient
 from elasticdl.python.worker.ps_client import PSClient
 from elasticdl.python.worker.worker import Worker
+from elasticdl.python.worker.worker_pytorch import WorkerPytorch
 from elasticdl_client.common.constants import DistributionStrategy
 
 
@@ -282,6 +286,29 @@ def create_pserver(
 
     return ports, channels, pservers
 
+def create_worker(
+    worker_num, batch_size, model_zoo_path, model_def, channels
+    ):
+    workers = []
+    for i in range(worker_num):
+        arguments = [
+            "--worker_id",
+            i,
+            "--job_type",
+            elasticdl_pb2.TRAINING,
+            "--minibatch_size",
+            batch_size,
+            "--model_zoo",
+            model_zoo_path,
+            "--model_def",
+            model_def,
+            "--distribution_strategy",
+            DistributionStrategy.PARAMETER_SERVER,
+        ]
+        args = parse_worker_args(arguments)
+        worker = WorkerPytorch(args, ps_client=PSClient(channels))
+        workers.append(worker)
+        return workers
 
 def distributed_train_and_evaluate(
     feature_shape,
