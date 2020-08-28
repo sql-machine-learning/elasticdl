@@ -43,7 +43,7 @@ class AllReduceTrainer(object):
         self._rendezvous_id = None
         self._need_broadcast = True
         self._var_created = False
-        self._world_size = 1
+        self._world_size = None
         self._set_optimizer(optimizer)
         self._set_horovod_env()
 
@@ -53,10 +53,11 @@ class AllReduceTrainer(object):
         self._optimizer.lr = self._get_learning_rate
 
     def _get_learning_rate(self):
+        scaler = 1 if self._world_size is None else self._world_size
         lr = self._lr
         if callable(lr):
             lr = lr()
-        return lr * self._world_size
+        return lr * scaler
 
     @tf.function
     def _training_process(self, features, labels):
@@ -156,7 +157,7 @@ class AllReduceTrainer(object):
         self._var_created = True
 
     def export_saved_model(self, model_path):
-        if model_path is None:
+        if not model_path:
             return
         if hvd.rank() == 0:
             self._model.save(
