@@ -130,11 +130,10 @@ Then, we can build the AllReduce training image `elasticdl:mnist_allreduce`
 with model definitions in `model_zoo`.
 
 ```bash
-cd elasticdl
 elasticdl zoo init \
   --base_image=elasticdl:dev_allreduce \
   --model_zoo=model_zoo \
-  --local_pkg_dir=./build \
+  --local_pkg_dir=./build
 elasticdl zoo build --image=elasticdl:mnist_allreduce .
 ```
 
@@ -243,7 +242,22 @@ related containers.
 
 ```bash
 NAME                                      READY   STATUS    RESTARTS   AGE
-elasticdl-test-mnist-allreduce-master     1/1     Running   0          33s
-elasticdl-test-mnist-allreduce-worker-0   1/1     Running   0          30s
-elasticdl-test-mnist-allreduce-worker-1   1/1     Running   0          30s
+elasticdl-test-mnist-allreduce-master     1/1     Running   0          102s
+elasticdl-test-mnist-allreduce-worker-0   1/1     Running   0          98s
+elasticdl-test-mnist-allreduce-worker-1   1/1     Running   0          98s
+```
+
+Then, we can view the loss in the worker log using
+
+```bash
+kubectl logs elasticdl-test-mnist-allreduce-worker-0 | grep Loss
+```
+
+The output looks like the following.
+
+```txt
+[2020-08-27 13:22:47,930] [INFO] [worker.py:627:_process_minibatch] Loss = 2.686038017272949, steps = 2
+[2020-08-27 13:23:17,254] [INFO] [worker.py:627:_process_minibatch] Loss = 0.08301685750484467, steps = 100
+[2020-08-27 13:23:47,887] [INFO] [worker.py:627:_process_minibatch] Loss = 0.0823458805680275, steps = 200
+[2020-08-27 13:24:19,067] [INFO] [worker.py:627:_process_minibatch] Loss = 0.14079990983009338, steps = 300
 ```
