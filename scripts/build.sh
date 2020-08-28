@@ -38,8 +38,6 @@ make -f elasticdl/Makefile
     GOBIN=/tmp go install ./...
 )
 
-rm ./build/*.whl
-
 # Create elasticdl_preprocessing package
 rm -rf ./build/lib
 python setup_preprocessing.py --quiet bdist_wheel --dist-dir ./build
