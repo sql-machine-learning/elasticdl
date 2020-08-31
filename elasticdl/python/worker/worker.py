@@ -131,7 +131,6 @@ class Worker(object):
             loss=args.loss,
             optimizer=args.optimizer,
             eval_metrics_fn=args.eval_metrics_fn,
-            model_params=args.model_params,
             prediction_outputs_processor=args.prediction_outputs_processor,
             custom_data_reader=args.custom_data_reader,
             callbacks=args.callbacks,

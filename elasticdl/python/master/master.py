@@ -126,7 +126,7 @@ class Master(object):
             get_module_file_path(args.model_zoo, args.model_def)
         ).__dict__
         self.model_inst = load_model_from_module(
-            args.model_def, self.model_module, args.model_params
+            args.model_def, self.model_module
         )
         self.optimizer = self.model_module[args.optimizer]()
         self._create_data_reader_fn = create_data_reader
