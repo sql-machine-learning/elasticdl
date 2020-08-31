@@ -27,8 +27,6 @@ from elasticdl_client.common.k8s_client import Client as BaseClient
 from elasticdl_client.common.k8s_client import append_pod_ip_to_env
 
 _PS_SERVICE_PORT = 2222
-_WORKER_SERVICE_PORT = 3333
-_FTLIB_GOSSIP_CONTAINER_PORT = 7946
 
 
 def get_worker_pod_name(job_name, worker_id):
