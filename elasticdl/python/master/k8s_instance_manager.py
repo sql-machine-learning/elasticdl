@@ -375,6 +375,8 @@ class InstanceManager(object):
         return alive_workers
 
     def get_worker_pod_ip(self, worker_id):
+        if worker_id not in self._worker_pods_ip_phase:
+            return None
         _, pod_ip, _ = self._worker_pods_ip_phase[worker_id]
         return pod_ip
 
