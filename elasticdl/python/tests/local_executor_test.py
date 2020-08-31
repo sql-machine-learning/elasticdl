@@ -44,7 +44,6 @@ class LocalExecutorArgs(object):
         loss,
         optimizer,
         eval_metrics_fn,
-        model_params=None,
         prediction_outputs_processor=None,
         envs=None,
         data_reader_params=None,
@@ -64,7 +63,6 @@ class LocalExecutorArgs(object):
         self.loss = loss
         self.optimizer = optimizer
         self.eval_metrics_fn = eval_metrics_fn
-        self.model_params = model_params
         self.prediction_outputs_processor = prediction_outputs_processor
         self.envs = envs
         self.data_reader_params = data_reader_params
@@ -108,7 +106,6 @@ class LocalExectorTest(unittest.TestCase):
                 loss="loss",
                 optimizer="optimizer",
                 eval_metrics_fn="eval_metrics_fn",
-                model_params="",
                 prediction_outputs_processor="PredictionOutputsProcessor",
                 data_reader_params=data_reader_params,
                 num_minibatches_per_task=5,
