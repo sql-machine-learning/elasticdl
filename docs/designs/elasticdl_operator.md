@@ -13,7 +13,7 @@ Then, the master pod launches worker pods and PS pods if necessary.
 The training process begins once a worker pod becomes ready.
 
 When making ElasticDL as a product of cloud computing,
-we find that we have to address the following two points:
+we find that we have to address the following two problems:
 
 - Job monitoring and management. ElasticDL client tool only launches a job.
 We have to write extra scripts to monitor the pods' status
@@ -33,7 +33,7 @@ The custom controller handles the request from the YAML file.
 
 ## Case study: Describing a MNIST Training Job
 
-We want to use a real case to drive the design of ElasticDL CRD.
+Let's use a real case to drive the design of ElasticDL CRD.
 Following is the master pod YAML file of a MNIST job
 dumped from the ElasticDL client tool.
 It contains all the needed information.
