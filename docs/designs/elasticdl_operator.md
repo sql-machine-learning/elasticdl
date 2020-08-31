@@ -19,9 +19,9 @@ we find that we have to address the following two problems:
 We have to write extra scripts to monitor the pods' status
 and clean pods when a job completes.
 
-- Product compatibility. Current products have deployed many operators of [Kubeflow](https://www.kubeflow.org/),
+- Product compatibility. Current products have deployed some operators of [Kubeflow](https://www.kubeflow.org/),
 such as TF operator and PyTorch operator.
-There are many development works on supporting [operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/),
+There are many existing works on supporting [operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/),
 including dashboard, command-line tool,
 and controllers with rich monitoring functions.
 It's better to reuse the work.
