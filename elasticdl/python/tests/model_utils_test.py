@@ -45,7 +45,6 @@ class ModelHelperTest(unittest.TestCase):
             loss="loss",
             optimizer="optimizer",
             eval_metrics_fn="eval_metrics_fn",
-            model_params="",
             prediction_outputs_processor="PredictionOutputsProcessor",
             custom_data_reader="custom_data_reader",
             callbacks="callbacks",
