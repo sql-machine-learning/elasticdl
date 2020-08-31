@@ -13,7 +13,7 @@ Then, the master pod launches worker pods and PS pods if necessary.
 The training process begins once a worker pod becomes ready.
 
 When making ElasticDL as a product of cloud computing,
-we find that we have to address the following two problems:
+we find that we have to address the following two points:
 
 - Job monitoring and management. ElasticDL client tool only launches a job.
 We have to write extra scripts to monitor the pods' status
@@ -21,7 +21,7 @@ and clean pods when a job completes.
 
 - Product compatibility. Current products have deployed some operators of [Kubeflow](https://www.kubeflow.org/),
 such as TF operator and PyTorch operator.
-Many development works have been done on integrating the operators into products,
+Many development works have been done when integrating the operators,
 including dashboard, command-line tool, and controllers with rich monitoring functions.
 It's better to reuse the work.
 
