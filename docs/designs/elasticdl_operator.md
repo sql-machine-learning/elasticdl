@@ -21,12 +21,13 @@ and clean pods when a job completes.
 
 - Product compatibility. Current products have deployed some operators of [Kubeflow](https://www.kubeflow.org/),
 such as TF operator and PyTorch operator.
-There are many existing works on supporting [operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/),
-including dashboard, command-line tool,
-and controllers with rich monitoring functions.
+Many development works have been done on integrating the operators into products,
+including dashboard, command-line tool, and controllers with rich monitoring functions.
 It's better to reuse the work.
 
-So, we decide to apply the operator pattern to ElasticDL.
+So, we decide to apply the
+[operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
+to ElasticDL as well.
 We introduce a CRD to define the workload of ElasticDL jobs.
 Then, we describe each ElastiDL job with a YAML file according to the CRD.
 The custom controller handles the request from the YAML file.
