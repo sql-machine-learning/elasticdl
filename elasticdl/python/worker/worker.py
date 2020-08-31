@@ -183,6 +183,7 @@ class Worker(object):
             saved_model_path=args.output,
             checkpoint_path=args.checkpoint_dir,
         )
+        self._saved_model_path = args.output
 
         self._allreduce_trainer = None
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
@@ -701,6 +702,8 @@ class Worker(object):
             self._mc.report_task_result(
                 task_id=train_end_task.task_id, err_msg=""
             )
+        if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
+            self._allreduce_trainer.export_saved_model(self._saved_model_path)
 
     def _process_minibatch_and_report(
         self,
