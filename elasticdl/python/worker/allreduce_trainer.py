@@ -109,7 +109,7 @@ class AllReduceTrainer(object):
             rank_response = self._master_client.get_comm_rank()
             if rank_response.rank_id < 0:
                 logger.warning(
-                    "The master has not added the worker host into "
+                    "The master has not added the worker host info "
                     "rendezvous yet. Retrying to get rank"
                 )
                 time.sleep(5)
