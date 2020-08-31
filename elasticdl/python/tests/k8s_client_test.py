@@ -105,10 +105,6 @@ class K8sClientTest(unittest.TestCase):
                 worker.metadata.labels[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
             )
 
-        # Start 3 worker services
-        for i in range(3):
-            c.create_worker_service(i)
-
         # Check worker services
         for i in range(3):
             service = c.get_worker_service(i)

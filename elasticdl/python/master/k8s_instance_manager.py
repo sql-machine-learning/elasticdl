@@ -101,7 +101,7 @@ class InstanceManager(object):
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
-        # worker id to (pod name, phase) mapping
+        # worker id to (pod name, ip, phase) mapping
         # phase: None/Pending/Running/Succeeded/Failed/Unknown
         #   None: worker was just launched, haven't received event yet.
         #   Pending: worker pod not started yet
@@ -110,7 +110,7 @@ class InstanceManager(object):
         #       no issue.
         #   Failed: worker pod is killed for some reason
         #   Unknown: unknown
-        self._worker_pods_phase = {}
+        self._worker_pods_ip_phase = {}
         # pod name to worker id mapping
         self._worker_pod_name_to_id = {}
 
@@ -164,8 +164,7 @@ class InstanceManager(object):
             )
             name = pod.metadata.name
             self._worker_pod_name_to_id[name] = worker_id
-            self._worker_pods_phase[worker_id] = (name, None)
-            self._k8s_client.create_worker_service(worker_id)
+            self._worker_pods_ip_phase[worker_id] = (name, None, None)
 
     def _start_ps(self, ps_id):
         logger.info("Starting PS: %d" % ps_id)
@@ -217,7 +216,7 @@ class InstanceManager(object):
     def _remove_worker(self, worker_id):
         logger.info("Removing worker: %d", worker_id)
         with self._lock:
-            if worker_id not in self._worker_pods_phase:
+            if worker_id not in self._worker_pods_ip_phase:
                 logger.error("Unknown worker id: %s" % worker_id)
                 return
 
@@ -236,7 +235,7 @@ class InstanceManager(object):
     def stop_relaunch_and_remove_workers(self):
         with self._lock:
             self._relaunch_deleted_live_worker = False
-            for worker_id in self._worker_pods_phase:
+            for worker_id in self._worker_pods_ip_phase:
                 self._k8s_client.delete_worker(worker_id)
 
     def stop_relaunch_and_remove_all_ps(self):
@@ -247,7 +246,9 @@ class InstanceManager(object):
 
     def get_worker_counter(self):
         with self._lock:
-            return Counter([v for _, v in self._worker_pods_phase.values()])
+            return Counter(
+                [v for _, _, v in self._worker_pods_ip_phase.values()]
+            )
 
     def get_ps_counter(self):
         with self._lock:
@@ -265,6 +266,7 @@ class InstanceManager(object):
             return
 
         pod_name = evt_obj.metadata.name
+        pod_ip = evt_obj.status.pod_ip
         phase = evt_obj.status.phase
         if pod_name == self._k8s_client.get_master_pod_name():
             # No need to care about master pod
@@ -311,9 +313,13 @@ class InstanceManager(object):
 
             if pod_name in self._worker_pod_name_to_id:
                 worker_id = self._worker_pod_name_to_id.get(pod_name)
-                self._worker_pods_phase[worker_id] = (pod_name, phase)
+                self._worker_pods_ip_phase[worker_id] = (
+                    pod_name,
+                    pod_ip,
+                    phase,
+                )
                 if evt_type == "DELETED" or relaunch_failed_pod:
-                    del self._worker_pods_phase[worker_id]
+                    del self._worker_pods_ip_phase[worker_id]
                     del self._worker_pod_name_to_id[pod_name]
 
                     # If a deleted pod was not "Succeeded", relaunch a worker.
@@ -323,7 +329,11 @@ class InstanceManager(object):
                     )
                 else:
                     workers_failed = []
-                    for pod_name, phase in self._worker_pods_phase.values():
+                    for (
+                        pod_name,
+                        _,
+                        phase,
+                    ) in self._worker_pods_ip_phase.values():
                         workers_failed.append(phase == PodStatus.FAILED)
                     self.all_workers_failed = all(workers_failed)
 
@@ -359,30 +369,32 @@ class InstanceManager(object):
 
     def get_alive_workers(self):
         alive_workers = []
-        for pod_name, phase in self._worker_pods_phase.values():
+        for pod_name, _, phase in self._worker_pods_ip_phase.values():
             if phase == PodStatus.RUNNING:
                 alive_workers.append(pod_name)
         return alive_workers
 
+    def get_worker_pod_ip(self, worker_id):
+        _, pod_ip, _ = self._worker_pods_ip_phase[worker_id]
+        return pod_ip
+
     def _get_alive_worker_addr(self):
         alive_workers = self.get_alive_workers()
-        worker_service_addrs = []
+        worker_addrs = []
         worker_start_times = []
         for pod_name in alive_workers:
             pod = self._k8s_client.get_pod(pod_name)
             worker_start_times.append(pod.status.start_time)
             worker_id = self._worker_pod_name_to_id[pod_name]
-            service_addr_port = self._k8s_client.get_worker_service_address(
-                worker_id
-            )
-            worker_service_addrs.append(service_addr_port.split(":")[0])
+            pod_ip = self.get_worker_pod_ip(worker_id)
+            worker_addrs.append(pod_ip)
 
         # Sort worker addrs by start time. Then the master will assign
         # the rank according to the order in addrs list.
-        worker_service_addrs = [
-            x for _, x in sorted(zip(worker_start_times, worker_service_addrs))
+        worker_addrs = [
+            x for _, x in sorted(zip(worker_start_times, worker_addrs))
         ]
-        return worker_service_addrs
+        return worker_addrs
 
     @property
     def ps_addrs(self):

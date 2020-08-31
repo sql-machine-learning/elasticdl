@@ -101,14 +101,6 @@ class Client(BaseClient):
     def get_worker_pod_name(self, worker_id):
         return get_worker_pod_name(self.job_name, worker_id)
 
-    def get_worker_service_name(self, worker_id):
-        return self.get_worker_pod_name(worker_id)
-
-    def get_worker_service_address(self, worker_id):
-        return self._get_service_address(
-            self.get_worker_service_name(worker_id), _WORKER_SERVICE_PORT
-        )
-
     def get_ps_pod_name(self, ps_id):
         return get_ps_pod_name(self.job_name, ps_id)
 
@@ -149,17 +141,6 @@ class Client(BaseClient):
             )
         except client.api_client.ApiException as e:
             logger.warning("Exception when reading PS service: %s\n" % e)
-            return None
-
-    def get_worker_service(self, worker_id):
-        try:
-            return self.client.read_namespaced_service(
-                # Worker service has the same name as pod name
-                name=self.get_worker_service_name(worker_id),
-                namespace=self.namespace,
-            )
-        except client.api_client.ApiException as e:
-            logger.warning("Exception when reading worker service: %s\n" % e)
             return None
 
     def _create_ps_worker_pod(self, pod_name, type_key, index_key, **kargs):
@@ -244,16 +225,6 @@ class Client(BaseClient):
             replica_type="ps",
             replica_index=ps_id,
             owner=self.get_ps_pod(ps_id),
-        )
-
-    def create_worker_service(self, worker_id):
-        return self._create_service(
-            name=self.get_worker_service_name(worker_id),
-            port=_WORKER_SERVICE_PORT,
-            target_port=_WORKER_SERVICE_PORT,
-            replica_type="worker",
-            replica_index=worker_id,
-            owner=self.get_worker_pod(worker_id),
         )
 
     def _create_service(self, **kargs):

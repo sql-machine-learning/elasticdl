@@ -130,11 +130,11 @@ class ServicerTest(unittest.TestCase):
             ["172.0.0.1", "172.0.0.2"]
         )
 
-        k8s_client = Mock()
-        k8s_client.get_worker_service_address = MagicMock(
-            return_value="172.0.0.1:8080"
+        mock_instance_manager = Mock()
+        mock_instance_manager.get_worker_pod_ip = MagicMock(
+            return_value="172.0.0.1"
         )
-        self.master.instance_manager = Mock(_k8s_client=k8s_client)
+        self.master.instance_manager = mock_instance_manager
         master_servicer = MasterServicer(
             3, evaluation_service=None, master=self.master
         )
