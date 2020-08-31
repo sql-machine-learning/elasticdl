@@ -116,54 +116,86 @@ kind: "ElasticDLJob"
 metadata:
   name: "test-mnist"
 spec:
-  ElasticDLSpecs:
-    image: docker.io/elasticdl:test
-    namespace: "default"
-    volume: "host_path=/data,mount_path=/data"
-    imagePullPolicy: Never
+  ElasticDLJobSpecs:
+    modelZoo: /model_zoo
+    modefDef: mnist_functional_api.mnist_functional_api.custom_model
+    trainingData: /data/mnist/train
+    validationData: /data/mnist/val
+    output: /data/output
+    dataReaderParams: ""
+    minibatchSize: 64
+    numMinibatchesPerTask: 20
+    evaluationStep: 1000
+    checkpointStep: 1000
+    checkpointDir: /data/checkpoint
+    checkpointDirForInit: ""
+    keepCheckpointMax: 0
     envs: ""
     Master:
-      modelZoo: /model_zoo
-      modefDef: mnist_functional_api.mnist_functional_api.custom_model
-      trainingData: /data/mnist/train
-      validationData: /data/mnist/val
-      output: /data/output
-      dataReaderParams: ""
-      minibatchSize: 64
-      numMinibatchesPerTask: 20
-      evaluationStep: 1000
-      checkpointStep: 1000
-      checkpointDir: /data/checkpoint
-      checkpointDirForInit: ""
-      keepCheckpointMax: 0
+      replicas: 1
+      restartPolicy: Never
       priorityClassName: high
-      resources:
-        limits:
-          cpu: 1
-          memory: 2048Mi
-        requests:
-          cpu: 0.2
-          memory: 1024Mi
+      template:
+        spec:
+          containers:
+          - name: test-mnist-master
+            image: elasticdl-mnist
+            imagePullPolicy: Never
+            resources:
+              limits:
+                cpu: 1
+                memory: 2048Mi
+              requests:
+                cpu: 0.2
+                memory: 1024Mi
+            volumeMounts:
+            - mountPath: /data
+              name: test-volume
+          volumes:
+            - name: test-volume
+              hostPath:
+                path: /data
     PS:
       replicas: 2
+      restartPolicy: Never
       priorityClassName: high
-      resources:
-      limits:
-        cpu: 1
-        memory: 2048Mi
-      requests:
-        cpu: 0.2
-        memory: 1024Mi
+      template:
+        spec:
+          containers:
+          - name: test-mnist-ps
+            image: elasticdl-ps
+            imagePullPolicy: Never
+            resources:
+              limits:
+                cpu: 1
+                memory: 2048Mi
+            requests:
+                cpu: 0.2
+                memory: 1024Mi
     Worker:
       replicas: 10
+      restartPolicy: Never
       priorityClassName: low
-      resources:
-        limits:
-          cpu: 1
-          memory: 2048Mi
-        requests:
-          cpu: 0.2
-          memory: 1024Mi
+      template:
+        spec:
+          containers:
+          - name: test-mnist-worker
+            image: elasticdl-mnist
+            imagePullPolicy: Never
+            resources:
+              limits:
+                cpu: 1
+                memory: 2048Mi
+            requests:
+                cpu: 0.2
+                memory: 1024Mi
+            volumeMounts:
+            - mountPath: /data
+              name: test-volume
+          volumes:
+            - name: test-volume
+              hostPath:
+                path: /data
 ```
 
 ## ElasticDL CRD
