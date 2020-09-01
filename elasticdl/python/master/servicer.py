@@ -149,9 +149,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def get_comm_rank(self, request, _):
         worker_id = request.worker_id
-        k8s_client = self._instance_manager._k8s_client
-        worker_address_port = k8s_client.get_worker_service_address(worker_id)
-        worker_host = worker_address_port.split(":")[0]
+        worker_host = self._instance_manager.get_worker_pod_ip(worker_id)
 
         res = elasticdl_pb2.GetCommRankResponse()
         res.rank_id = self._rendezvous_server.get_worker_host_rank(worker_host)
