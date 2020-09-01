@@ -116,9 +116,9 @@ kind: "ElasticDLJob"
 metadata:
   name: "test-mnist"
 spec:
-  ElasticDLJobSpecs:
+  elasticDLArgs:
     modelZoo: /model_zoo
-    modefDef: mnist_functional_api.mnist_functional_api.custom_model
+    modelDef: mnist_functional_api.mnist_functional_api.custom_model
     trainingData: /data/mnist/train
     validationData: /data/mnist/val
     output: /data/output
@@ -131,12 +131,13 @@ spec:
     checkpointDirForInit: ""
     keepCheckpointMax: 0
     envs: ""
+  elasticDLReplicaSpecs:
     Master:
       replicas: 1
-      restartPolicy: Never
-      priorityClassName: high
       template:
         spec:
+          restartPolicy: Never
+          priorityClassName: high
           containers:
           - name: test-mnist-master
             image: elasticdl-mnist
@@ -152,15 +153,15 @@ spec:
             - mountPath: /data
               name: test-volume
           volumes:
-            - name: test-volume
-              hostPath:
-                path: /data
+          - name: test-volume
+            hostPath:
+              path: /data
     PS:
       replicas: 2
-      restartPolicy: Never
-      priorityClassName: high
       template:
         spec:
+          restartPolicy: Never
+          priorityClassName: high
           containers:
           - name: test-mnist-ps
             image: elasticdl-ps
@@ -169,15 +170,15 @@ spec:
               limits:
                 cpu: 1
                 memory: 2048Mi
-            requests:
+              requests:
                 cpu: 0.2
                 memory: 1024Mi
     Worker:
       replicas: 10
-      restartPolicy: Never
-      priorityClassName: low
       template:
         spec:
+          restartPolicy: Never
+          priorityClassName: low
           containers:
           - name: test-mnist-worker
             image: elasticdl-mnist
@@ -186,16 +187,16 @@ spec:
               limits:
                 cpu: 1
                 memory: 2048Mi
-            requests:
+              requests:
                 cpu: 0.2
                 memory: 1024Mi
             volumeMounts:
             - mountPath: /data
               name: test-volume
           volumes:
-            - name: test-volume
-              hostPath:
-                path: /data
+          - name: test-volume
+            hostPath:
+              path: /data
 ```
 
 ## ElasticDL CRD
