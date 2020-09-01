@@ -426,13 +426,6 @@ def add_common_args_between_master_and_worker(parser):
         'model zoo, e.g. "cifar10_subclass.cifar10_subclass.CustomModel"',
     )
     parser.add_argument(
-        "--model_params",
-        type=str,
-        default="",
-        help="The model parameters in a string separated by semi-colon "
-        'used to instantiate the model, e.g. "param1=1; param2=2"',
-    )
-    parser.add_argument(
         "--get_model_steps",
         type=int,
         default=1,

@@ -105,24 +105,6 @@ class K8sClientTest(unittest.TestCase):
                 worker.metadata.labels[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
             )
 
-        # Start 3 worker services
-        for i in range(3):
-            c.create_worker_service(i)
-
-        # Check worker services
-        for i in range(3):
-            service = c.get_worker_service(i)
-            self.assertIsNotNone(service)
-            self.assertEqual(
-                service.spec.selector[k8s.ELASTICDL_JOB_KEY], c.job_name
-            )
-            self.assertEqual(
-                service.spec.selector[k8s.ELASTICDL_REPLICA_TYPE_KEY], "worker"
-            )
-            self.assertEqual(
-                service.spec.selector[k8s.ELASTICDL_REPLICA_INDEX_KEY], str(i)
-            )
-
         # Start 2 ps pods
         for i in range(2):
             _ = c.create_ps(
