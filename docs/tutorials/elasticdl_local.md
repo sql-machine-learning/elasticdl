@@ -247,13 +247,13 @@ elasticdl-test-mnist-allreduce-worker-0   1/1     Running   0          98s
 elasticdl-test-mnist-allreduce-worker-1   1/1     Running   0          98s
 ```
 
-Then, we can view the loss in the worker log using
+Then, we can view the loss in the worker log using the following command
 
 ```bash
 kubectl logs elasticdl-test-mnist-allreduce-worker-0 | grep Loss
 ```
 
-The output looks like the following.
+The outputs look like.
 
 ```txt
 [2020-08-27 13:22:47,930] [INFO] [worker.py:627:_process_minibatch] Loss = 2.686038017272949, steps = 2
