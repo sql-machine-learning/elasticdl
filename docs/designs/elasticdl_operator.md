@@ -130,7 +130,6 @@ spec:
     checkpointDir: /data/checkpoint
     checkpointDirForInit: ""
     keepCheckpointMax: 0
-    envs: ""
   elasticDLReplicaSpecs:
     Master:
       replicas: 1
