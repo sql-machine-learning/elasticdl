@@ -28,7 +28,8 @@ It's better to reuse the work.
 So, we decide to apply the
 [operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
 to ElasticDL as well.
-We introduce a CRD to define the workload of ElasticDL jobs.
+We introduce a [CRD](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/)
+to define the workload of ElasticDL jobs.
 Then, we describe each ElastiDL job with a YAML file according to the CRD.
 The custom controller handles the request from the YAML file.
 
@@ -108,7 +109,7 @@ spec:
 
 We could rewrite it as a custom ElasticDLJob object
 after the ElasticDL CRD is created.
-Following is a demo:
+The following is a demo:
 
 ```yaml
 apiVersion: "elasticdl.org/v1"
