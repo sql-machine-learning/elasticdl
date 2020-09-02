@@ -17,12 +17,12 @@ set -e
 
 sh scripts/build.sh
 
+python scripts/check_hvd.py
+
 (
     cd /tmp/elasticdl
     go test -v -cover ./...
 )
-
-python scripts/check_hvd.py
 
 # Run Python unittests
 pytest elasticdl/python/tests \
