@@ -22,6 +22,8 @@ sh scripts/build.sh
     go test -v -cover ./...
 )
 
+python scripts/check_hvd.py
+
 # Run Python unittests
 pytest elasticdl/python/tests \
     elasticdl_preprocessing/tests \
