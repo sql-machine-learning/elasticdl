@@ -98,7 +98,7 @@ RUN python -m pip install --quiet torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl \
 #        -b master ${HOROVOD_COMMIT_ID}
 ENV HOROVOD_PATH /tmp/horovod
 RUN cd /tmp \
-        && git clone https://github.com/horovod/horovod.git \
+        && git clone -n https://github.com/horovod/horovod.git \
         && git checkout ${HOROVOD_COMMIT_ID} \
         && git submodule update --init --recursive
 
