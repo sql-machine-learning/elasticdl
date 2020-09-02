@@ -35,7 +35,7 @@ def _get_model_zoo_path():
 def _create_model_instance(model_def):
     module_file = get_module_file_path(_get_model_zoo_path(), model_def)
     model_module = load_module(module_file).__dict__
-    return load_model_from_module(model_def, model_module, None)
+    return load_model_from_module(model_def, model_module)
 
 
 class FindLayerTest(unittest.TestCase):

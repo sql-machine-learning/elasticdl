@@ -31,7 +31,7 @@ def load_module(module_file):
     return module
 
 
-def load_model_from_module(model_def, model_module, model_params):
+def load_model_from_module(model_def, model_module):
     model_def_name = model_def.split(".")[-1]
     if model_def_name in model_module:
         custom_model_name = model_def_name
@@ -40,11 +40,7 @@ def load_model_from_module(model_def, model_module, model_params):
             "Cannot find the custom model function/class "
             "in model definition files"
         )
-    if model_params:
-        model_params_dict = get_dict_from_params_str(model_params)
-        return model_module[custom_model_name](**model_params_dict)
-    else:
-        return model_module[custom_model_name]()
+    return model_module[custom_model_name]()
 
 
 def load_callbacks_from_module(callbacks_def, model_module):
@@ -139,7 +135,6 @@ def _get_spec_value(spec_key, model_zoo, default_module, required=False):
 def get_model_spec(
     model_zoo,
     model_def,
-    model_params,
     dataset_fn,
     loss,
     optimizer,
@@ -152,8 +147,6 @@ def get_model_spec(
 
     The model spec tuple contains the following items in order:
 
-    * The model object instantiated with parameters specified
-      in `model_params`,
     * The `dataset_fn`,
     * The `loss`,
     * The `optimizer`,
@@ -165,7 +158,7 @@ def get_model_spec(
     """
     model_def_module_file = get_module_file_path(model_zoo, model_def)
     default_module = load_module(model_def_module_file).__dict__
-    model = load_model_from_module(model_def, default_module, model_params)
+    model = load_model_from_module(model_def, default_module)
     prediction_outputs_processor = _get_spec_value(
         prediction_outputs_processor, model_zoo, default_module
     )

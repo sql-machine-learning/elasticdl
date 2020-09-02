@@ -27,7 +27,6 @@ ELASTICDL_APP_NAME = "elasticdl"
 ELASTICDL_JOB_KEY = "elasticdl-job-name"
 ELASTICDL_REPLICA_TYPE_KEY = "elasticdl-replica-type"
 ELASTICDL_REPLICA_INDEX_KEY = "elasticdl-replica-index"
-_FTLIB_GOSSIP_CONTAINER_PORT = 7946
 
 
 def get_master_pod_name(job_name):
