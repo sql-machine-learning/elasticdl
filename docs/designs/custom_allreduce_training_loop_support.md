@@ -46,7 +46,7 @@ def train_step(batch_data):
     upate_model(gradients)
 ```
 
-To support elastic training, the `allreduce` should be able to 
+To support elastic training, the `allreduce` should be able to
 complete gradient combination even if the number of worker changes.
 
 ## Elastic AllReduce to Merge Gradients in ElasticDL
@@ -65,10 +65,11 @@ def allreduce(model, optimizer, tape):
     )
 ```
 
-We can develop a decorator to wrap the gradient combination process using AllReduce.
-The decorator can support fault-tolerance and elastic training. If AllReduce fails,
-the decorator will query the master for a new AllReduce ring and retry to
-combine gradients across alive workers. And the decorator also queries the master
+We can develop a decorator to wrap the gradient combination process
+using AllReduce. The decorator can support fault-tolerance and
+elastic training. If AllReduce fails, the decorator will query the
+master for a new AllReduce ring and retry to combine gradients
+across alive workers. And the decorator also queries the master
 for a new ring periodically in case that the master add new workers.
 
 ```python
@@ -106,7 +107,8 @@ AllReduce fails.
 ### TensorFlow 1.x
 
 Using Tensorflow 1.x, we use `tf.Session` to execute the forward and backward
-computation. The training function definition likes the following code snippets.
+computation. The training function definition likes the following
+code snippets.
 
 ```python
 
