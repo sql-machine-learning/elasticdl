@@ -30,7 +30,7 @@ So, we decide to apply the
 to ElasticDL as well.
 We introduce a [CRD](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/)
 to define the workload of ElasticDL jobs.
-Then, we describe each ElastiDL job with a YAML file according to the CRD.
+Then, we describe each ElasticDL job with a YAML file according to the CRD.
 The custom controller handles the request from the YAML file.
 
 Please note the fact that the controller only launches
