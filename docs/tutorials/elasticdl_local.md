@@ -86,7 +86,7 @@ the Kubernetes cluster and operates ElasticDL jobs.
 pip install elasticdl_client
 ```
 
-## Build the Model Zoo
+## Build the Docker Image with Model Definition
 
 Kubernetes runs Docker containers, so we need to put the training system,
 consisting of user-defined models, ElasticDL the trainer, and all dependencies,
@@ -99,9 +99,9 @@ retrieve the source code, please run the following command.
 git clone https://github.com/sql-machine-learning/elasticdl
 ```
 
-The model definitions are in directory `elasticdl/model_zoo`.
+Model definitions are in directory `elasticdl/model_zoo`.
 
-### Build the Model Zoo for Parameter Server
+### Build the Docker Image for Parameter Server
 
 The following commands build the Docker image `elasticdl:mnist_ps`
 
@@ -111,7 +111,7 @@ elasticdl zoo init --model_zoo=model_zoo
 elasticdl zoo build --image=elasticdl:mnist_ps .
 ```
 
-### Build the Model Zoo for AllReduce
+### Build the Docker Image for AllReduce
 
 We must build the base image `elasticdl:dev_allreduce` firstly using the
 
