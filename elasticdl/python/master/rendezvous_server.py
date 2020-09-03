@@ -13,19 +13,16 @@
 import time
 from threading import Lock
 
-from horovod.runner.common.util.hosts import get_host_assignments, parse_hosts
-from horovod.runner.http.http_server import RendezvousServer
+try:
+    from horovod.runner.common.util.hosts import (
+        get_host_assignments,
+        parse_hosts,
+    )
+    from horovod.runner.http.http_server import RendezvousServer
 
-# try:
-#     from horovod.runner.common.util.hosts import (
-#         get_host_assignments,
-#         parse_hosts,
-#     )
-#     from horovod.runner.http.http_server import RendezvousServer
-
-#     _HOROVOD_INSTALLED = True
-# except ImportError:
-#     _HOROVOD_INSTALLED = False
+    _HOROVOD_INSTALLED = True
+except ImportError:
+    _HOROVOD_INSTALLED = False
 
 _WORKER_SLOT_NUMBER = 1
 _HOST_SEP = ","
