@@ -33,10 +33,10 @@ to define the workload of ElasticDL jobs.
 Then, we describe each ElastiDL job with a YAML file according to the CRD.
 The custom controller handles the request from the YAML file.
 
-It's a remarkable fact that the controller only launches
+Please note the fact that the controller only launches
 the master pod, and monitors the job.
 The worker pods are still mananged by the master pod.
-The controller does no contribution to fault-torance and elastic scheduling features.
+The controller does not take part in fault-torance and elastic scheduling features.
 
 ## Case study: Describing a MNIST Training Job
 
