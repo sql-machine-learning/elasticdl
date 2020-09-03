@@ -117,7 +117,7 @@ kind: "ElasticAI"
 metadata:
   name: "test-mnist"
 spec:
-  trainingArgs:
+  jobArgs:
     modelZoo: /model_zoo
     modelDef: mnist_functional_api.mnist_functional_api.custom_model
     trainingData: /data/mnist/train
