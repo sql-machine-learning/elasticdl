@@ -113,21 +113,23 @@ elasticdl zoo build --image=elasticdl:mnist_ps .
 
 ### Build the Docker Image for AllReduce
 
-We must build the base image `elasticdl:dev_allreduce` firstly using the
+We have not released ElasticDL packages with AllReduce yet. Thus,
+we need to manually build packages with AllReduce support.
+
+We must build an image `elasticdl:dev_allreduce` first using the
 
 ```bash
 scripts/travis/build_images.sh
 ```
 
-We have not released ElasticDL packages with AllRedue yet. So we need to
-build packages manually by the command.
+Then we use this image to build packages with AllReduce support.
 
 ```bash
 scripts/docker_build_wheel.sh
 ```
 
-Then, we can build the AllReduce training image `elasticdl:mnist_allreduce`
-with model definitions in `model_zoo`.
+After this, we can build the AllReduce training image `elasticdl:mnist_allreduce`
+with model definitions in model_zoo.
 
 ```bash
 elasticdl zoo init \
