@@ -113,11 +113,11 @@ The following is a demo:
 
 ```yaml
 apiVersion: "elasticdl.org/v1"
-kind: "ElasticDLJob"
+kind: "ElasticAI"
 metadata:
   name: "test-mnist"
 spec:
-  elasticDLArgs:
+  trainingArgs:
     modelZoo: /model_zoo
     modelDef: mnist_functional_api.mnist_functional_api.custom_model
     trainingData: /data/mnist/train
@@ -131,72 +131,70 @@ spec:
     checkpointDir: /data/checkpoint
     checkpointDirForInit: ""
     keepCheckpointMax: 0
-  elasticDLReplicaSpecs:
-    Master:
-      replicas: 1
-      template:
-        spec:
-          restartPolicy: Never
-          priorityClassName: high
-          containers:
-          - name: test-mnist-master
-            image: elasticdl-mnist
-            imagePullPolicy: Never
-            resources:
-              limits:
-                cpu: 1
-                memory: 2048Mi
-              requests:
-                cpu: 0.2
-                memory: 1024Mi
-            volumeMounts:
-            - mountPath: /data
-              name: test-volume
-          volumes:
-          - name: test-volume
-            hostPath:
-              path: /data
-    PS:
-      replicas: 2
-      template:
-        spec:
-          restartPolicy: Never
-          priorityClassName: high
-          containers:
-          - name: test-mnist-ps
-            image: elasticdl-ps
-            imagePullPolicy: Never
-            resources:
-              limits:
-                cpu: 1
-                memory: 2048Mi
-              requests:
-                cpu: 0.2
-                memory: 1024Mi
-    Worker:
-      replicas: 10
-      template:
-        spec:
-          restartPolicy: Never
-          priorityClassName: low
-          containers:
-          - name: test-mnist-worker
-            image: elasticdl-mnist
-            imagePullPolicy: Never
-            resources:
-              limits:
-                cpu: 1
-                memory: 2048Mi
-              requests:
-                cpu: 0.2
-                memory: 1024Mi
-            volumeMounts:
-            - mountPath: /data
-              name: test-volume
-          volumes:
-          - name: test-volume
-            hostPath:
-              path: /data
+  Master:
+    template:
+      spec:
+        restartPolicy: Never
+        priorityClassName: high
+        containers:
+        - name: test-mnist-master
+          image: elasticdl-mnist
+          imagePullPolicy: Never
+          resources:
+            limits:
+              cpu: 1
+              memory: 2048Mi
+            requests:
+              cpu: 0.2
+              memory: 1024Mi
+          volumeMounts:
+          - mountPath: /data
+            name: test-volume
+        volumes:
+        - name: test-volume
+          hostPath:
+            path: /data
+  PS:
+    replicas: 2
+    template:
+      spec:
+        restartPolicy: Never
+        priorityClassName: high
+        containers:
+        - name: test-mnist-ps
+          image: elasticdl-ps
+          imagePullPolicy: Never
+          resources:
+            limits:
+              cpu: 1
+              memory: 2048Mi
+            requests:
+              cpu: 0.2
+              memory: 1024Mi
+  Worker:
+    replicas: 10
+    template:
+      spec:
+        restartPolicy: Never
+        priorityClassName: low
+        containers:
+        - name: test-mnist-worker
+          image: elasticdl-mnist
+          imagePullPolicy: Never
+          resources:
+            limits:
+              cpu: 1
+              memory: 2048Mi
+            requests:
+              cpu: 0.2
+              memory: 1024Mi
+          volumeMounts:
+          - mountPath: /data
+            name: test-volume
+        volumes:
+        - name: test-volume
+          hostPath:
+            path: /data
 ```
 
 ## ElasticDL CRD
