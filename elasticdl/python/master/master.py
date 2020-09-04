@@ -125,9 +125,7 @@ class Master(object):
         model_module = load_module(
             get_module_file_path(args.model_zoo, args.model_def)
         ).__dict__
-        model_inst = load_model_from_module(
-            args.model_def, model_module
-        )
+        model_inst = load_model_from_module(args.model_def, model_module)
         self.callbacks_list.set_model(model_inst)
         set_callback_parameters(
             self.callbacks_list,
@@ -146,9 +144,7 @@ class Master(object):
 
         self._create_data_reader_fn = create_data_reader
         if args.custom_data_reader in model_module:
-            self._create_data_reader_fn = model_module[
-                args.custom_data_reader
-            ]
+            self._create_data_reader_fn = model_module[args.custom_data_reader]
 
         # Start task queue
         records_per_task = args.minibatch_size * args.num_minibatches_per_task
