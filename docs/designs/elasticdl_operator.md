@@ -113,7 +113,7 @@ The following is a demo:
 
 ```yaml
 apiVersion: "elasticdl.org/v1"
-kind: "ElasticAI"
+kind: "ElasticAIJob"
 metadata:
   name: "test-mnist"
 spec:
@@ -199,10 +199,76 @@ spec:
 
 ## ElasticDL CRD
 
-TBD.
-
-We will add this part after we reach an agreement on
-describing a MNIST training job.
+```yaml
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: eaijobs.elasticdl.org
+spec:
+  group: elasticdl.org
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storaged: true
+  names:
+    kind: ElasticAIJob
+    listKind: ElasticAIJobList
+    singular: elasticaiJob
+    plural: elasticdljobs
+    shortNames:
+    - eaijob
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          properties:
+            jobArgs:
+              properties:
+                modelZoo:
+                  type: string
+                modelDef:
+                  type: string
+                trainingData:
+                  type: string
+                validationData:
+                  type: string
+                output:
+                  type: string
+                dataReaderParams:
+                  type: string
+                minibatchSize:
+                  type: integer
+                numMinibatchesPerTask:
+                  type: integer
+                evaluationStep:
+                  type: integer
+                checkpointStep:
+                  type: integer
+                checkpointDir:
+                  type: string
+                checkpointDirForInit:
+                  type: string
+                keepCheckpointMax:
+                  type: integer
+                additionalArgs:
+                  type: array
+                  items:
+                    type: string
+                    pattern: '^--([a-z0-9_]+)=([a-z0-9_]+)$'
+            Master:
+              type: object
+            PS:
+              type: object
+            Worker:
+              type: object
+              properties:
+                replicas:
+                  type: integer
+                  minium: 1
+```
 
 ## ElasticDL Controller
 
