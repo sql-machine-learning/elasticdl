@@ -31,6 +31,9 @@ _HOST_SEP = ","
 class HorovodRendezvousServer(object):
     def __init__(self, server_host):
         self._rendezvous_host = server_host
+        self._init_attributes()
+
+    def _init_attributes(self):
         self._rendezvous_id = 0
         self._worker_name_hosts = []
         self._worker_hosts = []
