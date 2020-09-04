@@ -118,19 +118,14 @@ metadata:
   name: "test-mnist"
 spec:
   jobArgs:
-    modelZoo: /model_zoo
-    modelDef: mnist_functional_api.mnist_functional_api.custom_model
-    trainingData: /data/mnist/train
-    validationData: /data/mnist/val
-    output: /data/output
-    dataReaderParams: ""
-    minibatchSize: 64
-    numMinibatchesPerTask: 20
-    evaluationStep: 1000
-    checkpointStep: 1000
-    checkpointDir: /data/checkpoint
-    checkpointDirForInit: ""
-    keepCheckpointMax: 0
+  - "--model_zoo /model_zoo"
+  - "--model_def mnist_functional_api.mnist_functional_api.custom_model"
+  - "--training_data /data/mnist/train"
+  - "--valiation_data /data/mnist/val"
+  - "--output /data/output"
+  - "--minibatch_size 64"
+  - "--num_minibatches_per_task 2"
+  - "--evaluation_step 1000"
   Master:
     template:
       spec:
@@ -226,38 +221,10 @@ spec:
         spec:
           properties:
             jobArgs:
-              properties:
-                modelZoo:
-                  type: string
-                modelDef:
-                  type: string
-                trainingData:
-                  type: string
-                validationData:
-                  type: string
-                output:
-                  type: string
-                dataReaderParams:
-                  type: string
-                minibatchSize:
-                  type: integer
-                numMinibatchesPerTask:
-                  type: integer
-                evaluationStep:
-                  type: integer
-                checkpointStep:
-                  type: integer
-                checkpointDir:
-                  type: string
-                checkpointDirForInit:
-                  type: string
-                keepCheckpointMax:
-                  type: integer
-                additionalArgs:
-                  type: array
-                  items:
-                    type: string
-                    pattern: '^--([a-z0-9_]+)=([a-z0-9_]+)$'
+              type: array
+              items:
+                type: string
+                pattern: '^--([a-z0-9_]+)\s([a-z0-9_]+)$'
             Master:
               type: object
             PS:
