@@ -122,31 +122,33 @@ class Master(object):
             )
 
         # Initialize the components from the model definition
-        self.model_module = load_module(
+        model_module = load_module(
             get_module_file_path(args.model_zoo, args.model_def)
         ).__dict__
-        self.model_inst = load_model_from_module(
-            args.model_def, self.model_module
+        model_inst = load_model_from_module(
+            args.model_def, model_module
         )
-        self.optimizer = self.model_module[args.optimizer]()
-        self._create_data_reader_fn = create_data_reader
-        if args.custom_data_reader in self.model_module:
-            self._create_data_reader_fn = self.model_module[
-                args.custom_data_reader
-            ]
-
-        # Initialize the callbacks
-        self.callbacks_list = load_callbacks_from_module(
-            args.callbacks, self.model_module
-        )
-        self.callbacks_list.set_model(self.model_inst)
+        self.callbacks_list.set_model(model_inst)
         set_callback_parameters(
             self.callbacks_list,
             batch_size=args.minibatch_size,
             saved_model_path=args.output,
             checkpoint_path=args.checkpoint_dir,
         )
+        self._optimizer = model_module[args.optimizer]()
+
+        # Initialize the callbacks
+        self.callbacks_list = load_callbacks_from_module(
+            args.callbacks, model_module
+        )
+
         self._set_completed_steps_by_checkpoint(args.checkpoint_dir_for_init)
+
+        self._create_data_reader_fn = create_data_reader
+        if args.custom_data_reader in model_module:
+            self._create_data_reader_fn = model_module[
+                args.custom_data_reader
+            ]
 
         # Start task queue
         records_per_task = args.minibatch_size * args.num_minibatches_per_task
@@ -162,7 +164,9 @@ class Master(object):
         )
 
         self.task_d.add_deferred_callback_create_train_end_task()
-        self.evaluation_service = self._create_evaluation_service(args)
+        self.evaluation_service = self._create_evaluation_service(
+            model_module[args.eval_metrics_fn], args.evaluation_steps
+        )
 
         # Initialize instance manager
         self.instance_manager = self._create_instance_manager(args)
@@ -324,7 +328,7 @@ class Master(object):
 
         return tb_service
 
-    def _create_evaluation_service(self, args):
+    def _create_evaluation_service(self, eval_func, evaluation_steps):
         evaluation_service = None
         if (
             self.job_type == JobType.TRAINING_WITH_EVALUATION
@@ -332,14 +336,14 @@ class Master(object):
         ):
             self.logger.info(
                 "Creating evaluation service with " "evaluation steps %d",
-                args.evaluation_steps,
+                evaluation_steps,
             )
             evaluation_service = EvaluationService(
                 self.tb_service,
                 self.task_d,
-                args.evaluation_steps,
+                evaluation_steps,
                 self.job_type == JobType.EVALUATION_ONLY,
-                self.model_module[args.eval_metrics_fn],
+                eval_func,
             )
             self.task_d.set_evaluation_service(evaluation_service)
 
@@ -394,7 +398,7 @@ class Master(object):
             worker_args.insert(0, worker_client_command)
 
             if args.use_go_ps:
-                opt_type, opt_args = get_optimizer_info(self.optimizer)
+                opt_type, opt_args = get_optimizer_info(self._optimizer)
                 ps_command = "elasticdl_ps"
                 ps_command_args = [
                     "-job_name=" + args.job_name,
