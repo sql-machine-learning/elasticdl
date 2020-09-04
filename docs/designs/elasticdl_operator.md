@@ -68,11 +68,11 @@ spec:
       '' --get_model_steps '1' --data_reader_params '' --distribution_strategy 'ParameterServerStrategy'
       --checkpoint_steps '0' --checkpoint_dir '' --keep_checkpoint_max '0' --output
       '' --image_name 'elasticdl:test' --job_name 'test-mnist' --master_resource_request
-      'cpu=0.2,memory=1024Mi' --master_resource_limit 'cpu=1,memory=2048Mi' --num_workers
-      '1' --worker_resource_request 'cpu=0.4,memory=1024Mi' --worker_resource_limit
-      'cpu=1,memory=2048Mi' --master_pod_priority '' --worker_pod_priority '' --num_ps_pods
-      '1' --ps_resource_request 'cpu=0.2,memory=1024Mi' --ps_resource_limit 'cpu=1,memory=2048Mi'
-      --ps_pod_priority '' --volume 'host_path=/data,mount_path=/data' --image_pull_policy
+      'cpu=1,memory=1024Mi' --master_resource_limit 'cpu=1,memory=2048Mi' --num_workers
+      '8' --worker_resource_request 'cpu=2,gpu=1,memory=2048Mi' --worker_resource_limit
+      'cpu=2,gpu=1,memory=2048Mi' --master_pod_priority '' --worker_pod_priority 'high=0.5' --num_ps_pods
+      '1' --ps_resource_request 'cpu=2,memory=1024Mi' --ps_resource_limit 'cpu=2,memory=2048Mi'
+      --ps_pod_priority 'high' --volume 'host_path=/data,mount_path=/data' --image_pull_policy
       'Never' --restart_policy 'Never' --envs '' --extra_pypi_index 'https://pypi.org/simple'
       --namespace 'default' --num_minibatches_per_task '2' --use_go_ps 'True' --aux_params '' --log_file_path '' --tensorboard_log_dir
       '' --num_epochs '2' --grads_to_wait '1' --training_data '/data/mnist/train'
@@ -94,7 +94,7 @@ spec:
         cpu: '1'
         memory: 2048Mi
       requests:
-        cpu: '0.2'
+        cpu: '1'
         memory: 1024Mi
     volumeMounts:
     - mountPath: /data
@@ -103,13 +103,13 @@ spec:
   restartPolicy: Never
   volumes:
   - hostPath:
-      path: /data
+      path: /host_data
     name: elasticdl-test-mnist-master-volume-0
 ```
 
 We could rewrite it as a custom ElasticDLJob object
 after the ElasticDL CRD is created.
-The following is a demo:
+The following is a sample:
 
 ```yaml
 apiVersion: "elasticdl.org/v1"
@@ -127,72 +127,35 @@ spec:
   - "--num_minibatches_per_task 2"
   - "--evaluation_step 1000"
   Master:
-    template:
-      spec:
-        restartPolicy: Never
-        priorityClassName: high
-        containers:
-        - name: test-mnist-master
-          image: elasticdl-mnist
-          imagePullPolicy: Never
-          resources:
-            limits:
-              cpu: 1
-              memory: 2048Mi
-            requests:
-              cpu: 0.2
-              memory: 1024Mi
-          volumeMounts:
-          - mountPath: /data
-            name: test-volume
-        volumes:
-        - name: test-volume
-          hostPath:
-            path: /data
+    image: elasticdl-mnist
+    priority: high
+    resource_request:
+      cpu: 1
+      memory: 1024Mi
+    volume:
+      host_path=/host_data,mount_path=/data
   PS:
-    replicas: 2
-    template:
-      spec:
-        restartPolicy: Never
-        priorityClassName: high
-        containers:
-        - name: test-mnist-ps
-          image: elasticdl-ps
-          imagePullPolicy: Never
-          resources:
-            limits:
-              cpu: 1
-              memory: 2048Mi
-            requests:
-              cpu: 0.2
-              memory: 1024Mi
+    count: 2
+    priority: high
+    image: elasticdl-ps
+    resource_request:
+      cpu: 1
+      memory: 1024Mi
   Worker:
-    replicas: 10
-    template:
-      spec:
-        restartPolicy: Never
-        priorityClassName: low
-        containers:
-        - name: test-mnist-worker
-          image: elasticdl-mnist
-          imagePullPolicy: Never
-          resources:
-            limits:
-              cpu: 1
-              memory: 2048Mi
-            requests:
-              cpu: 0.2
-              memory: 1024Mi
-          volumeMounts:
-          - mountPath: /data
-            name: test-volume
-        volumes:
-        - name: test-volume
-          hostPath:
-            path: /data
+    count: 10
+    priority: high=0.5
+    image: elasticdl-worker
+    resource_request:
+      cpu: 4
+      gpu: 1
+      memory: 2048Mi
+    volume:
+      host_path=/host_data,mount_path=/data
 ```
 
 ## ElasticDL CRD
+
+TODO: change CRD definition to be consistent with the sample above.
 
 ```yaml
 apiVersion: apiextensions.k8s.io/v1beta1
