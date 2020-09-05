@@ -31,11 +31,15 @@ _HOST_SEP = ","
 class HorovodRendezvousServer(object):
     def __init__(self, server_host):
         self._rendezvous_host = server_host
+        self._init_attributes()
+
+    def _init_attributes(self):
         self._rendezvous_id = 0
+        self._worker_name_hosts = []
         self._worker_hosts = []
         self._rendezvous_server = RendezvousServer(verbose=True)
         self._rendezvous_port = None
-        self._next_worker_hosts = None
+        self._next_worker_name_hosts = None
         self._ready_worker_hosts = set()
         self._rendezvous_completed = True
         self._lock = Lock()
@@ -43,7 +47,7 @@ class HorovodRendezvousServer(object):
     def start(self):
         self._rendezvous_port = self._rendezvous_server.start()
 
-    def set_worker_hosts(self, worker_hosts):
+    def set_worker_hosts(self, worker_name_hosts):
         """
         Set worker hosts into RendezvousServer.
 
@@ -51,12 +55,13 @@ class HorovodRendezvousServer(object):
             worker_hosts: List of host string.
         """
 
-        if sorted(worker_hosts) != sorted(self._worker_hosts):
-            self._next_worker_hosts = worker_hosts
+        if sorted(worker_name_hosts) != sorted(self._worker_name_hosts):
+            self._next_worker_name_hosts = worker_name_hosts
 
     def _init_rendezvous_server(self):
-        self._worker_hosts = self._next_worker_hosts
-        self._next_worker_hosts = None
+        self._worker_name_hosts = self._next_worker_name_hosts
+        self._next_worker_name_hosts = None
+        self._worker_hosts = []
         host_alloc_plan = self._get_host_plan()
         self._rendezvous_server.init(host_alloc_plan)
         self._rendezvous_id += 1
@@ -64,7 +69,8 @@ class HorovodRendezvousServer(object):
 
     def _get_host_plan(self):
         hosts = []
-        for host in self._worker_hosts:
+        for _, host in self._worker_name_hosts:
+            self._worker_hosts.append(host)
             hosts.append(host + ":" + str(_WORKER_SLOT_NUMBER))
 
         host_infos = parse_hosts(_HOST_SEP.join(hosts))
@@ -79,7 +85,7 @@ class HorovodRendezvousServer(object):
 
     def get_worker_host_rank(self, host):
         with self._lock:
-            if self._next_worker_hosts and self._rendezvous_completed:
+            if self._next_worker_name_hosts and self._rendezvous_completed:
                 time.sleep(2)  # Wait 2s for workers to complete rendezvous.
                 self._init_rendezvous_server()
 
