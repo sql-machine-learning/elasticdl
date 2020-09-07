@@ -389,7 +389,7 @@ class InstanceManager(object):
             worker_start_times.append(pod.status.start_time)
             worker_id = self._worker_pod_name_to_id[pod_name]
             pod_ip = self.get_worker_pod_ip(worker_id)
-            worker_addrs.append(pod_ip)
+            worker_addrs.append((pod_name, pod_ip))
 
         # Sort worker addrs by start time. Then the master will assign
         # the rank according to the order in addrs list.
