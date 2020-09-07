@@ -132,25 +132,23 @@ spec:
     resource_request:
       cpu: 1
       memory: 1024Mi
-    volume:
-      host_path=/host_data,mount_path=/data
+    volume: "host_path=/host_data,mount_path=/data"
   PS:
-    count: 2
+    replicas: 2
     priority: high
     image: elasticdl-ps
     resource_request:
       cpu: 1
       memory: 1024Mi
   Worker:
-    count: 10
+    replicas: 10
     priority: high=0.5
     image: elasticdl-worker
     resource_request:
       cpu: 4
       gpu: 1
       memory: 2048Mi
-    volume:
-      host_path=/host_data,mount_path=/data
+    volume: "host_path=/host_data,mount_path=/data"
 ```
 
 ## ElasticDL CRD
