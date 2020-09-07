@@ -64,7 +64,7 @@ spec:
       --model_zoo 'model_zoo' --cluster_spec '' --minibatch_size '64' --log_level
       'INFO' --dataset_fn 'dataset_fn' --loss 'loss' --optimizer 'optimizer' --callbacks
       'callbacks' --eval_metrics_fn 'eval_metrics_fn' --custom_data_reader 'custom_data_reader'
-      --model_def 'mnist_functional_api.mnist_functional_api.custom_model' --model_params
+      --model_def 'mnist.mnist_functional_api.custom_model' --model_params
       '' --get_model_steps '1' --data_reader_params '' --distribution_strategy 'ParameterServerStrategy'
       --checkpoint_steps '0' --checkpoint_dir '' --keep_checkpoint_max '0' --output
       '' --image_name 'elasticdl:test' --job_name 'test-mnist' --master_resource_request
@@ -119,29 +119,29 @@ metadata:
 spec:
   jobArgs:
   - "--model_zoo /model_zoo"
-  - "--model_def mnist_functional_api.mnist_functional_api.custom_model"
+  - "--model_def mnist.mnist_functional_api.custom_model"
   - "--training_data /data/mnist/train"
   - "--valiation_data /data/mnist/val"
   - "--output /data/output"
   - "--minibatch_size 64"
   - "--num_minibatches_per_task 2"
   - "--evaluation_step 1000"
-  Master:
+  master:
     image: elasticdl-mnist
     priority: high
     resource_request:
       cpu: 1
       memory: 1024Mi
     volume: "host_path=/host_data,mount_path=/data"
-  PS:
-    replicas: 2
+  ps:
+    count: 2
     priority: high
     image: elasticdl-ps
     resource_request:
       cpu: 1
       memory: 1024Mi
-  Worker:
-    replicas: 10
+  worker:
+    count: 10
     priority: high=0.5
     image: elasticdl-worker
     resource_request:
