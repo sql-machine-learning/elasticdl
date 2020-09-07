@@ -92,21 +92,24 @@ class WorkerPSInteractionTest(unittest.TestCase):
         worker_results = []
         for step, (x, y) in enumerate(train_db):
             if step == 0:
-                worker._run_model_call_before_training(x)
+                worker._trainer._run_model_call_before_training(x)
 
-            worker.get_model()
+            worker._trainer._get_model()
             if use_tf_function:
-                w_loss, w_grads = worker.training_process_with_acceleration(
+                (
+                    w_loss,
+                    w_grads,
+                ) = worker._trainer.training_process_with_acceleration(x, y)
+            else:
+                w_loss, w_grads = worker._trainer._training_process_eagerly(
                     x, y
                 )
-            else:
-                w_loss, w_grads = worker.training_process_eagerly(x, y)
-            worker.report_gradient(w_grads)
+            worker._trainer._report_gradient(w_grads)
 
             if step % 20 == 0:
-                worker.get_model()
+                worker._trainer._get_model()
                 for (x, y) in test_db:
-                    out = worker.forward_process(x)
+                    out = worker._trainer._forward_process(x)
                     if "mnist" in self._model_def:
                         acc_meter.update_state(tf.argmax(out, axis=1), y)
                     else:
@@ -220,10 +223,12 @@ class WorkerPSInteractionTest(unittest.TestCase):
         tf.random.set_seed(22)
 
         worker = Worker(args, ps_client=PSClient(self._channels))
-        worker._run_model_call_before_training(images)
-        worker.get_model()
-        w_loss, w_grads = worker.training_process_eagerly(images, labels)
-        worker.report_gradient(w_grads)
+        worker._trainer._run_model_call_before_training(images)
+        worker._trainer._get_model()
+        w_loss, w_grads = worker._trainer._training_process_eagerly(
+            images, labels
+        )
+        worker._trainer._report_gradient(w_grads)
 
         tf.keras.backend.clear_session()
         tf.random.set_seed(22)
@@ -375,28 +380,30 @@ class WorkerPSInteractionTest(unittest.TestCase):
             tf.random.set_seed(22)
             worker = Worker(args, ps_client=PSClient(self._channels))
             workers.append(worker)
-            worker._run_model_call_before_training(training_data[0][0])
+            worker._trainer._run_model_call_before_training(
+                training_data[0][0]
+            )
             for i in range(num_data):
-                worker.get_model()
-                w_loss, w_grads = worker.training_process_eagerly(
+                worker._trainer._get_model()
+                w_loss, w_grads = worker._trainer._training_process_eagerly(
                     training_data[i][0], training_data[i][1]
                 )
-                worker.report_gradient(w_grads)
+                worker._trainer._report_gradient(w_grads)
                 if w == 1 and i == 3:
                     # Restart ps for the 2nd worker at i==3
                     # self._restart_pserver(model_def)
                     self._reset_pserver()
                     # `push_dense_parameters` will be called in `get_model` to
                     # initialize variables on ps with worker variables
-                    worker.get_model()
+                    worker._trainer._get_model()
                     # send the grads again as these grads are not applied
                     # on worker variables
-                    worker.report_gradient(w_grads)
+                    worker._trainer._report_gradient(w_grads)
 
-        for var_name in workers[0]._non_embed_vars:
+        for var_name in workers[0]._trainer._non_embed_vars:
             np.testing.assert_array_equal(
-                workers[0]._non_embed_vars[var_name].numpy(),
-                workers[1]._non_embed_vars[var_name].numpy(),
+                workers[0]._trainer._non_embed_vars[var_name].numpy(),
+                workers[1]._trainer._non_embed_vars[var_name].numpy(),
             )
 
     def test_train_acceleration_with_embedding(self):

@@ -30,8 +30,9 @@ class AllReduceTrainerTest(unittest.TestCase):
             )
         )
         model = custom_model()
-        opt = optimizer()
-        self._trainer = AllReduceTrainer(master_client, "", model, loss, opt)
+        model.optimizer = optimizer()
+        model.loss = loss
+        self._trainer = AllReduceTrainer(master_client, "", model)
 
     def test_training_process_with_fault_tolerance(self):
         self._trainer.init_horovod_if_needed()

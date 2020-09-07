@@ -33,18 +33,18 @@ DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
 
 
 class AllReduceTrainer(object):
-    def __init__(self, master_client, master_addr, model, loss_fn, optimizer):
+    def __init__(self, master_client, master_addr, model):
         if not hvd:
             raise RuntimeError("Horovod is not installed for AllReduce")
         self._master_client = master_client
         self._rendezvous_addr = master_addr
         self._model = model
-        self._loss = loss_fn
+        self._loss = model.loss
         self._rendezvous_id = None
         self._need_broadcast = True
         self._var_created = False
         self._world_size = None
-        self._set_optimizer(optimizer)
+        self._set_optimizer(model.optimizer)
         self._set_horovod_env()
 
     def _set_optimizer(self, optimizer):
@@ -76,7 +76,7 @@ class AllReduceTrainer(object):
         )
         return loss
 
-    def training_process_with_fault_tolerance(self, features, labels):
+    def train_minibatch(self, features, labels, train_with_local_model=False):
         if not self._var_created:
             self._run_model_call_locally(features, labels)
 
