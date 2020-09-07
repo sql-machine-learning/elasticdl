@@ -47,6 +47,7 @@ else
         -v "$PWD":/work \
         -w /work elasticdl:ci \
         bash -c "scripts/client_test.sh $JOB_TYPE $PS_NUM $WORKER_NUM $DATA_PATH"
+    echo "Finish submit jobs"
     python3 scripts/validate_job_status.py "$JOB_TYPE" "$PS_NUM" "$WORKER_NUM"
     if [[ "$JOB_TYPE" == "odps" ]]; then
         bash scripts/travis/cleanup_odps_table.sh
