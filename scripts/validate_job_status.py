@@ -11,9 +11,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import sys
 import time
-import logging
 
 from kubernetes import client, config
 
@@ -157,7 +157,9 @@ def validate_job_status(client, job_type, ps_num, worker_num):
             for i, ps in enumerate(ps_pod_names):
                 logging.info("PS%d: %s" % (i, client.get_pod_phase(ps)))
             for i, worker in enumerate(worker_pod_names):
-                logging.info("Worker%d: %s" % (i, client.get_pod_phase(worker)))
+                logging.info(
+                    "Worker%d: %s" % (i, client.get_pod_phase(worker))
+                )
             time.sleep(10)
 
     print("ElasticDL job timed out.")
