@@ -19,6 +19,7 @@ from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticdl.python.common.constants import HorovodEnv
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.worker.trainer import Trainer
 
 try:
     from horovod.tensorflow.functions import broadcast_variables
@@ -32,7 +33,7 @@ except ImportError:
 DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
 
 
-class AllReduceTrainer(object):
+class AllReduceTrainer(Trainer):
     def __init__(self, master_client, master_addr, model):
         if not hvd:
             raise RuntimeError("Horovod is not installed for AllReduce")
@@ -163,3 +164,6 @@ class AllReduceTrainer(object):
             self._model.save(
                 model_path, overwrite=True, include_optimizer=False
             )
+
+    def get_model_version(self):
+        return self._optimizer.iterations.numpy()

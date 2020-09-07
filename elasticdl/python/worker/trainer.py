@@ -21,7 +21,7 @@ class Trainer(object):
     """
 
     @abstractmethod
-    def init_variables_if_need(self):
+    def init_variables_if_need(self, features):
         """Initialize model variables before calling the model"""
         pass
 
