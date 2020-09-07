@@ -1,12 +1,12 @@
 # Support Customizing the Training Loop Using AllReduce
 
 This document describes the design for supporting customizing
-the training loop when users use AllReduce distribution strategy.
+the training loop when users use the AllReduce distribution strategy.
 
 ## Motivation
 
-Now, users need to define the forward computation, loss function,
-optimizer and dataset function in ElasticDL. ElasticDL provides
+Users need to define the forward computation, loss function,
+optimizer, and dataset function in ElasticDL. ElasticDL provides
 the training loop with those definitions. ElasticDL only supports
 Keras API to define the forward computation. It maybe not flexible for
 users to define complex models in CV or NLP. Sometimes, users need to
@@ -15,9 +15,9 @@ For example, given a pre-trained network, users might only want to
 optimize a new set of output weights.
 
 If ElasticDL supports customizing the training loop, users can use different
-deep learning library (e.g. TensorFlow, Pytorch) to define their training loop.
-ElasticDL only need to provide dynamic data partitioning for dataset and
-elastic AllReduce to merge gradients across workers.
+deep-learning library (e.g., TensorFlow, Pytorch) to define their training
+loop. ElasticDL only need to provide dynamic data partitioning for
+dataset and elastic AllReduce to merge gradients across workers.
 
 ## The Training Loop of AllReduce
 
@@ -27,9 +27,11 @@ The training loop of AllReduce contains two steps:
 - Calculate gradients and update the model.
 
 To support elastic training, the worker should read data from disk
-to create dataset according to the data task assigned by the master.
-So, ElasticDL can create a dataset for users and users only need to
-get batch data from the dataset to do forward and backward computation.
+to create a dataset according to the task of data shard assigned by the master.
+When a worker fails, the master can recover the task and assign it to other
+workers. ElasticDL can provide the dataset for users for
+elastic training. Users only need to get batch data from the dataset to do
+forward and backward computation.
 
 ```python
 def train(dataset):
@@ -37,7 +39,7 @@ def train(dataset):
         train_step(batch_data)
 ```
 
-Using AllReduce distribution strategy, users need to merge gradients
+Using the AllReduce distribution strategy, users need to merge gradients
 across workers before updating the local model during each step.
 
 ```Python
@@ -48,8 +50,8 @@ def train_step(batch_data):
     upate_model(gradients)
 ```
 
-To support elastic training, the `allreduce` should be able to
-complete gradient combination even if the number of worker changes.
+The `allreduce` function should be able to
+complete gradient combination, even if the number of worker changes.
 
 ## Elastic AllReduce to Merge Gradients in ElasticDL
 
@@ -66,11 +68,11 @@ optimizer.apply_gradients(
 ```
 
 We can develop a decorator to wrap the gradient combination process
-using AllReduce. The decorator can support fault-tolerance and
+using AllReduce. The decorator should support fault-tolerance and
 elastic training. If AllReduce fails, the decorator will query the
 master for a new AllReduce ring and retry to combine gradients
 across alive workers. And the decorator also queries the master
-for a new ring periodically in case that the master add new workers.
+for a new ring periodically if the master adds new workers.
 
 ```python
 
@@ -107,7 +109,7 @@ Users only need to make the following changes to their training loop:
 
 - Use the decorator of elastic training to wrap the code of gradient
 combination using Horovod.
-- Set objects to broadcast like model and optimizer. Because, one alive
+- Set objects to broadcast like the model and optimizer. Because an alive
 worker should broadcast its model and optimizer to other workers if
 AllReduce fails.
 
