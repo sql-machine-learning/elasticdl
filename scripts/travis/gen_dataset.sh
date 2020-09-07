@@ -15,7 +15,7 @@
 # Generate mnist dataset
 DATA_PATH=$1
 
-python elasticdl/python/data/recordio_gen/image_label.py --dataset mnist --fraction 0.15 \
+python elasticdl/python/data/recordio_gen/image_label.py --dataset mnist --fraction 0.05 \
         --records_per_shard 4096 "$DATA_PATH"
 
 # Generate frappe dataset

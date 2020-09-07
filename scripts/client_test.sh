@@ -126,9 +126,9 @@ elif [[ "$JOB_TYPE" == "allreduce" ]]; then
       --model_def=mnist.mnist_functional_api.custom_model \
       --training_data=/data/mnist/train \
       --num_epochs=1 \
-      --master_resource_request="cpu=0.3,memory=1024Mi" \
+      --master_resource_request="cpu=0.2,memory=1024Mi" \
       --master_resource_limit="cpu=1,memory=2048Mi" \
-      --worker_resource_request="cpu=0.4,memory=2048Mi" \
+      --worker_resource_request="cpu=0.3,memory=2048Mi" \
       --worker_resource_limit="cpu=1,memory=3072Mi" \
       --minibatch_size=64 \
       --num_minibatches_per_task=2 \
