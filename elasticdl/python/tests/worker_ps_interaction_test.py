@@ -99,7 +99,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 (
                     w_loss,
                     w_grads,
-                ) = worker._trainer.training_process_with_acceleration(x, y)
+                ) = worker._trainer._training_process_with_acceleration(x, y)
             else:
                 w_loss, w_grads = worker._trainer._training_process_eagerly(
                     x, y

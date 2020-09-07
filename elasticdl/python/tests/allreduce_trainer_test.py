@@ -34,11 +34,11 @@ class AllReduceTrainerTest(unittest.TestCase):
         model.loss = loss
         self._trainer = AllReduceTrainer(master_client, "", model)
 
-    def test_training_process_with_fault_tolerance(self):
+    def test_train_minibatch(self):
         self._trainer.init_horovod_if_needed()
         features = tf.constant([[0.5], [0.6], [0.7]])
         labels = tf.constant([[1.0], [0.0], [1.0]])
-        version, _ = self._trainer.training_process_with_fault_tolerance(
+        version, _ = self._trainer.train_minibatch(
             features, labels
         )
         # Firstly, we will call model locally to create variables
