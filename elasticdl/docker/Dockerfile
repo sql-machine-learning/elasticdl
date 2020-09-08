@@ -65,6 +65,9 @@ ENV PATH /usr/local/go/bin:$GOPATH/bin:$PATH
 COPY elasticdl/docker/scripts/install-go.bash /
 RUN /install-go.bash ${GO_MIRROR_URL} && rm /install-go.bash
 
+# Remove TensorFlow source codes after building go modules
+RUN rm -rf /tmp/tensorflow
+
 # Install protobuf and protoc
 COPY elasticdl/docker/scripts/install-protobuf.bash /
 RUN /install-protobuf.bash && rm /install-protobuf.bash
