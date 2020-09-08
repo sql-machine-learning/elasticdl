@@ -60,6 +60,8 @@ class ExampleTest(unittest.TestCase):
             finally:
                 for pserver in pservers:
                     pserver.server.stop(0)
+                for channel in ps_channels:
+                    channel.close()
             model_versions.append(model_version)
         return model_versions
 
@@ -89,6 +91,8 @@ class ExampleTest(unittest.TestCase):
         finally:
             for pserver in pservers:
                 pserver.server.stop(0)
+            for channel in ps_channels:
+                channel.close()
         return model_version
 
     def test_deepfm_functional_train(self):
