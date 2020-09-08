@@ -86,7 +86,7 @@ the Kubernetes cluster and operates ElasticDL jobs.
 pip install elasticdl_client
 ```
 
-## Build the Model Zoo
+## Build the Docker Image with Model Definition
 
 Kubernetes runs Docker containers, so we need to put the training system,
 consisting of user-defined models, ElasticDL the trainer, and all dependencies,
@@ -99,22 +99,53 @@ retrieve the source code, please run the following command.
 git clone https://github.com/sql-machine-learning/elasticdl
 ```
 
-The model definitions are in directory `elasticdl/model_zoo`.  The following
-commands build the Docker image `elasticdl:mnist`
+Model definitions are in directory `elasticdl/model_zoo`.
+
+### Build the Docker Image for Parameter Server
+
+The following commands build the Docker image `elasticdl:mnist_ps`
 
 ```bash
-cd elasticdl/model_zoo
-elasticdl zoo init
-elasticdl zoo build --image=elasticdl:mnist .
+cd elasticdl
+elasticdl zoo init --model_zoo=model_zoo
+elasticdl zoo build --image=elasticdl:mnist_ps .
 ```
 
-## Submit the Training Job
+### Build the Docker Image for AllReduce
+
+We have not released ElasticDL packages with AllReduce yet. Thus,
+we need to manually build packages with AllReduce support.
+
+We must build an image `elasticdl:dev_allreduce` first using the
+
+```bash
+scripts/travis/build_images.sh
+```
+
+Then we use this image to build packages with AllReduce support.
+
+```bash
+scripts/docker_build_wheel.sh
+```
+
+After this, we can build the AllReduce training image `elasticdl:mnist_allreduce`
+with model definitions in model_zoo.
+
+```bash
+elasticdl zoo init \
+  --base_image=elasticdl:dev_allreduce \
+  --model_zoo=model_zoo \
+  --local_pkg_dir=./build
+elasticdl zoo build --image=elasticdl:mnist_allreduce .
+```
+
+## Submit the Training Job Using Parameter Server
 
 The following command submits a training job:
 
 ```bash
 elasticdl train \
-  --image_name=elasticdl:mnist \
+  --image_name=elasticdl:mnist_ps \
   --model_zoo=model_zoo \
   --model_def=mnist.mnist_functional_api.custom_model \
   --training_data=/data/mnist/train \
@@ -152,7 +183,7 @@ algorithm. The option `--num_ps_pods=1` tells the master to start one parameter
 server pod. For more details about parameter server strategy, please refer to
 the [design doc](/docs/designs/parameter_server.md).
 
-## Check Job Status
+### Check Job Status
 
 After the job submission, we can run the command `kubectl get pods` to list
 related containers.
@@ -185,3 +216,50 @@ The output looks like the following.
 ```
 
 The logs show that the accuracy reaches to 0.77 after 250 steps iteration.
+
+## Submit the Training Job Using AllReduce
+
+```bash
+elasticdl train \
+  --image_name=elasticdl:mnist_allreduce \
+  --model_zoo=model_zoo \
+  --model_def=mnist.mnist_functional_api.custom_model \
+  --training_data=/data/mnist/train \
+  --num_epochs=1 \
+  --master_resource_request="cpu=0.2,memory=1024Mi" \
+  --master_resource_limit="cpu=1,memory=2048Mi" \
+  --worker_resource_request="cpu=0.4,memory=1024Mi" \
+  --worker_resource_limit="cpu=1,memory=2048Mi" \
+  --minibatch_size=64 \
+  --num_minibatches_per_task=2 \
+  --num_workers=2 \
+  --job_name=test-mnist-allreduce \
+  --image_pull_policy=Never \
+  --volume="host_path=/data,mount_path=/data" \
+  --distribution_strategy=AllreduceStrategy
+```
+
+After the job submission, we can run the command `kubectl get pods` to list
+related containers.
+
+```bash
+NAME                                      READY   STATUS    RESTARTS   AGE
+elasticdl-test-mnist-allreduce-master     1/1     Running   0          102s
+elasticdl-test-mnist-allreduce-worker-0   1/1     Running   0          98s
+elasticdl-test-mnist-allreduce-worker-1   1/1     Running   0          98s
+```
+
+Then, we can view the loss in the worker log using the following command
+
+```bash
+kubectl logs elasticdl-test-mnist-allreduce-worker-0 | grep Loss
+```
+
+The outputs look like.
+
+```txt
+[2020-08-27 13:22:47,930] [INFO] [worker.py:627:_process_minibatch] Loss = 2.686038017272949, steps = 2
+[2020-08-27 13:23:17,254] [INFO] [worker.py:627:_process_minibatch] Loss = 0.08301685750484467, steps = 100
+[2020-08-27 13:23:47,887] [INFO] [worker.py:627:_process_minibatch] Loss = 0.0823458805680275, steps = 200
+[2020-08-27 13:24:19,067] [INFO] [worker.py:627:_process_minibatch] Loss = 0.14079990983009338, steps = 300
+```
