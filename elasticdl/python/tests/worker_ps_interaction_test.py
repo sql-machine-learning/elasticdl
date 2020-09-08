@@ -58,6 +58,10 @@ class WorkerPSInteractionTest(unittest.TestCase):
         )
         self._model_def = model_def
 
+    def _close_channels(self):
+        for channel in self._channels:
+            channel.close()
+
     def _reset_pserver(self):
         for ps in self._pservers:
             ps.parameters.reset()
@@ -143,6 +147,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             threads.append(t)
         for t in threads:
             t.join()
+        self._close_channels()
 
     def test_worker_pull_embedding(self):
         model_def = "mnist.mnist_functional_api.custom_model"
@@ -194,6 +199,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 expected_result.append(table.get([embedding_id]))
             expected_result = np.concatenate(expected_result)
             self.assertTrue(np.allclose(expected_result, result_dict[layer]))
+        self._close_channels()
 
     def test_compare_onebatch_train(self):
         model_def = "mnist.mnist_functional_api.custom_model"
@@ -262,6 +268,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 v.name
             )
             np.testing.assert_array_equal(ps_v.numpy(), v.numpy())
+        self._close_channels()
 
     def test_compare_mnist_train(self):
         model_def = "mnist.mnist_functional_api.custom_model"
@@ -322,6 +329,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
         for w, l in zip(worker_results, local_results):
             self.assertTupleEqual(w, l)
+        self._close_channels()
 
     def test_deepfm_train(self):
         model_def = "deepfm_functional_api.deepfm_functional_api.custom_model"
@@ -333,6 +341,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         )
         acc = max([r[1] for r in worker_results])
         self.assertLess(0.65, acc)
+        self._close_channels()
 
     def test_deepfm_two_worker_train(self):
         num_ps = 2
@@ -398,6 +407,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 workers[0]._non_embed_vars[var_name].numpy(),
                 workers[1]._non_embed_vars[var_name].numpy(),
             )
+        self._close_channels()
 
     def test_train_acceleration_with_embedding(self):
         model_def = "deepfm_functional_api.deepfm_functional_api.custom_model"
@@ -413,6 +423,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         )
         acc = max([r[1] for r in worker_results])
         self.assertLess(0.65, acc)
+        self._close_channels()
 
 
 if __name__ == "__main__":
