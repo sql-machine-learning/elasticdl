@@ -98,7 +98,6 @@ def validate_job_status(client, job_type, ps_num, worker_num):
     master_pod_name = "elasticdl-test-" + job_type + "-master"
 
     for step in range(200):
-        print("Query master pod phase")
         master_pod_phase = client.get_pod_phase(master_pod_name)
         ps_pod_phases = [client.get_pod_phase(ps) for ps in ps_pod_names]
         worker_pod_phases = [
@@ -165,10 +164,8 @@ def validate_job_status(client, job_type, ps_num, worker_num):
 
 
 if __name__ == "__main__":
-    print("Start validate job status")
     k8s_client = Client(namespace="default")
     job_type = sys.argv[1]
     ps_num = int(sys.argv[2])
     worker_num = int(sys.argv[3])
-    print("Job args :{}".format(job_type))
     validate_job_status(k8s_client, job_type, ps_num, worker_num)
