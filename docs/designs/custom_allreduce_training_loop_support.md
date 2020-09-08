@@ -139,12 +139,15 @@ def train(dataset, elastic_manager):
     train_op = opt.minimize(loss, global_step=global_step)
 
     hooks = [
-        tf.train.LoggingTensorHook(tensors={'step': global_step, 'loss': loss},
-                                   every_n_iter=10),
+        tf.train.LoggingTensorHook(
+            tensors={'step': global_step, 'loss': loss},
+            every_n_iter=10
+        ),
     ]
 
     with tf.train.MonitoredTrainingSession(hooks=hooks) as mon_sess
-        # ElasticDL provides ElasticBroadcastObject to set broadcast objects
+        # ElasticDL provides ElasticBroadcastObject to
+        # set broadcast objects
         elastic_manager.set_session(mon_sess)
 
         while not mon_sess.should_stop():
@@ -184,14 +187,17 @@ def main(_):
         # Horovod: adjust number of steps based on number of GPUs.
         tf.train.StopAtStepHook(last_step=20000 // hvd.size()),
 
-        tf.train.LoggingTensorHook(tensors={'step': global_step, 'loss': loss},
-                                   every_n_iter=10),
+        tf.train.LoggingTensorHook(
+            tensors={'step': global_step, 'loss': loss},
+            every_n_iter=10
+        ),
     ]
 
     with tf.train.MonitoredTrainingSession(hooks=hooks) as mon_sess:
         while not mon_sess.should_stop():
             mon_sess.run(train_op)
 ```
+
 </td></tr>
 </table>
 
@@ -237,16 +243,21 @@ def main(_):
 def train_one_batch(mnist_model, opt, images, labels):
     with tf.GradientTape() as tape:
         logits = mnist_model(images, training=True)
-        loss_value = tf.losses.sparse_softmax_cross_entropy(labels, logits)
+        loss_value = tf.losses.sparse_softmax_cross_entropy(
+            labels, logits
+        )
 
     # Horovod: add Horovod Distributed GradientTape.
     tape = hvd.DistributedGradientTape(tape)
 
     grads = tape.gradient(loss_value, mnist_model.variables)
-    opt.apply_gradients(zip(grads, mnist_model.variables),
-                        global_step=tf.train.get_or_create_global_step())
+    opt.apply_gradients(
+        zip(grads, mnist_model.variables),
+        global_step=tf.train.get_or_create_global_step()
+    )
     return loss_value
 ```
+
 </td><td>
 
 ```python
@@ -281,17 +292,22 @@ def train(dataset, elastic_manager):
 def train_one_batch(model, opt, features, labels):
     with tf.GradientTape() as tape:
         logits = mnist_model(images, training=True)
-        loss_value = tf.losses.sparse_softmax_cross_entropy(labels, logits)
+        loss_value = tf.losses.sparse_softmax_cross_entropy(
+            labels, logits
+        )
 
     # Horovod: add Horovod Distributed GradientTape.
     tape = hvd.DistributedGradientTape(tape)
 
     opt.lr = opt.lr * hvd.size()
     grads = tape.gradient(loss_value, mnist_model.variables)
-    opt.apply_gradients(zip(grads, mnist_model.variables),
-                            global_step=tf.train.get_or_create_global_step())
+    opt.apply_gradients(
+        zip(grads, mnist_model.variables),
+        global_step=tf.train.get_or_create_global_step()
+    )
     return loss_value
 ```
+
 </td></tr>
 </table>
 
@@ -307,11 +323,13 @@ import torch
 import horovod.torch as hvd
 
 def train(dataset, elastic_manager):
-    """ ElasticDL will call the function to execute the training loop
+    """ ElasticDL will call the function to execute the
+    training loop.
 
     Arguments:
-        dataset: tf.data.Dataset which initialized by ElasticDL. We can
-        use eager execution to fetch batch data from the dataset for PyTorch.
+        dataset: tf.data.Dataset which initialized by ElasticDL.
+        We can use eager execution to fetch batch data from
+        the dataset for PyTorch.
     """
     model = Net()
 
@@ -324,7 +342,8 @@ def train(dataset, elastic_manager):
     elastic_manager.set_optimizer(optimizer)
 
     for images, labels in dataset:
-        # Now, the dataset if tf.data.Dataset, so we should convert the outputs
+        # Now, the dataset if tf.data.Dataset,
+        # so we should convert the outputs
         # to numpy array for Pytorch.
         images = images.numpy()
         labels = labels.numpy()
@@ -354,7 +373,7 @@ def main()
 
     base_lr = 0.001
     lr_scaler = hvd.size()
-    optimizer = optim.SGD(model.parameters(), lr= base_lr * lr_scaler)
+    optimizer = optim.SGD(model.parameters(), base_lr * lr_scaler)
 
     # Horovod: broadcast parameters & optimizer state.
     hvd.broadcast_parameters(model.state_dict(), root_rank=0)
