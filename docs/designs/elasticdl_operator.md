@@ -180,15 +180,28 @@ spec:
                 type: string
                 pattern: '^--([a-z0-9_]+)\s([a-z0-9_]+)$'
             Master:
-              type: object
-            PS:
-              type: object
-            Worker:
-              type: object
               properties:
-                replicas:
-                  type: integer
+                image: string
+                priority: string
+                resource_request: string
+                volume: string
+            PS:
+              properties:
+                count: integer
+                  minium: 0
+                image: string
+                priority: string
+                resource_request: string
+                volume: string
+            Worker:
+               properties:
+                count: integer
                   minium: 1
+                image: string
+                priority: string
+                resource_request: string
+                volume: string
+              type: object
 ```
 
 ## ElasticDL Controller
