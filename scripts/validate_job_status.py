@@ -11,7 +11,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import sys
 import time
 
@@ -99,7 +98,7 @@ def validate_job_status(client, job_type, ps_num, worker_num):
     master_pod_name = "elasticdl-test-" + job_type + "-master"
 
     for step in range(10):
-        logging.info("Query master pod phase")
+        print("Query master pod phase")
         master_pod_phase = client.get_pod_phase(master_pod_name)
         ps_pod_phases = [client.get_pod_phase(ps) for ps in ps_pod_names]
         worker_pod_phases = [
@@ -146,20 +145,18 @@ def validate_job_status(client, job_type, ps_num, worker_num):
             client.delete_pod(master_pod_name)
             exit(-1)
         else:
-            logging.info(
+            print(
                 "Master (status.phase): %s"
                 % client.get_pod_phase(master_pod_name)
             )
-            logging.info(
+            print(
                 "Master (metadata.labels.status): %s"
                 % client.get_pod_label_status(master_pod_name)
             )
             for i, ps in enumerate(ps_pod_names):
-                logging.info("PS%d: %s" % (i, client.get_pod_phase(ps)))
+                print("PS%d: %s" % (i, client.get_pod_phase(ps)))
             for i, worker in enumerate(worker_pod_names):
-                logging.info(
-                    "Worker%d: %s" % (i, client.get_pod_phase(worker))
-                )
+                print("Worker%d: %s" % (i, client.get_pod_phase(worker)))
             time.sleep(10)
 
     print("ElasticDL job timed out.")
@@ -168,10 +165,10 @@ def validate_job_status(client, job_type, ps_num, worker_num):
 
 
 if __name__ == "__main__":
-    logging.info("Start validate job status")
+    print("Start validate job status")
     k8s_client = Client(namespace="default")
     job_type = sys.argv[1]
     ps_num = int(sys.argv[2])
     worker_num = int(sys.argv[3])
-    logging.info("Job args :{}".format(job_type))
+    print("Job args :{}".format(job_type))
     validate_job_status(k8s_client, job_type, ps_num, worker_num)
