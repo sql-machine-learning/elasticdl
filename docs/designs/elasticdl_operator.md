@@ -129,25 +129,18 @@ spec:
   master:
     image: elasticdl-mnist
     priority: high
-    resource_request:
-      cpu: 1
-      memory: 1024Mi
+    resource_request: "cpu=1,memory=1024Mi"
     volume: "host_path=/host_data,mount_path=/data"
   ps:
     count: 2
     priority: high
     image: elasticdl-ps
-    resource_request:
-      cpu: 1
-      memory: 1024Mi
+    resource_request: "cpu=1,memory=1024Mi"
   worker:
     count: 10
     priority: high=0.5
     image: elasticdl-worker
-    resource_request:
-      cpu: 4
-      gpu: 1
-      memory: 2048Mi
+    resource_request: "cpu=4,gpu=1,memory=2048Mi"
     volume: "host_path=/host_data,mount_path=/data"
 ```
 
