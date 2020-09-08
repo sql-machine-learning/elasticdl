@@ -88,7 +88,7 @@ class AllReduceTrainer(Trainer):
                     self._need_broadcast = False
                 loss = self._training_process(features, labels)
                 version = self._optimizer.iterations.numpy()
-                return version, loss
+                return True, version, loss
             except UnknownError as e:
                 logger.warning(
                     "Failed to perform allreduce operation on "

@@ -97,7 +97,7 @@ def validate_job_status(client, job_type, ps_num, worker_num):
     ]
     master_pod_name = "elasticdl-test-" + job_type + "-master"
 
-    for step in range(10):
+    for step in range(200):
         print("Query master pod phase")
         master_pod_phase = client.get_pod_phase(master_pod_name)
         ps_pod_phases = [client.get_pod_phase(ps) for ps in ps_pod_names]
@@ -160,16 +160,6 @@ def validate_job_status(client, job_type, ps_num, worker_num):
             time.sleep(10)
 
     print("ElasticDL job timed out.")
-    print("ElasticDL job failed.")
-    print(client.get_pod_status(master_pod_name))
-    print("Master log:")
-    print(client.get_pod_log(master_pod_name))
-    for ps, pod_phase in zip(ps_pod_names, ps_pod_phases):
-        print("PS %s log" % ps)
-        print_tail_log(client.get_pod_log(ps), 50)
-    for worker, pod_phase in zip(worker_pod_names, worker_pod_phases):
-        print("Worker %s log" % worker)
-        print_tail_log(client.get_pod_log(worker), 50)
     client.delete_pod(master_pod_name)
     exit(-1)
 
