@@ -19,24 +19,32 @@ deep-learning library (e.g., TensorFlow, Pytorch) to define their training
 loop. ElasticDL only need to provide dynamic data partitioning for
 dataset and elastic AllReduce to merge gradients across workers.
 
-## The Training Loop of AllReduce
+## The Training Loop of ElasticDL
 
-The training loop of AllReduce contains two steps:
+The training loop of ElasticDL on the worker contains two steps:
 
-- Dataset to read data from disk and convert the data to tensor.
-- Calculate gradients and update the model.
+- Get tasks from the master to create dataset with data shards in tasks.
+- Execute training loop to calculate gradients and update the model
+using the dataset.
 
-To support elastic training, the worker should read data from disk
-to create a dataset according to the task of data shard assigned by the master.
-When a worker fails, the master can recover the task and assign it to other
-workers. ElasticDL can provide the dataset for users for
-elastic training. Users only need to get batch data from the dataset to do
-forward and backward computation.
+![Training Loop](../images/training_loop.jpg)
+
+From the figure, elastic training of ElasticDL focus on data partitioning
+and elastic gradients reporting. If we can provide users with the dataset
+and an API of elastic gradients reporting, users can define the training
+loop by themselves.
 
 ```python
-def train(dataset):
+def train(dataset, elastic_manager):
+    """
+    Arguments:
+        dataset: tf.data.Dataset. ElasticDL creates a dataset according to
+            tasks from the master
+        elastic_manager: A manager to execute elastic training.
+    """
     for batch_data in dataset:
-        train_step(batch_data)
+        elastic_train = elastic_manager.elastic_run(train_one_batch)
+        elastic_train(batch_data)
 ```
 
 Using the AllReduce distribution strategy, users need to merge gradients
@@ -50,10 +58,7 @@ def train_one_batch(batch_data):
     upate_model(gradients)
 ```
 
-The `allreduce` function should be able to
-complete gradient combination, even if the number of worker changes.
-
-## Elastic AllReduce to Merge Gradients in ElasticDL
+## Elastic AllReduce Wrapper for Customized Training Loop
 
 ElasticDL AllReduce is based on Horovod. Using Horovod, users only need to
 use Horovod APIs to wrap optimizer or tape to execute AllReduce in their
