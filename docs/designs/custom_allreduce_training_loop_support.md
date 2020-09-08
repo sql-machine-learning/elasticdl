@@ -43,7 +43,7 @@ Using the AllReduce distribution strategy, users need to merge gradients
 across workers before updating the local model during each step.
 
 ```Python
-def train_step(batch_data):
+def train_one_batch(batch_data):
     loss = forward(batch_data)
     gradients = backward(loss)
     gradients = allreduce(gradients)
@@ -119,63 +119,137 @@ Using Tensorflow 1.x, we use `tf.Session` to execute the forward and backward
 computation. The training function definition likes the following
 code snippets.
 
+<table>
+<tr valign="top"><td>ElasticDL</td><td>Horovod</td></tr>
+
+<tr valign="bottom"><td>
+
 ```python
-def allreduce(session, train_op):
-    """Users should wrap the backward computation using ElasticDL
-    """
-    sess.run(train_op, feed_dict=feed_dict)
-
-
 def train(dataset, elastic_manager):
     dataset_iter = dataset.make_one_shot_iterator()
     features, labels = dataset_iter.get_next()
 
-    loss = forward(features, labels)
+    predict, loss = forward(features, labels)
 
+    base_lr = 0.001
+    lr = tf.Variable(base_lr)
+    opt = tf.train.GradientDescentOptimizer(lr)
+    opt = hvd.DistributedOptimizer(opt)
     global_step = tf.train.get_or_create_global_step()
+    train_op = opt.minimize(loss, global_step=global_step)
 
-    lr = tf.Variable(base_lr * hvd.size())
-    optimizer = tf.train.GradientDescentOptimizer(lr)
-    optimizer = hvd.DistributedOptimizer(optimizer)
-    train_op = optimizer.minimize(loss, global_step=global_step)
+    hooks = [
+        tf.train.LoggingTensorHook(tensors={'step': global_step, 'loss': loss},
+                                   every_n_iter=10),
+    ]
 
-    with tf.Session(config=config) as session:
+    with tf.train.MonitoredTrainingSession(hooks=hooks) as mon_sess
         # ElasticDL provides ElasticBroadcastObject to set broadcast objects
-        elastic_manager.set_session(session)
+        elastic_manager.set_session(mon_sess)
 
-        session.run(initializer)
-        step = 0
-        while True:
+        while not mon_sess.should_stop():
             # Users should wrap their forward and backward computation
             # using ElasticDL decorator
-            elastic_allreduce = elastic_manager.elastic_run(allreduce)
+            elastic_train = elastic_manager.elastic_run(train_one_batch)
+            lr.load(base_lr * hvd.size(), session)
+            elastic_train(mon_sess, train_op)
 
-            elastic_allreduce(session, train_op)
-            loss = sess.run(loss, feed_dict=feed_dict)
-            if step % 20 == 0:
-                logging.info("loss = {}".format(loss))
-            step += 1
+
+def train_one_batch(session, train_op):
+    """Users should wrap the backward computation using ElasticDL
+    """
+    session.run(train_op)
 ```
+
+</td><td>
+
+```python
+def main(_):
+    hvd.init()
+
+    dataset = ...
+    images, labels = dataset_iter.get_next()
+    predict, loss = forward(features, labels)
+
+    base_lr = 0.001
+    lr = tf.Variable(base_lr * hvd.size())
+    opt = tf.train.GradientDescentOptimizer(lr)
+    opt = hvd.DistributedOptimizer(opt)
+    global_step = tf.train.get_or_create_global_step()
+    train_op = opt.minimize(loss, global_step=global_step)
+
+    hooks = [
+        hvd.BroadcastGlobalVariablesHook(0),
+
+        # Horovod: adjust number of steps based on number of GPUs.
+        tf.train.StopAtStepHook(last_step=20000 // hvd.size()),
+
+        tf.train.LoggingTensorHook(tensors={'step': global_step, 'loss': loss},
+                                   every_n_iter=10),
+    ]
+
+    with tf.train.MonitoredTrainingSession(hooks=hooks) as mon_sess:
+        while not mon_sess.should_stop():
+            mon_sess.run(train_op)
+```
+</td></tr>
+</table>
 
 ### TensorFlow 2.x
 
-```python
-def allreduce(model, optimizer, features, labels):
-     with tf.GradientTape() as tape:
-        outputs = model.call(features, training=True)
+<table>
+<tr valign="top"><td> ElasticDL </td><td> Horovod </td></tr>
 
-        loss = tf.reduce_mean(
-            input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-                logits=outputs, labels=labels
-            )
-        )
+<tr valign="bottom"><td>
+
+```python
+import tensorflow as tf
+import horovod.tensorflow as hvd
+
+def main(_):
+    # Horovod: initialize Horovod.
+    hvd.init()
+
+    datast = ...
+
+    mnist_model = tf.keras.Sequential([
+        tf.keras.layers.Conv2D(16, [3, 3], activation='relu'),
+        tf.keras.layers.Conv2D(16, [3, 3], activation='relu'),
+        tf.keras.layers.GlobalAveragePooling2D(),
+        tf.keras.layers.Dense(10)
+    ])
+
+    # Horovod: adjust learning rate based on number of GPUs.
+    opt = tf.train.AdamOptimizer(0.001 * hvd.size())
+
+    # Horovod: adjust number of steps based on number of GPUs.
+    for (batch, (images, labels)) in enumerate(
+            dataset.take(20000 // hvd.size())):
+        loss_value = train_one_batch(mnist_model, opt, images, labels)
+        if batch == 0:
+            hvd.broadcast_variables(mnist_model.variables, root_rank=0)
+            hvd.broadcast_variables(opt.variables(), root_rank=0)
+
+        if batch % 10 == 0 and hvd.local_rank() == 0:
+            print('Step #%d\tLoss: %.6f' % (batch, loss_value))
+
+
+def train_one_batch(mnist_model, opt, images, labels):
+    with tf.GradientTape() as tape:
+        logits = mnist_model(images, training=True)
+        loss_value = tf.losses.sparse_softmax_cross_entropy(labels, logits)
+
+    # Horovod: add Horovod Distributed GradientTape.
     tape = hvd.DistributedGradientTape(tape)
-    grads = tape.gradient(loss, model.trainable_variables)
-    # Take care of the order of grads and vars if worker modifies
-    # `_non_embed_vars` during training.
-    optimizer.apply_gradients(
-        zip(grads, model.trainable_variables)
-    )
+
+    grads = tape.gradient(loss_value, mnist_model.variables)
+    opt.apply_gradients(zip(grads, mnist_model.variables),
+                        global_step=tf.train.get_or_create_global_step())
+    return loss_value
+```
+</td><td>
+
+```python
 
 def train(dataset, elastic_manager):
     """ ElasticDL will call the function to execute the training loop
@@ -183,35 +257,54 @@ def train(dataset, elastic_manager):
     Arguments:
         dataset: tf.data.Dataset which initialized by ElasticDL
     """
-    inputs = tf.keras.Input(shape=(28, 28), name="image")
-    outputs = Conv(10)(inputs)
+    mnist_model = tf.keras.Sequential([
+        tf.keras.layers.Conv2D(16, [3, 3], activation='relu'),
+        tf.keras.layers.Conv2D(16, [3, 3], activation='relu'),
+        tf.keras.layers.GlobalAveragePooling2D(),
+        tf.keras.layers.Dense(10)
+    ])
 
-    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="mnist_model")
-
-    optimizer = tf.optimizers.SGD(lr)
+    opt = tf.train.AdamOptimizer(0.001)
 
     # Set object to broadcast
-    elastic_manager.set_model(model)
-    elastic_manager.set_optimizer(optimizer)
+    elastic_manager.set_model(mnist_model)
+    elastic_manager.set_optimizer(opt)
 
-    for step, (features, labels) in enumerate(dataset):
-        elastic_allreduce = elastic_manager.elastic_run(elastic_manager)
-        elastic_allreduce(model, optimizer, features, labels)
-        if step % 20 == 0:
-            logging.info("Step = {}, loss = {}".format(step, loss))
+    for batch, (features, labels) in enumerate(dataset):
+        elastic_train = elastic_manager.elastic_run(train_one_batch)
+        loss_value = elastic_train(mnist_model, opt, features, labels)
 
+        if step % 10 == 0:
+            print('Step #%d\tLoss: %.6f' % (batch, loss_value))
+
+
+def train_one_batch(model, opt, features, labels):
+    with tf.GradientTape() as tape:
+        logits = mnist_model(images, training=True)
+        loss_value = tf.losses.sparse_softmax_cross_entropy(labels, logits)
+
+    # Horovod: add Horovod Distributed GradientTape.
+    tape = hvd.DistributedGradientTape(tape)
+
+    opt.lr = opt.lr * hvd.size()
+    grads = tape.gradient(loss_value, mnist_model.variables)
+    opt.apply_gradients(zip(grads, mnist_model.variables),
+                            global_step=tf.train.get_or_create_global_step())
+    return loss_value
 ```
+</td></tr>
+</table>
 
 ### PyTorch
+
+<table>
+<tr valign="top"><td>ElasticDL</td><td>Horovod</td></tr>
+
+<tr valign="bottom"><td>
 
 ```python
 import torch
 import horovod.torch as hvd
-
-def allreduce(optimizer):
-    """Users should wrap the backward computation using ElasticDL
-    """
-    optimizer.step()
 
 def train(dataset, elastic_manager):
     """ ElasticDL will call the function to execute the training loop
@@ -220,23 +313,68 @@ def train(dataset, elastic_manager):
         dataset: tf.data.Dataset which initialized by ElasticDL. We can
         use eager execution to fetch batch data from the dataset for PyTorch.
     """
-    model = ...
+    model = Net()
 
-    optimizer = optim.SGD(model.parameters(), lr * hvd.size())
+    base_lr = 0.001
+    optimizer = optim.SGD(model.parameters(), base_lr)
     optimizer = hvd.DistributedOptimizer(optimizer)
 
     # Set object to broadcast
     elastic_manager.set_model(model)
     elastic_manager.set_optimizer(optimizer)
 
-    for features, labels in dataset:
-        optimizer.zero_grad()
-        output = model(features)
-        loss = F.nll_loss(output, labels)
-        loss.backward()
-        elastic_allreduce = elastic_manager.elastic_run(allreduce)
-        elastic_allreduce(optimizer)
+    for images, labels in dataset:
+        # Now, the dataset if tf.data.Dataset, so we should convert the outputs
+        # to numpy array for Pytorch.
+        images = images.numpy()
+        labels = labels.numpy()
 
-    if step % 20 == 0:
-        logging.info("Step = {}, loss = {}".format(step, loss))
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = base_lr * hvd.size()
+
+        elastic_train = elastic_manager.elastic_run(train_one_batch)
+        loss = elastic_train(model, optimizer, images, labels)
+
+def train_one_batch(model, optimizer, images, labels):
+    optimizer.zero_grad()
+    output = model(images)
+    loss = F.nll_loss(output, labels)
+    loss.backward()
+    optimizer.step()
+    return loss
 ```
+
+</td><td>
+
+```python
+def main()
+    dataloader = ...
+
+    model = Net()
+
+    base_lr = 0.001
+    lr_scaler = hvd.size()
+    optimizer = optim.SGD(model.parameters(), lr= base_lr * lr_scaler)
+
+    # Horovod: broadcast parameters & optimizer state.
+    hvd.broadcast_parameters(model.state_dict(), root_rank=0)
+    hvd.broadcast_optimizer_state(optimizer, root_rank=0)
+
+    # Horovod: wrap optimizer with DistributedOptimizer.
+    optimizer = hvd.DistributedOptimizer(optimizer)
+
+    for images, labels in enumerate(train_loader):
+        loss = train_one_batch(model, optimizer, images, labels)
+
+def train_one_batch(model, optimizer, imagesl, labels)
+    optimizer.zero_grad()
+    output = model(images)
+    loss = F.nll_loss(output, labels)
+    loss.backward()
+    optimizer.step()
+    return loss
+
+```
+
+</td></tr>
+</table>
