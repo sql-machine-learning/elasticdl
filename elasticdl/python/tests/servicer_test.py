@@ -127,7 +127,7 @@ class ServicerTest(unittest.TestCase):
         )
         self.master.rendezvous_server.start()
         self.master.rendezvous_server.set_worker_hosts(
-            ["172.0.0.1", "172.0.0.2"]
+            [("worker-0", "172.0.0.1"), ("worker-1", "172.0.0.2")]
         )
 
         mock_instance_manager = Mock()
