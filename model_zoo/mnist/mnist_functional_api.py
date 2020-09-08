@@ -63,7 +63,7 @@ def loss(labels, predictions):
     )
 
 
-def optimizer(lr=0.01):
+def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
 
