@@ -202,7 +202,6 @@ spec:
                 priority: string
                 resource_request: string
                 volume: string
-              type: object
 ```
 
 ## ElasticDL Controller
