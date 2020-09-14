@@ -146,7 +146,8 @@ spec:
 
 ## ElasticDL CRD
 
-TODO: change CRD definition to be consistent with the sample above.
+This is a reference CRD design.
+Each ElasticDL operator implementation may have its own design.
 
 ```yaml
 apiVersion: apiextensions.k8s.io/v1beta1
