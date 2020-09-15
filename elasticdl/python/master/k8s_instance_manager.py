@@ -348,6 +348,10 @@ class InstanceManager(object):
                 logger.error("Unknown pod name: %s" % pod_name)
                 return
 
+            if self._rendezvous_server:
+                self._worker_addrs = self._get_alive_worker_addr()
+                self._rendezvous_server.set_worker_hosts(self._worker_addrs)
+
         if relaunch_worker and worker_id >= 0:
             logger.info("Relaunching worker.")
             new_worker_id = self._next_worker_id()
@@ -362,10 +366,6 @@ class InstanceManager(object):
             # server are intentionally left unchanged to support fault
             # tolerance.
             self._start_ps(ps_id)
-
-        if self._rendezvous_server:
-            self._worker_addrs = self._get_alive_worker_addr()
-            self._rendezvous_server.set_worker_hosts(self._worker_addrs)
 
     def get_alive_workers(self):
         alive_workers = []
