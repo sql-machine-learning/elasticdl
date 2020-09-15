@@ -22,8 +22,10 @@ set -e
 #    go test -v -cover ./...
 #)
 
-pytest elasticdl/python/tests/evaluation_service_test.py
-pytest elasticdl/python/tests/data_reader_test.py
+pytest elasticdl/python/tests/evaluation_service_test.py \
+  elasticdl/python/tests/data_reader_test.py \
+  --cov=elasticdl/python \
+  --cov-report=xml
 
 # Run Python unittests
 pytest elasticdl/python/tests \
