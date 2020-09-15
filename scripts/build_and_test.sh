@@ -22,6 +22,8 @@ sh scripts/build.sh
     go test -v -cover ./...
 )
 
+pytest elasticdl/python/tests/evaluation_service_test.py
+
 # Run Python unittests
 pytest elasticdl/python/tests \
     elasticdl_preprocessing/tests \
