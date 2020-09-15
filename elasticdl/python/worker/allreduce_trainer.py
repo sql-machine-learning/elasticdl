@@ -19,6 +19,7 @@ from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticdl.python.common.constants import HorovodEnv
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.worker.trainer import Trainer
 
 try:
     from horovod.tensorflow.functions import broadcast_variables
@@ -32,19 +33,19 @@ except ImportError:
 DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
 
 
-class AllReduceTrainer(object):
-    def __init__(self, master_client, master_addr, model, loss_fn, optimizer):
+class AllReduceTrainer(Trainer):
+    def __init__(self, master_client, master_addr, model):
         if not hvd:
             raise RuntimeError("Horovod is not installed for AllReduce")
         self._master_client = master_client
         self._rendezvous_addr = master_addr
         self._model = model
-        self._loss = loss_fn
+        self._loss = model.loss
         self._rendezvous_id = None
         self._need_broadcast = True
         self._var_created = False
         self._world_size = None
-        self._set_optimizer(optimizer)
+        self._set_optimizer(model.optimizer)
         self._set_horovod_env()
 
     def _set_optimizer(self, optimizer):
@@ -76,7 +77,7 @@ class AllReduceTrainer(object):
         )
         return loss
 
-    def training_process_with_fault_tolerance(self, features, labels):
+    def train_minibatch(self, features, labels, train_with_local_model=False):
         if not self._var_created:
             self._run_model_call_locally(features, labels)
 
@@ -87,7 +88,7 @@ class AllReduceTrainer(object):
                     self._need_broadcast = False
                 loss = self._training_process(features, labels)
                 version = self._optimizer.iterations.numpy()
-                return version, loss
+                return True, version, loss
             except UnknownError as e:
                 logger.warning(
                     "Failed to perform allreduce operation on "
@@ -167,3 +168,6 @@ class AllReduceTrainer(object):
             self._model.save(
                 model_path, overwrite=True, include_optimizer=False
             )
+
+    def get_model_version(self):
+        return self._optimizer.iterations.numpy()
