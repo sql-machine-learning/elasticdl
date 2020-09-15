@@ -1,5 +1,5 @@
-grpcio-tools==1.32.0
-grpcio==1.32.0
+grpcio-tools==1.29.0
+grpcio==1.29.0
 kubernetes==10.1.0
 docker==4.2.1
 pyrecordio>=0.0.6
