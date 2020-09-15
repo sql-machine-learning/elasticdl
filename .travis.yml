@@ -47,7 +47,7 @@ jobs:
         - bash scripts/travis/start_minikube.sh
         # Run unit tests not related to ODPS
         # TODO(qijun) cache Go
-        - docker run --rm -it --net=host -m 1024m
+        - docker run --rm -it --net=host
           -v $HOME/.cache:/root/.cache
           -v $HOME/.keras/datasets:/root/.keras/datasets
           -v $HOME/.kube:/root/.kube
