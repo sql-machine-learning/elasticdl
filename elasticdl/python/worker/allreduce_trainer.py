@@ -126,8 +126,12 @@ class AllReduceTrainer(Trainer):
             )
             os.environ[HorovodEnv.RANK] = str(rank_response.rank_id)
             os.environ[HorovodEnv.SIZE] = str(rank_response.world_size)
+            # Not using Horovod elastic feature in init, but need it for
+            # allreduce to call allreduce op when size=1.
+            os.environ[HorovodEnv.ELASTIC] = str(0)
             hvd.shutdown()
             hvd.init()
+            os.environ[HorovodEnv.ELASTIC] = str(1)
             self._world_size = hvd.size()
             self._rendezvous_id = rank_response.rendezvous_id
             self._need_broadcast = True
