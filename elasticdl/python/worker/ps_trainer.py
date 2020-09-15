@@ -44,7 +44,7 @@ class ParameterServerTrainer(Trainer):
 
         if self._ps_client is None:
             raise ValueError(
-                "PS channels are not set up under " "parameter server strategy"
+                "PS channels are not set up under parameter server strategy"
             )
         else:
             self._model_versions_from_ps = [
