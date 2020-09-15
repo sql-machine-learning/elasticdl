@@ -15,12 +15,15 @@
 
 set -e
 
-sh scripts/build.sh
+#sh scripts/build.sh
 
-(
-    cd /tmp/elasticdl
-    go test -v -cover ./...
-)
+#(
+#    cd /tmp/elasticdl
+#    go test -v -cover ./...
+#)
+
+pytest elasticdl/python/tests/evaluation_service_test.py
+pytest elasticdl/python/tests/data_reader_test.py
 
 # Run Python unittests
 pytest elasticdl/python/tests \
