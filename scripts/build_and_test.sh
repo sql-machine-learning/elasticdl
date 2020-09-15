@@ -23,9 +23,9 @@ set -e
 #)
 
 pytest elasticdl/python/tests/evaluation_service_test.py \
-  elasticdl/python/tests/data_reader_test.py \
-  --cov=elasticdl/python \
-  --cov-report=xml
+  elasticdl/python/tests/data_reader_test.py
+
+pytest elasticdl/python/tests
 
 # Run Python unittests
 pytest elasticdl/python/tests \
