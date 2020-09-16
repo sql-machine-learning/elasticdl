@@ -79,13 +79,7 @@ class AllReduceTrainer(Trainer):
         return loss
 
     def train_minibatch(self, features, labels, train_with_local_model=False):
-        iter_steps = self._optimizer.iterations.numpy()
-
-        # Check whether new workers join the job
-        # and re-initialize Horovod if True
-        if iter_steps % DEFAULT_STEPS_TO_CHECK_RENDEZVOUS == 0:
-            self.init_horovod_if_needed()
-
+        self._check_new_communication_world()
         if not self._var_created:
             self._run_model_call_locally(features, labels)
 
@@ -112,6 +106,15 @@ class AllReduceTrainer(Trainer):
                 ):
                     time.sleep(3)
                     self.init_horovod_if_needed()
+
+    def _check_new_communication_world(self):
+        """"Check periodically whether new workers join the job
+        and re-initialize Horovod if True.
+        """
+        iter_steps = self._optimizer.iterations.numpy()
+
+        if iter_steps % DEFAULT_STEPS_TO_CHECK_RENDEZVOUS == 0:
+            self.init_horovod_if_needed()
 
     def init_horovod_if_needed(self):
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM):
