@@ -16,7 +16,6 @@ import shutil
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import Mode
@@ -151,4 +150,4 @@ class LearningRateScheduler(tf.keras.callbacks.Callback):
             raise ValueError(
                 'The output of the "schedule" function should be float.'
             )
-        K.set_value(self.model.optimizer.lr, K.get_value(lr))
+        self.model.optimizer.lr = lr

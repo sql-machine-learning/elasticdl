@@ -138,7 +138,7 @@ def callbacks():
         else:
             return 0.001
 
-    LearningRateScheduler(_schedule)
+    return [LearningRateScheduler(_schedule)]
 
 
 def dataset_fn(dataset, mode, _):
