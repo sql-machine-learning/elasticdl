@@ -160,7 +160,7 @@ class AllReduceTrainer(Trainer):
         if not self._var_created:
             self._run_model_call_locally(features, labels)
         self._var_created = True
-    
+
     def _run_model_call_locally(self, features, labels):
         """Call `self._model.call` locally to create variables of the model
         and optimizer. Because we should have variables before broadcasting.
