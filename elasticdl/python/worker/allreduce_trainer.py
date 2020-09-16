@@ -86,7 +86,7 @@ class AllReduceTrainer(Trainer):
                 if self._need_broadcast:
                     self._broadcast_model()
                     self._need_broadcast = False
-                loss, version = self._training_process(features, labels)
+                loss = self._training_process(features, labels)
                 version = self._optimizer.iterations.numpy()
                 return True, version, loss
             except UnknownError as e:
