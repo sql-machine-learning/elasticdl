@@ -80,15 +80,13 @@ class AllReduceTrainer(Trainer):
 
     def train_minibatch(self, features, labels, train_with_local_model=False):
         self._check_new_communication_world()
-        if not self._var_created:
-            self._run_model_call_locally(features, labels)
 
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
             try:
                 if self._need_broadcast:
                     self._broadcast_model()
                     self._need_broadcast = False
-                loss = self._training_process(features, labels)
+                loss, version = self._training_process(features, labels)
                 version = self._optimizer.iterations.numpy()
                 return True, version, loss
             except UnknownError as e:
@@ -158,6 +156,11 @@ class AllReduceTrainer(Trainer):
         broadcast_variables(self._model.variables, root_rank=0)
         broadcast_variables(self._optimizer.variables(), root_rank=0)
 
+    def init_variables_if_need(self, features, labels):
+        if not self._var_created:
+            self._run_model_call_locally(features, labels)
+        self._var_created = True
+    
     def _run_model_call_locally(self, features, labels):
         """Call `self._model.call` locally to create variables of the model
         and optimizer. Because we should have variables before broadcasting.

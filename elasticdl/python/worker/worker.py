@@ -174,7 +174,7 @@ class Worker(object):
         min_model_version,
         train_with_local_model=False,
     ):
-        self._trainer.init_variables_if_need(features)
+        self._trainer.init_variables_if_need(features, labels)
         self._timing.start_record_time("batch_process")
         for _ in range(self._max_minibatch_retry_num):
             if task_type == elasticdl_pb2.EVALUATION:
