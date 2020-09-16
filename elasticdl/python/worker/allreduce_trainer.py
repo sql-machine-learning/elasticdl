@@ -81,6 +81,8 @@ class AllReduceTrainer(Trainer):
     def train_minibatch(self, features, labels, train_with_local_model=False):
         iter_steps = self._optimizer.iterations.numpy()
 
+        # Check whether new workers join the job
+        # and re-initialize Horovod if True
         if iter_steps % DEFAULT_STEPS_TO_CHECK_RENDEZVOUS == 0:
             self.init_horovod_if_needed()
 
