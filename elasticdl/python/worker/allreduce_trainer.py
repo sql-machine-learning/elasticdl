@@ -31,6 +31,7 @@ except ImportError:
 # The default maximum number of retries for allreduce operation
 # if allreduce-based distributed training strategy is used.
 DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
+DEFAULT_STEPS_TO_CHECK_RENDEZVOUS = 20
 
 
 class AllReduceTrainer(Trainer):
@@ -78,6 +79,11 @@ class AllReduceTrainer(Trainer):
         return loss
 
     def train_minibatch(self, features, labels, train_with_local_model=False):
+        iter_steps = self._optimizer.iterations.numpy()
+
+        if iter_steps % DEFAULT_STEPS_TO_CHECK_RENDEZVOUS == 0:
+            self.init_horovod_if_needed()
+
         if not self._var_created:
             self._run_model_call_locally(features, labels)
 
