@@ -118,6 +118,20 @@ class LearningRateSchedulerTest(unittest.TestCase):
     def _schedule(self, model_version):
         return 0.2 if model_version < 2 else 0.1
 
+    def test_raise_error(self):
+        def _schedule(model_version):
+            return 1 if model_version < 2 else 2
+
+        learning_rate_scheduler = LearningRateScheduler(_schedule)
+        model = tf.keras.Model()
+        learning_rate_scheduler.set_model(model)
+        with self.assertRaises(ValueError):
+            learning_rate_scheduler.on_train_batch_begin(batch=1)
+
+        model.optimizer = tf.optimizers.SGD(0.1)
+        with self.assertRaises(ValueError):
+            learning_rate_scheduler.on_train_batch_begin(batch=1)
+
     def test_learning_rate_scheduler(self):
         learning_rate_scheduler = LearningRateScheduler(self._schedule)
         model = tf.keras.Model()
