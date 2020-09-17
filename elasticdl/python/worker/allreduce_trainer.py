@@ -16,6 +16,7 @@ import time
 
 import tensorflow as tf
 from tensorflow.python.framework.errors_impl import UnknownError
+from tensorflow.keras import backend as K
 
 from elasticdl.python.common.constants import HorovodEnv
 from elasticdl.python.common.log_utils import default_logger as logger
@@ -173,6 +174,7 @@ class AllReduceTrainer(Trainer):
         self._optimizer.apply_gradients(
             zip(grads, self._model.trainable_variables)
         )
+        K.set_value(self._optimizer.iterations, 0)
         self._var_created = True
 
     def export_saved_model(self, model_path):
