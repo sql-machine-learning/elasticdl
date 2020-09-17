@@ -11,10 +11,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
 
-class Trainer(object):
+class Trainer(ABC):
     """An abstract trainer to train/evaluate/predict using a minibatch data.
     The trainer will do forward and bachward computation, report gradients
     and update model variables.
