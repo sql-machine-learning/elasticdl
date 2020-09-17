@@ -15,8 +15,8 @@ import os
 import time
 
 import tensorflow as tf
-from tensorflow.python.framework.errors_impl import UnknownError
 from tensorflow.keras import backend as K
+from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticdl.python.common.constants import HorovodEnv
 from elasticdl.python.common.log_utils import default_logger as logger
