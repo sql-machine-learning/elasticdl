@@ -38,9 +38,17 @@ class AllReduceTrainerTest(unittest.TestCase):
         self._trainer.init_horovod_if_needed()
         features = tf.constant([[0.5], [0.6], [0.7]])
         labels = tf.constant([[1.0], [0.0], [1.0]])
-        _, version, _ = self._trainer.train_minibatch(features, labels)
+        _, version, loss = self._trainer.train_minibatch(features, labels)
         self.assertEqual(version, 1)
+        self.assertIsNotNone(loss)
         hvd.shutdown()
+
+    def test_init_variables_if_needed(self):
+        features = tf.constant([[0.5], [0.6], [0.7]])
+        labels = tf.constant([[1.0], [0.0], [1.0]])
+        self._trainer.init_variables_if_need(features, labels)
+        self.assertTrue(self._trainer._var_created)
+        self.assertEqual(self._optimizer.iterations.numpy(), 0)
 
 
 if __name__ == "__main__":
