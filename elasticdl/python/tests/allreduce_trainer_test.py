@@ -39,10 +39,7 @@ class AllReduceTrainerTest(unittest.TestCase):
         features = tf.constant([[0.5], [0.6], [0.7]])
         labels = tf.constant([[1.0], [0.0], [1.0]])
         _, version, _ = self._trainer.train_minibatch(features, labels)
-        # Firstly, we will call model locally to create variables
-        # for the model and optimizer. Then, we will train the
-        # model using Horovod. So, the iteration step = 2.
-        self.assertEqual(version, 2)
+        self.assertEqual(version, 1)
         hvd.shutdown()
 
 
