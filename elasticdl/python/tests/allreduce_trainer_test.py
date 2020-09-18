@@ -15,6 +15,7 @@ import unittest
 from unittest.mock import MagicMock, Mock
 
 import horovod.tensorflow as hvd
+import numpy as np
 import tensorflow as tf
 
 from elasticdl.python.tests.test_module import custom_model, loss, optimizer
@@ -44,6 +45,12 @@ class AllReduceTrainerTest(unittest.TestCase):
         # model using Horovod. So, the iteration step = 2.
         self.assertEqual(version, 2)
         hvd.shutdown()
+
+    def test_scale_learning_rate(self):
+        self._trainer._last_world_size = 2
+        hvd.init()
+        self._trainer._scale_learning_rate()
+        self.assertEqual(self._trainer._optimizer.lr.numpy(), np.float32(0.05))
 
 
 if __name__ == "__main__":
