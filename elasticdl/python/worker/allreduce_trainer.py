@@ -174,6 +174,7 @@ class AllReduceTrainer(Trainer):
         self._optimizer.apply_gradients(
             zip(grads, self._model.trainable_variables)
         )
+        # TODO: Handle the case that the model is initialized from a checkpoint
         K.set_value(self._optimizer.iterations, 0)
         self._var_created = True
 
