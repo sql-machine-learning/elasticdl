@@ -48,7 +48,7 @@ class AllReduceTrainerTest(unittest.TestCase):
         labels = tf.constant([[1.0], [0.0], [1.0]])
         self._trainer.init_variables_if_need(features, labels)
         self.assertTrue(self._trainer._var_created)
-        self.assertEqual(self._optimizer.iterations.numpy(), 0)
+        self.assertEqual(self._trainer._optimizer.iterations.numpy(), 0)
 
 
 if __name__ == "__main__":
