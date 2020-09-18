@@ -20,6 +20,11 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import Mode
 
+try:
+    import horovod.tensorflow as hvd
+except ImportError:
+    hvd = None
+
 
 class SavedModelExporter(tf.keras.callbacks.Callback):
     """Export model using SavedModel after training.
@@ -115,9 +120,10 @@ class LearningRateScheduler(tf.keras.callbacks.Callback):
     to the iteration steps.
 
     Args:
-        schedule: A function that takes a batch index as input
-        (integer, indexed from 0) and returns a new learning rate
-        as output (float).
+        schedule: A function that takes a batch index (integer, indexed from 0)
+        and world size as inputs. The world size is the number of workers
+        when using AllReduce distributed strategy. The function returns a new
+        learning rate as output (float).
 
     Example:
     ```python
@@ -125,8 +131,9 @@ class LearningRateScheduler(tf.keras.callbacks.Callback):
 
     def callbacks():
         # This callback will schedule the learning rate for each step.
-        def _schedule(batch):
-            return 0.002 if batch < 1000 else 0.001
+        def _schedule(batch, world_size):
+            lr =  0.002 if batch < 1000 else 0.001
+            return lr * world_size
         learning_rate_scheduler = LearningRateScheduler(_schedule)
         return [learning_rate_scheduler]
     ```
@@ -145,7 +152,10 @@ class LearningRateScheduler(tf.keras.callbacks.Callback):
         if not hasattr(self.model.optimizer, "lr"):
             raise ValueError('Optimizer must have a "lr" attribute.')
 
-        lr = self._schedule(batch)
+        if hvd is not None:
+            lr = self._schedule(batch, world_size=hvd.size())
+        else:
+            lr = self._schedule(batch, world_size=1)
         if not isinstance(lr, (tf.Tensor, float, np.float32, np.float64)):
             raise ValueError(
                 'The output of the "schedule" function should be float.'
