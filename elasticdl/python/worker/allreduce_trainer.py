@@ -15,6 +15,7 @@ import os
 import time
 
 import tensorflow as tf
+from tensorflow.keras import backend as K
 from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticdl.python.common.constants import HorovodEnv
@@ -31,6 +32,7 @@ except ImportError:
 # The default maximum number of retries for allreduce operation
 # if allreduce-based distributed training strategy is used.
 DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
+DEFAULT_STEPS_TO_CHECK_RENDEZVOUS = 20
 
 
 class AllReduceTrainer(Trainer):
@@ -78,8 +80,7 @@ class AllReduceTrainer(Trainer):
         return loss
 
     def train_minibatch(self, features, labels, train_with_local_model=False):
-        if not self._var_created:
-            self._run_model_call_locally(features, labels)
+        self._check_new_communication_world()
 
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
             try:
@@ -104,6 +105,15 @@ class AllReduceTrainer(Trainer):
                 ):
                     time.sleep(3)
                     self.init_horovod_if_needed()
+
+    def _check_new_communication_world(self):
+        """"Check periodically whether new workers join the job
+        and re-initialize Horovod if True.
+        """
+        iter_steps = self._optimizer.iterations.numpy()
+
+        if iter_steps % DEFAULT_STEPS_TO_CHECK_RENDEZVOUS == 0:
+            self.init_horovod_if_needed()
 
     def init_horovod_if_needed(self):
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM):
@@ -147,6 +157,11 @@ class AllReduceTrainer(Trainer):
         broadcast_variables(self._model.variables, root_rank=0)
         broadcast_variables(self._optimizer.variables(), root_rank=0)
 
+    def init_variables_if_need(self, features, labels):
+        if not self._var_created:
+            self._run_model_call_locally(features, labels)
+        self._var_created = True
+
     def _run_model_call_locally(self, features, labels):
         """Call `self._model.call` locally to create variables of the model
         and optimizer. Because we should have variables before broadcasting.
@@ -159,6 +174,8 @@ class AllReduceTrainer(Trainer):
         self._optimizer.apply_gradients(
             zip(grads, self._model.trainable_variables)
         )
+        # TODO: Handle the case that the model is initialized from a checkpoint
+        K.set_value(self._optimizer.iterations, 0)
         self._var_created = True
 
     def export_saved_model(self, model_path):

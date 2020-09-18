@@ -174,7 +174,7 @@ class Worker(object):
         min_model_version,
         train_with_local_model=False,
     ):
-        self._trainer.init_variables_if_need(features)
+        self._trainer.init_variables_if_need(features, labels)
         self._timing.start_record_time("batch_process")
         for _ in range(self._max_minibatch_retry_num):
             if task_type == elasticdl_pb2.EVALUATION:
@@ -342,8 +342,6 @@ class Worker(object):
                 self._task_data_service.data_reader.metadata,
             )
             dataset = dataset.batch(self._minibatch_size).prefetch(1)
-            if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-                self._trainer.init_horovod_if_needed()
             self._timing.start_record_time("task_process")
             for dataset_batch in dataset:
                 if self._job_type == JobType.TRAINING_WITH_EVALUATION:

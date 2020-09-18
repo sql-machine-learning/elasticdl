@@ -302,9 +302,11 @@ class ParameterServerTrainer(Trainer):
     def get_model_version(self):
         return self._model_version
 
-    def init_variables_if_need(self, features):
+    def init_variables_if_need(self, features, labels):
         if self._need_embedding_layer_check or not self._var_created:
             self._run_model_call_before_training(features)
+
+        self._var_created = True
 
     def _run_model_call_before_training(self, features):
         """Call `self._model.call` before training for two things:
@@ -323,8 +325,6 @@ class ParameterServerTrainer(Trainer):
             self._model, self._embedding_layers
         ):
             self._non_embed_vars[var.name] = var
-
-        self._var_created = True
 
         self._ps_client.partition_dense_parameters(self._non_embed_vars.keys())
 
