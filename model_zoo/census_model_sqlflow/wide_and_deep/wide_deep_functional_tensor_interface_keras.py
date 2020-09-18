@@ -278,7 +278,7 @@ def eval_metrics_fn():
 
 
 def callbacks():
-    def _schedule(model_version):
+    def _schedule(model_version, world_size):
         if model_version < 5000:
             return 0.0003
         elif model_version < 12000:

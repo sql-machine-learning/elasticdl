@@ -45,7 +45,7 @@ def optimizer(lr=0.1):
 
 
 def callbacks():
-    def _schedule(model_version):
+    def _schedule(model_version, world_size):
         if model_version < 5000:
             return 0.1
         elif model_version < 15000:

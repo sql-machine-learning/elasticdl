@@ -141,7 +141,7 @@ def eval_metrics_fn():
 
 
 def callbacks():
-    def _schedule(model_version):
+    def _schedule(model_version, world_size):
         return 0.5 if model_version < 100 else 0.2
 
     learning_reate_scheduler = LearningRateScheduler(_schedule)

@@ -115,11 +115,12 @@ class MaxStepsStoppingTest(unittest.TestCase):
 
 
 class LearningRateSchedulerTest(unittest.TestCase):
-    def _schedule(self, model_version):
-        return 0.2 if model_version < 2 else 0.1
+    def _schedule(self, model_version, world_size):
+        lr = 0.2 if model_version < 2 else 0.1
+        return lr * world_size
 
     def test_raise_error(self):
-        def _schedule(model_version):
+        def _schedule(model_version, world_size):
             return 1 if model_version < 2 else 2
 
         learning_rate_scheduler = LearningRateScheduler(_schedule)
