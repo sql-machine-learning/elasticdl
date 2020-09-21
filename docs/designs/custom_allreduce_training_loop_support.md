@@ -5,18 +5,18 @@ the training loop when users use the AllReduce distribution strategy.
 
 ## Motivation
 
-Users need to define the forward computation, loss function,
-optimizer, and dataset function in ElasticDL. ElasticDL provides
+Users need to define a forward computation, a loss function, an optimizer,
+and a dataset function in ElasticDL. ElasticDL provides
 the training loop with those definitions. ElasticDL only supports
-Keras API to define the forward computation. It maybe not flexible for
-users to define complex models in CV or NLP. Sometimes, users need to
-customize the training loop to control the model iteration. For example,
+Keras API to define the forward computation. This is not very flexible for
+users to define some complex models in CV or NLP. Also, users may wan to
+customize the training loop to control the model iteration.
 For example, given a pre-trained network, users might only want to
 optimize a new set of output weights.
 
 If ElasticDL supports customizing the training loop, users can use different
-deep-learning library (e.g., TensorFlow, Pytorch) to define their training
-loop. ElasticDL only need to provide dynamic data partitioning for
+deep-learning libraries (e.g., TensorFlow, Pytorch) to define their training
+loop. ElasticDL only needs to provide dynamic data partitioning for
 dataset and elastic AllReduce to merge gradients across workers.
 
 ## The Training Loop of ElasticDL
@@ -25,14 +25,26 @@ The training loop of ElasticDL on the worker contains two steps:
 
 - Get tasks from the master to create dataset with data shards in tasks.
 - Execute training loop to calculate gradients and update the model
-using the dataset.
+using the gradients.
 
 ![Training Loop](../images/training_loop.jpg)
 
-From the figure, elastic training of ElasticDL focus on data partitioning
-and elastic gradients reporting. If we can provide users with the dataset
-and an API of elastic gradients reporting, users can define the training
-loop by themselves.
+In order to support customized training loop with ElasticDL AllReduce,
+ElasticDL provides users with a dataset with dynamic partition support,
+and an API `elastic_run` for elastic training. Users need to implement
+their own training logic for a training data batch in a function
+`train_one_batch`.
+
+```Python
+def train_one_batch(batch_data):
+    loss = forward(batch_data)
+    gradients = backward(loss)
+    gradients = allreduce(gradients)
+    upate_model(gradients)
+```
+
+Then users can write the training loop using `train_one_batch`,
+the dataset and `elastic_run` API provided by ElasticDL.
 
 ```python
 def train(dataset, elastic_manager):
@@ -45,17 +57,6 @@ def train(dataset, elastic_manager):
     for batch_data in dataset:
         elastic_train = elastic_manager.elastic_run(train_one_batch)
         elastic_train(batch_data)
-```
-
-Using the AllReduce distribution strategy, users need to merge gradients
-across workers before updating the local model during each step.
-
-```Python
-def train_one_batch(batch_data):
-    loss = forward(batch_data)
-    gradients = backward(loss)
-    gradients = allreduce(gradients)
-    upate_model(gradients)
 ```
 
 ## Elastic AllReduce Wrapper for Customized Training Loop
@@ -80,7 +81,6 @@ across alive workers. And the decorator also queries the master
 for a new ring periodically if the master adds new workers.
 
 ```python
-
 class ElasticAllReduceManager(object):
     def elastic_run(self, func):
         def wrapper(*args, **kwargs):
@@ -105,7 +105,6 @@ class ElasticAllReduceManager(object):
 
     def set_broadcast_object(self, broadcast_obj):
         ...
-
 ```
 
 ## Examples of Different Libraries Using ElasticDL AllReduce
@@ -214,6 +213,55 @@ def main(_):
 <tr valign="bottom"><td>
 
 ```python
+def train(dataset, elastic_manager):
+    """ ElasticDL will call the function to execute the training loop
+
+    Arguments:
+        dataset: tf.data.Dataset which initialized by ElasticDL
+    """
+    mnist_model = tf.keras.Sequential([
+        tf.keras.layers.Conv2D(16, [3, 3], activation='relu'),
+        tf.keras.layers.Conv2D(16, [3, 3], activation='relu'),
+        tf.keras.layers.GlobalAveragePooling2D(),
+        tf.keras.layers.Dense(10)
+    ])
+
+    opt = tf.train.AdamOptimizer(0.001)
+
+    # Set object to broadcast
+    elastic_manager.set_model(mnist_model)
+    elastic_manager.set_optimizer(opt)
+
+    for batch, (features, labels) in enumerate(dataset):
+        elastic_train = elastic_manager.elastic_run(train_one_batch)
+        loss_value = elastic_train(mnist_model, opt, features, labels)
+
+        if step % 10 == 0:
+            print('Step #%d\tLoss: %.6f' % (batch, loss_value))
+
+
+def train_one_batch(model, opt, features, labels):
+    with tf.GradientTape() as tape:
+        logits = mnist_model(images, training=True)
+        loss_value = tf.losses.sparse_softmax_cross_entropy(
+            labels, logits
+        )
+
+    # Horovod: add Horovod Distributed GradientTape.
+    tape = hvd.DistributedGradientTape(tape)
+
+    opt.lr = opt.lr * hvd.size()
+    grads = tape.gradient(loss_value, mnist_model.variables)
+    opt.apply_gradients(
+        zip(grads, mnist_model.variables),
+        global_step=tf.train.get_or_create_global_step()
+    )
+    return loss_value
+```
+
+</td><td>
+
+```python
 import tensorflow as tf
 import horovod.tensorflow as hvd
 
@@ -255,56 +303,6 @@ def train_one_batch(mnist_model, opt, images, labels):
     # Horovod: add Horovod Distributed GradientTape.
     tape = hvd.DistributedGradientTape(tape)
 
-    grads = tape.gradient(loss_value, mnist_model.variables)
-    opt.apply_gradients(
-        zip(grads, mnist_model.variables),
-        global_step=tf.train.get_or_create_global_step()
-    )
-    return loss_value
-```
-
-</td><td>
-
-```python
-
-def train(dataset, elastic_manager):
-    """ ElasticDL will call the function to execute the training loop
-
-    Arguments:
-        dataset: tf.data.Dataset which initialized by ElasticDL
-    """
-    mnist_model = tf.keras.Sequential([
-        tf.keras.layers.Conv2D(16, [3, 3], activation='relu'),
-        tf.keras.layers.Conv2D(16, [3, 3], activation='relu'),
-        tf.keras.layers.GlobalAveragePooling2D(),
-        tf.keras.layers.Dense(10)
-    ])
-
-    opt = tf.train.AdamOptimizer(0.001)
-
-    # Set object to broadcast
-    elastic_manager.set_model(mnist_model)
-    elastic_manager.set_optimizer(opt)
-
-    for batch, (features, labels) in enumerate(dataset):
-        elastic_train = elastic_manager.elastic_run(train_one_batch)
-        loss_value = elastic_train(mnist_model, opt, features, labels)
-
-        if step % 10 == 0:
-            print('Step #%d\tLoss: %.6f' % (batch, loss_value))
-
-
-def train_one_batch(model, opt, features, labels):
-    with tf.GradientTape() as tape:
-        logits = mnist_model(images, training=True)
-        loss_value = tf.losses.sparse_softmax_cross_entropy(
-            labels, logits
-        )
-
-    # Horovod: add Horovod Distributed GradientTape.
-    tape = hvd.DistributedGradientTape(tape)
-
-    opt.lr = opt.lr * hvd.size()
     grads = tape.gradient(loss_value, mnist_model.variables)
     opt.apply_gradients(
         zip(grads, mnist_model.variables),
