@@ -164,8 +164,8 @@ spec:
   names:
     kind: ElasticAIJob
     listKind: ElasticAIJobList
-    singular: elasticaiJob
-    plural: elasticdljobs
+    singular: elasticaijob
+    plural: elasticaijobs
     shortNames:
     - eaijob
   subresources:
