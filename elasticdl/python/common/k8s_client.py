@@ -103,7 +103,7 @@ class Client(BaseClient):
     def _periodic_call(self):
         while True:
             self._periodic_call_func()
-            time.sleep(30)
+            time.sleep(15)
 
     def _get_service_address(self, service_name, port):
         return "%s.%s.svc:%d" % (service_name, self.namespace, port)
