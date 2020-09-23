@@ -37,11 +37,19 @@ class InstanceManagerTest(unittest.TestCase):
             worker_command=["/bin/bash"],
             worker_args=["-c", "echo"],
             namespace="default",
-            num_workers=3,
+            num_workers=2,
         )
 
         instance_manager.start_workers()
         max_check_num = 20
+        for _ in range(max_check_num):
+            time.sleep(3)
+            counters = instance_manager.get_worker_counter()
+            if counters["Succeeded"] == 2:
+                break
+
+        instance_manager._not_created_worker_id = [2]
+        instance_manager._process_worker()
         for _ in range(max_check_num):
             time.sleep(3)
             counters = instance_manager.get_worker_counter()
@@ -55,14 +63,6 @@ class InstanceManagerTest(unittest.TestCase):
             if not counters:
                 break
         self.assertFalse(counters)
-
-        instance_manager._not_created_worker_id = [3, 4]
-        instance_manager._process_worker()
-        for _ in range(max_check_num):
-            time.sleep(3)
-            counters = instance_manager.get_worker_counter()
-            if counters["Succeeded"] == 2:
-                break
 
     @unittest.skipIf(
         os.environ.get("K8S_TESTS", "True") == "False",
