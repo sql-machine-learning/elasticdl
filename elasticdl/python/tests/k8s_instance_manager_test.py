@@ -49,6 +49,7 @@ class InstanceManagerTest(unittest.TestCase):
                 break
 
         instance_manager._not_created_worker_id = [2]
+        instance_manager._worker_pod_priority[2] = None
         instance_manager._process_worker()
         for _ in range(max_check_num):
             time.sleep(3)
