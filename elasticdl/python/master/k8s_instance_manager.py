@@ -14,6 +14,7 @@
 import copy
 import itertools
 import threading
+import time
 from collections import Counter
 
 from elasticdl.python.common import k8s_client as k8s
@@ -113,6 +114,8 @@ class InstanceManager(object):
         self._worker_pods_ip_phase = {}
         # pod name to worker id mapping
         self._worker_pod_name_to_id = {}
+        # worker ids whose pods are not created
+        self._not_created_worker_id = []
 
         self._relaunch_deleted_live_worker = True
 
@@ -127,12 +130,21 @@ class InstanceManager(object):
             self._k8s_client = k8s.Client(**kwargs)
         else:
             self._k8s_client = k8s.Client(
-                event_callback=self._event_cb, **kwargs
+                event_callback=self._event_cb,
+                periodic_call_func=self._process_worker,
+                **kwargs
             )
         self._ps_addrs = self._get_addrs(
             self._num_ps, self._k8s_client.get_ps_service_address
         )
         self._worker_addrs = []
+
+    def _process_worker(self):
+        need_process = True
+        while need_process and self._not_created_worker_id:
+            worker_id = self._not_created_worker_id.pop()
+            # Try to create a worker pod with id as worker_id
+            need_process = self._start_worker(worker_id)
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
@@ -162,9 +174,14 @@ class InstanceManager(object):
                 ps_addrs=self._ps_addrs,
                 envs=copy.deepcopy(self._envs),
             )
-            name = pod.metadata.name
-            self._worker_pod_name_to_id[name] = worker_id
-            self._worker_pods_ip_phase[worker_id] = (name, None, None)
+            if pod:
+                name = pod.metadata.name
+                self._worker_pod_name_to_id[name] = worker_id
+                self._worker_pods_ip_phase[worker_id] = (name, None, None)
+                return True
+            else:
+                self._not_created_worker_id.append(worker_id)
+                return False
 
     def _start_ps(self, ps_id):
         logger.info("Starting PS: %d" % ps_id)
@@ -176,18 +193,24 @@ class InstanceManager(object):
             )
         ps_args = [self._ps_args[0], bash_command]
         with self._lock:
-            pod = self._k8s_client.create_ps(
-                ps_id=ps_id,
-                resource_requests=self._ps_resource_request,
-                resource_limits=self._ps_resource_limit,
-                pod_priority=self._ps_pod_priority,
-                volume=self._volume,
-                image_pull_policy=self._image_pull_policy,
-                command=self._ps_command,
-                args=ps_args,
-                restart_policy=self._restart_policy,
-                envs=copy.deepcopy(self._envs),
-            )
+            while True:
+                pod = self._k8s_client.create_ps(
+                    ps_id=ps_id,
+                    resource_requests=self._ps_resource_request,
+                    resource_limits=self._ps_resource_limit,
+                    pod_priority=self._ps_pod_priority,
+                    volume=self._volume,
+                    image_pull_policy=self._image_pull_policy,
+                    command=self._ps_command,
+                    args=ps_args,
+                    restart_policy=self._restart_policy,
+                    envs=copy.deepcopy(self._envs),
+                )
+                if pod:
+                    break
+                # TODO: should we fail the job when ps pods fail to
+                #       create for a long time?
+                time.sleep(15)
             name = pod.metadata.name
             self._ps_pod_name_to_id[name] = ps_id
             self._ps_pods_phase[ps_id] = (name, None)
