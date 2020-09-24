@@ -271,8 +271,9 @@ class InstanceManager(object):
             self._relaunch_deleted_live_ps = False
             ids = self._ps_pods_phase
             delete_func = self._k8s_client.delete_ps
-        for id in ids:
-            delete_func(id)
+        with self._lock:
+            for id in ids:
+                delete_func(id)
 
     def get_pod_counter(self, pod_type):
         worker_counter = Counter(
