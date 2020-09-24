@@ -263,6 +263,7 @@ class InstanceManager(object):
         self._k8s_client.delete_ps(ps_id)
 
     def stop_relaunch_and_remove_pods(self, pod_type):
+        ids = []
         if pod_type == "worker":
             self._relaunch_deleted_live_worker = False
             ids = self._worker_pods_ip_phase
@@ -276,12 +277,13 @@ class InstanceManager(object):
                 delete_func(id)
 
     def get_pod_counter(self, pod_type):
-        worker_counter = Counter(
-            [v for _, _, v in self._worker_pods_ip_phase.values()]
-        )
-        ps_counter = Counter(
-            [v for _, _, v in self._worker_pods_ip_phase.values()]
-        )
+        with self._lock:
+            worker_counter = Counter(
+                [v for _, _, v in self._worker_pods_ip_phase.values()]
+            )
+            ps_counter = Counter(
+                [v for _, _, v in self._worker_pods_ip_phase.values()]
+            )
         if pod_type == "worker":
             return worker_counter
         elif pod_type == "ps":
