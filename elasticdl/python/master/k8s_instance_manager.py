@@ -262,28 +262,29 @@ class InstanceManager(object):
 
         self._k8s_client.delete_ps(ps_id)
 
-    def stop_relaunch_and_remove_workers(self):
+    def stop_relaunch_and_remove_pods(self, pod_type):
         with self._lock:
-            self._relaunch_deleted_live_worker = False
-            for worker_id in self._worker_pods_ip_phase:
-                self._k8s_client.delete_worker(worker_id)
+            if pod_type == "worker":
+                self._relaunch_deleted_live_worker = False
+                for worker_id in self._worker_pods_ip_phase:
+                    self._k8s_client.delete_worker(worker_id)
+            elif pod_type == "ps":
+                self._relaunch_deleted_live_ps = False
+                for ps_id in self._ps_pods_phase:
+                    self._k8s_client.delete_ps(ps_id)
 
-    def stop_relaunch_and_remove_all_ps(self):
+    def get_pod_counter(self, pod_type):
         with self._lock:
-            self._relaunch_deleted_live_ps = False
-            for ps_id in self._ps_pods_phase:
-                self._k8s_client.delete_ps(ps_id)
-
-    def get_pod_counter(self, is_worker=True):
-        with self._lock:
-            if is_worker:
+            if pod_type == "worker":
+                return Counter(
+                    [v for _, _, v in self._worker_pods_ip_phase.values()]
+                )
+            elif pod_type == "ps":
                 return Counter(
                     [v for _, _, v in self._worker_pods_ip_phase.values()]
                 )
             else:
-                return Counter(
-                    [v for _, _, v in self._worker_pods_ip_phase.values()]
-                )
+                return None
 
     def _event_cb(self, event):
         evt_obj = event.get("object")

@@ -44,7 +44,7 @@ class InstanceManagerTest(unittest.TestCase):
         max_check_num = 20
         for _ in range(max_check_num):
             time.sleep(3)
-            counters = instance_manager.get_pod_counter()
+            counters = instance_manager.get_pod_counter(pod_type="worker")
             if counters["Succeeded"] == 2:
                 break
 
@@ -53,14 +53,14 @@ class InstanceManagerTest(unittest.TestCase):
         instance_manager._process_worker()
         for _ in range(max_check_num):
             time.sleep(3)
-            counters = instance_manager.get_pod_counter()
+            counters = instance_manager.get_pod_counter(pod_type="worker")
             if counters["Succeeded"] == 3:
                 break
 
-        instance_manager.stop_relaunch_and_remove_workers()
+        instance_manager.stop_relaunch_and_remove_pods(pod_type="worker")
         for _ in range(max_check_num):
             time.sleep(3)
-            counters = instance_manager.get_pod_counter()
+            counters = instance_manager.get_pod_counter(pod_type="worker")
             if not counters:
                 break
         self.assertFalse(counters)
@@ -86,12 +86,12 @@ class InstanceManagerTest(unittest.TestCase):
         max_check_num = 20
         for _ in range(max_check_num):
             time.sleep(3)
-            counters = instance_manager.get_pod_counter()
+            counters = instance_manager.get_pod_counter(pod_type="worker")
             if counters["Running"]:
                 worker_addrs = instance_manager._get_alive_worker_addr()
                 self.assertEqual(len(worker_addrs), counters["Running"])
 
-        instance_manager.stop_relaunch_and_remove_workers()
+        instance_manager.stop_relaunch_and_remove_pods(pod_type="worker")
 
     @unittest.skipIf(
         os.environ.get("K8S_TESTS", "True") == "False",
@@ -119,14 +119,14 @@ class InstanceManagerTest(unittest.TestCase):
         max_check_num = 20
         for _ in range(max_check_num):
             time.sleep(3)
-            counters = instance_manager.get_pod_counter()
+            counters = instance_manager.get_pod_counter(pod_type="worker")
             if counters["Failed"] == 3:
                 break
 
-        instance_manager.stop_relaunch_and_remove_workers()
+        instance_manager.stop_relaunch_and_remove_pods(pod_type="worker")
         for _ in range(max_check_num):
             time.sleep(3)
-            counters = instance_manager.get_pod_counter()
+            counters = instance_manager.get_pod_counter(pod_type="worker")
             if not counters:
                 break
         task_d.recover_tasks.assert_has_calls(
@@ -156,7 +156,7 @@ class InstanceManagerTest(unittest.TestCase):
         max_check_num = 60
         for _ in range(max_check_num):
             time.sleep(1)
-            counters = instance_manager.get_pod_counter()
+            counters = instance_manager.get_pod_counter(pod_type="worker")
             if counters["Running"] + counters["Pending"] > 0:
                 break
         # Note: There is a slight chance of race condition.
@@ -187,7 +187,7 @@ class InstanceManagerTest(unittest.TestCase):
         else:
             self.fail("Failed to find newly launched worker.")
 
-        instance_manager.stop_relaunch_and_remove_workers()
+        instance_manager.stop_relaunch_and_remove_pods(pod_type="worker")
 
     @unittest.skipIf(
         os.environ.get("K8S_TESTS", "True") == "False",
@@ -221,7 +221,7 @@ class InstanceManagerTest(unittest.TestCase):
         max_check_num = 60
         for _ in range(max_check_num):
             time.sleep(1)
-            counters = instance_manager.get_pod_counter(is_worker=False)
+            counters = instance_manager.get_pod_counter(pod_type="ps")
             if counters["Running"] + counters["Pending"] > 0:
                 break
         # Note: There is a slight chance of race condition.
@@ -251,7 +251,7 @@ class InstanceManagerTest(unittest.TestCase):
         else:
             self.fail("Failed to find newly launched ps.")
 
-        instance_manager.stop_relaunch_and_remove_all_ps()
+        instance_manager.stop_relaunch_and_remove_pods(pod_type="ps")
 
 
 if __name__ == "__main__":
