@@ -274,15 +274,16 @@ class InstanceManager(object):
             for ps_id in self._ps_pods_phase:
                 self._k8s_client.delete_ps(ps_id)
 
-    def get_worker_counter(self):
+    def get_pod_counter(self, is_worker=True):
         with self._lock:
-            return Counter(
-                [v for _, _, v in self._worker_pods_ip_phase.values()]
-            )
-
-    def get_ps_counter(self):
-        with self._lock:
-            return Counter([v for _, v in self._ps_pods_phase.values()])
+            if is_worker:
+                return Counter(
+                    [v for _, _, v in self._worker_pods_ip_phase.values()]
+                )
+            else:
+                return Counter(
+                    [v for _, _, v in self._worker_pods_ip_phase.values()]
+                )
 
     def _event_cb(self, event):
         evt_obj = event.get("object")

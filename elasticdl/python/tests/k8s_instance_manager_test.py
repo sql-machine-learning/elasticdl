@@ -44,7 +44,7 @@ class InstanceManagerTest(unittest.TestCase):
         max_check_num = 20
         for _ in range(max_check_num):
             time.sleep(3)
-            counters = instance_manager.get_worker_counter()
+            counters = instance_manager.get_pod_counter()
             if counters["Succeeded"] == 2:
                 break
 
@@ -53,14 +53,14 @@ class InstanceManagerTest(unittest.TestCase):
         instance_manager._process_worker()
         for _ in range(max_check_num):
             time.sleep(3)
-            counters = instance_manager.get_worker_counter()
+            counters = instance_manager.get_pod_counter()
             if counters["Succeeded"] == 3:
                 break
 
         instance_manager.stop_relaunch_and_remove_workers()
         for _ in range(max_check_num):
             time.sleep(3)
-            counters = instance_manager.get_worker_counter()
+            counters = instance_manager.get_pod_counter()
             if not counters:
                 break
         self.assertFalse(counters)
@@ -86,7 +86,7 @@ class InstanceManagerTest(unittest.TestCase):
         max_check_num = 20
         for _ in range(max_check_num):
             time.sleep(3)
-            counters = instance_manager.get_worker_counter()
+            counters = instance_manager.get_pod_counter()
             if counters["Running"]:
                 worker_addrs = instance_manager._get_alive_worker_addr()
                 self.assertEqual(len(worker_addrs), counters["Running"])
@@ -119,14 +119,14 @@ class InstanceManagerTest(unittest.TestCase):
         max_check_num = 20
         for _ in range(max_check_num):
             time.sleep(3)
-            counters = instance_manager.get_worker_counter()
+            counters = instance_manager.get_pod_counter()
             if counters["Failed"] == 3:
                 break
 
         instance_manager.stop_relaunch_and_remove_workers()
         for _ in range(max_check_num):
             time.sleep(3)
-            counters = instance_manager.get_worker_counter()
+            counters = instance_manager.get_pod_counter()
             if not counters:
                 break
         task_d.recover_tasks.assert_has_calls(
@@ -156,7 +156,7 @@ class InstanceManagerTest(unittest.TestCase):
         max_check_num = 60
         for _ in range(max_check_num):
             time.sleep(1)
-            counters = instance_manager.get_worker_counter()
+            counters = instance_manager.get_pod_counter()
             if counters["Running"] + counters["Pending"] > 0:
                 break
         # Note: There is a slight chance of race condition.
@@ -221,7 +221,7 @@ class InstanceManagerTest(unittest.TestCase):
         max_check_num = 60
         for _ in range(max_check_num):
             time.sleep(1)
-            counters = instance_manager.get_ps_counter()
+            counters = instance_manager.get_pod_counter(is_worker=False)
             if counters["Running"] + counters["Pending"] > 0:
                 break
         # Note: There is a slight chance of race condition.
