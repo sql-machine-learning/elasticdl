@@ -102,6 +102,23 @@ class InstanceManager(object):
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
+
+        self._init_worker_pod_status()
+
+        if disable_relaunch:
+            self._k8s_client = k8s.Client(**kwargs)
+        else:
+            self._k8s_client = k8s.Client(
+                event_callback=self._event_cb,
+                periodic_call_func=self._process_worker,
+                **kwargs
+            )
+        self._ps_addrs = self._get_addrs(
+            self._num_ps, self._k8s_client.get_ps_service_address
+        )
+        self._worker_addrs = []
+
+    def _init_worker_pod_status(self):
         # worker id to (pod name, ip, phase) mapping
         # phase: None/Pending/Running/Succeeded/Failed/Unknown
         #   None: worker was just launched, haven't received event yet.
@@ -125,19 +142,6 @@ class InstanceManager(object):
 
         self._failed_pods = []
         self.all_workers_failed = False
-
-        if disable_relaunch:
-            self._k8s_client = k8s.Client(**kwargs)
-        else:
-            self._k8s_client = k8s.Client(
-                event_callback=self._event_cb,
-                periodic_call_func=self._process_worker,
-                **kwargs
-            )
-        self._ps_addrs = self._get_addrs(
-            self._num_ps, self._k8s_client.get_ps_service_address
-        )
-        self._worker_addrs = []
 
     def _process_worker(self):
         need_process = True
@@ -194,18 +198,7 @@ class InstanceManager(object):
         ps_args = [self._ps_args[0], bash_command]
         with self._lock:
             while True:
-                pod = self._k8s_client.create_ps(
-                    ps_id=ps_id,
-                    resource_requests=self._ps_resource_request,
-                    resource_limits=self._ps_resource_limit,
-                    pod_priority=self._ps_pod_priority,
-                    volume=self._volume,
-                    image_pull_policy=self._image_pull_policy,
-                    command=self._ps_command,
-                    args=ps_args,
-                    restart_policy=self._restart_policy,
-                    envs=copy.deepcopy(self._envs),
-                )
+                pod = self._create_ps_pod(ps_id, ps_args)
                 if pod:
                     break
                 # TODO: should we fail the job when ps pods fail to
@@ -215,6 +208,20 @@ class InstanceManager(object):
             self._ps_pod_name_to_id[name] = ps_id
             self._ps_pods_phase[ps_id] = (name, None)
             self._k8s_client.create_ps_service(ps_id)
+
+    def _create_ps_pod(self, ps_id, ps_args):
+        return self._k8s_client.create_ps(
+            ps_id=ps_id,
+            resource_requests=self._ps_resource_request,
+            resource_limits=self._ps_resource_limit,
+            pod_priority=self._ps_pod_priority,
+            volume=self._volume,
+            image_pull_policy=self._image_pull_policy,
+            command=self._ps_command,
+            args=ps_args,
+            restart_policy=self._restart_policy,
+            envs=copy.deepcopy(self._envs),
+        )
 
     def _get_addrs(self, num_addrs, addr_get_fn):
         addrs = []
