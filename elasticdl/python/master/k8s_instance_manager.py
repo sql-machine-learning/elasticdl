@@ -281,9 +281,8 @@ class InstanceManager(object):
             worker_counter = Counter(
                 [v for _, _, v in self._worker_pods_ip_phase.values()]
             )
-            ps_counter = Counter(
-                [v for _, _, v in self._worker_pods_ip_phase.values()]
-            )
+            ps_counter = Counter([v for _, v in self._ps_pods_phase.values()])
+
         if pod_type == "worker":
             return worker_counter
         elif pod_type == "ps":

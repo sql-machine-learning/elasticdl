@@ -233,7 +233,6 @@ class InstanceManagerTest(unittest.TestCase):
                 all_current_ps.add(k)
                 if phase in ["Running", "Pending"]:
                     all_live_ps.add(k)
-        self.assertTrue(all_current_ps)
         self.assertTrue(all_live_ps)
 
         ps_to_be_removed = all_live_ps.pop()
