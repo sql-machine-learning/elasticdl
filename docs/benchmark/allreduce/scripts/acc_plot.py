@@ -14,6 +14,12 @@ if __name__ == "__main__":
     y = df['baseline_4workers_1']
     plt.plot(x, y, '--', label="baseline_4workers")
 
+    y = df['baseline_2workers_0']
+    plt.plot(x, y, '-.', label="baseline_2workers")
+
+    y = df['baseline_2workers_1']
+    plt.plot(x, y, '-.', label="baseline_2workers")
+
     y = df['elastic_2_4workers_0']
     plt.plot(x, y, label="elastic_2_4workers")
 
