@@ -46,3 +46,4 @@ if __name__ == "__main__":
     plt.legend(loc="upper left", bbox_to_anchor=(0.02, 0.98))
     plt.ylim((0.3, 1))
     plt.show()
+    f.savefig("../data/experiment_3.pdf", bbox_inches='tight')
