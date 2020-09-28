@@ -46,7 +46,6 @@ class AllReduceTrainer(Trainer):
         self._rendezvous_id = None
         self._need_broadcast = True
         self._var_created = False
-        self._world_size = None
         self._optimizer = model.optimizer
         self._set_horovod_env()
 
@@ -130,7 +129,6 @@ class AllReduceTrainer(Trainer):
             hvd.shutdown()
             hvd.init()
             os.environ[HorovodEnv.ELASTIC] = str(1)
-            self._world_size = hvd.size()
             self._rendezvous_id = rank_response.rendezvous_id
             self._need_broadcast = True
 
