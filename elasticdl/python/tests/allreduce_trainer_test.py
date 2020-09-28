@@ -14,9 +14,9 @@
 import unittest
 from unittest.mock import MagicMock, Mock
 
-import horovod.tensorflow as hvd
 import tensorflow as tf
 
+import horovod.tensorflow as hvd
 from elasticdl.python.tests.test_module import custom_model, loss, optimizer
 from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
 
@@ -33,6 +33,12 @@ class AllReduceTrainerTest(unittest.TestCase):
         model.optimizer = optimizer()
         model.loss = loss
         self._trainer = AllReduceTrainer(master_client, "", model)
+
+    def test_training_process(self):
+        features = tf.constant([[0.5], [0.6], [0.7]])
+        labels = tf.constant([[1.0], [0.0], [1.0]])
+        loss = self._trainer._training_process(features, labels)
+        self.assertIsNotNone(loss)
 
     def test_train_minibatch(self):
         self._trainer.init_horovod_if_needed()
