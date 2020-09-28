@@ -12,8 +12,8 @@
 # limitations under the License.
 
 import os
-import time
 import socket
+import time
 
 import tensorflow as tf
 from tensorflow.keras import backend as K
