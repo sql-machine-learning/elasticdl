@@ -33,7 +33,7 @@ DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
 
 
 class AllReduceTrainer(object):
-    def __init__(self, master_client, master_addr, model, loss_fn, optimizer):
+    def __init__(self, master_client, master_addr, model, loss_fn):
         if not hvd:
             raise RuntimeError("Horovod is not installed for AllReduce")
         self._master_client = master_client
@@ -44,12 +44,12 @@ class AllReduceTrainer(object):
         self._need_broadcast = True
         self._var_created = False
         self._world_size = None
-        self._set_optimizer(optimizer)
+        self._set_optimizer()
         self._set_horovod_env()
 
-    def _set_optimizer(self, optimizer):
-        self._optimizer = optimizer
-        self._lr = optimizer._hyper["learning_rate"]
+    def _set_optimizer(self):
+        self._optimizer = self._model.optimizer
+        self._lr = self._model.optimizer._hyper["learning_rate"]
         self._optimizer.lr = self._get_learning_rate
 
     def _get_learning_rate(self):

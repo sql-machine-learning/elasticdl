@@ -188,7 +188,7 @@ class Worker(object):
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
             master_addr = args.master_addr.split(":")[0]
             self._allreduce_trainer = AllReduceTrainer(
-                self._mc, master_addr, self._model, self._loss, self._opt
+                self._mc, master_addr, self._model, self._loss
             )
 
     # TODO: Multiple tests are currently using this function to initialize
