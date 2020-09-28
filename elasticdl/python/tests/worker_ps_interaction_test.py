@@ -58,6 +58,10 @@ class WorkerPSInteractionTest(unittest.TestCase):
         )
         self._model_def = model_def
 
+    def _close_channels(self):
+        for channel in self._channels:
+            channel.close()
+
     def _reset_pserver(self):
         for ps in self._pservers:
             ps.parameters.reset()
@@ -92,21 +96,24 @@ class WorkerPSInteractionTest(unittest.TestCase):
         worker_results = []
         for step, (x, y) in enumerate(train_db):
             if step == 0:
-                worker._run_model_call_before_training(x)
+                worker._trainer._run_model_call_before_training(x)
 
-            worker.get_model()
+            worker._trainer._get_model()
             if use_tf_function:
-                w_loss, w_grads = worker.training_process_with_acceleration(
+                (
+                    w_loss,
+                    w_grads,
+                ) = worker._trainer._training_process_with_acceleration(x, y)
+            else:
+                w_loss, w_grads = worker._trainer._training_process_eagerly(
                     x, y
                 )
-            else:
-                w_loss, w_grads = worker.training_process_eagerly(x, y)
-            worker.report_gradient(w_grads)
+            worker._trainer._report_gradient(w_grads)
 
             if step % 20 == 0:
-                worker.get_model()
+                worker._trainer._get_model()
                 for (x, y) in test_db:
-                    out = worker.forward_process(x)
+                    out = worker._trainer._forward_process(x)
                     if "mnist" in self._model_def:
                         acc_meter.update_state(tf.argmax(out, axis=1), y)
                     else:
@@ -143,6 +150,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             threads.append(t)
         for t in threads:
             t.join()
+        self._close_channels()
 
     def test_worker_pull_embedding(self):
         model_def = "mnist.mnist_functional_api.custom_model"
@@ -194,6 +202,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 expected_result.append(table.get([embedding_id]))
             expected_result = np.concatenate(expected_result)
             self.assertTrue(np.allclose(expected_result, result_dict[layer]))
+        self._close_channels()
 
     def test_compare_onebatch_train(self):
         model_def = "mnist.mnist_functional_api.custom_model"
@@ -220,10 +229,12 @@ class WorkerPSInteractionTest(unittest.TestCase):
         tf.random.set_seed(22)
 
         worker = Worker(args, ps_client=PSClient(self._channels))
-        worker._run_model_call_before_training(images)
-        worker.get_model()
-        w_loss, w_grads = worker.training_process_eagerly(images, labels)
-        worker.report_gradient(w_grads)
+        worker._trainer._run_model_call_before_training(images)
+        worker._trainer._get_model()
+        w_loss, w_grads = worker._trainer._training_process_eagerly(
+            images, labels
+        )
+        worker._trainer._report_gradient(w_grads)
 
         tf.keras.backend.clear_session()
         tf.random.set_seed(22)
@@ -262,6 +273,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 v.name
             )
             np.testing.assert_array_equal(ps_v.numpy(), v.numpy())
+        self._close_channels()
 
     def test_compare_mnist_train(self):
         model_def = "mnist.mnist_functional_api.custom_model"
@@ -322,6 +334,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
         for w, l in zip(worker_results, local_results):
             self.assertTupleEqual(w, l)
+        self._close_channels()
 
     def test_deepfm_train(self):
         model_def = "deepfm_functional_api.deepfm_functional_api.custom_model"
@@ -333,6 +346,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         )
         acc = max([r[1] for r in worker_results])
         self.assertLess(0.65, acc)
+        self._close_channels()
 
     def test_deepfm_two_worker_train(self):
         num_ps = 2
@@ -375,29 +389,32 @@ class WorkerPSInteractionTest(unittest.TestCase):
             tf.random.set_seed(22)
             worker = Worker(args, ps_client=PSClient(self._channels))
             workers.append(worker)
-            worker._run_model_call_before_training(training_data[0][0])
+            worker._trainer._run_model_call_before_training(
+                training_data[0][0]
+            )
             for i in range(num_data):
-                worker.get_model()
-                w_loss, w_grads = worker.training_process_eagerly(
+                worker._trainer._get_model()
+                w_loss, w_grads = worker._trainer._training_process_eagerly(
                     training_data[i][0], training_data[i][1]
                 )
-                worker.report_gradient(w_grads)
+                worker._trainer._report_gradient(w_grads)
                 if w == 1 and i == 3:
                     # Restart ps for the 2nd worker at i==3
                     # self._restart_pserver(model_def)
                     self._reset_pserver()
                     # `push_dense_parameters` will be called in `get_model` to
                     # initialize variables on ps with worker variables
-                    worker.get_model()
+                    worker._trainer._get_model()
                     # send the grads again as these grads are not applied
                     # on worker variables
-                    worker.report_gradient(w_grads)
+                    worker._trainer._report_gradient(w_grads)
 
-        for var_name in workers[0]._non_embed_vars:
+        for var_name in workers[0]._trainer._non_embed_vars:
             np.testing.assert_array_equal(
-                workers[0]._non_embed_vars[var_name].numpy(),
-                workers[1]._non_embed_vars[var_name].numpy(),
+                workers[0]._trainer._non_embed_vars[var_name].numpy(),
+                workers[1]._trainer._non_embed_vars[var_name].numpy(),
             )
+        self._close_channels()
 
     def test_train_acceleration_with_embedding(self):
         model_def = "deepfm_functional_api.deepfm_functional_api.custom_model"
@@ -413,6 +430,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         )
         acc = max([r[1] for r in worker_results])
         self.assertLess(0.65, acc)
+        self._close_channels()
 
 
 if __name__ == "__main__":

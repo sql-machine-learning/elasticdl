@@ -14,6 +14,7 @@
 import copy
 import itertools
 import threading
+import time
 from collections import Counter
 
 from elasticdl.python.common import k8s_client as k8s
@@ -101,6 +102,23 @@ class InstanceManager(object):
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
+
+        self._init_worker_pod_status()
+
+        if disable_relaunch:
+            self._k8s_client = k8s.Client(**kwargs)
+        else:
+            self._k8s_client = k8s.Client(
+                event_callback=self._event_cb,
+                periodic_call_func=self._process_worker,
+                **kwargs
+            )
+        self._ps_addrs = self._get_addrs(
+            self._num_ps, self._k8s_client.get_ps_service_address
+        )
+        self._worker_addrs = []
+
+    def _init_worker_pod_status(self):
         # worker id to (pod name, ip, phase) mapping
         # phase: None/Pending/Running/Succeeded/Failed/Unknown
         #   None: worker was just launched, haven't received event yet.
@@ -113,6 +131,8 @@ class InstanceManager(object):
         self._worker_pods_ip_phase = {}
         # pod name to worker id mapping
         self._worker_pod_name_to_id = {}
+        # worker ids whose pods are not created
+        self._not_created_worker_id = []
 
         self._relaunch_deleted_live_worker = True
 
@@ -123,16 +143,12 @@ class InstanceManager(object):
         self._failed_pods = []
         self.all_workers_failed = False
 
-        if disable_relaunch:
-            self._k8s_client = k8s.Client(**kwargs)
-        else:
-            self._k8s_client = k8s.Client(
-                event_callback=self._event_cb, **kwargs
-            )
-        self._ps_addrs = self._get_addrs(
-            self._num_ps, self._k8s_client.get_ps_service_address
-        )
-        self._worker_addrs = []
+    def _process_worker(self):
+        need_process = True
+        while need_process and self._not_created_worker_id:
+            worker_id = self._not_created_worker_id.pop()
+            # Try to create a worker pod with id as worker_id
+            need_process = self._start_worker(worker_id)
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
@@ -162,9 +178,14 @@ class InstanceManager(object):
                 ps_addrs=self._ps_addrs,
                 envs=copy.deepcopy(self._envs),
             )
-            name = pod.metadata.name
-            self._worker_pod_name_to_id[name] = worker_id
-            self._worker_pods_ip_phase[worker_id] = (name, None, None)
+            if pod:
+                name = pod.metadata.name
+                self._worker_pod_name_to_id[name] = worker_id
+                self._worker_pods_ip_phase[worker_id] = (name, None, None)
+                return True
+            else:
+                self._not_created_worker_id.append(worker_id)
+                return False
 
     def _start_ps(self, ps_id):
         logger.info("Starting PS: %d" % ps_id)
@@ -176,22 +197,31 @@ class InstanceManager(object):
             )
         ps_args = [self._ps_args[0], bash_command]
         with self._lock:
-            pod = self._k8s_client.create_ps(
-                ps_id=ps_id,
-                resource_requests=self._ps_resource_request,
-                resource_limits=self._ps_resource_limit,
-                pod_priority=self._ps_pod_priority,
-                volume=self._volume,
-                image_pull_policy=self._image_pull_policy,
-                command=self._ps_command,
-                args=ps_args,
-                restart_policy=self._restart_policy,
-                envs=copy.deepcopy(self._envs),
-            )
+            while True:
+                pod = self._create_ps_pod(ps_id, ps_args)
+                if pod:
+                    break
+                # TODO: should we fail the job when ps pods fail to
+                #       create for a long time?
+                time.sleep(15)
             name = pod.metadata.name
             self._ps_pod_name_to_id[name] = ps_id
             self._ps_pods_phase[ps_id] = (name, None)
             self._k8s_client.create_ps_service(ps_id)
+
+    def _create_ps_pod(self, ps_id, ps_args):
+        return self._k8s_client.create_ps(
+            ps_id=ps_id,
+            resource_requests=self._ps_resource_request,
+            resource_limits=self._ps_resource_limit,
+            pod_priority=self._ps_pod_priority,
+            volume=self._volume,
+            image_pull_policy=self._image_pull_policy,
+            command=self._ps_command,
+            args=ps_args,
+            restart_policy=self._restart_policy,
+            envs=copy.deepcopy(self._envs),
+        )
 
     def _get_addrs(self, num_addrs, addr_get_fn):
         addrs = []
@@ -232,27 +262,33 @@ class InstanceManager(object):
 
         self._k8s_client.delete_ps(ps_id)
 
-    def stop_relaunch_and_remove_workers(self):
-        with self._lock:
+    def stop_relaunch_and_remove_pods(self, pod_type):
+        ids = []
+        if pod_type == "worker":
             self._relaunch_deleted_live_worker = False
-            for worker_id in self._worker_pods_ip_phase:
-                self._k8s_client.delete_worker(worker_id)
-
-    def stop_relaunch_and_remove_all_ps(self):
-        with self._lock:
+            ids = self._worker_pods_ip_phase
+            delete_func = self._k8s_client.delete_worker
+        elif pod_type == "ps":
             self._relaunch_deleted_live_ps = False
-            for ps_id in self._ps_pods_phase:
-                self._k8s_client.delete_ps(ps_id)
-
-    def get_worker_counter(self):
+            ids = self._ps_pods_phase
+            delete_func = self._k8s_client.delete_ps
         with self._lock:
-            return Counter(
+            for id in ids:
+                delete_func(id)
+
+    def get_pod_counter(self, pod_type):
+        with self._lock:
+            worker_counter = Counter(
                 [v for _, _, v in self._worker_pods_ip_phase.values()]
             )
+            ps_counter = Counter([v for _, v in self._ps_pods_phase.values()])
 
-    def get_ps_counter(self):
-        with self._lock:
-            return Counter([v for _, v in self._ps_pods_phase.values()])
+        if pod_type == "worker":
+            return worker_counter
+        elif pod_type == "ps":
+            return ps_counter
+        else:
+            return None
 
     def _event_cb(self, event):
         evt_obj = event.get("object")
@@ -348,6 +384,10 @@ class InstanceManager(object):
                 logger.error("Unknown pod name: %s" % pod_name)
                 return
 
+            if self._rendezvous_server:
+                self._worker_addrs = self._get_alive_worker_addr()
+                self._rendezvous_server.set_worker_hosts(self._worker_addrs)
+
         if relaunch_worker and worker_id >= 0:
             logger.info("Relaunching worker.")
             new_worker_id = self._next_worker_id()
@@ -362,10 +402,6 @@ class InstanceManager(object):
             # server are intentionally left unchanged to support fault
             # tolerance.
             self._start_ps(ps_id)
-
-        if self._rendezvous_server:
-            self._worker_addrs = self._get_alive_worker_addr()
-            self._rendezvous_server.set_worker_hosts(self._worker_addrs)
 
     def get_alive_workers(self):
         alive_workers = []

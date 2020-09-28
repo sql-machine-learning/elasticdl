@@ -45,6 +45,7 @@ class Client(BaseClient):
         namespace,
         job_name,
         event_callback=None,
+        periodic_call_func=None,
         cluster_spec="",
         force_use_kube_config_file=False
     ):
@@ -59,6 +60,7 @@ class Client(BaseClient):
                 Used as pod name prefix and value for "elasticdl" label.
             event_callback: If not None, an event watcher will be created and
                 events passed to the callback.
+            periodic_call_func: If not None, call this method periodically.
             force_use_kube_config_file: If true, force to load the cluster
                 config from ~/.kube/config. Otherwise, if it's in a process
                 running in a K8S environment, it loads the incluster config,
@@ -72,9 +74,14 @@ class Client(BaseClient):
             force_use_kube_config_file=force_use_kube_config_file,
         )
         self._event_cb = event_callback
+        self._periodic_call_func = periodic_call_func
         if self._event_cb:
             threading.Thread(
                 target=self._watch, name="event_watcher", daemon=True
+            ).start()
+        if self._periodic_call_func:
+            threading.Thread(
+                target=self._periodic_call, name="periodic_call", daemon=True
             ).start()
 
     def _watch(self):
@@ -92,6 +99,11 @@ class Client(BaseClient):
             # In case of any flaky issue causing exceptions, we wait for little
             # time and retry.
             time.sleep(5)
+
+    def _periodic_call(self):
+        while True:
+            self._periodic_call_func()
+            time.sleep(15)
 
     def _get_service_address(self, service_name, port):
         return "%s.%s.svc:%d" % (service_name, self.namespace, port)
@@ -167,7 +179,11 @@ class Client(BaseClient):
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = type_key
         pod.metadata.labels[ELASTICDL_REPLICA_INDEX_KEY] = str(index_key)
-        return self.client.create_namespaced_pod(self.namespace, pod)
+        try:
+            return self.client.create_namespaced_pod(self.namespace, pod)
+        except client.rest.ApiException as e:
+            logger.warning("Failed to create %s pod: %s\n" % (pod_name, e))
+            return None
 
     def create_worker(self, **kargs):
         pod_name = self.get_worker_pod_name(kargs["worker_id"])

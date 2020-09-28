@@ -15,10 +15,12 @@ import os
 import time
 
 import tensorflow as tf
+from tensorflow.keras import backend as K
 from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticdl.python.common.constants import HorovodEnv
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.worker.trainer import Trainer
 
 try:
     from horovod.tensorflow.functions import broadcast_variables
@@ -30,26 +32,27 @@ except ImportError:
 # The default maximum number of retries for allreduce operation
 # if allreduce-based distributed training strategy is used.
 DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
+DEFAULT_STEPS_TO_CHECK_RENDEZVOUS = 20
 
 
-class AllReduceTrainer(object):
-    def __init__(self, master_client, master_addr, model, loss_fn):
+class AllReduceTrainer(Trainer):
+    def __init__(self, master_client, master_addr, model):
         if not hvd:
             raise RuntimeError("Horovod is not installed for AllReduce")
         self._master_client = master_client
         self._rendezvous_addr = master_addr
         self._model = model
-        self._loss = loss_fn
+        self._loss = model.loss
         self._rendezvous_id = None
         self._need_broadcast = True
         self._var_created = False
         self._world_size = None
-        self._set_optimizer()
+        self._set_optimizer(model.optimizer)
         self._set_horovod_env()
 
-    def _set_optimizer(self):
-        self._optimizer = self._model.optimizer
-        self._lr = self._model.optimizer._hyper["learning_rate"]
+    def _set_optimizer(self, optimizer):
+        self._optimizer = optimizer
+        self._lr = optimizer._hyper["learning_rate"]
         self._optimizer.lr = self._get_learning_rate
 
     def _get_learning_rate(self):
@@ -76,9 +79,8 @@ class AllReduceTrainer(object):
         )
         return loss
 
-    def training_process_with_fault_tolerance(self, features, labels):
-        if not self._var_created:
-            self._run_model_call_locally(features, labels)
+    def train_minibatch(self, features, labels, train_with_local_model=False):
+        self._check_new_communication_world()
 
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
             try:
@@ -87,7 +89,7 @@ class AllReduceTrainer(object):
                     self._need_broadcast = False
                 loss = self._training_process(features, labels)
                 version = self._optimizer.iterations.numpy()
-                return version, loss
+                return True, version, loss
             except UnknownError as e:
                 logger.warning(
                     "Failed to perform allreduce operation on "
@@ -103,6 +105,15 @@ class AllReduceTrainer(object):
                 ):
                     time.sleep(3)
                     self.init_horovod_if_needed()
+
+    def _check_new_communication_world(self):
+        """"Check periodically whether new workers join the job
+        and re-initialize Horovod if True.
+        """
+        iter_steps = self._optimizer.iterations.numpy()
+
+        if iter_steps % DEFAULT_STEPS_TO_CHECK_RENDEZVOUS == 0:
+            self.init_horovod_if_needed()
 
     def init_horovod_if_needed(self):
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM):
@@ -125,8 +136,12 @@ class AllReduceTrainer(object):
             )
             os.environ[HorovodEnv.RANK] = str(rank_response.rank_id)
             os.environ[HorovodEnv.SIZE] = str(rank_response.world_size)
+            # Not using Horovod elastic feature in init, but need it for
+            # allreduce to call allreduce op when size=1.
+            os.environ[HorovodEnv.ELASTIC] = str(0)
             hvd.shutdown()
             hvd.init()
+            os.environ[HorovodEnv.ELASTIC] = str(1)
             self._world_size = hvd.size()
             self._rendezvous_id = rank_response.rendezvous_id
             self._need_broadcast = True
@@ -142,6 +157,11 @@ class AllReduceTrainer(object):
         broadcast_variables(self._model.variables, root_rank=0)
         broadcast_variables(self._optimizer.variables(), root_rank=0)
 
+    def init_variables_if_need(self, features, labels):
+        if not self._var_created:
+            self._run_model_call_locally(features, labels)
+        self._var_created = True
+
     def _run_model_call_locally(self, features, labels):
         """Call `self._model.call` locally to create variables of the model
         and optimizer. Because we should have variables before broadcasting.
@@ -154,6 +174,8 @@ class AllReduceTrainer(object):
         self._optimizer.apply_gradients(
             zip(grads, self._model.trainable_variables)
         )
+        # TODO: Handle the case that the model is initialized from a checkpoint
+        K.set_value(self._optimizer.iterations, 0)
         self._var_created = True
 
     def export_saved_model(self, model_path):
@@ -163,3 +185,6 @@ class AllReduceTrainer(object):
             self._model.save(
                 model_path, overwrite=True, include_optimizer=False
             )
+
+    def get_model_version(self):
+        return self._optimizer.iterations.numpy()
