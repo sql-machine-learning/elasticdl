@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import os
+import socket
 import time
 
 import tensorflow as tf
@@ -137,7 +138,8 @@ class AllReduceTrainer(Trainer):
             os.environ[HorovodEnv.RENDEZVOUS_ADDR] = self._rendezvous_addr
         os.environ[HorovodEnv.CONTROLLER] = "gloo"
         os.environ[HorovodEnv.CPU_OPERATIONS] = "gloo"
-        os.environ[HorovodEnv.HOSTNAME] = "master"
+        domain_ip = socket.gethostbyname(socket.gethostname())
+        os.environ[HorovodEnv.HOSTNAME] = domain_ip
 
     def _broadcast_model(self):
         broadcast_variables(self._model.variables, root_rank=0)
