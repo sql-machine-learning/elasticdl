@@ -75,27 +75,27 @@ ends at 809s.  The cluster's overall utilization is higher, and the total run
 time is less (809s v.s. 968s). Most importantly, users enjoy that both jobs
 started running once after their submissions.
 
-## Experiment 2: Hybrid Deployment of Training and Serving Jobs
+## Experiment 2: Hybrid Deployment of Training Jobs and Serving Service
 
-Many Internet products rely on deep learning prediction services.  Like any
+Many Internet products rely on deep learning inference services.  Like any
 online service, the cluster must keep some extra idle resources to handle
 unexpected traffic boost, for example, Black Friday.
 
 To use the idle resource, we can run ElasticDL training jobs with lower
-priorities than the prediction service.  To verify the idea, we run the
+priorities than the inference service.  To verify the idea, we run the
 following experiment.
 
 ![preemption](./data/experiment_2.pdf)
 
-This experiment uses a Kubernetes cluster with 8 GPUs.  We start a TenosrFlow
+This experiment uses a Kubernetes cluster with 8 GPUs.  We start a TensorFlow
 Serving service and an ElasticDL training job — a script program mimics user
 traffic to the service.
 
 Initially, the TF serving uses 2 GPUs, and the training job uses 2.  In the
-first 170s, the traffic increase, and Kubernetes's
-horizontal scaling feature will increase service processes which will
-preempt the processes of training jobs. So We can see the
-auto-increment of service processes and the decrement of training workers.
+first 170s, the traffic increase, and Kubernetes's horizontal scaling
+feature will increase service processes which will preempt the processes
+of training jobs. So We can see the auto-increment of service processes
+and the decrement of training workers.
 
 Then, the script program mimics the decrease of traffic. Kubernetes
 frees up service processes from using 6 GPUs to 2, as shown by the blue curve.
