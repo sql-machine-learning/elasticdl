@@ -35,6 +35,7 @@ class AllReduceTrainerTest(unittest.TestCase):
         self._trainer = AllReduceTrainer(master_client, "", model)
 
     def test_training_process(self):
+        self._trainer.init_horovod_if_needed()
         features = tf.constant([[0.5], [0.6], [0.7]])
         labels = tf.constant([[1.0], [0.0], [1.0]])
         loss = self._trainer._training_process(features, labels)
