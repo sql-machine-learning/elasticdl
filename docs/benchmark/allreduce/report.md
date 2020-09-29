@@ -58,7 +58,7 @@ The following figure compares the gang (non-elastic) and elastic scheduling
 using ElasticDL.  The Kubernetes cluster has 6 GPUs, and each of the two jobs
 requests 4 GPUs.
 
-![overlap jobs](./data/experiment_1.pdf)
+![overlap jobs](./data/experiment_1.png)
 
 The upper part of the figure presents the GPU utilization over time without
 elastic scheduling.  We see that the two jobs run one after another.  Between
@@ -85,7 +85,7 @@ To use the idle resource, we can run ElasticDL training jobs with lower
 priorities than the inference service.  To verify the idea, we run the
 following experiment.
 
-![preemption](./data/experiment_2.pdf)
+![preemption](./data/experiment_2.png)
 
 This experiment uses a Kubernetes cluster with 8 GPUs.  We start a TensorFlow
 Serving service and an ElasticDL training job — a script program mimics user
@@ -121,7 +121,7 @@ the CIFAR10 dataset.  Each worker uses an NVIDIA Tesla P100 GPU.  Curves marked
 "baseline" corresponds to experiments using gang scheduling, and the mark
 "elastic" denotes ElasticDL jobs.
 
-![accuracy](./data/experiment_3.pdf)
+![accuracy](./data/experiment_3.png)
 
 ElasticDL allows users to define a function of learning rate decay.  This
 experiment uses the following decay function.
