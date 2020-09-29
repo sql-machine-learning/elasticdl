@@ -1,4 +1,4 @@
-# Benchmark: ElasticDL Calling Fault-Tolerable AllReduce from Elastic Horovod
+# Benchmark: ElasticDL Calling Fault-Tolerant AllReduce from Elastic Horovod
 
 In distributed deep learning, the synchronous distributed SGD algorithm works
 well with dense models used in multimedia applications like speech recognition,
