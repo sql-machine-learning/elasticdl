@@ -18,7 +18,7 @@ cases, ElasticDL can improve the following objectives:
 ## The Dependency on Elastic Horovod
 
 To enable elastic scheduling of synchronous distributed SGD training jobs, we
-need a fault-tolerable AllReduce all.  The requirement on fault-tolerance
+need a fault-tolerable AllReduce.  The requirement on fault-tolerance
 prohibits classical implementations of AllReduce provided by MPI.  After a
 survey, we chose the one from Elastic Horovod released in v0.20.0.
 
@@ -38,7 +38,7 @@ for Kubernetes (ACK), which features a customized version of Kubernetes.
 ElasticDL users should be able to repeat all experiments on any modern
 Kubernetes version that supports priority-aware scheduling.
 
-All experiments use the CIFAR10 dataset to train a ResNet20 model, a classical
+All experiments use the CIFAR-10 dataset to train a ResNet20 model, a classical
 image classification model.
 
 ## Experiment 1: Elastic Scheduling of Multiple ElasticDL Jobs
@@ -58,23 +58,22 @@ The following figure compares the gang (non-elastic) and elastic scheduling
 using ElasticDL.  The Kubernetes cluster has 6 GPUs, and each of the two jobs
 requests 4 GPUs.
 
-![overlap jobs](./data/experiment_1.png)
+![overlap jobs](./data/experiment_1.pdf)
 
 The upper part of the figure presents the GPU utilization over time without
 elastic scheduling.  We see that the two jobs run one after another.  Between
 them, there was a short period of resource allocation by Kubernetes for the
-second job and for the master of the second job to start workers.  The second
-job ended at 968s.  In most of the period, only 4 of the 6 GPUs are in use, and
-the utilization is as low as 66.6%.
+second job.  The second job ended at 968s.  In most of the period, only 4 of
+the 6 GPUs are in use, and the utilization is as low as 66.6%.
 
 The lower part shows elastic scheduling by ElasticDL enables parallel execution
-of the two jobs, each using 3 GPUs -- less than the requested 4.  We submitted
-the second job slightly after the first one at 120s.  The parallel execution
-fully utilizes all 6 GPUs until the completion of the first job at 474s.  After
-then, the second job scales up to use 4 GPUs and ends at 809s.  The cluster's
-overall utilization is higher, and the total run time is less (809s v.s. 968s).
-Most importantly, users enjoy that both jobs started running once after their
-submissions.
+of the two jobs, one using 4 GPUs and another using 2 GPUs -- less than
+the requested 4.  We submitted the second job slightly after the first one at
+120s.  The parallel execution fully utilizes all 6 GPUs until the completion of
+the first job at 474s.  After then, the second job scales up to use 4 GPUs and
+ends at 809s.  The cluster's overall utilization is higher, and the total run
+time is less (809s v.s. 968s). Most importantly, users enjoy that both jobs
+started running once after their submissions.
 
 ## Experiment 2: Hybrid Deployment of Training and Serving Jobs
 
@@ -86,21 +85,23 @@ To use the idle resource, we can run ElasticDL training jobs with lower
 priorities than the prediction service.  To verify the idea, we run the
 following experiment.
 
-![preemption](./data/experiment_2.png)
+![preemption](./data/experiment_2.pdf)
 
 This experiment uses a Kubernetes cluster with 8 GPUs.  We start a TenosrFlow
 Serving service and an ElasticDL training job — a script program mimics user
 traffic to the service.
 
-Initially, the TF serving uses 6 GPUs, and the training job uses 2.  In the
-first 170s, the traffic decreases, and Kubernetes's horizontal scaling feature
-automatically frees up service processes from using 6 GPUs to 1, as shown by the
-blue curve.  The master process of the ElasticDL job notices this change and
-increases the number of workers to make use of the freed-up GPUs, as shown in
-the brown curve.
-
-Then, the script program mimics the increment of traffic.  We can see the
+Initially, the TF serving uses 2 GPUs, and the training job uses 2.  In the
+first 170s, the traffic increase, and Kubernetes's
+horizontal scaling feature will increase service processes which will
+preempt the processes of training jobs. So We can see the
 auto-increment of service processes and the decrement of training workers.
+
+Then, the script program mimics the decrease of traffic. Kubernetes
+frees up service processes from using 6 GPUs to 2, as shown by the blue curve.
+The master process of the ElasticDL job notices this change and increases
+the number of workers to make use of the freed-up GPUs, as shown in the
+brown curve.
 
 Anyway, GPUs' overall utilization is 100% except for short periods when
 Kubernetes or ElasticDL master was reacting to the change of traffic, as shown
@@ -120,7 +121,7 @@ the CIFAR10 dataset.  Each worker uses an NVIDIA Tesla P100 GPU.  Curves marked
 "baseline" corresponds to experiments using gang scheduling, and the mark
 "elastic" denotes ElasticDL jobs.
 
-![accuracy](./data/experiment_3.png)
+![accuracy](./data/experiment_3.pdf)
 
 ElasticDL allows users to define a function of learning rate decay.  This
 experiment uses the following decay function.
@@ -134,8 +135,6 @@ def callbacks():
         elif epoch > 60:
             lr = LR * 0.1
         elif epoch > 40:
-            lr = LR * 0.2
-        elif epoch > 35:
             lr = LR * 0.5
         else:
             lr = LR
