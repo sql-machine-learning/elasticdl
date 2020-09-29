@@ -1,73 +1,129 @@
-# Benchmark: ElasticDL Calling the Fault-Tolerable AllReduce from Elastic Horovod
+# Benchmark: ElasticDL Calling Fault-Tolerable AllReduce from Elastic Horovod
 
-We usually use synchronous distributed SGD to train deep learning models in CV
-and NLP. fault tolerance and Elastic scheduling can improve the resource utilization
-and user experience. Horovod has released fault-tolerance AllReduce in v0.20.0.
-ElasticDL implements elastic synchronous training on Kubernetes by calling
-Horovod. So, we experiment to verify the performance of ElasticDL.
+In distributed deep learning, the synchronous distributed SGD algorithm works
+well with dense models used in multimedia applications like speech recognition,
+image classification, and face recognition. Its asynchronous counterpart works
+with sparse models with large embeddings for applications like searching,
+recommending, and advertising.
+
+In a [previous benchmark](../report_cn.pdf), we tested the performance of
+ElasticDL working in the asynchronous mode.  This one is about synchronous SGD.
+Like in the previous benchmark, we run three experiments to show that in various
+cases, ElasticDL can improve the following objectives:
+
+1. higher cluster utilization,
+1. shorter total run time of multiple training jobs, and
+1. the shorter pending time and higher user satisfaction.
+
+## The Dependency on Elastic Horovod
+
+To enable elastic scheduling of synchronous distributed SGD training jobs, we
+need a fault-tolerable AllReduce all.  The requirement on fault-tolerance
+prohibits classical implementations of AllReduce provided by MPI.  After a
+survey, we chose the one from Elastic Horovod released in v0.20.0.
+
+In all the following experiments, the master process of each ElasticDL job calls
+Kubernetes API to start worker processes, which in turn calls the
+fault-tolerable AllReduce during distributed training.  If jobs with
+higher-priorities preempt some workers, the master gets notifications and
+instructs the rest workers to redo the AllReduce.  The fault-tolerance feature
+of the AllReduce implementation prevents all workers from crashing due to the
+preemption and gives the master the chance to reorganize the rest living workers
+to make a new AllReduce call.
+
+## Experiment Settings
+
+We run experiments on GPU clusters managed by Alibaba Cloud Container Service
+for Kubernetes (ACK), which features a customized version of Kubernetes.
+ElasticDL users should be able to repeat all experiments on any modern
+Kubernetes version that supports priority-aware scheduling.
+
+All experiments use the CIFAR10 dataset to train a ResNet20 model, a classical
+image classification model.
 
 ## Experiment 1: Elastic Scheduling of Multiple ElasticDL Jobs
 
-Supposed the GPU requirement of two jobs is a little over the total of the
-cluster. Without elastic scheduling, the latter job cannot start until
-another job completes. There are two problems:
+Consider that two training jobs request more GPUs than what we have in the
+cluster.  Without elastic scheduling, we would have to run them one after
+another.  The submitter of the second job would have to wait for the completion
+of the first one.  The waiting implies a long pending time and bad user
+experience.  It also lowers the GPU utilization and the profit margin of the
+cloud service.
 
-- Bad user experience. The submitter of the latter job must wait a long time.
-- Low resource utilization. The rest of GPU in the cluster is free.
+With elastic scheduling, both jobs run in parallel; each uses less number of
+GPUs than requested.  This approach fully uses all GPUs, shortens the pending
+time as well as the total running time.
 
-Using elastic scheduling, the latter job can start using the rest of GPU and
-does not need to wait for the completion of the earlier job.
-After the earlier job completes, the latter job can scale up to speed up
-training. So, elastic scheduling can improve user experience and
-resource utilization.
-
-To verify the benefit of elastic scheduling, we perform an experiment on a
-Kubernetes cluster with GPU. The experiment result is shown in the following
-figure.
+The following figure compares the gang (non-elastic) and elastic scheduling
+using ElasticDL.  The Kubernetes cluster has 6 GPUs, and each of the two jobs
+requests 4 GPUs.
 
 ![overlap jobs](./data/experiment_1.png)
 
-In the upper figure, we use gang scheduling to submit two training jobs one
-after another, and each job needs 4 GPUs. However, we create a cluster
-only with 6 GPUs using Alibaba Cloud Container Service for Kubernetes (ACK).
-So, we cannot simultaneously run those two jobs on the cluster.
-The latter cannot start until the earlier job completes.
-We can find the earlier job completes at 465s. Then,
-the latter job starts at 518s and ends at 968s. After the
-earlier job completes, the latter job waits for 53s because ElasticDL must
-launch the master pod firstly. The master pod does not need GPU,
-so the GPU utilization is 0 before the master launches worker pods.
+The upper part of the figure presents the GPU utilization over time without
+elastic scheduling.  We see that the two jobs run one after another.  Between
+them, there was a short period of resource allocation by Kubernetes for the
+second job and for the master of the second job to start workers.  The second
+job ended at 968s.  In most of the period, only 4 of the 6 GPUs are in use, and
+the utilization is as low as 66.6%.
 
-In the figure below, we use ElasticDL to submit the two same jobs.
-We submit the latter job at 120s, and the latter job starts immediately.
-All 6 GPUs on the cluster are used. After the earlier job ends at 474s,
-the latter job scale up to 4 GPUs and ends at 809s. Due to elastic scheduling,
-the elapsed time is less than gang scheduling.
+The lower part shows elastic scheduling by ElasticDL enables parallel execution
+of the two jobs, each using 3 GPUs -- less than the requested 4.  We submitted
+the second job slightly after the first one at 120s.  The parallel execution
+fully utilizes all 6 GPUs until the completion of the first job at 474s.  After
+then, the second job scales up to use 4 GPUs and ends at 809s.  The cluster's
+overall utilization is higher, and the total run time is less (809s v.s. 968s).
+Most importantly, users enjoy that both jobs started running once after their
+submissions.
 
-## Experiment 2: AI Training Jobs and Serving Jobs are Running on a GPU Cluster
+## Experiment 2: Hybrid Deployment of Training and Serving Jobs
 
-We usually set some rest on the serving cluster in case requests increase
-sharply. We hope to utilize the rest to train an AI model to improve the
-utilization of the cluster. On the experiment, we create a cluster with
-8 NVIDIA T4 GPUs on ACK and start a TensorFlow Serving job for inference
-with a Resnet20 model. Then we submit an ElasticDL training job with 6
-low-priority GPUs configuration. When inference requests increase,
-Kubernetes will scale up pods of the serving job, and the ElasticDL job will
-release pods. When requests decrease, Kubernetes will scale down pods of
-the serving job, and the ElasticDL job will relaunch pods to speed up training.
+Many Internet products rely on deep learning prediction services.  Like any
+online service, the cluster must keep some extra idle resources to handle
+unexpected traffic boost, for example, Black Friday.
+
+To use the idle resource, we can run ElasticDL training jobs with lower
+priorities than the prediction service.  To verify the idea, we run the
+following experiment.
 
 ![preemption](./data/experiment_2.png)
 
-In the figure, the ElasticDL GPUs vary with the GPUs used by the serving job.
-The total GPUs are almost used all the time.
+This experiment uses a Kubernetes cluster with 8 GPUs.  We start a TenosrFlow
+Serving service and an ElasticDL training job — a script program mimics user
+traffic to the service.
 
-## Experiment 3: Changing the Worker Number Does not Hurt the Model Convergence
+Initially, the TF serving uses 6 GPUs, and the training job uses 2.  In the
+first 170s, the traffic decreases, and Kubernetes's horizontal scaling feature
+automatically frees up service processes from using 6 GPUs to 1, as shown by the
+blue curve.  The master process of the ElasticDL job notices this change and
+increases the number of workers to make use of the freed-up GPUs, as shown in
+the brown curve.
 
-Some users may worry that changing the worker number will have a bad effect on
-convergence. Using elastic AllReduce, the batch size varies with the worker
-number. So, the learning rate also need to vary with the worker number to
-remain the convergence. In ElasticDL, users can define a callback to adjust
-learning rate according the worker number, like:
+Then, the script program mimics the increment of traffic.  We can see the
+auto-increment of service processes and the decrement of training workers.
+
+Anyway, GPUs' overall utilization is 100% except for short periods when
+Kubernetes or ElasticDL master was reacting to the change of traffic, as shown
+by the green curve.  The full utilization of GPUs improves the margin profit of
+cloud service.
+
+## Experiment 3: Convergence Tolerant to the Varying Number of Workers
+
+Some users might worry about the convergence as the number of workers might
+change, which changes the effective batch size.  In a vast number of
+experiments, we observed that, as long as we use the commonly-used trick of
+learning rate decay, the convergence has no difference between the gang and
+elastic scheduling.
+
+The following figure shows several experiments training the ResNet20 model with
+the CIFAR10 dataset.  Each worker uses an NVIDIA Tesla P100 GPU.  Curves marked
+"baseline" corresponds to experiments using gang scheduling, and the mark
+"elastic" denotes ElasticDL jobs.
+
+![accuracy](./data/experiment_3.png)
+
+ElasticDL allows users to define a function of learning rate decay.  This
+experiment uses the following decay function.
 
 ```python
 def callbacks():
@@ -87,15 +143,3 @@ def callbacks():
 
     return [LearningRateScheduler(_schedule)]
 ```
-
-In the experiment, we use ElasticDL and gang scheduling to train ResNet20 with
-CIFAR-10 dataset.
-
-The accuracy of the test dataset is the following:
-
-![accuracy](./data/experiment_3.png)
-
-In the experiment, we use gang scheduling with two workers or four workers
-to train ResNet20. Each worker has an Nvidia Tesla P100 GPU.
-The worker number of ElasticDL varies from 2 to 4. From the figure, there
-is no obvious difference in the accuracy of training jobs.
