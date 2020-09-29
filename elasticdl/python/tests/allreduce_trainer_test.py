@@ -14,9 +14,9 @@
 import unittest
 from unittest.mock import MagicMock, Mock
 
-import horovod.tensorflow as hvd
 import tensorflow as tf
 
+import horovod.tensorflow as hvd
 from elasticdl.python.tests.test_module import custom_model, loss, optimizer
 from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
 
