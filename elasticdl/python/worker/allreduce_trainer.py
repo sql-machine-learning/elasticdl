@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import os
+import socket
 import time
 
 import tensorflow as tf
@@ -46,21 +47,8 @@ class AllReduceTrainer(Trainer):
         self._rendezvous_id = None
         self._need_broadcast = True
         self._var_created = False
-        self._world_size = None
-        self._set_optimizer(model.optimizer)
+        self._optimizer = model.optimizer
         self._set_horovod_env()
-
-    def _set_optimizer(self, optimizer):
-        self._optimizer = optimizer
-        self._lr = optimizer._hyper["learning_rate"]
-        self._optimizer.lr = self._get_learning_rate
-
-    def _get_learning_rate(self):
-        scaler = 1 if self._world_size is None else self._world_size
-        lr = self._lr
-        if callable(lr):
-            lr = lr()
-        return lr * scaler
 
     @tf.function
     def _training_process(self, features, labels):
@@ -142,7 +130,6 @@ class AllReduceTrainer(Trainer):
             hvd.shutdown()
             hvd.init()
             os.environ[HorovodEnv.ELASTIC] = str(1)
-            self._world_size = hvd.size()
             self._rendezvous_id = rank_response.rendezvous_id
             self._need_broadcast = True
 
@@ -151,7 +138,8 @@ class AllReduceTrainer(Trainer):
             os.environ[HorovodEnv.RENDEZVOUS_ADDR] = self._rendezvous_addr
         os.environ[HorovodEnv.CONTROLLER] = "gloo"
         os.environ[HorovodEnv.CPU_OPERATIONS] = "gloo"
-        os.environ[HorovodEnv.HOSTNAME] = "master"
+        domain_ip = socket.gethostbyname(socket.gethostname())
+        os.environ[HorovodEnv.HOSTNAME] = domain_ip
 
     def _broadcast_model(self):
         broadcast_variables(self._model.variables, root_rank=0)

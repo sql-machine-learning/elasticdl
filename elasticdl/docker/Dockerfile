@@ -90,19 +90,10 @@ RUN curl -sLo torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl \
 RUN python -m pip install --quiet torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl \
         && rm torch-1.4.0-cp36-cp36m-manylinux1_x86_64.whl
 
-# The latest package of Horovod does not support elastic training,
-# so we need to git clone and install it using source codes.
-ENV HOROVOD_PATH /tmp/horovod
-RUN cd /tmp \
-        && git clone -n https://github.com/horovod/horovod.git \
-        && cd horovod \
-        && git checkout ${HOROVOD_COMMIT_ID} \
-        && git submodule update --init --recursive
-
-RUN cd ${HOROVOD_PATH} && HOROVOD_WITHOUT_MPI=1 \
+RUN HOROVOD_WITHOUT_MPI=1 \
         HOROVOD_WITHOUT_MXNET=1 \
         HOROVOD_WITH_TENSORFLOW=1 \
         HOROVOD_WITH_PYTORCH=1  \
-        python setup.py install
+        pip install horovod==0.20.0
 
 RUN rm -rf $HOROVOD_PATH

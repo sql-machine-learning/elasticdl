@@ -45,4 +45,5 @@ if __name__ == "__main__":
     plt.ylabel(ylabel="Accuracy", fontsize=18, fontfamily="Times New Roman")
     plt.legend(loc="upper left", bbox_to_anchor=(0.02, 0.98))
     plt.ylim((0.3, 1))
-    plt.show()
+    f.savefig("../data/experiment_3.pdf", bbox_inches="tight")
+    f.savefig("../data/experiment_3.png", bbox_inches="tight")
