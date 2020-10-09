@@ -9,7 +9,7 @@ Users need to define a forward computation, a loss function, an optimizer,
 and a dataset function in ElasticDL. ElasticDL provides
 the training loop with those definitions. ElasticDL only supports
 Keras API to define the forward computation. This is not very flexible for
-users to define some complex models in CV or NLP. Also, users may wan to
+users to define some complex models in CV or NLP. Also, users may want to
 customize the training loop to control the model iteration.
 For example, given a pre-trained network, users might only want to
 optimize a new set of output weights.
@@ -73,8 +73,9 @@ optimizer.apply_gradients(
 )
 ```
 
-We can develop a decorator to wrap the gradient combination process
-using AllReduce. The decorator should support fault-tolerance and
+Thus, we can implement elastic_run as a decorator to wrap
+the gradient combination process using AllReduce.
+The decorator should support fault-tolerance and
 elastic training. If AllReduce fails, the decorator will query the
 master for a new AllReduce ring and retry to combine gradients
 across alive workers. And the decorator also queries the master
