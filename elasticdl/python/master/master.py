@@ -404,8 +404,7 @@ class Master(object):
                 "-grads_to_wait=" + str(args.grads_to_wait),
                 "-lr_staleness_modulation="
                 + ("true" if args.lr_staleness_modulation else "false"),
-                "-sync_version_tolerance="
-                + str(args.sync_version_tolerance),
+                "-sync_version_tolerance=" + str(args.sync_version_tolerance),
                 "-evaluation_steps=" + str(args.evaluation_steps),
                 "-num_ps_pods=" + str(args.num_ps_pods),
                 "-num_workers=" + str(args.num_workers),
