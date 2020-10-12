@@ -193,19 +193,19 @@ class Worker(object):
                 )
                 self._model_version = self._trainer.get_model_version()
 
-                if (
-                    self._model_version
-                    >= self._log_loss_count * self._log_loss_steps
-                ):
-                    self.logger.info(
-                        "Loss = {}, steps = {}".format(
-                            loss.numpy(), self._model_version
-                        )
-                    )
-                    self._log_loss_count = (
-                        int(self._model_version / self._log_loss_steps) + 1
-                    )
                 if accepted:
+                    if (
+                        self._model_version
+                        >= self._log_loss_count * self._log_loss_steps
+                    ):
+                        self.logger.info(
+                            "Loss = {}, steps = {}".format(
+                                loss.numpy(), self._model_version
+                            )
+                        )
+                        self._log_loss_count = (
+                            int(self._model_version / self._log_loss_steps) + 1
+                        )
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
                 accepted = self._trainer.predict_minibatch(features)
