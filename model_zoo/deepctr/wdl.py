@@ -32,10 +32,7 @@ def custom_model():
         for i, feat in enumerate(sparse_features)
     ] + [DenseFeat(feat, 1,) for feat in dense_features]
 
-    dnn_feature_columns = fixlen_feature_columns
-    linear_feature_columns = fixlen_feature_columns
-
-    model = WDL(linear_feature_columns, dnn_feature_columns, task="binary")
+    model = WDL(fixlen_feature_columns, fixlen_feature_columns, task="binary")
     return model
 
 
@@ -65,7 +62,6 @@ def callbacks():
 def dataset_fn(dataset, mode, _):
     sparse_features = ["C" + str(i) for i in range(1, 27)]
     dense_features = ["I" + str(i) for i in range(1, 14)]
-    label_column = "label"
 
     def _parse_data(record):
         feature_description = dict(
@@ -77,15 +73,14 @@ def dataset_fn(dataset, mode, _):
                 (name, tf.io.FixedLenFeature((1,), tf.string))
                 for name in sparse_features
             ]
-            + [(label_column, tf.io.FixedLenFeature([], tf.int64))]
+            + [("label", tf.io.FixedLenFeature([], tf.int64))]
         )
 
         parsed_record = tf.io.parse_single_example(record, feature_description)
-        label = parsed_record.pop(label_column)
+        label = parsed_record.pop("label")
 
         return parsed_record, label
 
-    dataset = dataset.prefetch(10000)
     dataset = dataset.shuffle(10000)
     dataset = dataset.map(_parse_data, num_parallel_calls=8)
 
