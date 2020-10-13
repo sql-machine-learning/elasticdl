@@ -19,7 +19,7 @@ WITH
     model.loss = "loss",
     model.eval_metrics_fn = "eval_metrics_fn",
     model.num_classes = 3,
-    model.dataset_fn = "dataset_fn",
+    model.feed = "feed",
     train.shuffle = 120,
     train.epoch = 2,
     train.grads_to_wait = 2,
@@ -65,7 +65,7 @@ FROM prediction_data
 PREDICT prediction_results_table
 WITH
     model.num_classes = 10,
-    model.dataset_fn = "dataset_fn",
+    model.feed = "feed",
     predict.checkpoint_dir_for_init = "v1/",
     engine.master_resource_request = "cpu=400m,memory=1024Mi",
     engine.master_resource_limit = "cpu=1,memory=2048Mi",
@@ -114,14 +114,14 @@ type elasticDLFiller struct {
 This `elasticDLFiller` struct will be used to fill a template pre-defined to
 generate the model definition components required
 for ElasticDL, such as the model definition using `tf.keras` API, loss,
-optimizer, `dataset_fn`, etc.
+optimizer, `feed`, etc.
 
-For example, the `dataset_fn` is generated using the `FeaturesList`,
+For example, the `feed` is generated using the `FeaturesList`,
 `LabelColName`, `InputShape`, `IsTraining`, and `TrainClause` in the
 `elasticDLFiller` struct:
 
 ```python
-def dataset_fn(dataset, mode, metadata):
+def feed(dataset, mode, metadata):
     def _parse_data(record):
 
         def _get_features_without_labels(
@@ -166,7 +166,7 @@ def dataset_fn(dataset, mode, metadata):
     return dataset
 ```
 
-Some fields used to generate the above `dataset_fn` are obtained directly from
+Some fields used to generate the above `feed` are obtained directly from
 the extended SQL statement. For example, `FeaturesList` is obtained
 from `SELECT FROM` clause. `LabelColName` is obtained from `LABEL` clause.
 `TrainClause.ShuffleBufferSize` is obtained from
@@ -174,7 +174,7 @@ from `SELECT FROM` clause. `LabelColName` is obtained from `LABEL` clause.
 indirectly. For example, `InputShape` is inferred from `FeaturesList`.
 
 Note that in the template we currently we hard-coded the types for each column
-to be `tf.float32` in the generated `dataset_fn`. We should infer
+to be `tf.float32` in the generated `feed`. We should infer
 this information from the database instead. We also hard-coded other components
 in the model definition such as `loss` and `optimizer`, these
 components should be derived from the model zoo instead.
@@ -260,5 +260,5 @@ we pass the list of column names that we want to read from ODPS via
   functionality to read/write from different SQL databases.
 - Support prediction job and add integration tests on Travis CI.
 - Currently we have hard-coded the types for each column to be `tf.float32` in
-  the generated `dataset_fn`. We should infer this information from the database
+  the generated `feed`. We should infer this information from the database
   instead.

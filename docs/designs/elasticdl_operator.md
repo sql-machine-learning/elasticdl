@@ -62,7 +62,7 @@ spec:
     - -c
     - set -o pipefail; python -m elasticdl.python.master.main --worker_image 'elasticdl:test'
       --model_zoo 'model_zoo' --cluster_spec '' --minibatch_size '64' --log_level
-      'INFO' --dataset_fn 'dataset_fn' --loss 'loss' --optimizer 'optimizer' --callbacks
+      'INFO' --feed 'feed' --loss 'loss' --optimizer 'optimizer' --callbacks
       'callbacks' --eval_metrics_fn 'eval_metrics_fn' --custom_data_reader 'custom_data_reader'
       --model_def 'mnist.mnist_functional_api.custom_model' --model_params
       '' --get_model_steps '1' --data_reader_params '' --distribution_strategy 'ParameterServerStrategy'

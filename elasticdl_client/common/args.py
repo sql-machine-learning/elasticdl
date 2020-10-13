@@ -381,9 +381,9 @@ def add_common_args_between_master_and_worker(parser):
         help="Set the logging level",
     )
     parser.add_argument(
-        "--dataset_fn",
+        "--feed",
         type=str,
-        default="dataset_fn",
+        default="feed",
         help="The name of the dataset function defined in the model file",
     )
     parser.add_argument(

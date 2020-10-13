@@ -66,7 +66,7 @@ def optimizer(lr=1e-6):
     return tf.optimizers.SGD(lr)
 
 
-def dataset_fn(dataset, mode, _):
+def feed(dataset, mode, _):
     def _parse_data(record):
 
         feature_description = {

@@ -35,7 +35,7 @@ def keras_loss(labels, predictions):
     return tf.keras.losses.mean_squared_error(labels, predictions)
 
 
-def dataset_fn(dataset, mode, metadata):
+def feed(dataset, mode, metadata):
     def _parse_data(record):
         feature_description = {
             "x": tf.io.FixedLenFeature([1], tf.float32),

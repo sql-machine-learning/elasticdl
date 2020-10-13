@@ -92,7 +92,7 @@ class Worker(object):
         self._log_loss_steps = args.log_loss_steps
         (
             model_inst,
-            self._dataset_fn,
+            self._feed,
             loss,
             opt_fn,
             self._eval_metrics_fn,
@@ -102,7 +102,7 @@ class Worker(object):
         ) = get_model_spec(
             model_zoo=args.model_zoo,
             model_def=args.model_def,
-            dataset_fn=args.dataset_fn,
+            feed=args.feed,
             loss=args.loss,
             optimizer=args.optimizer,
             eval_metrics_fn=args.eval_metrics_fn,
@@ -128,21 +128,21 @@ class Worker(object):
             ),
             data_origin=args.training_data,
         )
-        if self._dataset_fn is None:
+        if self._feed is None:
             if hasattr(
-                self._task_data_service.data_reader, "default_dataset_fn"
+                self._task_data_service.data_reader, "default_feed"
             ):
-                self._dataset_fn = (
-                    self._task_data_service.data_reader.default_dataset_fn()
+                self._feed = (
+                    self._task_data_service.data_reader.default_feed()
                 )
             else:
                 raise ValueError(
-                    "dataset_fn is required if the data_reader used does "
-                    "not provide default implementation of dataset_fn"
+                    "feed is required if the data_reader used does "
+                    "not provide default implementation of feed"
                 )
         self._get_model_steps = args.get_model_steps
         saved_model_exporter = SavedModelExporter(
-            self._task_data_service, self._dataset_fn, model_handler
+            self._task_data_service, self._feed, model_handler
         )
         # Place default callbacks at the head to execute them firstly
         self._callbacks_list.callbacks.insert(0, saved_model_exporter)
@@ -238,7 +238,7 @@ class Worker(object):
             eval_dataset = tf.data.Dataset.from_generator(
                 gen, self._task_data_service.data_reader.records_output_types
             )
-            eval_dataset = self._dataset_fn(
+            eval_dataset = self._feed(
                 eval_dataset,
                 Mode.EVALUATION,
                 self._task_data_service.data_reader.metadata,
@@ -336,7 +336,7 @@ class Worker(object):
             if not dataset:
                 self._process_train_end_callback_task_if_needed()
                 break
-            dataset = self._dataset_fn(
+            dataset = self._feed(
                 dataset,
                 Mode.TRAINING,
                 self._task_data_service.data_reader.metadata,
@@ -418,7 +418,7 @@ class Worker(object):
             dataset = self._task_data_service.get_dataset()
             if not dataset:
                 break
-            dataset = self._dataset_fn(
+            dataset = self._feed(
                 dataset,
                 Mode.PREDICTION,
                 self._task_data_service.data_reader.metadata,

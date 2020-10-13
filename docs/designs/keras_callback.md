@@ -176,13 +176,13 @@ class SavedModelExporter(tf.keras.callbacks.Callback):
     """Export model using SavedModel after training.
     Args:
         task_data_service: TaskDataService to process data according the task
-        dataset_fn: function to process dataset
+        feed: function to process dataset
         model_handler: to transform the trained model with ElasticDL embedding layer to Keras native model.
     """
-    def __init__(self, task_data_service, dataset_fn, model_handler):
+    def __init__(self, task_data_service, feed, model_handler):
         self._model_handler = model_handler
         self._task_data_service
-        self._dataset_fn = dataset_fn
+        self._feed = feed
 
     def on_train_end(self, logs=None):
         """Call on the train job end
@@ -194,7 +194,7 @@ class SavedModelExporter(tf.keras.callbacks.Callback):
         (task,dataset) = self._task_data_service.get_save_model_task_and_dataset()
 
         if task is not None and dataset is not None:
-            dataset = self._dataset_fn(
+            dataset = self._feed(
                 dataset,
                 Mode.PREDICTION,
                 self._task_data_service.data_reader.metadata,
