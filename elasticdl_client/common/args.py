@@ -334,13 +334,6 @@ def add_common_params(parser):
         "K8S environment, load the incluster config, if not, load the kube "
         "config file.",
     )
-    # delete this argument after finishing Go-based PS implementation
-    add_bool_param(
-        parser=parser,
-        name="--use_go_ps",
-        default=True,
-        help="True for Go-based PS, False for Python-based PS",
-    )
     parser.add_argument(
         "--aux_params",
         type=str,
