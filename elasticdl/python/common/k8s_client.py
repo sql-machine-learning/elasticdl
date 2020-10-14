@@ -14,6 +14,9 @@
 import threading
 import time
 
+from kubernetes import client, watch
+
+from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl_client.common.k8s_client import (
     ELASTICDL_APP_NAME,
     ELASTICDL_JOB_KEY,
@@ -22,9 +25,6 @@ from elasticdl_client.common.k8s_client import (
 )
 from elasticdl_client.common.k8s_client import Client as BaseClient
 from elasticdl_client.common.k8s_client import append_pod_ip_to_env
-from kubernetes import client, watch
-
-from elasticdl.python.common.log_utils import default_logger as logger
 
 _PS_SERVICE_PORT = 2222
 
