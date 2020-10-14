@@ -39,6 +39,14 @@ def add_zoo_init_params(parser):
         default="",
     )
     parser.add_argument(
+        "--cluster_spec_json",
+        type=str,
+        help="A JSON-encoded string that contains user-defined cluster"
+        "specification, which is an alternate for cluster_spec to"
+        "avoid using file.",
+        default="",
+    )
+    parser.add_argument(
         "--local_pkg_dir",
         type=str,
         help="The directory of wheel packages. The image will install wheel "
@@ -502,7 +510,7 @@ def parse_envs(arg):
         else:
             r = fields[i].rfind(",")
             envs[pre_key] = fields[i][:r]
-            pre_key = fields[i][r + 1 :]  # noqa: E203
+            pre_key = fields[i][r + 1:]  # noqa: E203
         i += 1
     return envs
 

@@ -196,6 +196,7 @@ def _submit_job(image_name, client_args, container_args):
         namespace=client_args.namespace,
         job_name=client_args.job_name,
         cluster_spec=client_args.cluster_spec,
+        cluster_spec_json=client_args.cluster_spec_json,
         force_use_kube_config_file=client_args.force_use_kube_config_file,
     )
 

@@ -11,17 +11,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 import traceback
 
 import yaml
-from kubernetes import client, config
-from kubernetes.client import V1EnvVar, V1EnvVarSource, V1ObjectFieldSelector
-
+from elasticdl_client.common.constants import ClusterSpecConfig
 from elasticdl_client.common.k8s_resource import parse as parse_resource
 from elasticdl_client.common.k8s_volume import parse_volume_and_mount
 from elasticdl_client.common.log_utils import default_logger as logger
 from elasticdl_client.common.module_utils import load_module
+from kubernetes import client, config
+from kubernetes.client import V1EnvVar, V1EnvVarSource, V1ObjectFieldSelector
 
 ELASTICDL_APP_NAME = "elasticdl"
 ELASTICDL_JOB_KEY = "elasticdl-job-name"
@@ -47,6 +48,71 @@ def append_pod_ip_to_env(env):
     return env
 
 
+class ClusterSpec(object):
+    def __init__(self, cluster_spec_json="", cluster_spec=""):
+        """
+        Cluster spec for adding on-premise k8s cluster specification,
+        including pod and service specifications if needed.
+
+        Args:
+            cluster_spec_json: An JSON-encoded string. After decoding, it is
+                a dict. This dict may contains:
+                (1) "pod_spec" to add pod specifications to all pods;
+                (2) "master_spec" to add pod specifications to master pod;
+                (3) "ps_spec" to add pod specifications to ps pod;
+                (4) "worker_spec" to add pod specifications to worker pod;
+                (5) "service_spec" to add service specifications to ps service.
+                Supported pod specifications include labels, annotations,
+                tolerations, affinity, env.
+            cluster_spec: A Python file name. The corresponding file defines a
+                cluster class instance, which has `with_pod` and `with_service`
+                methods to add pod/service specifications.
+        """
+        self._cluster = None
+        self._cluster_spec = None
+        if cluster_spec:
+            cluster_spec_module = load_module(cluster_spec)
+            self._cluster = cluster_spec_module.cluster
+        if cluster_spec_json:
+            self._cluster_spec = json.loads(cluster_spec_json)
+
+    def patch_pod(self, pod, pod_type):
+        if self._cluster:
+            pod = self._cluster.with_pod(pod)
+
+        if self._cluster_spec:
+            if ClusterSpecConfig.POD_SPEC in self._cluster_spec:
+                pod = self._patch_pod_with_spec(
+                    pod, self._cluster_spec[ClusterSpecConfig.POD_SPEC]
+                )
+            pod_type_spec_name = pod_type + ClusterSpecConfig.POD_SPEC_SUFFIX
+            if pod_type_spec_name in self._cluster_spec:
+                pod = self._patch_pod_with_spec(
+                    pod, self._cluster_spec[pod_type_spec_name]
+                )
+        return pod
+
+    def patch_service(self, service):
+        if self._cluster:
+            service = self._cluster.with_service(service)
+        if (
+            self._cluster_spec
+            and ClusterSpecConfig.SERVICE_SPEC in self._cluster_spec
+        ):
+            service = self._patch_service_with_spec(
+                service, self._cluster_spec[ClusterSpecConfig.SERVICE_SPEC]
+            )
+        return service
+
+    def _patch_pod_with_spec(self, pod, spec):
+        # TODO: implement it.
+        return pod
+
+    def _patch_service_with_spec(self, service, spec):
+        # TODO: implement it.
+        return service
+
+
 class Client(object):
     def __init__(
         self,
@@ -55,6 +121,7 @@ class Client(object):
         namespace,
         job_name,
         cluster_spec="",
+        cluster_spec_json="",
         force_use_kube_config_file=False
     ):
         """
@@ -93,10 +160,7 @@ class Client(object):
         self.namespace = namespace
         self.job_name = job_name
         self._image_name = image_name
-        self.cluster = None
-        if cluster_spec:
-            cluster_spec_module = load_module(cluster_spec)
-            self.cluster = cluster_spec_module.cluster
+        self.cluster_spec = ClusterSpec(cluster_spec_json, cluster_spec)
 
     def get_master_pod_name(self):
         return get_master_pod_name(self.job_name)
@@ -179,8 +243,7 @@ class Client(object):
                 namespace=self.namespace,
             ),
         )
-        if self.cluster:
-            pod = self.cluster.with_pod(pod)
+        pod = self.cluster_spec.patch_pod(pod, kargs["pod_type"])
 
         return pod
 
@@ -216,6 +279,7 @@ class Client(object):
             volume=kargs["volume"],
             owner_pod=None,
             env=env,
+            pod_type="master",
         )
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "master"

@@ -14,9 +14,6 @@
 import threading
 import time
 
-from kubernetes import client, watch
-
-from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl_client.common.k8s_client import (
     ELASTICDL_APP_NAME,
     ELASTICDL_JOB_KEY,
@@ -25,6 +22,9 @@ from elasticdl_client.common.k8s_client import (
 )
 from elasticdl_client.common.k8s_client import Client as BaseClient
 from elasticdl_client.common.k8s_client import append_pod_ip_to_env
+from kubernetes import client, watch
+
+from elasticdl.python.common.log_utils import default_logger as logger
 
 _PS_SERVICE_PORT = 2222
 
@@ -47,6 +47,7 @@ class Client(BaseClient):
         event_callback=None,
         periodic_call_func=None,
         cluster_spec="",
+        cluster_spec_json="",
         force_use_kube_config_file=False
     ):
         """
@@ -71,6 +72,7 @@ class Client(BaseClient):
             namespace=namespace,
             job_name=job_name,
             cluster_spec=cluster_spec,
+            cluster_spec_json=cluster_spec_json,
             force_use_kube_config_file=force_use_kube_config_file,
         )
         self._event_cb = event_callback
@@ -175,6 +177,7 @@ class Client(BaseClient):
             ps_addrs=kargs.get("ps_addrs", ""),
             termination_period=kargs.get("termination_period", None),
             env=env,
+            pod_type=type_key,
         )
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = type_key
@@ -275,8 +278,7 @@ class Client(BaseClient):
         service = client.V1Service(
             api_version="v1", kind="Service", metadata=metadata, spec=spec
         )
-        if self.cluster:
-            service = self.cluster.with_service(service)
+        service = self.cluster_spec.patch_service(service)
         return self.client.create_namespaced_service(self.namespace, service)
 
     def get_master_log(self):

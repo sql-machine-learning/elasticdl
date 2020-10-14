@@ -17,6 +17,16 @@ import time
 from concurrent import futures
 
 import grpc
+from elasticdl_client.common.args import (
+    build_arguments_from_parsed_result,
+    parse_envs,
+    wrap_python_args_with_string,
+)
+from elasticdl_client.common.constants import (
+    BashCommandTemplate,
+    ClusterSpecConfig,
+    DistributionStrategy,
+)
 from kubernetes.client import V1EnvVar
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
@@ -46,16 +56,6 @@ from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 from elasticdl.python.master.tensorboard_service import TensorboardService
-from elasticdl_client.common.args import (
-    build_arguments_from_parsed_result,
-    parse_envs,
-    wrap_python_args_with_string,
-)
-from elasticdl_client.common.constants import (
-    BashCommandTemplate,
-    ClusterSpecConfig,
-    DistributionStrategy,
-)
 
 
 def _make_task_dispatcher(
@@ -512,6 +512,7 @@ class Master(object):
                 image_pull_policy=args.image_pull_policy,
                 restart_policy=args.restart_policy,
                 cluster_spec=cluster_spec,
+                cluster_spec_json=args.cluster_spec_json,
                 envs=env,
                 disable_relaunch=disable_relaunch,
                 log_file_path=args.log_file_path,

@@ -25,3 +25,6 @@ class BashCommandTemplate(object):
 
 class ClusterSpecConfig(object):
     CLUSTER_SPEC_DIR = "/cluster_spec"
+    POD_SPEC = "pod_spec"
+    SERVICE_SPEC = "service_spec"
+    POD_SPEC_SUFFIX = "_pod_spec"
