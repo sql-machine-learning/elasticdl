@@ -60,31 +60,31 @@ def callbacks():
 
 
 def dataset_fn(dataset, mode, _):
-    sparse_features = ["C" + str(i) for i in range(1, 27)]
-    dense_features = ["I" + str(i) for i in range(1, 14)]
-
-    def _parse_data(record):
-        feature_description = dict(
-            [
-                (name, tf.io.FixedLenFeature((1,), tf.int64))
-                for name in dense_features
-            ]
-            + [
-                (name, tf.io.FixedLenFeature((1,), tf.string))
-                for name in sparse_features
-            ]
-            + [("label", tf.io.FixedLenFeature([], tf.int64))]
-        )
-
-        parsed_record = tf.io.parse_single_example(record, feature_description)
-        label = parsed_record.pop("label")
-
-        return parsed_record, label
-
     dataset = dataset.shuffle(10000)
-    dataset = dataset.map(_parse_data, num_parallel_calls=8)
+    dataset = dataset.map(parse_data, num_parallel_calls=8)
 
     return dataset
+
+
+def parse_data(record):
+    sparse_features = ["C" + str(i) for i in range(1, 27)]
+    dense_features = ["I" + str(i) for i in range(1, 14)]
+    feature_description = dict(
+        [
+            (name, tf.io.FixedLenFeature((1,), tf.int64))
+            for name in dense_features
+        ]
+        + [
+            (name, tf.io.FixedLenFeature((1,), tf.string))
+            for name in sparse_features
+        ]
+        + [("label", tf.io.FixedLenFeature([], tf.int64))]
+    )
+
+    parsed_record = tf.io.parse_single_example(record, feature_description)
+    label = parsed_record.pop("label")
+
+    return parsed_record, label
 
 
 if __name__ == "__main__":
