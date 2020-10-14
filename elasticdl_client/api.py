@@ -121,6 +121,8 @@ def train(args):
         args.model_zoo,
         "--cluster_spec",
         args.cluster_spec,
+        "--cluster_spec_json",
+        args.cluster_spec_json,
     ]
 
     container_args.extend(
@@ -147,6 +149,8 @@ def evaluate(args):
         args.model_zoo,
         "--cluster_spec",
         args.cluster_spec,
+        "--cluster_spec_json",
+        args.cluster_spec_json,
     ]
     container_args.extend(
         build_arguments_from_parsed_result(
@@ -172,6 +176,8 @@ def predict(args):
         args.model_zoo,
         "--cluster_spec",
         args.cluster_spec,
+        "--cluster_spec_json",
+        args.cluster_spec_json,
     ]
 
     container_args.extend(
