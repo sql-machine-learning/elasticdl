@@ -189,19 +189,19 @@ class Worker(object):
                 )
                 self._model_version = self._trainer.get_model_version()
 
-                if (
-                    self._model_version
-                    >= self._log_loss_count * self._log_loss_steps
-                ):
-                    self.logger.info(
-                        "Loss = {}, steps = {}".format(
-                            loss.numpy(), self._model_version
-                        )
-                    )
-                    self._log_loss_count = (
-                        int(self._model_version / self._log_loss_steps) + 1
-                    )
                 if accepted:
+                    if (
+                        self._model_version
+                        >= self._log_loss_count * self._log_loss_steps
+                    ):
+                        self.logger.info(
+                            "Loss = {}, steps = {}".format(
+                                loss.numpy(), self._model_version
+                            )
+                        )
+                        self._log_loss_count = (
+                            int(self._model_version / self._log_loss_steps) + 1
+                        )
                     break
             elif task_type == elasticdl_pb2.PREDICTION:
                 accepted = self._trainer.predict_minibatch(features)
@@ -248,7 +248,7 @@ class Worker(object):
         task_id = task.task_id
         err_msg = ""
         for dataset_batch in eval_dataset:
-            data_err_msg = self._process_minibatch_and_report(
+            data_err_msg = self._safe_process_minibatch(
                 dataset_batch, elasticdl_pb2.EVALUATION, model_version
             )
             if data_err_msg:
@@ -274,7 +274,7 @@ class Worker(object):
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
             self._trainer.export_saved_model(self._saved_model_path)
 
-    def _process_minibatch_and_report(
+    def _safe_process_minibatch(
         self,
         dataset_batch,
         task_type,
@@ -360,7 +360,7 @@ class Worker(object):
                 else:
                     train_with_local_model = True
 
-                err_msg = self._process_minibatch_and_report(
+                err_msg = self._safe_process_minibatch(
                     dataset_batch,
                     task.type,
                     task.model_version,
@@ -423,7 +423,7 @@ class Worker(object):
             for dataset_batch in dataset:
                 task = self._task_data_service.get_current_task()
 
-                err_msg = self._process_minibatch_and_report(
+                err_msg = self._safe_process_minibatch(
                     dataset_batch, task.type, task.model_version
                 )
                 self._task_data_service.report_record_done(

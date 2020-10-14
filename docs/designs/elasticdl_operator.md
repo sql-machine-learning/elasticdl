@@ -74,7 +74,7 @@ spec:
       '1' --ps_resource_request 'cpu=2,memory=1024Mi' --ps_resource_limit 'cpu=2,memory=2048Mi'
       --ps_pod_priority 'high' --volume 'host_path=/data,mount_path=/data' --image_pull_policy
       'Never' --restart_policy 'Never' --envs '' --extra_pypi_index 'https://pypi.org/simple'
-      --namespace 'default' --num_minibatches_per_task '2' --use_go_ps 'True' --aux_params '' --log_file_path '' --tensorboard_log_dir
+      --namespace 'default' --num_minibatches_per_task '2' --aux_params '' --log_file_path '' --tensorboard_log_dir
       '' --num_epochs '2' --grads_to_wait '1' --training_data '/data/mnist/train'
       --validation_data '' --evaluation_steps '0' --evaluation_start_delay_secs '100'
       --evaluation_throttle_secs '0' --checkpoint_dir_for_init '' --sync_version_tolerance
