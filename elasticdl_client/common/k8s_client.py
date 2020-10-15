@@ -13,6 +13,7 @@
 
 import json
 import os
+import six
 import traceback
 
 import yaml
@@ -47,6 +48,39 @@ def append_pod_ip_to_env(env):
     else:
         env = [pod_ip_var]
     return env
+
+
+def try_get_class(module, name):
+    try:
+        cls = getattr(module, name)
+        return cls
+    except AttributeError:
+        return None
+
+
+def get_instance_from_value(type_name, value):
+    # Args:
+    #   type_name: a class name in client, or a basic type such as string,
+    #              int, float, etc.
+    #   value: a dict corresponding to the class, or a string/int/float
+    #          value if basic type.
+    # Return: a class instance if class, the basic type value otherwise.
+
+    cls = try_get_class(client, type_name)
+    if not cls:
+        # not a class
+        return value
+    # value must be a dict
+    args = {}
+    # Note that swagger_types is renamed to openapi_types in kubernetes 11.x
+    for attr, attr_type in six.iteritems(cls.swagger_types):
+        if cls.attribute_map[attr] in value:
+            attr_value = get_instance_from_value(
+                attr_type, value[cls.attribute_map[attr]]
+            )
+            args[attr] = attr_value
+    cls_inst = cls(**args)
+    return cls_inst
 
 
 class ClusterSpec(object):
@@ -106,11 +140,59 @@ class ClusterSpec(object):
         return service
 
     def _patch_pod_with_spec(self, pod, spec):
-        # TODO: implement it.
+        # Add labels if any
+        if "labels" in spec:
+            labels = spec["labels"]
+            for label_name in labels:
+                pod.metadata.labels[label_name] = labels[label_name]
+
+        # Add annotations if any
+        if "annotations" in spec:
+            annotations = spec["annotations"]
+            if not pod.metadata.annotations:
+                pod.metadata.annotations = {}
+            for annotation_name in annotations:
+                pod.metadata.annotations[annotation_name] = annotations[
+                    annotation_name
+                ]
+
+        # Add affinity if any
+        if "affinity" in spec:
+            pod.spec.affinity = get_instance_from_value(
+                "V1Affinity", spec["affinity"]
+            )
+
+        # Add tolerations if any
+        if "tolerations" in spec:
+            tolerations = spec["tolerations"]
+            if not pod.spec.tolerations:
+                pod.spec.tolerations = []
+            for toleration in tolerations:
+                pod.spec.tolerations.append(get_instance_from_value(
+                    "V1Toleration", toleration
+                ))
+
+        # Add env if any
+        if "env" in spec:
+            for container in pod.spec.containers:
+                if not container.env:
+                    container.env = []
+                for env in spec["env"]:
+                    container.env.append(
+                        get_instance_from_value("V1EnvVar", env)
+                    )
+
         return pod
 
     def _patch_service_with_spec(self, service, spec):
-        # TODO: implement it.
+        for attr, attr_type in six.iteritems(
+            client.V1ServiceSpec.swagger_types
+        ):
+            if client.V1ServiceSpec.attribute_map[attr] in spec:
+                attr_value = get_instance_from_value(
+                    attr_type, spec[client.V1ServiceSpec.attribute_map[attr]]
+                )
+                setattr(service, attr, attr_value)
         return service
 
 
