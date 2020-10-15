@@ -73,7 +73,7 @@ class RendevousManagerTest(unittest.TestCase):
 
     def test_init_variables_if_needed(self):
         self._manager.init_horovod_if_needed()
-        self.assertEqual(self._rendezvous_id, 1)
+        self.assertEqual(self._manager._rendezvous_id, 1)
         self.assertTrue(self.need_broadcast)
 
 
