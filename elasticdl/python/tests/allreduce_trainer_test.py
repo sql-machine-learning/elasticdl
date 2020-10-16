@@ -56,7 +56,7 @@ class AllReduceTrainerTest(unittest.TestCase):
     def test_init_variables_if_needed(self):
         features = tf.constant([[0.5], [0.6], [0.7]])
         labels = tf.constant([[1.0], [0.0], [1.0]])
-        self._trainer._rendezvous_manager.init_variables_if_need(
+        self._trainer.init_variables_if_need(
             features, labels
         )
         self.assertTrue(self._trainer._var_created)
@@ -76,7 +76,7 @@ class RendevousManagerTest(unittest.TestCase):
     def test_init_variables_if_needed(self):
         self._manager.init_horovod_if_needed()
         self.assertEqual(self._manager._rendezvous_id, 1)
-        self.assertTrue(self.need_broadcast)
+        self.assertTrue(self._manager.need_broadcast)
 
 
 if __name__ == "__main__":
