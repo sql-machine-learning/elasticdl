@@ -67,7 +67,7 @@ def dataset_fn(dataset, mode, _):
 
 
 def parse_data(record):
-    feature_description = {}
+    feature_description = {"label": tf.io.FixedLenFeature([], tf.int64)}
     for i in range(1, 27):
         feature_description["C" + str(i)] = tf.io.FixedLenFeature(
             (1,), tf.int64
@@ -77,8 +77,6 @@ def parse_data(record):
         feature_description["I" + str(i)] = tf.io.FixedLenFeature(
             (1,), tf.int64
         )
-
-    feature_description["label"] = tf.io.FixedLenFeature([], tf.int64)
 
     parsed_record = tf.io.parse_single_example(record, feature_description)
     label = parsed_record.pop("label")
