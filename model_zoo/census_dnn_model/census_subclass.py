@@ -78,7 +78,7 @@ NUMERIC_FEATURE_KEYS = [
 LABEL_KEY = "label"
 
 
-def dataset_fn(dataset, mode, _):
+def feed(dataset, mode, _):
     def _parse_data(record):
 
         feature_description = dict(

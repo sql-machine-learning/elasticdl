@@ -85,11 +85,11 @@ NUMERIC_FEATURE_KEYS = [
 LABEL_KEY = "label"
 
 
-# TODO: The dataset_fn and the column names above is bound with
+# TODO: The feed and the column names above is bound with
 # the input data source. We can consider move it out of the
 # model definition file. Currently ElasticDL framework has the
-# limitation that the dataset_fn is in the same file with model def.
-def dataset_fn(dataset, mode, _):
+# limitation that the feed is in the same file with model def.
+def dfeed(dataset, mode, _):
     def _parse_data(record):
 
         feature_description = dict(

@@ -241,7 +241,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
         (
             model,
-            dataset_fn,
+            feed,
             loss_fn,
             opt_fn,
             eval_metrics_fn,
@@ -251,7 +251,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         ) = get_model_spec(
             model_zoo=self._model_zoo_path,
             model_def=model_def,
-            dataset_fn="dataset_fn",
+            feed="feed",
             loss="loss",
             optimizer="optimizer",
             eval_metrics_fn="eval_metrics_fn",
@@ -293,7 +293,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
 
         (
             model,
-            dataset_fn,
+            feed,
             loss_fn,
             opt_fn,
             eval_metrics_fn,
@@ -303,7 +303,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
         ) = get_model_spec(
             model_zoo=self._model_zoo_path,
             model_def=model_def,
-            dataset_fn="dataset_fn",
+            feed="feed",
             loss="loss",
             optimizer="optimizer",
             eval_metrics_fn="eval_metrics_fn",

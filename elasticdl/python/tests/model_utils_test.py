@@ -31,7 +31,7 @@ class ModelHelperTest(unittest.TestCase):
     def test_get_model_spec(self):
         (
             model,
-            dataset_fn,
+            feed,
             loss,
             optimizer,
             eval_metrics_fn,
@@ -41,7 +41,7 @@ class ModelHelperTest(unittest.TestCase):
         ) = get_model_spec(
             model_zoo=_model_zoo_path,
             model_def="test_module.custom_model",
-            dataset_fn="dataset_fn",
+            feed="feed",
             loss="loss",
             optimizer="optimizer",
             eval_metrics_fn="eval_metrics_fn",
@@ -51,7 +51,7 @@ class ModelHelperTest(unittest.TestCase):
         )
 
         self.assertTrue(model is not None)
-        self.assertTrue(dataset_fn is not None)
+        self.assertTrue(feed is not None)
         self.assertTrue(loss is not None)
         self.assertTrue(optimizer is not None)
         self.assertTrue(eval_metrics_fn is not None)
@@ -66,7 +66,7 @@ class ModelHelperTest(unittest.TestCase):
             get_model_spec,
             model_zoo=_model_zoo_path,
             model_def="test_module.undefined",
-            dataset_fn="dataset_fn",
+            feed="feed",
             loss="loss",
             optimizer="optimizer",
             eval_metrics_fn="eval_metrics_fn",
