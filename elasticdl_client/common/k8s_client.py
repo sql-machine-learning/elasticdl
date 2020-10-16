@@ -58,6 +58,13 @@ def try_get_class(module, name):
         return None
 
 
+def is_list_type(type_name):
+    if type_name.startswith("list["):
+        return True, type_name.split("[")[1].split("]")[0]
+    else:
+        return False, None
+
+
 def get_instance_from_value(type_name, value):
     # Args:
     #   type_name: a class name in client, or a basic type such as string,
@@ -69,7 +76,15 @@ def get_instance_from_value(type_name, value):
     cls = try_get_class(client, type_name)
     if not cls:
         # not a class
-        return value
+        is_a_list, list_type = is_list_type(type_name)
+        if is_a_list:
+            value_list = []
+            # value must be a list
+            for v in value:
+                value_list.append(get_instance_from_value(list_type, v))
+            return value_list
+        else:
+            return value
     # value must be a dict
     args = {}
     # Note that swagger_types is renamed to openapi_types in kubernetes 11.x
@@ -143,6 +158,8 @@ class ClusterSpec(object):
         # Add labels if any
         if "labels" in spec:
             labels = spec["labels"]
+            if not pod.metadata.labels:
+                pod.metadata.labels = {}
             for label_name in labels:
                 pod.metadata.labels[label_name] = labels[label_name]
 
@@ -192,7 +209,7 @@ class ClusterSpec(object):
                 attr_value = get_instance_from_value(
                     attr_type, spec[client.V1ServiceSpec.attribute_map[attr]]
                 )
-                setattr(service, attr, attr_value)
+                setattr(service.spec, attr, attr_value)
         return service
 
 
