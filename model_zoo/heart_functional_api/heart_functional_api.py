@@ -67,28 +67,28 @@ def optimizer(lr=1e-6):
 
 
 def feed(dataset, mode, _):
-    def _parse_data(record):
-
-        feature_description = {
-            "age": tf.io.FixedLenFeature([], tf.int64),
-            "trestbps": tf.io.FixedLenFeature([], tf.int64),
-            "chol": tf.io.FixedLenFeature([], tf.int64),
-            "thalach": tf.io.FixedLenFeature([], tf.int64),
-            "oldpeak": tf.io.FixedLenFeature([], tf.float32),
-            "slope": tf.io.FixedLenFeature([], tf.int64),
-            "ca": tf.io.FixedLenFeature([], tf.int64),
-            "thal": tf.io.FixedLenFeature([], tf.string),
-            "target": tf.io.FixedLenFeature([], tf.int64),
-        }
-
-        parsed_record = tf.io.parse_single_example(record, feature_description)
-        label = parsed_record.pop("target")
-
-        return parsed_record, label
-
     dataset = dataset.map(_parse_data)
 
     return dataset
+
+
+def _parse_data(record):
+    feature_description = {
+        "age": tf.io.FixedLenFeature([], tf.int64),
+        "trestbps": tf.io.FixedLenFeature([], tf.int64),
+        "chol": tf.io.FixedLenFeature([], tf.int64),
+        "thalach": tf.io.FixedLenFeature([], tf.int64),
+        "oldpeak": tf.io.FixedLenFeature([], tf.float32),
+        "slope": tf.io.FixedLenFeature([], tf.int64),
+        "ca": tf.io.FixedLenFeature([], tf.int64),
+        "thal": tf.io.FixedLenFeature([], tf.string),
+        "target": tf.io.FixedLenFeature([], tf.int64),
+    }
+
+    parsed_record = tf.io.parse_single_example(record, feature_description)
+    label = parsed_record.pop("target")
+
+    return parsed_record, label
 
 
 def eval_metrics_fn():

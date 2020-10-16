@@ -68,30 +68,34 @@ def optimizer(lr=0.01):
 
 
 def feed(dataset, mode, _):
-    def _parse_data(record):
-        if mode == Mode.PREDICTION:
-            feature_description = {
-                "image": tf.io.FixedLenFeature([28, 28], tf.float32)
-            }
-        else:
-            feature_description = {
-                "image": tf.io.FixedLenFeature([28, 28], tf.float32),
-                "label": tf.io.FixedLenFeature([1], tf.int64),
-            }
-        r = tf.io.parse_single_example(record, feature_description)
-        features = {
-            "image": tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
-        }
-        if mode == Mode.PREDICTION:
-            return features
-        else:
-            return features, tf.cast(r["label"], tf.int32)
+    def _parse_fn(record, mode):
+        return _parse_data(record, mode)
 
-    dataset = dataset.map(_parse_data)
+    dataset = dataset.map(_parse_fn)
 
     if mode == Mode.TRAINING:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
+
+
+def _parse_data(record, mode):
+    if mode == Mode.PREDICTION:
+        feature_description = {
+            "image": tf.io.FixedLenFeature([28, 28], tf.float32)
+        }
+    else:
+        feature_description = {
+            "image": tf.io.FixedLenFeature([28, 28], tf.float32),
+            "label": tf.io.FixedLenFeature([1], tf.int64),
+        }
+    r = tf.io.parse_single_example(record, feature_description)
+    features = {
+        "image": tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
+    }
+    if mode == Mode.PREDICTION:
+        return features
+    else:
+        return features, tf.cast(r["label"], tf.int32)
 
 
 def eval_metrics_fn():

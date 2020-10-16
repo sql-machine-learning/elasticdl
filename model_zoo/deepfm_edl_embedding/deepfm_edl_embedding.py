@@ -89,27 +89,31 @@ def optimizer(lr=0.1):
 
 
 def feed(dataset, mode, _):
-    def _parse_data(record):
-        if mode == Mode.PREDICTION:
-            feature_description = {
-                "feature": tf.io.FixedLenFeature([10], tf.int64)
-            }
-        else:
-            feature_description = {
-                "feature": tf.io.FixedLenFeature([10], tf.int64),
-                "label": tf.io.FixedLenFeature([1], tf.int64),
-            }
-        r = tf.io.parse_single_example(record, feature_description)
-        features = {"feature": tf.cast(r["feature"], tf.int64)}
-        if mode == Mode.PREDICTION:
-            return features
-        return features, tf.cast(r["label"], tf.int32)
+    def _parse_fn(record):
+        return _parse_data(record, mode)
 
     dataset = dataset.map(_parse_data)
 
     if mode == Mode.TRAINING:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
+
+
+def _parse_data(record, mode):
+    if mode == Mode.PREDICTION:
+        feature_description = {
+            "feature": tf.io.FixedLenFeature([10], tf.int64)
+        }
+    else:
+        feature_description = {
+            "feature": tf.io.FixedLenFeature([10], tf.int64),
+            "label": tf.io.FixedLenFeature([1], tf.int64),
+        }
+    r = tf.io.parse_single_example(record, feature_description)
+    features = {"feature": tf.cast(r["feature"], tf.int64)}
+    if mode == Mode.PREDICTION:
+        return features
+    return features, tf.cast(r["label"], tf.int32)
 
 
 def eval_metrics_fn():

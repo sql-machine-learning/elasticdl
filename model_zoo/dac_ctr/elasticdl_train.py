@@ -68,29 +68,30 @@ def callbacks():
 
 
 def feed(dataset, mode, _):
-    def _parse_data(record):
-        feature_description = dict(
-            [
-                (name, tf.io.FixedLenFeature((1,), tf.int64))
-                for name in STANDARDIZED_FEATURES
-            ]
-            + [
-                (name, tf.io.FixedLenFeature((1,), tf.string))
-                for name in HASH_FEATURES
-            ]
-            + [(LABEL_KEY, tf.io.FixedLenFeature([], tf.int64))]
-        )
-
-        parsed_record = tf.io.parse_single_example(record, feature_description)
-        label = parsed_record.pop(LABEL_KEY)
-
-        return parsed_record, label
-
     dataset = dataset.prefetch(10000)
     dataset = dataset.shuffle(10000)
     dataset = dataset.map(_parse_data, num_parallel_calls=8)
 
     return dataset
+
+
+def _parse_data(record):
+    feature_description = dict(
+        [
+            (name, tf.io.FixedLenFeature((1,), tf.int64))
+            for name in STANDARDIZED_FEATURES
+        ]
+        + [
+            (name, tf.io.FixedLenFeature((1,), tf.string))
+            for name in HASH_FEATURES
+        ]
+        + [(LABEL_KEY, tf.io.FixedLenFeature([], tf.int64))]
+    )
+
+    parsed_record = tf.io.parse_single_example(record, feature_description)
+    label = parsed_record.pop(LABEL_KEY)
+
+    return parsed_record, label
 
 
 def get_input_layers(feature_names):

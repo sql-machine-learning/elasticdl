@@ -183,40 +183,40 @@ def optimizer(lr=0.02):
 
 
 def feed(dataset, mode, _):
-    def _parse_data(record):
-        if mode == Mode.PREDICTION:
-            feature_description = {
-                "image": tf.io.FixedLenFeature([], tf.string)
-            }
-        else:
-            feature_description = {
-                "image": tf.io.FixedLenFeature([], tf.string),
-                "label": tf.io.FixedLenFeature([], tf.int64),
-            }
-        r = tf.io.parse_single_example(record, feature_description)
-        features = tf.image.resize(
-            tf.image.decode_jpeg(r["image"]),
-            [224, 224],
-            method=tf.image.ResizeMethod.BILINEAR,
-        )
-        features = tf.cond(
-            tf.math.greater(tf.size(features), 244 * 244),
-            lambda: features,
-            lambda: tf.image.grayscale_to_rgb(features),
-        )
-        features = {
-            "image": tf.math.divide(tf.cast(features, tf.float32), 255.0)
-        }
-        if mode == Mode.PREDICTION:
-            return features
-        else:
-            return features, tf.cast(r["label"] - 1, tf.int32)
+    def _parse_fn(record):
+        return _parse_data(record, mode)
 
-    dataset = dataset.map(_parse_data)
+    dataset = dataset.map(_parse_fn)
 
     if mode == Mode.TRAINING:
         dataset = dataset.shuffle(buffer_size=1024)
     return dataset
+
+
+def _parse_data(record, mode):
+    if mode == Mode.PREDICTION:
+        feature_description = {"image": tf.io.FixedLenFeature([], tf.string)}
+    else:
+        feature_description = {
+            "image": tf.io.FixedLenFeature([], tf.string),
+            "label": tf.io.FixedLenFeature([], tf.int64),
+        }
+    r = tf.io.parse_single_example(record, feature_description)
+    features = tf.image.resize(
+        tf.image.decode_jpeg(r["image"]),
+        [224, 224],
+        method=tf.image.ResizeMethod.BILINEAR,
+    )
+    features = tf.cond(
+        tf.math.greater(tf.size(features), 244 * 244),
+        lambda: features,
+        lambda: tf.image.grayscale_to_rgb(features),
+    )
+    features = {"image": tf.math.divide(tf.cast(features, tf.float32), 255.0)}
+    if mode == Mode.PREDICTION:
+        return features
+    else:
+        return features, tf.cast(r["label"] - 1, tf.int32)
 
 
 def eval_metrics_fn():
