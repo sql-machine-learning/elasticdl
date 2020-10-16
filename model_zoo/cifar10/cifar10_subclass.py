@@ -148,7 +148,7 @@ def optimizer(lr=0.1):
     return tf.optimizers.SGD(lr)
 
 
-def dataset_fn(dataset, mode, _):
+def feed(dataset, mode, _):
     def _parse_data(record):
         return parse_data(record, mode)
 

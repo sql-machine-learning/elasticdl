@@ -124,7 +124,7 @@ def eval_metrics_fn():
         )
     }
 
-def dataset_fn(dataset, mode, metadata):
+def feed(dataset, mode, metadata):
     def _parse_data(record):
         features = tf.strings.to_number(record[0:-1], tf.float32)
         label = tf.strings.to_number(record[-1], tf.float32)

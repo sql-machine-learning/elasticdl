@@ -6,7 +6,7 @@ used in this
 [example](https://github.com/sql-machine-learning/elasticdl/blob/develop/doc/tutorials/elasticdl_cloud.md#submit-job).
 
 This model file contains a [model](#model) built with TensorFlow Keras API and
-other components required by ElasticDL, including [dataset\_fn](#dataset_fn),
+other components required by ElasticDL, including [dataset\_fn](#feed),
 [loss](#loss), [optimizer](#optimizer), and
 [eval_metrics_fn](#eval\_metrics\_fn).
 
@@ -68,13 +68,13 @@ class MnistModel(tf.keras.Model):
 model = MnistModel()
 ```
 
-### dataset_fn
+### feed
 
 ```python
-dataset_fn(dataset, mode)
+feed(dataset, mode)
 ```
 
-`dataset_fn` is a function that takes a RecordIO `dataset` as input,
+`feed` is a function that takes a RecordIO `dataset` as input,
 pre-processes the data as needed, and returns the a dataset containing
 `model_inputs` and `labels` as a pair.
 
@@ -98,7 +98,7 @@ Output: a dataset, each data is a tuple (`model_inputs`, `labels`)
 Example:
 
 ```python
-def dataset_fn(dataset, mode):
+def feed(dataset, mode):
     def _parse_data(record):
         if mode == Mode.PREDICTION:
             feature_description = {
@@ -135,7 +135,7 @@ loss(labels, predictions)
 
 Arguments:
 
-- labels: `labels` from [`dataset_fn`](#dataset_fn).
+- labels: `labels` from [`feed`](#feed).
 - predictions:  [model](#model)'s output.
 
 Example:

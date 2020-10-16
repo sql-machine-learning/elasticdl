@@ -66,7 +66,7 @@ def loss(labels, predictions):
 def optimizer(lr=0.1):
     return torch.optim.Adam(cnn.parameters(), lr)
 
-def dataset_fn(data_list, mode, _):
+def feed(data_list, mode, _):
     feature_list = []
     label_list = []
     if mode == Mode.PREDICTION:
@@ -82,11 +82,11 @@ def dataset_fn(data_list, mode, _):
         return feature_list, label_list
 
 class Custom_Datasets(Dataset):
-    def __init__(self, tf_dataset,dataset_fn, transform=None):
+    def __init__(self, tf_dataset, feed, transform=None):
         self.transform = transform
         self.dataset = tf_dataset.map(lambda x: tf.strings.to_number(x, tf.float32))
         self.data_list = list(dataset.as_numpy_iterator())
-        self.feature_list, self.label_list = dataset_fn(self.data_list)
+        self.feature_list, self.label_list = feed(self.data_list)
 
     def __getitem__(self, idx):
         element = torch.from_numpy(self.data_list[idx])
@@ -143,7 +143,7 @@ def loss(labels, predictions):
 def optimizer(lr=0.01):
     return tf.optimizers.SGD(lr)
 
-def dataset_fn(dataset, mode, _):
+def feed(dataset, mode, _):
     def _parse_data(record):
         if mode == Mode.PREDICTION:
             feature_description = {
@@ -237,7 +237,7 @@ Pay attention to the code in [worker.py](https://github.com/sql-machine-learning
 
 ```python
 dataset = self._task_data_service.get_dataset()
-dataset = self._dataset_fn(
+dataset = self._feed(
     dataset,
     Mode.TRAINING,
     self._task_data_service.data_reader.metadata,
@@ -247,7 +247,7 @@ def get_dataset():
     return ds
 ```
 
-`_dataset_fn()` converts string types to corresponding numeric types because
+`_feed()` converts string types to corresponding numeric types because
 `data_reader.read_records` gets string data.
 
 Three methods about PyTorch data loading in ElasticDL:
@@ -263,14 +263,14 @@ from this `gen` function and sends the `data` to the training loop.
 The rest of this section concerns the case with the second method. In support of
 PyTorch, we will turn the `dataset` into a list while turning the data inside into
 a `NumPy` format.
-`_dataset_fn` is defined by the user and make `NumPy` data into the index `list`
+`_feed` is defined by the user and make `NumPy` data into the index `list`
 for `Custom_Datasets`, which is the subclass of an abstract class `torch.utils.data.Dataset`.
 
 ```python
 self.dataset = tf_dataset.map(lambda x: tf.strings.to_number(x, tf.float32))
 data_list = list(dataset.as_numpy_iterator())
 
-def dataset_fn(data_list, mode, _):
+def feed(data_list, mode, _):
     feature_list = []
     label_list = []
     if mode == Mode.PREDICTION:
@@ -285,11 +285,11 @@ def dataset_fn(data_list, mode, _):
             data_list = data_list[28 * 28:]
         return feature_list, label_list
 class Custom_Datasets(Dataset):
-    def __init__(self, tf_dataset,dataset_fn, transform=None):
+    def __init__(self, tf_dataset, feed, transform=None):
         self.transform = transform
         self.dataset = tf_dataset.map(lambda x: tf.strings.to_number(x, tf.float32))
         self.data_list = list(dataset.as_numpy_iterator())
-        self.feature_list, self.label_list = dataset_fn(self.data_list)
+        self.feature_list, self.label_list = feed(self.data_list)
 
     def __getitem__(self, idx):
         element = torch.from_numpy(self.data_list[idx])

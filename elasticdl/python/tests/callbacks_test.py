@@ -42,7 +42,7 @@ def custom_model_with_embedding_layer():
     return tf.keras.models.Model(inputs, outputs)
 
 
-def dataset_fn(dataset, mode, metadata):
+def feed(dataset, mode, metadata):
     return dataset
 
 
@@ -80,7 +80,7 @@ class SavedModelExporterTest(unittest.TestCase):
                 checkpoint_dir=checkpoint_dir,
             )
             saved_model_exporter = SavedModelExporter(
-                task_data_service, dataset_fn, model_handler
+                task_data_service, feed, model_handler
             )
             saved_model_path = os.path.join(temp_dir_name, "test_exporter")
             params = {"batch_size": 10, "saved_model_path": saved_model_path}
