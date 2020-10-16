@@ -151,7 +151,7 @@ def add_train_params(parser):
         type=bool,
         default=False,
         help="If true, users need to define training loop by themselves "
-        "Otherwise, users should define a Keras model"
+        "Otherwise, users should define a Keras model",
     )
 
 
