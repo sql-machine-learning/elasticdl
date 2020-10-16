@@ -22,7 +22,7 @@ from elasticdl_client.common.args import (
 from elasticdl_client.common.constants import DistributionStrategy
 
 MODEL_SPEC_GROUP = [
-    "dataset_fn",
+    "feed",
     "eval_metrics_fn",
     "model_def",
     "model_params",

@@ -62,7 +62,7 @@ spec:
     - -c
     - set -o pipefail; python -m elasticdl.python.master.main --worker_image 'elasticdl:test'
       --model_zoo 'model_zoo' --cluster_spec '' --minibatch_size '64' --log_level
-      'INFO' --dataset_fn 'dataset_fn' --loss 'loss' --optimizer 'optimizer' --callbacks
+      'INFO' --feed 'feed' --loss 'loss' --optimizer 'optimizer' --callbacks
       'callbacks' --eval_metrics_fn 'eval_metrics_fn' --custom_data_reader 'custom_data_reader'
       --model_def 'mnist.mnist_functional_api.custom_model' --model_params
       '' --get_model_steps '1' --data_reader_params '' --distribution_strategy 'ParameterServerStrategy'
@@ -74,7 +74,7 @@ spec:
       '1' --ps_resource_request 'cpu=2,memory=1024Mi' --ps_resource_limit 'cpu=2,memory=2048Mi'
       --ps_pod_priority 'high' --volume 'host_path=/data,mount_path=/data' --image_pull_policy
       'Never' --restart_policy 'Never' --envs '' --extra_pypi_index 'https://pypi.org/simple'
-      --namespace 'default' --num_minibatches_per_task '2' --use_go_ps 'True' --aux_params '' --log_file_path '' --tensorboard_log_dir
+      --namespace 'default' --num_minibatches_per_task '2' --aux_params '' --log_file_path '' --tensorboard_log_dir
       '' --num_epochs '2' --grads_to_wait '1' --training_data '/data/mnist/train'
       --validation_data '' --evaluation_steps '0' --evaluation_start_delay_secs '100'
       --evaluation_throttle_secs '0' --checkpoint_dir_for_init '' --sync_version_tolerance

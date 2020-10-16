@@ -342,13 +342,6 @@ def add_common_params(parser):
         "K8S environment, load the incluster config, if not, load the kube "
         "config file.",
     )
-    # delete this argument after finishing Go-based PS implementation
-    add_bool_param(
-        parser=parser,
-        name="--use_go_ps",
-        default=True,
-        help="True for Go-based PS, False for Python-based PS",
-    )
     parser.add_argument(
         "--aux_params",
         type=str,
@@ -389,9 +382,9 @@ def add_common_args_between_master_and_worker(parser):
         help="Set the logging level",
     )
     parser.add_argument(
-        "--dataset_fn",
+        "--feed",
         type=str,
-        default="dataset_fn",
+        default="feed",
         help="The name of the dataset function defined in the model file",
     )
     parser.add_argument(

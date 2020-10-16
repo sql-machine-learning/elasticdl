@@ -137,10 +137,10 @@ class ODPSDataReader(AbstractDataReader):
     def _get_odps_table_name(shard_name):
         return shard_name.split(":")[0]
 
-    def default_dataset_fn(self):
+    def default_feed(self):
         check_required_kwargs(["label_col"], self._kwargs)
 
-        def dataset_fn(dataset, mode, metadata):
+        def feed(dataset, mode, metadata):
             def _parse_data(record):
                 label_col_name = self._kwargs["label_col"]
                 record = tf.strings.to_number(record, tf.float32)
@@ -189,7 +189,7 @@ class ODPSDataReader(AbstractDataReader):
                 dataset = dataset.shuffle(buffer_size=200)
             return dataset
 
-        return dataset_fn
+        return feed
 
 
 class ParallelODPSDataReader(ODPSDataReader):
