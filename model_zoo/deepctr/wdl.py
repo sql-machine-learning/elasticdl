@@ -68,11 +68,15 @@ def dataset_fn(dataset, mode, _):
 
 def parse_data(record):
     feature_description = {}
-    for name in ["C" + str(i) for i in range(1, 27)]:
-        feature_description[name] = tf.io.FixedLenFeature((1,), tf.int64)
+    for i in range(1, 27):
+        feature_description["C" + str(i)] = tf.io.FixedLenFeature(
+            (1,), tf.int64
+        )
 
-    for name in ["I" + str(i) for i in range(1, 14)]:
-        feature_description[name] = tf.io.FixedLenFeature((1,), tf.int64)
+    for i in range(1, 14):
+        feature_description["I" + str(i)] = tf.io.FixedLenFeature(
+            (1,), tf.int64
+        )
 
     feature_description["label"] = tf.io.FixedLenFeature([], tf.int64)
 
