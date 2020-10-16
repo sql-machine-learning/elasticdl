@@ -141,7 +141,7 @@ def callbacks():
     return [LearningRateScheduler(_schedule)]
 
 
-def dataset_fn(dataset, mode, _):
+def feed(dataset, mode, _):
     def _parse_data(record):
         return parse_data(record, mode)
 

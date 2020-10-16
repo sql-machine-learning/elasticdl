@@ -135,7 +135,7 @@ def _get_spec_value(spec_key, model_zoo, default_module, required=False):
 def get_model_spec(
     model_zoo,
     model_def,
-    dataset_fn,
+    feed,
     loss,
     optimizer,
     eval_metrics_fn,
@@ -147,7 +147,7 @@ def get_model_spec(
 
     The model spec tuple contains the following items in order:
 
-    * The `dataset_fn`,
+    * The `feed`,
     * The `loss`,
     * The `optimizer`,
     * The `eval_metrics_fn`,
@@ -171,14 +171,14 @@ def get_model_spec(
             "Prediction outputs may not be processed correctly."
         )
 
-    # If ODPS data source is used, dataset_fn is optional
-    dataset_fn_required = not is_odps_configured()
+    # If ODPS data source is used, feed is optional
+    feed_required = not is_odps_configured()
     callbacks_list = load_callbacks_from_module(callbacks, default_module)
 
     return (
         model,
         _get_spec_value(
-            dataset_fn, model_zoo, default_module, required=dataset_fn_required
+            feed, model_zoo, default_module, required=feed_required
         ),
         _get_spec_value(loss, model_zoo, default_module, required=True),
         _get_spec_value(optimizer, model_zoo, default_module, required=True),

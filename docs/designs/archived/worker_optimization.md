@@ -85,7 +85,7 @@ creating a new dataset.
 
 A better way is to use a shared dataset, which will call `get_task` to get new
 training data when it runs out the data.
-The user needs to provide `dataset_fn` instead of `input_fn`. `dataset_fn`
+The user needs to provide `feed` instead of `input_fn`. `feed`
 would take a RecordIO dataset as input, decode and preprocessing the data as
 needed.
 
@@ -120,10 +120,10 @@ def input_fn(records):
     return ({"image": images}, labels)
 ```
 
-Define `dataset_fn` instead:
+Define `feed` instead:
 
 ```python
-def dataset_fn(dataset):
+def feed(dataset):
     def _parse_data(record):
         feature_description = {
             "image": tf.io.FixedLenFeature([32, 32, 3], tf.float32),
@@ -160,9 +160,9 @@ def data_generator(self):
 recordio_dataset = tf.data.Dataset.from_generator(
     data_generator, (tf.string), (tf.TensorShape([]))
 
-# apply dataset_fn
+# apply feed
 
-dataset = dataset_fn(recordio_dataset)
+dataset = feed(recordio_dataset)
 
 # batching
 
@@ -192,7 +192,7 @@ of the pending tasks to get:
 1. Add prerequisite:
    - The master knows the type of the job from user provided arguments. Add an
 extra argument for the job type in worker initialization.
-   - Add `dataset_fn` in model_zoo examples.
+   - Add `feed` in model_zoo examples.
 2. Support training-only with a shared dataset.
    - If the job type is not training-only, keep use the legacy code.
 3. Add evaluation-only, predict-only support.

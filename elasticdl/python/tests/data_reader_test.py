@@ -100,7 +100,7 @@ class CSVDataReaderTest(unittest.TestCase):
                 for record in csv_data_reader.read_records(task):
                     yield record
 
-            def _dataset_fn(dataset, mode, metadata):
+            def _feed(dataset, mode, metadata):
                 def _parse_data(record):
                     features = tf.strings.to_number(record[0:-1], tf.float32)
                     label = tf.strings.to_number(record[-1], tf.float32)
@@ -113,7 +113,7 @@ class CSVDataReaderTest(unittest.TestCase):
             dataset = tf.data.Dataset.from_generator(
                 _gen, csv_data_reader.records_output_types
             )
-            dataset = _dataset_fn(dataset, None, None)
+            dataset = _feed(dataset, None, None)
             for features, labels in dataset:
                 self.assertEqual(features.shape.as_list(), [10, 4])
                 self.assertEqual(labels.shape.as_list(), [10])
@@ -234,7 +234,7 @@ class ODPSDataReaderTest(unittest.TestCase):
             records_per_task=10,
             **{"columns": IRIS_TABLE_COLUMN_NAMES, "label_col": "class"}
         )
-        dataset_fn = reader.default_dataset_fn()
+        feed = reader.default_feed()
 
         def _gen():
             for data in self.reader.read_records(
@@ -249,7 +249,7 @@ class ODPSDataReaderTest(unittest.TestCase):
                     yield data
 
         dataset = tf.data.Dataset.from_generator(_gen, tf.string)
-        dataset = dataset_fn(
+        dataset = feed(
             dataset, None, Metadata(column_names=IRIS_TABLE_COLUMN_NAMES)
         )
         dataset = dataset.batch(1)
