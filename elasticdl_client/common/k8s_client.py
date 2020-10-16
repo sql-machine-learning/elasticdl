@@ -13,9 +13,9 @@
 
 import json
 import os
-import six
 import traceback
 
+import six
 import yaml
 from kubernetes import client, config
 from kubernetes.client import V1EnvVar, V1EnvVarSource, V1ObjectFieldSelector
@@ -168,9 +168,9 @@ class ClusterSpec(object):
             if not pod.spec.tolerations:
                 pod.spec.tolerations = []
             for toleration in tolerations:
-                pod.spec.tolerations.append(get_instance_from_value(
-                    "V1Toleration", toleration
-                ))
+                pod.spec.tolerations.append(
+                    get_instance_from_value("V1Toleration", toleration)
+                )
 
         # Add env if any
         if "env" in spec:
