@@ -146,6 +146,13 @@ def add_train_params(parser):
         help="If True, PS will modulate the learning rate with staleness "
         "in asynchronous SGD",
     )
+    parser.add_argument(
+        "--custom_training_loop",
+        type=bool,
+        default=False,
+        help="If true, users need to define training loop by themselves "
+        "Otherwise, users should define a Keras model"
+    )
 
 
 def add_evaluate_params(parser):

@@ -125,20 +125,23 @@ class Master(object):
         model_module = load_module(
             get_module_file_path(args.model_zoo, args.model_def)
         ).__dict__
-        model_inst = load_model_from_module(args.model_def, model_module)
-        self._optimizer = model_module[args.optimizer]()
+        if not args.custom_training_loop:
+            model_inst = load_model_from_module(args.model_def, model_module)
+            self._optimizer = model_module[args.optimizer]()
 
-        # Initialize the callbacks
-        self.callbacks_list = load_callbacks_from_module(
-            args.callbacks, model_module
-        )
-        self.callbacks_list.set_model(model_inst)
-        set_callback_parameters(
-            self.callbacks_list,
-            batch_size=args.minibatch_size,
-            saved_model_path=args.output,
-            checkpoint_path=args.checkpoint_dir,
-        )
+            # Initialize the callbacks
+            self.callbacks_list = load_callbacks_from_module(
+                args.callbacks, model_module
+            )
+            self.callbacks_list.set_model(model_inst)
+            set_callback_parameters(
+                self.callbacks_list,
+                batch_size=args.minibatch_size,
+                saved_model_path=args.output,
+                checkpoint_path=args.checkpoint_dir,
+            )
+        else:
+            self.callbacks_list = None
 
         self._set_completed_steps_by_checkpoint(args.checkpoint_dir_for_init)
 
