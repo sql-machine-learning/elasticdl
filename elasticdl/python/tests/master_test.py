@@ -40,8 +40,6 @@ class MasterTest(unittest.TestCase):
             self._model_zoo_path,
             "--model_def",
             "mnist.mnist_functional_api.custom_model",
-            "--distribution_strategy",
-            DistributionStrategy.PARAMETER_SERVER,
             "--job_name",
             "test",
             "--worker_image",
@@ -49,15 +47,38 @@ class MasterTest(unittest.TestCase):
         ]
 
     def test_create_instance_manager(self):
+        arguments = [
+            "--distribution_strategy",
+            DistributionStrategy.PARAMETER_SERVER,
+        ]
+        arguments.extend(self.arguments)
         num_records = 128
         with tempfile.TemporaryDirectory() as temp_dir_name:
             create_recordio_file(
                 num_records, DatasetName.TEST_MODULE, 1, temp_dir=temp_dir_name
             )
-            self.arguments.extend(["--training_data", temp_dir_name])
-            args = parse_master_args(self.arguments)
+            arguments.extend(["--training_data", temp_dir_name])
+            args = parse_master_args(arguments)
             master = Master(args)
             self.assertIsNotNone(master.instance_manager)
+
+    def test_create_master_for_allreduce(self):
+        arguments = [
+            "--distribution_strategy",
+            DistributionStrategy.ALLREDUCE,
+        ]
+        arguments.extend(self.arguments)
+        num_records = 128
+        with tempfile.TemporaryDirectory() as temp_dir_name:
+            create_recordio_file(
+                num_records, DatasetName.TEST_MODULE, 1, temp_dir=temp_dir_name
+            )
+            arguments.extend(["--training_data", temp_dir_name])
+            arguments.extend(["--custom_training_loop", "true"])
+            args = parse_master_args(arguments)
+            master = Master(args)
+            self.assertIsNotNone(master.instance_manager)
+            self.assertIsNone(master.callbacks_list)
 
 
 if __name__ == "__main__":

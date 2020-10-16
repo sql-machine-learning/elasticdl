@@ -142,6 +142,7 @@ class Master(object):
             )
         else:
             self.callbacks_list = None
+            self._optimizer = None
 
         self._set_completed_steps_by_checkpoint(args.checkpoint_dir_for_init)
 
@@ -395,43 +396,15 @@ class Master(object):
             )
             worker_args = wrap_python_args_with_string(worker_args)
             worker_args.insert(0, worker_client_command)
-
-            opt_type, opt_args = get_optimizer_info(self._optimizer)
-            ps_command = "elasticdl_ps"
-            ps_command_args = [
-                "-job_name=" + args.job_name,
-                "-namespace=" + args.namespace,
-                "-master_addr=" + self.master_addr,
-                "-port=2222",
-                "-use_async=" + ("true" if args.use_async else "false"),
-                "-grads_to_wait=" + str(args.grads_to_wait),
-                "-lr_staleness_modulation="
-                + ("true" if args.lr_staleness_modulation else "false"),
-                "-sync_version_tolerance=" + str(args.sync_version_tolerance),
-                "-evaluation_steps=" + str(args.evaluation_steps),
-                "-num_ps_pods=" + str(args.num_ps_pods),
-                "-num_workers=" + str(args.num_workers),
-                "-checkpoint_dir=" + str(args.checkpoint_dir),
-                "-checkpoint_steps=" + str(args.checkpoint_steps),
-                "-keep_checkpoint_max=" + str(args.keep_checkpoint_max),
-                "-checkpoint_dir_for_init="
-                + str(args.checkpoint_dir_for_init),
-                "-opt_type=" + opt_type,
-                "-opt_args=" + opt_args,
-            ]
-            ps_command_args = wrap_go_args_with_string(ps_command_args)
-            # Execute source /root/.bashrc to add the file path
-            # of `elasticdl_ps` into the PATH environment variable.
-            ps_args = [
-                "source",
-                "/root/.bashrc_elasticdl",
-                "&&",
-                ps_command,
-            ]
-            ps_args.extend(ps_command_args)
-
             worker_args = ["-c", " ".join(worker_args)]
-            ps_args = ["-c", " ".join(ps_args)]
+
+            if (
+                args.distribution_strategy
+                == DistributionStrategy.PARAMETER_SERVER
+            ):
+                ps_args = self._create_ps_command(args)
+            else:
+                ps_args = []
 
             env_dict = parse_envs(args.envs)
             env = []
@@ -470,6 +443,42 @@ class Master(object):
             )
 
         return instance_manager
+
+    def _create_ps_command(self, args):
+        opt_type, opt_args = get_optimizer_info(self._optimizer)
+        ps_command = "elasticdl_ps"
+        ps_command_args = [
+            "-job_name=" + args.job_name,
+            "-namespace=" + args.namespace,
+            "-master_addr=" + self.master_addr,
+            "-port=2222",
+            "-use_async=" + ("true" if args.use_async else "false"),
+            "-grads_to_wait=" + str(args.grads_to_wait),
+            "-lr_staleness_modulation="
+            + ("true" if args.lr_staleness_modulation else "false"),
+            "-sync_version_tolerance=" + str(args.sync_version_tolerance),
+            "-evaluation_steps=" + str(args.evaluation_steps),
+            "-num_ps_pods=" + str(args.num_ps_pods),
+            "-num_workers=" + str(args.num_workers),
+            "-checkpoint_dir=" + str(args.checkpoint_dir),
+            "-checkpoint_steps=" + str(args.checkpoint_steps),
+            "-keep_checkpoint_max=" + str(args.keep_checkpoint_max),
+            "-checkpoint_dir_for_init=" + str(args.checkpoint_dir_for_init),
+            "-opt_type=" + opt_type,
+            "-opt_args=" + opt_args,
+        ]
+        ps_command_args = wrap_go_args_with_string(ps_command_args)
+        # Execute source /root/.bashrc to add the file path
+        # of `elasticdl_ps` into the PATH environment variable.
+        ps_args = [
+            "source",
+            "/root/.bashrc_elasticdl",
+            "&&",
+            ps_command,
+        ]
+        ps_args.extend(ps_command_args)
+        ps_args = ["-c", " ".join(ps_args)]
+        return ps_args
 
     def _get_image_cluster_spec(self, cluster_spec):
         if cluster_spec:
