@@ -68,7 +68,7 @@ def optimizer(lr=0.01):
 
 
 def feed(dataset, mode, _):
-    def _parse_fn(record, mode):
+    def _parse_fn(record):
         return _parse_data(record, mode)
 
     dataset = dataset.map(_parse_fn)
