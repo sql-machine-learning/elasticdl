@@ -67,19 +67,14 @@ def dataset_fn(dataset, mode, _):
 
 
 def parse_data(record):
-    sparse_features = ["C" + str(i) for i in range(1, 27)]
-    dense_features = ["I" + str(i) for i in range(1, 14)]
-    feature_description = dict(
-        [
-            (name, tf.io.FixedLenFeature((1,), tf.int64))
-            for name in dense_features
-        ]
-        + [
-            (name, tf.io.FixedLenFeature((1,), tf.string))
-            for name in sparse_features
-        ]
-        + [("label", tf.io.FixedLenFeature([], tf.int64))]
-    )
+    feature_description = {}
+    for name in ["C" + str(i) for i in range(1, 27)]:
+        feature_description[name] = tf.io.FixedLenFeature((1,), tf.int64)
+
+    for name in ["I" + str(i) for i in range(1, 14)]:
+        feature_description[name] = tf.io.FixedLenFeature((1,), tf.int64)
+
+    feature_description["label"] = tf.io.FixedLenFeature([], tf.int64)
 
     parsed_record = tf.io.parse_single_example(record, feature_description)
     label = parsed_record.pop("label")
