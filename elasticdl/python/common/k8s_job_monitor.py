@@ -79,7 +79,7 @@ class PodMonitor:
                     break
                 else:
                     time.sleep(30)
-            except client.api_client.ApiException:
+            except client.ApiException:
                 time.sleep(60)
         return pod_succeeded
 
@@ -200,7 +200,7 @@ class EdlJobMonitor:
                     )
                     master_old_log = master_new_log
                     time.sleep(60)
-            except client.api_client.ApiException:
+            except client.ApiException:
                 time.sleep(60)
         return job_succeed
 

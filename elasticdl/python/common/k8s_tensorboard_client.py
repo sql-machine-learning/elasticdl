@@ -45,7 +45,7 @@ class TensorBoardClient(object):
                 name=self._k8s_client.get_tensorboard_service_name(),
                 namespace=self._k8s_client.namespace,
             ).to_dict()
-        except client.api_client.ApiException as e:
+        except client.ApiException as e:
             logger.warning(
                 "Exception when reading TensorBoard service: %s\n" % e
             )

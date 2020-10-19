@@ -107,7 +107,7 @@ class Client(object):
             return self.client.patch_namespaced_pod(
                 name=pod_name, namespace=self.namespace, body=body
             )
-        except client.api_client.ApiException as e:
+        except client.ApiException as e:
             logger.warning("Exception when patching labels to pod: %s\n" % e)
             return None
 
