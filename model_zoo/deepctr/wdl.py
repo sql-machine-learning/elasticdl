@@ -58,7 +58,7 @@ def callbacks():
     ]
 
 
-def dataset_fn(dataset, mode, _):
+def feed(dataset, mode, _):
     dataset = dataset.shuffle(10000)
     dataset = dataset.map(parse_data, num_parallel_calls=8)
 
