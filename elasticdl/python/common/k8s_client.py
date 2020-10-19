@@ -138,7 +138,7 @@ class Client(BaseClient):
             return self.client.read_namespaced_pod(
                 namespace=self.namespace, name=pod_name
             )
-        except client.api_client.ApiException as e:
+        except client.ApiException as e:
             logger.warning(
                 "Exception when reading pod %s: %s\n" % (pod_name, e)
             )
@@ -151,7 +151,7 @@ class Client(BaseClient):
                 name=self.get_ps_service_name(ps_id),
                 namespace=self.namespace,
             )
-        except client.api_client.ApiException as e:
+        except client.ApiException as e:
             logger.warning("Exception when reading PS service: %s\n" % e)
             return None
 
@@ -295,7 +295,7 @@ class Client(BaseClient):
             return self.client.read_namespaced_pod_log(
                 namespace=self.namespace, name=pod_name
             )
-        except client.api_client.ApiException as e:
+        except client.ApiException as e:
             logger.warning(
                 "Exception when reading log of pod %s: %s\n" % (pod_name, e)
             )
