@@ -18,7 +18,7 @@ from deepctr.models import WDL
 from elasticdl.python.elasticdl.callbacks import MaxStepsStopping
 
 
-def custom_model():
+def forward():
     sparse_features = ["C" + str(i) for i in range(1, 27)]
     dense_features = ["I" + str(i) for i in range(1, 14)]
     fixlen_feature_columns = [
