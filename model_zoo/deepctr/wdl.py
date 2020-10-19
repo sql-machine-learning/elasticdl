@@ -39,8 +39,7 @@ def custom_model():
 def loss(labels, predictions):
     return tf.reduce_mean(
         tf.keras.losses.binary_crossentropy(
-            labels=tf.cast(tf.reshape(labels, (-1, 1)), tf.float32),
-            logits=predictions,
+            y_true=tf.cast(labels, tf.float32), y_pred=predictions,
         )
     )
 
@@ -50,7 +49,7 @@ def optimizer(lr=0.001):
 
 
 def eval_metrics_fn():
-    return tf.keras.metrics.AUC()
+    return {"auc": tf.keras.metrics.AUC()}
 
 
 def callbacks():
@@ -79,7 +78,7 @@ def parse_data(record):
         )
 
     parsed_record = tf.io.parse_single_example(record, feature_description)
-    label = parsed_record.pop("label")
+    label = tf.cast([parsed_record.pop("label")], tf.dtypes.float32)
 
     return parsed_record, label
 
