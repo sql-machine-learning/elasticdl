@@ -87,8 +87,7 @@ def get_instance_from_value(type_name, value):
             return value
     # value must be a dict
     args = {}
-    # Note that swagger_types is renamed to openapi_types in kubernetes 11.x
-    for attr, attr_type in six.iteritems(cls.swagger_types):
+    for attr, attr_type in six.iteritems(cls.openapi_types):
         if cls.attribute_map[attr] in value:
             attr_value = get_instance_from_value(
                 attr_type, value[cls.attribute_map[attr]]
@@ -203,7 +202,7 @@ class ClusterSpec(object):
 
     def _patch_service_with_spec(self, service, spec):
         for attr, attr_type in six.iteritems(
-            client.V1ServiceSpec.swagger_types
+            client.V1ServiceSpec.openapi_types
         ):
             if client.V1ServiceSpec.attribute_map[attr] in spec:
                 attr_value = get_instance_from_value(
