@@ -19,95 +19,41 @@ import sys
 import recordio
 import tensorflow as tf
 
-DAC_COLUMNS = [
-    "label",
-    "I1",
-    "I2",
-    "I3",
-    "I4",
-    "I5",
-    "I6",
-    "I7",
-    "I8",
-    "I9",
-    "I10",
-    "I11",
-    "I12",
-    "I13",
-    "C1",
-    "C2",
-    "C3",
-    "C4",
-    "C5",
-    "C6",
-    "C7",
-    "C8",
-    "C9",
-    "C10",
-    "C11",
-    "C12",
-    "C13",
-    "C14",
-    "C15",
-    "C16",
-    "C17",
-    "C18",
-    "C19",
-    "C20",
-    "C21",
-    "C22",
-    "C23",
-    "C24",
-    "C25",
-    "C26",
-]
-
-DAC_DTYPES = ["int64"] * 14 + ["str"] * 26
+COLUMNS = (
+    ["label"]
+    + ["I" + str(i) for i in range(1, 14)]
+    + ["C" + str(i) for i in range(1, 27)]
+)
 
 
-def convert_series_to_tf_feature(data_series, columns, dtype_series):
-    """
-    Convert pandas series to TensorFlow features.
-    Args:
-        data_series: Pandas series of data content.
-        columns: Column name array.
-        dtype_series: Pandas series of dtypes.
-    Return:
-        A dict of feature name -> tf.train.Feature
-    """
+def convert_data_to_tf_example(sample_data, columns):
     features = {}
-    data_series = data_series.split("\t")
+    column_data = sample_data.split("\t")
     for i, column_name in enumerate(columns):
-        feature = None
-        value = data_series[i]
-        value = value.strip()
-        dtype = dtype_series[i]
-
-        if dtype == "int64":
-            if value == "":
-                value = 0
-            else:
-                value = int(value)
+        value = column_data[i].strip()
+        if column_name[0] == "I" or column_name == "label":
+            value = 0 if value == "" else int(value)
             feature = tf.train.Feature(
                 int64_list=tf.train.Int64List(value=[value])
             )
-        elif dtype == "str":
+        else:
             feature = tf.train.Feature(
                 bytes_list=tf.train.BytesList(value=[value.encode("utf-8")])
             )
-        else:
-            assert False, "Unrecoginize dtype: {}".format(dtype)
-
         features[column_name] = feature
 
-    return features
+    example = tf.train.Example(
+        features=tf.train.Features(feature=features)
+    ).SerializeToString()
+
+    return example
 
 
-def convert_to_recordio_files(file_path, dir_name, records_per_shard):
+def convert_to_recordio_files(file_path, dir_name, records_per_shard=10240):
     """
-    Convert a pandas DataFrame to recordio files.
+    Convert a CSV file to recordio files.
     Args:
-        file_path: A path of the data file
+        file_path: A path of the CSV file
         dir_name: A directory to put the generated recordio files.
         records_per_shard: The record number per shard.
     """
@@ -123,19 +69,11 @@ def convert_to_recordio_files(file_path, dir_name, records_per_shard):
                 shard = index // records_per_shard
                 file_path_name = os.path.join(dir_name, "data-%05d" % shard)
                 writer = recordio.Writer(file_path_name)
-
-            feature = convert_series_to_tf_feature(
-                row, DAC_COLUMNS, DAC_DTYPES
-            )
-            result_string = tf.train.Example(
-                features=tf.train.Features(feature=feature)
-            ).SerializeToString()
-            writer.write(result_string)
+            example = convert_data_to_tf_example(row, COLUMNS)
+            writer.write(example)
 
         if writer:
             writer.close()
-
-        print("Finish data conversion in {}".format(dir_name))
 
 
 def split_to_train_test(data_path):
