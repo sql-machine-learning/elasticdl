@@ -15,8 +15,6 @@ import tensorflow as tf
 from deepctr.feature_column import DenseFeat, SparseFeat
 from deepctr.models import WDL
 
-from elasticdl.python.elasticdl.callbacks import MaxStepsStopping
-
 
 def custom_model():
     sparse_features = ["C" + str(i) for i in range(1, 27)]
@@ -52,35 +50,29 @@ def eval_metrics_fn():
     return {"auc": tf.keras.metrics.AUC()}
 
 
-def callbacks():
-    return [
-        MaxStepsStopping(max_steps=150000),
-    ]
-
-
 def feed(dataset, mode, _):
-    dataset = dataset.shuffle(10000)
+    dataset = dataset.shuffle(100)
     dataset = dataset.map(parse_data, num_parallel_calls=8)
 
     return dataset
 
 
 def parse_data(record):
-    feature_description = {"label": tf.io.FixedLenFeature([], tf.int64)}
+    feature_description = {"label": tf.io.FixedLenFeature([], tf.float32)}
     for i in range(1, 27):
         feature_description["C" + str(i)] = tf.io.FixedLenFeature(
-            (1,), tf.int64
+            (1,), tf.string
         )
 
     for i in range(1, 14):
         feature_description["I" + str(i)] = tf.io.FixedLenFeature(
-            (1,), tf.int64
+            (1,), tf.float32
         )
 
     parsed_record = tf.io.parse_single_example(record, feature_description)
-    label = tf.cast([parsed_record.pop("label")], tf.dtypes.float32)
+    label = parsed_record.pop("label")
 
-    return parsed_record, label
+    return parsed_record, [label]
 
 
 if __name__ == "__main__":
