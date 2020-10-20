@@ -21,7 +21,6 @@ from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.common.constants import PodStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl_client.common.constants import BashCommandTemplate
-from elasticdl_client.common.k8s_client import PodType
 
 _SERVICE_ADDR_SEP = ","
 
@@ -265,11 +264,11 @@ class InstanceManager(object):
 
     def stop_relaunch_and_remove_pods(self, pod_type):
         ids = []
-        if pod_type == PodType.WORKER:
+        if pod_type == "worker":
             self._relaunch_deleted_live_worker = False
             ids = self._worker_pods_ip_phase
             delete_func = self._k8s_client.delete_worker
-        elif pod_type == PodType.PS:
+        elif pod_type == "ps":
             self._relaunch_deleted_live_ps = False
             ids = self._ps_pods_phase
             delete_func = self._k8s_client.delete_ps
@@ -284,9 +283,9 @@ class InstanceManager(object):
             )
             ps_counter = Counter([v for _, v in self._ps_pods_phase.values()])
 
-        if pod_type == PodType.WORKER:
+        if pod_type == "worker":
             return worker_counter
-        elif pod_type == PodType.PS:
+        elif pod_type == "ps":
             return ps_counter
         else:
             return None

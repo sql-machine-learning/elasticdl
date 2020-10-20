@@ -14,7 +14,6 @@
 import json
 import os
 import traceback
-from enum import Enum
 
 import six
 import yaml
@@ -31,21 +30,6 @@ ELASTICDL_APP_NAME = "elasticdl"
 ELASTICDL_JOB_KEY = "elasticdl-job-name"
 ELASTICDL_REPLICA_TYPE_KEY = "elasticdl-replica-type"
 ELASTICDL_REPLICA_INDEX_KEY = "elasticdl-replica-index"
-
-
-class PodType(Enum):
-    UNKNOWN = (0,)
-    MASTER = (1,)
-    PS = (2,)
-    WORKER = (3,)
-
-
-POD_TYPE_NAME = {
-    PodType.UNKNOWN: "unknown",
-    PodType.MASTER: "master",
-    PodType.PS: "ps",
-    PodType.WORKER: "worker",
-}
 
 
 def get_master_pod_name(job_name):
@@ -74,7 +58,7 @@ def try_get_class(module, name):
         return None
 
 
-def check_list_get_type(type_name):
+def is_list_type(type_name):
     if type_name.startswith("list["):
         return True, type_name.split("[")[1].split("]")[0]
     else:
@@ -92,7 +76,7 @@ def get_instance_from_value(type_name, value):
     cls = try_get_class(client, type_name)
     if not cls:
         # not a class
-        is_a_list, list_type = check_list_get_type(type_name)
+        is_a_list, list_type = is_list_type(type_name)
         if is_a_list:
             value_list = []
             # value must be a list
@@ -150,9 +134,7 @@ class ClusterSpec(object):
                 pod = self._patch_pod_with_spec(
                     pod, self._cluster_spec[ClusterSpecConfig.POD_SPEC]
                 )
-            pod_type_spec_name = (
-                POD_TYPE_NAME[pod_type] + ClusterSpecConfig.POD_SPEC_SUFFIX
-            )
+            pod_type_spec_name = pod_type + ClusterSpecConfig.POD_SPEC_SUFFIX
             if pod_type_spec_name in self._cluster_spec:
                 pod = self._patch_pod_with_spec(
                     pod, self._cluster_spec[pod_type_spec_name]
@@ -396,7 +378,7 @@ class Client(object):
             volume=kargs["volume"],
             owner_pod=None,
             env=env,
-            pod_type=PodType.MASTER,
+            pod_type="master",
         )
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "master"
