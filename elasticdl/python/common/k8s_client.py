@@ -24,7 +24,7 @@ from elasticdl_client.common.k8s_client import (
     ELASTICDL_REPLICA_TYPE_KEY,
 )
 from elasticdl_client.common.k8s_client import Client as BaseClient
-from elasticdl_client.common.k8s_client import append_pod_ip_to_env
+from elasticdl_client.common.k8s_client import PodType, append_pod_ip_to_env
 
 _PS_SERVICE_PORT = 2222
 
@@ -191,13 +191,13 @@ class Client(BaseClient):
     def create_worker(self, **kargs):
         pod_name = self.get_worker_pod_name(kargs["worker_id"])
         return self._create_ps_worker_pod(
-            pod_name, "worker", kargs["worker_id"], **kargs
+            pod_name, PodType.WORKER, kargs["worker_id"], **kargs
         )
 
     def create_ps(self, **kargs):
         pod_name = self.get_ps_pod_name(kargs["ps_id"])
         return self._create_ps_worker_pod(
-            pod_name, "ps", kargs["ps_id"], **kargs
+            pod_name, PodType.PS, kargs["ps_id"], **kargs
         )
 
     def delete_worker(self, worker_id):

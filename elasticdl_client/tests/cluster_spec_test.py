@@ -15,7 +15,7 @@ import unittest
 
 from kubernetes import client
 
-from elasticdl_client.common.k8s_client import ClusterSpec
+from elasticdl_client.common.k8s_client import ClusterSpec, PodType
 
 test_spec = """
 {
@@ -162,15 +162,15 @@ class ClusterSpecTest(unittest.TestCase):
         self.assertEqual(pod.spec.containers[0].env, expected_env)
 
         pod = create_test_pod("test_spec")
-        pod = cluster_spec.patch_pod(pod, "master")
+        pod = cluster_spec.patch_pod(pod, PodType.MASTER)
         self.assertEqual(pod.metadata.labels["elasticdl.org/xyz"], "Sun")
 
         pod = create_test_pod("test_spec")
-        pod = cluster_spec.patch_pod(pod, "worker")
+        pod = cluster_spec.patch_pod(pod, PodType.WORKER)
         self.assertEqual(pod.metadata.labels["elasticdl.org/xyz"], "Earth")
 
         pod = create_test_pod("test_spec")
-        pod = cluster_spec.patch_pod(pod, "ps")
+        pod = cluster_spec.patch_pod(pod, PodType.PS)
         self.assertEqual(pod.metadata.labels["elasticdl.org/xyz"], "Moon")
 
     def test_service_spec(self):

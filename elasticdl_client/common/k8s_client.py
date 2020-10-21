@@ -36,6 +36,12 @@ def get_master_pod_name(job_name):
     return "elasticdl-%s-master" % job_name
 
 
+class PodType(object):
+    MASTER = "master"
+    PS = "ps"
+    WORKER = "worker"
+
+
 def append_pod_ip_to_env(env):
     pod_ip_var = V1EnvVar(
         name="MY_POD_IP",
@@ -58,7 +64,7 @@ def try_get_class(module, name):
         return None
 
 
-def is_list_type(type_name):
+def check_list_get_type(type_name):
     if type_name.startswith("list["):
         return True, type_name.split("[")[1].split("]")[0]
     else:
@@ -76,7 +82,7 @@ def get_instance_from_value(type_name, value):
     cls = try_get_class(client, type_name)
     if not cls:
         # not a class
-        is_a_list, list_type = is_list_type(type_name)
+        is_a_list, list_type = check_list_get_type(type_name)
         if is_a_list:
             value_list = []
             # value must be a list
@@ -378,7 +384,7 @@ class Client(object):
             volume=kargs["volume"],
             owner_pod=None,
             env=env,
-            pod_type="master",
+            pod_type=PodType.MASTER,
         )
         # Add replica type and index
         pod.metadata.labels[ELASTICDL_REPLICA_TYPE_KEY] = "master"
