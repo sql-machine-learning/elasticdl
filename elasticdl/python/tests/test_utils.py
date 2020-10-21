@@ -361,8 +361,6 @@ def distributed_train_and_evaluate(
         get_model_steps,
         "--distribution_strategy",
         distribution_strategy,
-        "--master_addr",
-        "",
     ]
     args = parse_worker_args(worker_arguments)
 
