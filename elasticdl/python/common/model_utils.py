@@ -191,6 +191,35 @@ def get_model_spec(
     )
 
 
+def get_training_func_spec(
+    model_zoo, model_def, dataset_fn, custom_data_reader,
+):
+    """Get the model spec items in a tuple.
+
+    The model spec tuple contains the following items in order:
+
+    * The `dataset_fn`,
+    * The `custom_data_reader`
+    """
+    model_def_module_file = get_module_file_path(model_zoo, model_def)
+    default_module = load_module(model_def_module_file).__dict__
+    training_func_name = model_def.split(".")[-1]
+    training_func = _get_spec_value(
+        training_func_name, model_zoo, default_module, required=True
+    )
+
+    # If ODPS data source is used, dataset_fn is optional
+    dataset_fn_required = not is_odps_configured()
+
+    return (
+        training_func,
+        _get_spec_value(
+            dataset_fn, model_zoo, default_module, required=dataset_fn_required
+        ),
+        _get_spec_value(custom_data_reader, model_zoo, default_module),
+    )
+
+
 def find_layer(model, layer_class):
     """
     Find all layers in model that are instances of layer_class

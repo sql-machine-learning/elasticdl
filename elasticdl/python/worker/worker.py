@@ -23,6 +23,7 @@ from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
     get_model_spec,
+    get_training_func_spec,
     set_callback_parameters,
 )
 from elasticdl.python.common.timing_utils import Timing
@@ -79,7 +80,12 @@ class Worker(object):
         self._timing = Timing(args.log_level.upper() == "DEBUG", self.logger)
         self._log_loss_count = 0
         self._var_created = False
-        self._init_from_args(args)
+        self._master_addr = args.master_addr.split(":")[0]
+        self.custom_training_loop = args.custom_training_loop
+        if self.custom_training_loop:
+            self._init_training_func_from_args(args)
+        else:
+            self._init_from_args(args)
 
     def _init_from_args(self, args):
         """
@@ -152,8 +158,9 @@ class Worker(object):
         self._saved_model_path = args.output
 
         if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
-            master_addr = args.master_addr.split(":")[0]
-            self._trainer = AllReduceTrainer(self._mc, master_addr, model_inst)
+            self._trainer = AllReduceTrainer(
+                self._mc, self._master_addr, model_inst
+            )
         elif (
             self._distribution_strategy
             == DistributionStrategy.PARAMETER_SERVER
@@ -161,6 +168,42 @@ class Worker(object):
             self._trainer = ParameterServerTrainer(
                 model_inst, self._ps_client, self._timing, args
             )
+
+    def _init_training_func_from_args(self, args):
+        self._worker_id = args.worker_id
+        self._job_type = args.job_type
+        self._minibatch_size = args.minibatch_size
+        (
+            self._training_func,
+            self._dataset_fn,
+            self._custom_data_reader,
+        ) = get_training_func_spec(
+            model_zoo=args.model_zoo,
+            model_def=args.model_def,
+            dataset_fn=args.dataset_fn,
+            custom_data_reader=args.custom_data_reader,
+        )
+        self._task_data_service = TaskDataService(
+            self._mc,
+            self._job_type == JobType.TRAINING_WITH_EVALUATION,
+            custom_data_reader=self._custom_data_reader,
+            data_reader_params=get_dict_from_params_str(
+                args.data_reader_params
+            ),
+            data_origin=args.training_data,
+        )
+        if self._dataset_fn is None:
+            if hasattr(
+                self._task_data_service.data_reader, "default_dataset_fn"
+            ):
+                self._dataset_fn = (
+                    self._task_data_service.data_reader.default_dataset_fn()
+                )
+            else:
+                raise ValueError(
+                    "dataset_fn is required if the data_reader used does "
+                    "not provide default implementation of dataset_fn"
+                )
 
     def _process_minibatch(
         self,
@@ -441,4 +484,32 @@ class Worker(object):
         elif self._job_type == JobType.EVALUATION_ONLY:
             self._evaluate_only()
         else:
-            self._train_and_evaluate()
+            if self.custom_training_loop:
+                self._elastic_allreduce_train()
+            else:
+                self._train_and_evaluate()
+
+    def _elastic_allreduce_train(self):
+        """
+        Train and evaluate the model on the worker
+        """
+        from elasticdl.python.worker.allreduce_trainer import (
+            ElasticTensorFlowV2Controller,
+        )
+
+        elastic_controller = ElasticTensorFlowV2Controller(
+            self._mc, self._master_addr
+        )
+        while True:
+            dataset = self._task_data_service.get_dataset()
+            if not dataset:
+                self._process_train_end_callback_task_if_needed()
+                break
+            dataset = self._dataset_fn(
+                dataset,
+                Mode.TRAINING,
+                self._task_data_service.data_reader.metadata,
+            )
+            dataset = dataset.batch(self._minibatch_size).prefetch(1)
+            self._training_func(dataset, elastic_controller)
+            del dataset

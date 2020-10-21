@@ -14,6 +14,8 @@
 import os
 import socket
 import time
+from abc import abstractmethod
+from functools import wraps
 
 import tensorflow as tf
 from tensorflow.keras import backend as K
@@ -182,3 +184,74 @@ class AllReduceTrainer(Trainer):
 
     def get_model_version(self):
         return self._optimizer.iterations.numpy()
+
+
+class ElasticAllReduceController(object):
+    def __init__(self, master_client, master_addr):
+        if not hvd:
+            raise RuntimeError("Horovod is not installed for AllReduce")
+
+        self._rendezvous_manager = RendevousManager(master_client, master_addr)
+        self._step = 0
+        self._first_call = True
+        self._need_broadcast = True
+
+    def elastic_run(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if self._first_call:
+                hvd.init()
+                func(*args, **kwargs)
+                self._first_call = False
+            if self._step % 20 == 0:
+                self._rendezvous_manager.init_horovod_if_needed()
+
+            for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
+                try:
+                    if self._rendezvous_manager.need_broadcast:
+                        logger.info("Broadcast models")
+                        self.broadcast()
+                        self._rendezvous_manager.need_broadcast = False
+
+                    self._step += 1
+                    return func(*args, **kwargs)
+                except UnknownError as e:
+                    logger.warning(
+                        "Failed to perform allreduce operation on "
+                        "the gradients. Retrying..."
+                    )
+                    # Those error message show that the communication
+                    # to merge gradient fails and we can rebuild the
+                    # communication.
+                    if (
+                        "HorovodAllreduce" in e.message
+                        or "HorovodAllgather" in e.message
+                        or "HorovodBroadcast" in e.message
+                    ):
+                        time.sleep(3)
+                        self._rendezvous_manager.init_horovod_if_needed()
+
+        return wrapper
+
+    @abstractmethod
+    def broadcast(self):
+        pass
+
+
+class ElasticTensorFlowV2Controller(ElasticAllReduceController):
+    def __init__(self, master_client, master_addr):
+        super(ElasticTensorFlowV2Controller, self).__init__(
+            master_client, master_addr
+        )
+        self._model = None
+        self._optimizer = None
+
+    def set_broadcast_model(self, model):
+        self._model = model
+
+    def set_broadcast_optimizer(self, optimizer):
+        self._optimizer = optimizer
+
+    def broadcast(self):
+        broadcast_variables(self._model.variables, root_rank=0)
+        broadcast_variables(self._optimizer.variables(), root_rank=0)
