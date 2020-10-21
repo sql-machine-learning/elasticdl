@@ -105,7 +105,7 @@ for ElasticDL to submit a distributed training job.
 
 `feed`: Return a dataset using TensorFlow.
 
-For example, we define those APIs for the WDL model in DeepCTR:
+For example, we define those APIs for the WDL model in DeepCTR.
 
 ```python
 import tensorflow as tf
@@ -179,7 +179,7 @@ inside the Minikube instance using the following command.
 eval $(minikube docker-env)
 ```
 
-Last, we need to enable RBAC of Kubernetes by the following command.
+Lastly, we need to enable RBAC of Kubernetes by the following command.
 
 ```bash
 kubectl apply -f \
@@ -266,6 +266,7 @@ over iterations.
 ```bash
 kubectl logs elasticdl-test-mnist-master | grep "Evaluation"
 ```
+
 The output looks like the following.
 
 ```txt
