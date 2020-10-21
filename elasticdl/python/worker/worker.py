@@ -175,12 +175,12 @@ class Worker(object):
         self._minibatch_size = args.minibatch_size
         (
             self._training_func,
-            self._dataset_fn,
+            self._feed,
             self._custom_data_reader,
         ) = get_training_func_spec(
             model_zoo=args.model_zoo,
             model_def=args.model_def,
-            dataset_fn=args.dataset_fn,
+            feed=args.feed,
             custom_data_reader=args.custom_data_reader,
         )
         self._task_data_service = TaskDataService(
@@ -192,17 +192,17 @@ class Worker(object):
             ),
             data_origin=args.training_data,
         )
-        if self._dataset_fn is None:
+        if self._feed is None:
             if hasattr(
-                self._task_data_service.data_reader, "default_dataset_fn"
+                self._task_data_service.data_reader, "default_feed"
             ):
-                self._dataset_fn = (
+                self._feed = (
                     self._task_data_service.data_reader.default_dataset_fn()
                 )
             else:
                 raise ValueError(
-                    "dataset_fn is required if the data_reader used does "
-                    "not provide default implementation of dataset_fn"
+                    "feed is required if the data_reader used does "
+                    "not provide default implementation of feed"
                 )
 
     def _process_minibatch(
@@ -505,7 +505,7 @@ class Worker(object):
             if not dataset:
                 self._process_train_end_callback_task_if_needed()
                 break
-            dataset = self._dataset_fn(
+            dataset = self._feed(
                 dataset,
                 Mode.TRAINING,
                 self._task_data_service.data_reader.metadata,

@@ -192,13 +192,13 @@ def get_model_spec(
 
 
 def get_training_func_spec(
-    model_zoo, model_def, dataset_fn, custom_data_reader,
+    model_zoo, model_def, feed, custom_data_reader,
 ):
     """Get the model spec items in a tuple.
 
     The model spec tuple contains the following items in order:
 
-    * The `dataset_fn`,
+    * The `feed`,
     * The `custom_data_reader`
     """
     model_def_module_file = get_module_file_path(model_zoo, model_def)
@@ -208,13 +208,10 @@ def get_training_func_spec(
         training_func_name, model_zoo, default_module, required=True
     )
 
-    # If ODPS data source is used, dataset_fn is optional
-    dataset_fn_required = not is_odps_configured()
-
     return (
         training_func,
         _get_spec_value(
-            dataset_fn, model_zoo, default_module, required=dataset_fn_required
+            feed, model_zoo, default_module, required=False
         ),
         _get_spec_value(custom_data_reader, model_zoo, default_module),
     )
