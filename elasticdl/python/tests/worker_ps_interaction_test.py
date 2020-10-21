@@ -83,6 +83,8 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 self._model_def,
                 "--distribution_strategy",
                 DistributionStrategy.PARAMETER_SERVER,
+                "--master_addr",
+                "",
             ]
             args = parse_worker_args(arguments)
             worker = Worker(args, ps_client=PSClient(self._channels))
