@@ -414,6 +414,7 @@ class Master(object):
                 image_pull_policy=args.image_pull_policy,
                 restart_policy=args.restart_policy,
                 cluster_spec=cluster_spec,
+                cluster_spec_json=args.cluster_spec_json,
                 envs=env,
                 disable_relaunch=disable_relaunch,
                 log_file_path=args.log_file_path,

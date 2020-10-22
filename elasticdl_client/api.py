@@ -121,6 +121,8 @@ def train(args):
         args.model_zoo,
         "--cluster_spec",
         args.cluster_spec,
+        "--cluster_spec_json",
+        args.cluster_spec_json,
     ]
 
     container_args.extend(
@@ -147,6 +149,8 @@ def evaluate(args):
         args.model_zoo,
         "--cluster_spec",
         args.cluster_spec,
+        "--cluster_spec_json",
+        args.cluster_spec_json,
     ]
     container_args.extend(
         build_arguments_from_parsed_result(
@@ -172,6 +176,8 @@ def predict(args):
         args.model_zoo,
         "--cluster_spec",
         args.cluster_spec,
+        "--cluster_spec_json",
+        args.cluster_spec_json,
     ]
 
     container_args.extend(
@@ -196,6 +202,7 @@ def _submit_job(image_name, client_args, container_args):
         namespace=client_args.namespace,
         job_name=client_args.job_name,
         cluster_spec=client_args.cluster_spec,
+        cluster_spec_json=client_args.cluster_spec_json,
         force_use_kube_config_file=client_args.force_use_kube_config_file,
     )
 

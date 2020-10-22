@@ -324,6 +324,14 @@ def add_common_params(parser):
         default="",
     )
     parser.add_argument(
+        "--cluster_spec_json",
+        type=str,
+        help="A JSON-encoded string that contains user-defined cluster"
+        "specification, which is an alternate for cluster_spec to"
+        "avoid using file.",
+        default="",
+    )
+    parser.add_argument(
         "--yaml",
         type=str,
         default="",
