@@ -199,20 +199,12 @@ class ElasticAllReduceController(object):
     def elastic_run(self, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if self._first_call:
-                hvd.init()
-                func(*args, **kwargs)
-                self._first_call = False
-            if self._step % 20 == 0:
-                self._rendezvous_manager.init_horovod_if_needed()
+            self._init_variables_before_first_calling(func, *args, **kwargs)
+            self._init_horovod_periodically()
 
             for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
                 try:
-                    if self._rendezvous_manager.need_broadcast:
-                        logger.info("Broadcast models")
-                        self.broadcast()
-                        self._rendezvous_manager.need_broadcast = False
-
+                    self._broadcast_if_needed()
                     self._step += 1
                     return func(*args, **kwargs)
                 except UnknownError as e:
@@ -232,6 +224,22 @@ class ElasticAllReduceController(object):
                         self._rendezvous_manager.init_horovod_if_needed()
 
         return wrapper
+
+    def _init_variables_before_first_calling(self, func, *args, **kwargs):
+        if self._first_call:
+            hvd.init()
+            func(*args, **kwargs)
+            self._first_call = False
+
+    def _init_horovod_periodically(self):
+        if self._step % 20 == 0:
+            self._rendezvous_manager.init_horovod_if_needed()
+
+    def _broadcast_if_needed(self):
+        if self._rendezvous_manager.need_broadcast:
+            logger.info("Broadcast models")
+            self.broadcast()
+            self._rendezvous_manager.need_broadcast = False
 
     @abstractmethod
     def broadcast(self):

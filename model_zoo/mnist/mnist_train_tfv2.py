@@ -36,7 +36,6 @@ def train(dataset, elastic_controller):
     elastic_controller.set_broadcast_optimizer(optimizer)
 
     for features, labels in dataset:
-        # allreduce(tape, loss, model, optimizer)
         elastic_allreduce = elastic_controller.elastic_run(train_one_batch)
         loss = elastic_allreduce(model, optimizer, features, labels)
         step = optimizer.iterations.numpy()
@@ -60,25 +59,6 @@ def train_one_batch(model, optimizer, features, labels):
 
 
 def feed(dataset, mode, _):
-    def _parse_data(record):
-        if mode == Mode.PREDICTION:
-            feature_description = {
-                "image": tf.io.FixedLenFeature([28, 28], tf.float32)
-            }
-        else:
-            feature_description = {
-                "image": tf.io.FixedLenFeature([28, 28], tf.float32),
-                "label": tf.io.FixedLenFeature([1], tf.int64),
-            }
-        r = tf.io.parse_single_example(record, feature_description)
-        features = {
-            "image": tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
-        }
-        if mode == Mode.PREDICTION:
-            return features
-        else:
-            return features, tf.cast(r["label"], tf.int32)
-
     dataset = dataset.map(_parse_data)
 
     if mode == Mode.TRAINING:
@@ -86,10 +66,13 @@ def feed(dataset, mode, _):
     return dataset
 
 
-def eval_metrics_fn():
-    return {
-        "accuracy": lambda labels, predictions: tf.equal(
-            tf.argmax(predictions, 1, output_type=tf.int32),
-            tf.cast(tf.reshape(labels, [-1]), tf.int32),
-        )
+def _parse_data(record):
+    feature_description = {
+        "image": tf.io.FixedLenFeature([28, 28], tf.float32),
+        "label": tf.io.FixedLenFeature([1], tf.int64),
     }
+    r = tf.io.parse_single_example(record, feature_description)
+    features = {
+        "image": tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
+    }
+    return features, tf.cast(r["label"], tf.int32)
