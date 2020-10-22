@@ -203,25 +203,7 @@ class ElasticAllReduceController(object):
             self._init_horovod_periodically()
 
             for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
-                try:
-                    self._broadcast_if_needed()
-                    self._step += 1
-                    return func(*args, **kwargs)
-                except UnknownError as e:
-                    logger.warning(
-                        "Failed to perform allreduce operation on "
-                        "the gradients. Retrying..."
-                    )
-                    # Those error message show that the communication
-                    # to merge gradient fails and we can rebuild the
-                    # communication.
-                    if (
-                        "HorovodAllreduce" in e.message
-                        or "HorovodAllgather" in e.message
-                        or "HorovodBroadcast" in e.message
-                    ):
-                        time.sleep(3)
-                        self._rendezvous_manager.init_horovod_if_needed()
+                self._try_to_call_func(func, *args, **kwargs)
 
         return wrapper
 
@@ -240,6 +222,27 @@ class ElasticAllReduceController(object):
             logger.info("Broadcast models")
             self.broadcast()
             self._rendezvous_manager.need_broadcast = False
+
+    def _try_to_call_func(self, func, *args, **kwargs):
+        try:
+            self._broadcast_if_needed()
+            self._step += 1
+            return func(*args, **kwargs)
+        except UnknownError as e:
+            logger.warning(
+                "Failed to perform allreduce operation on "
+                "the gradients. Retrying..."
+            )
+            # Those error message show that the communication
+            # to merge gradient fails and we can rebuild the
+            # communication.
+            if (
+                "HorovodAllreduce" in e.message
+                or "HorovodAllgather" in e.message
+                or "HorovodBroadcast" in e.message
+            ):
+                time.sleep(3)
+                self._rendezvous_manager.init_horovod_if_needed()
 
     @abstractmethod
     def broadcast(self):

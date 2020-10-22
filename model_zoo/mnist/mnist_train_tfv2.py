@@ -46,10 +46,9 @@ def train(dataset, elastic_controller):
 def train_one_batch(model, optimizer, features, labels):
     with tf.GradientTape() as tape:
         outputs = model.call(features, training=True)
-        labels = tf.reshape(labels, [-1])
         loss = tf.reduce_mean(
             input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
-                logits=outputs, labels=labels
+                logits=outputs, labels=tf.reshape(labels, [-1])
             )
         )
     tape = hvd.DistributedGradientTape(tape)
