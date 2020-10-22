@@ -20,6 +20,8 @@ import tensorflow as tf
 from elasticdl.python.tests.test_module import custom_model, loss, optimizer
 from elasticdl.python.worker.allreduce_trainer import (
     AllReduceTrainer,
+    ElasticAllReduceController,
+    ElasticTensorFlowV2Controller,
     RendevousManager,
 )
 
@@ -75,6 +77,40 @@ class RendevousManagerTest(unittest.TestCase):
         self._manager.init_horovod_if_needed()
         self.assertEqual(self._manager._rendezvous_id, 1)
         self.assertTrue(self._manager.need_broadcast)
+
+
+class ElasticAllReduceControllerTest(unittest.TestCase):
+    def train(self):
+        pass
+
+    def test_elastic_run(self):
+        master_client = Mock()
+        master_client.get_comm_rank = MagicMock(
+            return_value=Mock(
+                rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
+            )
+        )
+        controller = ElasticAllReduceController(master_client, "")
+        elastic_run = controller.elastic_run(self.train)
+        elastic_run()
+        self.assertEqual(controller._step, 1)
+        self.assertFalse(controller._first_call)
+
+
+class ElasticTensorFlowV2ControllerTest(unittest.TestCase):
+    def test_elastic_run(self):
+        master_client = Mock()
+        master_client.get_comm_rank = MagicMock(
+            return_value=Mock(
+                rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
+            )
+        )
+        controller = ElasticTensorFlowV2Controller(master_client, "")
+        controller.set_broadcast_model(tf.keras.Model())
+        controller.set_broadcast_optimizer(tf.optimizers.SGD(0.01))
+        controller.broadcast()
+        self.assertIsNotNone(controller._model)
+        self.assertIsNotNone(controller._optimizer)
 
 
 if __name__ == "__main__":
