@@ -193,9 +193,7 @@ class Worker(object):
             data_origin=args.training_data,
         )
         if self._feed is None:
-            if hasattr(
-                self._task_data_service.data_reader, "default_feed"
-            ):
+            if hasattr(self._task_data_service.data_reader, "default_feed"):
                 self._feed = (
                     self._task_data_service.data_reader.default_dataset_fn()
                 )

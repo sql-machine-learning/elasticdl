@@ -210,9 +210,7 @@ def get_training_func_spec(
 
     return (
         training_func,
-        _get_spec_value(
-            feed, model_zoo, default_module, required=False
-        ),
+        _get_spec_value(feed, model_zoo, default_module, required=False),
         _get_spec_value(custom_data_reader, model_zoo, default_module),
     )
 
