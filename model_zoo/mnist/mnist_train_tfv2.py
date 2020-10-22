@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# import horovod.tensorflow as hvd
+import horovod.tensorflow as hvd
 import tensorflow as tf
 
 from elasticdl.python.common.constants import Mode
