@@ -203,7 +203,8 @@ class ElasticAllReduceController(object):
             self._init_horovod_periodically()
 
             for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
-                self._try_to_call_func(func, *args, **kwargs)
+                if self._try_to_call_func(func, *args, **kwargs):
+                    break
 
         return wrapper
 
@@ -226,8 +227,9 @@ class ElasticAllReduceController(object):
     def _try_to_call_func(self, func, *args, **kwargs):
         try:
             self._broadcast_if_needed()
+            func(*args, **kwargs)
             self._step += 1
-            return func(*args, **kwargs)
+            return True
         except UnknownError as e:
             logger.warning(
                 "Failed to perform allreduce operation on "
@@ -243,6 +245,7 @@ class ElasticAllReduceController(object):
             ):
                 time.sleep(3)
                 self._rendezvous_manager.init_horovod_if_needed()
+            return False
 
     @abstractmethod
     def broadcast(self):

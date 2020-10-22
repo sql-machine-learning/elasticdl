@@ -46,7 +46,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             "--model_zoo",
             self._model_zoo_path,
             "--model_def",
-            "mnist_train_tfv2.train",
+            "mnist.mnist_train_tfv2.train",
             "--distribution_strategy",
             DistributionStrategy.ALLREDUCE,
             "--custom_training_loop",
