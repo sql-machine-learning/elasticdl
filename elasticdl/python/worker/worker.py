@@ -493,11 +493,20 @@ class Worker(object):
         """
         from elasticdl.python.worker.allreduce_trainer import (
             ElasticTensorFlowV2Controller,
+            ElasticPyTorchController,
         )
 
-        elastic_controller = ElasticTensorFlowV2Controller(
-            self._mc, self._master_addr
-        )
+        if os.getenv("USE_TORCH", None):
+            elastic_controller = ElasticPyTorchController(
+                self._mc, self._master_addr
+            )
+        else:
+            elastic_controller = ElasticTensorFlowV2Controller(
+                self._mc, self._master_addr
+            )
+        # Initialize Horovod locally to generate varibles of the model
+        # and optimizer.
+        elastic_controller.init_horvod_locally()
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:

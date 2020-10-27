@@ -14,6 +14,7 @@
 import os
 import socket
 import time
+import traceback
 from abc import abstractmethod
 from functools import wraps
 
@@ -26,8 +27,17 @@ from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.worker.trainer import Trainer
 
 try:
-    from horovod.tensorflow.functions import broadcast_variables
-    import horovod.tensorflow as hvd
+    if os.getenv("USE_TORCH", None):
+        from horovod.torch.functions import (
+            broadcast_optimizer_state,
+            broadcast_parameters,
+        )
+        import horovod.torch as hvd
+    else:
+        from horovod.tensorflow.functions import broadcast_variables
+        import horovod.tensorflow as hvd
+    from horovod.common.exceptions import HorovodInternalError
+
 except ImportError:
     hvd = None
 
@@ -62,6 +72,7 @@ class RendevousManager(object):
         # the worker should rebuild the communication because the master
         # has updated the communication group.
         if rank_response.rendezvous_id != self._rendezvous_id:
+            logger.info("Initialize Horovod")
             os.environ[HorovodEnv.RENDEZVOUS_PORT] = str(
                 rank_response.rendezvous_port
             )
@@ -208,13 +219,16 @@ class ElasticAllReduceController(object):
         def wrapper(*args, **kwargs):
             self._init_variables_before_first_calling(func, *args, **kwargs)
             self._init_horovod_periodically()
-            return self._try_to_call_func(func, *args, **kwargs)
+            return self.try_to_call_func(func, *args, **kwargs)
 
         return wrapper
 
     def _init_variables_before_first_calling(self, func, *args, **kwargs):
+        """Call the training function to generate variables of the
+        model and optimizer to broadcast.
+        """
         if self._first_call:
-            hvd.init()
+            logger.info("First call")
             func(*args, **kwargs)
             self._first_call = False
 
@@ -228,7 +242,27 @@ class ElasticAllReduceController(object):
             self.broadcast()
             self._rendezvous_manager.need_broadcast = False
 
-    def _try_to_call_func(self, func, *args, **kwargs):
+    def init_horvod_locally(self):
+        hvd.init()
+
+    @abstractmethod
+    def broadcast(self):
+        pass
+
+    @abstractmethod
+    def try_to_call_func(self):
+        pass
+
+
+class ElasticTensorFlowV2Controller(ElasticAllReduceController):
+    def __init__(self, master_client, master_addr):
+        super(ElasticTensorFlowV2Controller, self).__init__(
+            master_client, master_addr
+        )
+        self._model = None
+        self._optimizer = None
+
+    def try_to_call_func(self, func, *args, **kwargs):
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
             try:
                 self._broadcast_if_needed()
@@ -251,18 +285,20 @@ class ElasticAllReduceController(object):
                     time.sleep(3)
                     self._rendezvous_manager.init_horovod_if_needed()
 
-    @abstractmethod
+    def set_broadcast_model(self, model):
+        self._model = model
+
+    def set_broadcast_optimizer(self, optimizer):
+        self._optimizer = optimizer
+
     def broadcast(self):
-        pass
+        broadcast_variables(self._model.variables, root_rank=0)
+        broadcast_variables(self._optimizer.variables(), root_rank=0)
 
 
-class ElasticTensorFlowV2Controller(ElasticAllReduceController):
-    """The controller is responsible for elastic training of
-    TensorFlow eager execution using AllReduce.
-    """
-
+class ElasticPyTorchController(ElasticAllReduceController):
     def __init__(self, master_client, master_addr):
-        super(ElasticTensorFlowV2Controller, self).__init__(
+        super(ElasticPyTorchController, self).__init__(
             master_client, master_addr
         )
         self._model = None
@@ -275,5 +311,31 @@ class ElasticTensorFlowV2Controller(ElasticAllReduceController):
         self._optimizer = optimizer
 
     def broadcast(self):
-        broadcast_variables(self._model.variables, root_rank=0)
-        broadcast_variables(self._optimizer.variables(), root_rank=0)
+        broadcast_parameters(self._model.state_dict(), root_rank=0)
+        broadcast_optimizer_state(self._optimizer, root_rank=0)
+
+    def try_to_call_func(self, func, *args, **kwargs):
+        for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
+            try:
+                self._broadcast_if_needed()
+                result = func(*args, **kwargs)
+                self._step += 1
+                return result
+            except HorovodInternalError:
+                logger.warning(
+                    "Failed to perform allreduce operation on "
+                    "the gradients. Retrying..."
+                )
+                # Those error message show that the communication
+                # to merge gradient fails and we can rebuild the
+                # communication.
+                self.restore()
+            except RuntimeError:
+                traceback.print_exc()
+                self.restore()
+
+    def restore(self):
+        time.sleep(3)
+        # Call `load_state_dict` to reset the state of Horovod optimizer
+        self._optimizer.load_state_dict(self._optimizer.state_dict())
+        self._rendezvous_manager.init_horovod_if_needed()
