@@ -187,6 +187,13 @@ class AllReduceTrainer(Trainer):
 
 
 class ElasticAllReduceController(object):
+    """The controller initializes Horovod and call the function with forward
+    and backward computation using a batch data. If Horovod raise an exception
+    about AllReduce, Allgather and Broadcast, the controller will catch the
+    exception and re-initialize Horovod. Then, it will broadcast the variables
+    and retry to call those function.
+    """
+
     def __init__(self, master_client, master_addr):
         if not hvd:
             raise RuntimeError("Horovod is not installed for AllReduce")
@@ -250,6 +257,10 @@ class ElasticAllReduceController(object):
 
 
 class ElasticTensorFlowV2Controller(ElasticAllReduceController):
+    """The controller is responsible for elastic training of
+    TensorFlow eager execution using AllReduce.
+    """
+
     def __init__(self, master_client, master_addr):
         super(ElasticTensorFlowV2Controller, self).__init__(
             master_client, master_addr

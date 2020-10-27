@@ -198,6 +198,7 @@ def get_training_func_spec(
 
     The model spec tuple contains the following items in order:
 
+    * The `training_func` of training loop.
     * The `feed`,
     * The `custom_data_reader`
     """

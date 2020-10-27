@@ -36,8 +36,10 @@ def train(dataset, elastic_controller):
     elastic_controller.set_broadcast_optimizer(optimizer)
 
     for features, labels in dataset:
-        elastic_allreduce = elastic_controller.elastic_run(train_one_batch)
-        loss = elastic_allreduce(model, optimizer, features, labels)
+        elastic_train_one_batch = elastic_controller.elastic_run(
+            train_one_batch
+        )
+        loss = elastic_train_one_batch(model, optimizer, features, labels)
         step = optimizer.iterations.numpy()
         if step % 5 == 0:
             logger.info("step = {}, loss = {}".format(step, loss))

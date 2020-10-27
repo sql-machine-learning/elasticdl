@@ -22,7 +22,7 @@ from elasticdl.python.worker.worker import Worker
 from elasticdl_client.common.constants import DistributionStrategy
 
 
-class WorkerPSInteractionTest(unittest.TestCase):
+class WorkerTest(unittest.TestCase):
     def setUp(self):
         self._model_zoo_path = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), "../../../model_zoo"
