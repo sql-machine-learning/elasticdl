@@ -1,6 +1,6 @@
 # ElasticDL：Distributed Train the DeepCTR Model on Kubernetes
 
-This document shows how to use ElasticDL to train the premade Keras Model
+This document shows how to use ElasticDL to train premade Keras Models
 on Kubernetes. In the document,  we use the model in DeepCTR which is a
 popular package in CTR estimation and the dataset provided by Cretio from
 Kaggle Advertising Challenge contest. There are 13 columns of integer
@@ -84,7 +84,7 @@ def convert_to_recordio_files(file_path, dir_name, records_per_shard=10240):
         if writer:
             writer.close()
 
-# We use the same dataset for training and valuation for simplity.
+# We use the same dataset for training and evaluation for simplity.
 convert_to_recordio_files("./criteo_sample.txt", "./data/criteo_records/train")
 convert_to_recordio_files("./criteo_sample.txt", "./data/criteo_records/test")
 ```
@@ -114,8 +114,8 @@ from deepctr.models import WDL
 
 
 def forward():
-    sparse_features = ["C" + str(i) for i in range(1, 27)]
-    dense_features = ["I" + str(i) for i in range(1, 14)]
+    sparse_features = [("C" + str(i)) for i in range(1, 27)]
+    dense_features = [("I" + str(i)) for i in range(1, 14)]
     fixlen_feature_columns = [
         SparseFeat(
             feat,
@@ -248,7 +248,7 @@ job like the above command on Minikube.
 
 ### Check Job Status
 
-After the job submission, we can run the command kubectl get pods to list
+After the job submission, we can run the command `kubectl get pods` to list
 related containers.
 
 ```txt
