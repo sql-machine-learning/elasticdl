@@ -36,8 +36,8 @@ import tensorflow as tf
 
 COLUMNS = (
     ["label"]
-    + ["I" + str(i) for i in range(1, 14)]
-    + ["C" + str(i) for i in range(1, 27)]
+    + [("I" + str(i)) for i in range(1, 14)]
+    + [("C" + str(i)) for i in range(1, 27)]
 )
 
 
@@ -89,7 +89,7 @@ convert_to_recordio_files("./criteo_sample.txt", "./data/criteo_records/train")
 convert_to_recordio_files("./criteo_sample.txt", "./data/criteo_records/test")
 ```
 
-Except RecordIO format, ElasticDL also supports other storage with the index
+Besides RecordIO format, ElasticDL also supports other storages with the index
 like MaxCompute Table.
 
 ## 3. Define Training APIs for ElasticDL with Premade Models
