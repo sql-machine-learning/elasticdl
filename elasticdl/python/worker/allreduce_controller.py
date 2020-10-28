@@ -104,13 +104,13 @@ class AllReduceController(object):
         pass
 
 
-class TensorFlowV2AllreduceController(AllReduceController):
+class TensorFlowV2AllReduceController(AllReduceController):
     """The controller is responsible for elastic training of
     TensorFlow eager execution using AllReduce.
     """
 
     def __init__(self, master_client, master_addr):
-        super(TensorFlowV2AllreduceController, self).__init__(
+        super(TensorFlowV2AllReduceController, self).__init__(
             master_client, master_addr
         )
         self._model = None
