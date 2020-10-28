@@ -28,6 +28,9 @@ from elasticdl.python.common.model_utils import (
 )
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
+from elasticdl.python.worker.allreduce_controller import (
+    TensorFlowV2AllreduceController,
+)
 from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
 from elasticdl.python.worker.ps_trainer import ParameterServerTrainer
 from elasticdl.python.worker.task_data_service import TaskDataService
@@ -491,11 +494,8 @@ class Worker(object):
         """
         Train and evaluate the model on the worker
         """
-        from elasticdl.python.worker.allreduce_trainer import (
-            ElasticTensorFlowV2Controller,
-        )
 
-        elastic_controller = ElasticTensorFlowV2Controller(
+        elastic_controller = TensorFlowV2AllreduceController(
             self._mc, self._master_addr
         )
         while True:
