@@ -196,6 +196,15 @@ def get_training_func_spec(
 ):
     """Get the model spec items in a tuple.
 
+    Args:
+        model_zoo: String, the folder name of model files.
+        model_def: The import path to the model definition function/class in
+        the "model zoo".
+        feed: the function name in the model definition file to convert the
+        input data.
+        custom_data_reader: the function name in the model definition file
+        to read data from the storage.
+
     The model spec tuple contains the following items in order:
 
     * The `training_func` of training loop.

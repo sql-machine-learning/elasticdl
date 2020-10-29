@@ -77,12 +77,3 @@ def _parse_data(record):
         "image": tf.math.divide(tf.cast(r["image"], tf.float32), 255.0)
     }
     return features, tf.cast(r["label"], tf.int32)
-
-
-def eval_metrics_fn():
-    return {
-        "accuracy": lambda labels, predictions: tf.equal(
-            tf.argmax(predictions, 1, output_type=tf.int32),
-            tf.cast(tf.reshape(labels, [-1]), tf.int32),
-        )
-    }
