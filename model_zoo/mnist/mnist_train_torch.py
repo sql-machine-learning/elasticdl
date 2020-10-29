@@ -87,9 +87,7 @@ def train_one_batch(model, optimizer, data, target):
     optimizer.zero_grad()
     output = model(data)
     loss = F.nll_loss(output, target)
-    logger.info("backward")
     loss.backward()
-    logger.info("optimizer step")
     optimizer.step()
     return loss
 

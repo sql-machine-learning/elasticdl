@@ -20,12 +20,10 @@ import tensorflow as tf
 from elasticdl.python.tests.test_module import custom_model, loss, optimizer
 from elasticdl.python.worker.allreduce_controller import (
     AllReduceController,
+    RendevousManager,
     TensorFlowV2AllReduceController,
 )
-from elasticdl.python.worker.allreduce_trainer import (
-    AllReduceTrainer,
-    RendevousManager,
-)
+from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
 
 
 class AllReduceTrainerTest(unittest.TestCase):
