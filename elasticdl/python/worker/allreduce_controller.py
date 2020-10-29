@@ -24,15 +24,15 @@ from elasticdl.python.common.log_utils import default_logger as logger
 
 try:
     if os.getenv("USE_TORCH", None):
-        from horovod.torch.functions import (
-            broadcast_optimizer_state,
-            broadcast_parameters,
-        )
         import horovod.torch as hvd
     else:
-        from horovod.tensorflow.functions import broadcast_variables
         import horovod.tensorflow as hvd
+    from horovod.tensorflow.functions import broadcast_variables
     from horovod.common.exceptions import HorovodInternalError
+    from horovod.torch.functions import (
+        broadcast_optimizer_state,
+        broadcast_parameters,
+    )
 
 except ImportError:
     hvd = None

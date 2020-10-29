@@ -12,6 +12,8 @@
 # limitations under the License.
 
 import tensorflow as tf
+import torch.nn as nn
+import torch.nn.functional as F
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, Input
 
@@ -82,3 +84,14 @@ class CustomDataReader(RecordIODataReader):
 
 def custom_data_reader(data_origin, records_per_task=None, **kwargs):
     return CustomDataReader(data_dir=data_origin)
+
+
+class TorchModel(nn.Module):
+    def __init__(self):
+        super(TorchModel, self).__init__()
+        self.conv1 = nn.Conv2d(1, 20, 5)
+        self.conv2 = nn.Conv2d(20, 20, 5)
+
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        return F.relu(self.conv2(x))
