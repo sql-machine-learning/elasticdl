@@ -114,7 +114,9 @@ class AllReduceController(object):
         def wrapper(*args, **kwargs):
             self._init_variables_before_first_calling(func, *args, **kwargs)
             self._init_horovod_periodically()
-            return self.train_one_batch_with_retries(func, *args, **kwargs)
+            result = self.train_one_batch_with_retries(func, *args, **kwargs)
+            self._step += 1
+            return result
 
         return wrapper
 
@@ -176,7 +178,6 @@ class TensorFlowV2AllReduceController(AllReduceController):
             try:
                 self._broadcast_if_needed()
                 result = func(*args, **kwargs)
-                self._step += 1
                 return result
             except UnknownError as e:
                 logger.warning(
@@ -218,7 +219,6 @@ class PyTorchAllReduceController(AllReduceController):
             try:
                 self._broadcast_if_needed()
                 result = func(*args, **kwargs)
-                self._step += 1
                 return result
             except HorovodInternalError:
                 logger.warning(
