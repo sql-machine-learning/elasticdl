@@ -202,7 +202,7 @@ def parse_worker_args(worker_args=None):
         "--num_workers", help="The number of workers", type=int, required=False
     )
     parser.add_argument("--job_type", help="Job type", required=True)
-    parser.add_argument("--master_addr", help="Master ip:port")
+    parser.add_argument("--master_addr", help="Master ip:port", default="")
     parser.add_argument(
         "--prediction_outputs_processor",
         help="The name of the prediction output processor class "
