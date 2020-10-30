@@ -13,6 +13,7 @@
 
 import os
 import traceback
+from distutils.version import LooseVersion
 
 import tensorflow as tf
 
@@ -30,6 +31,7 @@ from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.worker.allreduce_controller import (
     PyTorchAllReduceController,
+    TensorFlowV1AllReduceController,
     TensorFlowV2AllReduceController,
 )
 from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
@@ -42,6 +44,8 @@ from elasticdl_client.common.constants import DistributionStrategy
 DEFAULT_MAX_MINIBATCH_RETRY_NUM = 64
 
 DEFAULT_STEPS_TO_CHECK_RENDEZVOUS = 20
+
+_IS_TF2 = LooseVersion(tf.__version__) >= LooseVersion("2.0.0")
 
 
 class Worker(object):
@@ -499,8 +503,12 @@ class Worker(object):
             elastic_controller = PyTorchAllReduceController(
                 self._mc, self._master_addr
             )
-        else:
+        elif _IS_TF2:
             elastic_controller = TensorFlowV2AllReduceController(
+                self._mc, self._master_addr
+            )
+        else:
+            elastic_controller = TensorFlowV1AllReduceController(
                 self._mc, self._master_addr
             )
         # Initialize Horovod locally to generate varibles of the model

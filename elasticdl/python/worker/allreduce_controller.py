@@ -17,6 +17,7 @@ import traceback
 from abc import abstractmethod
 from functools import wraps
 
+import tensorflow as tf
 from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticdl.python.common.constants import HorovodEnv
@@ -238,3 +239,44 @@ class PyTorchAllReduceController(AllReduceController):
         # Call `load_state_dict` to reset the state of Horovod optimizer
         self._optimizer.load_state_dict(self._optimizer.state_dict())
         self._rendezvous_manager.init_horovod_if_needed()
+
+
+class TensorFlowV1AllReduceController(AllReduceController):
+    """The controller is responsible for elastic training of
+    TensorFlow eager execution using AllReduce.
+    """
+
+    def __init__(self, master_client, master_addr):
+        super(TensorFlowV1AllReduceController, self).__init__(
+            master_client, master_addr
+        )
+        self._bcast_op = None
+
+    def broadcast(self):
+        if self._bcast_op is None:
+            self._variables = tf.global_variables()
+            self._bcast_op = broadcast_variables(self._variables, root_rank=0)
+        session = tf.get_default_session()
+        session.run(self._bcast_op)
+
+    def train_one_batch_with_retries(self, func, *args, **kwargs):
+        for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
+            try:
+                self._broadcast_if_needed()
+                result = func(*args, **kwargs)
+                return result
+            except UnknownError as e:
+                logger.warning(
+                    "Failed to perform allreduce operation on "
+                    "the gradients. Retrying..."
+                )
+                # Those error message show that the communication
+                # to merge gradient fails and we can rebuild the
+                # communication.
+                if (
+                    "HorovodAllreduce" in e.message
+                    or "HorovodAllgather" in e.message
+                    or "HorovodBroadcast" in e.message
+                ):
+                    time.sleep(3)
+                    self._rendezvous_manager.init_horovod_if_needed()
