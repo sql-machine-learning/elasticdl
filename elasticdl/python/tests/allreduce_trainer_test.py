@@ -123,6 +123,8 @@ class TensorFlowV2ReduceControllerTest(unittest.TestCase):
         self.assertIsNotNone(self.controller._optimizer)
 
     def test_train_one_batch_with_retries(self):
+        self.controller.set_broadcast_model(tf.keras.Model())
+        self.controller.set_broadcast_optimizer(tf.optimizers.SGD(0.01))
         result = self.controller.train_one_batch_with_retries(self._train)
         self.assertEqual(result, 1)
 
