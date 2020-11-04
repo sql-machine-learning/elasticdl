@@ -168,7 +168,6 @@ class Master(object):
         )
 
         self.task_d.add_deferred_callback_create_train_end_task()
-        
 
         # Initialize instance manager
         self.instance_manager = self._create_instance_manager(args)
