@@ -140,9 +140,13 @@ class Master(object):
                 saved_model_path=args.output,
                 checkpoint_path=args.checkpoint_dir,
             )
+            self.evaluation_service = self._create_evaluation_service(
+                model_module[args.eval_metrics_fn], args.evaluation_steps
+            )
         else:
             self.callbacks_list = None
             self._optimizer = None
+            self.evaluation_service = None
 
         self._set_completed_steps_by_checkpoint(args.checkpoint_dir_for_init)
 
@@ -164,9 +168,7 @@ class Master(object):
         )
 
         self.task_d.add_deferred_callback_create_train_end_task()
-        self.evaluation_service = self._create_evaluation_service(
-            model_module[args.eval_metrics_fn], args.evaluation_steps
-        )
+        
 
         # Initialize instance manager
         self.instance_manager = self._create_instance_manager(args)
