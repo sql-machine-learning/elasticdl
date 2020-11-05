@@ -86,9 +86,7 @@ class MasterTest(unittest.TestCase):
         self.arguments[
             "distribution_strategy"
         ] = DistributionStrategy.ALLREDUCE
-        self.arguments[
-            "custom_training_loop"
-        ] = "true"
+        self.arguments["custom_training_loop"] = "true"
         self.arguments["model_def"] = "mnist.mnist_train_tfv2.train"
         with tempfile.TemporaryDirectory() as temp_dir_name:
             create_recordio_file(
