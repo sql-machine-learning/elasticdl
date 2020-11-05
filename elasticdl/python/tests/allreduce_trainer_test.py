@@ -150,34 +150,6 @@ class PyTorchReduceControllerTest(unittest.TestCase):
         controller.set_broadcast_model(model)
         controller.set_broadcast_optimizer(optimizer)
         controller.broadcast()
-        result = controller.train_one_batch_with_retries(self.train)
-        controller.restore()
-        self.assertEqual(result, 1)
-        self.assertIsNotNone(controller._model)
-        self.assertIsNotNone(controller._optimizer)
-
-
-class PyTorchReduceControllerTest(unittest.TestCase):
-    def train(self):
-        return 1
-
-    def test_elastic_run(self):
-        import horovod.torch as hvd
-
-        master_client = Mock()
-        master_client.get_comm_rank = MagicMock(
-            return_value=Mock(
-                rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
-            )
-        )
-        controller = PyTorchAllReduceController(master_client, "")
-        model = TorchModel()
-        optimizer = optim.SGD(model.parameters(), lr=0.1)
-        hvd.init()
-        optimizer = hvd.DistributedOptimizer(optimizer)
-        controller.set_broadcast_model(model)
-        controller.set_broadcast_optimizer(optimizer)
-        controller.broadcast()
         controller.restore()
         result = controller.train_one_batch_with_retries(self.train)
         self.assertEqual(result, 1)
