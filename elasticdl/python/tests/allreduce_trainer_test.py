@@ -103,17 +103,56 @@ class AllReduceControllerTest(unittest.TestCase):
 
 
 class TensorFlowV2ReduceControllerTest(unittest.TestCase):
-    def test_elastic_run(self):
+    def setUp(self):
         master_client = Mock()
         master_client.get_comm_rank = MagicMock(
             return_value=Mock(
                 rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
             )
         )
-        controller = TensorFlowV2AllReduceController(master_client, "")
-        controller.set_broadcast_model(tf.keras.Model())
-        controller.set_broadcast_optimizer(tf.optimizers.SGD(0.01))
+        self.controller = TensorFlowV2AllReduceController(master_client, "")
+
+    def _train(self):
+        return 1
+
+    def test_broadcast(self):
+        self.controller.set_broadcast_model(tf.keras.Model())
+        self.controller.set_broadcast_optimizer(tf.optimizers.SGD(0.01))
+        self.controller.broadcast()
+        self.assertIsNotNone(self.controller._model)
+        self.assertIsNotNone(self.controller._optimizer)
+
+    def test_train_one_batch_with_retries(self):
+        self.controller.set_broadcast_model(tf.keras.Model())
+        self.controller.set_broadcast_optimizer(tf.optimizers.SGD(0.01))
+        result = self.controller.train_one_batch_with_retries(self._train)
+        self.assertEqual(result, 1)
+
+
+class PyTorchReduceControllerTest(unittest.TestCase):
+    def train(self):
+        return 1
+
+    def test_elastic_run(self):
+        import horovod.torch as hvd
+
+        master_client = Mock()
+        master_client.get_comm_rank = MagicMock(
+            return_value=Mock(
+                rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
+            )
+        )
+        controller = PyTorchAllReduceController(master_client, "")
+        model = TorchModel()
+        optimizer = optim.SGD(model.parameters(), lr=0.1)
+        hvd.init()
+        optimizer = hvd.DistributedOptimizer(optimizer)
+        controller.set_broadcast_model(model)
+        controller.set_broadcast_optimizer(optimizer)
         controller.broadcast()
+        result = controller.train_one_batch_with_retries(self.train)
+        controller.restore()
+        self.assertEqual(result, 1)
         self.assertIsNotNone(controller._model)
         self.assertIsNotNone(controller._optimizer)
 

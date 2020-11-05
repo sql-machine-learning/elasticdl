@@ -27,58 +27,79 @@ class MasterTest(unittest.TestCase):
         self._model_zoo_path = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), "../../../model_zoo"
         )
-        self.arguments = [
-            "--num_ps_pods",
-            "1",
-            "--num_workers",
-            "2",
-            "--job_type",
-            elasticdl_pb2.TRAINING,
-            "--minibatch_size",
-            "32",
-            "--model_zoo",
-            self._model_zoo_path,
-            "--model_def",
-            "mnist.mnist_functional_api.custom_model",
-            "--job_name",
-            "test",
-            "--worker_image",
-            "ubuntu:18.04",
-        ]
+        self.arguments = {
+            "num_ps_pods": "1",
+            "num_workers": "2",
+            "job_type": elasticdl_pb2.TRAINING,
+            "minibatch_size": "32",
+            "model_zoo": self._model_zoo_path,
+            "model_def": "mnist.mnist_functional_api.custom_model",
+            "job_name": "test",
+            "worker_image": "ubuntu:18.04",
+        }
+        self._num_records = 128
+
+    def _get_args(self):
+        args = []
+        for key, value in self.arguments.items():
+            args.append("--" + key)
+            args.append(value)
+        return args
 
     def test_create_instance_manager(self):
-        arguments = [
-            "--distribution_strategy",
-            DistributionStrategy.PARAMETER_SERVER,
-        ]
-        arguments.extend(self.arguments)
-        num_records = 128
+        self.arguments[
+            "distribution_strategy"
+        ] = DistributionStrategy.PARAMETER_SERVER
         with tempfile.TemporaryDirectory() as temp_dir_name:
             create_recordio_file(
-                num_records, DatasetName.TEST_MODULE, 1, temp_dir=temp_dir_name
+                self._num_records,
+                DatasetName.TEST_MODULE,
+                1,
+                temp_dir=temp_dir_name,
             )
-            arguments.extend(["--training_data", temp_dir_name])
-            args = parse_master_args(arguments)
+            self.arguments["training_data"] = temp_dir_name
+            args = self._get_args()
+            args = parse_master_args(args)
             master = Master(args)
             self.assertIsNotNone(master.instance_manager)
 
     def test_create_master_for_allreduce(self):
-        arguments = [
-            "--distribution_strategy",
-            DistributionStrategy.ALLREDUCE,
-        ]
-        arguments.extend(self.arguments)
-        num_records = 128
+        self.arguments[
+            "distribution_strategy"
+        ] = DistributionStrategy.ALLREDUCE
         with tempfile.TemporaryDirectory() as temp_dir_name:
             create_recordio_file(
-                num_records, DatasetName.TEST_MODULE, 1, temp_dir=temp_dir_name
+                self._num_records,
+                DatasetName.TEST_MODULE,
+                1,
+                temp_dir=temp_dir_name,
             )
-            arguments.extend(["--training_data", temp_dir_name])
-            arguments.extend(["--custom_training_loop", "true"])
-            args = parse_master_args(arguments)
+            self.arguments["training_data"] = temp_dir_name
+            self.arguments["custom_training_loop"] = "true"
+            args = self._get_args()
+            args = parse_master_args(args)
             master = Master(args)
             self.assertIsNotNone(master.instance_manager)
             self.assertIsNone(master.callbacks_list)
+
+    def test_create_master_without_eval(self):
+        self.arguments[
+            "distribution_strategy"
+        ] = DistributionStrategy.ALLREDUCE
+        self.arguments["custom_training_loop"] = "true"
+        self.arguments["model_def"] = "mnist.mnist_train_tfv2.train"
+        with tempfile.TemporaryDirectory() as temp_dir_name:
+            create_recordio_file(
+                self._num_records,
+                DatasetName.TEST_MODULE,
+                1,
+                temp_dir=temp_dir_name,
+            )
+            self.arguments["training_data"] = temp_dir_name
+            args = self._get_args()
+            args = parse_master_args(args)
+            master = Master(args)
+            self.assertIsNone(master.evaluation_service)
 
 
 if __name__ == "__main__":
