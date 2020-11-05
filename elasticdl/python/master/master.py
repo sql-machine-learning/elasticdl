@@ -164,9 +164,12 @@ class Master(object):
         )
 
         self.task_d.add_deferred_callback_create_train_end_task()
-        self.evaluation_service = self._create_evaluation_service(
-            model_module[args.eval_metrics_fn], args.evaluation_steps
-        )
+        if args.eval_metrics_fn in model_module:
+            self.evaluation_service = self._create_evaluation_service(
+                model_module[args.eval_metrics_fn], args.evaluation_steps
+            )
+        else:
+            self.evaluation_service = None
 
         # Initialize instance manager
         self.instance_manager = self._create_instance_manager(args)
