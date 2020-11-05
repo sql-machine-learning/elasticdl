@@ -29,6 +29,7 @@ from elasticdl.python.common.model_utils import (
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
 from elasticdl.python.worker.allreduce_controller import (
+    PyTorchAllReduceController,
     TensorFlowV2AllReduceController,
 )
 from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
@@ -494,10 +495,17 @@ class Worker(object):
         """
         Train and evaluate the model on the worker
         """
-
-        elastic_controller = TensorFlowV2AllReduceController(
-            self._mc, self._master_addr
-        )
+        if os.getenv("USE_TORCH", None):
+            elastic_controller = PyTorchAllReduceController(
+                self._mc, self._master_addr
+            )
+        else:
+            elastic_controller = TensorFlowV2AllReduceController(
+                self._mc, self._master_addr
+            )
+        # Initialize Horovod locally to generate varibles of the model
+        # and optimizer.
+        elastic_controller.init_horvod_locally()
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:

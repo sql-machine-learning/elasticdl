@@ -11,76 +11,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import socket
 import time
 
 import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.python.framework.errors_impl import UnknownError
 
-from elasticdl.python.common.constants import HorovodEnv
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.worker.allreduce_controller import (
+    DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
+    DEFAULT_STEPS_TO_CHECK_RENDEZVOUS,
+    RendevousManager,
+)
 from elasticdl.python.worker.trainer import Trainer
 
 try:
     from horovod.tensorflow.functions import broadcast_variables
     import horovod.tensorflow as hvd
+
 except ImportError:
     hvd = None
-
-
-# The default maximum number of retries for allreduce operation
-# if allreduce-based distributed training strategy is used.
-DEFAULT_MAX_ALLREDUCE_RETRY_NUM = 5
-DEFAULT_STEPS_TO_CHECK_RENDEZVOUS = 20
-
-
-class RendevousManager(object):
-    def __init__(self, master_client, master_addr):
-        self.need_broadcast = True
-        self._master_client = master_client
-        self._rendezvous_addr = master_addr
-        self._rendezvous_id = None
-
-    def init_horovod_if_needed(self):
-        self._set_horovod_env()
-        for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM):
-            rank_response = self._master_client.get_comm_rank()
-            if rank_response.rank_id < 0:
-                logger.warning(
-                    "The master has not added the worker host into "
-                    "rendezvous yet. Retrying to get rank"
-                )
-                time.sleep(5)
-            else:
-                break
-
-        # If the rendezvous from master is unequal to self._rendezvous_id,
-        # the worker should rebuild the communication because the master
-        # has updated the communication group.
-        if rank_response.rendezvous_id != self._rendezvous_id:
-            os.environ[HorovodEnv.RENDEZVOUS_PORT] = str(
-                rank_response.rendezvous_port
-            )
-            os.environ[HorovodEnv.RANK] = str(rank_response.rank_id)
-            os.environ[HorovodEnv.SIZE] = str(rank_response.world_size)
-            # Not using Horovod elastic feature in init, but need it for
-            # allreduce to call allreduce op when size=1.
-            os.environ[HorovodEnv.ELASTIC] = str(0)
-            hvd.shutdown()
-            hvd.init()
-            os.environ[HorovodEnv.ELASTIC] = str(1)
-            self._rendezvous_id = rank_response.rendezvous_id
-            self.need_broadcast = True
-
-    def _set_horovod_env(self):
-        if self._rendezvous_addr:
-            os.environ[HorovodEnv.RENDEZVOUS_ADDR] = self._rendezvous_addr
-        os.environ[HorovodEnv.CONTROLLER] = "gloo"
-        os.environ[HorovodEnv.CPU_OPERATIONS] = "gloo"
-        domain_ip = socket.gethostbyname(socket.gethostname())
-        os.environ[HorovodEnv.HOSTNAME] = domain_ip
 
 
 class AllReduceTrainer(Trainer):
