@@ -22,22 +22,20 @@ message Task {
   // Unique id assigned by master.
   int32 task_id = 1;
 
-  int32 minibatch_size = 2;
-
   // Name for the shard. If RecordIO file format is used, this should be the
   // filename for a RecordIO shard. An empty shard name signifies that the
   // master has no pending tasks to assign to the requesting worker.
-  string shard_name = 3;
+  string shard_name = 2;
 
   // Starting and ending (non-inclusive) record number.
-  int64 start = 4;
-  int64 end = 5;
+  int64 start = 3;
+  int64 end = 4;
 
   // Current model version on master
-  int32 model_version = 6;
+  int32 model_version = 5;
 
   // Whether this is training or evaluation task.
-  TaskType type = 7;
+  TaskType type = 6;
 
   // Extended task configuration as a list of key-value pair.
   // The task message is mainly targeted to data and model.
@@ -47,7 +45,7 @@ message Task {
   // task type into this field.
   // For example:
   // SAVE_MODEL task: saved_model_path
-  map<string, string> extended_config = 8;
+  map<string, string> extended_config = 7;
 }
 
 message IndexedSlicesProto {
