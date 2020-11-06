@@ -38,7 +38,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self._version = 0
 
         self._evaluation_service = evaluation_service
-        self._master = master
         self._task_complete_times = {
             elasticdl_pb2.EVALUATION: [],
             elasticdl_pb2.TRAINING: [],
