@@ -64,14 +64,8 @@ class EvaluationService(object):
     """Evaluation service"""
 
     def __init__(
-        self,
-        tensorboard_service,
-        task_d,
-        eval_steps,
-        eval_only,
-        eval_metrics_fn,
+        self, task_d, eval_steps, eval_only, eval_metrics_fn,
     ):
-        self._tensorboard_service = tensorboard_service
         self._task_d = task_d
         self._lock = threading.Lock()
         self._eval_job = None
@@ -154,10 +148,6 @@ class EvaluationService(object):
             evaluation_metrics = (
                 self._eval_job.evaluation_metrics.get_evaluation_summary()
             )
-            if self._tensorboard_service and evaluation_metrics:
-                self._tensorboard_service.write_dict_to_summary(
-                    evaluation_metrics, version=self._eval_job.model_version
-                )
             logger.info(
                 "Evaluation metrics[v=%d]: %s"
                 % (

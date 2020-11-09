@@ -76,18 +76,6 @@ def add_zoo_push_params(parser):
 
 
 def add_train_params(parser):
-    parser.add_argument(
-        "--tensorboard_log_dir",
-        default="",
-        type=str,
-        help="Directory where TensorBoard will look to find "
-        "TensorFlow event files that it can display. "
-        "TensorBoard will recursively walk the directory "
-        "structure rooted at log dir, looking for .*tfevents.* "
-        "files. You may also pass a comma separated list of log "
-        "directories, and TensorBoard will watch each "
-        "directory.",
-    )
     parser.add_argument("--num_epochs", type=int, default=1)
     parser.add_argument(
         "--grads_to_wait",

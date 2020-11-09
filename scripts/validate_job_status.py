@@ -118,10 +118,7 @@ def validate_job_status(client, job_type, ps_num, worker_num):
             and client.get_pod_phase(master_pod_name) == "Running"
             and client.get_pod_label_status(master_pod_name) == "Finished"
         ):
-            print(
-                "ElasticDL job succeeded"
-                "(master pod keeps running for TensorBoard service)."
-            )
+            print("ElasticDL job succeeded.")
             client.delete_pod(master_pod_name)
             exit(0)
         elif (

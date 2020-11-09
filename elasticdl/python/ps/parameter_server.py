@@ -146,10 +146,7 @@ class ParameterServer(object):
                     and master_pod.metadata.labels["status"]
                     == PodStatus.FINISHED
                 ):
-                    self.logger.info(
-                        "Task is finished, "
-                        "master pod is still running tensorboard service"
-                    )
+                    self.logger.info("Task is finished")
                     break
 
                 if self._debug_info_needed:

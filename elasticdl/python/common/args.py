@@ -32,7 +32,6 @@ MODEL_SPEC_GROUP = [
     "minibatch_size",
     "grads_to_wait",
     "num_epochs",
-    "tensorboard_log_dir",
     "training_data",
 ]
 

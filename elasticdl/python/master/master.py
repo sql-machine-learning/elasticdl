@@ -26,7 +26,6 @@ from elasticdl.python.common.constants import (
     InstanceManagerStatus,
     JobType,
 )
-from elasticdl.python.common.k8s_tensorboard_client import TensorBoardClient
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
@@ -45,7 +44,6 @@ from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import MasterServicer
 from elasticdl.python.master.task_dispatcher import _TaskDispatcher
-from elasticdl.python.master.tensorboard_service import TensorboardService
 from elasticdl_client.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
@@ -109,17 +107,6 @@ class Master(object):
         self.rendezvous_server = None
         if self.distribution_strategy == DistributionStrategy.ALLREDUCE:
             self.rendezvous_server = HorovodRendezvousServer(master_ip)
-
-        # Initialize TensorBoard service if requested
-        self.tb_service = self._create_tensorboard_service(
-            args.tensorboard_log_dir, master_ip
-        )
-        if self.tb_service:
-            self.tb_client = TensorBoardClient(
-                job_name=args.job_name,
-                image_name=args.worker_image,
-                namespace=args.namespace,
-            )
 
         # Initialize the components from the model definition
         model_module = load_module(
@@ -231,13 +218,6 @@ class Master(object):
             self.instance_manager.start_workers()
             self.instance_manager.update_status(InstanceManagerStatus.RUNNING)
 
-        # Start TensorBoard k8s Service if requested
-        if self.tb_service and self.tb_client:
-            self.logger.info("Starting tensorboard service")
-            self.tb_service.start()
-            self.tb_client.start_tensorboard_service()
-            self.logger.info("Tensorboard service started")
-
     def run(self):
         """
         The main loop of master.
@@ -275,21 +255,6 @@ class Master(object):
         self.logger.info("Stopping RPC server")
         self.server.stop(None)  # grace = None
         self.logger.info("RPC server stopped")
-
-        # Keep TensorBoard running when all the tasks are finished
-        if self.tb_service:
-            self.logger.info(
-                "All tasks finished. Keeping TensorBoard service running..."
-            )
-            while True:
-                if self.tb_service.is_active():
-                    time.sleep(10)
-                else:
-                    self.logger.warning(
-                        "Unable to keep TensorBoard running. "
-                        "It has already terminated"
-                    )
-                    break
         self.logger.info("Master stopped")
 
     @staticmethod
@@ -319,18 +284,6 @@ class Master(object):
 
         return job_type
 
-    def _create_tensorboard_service(self, tensorboard_log_dir, master_ip):
-        tb_service = None
-        if tensorboard_log_dir:
-            self.logger.info(
-                "Creating TensorBoard service with log directory %s",
-                tensorboard_log_dir,
-            )
-            # Start TensorBoard CLI
-            tb_service = TensorboardService(tensorboard_log_dir, master_ip)
-
-        return tb_service
-
     def _create_evaluation_service(self, eval_func, evaluation_steps):
         evaluation_service = None
         if (
@@ -342,7 +295,6 @@ class Master(object):
                 evaluation_steps,
             )
             evaluation_service = EvaluationService(
-                self.tb_service,
                 self.task_d,
                 evaluation_steps,
                 self.job_type == JobType.EVALUATION_ONLY,

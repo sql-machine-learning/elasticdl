@@ -213,27 +213,6 @@ class Client(BaseClient):
             body=client.V1DeleteOptions(grace_period_seconds=0),
         )
 
-    def get_tensorboard_service_name(self):
-        return "tensorboard-" + self.job_name
-
-    def create_tensorboard_service(
-        self,
-        port=80,
-        target_port=6006,
-        replica_type="master",
-        replica_index="0",
-        service_type="LoadBalancer",
-    ):
-        return self._create_service(
-            name=self.get_tensorboard_service_name(),
-            port=port,
-            target_port=target_port,
-            replica_type=replica_type,
-            replica_index=replica_index,
-            service_type=service_type,
-            owner=self.get_master_pod(),
-        )
-
     def create_ps_service(self, ps_id):
         return self._create_service(
             name=self.get_ps_service_name(ps_id),
