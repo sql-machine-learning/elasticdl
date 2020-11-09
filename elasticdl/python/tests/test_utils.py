@@ -390,7 +390,6 @@ def distributed_train_and_evaluate(
 
     if training:
         evaluation_service = EvaluationService(
-            None,
             task_d,
             evaluation_steps,
             False,
@@ -398,7 +397,6 @@ def distributed_train_and_evaluate(
         )
     else:
         evaluation_service = EvaluationService(
-            None,
             task_d,
             evaluation_steps,
             True,
