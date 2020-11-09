@@ -56,7 +56,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def get_task(self, request, _):
         res = elasticdl_pb2.Task()
         res.model_version = self._version
-        res.minibatch_size = self._minibatch_size
         if request.task_type == elasticdl_pb2.EVALUATION:
             task_id, task = self._task_d.get_eval_task(request.worker_id)
         else:
