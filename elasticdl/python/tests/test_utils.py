@@ -390,19 +390,11 @@ def distributed_train_and_evaluate(
 
     if training:
         evaluation_service = EvaluationService(
-            None,
-            task_d,
-            evaluation_steps,
-            False,
-            model_module[eval_metrics_fn],
+            task_d, evaluation_steps, False, model_module[eval_metrics_fn],
         )
     else:
         evaluation_service = EvaluationService(
-            None,
-            task_d,
-            evaluation_steps,
-            True,
-            model_module[eval_metrics_fn],
+            task_d, evaluation_steps, True, model_module[eval_metrics_fn],
         )
     task_d.set_evaluation_service(evaluation_service)
 

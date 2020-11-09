@@ -41,7 +41,6 @@ if [[ "$JOB_TYPE" == "train" ]]; then
       --num_ps_pods="$PS_NUM" \
       --checkpoint_steps=500 \
       --evaluation_steps=500 \
-      --tensorboard_log_dir=/tmp/tensorboard-log \
       --grads_to_wait=1 \
       --use_async=True \
       --job_name=test-train \
@@ -68,7 +67,6 @@ elif [[ "$JOB_TYPE" == "evaluate" ]]; then
       --num_workers="$WORKER_NUM" \
       --num_ps_pods="$PS_NUM" \
       --evaluation_steps=15 \
-      --tensorboard_log_dir=/tmp/tensorboard-log \
       --job_name=test-evaluate \
       --log_level=INFO \
       --image_pull_policy=Never \
