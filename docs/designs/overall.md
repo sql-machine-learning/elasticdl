@@ -2,7 +2,7 @@
 
 ## Architecture
 
-![architecture](../images/architecture.png)
+![architecture](../images/architecture.jpg)
 
 ElasticDL uses the master-worker architecture. The master node plays the master
 role in two aspects.
