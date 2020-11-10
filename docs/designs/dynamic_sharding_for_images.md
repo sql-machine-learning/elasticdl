@@ -10,70 +10,72 @@ for different formats.
 
 1. All images are in the same folder.
 
-```txt
-|-- images
-    |--0001.png
-    |--0002.png
-    |--0003.png
-    |--0004.png
-    |--0005.png
-```
-
-In the format, users may not need labels in the image compression.
-
-1. Images with the same label are in the same folder such as ImageNet.
-
-```txt
-|-- images
-    |--0
+    ```txt
+    |-- images
         |--0001.png
         |--0002.png
         |--0003.png
-    |--1
         |--0004.png
         |--0005.png
-        |--0006.png
-```
+    ```
 
-Besides the images, there is usually a file to store all filenames and labels like:
+    In the format, users may not need labels in the image compression.
 
-```csv
-0001.png,0
-0002.png,0
-0003.png,0
-0004.png,1
-0005.png,1
-0006.png,1
-```
+2. Images with the same label are in the same folder such as ImageNet.
 
-Users will read the content from the file and then read images.
+    ```txt
+    |-- images
+        |--0
+            |--0001.png
+            |--0002.png
+            |--0003.png
+        |--1
+            |--0004.png
+            |--0005.png
+            |--0006.png
+    ```
 
-1. The description of images, labels, and annotations is in a JSON or XML file.
+    Besides the images, there is usually a file to store all filenames and labels
+    like:
 
-For example, the description of the image is in a JSON file for COCO dataset 
-and in a XML file for Pascal VOC dataset. The example of COCO description is
+    ```csv
+    0001.png,0
+    0002.png,0
+    0003.png,0
+    0004.png,1
+    0005.png,1
+    0006.png,1
+    ```
 
-```json
-"{'license': 3,
-  'file_name': 'COCO_val2014_000000391895.jpg',
-  'coco_url': 'http://images.cocodataset.org/val2014/COCO_val2014_000000391895.jpg',
-  'height': 360,
-  'width': 640,
-  'date_captured': '2013-11-14 11:18:45',
-  'flickr_url': 'http://farm9.staticflickr.com/8186/8119368305_4e622c8349_z.jpg',
-  'id': 391895}"
+    Users will read the content from the file to read images from the storage.
 
-```
+3. The description of images, labels, and annotations is in a JSON or XML file.
 
-```json
-"{'image_id': 203564,
-  'id': 37,
-  'caption': 'A bicycle replica with a clock as the front wheel.'}"
-```
+    For example, the description of the image is in a JSON file for COCO
+    dataset and in a XML file for Pascal VOC dataset. The example of COCO
+    description is
 
-In elastic training, we need to split the training data into shards and
-assign those shards to workers. When the worker fails, we need to
-reassign uncompleted shards of the worker to other alive workers.
+    ```json
+    "{'license': 3,
+    'file_name': 'COCO_val2014_000000391895.jpg',
+    'coco_url': 'http://images.cocodataset.org/val2014/COCO_val2014_000000391895.jpg',
+    'height': 360,
+    'width': 640,
+    'date_captured': '2013-11-14 11:18:45',
+    'flickr_url': 'http://farm9.staticflickr.com/8186/8119368305_4e622c8349_z.jpg',
+    'id': 391895}"
+
+    ```
+
+    ```json
+    "{'image_id': 203564,
+    'id': 37,
+    'caption': 'A bicycle replica with a clock as the front wheel.'}"
+    ```
+
+    In elastic training, we need to split the training data into shards and
+    assign those shards to workers. When the worker fails, we need to
+    reassign uncompleted shards of the worker to other alive workers.
 
 ## Shard Definition
 
