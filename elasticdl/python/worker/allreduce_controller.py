@@ -203,6 +203,8 @@ class PyTorchAllReduceController(AllReduceController):
         )
         self._model = None
         self._optimizer = None
+        self.backward_passes_per_step = 1
+        self.batch_num_per_step = int(os.getenv("BATCH_COUNT"))
 
     def set_broadcast_model(self, model):
         self._model = model
@@ -215,6 +217,7 @@ class PyTorchAllReduceController(AllReduceController):
         broadcast_optimizer_state(self._optimizer, root_rank=0)
 
     def train_one_batch_with_retries(self, func, *args, **kwargs):
+        self.reset_backward_passes_per_step()
         for _ in range(DEFAULT_MAX_ALLREDUCE_RETRY_NUM + 1):
             try:
                 self._broadcast_if_needed()
@@ -238,3 +241,13 @@ class PyTorchAllReduceController(AllReduceController):
         # Call `load_state_dict` to reset the state of Horovod optimizer
         self._optimizer.load_state_dict(self._optimizer.state_dict())
         self._rendezvous_manager.init_horovod_if_needed()
+
+    def reset_backward_passes_per_step(self):
+        world_size = hvd.size()
+        rank = hvd.rank()
+        self.backward_passes_per_step = int(self.batch_num_per_step / world_size)
+        if rank < self.batch_num_per_step % world_size:
+            self.backward_passes_per_step += 1
+        if self.backward_passes_per_step != self._optimizer.backward_passes_per_step:
+            self._optimizer.backward_passes_per_step = self.backward_passes_per_step
+            logger.info("Backward passes = {}".format(self._optimizer.backward_passes_per_step))

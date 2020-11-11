@@ -396,6 +396,8 @@ class InstanceManager(object):
                 self._worker_pod_priority[
                     new_worker_id
                 ] = self._worker_pod_priority[worker_id]
+            import time
+            time.sleep(60)
             self._start_worker(new_worker_id)
         elif relaunch_ps:
             logger.info("Relaunching ps.")
