@@ -28,7 +28,6 @@ _MAX_TASK_RETRIES = 3
 
 
 class _Shard(object):
-    
     def __init__(self, name, start, end):
         self.name = name
         self.start = start

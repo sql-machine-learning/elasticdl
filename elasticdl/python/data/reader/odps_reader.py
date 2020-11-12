@@ -54,7 +54,9 @@ class ODPSDataReader(AbstractDataReader):
 
         reader = self._table_readers[task_table_name][task.type]
         for record in reader.record_generator_with_retry(
-            start=task.shard.start, end=task.shard.end, columns=self._metadata.column_names
+            start=task.shard.start,
+            end=task.shard.end,
+            columns=self._metadata.column_names,
         ):
             yield record
 

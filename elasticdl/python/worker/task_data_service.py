@@ -117,10 +117,13 @@ class TaskDataService(object):
             # larger than `shard.end - shard.start`
             with self._lock:
                 while self._pending_tasks and self._reported_record_count >= (
-                    self._pending_tasks[0].shard.end - self._pending_tasks[0].shard.start
+                    self._pending_tasks[0].shard.end
+                    - self._pending_tasks[0].shard.start
                 ):
                     task = self._pending_tasks[0]
-                    self._reported_record_count -= task.shard.end - task.shard.start
+                    self._reported_record_count -= (
+                        task.shard.end - task.shard.start
+                    )
                     self._pending_tasks.popleft()
                     self._do_report_task(task, err_msg)
                     self._failed_record_count = 0
