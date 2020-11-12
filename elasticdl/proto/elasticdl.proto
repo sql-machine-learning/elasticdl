@@ -15,6 +15,17 @@ enum TaskType {
   TRAIN_END_CALLBACK = 4;
 }
 
+message Shard{
+  // Name for the shard. If RecordIO file format is used, this should be the
+  // filename for a RecordIO shard. An empty shard name signifies that the
+  // master has no pending tasks to assign to the requesting worker.
+  string name = 1;
+
+  // Starting and ending (non-inclusive) record number.
+  int64 start = 2;
+  int64 end = 3;
+}
+
 // A task is a unit of work for ElasticDL training workers, assigned by master.
 // Worker divides a task into multiple minibatches and compute a gradient for
 // each minibatch. For now, only RecordIO file format is supported.
@@ -22,20 +33,13 @@ message Task {
   // Unique id assigned by master.
   int32 task_id = 1;
 
-  // Name for the shard. If RecordIO file format is used, this should be the
-  // filename for a RecordIO shard. An empty shard name signifies that the
-  // master has no pending tasks to assign to the requesting worker.
-  string shard_name = 2;
-
-  // Starting and ending (non-inclusive) record number.
-  int64 start = 3;
-  int64 end = 4;
+  Shard shard = 2;
 
   // Current model version on master
-  int32 model_version = 5;
+  int32 model_version = 3;
 
   // Whether this is training or evaluation task.
-  TaskType type = 6;
+  TaskType type = 4;
 
   // Extended task configuration as a list of key-value pair.
   // The task message is mainly targeted to data and model.
@@ -45,7 +49,7 @@ message Task {
   // task type into this field.
   // For example:
   // SAVE_MODEL task: saved_model_path
-  map<string, string> extended_config = 7;
+  map<string, string> extended_config = 5;
 }
 
 message IndexedSlicesProto {

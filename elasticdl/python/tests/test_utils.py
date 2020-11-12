@@ -421,7 +421,7 @@ def distributed_train_and_evaluate(
     # stop the master servicer
     svc.stop(0)
     # No more task.
-    if task.shard_name:
+    if task.shard.name:
         raise RuntimeError(
             "There are some tasks unfinished after worker exits."
         )

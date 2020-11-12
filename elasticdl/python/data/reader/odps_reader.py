@@ -49,12 +49,12 @@ class ODPSDataReader(AbstractDataReader):
             self.metadata.column_dtypes = column_dtypes
 
     def read_records(self, task):
-        task_table_name = self._get_odps_table_name(task.shard_name)
+        task_table_name = self._get_odps_table_name(task.shard.name)
         self._init_reader(task_table_name, task.type)
 
         reader = self._table_readers[task_table_name][task.type]
         for record in reader.record_generator_with_retry(
-            start=task.start, end=task.end, columns=self._metadata.column_names
+            start=task.shard.start, end=task.shard.end, columns=self._metadata.column_names
         ):
             yield record
 
@@ -206,9 +206,9 @@ class ParallelODPSDataReader(ODPSDataReader):
         check_required_kwargs(
             ["project", "access_id", "access_key"], self._kwargs
         )
-        start = task.start
+        start = task.shard.start
         end = task.end
-        table = self._get_odps_table_name(task.shard_name)
+        table = self._get_odps_table_name(task.shard.name)
         table = table.split(".")[1]
         project = self._kwargs["project"]
         access_id = self._kwargs["access_id"]
@@ -236,7 +236,7 @@ class ParallelODPSDataReader(ODPSDataReader):
         pd.stop()
 
     def read_records(self, task):
-        shard_size = (task.end - task.start) // 4
+        shard_size = (task.shard.end - task.shard.start) // 4
         record_gen = self.parallel_record_records(
             task=task,
             num_processes=4,

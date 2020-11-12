@@ -33,7 +33,7 @@ class RecordIODataReader(AbstractDataReader):
     def read_records(self, task):
         with closing(
             recordio.Scanner(
-                task.shard_name, task.start, task.end - task.start
+                task.shard.name, task.shard.start, task.shard.end - task.shard.start
             )
         ) as reader:
             while True:

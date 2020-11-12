@@ -79,7 +79,7 @@ class TaskDataService(object):
         )
 
     def _log_fail_records(self, task, err_msg):
-        task_len = task.end - task.start
+        task_len = task.shard.end - task.shard.start
         msg = (
             "records ({f}/{t}) failure, possible "
             "in task_id: {task_id} "
@@ -107,20 +107,20 @@ class TaskDataService(object):
         if not self._pending_tasks:
             return False
         task = self._pending_tasks[0]
-        total_record_num = task.end - task.start
+        total_record_num = task.shard.end - task.shard.start
         if self._reported_record_count >= total_record_num:
             if err_msg:
                 self._log_fail_records(task, err_msg)
 
             # Keep popping tasks until the reported record count is less
             # than the size of the current data since `batch_size` may be
-            # larger than `task.end - task.start`
+            # larger than `shard.end - shard.start`
             with self._lock:
                 while self._pending_tasks and self._reported_record_count >= (
-                    self._pending_tasks[0].end - self._pending_tasks[0].start
+                    self._pending_tasks[0].shard.end - self._pending_tasks[0].shard.start
                 ):
                     task = self._pending_tasks[0]
-                    self._reported_record_count -= task.end - task.start
+                    self._reported_record_count -= task.shard.end - task.shard.start
                     self._pending_tasks.popleft()
                     self._do_report_task(task, err_msg)
                     self._failed_record_count = 0
@@ -187,7 +187,7 @@ class TaskDataService(object):
                 if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
                     self._pending_train_end_callback_task = task
                     return None
-                elif not task.shard_name:
+                elif not task.shard.name:
                     logger.info("No more task, stopping")
                     return None
                 else:
@@ -215,7 +215,8 @@ class TaskDataService(object):
                 self._warm_up_task = None
             else:
                 task = self._mc.get_task()
-            if not task.shard_name:
+            if not task.shard.name:
+                logger.info("task = {}".format(task))
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True
                     logger.info("No tasks for now, maybe more later")
