@@ -15,7 +15,7 @@ enum TaskType {
   TRAIN_END_CALLBACK = 4;
 }
 
-message Shard{
+message Shard {
   // Name for the shard. If RecordIO file format is used, this should be the
   // filename for a RecordIO shard. An empty shard name signifies that the
   // master has no pending tasks to assign to the requesting worker.
