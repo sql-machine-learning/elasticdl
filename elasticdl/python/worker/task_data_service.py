@@ -216,7 +216,6 @@ class TaskDataService(object):
             else:
                 task = self._mc.get_task()
             if not task.shard.name:
-                logger.info("task = {}".format(task))
                 if task.type == elasticdl_pb2.WAIT:
                     self._pending_dataset = True
                     logger.info("No tasks for now, maybe more later")
