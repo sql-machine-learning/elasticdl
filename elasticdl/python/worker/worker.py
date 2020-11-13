@@ -433,10 +433,11 @@ class Worker(object):
         dataset = dataset.batch(self._minibatch_size).prefetch(1)
         while True:
             # The dataset will re-call generator each time when
-            # we call iterator of the dataset.
+            # calling iterator of the dataset.
             evaluated = self._process_evaluation_dataset(dataset)
             if not evaluated:
                 break
+        del dataset
         evaluation_task_executed = True
         return evaluation_task_executed
 
