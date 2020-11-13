@@ -262,51 +262,33 @@ class Worker(object):
         self._timing.end_record_time("batch_process")
         return min_model_version
 
-    def _process_eval_task(self, task):
+    def _process_evaluation_dataset(self, dataset):
         """
         Check if there are evaluation tasks and process the tasks if any.
         Return:
             A python bool indicating whether worker processed some evaluation
             tasks.
         """
-        self.logger.info("the evaluation task_id: %d" % task.task_id)
-
-        gen = self._task_data_service.get_dataset_gen(task)
-        if not gen:
-            return None
-
-        def create_dataset():
-            eval_dataset = tf.data.Dataset.from_generator(
-                gen, self._task_data_service.data_reader.records_output_types
-            )
-            eval_dataset = self._feed(
-                eval_dataset,
-                Mode.EVALUATION,
-                self._task_data_service.data_reader.metadata,
-            )
-            eval_dataset = eval_dataset.batch(self._minibatch_size).prefetch(1)
-            return eval_dataset
-
-        with tf.device("/device:cpu:0"):
-            eval_dataset = create_dataset()
-        model_version = task.model_version
-        task_id = task.task_id
+        evaluation_executed = False
         err_msg = ""
-        for dataset_batch in eval_dataset:
+        for dataset_batch in dataset:
+            evaluation_executed = True
             data_err_msg = self._safe_process_minibatch(
-                dataset_batch, elasticdl_pb2.EVALUATION, model_version
+                dataset_batch, elasticdl_pb2.EVALUATION, None
             )
             if data_err_msg:
                 err_msg = data_err_msg
                 break
-        del eval_dataset
-        evaluation_result = self._trainer.get_evaluation_result()
-        self._mc.report_evaluation_metrics(
-            model_outputs=evaluation_result[MetricsDictKey.MODEL_OUTPUT],
-            labels=evaluation_result[MetricsDictKey.LABEL],
-        )
-        self._mc.report_task_result(task_id, err_msg)
-        self._trainer.reset_evaluation_result()
+        if evaluation_executed:
+            evaluation_result = self._trainer.get_evaluation_result()
+            self._mc.report_evaluation_metrics(
+                model_outputs=evaluation_result[MetricsDictKey.MODEL_OUTPUT],
+                labels=evaluation_result[MetricsDictKey.LABEL],
+            )
+            task_id = self._task_data_service.current_eval_task.task_id
+            self._mc.report_task_result(task_id, err_msg)
+            self._trainer.reset_evaluation_result()
+        return evaluation_executed
 
     def _process_train_end_callback_task_if_needed(self):
         train_end_task = self._task_data_service.get_train_end_callback_task()
@@ -440,15 +422,22 @@ class Worker(object):
         Only evaluate the model on the worker.
         """
         evaluation_task_executed = False
-        # should not get model before finishing some training tasks, because
-        # variables of subclass models are not created.
+        with tf.device("/device:cpu:0"):
+            dataset = self._task_data_service.get_eval_dataset()
+
+        dataset = self._feed(
+            dataset,
+            Mode.EVALUATION,
+            self._task_data_service.data_reader.metadata,
+        )
+        dataset = dataset.batch(self._minibatch_size).prefetch(1)
         while True:
-            task = self._mc.get_task(elasticdl_pb2.EVALUATION)
-            # no evaluation task in eval_todo of master
-            if not task.shard.name:
+            # The dataset will re-call generator each time when
+            # we call iterator of the dataset.
+            evaluated = self._process_evaluation_dataset(dataset)
+            if not evaluated:
                 break
-            self._process_eval_task(task)
-            evaluation_task_executed = True
+        evaluation_task_executed = True
         return evaluation_task_executed
 
     def _predict_only(self):
