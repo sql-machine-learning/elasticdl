@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import csv
+import linecache
 
 import numpy as np
 import tensorflow as tf
@@ -38,33 +39,46 @@ class CSVDataReader(AbstractDataReader):
         """
         AbstractDataReader.__init__(self, **kwargs)
         check_required_kwargs(["sep", "columns"], kwargs)
+        self._filename = self._kwargs["filename"]
         self.sep = kwargs.get("sep", ",")
         self.selected_columns = kwargs.get("columns", None)
 
-    def read_records(self, task):
-        with open(task.shard.name, "r", encoding="utf-8") as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=self.sep)
-            csv_columns = next(csv_reader)
-            selected_columns = (
-                csv_columns
-                if self.selected_columns is None
-                else self.selected_columns
-            )
-            if not set(selected_columns).issubset(set(csv_columns)):
-                raise ValueError(
-                    "The first line in the csv file must be column names and "
-                    "the selected columns are not in the file. The selected "
-                    "columns are {} and the columns in {} are {}".format(
-                        selected_columns, task.shard.name, csv_columns
-                    )
-                )
-            column_indices = [csv_columns.index(e) for e in selected_columns]
-            for line in csv_reader:
-                line_elements = np.array(line, dtype=np.str)
-                yield line_elements[column_indices].tolist()
+    def read_records(self, task, shuffle=False):
+        records = linecache.getlines(task.shard.name)[
+            task.shard.start : task.shard.end
+        ]
+        if shuffle:
+            np.random.shuffle(records)
+
+        for record in records:
+            yield record
 
     def create_shards(self):
-        pass
+        shard_name_prefix = self._kwargs["filename"] + ":shard_"
+        size = self.get_size()
+        records_per_task = self._kwargs["records_per_task"]
+        shards = {}
+        num_shards = size // records_per_task
+        start_ind = 0
+        for shard_id in range(num_shards):
+            shards[shard_name_prefix + str(shard_id)] = (
+                start_ind,
+                records_per_task,
+            )
+            start_ind += records_per_task
+        num_records_left = size % records_per_task
+        if num_records_left != 0:
+            shards[shard_name_prefix + str(num_shards)] = (
+                start_ind,
+                num_records_left,
+            )
+        return shards
+
+    def get_size(self):
+        with open(self._filename) as file:
+            reader = csv.reader(file)
+            line_num = len(list(reader))
+            return line_num
 
     @property
     def records_output_types(self):
