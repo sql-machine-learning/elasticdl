@@ -169,19 +169,8 @@ class TaskDataService(object):
         """
         while True:
             task = self._mc.get_task()
-            logger.info(
-                "task == {}, type = {}".format(task.shard_name, task.type)
-            )
-            if not task.shard_name:
-                if task.type == elasticdl_pb2.WAIT:
-                    logger.info("No tasks for now, maybe more later")
-                    # There are too many requests to get task from the master
-                    # if the worker does not sleep.
-                    time.sleep(5)
-                    continue
-                else:
-                    logger.info("No more task, stopping")
-                    break
+            if not task.shard.name:
+                break
             with self._lock:
                 if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
                     self._pending_train_end_callback_task = task
