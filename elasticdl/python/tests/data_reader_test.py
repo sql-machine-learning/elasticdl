@@ -16,7 +16,6 @@ import random
 import tempfile
 import time
 import unittest
-from collections import namedtuple
 
 import numpy as np
 import odps
