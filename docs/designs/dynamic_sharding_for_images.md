@@ -96,23 +96,24 @@ message shard {
 ```
 
 In order to split the training data into shards, we must get the size of the
-training data firstly. For the former 2 ways, we can we can get the size by
-`len(os.listdir("images"))` and reading the CSV file. For simplicity, we also
+training data firstly. We can get the size by
+`len(os.listdir("images"))` for case 1 and reading the CSV file for case 2.
+For simplicity, we also
 can store the image names in a CSV file for the first way to store images.
 So, the name of the shard is the CSV file. The start and end indices are
 the line number of the CSV file. When the worker gets the shard, it can read
 the images by the lines in the CSV file.
 
-It is difficult to get the size because we don't know the format of the
-description. So, users need to indicate the size of training data. We can
-design a function in the model definition and users implement the function
-to return the size.
+For case 3, it is difficult to get the size  because we don't know the
+format of the description. So, users need to indicate the size of
+training data. We can design a function in the model definition and
+users implement the function to return the size.
 
 ```python
 def get_training_size():
     with open("annotations/captions_val2014.json") as f:
         data = json.load(f)
-    return len(data["images"])
+    return len(data["annotations"])
 ```
 
 Then, the master will call the function to get the size and split the
@@ -154,7 +155,7 @@ import tensorflow as tf
 global dynamic_sharding = DynamicShardingManager()
 
 class DynamicShardingHook(tf.train.SessionRunHook):
-    def __init__(self, num_worker, num_shards=100, max_steps=None):
+    def __init__(self, num_worker):
         self._max_steps = max_steps
         self._local_step = 0
         self._batch_size = 256
@@ -162,13 +163,17 @@ class DynamicShardingHook(tf.train.SessionRunHook):
     def after_run(self, run_context, run_values):
         self._local_step += 1
         if self._local_step * self._batch_size > dynamic_sharding.record_count:
-            dynamic_sharding.report_shard_done()
+            dynamic_sharding.report_batch_done()
 
-def get_dataset():
+def get_dataset(shuffle=False):
     def _record_generator():
         while True:
             shard = dynamic_sharding.fetch_shard()
+            if not shard:
+                break
             records = read_records(shard.start, shard.end)
+            if shuffle:
+                np.random.shuffle(records)
             for record in records:
                 yield record
     return tf.data.Dataset.from_generator(_record_generator()
@@ -189,12 +194,14 @@ class ImageDataset(torch.utils.data.IterableDataset):
     def __iter__(self):
         while True:
             shard = dynamic_sharding.fetch_shard()
-            if shard is not None:
+            if shard:
                 images = read_images(shard)
                 if self._shuffle:
                     np.random.shuffle(images)
                 for image in images:
                     yield image
+            else:
+                break
 
 data_loader = DataLoader(dataset=dataset, batch_size=32)
 ```
