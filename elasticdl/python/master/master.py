@@ -240,6 +240,7 @@ class Master(object):
                     self.logger.info(
                         "All workers completed but there are unfinished tasks"
                     )
+                    break
                 if self._should_stop:
                     break
                 time.sleep(30)
