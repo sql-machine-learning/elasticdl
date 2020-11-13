@@ -403,7 +403,7 @@ class InstanceManager(object):
         workers_completed = []
         for (pod_name, _, phase,) in self._worker_pods_ip_phase.values():
             workers_failed.append(phase == PodStatus.FAILED)
-            workers_completed.append(phase == PodStatus.Completed)
+            workers_completed.append(phase == PodStatus.SUCCEEDED)
         self.all_workers_failed = all(workers_failed)
         self.all_workers_completed = all(workers_completed)
 
