@@ -42,7 +42,7 @@ class CSVDataReader(AbstractDataReader):
         self.selected_columns = kwargs.get("columns", None)
 
     def read_records(self, task):
-        with open(task.shard_name, "r", encoding="utf-8") as csv_file:
+        with open(task.shard.name, "r", encoding="utf-8") as csv_file:
             csv_reader = csv.reader(csv_file, delimiter=self.sep)
             csv_columns = next(csv_reader)
             selected_columns = (
@@ -55,7 +55,7 @@ class CSVDataReader(AbstractDataReader):
                     "The first line in the csv file must be column names and "
                     "the selected columns are not in the file. The selected "
                     "columns are {} and the columns in {} are {}".format(
-                        selected_columns, task.shard_name, csv_columns
+                        selected_columns, task.shard.name, csv_columns
                     )
                 )
             column_indices = [csv_columns.index(e) for e in selected_columns]

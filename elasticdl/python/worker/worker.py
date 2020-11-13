@@ -440,7 +440,7 @@ class Worker(object):
         while True:
             task = self._mc.get_task(elasticdl_pb2.EVALUATION)
             # no evaluation task in eval_todo of master
-            if not task.shard_name:
+            if not task.shard.name:
                 break
             self._process_eval_task(task)
             evaluation_task_executed = True
