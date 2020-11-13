@@ -236,7 +236,7 @@ class Master(object):
                             InstanceManagerStatus.FINISHED
                         )
                     break
-                if self.instance_manager.all_workers_failed:
+                if self.instance_manager.all_workers_completed:
                     self.logger.info(
                         "All workers completed but there are unfinished tasks"
                     )
