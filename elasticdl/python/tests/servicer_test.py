@@ -70,12 +70,12 @@ class ServicerTest(unittest.TestCase):
         # No task yet, make sure the returned versions are as expected.
         req.worker_id = 1
         task = master_servicer.get_task(req, None)
-        self.assertEqual("", task.shard_name)
+        self.assertEqual("", task.shard.name)
         self.assertEqual(0, task.model_version)
 
         master_servicer._version = 1
         task = master_servicer.get_task(req, None)
-        self.assertEqual("", task.shard_name)
+        self.assertEqual("", task.shard.name)
         self.assertEqual(1, task.model_version)
 
     def test_report_task_result(self):
@@ -94,16 +94,16 @@ class ServicerTest(unittest.TestCase):
             req = elasticdl_pb2.GetTaskRequest()
             req.worker_id = random.randint(1, 10)
             task = master.get_task(req, None)
-            if not task.shard_name:
+            if not task.shard.name:
                 break
             self.assertEqual(
                 self.master.task_d._doing[task.task_id][0], req.worker_id
             )
-            task_key = (task.shard_name, task.start, task.end)
+            task_key = (task.shard.name, task.shard.start, task.shard.end)
             tasks[task_key] += 1
             report = elasticdl_pb2.ReportTaskResultRequest()
             report.task_id = task.task_id
-            if task.start == 0 and tasks[task_key] == 1:
+            if task.shard.start == 0 and tasks[task_key] == 1:
                 # Simulate error reports.
                 report.err_message = "Worker error"
             master.report_task_result(report, None)

@@ -103,7 +103,7 @@ class MaxStepsStopping(tf.keras.callbacks.Callback):
         """
         batch_size = self.params.get("batch_size", None)
         if task.type == elasticdl_pb2.TRAINING:
-            task_records = task.end - task.start
+            task_records = task.shard.end - task.shard.start
             task_batch_count = int(task_records / batch_size)
             self._completed_steps += task_batch_count
             if self._completed_steps > self._max_steps:
