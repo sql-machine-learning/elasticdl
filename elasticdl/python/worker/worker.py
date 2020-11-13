@@ -505,7 +505,7 @@ class Worker(object):
             )
         # Initialize Horovod locally to generate varibles of the model
         # and optimizer.
-        elastic_controller.init_horvod_locally()
+        elastic_controller.init_horovod_locally()
         while True:
             dataset = self._task_data_service.get_dataset()
             if not dataset:
