@@ -147,7 +147,20 @@ class TaskDataService(object):
         return dataset
 
     def get_train_end_callback_task(self):
-        return self._pending_train_end_callback_task
+        if self._pending_train_end_callback_task:
+            return self._pending_train_end_callback_task
+
+        while True:
+            task = self._mc.get_task()
+            if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
+                return task
+            elif task.type == elasticdl_pb2.WAIT:
+                # The worker can only do the callback task until
+                # the training loop finishes.
+                logger.info("Waiting more tasks")
+                time.sleep(5)
+            else:
+                return None
 
     def clear_train_end_callback_task(self):
         self._pending_train_end_callback_task = None
