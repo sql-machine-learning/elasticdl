@@ -366,7 +366,7 @@ class InstanceManager(object):
                         and phase != "Succeeded"
                     )
                 else:
-                    self.check_all_worker_exit()
+                    self.check_all_worker_exited()
 
             elif pod_name in self._ps_pod_name_to_id:
                 ps_id = self._ps_pod_name_to_id.get(pod_name)
@@ -398,7 +398,7 @@ class InstanceManager(object):
             # tolerance.
             self._start_ps(ps_id)
 
-    def check_all_worker_exit(self):
+    def check_all_worker_exited(self):
         workers_failed = []
         workers_completed = []
         for (pod_name, _, phase,) in self._worker_pods_ip_phase.values():
