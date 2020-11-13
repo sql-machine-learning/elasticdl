@@ -500,12 +500,17 @@ class Worker(object):
             )
         # Initialize Horovod locally to generate varibles of the model
         # and optimizer.
-        elastic_controller.init_horvod_locally()
-        dataset = self._task_data_service.get_dataset()
-        dataset = self._feed(
-            dataset,
-            Mode.TRAINING,
-            self._task_data_service.data_reader.metadata,
-        )
-        dataset = dataset.batch(self._minibatch_size).prefetch(1)
-        self._training_func(dataset, elastic_controller)
+        elastic_controller.init_horovod_locally()
+        while True:
+            dataset = self._task_data_service.get_dataset()
+            if not dataset:
+                self._process_train_end_callback_task_if_needed()
+                break
+            dataset = self._feed(
+                dataset,
+                Mode.TRAINING,
+                self._task_data_service.data_reader.metadata,
+            )
+            dataset = dataset.batch(self._minibatch_size).prefetch(1)
+            self._training_func(dataset, elastic_controller)
+            del dataset
