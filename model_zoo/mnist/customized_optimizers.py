@@ -38,7 +38,9 @@ def get_not_none_from_list(tensor_list):
     return [x for x in tensor_list if x is not None]
 
 # Copied from https://github.com/horovod/horovod/blob/18cfedd5236885d9fd581ca53fe04a142486bb2b/horovod/tensorflow/gradient_aggregation.py#L16
-# because we cannot import it from horovod package.
+# because we cannot import it from horovod package. 
+# Make `backward_passes_per_step` a tensorflow variable instead of
+# a primitive python type.
 class LocalGradientAggregationHelper:
     """
     LocalGradientAggregationHelper aggregates gradient updates locally,
