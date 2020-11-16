@@ -54,6 +54,7 @@ class TaskDataService(object):
         self._reported_record_count = 0
         self._current_task = None
         self._pending_tasks = deque()
+        self.current_eval_task = None
 
     def _reset(self):
         """
@@ -239,3 +240,19 @@ class TaskDataService(object):
             for data in self.data_reader.read_records(task):
                 if data:
                     yield data
+
+    def get_eval_dataset(self):
+        def _gen():
+            task = self._mc.get_task(elasticdl_pb2.EVALUATION)
+            if not task.shard.name:
+                return
+            logger.info("the evaluation task_id: %d" % task.task_id)
+            self.current_eval_task = task
+            for data in self.data_reader.read_records(task):
+                if data:
+                    yield data
+
+        dataset = tf.data.Dataset.from_generator(
+            _gen, self.data_reader.records_output_types
+        )
+        return dataset
