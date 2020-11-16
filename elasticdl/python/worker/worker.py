@@ -262,24 +262,24 @@ class Worker(object):
         self._timing.end_record_time("batch_process")
         return min_model_version
 
-    def _process_evaluation_dataset(self, dataset):
+    def _process_evaluation_if_exist(self, dataset):
         """
         Check if there are evaluation tasks and process the tasks if any.
         Return:
             A python bool indicating whether worker processed some evaluation
             tasks.
         """
-        evaluation_executed = False
+        evaluation_exist = False
         err_msg = ""
         for dataset_batch in dataset:
-            evaluation_executed = True
+            evaluation_exist = True
             data_err_msg = self._safe_process_minibatch(
                 dataset_batch, elasticdl_pb2.EVALUATION, None
             )
             if data_err_msg:
                 err_msg = data_err_msg
                 break
-        if evaluation_executed:
+        if evaluation_exist:
             evaluation_result = self._trainer.get_evaluation_result()
             self._mc.report_evaluation_metrics(
                 model_outputs=evaluation_result[MetricsDictKey.MODEL_OUTPUT],
@@ -288,7 +288,7 @@ class Worker(object):
             task_id = self._task_data_service.current_eval_task.task_id
             self._mc.report_task_result(task_id, err_msg)
             self._trainer.reset_evaluation_result()
-        return evaluation_executed
+        return evaluation_exist
 
     def _process_train_end_callback_task_if_needed(self):
         train_end_task = self._task_data_service.get_train_end_callback_task()
@@ -434,8 +434,8 @@ class Worker(object):
         while True:
             # The dataset will re-call generator each time when
             # calling iterator of the dataset.
-            evaluated = self._process_evaluation_dataset(dataset)
-            if not evaluated:
+            evaluation_exist = self._process_evaluation_if_exist(dataset)
+            if not evaluation_exist:
                 break
         del dataset
         evaluation_task_executed = True
