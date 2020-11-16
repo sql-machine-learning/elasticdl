@@ -17,26 +17,39 @@
 # We use the customized optimizer and hook here to ensure that
 # the global batch size is not changed even the horovod size changes.
 
-import os
+import argparse
 import errno
-import tensorflow as tf
+import os
+
 import horovod.tensorflow as hvd
 import numpy as np
-import argparse
-
+import tensorflow as tf
+from customized_optimizers import (
+    ElasticDistributedOptimizer,
+    UpdateVariableBySizeHook,
+)
 from tensorflow import keras
-from customized_optimizers import UpdateVariableBySizeHook, ElasticDistributedOptimizer
+
 layers = tf.layers
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
 # Training settings
-parser = argparse.ArgumentParser(description='Tensorflow MNIST Example')
-parser.add_argument('--use-adasum', action='store_true', default=False,
-                    help='use adasum algorithm to do reduction')
-parser.add_argument('--gradient-predivide-factor', type=float, default=1.0,
-                    help='apply gradient predivide factor in optimizer (default: 1.0)')
+parser = argparse.ArgumentParser(description="Tensorflow MNIST Example")
+parser.add_argument(
+    "--use-adasum",
+    action="store_true",
+    default=False,
+    help="use adasum algorithm to do reduction",
+)
+parser.add_argument(
+    "--gradient-predivide-factor",
+    type=float,
+    default=1.0,
+    help="apply gradient predivide factor in optimizer (default: 1.0)",
+)
 args = parser.parse_args()
+
 
 def conv_model(feature, target, mode):
     """2-layer convolution model."""
@@ -49,25 +62,39 @@ def conv_model(feature, target, mode):
     feature = tf.reshape(feature, [-1, 28, 28, 1])
 
     # First conv layer will compute 32 features for each 5x5 patch
-    with tf.variable_scope('conv_layer1'):
-        h_conv1 = layers.conv2d(feature, 32, kernel_size=[5, 5],
-                                activation=tf.nn.relu, padding="SAME")
+    with tf.variable_scope("conv_layer1"):
+        h_conv1 = layers.conv2d(
+            feature,
+            32,
+            kernel_size=[5, 5],
+            activation=tf.nn.relu,
+            padding="SAME",
+        )
         h_pool1 = tf.nn.max_pool(
-            h_conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+            h_conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME"
+        )
 
     # Second conv layer will compute 64 features for each 5x5 patch.
-    with tf.variable_scope('conv_layer2'):
-        h_conv2 = layers.conv2d(h_pool1, 64, kernel_size=[5, 5],
-                                activation=tf.nn.relu, padding="SAME")
+    with tf.variable_scope("conv_layer2"):
+        h_conv2 = layers.conv2d(
+            h_pool1,
+            64,
+            kernel_size=[5, 5],
+            activation=tf.nn.relu,
+            padding="SAME",
+        )
         h_pool2 = tf.nn.max_pool(
-            h_conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+            h_conv2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding="SAME"
+        )
         # reshape tensor into a batch of vectors
         h_pool2_flat = tf.reshape(h_pool2, [-1, 7 * 7 * 64])
 
     # Densely connected layer with 1024 neurons.
     h_fc1 = layers.dropout(
         layers.dense(h_pool2_flat, 1024, activation=tf.nn.relu),
-        rate=0.5, training=mode == tf.estimator.ModeKeys.TRAIN)
+        rate=0.5,
+        training=mode == tf.estimator.ModeKeys.TRAIN,
+    )
 
     # Compute logits (1 per class) and compute loss.
     logits = layers.dense(h_fc1, 10, activation=None)
@@ -83,8 +110,9 @@ def train_input_generator(x_train, y_train, batch_size=64):
         x_train, y_train = x_train[p], y_train[p]
         index = 0
         while index <= len(x_train) - batch_size:
-            yield x_train[index:index + batch_size], \
-                  y_train[index:index + batch_size],
+            yield x_train[index : index + batch_size], y_train[
+                index : index + batch_size
+            ],
             index += batch_size
 
 
@@ -97,7 +125,7 @@ def main(_):
     # condition among the workers that share the same filesystem. If the
     # directory already exists by the time this worker gets around to creating
     # it, ignore the resulting exception and continue.
-    cache_dir = os.path.join(os.path.expanduser('~'), '.keras', 'datasets')
+    cache_dir = os.path.join(os.path.expanduser("~"), ".keras", "datasets")
     if not os.path.exists(cache_dir):
         try:
             os.mkdir(cache_dir)
@@ -108,8 +136,9 @@ def main(_):
                 raise
 
     # Download and load MNIST dataset.
-    (x_train, y_train), (x_test, y_test) = \
-        keras.datasets.mnist.load_data('MNIST-data-%d' % hvd.rank())
+    (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data(
+        "MNIST-data-%d" % hvd.rank()
+    )
 
     # The shape of downloaded data is (-1, 28, 28), hence we need to reshape it
     # into (-1, 784) to feed into our network. Also, need to normalize the
@@ -118,9 +147,9 @@ def main(_):
     x_test = np.reshape(x_test, (-1, 784)) / 255.0
 
     # Build model...
-    with tf.name_scope('input'):
-        image = tf.placeholder(tf.float32, [None, 784], name='image')
-        label = tf.placeholder(tf.float32, [None], name='label')
+    with tf.name_scope("input"):
+        image = tf.placeholder(tf.float32, [None, 784], name="image")
+        label = tf.placeholder(tf.float32, [None], name="label")
     predict, loss = conv_model(image, label, tf.estimator.ModeKeys.TRAIN)
 
     lr_scaler = hvd.size()
@@ -133,9 +162,12 @@ def main(_):
     opt = tf.train.AdamOptimizer(0.001 * lr_scaler)
 
     # Use the customized optimizer instead of the DistributedOptimizer from horovod.
-    opt = ElasticDistributedOptimizer(opt, op=hvd.Average,
-                                      backward_passes_per_step=2,
-                                      gradient_predivide_factor=args.gradient_predivide_factor)
+    opt = ElasticDistributedOptimizer(
+        opt,
+        op=hvd.Average,
+        backward_passes_per_step=2,
+        gradient_predivide_factor=args.gradient_predivide_factor,
+    )
 
     global_step = tf.train.get_or_create_global_step()
     train_op = opt.minimize(loss, global_step=global_step)
@@ -146,16 +178,16 @@ def main(_):
         # initialization of all workers when training is started with random weights
         # or restored from a checkpoint.
         hvd.BroadcastGlobalVariablesHook(0),
-
         # Horovod: adjust number of steps based on number of GPUs.
         tf.train.StopAtStepHook(last_step=20000 // hvd.size()),
-
-        tf.train.LoggingTensorHook(tensors={'step': global_step, 'loss': loss},
-                                   every_n_iter=10),
-
+        tf.train.LoggingTensorHook(
+            tensors={"step": global_step, "loss": loss}, every_n_iter=10
+        ),
         # Add the hook to update the backward_passes_per_step variable based on
         # the horovod size and the rank of this process.
-        UpdateVariableBySizeHook(updatable_tensor=opt.backward_passes_per_step(), total_count=8),
+        UpdateVariableBySizeHook(
+            updatable_tensor=opt.backward_passes_per_step(), total_count=8
+        ),
     ]
 
     # Horovod: pin GPU to be used to process local rank (one GPU per process)
@@ -165,15 +197,16 @@ def main(_):
 
     # Horovod: save checkpoints only on worker 0 to prevent other workers from
     # corrupting them.
-    checkpoint_dir = './checkpoints' if hvd.rank() == 0 else None
-    training_batch_generator = train_input_generator(x_train,
-                                                     y_train, batch_size=100)
+    checkpoint_dir = "./checkpoints" if hvd.rank() == 0 else None
+    training_batch_generator = train_input_generator(
+        x_train, y_train, batch_size=100
+    )
     # The MonitoredTrainingSession takes care of session initialization,
     # restoring from a checkpoint, saving to a checkpoint, and closing when done
     # or an error occurs.
-    with tf.train.MonitoredTrainingSession(checkpoint_dir=checkpoint_dir,
-                                           hooks=hooks,
-                                           config=config) as mon_sess:
+    with tf.train.MonitoredTrainingSession(
+        checkpoint_dir=checkpoint_dir, hooks=hooks, config=config
+    ) as mon_sess:
         while not mon_sess.should_stop():
             # Run a training step synchronously.
             image_, label_ = next(training_batch_generator)
