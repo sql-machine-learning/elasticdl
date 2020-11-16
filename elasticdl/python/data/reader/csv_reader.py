@@ -25,17 +25,14 @@ from elasticdl.python.data.reader.data_reader import (
 
 
 class CSVDataReader(AbstractDataReader):
-    """This reader is used to read data from a csv file. It is convenient for
-    user to locally run and debug a Keras model by using this reader.
-    However, it cannot be used with distribution strategy because it cannot
-    read data by line indices.
+    """This reader is used to create shards for a csv file and
+    read records from the shard.
     """
 
     def __init__(self, **kwargs):
         """
         Args:
-            kwargs should contains "sep" and "columns" like
-            'sep=",",column=["sepal.length", "sepal.width", "variety"]'
+            kwargs should contains "filename" and "records_per_task".
         """
         AbstractDataReader.__init__(self, **kwargs)
         self._kwargs = kwargs
