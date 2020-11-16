@@ -38,10 +38,8 @@ class CSVDataReader(AbstractDataReader):
             'sep=",",column=["sepal.length", "sepal.width", "variety"]'
         """
         AbstractDataReader.__init__(self, **kwargs)
-        check_required_kwargs(["sep", "columns"], kwargs)
+        self._kwargs = kwargs
         self._filename = self._kwargs["filename"]
-        self.sep = kwargs.get("sep", ",")
-        self.selected_columns = kwargs.get("columns", None)
 
     def read_records(self, task, shuffle=False):
         records = linecache.getlines(task.shard.name)[
@@ -86,4 +84,4 @@ class CSVDataReader(AbstractDataReader):
 
     @property
     def metadata(self):
-        return Metadata(column_names=self.selected_columns)
+        return Metadata(column_names=None)

@@ -87,33 +87,20 @@ class CSVDataReaderTest(unittest.TestCase):
             iris_file_name = create_iris_csv_file(
                 size=num_records, columns=columns, temp_dir=temp_dir_name
             )
-            csv_data_reader = CSVDataReader(columns=columns, sep=",")
+            csv_data_reader = CSVDataReader(
+                filename=iris_file_name,
+                records_per_task=20
+            )
+            shards = csv_data_reader.create_shards()
+            self.assertEqual(len(shards), 7)
             task = _Task(
-                iris_file_name, 0, num_records, elasticdl_pb2.TRAINING
+                iris_file_name, 0, 20, elasticdl_pb2.TRAINING
             )
-
-            def _gen():
-                for record in csv_data_reader.read_records(task):
-                    yield record
-
-            def _feed(dataset, mode, metadata):
-                def _parse_data(record):
-                    features = tf.strings.to_number(record[0:-1], tf.float32)
-                    label = tf.strings.to_number(record[-1], tf.float32)
-                    return features, label
-
-                dataset = dataset.map(_parse_data)
-                dataset = dataset.batch(10)
-                return dataset
-
-            dataset = tf.data.Dataset.from_generator(
-                _gen, csv_data_reader.records_output_types
-            )
-            dataset = _feed(dataset, None, None)
-            for features, labels in dataset:
-                self.assertEqual(features.shape.as_list(), [10, 4])
-                self.assertEqual(labels.shape.as_list(), [10])
-                break
+            record_count = 0
+            for record in csv_data_reader.read_records(task, shuffle=True):
+                record_count += 1
+            self.assertEqual(csv_data_reader.get_size(), num_records)
+            self.assertEqual(record_count, 20)
 
 
 @unittest.skipIf(
