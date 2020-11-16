@@ -132,11 +132,7 @@ def main(_):
     # Horovod: adjust learning rate based on lr_scaler.
     opt = tf.train.AdamOptimizer(0.001 * lr_scaler)
 
-    # Horovod: add Horovod Distributed Optimizer.
-    '''
-    opt = hvd.DistributedOptimizer(opt, op=hvd.Adasum if args.use_adasum else hvd.Average,
-                                   gradient_predivide_factor=args.gradient_predivide_factor)
-    '''
+    # Use the customized optimizer instead of the DistributedOptimizer from horovod.
     opt = ElasticDistributedOptimizer(opt, op=hvd.Average,
                                       backward_passes_per_step=2,
                                       gradient_predivide_factor=args.gradient_predivide_factor)
@@ -157,6 +153,8 @@ def main(_):
         tf.train.LoggingTensorHook(tensors={'step': global_step, 'loss': loss},
                                    every_n_iter=10),
 
+        # Add the hook to update the backward_passes_per_step variable based on
+        # the horovod size and the rank of this process.
         UpdateVariableBySizeHook(updatable_tensor=opt.backward_passes_per_step(), total_count=8),
     ]
 
