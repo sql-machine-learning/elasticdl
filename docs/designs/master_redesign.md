@@ -19,9 +19,9 @@ The elastic pod manager is responsible for:
 
 ### Task Manager
 
-The task manager is responsible for creating tasks. Workers will ask the task manager for new tasks and report task completion status to the task manager when needed. Optionally, the task mamager supports task fault-tolerance by recovering un-completed tasks from failed workers and re-assigning to other workers.
+The task manager is responsible for creating tasks and dispatching tasks to workers. Workers will ask the task manager for new tasks and report task completion status to the task manager when needed. Optionally, the task mamager supports task fault-tolerance by recovering un-completed tasks from failed workers and re-assigning to other workers.
 
-For training jobs, the task manager supports dynamic sharding and partitions all training data into shards. Each task is a data shard.
+For training jobs, the task manager supports dynamic sharding and partitions all training data into shards. Each task contains a data shard.
 
 ### Rendezvous Server
 
