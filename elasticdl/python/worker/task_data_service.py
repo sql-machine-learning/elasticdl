@@ -153,6 +153,7 @@ class TaskDataService(object):
         while True:
             task = self._mc.get_task()
             if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
+                self._pending_train_end_callback_task = task
                 return task
             elif task.type == elasticdl_pb2.WAIT:
                 # The worker can only do the callback task until
