@@ -8,7 +8,7 @@ We plan to provide elastic training feature to customized AllReduce training cod
 After this re-design, the master consists of a few modular components and only launches those required components when providing elastic training feature to others.
 
 ## Master Components
-The master has three modular components: elastic pod manager, task manager and ElasticDL training/evaluation service.
+The master has four modular components: elastic pod manager, task manager, rendezvous server and ElasticDL training/evaluation service.
 
 ### Elastic Pod Manager
 The elastic pod manager is responsible for:
