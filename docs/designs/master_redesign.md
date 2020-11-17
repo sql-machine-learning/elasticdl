@@ -33,13 +33,23 @@ All other current master functions except the above three components. ElasticDL 
 
 Thus, we can launch the master in seven component combinations:
 
-1. Elastic pod manager only;
-2. Task manager only (without fault-tolerance);
-3. Elastic pod manager + Task manager;
-4. Elastic pod manager + Rendezvous server;
+1. Task manager only (without fault-tolerance);
+2. Elastic pod manager only;
+3. Elastic pod manager + Rendezvous server;
+4. Elastic pod manager + Task manager;
 5. Elastic pod manager + Rendezvous server + Task manager;
 6. Elastic pod manager + Task manager + ElasticDL training/evaluation service;
 7. Elastic pod manager + Task manager + Rendezvous server + ElasticDL training/evaluation service.
+
+Case | Elastic pod manager | Task manager | Rendezvous server | ElasticDL training/evaluation service | Usage
+---|---|---|---|---|---
+1 | | Y (without fault-tolerance) | | | Dynamic sharding service (rarely used alone)
+2 | Y | | | | Provide elastic training to other DL frameworks for PS-based training. DL frameworks need to have their own dynamic sharding implementations.
+3 | Y | | Y | | Provide elastic training to other DL frameworks for AllReduce training. DL frameworks need to have their own dynamic sharding implementations.
+4 | Y | Y | | | Provide elastic training and dynamic shading to other DL frameworks for PS-based training.
+5 | Y | Y | Y | | Provide elastic training and dynamic shading to other DL frameworks for AllReduce training.
+6 | Y | Y | | Y | ElasticDL PS-based training.
+7 | Y | Y | Y | Y | ElasticDL AllReduce training.
 
 
 ## Implementation
