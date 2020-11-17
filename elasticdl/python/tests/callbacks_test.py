@@ -20,7 +20,6 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.save_utils import (
     save_checkpoint_without_embedding,
