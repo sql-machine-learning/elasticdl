@@ -38,7 +38,6 @@ class TaskDataService(object):
             self._create_data_reader_fn = custom_data_reader
         self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
-        self._pending_dataset = True
         self._pending_train_end_callback_task = None
         if data_reader_params:
             self.data_reader = self._create_data_reader_fn(
@@ -48,21 +47,11 @@ class TaskDataService(object):
             self.data_reader = self._create_data_reader_fn(
                 data_origin=data_origin
             )
-        self._warm_up_task = None
-        self._has_warmed_up = False
         self._failed_record_count = 0
         self._reported_record_count = 0
         self._current_task = None
         self._pending_tasks = deque()
-
-    def _reset(self):
-        """
-        Reset pending tasks and record counts
-        """
-        self._reported_record_count = 0
-        self._failed_record_count = 0
-        self._pending_tasks = deque()
-        self._current_task = None
+        self.current_eval_task = None
 
     def get_current_task(self):
         return self._current_task
@@ -159,7 +148,21 @@ class TaskDataService(object):
         return dataset
 
     def get_train_end_callback_task(self):
-        return self._pending_train_end_callback_task
+        if self._pending_train_end_callback_task:
+            return self._pending_train_end_callback_task
+
+        while True:
+            task = self._mc.get_task()
+            if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
+                self._pending_train_end_callback_task = task
+                return task
+            elif task.type == elasticdl_pb2.WAIT:
+                # The worker can only do the callback task until
+                # the training loop finishes.
+                logger.info("Waiting more tasks")
+                time.sleep(5)
+            else:
+                return None
 
     def clear_train_end_callback_task(self):
         self._pending_train_end_callback_task = None
@@ -169,42 +172,10 @@ class TaskDataService(object):
         If there's more data, this creates a `tf.data.Dataset` object.
         Otherwise, this returns `None`.
         """
-        if self._pending_dataset:
-            if self._pending_tasks:
-                logger.error(
-                    "Cannot get new dataset when there are pending tasks"
-                )
-                return None
-            self._reset()
-            # We use a task to perform warm-up for data reader in order
-            # to collect useful metadata. Note that we only performs
-            # data fetching for this task and `break` instantly to make
-            # sure `read_records()` is executed without iterating all the
-            # records so this should not be time consuming.
-            if self._warm_up_task is None and not self._has_warmed_up:
-                while True:
-                    task = self._mc.get_task()
-                    if task.type != elasticdl_pb2.WAIT:
-                        break
-                    time.sleep(2)
-                if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
-                    self._pending_train_end_callback_task = task
-                    return None
-                elif not task.shard.name:
-                    logger.info("No more task, stopping")
-                    return None
-                else:
-                    self._warm_up_task = task
-                    for _ in self.data_reader.read_records(task):
-                        break
-                    self._has_warmed_up = True
-            ds = tf.data.Dataset.from_generator(
-                self._gen, self.data_reader.records_output_types
-            )
-            self._pending_dataset = False
-            return ds
-        else:
-            return None
+        ds = tf.data.Dataset.from_generator(
+            self._gen, self.data_reader.records_output_types
+        )
+        return ds
 
     def _gen(self):
         """
@@ -212,26 +183,13 @@ class TaskDataService(object):
         used to create a `tf.data.Dataset` object from a list of tasks.
         """
         while True:
-            # Make sure we also generate data from the warm-up task.
-            if self._warm_up_task is not None and self._has_warmed_up:
-                task = self._warm_up_task
-                self._warm_up_task = None
-            else:
-                task = self._mc.get_task()
+            task = self._mc.get_task()
             if not task.shard.name:
-                if task.type == elasticdl_pb2.WAIT:
-                    self._pending_dataset = True
-                    logger.info("No tasks for now, maybe more later")
-                    # There are too many requests to get task from the master
-                    # if the worker does not sleep.
-                    time.sleep(5)
-                else:
-                    logger.info("No more task, stopping")
                 break
             with self._lock:
                 if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
                     self._pending_train_end_callback_task = task
-                    continue
+                    break
 
                 self._pending_tasks.append(task)
                 if len(self._pending_tasks) == 1:
@@ -239,3 +197,19 @@ class TaskDataService(object):
             for data in self.data_reader.read_records(task):
                 if data:
                     yield data
+
+    def get_eval_dataset(self):
+        def _gen():
+            task = self._mc.get_task(elasticdl_pb2.EVALUATION)
+            if not task.shard.name:
+                return
+            logger.info("the evaluation task_id: %d" % task.task_id)
+            self.current_eval_task = task
+            for data in self.data_reader.read_records(task):
+                if data:
+                    yield data
+
+        dataset = tf.data.Dataset.from_generator(
+            _gen, self.data_reader.records_output_types
+        )
+        return dataset
