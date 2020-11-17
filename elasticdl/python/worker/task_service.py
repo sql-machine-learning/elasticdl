@@ -52,7 +52,7 @@ class TaskService(object):
                 self._current_task = task
         return task
 
-    def fetch_training_shard(self):
+    def fetch_shard(self):
         task = self.get_task()
         return task.shard
 
