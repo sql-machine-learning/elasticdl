@@ -26,7 +26,7 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import MaxComputeConfig
 from elasticdl.python.common.model_utils import load_module
 from elasticdl.python.data.odps_io import is_odps_configured
-from elasticdl.python.data.reader.csv_reader import CSVDataReader
+from elasticdl.python.data.reader.text_reader import TextDataReader
 from elasticdl.python.data.reader.data_reader import Metadata
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.data.reader.odps_reader import ODPSDataReader
@@ -73,7 +73,7 @@ class RecordIODataReaderTest(unittest.TestCase):
                     self.assertEqual(len(v.numpy()), 1)
 
 
-class CSVDataReaderTest(unittest.TestCase):
+class TextDataReaderTest(unittest.TestCase):
     def test_csv_data_reader(self):
         with tempfile.TemporaryDirectory() as temp_dir_name:
             num_records = 128
@@ -87,7 +87,7 @@ class CSVDataReaderTest(unittest.TestCase):
             iris_file_name = create_iris_csv_file(
                 size=num_records, columns=columns, temp_dir=temp_dir_name
             )
-            csv_data_reader = CSVDataReader(
+            csv_data_reader = TextDataReader(
                 filename=iris_file_name,
                 records_per_task=20
             )

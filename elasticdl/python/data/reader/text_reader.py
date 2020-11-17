@@ -24,8 +24,8 @@ from elasticdl.python.data.reader.data_reader import (
 )
 
 
-class CSVDataReader(AbstractDataReader):
-    """This reader is used to create shards for a csv file and
+class TextDataReader(AbstractDataReader):
+    """This reader is used to create shards for a file and
     read records from the shard.
     """
 
