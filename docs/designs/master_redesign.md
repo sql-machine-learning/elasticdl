@@ -1,6 +1,6 @@
 # Master Design
 
-This document deseribes an ElasticDL master design.
+This document describes an ElasticDL master design.
 
 ## Motivation
 
