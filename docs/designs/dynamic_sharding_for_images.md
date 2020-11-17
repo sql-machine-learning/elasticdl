@@ -2,7 +2,7 @@
 
 Now, users have to convert images into RecordIO for ElasticDL. In practice,
 many users read the original images to train their models. So, we need to
-support read the original data from the storage. However, there are various
+support reading the original data from the storage. However, there are various
 file formats for the original data. We need to design a common definition
 for different formats.
 
