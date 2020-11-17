@@ -365,7 +365,7 @@ class _TaskDispatcher(object):
 
     def finished(self):
         """Return if all tasks are done"""
-        return all([not self._todo, not self._eval_todo, not self._doing])
+        return all([not self._todo, not self._doing])
 
     def recover_tasks(self, worker_id):
         """Recover doing tasks for a dead worker"""
