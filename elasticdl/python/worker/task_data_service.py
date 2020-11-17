@@ -27,7 +27,6 @@ class TaskDataService(object):
     def __init__(
         self,
         master_client,
-        training_with_evaluation,
         custom_data_reader=None,
         data_reader_params=None,
         data_origin=None,
@@ -36,7 +35,6 @@ class TaskDataService(object):
         self._create_data_reader_fn = create_data_reader
         if custom_data_reader is not None:
             self._create_data_reader_fn = custom_data_reader
-        self._training_with_evaluation = training_with_evaluation
         self._lock = threading.Lock()
         self._pending_train_end_callback_task = None
         if data_reader_params:
