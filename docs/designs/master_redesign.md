@@ -1,11 +1,11 @@
 # Master Design
 
-This document describes an ElasticDL master design.
+This document is a new design of the ElasticDL master.
 
 ## Motivation
 
-We plan to provide elastic training feature to customized AllReduce training codes and other deep learning frameworks. Currently the master is designed for ElasticDL's own training framework. This requires us to re-design the master.
-After this re-design, the master consists of a few modular components and only launches those required components when providing elastic training feature to others.
+We plan to provide elastic training feature to customized training loop for AllReduce and other deep learning frameworks. Currently the master is designed for ElasticDL's own training framework. This requires us to re-design the master.
+After this re-design, the master consists of a few modular components and only launches required components when providing elastic training feature in different scenarios.
 
 ## Master Components
 The master has four modular components: elastic pod manager, task manager, rendezvous server and ElasticDL training/evaluation service.
@@ -88,11 +88,11 @@ Run:
 
 We need to add more arguments
 
-- need_pod_manager (default:True)
-- need_task_manager (default: True)
-- need_training_service (default: True)
-- task_fault_tolerance (default: True)
-- worker_command (provided by ElasticDL operator, if none, using default `python -m elasticdl.python.worker.main args`)
+- need\_pod\_manager (default:True)
+- need\_task\_manager (default: True)
+- need\_training\_service (default: True)
+- task\_fault\_tolerance (default: True)
+- worker\_command (provided by ElasticDL operator, if none, using default `python -m elasticdl.python.worker.main args`)
 
 
 ```python
@@ -136,7 +136,7 @@ Note that k8s client with watch is included in the pod manager, which is using a
 
 ### Implementation Steps
 
-1. Create the above framework, but put everything in the current master version into training_service. We will remove most components from it after implementing them as modular components.
+1. Create the above framework, but put everything in the current master version into training_service. We will remove most components out of it after implementing them as modular components.
 2. Move rpc server as a modular components.
 3. Implement pod_manager.
 4. Implement task_manager.
