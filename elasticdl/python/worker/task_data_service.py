@@ -18,9 +18,9 @@ from collections import deque
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.constants import TaskExecCounterKey
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
+from elasticdl.python.worker.task_service import TaskService
 
 
 class TaskDataService(object):
@@ -32,7 +32,7 @@ class TaskDataService(object):
         data_reader_params=None,
         data_origin=None,
     ):
-        self._mc = master_client
+        self._task_service = TaskService(master_client)
         self._create_data_reader_fn = create_data_reader
         if custom_data_reader is not None:
             self._create_data_reader_fn = custom_data_reader
@@ -47,79 +47,13 @@ class TaskDataService(object):
             self.data_reader = self._create_data_reader_fn(
                 data_origin=data_origin
             )
-        self._failed_record_count = 0
-        self._reported_record_count = 0
-        self._current_task = None
-        self._pending_tasks = deque()
         self.current_eval_task = None
 
     def get_current_task(self):
-        return self._current_task
-
-    def _do_report_task(self, task, err_msg=""):
-        if self._failed_record_count != 0:
-            exec_counters = {
-                TaskExecCounterKey.FAIL_COUNT: self._failed_record_count
-            }
-        else:
-            exec_counters = None
-        self._mc.report_task_result(
-            task.task_id, err_msg, exec_counters=exec_counters
-        )
-
-    def _log_fail_records(self, task, err_msg):
-        task_len = task.shard.end - task.shard.start
-        msg = (
-            "records ({f}/{t}) failure, possible "
-            "in task_id: {task_id} "
-            'reason "{err_msg}"'
-        ).format(
-            task_id=task.task_id,
-            err_msg=err_msg,
-            f=self._failed_record_count,
-            t=task_len,
-        )
-        logger.warning(msg)
+        return self._task_service.get_current_task()
 
     def report_record_done(self, count, err_msg=""):
-        """
-        Report the number of records in the latest processed batch,
-        so TaskDataService knows if some pending tasks are finished
-        and report_task_result to the master.
-        Return True if there are some finished tasks, False otherwise.
-        """
-        self._reported_record_count += count
-        if err_msg:
-            self._failed_record_count += count
-
-        # TODO(qijun) This is a workaround for #1829
-        if not self._pending_tasks:
-            return False
-        task = self._pending_tasks[0]
-        total_record_num = task.shard.end - task.shard.start
-        if self._reported_record_count >= total_record_num:
-            if err_msg:
-                self._log_fail_records(task, err_msg)
-
-            # Keep popping tasks until the reported record count is less
-            # than the size of the current data since `batch_size` may be
-            # larger than `shard.end - shard.start`
-            with self._lock:
-                while self._pending_tasks and self._reported_record_count >= (
-                    self._pending_tasks[0].shard.end
-                    - self._pending_tasks[0].shard.start
-                ):
-                    task = self._pending_tasks[0]
-                    self._reported_record_count -= (
-                        task.shard.end - task.shard.start
-                    )
-                    self._pending_tasks.popleft()
-                    self._do_report_task(task, err_msg)
-                    self._failed_record_count = 0
-                if self._pending_tasks:
-                    self._current_task = self._pending_tasks[0]
-            return True
-        return False
+        self._task_service.report_batch_done(count, err_msg)
 
     def get_dataset_gen(self, task):
         """
@@ -152,7 +86,7 @@ class TaskDataService(object):
             return self._pending_train_end_callback_task
 
         while True:
-            task = self._mc.get_task()
+            task = self._task_service.get_task()
             if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
                 self._pending_train_end_callback_task = task
                 return task
@@ -183,7 +117,7 @@ class TaskDataService(object):
         used to create a `tf.data.Dataset` object from a list of tasks.
         """
         while True:
-            task = self._mc.get_task()
+            task = self._task_service.get_task()
             if not task.shard.name:
                 break
             with self._lock:
@@ -191,16 +125,13 @@ class TaskDataService(object):
                     self._pending_train_end_callback_task = task
                     break
 
-                self._pending_tasks.append(task)
-                if len(self._pending_tasks) == 1:
-                    self._current_task = task
             for data in self.data_reader.read_records(task):
                 if data:
                     yield data
 
     def get_eval_dataset(self):
         def _gen():
-            task = self._mc.get_task(elasticdl_pb2.EVALUATION)
+            task = self._task_service.get_task(elasticdl_pb2.EVALUATION)
             if not task.shard.name:
                 return
             logger.info("the evaluation task_id: %d" % task.task_id)
