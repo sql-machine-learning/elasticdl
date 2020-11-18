@@ -245,9 +245,20 @@ class PyTorchAllReduceController(AllReduceController):
     def reset_backward_passes_per_step(self):
         world_size = hvd.size()
         rank = hvd.rank()
-        self.backward_passes_per_step = int(self.batch_num_per_step / world_size)
+        self.backward_passes_per_step = int(
+            self.batch_num_per_step / world_size
+        )
         if rank < self.batch_num_per_step % world_size:
             self.backward_passes_per_step += 1
-        if self.backward_passes_per_step != self._optimizer.backward_passes_per_step:
-            self._optimizer.backward_passes_per_step = self.backward_passes_per_step
-            logger.info("Backward passes = {}".format(self._optimizer.backward_passes_per_step))
+        if (
+            self.backward_passes_per_step
+            != self._optimizer.backward_passes_per_step
+        ):
+            self._optimizer.backward_passes_per_step = (
+                self.backward_passes_per_step
+            )
+            logger.info(
+                "Backward passes = {}".format(
+                    self._optimizer.backward_passes_per_step
+                )
+            )
