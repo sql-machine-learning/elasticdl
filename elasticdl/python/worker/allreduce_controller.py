@@ -240,6 +240,7 @@ class PyTorchAllReduceController(AllReduceController):
         time.sleep(3)
         # Call `load_state_dict` to reset the state of Horovod optimizer
         self._optimizer.load_state_dict(self._optimizer.state_dict())
+        self._optimizer.zero_grad()
         self._rendezvous_manager.init_horovod_if_needed()
 
     def reset_backward_passes_per_step(self):

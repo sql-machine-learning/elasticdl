@@ -498,4 +498,4 @@ class Worker(object):
         dataset = dataset.batch(self._minibatch_size).prefetch(1)
         self._training_func(dataset, elastic_controller)
         del dataset
-        self._process_train_end_callback_task_if_needed()
+        # self._process_train_end_callback_task_if_needed()

@@ -21,6 +21,7 @@ import torch.optim as optim
 from elasticdl.python.common.constants import Mode
 from elasticdl.python.common.log_utils import default_logger as logger
 
+NUM_WORKER = 3
 
 class Net(nn.Module):
     def __init__(self):
@@ -61,6 +62,7 @@ def train(dataset, elastic_controller):
     model = Net()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
 
+    # op must be sum to keep the batch size fixed
     optimizer = hvd.DistributedOptimizer(optimizer, op=hvd.Sum)
 
     # Set the model and optimizer to broadcast.
@@ -72,7 +74,6 @@ def train(dataset, elastic_controller):
     elastic_train_one_step = elastic_controller.elastic_run(
         train_one_step
     )
-    batches = []
     for batch_idx, (data, target) in enumerate(dataset):
         # Convert tf.tensor to torch.tensor.
         target = tf.reshape(target, [-1])
@@ -82,26 +83,21 @@ def train(dataset, elastic_controller):
 
         target = target.type(torch.LongTensor)
 
-        batches.append((data, target))
-
-        # Elastic controller will adjust the backward_passes_per_step
-        # if worker number changes
-        if len(batches) == elastic_controller.backward_passes_per_step:
-            loss = elastic_train_one_step(
-                model, optimizer, batches, elastic_controller.batch_num_per_step
-            )
-            batches = []
-            logger.info("loss = {}, batch_index = {}".format(loss, batch_idx))
+        loss = elastic_train_one_step(
+            batch_idx, model, optimizer, data, target
+        )
+        logger.info("loss = {}, batch_index = {}".format(loss, batch_idx))
 
 
-def train_one_step(model, optimizer, batches, batch_num):
-    optimizer.zero_grad()
-    for data, target in batches:
-        output = model(data)
-        loss = F.nll_loss(output, target)
-        loss.div_(batch_num)
-        loss.backward()
-    optimizer.step()
+def train_one_step(batch_index, model, optimizer, data, target):
+    output = model(data)
+    loss = F.nll_loss(output, target)
+    loss.backward()
+    # The loss must divide by the number of workers when op = sum
+    loss.div_(NUM_WORKER)
+    if batch_index % optimizer.backward_passes_per_step == 0:
+        optimizer.step()
+        optimizer.zero_grad()
     return loss
 
 
