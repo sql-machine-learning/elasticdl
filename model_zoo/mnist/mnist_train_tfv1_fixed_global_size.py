@@ -13,7 +13,8 @@
 # limitations under the License.
 # ==============================================================================
 
-# The following code is slightly updated based on https://github.com/horovod/horovod/blob/18cfedd5236885d9fd581ca53fe04a142486bb2b/examples/tensorflow/tensorflow_mnist.py#L16
+# The following code is slightly updated based on
+# https://github.com/horovod/horovod/blob/18cfedd5236885d9fd581ca53fe04a142486bb2b/examples/tensorflow/tensorflow_mnist.py#L16
 # We use the customized optimizer and hook here to ensure that
 # the global batch size is not changed even the horovod size changes.
 
@@ -26,7 +27,7 @@ import numpy as np
 import tensorflow as tf
 from customized_optimizers import (
     ElasticDistributedOptimizer,
-    UpdateVariableBySizeHook,
+    UpdateBackwardNumberByHorovodSizeHook,
 )
 from tensorflow import keras
 
@@ -58,7 +59,8 @@ def conv_model(feature, target, mode):
     target = tf.one_hot(tf.cast(target, tf.int32), 10, 1, 0)
 
     # Reshape feature to 4d tensor with 2nd and 3rd dimensions being
-    # image width and height final dimension being the number of color channels.
+    # image width and height final dimension being the number of color
+    # channels.
     feature = tf.reshape(feature, [-1, 28, 28, 1])
 
     # First conv layer will compute 32 features for each 5x5 patch
@@ -110,8 +112,8 @@ def train_input_generator(x_train, y_train, batch_size=64):
         x_train, y_train = x_train[p], y_train[p]
         index = 0
         while index <= len(x_train) - batch_size:
-            yield x_train[index : index + batch_size], y_train[
-                index : index + batch_size
+            yield x_train[index : (index + batch_size)], y_train[
+                index : (index + batch_size)
             ],
             index += batch_size
 
@@ -153,15 +155,16 @@ def main(_):
     predict, loss = conv_model(image, label, tf.estimator.ModeKeys.TRAIN)
 
     lr_scaler = hvd.size()
-    # By default, Adasum doesn't need scaling when increasing batch size. If used with NCCL,
-    # scale lr by local_size
+    # By default, Adasum doesn't need scaling when increasing batch size.
+    # If used with NCCL, scale lr by local_size
     if args.use_adasum:
         lr_scaler = hvd.local_size() if hvd.nccl_built() else 1
 
     # Horovod: adjust learning rate based on lr_scaler.
     opt = tf.train.AdamOptimizer(0.001 * lr_scaler)
 
-    # Use the customized optimizer instead of the DistributedOptimizer from horovod.
+    # Use the customized optimizer instead of the DistributedOptimizer
+    # from horovod.
     opt = ElasticDistributedOptimizer(
         opt,
         op=hvd.Average,
@@ -173,10 +176,10 @@ def main(_):
     train_op = opt.minimize(loss, global_step=global_step)
 
     hooks = [
-        # Horovod: BroadcastGlobalVariablesHook broadcasts initial variable states
-        # from rank 0 to all other processes. This is necessary to ensure consistent
-        # initialization of all workers when training is started with random weights
-        # or restored from a checkpoint.
+        # Horovod: BroadcastGlobalVariablesHook broadcasts initial variable
+        # states from rank 0 to all other processes. This is necessary to
+        # ensure consistent initialization of all workers when training is
+        # started with random weights or restored from a checkpoint.
         hvd.BroadcastGlobalVariablesHook(0),
         # Horovod: adjust number of steps based on number of GPUs.
         tf.train.StopAtStepHook(last_step=20000 // hvd.size()),
@@ -185,7 +188,7 @@ def main(_):
         ),
         # Add the hook to update the backward_passes_per_step variable based on
         # the horovod size and the rank of this process.
-        UpdateVariableBySizeHook(
+        UpdateBackwardNumberByHorovodSizeHook(
             updatable_tensor=opt.backward_passes_per_step(), total_count=8
         ),
     ]
@@ -202,8 +205,8 @@ def main(_):
         x_train, y_train, batch_size=100
     )
     # The MonitoredTrainingSession takes care of session initialization,
-    # restoring from a checkpoint, saving to a checkpoint, and closing when done
-    # or an error occurs.
+    # restoring from a checkpoint, saving to a checkpoint, and closing when
+    # done or an error occurs.
     with tf.train.MonitoredTrainingSession(
         checkpoint_dir=checkpoint_dir, hooks=hooks, config=config
     ) as mon_sess:
