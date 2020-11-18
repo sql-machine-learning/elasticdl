@@ -189,7 +189,8 @@ def main(_):
         # Add the hook to update the backward_passes_per_step variable based on
         # the horovod size and the rank of this process.
         AdjustBackwardPassesPerStepHook(
-            updatable_tensor=opt.backward_passes_per_step(), total_count=8
+            backward_passes_per_step_var=opt.backward_passes_per_step,
+            global_batch_count_per_step=8
         ),
     ]
 
