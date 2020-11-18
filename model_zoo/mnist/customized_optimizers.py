@@ -16,6 +16,10 @@ import tensorflow as tf
 
 
 class AdjustBackwardPassesPerStepHook(tf.train.SessionRunHook):
+    """
+    Hooks that adjusts `backward_passer_per_step` according to
+    the horovod size dynamically.
+    """
     def __init__(
         self, backward_passes_per_step_var, global_batch_count_per_step
     ):
@@ -402,16 +406,14 @@ class ElasticDistributedOptimizer(tf.train.Optimizer):
             gradient_predivide_factor,
         )
 
-        self._agg_helper = None
-        if backward_passes_per_step > 1:
-            self._agg_helper = LocalGradientAggregationHelper(
-                backward_passes_per_step=backward_passes_per_step,
-                allreduce_func=self._allreduce_grads,
-                sparse_as_dense=sparse_as_dense,
-                average_aggregated_gradients=average_aggregated_gradients,
-                rank=hvd.rank(),
-                optimizer_type=LocalGradientAggregationHelper._OPTIMIZER_TYPE_LEGACY,
-            )
+        self._agg_helper = LocalGradientAggregationHelper(
+            backward_passes_per_step=backward_passes_per_step,
+            allreduce_func=self._allreduce_grads,
+            sparse_as_dense=sparse_as_dense,
+            average_aggregated_gradients=average_aggregated_gradients,
+            rank=hvd.rank(),
+            optimizer_type=LocalGradientAggregationHelper._OPTIMIZER_TYPE_LEGACY,
+        )
 
     def compute_gradients(self, *args, **kwargs):
         """Compute gradients of all trainable variables.
