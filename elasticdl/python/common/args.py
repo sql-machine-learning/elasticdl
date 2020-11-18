@@ -104,7 +104,7 @@ def print_args(args, groups=None):
         logger.info("%s = %s", key, value)
 
 
-def parse_master_args(master_args=None):
+def _build_master_args_parser():
     parser = argparse.ArgumentParser(description="ElasticDL Master")
     parser.add_argument(
         "--port",
@@ -124,11 +124,10 @@ def parse_master_args(master_args=None):
     add_common_params(parser)
     add_train_params(parser)
 
-    args, unknown_args = parser.parse_known_args(args=master_args)
-    print_args(args, groups=ALL_ARGS_GROUPS)
-    if unknown_args:
-        logger.warning("Unknown arguments: %s", unknown_args)
+    return parser
 
+
+def _check_master_args_validity(args):
     if all(
         v == "" or v is None
         for v in [
@@ -153,18 +152,29 @@ def parse_master_args(master_args=None):
     if not args.use_async and args.get_model_steps > 1:
         args.get_model_steps = 1
         logger.warning(
-            "get_model_steps is set to 1 when using synchronous SGD."
+            "get_model_steps is set to 1 while using synchronous SGD."
         )
     if args.use_async and args.grads_to_wait > 1:
         args.grads_to_wait = 1
         logger.warning(
-            "grads_to_wait is set to 1 when using asynchronous SGD."
+            "grads_to_wait is set to 1 while using asynchronous SGD."
         )
+
+
+def parse_master_args(master_args=None):
+    parser = _build_master_args_parser()
+
+    args, unknown_args = parser.parse_known_args(args=master_args)
+    print_args(args, groups=ALL_ARGS_GROUPS)
+    if unknown_args:
+        logger.warning("Unknown arguments: %s", unknown_args)
+
+    _check_master_args_validity(args)
 
     return args
 
 
-def parse_ps_args(ps_args=None):
+def _build_ps_args_parser():
     parser = argparse.ArgumentParser(description="ElasticDL PS")
     parser.add_argument(
         "--ps_id", help="ID unique to the PS", type=int, required=True
@@ -176,21 +186,30 @@ def parse_ps_args(ps_args=None):
 
     add_common_params(parser)
     add_train_params(parser)
+
+    return parser
+
+
+def parse_ps_args(ps_args=None):
+    parser = _build_ps_args_parser()
+
     # TODO: add PS replica address for RPC stub creation
 
     args, unknown_args = parser.parse_known_args(args=ps_args)
     print_args(args, groups=ALL_ARGS_GROUPS)
     if unknown_args:
         logger.warning("Unknown arguments: %s", unknown_args)
+
     if args.use_async and args.grads_to_wait > 1:
         args.grads_to_wait = 1
         logger.warning(
-            "grads_to_wait is set to 1 when using asynchronous SGD."
+            "grads_to_wait is set to 1 while using asynchronous SGD."
         )
+
     return args
 
 
-def parse_worker_args(worker_args=None):
+def _build_worker_args_parser():
     parser = argparse.ArgumentParser(description="ElasticDL Worker")
     add_common_args_between_master_and_worker(parser)
     add_train_params(parser)
@@ -214,14 +233,25 @@ def parse_worker_args(worker_args=None):
         help="Addresses of parameter service pods, separated by comma",
     )
 
+    return parser
+
+
+def parse_worker_args(worker_args=None):
+    parser = _build_worker_args_parser()
+
     if worker_args:
         worker_args = list(map(str, worker_args))
     args, unknown_args = parser.parse_known_args(args=worker_args)
     print_args(args, groups=ALL_ARGS_GROUPS)
     if unknown_args:
         logger.warning("Unknown arguments: %s", unknown_args)
+
     if args.distribution_strategy == DistributionStrategy.ALLREDUCE:
+        logger.warning(
+            "Set ps address to be empty for AllReduce distribution strategy"
+        )
         args.ps_addrs = ""
+
     return args
 
 

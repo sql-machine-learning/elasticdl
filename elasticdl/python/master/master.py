@@ -79,15 +79,15 @@ def _make_task_dispatcher(
             else {}
         )
 
-    prediction_f_records = _maybe_create_shards(prediction_data)
+    prediction_shards = _maybe_create_shards(prediction_data)
 
     return _TaskDispatcher(
         _maybe_create_shards(training_data),
         _maybe_create_shards(validation_data),
-        prediction_f_records,
+        prediction_shards,
         records_per_task,
         # Only generate prediction tasks for 1 epoch
-        1 if prediction_f_records else num_epochs,
+        1 if prediction_shards else num_epochs,
         callbacks_list,
     )
 
@@ -167,7 +167,7 @@ class Master(object):
         self._should_stop = False
         self._exit_code = 0
         threading.Thread(
-            target=self._check_timeout_tasks,
+            target=self._check_and_reassign_timeout_tasks,
             name="check_timeout_tasks",
             daemon=True,
         ).start()
@@ -236,7 +236,6 @@ class Master(object):
                         "All workers exited but there also are",
                         "unfinished tasks",
                     )
-                    break
                 if self._should_stop:
                     break
                 time.sleep(30)
@@ -441,12 +440,12 @@ class Master(object):
             return image_cluster_spec
         return cluster_spec
 
-    def _check_timeout_tasks(self):
+    def _check_and_reassign_timeout_tasks(self):
         while True:
             doing_tasks = self.task_d._doing.copy()
             cur_time = time.time()
             avg_time = self.master_servicer.get_average_task_complete_time()
-            for task_id, (worker_id, task, start_time) in doing_tasks.items():
+            for _, (worker_id, task, start_time) in doing_tasks.items():
                 if task.type == elasticdl_pb2.TRAINING:
                     start_time = self.master_servicer.get_worker_liveness_time(
                         worker_id
