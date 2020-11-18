@@ -15,9 +15,9 @@ import horovod.tensorflow as hvd
 import tensorflow as tf
 
 
-class UpdateBackwardNumberByHorovodSizeHook(tf.train.SessionRunHook):
+class AdjustBackwardPassesPerStepHook(tf.train.SessionRunHook):
     def __init__(self, backward_passes_per_step_var, global_batch_count_per_step):
-        
+
         self._step = 0
         self._value_placeholder = tf.placeholder(
             backward_passes_per_step_var.dtype, []

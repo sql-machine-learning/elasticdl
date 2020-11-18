@@ -27,7 +27,7 @@ import numpy as np
 import tensorflow as tf
 from customized_optimizers import (
     ElasticDistributedOptimizer,
-    UpdateBackwardNumberByHorovodSizeHook,
+    AdjustBackwardPassesPerStepHook,
 )
 from tensorflow import keras
 
@@ -188,7 +188,7 @@ def main(_):
         ),
         # Add the hook to update the backward_passes_per_step variable based on
         # the horovod size and the rank of this process.
-        UpdateBackwardNumberByHorovodSizeHook(
+        AdjustBackwardPassesPerStepHook(
             updatable_tensor=opt.backward_passes_per_step(), total_count=8
         ),
     ]
