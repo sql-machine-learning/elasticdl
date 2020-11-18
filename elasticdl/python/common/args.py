@@ -169,7 +169,7 @@ def parse_master_args(master_args=None):
     if unknown_args:
         logger.warning("Unknown arguments: %s", unknown_args)
 
-    _check_master_args_validity()
+    _check_master_args_validity(args)
 
     return args
 
@@ -199,6 +199,7 @@ def parse_ps_args(ps_args=None):
     print_args(args, groups=ALL_ARGS_GROUPS)
     if unknown_args:
         logger.warning("Unknown arguments: %s", unknown_args)
+
     if args.use_async and args.grads_to_wait > 1:
         args.grads_to_wait = 1
         logger.warning(
