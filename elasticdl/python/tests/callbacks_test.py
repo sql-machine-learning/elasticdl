@@ -20,7 +20,6 @@ import numpy as np
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.model_handler import ModelHandler
 from elasticdl.python.common.save_utils import (
     save_checkpoint_without_embedding,
@@ -57,9 +56,7 @@ class SavedModelExporterTest(unittest.TestCase):
 
     def test_on_train_end(self):
         worker = MockWorker()
-        task_data_service = TaskDataService(
-            worker, JobType.TRAINING_WITH_EVALUATION
-        )
+        task_data_service = TaskDataService(worker)
         dataset = tf.data.Dataset.from_tensor_slices(
             np.array([[1.0, 2.0, 3.0, 4.0], [1.0, 2.0, 3.0, 4.0]])
         )
