@@ -142,7 +142,7 @@ class InstanceManager(object):
         self._relaunch_deleted_live_ps = True
 
         self._failed_pods = []
-        self.all_workers_failed = False
+        self.all_workers_exited = False
 
     def _process_worker(self):
         need_process = True
@@ -365,14 +365,7 @@ class InstanceManager(object):
                         and phase != "Succeeded"
                     )
                 else:
-                    workers_failed = []
-                    for (
-                        pod_name,
-                        _,
-                        phase,
-                    ) in self._worker_pods_ip_phase.values():
-                        workers_failed.append(phase == PodStatus.FAILED)
-                    self.all_workers_failed = all(workers_failed)
+                    self.check_all_worker_exited()
 
             elif pod_name in self._ps_pod_name_to_id:
                 ps_id = self._ps_pod_name_to_id.get(pod_name)
@@ -403,6 +396,14 @@ class InstanceManager(object):
             # server are intentionally left unchanged to support fault
             # tolerance.
             self._start_ps(ps_id)
+
+    def check_all_worker_exited(self):
+        workers_exited = []
+        for (pod_name, _, phase,) in self._worker_pods_ip_phase.values():
+            workers_exited.append(
+                phase == PodStatus.FAILED or phase == PodStatus.SUCCEEDED
+            )
+        self.all_workers_exited = all(workers_exited)
 
     def get_alive_workers(self):
         alive_workers = []

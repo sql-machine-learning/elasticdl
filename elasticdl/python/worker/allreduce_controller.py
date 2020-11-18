@@ -120,7 +120,7 @@ class AllReduceController(object):
 
         return wrapper
 
-    def init_horvod_locally(self):
+    def init_horovod_locally(self):
         hvd.init()
 
     def _init_variables_before_first_calling(self, func, *args, **kwargs):

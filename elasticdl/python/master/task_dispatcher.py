@@ -27,24 +27,29 @@ from elasticdl.python.common.log_utils import default_logger as logger
 _MAX_TASK_RETRIES = 3
 
 
+class _Shard(object):
+    def __init__(self, name, start, end):
+        self.name = name
+        self.start = start
+        self.end = end
+
+
 class _Task(object):
     """Internal representation of a task"""
 
     def __init__(
         self, shard_name, start, end, type, model_version=-1, **kwargs
     ):
-        self.shard_name = shard_name
-        self.start = start
-        self.end = end
+        self.shard = _Shard(shard_name, start, end)
         self.type = type
         self.model_version = model_version
         self.extended_config = kwargs
 
     def _info(self):
         return (
-            self.shard_name,
-            self.start,
-            self.end,
+            self.shard.name,
+            self.shard.start,
+            self.shard.end,
             self.type,
             self.model_version,
         )
@@ -360,7 +365,7 @@ class _TaskDispatcher(object):
 
     def finished(self):
         """Return if all tasks are done"""
-        return all([not self._todo, not self._eval_todo, not self._doing])
+        return all([not self._todo, not self._doing])
 
     def recover_tasks(self, worker_id):
         """Recover doing tasks for a dead worker"""

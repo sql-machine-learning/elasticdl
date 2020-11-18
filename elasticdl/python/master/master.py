@@ -225,16 +225,17 @@ class Master(object):
         """
         try:
             while True:
-                if self.instance_manager.all_workers_failed:
-                    raise Exception(
-                        "All workers fail with unrecoverable errors"
-                    )
-                    break
                 if self.task_d.finished():
                     if self.instance_manager:
                         self.instance_manager.update_status(
                             InstanceManagerStatus.FINISHED
                         )
+                    break
+                if self.instance_manager.all_workers_exited:
+                    raise Exception(
+                        "All workers exited but there also are",
+                        "unfinished tasks",
+                    )
                     break
                 if self._should_stop:
                     break

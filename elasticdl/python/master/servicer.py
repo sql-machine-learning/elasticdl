@@ -54,7 +54,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return self._version
 
     def get_task(self, request, _):
-        res = elasticdl_pb2.Task()
+        shard = elasticdl_pb2.Shard()
+        res = elasticdl_pb2.Task(shard=shard)
         res.model_version = self._version
         if request.task_type == elasticdl_pb2.EVALUATION:
             task_id, task = self._task_d.get_eval_task(request.worker_id)
@@ -63,10 +64,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
         if task:
             res.task_id = task_id
-            res.shard_name = task.shard_name
-            res.start = task.start
-            res.end = task.end
             res.type = task.type
+            res.shard.name = task.shard.name
+            res.shard.start = task.shard.start
+            res.shard.end = task.shard.end
             for k, v in task.extended_config.items():
                 res.extended_config[k] = v
 
