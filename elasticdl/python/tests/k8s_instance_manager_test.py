@@ -28,7 +28,7 @@ class InstanceManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def test_create_delete_worker_pod(self):
-        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1)
+        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1, 2, 0)
         task_d.recover_tasks = MagicMock()
         instance_manager = InstanceManager(
             task_d,
@@ -77,7 +77,7 @@ class InstanceManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def test_get_worker_addrs(self):
-        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1)
+        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1, 2, 0)
         instance_manager = InstanceManager(
             task_d,
             job_name="test-create-worker-pod-%d-%d"
@@ -111,7 +111,7 @@ class InstanceManagerTest(unittest.TestCase):
         Start a pod running a python program destined to fail with
         restart_policy="Never" to test failed_worker_count
         """
-        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1)
+        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1, 2, 0)
         task_d.recover_tasks = MagicMock()
         instance_manager = InstanceManager(
             task_d,
@@ -152,7 +152,7 @@ class InstanceManagerTest(unittest.TestCase):
     )
     def test_relaunch_worker_pod(self):
         num_workers = 3
-        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1)
+        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1, 2, 0)
         instance_manager = InstanceManager(
             task_d,
             job_name="test-relaunch-worker-pod-%d-%d"

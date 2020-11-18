@@ -31,14 +31,9 @@ from elasticdl.python.common.model_utils import (
     get_dict_from_params_str,
     get_module_file_path,
     get_optimizer_info,
-    load_callbacks_from_module,
-    load_model_from_module,
     load_module,
-    set_callback_parameters,
 )
-from elasticdl.python.common.save_utils import CheckpointSaver
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
-from elasticdl.python.elasticdl.callbacks import MaxStepsStopping
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
@@ -64,7 +59,8 @@ def _make_task_dispatcher(
     num_epochs,
     data_reader_params,
     create_data_reader_fn,
-    callbacks_list,
+    batch_size,
+    max_step,
 ):
     def _maybe_create_shards(data_origin):
         kwargs = get_dict_from_params_str(data_reader_params)
@@ -88,7 +84,8 @@ def _make_task_dispatcher(
         records_per_task,
         # Only generate prediction tasks for 1 epoch
         1 if prediction_shards else num_epochs,
-        callbacks_list,
+        batch_size,
+        max_step,
     )
 
 
@@ -112,26 +109,6 @@ class Master(object):
         model_module = load_module(
             get_module_file_path(args.model_zoo, args.model_def)
         ).__dict__
-        if not args.custom_training_loop:
-            model_inst = load_model_from_module(args.model_def, model_module)
-            self._optimizer = model_module[args.optimizer]()
-
-            # Initialize the callbacks
-            self.callbacks_list = load_callbacks_from_module(
-                args.callbacks, model_module
-            )
-            self.callbacks_list.set_model(model_inst)
-            set_callback_parameters(
-                self.callbacks_list,
-                batch_size=args.minibatch_size,
-                saved_model_path=args.output,
-                checkpoint_path=args.checkpoint_dir,
-            )
-        else:
-            self.callbacks_list = None
-            self._optimizer = None
-
-        self._set_completed_steps_by_checkpoint(args.checkpoint_dir_for_init)
 
         self._create_data_reader_fn = create_data_reader
         if args.custom_data_reader in model_module:
@@ -147,10 +124,19 @@ class Master(object):
             args.num_epochs,
             args.data_reader_params,
             self._create_data_reader_fn,
-            self.callbacks_list,
+            args.minibatch_size,
+            args.max_step,
         )
 
-        self.task_d.add_deferred_callback_create_train_end_task()
+        if not args.custom_training_loop:
+            self._optimizer = model_module[args.optimizer]()
+            self.task_d.add_deferred_callback_create_train_end_task()
+            self.task_d.set_completed_steps_by_checkpoint(
+                args.checkpoint_dir_for_init
+            )
+        else:
+            self._optimizer = None
+
         if args.eval_metrics_fn in model_module:
             self.evaluation_service = self._create_evaluation_service(
                 model_module[args.eval_metrics_fn], args.evaluation_steps
@@ -171,24 +157,6 @@ class Master(object):
             name="check_timeout_tasks",
             daemon=True,
         ).start()
-
-    def _set_completed_steps_by_checkpoint(self, checkpoint_dir_for_init):
-        if not checkpoint_dir_for_init:
-            return
-
-        if not CheckpointSaver.check_checkpoint_valid(checkpoint_dir_for_init):
-            raise ValueError(
-                "Invalid checkpoint directory {}".format(
-                    checkpoint_dir_for_init
-                )
-            )
-
-        model_verion = CheckpointSaver.get_version_from_checkpoint(
-            checkpoint_dir_for_init
-        )
-        for callback in self.callbacks_list.callbacks:
-            if isinstance(callback, MaxStepsStopping):
-                callback.set_completed_steps(model_verion)
 
     def request_stop(self, err_msg=None):
         """Request master to quit"""

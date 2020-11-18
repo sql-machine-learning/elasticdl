@@ -99,6 +99,8 @@ class EvaluationServiceTest(unittest.TestCase):
             {},
             3,
             1,
+            2,
+            0,
         )
 
         # Evaluation metrics will not be accepted if no evaluation ongoing
@@ -129,7 +131,9 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertFalse(evaluation_service.try_to_create_new_job())
 
     def testEvaluationOnly(self):
-        task_d = _TaskDispatcher({}, {"f1": (0, 10), "f2": (0, 10)}, {}, 3, 1)
+        task_d = _TaskDispatcher(
+            {}, {"f1": (0, 10), "f2": (0, 10)}, {}, 3, 1, 2, 0
+        )
 
         evaluation_service = EvaluationService(
             task_d, 0, True, _eval_metrics_fn
@@ -157,6 +161,8 @@ class EvaluationServiceTest(unittest.TestCase):
             {},
             3,
             1,
+            2,
+            0,
         )
 
         evaluation_service = EvaluationService(
