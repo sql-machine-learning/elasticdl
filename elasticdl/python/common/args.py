@@ -127,7 +127,7 @@ def _build_master_args_parser():
     return parser
 
 
-def _check_master_args_validitiy(args):
+def _check_master_args_validity(args):
     if all(
         v == "" or v is None
         for v in [
@@ -169,7 +169,7 @@ def parse_master_args(master_args=None):
     if unknown_args:
         logger.warning("Unknown arguments: %s", unknown_args)
 
-    _check_master_args_validitiy()
+    _check_master_args_validity()
 
     return args
 
