@@ -16,8 +16,16 @@ import tensorflow as tf
 
 
 class AdjustBackwardPassesPerStepHook(tf.train.SessionRunHook):
-    def __init__(self, backward_passes_per_step_var, global_batch_count_per_step):
-
+    def __init__(
+        self, backward_passes_per_step_var, global_batch_count_per_step
+    ):
+        """
+        Args:
+            backward_passes_per_step_var: A tf.Variable which stands for
+                `backward_passes_per_step` of this process.
+            global_batch_count_per_step: The total batch counts per step
+                of all the workers for this training job.
+        """
         self._step = 0
         self._value_placeholder = tf.placeholder(
             backward_passes_per_step_var.dtype, []

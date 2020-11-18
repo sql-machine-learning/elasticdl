@@ -26,8 +26,8 @@ import horovod.tensorflow as hvd
 import numpy as np
 import tensorflow as tf
 from customized_optimizers import (
-    ElasticDistributedOptimizer,
     AdjustBackwardPassesPerStepHook,
+    ElasticDistributedOptimizer,
 )
 from tensorflow import keras
 
