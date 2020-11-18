@@ -25,11 +25,12 @@ import os
 import horovod.tensorflow as hvd
 import numpy as np
 import tensorflow as tf
+from tensorflow import keras
+
 from model_zoo.mnist.customized_optimizers import (
     AdjustBackwardPassesPerStepHook,
-    ElasticDistributedOptimizer,
+    DistributedOptimizer,
 )
-from tensorflow import keras
 
 layers = tf.layers
 
@@ -112,8 +113,10 @@ def train_input_generator(x_train, y_train, batch_size=64):
         x_train, y_train = x_train[p], y_train[p]
         index = 0
         while index <= len(x_train) - batch_size:
-            yield x_train[index : (index + batch_size)], y_train[
-                index : (index + batch_size)
+            yield x_train[
+                index : (index + batch_size)  # noqa: ignore=E203
+            ], y_train[
+                index : (index + batch_size)  # noqa: ignore=E203
             ],
             index += batch_size
 
@@ -165,7 +168,7 @@ def main(_):
 
     # Use the customized optimizer instead of the DistributedOptimizer
     # from horovod.
-    opt = ElasticDistributedOptimizer(
+    opt = DistributedOptimizer(
         opt,
         op=hvd.Average,
         backward_passes_per_step=2,
@@ -190,7 +193,7 @@ def main(_):
         # the horovod size and the rank of this process.
         AdjustBackwardPassesPerStepHook(
             backward_passes_per_step_var=opt.backward_passes_per_step,
-            global_batch_count_per_step=8
+            global_batch_count_per_step=8,
         ),
     ]
 

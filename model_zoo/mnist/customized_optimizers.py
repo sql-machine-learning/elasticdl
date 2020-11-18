@@ -11,6 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 import horovod.tensorflow as hvd
 import tensorflow as tf
 
@@ -20,8 +22,9 @@ class AdjustBackwardPassesPerStepHook(tf.train.SessionRunHook):
     Hooks that adjusts `backward_passer_per_step` according to
     the horovod size dynamically.
     """
+
     def __init__(
-        self, backward_passes_per_step_var, global_batch_count_per_step
+        self, backward_passes_per_step_var, global_batch_count_per_step=None
     ):
         """
         Args:
@@ -37,7 +40,18 @@ class AdjustBackwardPassesPerStepHook(tf.train.SessionRunHook):
         self._update_op = tf.assign(
             backward_passes_per_step_var, self._value_placeholder
         )
-        self._global_batch_count = global_batch_count_per_step
+
+        if global_batch_count_per_step:
+            self._global_batch_count = global_batch_count_per_step
+        elif os.environ.get("global_batch_count_per_step"):
+            self._global_batch_count = int(
+                os.environ.get("global_batch_count_per_step")
+            )
+        else:
+            raise ValueError(
+                """global_batch_count_per_step should be assigned \
+                    from either init parameter or environment variable."""
+            )
 
     def begin(self):
         pass
@@ -371,7 +385,7 @@ class LocalGradientAggregationHelper:
 
 # `ElasticDistributedOptimizer` is slightly updated based on
 # https://github.com/horovod/horovod/blob/18cfedd5236885d9fd581ca53fe04a142486bb2b/horovod/tensorflow/__init__.py#L294
-class ElasticDistributedOptimizer(tf.train.Optimizer):
+class DistributedOptimizer(tf.train.Optimizer):
     """An optimizer that wraps another tf.Optimizer, using an allreduce to
     combine gradient values before applying gradients to model weights."""
 
@@ -391,7 +405,7 @@ class ElasticDistributedOptimizer(tf.train.Optimizer):
     ):
         if name is None:
             name = "Distributed{}".format(type(optimizer).__name__)
-        super(ElasticDistributedOptimizer, self).__init__(
+        super(DistributedOptimizer, self).__init__(
             name=name, use_locking=use_locking
         )
 
@@ -412,7 +426,7 @@ class ElasticDistributedOptimizer(tf.train.Optimizer):
             sparse_as_dense=sparse_as_dense,
             average_aggregated_gradients=average_aggregated_gradients,
             rank=hvd.rank(),
-            optimizer_type=LocalGradientAggregationHelper._OPTIMIZER_TYPE_LEGACY,
+            optimizer_type=LocalGradientAggregationHelper._OPTIMIZER_TYPE_LEGACY,  # noqa: ignore=E501
         )
 
     def compute_gradients(self, *args, **kwargs):
