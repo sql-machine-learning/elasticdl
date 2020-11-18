@@ -25,7 +25,7 @@ import os
 import horovod.tensorflow as hvd
 import numpy as np
 import tensorflow as tf
-from customized_optimizers import (
+from model_zoo.mnist.customized_optimizers import (
     AdjustBackwardPassesPerStepHook,
     ElasticDistributedOptimizer,
 )
