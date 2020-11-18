@@ -34,18 +34,16 @@ CONNECT_PS_MAX_RETRIES = 3
 CONNECT_PS_TIMEOUT = 300
 
 
-"""
-Build a PSClient from the address list.
-Args:
-    ps_addrs: a string of common separated format that stands for a list
-        of address for parameter servers
-    logger: a logger object
-Returns:
-    A PS Client.
-"""
-
-
 def build_ps_client(ps_addrs, logger):
+    """
+    Build a PSClient from the address list.
+    Args:
+        ps_addrs: a string of common separated format that stands for a list
+            of address for parameter servers
+        logger: a logger object
+    Returns:
+        A PS Client.
+    """
     if not ps_addrs:
         return None
 

@@ -303,35 +303,6 @@ class ODPSReader(object):
                 time.sleep(5)
                 retry_count += 1
 
-    def _estimate_cache_batch_count(self, columns, table_size, batch_size):
-        """
-        This function calculates the appropriate cache batch size
-        when we download from ODPS, if batch size is small, we will
-        repeatedly create http connection and download small chunk of
-        data. To read more efficiently, we will read
-        `batch_size * cache_batch_count` lines of data.
-        However, determining a proper `cache_batch_count` is non-trivial.
-        Our heuristic now is to set a per download upper bound.
-        """
-
-        sample_size = 10
-        max_cache_batch_count = 50
-        upper_bound = 20 * 1000000
-
-        if table_size < sample_size:
-            return 1
-
-        batch = self.read_batch(start=0, end=sample_size, columns=columns)
-
-        size_sample = _nested_list_size(batch)
-        size_per_batch = size_sample * batch_size / sample_size
-
-        # `size_per_batch * cache_batch_count` will
-        # not exceed upper bound but will always greater than 0
-        cache_batch_count_estimate = max(int(upper_bound / size_per_batch), 1)
-
-        return min(cache_batch_count_estimate, max_cache_batch_count)
-
 
 class ODPSWriter(object):
     def __init__(
