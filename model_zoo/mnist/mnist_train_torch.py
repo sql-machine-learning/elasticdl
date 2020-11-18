@@ -84,6 +84,8 @@ def train(dataset, elastic_controller):
 
         batches.append((data, target))
 
+        # Elastic controller will adjust the backward_passes_per_step
+        # if worker number changes
         if len(batches) == elastic_controller.backward_passes_per_step:
             loss = elastic_train_one_step(
                 model, optimizer, batches, elastic_controller.batch_num_per_step
