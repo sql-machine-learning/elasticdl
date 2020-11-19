@@ -101,8 +101,8 @@ class _TaskDispatcher(object):
             records_per_task: The number of records per task.
             num_epochs: The total number of epochs for the tasks where
                 an epoch is a complete iteration over the shards.
-            batch_size:
-            max_step:
+            batch_size: The batch size of each worker.
+            max_step: The maximum iteration step.
         """
         self._lock = threading.Lock()
 

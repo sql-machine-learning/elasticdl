@@ -28,7 +28,6 @@ from elasticdl.python.elasticdl.callbacks import (
     LearningRateScheduler,
     SavedModelExporter,
 )
-from elasticdl.python.master.task_dispatcher import _Task
 from elasticdl.python.worker.task_data_service import TaskDataService
 from elasticdl_client.common.constants import DistributionStrategy
 
