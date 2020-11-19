@@ -33,6 +33,7 @@ from elasticdl.python.worker.allreduce_controller import (
     TensorFlowV2AllReduceController,
 )
 from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
+from elasticdl.python.worker.data_shard_service import DataShardService
 from elasticdl.python.worker.ps_trainer import ParameterServerTrainer
 from elasticdl.python.worker.task_data_service import TaskDataService
 from elasticdl_client.common.constants import DistributionStrategy
@@ -85,20 +86,32 @@ class Worker(object):
         self._log_loss_count = 0
         self._var_created = False
         self._master_addr = args.master_addr.split(":")[0]
-        self.custom_training_loop = args.custom_training_loop
-        if self.custom_training_loop:
+        self._custom_training_loop = args.custom_training_loop
+        self._worker_id = args.worker_id
+        self._job_type = args.job_type
+        self._minibatch_size = args.minibatch_size
+        self._data_shard_service = DataShardService(
+            self._minibatch_size, self._mc
+        )
+        if self._custom_training_loop:
             self._init_training_func_from_args(args)
         else:
             self._init_from_args(args)
+
+        self._task_data_service = TaskDataService(
+            self._data_shard_service,
+            custom_data_reader=self._custom_data_reader,
+            data_reader_params=get_dict_from_params_str(
+                args.data_reader_params
+            ),
+            data_origin=args.training_data,
+        )
 
     def _init_from_args(self, args):
         """
         Please refer to elastic/python/common/args.py for more
         details about arguments of a worker.
         """
-        self._worker_id = args.worker_id
-        self._job_type = args.job_type
-        self._minibatch_size = args.minibatch_size
         self._log_loss_steps = args.log_loss_steps
         (
             model_inst,
@@ -129,14 +142,6 @@ class Worker(object):
         model_inst.loss = loss
 
         self._model_version = -1
-        self._task_data_service = TaskDataService(
-            self._mc,
-            custom_data_reader=self._custom_data_reader,
-            data_reader_params=get_dict_from_params_str(
-                args.data_reader_params
-            ),
-            data_origin=args.training_data,
-        )
         if self._feed is None:
             if hasattr(self._task_data_service.data_reader, "default_feed"):
                 self._feed = self._task_data_service.data_reader.default_feed()
@@ -175,7 +180,6 @@ class Worker(object):
     def _init_training_func_from_args(self, args):
         self._worker_id = args.worker_id
         self._job_type = args.job_type
-        self._minibatch_size = args.minibatch_size
         (
             self._training_func,
             self._feed,
@@ -185,14 +189,6 @@ class Worker(object):
             model_def=args.model_def,
             feed=args.feed,
             custom_data_reader=args.custom_data_reader,
-        )
-        self._task_data_service = TaskDataService(
-            self._mc,
-            custom_data_reader=self._custom_data_reader,
-            data_reader_params=get_dict_from_params_str(
-                args.data_reader_params
-            ),
-            data_origin=args.training_data,
         )
         if self._feed is None:
             if hasattr(self._task_data_service.data_reader, "default_feed"):
@@ -469,7 +465,7 @@ class Worker(object):
         elif self._job_type == JobType.EVALUATION_ONLY:
             self._evaluate_only()
         else:
-            if self.custom_training_loop:
+            if self._custom_training_loop:
                 self._elastic_allreduce_train()
             else:
                 self._train_and_evaluate()
@@ -480,11 +476,11 @@ class Worker(object):
         """
         if os.getenv("USE_TORCH", None):
             elastic_controller = PyTorchAllReduceController(
-                self._mc, self._master_addr
+                self._mc, self._master_addr, self._data_shard_service
             )
         else:
             elastic_controller = TensorFlowV2AllReduceController(
-                self._mc, self._master_addr
+                self._mc, self._master_addr, self._data_shard_service
             )
         # Initialize Horovod locally to generate varibles of the model
         # and optimizer.
@@ -498,4 +494,3 @@ class Worker(object):
         dataset = dataset.batch(self._minibatch_size).prefetch(1)
         self._training_func(dataset, elastic_controller)
         del dataset
-        self._process_train_end_callback_task_if_needed()

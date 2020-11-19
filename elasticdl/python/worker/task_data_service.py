@@ -13,25 +13,23 @@
 
 import threading
 import time
-from collections import deque
 
 import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
-from elasticdl.python.worker.task_service import TaskService
 
 
 class TaskDataService(object):
     def __init__(
         self,
-        master_client,
+        data_shard_service,
         custom_data_reader=None,
         data_reader_params=None,
         data_origin=None,
     ):
-        self._task_service = TaskService(master_client)
+        self._data_shard_service = data_shard_service
         self._create_data_reader_fn = create_data_reader
         if custom_data_reader is not None:
             self._create_data_reader_fn = custom_data_reader
@@ -48,10 +46,10 @@ class TaskDataService(object):
         self.current_eval_task = None
 
     def get_current_task(self):
-        return self._task_service.get_current_task()
+        return self._data_shard_service.get_current_task()
 
     def report_record_done(self, count, err_msg=""):
-        self._task_service.report_batch_done(count, err_msg)
+        self._data_shard_service.report_batch_done(count, err_msg)
 
     def get_dataset_gen(self, task):
         """
@@ -84,7 +82,7 @@ class TaskDataService(object):
             return self._pending_train_end_callback_task
 
         while True:
-            task = self._task_service.get_task()
+            task = self._data_shard_service.get_task()
             if task.type == elasticdl_pb2.TRAIN_END_CALLBACK:
                 self._pending_train_end_callback_task = task
                 return task
@@ -115,7 +113,7 @@ class TaskDataService(object):
         used to create a `tf.data.Dataset` object from a list of tasks.
         """
         while True:
-            task = self._task_service.get_task()
+            task = self._data_shard_service.get_task()
             if not task.shard.name:
                 break
             with self._lock:
@@ -129,7 +127,7 @@ class TaskDataService(object):
 
     def get_eval_dataset(self):
         def _gen():
-            task = self._task_service.get_task(elasticdl_pb2.EVALUATION)
+            task = self._data_shard_service.get_task(elasticdl_pb2.EVALUATION)
             if not task.shard.name:
                 return
             logger.info("the evaluation task_id: %d" % task.task_id)
