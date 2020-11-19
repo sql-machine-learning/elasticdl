@@ -19,7 +19,9 @@ from elasticdl.python.master.task_dispatcher import _TaskDispatcher
 
 class TaskQueueTest(unittest.TestCase):
     def test_create_tasks_with_zero_start_ind(self):
-        task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1)
+        task_d = _TaskDispatcher(
+            {"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1, 2, 0
+        )
 
         all_tasks = [
             ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
@@ -74,7 +76,9 @@ class TaskQueueTest(unittest.TestCase):
         self.assertTrue(task_d.finished())
 
     def test_create_tasks_with_non_zero_start_ind(self):
-        task_d = _TaskDispatcher({"f1": (0, 10), "f2": (10, 10)}, {}, {}, 3, 1)
+        task_d = _TaskDispatcher(
+            {"f1": (0, 10), "f2": (10, 10)}, {}, {}, 3, 1, 2, 0
+        )
 
         all_tasks = [
             ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
@@ -97,7 +101,9 @@ class TaskQueueTest(unittest.TestCase):
         self.assertEqual(sorted([v._info() for _, v in got_tasks]), all_tasks)
 
     def test_epoch(self):
-        task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 2)
+        task_d = _TaskDispatcher(
+            {"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 2, 2, 0
+        )
 
         epoch_tasks = [
             ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
@@ -123,7 +129,9 @@ class TaskQueueTest(unittest.TestCase):
         )
 
     def test_invoke_train_end_callback(self):
-        task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1)
+        task_d = _TaskDispatcher(
+            {"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1, 2, 0
+        )
         task_d.add_deferred_callback_create_train_end_task()
         task_d._todo.clear()
         task_d.invoke_deferred_callback()
