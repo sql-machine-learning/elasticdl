@@ -41,7 +41,7 @@ The rendezvous server supports for elastic AllReduce. After detecting worker
 pod number change, it creates a new worker host plan so that worker pods can
 re-initialize Horovod.
 
-### ElasticDL Training/Evaluation Service
+### ElasticDL Job Service
 
 All other current master functions except the above three components. ElasticDL
  raining/evaluation service supports for ElasticDL native training. It includes
@@ -56,9 +56,9 @@ Thus, we can launch the master in seven component combinations:
 5. Elastic pod manager + Rendezvous server + Task manager;
 6. Elastic pod manager + Task manager + ElasticDL training/evaluation service;
 7. Elastic pod manager + Task manager + Rendezvous server + ElasticDL
-training/evaluation service.
+job service.
 
-Case | Elastic pod manager | Task manager | Rendezvous server | ElasticDL training/evaluation service | Usage
+Case | Elastic pod manager | Task manager | Rendezvous server | ElasticDL Job service | Usage
 ---|---|---|---|---|---
 1 | | Y (without fault-tolerance) | | | Dynamic sharding service (rarely used alone)
 2 | Y | | | | Provide elastic training to other DL frameworks for PS-based training. DL frameworks need to have their own dynamic sharding implementations.
@@ -106,7 +106,7 @@ We need to add more arguments
 
 - need\_pod\_manager (default:True)
 - need\_task\_manager (default: True)
-- need\_training\_service (default: True)
+- need\_elasticdl_job\_service (default: True)
 - task\_fault\_tolerance (default: True)
 - worker\_command (provided by ElasticDL operator, if none, using default
 `python -m elasticdl.python.worker.main args`)
@@ -125,7 +125,7 @@ Init
  rendezvous_server = create_rendezvous_server_if_needed(args, pod_manager)
 
  # init ElasticDL training/evaluation service if args.need_training_service
- training_service = init_training_service_if_needed(args)
+ elasticdl_job_service = create_elasticdl_job_service_if_needed(args)
 
  # create master rpc service
  rpc_server = create_rpc_service()
@@ -139,8 +139,8 @@ Prepare
     task_manager.start()
   if rendezvous_server:
     rendezvous_server.start()
-  if training_service:
-     training_service.start()
+  if elasticdl_job_service:
+     elasticdl_job_service.start()
 
 
 Run
@@ -156,7 +156,7 @@ functions in that event callback.
 ### Implementation Steps
 
 1. Create the above framework, but put everything in the current master version
-into training_service. We will remove most components out of it after
+into elasticdl_job_service. We will remove most components out of it after
 implementing them as modular components.
 2. Move rpc server as a modular components.
 3. Implement pod_manager.
