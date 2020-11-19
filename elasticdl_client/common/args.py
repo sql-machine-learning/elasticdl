@@ -121,6 +121,12 @@ def add_train_params(parser):
         "and the loss will be logged during training.",
         default=100,
     )
+    parser.add_argument(
+        "--max_step",
+        type=int,
+        help="The maximum step to train the model",
+        default=0,
+    )
     add_bool_param(
         parser=parser,
         name="--use_async",

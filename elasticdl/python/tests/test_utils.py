@@ -386,6 +386,8 @@ def distributed_train_and_evaluate(
         {},
         records_per_task=64,
         num_epochs=1,
+        batch_size=2,
+        max_step=0,
     )
 
     if training:

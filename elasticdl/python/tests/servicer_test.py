@@ -59,7 +59,13 @@ class ServicerTest(unittest.TestCase):
 
     def test_get_empty_task(self):
         self.master.task_d = _TaskDispatcher(
-            {}, {}, {}, records_per_task=3, num_epochs=2
+            {},
+            {},
+            {},
+            records_per_task=3,
+            num_epochs=2,
+            batch_size=32,
+            max_step=0,
         )
         master_servicer = MasterServicer(
             3, evaluation_service=None, master=self.master,
@@ -85,6 +91,8 @@ class ServicerTest(unittest.TestCase):
             {},
             records_per_task=3,
             num_epochs=2,
+            batch_size=2,
+            max_step=0,
         )
         master = MasterServicer(3, evaluation_service=None, master=self.master)
 

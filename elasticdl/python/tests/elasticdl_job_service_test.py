@@ -80,7 +80,6 @@ class ElasticdlJobServiceTest(unittest.TestCase):
             args = parse_master_args(args)
             master = ElasticdlJobService(args)
             self.assertIsNotNone(master.instance_manager)
-            self.assertIsNone(master.callbacks_list)
 
     def test_create_master_without_eval(self):
         self.arguments[

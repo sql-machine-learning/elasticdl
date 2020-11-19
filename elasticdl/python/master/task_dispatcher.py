@@ -17,12 +17,10 @@ import random
 import threading
 import time
 
-import tensorflow as tf
-from tensorflow.python.keras.callbacks import CallbackList
-
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import TaskExecCounterKey
 from elasticdl.python.common.log_utils import default_logger as logger
+from elasticdl.python.common.save_utils import CheckpointSaver
 
 _MAX_TASK_RETRIES = 3
 
@@ -89,7 +87,8 @@ class _TaskDispatcher(object):
         prediction_shards,
         records_per_task,
         num_epochs,
-        callbacks_list=None,
+        batch_size,
+        max_step,
     ):
         """
         Arguments:
@@ -102,18 +101,21 @@ class _TaskDispatcher(object):
             records_per_task: The number of records per task.
             num_epochs: The total number of epochs for the tasks where
                 an epoch is a complete iteration over the shards.
-            callbacks_list: The Keras CallbacksList object to contain all
-                callback instances.
+            batch_size: The batch size of each worker.
+            max_step: The maximum iteration step.
         """
         self._lock = threading.Lock()
 
+        self._batch_size = batch_size
         self._num_epochs = num_epochs
         self._epoch = 0
+        self._max_step = max_step
+        self._completed_steps = 0
         self._training_shards = training_shards
         self._evaluation_shards = evaluation_shards
         self._prediction_shards = prediction_shards
         self._records_per_task = records_per_task
-        self._init_callbacks(callbacks_list)
+        self._should_stop = False
 
         self._todo = []
         # dictionary from task id to Task.
@@ -136,14 +138,20 @@ class _TaskDispatcher(object):
         elif self._prediction_shards:
             self.create_tasks(elasticdl_pb2.PREDICTION)
 
-    def _init_callbacks(self, callbacks_list):
-        if callbacks_list is None:
-            self._callbacks_list = CallbackList([])
-            self._callbacks_list.set_model(tf.keras.Model())
-        else:
-            self._callbacks_list = callbacks_list
+    def set_completed_steps_by_checkpoint(self, checkpoint_dir_for_init):
+        if not checkpoint_dir_for_init:
+            return
 
-        self._callbacks_list.model.stop_training = False
+        if not CheckpointSaver.check_checkpoint_valid(checkpoint_dir_for_init):
+            raise ValueError(
+                "Invalid checkpoint directory {}".format(
+                    checkpoint_dir_for_init
+                )
+            )
+
+        self._completed_steps = CheckpointSaver.get_version_from_checkpoint(
+            checkpoint_dir_for_init
+        )
 
     def reset_job_counters(self, task_type):
         """Return record number in specific task_type"""
@@ -282,7 +290,7 @@ class _TaskDispatcher(object):
             #       to avoid the queue is overwhelmed by evaluation tasks.
             if (
                 not self._todo
-                and not self._callbacks_list.model.stop_training
+                and not self._should_stop
                 and self._epoch < self._num_epochs - 1
             ):
                 # Start a new epoch
@@ -334,7 +342,7 @@ class _TaskDispatcher(object):
             ):
                 evaluation_task_completed = True
             else:
-                self._call_on_task_end(task)
+                self._check_exceed_max_step(task)
                 logger.info(
                     "Task:%d completed, %d remaining tasks",
                     task_id,
@@ -346,11 +354,17 @@ class _TaskDispatcher(object):
             if success:
                 if task in self._task_retry_count:
                     del self._task_retry_count[task]
-                if self._callbacks_list.model.stop_training:
-                    # Clear todo list to stop training
-                    self._todo = []
 
         return (time.time() - start_time), task, worker_id
+
+    def _check_exceed_max_step(self, task):
+        if self._max_step > 0 and task.type == elasticdl_pb2.TRAINING:
+            task_records = task.shard.end - task.shard.start
+            task_batch_count = int(task_records / self._batch_size)
+            self._completed_steps += task_batch_count
+            if self._completed_steps > self._max_step:
+                self._todo.clear()
+                self._should_stop = True
 
     def check_exceed_max_task_retries(self, task):
         self._task_retry_count.setdefault(task, 1)
@@ -387,11 +401,3 @@ class _TaskDispatcher(object):
             self._evaluation_service = evaluation_service
             if self._evaluation_shards and not self._training_shards:
                 evaluation_service.init_eval_only_job(len(self._eval_todo))
-
-    def _call_on_task_end(self, task):
-        # The on_task_end is not a method of tf.keras.callbacks.Callback
-        # and tf.keras.callbacks.CallbackList. So, we need to check
-        # before calling the method.
-        for callback in self._callbacks_list.callbacks:
-            if hasattr(callback, "on_task_end"):
-                callback.on_task_end(task)
