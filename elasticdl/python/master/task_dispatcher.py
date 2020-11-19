@@ -358,9 +358,7 @@ class _TaskDispatcher(object):
         return (time.time() - start_time), task, worker_id
 
     def _check_exceed_max_step(self, task):
-        if self._max_step <= 0:
-            return
-        if task.type == elasticdl_pb2.TRAINING:
+        if self._max_step <= 0 or task.type != elasticdl_pb2.TRAINING:
             task_records = task.shard.end - task.shard.start
             task_batch_count = int(task_records / self._batch_size)
             self._completed_steps += task_batch_count
