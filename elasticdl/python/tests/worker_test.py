@@ -13,6 +13,7 @@
 
 import os
 import unittest
+from unittest.mock import Mock
 
 import tensorflow as tf
 
@@ -33,7 +34,8 @@ class WorkerTest(unittest.TestCase):
         tf.keras.backend.clear_session()
         tf.random.set_seed(22)
         args = parse_worker_args(arguments)
-        return Worker(args)
+        master_client = Mock()
+        return Worker(args, master_client)
 
     def test_init_training_func_from_args(self):
         arguments = [

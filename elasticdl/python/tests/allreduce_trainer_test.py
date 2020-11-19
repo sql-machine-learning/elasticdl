@@ -96,7 +96,7 @@ class AllReduceControllerTest(unittest.TestCase):
                 rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
             )
         )
-        data_shard_service = DataShardService(master_client, batch_size=1)
+        data_shard_service = DataShardService(1, master_client)
         controller = AllReduceController(master_client, "", data_shard_service)
         elastic_run = controller.elastic_run(self.train)
         elastic_run()
@@ -112,7 +112,7 @@ class TensorFlowV2ReduceControllerTest(unittest.TestCase):
                 rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
             )
         )
-        data_shard_service = DataShardService(master_client, batch_size=1)
+        data_shard_service = DataShardService(1, master_client)
         self.controller = TensorFlowV2AllReduceController(
             master_client, "", data_shard_service
         )
@@ -147,7 +147,7 @@ class PyTorchReduceControllerTest(unittest.TestCase):
                 rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
             )
         )
-        data_shard_service = DataShardService(master_client, batch_size=1)
+        data_shard_service = DataShardService(1, master_client)
         controller = PyTorchAllReduceController(
             master_client, "", data_shard_service
         )

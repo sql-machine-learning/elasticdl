@@ -14,6 +14,7 @@
 import os
 import unittest
 from threading import Thread
+from unittest.mock import Mock
 
 import numpy as np
 import tensorflow as tf
@@ -67,6 +68,7 @@ class WorkerPSInteractionTest(unittest.TestCase):
             ps.parameters.reset()
 
     def _create_worker(self, worker_num):
+        master_client = Mock()
         for i in range(worker_num):
             tf.keras.backend.clear_session()
             tf.random.set_seed(22)
@@ -85,7 +87,9 @@ class WorkerPSInteractionTest(unittest.TestCase):
                 DistributionStrategy.PARAMETER_SERVER,
             ]
             args = parse_worker_args(arguments)
-            worker = Worker(args, ps_client=PSClient(self._channels))
+            worker = Worker(
+                args, master_client, ps_client=PSClient(self._channels)
+            )
             self._workers.append(worker)
 
     def _worker_train(
