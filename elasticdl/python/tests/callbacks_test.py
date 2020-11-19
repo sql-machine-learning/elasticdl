@@ -26,7 +26,6 @@ from elasticdl.python.common.save_utils import (
 )
 from elasticdl.python.elasticdl.callbacks import (
     LearningRateScheduler,
-    MaxStepsStopping,
     SavedModelExporter,
 )
 from elasticdl.python.master.task_dispatcher import _Task
@@ -90,25 +89,6 @@ class SavedModelExporterTest(unittest.TestCase):
                     os.path.join(saved_model_path, "saved_model.pb")
                 )
             )
-
-
-class MaxStepsStoppingTest(unittest.TestCase):
-    def test_on_task_end(self):
-        max_steps_stopping = MaxStepsStopping(max_steps=20)
-        max_steps_stopping.set_model(tf.keras.Model())
-        max_steps_stopping.model.stop_training = False
-        max_steps_stopping.set_params({"batch_size": 128})
-        for i in range(6):
-            start = i * 512
-            end = (i + 1) * 512
-            task = _Task(
-                shard_name="test",
-                start=start,
-                end=end,
-                type=elasticdl_pb2.TRAINING,
-            )
-            max_steps_stopping.on_task_end(task)
-        self.assertTrue(max_steps_stopping.model.stop_training)
 
 
 class LearningRateSchedulerTest(unittest.TestCase):
