@@ -27,12 +27,8 @@ try:
         import horovod.torch as hvd
     else:
         import horovod.tensorflow as hvd
-    from horovod.tensorflow.functions import broadcast_variables
+        from horovod.tensorflow.functions import broadcast_variables
     from horovod.common.exceptions import HorovodInternalError
-    from horovod.torch.functions import (
-        broadcast_optimizer_state,
-        broadcast_parameters,
-    )
 
 except ImportError:
     hvd = None
@@ -211,6 +207,11 @@ class PyTorchAllReduceController(AllReduceController):
         self._optimizer = optimizer
 
     def broadcast(self):
+        from horovod.torch.functions import (
+            broadcast_optimizer_state,
+            broadcast_parameters,
+        )
+
         broadcast_parameters(self._model.state_dict(), root_rank=0)
         broadcast_optimizer_state(self._optimizer, root_rank=0)
 
