@@ -11,27 +11,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import threading
 from collections import deque
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import TaskExecCounterKey
-from elasticdl.python.common.grpc_utils import build_channel
-from elasticdl.python.worker.master_client import MasterClient
 
 
 class DataShardService(object):
     def __init__(
         self, batch_size, master_client=None,
     ):
-        if master_client is None:
-            master_addr = os.getenv("MASTER_ADDR")
-            worker_id = int(os.getenv("WORKER_ID"))
-            self._mc = MasterClient(build_channel(master_addr), worker_id)
-        else:
-            self._mc = master_client
-
+        self._mc = master_client
         self._batch_size = batch_size
         self._lock = threading.Lock()
         self._failed_record_count = 0
@@ -44,6 +35,7 @@ class DataShardService(object):
 
     def get_task(self, task_type=None):
         task = self._mc.get_task(task_type)
+        # TODO Use task type to determine whether there are new tasks or not
         if task.shard.name and task.type == elasticdl_pb2.TRAINING:
             self._pending_tasks.append(task)
             if len(self._pending_tasks) == 1:
