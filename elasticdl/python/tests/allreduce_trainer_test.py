@@ -30,6 +30,7 @@ from elasticdl.python.worker.allreduce_controller import (
     TensorFlowV2AllReduceController,
 )
 from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
+from elasticdl.python.worker.data_shard_service import DataShardService
 
 
 class AllReduceTrainerTest(unittest.TestCase):
@@ -95,7 +96,8 @@ class AllReduceControllerTest(unittest.TestCase):
                 rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
             )
         )
-        controller = AllReduceController(master_client, "")
+        data_shard_service = DataShardService(master_client, batch_size=1)
+        controller = AllReduceController(master_client, "", data_shard_service)
         elastic_run = controller.elastic_run(self.train)
         elastic_run()
         self.assertEqual(controller._step, 1)
@@ -110,7 +112,10 @@ class TensorFlowV2ReduceControllerTest(unittest.TestCase):
                 rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
             )
         )
-        self.controller = TensorFlowV2AllReduceController(master_client, "")
+        data_shard_service = DataShardService(master_client, batch_size=1)
+        self.controller = TensorFlowV2AllReduceController(
+            master_client, "", data_shard_service
+        )
 
     def _train(self):
         return 1
@@ -142,7 +147,10 @@ class PyTorchReduceControllerTest(unittest.TestCase):
                 rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
             )
         )
-        controller = PyTorchAllReduceController(master_client, "")
+        data_shard_service = DataShardService(master_client, batch_size=1)
+        controller = PyTorchAllReduceController(
+            master_client, "", data_shard_service
+        )
         model = TorchModel()
         optimizer = optim.SGD(model.parameters(), lr=0.1)
         hvd.init()
