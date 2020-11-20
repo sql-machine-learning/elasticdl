@@ -411,9 +411,7 @@ def distributed_train_and_evaluate(
             record_num,
         )
     }
-    args = TaskManagerArgs(
-        num_minibatches_per_task=32, num_epochs=1, batch_size=2, max_step=0,
-    )
+    args = TaskManagerArgs(minibatch_size=2, num_minibatches_per_task=32)
     task_d = TaskManager(args)
 
     if training:
