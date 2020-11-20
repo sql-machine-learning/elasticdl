@@ -96,11 +96,12 @@ class AllReduceController(object):
     the variables and retry to call those functions.
     """
 
-    def __init__(self, master_client, master_addr):
+    def __init__(self, master_client, master_addr, data_shard_service):
         if not hvd:
             raise RuntimeError("Horovod is not installed for AllReduce")
 
         self._rendezvous_manager = RendevousManager(master_client, master_addr)
+        self.data_shard_service = data_shard_service
         self._step = 0
         self._first_call = True
         self._need_broadcast = True
@@ -152,9 +153,9 @@ class TensorFlowV2AllReduceController(AllReduceController):
     TensorFlow eager execution using AllReduce.
     """
 
-    def __init__(self, master_client, master_addr):
+    def __init__(self, master_client, master_addr, data_shard_service):
         super(TensorFlowV2AllReduceController, self).__init__(
-            master_client, master_addr
+            master_client, master_addr, data_shard_service
         )
         self._model = None
         self._optimizer = None
@@ -174,7 +175,7 @@ class TensorFlowV2AllReduceController(AllReduceController):
             try:
                 self._broadcast_if_needed()
                 result = func(*args, **kwargs)
-                return result
+                break
             except UnknownError as e:
                 logger.warning(
                     "Failed to perform allreduce operation on "
@@ -190,12 +191,14 @@ class TensorFlowV2AllReduceController(AllReduceController):
                 ):
                     time.sleep(3)
                     self._rendezvous_manager.init_horovod_if_needed()
+        self.data_shard_service.report_batch_done()
+        return result
 
 
 class PyTorchAllReduceController(AllReduceController):
-    def __init__(self, master_client, master_addr):
+    def __init__(self, master_client, master_addr, data_shard_service):
         super(PyTorchAllReduceController, self).__init__(
-            master_client, master_addr
+            master_client, master_addr, data_shard_service
         )
         self._model = None
         self._optimizer = None
@@ -220,7 +223,7 @@ class PyTorchAllReduceController(AllReduceController):
             try:
                 self._broadcast_if_needed()
                 result = func(*args, **kwargs)
-                return result
+                break
             except HorovodInternalError:
                 logger.warning(
                     "Failed to perform allreduce operation on "
@@ -233,6 +236,8 @@ class PyTorchAllReduceController(AllReduceController):
             except RuntimeError:
                 traceback.print_exc()
                 self.restore()
+        self.data_shard_service.report_batch_done()
+        return result
 
     def restore(self):
         time.sleep(3)
