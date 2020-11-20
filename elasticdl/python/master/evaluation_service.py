@@ -64,9 +64,9 @@ class EvaluationService(object):
     """Evaluation service"""
 
     def __init__(
-        self, task_d, eval_steps, eval_only, eval_metrics_fn,
+        self, task_manager, eval_steps, eval_only, eval_metrics_fn,
     ):
-        self._task_d = task_d
+        self._task_manager = task_manager
         self._lock = threading.Lock()
         self._eval_job = None
         self._eval_steps = eval_steps
@@ -104,10 +104,10 @@ class EvaluationService(object):
         with self._lock:
             if self._eval_job is None and self._eval_checkpoint_versions:
                 checkpoint_version = self._eval_checkpoint_versions.pop(0)
-                self._task_d.create_tasks(
+                self._task_manager.create_tasks(
                     elasticdl_pb2.EVALUATION, checkpoint_version
                 )
-                task_count = len(self._task_d._eval_todo)
+                task_count = len(self._task_manager._eval_todo)
                 if self._eval_job is None:
                     self._eval_job = EvaluationJob(
                         self._eval_metrics_fn(), checkpoint_version, task_count
