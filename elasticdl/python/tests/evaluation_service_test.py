@@ -18,6 +18,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.metrics import Accuracy, MeanSquaredError
 
+from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import MetricsDictKey
 from elasticdl.python.common.evaluation_utils import EvaluationMetrics
 from elasticdl.python.common.tensor_utils import ndarray_to_pb
@@ -26,7 +27,7 @@ from elasticdl.python.master.evaluation_service import (
     EvaluationService,
 )
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.tests.test_utils import create_task_manager
 
 
 def _eval_metrics_fn():
@@ -93,14 +94,8 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertAlmostEqual(10.125, evaluation_metrics.get("mse"))
 
     def testEvaluationService(self):
-        task_d = _TaskDispatcher(
-            {"f1": (0, 10), "f2": (0, 10)},
-            {"f1": (0, 10), "f2": (0, 10)},
-            {},
-            3,
-            1,
-            2,
-            0,
+        task_d = create_task_manager(
+            {"f1": (0, 10), "f2": (0, 10)}, {"f1": (0, 10), "f2": (0, 10)}
         )
 
         # Evaluation metrics will not be accepted if no evaluation ongoing
@@ -131,9 +126,8 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertFalse(evaluation_service.try_to_create_new_job())
 
     def testEvaluationOnly(self):
-        task_d = _TaskDispatcher(
-            {}, {"f1": (0, 10), "f2": (0, 10)}, {}, 3, 1, 2, 0
-        )
+        task_d = create_task_manager({}, {"f1": (0, 10), "f2": (0, 10)})
+        task_d.create_tasks(elasticdl_pb2.EVALUATION)
 
         evaluation_service = EvaluationService(
             task_d, 0, True, _eval_metrics_fn
@@ -155,14 +149,8 @@ class EvaluationServiceTest(unittest.TestCase):
         self.assertTrue(evaluation_service._eval_job.finished())
 
     def testNeedEvaluation(self):
-        task_d = _TaskDispatcher(
-            {"f1": (0, 10), "f2": (0, 10)},
-            {"f1": (0, 10), "f2": (0, 10)},
-            {},
-            3,
-            1,
-            2,
-            0,
+        task_d = create_task_manager(
+            {"f1": (0, 10), "f2": (0, 10)}, {"f1": (0, 10), "f2": (0, 10)}
         )
 
         evaluation_service = EvaluationService(

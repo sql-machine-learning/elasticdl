@@ -21,7 +21,7 @@ import tensorflow as tf
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.tests.test_utils import create_task_manager
 
 
 def _get_variable_names(model_pb):
@@ -58,15 +58,7 @@ class ServicerTest(unittest.TestCase):
         )
 
     def test_get_empty_task(self):
-        self.master.task_d = _TaskDispatcher(
-            {},
-            {},
-            {},
-            records_per_task=3,
-            num_epochs=2,
-            batch_size=32,
-            max_step=0,
-        )
+        self.master.task_d = create_task_manager({}, {})
         master_servicer = MasterServicer(
             3, evaluation_service=None, master=self.master,
         )
@@ -85,14 +77,8 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual(1, task.model_version)
 
     def test_report_task_result(self):
-        self.master.task_d = _TaskDispatcher(
-            {"shard_1": (0, 10), "shard_2": (0, 9)},
-            {},
-            {},
-            records_per_task=3,
-            num_epochs=2,
-            batch_size=2,
-            max_step=0,
+        self.master.task_d = create_task_manager(
+            {"shard_1": (0, 10), "shard_2": (0, 9)}, {}, 2
         )
         master = MasterServicer(3, evaluation_service=None, master=self.master)
 

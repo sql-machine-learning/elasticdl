@@ -31,7 +31,7 @@ from elasticdl.python.data.reader.data_reader import Metadata
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.data.reader.odps_reader import ODPSDataReader
 from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
-from elasticdl.python.master.task_dispatcher import _Task
+from elasticdl.python.master.task_manager import _Task
 from elasticdl.python.tests.test_utils import (
     IRIS_TABLE_COLUMN_NAMES,
     DatasetName,
