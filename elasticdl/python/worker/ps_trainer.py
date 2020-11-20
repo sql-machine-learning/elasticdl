@@ -25,7 +25,6 @@ from elasticdl.python.common.tensor_utils import EmbeddingTableInfo, Tensor
 from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.worker.trainer import Trainer
-from elasticdl.python.common.log_utils import default_logger as logger
 
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.
