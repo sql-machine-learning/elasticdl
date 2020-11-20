@@ -411,8 +411,8 @@ def distributed_train_and_evaluate(
             record_num,
         )
     }
-    args = TaskManagerArgs(minibatch_size=2, num_minibatches_per_task=32)
-    task_d = TaskManager(args)
+    task_args = TaskManagerArgs(minibatch_size=2, num_minibatches_per_task=32)
+    task_d = TaskManager(task_args)
 
     if training:
         task_d._training_shards = shards
