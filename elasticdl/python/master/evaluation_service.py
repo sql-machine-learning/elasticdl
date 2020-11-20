@@ -149,7 +149,7 @@ class EvaluationService(object):
                 self._eval_job.evaluation_metrics.get_evaluation_summary()
             )
             logger.info(
-                "Evaluation metrics[v=%d]: %s"
+                "Evaluation metrics[step=%d]: %s"
                 % (
                     self._eval_job.model_version
                     if self._eval_job.model_version >= 0
