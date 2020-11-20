@@ -37,7 +37,10 @@ class Master(object):
     def run(self):
         # TODO: Implement run loop here after we have implemented
         #       pod manager or task manager
-        return self.elasticdl_job_service.run()
+        if self.elasticdl_job_service:
+            return self.elasticdl_job_service.run()
+        else:
+            return -1
 
     def create_pod_manager_if_needed(self, args):
         # TODO: set None if args.need_pod_manager is False.
@@ -54,5 +57,7 @@ class Master(object):
         self.rendezvous_server = None
 
     def create_elasticdl_job_service_if_needed(self, args):
-        # TODO: set None if args.need_elasticdl_job_service is False.
-        self.elasticdl_job_service = ElasticdlJobService(args)
+        if args.need_elasticdl_job_service:
+            self.elasticdl_job_service = ElasticdlJobService(args)
+        else:
+            self.elasticdl_job_service = None
