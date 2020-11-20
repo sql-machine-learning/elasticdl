@@ -33,12 +33,11 @@ from elasticdl.python.common.model_utils import (
     get_optimizer_info,
     load_module,
 )
-from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.master.task_manager import TaskManager
 from elasticdl_client.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
@@ -49,44 +48,6 @@ from elasticdl_client.common.constants import (
     ClusterSpecConfig,
     DistributionStrategy,
 )
-
-
-def _make_task_dispatcher(
-    training_data,
-    validation_data,
-    prediction_data,
-    records_per_task,
-    num_epochs,
-    data_reader_params,
-    create_data_reader_fn,
-    batch_size,
-    max_step,
-):
-    def _maybe_create_shards(data_origin):
-        kwargs = get_dict_from_params_str(data_reader_params)
-        partition = kwargs.get("partition", None) if kwargs else None
-        return (
-            create_data_reader_fn(
-                data_origin=data_origin,
-                records_per_task=records_per_task,
-                partition=partition,
-            ).create_shards()
-            if data_origin
-            else {}
-        )
-
-    prediction_shards = _maybe_create_shards(prediction_data)
-
-    return _TaskDispatcher(
-        _maybe_create_shards(training_data),
-        _maybe_create_shards(validation_data),
-        prediction_shards,
-        records_per_task,
-        # Only generate prediction tasks for 1 epoch
-        1 if prediction_shards else num_epochs,
-        batch_size,
-        max_step,
-    )
 
 
 class ElasticdlJobService(object):
@@ -110,23 +71,8 @@ class ElasticdlJobService(object):
             get_module_file_path(args.model_zoo, args.model_def)
         ).__dict__
 
-        self._create_data_reader_fn = create_data_reader
-        if args.custom_data_reader in model_module:
-            self._create_data_reader_fn = model_module[args.custom_data_reader]
-
         # Start task queue
-        records_per_task = args.minibatch_size * args.num_minibatches_per_task
-        self.task_d = _make_task_dispatcher(
-            args.training_data,
-            args.validation_data,
-            args.prediction_data,
-            records_per_task,
-            args.num_epochs,
-            args.data_reader_params,
-            self._create_data_reader_fn,
-            args.minibatch_size,
-            args.max_step,
-        )
+        self.task_d = TaskManager(args)
         self.task_d.set_completed_steps_by_checkpoint(
             args.checkpoint_dir_for_init
         )

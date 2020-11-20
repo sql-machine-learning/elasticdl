@@ -25,6 +25,7 @@ import recordio
 import tensorflow as tf
 from odps import ODPS
 
+from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_worker_args
 from elasticdl.python.common.constants import JobType, MaxComputeConfig
 from elasticdl.python.common.grpc_utils import build_channel
@@ -37,7 +38,7 @@ from elasticdl.python.data.recordio_gen.frappe_recordio_gen import (
 )
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.master.task_manager import TaskManager
 from elasticdl.python.ps.parameter_server import ParameterServer
 from elasticdl.python.tests.mock_service import _server
 from elasticdl.python.worker.master_client import MasterClient
@@ -92,12 +93,48 @@ class PserverArgs(object):
         self.checkpoint_dir_for_init = checkpoint_dir_for_init
 
 
+class TaskManagerArgs(object):
+    def __init__(
+        self,
+        training_data="",
+        validation_data="",
+        minibatch_size=1,
+        num_minibatches_per_task=2,
+        num_epochs=1,
+        max_step=0,
+        data_reader_params="",
+        model_zoo="",
+        model_def="",
+        custom_data_reader="custom_data_reader",
+    ):
+        self.training_data = training_data
+        self.validation_data = validation_data
+        self.minibatch_size = minibatch_size
+        self.num_minibatches_per_task = num_minibatches_per_task
+        self.num_epochs = num_epochs
+        self.max_step = max_step
+        self.data_reader_params = data_reader_params
+        self.model_zoo = model_zoo
+        self.model_def = model_def
+        self.custom_data_reader = custom_data_reader
+
+
 class DatasetName(object):
     IMAGENET = "imagenet1"
     FRAPPE = "frappe1"
     TEST_MODULE = "test_module1"
     IMAGE_DEFAULT = "image_default1"
     CENSUS = "census1"
+
+
+def create_task_manager(training_shards, evaluation_shards, num_epochs=1):
+    args = TaskManagerArgs(num_minibatches_per_task=3, num_epochs=num_epochs)
+    task_d = TaskManager(args)
+    task_d._training_shards = training_shards
+    task_d._evaluation_shards = evaluation_shards
+    if task_d._training_shards:
+        task_d.create_tasks(elasticdl_pb2.TRAINING)
+    return task_d
 
 
 def create_recordio_file(size, dataset_name, shape, temp_dir=None):
@@ -374,21 +411,20 @@ def distributed_train_and_evaluate(
             record_num,
         )
     }
-    if training:
-        training_shards = shards
-        evaluation_shards = shards
-    else:
-        training_shards = {}
-        evaluation_shards = shards
-    task_d = _TaskDispatcher(
-        training_shards,
-        evaluation_shards,
-        {},
-        records_per_task=64,
-        num_epochs=1,
-        batch_size=2,
-        max_step=0,
+    args = TaskManagerArgs(
+        num_minibatches_per_task=32, num_epochs=1, batch_size=2, max_step=0,
     )
+    task_d = TaskManager(args)
+
+    if training:
+        task_d._training_shards = shards
+        task_d._evaluation_shards = shards
+        task_d.create_tasks(elasticdl_pb2.TRAINING)
+        task_d.create_tasks(elasticdl_pb2.EVALUATION)
+    else:
+        task_d._training_shards = {}
+        task_d._evaluation_shards = shards
+        task_d.create_tasks(elasticdl_pb2.TRAINING)
 
     if training:
         evaluation_service = EvaluationService(

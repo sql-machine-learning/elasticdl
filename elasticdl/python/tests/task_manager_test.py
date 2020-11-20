@@ -14,14 +14,20 @@
 import unittest
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.master.task_manager import TaskManager
+from elasticdl.python.tests.test_utils import TaskManagerArgs
+from elasticdl.python.tests.test_utils import create_task_manager
 
 
-class TaskQueueTest(unittest.TestCase):
+class TaskManagerTest(unittest.TestCase):
+    def _create_task_manager(self, args, training_shards):
+        task_d = TaskManager(args)
+        task_d._training_shards = training_shards
+        task_d.create_tasks(elasticdl_pb2.TRAINING)
+        return task_d
+
     def test_create_tasks_with_zero_start_ind(self):
-        task_d = _TaskDispatcher(
-            {"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1, 2, 0
-        )
+        task_d = create_task_manager({"f1": (0, 10), "f2": (0, 10)}, {})
 
         all_tasks = [
             ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
@@ -76,9 +82,7 @@ class TaskQueueTest(unittest.TestCase):
         self.assertTrue(task_d.finished())
 
     def test_create_tasks_with_non_zero_start_ind(self):
-        task_d = _TaskDispatcher(
-            {"f1": (0, 10), "f2": (10, 10)}, {}, {}, 3, 1, 2, 0
-        )
+        task_d = create_task_manager({"f1": (0, 10), "f2": (10, 10)}, {})
 
         all_tasks = [
             ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
@@ -101,9 +105,7 @@ class TaskQueueTest(unittest.TestCase):
         self.assertEqual(sorted([v._info() for _, v in got_tasks]), all_tasks)
 
     def test_epoch(self):
-        task_d = _TaskDispatcher(
-            {"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 2, 2, 0
-        )
+        task_d = create_task_manager({"f1": (0, 10), "f2": (0, 10)}, {}, 2)
 
         epoch_tasks = [
             ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
@@ -129,9 +131,7 @@ class TaskQueueTest(unittest.TestCase):
         )
 
     def test_invoke_train_end_callback(self):
-        task_d = _TaskDispatcher(
-            {"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1, 2, 0
-        )
+        task_d = create_task_manager({"f1": (0, 10), "f2": (0, 10)}, {})
         task_d.add_deferred_callback_create_train_end_task()
         task_d._todo.clear()
         task_d.invoke_deferred_callback()

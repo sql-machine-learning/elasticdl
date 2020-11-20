@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, call
 
 from elasticdl.python.common.k8s_client import PodType
 from elasticdl.python.master.k8s_instance_manager import InstanceManager
-from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.tests.test_utils import create_task_manager
 
 
 class InstanceManagerTest(unittest.TestCase):
@@ -28,7 +28,7 @@ class InstanceManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def test_create_delete_worker_pod(self):
-        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1, 2, 0)
+        task_d = create_task_manager({"f": (0, 10)}, {})
         task_d.recover_tasks = MagicMock()
         instance_manager = InstanceManager(
             task_d,
@@ -77,7 +77,7 @@ class InstanceManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def test_get_worker_addrs(self):
-        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1, 2, 0)
+        task_d = create_task_manager({"f": (0, 10)}, {})
         instance_manager = InstanceManager(
             task_d,
             job_name="test-create-worker-pod-%d-%d"
@@ -111,7 +111,7 @@ class InstanceManagerTest(unittest.TestCase):
         Start a pod running a python program destined to fail with
         restart_policy="Never" to test failed_worker_count
         """
-        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1, 2, 0)
+        task_d = create_task_manager({"f": (0, 10)}, {})
         task_d.recover_tasks = MagicMock()
         instance_manager = InstanceManager(
             task_d,
@@ -152,7 +152,7 @@ class InstanceManagerTest(unittest.TestCase):
     )
     def test_relaunch_worker_pod(self):
         num_workers = 3
-        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1, 2, 0)
+        task_d = create_task_manager({"f": (0, 10)}, {})
         instance_manager = InstanceManager(
             task_d,
             job_name="test-relaunch-worker-pod-%d-%d"
