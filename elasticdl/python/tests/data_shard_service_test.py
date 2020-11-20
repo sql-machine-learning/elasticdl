@@ -14,7 +14,7 @@
 import unittest
 from unittest.mock import MagicMock, Mock
 
-from elasticdl.python.master.task_dispatcher import _Task
+from elasticdl.python.master.task_manager import _Task
 from elasticdl.python.worker.data_shard_service import DataShardService
 
 
