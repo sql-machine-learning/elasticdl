@@ -25,6 +25,7 @@ from elasticdl.python.common.tensor_utils import EmbeddingTableInfo, Tensor
 from elasticdl.python.elasticdl.feature_column import feature_column
 from elasticdl.python.elasticdl.layers.embedding import Embedding
 from elasticdl.python.worker.trainer import Trainer
+from elasticdl.python.common.log_utils import default_logger as logger
 
 # The default maximum number of a minibatch retry as its results
 # (e.g. gradients) are not accepted by master.
@@ -258,8 +259,7 @@ class ParameterServerTrainer(Trainer):
             edl_embedding_grads = gradients[non_embed_vars_n:]
             bet_number = 0
             for name, embedding_and_ids in edl_embedding_name_values:
-
-                for i in range(bet_number):
+                for i in range(len(embedding_and_ids)):
                     grad = Tensor(
                         name,
                         edl_embedding_grads[i + bet_number].values.numpy(),
