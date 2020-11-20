@@ -286,8 +286,6 @@ class _TaskDispatcher(object):
         """Return next (task_id, Task) tuple"""
 
         with self._lock:
-            # TODO: check if task queue doesn't have training task,
-            #       to avoid the queue is overwhelmed by evaluation tasks.
             if (
                 not self._todo
                 and not self._should_stop
