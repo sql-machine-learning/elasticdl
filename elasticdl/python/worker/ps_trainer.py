@@ -262,7 +262,7 @@ class ParameterServerTrainer(Trainer):
                     grad = Tensor(
                         name,
                         edl_embedding_grads[i + bet_number].values.numpy(),
-                        edl_embedding_grads[i + bet_number].indices.numpy(),
+                        embedding_and_ids[i].batch_ids.numpy(),
                     )
                     edl_grads.append(grad)
                 bet_number += len(embedding_and_ids)
