@@ -132,6 +132,19 @@ class TaskManagerTest(unittest.TestCase):
             task_d._todo[0].type, elasticdl_pb2.TRAIN_END_CALLBACK
         )
 
+    def test_get_average_task_completed_time(self):
+        task_manager = create_task_manager({"f1": (0, 10), "f2": (0, 10)}, {})
+        average_task_completed_time = (
+            task_manager._get_average_task_completed_time()
+        )
+        self.assertEqual(average_task_completed_time, {0: 300, 1: 300})
+        task_manager._task_completed_times[0] = [10] * 21
+        task_manager._task_completed_times[1] = [5] * 21
+        average_task_completed_time = (
+            task_manager._get_average_task_completed_time()
+        )
+        self.assertEqual(average_task_completed_time, {0: 10, 1: 5})
+
 
 if __name__ == "__main__":
     unittest.main()
