@@ -58,6 +58,8 @@ class Master(object):
 
     def create_elasticdl_job_service_if_needed(self, args):
         if args.need_elasticdl_job_service:
-            self.elasticdl_job_service = ElasticdlJobService(args)
+            self.elasticdl_job_service = ElasticdlJobService(
+                args, self.task_manager
+            )
         else:
             self.elasticdl_job_service = None

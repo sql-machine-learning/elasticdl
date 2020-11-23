@@ -12,14 +12,13 @@
 # limitations under the License.
 
 import os
-import threading
 import time
 from concurrent import futures
 
 import grpc
 from kubernetes.client import V1EnvVar
 
-from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.args import wrap_go_args_with_string
 from elasticdl.python.common.constants import (
     GRPC,
@@ -51,7 +50,7 @@ from elasticdl_client.common.constants import (
 
 
 class ElasticdlJobService(object):
-    def __init__(self, args):
+    def __init__(self, args, task_manager):
         self.logger = get_logger("master", level=args.log_level.upper())
 
         self.num_ps_pods = args.num_ps_pods
@@ -71,14 +70,13 @@ class ElasticdlJobService(object):
             get_module_file_path(args.model_zoo, args.model_def)
         ).__dict__
 
-        # Start task queue
-        self.task_manager = TaskManager(args)
-
         self._optimizer = (
             None
             if args.custom_training_loop
             else model_module[args.optimizer]()
         )
+
+        self.task_manager = task_manager
 
         self.evaluation_service = (
             None
@@ -91,16 +89,15 @@ class ElasticdlJobService(object):
         # Initialize instance manager
         self.instance_manager = self._create_instance_manager(args)
 
+        self.task_manager.set_task_timeout_callback(
+            self.instance_manager._remove_worker
+        )
+
         # Initialize master service
         self.master_servicer, self.server = self._create_master_service(args)
 
         self._should_stop = False
         self._exit_code = 0
-        threading.Thread(
-            target=self._check_and_reassign_timeout_tasks,
-            name="check_timeout_tasks",
-            daemon=True,
-        ).start()
 
     def start(self):
         """
@@ -199,7 +196,7 @@ class ElasticdlJobService(object):
                 evaluation_steps,
             )
             evaluation_service = EvaluationService(
-                self.task_manager,
+                self.task_manager.create_evaluation_tasks,
                 evaluation_steps,
                 self.job_type == JobType.EVALUATION_ONLY,
                 eval_func,
@@ -343,27 +340,3 @@ class ElasticdlJobService(object):
             )
             return image_cluster_spec
         return cluster_spec
-
-    def _check_and_reassign_timeout_tasks(self):
-        while True:
-            doing_tasks = self.task_manager._doing.copy()
-            cur_time = time.time()
-            avg_time = self.master_servicer.get_average_task_complete_time()
-            for _, (worker_id, task, start_time) in doing_tasks.items():
-                if task.type == elasticdl_pb2.TRAINING:
-                    start_time = self.master_servicer.get_worker_liveness_time(
-                        worker_id
-                    )
-                if task.type in [
-                    elasticdl_pb2.TRAINING,
-                    elasticdl_pb2.EVALUATION,
-                ]:
-                    if (cur_time - start_time) > 3 * avg_time[task.type]:
-                        self.logger.info(
-                            "worker %d timeout, relaunch it" % worker_id
-                        )
-                        self.task_manager.recover_tasks(worker_id)
-                        # TODO: save worker logs before remove it
-                        self.instance_manager._remove_worker(worker_id)
-                        break
-            time.sleep(30)

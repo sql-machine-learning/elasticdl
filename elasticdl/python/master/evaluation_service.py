@@ -104,10 +104,9 @@ class EvaluationService(object):
         with self._lock:
             if self._eval_job is None and self._eval_checkpoint_versions:
                 checkpoint_version = self._eval_checkpoint_versions.pop(0)
-                self._task_manager.create_tasks(
-                    elasticdl_pb2.EVALUATION, checkpoint_version
+                task_count = self._task_manager.create_evaluation_tasks(
+                    checkpoint_version
                 )
-                task_count = len(self._task_manager._eval_todo)
                 if self._eval_job is None:
                     self._eval_job = EvaluationJob(
                         self._eval_metrics_fn(), checkpoint_version, task_count
