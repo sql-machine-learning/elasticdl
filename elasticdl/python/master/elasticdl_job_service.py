@@ -73,25 +73,20 @@ class ElasticdlJobService(object):
 
         # Start task queue
         self.task_manager = TaskManager(args)
-        self.task_manager.set_completed_steps_by_checkpoint(
-            args.checkpoint_dir_for_init
+
+        self._optimizer = (
+            None
+            if args.custom_training_loop
+            else model_module[args.optimizer]()
         )
 
-        if not args.custom_training_loop:
-            self._optimizer = model_module[args.optimizer]()
-            self.task_manager.add_deferred_callback_create_train_end_task()
-            self.task_manager.set_completed_steps_by_checkpoint(
-                args.checkpoint_dir_for_init
-            )
-        else:
-            self._optimizer = None
-
-        if args.eval_metrics_fn in model_module:
-            self.evaluation_service = self._create_evaluation_service(
+        self.evaluation_service = (
+            None
+            if args.eval_metrics_fn not in model_module
+            else self._create_evaluation_service(
                 model_module[args.eval_metrics_fn], args.evaluation_steps
             )
-        else:
-            self.evaluation_service = None
+        )
 
         # Initialize instance manager
         self.instance_manager = self._create_instance_manager(args)

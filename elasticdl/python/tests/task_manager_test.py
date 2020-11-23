@@ -14,17 +14,10 @@
 import unittest
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.master.task_manager import TaskManager
 from elasticdl.python.tests.test_utils import create_task_manager
 
 
 class TaskManagerTest(unittest.TestCase):
-    def _create_task_manager(self, args, training_shards):
-        task_d = TaskManager(args)
-        task_d._training_shards = training_shards
-        task_d.create_tasks(elasticdl_pb2.TRAINING)
-        return task_d
-
     def test_create_tasks_with_zero_start_ind(self):
         task_d = create_task_manager({"f1": (0, 10), "f2": (0, 10)}, {})
 
@@ -131,7 +124,7 @@ class TaskManagerTest(unittest.TestCase):
 
     def test_invoke_train_end_callback(self):
         task_d = create_task_manager({"f1": (0, 10), "f2": (0, 10)}, {})
-        task_d.add_deferred_callback_create_train_end_task()
+        task_d._add_deferred_callback_create_train_end_task()
         task_d._todo.clear()
         task_d.invoke_deferred_callback()
         self.assertEqual(len(task_d._todo), 1)
