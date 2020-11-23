@@ -58,7 +58,7 @@ class ServicerTest(unittest.TestCase):
         )
 
     def test_get_empty_task(self):
-        self.master.task_d = create_task_manager({}, {})
+        self.master.task_manager = create_task_manager({}, {})
         master_servicer = MasterServicer(
             3, evaluation_service=None, master=self.master,
         )
@@ -77,7 +77,7 @@ class ServicerTest(unittest.TestCase):
         self.assertEqual(1, task.model_version)
 
     def test_report_task_result(self):
-        self.master.task_d = create_task_manager(
+        self.master.task_manager = create_task_manager(
             {"shard_1": (0, 10), "shard_2": (0, 9)}, {}, 2
         )
         master = MasterServicer(3, evaluation_service=None, master=self.master)
@@ -91,7 +91,7 @@ class ServicerTest(unittest.TestCase):
             if not task.shard.name:
                 break
             self.assertEqual(
-                self.master.task_d._doing[task.task_id][0], req.worker_id
+                self.master.task_manager._doing[task.task_id][0], req.worker_id
             )
             task_key = (task.shard.name, task.shard.start, task.shard.end)
             tasks[task_key] += 1

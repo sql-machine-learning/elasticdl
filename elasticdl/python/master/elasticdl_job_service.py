@@ -72,15 +72,15 @@ class ElasticdlJobService(object):
         ).__dict__
 
         # Start task queue
-        self.task_d = TaskManager(args)
-        self.task_d.set_completed_steps_by_checkpoint(
+        self.task_manager = TaskManager(args)
+        self.task_manager.set_completed_steps_by_checkpoint(
             args.checkpoint_dir_for_init
         )
 
         if not args.custom_training_loop:
             self._optimizer = model_module[args.optimizer]()
-            self.task_d.add_deferred_callback_create_train_end_task()
-            self.task_d.set_completed_steps_by_checkpoint(
+            self.task_manager.add_deferred_callback_create_train_end_task()
+            self.task_manager.set_completed_steps_by_checkpoint(
                 args.checkpoint_dir_for_init
             )
         else:
@@ -134,7 +134,7 @@ class ElasticdlJobService(object):
         """
         try:
             while True:
-                if self.task_d.finished():
+                if self.task_manager.finished():
                     if self.instance_manager:
                         self.instance_manager.update_status(
                             InstanceManagerStatus.FINISHED
@@ -204,12 +204,12 @@ class ElasticdlJobService(object):
                 evaluation_steps,
             )
             evaluation_service = EvaluationService(
-                self.task_d,
+                self.task_manager,
                 evaluation_steps,
                 self.job_type == JobType.EVALUATION_ONLY,
                 eval_func,
             )
-            self.task_d.set_evaluation_service(evaluation_service)
+            self.task_manager.set_evaluation_service(evaluation_service)
 
         return evaluation_service
 
@@ -257,7 +257,7 @@ class ElasticdlJobService(object):
             cluster_spec = self._get_image_cluster_spec(args.cluster_spec)
 
             instance_manager = InstanceManager(
-                self.task_d,
+                self.task_manager,
                 rendezvous_server=self.rendezvous_server,
                 job_name=args.job_name,
                 image_name=args.worker_image,
@@ -351,7 +351,7 @@ class ElasticdlJobService(object):
 
     def _check_and_reassign_timeout_tasks(self):
         while True:
-            doing_tasks = self.task_d._doing.copy()
+            doing_tasks = self.task_manager._doing.copy()
             cur_time = time.time()
             avg_time = self.master_servicer.get_average_task_complete_time()
             for _, (worker_id, task, start_time) in doing_tasks.items():
@@ -367,7 +367,7 @@ class ElasticdlJobService(object):
                         self.logger.info(
                             "worker %d timeout, relaunch it" % worker_id
                         )
-                        self.task_d.recover_tasks(worker_id)
+                        self.task_manager.recover_tasks(worker_id)
                         # TODO: save worker logs before remove it
                         self.instance_manager._remove_worker(worker_id)
                         break
