@@ -29,7 +29,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self, minibatch_size, evaluation_service, master,
     ):
         # TODO: group params together into a single object.
-        self._task_d = master.task_d
+        self._task_manager = master.task_manager
         self._instance_manager = master.instance_manager
         self._distribution_strategy = master.distribution_strategy
         self._rendezvous_server = master.rendezvous_server
@@ -58,9 +58,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         res = elasticdl_pb2.Task(shard=shard)
         res.model_version = self._version
         if request.task_type == elasticdl_pb2.EVALUATION:
-            task_id, task = self._task_d.get_eval_task(request.worker_id)
+            task_id, task = self._task_manager.get_eval_task(request.worker_id)
         else:
-            task_id, task = self._task_d.get(request.worker_id)
+            task_id, task = self._task_manager.get(request.worker_id)
 
         if task:
             res.task_id = task_id
@@ -74,8 +74,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # For evaluation task, it will use the fixed version model
             if task.type == elasticdl_pb2.EVALUATION:
                 res.model_version = task.model_version
-        elif (not self._task_d.finished()) or (
-            self._task_d.invoke_deferred_callback()
+        elif (not self._task_manager.finished()) or (
+            self._task_manager.invoke_deferred_callback()
         ):
             # If the todo and doing tasks are not empty,
             # Otherwise if the callback list is not empty,
@@ -96,9 +96,11 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     def report_task_result(self, request, _):
         if request.err_message:
             logger.warning("Worker reported error: " + request.err_message)
-            self._task_d.report(request, False)
+            self._task_manager.report(request, False)
         else:
-            complete_time, task, worker_id = self._task_d.report(request, True)
+            complete_time, task, worker_id = self._task_manager.report(
+                request, True
+            )
             if task:
                 with self._lock:
                     self._worker_liveness_time[worker_id] = time.time()

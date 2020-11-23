@@ -209,7 +209,7 @@ class InstanceManagerTest(unittest.TestCase):
     def test_relaunch_ps_pod(self):
         num_ps = 3
         instance_manager = InstanceManager(
-            task_d=None,
+            task_manager=None,
             job_name="test-relaunch-ps-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="ubuntu:18.04",

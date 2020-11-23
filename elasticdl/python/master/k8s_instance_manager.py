@@ -54,7 +54,7 @@ def _parse_worker_pod_priority(num_workers, worker_pod_priority):
 class InstanceManager(object):
     def __init__(
         self,
-        task_d,
+        task_manager,
         rendezvous_server=None,
         num_workers=1,
         worker_command=None,
@@ -96,7 +96,7 @@ class InstanceManager(object):
         self._volume = volume
         self._image_pull_policy = image_pull_policy
         self._envs = envs
-        self._task_d = task_d
+        self._task_manager = task_manager
         self._rendezvous_server = rendezvous_server
         self._next_worker_id = itertools.count().__next__
         self._log_file_path = log_file_path
@@ -323,7 +323,7 @@ class InstanceManager(object):
                 worker_id = self._worker_pod_name_to_id.get(pod_name, None)
                 if worker_id is not None:
                     # Recover tasks when the worker failed
-                    self._task_d.recover_tasks(worker_id)
+                    self._task_manager.recover_tasks(worker_id)
 
                 if (
                     evt_obj.status.container_statuses
