@@ -13,7 +13,6 @@
 
 import threading
 
-from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.evaluation_utils import EvaluationMetrics
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor_utils import pb_to_ndarray

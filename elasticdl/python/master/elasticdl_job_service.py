@@ -36,7 +36,6 @@ from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import MasterServicer
-from elasticdl.python.master.task_manager import TaskManager
 from elasticdl_client.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
