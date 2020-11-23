@@ -27,6 +27,10 @@ _SERVICE_ADDR_SEP = ","
 
 
 def _get_addrs(num_addrs, addr_get_fn):
+    """
+    Get `num_addrs` addresses and the concatenate
+    them to a common separated string.
+    """
     addrs = []
     for addr_id in range(num_addrs):
         addrs.append(addr_get_fn(addr_id))
