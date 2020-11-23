@@ -14,7 +14,6 @@
 import unittest
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.master.task_manager import TaskManager
 from elasticdl.python.tests.test_utils import create_task_manager
 
 
