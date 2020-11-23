@@ -58,7 +58,12 @@ def _parse_worker_pod_priority(num_workers, worker_pod_priority):
     return res
 
 
-def _is_pod_oom_killed(evt_obj):
+def _should_relaunch_failed_pod(evt_obj):
+    """
+    Check whether to relaunch the failed pod according to the kubernetes event.
+    For the killed pods, we will try to relaunch them except the
+    OOM ones.
+    """
     return (
         evt_obj.status.container_statuses
         and evt_obj.status.container_statuses[0].state.terminated
@@ -334,7 +339,7 @@ class InstanceManager(object):
                 return
 
             # For the failed worker, reassign the its tasks to others.
-            # Check whether to relaunch the worker (OOM case only).
+            # Check whether to relaunch the worker.
             relaunch_failed_pod = False
             if evt_type == "MODIFIED" and phase == "Failed":
                 self._failed_pods.append(pod_name)
@@ -343,12 +348,16 @@ class InstanceManager(object):
                     # Recover tasks when the worker failed
                     self._task_d.recover_tasks(worker_id)
 
-                # Only if the worker fails because of `OOMKilled`,
-                # we will try to relaunch it.
-                if _is_pod_oom_killed(evt_obj):
+                if _should_relaunch_failed_pod(evt_obj):
                     relaunch_failed_pod = True
                     logger.info(
-                        "Pod %s is killed because of OOMKilled." % pod_name
+                        "Pod %s is killed with reason %s."
+                        % (
+                            pod_name,
+                            evt_obj.status.container_statuses[
+                                0
+                            ].state.terminated.reason,
+                        )
                     )
 
             if pod_name in self._worker_pod_name_to_id:
