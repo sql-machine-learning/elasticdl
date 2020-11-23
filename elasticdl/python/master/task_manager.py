@@ -140,6 +140,9 @@ class TaskManager(object):
         self._create_evaluation_tasks(
             args.validation_data, args.data_reader_params
         )
+        self._set_completed_steps_by_checkpoint(args.checkpoint_dir_for_init)
+        if not args.custom_training_loop:
+            self._add_deferred_callback_create_train_end_task()
 
     def _load_data_reader_fn(self, args):
         self._create_data_reader_fn = create_data_reader
@@ -182,7 +185,7 @@ class TaskManager(object):
             else {}
         )
 
-    def set_completed_steps_by_checkpoint(self, checkpoint_dir_for_init):
+    def _set_completed_steps_by_checkpoint(self, checkpoint_dir_for_init):
         if not checkpoint_dir_for_init:
             return
 
@@ -305,7 +308,7 @@ class TaskManager(object):
 
         self._todo.append(train_end_callback_task)
 
-    def add_deferred_callback_create_train_end_task(self):
+    def _add_deferred_callback_create_train_end_task(self):
         self._tasks_done_deferred_callbacks.append(
             lambda: self._create_train_end_callback_task()
         )
