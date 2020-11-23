@@ -62,7 +62,7 @@ def _parse_worker_pod_priority(num_workers, worker_pod_priority):
     return res
 
 
-def _should_relaunch_failed_pod(evt_obj):
+def _should_relaunch_killed_pod(evt_obj):
     """
     Check whether to relaunch the failed pod according to the kubernetes event.
     For the killed pods, we will try to relaunch them except the
@@ -352,7 +352,7 @@ class InstanceManager(object):
                     # Recover tasks when the worker failed
                     self._task_d.recover_tasks(worker_id)
 
-                if _should_relaunch_failed_pod(evt_obj):
+                if _should_relaunch_killed_pod(evt_obj):
                     relaunch_failed_pod = True
                     logger.info(
                         "Pod %s is killed with reason %s."
