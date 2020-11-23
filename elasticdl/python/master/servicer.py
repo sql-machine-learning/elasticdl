@@ -11,9 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import statistics
+
 import threading
-import time
 
 from google.protobuf import empty_pb2
 
@@ -29,7 +28,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         self, minibatch_size, evaluation_service, master,
     ):
         # TODO: group params together into a single object.
-        self._task_d = master.task_d
+        self._task_manager = master.task_manager
         self._instance_manager = master.instance_manager
         self._distribution_strategy = master.distribution_strategy
         self._rendezvous_server = master.rendezvous_server
@@ -42,7 +41,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             elasticdl_pb2.EVALUATION: [],
             elasticdl_pb2.TRAINING: [],
         }
-        self._worker_liveness_time = {}
         if evaluation_service:
             evaluation_service.set_master_servicer(self)
 
@@ -58,9 +56,9 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         res = elasticdl_pb2.Task(shard=shard)
         res.model_version = self._version
         if request.task_type == elasticdl_pb2.EVALUATION:
-            task_id, task = self._task_d.get_eval_task(request.worker_id)
+            task_id, task = self._task_manager.get_eval_task(request.worker_id)
         else:
-            task_id, task = self._task_d.get(request.worker_id)
+            task_id, task = self._task_manager.get(request.worker_id)
 
         if task:
             res.task_id = task_id
@@ -74,8 +72,8 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # For evaluation task, it will use the fixed version model
             if task.type == elasticdl_pb2.EVALUATION:
                 res.model_version = task.model_version
-        elif (not self._task_d.finished()) or (
-            self._task_d.invoke_deferred_callback()
+        elif (not self._task_manager.finished()) or (
+            self._task_manager.invoke_deferred_callback()
         ):
             # If the todo and doing tasks are not empty,
             # Otherwise if the callback list is not empty,
@@ -90,30 +88,32 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             else:
                 res.type = elasticdl_pb2.WAIT
         with self._lock:
-            self._worker_liveness_time[request.worker_id] = time.time()
+            self._task_manager.reset_worker_start_task_time(request.worker_id)
         return res
 
     def report_task_result(self, request, _):
         if request.err_message:
             logger.warning("Worker reported error: " + request.err_message)
-            self._task_d.report(request, False)
+            self._task_manager.report(request, False)
         else:
-            complete_time, task, worker_id = self._task_d.report(request, True)
+            complete_time, task, worker_id = self._task_manager.report(
+                request, True
+            )
             if task:
                 with self._lock:
-                    self._worker_liveness_time[worker_id] = time.time()
+                    self._task_manager.reset_worker_start_task_time(worker_id)
                     if task.type in [
                         elasticdl_pb2.TRAINING,
                         elasticdl_pb2.EVALUATION,
                     ]:
-                        self._task_complete_times[task.type].append(
-                            complete_time
+                        self._task_manager.record_task_completed_time(
+                            task.type, complete_time
                         )
         return empty_pb2.Empty()
 
     def report_evaluation_metrics(self, request, _):
         with self._lock:
-            self._worker_liveness_time[request.worker_id] = time.time()
+            self._task_manager.reset_worker_start_task_time(request.worker_id)
         self._evaluation_service.report_evaluation_metrics(
             request.model_outputs, request.labels
         )
@@ -126,25 +126,6 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
                 model_version=request.model_version
             )
         return empty_pb2.Empty()
-
-    def get_average_task_complete_time(self):
-        if len(self._task_complete_times) < 20:
-            return {
-                elasticdl_pb2.TRAINING: 300,
-                elasticdl_pb2.EVALUATION: 300,
-            }
-        else:
-            return {
-                elasticdl_pb2.TRAINING: statistics.mean(
-                    self._task_complete_times[elasticdl_pb2.TRAINING]
-                ),
-                elasticdl_pb2.EVALUATION: statistics.mean(
-                    self._task_complete_times[elasticdl_pb2.EVALUATION]
-                ),
-            }
-
-    def get_worker_liveness_time(self, worker_id):
-        return self._worker_liveness_time[worker_id]
 
     def get_comm_rank(self, request, _):
         worker_id = request.worker_id

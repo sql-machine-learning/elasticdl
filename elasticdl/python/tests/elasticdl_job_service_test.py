@@ -17,12 +17,12 @@ import unittest
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_master_args
-from elasticdl.python.master.master import Master
+from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
 from elasticdl.python.tests.test_utils import DatasetName, create_recordio_file
 from elasticdl_client.common.constants import DistributionStrategy
 
 
-class MasterTest(unittest.TestCase):
+class ElasticdlJobServiceTest(unittest.TestCase):
     def setUp(self):
         self._model_zoo_path = os.path.join(
             os.path.dirname(os.path.realpath(__file__)), "../../../model_zoo"
@@ -60,7 +60,7 @@ class MasterTest(unittest.TestCase):
             self.arguments["training_data"] = temp_dir_name
             args = self._get_args()
             args = parse_master_args(args)
-            master = Master(args)
+            master = ElasticdlJobService(args)
             self.assertIsNotNone(master.instance_manager)
 
     def test_create_master_for_allreduce(self):
@@ -78,9 +78,8 @@ class MasterTest(unittest.TestCase):
             self.arguments["custom_training_loop"] = "true"
             args = self._get_args()
             args = parse_master_args(args)
-            master = Master(args)
+            master = ElasticdlJobService(args)
             self.assertIsNotNone(master.instance_manager)
-            self.assertIsNone(master.callbacks_list)
 
     def test_create_master_without_eval(self):
         self.arguments[
@@ -98,7 +97,7 @@ class MasterTest(unittest.TestCase):
             self.arguments["training_data"] = temp_dir_name
             args = self._get_args()
             args = parse_master_args(args)
-            master = Master(args)
+            master = ElasticdlJobService(args)
             self.assertIsNone(master.evaluation_service)
 
 

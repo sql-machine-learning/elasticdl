@@ -121,6 +121,12 @@ def add_train_params(parser):
         "and the loss will be logged during training.",
         default=100,
     )
+    parser.add_argument(
+        "--max_step",
+        type=int,
+        help="The maximum step to train the model",
+        default=0,
+    )
     add_bool_param(
         parser=parser,
         name="--use_async",
@@ -140,6 +146,15 @@ def add_train_params(parser):
         default=False,
         help="If true, users need to define training loop by themselves "
         "Otherwise, users should define a Keras model",
+    )
+    add_bool_param(
+        parser=parser,
+        name="--need_elasticdl_job_service",
+        default=True,
+        help="If true, users use ElasticDL worker framework "
+        "Otherwise, master only launch pod manager and/or other services to "
+        "provide elastic training feature to other DL framework or customized "
+        "AllReduce training",
     )
 
 

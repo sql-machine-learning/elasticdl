@@ -13,7 +13,6 @@
 
 import threading
 
-from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.evaluation_utils import EvaluationMetrics
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor_utils import pb_to_ndarray
@@ -64,9 +63,9 @@ class EvaluationService(object):
     """Evaluation service"""
 
     def __init__(
-        self, task_d, eval_steps, eval_only, eval_metrics_fn,
+        self, task_manager, eval_steps, eval_only, eval_metrics_fn,
     ):
-        self._task_d = task_d
+        self._task_manager = task_manager
         self._lock = threading.Lock()
         self._eval_job = None
         self._eval_steps = eval_steps
@@ -104,10 +103,9 @@ class EvaluationService(object):
         with self._lock:
             if self._eval_job is None and self._eval_checkpoint_versions:
                 checkpoint_version = self._eval_checkpoint_versions.pop(0)
-                self._task_d.create_tasks(
-                    elasticdl_pb2.EVALUATION, checkpoint_version
+                task_count = self._task_manager.create_evaluation_tasks(
+                    checkpoint_version
                 )
-                task_count = len(self._task_d._eval_todo)
                 if self._eval_job is None:
                     self._eval_job = EvaluationJob(
                         self._eval_metrics_fn(), checkpoint_version, task_count
@@ -149,7 +147,7 @@ class EvaluationService(object):
                 self._eval_job.evaluation_metrics.get_evaluation_summary()
             )
             logger.info(
-                "Evaluation metrics[v=%d]: %s"
+                "Evaluation metrics[step=%d]: %s"
                 % (
                     self._eval_job.model_version
                     if self._eval_job.model_version >= 0
