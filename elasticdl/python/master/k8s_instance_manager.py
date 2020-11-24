@@ -17,8 +17,10 @@ import threading
 import time
 from collections import Counter
 
+from kubernetes.client import V1EnvVar
+
 from elasticdl.python.common import k8s_client as k8s
-from elasticdl.python.common.constants import PodStatus
+from elasticdl.python.common.constants import PodStatus, WorkerEnv
 from elasticdl.python.common.k8s_client import PodType
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl_client.common.constants import BashCommandTemplate
@@ -192,6 +194,8 @@ class InstanceManager(object):
             bash_command += " {}".format(extra_arg)
         worker_args = [self._worker_args[0], bash_command]
         with self._lock:
+            envs = copy.deepcopy(self._envs)
+            envs.append(V1EnvVar(name=WorkerEnv.WORKER_ID, value=worker_id))
             pod = self._k8s_client.create_worker(
                 worker_id=worker_id,
                 resource_requests=self._worker_resource_request,
@@ -204,7 +208,7 @@ class InstanceManager(object):
                 args=worker_args,
                 restart_policy=self._restart_policy,
                 ps_addrs=self._ps_addrs,
-                envs=copy.deepcopy(self._envs),
+                envs=envs,
             )
             if pod:
                 name = pod.metadata.name
