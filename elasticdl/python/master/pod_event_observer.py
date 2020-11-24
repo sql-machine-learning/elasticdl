@@ -11,13 +11,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import collections
 
-class PodManager(object):
-    def __init__(self, args):
-        self._observers = []
+PodInfo = collections.namedtuple("PodInfo", ("type", "id", "name", "address"))
 
-    def start(self):
+ClusterContext = collections.namedtuple("ClusterContext", ("pod_manager"))
+
+
+class PodEventObserver(object):
+    def on_pod_started(self, pod_info, cluster_context):
         pass
 
-    def add_observer(self, observer):
-        self._observers.append(observer)
+    def on_pod_completed(self, pod_info, cluster_context):
+        pass
+
+    def on_pod_failed(self, pod_info, cluster_context):
+        pass
+
+    def on_pod_deleted(self, pod_info, cluster_context):
+        pass
