@@ -26,13 +26,43 @@ class PodEventObserver(object):
     """
 
     def on_pod_started(self, pod_info, cluster_context):
+        """
+        The handler for the pod started event.
+        Args:
+            pod_info: A PodInfo object. It's the pod that just becomes running.
+            cluster_context: A ClusterContext object. It contains all the
+                context information about the cluster for the job.
+        """
         pass
 
-    def on_pod_completed(self, pod_info, cluster_context):
+    def on_pod_succeeded(self, pod_info, cluster_context):
+        """
+        The handler for the pod succeeded event.
+        Args:
+            pod_info: A PodInfo object. It's the pod that just terminates
+                in success.
+            cluster_context: A ClusterContext object. It contains all the
+                context information about the cluster for the job.
+        """
         pass
 
     def on_pod_failed(self, pod_info, cluster_context):
+        """
+        The handler for the pod failed event.
+        Args:
+            pod_info: A PodInfo object. It's the pod that just terminates
+                in failure.
+            cluster_context: A ClusterContext object. It contains all the
+                context information about the cluster for the job.
+        """
         pass
 
     def on_pod_deleted(self, pod_info, cluster_context):
+        """
+        The handler for the pod deleted event.
+        Args:
+            pod_info: A PodInfo object. It's the pod which is just deleted.
+            cluster_context: A ClusterContext object. It contains all the
+                context information about the cluster for the job.
+        """
         pass
