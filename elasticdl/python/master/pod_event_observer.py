@@ -19,6 +19,12 @@ ClusterContext = collections.namedtuple("ClusterContext", ("pod_manager"))
 
 
 class PodEventObserver(object):
+    """
+    The interface for the observers that are interested in the pod event.
+    The subclass observers can override the following methods to handle
+    various events.
+    """
+
     def on_pod_started(self, pod_info, cluster_context):
         pass
 
