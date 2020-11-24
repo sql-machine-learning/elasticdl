@@ -282,22 +282,25 @@ class ElasticdlJobService(object):
         return instance_manager
 
     def _create_worker_args(self, args):
-        worker_client_command = (
-            BashCommandTemplate.SET_PIPEFAIL
-            + " python -m elasticdl.python.worker.main"
-        )
-        worker_args = [
-            "--master_addr",
-            self.master_addr,
-            "--job_type",
-            self.job_type,
-        ]
-        worker_args.extend(
-            build_arguments_from_parsed_result(args, filter_args=["envs"])
-        )
-        worker_args = wrap_python_args_with_string(worker_args)
-        worker_args.insert(0, worker_client_command)
-        worker_args = ["-c", " ".join(worker_args)]
+        if args.pod_command:
+            worker_args = ["-c", args.pod_command]
+        else:
+            worker_client_command = (
+                BashCommandTemplate.SET_PIPEFAIL
+                + " python -m elasticdl.python.worker.main"
+            )
+            worker_args = [
+                "--master_addr",
+                self.master_addr,
+                "--job_type",
+                self.job_type,
+            ]
+            worker_args.extend(
+                build_arguments_from_parsed_result(args, filter_args=["envs"])
+            )
+            worker_args = wrap_python_args_with_string(worker_args)
+            worker_args.insert(0, worker_client_command)
+            worker_args = ["-c", " ".join(worker_args)]
         return worker_args
 
     def _create_ps_args(self, args):

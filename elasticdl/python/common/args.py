@@ -116,6 +116,11 @@ def _build_master_args_parser():
         "--worker_image", help="Docker image for workers", default=None
     )
     parser.add_argument(
+        "--pod_command",
+        help="The command executed in the pod launched by the master",
+        default=None,
+    )
+    parser.add_argument(
         "--prediction_data",
         help="Either the data directory that contains RecordIO files "
         "or an ODPS table name used for prediction.",
