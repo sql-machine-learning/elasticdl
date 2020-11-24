@@ -23,6 +23,10 @@ from elasticdl.python.common.log_utils import default_logger as logger
 try:
     import horovod.torch as hvd
     from horovod.common.exceptions import HorovodInternalError
+    from horovod.torch.functions import (
+        broadcast_optimizer_state,
+        broadcast_parameters,
+    )
 
 except ImportError:
     hvd = None
@@ -43,11 +47,6 @@ class PyTorchAllReduceController(AllReduceController):
         self._optimizer = optimizer
 
     def broadcast(self):
-        from horovod.torch.functions import (
-            broadcast_optimizer_state,
-            broadcast_parameters,
-        )
-
         broadcast_parameters(self._model.state_dict(), root_rank=0)
         broadcast_optimizer_state(self._optimizer, root_rank=0)
 
