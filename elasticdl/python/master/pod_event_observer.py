@@ -13,7 +13,7 @@
 
 import collections
 
-PodInfo = collections.namedtuple("PodInfo", ("type", "id", "name", "address"))
+PodInfo = collections.namedtuple("PodInfo", ("type", "id", "name"))
 
 ClusterContext = collections.namedtuple("ClusterContext", ("pod_manager"))
 
