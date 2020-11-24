@@ -291,8 +291,6 @@ class ElasticdlJobService(object):
             + " python -m elasticdl.python.worker.main"
         )
         worker_args = [
-            "--master_addr",
-            self.master_addr,
             "--job_type",
             self.job_type,
         ]
