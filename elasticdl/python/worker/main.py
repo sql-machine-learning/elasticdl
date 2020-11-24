@@ -11,8 +11,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
 from elasticdl.python.common import log_utils
 from elasticdl.python.common.args import parse_worker_args
+from elasticdl.python.common.constants import WorkerEnv
 from elasticdl.python.common.grpc_utils import build_channel
 from elasticdl.python.worker.master_client import MasterClient
 from elasticdl.python.worker.ps_client import build_ps_client
@@ -23,13 +26,13 @@ from elasticdl_client.common.constants import DistributionStrategy
 def main():
     args = parse_worker_args()
     logger = log_utils.get_logger(__name__)
-    logger.info("Starting worker %d", args.worker_id)
-    if args.master_addr is None:
+    worker_id = int(os.getenv(WorkerEnv.WORKER_ID))
+    master_addr = os.getenv(WorkerEnv.MASTER_ADDR, None)
+    logger.info("Starting worker %d", worker_id)
+    if master_addr is None:
         raise ValueError("master_addr is missing for worker")
 
-    master_client = MasterClient(
-        build_channel(args.master_addr), args.worker_id
-    )
+    master_client = MasterClient(build_channel(master_addr), worker_id)
 
     ps_client = (
         build_ps_client(args.ps_addrs, logger)
