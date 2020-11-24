@@ -11,6 +11,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import abc
 import collections
 
 PodInfo = collections.namedtuple("PodInfo", ("type", "id", "name"))
@@ -18,13 +19,14 @@ PodInfo = collections.namedtuple("PodInfo", ("type", "id", "name"))
 ClusterContext = collections.namedtuple("ClusterContext", ("pod_manager"))
 
 
-class PodEventObserver(object):
+class PodEventCallback(metaclass=abc.ABCMeta):
     """
     The interface for the observers that are interested in the pod event.
     The subclass observers can override the following methods to handle
     various events.
     """
 
+    @abc.abstractmethod
     def on_pod_started(self, pod_info, cluster_context):
         """
         The handler for the pod started event.
@@ -35,6 +37,7 @@ class PodEventObserver(object):
         """
         pass
 
+    @abc.abstractmethod
     def on_pod_succeeded(self, pod_info, cluster_context):
         """
         The handler for the pod succeeded event.
@@ -46,6 +49,7 @@ class PodEventObserver(object):
         """
         pass
 
+    @abc.abstractmethod
     def on_pod_failed(self, pod_info, cluster_context):
         """
         The handler for the pod failed event.
@@ -57,6 +61,7 @@ class PodEventObserver(object):
         """
         pass
 
+    @abc.abstractmethod
     def on_pod_deleted(self, pod_info, cluster_context):
         """
         The handler for the pod deleted event.
@@ -65,4 +70,23 @@ class PodEventObserver(object):
             cluster_context: A ClusterContext object. It contains all the
                 context information about the cluster for the job.
         """
+        pass
+
+
+class TaskRescheduleCallback(PodEventCallback):
+    def __init__(self, task_manager):
+        self._task_manager = task_manager
+
+    def on_pod_started(self, pod_info, cluster_context):
+        pass
+
+    def on_pod_succeeded(self, pod_info, cluster_context):
+        pass
+
+    def on_pod_failed(self, pod_info, cluster_context):
+        # TODO: Call task_manager to reschedule the task
+        # of the failed worker to another worker
+        pass
+
+    def on_pod_deleted(self, pod_info, cluster_context):
         pass

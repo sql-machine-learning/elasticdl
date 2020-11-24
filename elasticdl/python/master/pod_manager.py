@@ -14,10 +14,10 @@
 
 class PodManager(object):
     def __init__(self, args):
-        self._observers = []
+        self._pod_event_callbacks = []
 
     def start(self):
         pass
 
-    def add_observer(self, observer):
-        self._observers.append(observer)
+    def add_pod_event_callback(self, pod_event_callback):
+        self._pod_event_callbacks.append(pod_event_callback)
