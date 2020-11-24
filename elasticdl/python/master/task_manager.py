@@ -482,11 +482,8 @@ class TaskManager(object):
         for callback_fn in self._task_timeout_callbacks:
             callback_fn(worker_id)
 
-    def _check_and_reassign_timeout_tasks(self, default_period=30):
+    def _check_and_reassign_timeout_tasks(self):
         """Check whether there are timeout tasks periodically.
-
-        Args:
-            default_period: The period to check timeout tasks.
         """
         while True:
             doing_tasks = self._doing.copy()
@@ -507,7 +504,7 @@ class TaskManager(object):
                         # TODO: save worker logs before remove it
                         self._invoke_task_timeout_callback(worker_id)
                         break
-            time.sleep(default_period)
+            time.sleep(30)
 
     def _get_average_task_completed_time(self):
         average_task_completed_time = {}
