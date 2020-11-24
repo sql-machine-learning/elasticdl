@@ -28,10 +28,6 @@ from elasticdl.python.common.model_utils import (
 )
 from elasticdl.python.common.timing_utils import Timing
 from elasticdl.python.elasticdl.callbacks import SavedModelExporter
-from elasticdl.python.worker.allreduce_controller import (
-    PyTorchAllReduceController,
-    TensorFlowV2AllReduceController,
-)
 from elasticdl.python.worker.allreduce_trainer import AllReduceTrainer
 from elasticdl.python.worker.data_shard_service import DataShardService
 from elasticdl.python.worker.ps_trainer import ParameterServerTrainer
@@ -477,10 +473,18 @@ class Worker(object):
         Train and evaluate the model on the worker
         """
         if os.getenv("USE_TORCH", None):
+            from elasticdl.python.allreduce.pytorch_controller import (
+                PyTorchAllReduceController,
+            )
+
             elastic_controller = PyTorchAllReduceController(
                 self._mc, self._master_addr, self._data_shard_service
             )
         else:
+            from elasticdl.python.allreduce.tensorflow_controller import (
+                TensorFlowV2AllReduceController,
+            )
+
             elastic_controller = TensorFlowV2AllReduceController(
                 self._mc, self._master_addr, self._data_shard_service
             )

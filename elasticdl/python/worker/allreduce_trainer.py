@@ -18,7 +18,7 @@ from tensorflow.keras import backend as K
 from tensorflow.python.framework.errors_impl import UnknownError
 
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.worker.allreduce_controller import (
+from elasticdl.python.allreduce.base_controller import (
     DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
     DEFAULT_STEPS_TO_CHECK_RENDEZVOUS,
     RendevousManager,
