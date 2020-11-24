@@ -23,14 +23,27 @@ from elasticdl.python.worker.worker import Worker
 from elasticdl_client.common.constants import DistributionStrategy
 
 
+def get_worker_id():
+    worker_id = os.getenv(WorkerEnv.WORKER_ID, None)
+    if worker_id is None:
+        raise ValueError("worker_id is missing for worker")
+    return int(worker_id)
+
+
+def get_master_addr():
+    master_addr = os.getenv(WorkerEnv.MASTER_ADDR, None)
+    if master_addr is None:
+        raise ValueError("master_addr is missing for worker")
+    return master_addr
+
+
 def main():
     args = parse_worker_args()
     logger = log_utils.get_logger(__name__)
-    worker_id = int(os.getenv(WorkerEnv.WORKER_ID))
-    master_addr = os.getenv(WorkerEnv.MASTER_ADDR, None)
+    master_addr = get_master_addr()
+    worker_id = get_worker_id()
+
     logger.info("Starting worker %d", worker_id)
-    if master_addr is None:
-        raise ValueError("master_addr is missing for worker")
 
     master_client = MasterClient(build_channel(master_addr), worker_id)
 
