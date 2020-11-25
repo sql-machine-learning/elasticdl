@@ -18,7 +18,11 @@ import unittest
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.args import parse_master_args
 from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
-from elasticdl.python.tests.test_utils import DatasetName, create_recordio_file
+from elasticdl.python.tests.test_utils import (
+    DatasetName,
+    TaskManager,
+    create_recordio_file,
+)
 from elasticdl_client.common.constants import DistributionStrategy
 
 
@@ -60,7 +64,7 @@ class ElasticdlJobServiceTest(unittest.TestCase):
             self.arguments["training_data"] = temp_dir_name
             args = self._get_args()
             args = parse_master_args(args)
-            master = ElasticdlJobService(args)
+            master = ElasticdlJobService(args, TaskManager(args))
             self.assertIsNotNone(master.instance_manager)
 
     def test_create_master_for_allreduce(self):
@@ -78,7 +82,7 @@ class ElasticdlJobServiceTest(unittest.TestCase):
             self.arguments["custom_training_loop"] = "true"
             args = self._get_args()
             args = parse_master_args(args)
-            master = ElasticdlJobService(args)
+            master = ElasticdlJobService(args, TaskManager(args))
             self.assertIsNotNone(master.instance_manager)
 
     def test_create_master_without_eval(self):
@@ -97,7 +101,7 @@ class ElasticdlJobServiceTest(unittest.TestCase):
             self.arguments["training_data"] = temp_dir_name
             args = self._get_args()
             args = parse_master_args(args)
-            master = ElasticdlJobService(args)
+            master = ElasticdlJobService(args, TaskManager(args))
             self.assertIsNone(master.evaluation_service)
 
 

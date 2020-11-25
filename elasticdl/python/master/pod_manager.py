@@ -14,7 +14,10 @@
 
 class PodManager(object):
     def __init__(self, args):
-        pass
+        self._pod_event_callbacks = []
 
     def start(self):
         pass
+
+    def add_pod_event_callback(self, pod_event_callback):
+        self._pod_event_callbacks.append(pod_event_callback)

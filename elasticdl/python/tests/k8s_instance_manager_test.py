@@ -39,6 +39,7 @@ class InstanceManagerTest(unittest.TestCase):
             worker_args=["-c", "echo"],
             namespace="default",
             num_workers=2,
+            envs=[],
         )
 
         instance_manager.start_workers()
@@ -87,6 +88,7 @@ class InstanceManagerTest(unittest.TestCase):
             worker_args=["-c", "sleep 5 #"],
             namespace="default",
             num_workers=3,
+            envs=[],
         )
 
         instance_manager.start_workers()
@@ -123,6 +125,7 @@ class InstanceManagerTest(unittest.TestCase):
             namespace="default",
             num_workers=3,
             restart_policy="Never",
+            envs=[],
         )
         instance_manager.start_workers()
         max_check_num = 20
@@ -162,6 +165,7 @@ class InstanceManagerTest(unittest.TestCase):
             worker_args=["-c", "sleep 10 #"],
             namespace="default",
             num_workers=num_workers,
+            envs=[],
         )
 
         instance_manager.start_workers()
