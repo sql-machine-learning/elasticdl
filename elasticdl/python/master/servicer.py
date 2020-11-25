@@ -25,10 +25,10 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
 
     def __init__(
         self,
-        evaluation_service,
         task_manager,
         instance_manager,
         rendezvous_server=None,
+        evaluation_service=None,
     ):
         # TODO: group params together into a single object.
         self._task_manager = task_manager

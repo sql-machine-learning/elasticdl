@@ -218,10 +218,10 @@ class ElasticdlJobService(object):
             ],
         )
         master_servicer = MasterServicer(
-            evaluation_service=self.evaluation_service,
             task_manager=self.task_manager,
             instance_manager=self.instance_manager,
             rendezvous_server=self.rendezvous_server,
+            evaluation_service=self.evaluation_service,
         )
         elasticdl_pb2_grpc.add_MasterServicer_to_server(
             master_servicer, server
