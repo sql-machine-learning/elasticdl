@@ -107,10 +107,7 @@ class EvaluationServiceTest(unittest.TestCase):
             task_d=task_d, instance_manager=None, distribution_strategy=None,
         )
         _ = MasterServicer(
-            evaluation_service,
-            master.task_d,
-            master.instance_manager,
-            None,
+            evaluation_service, master.task_d, master.instance_manager, None,
         )
 
         # No checkpoint available
@@ -142,10 +139,7 @@ class EvaluationServiceTest(unittest.TestCase):
         )
 
         _ = MasterServicer(
-            evaluation_service,
-            master.task_d,
-            master.instance_manager,
-            None,
+            evaluation_service, master.task_d, master.instance_manager, None,
         )
 
         self.assertEqual(8, len(task_d._eval_todo))
