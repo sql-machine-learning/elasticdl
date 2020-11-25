@@ -444,7 +444,7 @@ def distributed_train_and_evaluate(
 
     def master_creator():
         return MasterServicer(
-            evaluation_service, master.task_d, master.instance_manager, None
+            master.task_d, master.instance_manager, None, evaluation_service
         )
 
     svc, port = _server(master_creator)

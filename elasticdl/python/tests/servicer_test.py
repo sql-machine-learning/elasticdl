@@ -60,7 +60,7 @@ class ServicerTest(unittest.TestCase):
     def test_get_empty_task(self):
         self.master.task_manager = create_task_manager({}, {})
         master_servicer = MasterServicer(
-            None, self.master.task_manager, self.master.instance_manager, None,
+            self.master.task_manager, self.master.instance_manager, None, None,
         )
 
         req = elasticdl_pb2.GetTaskRequest()
@@ -81,7 +81,7 @@ class ServicerTest(unittest.TestCase):
             {"shard_1": (0, 10), "shard_2": (0, 9)}, {}, 2
         )
         master = MasterServicer(
-            None, self.master.task_manager, self.master.instance_manager, None,
+            self.master.task_manager, self.master.instance_manager, None, None,
         )
 
         # task to number of runs.
@@ -132,10 +132,10 @@ class ServicerTest(unittest.TestCase):
         )
         self.master.instance_manager = mock_instance_manager
         master_servicer = MasterServicer(
-            None,
             self.master.task_manager,
             self.master.instance_manager,
             self.master.rendezvous_server,
+            None,
         )
         request = elasticdl_pb2.GetCommRankRequest()
         request.worker_id = 0
