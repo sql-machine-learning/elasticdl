@@ -34,10 +34,10 @@ except ImportError:
 
 
 class AllReduceTrainer(Trainer):
-    def __init__(self, master_client, master_addr, model):
+    def __init__(self, master_client, model):
         if not hvd:
             raise RuntimeError("Horovod is not installed for AllReduce")
-        self._rendezvous_manager = RendevousManager(master_client, master_addr)
+        self._rendezvous_manager = RendevousManager(master_client)
         self._model = model
         self._loss = model.loss
         self._need_broadcast = True

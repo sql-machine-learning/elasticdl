@@ -24,6 +24,7 @@ from elasticdl.python.common.constants import (
     GRPC,
     InstanceManagerStatus,
     JobType,
+    WorkerEnv,
 )
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
@@ -242,6 +243,9 @@ class ElasticdlJobService(object):
             env = []
             for key in env_dict:
                 env.append(V1EnvVar(name=key, value=env_dict[key]))
+            env.append(
+                V1EnvVar(name=WorkerEnv.MASTER_ADDR, value=self.master_addr)
+            )
 
             kwargs = get_dict_from_params_str(args.aux_params)
             disable_relaunch = kwargs.get("disable_relaunch", False)
@@ -283,8 +287,6 @@ class ElasticdlJobService(object):
             + " python -m elasticdl.python.worker.main"
         )
         worker_args = [
-            "--master_addr",
-            self.master_addr,
             "--job_type",
             self.job_type,
         ]
