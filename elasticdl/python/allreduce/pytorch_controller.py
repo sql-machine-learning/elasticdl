@@ -33,9 +33,9 @@ except ImportError:
 
 
 class PyTorchAllReduceController(AllReduceController):
-    def __init__(self, master_client, master_addr, data_shard_service):
+    def __init__(self, master_client, data_shard_service):
         super(PyTorchAllReduceController, self).__init__(
-            master_client, master_addr, data_shard_service
+            master_client, data_shard_service
         )
         self._model = None
         self._optimizer = None

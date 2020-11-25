@@ -48,7 +48,7 @@ class AllReduceTrainerTest(unittest.TestCase):
         model = custom_model()
         model.optimizer = optimizer()
         model.loss = loss
-        self._trainer = AllReduceTrainer(master_client, "", model)
+        self._trainer = AllReduceTrainer(master_client, model)
 
     def test_training_process(self):
         self._trainer._rendezvous_manager.init_horovod_if_needed()
@@ -81,7 +81,7 @@ class RendevousManagerTest(unittest.TestCase):
                 rendezvous_id=1, rank_id=0, world_size=1, rendezvous_port=0
             )
         )
-        self._manager = RendevousManager(master_client, "")
+        self._manager = RendevousManager(master_client)
 
     def test_init_variables_if_needed(self):
         self._manager.init_horovod_if_needed()
@@ -101,7 +101,7 @@ class AllReduceControllerTest(unittest.TestCase):
             )
         )
         data_shard_service = DataShardService(1, master_client)
-        controller = AllReduceController(master_client, "", data_shard_service)
+        controller = AllReduceController(master_client, data_shard_service)
         elastic_run = controller.elastic_run(self.train)
         elastic_run()
         self.assertEqual(controller._step, 1)
@@ -118,7 +118,7 @@ class TensorFlowV2ReduceControllerTest(unittest.TestCase):
         )
         data_shard_service = DataShardService(1, master_client)
         self.controller = TensorFlowV2AllReduceController(
-            master_client, "", data_shard_service
+            master_client, data_shard_service
         )
 
     def _train(self):
@@ -153,7 +153,7 @@ class PyTorchReduceControllerTest(unittest.TestCase):
         )
         data_shard_service = DataShardService(1, master_client)
         controller = PyTorchAllReduceController(
-            master_client, "", data_shard_service
+            master_client, data_shard_service
         )
         model = TorchModel()
         optimizer = optim.SGD(model.parameters(), lr=0.1)

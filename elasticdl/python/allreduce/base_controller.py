@@ -16,7 +16,7 @@ import time
 from abc import abstractmethod
 from functools import wraps
 
-from elasticdl.python.common.constants import HorovodEnv
+from elasticdl.python.common.constants import HorovodEnv, WorkerEnv
 from elasticdl.python.common.log_utils import default_logger as logger
 
 try:
@@ -36,10 +36,9 @@ DEFAULT_STEPS_TO_CHECK_RENDEZVOUS = 20
 
 
 class RendevousManager(object):
-    def __init__(self, master_client, master_addr):
+    def __init__(self, master_client):
         self.need_broadcast = True
         self._master_client = master_client
-        self._rendezvous_addr = master_addr
         self._rendezvous_id = None
 
     def init_horovod_if_needed(self):
@@ -75,8 +74,10 @@ class RendevousManager(object):
             self.need_broadcast = True
 
     def _set_horovod_env(self):
-        if self._rendezvous_addr:
-            os.environ[HorovodEnv.RENDEZVOUS_ADDR] = self._rendezvous_addr
+        master_addr_port = os.getenv(WorkerEnv.MASTER_ADDR, None)
+        if master_addr_port:
+            master_addr = master_addr_port.split(":")[0]
+            os.environ[HorovodEnv.RENDEZVOUS_ADDR] = master_addr
         os.environ[HorovodEnv.CONTROLLER] = "gloo"
         os.environ[HorovodEnv.CPU_OPERATIONS] = "gloo"
         domain_ip = socket.gethostbyname(socket.gethostname())
@@ -91,11 +92,11 @@ class AllReduceController(object):
     the variables and retry to call those functions.
     """
 
-    def __init__(self, master_client, master_addr, data_shard_service):
+    def __init__(self, master_client, data_shard_service):
         if not hvd:
             raise RuntimeError("Horovod is not installed for AllReduce")
 
-        self._rendezvous_manager = RendevousManager(master_client, master_addr)
+        self._rendezvous_manager = RendevousManager(master_client)
         self.data_shard_service = data_shard_service
         self._step = 0
         self._first_call = True
