@@ -460,3 +460,6 @@ class InstanceManager(object):
     @property
     def ps_addrs(self):
         return self._ps_addrs
+
+    def start(self):
+        self._k8s_client.start_watch_events()
