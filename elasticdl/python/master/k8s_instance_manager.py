@@ -30,7 +30,7 @@ _SERVICE_ADDR_SEP = ","
 
 def _get_addrs(num_addrs, addr_get_fn):
     """
-    Get `num_addrs` addresses and then the concatenate
+    Get `num_addrs` addresses and then concatenate
     them to a comma separated string.
     """
     addrs = []
