@@ -12,7 +12,6 @@
 # limitations under the License.
 
 from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
-from elasticdl.python.master.pod_manager import PodManager
 from elasticdl.python.master.task_manager import TaskManager
 from elasticdl_client.common.constants import DistributionStrategy
 
@@ -44,7 +43,8 @@ class Master(object):
 
     def create_pod_manager_if_needed(self, args):
         # TODO: set None if args.need_pod_manager is False.
-        self.pod_manager = PodManager(args)
+        # self.pod_manager = PodManager(args)
+        self.pod_manager = None
 
     def create_task_manager_if_needed(self, args):
         if args.need_task_manager:
