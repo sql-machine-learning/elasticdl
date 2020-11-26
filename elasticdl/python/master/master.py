@@ -43,7 +43,7 @@ class Master(object):
 
         # Start the master GRPC server
         logger.info("Starting master RPC server")
-        self._master_servicer.start()
+        self._master_server.start()
         logger.info("Master RPC server started")
 
     def run(self):
@@ -76,12 +76,12 @@ class Master(object):
         Stop all the components.
         Make sure that the created services and components are shut down.
         """
-        self.logger.info("Stopping master")
+        logger.info("Stopping master")
 
-        self.logger.info("Stopping RPC server")
-        self._master_servicer.stop(None)  # grace = None
-        self.logger.info("RPC server stopped")
-        self.logger.info("Master stopped")
+        logger.info("Stopping RPC server")
+        self._master_server.stop(None)  # grace = None
+        logger.info("RPC server stopped")
+        logger.info("Master stopped")
 
     def create_pod_manager_if_needed(self, args):
         # TODO: set None if args.need_pod_manager is False.
@@ -109,7 +109,7 @@ class Master(object):
             self.elasticdl_job_service = None
 
     def create_master_grpc_servicer(self, args):
-        self._master_servicer = create_master_service(
+        self._master_server = create_master_service(
             args.port,
             self.task_manager,
             self.pod_manager,
