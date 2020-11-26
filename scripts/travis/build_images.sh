@@ -14,7 +14,7 @@
 
 # Pull base image quietly.  We might want to use
 # tensorflow/tensorflow:2.1.0-gpu-py3 for GPU-accelerated deep learning.
-BASE_IMAGE=tensorflow/tensorflow:2.1.0-py3
+BASE_IMAGE=tensorflow/tensorflow:2.1.2
 docker pull --quiet "$BASE_IMAGE"
 
 docker build --target dev -t elasticdl:dev \
