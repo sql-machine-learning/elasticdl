@@ -28,7 +28,7 @@ class Master(object):
         self.create_task_manager_if_needed(args)
         self.create_rendezvous_server_if_needed(args)
         self.create_elasticdl_job_service_if_needed(args)
-        self.create_master_grpc_servicer(args)
+        self.create_master_grpc_service(args)
         self._exit_code = 0
 
     def prepare(self):
