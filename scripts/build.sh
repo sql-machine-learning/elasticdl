@@ -39,12 +39,17 @@ make -f elasticdl/Makefile
 )
 
 # Create elasticdl_preprocessing package
+echo "Building the wheel for elasticdl_preprocessing."
 rm -rf ./build/lib
 python setup_preprocessing.py --quiet bdist_wheel --dist-dir ./build
+
 # Create elasticdl_client package
+echo "Building the wheel for elasticdl_client."
 rm -rf ./build/lib
 python setup_client.py --quiet bdist_wheel --dist-dir ./build
+
 # Create elasticdl package
+echo "Building the wheel for elasticdl."
 mkdir -p ./elasticdl/go/bin
 cp /tmp/elasticdl_ps ./elasticdl/go/bin/
 rm -rf ./build/lib
