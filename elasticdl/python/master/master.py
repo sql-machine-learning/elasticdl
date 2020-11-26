@@ -108,10 +108,22 @@ class Master(object):
             self.elasticdl_job_service = None
 
     def create_master_grpc_service(self, args):
+        # TODO: Move the rendezvous_server out of elasticdl_job_service
+        rendezvous_server = (
+            self.elasticdl_job_service.rendezvous_server
+            if self.elasticdl_job_service
+            else None
+        )
+        evaluation_service = (
+            self.elasticdl_job_service.evaluation_service
+            if self.elasticdl_job_service
+            else None
+        )
+
         self._master_server = create_master_service(
             args.port,
             self.task_manager,
             self.pod_manager,
-            self.elasticdl_job_service.rendezvous_server,
-            self.elasticdl_job_service.evaluation_service,
+            rendezvous_server,
+            evaluation_service,
         )
