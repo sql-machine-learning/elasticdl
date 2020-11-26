@@ -41,6 +41,7 @@ class InstanceManagerTest(unittest.TestCase):
             num_workers=2,
             envs=[],
         )
+        instance_manager.start()
 
         instance_manager.start_workers()
         max_check_num = 20
@@ -90,6 +91,7 @@ class InstanceManagerTest(unittest.TestCase):
             num_workers=3,
             envs=[],
         )
+        instance_manager.start()
 
         instance_manager.start_workers()
         max_check_num = 20
@@ -127,6 +129,7 @@ class InstanceManagerTest(unittest.TestCase):
             restart_policy="Never",
             envs=[],
         )
+        instance_manager.start()
         instance_manager.start_workers()
         max_check_num = 20
         for _ in range(max_check_num):
@@ -167,7 +170,7 @@ class InstanceManagerTest(unittest.TestCase):
             num_workers=num_workers,
             envs=[],
         )
-
+        instance_manager.start()
         instance_manager.start_workers()
 
         max_check_num = 60
@@ -222,7 +225,7 @@ class InstanceManagerTest(unittest.TestCase):
             namespace="default",
             num_ps=num_ps,
         )
-
+        instance_manager.start()
         instance_manager.start_parameter_servers()
 
         # Check we also have ps services started
