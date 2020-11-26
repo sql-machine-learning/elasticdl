@@ -18,31 +18,29 @@ from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl_client.common.constants import DistributionStrategy
 
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
     """Master service implementation"""
 
     def __init__(
-        self, minibatch_size, evaluation_service, master,
+        self,
+        task_manager,
+        instance_manager,
+        rendezvous_server=None,
+        evaluation_service=None,
     ):
         # TODO: group params together into a single object.
-        self._task_manager = master.task_manager
-        self._instance_manager = master.instance_manager
-        self._distribution_strategy = master.distribution_strategy
-        self._rendezvous_server = master.rendezvous_server
-        self._lock = threading.Lock()
-        self._minibatch_size = minibatch_size
-        self._version = 0
-
+        self._task_manager = task_manager
+        self._instance_manager = instance_manager
+        self._rendezvous_server = rendezvous_server
         self._evaluation_service = evaluation_service
-        self._task_complete_times = {
-            elasticdl_pb2.EVALUATION: [],
-            elasticdl_pb2.TRAINING: [],
-        }
-        if evaluation_service:
-            evaluation_service.set_master_servicer(self)
+        if self._evaluation_service:
+            self._evaluation_service.set_model_version_fn(
+                self.get_model_version
+            )
+        self._lock = threading.Lock()
+        self._version = 0
 
     @staticmethod
     def var_name_encode(name):
@@ -80,7 +78,7 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
             # we are trying to pop and invoke the callback.
             # Then the master tells the worker to wait
             # in case of new tasks later.
-            if self._distribution_strategy == DistributionStrategy.ALLREDUCE:
+            if self._rendezvous_server:
                 # If there is no more task, master only send wait task to
                 # the last worker and other workers exit.
                 if len(self._instance_manager.get_alive_workers()) == 1:

@@ -94,7 +94,7 @@ class ElasticdlJobService(object):
         )
 
         # Initialize master service
-        self.master_servicer, self.server = self._create_master_service(args)
+        self.server = self._create_master_service(args)
 
         self._should_stop = False
         self._exit_code = 0
@@ -218,9 +218,10 @@ class ElasticdlJobService(object):
             ],
         )
         master_servicer = MasterServicer(
-            args.minibatch_size,
+            task_manager=self.task_manager,
+            instance_manager=self.instance_manager,
+            rendezvous_server=self.rendezvous_server,
             evaluation_service=self.evaluation_service,
-            master=self,
         )
         elasticdl_pb2_grpc.add_MasterServicer_to_server(
             master_servicer, server
@@ -228,7 +229,7 @@ class ElasticdlJobService(object):
         server.add_insecure_port("[::]:{}".format(args.port))
         self.logger.info("The port of the master server is: %d", args.port)
 
-        return master_servicer, server
+        return server
 
     def _create_instance_manager(self, args):
         instance_manager = None
