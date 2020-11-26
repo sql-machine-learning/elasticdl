@@ -77,7 +77,6 @@ class Master(object):
         Make sure that the created services and components are shut down.
         """
         logger.info("Stopping master")
-
         logger.info("Stopping RPC server")
         self._master_server.stop(None)  # grace = None
         logger.info("RPC server stopped")
@@ -108,7 +107,7 @@ class Master(object):
         else:
             self.elasticdl_job_service = None
 
-    def create_master_grpc_servicer(self, args):
+    def create_master_grpc_service(self, args):
         self._master_server = create_master_service(
             args.port,
             self.task_manager,

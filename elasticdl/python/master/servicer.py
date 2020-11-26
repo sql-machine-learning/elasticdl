@@ -26,6 +26,8 @@ from elasticdl.python.common.log_utils import default_logger as logger
 def create_master_service(
     port, task_manager, pod_manager, rendezvous_server, evaluation_service,
 ):
+    """Create GRPC server
+    """
     logger.info("Creating master service")
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=64),
