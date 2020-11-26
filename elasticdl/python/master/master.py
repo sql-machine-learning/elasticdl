@@ -47,8 +47,10 @@ class Master(object):
         self.pod_manager = PodManager(args)
 
     def create_task_manager_if_needed(self, args):
-        # TODO: set None if args.need_task_manager is False.
-        self.task_manager = TaskManager(args)
+        if args.need_task_manager:
+            self.task_manager = TaskManager(args)
+        else:
+            self.task_manager = None
 
     def create_rendezvous_server_if_needed(self, args):
         if args.distribution_strategy != DistributionStrategy.ALLREDUCE:

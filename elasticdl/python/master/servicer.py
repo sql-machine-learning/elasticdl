@@ -90,23 +90,26 @@ class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
         return res
 
     def report_task_result(self, request, _):
-        if request.err_message:
-            logger.warning("Worker reported error: " + request.err_message)
-            self._task_manager.report(request, False)
-        else:
-            complete_time, task, worker_id = self._task_manager.report(
-                request, True
-            )
-            if task:
-                with self._lock:
-                    self._task_manager.reset_worker_start_task_time(worker_id)
-                    if task.type in [
-                        elasticdl_pb2.TRAINING,
-                        elasticdl_pb2.EVALUATION,
-                    ]:
-                        self._task_manager.record_task_completed_time(
-                            task.type, complete_time
+        if self._task_manager.support_fault_tolerance:
+            if request.err_message:
+                logger.warning("Worker reported error: " + request.err_message)
+                self._task_manager.report(request, False)
+            else:
+                complete_time, task, worker_id = self._task_manager.report(
+                    request, True
+                )
+                if task:
+                    with self._lock:
+                        self._task_manager.reset_worker_start_task_time(
+                            worker_id
                         )
+                        if task.type in [
+                            elasticdl_pb2.TRAINING,
+                            elasticdl_pb2.EVALUATION,
+                        ]:
+                            self._task_manager.record_task_completed_time(
+                                task.type, complete_time
+                            )
         return empty_pb2.Empty()
 
     def report_evaluation_metrics(self, request, _):
