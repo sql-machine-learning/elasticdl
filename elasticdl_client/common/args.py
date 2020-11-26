@@ -144,17 +144,31 @@ def add_train_params(parser):
         parser=parser,
         name="--custom_training_loop",
         default=False,
-        help="If true, users need to define training loop by themselves "
+        help="If true, users need to define training loop by themselves. "
         "Otherwise, users should define a Keras model",
     )
     add_bool_param(
         parser=parser,
         name="--need_elasticdl_job_service",
         default=True,
-        help="If true, users use ElasticDL worker framework "
+        help="If true, users use ElasticDL worker framework. "
         "Otherwise, master only launch pod manager and/or other services to "
         "provide elastic training feature to other DL framework or customized "
         "AllReduce training",
+    )
+    add_bool_param(
+        parser=parser,
+        name="--need_task_manager",
+        default=True,
+        help="If true, master creates a task manager for dynamic sharding. "
+        "Otherwise, no task manager is created",
+    )
+    add_bool_param(
+        parser=parser,
+        name="--task_fault_tolerance",
+        default=True,
+        help="If true, task manager supports fault tolerance, otherwise "
+        "no fault tolerance.",
     )
 
 
