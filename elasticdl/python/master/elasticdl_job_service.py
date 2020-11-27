@@ -12,16 +12,11 @@
 # limitations under the License.
 
 import os
-import time
-from concurrent import futures
 
-import grpc
 from kubernetes.client import V1EnvVar
 
-from elasticdl.proto import elasticdl_pb2_grpc
 from elasticdl.python.common.args import wrap_go_args_with_string
 from elasticdl.python.common.constants import (
-    GRPC,
     InstanceManagerStatus,
     JobType,
     WorkerEnv,
@@ -36,7 +31,6 @@ from elasticdl.python.common.model_utils import (
 from elasticdl.python.master.evaluation_service import EvaluationService
 from elasticdl.python.master.k8s_instance_manager import InstanceManager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
-from elasticdl.python.master.servicer import MasterServicer
 from elasticdl_client.common.args import (
     build_arguments_from_parsed_result,
     parse_envs,
@@ -93,21 +87,10 @@ class ElasticdlJobService(object):
             self.instance_manager._remove_worker
         )
 
-        # Initialize master service
-        self.server = self._create_master_service(args)
-
-        self._should_stop = False
-        self._exit_code = 0
-
     def start(self):
         """
         Start the components one by one. Make sure that it is ready to run.
         """
-        # Start the master GRPC server
-        self.logger.info("Starting master RPC server")
-        self.server.start()
-        self.logger.info("Master RPC server started")
-
         # Start the worker manager if requested
         if self.instance_manager:
             self.instance_manager.update_status(InstanceManagerStatus.PENDING)
@@ -118,45 +101,6 @@ class ElasticdlJobService(object):
                 self.instance_manager.start_parameter_servers()
             self.instance_manager.start_workers()
             self.instance_manager.update_status(InstanceManagerStatus.RUNNING)
-
-    def run(self):
-        """
-        The main loop of master.
-        Dispatch the tasks to the workers until all the tasks are completed.
-        """
-        try:
-            while True:
-                if self.task_manager.finished():
-                    if self.instance_manager:
-                        self.instance_manager.update_status(
-                            InstanceManagerStatus.FINISHED
-                        )
-                    break
-                if self.instance_manager.all_workers_exited:
-                    raise Exception(
-                        "All workers exited but there also are",
-                        "unfinished tasks",
-                    )
-                if self._should_stop:
-                    break
-                time.sleep(30)
-        except KeyboardInterrupt:
-            self.logger.warning("Server stopping")
-        finally:
-            self._stop()
-        return self._exit_code
-
-    def _stop(self):
-        """
-        Stop all the components.
-        Make sure that the created services and components are shut down.
-        """
-        self.logger.info("Stopping master")
-
-        self.logger.info("Stopping RPC server")
-        self.server.stop(None)  # grace = None
-        self.logger.info("RPC server stopped")
-        self.logger.info("Master stopped")
 
     @staticmethod
     def _get_job_type(args):
@@ -204,32 +148,6 @@ class ElasticdlJobService(object):
             self.task_manager.set_evaluation_service(evaluation_service)
 
         return evaluation_service
-
-    def _create_master_service(self, args):
-        self.logger.info("Creating master service")
-        server = grpc.server(
-            futures.ThreadPoolExecutor(max_workers=64),
-            options=[
-                ("grpc.max_send_message_length", GRPC.MAX_SEND_MESSAGE_LENGTH),
-                (
-                    "grpc.max_receive_message_length",
-                    GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
-                ),
-            ],
-        )
-        master_servicer = MasterServicer(
-            task_manager=self.task_manager,
-            instance_manager=self.instance_manager,
-            rendezvous_server=self.rendezvous_server,
-            evaluation_service=self.evaluation_service,
-        )
-        elasticdl_pb2_grpc.add_MasterServicer_to_server(
-            master_servicer, server
-        )
-        server.add_insecure_port("[::]:{}".format(args.port))
-        self.logger.info("The port of the master server is: %d", args.port)
-
-        return server
 
     def _create_instance_manager(self, args):
         instance_manager = None

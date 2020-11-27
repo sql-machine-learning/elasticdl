@@ -11,8 +11,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+
+from elasticdl.python.common.constants import InstanceManagerStatus
+from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
 from elasticdl.python.master.pod_manager import PodManager
+from elasticdl.python.master.servicer import create_master_service
 from elasticdl.python.master.task_manager import TaskManager
 from elasticdl_client.common.constants import DistributionStrategy
 
@@ -23,6 +28,8 @@ class Master(object):
         self.create_task_manager_if_needed(args)
         self.create_rendezvous_server_if_needed(args)
         self.create_elasticdl_job_service_if_needed(args)
+        self.create_master_grpc_service(args)
+        self._exit_code = 0
 
     def prepare(self):
         if self.pod_manager:
@@ -34,13 +41,46 @@ class Master(object):
         if self.elasticdl_job_service:
             self.elasticdl_job_service.start()
 
+        # Start the master GRPC server
+        logger.info("Starting master RPC server")
+        self._master_server.start()
+        logger.info("Master RPC server started")
+
     def run(self):
-        # TODO: Implement run loop here after we have implemented
-        #       pod manager or task manager
-        if self.elasticdl_job_service:
-            return self.elasticdl_job_service.run()
-        else:
-            return -1
+        """
+        The main loop of master.
+        Dispatch the tasks to the workers until all the tasks are completed.
+        """
+        try:
+            while True:
+                if self.task_manager.finished():
+                    if self.pod_manager:
+                        self.pod_manager.update_status(
+                            InstanceManagerStatus.FINISHED
+                        )
+                    break
+                if self.pod_manager.all_workers_exited:
+                    raise Exception(
+                        "All workers exited but there also are",
+                        "unfinished tasks",
+                    )
+                time.sleep(30)
+        except KeyboardInterrupt:
+            self.logger.warning("Server stopping")
+        finally:
+            self.stop()
+        return self._exit_code
+
+    def stop(self):
+        """
+        Stop all the components.
+        Make sure that the created services and components are shut down.
+        """
+        logger.info("Stopping master")
+        logger.info("Stopping RPC server")
+        self._master_server.stop(None)  # grace = None
+        logger.info("RPC server stopped")
+        logger.info("Master stopped")
 
     def create_pod_manager_if_needed(self, args):
         # TODO: set None if args.need_pod_manager is False.
@@ -63,5 +103,29 @@ class Master(object):
             self.elasticdl_job_service = ElasticdlJobService(
                 args, self.task_manager
             )
+            # TODO: Move the initialization of pod manager away from
+            # elasticdl_job_service
+            self.pod_manager = self.elasticdl_job_service.instance_manager
         else:
             self.elasticdl_job_service = None
+
+    def create_master_grpc_service(self, args):
+        # TODO: Move the rendezvous_server out of elasticdl_job_service
+        rendezvous_server = (
+            self.elasticdl_job_service.rendezvous_server
+            if self.elasticdl_job_service
+            else None
+        )
+        evaluation_service = (
+            self.elasticdl_job_service.evaluation_service
+            if self.elasticdl_job_service
+            else None
+        )
+
+        self._master_server = create_master_service(
+            args.port,
+            self.task_manager,
+            self.pod_manager,
+            rendezvous_server,
+            evaluation_service,
+        )
