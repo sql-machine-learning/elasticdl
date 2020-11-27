@@ -41,7 +41,9 @@ class Master(object):
             if self.elasticdl_job_service:
                 self.pod_manager.set_up(
                     worker_command=self.elasticdl_job_service.get_ps_worker_command(),
-                    worker_args=self.elasticdl_job_service.get_worker_args(self._args),
+                    worker_args=self.elasticdl_job_service.get_worker_args(
+                        self._args
+                    ),
                     ps_command=self.elasticdl_job_service.get_ps_worker_command(),
                     ps_args=self.elasticdl_job_service.get_ps_args(self._args),
                 )
