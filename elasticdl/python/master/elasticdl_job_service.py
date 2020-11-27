@@ -22,7 +22,6 @@ from elasticdl.python.common.model_utils import (
     load_module,
 )
 from elasticdl.python.master.evaluation_service import EvaluationService
-from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl_client.common.args import (
     build_arguments_from_parsed_result,
     wrap_python_args_with_string,
@@ -59,20 +58,18 @@ def get_job_type(args):
 
 
 class ElasticdlJobService(object):
-    def __init__(self, args, task_manager, pod_manager=None):
+    def __init__(
+        self, args, task_manager, pod_manager=None, rendezvous_server=None
+    ):
         self.logger = get_logger("master", level=args.log_level.upper())
 
         self.num_ps_pods = args.num_ps_pods
         self.checkpoint_output_path = args.checkpoint_dir
-        self.distribution_strategy = args.distribution_strategy
 
         # Master addr
         master_ip = os.getenv("MY_POD_IP", "localhost")
         self.master_addr = "%s:%d" % (master_ip, args.port)
         self.job_type = get_job_type(args)
-        self.rendezvous_server = None
-        if self.distribution_strategy == DistributionStrategy.ALLREDUCE:
-            self.rendezvous_server = HorovodRendezvousServer(master_ip)
 
         # Initialize the components from the model definition
         model_module = load_module(
@@ -85,7 +82,10 @@ class ElasticdlJobService(object):
             else model_module[args.optimizer]()
         )
 
+        # TODO: Remove task manage and rendezvous server after
+        # refactoring pod manager.
         self.task_manager = task_manager
+        self.rendezvous_server = rendezvous_server
 
         self.evaluation_service = (
             None
@@ -109,10 +109,8 @@ class ElasticdlJobService(object):
         # Start the worker manager if requested
         if self.pod_manager:
             self.pod_manager.update_status(InstanceManagerStatus.PENDING)
-            if self.distribution_strategy == DistributionStrategy.ALLREDUCE:
-                # Start rendezvous server for workers to initialize Horovod
-                self.rendezvous_server.start()
-            else:
+            if self.num_ps_pods > 0:
+                self.logger.info("num ps pods : {}".format(self.num_ps_pods))
                 self.pod_manager.start_parameter_servers()
             self.pod_manager.start_workers()
             self.pod_manager.update_status(InstanceManagerStatus.RUNNING)
