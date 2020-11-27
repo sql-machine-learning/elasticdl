@@ -143,7 +143,7 @@ class Master(object):
         )
         if need_pod_manager and not self.pod_manager:
             raise Exception("pod manager is required.")
-        elif self.elasticdl_job_service and not (
+        if self.elasticdl_job_service and not (
             self.task_manager and self.task_manager.support_fault_tolerance
         ):
             raise Exception(
