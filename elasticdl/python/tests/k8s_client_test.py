@@ -45,6 +45,7 @@ class K8sClientTest(unittest.TestCase):
             % (int(time.time()), random.randint(1, 101)),
             event_callback=tracker.event_cb,
         )
+        c.start_watch_events()
 
         # Start master
         resource = "cpu=100m,memory=64M"
@@ -172,6 +173,7 @@ class K8sClientTest(unittest.TestCase):
             % (int(time.time()), random.randint(1, 101)),
             event_callback=tracker.event_cb,
         )
+        c.start_watch_events()
 
         # Start 1 worker
         resource = "cpu=100m,memory=64M"

@@ -20,7 +20,10 @@ import tensorflow as tf
 
 from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
-from elasticdl.python.master.servicer import MasterServicer
+from elasticdl.python.master.servicer import (
+    MasterServicer,
+    create_master_service,
+)
 from elasticdl.python.tests.test_utils import create_task_manager
 
 
@@ -56,6 +59,10 @@ class ServicerTest(unittest.TestCase):
         self.master = Mock(
             task_d=None, instance_manager=None, distribution_strategy=None,
         )
+
+    def test_create_master_service(self):
+        server = create_master_service(8080, None, None, None, None)
+        self.assertIsNotNone(server)
 
     def test_get_empty_task(self):
         self.master.task_manager = create_task_manager({}, {})

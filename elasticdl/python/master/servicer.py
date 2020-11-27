@@ -13,11 +13,43 @@
 
 
 import threading
+from concurrent import futures
 
+import grpc
 from google.protobuf import empty_pb2
 
 from elasticdl.proto import elasticdl_pb2, elasticdl_pb2_grpc
+from elasticdl.python.common.constants import GRPC
 from elasticdl.python.common.log_utils import default_logger as logger
+
+
+def create_master_service(
+    port, task_manager, pod_manager, rendezvous_server, evaluation_service,
+):
+    """Create GRPC server
+    """
+    logger.info("Creating master service")
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=64),
+        options=[
+            ("grpc.max_send_message_length", GRPC.MAX_SEND_MESSAGE_LENGTH),
+            (
+                "grpc.max_receive_message_length",
+                GRPC.MAX_RECEIVE_MESSAGE_LENGTH,
+            ),
+        ],
+    )
+    master_servicer = MasterServicer(
+        evaluation_service=evaluation_service,
+        task_manager=task_manager,
+        instance_manager=pod_manager,
+        rendezvous_server=rendezvous_server,
+    )
+    elasticdl_pb2_grpc.add_MasterServicer_to_server(master_servicer, server)
+    server.add_insecure_port("[::]:{}".format(port))
+    logger.info("The port of the master server is: %d", port)
+
+    return server
 
 
 class MasterServicer(elasticdl_pb2_grpc.MasterServicer):
