@@ -49,11 +49,10 @@ def get_image_cluster_spec(cluster_spec):
 
 
 def create_pod_manager(
-    args, task_manager, rendezvous_server, worker_args, ps_args,
+    args, task_manager, rendezvous_server,
 ):
     pod_manager = None
 
-    container_command = ["/bin/bash"]
     master_ip = os.getenv("MY_POD_IP", "localhost")
     master_addr = "%s:%d" % (master_ip, args.port)
     if args.num_workers:
@@ -74,16 +73,12 @@ def create_pod_manager(
             rendezvous_server=rendezvous_server,
             job_name=args.job_name,
             image_name=args.worker_image,
-            worker_command=container_command,
-            worker_args=worker_args,
             namespace=args.namespace,
             num_workers=args.num_workers,
             worker_resource_request=args.worker_resource_request,
             worker_resource_limit=args.worker_resource_limit,
             worker_pod_priority=args.worker_pod_priority,
             num_ps=args.num_ps_pods,
-            ps_command=container_command,
-            ps_args=ps_args,
             ps_resource_request=args.ps_resource_request,
             ps_resource_limit=args.ps_resource_limit,
             ps_pod_priority=args.ps_pod_priority,
@@ -106,14 +101,10 @@ class PodManager(object):
         task_manager,
         rendezvous_server=None,
         num_workers=1,
-        worker_command=None,
-        worker_args=None,
         worker_resource_request="cpu=1,memory=4096Mi",
         worker_resource_limit="cpu=1,memory=4096Mi",
         worker_pod_priority=None,
         num_ps=0,
-        ps_command=None,
-        ps_args=None,
         ps_resource_request="cpu=1,memory=4096Mi",
         ps_resource_limit="cpu=1,memory=4096Mi",
         ps_pod_priority=None,
@@ -126,8 +117,6 @@ class PodManager(object):
         **kwargs
     ):
         self._num_workers = num_workers
-        self._worker_command = worker_command
-        self._worker_args = worker_args
         self._worker_resource_request = worker_resource_request
         self._worker_resource_limit = worker_resource_limit
         self._worker_pod_priority = _parse_worker_pod_priority(
@@ -135,8 +124,6 @@ class PodManager(object):
         )
 
         self._num_ps = num_ps
-        self._ps_command = ps_command
-        self._ps_args = ps_args
         self._ps_resource_request = ps_resource_request
         self._ps_resource_limit = ps_resource_limit
         self._ps_pod_priority = ps_pod_priority
@@ -168,6 +155,12 @@ class PodManager(object):
         )
         self._worker_addrs = []
         self._pod_event_callbacks = []
+
+    def set_up(self, worker_command, worker_args, ps_command, ps_args):
+        self._worker_command = worker_command
+        self._worker_args = worker_args
+        self._ps_command = ps_command
+        self._ps_args = ps_args
 
     def start(self):
         pass

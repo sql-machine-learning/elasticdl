@@ -13,32 +13,22 @@
 
 import os
 
-from kubernetes.client import V1EnvVar
-
 from elasticdl.python.common.args import wrap_go_args_with_string
-from elasticdl.python.common.constants import (
-    InstanceManagerStatus,
-    JobType,
-    WorkerEnv,
-)
+from elasticdl.python.common.constants import InstanceManagerStatus, JobType
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
-    get_dict_from_params_str,
     get_module_file_path,
     get_optimizer_info,
     load_module,
 )
 from elasticdl.python.master.evaluation_service import EvaluationService
-from elasticdl.python.master.pod_manager import create_pod_manager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl_client.common.args import (
     build_arguments_from_parsed_result,
-    parse_envs,
     wrap_python_args_with_string,
 )
 from elasticdl_client.common.constants import (
     BashCommandTemplate,
-    ClusterSpecConfig,
     DistributionStrategy,
 )
 
@@ -69,7 +59,7 @@ def get_job_type(args):
 
 
 class ElasticdlJobService(object):
-    def __init__(self, args, task_manager):
+    def __init__(self, args, task_manager, pod_manager):
         self.logger = get_logger("master", level=args.log_level.upper())
 
         self.num_ps_pods = args.num_ps_pods
@@ -106,13 +96,7 @@ class ElasticdlJobService(object):
         )
 
         # Initialize pod manager
-        self.pod_manager = create_pod_manager(
-            args=args,
-            task_manager=self.task_manager,
-            rendezvous_server=self.rendezvous_server,
-            worker_args=self._create_worker_args(args),
-            ps_args=self._create_ps_args(args),
-        )
+        self.pod_manager = pod_manager
 
         self.task_manager.set_task_timeout_callback(
             self.pod_manager._remove_worker
@@ -153,7 +137,11 @@ class ElasticdlJobService(object):
 
         return evaluation_service
 
-    def _create_worker_args(self, args):
+    @staticmethod
+    def get_ps_worker_command():
+        return ["/bin/bash"]
+
+    def get_worker_args(self, args):
         worker_client_command = (
             BashCommandTemplate.SET_PIPEFAIL
             + " python -m elasticdl.python.worker.main"
@@ -170,7 +158,7 @@ class ElasticdlJobService(object):
         worker_args = ["-c", " ".join(worker_args)]
         return worker_args
 
-    def _create_ps_args(self, args):
+    def get_ps_args(self, args):
         if args.distribution_strategy == DistributionStrategy.PARAMETER_SERVER:
             opt_type, opt_args = get_optimizer_info(self._optimizer)
             ps_command = "elasticdl_ps"
