@@ -39,12 +39,13 @@ class Master(object):
             self.rendezvous_server.start()
         if self.pod_manager:
             if self.elasticdl_job_service:
+                command = self.elasticdl_job_service.get_ps_worker_command()
                 self.pod_manager.set_up(
-                    worker_command=self.elasticdl_job_service.get_ps_worker_command(),
+                    worker_command=command,
                     worker_args=self.elasticdl_job_service.get_worker_args(
                         self._args
                     ),
-                    ps_command=self.elasticdl_job_service.get_ps_worker_command(),
+                    ps_command=command,
                     ps_args=self.elasticdl_job_service.get_ps_args(self._args),
                 )
             else:
