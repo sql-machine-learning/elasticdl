@@ -32,7 +32,7 @@ class _ElasticDistributedOptimizer(_DistributedOptimizer):
             params,
             named_parameters,
             compression,
-            batch_num_per_step,
+            backward_passes_per_step,
             op,
             gradient_predivide_factor,
         )
