@@ -34,6 +34,7 @@ class Master(object):
         self._exit_code = 0
 
     def prepare(self):
+        self.validate()
         if self.pod_manager:
             self.pod_manager.start()
         if self.task_manager:
@@ -55,17 +56,18 @@ class Master(object):
         """
         try:
             while True:
-                if self.task_manager.finished():
+                if self.task_manager and self.task_manager.finished():
                     if self.pod_manager:
                         self.pod_manager.update_status(
                             InstanceManagerStatus.FINISHED
                         )
                     break
-                if self.pod_manager.all_workers_exited:
-                    raise Exception(
-                        "All workers exited but there also are",
-                        "unfinished tasks",
-                    )
+                if self.pod_manager and self.pod_manager.all_workers_exited:
+                    if self.task_manager:
+                        raise Exception(
+                            "All workers exited but there also are",
+                            "unfinished tasks",
+                        )
                 time.sleep(30)
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")
@@ -128,3 +130,23 @@ class Master(object):
             self.rendezvous_server,
             evaluation_service,
         )
+
+    def validate(self):
+        """
+        Check if the master has a valid configuration.
+        If not, raise exception.
+        """
+        need_pod_manager = (
+            (self.task_manager and self.task_manager.support_fault_tolerance)
+            or self.rendezvous_server
+            or self.elasticdl_job_service
+        )
+        if need_pod_manager and not self.pod_manager:
+            raise Exception("Pod manager is required.")
+        if self.elasticdl_job_service and not (
+            self.task_manager and self.task_manager.support_fault_tolerance
+        ):
+            raise Exception(
+                "Task manager with fault tolerance is required for ",
+                "elasticdl job service.",
+            )

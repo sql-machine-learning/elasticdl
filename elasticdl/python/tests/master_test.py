@@ -65,3 +65,33 @@ class MasterTest(unittest.TestCase):
             exit_code = master.run()
             master.stop()
             self.assertEqual(exit_code, 0)
+
+    def test_master_validate(self):
+        with tempfile.TemporaryDirectory() as temp_dir_name:
+            create_recordio_file(
+                self._num_records,
+                DatasetName.TEST_MODULE,
+                1,
+                temp_dir=temp_dir_name,
+            )
+            self.arguments["training_data"] = temp_dir_name
+            self.arguments["task_fault_tolerance"] = "False"
+            args = self._get_args()
+            args = parse_master_args(args)
+            master = Master(args)
+            with self.assertRaises(Exception):
+                master.validate()
+
+            self.arguments["need_elasticdl_job_service"] = "False"
+            args = self._get_args()
+            args = parse_master_args(args)
+            master = Master(args)
+            master.validate()
+
+            self.arguments["task_fault_tolerance"] = "True"
+            args = self._get_args()
+            args = parse_master_args(args)
+            master = Master(args)
+            master.pod_manager = None
+            with self.assertRaises(Exception):
+                master.validate()
