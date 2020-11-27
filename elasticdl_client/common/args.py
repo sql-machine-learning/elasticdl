@@ -263,7 +263,7 @@ def add_common_params(parser):
         "low priority. The default value is low",
     )
     parser.add_argument(
-        "--num_ps_pods", type=int, help="Number of PS pods", default=1
+        "--num_ps_pods", type=int, help="Number of PS pods", default=0
     )
     parser.add_argument(
         "--ps_resource_request",

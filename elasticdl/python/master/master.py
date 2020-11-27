@@ -11,12 +11,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import time
 
 from elasticdl.python.common.constants import InstanceManagerStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
 from elasticdl.python.master.pod_manager import PodManager
+from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import create_master_service
 from elasticdl.python.master.task_manager import TaskManager
 from elasticdl_client.common.constants import DistributionStrategy
@@ -101,13 +103,16 @@ class Master(object):
     def create_rendezvous_server_if_needed(self, args):
         if args.distribution_strategy != DistributionStrategy.ALLREDUCE:
             self.rendezvous_server = None
-        # TODO: create HorovodRendezvousServer
-        self.rendezvous_server = None
+        else:
+            master_ip = os.getenv("MY_POD_IP", "localhost")
+            self.rendezvous_server = HorovodRendezvousServer(master_ip)
 
     def create_elasticdl_job_service_if_needed(self, args):
         if args.need_elasticdl_job_service:
+            # TODO: Remove rendezvous server after rafactoring the pod
+            # manager.
             self.elasticdl_job_service = ElasticdlJobService(
-                args, self.task_manager
+                args, self.task_manager, self.rendezvous_server
             )
             # TODO: Move the initialization of pod manager away from
             # elasticdl_job_service
@@ -116,12 +121,6 @@ class Master(object):
             self.elasticdl_job_service = None
 
     def create_master_grpc_service(self, args):
-        # TODO: Move the rendezvous_server out of elasticdl_job_service
-        rendezvous_server = (
-            self.elasticdl_job_service.rendezvous_server
-            if self.elasticdl_job_service
-            else None
-        )
         evaluation_service = (
             self.elasticdl_job_service.evaluation_service
             if self.elasticdl_job_service
@@ -132,7 +131,7 @@ class Master(object):
             args.port,
             self.task_manager,
             self.pod_manager,
-            rendezvous_server,
+            self.rendezvous_server,
             evaluation_service,
         )
 
