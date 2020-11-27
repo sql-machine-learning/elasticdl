@@ -26,16 +26,65 @@ from elasticdl.python.common.constants import PodStatus, WorkerEnv
 from elasticdl.python.common.k8s_client import PodType
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import get_dict_from_params_str
-from elasticdl.python.master.k8s_instance_manager import (
-    _get_addrs,
-    _parse_worker_pod_priority,
-    _should_relaunch_killed_pod,
-)
 from elasticdl_client.common.args import parse_envs
 from elasticdl_client.common.constants import (
     BashCommandTemplate,
     ClusterSpecConfig,
 )
+
+_SERVICE_ADDR_SEP = ","
+
+
+def _get_addrs(num_addrs, addr_get_fn):
+    """
+    Get `num_addrs` addresses and then concatenate
+    them to a comma separated string.
+    """
+    addrs = []
+    for addr_id in range(num_addrs):
+        addrs.append(addr_get_fn(addr_id))
+    return _SERVICE_ADDR_SEP.join(addrs)
+
+
+def _parse_worker_pod_priority(num_workers, worker_pod_priority):
+    res = {}
+    if isinstance(worker_pod_priority, str) and "high=" in worker_pod_priority:
+        try:
+            fraction = float(worker_pod_priority.split("=")[1])
+            high_count = int(num_workers * fraction)
+            for i in range(num_workers):
+                if i < high_count:
+                    res[i] = "high"
+                else:
+                    res[i] = "low"
+        except Exception:
+            logger.warning(
+                "Please check the input worker pod priority format,"
+                "e.g. high=0.5  The config is no use, and ElasticDL sets "
+                "low priority for all worker pods by default."
+            )
+            for i in range(num_workers):
+                res[i] = None
+    else:
+        for i in range(num_workers):
+            res[i] = worker_pod_priority
+    return res
+
+
+def _should_relaunch_killed_pod(evt_obj):
+    """
+    Check whether to relaunch the failed pod according to the kubernetes event.
+    For the killed pods, we will try to relaunch them except the
+    OOM ones.
+    """
+    return (
+        evt_obj.status.container_statuses
+        and evt_obj.status.container_statuses[0].state.terminated
+        and evt_obj.status.container_statuses[0].state.terminated.exit_code
+        == 137
+        and evt_obj.status.container_statuses[0].state.terminated.reason
+        != "OOMKilled"
+    )
 
 
 def get_image_cluster_spec(cluster_spec):
