@@ -13,7 +13,6 @@
 
 import threading
 
-from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.evaluation_utils import EvaluationMetrics
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.tensor_utils import pb_to_ndarray
@@ -64,9 +63,13 @@ class EvaluationService(object):
     """Evaluation service"""
 
     def __init__(
-        self, task_d, eval_steps, eval_only, eval_metrics_fn,
+        self,
+        create_evaluation_tasks_fn,
+        eval_steps,
+        eval_only,
+        eval_metrics_fn,
     ):
-        self._task_d = task_d
+        self._create_evaluation_tasks_fn = create_evaluation_tasks_fn
         self._lock = threading.Lock()
         self._eval_job = None
         self._eval_steps = eval_steps
@@ -75,8 +78,8 @@ class EvaluationService(object):
         self._eval_only = eval_only
         self._eval_metrics_fn = eval_metrics_fn
 
-    def set_master_servicer(self, master_servicer):
-        self._master_servicer = master_servicer
+    def set_model_version_fn(self, get_model_version_fn):
+        self._get_model_version_fn = get_model_version_fn
 
     def init_eval_only_job(self, num_task):
         self._eval_job = EvaluationJob(self._eval_metrics_fn(), -1, num_task)
@@ -86,7 +89,7 @@ class EvaluationService(object):
         Add evaluation task with current model_version.
         """
         if not model_version:
-            model_version = self._master_servicer.get_model_version()
+            model_version = self._get_model_version_fn()
         if model_version == self._last_eval_checkpoint_version:
             return
 
@@ -104,10 +107,9 @@ class EvaluationService(object):
         with self._lock:
             if self._eval_job is None and self._eval_checkpoint_versions:
                 checkpoint_version = self._eval_checkpoint_versions.pop(0)
-                self._task_d.create_tasks(
-                    elasticdl_pb2.EVALUATION, checkpoint_version
+                task_count = self._create_evaluation_tasks_fn(
+                    checkpoint_version
                 )
-                task_count = len(self._task_d._eval_todo)
                 if self._eval_job is None:
                     self._eval_job = EvaluationJob(
                         self._eval_metrics_fn(), checkpoint_version, task_count
@@ -124,7 +126,7 @@ class EvaluationService(object):
         Add step-based evaluation task
         """
         if not model_version:
-            model_version = self._master_servicer.get_model_version()
+            model_version = self._get_model_version_fn()
         if (
             self._eval_steps
             and model_version % self._eval_steps == 0
@@ -149,11 +151,11 @@ class EvaluationService(object):
                 self._eval_job.evaluation_metrics.get_evaluation_summary()
             )
             logger.info(
-                "Evaluation metrics[v=%d]: %s"
+                "Evaluation metrics[step=%d]: %s"
                 % (
                     self._eval_job.model_version
                     if self._eval_job.model_version >= 0
-                    else self._master_servicer.get_model_version(),
+                    else self._get_model_version_fn(),
                     str(evaluation_metrics),
                 )
             )

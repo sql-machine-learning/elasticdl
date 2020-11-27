@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, call
 
 from elasticdl.python.common.k8s_client import PodType
 from elasticdl.python.master.k8s_instance_manager import InstanceManager
-from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.tests.test_utils import create_task_manager
 
 
 class InstanceManagerTest(unittest.TestCase):
@@ -28,7 +28,7 @@ class InstanceManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def test_create_delete_worker_pod(self):
-        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1)
+        task_d = create_task_manager({"f": (0, 10)}, {})
         task_d.recover_tasks = MagicMock()
         instance_manager = InstanceManager(
             task_d,
@@ -39,7 +39,9 @@ class InstanceManagerTest(unittest.TestCase):
             worker_args=["-c", "echo"],
             namespace="default",
             num_workers=2,
+            envs=[],
         )
+        instance_manager.start()
 
         instance_manager.start_workers()
         max_check_num = 20
@@ -77,7 +79,7 @@ class InstanceManagerTest(unittest.TestCase):
         "No Kubernetes cluster available",
     )
     def test_get_worker_addrs(self):
-        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1)
+        task_d = create_task_manager({"f": (0, 10)}, {})
         instance_manager = InstanceManager(
             task_d,
             job_name="test-create-worker-pod-%d-%d"
@@ -87,7 +89,9 @@ class InstanceManagerTest(unittest.TestCase):
             worker_args=["-c", "sleep 5 #"],
             namespace="default",
             num_workers=3,
+            envs=[],
         )
+        instance_manager.start()
 
         instance_manager.start_workers()
         max_check_num = 20
@@ -111,7 +115,7 @@ class InstanceManagerTest(unittest.TestCase):
         Start a pod running a python program destined to fail with
         restart_policy="Never" to test failed_worker_count
         """
-        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1)
+        task_d = create_task_manager({"f": (0, 10)}, {})
         task_d.recover_tasks = MagicMock()
         instance_manager = InstanceManager(
             task_d,
@@ -123,7 +127,9 @@ class InstanceManagerTest(unittest.TestCase):
             namespace="default",
             num_workers=3,
             restart_policy="Never",
+            envs=[],
         )
+        instance_manager.start()
         instance_manager.start_workers()
         max_check_num = 20
         for _ in range(max_check_num):
@@ -152,7 +158,7 @@ class InstanceManagerTest(unittest.TestCase):
     )
     def test_relaunch_worker_pod(self):
         num_workers = 3
-        task_d = _TaskDispatcher({"f": (0, 10)}, {}, {}, 1, 1)
+        task_d = create_task_manager({"f": (0, 10)}, {})
         instance_manager = InstanceManager(
             task_d,
             job_name="test-relaunch-worker-pod-%d-%d"
@@ -162,8 +168,9 @@ class InstanceManagerTest(unittest.TestCase):
             worker_args=["-c", "sleep 10 #"],
             namespace="default",
             num_workers=num_workers,
+            envs=[],
         )
-
+        instance_manager.start()
         instance_manager.start_workers()
 
         max_check_num = 60
@@ -209,7 +216,7 @@ class InstanceManagerTest(unittest.TestCase):
     def test_relaunch_ps_pod(self):
         num_ps = 3
         instance_manager = InstanceManager(
-            task_d=None,
+            task_manager=None,
             job_name="test-relaunch-ps-pod-%d-%d"
             % (int(time.time()), random.randint(1, 101)),
             image_name="ubuntu:18.04",
@@ -218,7 +225,7 @@ class InstanceManagerTest(unittest.TestCase):
             namespace="default",
             num_ps=num_ps,
         )
-
+        instance_manager.start()
         instance_manager.start_parameter_servers()
 
         # Check we also have ps services started
@@ -250,7 +257,7 @@ class InstanceManagerTest(unittest.TestCase):
 
         ps_to_be_removed = all_live_ps.pop()
         all_current_ps.remove(ps_to_be_removed)
-        instance_manager._remove_ps(ps_to_be_removed)
+        instance_manager._remove_parameter_server(ps_to_be_removed)
         # Verify a new ps gets launched
         found = False
         for _ in range(max_check_num):

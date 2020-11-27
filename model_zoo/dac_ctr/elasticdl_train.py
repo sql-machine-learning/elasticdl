@@ -13,7 +13,6 @@
 
 import tensorflow as tf
 
-from elasticdl.python.elasticdl.callbacks import MaxStepsStopping
 from model_zoo.dac_ctr.feature_config import (
     FEATURE_GROUPS,
     FEATURE_NAMES,
@@ -59,12 +58,6 @@ def eval_metrics_fn():
         },
         "probs": {"auc": tf.keras.metrics.AUC()},
     }
-
-
-def callbacks():
-    return [
-        MaxStepsStopping(max_steps=150000),
-    ]
 
 
 def feed(dataset, mode, _):

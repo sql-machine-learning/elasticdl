@@ -11,15 +11,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
+import time
 import unittest
 
 from elasticdl.proto import elasticdl_pb2
-from elasticdl.python.master.task_dispatcher import _TaskDispatcher
+from elasticdl.python.tests.test_utils import create_task_manager
 
 
-class TaskQueueTest(unittest.TestCase):
+class TaskManagerTest(unittest.TestCase):
     def test_create_tasks_with_zero_start_ind(self):
-        task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1)
+        task_d = create_task_manager({"f1": (0, 10), "f2": (0, 10)}, {})
 
         all_tasks = [
             ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
@@ -74,7 +76,7 @@ class TaskQueueTest(unittest.TestCase):
         self.assertTrue(task_d.finished())
 
     def test_create_tasks_with_non_zero_start_ind(self):
-        task_d = _TaskDispatcher({"f1": (0, 10), "f2": (10, 10)}, {}, {}, 3, 1)
+        task_d = create_task_manager({"f1": (0, 10), "f2": (10, 10)}, {})
 
         all_tasks = [
             ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
@@ -97,7 +99,7 @@ class TaskQueueTest(unittest.TestCase):
         self.assertEqual(sorted([v._info() for _, v in got_tasks]), all_tasks)
 
     def test_epoch(self):
-        task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 2)
+        task_d = create_task_manager({"f1": (0, 10), "f2": (0, 10)}, {}, 2)
 
         epoch_tasks = [
             ("f1", 0, 3, elasticdl_pb2.TRAINING, -1),
@@ -123,14 +125,44 @@ class TaskQueueTest(unittest.TestCase):
         )
 
     def test_invoke_train_end_callback(self):
-        task_d = _TaskDispatcher({"f1": (0, 10), "f2": (0, 10)}, {}, {}, 3, 1)
-        task_d.add_deferred_callback_create_train_end_task()
+        task_d = create_task_manager({"f1": (0, 10), "f2": (0, 10)}, {})
+        task_d._add_deferred_callback_create_train_end_task()
         task_d._todo.clear()
         task_d.invoke_deferred_callback()
         self.assertEqual(len(task_d._todo), 1)
         self.assertEqual(
             task_d._todo[0].type, elasticdl_pb2.TRAIN_END_CALLBACK
         )
+
+    def test_check_and_reassign_timeout_tasks(self):
+        task_manager = create_task_manager({"f1": (0, 10), "f2": (0, 10)}, {})
+        task_manager.create_tasks(elasticdl_pb2.TRAINING)
+        task_count = len(task_manager._todo)
+        task_start_time = time.time() - 1000
+        task_manager._worker_start_task_time[0] = task_start_time
+        task_manager._doing[0] = (0, task_manager._todo[0], task_start_time)
+        task_manager._todo.pop()
+
+        threading.Thread(
+            target=task_manager._check_and_reassign_timeout_tasks,
+            name="check_timeout_tasks",
+            daemon=True,
+        ).start()
+        time.sleep(1)  # Sleep 1s to reassgin checkout the timeout task
+        self.assertEqual(len(task_manager._todo), task_count)
+
+    def test_get_average_task_completed_time(self):
+        task_manager = create_task_manager({"f1": (0, 10), "f2": (0, 10)}, {})
+        average_task_completed_time = (
+            task_manager._get_average_task_completed_time()
+        )
+        self.assertEqual(average_task_completed_time, {0: 300, 1: 300})
+        task_manager._task_completed_times[0] = [10] * 21
+        task_manager._task_completed_times[1] = [5] * 21
+        average_task_completed_time = (
+            task_manager._get_average_task_completed_time()
+        )
+        self.assertEqual(average_task_completed_time, {0: 10, 1: 5})
 
 
 if __name__ == "__main__":

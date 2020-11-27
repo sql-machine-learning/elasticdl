@@ -17,13 +17,26 @@ import threading
 import time
 from collections import Counter
 
+from kubernetes.client import V1EnvVar
+
 from elasticdl.python.common import k8s_client as k8s
-from elasticdl.python.common.constants import PodStatus
+from elasticdl.python.common.constants import PodStatus, WorkerEnv
 from elasticdl.python.common.k8s_client import PodType
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl_client.common.constants import BashCommandTemplate
 
 _SERVICE_ADDR_SEP = ","
+
+
+def _get_addrs(num_addrs, addr_get_fn):
+    """
+    Get `num_addrs` addresses and then concatenate
+    them to a comma separated string.
+    """
+    addrs = []
+    for addr_id in range(num_addrs):
+        addrs.append(addr_get_fn(addr_id))
+    return _SERVICE_ADDR_SEP.join(addrs)
 
 
 def _parse_worker_pod_priority(num_workers, worker_pod_priority):
@@ -51,10 +64,26 @@ def _parse_worker_pod_priority(num_workers, worker_pod_priority):
     return res
 
 
+def _should_relaunch_killed_pod(evt_obj):
+    """
+    Check whether to relaunch the failed pod according to the kubernetes event.
+    For the killed pods, we will try to relaunch them except the
+    OOM ones.
+    """
+    return (
+        evt_obj.status.container_statuses
+        and evt_obj.status.container_statuses[0].state.terminated
+        and evt_obj.status.container_statuses[0].state.terminated.exit_code
+        == 137
+        and evt_obj.status.container_statuses[0].state.terminated.reason
+        != "OOMKilled"
+    )
+
+
 class InstanceManager(object):
     def __init__(
         self,
-        task_d,
+        task_manager,
         rendezvous_server=None,
         num_workers=1,
         worker_command=None,
@@ -96,15 +125,15 @@ class InstanceManager(object):
         self._volume = volume
         self._image_pull_policy = image_pull_policy
         self._envs = envs
-        self._task_d = task_d
+        self._task_manager = task_manager
         self._rendezvous_server = rendezvous_server
-        self._next_worker_id = itertools.count().__next__
+        self._next_worker_id_fn = itertools.count().__next__
         self._log_file_path = log_file_path
 
         # Protects followed variables, which are accessed from event_cb.
         self._lock = threading.Lock()
 
-        self._init_worker_pod_status()
+        self._init_job_pod_status()
 
         if disable_relaunch:
             self._k8s_client = k8s.Client(**kwargs)
@@ -114,12 +143,12 @@ class InstanceManager(object):
                 periodic_call_func=self._process_worker,
                 **kwargs
             )
-        self._ps_addrs = self._get_addrs(
+        self._ps_addrs = _get_addrs(
             self._num_ps, self._k8s_client.get_ps_service_address
         )
         self._worker_addrs = []
 
-    def _init_worker_pod_status(self):
+    def _init_job_pod_status(self):
         # worker id to (pod name, ip, phase) mapping
         # phase: None/Pending/Running/Succeeded/Failed/Unknown
         #   None: worker was just launched, haven't received event yet.
@@ -154,7 +183,6 @@ class InstanceManager(object):
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
         bash_command = self._worker_args[1]
-        bash_command += " --worker_id {}".format(worker_id)
         if self._ps_addrs:
             bash_command += " --ps_addrs {}".format(self._ps_addrs)
         if self._log_file_path:
@@ -164,6 +192,8 @@ class InstanceManager(object):
         for extra_arg in self._worker_args[2:]:
             bash_command += " {}".format(extra_arg)
         worker_args = [self._worker_args[0], bash_command]
+        envs = copy.deepcopy(self._envs)
+        envs.append(V1EnvVar(name=WorkerEnv.WORKER_ID, value=str(worker_id)))
         with self._lock:
             pod = self._k8s_client.create_worker(
                 worker_id=worker_id,
@@ -177,7 +207,7 @@ class InstanceManager(object):
                 args=worker_args,
                 restart_policy=self._restart_policy,
                 ps_addrs=self._ps_addrs,
-                envs=copy.deepcopy(self._envs),
+                envs=envs,
             )
             if pod:
                 name = pod.metadata.name
@@ -204,6 +234,10 @@ class InstanceManager(object):
                     break
                 # TODO: should we fail the job when ps pods fail to
                 #       create for a long time?
+                logger.error(
+                    "Creating PS fails and will try again."
+                    "ps_id: {}, ps_args: {}.".format(ps_id, ps_args)
+                )
                 time.sleep(15)
             name = pod.metadata.name
             self._ps_pod_name_to_id[name] = ps_id
@@ -224,12 +258,6 @@ class InstanceManager(object):
             envs=copy.deepcopy(self._envs),
         )
 
-    def _get_addrs(self, num_addrs, addr_get_fn):
-        addrs = []
-        for addr_id in range(num_addrs):
-            addrs.append(addr_get_fn(addr_id))
-        return _SERVICE_ADDR_SEP.join(addrs)
-
     def update_status(self, status):
         master_name = self._k8s_client.get_master_pod_name()
         self._k8s_client.patch_labels_to_pod(
@@ -238,7 +266,7 @@ class InstanceManager(object):
 
     def start_workers(self):
         for _ in range(self._num_workers):
-            self._start_worker(self._next_worker_id())
+            self._start_worker(self._next_worker_id_fn())
 
     def start_parameter_servers(self):
         for i in range(self._num_ps):
@@ -254,7 +282,7 @@ class InstanceManager(object):
         # TODO: change _k8s_client to accept pod name instead of worker id.
         self._k8s_client.delete_worker(worker_id)
 
-    def _remove_ps(self, ps_id):
+    def _remove_parameter_server(self, ps_id):
         logger.info("Removing PS: %d", ps_id)
         with self._lock:
             if ps_id not in self._ps_pods_phase:
@@ -317,26 +345,17 @@ class InstanceManager(object):
             if pod_name in self._failed_pods:
                 return
 
+            # For the failed worker, reassign the its tasks to others.
+            # Check whether to relaunch the worker.
             relaunch_failed_pod = False
             if evt_type == "MODIFIED" and phase == "Failed":
                 self._failed_pods.append(pod_name)
                 worker_id = self._worker_pod_name_to_id.get(pod_name, None)
                 if worker_id is not None:
                     # Recover tasks when the worker failed
-                    self._task_d.recover_tasks(worker_id)
+                    self._task_manager.recover_tasks(worker_id)
 
-                if (
-                    evt_obj.status.container_statuses
-                    and evt_obj.status.container_statuses[0].state.terminated
-                    and evt_obj.status.container_statuses[
-                        0
-                    ].state.terminated.exit_code
-                    == 137
-                    and evt_obj.status.container_statuses[
-                        0
-                    ].state.terminated.reason
-                    != "OOMKilled"
-                ):
+                if _should_relaunch_killed_pod(evt_obj):
                     relaunch_failed_pod = True
                     logger.info(
                         "Pod %s is killed with reason %s."
@@ -349,6 +368,7 @@ class InstanceManager(object):
                     )
 
             if pod_name in self._worker_pod_name_to_id:
+                # If the pod related with the event is a worker
                 worker_id = self._worker_pod_name_to_id.get(pod_name)
                 self._worker_pods_ip_phase[worker_id] = (
                     pod_name,
@@ -365,9 +385,10 @@ class InstanceManager(object):
                         and phase != "Succeeded"
                     )
                 else:
-                    self.check_all_worker_exited()
+                    self.check_all_workers_exited()
 
             elif pod_name in self._ps_pod_name_to_id:
+                # If the pod related with the event is a PS
                 ps_id = self._ps_pod_name_to_id.get(pod_name)
                 self._ps_pods_phase[ps_id] = (pod_name, phase)
                 if evt_type == "DELETED" or relaunch_failed_pod:
@@ -384,7 +405,7 @@ class InstanceManager(object):
 
         if relaunch_worker and worker_id >= 0:
             logger.info("Relaunching worker.")
-            new_worker_id = self._next_worker_id()
+            new_worker_id = self._next_worker_id_fn()
             with self._lock:
                 self._worker_pod_priority[
                     new_worker_id
@@ -397,9 +418,9 @@ class InstanceManager(object):
             # tolerance.
             self._start_ps(ps_id)
 
-    def check_all_worker_exited(self):
+    def check_all_workers_exited(self):
         workers_exited = []
-        for (pod_name, _, phase,) in self._worker_pods_ip_phase.values():
+        for (_, _, phase,) in self._worker_pods_ip_phase.values():
             workers_exited.append(
                 phase == PodStatus.FAILED or phase == PodStatus.SUCCEEDED
             )
@@ -439,3 +460,6 @@ class InstanceManager(object):
     @property
     def ps_addrs(self):
         return self._ps_addrs
+
+    def start(self):
+        self._k8s_client.start_watch_events()

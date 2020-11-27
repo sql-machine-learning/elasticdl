@@ -1,4 +1,3 @@
-#!/bin/bash
 # Copyright 2020 The ElasticDL Authors. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,15 +11,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Pull base image quietly.  We might want to use
-# tensorflow/tensorflow:2.1.0-gpu-py3 for GPU-accelerated deep learning.
-BASE_IMAGE=tensorflow/tensorflow:2.1.2
-docker pull --quiet "$BASE_IMAGE"
 
-docker build --target dev -t elasticdl:dev \
-       -f elasticdl/docker/Dockerfile \
-       --build-arg BASE_IMAGE="$BASE_IMAGE" .
+class PodManager(object):
+    def __init__(self, args):
+        self._pod_event_callbacks = []
 
-docker build --target allreduce -t elasticdl:dev_allreduce \
-       -f elasticdl/docker/Dockerfile \
-       --build-arg BASE_IMAGE="$BASE_IMAGE" .
+    def start(self):
+        pass
+
+    def add_pod_event_callback(self, pod_event_callback):
+        self._pod_event_callbacks.append(pod_event_callback)

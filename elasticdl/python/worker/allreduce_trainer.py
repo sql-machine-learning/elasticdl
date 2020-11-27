@@ -17,12 +17,12 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.python.framework.errors_impl import UnknownError
 
-from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.worker.allreduce_controller import (
+from elasticdl.python.allreduce.base_controller import (
     DEFAULT_MAX_ALLREDUCE_RETRY_NUM,
     DEFAULT_STEPS_TO_CHECK_RENDEZVOUS,
     RendevousManager,
 )
+from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.worker.trainer import Trainer
 
 try:
@@ -34,10 +34,10 @@ except ImportError:
 
 
 class AllReduceTrainer(Trainer):
-    def __init__(self, master_client, master_addr, model):
+    def __init__(self, master_client, model):
         if not hvd:
             raise RuntimeError("Horovod is not installed for AllReduce")
-        self._rendezvous_manager = RendevousManager(master_client, master_addr)
+        self._rendezvous_manager = RendevousManager(master_client)
         self._model = model
         self._loss = model.loss
         self._need_broadcast = True
