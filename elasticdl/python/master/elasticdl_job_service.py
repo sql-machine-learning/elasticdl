@@ -59,7 +59,7 @@ def get_job_type(args):
 
 
 class ElasticdlJobService(object):
-    def __init__(self, args, task_manager, pod_manager):
+    def __init__(self, args, task_manager, pod_manager=None):
         self.logger = get_logger("master", level=args.log_level.upper())
 
         self.num_ps_pods = args.num_ps_pods
