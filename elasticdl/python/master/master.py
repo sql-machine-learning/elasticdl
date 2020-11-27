@@ -52,19 +52,30 @@ class Master(object):
         Dispatch the tasks to the workers until all the tasks are completed.
         """
         try:
-            while True:
-                if self.task_manager.finished():
-                    if self.pod_manager:
-                        self.pod_manager.update_status(
-                            InstanceManagerStatus.FINISHED
-                        )
-                    break
-                if self.pod_manager.all_workers_exited:
-                    raise Exception(
-                        "All workers exited but there also are",
-                        "unfinished tasks",
-                    )
-                time.sleep(30)
+            no_loop_run = not self.task_manager and not self.pod_manager
+            if no_loop_run:
+                logger.warning(
+                    "Nothing to do as neither pod manager nor "
+                    "task manager is started, stopping"
+                )
+            else:
+                while True:
+                    if self.task_manager and self.task_manager.finished():
+                        if self.pod_manager:
+                            self.pod_manager.update_status(
+                                InstanceManagerStatus.FINISHED
+                            )
+                        break
+                    if (
+                        self.pod_manager
+                        and self.pod_manager.all_workers_exited
+                    ):
+                        if self.task_manager:
+                            raise Exception(
+                                "All workers exited but there also are",
+                                "unfinished tasks",
+                            )
+                    time.sleep(30)
         except KeyboardInterrupt:
             self.logger.warning("Server stopping")
         finally:
