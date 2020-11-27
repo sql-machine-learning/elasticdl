@@ -163,7 +163,13 @@ class PodManager(object):
         self._ps_command = None
         self._ps_args = None
 
-    def set_up(self, worker_command, worker_args, ps_command, ps_args):
+    def set_up(
+        self,
+        worker_command=None,
+        worker_args=None,
+        ps_command=None,
+        ps_args=None,
+    ):
         self._worker_command = worker_command
         self._worker_args = worker_args
         self._ps_command = ps_command
