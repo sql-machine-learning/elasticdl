@@ -88,7 +88,6 @@ class MasterTest(unittest.TestCase):
             master = Master(args)
             master.validate()
 
-            self.arguments["task_fault_tolerance"] = "False"
             self.arguments["task_fault_tolerance"] = "True"
             args = self._get_args()
             args = parse_master_args(args)
