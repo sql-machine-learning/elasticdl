@@ -39,10 +39,12 @@ class Master(object):
         self._exit_code = 0
 
     def prepare(self):
-        if self.task_manager:
-            self.task_manager.start()
-        if self.rendezvous_server:
-            self.rendezvous_server.start()
+        # Composite the components
+        if self.task_manager and self.pod_manager:
+            self.task_manager.set_task_timeout_callback(
+                self.pod_manager._remove_worker
+            )
+
         if self.pod_manager:
             if self.elasticdl_job_service:
                 command = self.elasticdl_job_service.get_ps_worker_command()
@@ -58,6 +60,13 @@ class Master(object):
                 # TODO: Get the Pod arguments from the input
                 # args directly
                 pass
+
+        # Start the components one by one
+        if self.task_manager:
+            self.task_manager.start()
+        if self.rendezvous_server:
+            self.rendezvous_server.start()
+        if self.pod_manager:
             self.pod_manager.start()
         if self.elasticdl_job_service:
             self.elasticdl_job_service.start()
@@ -104,7 +113,7 @@ class Master(object):
         logger.info("Master stopped")
 
     def create_pod_manager_if_needed(self, args):
-        if args.need_task_manager:
+        if args.need_pod_manager:
             self.pod_manager = create_pod_manager(
                 args, self.task_manager, self.rendezvous_server
             )

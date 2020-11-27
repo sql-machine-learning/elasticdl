@@ -165,6 +165,13 @@ def add_train_params(parser):
     )
     add_bool_param(
         parser=parser,
+        name="--need_pod_manager",
+        default=True,
+        help="If true, master creates a pod manager to maintain the "
+        "cluster for the job. Otherwise, no pod manager is created",
+    )
+    add_bool_param(
+        parser=parser,
         name="--task_fault_tolerance",
         default=True,
         help="If true, task manager supports fault tolerance, otherwise "

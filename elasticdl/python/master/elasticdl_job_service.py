@@ -86,6 +86,7 @@ class ElasticdlJobService(object):
         # refactoring pod manager.
         self.task_manager = task_manager
         self.rendezvous_server = rendezvous_server
+        self.pod_manager = pod_manager
 
         self.evaluation_service = (
             None
@@ -93,13 +94,6 @@ class ElasticdlJobService(object):
             else self._create_evaluation_service(
                 model_module[args.eval_metrics_fn], args.evaluation_steps
             )
-        )
-
-        # Initialize pod manager
-        self.pod_manager = pod_manager
-
-        self.task_manager.set_task_timeout_callback(
-            self.pod_manager._remove_worker
         )
 
     def start(self):
