@@ -99,9 +99,12 @@ class Master(object):
 
     def create_pod_manager_if_needed(self, args):
         # TODO: set None if args.need_pod_manager is False.
-        self.pod_manager = create_pod_manager(
-            args, self.task_manager, self.rendezvous_server
-        )
+        if args.need_task_manager:
+            self.pod_manager = create_pod_manager(
+                args, self.task_manager, self.rendezvous_server
+            )
+        else:
+            self.pod_manager = None
 
     def create_task_manager_if_needed(self, args):
         if args.need_task_manager:
