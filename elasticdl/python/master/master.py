@@ -35,8 +35,6 @@ class Master(object):
 
     def prepare(self):
         self.validate()
-        if not self.is_valid():
-            return
         if self.pod_manager:
             self.pod_manager.start()
         if self.task_manager:
@@ -56,8 +54,6 @@ class Master(object):
         The main loop of master.
         Dispatch the tasks to the workers until all the tasks are completed.
         """
-        if not self.is_valid():
-            return self._exit_code
         try:
             while True:
                 if self.task_manager and self.task_manager.finished():
@@ -138,7 +134,7 @@ class Master(object):
     def validate(self):
         """
         Check if the master has a valid configuration.
-        If not, set _exit_code as non-zero.
+        If not, raise exception.
         """
         need_pod_manager = (
             (self.task_manager and self.task_manager.support_fault_tolerance)
@@ -146,16 +142,11 @@ class Master(object):
             or self.elasticdl_job_service
         )
         if need_pod_manager and not self.pod_manager:
-            logger.error("pod manager is required.")
-            self._exit_code = -1
+            raise Exception("pod manager is required.")
         elif self.elasticdl_job_service and not (
             self.task_manager and self.task_manager.support_fault_tolerance
         ):
-            logger.error(
-                "task manager with fault tolerance is required for "
-                "elasticdl job service"
+            raise Exception(
+                "task manager with fault tolerance is required for ",
+                "elasticdl job service",
             )
-            self._exit_code = -2
-
-    def is_valid(self):
-        return self._exit_code == 0
