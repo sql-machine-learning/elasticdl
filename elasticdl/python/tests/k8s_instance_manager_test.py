@@ -18,11 +18,11 @@ import unittest
 from unittest.mock import MagicMock, call
 
 from elasticdl.python.common.k8s_client import PodType
-from elasticdl.python.master.pod_manager import PodManager
+from elasticdl.python.master.k8s_instance_manager import PodManager
 from elasticdl.python.tests.test_utils import create_task_manager
 
 
-class InstanceManagerTest(unittest.TestCase):
+class PodManagerTest(unittest.TestCase):
     @unittest.skipIf(
         os.environ.get("K8S_TESTS", "True") == "False",
         "No Kubernetes cluster available",
