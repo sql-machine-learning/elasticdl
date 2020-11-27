@@ -98,7 +98,6 @@ class Master(object):
         logger.info("Master stopped")
 
     def create_pod_manager_if_needed(self, args):
-        # TODO: set None if args.need_pod_manager is False.
         if args.need_task_manager:
             self.pod_manager = create_pod_manager(
                 args, self.task_manager, self.rendezvous_server
