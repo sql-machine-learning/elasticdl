@@ -17,7 +17,7 @@ import time
 from elasticdl.python.common.constants import InstanceManagerStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
-from elasticdl.python.master.pod_manager import PodManager
+from elasticdl.python.master.k8s_instance_manager import create_pod_manager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import create_master_service
 from elasticdl.python.master.task_manager import TaskManager
@@ -26,21 +26,48 @@ from elasticdl_client.common.constants import DistributionStrategy
 
 class Master(object):
     def __init__(self, args):
-        self.create_pod_manager_if_needed(args)
         self.create_task_manager_if_needed(args)
         self.create_rendezvous_server_if_needed(args)
+        # TODO: At the present, the creation of PodManager requires TaskManager
+        # and RendezvousServer, so we move the create method after these
+        # two. After the next decouple step, there is no dependency between
+        # these create method calls.
+        self.create_pod_manager_if_needed(args)
         self.create_elasticdl_job_service_if_needed(args)
         self.create_master_grpc_service(args)
+        self._args = args
         self._exit_code = 0
 
     def prepare(self):
         self.validate()
+        # Composite the components
+        if self.task_manager and self.pod_manager:
+            self.task_manager.set_task_timeout_callback(
+                self.pod_manager._remove_worker
+            )
         if self.pod_manager:
-            self.pod_manager.start()
+            if self.elasticdl_job_service:
+                command = self.elasticdl_job_service.get_ps_worker_command()
+                self.pod_manager.set_up(
+                    worker_command=command,
+                    worker_args=self.elasticdl_job_service.get_worker_args(
+                        self._args
+                    ),
+                    ps_command=command,
+                    ps_args=self.elasticdl_job_service.get_ps_args(self._args),
+                )
+            else:
+                # TODO: Get the Pod arguments from the input
+                # args directly
+                pass
+
+        # Start the components one by one
         if self.task_manager:
             self.task_manager.start()
         if self.rendezvous_server:
             self.rendezvous_server.start()
+        if self.pod_manager:
+            self.pod_manager.start()
         if self.elasticdl_job_service:
             self.elasticdl_job_service.start()
 
@@ -87,8 +114,12 @@ class Master(object):
         logger.info("Master stopped")
 
     def create_pod_manager_if_needed(self, args):
-        # TODO: set None if args.need_pod_manager is False.
-        self.pod_manager = PodManager(args)
+        if args.need_pod_manager:
+            self.pod_manager = create_pod_manager(
+                args, self.task_manager, self.rendezvous_server
+            )
+        else:
+            self.pod_manager = None
 
     def create_task_manager_if_needed(self, args):
         if args.need_task_manager:
@@ -108,11 +139,11 @@ class Master(object):
             # TODO: Remove rendezvous server after rafactoring the pod
             # manager.
             self.elasticdl_job_service = ElasticdlJobService(
-                args, self.task_manager, self.rendezvous_server
+                args=args,
+                task_manager=self.task_manager,
+                pod_manager=self.pod_manager,
+                rendezvous_server=self.rendezvous_server,
             )
-            # TODO: Move the initialization of pod manager away from
-            # elasticdl_job_service
-            self.pod_manager = self.elasticdl_job_service.instance_manager
         else:
             self.elasticdl_job_service = None
 

@@ -11,8 +11,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import copy
 import itertools
+import os
 import threading
 import time
 from collections import Counter
@@ -23,7 +25,12 @@ from elasticdl.python.common import k8s_client as k8s
 from elasticdl.python.common.constants import PodStatus, WorkerEnv
 from elasticdl.python.common.k8s_client import PodType
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl_client.common.constants import BashCommandTemplate
+from elasticdl.python.common.model_utils import get_dict_from_params_str
+from elasticdl_client.common.args import parse_envs
+from elasticdl_client.common.constants import (
+    BashCommandTemplate,
+    ClusterSpecConfig,
+)
 
 _SERVICE_ADDR_SEP = ","
 
@@ -80,20 +87,76 @@ def _should_relaunch_killed_pod(evt_obj):
     )
 
 
-class InstanceManager(object):
+def get_image_cluster_spec(cluster_spec):
+    if cluster_spec:
+        filename = os.path.basename(cluster_spec)
+        image_cluster_spec = os.path.join(
+            ClusterSpecConfig.CLUSTER_SPEC_DIR, filename
+        )
+        return image_cluster_spec
+    return cluster_spec
+
+
+# TODO: After decouple PodManager with TaskManager and RendezvousServer
+# with PodEventCallback, we can remove these two parameter from this
+# factory method and the __init__ method of PodManager.
+def create_pod_manager(
+    args, task_manager, rendezvous_server,
+):
+    pod_manager = None
+
+    master_ip = os.getenv("MY_POD_IP", "localhost")
+    master_addr = "%s:%d" % (master_ip, args.port)
+    if args.num_workers:
+        assert args.worker_image, "Worker image cannot be empty"
+
+        env_dict = parse_envs(args.envs)
+        env = []
+        for key in env_dict:
+            env.append(V1EnvVar(name=key, value=env_dict[key]))
+        env.append(V1EnvVar(name=WorkerEnv.MASTER_ADDR, value=master_addr))
+
+        kwargs = get_dict_from_params_str(args.aux_params)
+        disable_relaunch = kwargs.get("disable_relaunch", False)
+        cluster_spec = get_image_cluster_spec(args.cluster_spec)
+
+        pod_manager = PodManager(
+            task_manager=task_manager,
+            rendezvous_server=rendezvous_server,
+            job_name=args.job_name,
+            image_name=args.worker_image,
+            namespace=args.namespace,
+            num_workers=args.num_workers,
+            worker_resource_request=args.worker_resource_request,
+            worker_resource_limit=args.worker_resource_limit,
+            worker_pod_priority=args.worker_pod_priority,
+            num_ps=args.num_ps_pods,
+            ps_resource_request=args.ps_resource_request,
+            ps_resource_limit=args.ps_resource_limit,
+            ps_pod_priority=args.ps_pod_priority,
+            volume=args.volume,
+            image_pull_policy=args.image_pull_policy,
+            restart_policy=args.restart_policy,
+            cluster_spec=cluster_spec,
+            cluster_spec_json=args.cluster_spec_json,
+            envs=env,
+            disable_relaunch=disable_relaunch,
+            log_file_path=args.log_file_path,
+        )
+
+    return pod_manager
+
+
+class PodManager(object):
     def __init__(
         self,
         task_manager,
         rendezvous_server=None,
         num_workers=1,
-        worker_command=None,
-        worker_args=None,
         worker_resource_request="cpu=1,memory=4096Mi",
         worker_resource_limit="cpu=1,memory=4096Mi",
         worker_pod_priority=None,
         num_ps=0,
-        ps_command=None,
-        ps_args=None,
         ps_resource_request="cpu=1,memory=4096Mi",
         ps_resource_limit="cpu=1,memory=4096Mi",
         ps_pod_priority=None,
@@ -106,8 +169,6 @@ class InstanceManager(object):
         **kwargs
     ):
         self._num_workers = num_workers
-        self._worker_command = worker_command
-        self._worker_args = worker_args
         self._worker_resource_request = worker_resource_request
         self._worker_resource_limit = worker_resource_limit
         self._worker_pod_priority = _parse_worker_pod_priority(
@@ -115,8 +176,6 @@ class InstanceManager(object):
         )
 
         self._num_ps = num_ps
-        self._ps_command = ps_command
-        self._ps_args = ps_args
         self._ps_resource_request = ps_resource_request
         self._ps_resource_limit = ps_resource_limit
         self._ps_pod_priority = ps_pod_priority
@@ -147,6 +206,29 @@ class InstanceManager(object):
             self._num_ps, self._k8s_client.get_ps_service_address
         )
         self._worker_addrs = []
+        self._pod_event_callbacks = []
+        self._worker_command = None
+        self._worker_args = None
+        self._ps_command = None
+        self._ps_args = None
+
+    def set_up(
+        self,
+        worker_command=None,
+        worker_args=None,
+        ps_command=None,
+        ps_args=None,
+    ):
+        self._worker_command = worker_command
+        self._worker_args = worker_args
+        self._ps_command = ps_command
+        self._ps_args = ps_args
+
+    def start(self):
+        self._k8s_client.start_watch_events()
+
+    def add_pod_event_callback(self, pod_event_callback):
+        self._pod_event_callbacks.append(pod_event_callback)
 
     def _init_job_pod_status(self):
         # worker id to (pod name, ip, phase) mapping
@@ -319,6 +401,9 @@ class InstanceManager(object):
         else:
             return None
 
+    # TODO: Refactor the process of _event_cb to publish
+    # PodStarted / PodSucceded / PodFailed / PodDeleted
+    # events and invoke the corresponding callbacks.
     def _event_cb(self, event):
         evt_obj = event.get("object")
         evt_type = event.get("type")
@@ -460,6 +545,3 @@ class InstanceManager(object):
     @property
     def ps_addrs(self):
         return self._ps_addrs
-
-    def start(self):
-        self._k8s_client.start_watch_events()
