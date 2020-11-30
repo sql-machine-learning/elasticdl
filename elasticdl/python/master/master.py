@@ -17,7 +17,7 @@ import time
 from elasticdl.python.common.constants import InstanceManagerStatus
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.master.elasticdl_job_service import ElasticdlJobService
-from elasticdl.python.master.k8s_instance_manager import create_pod_manager
+from elasticdl.python.master.pod_manager import create_pod_manager
 from elasticdl.python.master.rendezvous_server import HorovodRendezvousServer
 from elasticdl.python.master.servicer import create_master_service
 from elasticdl.python.master.task_manager import TaskManager
