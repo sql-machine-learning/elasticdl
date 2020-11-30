@@ -14,7 +14,7 @@
 import os
 
 from elasticdl.python.common.args import wrap_go_args_with_string
-from elasticdl.python.common.constants import InstanceManagerStatus, JobType
+from elasticdl.python.common.constants import JobType
 from elasticdl.python.common.log_utils import get_logger
 from elasticdl.python.common.model_utils import (
     get_module_file_path,
@@ -58,9 +58,7 @@ def get_job_type(args):
 
 
 class ElasticdlJobService(object):
-    def __init__(
-        self, args, task_manager, pod_manager=None, rendezvous_server=None
-    ):
+    def __init__(self, args, task_manager, rendezvous_server=None):
         self.logger = get_logger("master", level=args.log_level.upper())
 
         self.num_ps_pods = args.num_ps_pods
@@ -86,7 +84,6 @@ class ElasticdlJobService(object):
         # refactoring pod manager.
         self.task_manager = task_manager
         self.rendezvous_server = rendezvous_server
-        self.pod_manager = pod_manager
 
         self.evaluation_service = (
             None
@@ -97,17 +94,8 @@ class ElasticdlJobService(object):
         )
 
     def start(self):
-        """
-        Start the components one by one. Make sure that it is ready to run.
-        """
+        self.logger.info("ElasticDL job service starts")
         # Start the worker manager if requested
-        if self.pod_manager:
-            self.pod_manager.update_status(InstanceManagerStatus.PENDING)
-            if self.num_ps_pods > 0:
-                self.logger.info("num ps pods : {}".format(self.num_ps_pods))
-                self.pod_manager.start_parameter_servers()
-            self.pod_manager.start_workers()
-            self.pod_manager.update_status(InstanceManagerStatus.RUNNING)
 
     def _create_evaluation_service(self, eval_func, evaluation_steps):
         evaluation_service = None
