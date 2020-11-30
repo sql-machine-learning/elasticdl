@@ -26,6 +26,7 @@ from elasticdl.python.common.constants import PodStatus, WorkerEnv
 from elasticdl.python.common.k8s_client import PodType
 from elasticdl.python.common.log_utils import default_logger as logger
 from elasticdl.python.common.model_utils import get_dict_from_params_str
+from elasticdl.python.master.pod_event_callbacks import ClusterContext, PodInfo
 from elasticdl_client.common.args import parse_envs
 from elasticdl_client.common.constants import (
     BashCommandTemplate,
@@ -430,15 +431,26 @@ class PodManager(object):
             if pod_name in self._failed_pods:
                 return
 
+            # Notify each PodEventCallback that PodStarted is fired
+            if evt_type in ["ADDED", "MODIFIED"] and phase == "Running":
+                for callback in self._pod_event_callbacks:
+                    callback.on_pod_started(
+                        PodInfo(id=None, name=pod_name, ip=pod_ip),
+                        ClusterContext(pod_manager=self),
+                    )
+
             # For the failed worker, reassign the its tasks to others.
             # Check whether to relaunch the worker.
             relaunch_failed_pod = False
             if evt_type == "MODIFIED" and phase == "Failed":
                 self._failed_pods.append(pod_name)
                 worker_id = self._worker_pod_name_to_id.get(pod_name, None)
-                if worker_id is not None:
-                    # Recover tasks when the worker failed
-                    self._task_manager.recover_tasks(worker_id)
+                # Notify each PodEventCallback that PodFailed is fired
+                for callback in self._pod_event_callbacks:
+                    callback.on_pod_failed(
+                        PodInfo(id=worker_id, name=pod_name, ip=pod_ip),
+                        ClusterContext(pod_manager=self),
+                    )
 
                 if _should_relaunch_killed_pod(evt_obj):
                     relaunch_failed_pod = True
@@ -472,6 +484,13 @@ class PodManager(object):
                 else:
                     self.check_all_workers_exited()
 
+                if evt_type == "DELETED":
+                    # Notify each PodEventCallback that PodDeleted is fired
+                    for callback in self._pod_event_callbacks:
+                        callback.on_pod_deleted(
+                            PodInfo(id=worker_id, name=pod_name, ip=pod_ip),
+                            ClusterContext(pod_manager=self),
+                        )
             elif pod_name in self._ps_pod_name_to_id:
                 # If the pod related with the event is a PS
                 ps_id = self._ps_pod_name_to_id.get(pod_name)
@@ -483,10 +502,6 @@ class PodManager(object):
             else:
                 logger.error("Unknown pod name: %s" % pod_name)
                 return
-
-            if self._rendezvous_server:
-                self._worker_addrs = self.get_alive_worker_addr()
-                self._rendezvous_server.set_worker_hosts(self._worker_addrs)
 
         if relaunch_worker and worker_id >= 0:
             logger.info("Relaunching worker.")
