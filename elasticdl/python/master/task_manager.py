@@ -448,6 +448,8 @@ class TaskManager(object):
         if not self.support_fault_tolerance:
             return
 
+        logger.info("Recover the tasks assigned to worker %d" % worker_id)
+
         with self._lock:
             ids = [
                 id
