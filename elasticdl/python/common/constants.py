@@ -100,3 +100,4 @@ class HorovodEnv(object):
 class WorkerEnv(object):
     MASTER_ADDR = "MASTER_ADDR"
     WORKER_ID = "WORKER_ID"
+    WORKER_NUM = "WORKER_NUM"

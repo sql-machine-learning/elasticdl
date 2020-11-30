@@ -17,10 +17,14 @@ from contextlib import contextmanager
 import torch
 from horovod.torch.compression import Compression
 from horovod.torch.mpi_ops import Average, allreduce_async_, size, synchronize
-from elasticdl.python.common.log_utils import default_logger as logger
 
 
 class _ElasticDistributedOptimizer(torch.optim.Optimizer):
+    """ ElasticDistributedOptimizer refers to _DistributedOptimizer in Horovod.
+    But it modifies the `step`, `zero_grad` and `_allreduce_grad_async` to
+    be able to keep the fixed global batch size when the worker number changes.
+    """
+
     def __init__(
         self,
         params,
@@ -29,7 +33,7 @@ class _ElasticDistributedOptimizer(torch.optim.Optimizer):
         backward_passes_per_step=1,
         op=Average,
         gradient_predivide_factor=1.0,
-        batch_num_per_step=None,
+        global_batch_num_per_step=None,
         fixed_batch_size=False,
     ):
         super(self.__class__, self).__init__(params)
@@ -91,7 +95,7 @@ class _ElasticDistributedOptimizer(torch.optim.Optimizer):
             self._register_hooks()
 
         self._fixed_batch_size = fixed_batch_size
-        self._batch_num_per_step = batch_num_per_step
+        self._global_batch_num_per_step = global_batch_num_per_step
         self._iter_step = 0
 
     def load_state_dict(self, *args, **kwargs):
@@ -138,9 +142,14 @@ class _ElasticDistributedOptimizer(torch.optim.Optimizer):
             # C++ backend will apply additional 1 / size() factor
             # to postscale_factor for op == Average.
             if self._fixed_batch_size:
+                # Set global_batch_num_per_step into the divisor
+                # to averager gradient.
                 prescale_factor = 1.0 / (
-                    self.gradient_predivide_factor * self._batch_num_per_step
+                    self.gradient_predivide_factor
+                    * self._global_batch_num_per_step
                 )
+                # Set size() to the multiplier because C++ backend of Horovod
+                # will apply additional 1 / size() factor.
                 postscale_factor = self.gradient_predivide_factor * size()
             else:
                 prescale_factor = 1.0 / self.gradient_predivide_factor
@@ -259,9 +268,14 @@ def ElasticDistributedOptimizer(
     backward_passes_per_step=1,
     op=Average,
     gradient_predivide_factor=1.0,
-    batch_num_per_step=None,
+    global_batch_num_per_step=None,
     fixed_batch_size=False,
 ):
+    global_batch_num_per_step = (
+        global_batch_num_per_step
+        if global_batch_num_per_step
+        else int(os.getenv("WORKER_NUM", 1))
+    )
 
     cls = type(
         optimizer.__class__.__name__,
@@ -275,6 +289,6 @@ def ElasticDistributedOptimizer(
         backward_passes_per_step,
         op,
         gradient_predivide_factor,
-        batch_num_per_step,
+        global_batch_num_per_step,
         fixed_batch_size,
     )

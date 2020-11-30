@@ -24,8 +24,6 @@ from elasticdl.python.allreduce.torch_optimizer import (
 from elasticdl.python.common.constants import Mode
 from elasticdl.python.common.log_utils import default_logger as logger
 
-NUM_WORKER = 3
-
 
 class Net(nn.Module):
     def __init__(self):
@@ -68,10 +66,7 @@ def train(dataset, elastic_controller):
 
     # op must be sum to keep the batch size fixed
     optimizer = ElasticDistributedOptimizer(
-        optimizer,
-        op=hvd.Average,
-        batch_num_per_step=NUM_WORKER,
-        fixed_batch_size=True,
+        optimizer, op=hvd.Average, fixed_batch_size=True,
     )
 
     # Set the model and optimizer to broadcast.
