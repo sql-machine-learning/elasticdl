@@ -64,6 +64,7 @@ class Master(object):
                 # TODO: Get the Pod arguments from the input
                 # args directly
                 pass
+            # Add PodEventCallbacks for the listeners of Pod events.
             if self.task_manager:
                 self.pod_manager.add_pod_event_callback(
                     TaskRescheduleCallback(self.task_manager)
@@ -127,9 +128,7 @@ class Master(object):
 
     def create_pod_manager_if_needed(self, args):
         if args.need_pod_manager:
-            self.pod_manager = create_pod_manager(
-                args, self.task_manager, self.rendezvous_server
-            )
+            self.pod_manager = create_pod_manager(args)
         else:
             self.pod_manager = None
 

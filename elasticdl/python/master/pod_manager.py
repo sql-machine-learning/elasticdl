@@ -98,12 +98,7 @@ def get_image_cluster_spec(cluster_spec):
     return cluster_spec
 
 
-# TODO: After decouple PodManager with TaskManager and RendezvousServer
-# with PodEventCallback, we can remove these two parameter from this
-# factory method and the __init__ method of PodManager.
-def create_pod_manager(
-    args, task_manager, rendezvous_server,
-):
+def create_pod_manager(args):
     pod_manager = None
 
     master_ip = os.getenv("MY_POD_IP", "localhost")
@@ -122,8 +117,6 @@ def create_pod_manager(
         cluster_spec = get_image_cluster_spec(args.cluster_spec)
 
         pod_manager = PodManager(
-            task_manager=task_manager,
-            rendezvous_server=rendezvous_server,
             job_name=args.job_name,
             image_name=args.worker_image,
             namespace=args.namespace,
@@ -151,8 +144,6 @@ def create_pod_manager(
 class PodManager(object):
     def __init__(
         self,
-        task_manager,
-        rendezvous_server=None,
         num_workers=1,
         worker_resource_request="cpu=1,memory=4096Mi",
         worker_resource_limit="cpu=1,memory=4096Mi",
@@ -185,8 +176,6 @@ class PodManager(object):
         self._volume = volume
         self._image_pull_policy = image_pull_policy
         self._envs = envs
-        self._task_manager = task_manager
-        self._rendezvous_server = rendezvous_server
         self._next_worker_id_fn = itertools.count().__next__
         self._log_file_path = log_file_path
 
@@ -207,11 +196,11 @@ class PodManager(object):
             self._num_ps, self._k8s_client.get_ps_service_address
         )
         self._worker_addrs = []
-        self._pod_event_callbacks = []
         self._worker_command = None
         self._worker_args = None
         self._ps_command = None
         self._ps_args = None
+        self._pod_event_callbacks = []
 
     def set_up(
         self,
