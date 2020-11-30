@@ -26,11 +26,11 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import MaxComputeConfig
 from elasticdl.python.common.model_utils import load_module
 from elasticdl.python.data.odps_io import is_odps_configured
-from elasticdl.python.data.reader.csv_reader import CSVDataReader
 from elasticdl.python.data.reader.data_reader import Metadata
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.data.reader.odps_reader import ODPSDataReader
 from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
+from elasticdl.python.data.reader.text_reader import TextDataReader
 from elasticdl.python.master.task_manager import _Task
 from elasticdl.python.tests.test_utils import (
     IRIS_TABLE_COLUMN_NAMES,
@@ -73,7 +73,7 @@ class RecordIODataReaderTest(unittest.TestCase):
                     self.assertEqual(len(v.numpy()), 1)
 
 
-class CSVDataReaderTest(unittest.TestCase):
+class TextDataReaderTest(unittest.TestCase):
     def test_csv_data_reader(self):
         with tempfile.TemporaryDirectory() as temp_dir_name:
             num_records = 128
@@ -87,33 +87,17 @@ class CSVDataReaderTest(unittest.TestCase):
             iris_file_name = create_iris_csv_file(
                 size=num_records, columns=columns, temp_dir=temp_dir_name
             )
-            csv_data_reader = CSVDataReader(columns=columns, sep=",")
-            task = _Task(
-                iris_file_name, 0, num_records, elasticdl_pb2.TRAINING
+            csv_data_reader = TextDataReader(
+                filename=iris_file_name, records_per_task=20
             )
-
-            def _gen():
-                for record in csv_data_reader.read_records(task):
-                    yield record
-
-            def _feed(dataset, mode, metadata):
-                def _parse_data(record):
-                    features = tf.strings.to_number(record[0:-1], tf.float32)
-                    label = tf.strings.to_number(record[-1], tf.float32)
-                    return features, label
-
-                dataset = dataset.map(_parse_data)
-                dataset = dataset.batch(10)
-                return dataset
-
-            dataset = tf.data.Dataset.from_generator(
-                _gen, csv_data_reader.records_output_types
-            )
-            dataset = _feed(dataset, None, None)
-            for features, labels in dataset:
-                self.assertEqual(features.shape.as_list(), [10, 4])
-                self.assertEqual(labels.shape.as_list(), [10])
-                break
+            shards = csv_data_reader.create_shards()
+            self.assertEqual(len(shards), 7)
+            task = _Task(iris_file_name, 0, 20, elasticdl_pb2.TRAINING)
+            record_count = 0
+            for record in csv_data_reader.read_records(task, shuffle=True):
+                record_count += 1
+            self.assertEqual(csv_data_reader.get_size(), num_records)
+            self.assertEqual(record_count, 20)
 
 
 @unittest.skipIf(
