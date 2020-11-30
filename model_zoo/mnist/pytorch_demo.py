@@ -23,30 +23,9 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, IterableDataset
 
 from elasticdl.python.common.log_utils import default_logger as logger
-from elasticdl.python.worker.allreduce_controller import (
-    PyTorchAllReduceController,
+from elasticdl.python.allreduce.pytorch_controller import (
+    get_elastic_controller
 )
-from elasticdl.python.worker.data_shard_service import DataShardService
-from elasticdl.python.common.grpc_utils import build_channel
-from elasticdl.python.worker.master_client import MasterClient
-
-
-def get_elastic_controller():
-    """ElasticDL can provide the function"""
-    master_addr = os.getenv("MASTER_ADDR", None)
-    worker_id = os.getenv("WORKER_ID", None)
-
-    if master_addr and worker_id:
-        master_client = MasterClient(
-            build_channel(master_addr), int(worker_id)
-        )
-        data_shard_service = DataShardService(64)
-
-        master_ip = master_addr.split(":")[0]
-        controller = PyTorchAllReduceController(
-            master_client, master_ip, data_shard_service
-        )
-        controller.init_horovod_locally()
 
 
 def read_images(shard):
