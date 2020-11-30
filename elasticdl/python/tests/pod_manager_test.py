@@ -95,7 +95,7 @@ class PodManagerTest(unittest.TestCase):
             time.sleep(3)
             counters = pod_manager.get_pod_counter(pod_type=PodType.WORKER)
             if counters["Running"]:
-                worker_addrs = pod_manager._get_alive_worker_addr()
+                worker_addrs = pod_manager.get_alive_worker_addr()
                 self.assertEqual(len(worker_addrs), counters["Running"])
 
         pod_manager.stop_relaunch_and_remove_pods(pod_type=PodType.WORKER)

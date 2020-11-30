@@ -485,7 +485,7 @@ class PodManager(object):
                 return
 
             if self._rendezvous_server:
-                self._worker_addrs = self._get_alive_worker_addr()
+                self._worker_addrs = self.get_alive_worker_addr()
                 self._rendezvous_server.set_worker_hosts(self._worker_addrs)
 
         if relaunch_worker and worker_id >= 0:
@@ -524,7 +524,7 @@ class PodManager(object):
         _, pod_ip, _ = self._worker_pods_ip_phase[worker_id]
         return pod_ip
 
-    def _get_alive_worker_addr(self):
+    def get_alive_worker_addr(self):
         alive_workers = self.get_alive_workers()
         worker_addrs = []
         worker_start_times = []
