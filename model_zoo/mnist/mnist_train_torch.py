@@ -75,7 +75,7 @@ def train(dataset, elastic_controller):
     model.train()
 
     # Use the elastic function to wrap the training function with a batch.
-    elastic_train_one_step = elastic_controller.elastic_run(train_one_step)
+    elastic_train_one_step = elastic_controller.elastic_run(train_one_batch)
     for batch_idx, (data, target) in enumerate(dataset):
         # Convert tf.tensor to torch.tensor.
         target = tf.reshape(target, [-1])
@@ -91,7 +91,7 @@ def train(dataset, elastic_controller):
         logger.info("loss = {}, batch_index = {}".format(loss, batch_idx))
 
 
-def train_one_step(batch_index, model, optimizer, data, target):
+def train_one_batch(batch_index, model, optimizer, data, target):
     output = model(data)
     loss = F.nll_loss(output, target)
     loss.backward()
