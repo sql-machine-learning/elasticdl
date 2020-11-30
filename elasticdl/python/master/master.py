@@ -56,10 +56,11 @@ class Master(object):
                     ps_command=command,
                     ps_args=self.elasticdl_job_service.get_ps_args(self._args),
                 )
-            else:
-                # TODO: Get the Pod arguments from the input
-                # args directly
-                pass
+            elif self._args.pod_command:
+                self.pod_manager.set_up(
+                    worker_command=self._args.pod_command,
+                    ps_command=self._args.pod_command,
+                )
 
         # Start the components one by one
         if self.task_manager:
