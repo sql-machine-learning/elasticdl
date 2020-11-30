@@ -435,7 +435,7 @@ class PodManager(object):
             if evt_type in ["ADDED", "MODIFIED"] and phase == "Running":
                 for callback in self._pod_event_callbacks:
                     callback.on_pod_started(
-                        PodInfo(id=None, name=pod_name, ip=pod_ip),
+                        PodInfo(type=None, id=None, name=pod_name),
                         ClusterContext(pod_manager=self),
                     )
 
@@ -448,7 +448,9 @@ class PodManager(object):
                 # Notify each PodEventCallback that PodFailed is fired
                 for callback in self._pod_event_callbacks:
                     callback.on_pod_failed(
-                        PodInfo(id=worker_id, name=pod_name, ip=pod_ip),
+                        PodInfo(
+                            type=PodType.WORKER, id=worker_id, name=pod_name
+                        ),
                         ClusterContext(pod_manager=self),
                     )
 
@@ -488,7 +490,7 @@ class PodManager(object):
                     # Notify each PodEventCallback that PodDeleted is fired
                     for callback in self._pod_event_callbacks:
                         callback.on_pod_deleted(
-                            PodInfo(id=worker_id, name=pod_name, ip=pod_ip),
+                            PodInfo(type=None, id=worker_id, name=pod_name),
                             ClusterContext(pod_manager=self),
                         )
             elif pod_name in self._ps_pod_name_to_id:
