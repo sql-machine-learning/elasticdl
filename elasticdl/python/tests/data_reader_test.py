@@ -26,11 +26,11 @@ from elasticdl.proto import elasticdl_pb2
 from elasticdl.python.common.constants import MaxComputeConfig
 from elasticdl.python.common.model_utils import load_module
 from elasticdl.python.data.odps_io import is_odps_configured
-from elasticdl.python.data.reader.text_reader import TextDataReader
 from elasticdl.python.data.reader.data_reader import Metadata
 from elasticdl.python.data.reader.data_reader_factory import create_data_reader
 from elasticdl.python.data.reader.odps_reader import ODPSDataReader
 from elasticdl.python.data.reader.recordio_reader import RecordIODataReader
+from elasticdl.python.data.reader.text_reader import TextDataReader
 from elasticdl.python.master.task_manager import _Task
 from elasticdl.python.tests.test_utils import (
     IRIS_TABLE_COLUMN_NAMES,
@@ -88,14 +88,11 @@ class TextDataReaderTest(unittest.TestCase):
                 size=num_records, columns=columns, temp_dir=temp_dir_name
             )
             csv_data_reader = TextDataReader(
-                filename=iris_file_name,
-                records_per_task=20
+                filename=iris_file_name, records_per_task=20
             )
             shards = csv_data_reader.create_shards()
             self.assertEqual(len(shards), 7)
-            task = _Task(
-                iris_file_name, 0, 20, elasticdl_pb2.TRAINING
-            )
+            task = _Task(iris_file_name, 0, 20, elasticdl_pb2.TRAINING)
             record_count = 0
             for record in csv_data_reader.read_records(task, shuffle=True):
                 record_count += 1

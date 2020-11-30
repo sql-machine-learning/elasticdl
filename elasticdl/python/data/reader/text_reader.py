@@ -20,7 +20,6 @@ import tensorflow as tf
 from elasticdl.python.data.reader.data_reader import (
     AbstractDataReader,
     Metadata,
-    check_required_kwargs,
 )
 
 
