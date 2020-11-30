@@ -143,7 +143,7 @@ class Master(object):
             self.rendezvous_server = HorovodRendezvousServer(master_ip)
 
     def create_elasticdl_job_service_if_needed(self, args):
-        if args.need_elasticdl_job_service and False:
+        if args.need_elasticdl_job_service:
             # TODO: Remove rendezvous server after rafactoring the pod
             # manager.
             self.elasticdl_job_service = ElasticdlJobService(
