@@ -274,18 +274,16 @@ class PodManager(object):
 
     def _start_worker(self, worker_id):
         logger.info("Starting worker: %d" % worker_id)
-        worker_args = self._worker_args
-        if self._worker_args:
-            bash_command = self._worker_args[1]
-            if self._ps_addrs:
-                bash_command += " --ps_addrs {}".format(self._ps_addrs)
-            if self._log_file_path:
-                bash_command += BashCommandTemplate.REDIRECTION.format(
-                    self._log_file_path
-                )
-            for extra_arg in self._worker_args[2:]:
-                bash_command += " {}".format(extra_arg)
-            worker_args = [self._worker_args[0], bash_command]
+        bash_command = self._worker_args[1]
+        if self._ps_addrs:
+            bash_command += " --ps_addrs {}".format(self._ps_addrs)
+        if self._log_file_path:
+            bash_command += BashCommandTemplate.REDIRECTION.format(
+                self._log_file_path
+            )
+        for extra_arg in self._worker_args[2:]:
+            bash_command += " {}".format(extra_arg)
+        worker_args = [self._worker_args[0], bash_command]
         envs = copy.deepcopy(self._envs)
         envs.append(V1EnvVar(name=WorkerEnv.WORKER_ID, value=str(worker_id)))
         with self._lock:
